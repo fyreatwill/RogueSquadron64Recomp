@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3524 (2026-08-31).
+documents are listed below. Updated for session 3525 (2026-08-31).
 
 ## Current state
 
@@ -90,6 +90,16 @@ difference at static caller scope: an enclosing route gate or a
 non-generated/indirect alternate path reaches the stores. See
 [M5-S3524-SELECTOR-TICK-ROUTE.md](M5-S3524-SELECTOR-TICK-ROUTE.md).
 
+Session 3525 qualified the retail immediate-store range independently: the
+whole-RDRAM control fired, retail reached title and hangar, the range executed
+981 times, and `0x80029E78` fired twice in hangar from `0x80029E64`. The port
+entry witness was present and its startup control fired, but the corrected
+real-audio LLE/spin-yield/autopilot arm crashed before title at
+`last-guest-pc=0x8000834C`; no title or hangar entry rows were available. This
+selects `H-CaptureInvalid` for the port comparison and leaves alternate-entry
+versus route-gate hypotheses open. See
+[M5-S3525-SELECTOR-STORE-ENTRY.md](M5-S3525-SELECTOR-STORE-ENTRY.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -116,11 +126,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Trace the immediate callers/entry boundary of selector stores
-   `0x8008F228` and `0x8008F264`, using the same retail execution watch and
-   port title/hangar controls. Distinguish a store reached without
-   `runVideoFrameTick` from an enclosing route gate. Do not rewrite audio or
-   selector state.
+1. Re-run the now-built selector-store entry witness on a real-audio port arm
+   that reaches title and hangar. The s3525 corrected arm crashed pre-title at
+   `0x8000834C`, so the entry comparison is unevaluable. Retain the retail
+   range/`0x80029E78` controls and all existing port positive controls; do not
+   rewrite audio or selector state.
 3. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -270,6 +280,7 @@ the oracle did not provide a matching register tuple.
 Latest selector boundary:
 
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
+- [M5-S3525-SELECTOR-STORE-ENTRY.md](M5-S3525-SELECTOR-STORE-ENTRY.md)
 - [M5-S3519-SELECTOR-CALLSITE-CONTEXT.md](M5-S3519-SELECTOR-CALLSITE-CONTEXT.md)
 - [M5-S3520-SELECTOR-AI-BOUNDARY.md](M5-S3520-SELECTOR-AI-BOUNDARY.md)
 - [M5-S3521-SELECTOR-CALLSITE-BOUNDARY.md](M5-S3521-SELECTOR-CALLSITE-BOUNDARY.md)

@@ -2765,6 +2765,45 @@ extern "C" void rs64_m5_selector_store_context(uint32_t pc, uint32_t v0,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_selector_store_entry(uint32_t pc, uint32_t ra,
+                                                uint32_t a0, uint32_t a1,
+                                                uint32_t a2, uint32_t a3) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_STORE_ENTRY");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const uint32_t width = rs64_vi_committed_width();
+    static bool control_seen = false;
+    if (!control_seen) {
+        control_seen = true;
+        std::fprintf(stderr,
+            "[m5-selector-store-entry-control] pc=0x%08X width=%u origin=0x%06X\n",
+            pc, width, origin);
+        std::fflush(stderr);
+    }
+    const bool target_phase =
+        (width == 1024u && (origin == 0x00790400u || origin == 0x00790800u)) ||
+        (width == 512u && origin == 0x006AB400u);
+    if (!target_phase) return;
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) {
+        phase_seen = phase;
+        rows = 0;
+    }
+    if (rows >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-selector-store-entry] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X\n",
+        rows++, phase, width, origin, pc, ra, a0, a1, a2, a3);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_selector_producer_context(uint32_t pc, uint32_t ra,
                                                      uint32_t a0, uint32_t a1,
                                                      uint32_t a2, uint32_t a3,

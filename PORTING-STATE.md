@@ -133265,3 +133265,27 @@ documented diagnostic-only definition was restored so the build could link.
 
 ORIGIN: all session-3524 probes observe phase, PCs, arguments, and branch
 outcomes; no guest state or control flow was changed.
+
+## Session 3525 (2026-08-31) — qualified selector-store entry boundary
+
+Ran the independent retail oracle with a whole-RDRAM positive control, a
+phase-gated execution range `0x8008F000..0x8008F2A0`, and the existing
+`0x80029E78` control. The positive control reached 10,000 callbacks and was
+removed. Retail reached title 1024 and hangar 512; the range executed 981
+times, and `0x80029E78` fired twice in hangar from `0x80029E64`. The store
+instructions' immediate predecessors were `0x8008F224` and `0x8008F260`.
+
+Added a regeneration-safe entry witness for `allocateSongChannelArray` at
+`0x8008F000`, capturing `$ra` and `a0..a3`, with a phase-scoped host logger.
+The first port arm omitted the validated route and stalled at width 640. The
+corrected real-audio LLE/spin-yield/autopilot arm crashed before title in
+`spTaskSchedulerThread`, with `last-guest-pc=0x8000834c`. The entry positive
+control fired at startup, but no title or hangar entry rows were produced.
+
+This selects `H-CaptureInvalid` for the port comparison. It rules out no
+selector caller or route hypothesis because the target phase was not reached;
+the retail execution result remains qualified. The build completed
+successfully. No audio, selector, task, or output state was rewritten.
+
+ORIGIN: the new witness observes the entry return address and arguments only;
+the crash is a route failure, not a mitigation target.
