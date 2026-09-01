@@ -1,37 +1,44 @@
-# NEXT work unit — M5 pre-call selector-state comparison
+# NEXT work unit — M5 selector-table writer attribution
 
-HYPOTHESIS-ID: m5-precall-selector-state
+HYPOTHESIS-ID: m5-selector-table-writer
 
-Session 3500 selected caller/input divergence: retail's caller at
-`0x80091330` was dominated by `a0=0x801772F0, a1=2, a2=1`, while the
-qualified port emitted 432 rows with `a0=0x80175960, a1=0, a2=1`.
-The next probe must locate the writer or table/slot load that supplies those
-caller arguments immediately before the call.
+Session 3501 selected `H-PreCallState`: retail's post-load `a0` at
+`0x80091320` was always `0x801772F0`, while the qualified port alternated
+between `0x80175960` from `0x80150000` and `0x801772F0` from `0x80150004`.
+The next boundary is the writer/initializer of those table entries or the
+selector-index source that chooses them.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-PreCallParity`: the caller's preceding loads and source state match
-  retail; the divergence is introduced in a later argument transform.
-- `H-PreCallState`: the preceding table/slot load or source word differs first
-  across retail and port.
-- `H-PreCallObservationFailure`: the route controls fire but the new
-  pre-call witness has no rows.
+- `H-TableWriterValue`: the same table-entry writer route is live in retail
+  and port, but the stored value differs; the first differing post-store value
+  selects the producer/value edge.
+- `H-TableWriterRoute`: retail and port use different writer PCs or write
+  addresses; a route difference selects the missing initialization path.
+- `H-IndexSelection`: the table contents match at the relevant entries, but
+  the selector index differs before `0x8009131C`; matching writes plus a first
+  differing index selects the index producer.
+- `H-TableObservationFailure`: positive controls fire but the bounded table
+  watch or port writer witness has no rows; repair the observation before
+  interpreting a null.
 
-Discriminating measurement: ask the oracle first to watch the bounded
-predecessor range ending at `0x80091330`, with whole-RDRAM and title controls.
-Then build once and run the qualified real-image/LLE/spin-yield/autopilot port
-arm with a phase-gated witness at the caller's input-load sequence, capturing
-the loaded values, table/slot addresses, and final `a0..a3`. Matching source
-classes select `H-PreCallParity`; a first differing source load selects
-`H-PreCallState`; live controls with no witness rows select
-`H-PreCallObservationFailure`. No null is interpreted without positive
-control.
+Discriminating measurement: first run the independent retail oracle with the
+whole-RDRAM control, title phase control, physical write watch
+`0x00150000:0x00150008`, writer-PC histogram/post-value sampling, and the
+existing predecessor execution range. Then build once and run the qualified
+real-image/LLE/spin-yield/autopilot port arm with a phase-gated witness for
+stores to `0x80150000..0x80150007`, including writer PC, address, value,
+index, and the adjacent `0x8009131C` arguments. Matching writer/address/value
+classes select `H-IndexSelection`; a first value difference selects
+`H-TableWriterValue`; a first writer/address difference selects
+`H-TableWriterRoute`; live controls with no table rows select
+`H-TableObservationFailure`.
 
-Exact run requirements: use the qualified route from `build/`, enable
+Exact route: run from `build/` with
 `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_FORCE=1`,
-`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_AUTOPILOT=1`,
-`ROGUESQ_LOG_PHASE=1`, `ROGUESQ_LOG_VI_TRANSITION=1`,
-`ROGUESQ_LOG_M5_TASK_WRITER=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`, and the caller,
-producer, and pre-call controls. Run the retail preflight first, use a
-direct-PID watchdog, capture under `scratch/agent/`, and terminate survivors
-with SIGKILL.
+`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_STUB_MISSING_FUNCS=1`,
+`ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a'`,
+`PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and the existing phase,
+caller, producer, and pre-call controls. Use direct-PID watchdog capture
+under `scratch/agent/` and SIGKILL survivors. The oracle and port controls
+must both be positive before any null is interpreted.

@@ -2574,6 +2574,38 @@ extern "C" void rs64_m5_selector_caller(uint32_t caller_pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_selector_precall(uint32_t pc, uint32_t stage,
+                                             uint32_t index, uint32_t address,
+                                             uint32_t value, uint32_t a0,
+                                             uint32_t a1, uint32_t a2,
+                                             uint32_t s0, uint32_t s1) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_PRECALL");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (rs64_vi_committed_width() != 1024u ||
+        (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t rows = 0;
+    if (rows == 0) {
+        std::fprintf(stderr,
+            "[m5-selector-precall-control] phase=%u width=1024 origin=0x%06X\n",
+            rs64_phase_ord(), origin);
+        std::fflush(stderr);
+    }
+    if (rows >= 2048u) return;
+    std::fprintf(stderr,
+        "[m5-selector-precall] ordinal=%u phase=%u width=1024 origin=0x%06X "
+        "stage=%u pc=0x%08X index=0x%08X address=0x%08X value=0x%08X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X s0=0x%08X s1=0x%08X\n",
+        rows++, rs64_phase_ord(), origin, stage, pc, index, address, value,
+        a0, a1, a2, s0, s1);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_state_pointer_consumer(uint32_t s1) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");

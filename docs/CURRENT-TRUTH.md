@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3500 (2026-08-31). This record was
+Current active marker: Session 3501 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -673,14 +673,33 @@ feeding the caller's `a0`/`a1` remains unresolved. Evidence:
 ORIGIN: diagnostic-only caller-register observation; no audio state, selector,
 task field, or output was rewritten, skipped, or validated.
 
+Session 3501 compared the bounded predecessor range before `0x80091330`.
+The independent retail oracle passed its 10,000-hit whole-RDRAM control,
+reached title origin `0x00790400`, and showed `a0=0x801772F0` at the
+post-load boundary `0x80091320` in all 628 sampled rows. The corrected port
+retry used the qualified real-image/LLE/spin-yield/autopilot route with
+`ROGUESQ_STUB_MISSING_FUNCS=1`; it reached title, passed caller/producer and
+pre-call controls, and emitted 2,048 pre-call, 1,024 caller, and 1,024
+producer rows. Port's `0x8009131C` post-load rows split into 511
+`0x80175960` loads from `0x80150000` and 512 `0x801772F0` loads from
+`0x80150004`, with one additional `0x80195190` row. The adjacent `0x8009132C`
+and caller rows preserved those classes. This selects `H-PreCallState` and
+rules out an absent pre-call observation and a caller-wrapper/producer-only
+transformation at this scope. The exact writer or selector-index source for
+the `0x80150000` table remains unresolved. Evidence:
+[M5-S3501-PRECALL-STATE.md](M5-S3501-PRECALL-STATE.md).
+
+ORIGIN: diagnostic-only post-load table/register observations; no selector,
+audio, task, or output state was rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Trace the writer/selector state feeding the caller's `a0`/`a1` immediately
-   before `0x80091330`, with one batched retail/port discriminator keyed by
-   title origin, caller registers, and the preceding table/slot loads. Keep
-   the independent whole-RDRAM control and the port caller/producer controls
-   positive; the first matching or differing pre-call class selects the next
-   edge.
+1. Trace the writer/initializer and selector-index source feeding the
+   `0x80150000`/`0x80150004` table entries used by `0x8009131C`, with one
+   batched retail/port discriminator keyed by title origin, table address,
+   stored value, index, and caller arguments. Keep the independent
+   whole-RDRAM control and port pre-call/caller controls positive; the first
+   matching or differing table write selects the next edge.
 2. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's
    dispatch result as baselines; do not repeat any unchanged route retry.
 3. Keep Session 3488's silent route as the qualification baseline; do not

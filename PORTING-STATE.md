@@ -132669,3 +132669,29 @@ audio state, selector data, task fields, or output.
 
 ORIGIN: the new witness observes caller registers at the guest callsite; the
 writer of those arguments and legitimacy of the differing values remain open.
+
+## Session 3501 (2026-08-31) — selected pre-call selector-state divergence
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+Rice video, title-driving Start presses, and a bounded execution watch ending
+at `0x80091330`. The control reached 10,000 hits and the title predecessor
+range was live; retail showed `a0=0x801772F0` at the post-load `0x80091320`
+boundary in 628 sampled rows.
+
+Added a regeneration-safe witness at the `0x8009131C` and `0x8009132C`
+post-load points and built the full target. The first port invocation used an
+invalid `build/Debug` path and launched no process. The corrected retry from
+`build/` used the qualified real-image/LLE/spin-yield/autopilot route with
+`ROGUESQ_STUB_MISSING_FUNCS=1`; it reached title and emitted 2,048 pre-call,
+1,024 caller, and 1,024 producer rows, with all controls live.
+
+Port `a0` loads split into 511 rows of `0x80175960` from `0x80150000`, 512
+rows of `0x801772F0` from `0x80150004`, and one `0x80195190` row. The next
+halfword load and adjacent caller preserved those classes. This selects
+`H-PreCallState` and rules out a missing pre-call observation or a
+caller-wrapper/producer-only transformation at this scope. The exact writer
+or selector-index source remains unresolved. Evidence:
+`docs/M5-S3501-PRECALL-STATE.md`.
+
+ORIGIN: diagnostic-only post-load table/register observations; no selector,
+audio, task, or output state was rewritten, skipped, or validated.
