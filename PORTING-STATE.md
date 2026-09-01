@@ -132314,3 +132314,25 @@ guest transformation after that path. Evidence:
 
 ORIGIN: the new source-span hook is phase-gated and observational; it does not
 rewrite, skip, or validate task fields.
+
+## Session 3485 (2026-08-31) — joined task selector/load boundary
+
+The independent Rice oracle passed its whole-RDRAM control with 19,300
+callbacks, candidate-span controls with 4,643 and 4,657 writes, and reached
+3,566 VI. Its execution-range watch over `0x80091680:0x80091790` recorded
+154,327 executions overall and identified the `0x800916D8–0x80091714` chain
+before the ten task-field stores.
+
+The port build applied the new regeneration-safe selector probe and completed
+successfully. The task-writer and writer-entry controls fired. In 4,096
+bounded title rows, port `0x800916F0` selected `0x80171CE0` 264 times and
+`0x80173B20` 265 times, but also selected `0x8018FB70` twice and
+`0x8018DD30` once; `a2` at `0x80091710` included sizes 1, 2, and 3. Retail's
+paired writer evidence remains restricted to the two normal sources. This
+selects `H-SelectorDivergence` at the pre-writer selection boundary and rules
+out an intervening mutation as the first measured edge. The upstream table
+read/writer remains unresolved. Evidence:
+[M5-S3485-SELECTOR-JOIN.md](docs/M5-S3485-SELECTOR-JOIN.md).
+
+ORIGIN: this iteration observes selector registers and task-writer values; it
+does not rewrite, skip, or validate the differing operands.

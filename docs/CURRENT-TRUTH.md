@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3484 (2026-08-31). This record was
+Current active marker: Session 3485 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -433,16 +433,28 @@ candidate-span-store producer hypothesis at the measured scope and moves the
 unresolved edge to the upstream read/table-selection path. Evidence:
 [M5-S3484-PRODUCER-SPAN.md](../M5-S3484-PRODUCER-SPAN.md).
 
+Session 3485 joined an independent Rice-oracle execution-range capture to a
+new regeneration-safe port selector witness. Oracle whole-RDRAM and candidate
+span controls fired (19,300 and 4,643/4,657), title reached 3,566 VI, and the
+preceding block executed 154,327 times overall. Port selector rows at
+`0x800916F0` included extra sources `0x8018FB70` and `0x8018DD30`, while the
+retail writer evidence remains restricted to `0x80171CE0`/`0x80173B20`. This
+selects the pre-writer selector/load divergence and rules out an intervening
+mutation as the first measured edge. The upstream table read/writer is
+unresolved. Evidence: [M5-S3485-SELECTOR-JOIN.md](M5-S3485-SELECTOR-JOIN.md).
+
+ORIGIN: the probe is diagnostic-only; it does not rewrite, skip, or validate
+task fields.
+
 ## Next steps
 
-1. Trace the upstream read/table-selection path for the extra port writer
-   operands `0x8018FB70`/size 3 and `0x8018DD30`/size 1. The Session 3484
-   candidate-span store census found initialization and nearby-field stores,
-   not the extra values. Use one title-gated bounded capture of the table reads
-   or selector inputs feeding `0x8009177C/0x80091784`, with both positive
-   controls. A matching source value followed by a writer mismatch selects a
-   guest transformation boundary; a divergent selector/read selects the
-   upstream producer boundary.
+1. Trace the upstream table read/writer feeding the divergent port selector at
+   `0x800916F0` and `0x80091710`, focusing on `0x8018FB70`/size 3 and
+   `0x8018DD30`/size 1. Session 3485 selected the pre-writer divergence; use
+   one title-gated bounded capture of the relevant read or table-entry writer
+   with both positive controls. A matching source entry with a later port-only
+   selection selects a route/transform boundary; a divergent entry writer or
+   pointer selects the upstream producer.
 2. Retain the Session 3484 retail writer census and port source-span rows; do
    not repeat the rejected candidate-span store capture unchanged.
 3. Retain the Session 3483 retail post-store table and Session 3482 port
