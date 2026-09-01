@@ -132798,6 +132798,32 @@ ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
 audio state, selector value, task field, or output was rewritten, skipped, or
 validated.
 
+## Session 3509 (2026-08-31) — corrected selector-table port writer
+
+Ran the independent retail preflight with the whole-RDRAM positive control,
+title-driving inputs, corrected physical table-span watch, and writer-PC
+watches. The control reached 10,000 callbacks; title width 1024 appeared; the
+span recorded 8 writes; and the selected writer PCs each executed four times.
+Retail stored `0x80171E70` at `0x80149758` from `0x8008F228` and
+`0x80173CB0` at `0x8014975C` from `0x8008F264`.
+
+Added the regeneration-safe port witness at both corresponding generated
+stores and built the full target successfully. The validated real-image,
+forced-LLE, spin-yield, autopilot arm reached title and hangar, fired the
+existing selector-load control, and captured stores of `0x80171CE0` and
+`0x80173B20` at those same addresses and PCs. This selects
+`H-PortWriterDivergence` at the first measured value boundary and rejects
+`H-PortWriterAbsent` and `H-CaptureInvalid` at this scope. It rules out a
+missing port store route, but not the writer input/initializer or selector-index
+source that produces the differing values.
+
+Evidence: `docs/M5-S3509-SELECTOR-TABLE-PORT-WRITER.md`,
+`scratch/agent/s3509_selector_retail_natural.log`, and
+`scratch/agent/s3509_selector_port.log`.
+
+ORIGIN: the new witness observes guest stores and register contexts only; it
+does not rewrite, skip, or validate selector/table values.
+
 ## Session 3508 (2026-08-31) — corrected selector-table writer boundary
 
 The first retail capture used the stale physical `0x00150000..0x00150008`

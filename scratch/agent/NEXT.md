@@ -1,30 +1,32 @@
-# NEXT work unit — M5 corrected selector-table writer attribution
+# NEXT work unit — M5 selector writer input/initializer boundary
 
-HYPOTHESIS-ID: m5-selector-table-writer-boundary
+HYPOTHESIS-ID: m5-selector-writer-input-boundary
 
-Session 3508 corrected the stale `0x80150000` target: the live table is
-`0x80149758/0x8014975C`, and retail writes it at `0x8008F228`/`0x8008F264`.
+Session 3509 selected a real port-versus-retail value divergence at the
+corrected stores `0x8008F228`/`0x8008F264` to
+`0x80149758`/`0x8014975C`.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-PortWriterParity`: the port has a corresponding store route/value at the
-  corrected table addresses; the first joined writer/value class matches.
-- `H-PortWriterDivergence`: the port route is live but its first corrected
-  table store/value differs, selecting its writer input or initializer.
-- `H-PortWriterAbsent`: retail writer PCs are active while the port has no
-  corrected table store despite positive title controls, selecting a route
-  difference.
-- `H-CaptureInvalid`: either the retail whole-RDRAM control/title or the port
-  title/schema control fails; the result is unevaluable.
+- `H-InputParity`: writer register/input context and selector index match
+  across runtimes; the difference is an earlier table initializer value.
+- `H-InputDivergence`: the first writer input or index differs, selecting the
+  upstream producer/selection edge.
+- `H-PortWriterRoute`: the port reaches the stores through a materially
+  different caller/route despite matching writer PCs.
+- `H-CaptureInvalid`: either independent retail whole-RDRAM/title controls or
+  the port title/schema controls fail; the join is unevaluable.
 
-Discriminating measurement: add one regeneration-safe port witness for stores
-to `0x80149758..0x80149760`, while the same build/run keeps the existing
-selector pre-call/load/writer controls. Run the independent retail oracle first
-with whole-RDRAM control, title phase, `--watch-write 0x149758:0x149760`,
-`--post-value-watch`, and `--watch-pc 0x8008F228,0x8008F264`. Join by title
-origin, table address, stored value, writer PC, selector index, and caller
-arguments. A matching first class selects parity; a differing value or active
-retail-only writer selects divergence/absence; missing controls are invalid.
+Discriminating measurement: one batched retail/port capture that keeps the
+whole-RDRAM control, corrected table-store watch, existing selector pre-call
+and load controls, and the new store-register context. Join by title origin,
+table address, writer PC, stored value, writer arguments/registers, and
+selector index. Matching inputs with differing stored values selects an
+earlier initializer; a first differing input/index selects that producer; a
+route-only difference selects dispatch divergence; missing controls invalidate
+the result.
 
 Use the validated real-image/LLE/spin-yield/autopilot route and SIGKILL the
-game after the bounded watchdog. Keep the stale `0x80150000` watch retired.
+game after the bounded watchdog. Run the independent retail oracle first with
+the whole-RDRAM control and corrected table span. Do not repeat the unchanged
+3509 store census.

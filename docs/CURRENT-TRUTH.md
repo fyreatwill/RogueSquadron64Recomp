@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3508 (2026-08-31). This record was
+Current active marker: Session 3509 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -795,9 +795,23 @@ validated.
 
 ## Next steps
 
-1. Trace the writer/initializer and selector-index source feeding the
-   corrected `0x80149758`/`0x8014975C` table entries used by `0x8009131C`, with one
-   batched retail/port discriminator keyed by title origin, table address,
+Session 3509 added the corrected selector-table store witness. The independent
+retail control reached title, recorded 8 writes to `0x00149758..0x00149760`,
+and observed `0x80171E70`/`0x80173CB0` at writer PCs `0x8008F228`/`0x8008F264`.
+The matching port route reached title and hangar, fired the existing selector
+control, and captured the two corrected stores with values
+`0x80171CE0`/`0x80173B20`. This selects `H-PortWriterDivergence` at the first
+value boundary and rejects absent port observation and invalid capture. The
+writer input/initializer and selector-index source remain unresolved. Evidence:
+[M5-S3509-SELECTOR-TABLE-PORT-WRITER.md](M5-S3509-SELECTOR-TABLE-PORT-WRITER.md).
+
+ORIGIN: the new witness observes the two guest stores and register contexts;
+it does not rewrite, skip, or validate table or selector values.
+
+1. Trace the writer input/initializer and selector-index source producing the
+   differing values at the corrected `0x80149758`/`0x8014975C` table entries
+   used by `0x8009131C`, with one batched retail/port discriminator keyed by
+   title origin, table address,
    stored value, index, and caller arguments. Keep the independent
    whole-RDRAM control and port pre-call/caller controls positive; the first
    matching or differing table write selects the next edge.
