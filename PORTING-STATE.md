@@ -133127,3 +133127,34 @@ recorded in `docs/M5-S3519-SELECTOR-CALLSITE-CONTEXT.md` and
 ORIGIN: diagnostic-only oracle execution watches and port context/store
 witnesses; no audio, selector, task, or output state was rewritten or
 skipped.
+
+## Session 3520 (2026-08-31) — qualified selector AI boundary execution path
+
+Ran the independent retail oracle first with whole-RDRAM and selector-span
+controls plus an execution watch at `0x80029E78`, phase-gated to the 512
+hangar. Whole-RDRAM produced 10,012 writes, the selector span produced 12
+writes, and the execution watch fired once with `a0=0x5622`, `a1=0x8A0`,
+`a2=0x10`, `s1=0x80165ED0`, and `v0=0x561F`.
+
+Added a diagnostic hook to the port's native `osAiSetFrequency_recomp`, then
+rebuilt. The first port recipe was drifted and crashed at `0x8000834C` while
+still at VI 320; it produced no target-phase evidence. A fixed run using the
+previously qualified real-audio LLE/spin-yield/autopilot route reached title
+1024 and hangar 512. The new hook's startup positive control fired once, but
+it had zero hangar rows. Existing producer and selector-store controls fired
+in both target phases; hangar stores remained `0x80171E70` and `0x80173CB0`
+with `s1=0x5622`. No crash occurred in the fixed run.
+
+This selects a port/retail execution-path difference at the AI boundary: the
+retail instruction executes in hangar while the corresponding port host
+primitive is only entered before the target phase. It rules out a dead port
+instrument and a missing target phase, but does not yet distinguish a missing
+port call, caller/route mismatch, or incorrect retail-to-host equivalence.
+The next work unit labels every port callsite into the native primitive.
+
+ORIGIN: diagnostic-only oracle execution watch and port host witness; no
+audio, selector, task, or output state was rewritten, skipped, or validated.
+
+Evidence: `docs/M5-S3520-SELECTOR-AI-BOUNDARY.md`,
+`scratch/agent/s3520_selector_oracle.log`, and
+`scratch/agent/s3520_selector_port/run.log`.

@@ -177,10 +177,10 @@ index b0d6bef..8499f5f 100644
  
  namespace recomp {
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..29b51e0 100644
+index 0195f2b..774242a 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,10 +1,52 @@
+@@ -1,13 +1,61 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
@@ -194,6 +194,10 @@ index 0195f2b..29b51e0 100644
 +extern "C" uint32_t rs64_phase_ord();
 +extern "C" uint32_t rs64_vi_committed_width();
 +extern "C" uint32_t rs64_vi_committed_origin();
++extern "C" void rs64_m5_selector_ai_boundary(uint32_t pc, uint32_t ra,
++                                               uint32_t a0, uint32_t a1,
++                                               uint32_t a2, uint32_t s0,
++                                               uint32_t s1, uint32_t v0);
 +
 +static bool rs64_ai_status_probe_enabled() {
 +    static const bool enabled = [] {
@@ -233,7 +237,12 @@ index 0195f2b..29b51e0 100644
  
  extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
      uint32_t freq = ctx->r4;
-@@ -18,12 +60,20 @@ extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
++    rs64_m5_selector_ai_boundary(0x80029E78u, ctx->r31, ctx->r4, ctx->r5,
++                                 ctx->r6, ctx->r16, ctx->r17, ctx->r2);
+     // This makes actual audio frequency more accurate to console, but may not be desirable
+     //uint32_t dacRate = (uint32_t)(((float)VI_NTSC_CLOCK / freq) + 0.5f);
+     //freq = VI_NTSC_CLOCK / dacRate;
+@@ -18,12 +66,20 @@ extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
  extern "C" void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
      ultramodern::queue_audio_buffer(rdram, ctx->r4, ctx->r5);
      ctx->r2 = 0;

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3519 (2026-08-31).
+documents are listed below. Updated for session 3520 (2026-08-31).
 
 ## Current state
 
@@ -34,6 +34,14 @@ versus `0x5622` port). Retail identifies `0x80029E78` as the next internal
 call before the differing value is observed, selecting a later mixer-path
 mutation rather than an upstream producer divergence. The writer or return
 contract at that internal boundary remains open.
+
+Session 3520 qualified the next boundary with an independent retail execution
+watch and a same-build port hook. Retail executed `0x80029E78` in hangar with
+`a0=0x5622`, `a1=0x8A0`, `a2=0x10`, `s1=0x80165ED0`, and `v0=0x561F`. The
+port's corresponding native `osAiSetFrequency_recomp` hook passed its startup
+positive control but had zero hangar rows, while the downstream selector
+stores and their controls remained live. This selects an execution-path
+difference at the AI boundary, but not yet its caller or equivalence.
 
 Session 3516 qualified the selector-store boundary independently: retail
 whole-RDRAM and selector-span controls fired, with five executions at each of
@@ -69,10 +77,10 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Capture the first internal selector-path boundary at `0x80029E78` on
-   retail and the qualified real-audio port route, with whole-RDRAM and
-   selector-store controls. Compare call inputs and the resulting selector
-   store context; do not rewrite the value.
+1. Identify the port callsites entering `osAiSetFrequency_recomp` and compare
+   them with the retail caller context for `0x80029E78`, retaining whole-RDRAM,
+   selector-span, and hangar selector-store controls. Distinguish a missing
+   port call from a caller/route mismatch; do not rewrite the value.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -95,8 +103,9 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the first internal selector-path boundary on the
-real-audio route. The silent-arm route defect is parked separately.
+The active work unit is now the caller/route boundary for the retail
+`0x80029E78` execution on the real-audio route. The silent-arm route defect is
+parked separately.
 
 For the silent-arm route:
 
@@ -131,8 +140,16 @@ call input selects that function's producer; matching input with differing
 output/store selects its internal contract or a subsequent mutation; failed
 controls make the capture invalid.
 
-The discriminating measurement is one independent retail capture and one
-qualified port capture at the new boundary plus existing phase/store controls.
+Session 3520 selected `H-PortBoundaryAbsentInHangar`: the retail watch fired in
+hangar, the port hook's startup positive control fired, and the port hook had
+zero hangar rows while downstream stores remained live. This is a path result,
+not a proof that the host primitive is the exact instruction equivalence.
+
+The next discriminating measurement is one independent retail caller-context
+capture and one qualified port capture that labels every port callsite into the
+native AI primitive. A matching caller with no target-phase port entry selects
+a missing/route-gated call; a target-phase entry with differing arguments
+selects caller context; failed controls make the capture invalid.
 Matching predecessor fields with a later writer difference selects a mutation;
 the first differing predecessor field selects its producer; failed controls
  select capture invalidity only.
@@ -211,6 +228,7 @@ Latest selector boundary:
 
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
 - [M5-S3519-SELECTOR-CALLSITE-CONTEXT.md](M5-S3519-SELECTOR-CALLSITE-CONTEXT.md)
+- [M5-S3520-SELECTOR-AI-BOUNDARY.md](M5-S3520-SELECTOR-AI-BOUNDARY.md)
 - [M5-S3516-SELECTOR-STORE-CONTEXT.md](M5-S3516-SELECTOR-STORE-CONTEXT.md)
 - [M5-S3517-SELECTOR-PRODUCER-CONTEXT.md](M5-S3517-SELECTOR-PRODUCER-CONTEXT.md)
 - [M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md](M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md)

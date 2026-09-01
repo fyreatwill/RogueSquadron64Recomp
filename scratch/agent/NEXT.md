@@ -1,33 +1,36 @@
-# NEXT work unit — capture first internal selector-path boundary
+# NEXT work unit — identify port callers of the selector AI boundary
 
 HYPOTHESIS-ID: m5-selector-producer-context
 
-Session 3519 resolved the producer/call boundary: independent retail controls
-passed; retail and the real image arm agree on `a0=0x80165ED0`, `a1=0x12`, and
-the port reached title and hangar. Retail's internal call at `0x80029E78`
-observes/returns `0x561F` from input `0x5622`, while the port store context is
-`0x5622`. Use the real image arm next.
+Session 3520 qualified retail execution at `0x80029E78`, but the port's
+corresponding `osAiSetFrequency_recomp` hook was absent in the hangar despite
+a startup positive control and live downstream selector-store controls. The
+next single work unit is to label every generated port callsite entering
+`osAiSetFrequency_recomp`, then run the independent retail caller watch and
+the qualified real-audio port route in one batched build/run.
 
-The single work unit is one bounded internal-boundary capture. First run the
-retail oracle with whole-RDRAM and selector-span controls plus
-`--watch-pc 0x80029E78` and `--pc-phase-log-width 0x006AB400:512`. Then build
-and run one real-audio port capture with a regeneration-safe witness at the
-`0x80029E78` entry, the existing selector-store control, and the same
-phase-gated route. Use `PROBE_PHASE_WIDTH=1024` and
-`PROBE_KEYS_FROM_PHASE=1`; do not use the silent arm or repeat the blocked
-VI-640 schedule.
+Before building, arm the oracle with whole-RDRAM and selector-span controls,
+`--watch-pc 0x80029E78`, and `--pc-phase-log-width 0x006AB400:512`. Add
+callsite IDs to the two known generated calls at `0x80091BAC` and
+`0x80091CB8`; keep the native boundary positive control and hangar rows, plus
+the existing producer/store controls. Use `PROBE_PHASE_WIDTH=1024`,
+`PROBE_KEYS_FROM_PHASE=1`, and the validated real-audio LLE/spin-yield/
+autopilot route. Do not rewrite audio, selector, task, or output state.
 
 Competing hypotheses:
 
-- `H-ContextProducerParity`: the call inputs at `0x80029E78` match retail.
-- `H-ContextProducerDivergence`: the port call input differs from retail,
-  selecting the function's upstream producer.
-- `H-LaterContextMutation`: call input matches, but its return or a later
-  guest write changes the selector writer input.
-- `H-CaptureInvalid`: an independent control or target phase is absent.
+- `H-PortCallMissing`: no port callsite enters the native AI primitive during
+  hangar, selecting a missing or route-gated call.
+- `H-PortCallerMismatch`: a target-phase port call exists but its caller or
+  arguments differ from retail, selecting that caller edge.
+- `H-RetailEquivalentMismatch`: the retail instruction is not equivalent to
+  the host primitive, so matching callsite activity does not explain the
+  watch-PC row.
+- `H-CaptureInvalid`: whole-RDRAM, selector-span, startup hook, or phase/store
+  controls fail.
 
-The discriminator is the first phase-matched difference between retail
-producer/context rows and port producer/context plus selector-store rows:
-matching producer fields with a differing store selects later mutation; a
-first differing producer field selects its upstream edge; failed controls make
-the capture unevaluable.
+The discriminator is the first phase-matched port callsite row against the
+retail `0x80029E78` caller row. No target-phase port call with live controls
+selects `H-PortCallMissing`; a target-phase call with differing arguments
+selects `H-PortCallerMismatch`; matching call activity with no correspondence
+selects `H-RetailEquivalentMismatch`; failed controls select capture invalid.
