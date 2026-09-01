@@ -134525,3 +134525,24 @@ output, PCM, task, DMA, or source contents were changed.
 
 ORIGIN: diagnostic-only writer-entry witness. The observed writer is the
 legitimate guest `rs_memset` at `0x800078EC`; no mitigation was added.
+
+## Session 3574 (2026-09-01) — qualified retail zero-fill entry bucket
+
+The initial port capture was route-invalid (640 only) because the scheduled
+gate was wrong; the corrected route reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`. The intended writer-entry control was then
+corrected from the unused `ROGUESQ_LOG_M5_ZERO_FILL_CONTRACT` name to the
+actual `ROGUESQ_LOG_M5_WRITER_ENTRY` gate. The valid port table recorded
+`a0=0x801797B0`, `a1=0`, `a2=0x298` in the target entry.
+
+The driven retail oracle passed the whole-RDRAM control with 10,674 writes,
+the source-span watch with 674 writes, and the target phase-gated entry watch
+with 3,165 executions of `0x800078E0`. Its bounded output did not retain a
+caller-filtered target row for `0x8008F2CC`, so exact retail tuple parity and
+caller-to-entry/source-DMA ordering remain unevaluable. This rules out an
+absent retail entry execution, but selects none of the three zero-fill
+hypotheses. No game state, output, PCM, task, DMA, or source contents were
+changed. See `docs/M5-S3574-RETAIL-ZERO-FILL-ENTRY.md`.
+
+ORIGIN: diagnostic-only entry and oracle watch qualification. The observed
+zero-fill writer is the legitimate guest `rs_memset`; no mitigation was added.
