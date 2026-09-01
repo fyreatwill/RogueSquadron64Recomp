@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3525 (2026-08-31).
+documents are listed below. Updated for session 3526 (2026-08-31).
 
 ## Current state
 
@@ -100,6 +100,16 @@ selects `H-CaptureInvalid` for the port comparison and leaves alternate-entry
 versus route-gate hypotheses open. See
 [M5-S3525-SELECTOR-STORE-ENTRY.md](M5-S3525-SELECTOR-STORE-ENTRY.md).
 
+Session 3526 requalified the corrected real-audio port route. Startup
+controls fired; the port reached title 1024 and hangar 512. In hangar the
+`allocateSongChannelArray` entry witness fired once with `a0=0x12`,
+`a1=0x5622`, `a2=0`, `a3=1`; both selector-store contexts and the producer
+context fired. The known caller, route, and AI-boundary rows were absent in
+hangar. This validates execution of the target entry/path but does not
+distinguish an alternate caller from an enclosing route gate because the
+generated wrapper reports `ra=0`. See
+[M5-S3526-SELECTOR-STORE-ENTRY-REQUALIFIED.md](M5-S3526-SELECTOR-STORE-ENTRY-REQUALIFIED.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -126,27 +136,31 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Re-run the now-built selector-store entry witness on a real-audio port arm
-   that reaches title and hangar. The s3525 corrected arm crashed pre-title at
-   `0x8000834C`, so the entry comparison is unevaluable. Retain the retail
-   range/`0x80029E78` controls and all existing port positive controls; do not
-   rewrite audio or selector state.
-3. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
+1. Build one new caller/gate discriminator for `allocateSongChannelArray`:
+   enumerate every generated direct callsite and instrument those callsites
+   plus the enclosing route edge in one build, retaining the existing entry,
+   producer-context, store-context, retail range, and phase controls. Run the
+   canonical real-audio/LLE/spin-yield/autopilot arm to title and hangar. A
+   hangar callsite row with no route row selects an alternate caller; a route
+   row with the known callsite absent selects the gate; matching callsite and
+   route rows select a later internal mismatch; missing controls make the
+   comparison invalid. Do not rewrite audio or selector state.
+2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
-4. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
+3. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
    baseline; do not repeat that arm unchanged.
-5. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
+4. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
    Session 3488 silent qualification, and Sessions 3482–3486 producer/pointer
    captures as baselines; do not repeat unchanged captures.
-6. Keep the controlled phase/PC/ordinal join rule: sequential animated-scene
+5. Keep the controlled phase/PC/ordinal join rule: sequential animated-scene
    A/B rows are not evidence. A missing positive control makes a comparison
    unevaluable; matching fields close a boundary and the first divergent field
    selects the next producer edge.
-7. M5 Step 3 remains gated until one output comparison names a missing
+6. M5 Step 3 remains gated until one output comparison names a missing
    image-task/output contract edge. `docs/M5-AUDIO-PLAN.md` is complete;
    configured-host PatchesLib validation is unavailable in this Unix checkout.
-8. After M5 closes or a new discriminator is found, resume only systematic M3
+7. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep retail-entry, hangar `0x8000` Y/accumulator, and
    SP-yield/MORT publication threads parked. Generated-symbol renaming remains
    last priority and closed at its measured scope.

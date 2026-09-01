@@ -133289,3 +133289,24 @@ successfully. No audio, selector, task, or output state was rewritten.
 
 ORIGIN: the new witness observes the entry return address and arguments only;
 the crash is a route failure, not a mitigation target.
+## Session 3526 (2026-08-31) — requalified selector-store entry route
+
+Ran the reachable real-audio/LLE/spin-yield/autopilot port arm with the
+phase-scoped selector entry, producer-context, store-context, table, route,
+caller, mixer, and AI-boundary witnesses. Startup controls fired. The port
+reached title VI 1024 at 13.8 seconds and hangar VI 512 at 34.1 seconds.
+
+In hangar, `allocateSongChannelArray` entry `0x8008F000` fired once with
+`a0=0x12`, `a1=0x5622`, `a2=0`, `a3=1`; both selector-store contexts and the
+producer-context witness fired. Known caller, route, and AI-boundary rows were
+absent in hangar. The bounded run had no crash marker and was SIGKILLed.
+
+This validates target-entry/path execution on the reachable real-audio route,
+but does not distinguish an alternate caller from an enclosing route gate:
+the generated wrapper reports `ra=0`, and the known route witnesses were not
+present in the same hangar phase. The retail controls from Session 3525 remain
+the independent comparison line. No audio, selector, task, or output state was
+changed.
+
+ORIGIN: diagnostic-only entry and phase-keyed context observations; no
+mitigation or guest-state rewrite.

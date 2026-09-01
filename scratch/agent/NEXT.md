@@ -1,29 +1,36 @@
-# NEXT work unit — requalify selector-store entry on reachable port route
+# NEXT work unit — enumerate selector entry callers and route edge
 
 HYPOTHESIS-ID: m5-selector-store-caller-boundary
 
-Session 3525 landed the regeneration-safe entry witness, but the corrected
-real-audio LLE/spin-yield/autopilot arm crashed pre-title at
-`last-guest-pc=0x8000834c`; the port comparison was invalid. Re-run one
-reachable real-audio arm with the existing entry witness and all prior
-positive controls. Do not change guest state or control flow.
+Session 3526 requalified the real-audio route: startup controls fired, title
+1024 and hangar 512 were reached, and the target entry plus producer/store
+contexts fired. The known caller, route, and AI-boundary rows were absent in
+hangar; entry `$ra` was `0`, so alternate caller versus route gate remains
+unresolved.
 
 Competing hypotheses and discriminator:
 
-- `H-StoreCallerAlternate`: store rows have a distinct immediate caller or
-  entry path in hangar, selecting the alternate path.
-- `H-StoreCallerGate`: store rows retain the known caller but an enclosing
-  route gate differs, selecting the gate edge.
-- `H-StoreCallerParity`: immediate store caller context matches retail while
-  the AI boundary remains absent, selecting a later internal mismatch.
+- `H-StoreCallerAlternate`: a hangar callsite row exists without the known
+  route row, selecting an alternate caller or indirect path.
+- `H-StoreCallerGate`: a route-edge row exists while the known callsite row is
+  absent, selecting the enclosing gate.
+- `H-StoreCallerParity`: callsite and route rows match, selecting a later
+  internal mismatch.
 - `H-CaptureInvalid`: startup controls or title/hangar phase rows are absent;
-  predicted no valid comparison. Selected by s3525's port crash.
+  no comparison is valid.
 
-The discriminating table is phase-gated title 1024/hangar 512 rows for the
-entry witness (`pc=0x8008F000`, `$ra`, `a0..a3`), both store contexts,
-producer context, mixer entry, known route, and AI boundary. Use the validated
-route variables `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
-`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_STUB_MISSING_FUNCS=1`,
-the documented autopilot, and `ROGUESQ_AUDIO_UCODE=1`. Preserve the retail
-oracle result in `scratch/agent/s3525_selector_oracle.log`; capture the retry
-under `scratch/agent/s3526_selector_port.log` and SIGKILL the game.
+The discriminating table is phase-gated title 1024/hangar 512 rows for every
+generated direct callsite of `allocateSongChannelArray`, its enclosing route
+edge, the existing entry (`pc=0x8008F000`, `$ra`, `a0..a3`), both store
+contexts, producer context, mixer entry, known route, and AI boundary. Build
+all callsite and route arms in one build and run the canonical real-audio arm
+once. A same-run positive control must fire before interpreting null rows.
+Use `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+`ROGUESQ_STUB_MISSING_FUNCS=1`, the documented autopilot, and
+`ROGUESQ_AUDIO_UCODE=1`. Do not rewrite audio or selector state.
+
+Before building, enumerate the callsites from the generated source and record
+the hypotheses and outcome table above in the regeneration-safe probe script.
+Build once, run once, and capture under
+`scratch/agent/s3527_selector_callers_port.log`; SIGKILL the game.
