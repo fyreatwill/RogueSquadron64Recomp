@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3578 (2026-09-01).
+notes are linked below. Updated for session 3579 (2026-09-01).
 
 ## Current state
 
@@ -19,8 +19,9 @@ from `0x800078EC` (`rs_memset`, with tuples such as
 `dst=0x801797B0, fill=0, len=0x298`) followed by zero source-DMA payloads.
 Retail independently reaches the target phase, writes the watched source
 span, and repeatedly calls `0x800078E0` with `a2=0x80` and changing structure
-pointers from `0x800C825C`, unlike the port tuple. The legitimate retail
-source writer and its ordering against the first source DMA remain open.
+pointers from `0x800C825C`, unlike the port tuple. The target-phase retail
+source writer is `0x800078EC` and runs before the first observed target VI;
+stored-value parity against the first source DMA remains open.
 
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
@@ -31,14 +32,12 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: qualify the retail source writer. Run one independent oracle
-   table with whole-RDRAM and source-span positive controls, watches for
-   `0x800078EC`, `0x800078E0`, and `0x800C825C`, and detailed source-span
-   writes in target bucket `0x006AB400:512`. Compare writer PC, destination,
-   value, and order with the first source-span DMA. Same writer/pre-DMA order
-   selects upstream input construction; another writer selects the retail
-   producer; same writer/post-DMA order selects ordering. Missing any control
-   or target phase is unevaluable. Exact command is in `scratch/agent/NEXT.md`.
+1. M5 Step 3: resolve retail source value and DMA ordering. The retail oracle
+   identifies `0x800078EC` as the target-phase source-span writer at 47.4 s,
+   before the first observed `0x006AB400:512` VI at 48.5 s. Run one
+   phase-gated oracle table with post-value sampling; stored-value parity
+   against the port's zero-fill remains open. Exact command is in
+   `scratch/agent/NEXT.md`.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -53,9 +52,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 
 | Hypothesis | Discriminating result |
 |---|---|
-| H-RetailWriterSame | Retail writer matches the qualified family and precedes first source DMA. |
-| H-RetailWriterOther | A different retail PC writes the source span. |
-| H-RetailOrdering | Writer identity/value matches, but it occurs after first source DMA. |
+| H-RetailWriterSame | Selected for target-phase identity/order: `0x800078EC` writes at 47.4 s before target VI at 48.5 s. |
+| H-RetailWriterOther | Refuted for the target-phase write; earlier setup writers are separate activity. |
+| H-RetailOrdering | Exact DMA ordering remains unmeasured. |
+| H-RetailValue | Stored-word parity remains open. |
 | H-CaptureInvalid | Whole-RDRAM, source-span, or target-phase control fails; no conclusion. |
 
 The current work-unit slug is `m5-image-task-retail-source-writer`.
@@ -69,6 +69,11 @@ and evidence notes retain the full history.
   `0x800C825C` repeatedly reached `0x800078E0` with `a2=0x80` and changing
   structure pointers, unlike the port's `0x801797B0/0/0x298` tuple. Input
   divergence is selected; writer identity and ordering remain open.
+- **3579 — retail source writer:** controls and target phase fired. The
+  target-phase source span was written by `0x800078EC` at 47.4 s before the
+  first 512-wide target VI at 48.5 s. Writer identity and pre-target order
+  selected; ordinary watch rows did not report stored values, so value parity
+  remains open. See [M5-S3579-RETAIL-SOURCE-WRITER.md](M5-S3579-RETAIL-SOURCE-WRITER.md).
 - **3576 — retail predecessor input:** retail `0x800052C4` reached
   `0x800078E0` with varied lengths (`0x18`, `0x3C`, `0x208`, `0x4F0`,
   `0x1008`, `0x8000`), not the port tuple. This selected an observed-edge
@@ -147,6 +152,7 @@ capture-invalid and do not establish parity, divergence, or mutation.
 Latest boundary notes:
 
 - [M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md)
+- [M5-S3579-RETAIL-SOURCE-WRITER.md](M5-S3579-RETAIL-SOURCE-WRITER.md)
 - [M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md](M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md)
 - [M5-S3573-ZERO-FILL-CONTRACT.md](M5-S3573-ZERO-FILL-CONTRACT.md)
 - [M5-S3572-SOURCE-TRANSITION-JOIN.md](M5-S3572-SOURCE-TRANSITION-JOIN.md)

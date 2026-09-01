@@ -134616,3 +134616,23 @@ This rules out only documentation drift as the reason to defer the next unit;
 the retail source-writer identity and ordering remain open exactly as before.
 
 ORIGIN: documentation-only maintenance. No mitigation was added.
+
+## Session 3579 (2026-09-01) — qualified retail source writer
+
+Ran the independent retail oracle for 60 seconds with whole-RDRAM and source-
+span positive controls, watches for `0x800078EC`, `0x800078E0`, and
+`0x800C825C`, and the `0x006AB400:512` phase bucket. The controls fired:
+whole-RDRAM had 10,674 writes and the source span had 674 writes. Retail
+reached the target VI at 48.5s; target-phase source-span writes began at
+47.4s from PC `0x800078EC`, before that VI. The run recorded 1,289,615 hits
+at `0x800078EC`, 3,165 at `0x800078E0`, and 2,260 at `0x800C825C`.
+
+This selects the target-phase writer identity and pre-target ordering as the
+already-qualified `0x800078EC` family. Earlier setup writes from
+`0x8001E2C0`, `0x80007670`, and `0x8001FAxx..0x8001FDxx` are separate
+initialization activity. The ordinary source-span rows did not report stored
+word values, so value parity against the port's zero-fill remains open; no
+runtime behavior was changed. Capture: `/tmp/rs64_next_oracle.log`.
+
+ORIGIN: diagnostic-only retail source-writer attribution. No mitigation was
+added.
