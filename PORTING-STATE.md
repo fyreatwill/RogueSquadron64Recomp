@@ -134508,3 +134508,20 @@ changed. See `docs/M5-S3572-SOURCE-TRANSITION-JOIN.md`.
 
 ORIGIN: diagnostic-only source-transition census. The observed zero-fill
 writer is guest PC `0x800078EC`; its legitimacy and ordering remain open.
+## Session 3573 (2026-09-01) — qualified port zero-fill entry tuple
+
+The required oracle preflight found the debug core and retail ROM, passed the
+whole-RDRAM positive control with 11,058 writes, reached the target hangar
+origin `0x006AB400`, and recorded 1,058 writes in the watched source span.
+Retail execution watch `0x800078EC` was live with 7,159,689 hits. The target-
+valid port build reached title `1024 @ 0x00790400` and hangar `512 @
+0x006AB400`; its regeneration-safe writer-entry witness recorded
+`dst=0x801797B0`, `fill=0`, `len=0x298`, followed by zero-payload source-range
+DMA writebacks. The retail watch was at the loop body, not function entry
+`0x800078E0`, so retail tuple parity and ordering remain unevaluable. This
+does not select among the three zero-fill hypotheses; the next discriminator
+is a retail entry watch at `0x800078E0` with the same controls. No game state,
+output, PCM, task, DMA, or source contents were changed.
+
+ORIGIN: diagnostic-only writer-entry witness. The observed writer is the
+legitimate guest `rs_memset` at `0x800078EC`; no mitigation was added.

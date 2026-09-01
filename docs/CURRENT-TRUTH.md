@@ -2,7 +2,15 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3572 (2026-09-01).
+documents are listed below. Updated for session 3573 (2026-09-01).
+
+Session 3573 qualified the port-side zero-fill call tuple at the target
+handoff: `rs_memset` entered with `dst=0x801797B0`, `fill=0`, and `len=0x298`,
+then zero-payload source-range DMA writebacks followed. The retail oracle
+passed its whole-RDRAM and source-span controls and watched `0x800078EC`, but
+that is the loop body, not the function entry, so retail tuple parity and
+ordering remain unevaluable. The next boundary is the retail entry watch at
+`0x800078E0`. See [M5-S3573-ZERO-FILL-CONTRACT.md](M5-S3573-ZERO-FILL-CONTRACT.md).
 
 Session 3572 completed the phase-independent source-transition join. The
 target-valid port arm passed title 1024, hangar 512, and all positive controls.
@@ -614,6 +622,9 @@ to be rewritten as a diagnostic mitigation.
    target-phase zero-fill from `0x800078EC`, and the first source DMA is zero.
    The next boundary is the zero-fill call/input contract and its ordering
    relative to the image-task handoff; do not add another broad source census.
+   Session 3573 found the port tuple `0x801797B0/0/0x298` but the retail
+   `0x800078EC` watch was inside the loop, so parity and ordering remain open.
+   Watch retail entry `0x800078E0` with the same controls next.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -648,7 +659,11 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 zero-fill call/input qualification.
+The active work unit is now M5 Step 3 retail zero-fill entry qualification.
+Session 3573 established the port tuple `dst=0x801797B0`, `fill=0`,
+`len=0x298` and subsequent zero source-DMA writebacks. Its retail execution
+watch was live but sampled the loop body at `0x800078EC`, not entry
+`0x800078E0`; no parity or ordering conclusion is allowed yet.
 Session 3572 selected `H-PreTaskCpuInit`: the phase-independent port table
 found nonzero source-span CPU initialization before the first target source DMA,
 then zero stores from `0x800078EC` immediately before that DMA. Retail's
@@ -859,6 +874,8 @@ the oracle did not provide a matching register tuple.
 
 Latest output boundary:
 
+- [M5-S3573-ZERO-FILL-CONTRACT.md](M5-S3573-ZERO-FILL-CONTRACT.md)
+- [M5-S3572-SOURCE-TRANSITION-JOIN.md](M5-S3572-SOURCE-TRANSITION-JOIN.md)
 - [M5-S3565-IMAGE-STAGING-SOURCE.md](M5-S3565-IMAGE-STAGING-SOURCE.md)
 - [M5-S3566-SOURCE-RANGE-WRITER.md](M5-S3566-SOURCE-RANGE-WRITER.md)
 - [M5-S3567-DMEM-PAYLOAD-PRODUCER.md](M5-S3567-DMEM-PAYLOAD-PRODUCER.md)
