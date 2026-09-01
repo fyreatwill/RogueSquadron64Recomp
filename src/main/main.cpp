@@ -687,6 +687,46 @@ extern "C" void rs64_m5_caller_input_producer(
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_hmt_input(
+    uint8_t*, uint32_t pc, const char* label, uint32_t a0, uint32_t a1,
+    uint32_t a2, uint32_t a3, uint32_t sp, uint32_t w10, uint32_t w14,
+    uint32_t w18, uint32_t w1c, uint32_t w20, uint32_t w24, uint32_t w28,
+    uint32_t w2c, uint32_t w30, uint32_t ra) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_HMT_INPUT");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled) return;
+    static std::mutex mutex;
+    static uint32_t rows = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (rows >= 256u) return;
+    auto guest_ptr = [](uint32_t value) {
+        return value >= 0x80000000u && value < 0x80800000u;
+    };
+    auto suspicious = [guest_ptr](uint32_t value) {
+        return value != 0 && !guest_ptr(value) &&
+               (value >= 0x01000000u || value < 0x00100000u);
+    };
+    const uint32_t bad = suspicious(a0) || suspicious(a1) || suspicious(w10) ||
+                         suspicious(w14) || suspicious(w18) || suspicious(w1c) ||
+                         suspicious(w20) || suspicious(w24) || suspicious(w28) ||
+                         suspicious(w2c) || suspicious(w30);
+    if (rows == 0u) {
+        std::fprintf(stderr, "[m5-hmt-input-control] enabled=1\n");
+    }
+    std::fprintf(stderr,
+        "[m5-hmt-input] row=%u pc=0x%08X label=%s bad=%u "
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X sp=0x%08X "
+        "w10=0x%08X w14=0x%08X w18=0x%08X w1c=0x%08X "
+        "w20=0x%08X w24=0x%08X w28=0x%08X w2c=0x%08X w30=0x%08X ra=0x%08X\n",
+        rows++, pc, label, bad, a0, a1, a2, a3, sp, w10, w14, w18, w1c,
+        w20, w24, w28, w2c, w30, ra);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_052c4_join(uint8_t* rdram, uint32_t dst,
                                      uint32_t value, uint32_t len,
                                      uint32_t edge) {

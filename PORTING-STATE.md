@@ -133897,3 +133897,29 @@ Evidence: `docs/M5-S3547-CALLER-INPUT-PRODUCER.md`,
 `scratch/agent/s3547_m5_caller_input_producer/oracle_gpr.log`,
 `scratch/agent/s3547_m5_caller_input_producer/port_target.log`, and the
 other launch-attempt logs in that directory.
+
+## Session 3549 (2026-09-01) — HMT entry table was route-valid but role-invalid
+
+The first build attempt correctly refused to run because the generated tree
+still carried the fixup sentinel. After preserving the old generated trees,
+the required make_elf -> N64Recomp -> fixup order exposed two duplicate
+anchors in the existing s3531 fixup; scoping those anchors allowed the clean
+regen and Debug build to complete. The new s3549 fixup dispatch was then
+explicitly invoked and its entries verified in regenerated funcs_6.c/funcs_7.c.
+
+The corrected real-audio/LLE-solo port passed `[m5-hmt-input-control]` and
+emitted 256 `[m5-hmt-input]` rows from `loadDebugAssets`,
+`registerHmtTextureInTable`, and `parseHmtMaterials`. It reached only the
+640-wide pre-title origin `0x0066A500`, then crashed with SIGSEGV and
+`last-guest-pc=0x8000834C`; no title or hangar VI occurred. This refutes
+H-HmtEntryAbsent and proves the entry path executes. The provisional `bad`
+classification is not discriminating because it marks ordinary scalar
+indices/counts as suspicious alongside mapped pointers, so it does not select
+H-HmtInputMalformed or H-HmtInputValid.
+
+The failed no-row capture is retained at
+`scratch/agent/s3549_m5_hmt_input_table/run.log`; the corrected capture is at
+`scratch/agent/s3549_m5_hmt_input_table_fixed3/run.log`. The new host helper
+and regeneration hook are diagnostic-only; audio, PCM, image-task, output,
+and texture-record writes were unchanged. Next work is static role mapping of
+the tuple before another run.

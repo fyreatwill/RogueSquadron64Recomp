@@ -1,53 +1,31 @@
-# NEXT work unit — identify the malformed pre-title HMT input
+# NEXT work unit — statically qualify the HMT tuple roles before another run
 
 HYPOTHESIS-ID: m5-preclear-caller-input-producer
 
-Session 3547 selected `H-CaptureInvalid` for the new caller comparison: the
-retail oracle was phase-valid, but the real-audio port SIGBUSed in
-`parseHmtMaterials+3588` before target entry. Do not repeat the caller table
-until the port route is phase-valid.
+Use the generated MIPS body and the HMT format notes to classify which
+captured fields are pointers, indices, counts, or scalar payloads, then make
+one regeneration-safe replacement of the provisional `bad` classifier. Do
+not run the game until the role map makes each possible `bad` outcome
+interpretable; then rebuild and run one canonical real-audio capture.
 
-Do exactly one bounded work unit: add a regeneration-safe, phase-independent
-entry table for `loadDebugAssets` -> `registerHmtTextureInTable` ->
-`parseHmtMaterials`, rebuild once, and run the canonical real-audio route once.
-Capture every call's pointer/index/count tuple and the first malformed pointer
-before the existing crash. Preserve all existing witnesses and keep all audio,
-PCM, image-task, output, and texture-record writes unchanged.
+Competing hypotheses and the discriminator:
 
-Competing hypotheses and discriminator:
+- `H-HmtInputValid`: every role-mapped pointer is mapped and the crash is a
+  later dereference or route issue.
+- `H-HmtInputMalformed`: a role-mapped pointer/count violates the HMT contract
+  immediately before `parseHmtMaterials+3588`; its producer is next.
+- `H-HmtRoleUnknown`: the static body cannot distinguish a field role, so no
+  malformed-input conclusion is permitted and the probe must move to the
+  exact crash dereference.
 
-- `H-HmtInputValid`: all three entry tuples are valid and the route reaches a
-  target VI; the caller/input table can be rerun.
-- `H-HmtInputMalformed`: a specific pre-title tuple or pointer is outside the
-  mapped RDRAM range before `parseHmtMaterials`; that producer is the next
-  correction boundary.
-- `H-HmtEntryAbsent`: the positive control or entry table is absent, so the
-  capture is invalid and no input conclusion is allowed.
+The single discriminating table is the role-mapped `[m5-hmt-input]` table plus
+the existing positive control and VI/crash markers. Each row includes the
+classified pointer/index/count tuple, stack context, return address, and the
+first contract violation.
 
-The single discriminating measurement is one joined table containing positive
-control, each HMT entry tuple, pointer validity, title/hangar VI, crash PC,
-and last guest PC. Valid tuples plus target VI select `H-HmtInputValid`; an
-invalid tuple immediately before the crash selects `H-HmtInputMalformed`;
-missing controls select `H-HmtEntryAbsent`.
-
-The single discriminating table must include caller PC, predecessor, phase/VI,
-caller inputs/returns, the fields feeding the index, and the first family
-store. A matching caller tuple selects `H-CallerParity`; a first differing
-input or returned field selects `H-CallerDivergence`; retail-only execution
-selects `H-RetailOnlyFamily`; missing controls select `H-CaptureInvalid`.
-
-Before building, retain `scratch/agent/retail_preclear_groundtruth.log` and
-read the existing producer injection in
-`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
-Batch the instrumentation, then build and run both oracle and port arms in one
-iteration. Use VI phase gates, SIGKILL cleanup, and capture under:
-
-    scratch/agent/s3546_m5_caller_input_producer
-
-The intended oracle arm is `tools/oracle/build/rs64_oracle` with
-`--watch-write 0x0:0x800000`, the retained source-span watch, and execution
-watches for `0x80022ACC`, `0x8001F954`, `0x8001FAA0`, `0x8001FAB4`, and
-`0x8001FAC4`, phase-gated to origins `0x00790400:1024` and
-`0x006AB400:512`. The port arm must enable the new caller witness on the
-validated real-audio route. Positive controls and both target VIs are required
-before interpreting a missing caller row.
+Before building, inspect `funcs_6.c` around `0x80022A00-0x80022BFC` and update
+the regeneration hook in `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
+Then run the normal make_elf -> N64Recomp -> fixup -> cmake order and capture
+under `scratch/agent/s3550_m5_hmt_role_table/`, using the validated real-audio
+route and SIGKILL cleanup. Do not change audio, PCM, image-task, output, or
+texture-record writes.

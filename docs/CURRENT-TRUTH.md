@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3548 (2026-09-01).
+evidence documents are listed below. Updated for session 3549 (2026-09-01).
+
+Session 3549 added and ran a regeneration-safe, phase-independent entry table
+for `loadDebugAssets`, `registerHmtTextureInTable`, and `parseHmtMaterials`.
+The corrected port passed the HMT positive control and emitted 256 rows before
+the same pre-title SIGBUS (`last-guest-pc=0x8000834C`), reaching only the
+640-wide pre-title VI. The entry path is present, but the provisional
+pointer-like `bad` classifier also flags legitimate scalar indices/counts, so
+it does not establish malformed input. This refutes `H-HmtEntryAbsent` while
+leaving valid-versus-malformed input unresolved. See
+[M5-S3549-HMT-INPUT-TABLE.md](M5-S3549-HMT-INPUT-TABLE.md).
 
 Session 3548 re-ran the canonical real-audio/LLE/spin-yield/autopilot port
 route from `build/`. Startup and 320-VI controls fired, but it again SIGBUSed
