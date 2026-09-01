@@ -134831,3 +134831,19 @@ shape; no concrete invalid writer/value was found. This rules out a selected
 unsafe writer and a structural table misread, but does not prove the runtime
 ranges of source `+0x64/+0x58/+0x59`; the boundary remains unclassified and
 no guard was added. See `docs/M3-S3589-AUDIO-RECORD-FIELDS.md`.
+## Session 3590 (2026-09-01) — audited audio selector source-field writers
+
+Ran the bounded M3 source-field audit from `scratch/agent/NEXT.md`. The
+complete relevant generated writer census covered `+0x64` feeding
+`musyxKeyOnVoice` and `+0x58/+0x59` feeding `tickAudioChannel`, including
+cleanup, reaping, render, envelope, release, and voice-attack paths. Cleanup
+writers publish `-1` or zero; there is no independent `+0x59` store; and no
+concrete invalid source writer/value was identified. The reader/base layouts
+remain consistent, but render/timing-derived values span distinct record
+layouts and the runtime range/lifetime contract is not proved. This rules out
+landing a source-field guard from the current static evidence; it does not
+rule out a runtime allocator/lifetime defect. See
+`docs/M3-S3590-AUDIO-SOURCE-FIELD-AUDIT.md`.
+
+ORIGIN: no mitigation was added. Cleanup origins deliberately publish
+sentinel/zero values; the remaining source origins were not proven invalid.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3589 (2026-09-01).
+notes are linked below. Updated for session 3590 (2026-09-01).
 
 ## Current state
 
@@ -55,8 +55,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    the s3588 `-0x271C` packed voice-handle writer class is structurally closed
    for writer identity and sentinel/slot provenance, but runtime allocator/
    lifetime legitimacy remains unproven. Session 3589 found no concrete
-   invalid writer in the `0x4E/0x4F` audio-record/table-address class; its
-   source-field ranges remain unclassified. Retail-entry, hangar `0x8000`
+   invalid writer in the `0x4E/0x4F` audio-record/table-address class.
+   Session 3590 completed the source-field writer census for
+   `+0x64`/`+0x58`/`+0x59`: cleanup writers are sentinel/zero stores and no
+   concrete invalid source value was found, but the cross-layout range
+   contract remains unclassified. See
+   [M3-S3590-AUDIO-SOURCE-FIELD-AUDIT.md](M3-S3590-AUDIO-SOURCE-FIELD-AUDIT.md).
+   Retail-entry, hangar `0x8000`
    Y/accumulator, and SP-yield/MORT publication threads remain parked.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
