@@ -1,29 +1,30 @@
-# NEXT work unit — restore independent oracle for setup contract
+# NEXT work unit — qualify internal setup return boundary
 
-HYPOTHESIS-ID: m5-selector-setup-writer-contract
+HYPOTHESIS-ID: m5-selector-setup-return-contract
 
-Session 3531 qualified the port-side `0x80091CC8` setup contract: title and
-hangar controls were live; `reapplyAudioConfig` preserved `a0=0x80165ED0`,
-`a1=0x12`, loaded AI input `0x5622`, and observed AI return `v0=0x5622`.
-The retail oracle could not start because `libmupen64plus.dylib` is absent.
+Session 3532 qualified the missing retail half. Whole-RDRAM control fired and
+the retail run reached hangar 512. Retail had the same AI input `a0=0x5622`
+as the port but returned/stored `v0=0x561F`; the port returned/stored
+`v0=0x5622`.
 
-Next unit: restore/build the oracle core, then run one retail capture with a
-whole-RDRAM positive control, target write watch `0x165ED0:0x165ED4`, and
-phase-gated execution watches at `0x80091C88`, `0x80091CAC`, `0x80091CB0`,
-`0x80091CB8`, `0x80091CBC`, `0x80091CC4`, and `0x80091CC8`. Use the canonical
-Rice/autopilot route and explicit title/hangar width buckets. Do not repeat
-the port capture or rewrite audio/selector/task/output state.
+Next unit: add one regeneration-safe, phase-keyed port witness around the
+internal AI-frequency call/return that feeds `0x80091CC4`, then run the port
+and restored retail oracle arms in the same iteration. Use the canonical
+Rice/autopilot route, explicit title/hangar width buckets, and a whole-RDRAM
+positive control in the oracle arm. Do not repeat the valid port setup capture
+alone or rewrite audio/selector/task/output state.
 
 Competing hypotheses and discriminator:
 
-- `H-SetupWriterSourceDivergence`: retail source arguments or AI return/value
-  differ from the qualified port tuple; the first differing field selects the
-  next producer/contract.
-- `H-SetupWriterSourceParity`: retail source and return/value match the port;
-  the remaining difference is an intervening generated store/ABI edge.
-- `H-CaptureInvalid`: whole-RDRAM control, target phase, or target execution
-  witness is absent; no parity conclusion is allowed.
+- `H-SetupWriterReturnDivergence`: internal input matches but retail return is
+  `0x561F` versus port `0x5622`; the callee/host return contract is next.
+- `H-SetupWriterReturnParity`: internal input and return match in the new
+  witness; the divergence is later in the store/ABI edge.
+- `H-SetupWriterInputDivergence`: the new internal input differs; its producer
+  is next.
+- `H-CaptureInvalid`: a positive control, target phase, or execution witness
+  is absent; no parity conclusion is allowed.
 
-Required setup check before the run: locate or build
-`libmupen64plus.dylib`; if it cannot be made available, document the exact
-missing dependency and the one command that would falsify that blocker.
+Required setup check before building: verify the existing DEBUGGER-enabled
+core exports `DebugBreakpointCommand` and `DebugGetCPUDataPtr`; if absent,
+`tools/oracle/build_core.sh` is the falsifying rebuild command.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3531 (2026-08-31).
+evidence documents are listed below. Updated for session 3532 (2026-08-31).
 
 ## Current state
 
@@ -158,6 +158,14 @@ internal port-side ABI/return clobber at the qualified path, but does not
 select retail source/value parity versus divergence. See
 [M5-S3531-SELECTOR-SETUP-CONTRACT.md](M5-S3531-SELECTOR-SETUP-CONTRACT.md).
 
+Session 3532 independently qualified the retail side of that contract. The
+oracle's whole-RDRAM control fired 48,922 times and the target 512 hangar phase
+was reached. Retail supplied the same `a0=0x5622` at `0x80091CB8` seen on the
+port, but returned/stored `v0=0x561F` at `0x80091CC4`/`0x80091CC8`, versus the
+port's `v0=0x5622`. This selects a return-contract divergence after the shared
+source argument and rules out a source-value, load-only, or allocator cause at
+this boundary. See [M5-S3532-SELECTOR-SETUP-RETURN.md](M5-S3532-SELECTOR-SETUP-RETURN.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -184,11 +192,14 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Re-run the selected `0x80091CC8` setup-writer discriminator only after the
-   independent retail oracle's missing `libmupen64plus.dylib` is restored or
-   built. Reuse the existing port table and compare retail source arguments
-   and AI return/value in the same phase buckets. Do not repeat the valid port
-   capture alone or rewrite audio/selector state.
+1. Qualify the internal AI-frequency return boundary that produces the
+   retail/port `v0` split (`0x561F` versus `0x5622`). Build one regeneration-safe
+   port witness for the internal call/return and run it alongside the existing
+   title/hangar setup table; pair it with the restored oracle's same phase-keyed
+   execution watch. Matching internal input with divergent return selects the
+   callee/host contract; divergent input selects its producer; failed controls
+   invalidate the comparison. Do not repeat the valid setup capture alone or
+   rewrite audio/selector state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -211,7 +222,7 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the source/return contract feeding the
+The active work unit is now the internal return contract feeding the
 `0x80091CC8` setup writer on the real-audio route. The
 silent-arm route defect is parked separately.
 
@@ -240,9 +251,13 @@ For the next upstream argument boundary:
   control fails; the join is unevaluable.
 
 Session 3530 selected `H-SetupWriterInputDivergence` at the qualified scope.
-`H-SetupWriterParity` remains open because the retail writer watch did not
-record its numeric value; the next unit must qualify the writer's source
-arguments/return contract rather than repeat the same store census.
+The next unit qualified the writer's source arguments/return contract rather
+than repeating the same store census.
+
+Session 3532 selected `H-SetupWriterReturnDivergence`: retail and port agree on
+the `0x5622` AI-frequency input, but retail returns/stores `0x561F` while the
+port returns/stores `0x5622`. The next boundary is the internal AI-frequency
+callee/host return path.
 
 Session 3519 selected `H-ContextProducerParity` at the callsite and
 `H-LaterContextMutation` for the first observed value difference: retail and
@@ -354,6 +369,7 @@ the oracle did not provide a matching register tuple.
 Latest selector boundary:
 
 - [M5-S3530-SELECTOR-SOURCE-WRITER.md](M5-S3530-SELECTOR-SOURCE-WRITER.md)
+- [M5-S3532-SELECTOR-SETUP-RETURN.md](M5-S3532-SELECTOR-SETUP-RETURN.md)
 - [M5-S3529-SELECTOR-INPUT-BOUNDARY.md](M5-S3529-SELECTOR-INPUT-BOUNDARY.md)
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
 - [M5-S3528-SELECTOR-ALLOC-BOUNDARY.md](M5-S3528-SELECTOR-ALLOC-BOUNDARY.md)

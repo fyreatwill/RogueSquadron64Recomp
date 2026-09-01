@@ -133445,3 +133445,32 @@ game boundary.
 ORIGIN: diagnostic-only setup-entry, mutex, AI-call/return, phase, positive,
 downstream, and failed-oracle-start observations. No audio, selector, task, or
 output state was rewritten.
+
+## Session 3532 (2026-08-31) — qualified selector setup return
+
+Verified the independent oracle prerequisite before running: the existing
+DEBUGGER-enabled `libmupen64plus.dylib` exported both required debugger
+symbols. Ran the prescribed retail setup-contract capture with a whole-RDRAM
+positive control, target write watch, phase-gated setup execution watches, and
+the canonical Rice/autopilot Start schedule. The run exited normally after 120
+seconds; whole-RDRAM control fired 48,922 times and the target 512 hangar phase
+was reached.
+
+Retail setup execution fired twice in the target phase. At `0x80091CB8`,
+`a0=0x5622`, matching the qualified real-audio port input. At
+`0x80091CC4`/`0x80091CC8`, retail consumed `v0=0x561F`; the same-build port
+setup witness had observed AI return/store `v0=0x5622` in title and hangar.
+The independent retail line and same-build port line select
+`H-SetupWriterReturnDivergence`: the first qualified difference is the return
+value after the shared input, not the source writer, load, or allocator.
+
+This rules out `H-SetupWriterReturnParity` and `H-SetupWriterInputDivergence`
+at the qualified scope. It does not identify the writer or host contract that
+produces the divergent return; that is the next work unit. The oracle target
+write watch was globally saturated by later writes, so no per-hit target row
+was used beyond its summary count; the positive control and phase-gated PC
+watches remained live.
+
+ORIGIN: diagnostic-only independent retail and same-build port execution and
+return observations. The setup write is legitimate game audio state; no audio,
+selector, task, or output state was rewritten.
