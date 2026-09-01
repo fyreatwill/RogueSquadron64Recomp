@@ -134402,3 +134402,35 @@ This selects `H-SourceRangeOtherDma` as the immediate writer and rules out an
 immediate CPU writer or stale-only explanation at this boundary. It leaves the
 producer or clear that makes the writeback DMEM payload zero open. No behavior
 change was made. See `docs/M5-S3568-SOURCE-RANGE-PRODUCER.md`.
+
+## Session 3569 (2026-09-01) — identified zero-DMEM-payload boundary
+
+The first two port attempts were discarded: one omitted the validated
+`ROGUESQ_AUTOPILOT=1` route and stopped at VI 640, and the next omitted
+`ROGUESQ_LOG_ALL=1`, leaving route-gated census rows absent. The fixed
+standalone image arm used `ROGUESQ_AUTOPILOT=1`, `ROGUESQ_AUDIO_UCODE=1`,
+`ROGUESQ_SPIN_YIELD=1`, LLE-solo, and `ROGUESQ_LOG_ALL=1` from `build/`.
+It reached title VI 1024 at `0x00790400` and hangar VI 512 at `0x006AB400`;
+phase, RSP-source, DMEM-store, source-window, and source-range-writer
+controls all fired. It was deliberately stopped with SIGKILL and had no
+crash marker.
+
+The target census produced 512 source-range writebacks, 1,355 source-window
+store rows, and 6,995 source-window DMA rows. In hangar ordinals 668 onward,
+overlapping vector stores left the exact DMEM windows at zero hashes/nonzero
+counts, and the subsequent `dmem_to_rdram` writes to
+`0x1797B0..0x179930` carried zero payload and zero post-write hashes. No
+target-phase preclear or static `rs_memset` row fired. This selects
+`H-DmemPayloadClearOrStale` and rules out productive CPU/vector DMEM stores
+at this boundary; the next boundary is the source DMA's upstream RDRAM
+writer/data source. This is detailed port-only evidence.
+
+The independent retail oracle passed its whole-RDRAM positive control with
+10,674 writes and observed 674 writes in the watched source span, including
+384 from guest PC `0x800078EC`. That independently confirms live retail
+source-span activity but does not attribute the port's zero payload. No
+behavior change was made. See `docs/M5-S3569-DMEM-PAYLOAD-PRODUCER.md`.
+
+ORIGIN: diagnostic-only source-window census; the existing DMA writeback is
+the writer of the zero bytes, and that payload is not legitimate image/audio
+content. No game state, output, PCM state, or DMA behavior was rewritten.

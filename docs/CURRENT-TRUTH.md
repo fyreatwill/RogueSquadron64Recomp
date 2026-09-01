@@ -2,9 +2,20 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3568 (2026-09-01).
+documents are listed below. Updated for session 3569 (2026-09-01).
 
-Updated for session 3568 (2026-09-01).
+Updated for session 3569 (2026-09-01).
+
+Session 3569 closed the zero-DMEM-payload producer discriminator on a
+target-valid standalone image arm. Hangar image-task ordinals performed
+overlapping vector stores, but the exact DMEM window hashes stayed zero;
+source-range writebacks then carried zero payload and zero post-write hashes.
+No target-phase preclear or static `rs_memset` rows fired. This selects
+`H-DmemPayloadClearOrStale` and refutes a productive CPU/vector DMEM store at
+this boundary. Retail independently passed its whole-RDRAM control and
+observed 674 writes in the source span, including 384 from `0x800078EC`; the
+detailed producer result remains port-only. See
+[M5-S3569-DMEM-PAYLOAD-PRODUCER.md](M5-S3569-DMEM-PAYLOAD-PRODUCER.md).
 
 Session 3568 closed the immediate source-range writer discriminator on a
 target-valid standalone image arm. The hangar table recorded 512
@@ -560,12 +571,12 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. M5 Step 3 image-task staging/clear: identify the producer of the zero DMEM
-   payload consumed by the immediate source-range writeback. Session 3568
-   selected `H-SourceRangeOtherDma`: zero-payload `dmem_to_rdram` rows wrote
-   `0x1797B0`/`0x1798B0` before later zero RDRAM-to-DMEM reads. Join each
-   image-task ordinal to the preceding DMEM CPU/vector store table, its
-   clear/reset events, and the writeback payload hash. Do not rewrite output or
+0. M5 Step 3 image-task source DMA: identify the producer/data source that
+   supplies the zero bytes loaded from `0x1797B0`/`0x1798B0`. Session 3569
+   selected `H-DmemPayloadClearOrStale`: overlapping vector stores were
+   nonproductive, and no target-phase preclear or static memset fired before
+   the zero writebacks. Census the source DMA's upstream RDRAM writer and
+   payload, retaining task ordinal and phase joins. Do not rewrite output or
    PCM state.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
@@ -601,12 +612,12 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 zero-DMEM-payload producer qualification.
-Session 3568 selected `H-SourceRangeOtherDma`: the immediate source-range
-writer is a zero-payload `dmem_to_rdram` DMA, and the source span is then read
-back as zero. The next witness must identify the producer or clear that leaves
-the writeback's DMEM payload zero. The oracle core was unavailable, so this
-selection is port-only.
+The active work unit is now M5 Step 3 source-DMA payload qualification.
+Session 3569 selected `H-DmemPayloadClearOrStale`: target-phase overlapping
+vector stores left the exact DMEM windows zero, no clear or static memset row
+fired, and the writeback payload remained zero. The next witness must identify
+the upstream RDRAM writer/data source for the zero source DMA. Retail supplied
+independent source-span activity; the detailed producer selection is port-only.
 
 Session 3567 selected `H-DmemPayloadRdramDma`: target-phase RDRAM-to-DMEM
 DMAs sourced `0x1797B0`/`0x1798B0` into the image-task payload windows with
