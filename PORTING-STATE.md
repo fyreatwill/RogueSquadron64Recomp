@@ -133982,6 +133982,29 @@ Evidence: `docs/M5-S3551-HEAP-FAILURE.md` and
 
 ORIGIN: diagnostic-only observation; no mitigation was added.
 
+## Session 3553 (2026-09-01) — heap caller table was route-invalid
+
+Added a regeneration-safe, phase-scoped caller table at generated
+heapFreeListDequeue edges 0x800104A8 and 0x80010CD8, recording edge, phase,
+ordinal, arguments, node, and saved state. The first capture used a wrong
+probe path and produced no process. The fixed canonical real-audio/LLE-solo/
+spin-yield/autopilot run passed its autopilot arm and fire controls, reached
+VI 640, emitted 64 caller rows and 32 heap-entry rows, all before title, then
+timed out at VI 640. It reached neither VI 1024 nor VI 512, so the target
+caller/entry join is unevaluable. All observed caller rows were edge
+0x80010CD8, but that does not identify the target route.
+
+A fresh full regeneration built successfully but also stalled at VI 640.
+The preserved generated tree was restored and rebuilt for the final capture;
+that capture likewise stalled at VI 640. This rules out neither caller
+hypothesis and selects route requalification as the next work unit. No heap,
+audio, PCM, image-task, output, or texture-record value changed.
+
+Evidence: docs/M5-S3553-HEAP-CALLER-ROUTE.md and
+scratch/agent/s3553_m5_heap_caller_20260901-014301/run.log.
+
+ORIGIN: diagnostic-only caller instrumentation; no mitigation was added.
+
 ## Session 3552 (2026-09-01) — heap cached-head branch was not taken
 
 The requested phase-bucketed heap table was already present in the

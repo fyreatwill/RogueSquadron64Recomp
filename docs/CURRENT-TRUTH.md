@@ -4,6 +4,15 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
 evidence documents are listed below. Updated for session 3552 (2026-09-01).
 
+Session 3553 added the regeneration-safe caller table for both generated
+heapFreeListDequeue edges. The first corrected command used a wrong probe
+path. The fixed run passed the autopilot control and logged 64 caller rows,
+all pre-title phase 3 rows from edge 0x80010CD8; it stalled at VI 640 and
+never reached title or hangar, so the caller/entry join is unevaluable. A
+fresh full regeneration also reproduced the 640 stall, while the preserved
+generated state did not restore the known target route in this capture. See
+M5-S3553-HEAP-CALLER-ROUTE.md.
+
 Session 3552 requalified the cached-head branch with a fixed canonical route.
 The first attempt stalled at VI 640 and was not used as evidence. The retry
 passed the autopilot/VI controls, reached title `0x00790400` and hangar
@@ -390,6 +399,13 @@ the active discriminator. No audio state, selector, task field, or output is
 to be rewritten as a diagnostic mitigation.
 
 ## Next steps
+
+0. Requalify the canonical real-audio/LLE-solo/spin-yield/autopilot route
+   before interpreting the new caller table. Session 3553's positive control
+   fired, but both the fresh-regenerated and preserved generated trees stalled
+   at VI 640; target-phase caller/entry joins are therefore still absent.
+   Do not classify the cached head or add a mitigation until title and hangar
+   phases are live in the same capture.
 
 1. Add one phase-scoped caller/route table at the two known generated
    `heapFreeListDequeue` edges (`0x800104A8`, `0x80010CD8`), joined to the
