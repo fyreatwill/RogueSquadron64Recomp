@@ -2386,6 +2386,25 @@ extern "C" void rs64_m5_pointer_span_store(char width, uint32_t pc,
             std::fflush(stderr);
         }
     }
+    if (task_writer_enabled && title_phase && store_phys == 0x00149750u &&
+        store_span == 4u) {
+        static uint32_t pointer_rows = 0;
+        static bool pointer_control = false;
+        if (!pointer_control) {
+            std::fprintf(stderr,
+                "[m5-selector-pointer-control] phase=%u width=1024 origin=0x%06X addr=0x80149750\n",
+                rs64_phase_ord(), title_origin);
+            std::fflush(stderr);
+            pointer_control = true;
+        }
+        if (pointer_rows < 1024u) {
+            std::fprintf(stderr,
+                "[m5-selector-pointer-store] ordinal=%u phase=%u width=1024 origin=0x%06X "
+                "pc=0x%08X value=0x%08X\n",
+                pointer_rows++, rs64_phase_ord(), title_origin, pc, value);
+            std::fflush(stderr);
+        }
+    }
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_STATE_POINTER");

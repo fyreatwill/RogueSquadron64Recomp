@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3485 (2026-08-31). This record was
+Current active marker: Session 3486 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -446,32 +446,49 @@ unresolved. Evidence: [M5-S3485-SELECTOR-JOIN.md](M5-S3485-SELECTOR-JOIN.md).
 ORIGIN: the probe is diagnostic-only; it does not rewrite, skip, or validate
 task fields.
 
+Session 3486 joined the exact selector pointer word. Retail's whole-RDRAM
+control fired, the title phase reached 632 VI, and physical `0x80149750` had
+3,228 writes and 78,106 reads; all title-phase pointer writes were attributed
+to `0x80091074` (629 phase rows). The qualified port retry passed its controls,
+reached title, and likewise attributed its bounded pointer stores to
+`0x80091074`. Port normal values matched the known retail family, with one
+title `0x8018DD30` selection/store; no `0x8018FB70` appeared in this retry.
+This rules out a writer-route-only explanation and narrows the gap to writer
+input/value or a later selection transform. The exact cross-runtime writer
+value join remains unresolved. Evidence:
+[M5-S3486-SELECTOR-POINTER.md](M5-S3486-SELECTOR-POINTER.md).
+
+ORIGIN: the witness observes the pointer word, selector registers, and writer
+PC/value; it does not rewrite, skip, or validate task fields.
+
 ## Next steps
 
-1. Trace the upstream table read/writer feeding the divergent port selector at
-   `0x800916F0` and `0x80091710`, focusing on `0x8018FB70`/size 3 and
-   `0x8018DD30`/size 1. Session 3485 selected the pre-writer divergence; use
-   one title-gated bounded capture of the relevant read or table-entry writer
-   with both positive controls. A matching source entry with a later port-only
-   selection selects a route/transform boundary; a divergent entry writer or
-   pointer selects the upstream producer.
-2. Retain the Session 3484 retail writer census and port source-span rows; do
+1. Join the writer inputs/values at `0x80091074` to the selector output for
+   `0x8018DD30` and `0x8018FB70`. Session 3486 showed the same writer PC in
+   retail and port, so capture the writer's source registers and stored value
+   in one title-gated bounded run with both positive controls. Identical
+   writer inputs with a port-only selector value selects a later transform;
+   divergent writer inputs/values selects the upstream producer. A missing
+   control or title rows invalidates the result.
+2. Retain the Session 3486 pointer-word result; do not repeat the exact
+   pointer-word writer histogram unchanged.
+3. Retain the Session 3484 retail writer census and port source-span rows; do
    not repeat the rejected candidate-span store capture unchanged.
-3. Retain the Session 3483 retail post-store table and Session 3482 port
+4. Retain the Session 3483 retail post-store table and Session 3482 port
    writer/enqueue rows; do not repeat either unchanged capture.
-4. Retain the Session 3468 retail post-store table and Session 3473–3475 port
+5. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
-5. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
+6. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-6. Matching fields close the boundary; the first divergent field selects the
+7. Matching fields close the boundary; the first divergent field selects the
    missing contract edge. Keep the retail oracle and port positive controls
    in the same run before trusting any null.
-7. Keep M5 Step 3 gated until that output comparison names one missing
+8. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-9. After M5 closes or a new discriminator is found, resume only systematic M3
+10. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its

@@ -132336,3 +132336,28 @@ read/writer remains unresolved. Evidence:
 
 ORIGIN: this iteration observes selector registers and task-writer values; it
 does not rewrite, skip, or validate the differing operands.
+
+## Session 3486 (2026-08-31) — joined selector pointer writer
+
+The independent Rice oracle passed the whole-RDRAM control and reached the
+title phase. A read/write capture of physical `0x00149750` recorded 3,228
+retail writes and 78,106 reads; the writer-PC histogram attributed all writes
+to `0x80091074`, including 629 title-phase writes. The selector block was
+live with 2,249 title executions at `0x800916F0` and 2,246 at `0x80091710`.
+
+The first port attempt used a route that stopped at the known startup crash
+at guest PC `0x8000834C`, before title; its zero probe rows were invalid. A
+fixed retry with the validated LLE/spin-yield/ungated route passed the
+task-writer and pointer controls and reached title origin `0x00790400`.
+Its bounded pointer-store rows were all from `0x80091074`. Normal selector
+and pointer-store values were `0x80171CE0` and `0x80173B20`, with one
+title-phase `0x8018DD30` value in both selector and pointer-store rows; no
+`0x8018FB70` appeared in this retry.
+
+The retail and port writer routes therefore match at the measured pointer
+word, ruling out a writer-route-only explanation for the extra port operand.
+Writer inputs/values and any later selection transform remain unresolved.
+Evidence: [M5-S3486-SELECTOR-POINTER.md](docs/M5-S3486-SELECTOR-POINTER.md).
+
+ORIGIN: the witness observes the pointer word, selector registers, and writer
+PC/value; it does not rewrite, skip, or validate task fields.
