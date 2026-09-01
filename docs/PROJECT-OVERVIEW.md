@@ -121,6 +121,18 @@ catalog and day-to-day state: `CURRENT-TRUTH.md`.
 
 ## 4. The recurring hurdles
 
+### 4.0.1 Current M5 handoff archive
+
+The compact live state is in `CURRENT-TRUTH.md`. At session 3578, M5 Step 3
+is the image-task source-range boundary (`0x1797B0..0x179930`): the port
+deliberately zero-fills before zero source-DMA payloads, while retail reaches
+the same target phase with source-span writes and an
+`0x800C825C -> 0x800078E0` edge carrying `a2=0x80` and changing structure
+pointers. The next measurement is the retail writer identity/value/order
+relative to its first source DMA. Full chronological evidence remains in
+`PORTING-STATE.md`; the detailed notes are `M5-S3571` through `M5-S3577`.
+
+
 ### 4.0 M5 audio/image investigation through s2515
 
 The current M5 image arm is a qualified Factor 5 image-task path, while the

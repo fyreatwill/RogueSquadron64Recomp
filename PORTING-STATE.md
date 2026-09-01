@@ -134599,3 +134599,20 @@ state, output, PCM, task, DMA, or source contents were changed. See
 
 ORIGIN: diagnostic-only retail predecessor/entry qualification. No
 mitigation was added.
+
+## Session 3578 (2026-09-01) — compacted current truth maintenance
+
+Maintenance iteration: `docs/CURRENT-TRUTH.md` was 966 lines / 60,948 bytes,
+over the 60,000-byte trigger. It was compacted to the live configuration,
+active M5 source-writer boundary, recent evidence, durable rules, superseded
+conclusions, and a single monotonic five-item backlog; repetitive historical
+narratives remain in this append-only ledger and detailed evidence notes. A
+current M5 handoff was added to `docs/PROJECT-OVERVIEW.md`, and `NEXT.md` was
+rewritten with the competing hypotheses and one retail discriminating table.
+No experiment or runtime behavior changed. The soak tail was read; it added
+no post-3577 verdict.
+
+This rules out only documentation drift as the reason to defer the next unit;
+the retail source-writer identity and ordering remain open exactly as before.
+
+ORIGIN: documentation-only maintenance. No mitigation was added.
