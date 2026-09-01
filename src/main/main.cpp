@@ -2464,8 +2464,6 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
 
     const uint32_t width_n = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
-    if (!((width_n == 1024u && origin == 0x00790400u) ||
-          (width_n == 512u && origin == 0x006AB400u))) return;
 
     const uint32_t phys = addr & 0x007FFFFFu;
     const uint32_t len = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);

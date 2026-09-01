@@ -133747,3 +133747,29 @@ Evidence: `scratch/agent/retail_preclear_groundtruth.log`,
 
 ORIGIN: the only mitigation-shaped operation observed was the legitimate
 `rs_memset` zero fill at `0x800078EC`; no guard or skip was added.
+## Session 3544 (2026-09-01) — attributed pre-target source-span CPU writer
+
+Ground truth first: the retained retail oracle capture passed its whole-RDRAM
+control, reached title VI 1024 and hangar VI 512, and recorded nonzero writes
+to both corresponding source ranges.
+
+The existing generated scalar-store injection was retained, while its host
+helper was widened from target-VI-only to process-lifetime source-span overlap
+capture. One real-audio LLE/spin-yield/autopilot port capture reached both
+target VIs; the field348 writer control and source-DMA control were live. The
+pre-target width-640 phase recorded 268 stores overlapping the hangar span,
+including 104 nonzero rows. The last nonzero row before the hangar clear was
+PC `0x8001FAF8`, writing halfword `0x000F` at `0x17992E`.
+
+The hangar `rs_memset(dst=0x801797B0,len=0x298)` entered with `pre_nz=155`
+and exited with zero. Title entered its clear with `pre_nz=0`. This selects
+`H-PortPrephaseCPU` and rules out carried initial state for this run. The
+observed PCs are the existing texture-record scalar-store family; their
+metadata writes are legitimate operations at their executed destinations.
+The result identifies the pre-clear CPU writer boundary, but does not yet
+explain the higher-level destination selection or the port/retail semantic
+gap. No audio, PCM, image-task, or output state was changed.
+
+Evidence: `scratch/agent/retail_preclear_groundtruth.log`,
+`scratch/agent/s3544_m5_preclear_writer/run.log`, and
+`docs/M5-S3544-PRECLEAR-WRITER.md`.

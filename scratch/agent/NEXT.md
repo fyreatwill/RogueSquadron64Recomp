@@ -1,41 +1,40 @@
-# NEXT work unit — identify the writer that leaves hangar pre-clear bytes
+# NEXT work unit — resolve the higher-level source destination contract
 
-HYPOTHESIS-ID: m5-output-preclear-writer-attribution
+HYPOTHESIS-ID: m5-preclear-destination-contract
 
-Session 3543 established that the hangar `rs_memset` clear enters with
-`pre_nz=344`, while title enters zero. The port writer identity is still open.
+Session 3544 selected `H-PortPrephaseCPU`: the process-lifetime port census
+observed 268 hangar-span CPU stores in width-640 phase, 104 nonzero, followed
+by hangar `rs_memset` entry with `pre_nz=155`. Do not repeat that census.
 
-Do exactly one bounded work unit: extend the existing source-range writer
-census to capture the entire run before the target phase, then join the last
-nonzero writer to the hangar `rs_memset` entry. Keep the same real-audio
-LLE/spin-yield/autopilot route and do not alter audio, PCM, or output state.
+Do exactly one bounded work unit: instrument the already identified retail
+texture-record store family (`0x8001FACC`–`0x8001FD2C`) to capture its base/
+index context and destination relation, then run the same watch in the retail
+oracle and the same-build real-audio port. Keep all audio, PCM, image-task,
+and output state unchanged.
 
 Competing hypotheses and discriminator:
 
-- `H-PortPrephaseCPU`: a generated CPU store before VI 1024/512 establishes
-  the nonzero hangar bytes; its PC and payload precede the hangar entry.
-- `H-PortPrephaseDMA`: a RDRAM writeback/DMA before the target phase establishes
-  them; the DMA destination, length, and nonzero hash precede the entry.
-- `H-CarriedInitialState`: no port writer establishes the bytes in this run;
-  the span is already nonzero when the route becomes observable.
-- `H-CaptureInvalid`: the whole-RDRAM/phase controls or writer hooks do not
-  fire, so no writer conclusion is admissible.
+- `H-SharedDestinationContract`: retail and port execute the family with the
+  same destination relation and payload class; the remaining gap is upstream
+  source selection.
+- `H-PortWrongDestination`: the port's base/index selects the hangar source
+  span while retail selects a distinct texture-record destination; differing
+  context precedes the stores.
+- `H-RetailOnlyFamily`: retail executes this family in the target phase but the
+  port does not; the observed port rows belong to a different route/use.
+- `H-CaptureInvalid`: whole-RDRAM and both phase controls or the paired family
+  witnesses are absent.
 
-The discriminating table must include every overlapping scalar/vector/RDRAM
-writer event from process start through the hangar clear, with phase/VI
-identity, PC or DMA source, destination, length, payload FNV/nonzero count,
-and the `rs_memset` ordinal. A nonzero CPU event selects `H-PortPrephaseCPU`;
-a nonzero DMA event selects `H-PortPrephaseDMA`; no writer with a live source
-control and nonzero pre-clear snapshot selects `H-CarriedInitialState`; missing
-controls select `H-CaptureInvalid`.
+The single discriminating table must include, for each family store, phase/VI,
+PC, base register, effective destination, payload, and the nearest source
+selection/caller context. Matching context selects `H-SharedDestinationContract`;
+a first differing base/index selects `H-PortWrongDestination`; a retail-only
+execution selects `H-RetailOnlyFamily`; missing controls select
+`H-CaptureInvalid`.
 
-Before building, retain the retail ground-truth result from
-`scratch/agent/retail_preclear_groundtruth.log`. Then update the
-regeneration-safe generated-function injection and run:
+Before building, retain `scratch/agent/retail_preclear_groundtruth.log` and
+read the existing family injection in `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
+Batch the instrumentation, then build and run both oracle and port arms in one
+iteration. Use VI phase gates, SIGKILL cleanup, and capture under:
 
-    python3 tools/apply_s3543_m5_preclear.py
-    cmake --build build --config Debug --target RogueSquadron64Recomp -j8
-    env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ... zsh tools/probe.sh scratch/agent/s3544_m5_preclear_writer 55 0.5
-
-Use SIGKILL cleanup and phase-gate on VI transitions. Do not repeat the
-closed `rs_memset` identity probe without the pre-phase writer census.
+    scratch/agent/s3545_m5_destination_contract

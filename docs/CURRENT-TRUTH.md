@@ -2,7 +2,18 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3543 (2026-09-01).
+evidence documents are listed below. Updated for session 3544 (2026-09-01).
+
+Session 3544 extended the scalar source-span census across the pre-target
+run. The port reached both target VIs with positive controls live and logged
+268 hangar-span CPU stores in the preceding width-640 phase, including 104
+nonzero stores. The last nonzero row was `0x8001FAF8` writing `0x000F` at
+`0x17992E`; the hangar clear then entered with `pre_nz=155` and exited zero.
+This selects `H-PortPrephaseCPU` and rules out carried initial state for this
+run. The observed writer family is the existing texture-record scalar-store
+family; the operations are legitimate writes at their executed destinations,
+but this does not yet explain the higher-level source selection. See
+[M5-S3544-PRECLEAR-WRITER.md](M5-S3544-PRECLEAR-WRITER.md).
 
 Session 3543 phase-qualified the source-range state immediately before and
 after the two `rs_memset` clears. Title entered `0x178C80:0x178E00` already
@@ -302,10 +313,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify the producer that populates the source range before the legitimate
-   `rs_memset(dst=0x80178C80/0x801797B0, fill=0, len=0x298)` clear. Use one
-   phase-qualified pre-clear snapshot/writer census with the existing positive
-   control and downstream joins; do not change audio, PCM, or output state.
+1. Resolve the higher-level destination/producer contract behind the
+   pre-target CPU stores at `0x8001FAF8` and its sibling texture-record sites.
+   Use one independent retail execution watch plus a same-build port context
+   capture; do not repeat the closed pre-clear census or change audio, PCM, or
+   output state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
