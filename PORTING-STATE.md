@@ -133499,3 +133499,25 @@ retail maps `0x5622` to `0x561F`; that semantic/host contract is next.
 
 ORIGIN: independent retail execution/GPR evidence plus same-build port setup
 return evidence; no audio, selector, task, or output state was rewritten.
+
+## Session 3534 (2026-08-31) — resolved AI-frequency return contract
+
+The bounded unit was a static contract audit, so no build or runtime
+instrument was added. The complete retail ELF body of `osAiSetFrequency` at
+`0x80029D20` computes `dacRate = round(osViClock / frequency)`, rejects a
+too-small rate, clamps/programs the AI registers, and returns
+`osViClock / dacRate`. The retail `osViClock` is the NTSC clock
+48,681,812. For the qualified input `0x5622` (22,050 Hz), `dacRate=2208` and
+the returned actual frequency is 22,047 (`0x561F`).
+
+This exactly explains Session 3533's independent retail observation of
+`0x561F` after the shared `0x5622` input. The current host implementation in
+`librecomp/src/ai.cpp` returns the input because its equivalent calculation is
+commented out. This selects `H-InternalReturnSemantics` and refutes
+`H-LaterStoreABI` at the qualified boundary. No behavior change was applied;
+the next unit is the named host contract correction and route validation.
+
+ORIGIN: retail ELF disassembly plus independent retail/port return evidence;
+the legitimate writer is `osAiSetFrequency`, whose contract returns actual
+programmed frequency, not requested frequency. See
+`docs/M5-S3534-AI-FREQUENCY-CONTRACT.md`.

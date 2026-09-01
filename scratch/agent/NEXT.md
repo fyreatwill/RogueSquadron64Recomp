@@ -1,27 +1,34 @@
-# NEXT work unit — identify internal AI-frequency return semantics
+# NEXT work unit — implement actual AI-frequency return semantics
 
-HYPOTHESIS-ID: m5-selector-ai-return-semantics
+HYPOTHESIS-ID: m5-ai-frequency-contract-fix
 
-Session 3533 qualified the split independently: retail entered `0x80029D20`
-with `a0=0x5622` and had `v0=0x561F` at `0x80091CC4`; the port setup return
-row had `v0=0x5622`. The new host return probe had a startup control but no
-target-phase row and is not evidence.
+Session 3534 resolved the split from the retail ELF: `osAiSetFrequency`
+returns `osViClock / round(osViClock / frequency)`, so `0x5622` maps to
+`0x561F` at the NTSC clock. The host implementation currently returns its
+input.
 
-Next unit: use static source/ABI evidence or one genuinely new paired boundary
-to identify why `0x80029D20` returns `0x561F` on retail but the port host
-implementation returns its input `0x5622`. Do not change audio/selector/task/
-output state.
+Next unit: make the regeneration-safe host implementation match that actual
+frequency contract, then build and run the qualified real-audio route. Do not
+change selector/task/output state.
 
 Competing hypotheses and discriminator:
 
-- `H-InternalReturnSemantics`: retail's internal function contract differs
-  from the port host implementation; static semantics or a new boundary
-  should explain the mapped return.
-- `H-LaterStoreABI`: the internal return matches but the port's setup/store
-  context changes it later.
-- `H-CaptureInvalid`: a required positive control or target execution witness
-  is absent; no semantic conclusion is allowed.
+- `H-ContractFix`: the standard actual-frequency calculation makes the port
+  setup return `0x561F` for `0x5622` and preserves title/hangar reachability.
+- `H-AudioAbstractionMismatch`: the calculation is right but the runtime's
+  audio-register abstraction requires a different clock/register treatment;
+  the returned value or route will diverge.
+- `H-RouteRegression`: the contract fix changes audio lifecycle behavior and
+  causes a new pre-title/target-route failure.
+- `H-CaptureInvalid`: startup positive control or title/hangar phase witness
+  is absent; no route conclusion is allowed.
 
-Required discriminator: source-level contract or paired observation that
-either explains the `0x561F` return from `0x5622`, or proves the value changes
-after `0x80029D20` and before `0x80091CC4`.
+Required discriminator: one same-build run with the startup control plus
+phase-keyed setup rows. `H-ContractFix` requires target rows showing input
+`0x5622` and return/store `0x561F`, with title 1024 and hangar 512 reached;
+the other outcomes select the corresponding hypothesis above.
+
+Build/run shape: edit `lib/N64ModernRuntime/librecomp/src/ai.cpp`, export
+`./submodule-patches/export.sh`, build the normal Debug target, then use the
+existing real-audio LLE/spin-yield/autopilot recipe with all passive
+breadcrumbs. Do not repeat the silent arm.

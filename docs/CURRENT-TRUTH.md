@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3533 (2026-08-31).
+evidence documents are listed below. Updated for session 3534 (2026-08-31).
 
 ## Current state
 
@@ -177,6 +177,17 @@ host-side return hook fired its startup positive control but no target-phase
 row; that hook is not evidence. See
 [M5-S3533-SELECTOR-AI-RETURN.md](M5-S3533-SELECTOR-AI-RETURN.md).
 
+Session 3534 resolved the semantic contract statically from the complete
+retail ELF body of `osAiSetFrequency` at `0x80029D20`. Retail rounds
+`osViClock / frequency` to `dacRate`, programs the AI registers, and returns
+`osViClock / dacRate`; with NTSC clock 48,681,812 and input `0x5622`, this is
+`dacRate=2208` and return `0x561F`. The result exactly explains the
+independent retail return, while the current host implementation returns its
+input because the equivalent calculation is commented out. This selects
+`H-InternalReturnSemantics` and refutes a later store/ABI mutation at the
+qualified boundary. No behavior change was made. See
+[M5-S3534-AI-FREQUENCY-CONTRACT.md](M5-S3534-AI-FREQUENCY-CONTRACT.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -203,11 +214,10 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify the semantic/host contract of internal AI-frequency function
-   `0x80029D20`: retail enters with `a0=0x5622` and returns `0x561F`, while the
-   current port host implementation returns its input `0x5622`. Use static
-   contract evidence or a new paired boundary before any behavior change; do
-   not rewrite audio/selector state as a mitigation.
+1. Implement the now-qualified `osAiSetFrequency` actual-frequency contract
+   in the host primitive, using the NTSC calculation and existing audio
+   register abstraction, then validate the real-audio title/hangar route. This
+   is a named contract correction, not a selector/audio-state mitigation.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -377,6 +387,7 @@ the oracle did not provide a matching register tuple.
 Latest selector boundary:
 
 - [M5-S3533-SELECTOR-AI-RETURN.md](M5-S3533-SELECTOR-AI-RETURN.md)
+- [M5-S3534-AI-FREQUENCY-CONTRACT.md](M5-S3534-AI-FREQUENCY-CONTRACT.md)
 - [M5-S3530-SELECTOR-SOURCE-WRITER.md](M5-S3530-SELECTOR-SOURCE-WRITER.md)
 - [M5-S3532-SELECTOR-SETUP-RETURN.md](M5-S3532-SELECTOR-SETUP-RETURN.md)
 - [M5-S3529-SELECTOR-INPUT-BOUNDARY.md](M5-S3529-SELECTOR-INPUT-BOUNDARY.md)
