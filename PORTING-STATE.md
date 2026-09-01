@@ -132378,3 +132378,28 @@ transform; it does establish a route-specific audio blocker for this capture.
 
 ORIGIN: the new hook only observes registers and the stored word at
 `0x80091074`; it does not rewrite, skip, or validate task fields.
+
+## Session 3488 (2026-08-31) — qualified silent audio route for writer join
+
+The rebuilt port used the prescribed LLE-only, ungated, spin-yield route with
+`ROGUESQ_AUDIO_UCODE=0`, the existing title phase gate, and the selector-writer
+controls. It reached title origin `0x00790400` at width 1024 after 12.0
+seconds, captured 95 frames across the gated window, later reached hangar
+width 512, and emitted no crash or abort marker. The positive controls and
+the `0x80091074` selector-writer control fired; the port emitted 1,024 bounded
+selector-writer rows. Audio dispatch identified `musyx_stub` 72 times and the
+real image-stage marker was absent as expected for this arm.
+
+This selects the route-specific audio blocker from s3487: disabling the audio
+image removes the pre-title `fillSampleStreamRange` failure and restores the
+writer target. The retained retail capture has 533 title rows, so its
+separate animated run cannot be joined to the port by ordinal. The writer
+input/value and later-transform hypotheses remain open; the single observed
+port `0x8018DD30` row is descriptive only and is not promoted to a divergence.
+
+This rules out a silent-route pre-title blocker and an absent port writer hook
+for this arm. It does not rule out an input/value divergence or a later
+selector transform.
+
+ORIGIN: diagnostic-only audio-dispatch and selector-writer observations; no
+task fields or selector values were rewritten, skipped, or validated.

@@ -1,31 +1,30 @@
-# NEXT work unit — qualify audio-enabled route for selector writer join
+# NEXT work unit — design the non-ordinal selector-writer discriminator
 
 HYPOTHESIS-ID: m5-task-field-writer
 
-Session 3487 qualified retail but both prescribed audio-enabled port retries
-crashed before title in `fillSampleStreamRange` at guest PC `0x8000B650`.
-The next unit tests whether disabling the audio image makes the route reach
-title; only then can the writer join resume.
+Session 3488 qualified the silent port route: title and hangar were reached,
+the selector-writer control fired, and 1,024 writer rows were emitted without
+a crash. The retained retail capture has 533 rows, so sequential ordinals are
+not a valid cross-runtime key for the animated title scene.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-AudioRouteBlocker`: the audio-enabled port route crashes before title; a
-  silent route reaches title while the same schema controls fire.
-- `H-OtherRouteBlocker`: disabling audio still crashes before title, so the
-  current writer join remains unevaluable.
-- `H-WriterInputDivergence`: if title becomes reachable, joined writer rows
-  differ from retail in source inputs or stored values.
-- `H-SharedWriterTransform`: if title becomes reachable and writer rows match,
-  but selector operands diverge afterward.
+- `H-WriterInputDivergence`: a route-keyed selector/source class differs while
+  both independent controls fire.
+- `H-SharedWriterTransform`: route-keyed writer inputs match, but a later
+  selector/output value class differs.
+- `H-KeyInsufficient`: the proposed non-ordinal key yields no comparable
+  rows despite positive controls, so the key—not the contract—is unresolved.
 
-Discriminating measurement: one port run with `ROGUESQ_AUDIO_UCODE=0`, using
-the existing positive controls and title phase gate. Title rows select
-`H-AudioRouteBlocker`; a pre-title crash selects `H-OtherRouteBlocker` and
-leaves the join unevaluable. If title is reached, the existing writer rows
-split `H-WriterInputDivergence` from `H-SharedWriterTransform`.
+Discriminating measurement: construct one keyed table from the retained
+retail rows and the Session 3488 port rows using title origin, writer PC,
+selector value, and operand class—not ordinal or elapsed time. A class/value
+match supports `H-SharedWriterTransform`; a class/value present only on one
+route supports `H-WriterInputDivergence`; no qualified overlap supports
+`H-KeyInsufficient` and requires a new key.
 
-Expected command: run the built port from `build/` with the prescribed
-LLE/spin-yield flags, but `ROGUESQ_AUDIO_UCODE=0`, plus
-`ROGUESQ_LOG_M5_TASK_WRITER=1` and the existing title phase controls. Use a
-SIGKILL watchdog and do not compare sequential animation ordinals. If title
-is reached, perform the writer-input/value join in that same iteration.
+Expected command: use `awk`/`sort` over
+`scratch/agent/s3487_oracle_writer.log` and
+`scratch/agent/s3488_m5_audio_disabled/run.log` to emit the keyed tables and
+their intersection/differences. No build or new runtime instrumentation is
+needed until the key produces a qualified discriminator.

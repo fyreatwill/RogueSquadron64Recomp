@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3487 (2026-08-31). This record was
+Current active marker: Session 3488 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -474,17 +474,34 @@ selected. Evidence: [M5-S3487-WRITER-INPUTS.md](M5-S3487-WRITER-INPUTS.md).
 ORIGIN: diagnostic-only writer-register/value observation at `0x80091074`; it
 does not rewrite, skip, or validate task fields.
 
+Session 3488 ran the prescribed silent port arm with `ROGUESQ_AUDIO_UCODE=0`.
+It reached title origin `0x00790400` at width 1024, fired the existing
+positive controls and the `0x80091074` selector-writer control, emitted 1,024
+bounded writer rows, later reached hangar width 512, and produced no crash or
+abort marker. Audio dispatch identified the `musyx_stub` arm, with no real
+image-stage rows as expected. This selects the route-specific audio blocker
+seen in Session 3487: disabling the audio image removes the pre-title
+`fillSampleStreamRange` failure and restores the writer target. The retail
+capture has 533 title rows versus 1,024 port rows; because these are separate
+animated runs, ordinal writer-input/value joining is invalid. The writer-input
+and later-transform hypotheses therefore remain open. Evidence:
+[M5-S3488-AUDIO-DISABLED-ROUTE.md](M5-S3488-AUDIO-DISABLED-ROUTE.md).
+
+ORIGIN: diagnostic-only audio-dispatch and selector-writer observations; no
+task fields or selector values were rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Qualify the port route needed for the `0x80091074` writer join. Run the
-   same built arm once with `ROGUESQ_AUDIO_UCODE=0` to test whether the
-   pre-title `fillSampleStreamRange` crash is specific to the audio image;
-   title rows would refute the route-specific audio blocker and permit the
-   writer join, while another pre-title crash leaves the join unevaluable.
-   Keep the existing retail capture and port positive controls.
-2. If title is reachable, join writer inputs/values at `0x80091074` to the
-   selector output for `0x8018DD30` and `0x8018FB70`; do not repeat the exact
-   pointer-word histogram unchanged.
+1. Design a non-ordinal writer-input/value discriminator at `0x80091074`.
+   Use the already qualified silent port route and the independent retail
+   route, keyed by title origin, writer PC, selector value, and operand class;
+   do not compare sequential animation ordinals. A matching keyed table with
+   legitimate values closes the writer boundary; a keyed value/source class
+   present only on one route selects the first contract divergence; an empty
+   table with both controls firing means the key is insufficient and must be
+   redesigned, not repeated.
+2. Keep the Session 3488 silent route as the qualification baseline; do not
+   repeat the audio-disabled reachability run unchanged.
 3. Retain the Session 3486 pointer-word result; do not repeat the exact
    pointer-word writer histogram unchanged.
 4. Retain the Session 3484 retail writer census and port source-span rows; do
