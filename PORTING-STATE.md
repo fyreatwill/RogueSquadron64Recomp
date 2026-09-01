@@ -134048,3 +134048,25 @@ Evidence: `docs/M5-S3554-HEAP-ROUTE-REQUALIFICATION.md` and
 `scratch/agent/s3554_m5_heap_route_requalify/run.log`.
 
 ORIGIN: diagnostic-only route instrumentation; no mitigation was added.
+
+## Session 3555 (2026-09-01) — slot dispatcher table was route-invalid
+
+Ran the existing regeneration-safe `ROGUESQ_LOG_SLOT_DISPATCH` table with
+`ROGUESQ_LOG_SLOT_SP_GUARD=1` on the canonical real-audio/LLE-solo/spin-yield/
+autopilot route. Autopilot fired and VI controls reached widths 640 and 1024.
+The dispatcher table emitted 2,048 entry, 2,048 pre-call, and 2,048 post-call
+rows in phase 3; all pre-call rows had valid KSEG0 slot pointers and the slot
+SP guard never fired.
+
+The capture was route-invalid for the s3554 dispatcher boundary: it died at
+41.9 seconds / 67 frames in `musyxSynthFrame+3828`, with last guest PC
+`0x80001B08`, before the selected `slotDispatcherIter` failure at
+`0x80007904`. This leaves the dispatcher input, lifecycle-route, and overlay
+hypotheses unevaluable. It rules out only missing positive controls or a
+missing existing table in this capture; it does not establish slot legitimacy
+or identify the MusyX crash writer.
+
+Evidence: `docs/M5-S3555-SLOT-DISPATCH-ROUTE.md` and
+`scratch/agent/slot_dispatch_s3555/run.log`.
+
+ORIGIN: diagnostic-only table; no mitigation or value rewrite was added.

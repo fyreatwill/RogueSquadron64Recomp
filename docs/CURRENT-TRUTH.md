@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3554 (2026-09-01).
+evidence documents are listed below. Updated for session 3555 (2026-09-01).
+
+Session 3555 ran the existing regeneration-safe slot-dispatch table with
+positive controls live: autopilot fired, VI widths reached 640 and 1024, and
+the table emitted 2,048 entry, 2,048 pre-call, and 2,048 post-call rows in
+phase 3. All pre-call rows had valid KSEG0 slot pointers and no slot-SP guard
+fired. The run was route-invalid for the selected s3554 boundary: it crashed
+at `musyxSynthFrame+3828` with last guest PC `0x80001B08` before the dispatcher
+failure. This is single-source port evidence only; dispatcher hypotheses are
+unevaluable and the next boundary is the pre-title MusyX route. See
+[M5-S3555-SLOT-DISPATCH-ROUTE.md](M5-S3555-SLOT-DISPATCH-ROUTE.md).
 
 Session 3554 re-ran the canonical real-audio/LLE-solo/spin-yield/autopilot
 heap-route capture with the caller table. The autopilot control fired and the
@@ -409,16 +419,16 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. Audit the pre-title `slotDispatcherIter` crash boundary at guest PC
-   `0x80007904` as one audio-slot dispatcher idiom class. Enumerate its slot
-   index/state reads and all generated callers, then use the existing positive
-   control and a phase-scoped table to distinguish an invalid dispatcher input
-   from a route/overlay mismatch before revisiting the heap caller join.
+0. Requalify the canonical real-audio/LLE-solo/spin-yield/autopilot route at
+   the pre-title `musyxSynthFrame` crash (`last guest PC 0x80001B08`) using a
+   new phase-scoped boundary that names the immediate voice/state read and its
+   writer, while retaining the existing autopilot, VI, and slot-dispatch
+   controls. Do not interpret the slot table until the run reaches
+   `slotDispatcherIter` guest PC `0x80007904`.
 
-1. Requalify the canonical real-audio/LLE-solo/spin-yield/autopilot route only
-   after the dispatcher boundary has a discriminator. Session 3554 had live
-   autopilot and heap controls, but crashed at VI 640; do not classify the
-   cached head or add a mitigation from those pre-title rows.
+1. After a route-valid capture, use the existing slot-dispatch table to
+   distinguish invalid input from lifecycle/overlay mismatch. Session 3555's
+   valid KSEG0 pre-call rows are not evidence about the s3554 failure.
 2. Keep the HMT role result as valid at this discriminator: nullable `a2` is
    an intended branch, and the sampled required pointers were mapped. Do not
    repeat the provisional non-pointer scalar classifier or treat its old
