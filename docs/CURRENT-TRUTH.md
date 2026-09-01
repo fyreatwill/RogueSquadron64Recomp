@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3526 (2026-08-31).
+documents are listed below. Updated for session 3527 (2026-08-31).
 
 ## Current state
 
@@ -110,6 +110,17 @@ distinguish an alternate caller from an enclosing route gate because the
 generated wrapper reports `ra=0`. See
 [M5-S3526-SELECTOR-STORE-ENTRY-REQUALIFIED.md](M5-S3526-SELECTOR-STORE-ENTRY-REQUALIFIED.md).
 
+Session 3527 completed the generated caller/route discriminator. The new
+phase-keyed table covered the sole direct `allocateSongChannelArray` call at
+`0x80091934` and both `initN64RspMixer` callers. Positive controls and title
+1024/hangar 512 were live. In hangar, `reapplyAudioConfig` reached
+`initN64RspMixer`, which reached the allocate edge with matching arguments
+(`a0=0x12`, `a1=0x5622`, `a2=0`, `a3=1`); `initAudioSubsystem` had no hangar
+row. This selects matching caller/route parity at the qualified generated
+scope and moves the discriminator later inside the producer path. It is
+single-source port evidence; see
+[M5-S3527-SELECTOR-MIXER-CALLERS.md](M5-S3527-SELECTOR-MIXER-CALLERS.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -136,15 +147,13 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Build one new caller/gate discriminator for `allocateSongChannelArray`:
-   enumerate every generated direct callsite and instrument those callsites
-   plus the enclosing route edge in one build, retaining the existing entry,
-   producer-context, store-context, retail range, and phase controls. Run the
-   canonical real-audio/LLE/spin-yield/autopilot arm to title and hangar. A
-   hangar callsite row with no route row selects an alternate caller; a route
-   row with the known callsite absent selects the gate; matching callsite and
-   route rows select a later internal mismatch; missing controls make the
-   comparison invalid. Do not rewrite audio or selector state.
+1. Build one new producer/context discriminator between the live
+   `initN64RspMixer` entry and selector stores at `0x8008F228`/`0x8008F264`.
+   Keep the new caller table, entry, producer-context, store-context, mixer,
+   phase, and positive controls in one build/run. A first differing producer
+   argument or context selects that edge; matching context through the next
+   witness selects a later mutation; missing controls invalidate the join.
+   Do not rewrite audio or selector state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -167,9 +176,9 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the route-gate or alternate-caller boundary for
-the retail `0x80029E78` execution on the real-audio route. The silent-arm route
-defect is parked separately.
+The active work unit is now the producer/context boundary after the live
+`reapplyAudioConfig` → `initN64RspMixer` → `allocateSongChannelArray` path on
+the real-audio route. The silent-arm route defect is parked separately.
 
 For the silent-arm route:
 
@@ -220,6 +229,12 @@ but the known display-mode route witness and known AI callsite/boundary rows
 were title-only or absent in hangar. This is a phase-gated path result, not a
 proof that an alternate caller exists; the next discriminator is the enclosing
 `runVideoFrameTick` branch/caller or a separately instrumented alternate path.
+
+Session 3527 supersedes that route-gate interpretation at the generated
+caller scope: the new hangar rows show a live `reapplyAudioConfig` route and
+the sole direct allocate edge with matching arguments. The remaining open
+question is the first producer/context divergence between mixer entry and the
+selector stores.
 
 Session 3514 adds a retail-qualified mixer-entry candidate at `0x80090E04`,
 but the port did not reach its target phase on either tested arm. See

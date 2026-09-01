@@ -1,12 +1,30 @@
-# NEXT work unit — enumerate selector entry callers and route edge
+# NEXT work unit — qualify the producer/context edge after mixer entry
 
 HYPOTHESIS-ID: m5-selector-store-caller-boundary
 
-Session 3526 requalified the real-audio route: startup controls fired, title
+Session 3527 completed the caller/route census: startup controls fired, title
 1024 and hangar 512 were reached, and the target entry plus producer/store
 contexts fired. The known caller, route, and AI-boundary rows were absent in
 hangar; entry `$ra` was `0`, so alternate caller versus route gate remains
-unresolved.
+unresolved. The new table showed `reapplyAudioConfig` → `initN64RspMixer` →
+the sole `allocateSongChannelArray` call in hangar, with matching arguments;
+`initAudioSubsystem` was absent in hangar. The generated caller/route gate is
+therefore no longer the active discriminator. See
+`docs/M5-S3527-SELECTOR-MIXER-CALLERS.md`.
+
+Next unit: add one regeneration-safe witness at the next producer/context
+edge after `initN64RspMixer` entry and before the two selector stores. First
+enumerate that function's generated callsites and the immediate context
+predecessors in the source; write all competing hypotheses and the split
+outcomes here before building. Retain the three s3527 caller rows, the
+entry/store/producer/mixer controls, and the retail-range/phase controls in
+one build and run the canonical real-audio/LLE/spin-yield/autopilot arm.
+
+Expected discriminator: a hangar row with a changed producer argument/context
+selects that producer edge; a matching row through the next witness selects a
+later mutation; absent startup or phase controls makes the comparison invalid.
+Do not repeat the s3527 caller census unchanged and do not rewrite audio or
+selector state.
 
 Competing hypotheses and discriminator:
 

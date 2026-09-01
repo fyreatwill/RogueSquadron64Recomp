@@ -133310,3 +133310,30 @@ changed.
 
 ORIGIN: diagnostic-only entry and phase-keyed context observations; no
 mitigation or guest-state rewrite.
+
+## Session 3527 (2026-08-31) — qualified selector mixer caller boundary
+
+Enumerated the generated caller scope before building: one direct
+`allocateSongChannelArray` call at `0x80091934` inside `initN64RspMixer`, and
+two generated `initN64RspMixer` callers at `0x80091C58` (`initAudioSubsystem`)
+and `0x80091D14` (`reapplyAudioConfig`). Added the regeneration-safe
+phase-keyed caller table and retained the existing entry, producer, selector
+store, mixer, route, and phase controls. The build completed successfully.
+
+Ran the canonical real-audio/LLE/spin-yield/autopilot arm once. The positive
+controls fired and the port reached title VI 1024 and hangar VI 512. In
+hangar, `reapplyAudioConfig` reached `initN64RspMixer`, which reached the sole
+allocate edge and then `allocateSongChannelArray`; the edge and entry rows
+matched at `a0=0x12`, `a1=0x5622`, `a2=0`, `a3=1`. `initAudioSubsystem` had no
+hangar row. Existing producer and selector-store controls remained live; no
+crash marker appeared before the required SIGKILL.
+
+This selects `H-StoreCallerParity` at the qualified generated caller scope
+and rules out the previously suspected enclosing route gate or missing direct
+caller as the explanation for the hangar stores. It selects a later
+producer/context discriminator. The result is single-source port evidence;
+no retail oracle pair was run in this unit. No audio, selector, task, or
+output state was rewritten.
+
+ORIGIN: diagnostic-only phase, caller, route, entry, argument, and store
+observations.
