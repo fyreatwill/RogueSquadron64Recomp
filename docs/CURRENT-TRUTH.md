@@ -2,7 +2,18 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3565 (2026-09-01).
+documents are listed below. Updated for session 3566 (2026-09-01).
+
+Session 3566 closed the immediate RDRAM source-range writer question on a
+target-valid standalone image arm. The exact-span writer table found nine
+hangar DMEM-to-RDRAM writebacks into `0x1797B0`/`0x1798B0`; their payloads and
+post-write hashes were zero, and they preceded the zero stage-2/3 reads. A
+preceding CPU writer at `0x800078EC` also supplied zero stores, but it was not
+the immediate stage-task writer. This selects `H-SourceRangeDmaWriter` and
+leaves the zero DMEM payload producer open. It is single-source port ordering
+evidence; the retail oracle independently passed its whole-RDRAM control and
+observed the watched span. See
+[M5-S3566-SOURCE-RANGE-WRITER.md](M5-S3566-SOURCE-RANGE-WRITER.md).
 
 Session 3565 closed the immediate image-task staging-DMA ordering question on
 a target-valid standalone image arm. After fixing a process-lifetime source-
@@ -527,12 +538,13 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. M5 Step 3 image-task staging/clear: identify the source and ordering of the
-   zero-valued RDRAM-to-DMEM DMAs that overwrite the image-task windows. The
-   target-valid arm observed nonzero vector staging before those DMAs, then
-   zero stage-2/3 payload and destination hashes. Do not rewrite output or PCM
-   state. The next census must join each zero DMA's source range and ordering
-   to the preceding DMEM stores and source-range writer.
+0. M5 Step 3 image-task staging/clear: identify the producer of the zero DMEM
+   payload used by the now-qualified source-range DMEM-to-RDRAM writebacks.
+   Session 3566 found the immediate RDRAM writer and its zero payload, while
+   earlier CPU zero stores at `0x800078EC` remain upstream context. The next
+   census must join the route/task ordinal to the DMEM bytes immediately before
+   each `0xC30`/`0xCB0` writeback and to every writer of those DMEM regions.
+   Do not rewrite output or PCM state.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -567,7 +579,14 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 image-task staging/clear qualification.
+The active work unit is now M5 Step 3 image-task DMEM payload qualification.
+Session 3566 selected `H-SourceRangeDmaWriter`: nine target-phase
+DMEM-to-RDRAM writebacks into the source range had zero payload and followed
+earlier zero CPU stores, so the immediate source-range writer is known. The
+next witness must identify the producer of the zero `0xC30`/`0xCB0` DMEM
+payload before those writebacks. Session 3565's `H-ZeroDmaOrdering` result is
+superseded at this narrower source-writer scope; no behavior changed.
+
 Session 3564 selected `H-DmemProducerWrong`: target DMEM windows received
 nonzero vector-store staging activity, but repeated zero-valued source DMAs
 preceded zero stage payload and destination hashes. The next witness must
@@ -755,6 +774,7 @@ the oracle did not provide a matching register tuple.
 Latest output boundary:
 
 - [M5-S3565-IMAGE-STAGING-SOURCE.md](M5-S3565-IMAGE-STAGING-SOURCE.md)
+- [M5-S3566-SOURCE-RANGE-WRITER.md](M5-S3566-SOURCE-RANGE-WRITER.md)
 - [M5-S3564-IMAGE-DMEM-PRODUCER.md](M5-S3564-IMAGE-DMEM-PRODUCER.md)
 - [M5-S3539-SOURCE-WRITER.md](M5-S3539-SOURCE-WRITER.md)
 - [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md)

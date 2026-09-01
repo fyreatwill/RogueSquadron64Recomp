@@ -134333,3 +134333,31 @@ leaves the legitimate RDRAM source-range writer open. The retail oracle was
 unavailable, so this is single-source port evidence. The only code change was
 diagnostic budget scoping; no game state or mitigation was added. See
 `docs/M5-S3565-IMAGE-STAGING-SOURCE.md`.
+
+## Session 3566 (2026-09-01) — identified image source-range DMA writer
+
+The retail oracle check passed its whole-RDRAM positive control with 10,290
+callbacks in 12 seconds and independently observed 290 writes in physical
+`0x1797B0:0x179930`; it did not reach the target VI in that short check. The
+first port capture reached title `1024` and hangar `512`, but its new exact
+source-range DMA hook emitted no rows because the CPU writer controls were not
+enabled, so it was not used to classify the writer. The hook and controls were
+corrected, the project rebuilt successfully, and the validated standalone
+image route was rerun.
+
+The final capture had live phase, image-stage, source-DMA, audio-return, and
+title/hangar controls. It recorded 9 hangar DMEM-to-RDRAM writebacks into the
+source span from DMEM `0xC30`/`0xCB0`; every overlapping payload and post-write
+hash was zero. The rows were route ordinals 1176–1179, with first shared event
+5575. The CPU writer census also recorded 244 target-phase source-span rows,
+all zero stores from guest PC `0x800078EC`, with earlier shared events. Stage
+rows remained live and 2,371 stage-2/3 rows had zero DMEM payload.
+
+This selects `H-SourceRangeDmaWriter`, refutes `H-SourceRangeStaleOrUnwritten`
+for this route, and leaves the producer of the zero `0xC30`/`0xCB0` DMEM
+payload open. `H-SourceRangeCpuWriter` is a preceding zero producer but not the
+immediate stage-task writer. The target result is single-source port ordering;
+the retail run supplies an independent oracle-control and span-activity line.
+The only code change was the regeneration-surviving diagnostic hook in the
+runtime DMA path; no game-state mitigation was added. See
+`docs/M5-S3566-SOURCE-RANGE-WRITER.md`.

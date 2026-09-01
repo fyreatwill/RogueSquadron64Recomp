@@ -1078,6 +1078,60 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
     }
 }
 
+extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
+                                                   uint32_t dram_addr,
+                                                   uint32_t len,
+                                                   uint32_t dmem_addr) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SOURCE_WRITER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || len == 0u) return;
+    uint32_t phase = 0, width = 0, origin = 0, route_ordinal = 0xFFFFFFFFu,
+             route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    if (!rs64_audio_current_route_snapshot(
+            &phase, &width, &origin, &route_ordinal, &route_row,
+            &exit_reason, &arm)) return;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+
+    const uint32_t first = 0x1797B0u, last = 0x179930u;
+    const uint32_t end = dram_addr + len;
+    if (dram_addr >= last || end <= first) return;
+    const uint32_t overlap_first = dram_addr > first ? dram_addr : first;
+    const uint32_t overlap_last = end < last ? end : last;
+    uint32_t payload_fnv = 2166136261u, payload_nz = 0u;
+    uint32_t post_fnv = 2166136261u, post_nz = 0u;
+    for (uint32_t addr = overlap_first; addr < overlap_last; ++addr) {
+        const uint8_t source = dmem[((dmem_addr + (addr - dram_addr)) & 0xFFFu) ^ 3u];
+        payload_fnv = (payload_fnv * 16777619u) ^ source;
+        payload_nz += source != 0u;
+        const uint8_t stored = rdram[addr & 0x007FFFFFu];
+        post_fnv = (post_fnv * 16777619u) ^ stored;
+        post_nz += stored != 0u;
+    }
+    static std::mutex mutex;
+    static uint32_t rows[2] = {};
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] >= 512u) return;
+    const uint64_t event = g_rs64_m5_source_event++;
+    std::fprintf(stderr,
+        "[m5-source-range-writer] event=%llu op=dma_to_rdram row=%u "
+        "phase=%u width=%u origin=0x%06X arm=%s route_ordinal=%u "
+        "route_row=%u dram=0x%06X len=0x%X dmem=0x%03X overlap=0x%06X..0x%06X "
+        "payload_fnv=%08X payload_nz=%u post_fnv=%08X post_nz=%u exit=%d\n",
+        static_cast<unsigned long long>(event), rows[slot]++, phase, width,
+        origin, arm ? arm : "n/a", route_ordinal, route_row, dram_addr, len,
+        dmem_addr, overlap_first, overlap_last, payload_fnv, payload_nz,
+        post_fnv, post_nz, exit_reason);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_ai_table_row(uint32_t index, uint32_t root,
                                        uint32_t entry, uint32_t is_root) {
     static const bool enabled = [] {
@@ -2660,6 +2714,7 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
     static uint32_t unique_n[2] = {0, 0};
     static uint32_t unique_pc[2][64] = {};
     static const uint32_t spans[2] = {0x178C80u, 0x1797B0u};
+    uint64_t source_event = 0;
     std::lock_guard<std::mutex> lock(mutex);
 
     const uint64_t ordinal = store_ordinal++;
@@ -2691,14 +2746,19 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
             }
         }
         if (new_pc && unique_n[i] < 64u) unique_pc[i][unique_n[i]++] = pc;
+        if (i == 1u && source_event == 0u) {
+            source_event = g_rs64_m5_source_event++;
+        }
         if (printed[i] < 512u || (new_pc && unique_n[i] <= 64u)) {
             std::fprintf(stderr,
                 "[field348-writer] ordinal=%llu phase=%u width=%u "
                 "origin=0x%06X span=%u phys=0x%06X len=%u pc=0x%08X "
-                "value=0x%08X value_fnv=%08X value_nz=%u total=%u unique=%u\n",
+                "value=0x%08X value_fnv=%08X value_nz=%u total=%u unique=%u "
+                "source_event=%llu\n",
                 static_cast<unsigned long long>(ordinal), phase, width_n, origin,
                 i + 1u, phys, len, pc, logged_value, value_fnv, value_nz,
-                total[i], unique_n[i]);
+                total[i], unique_n[i],
+                static_cast<unsigned long long>(source_event));
             std::fflush(stderr);
             ++printed[i];
         }
