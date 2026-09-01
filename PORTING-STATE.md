@@ -132403,3 +132403,24 @@ selector transform.
 
 ORIGIN: diagnostic-only audio-dispatch and selector-writer observations; no
 task fields or selector values were rewritten, skipped, or validated.
+
+## Session 3489 (2026-08-31) — joined non-ordinal selector-writer inputs
+
+The prescribed keyed join used the retained independent retail capture from
+Session 3487 and the qualified silent port capture from Session 3488. Both
+positive-control paths fired: the retail whole-RDRAM control reached its
+threshold, and the port selector-writer and task-writer controls fired. The
+title key normalized origin `0x00790400`/`0x790400`, writer PC
+`0x80091074`, selector value, and operand-class fields; animation ordinals
+were not used.
+
+Retail produced 533 title rows, all with selector value `0x80171CE0`. The
+port produced 1,024 rows: 512 with `0x80171CE0`, 511 with `0x80173B20`, and
+one with `0x8018DD30`. The common source family and route-exclusive port
+families remained visible under operand-class joins. This selects
+`H-WriterInputDivergence` and rules out a later-transform explanation at the
+writer boundary. The upstream selector/table producer remains unresolved.
+Evidence: [M5-S3489-NONORDINAL-WRITER-JOIN.md](docs/M5-S3489-NONORDINAL-WRITER-JOIN.md).
+
+ORIGIN: diagnostic-only parsing of existing retail and port rows; no selector
+or task field was rewritten, skipped, or validated.

@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3488 (2026-08-31). This record was
+Current active marker: Session 3489 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -490,16 +490,27 @@ and later-transform hypotheses therefore remain open. Evidence:
 ORIGIN: diagnostic-only audio-dispatch and selector-writer observations; no
 task fields or selector values were rewritten, skipped, or validated.
 
+Session 3489 performed the prescribed non-ordinal join at `0x80091074` using
+title origin, writer PC, selector value, and operand-class fields. The
+independent retail control and the port selector/task controls all fired.
+Retail had 533 title rows, all selector value `0x80171CE0`; the silent port had
+1,024 rows: 512 `0x80171CE0`, 511 `0x80173B20`, and one `0x8018DD30`. The
+common source family and route-exclusive port families remain visible under
+operand-class joins. This selects `H-WriterInputDivergence` and rules out a
+later-transform explanation at this boundary; the upstream selector/table
+producer is unresolved. Evidence: [M5-S3489-NONORDINAL-WRITER-JOIN.md](M5-S3489-NONORDINAL-WRITER-JOIN.md).
+
+ORIGIN: diagnostic-only parsing of existing rows; no selector or task field
+was rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Design a non-ordinal writer-input/value discriminator at `0x80091074`.
-   Use the already qualified silent port route and the independent retail
-   route, keyed by title origin, writer PC, selector value, and operand class;
-   do not compare sequential animation ordinals. A matching keyed table with
-   legitimate values closes the writer boundary; a keyed value/source class
-   present only on one route selects the first contract divergence; an empty
-   table with both controls firing means the key is insufficient and must be
-   redesigned, not repeated.
+1. Trace the upstream selector/table producer feeding `0x80091074`. Use a
+   single batched retail/port discriminator keyed by the selected source
+   families (`0x80171CE0`, `0x80173B20`, `0x8018DD30`), the preceding selector
+   load, and the same title origin. Positive controls must fire in both arms;
+   a matching producer input closes the selector boundary, while a
+   route-exclusive producer value selects the next missing contract edge.
 2. Keep the Session 3488 silent route as the qualification baseline; do not
    repeat the audio-disabled reachability run unchanged.
 3. Retain the Session 3486 pointer-word result; do not repeat the exact

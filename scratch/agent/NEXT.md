@@ -1,30 +1,29 @@
-# NEXT work unit — design the non-ordinal selector-writer discriminator
+# NEXT work unit — trace the upstream selector/table producer
 
 HYPOTHESIS-ID: m5-task-field-writer
 
-Session 3488 qualified the silent port route: title and hangar were reached,
-the selector-writer control fired, and 1,024 writer rows were emitted without
-a crash. The retained retail capture has 533 rows, so sequential ordinals are
-not a valid cross-runtime key for the animated title scene.
+Session 3489 selected `H-WriterInputDivergence`: retail supplied only
+`0x80171CE0`, while the silent port supplied that value plus `0x80173B20` and
+`0x8018DD30` at the common writer. The source-family key had qualified overlap,
+so the next work unit is upstream attribution, not another join-key design.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-WriterInputDivergence`: a route-keyed selector/source class differs while
-  both independent controls fire.
-- `H-SharedWriterTransform`: route-keyed writer inputs match, but a later
-  selector/output value class differs.
-- `H-KeyInsufficient`: the proposed non-ordinal key yields no comparable
-  rows despite positive controls, so the key—not the contract—is unresolved.
+- `H-UpstreamProducerDivergence`: the selector/table producer supplies a
+  route-exclusive source value before `0x80091074`.
+- `H-SelectorLoadDivergence`: producer inputs match, but the load/selection
+  operation changes the source before the writer.
+- `H-JoinInsufficient`: both controls fire but the producer key has no
+  qualified overlap, requiring a redesigned key.
 
-Discriminating measurement: construct one keyed table from the retained
-retail rows and the Session 3488 port rows using title origin, writer PC,
-selector value, and operand class—not ordinal or elapsed time. A class/value
-match supports `H-SharedWriterTransform`; a class/value present only on one
-route supports `H-WriterInputDivergence`; no qualified overlap supports
-`H-KeyInsufficient` and requires a new key.
+Discriminating measurement: add one batched witness at the preceding selector
+load/table-read boundary, retaining the existing controls, and join retail and
+port rows by title origin, source family, selector input, and operand class.
+A route-exclusive producer value selects `H-UpstreamProducerDivergence`; equal
+producer inputs with differing writer values selects `H-SelectorLoadDivergence`;
+no qualified overlap selects `H-JoinInsufficient`.
 
-Expected command: use `awk`/`sort` over
-`scratch/agent/s3487_oracle_writer.log` and
-`scratch/agent/s3488_m5_audio_disabled/run.log` to emit the keyed tables and
-their intersection/differences. No build or new runtime instrumentation is
-needed until the key produces a qualified discriminator.
+Ground truth before building: use the independent retail oracle to watch the
+preceding selector load/table-read boundary and require its whole-RDRAM
+positive control in the same run. Then batch both arms in one build/run
+recipe; do not compare sequential animation ordinals.
