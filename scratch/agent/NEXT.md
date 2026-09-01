@@ -1,35 +1,41 @@
-# NEXT work unit — requalify the canonical heap-route capture
+# NEXT work unit — audit the pre-title audio-slot dispatcher boundary
 
-HYPOTHESIS-ID: m5-heap-route-requalification
+HYPOTHESIS-ID: m5-audio-slot-dispatcher-boundary
 
-Run one canonical real-audio/LLE-solo/spin-yield/autopilot capture from
-build/ with the already-built caller-table binary, using the C88 route aid
-and the phase gate. Do not add instrumentation or change heap/audio state.
-Use ROGUESQ_AUTOPILOT=1, ROGUESQ_M5_C88_VALUE=0, ROGUESQ_AUDIO_UCODE=1,
-ROGUESQ_SPIN_YIELD=1, ROGUESQ_LLE_FORCE=1, ROGUESQ_LLE_UNGATED=1,
-ROGUESQ_LLE_SOLO=1, ROGUESQ_STUB_MISSING_FUNCS=1,
-ROGUESQ_LOG_HEAP_DEQUEUE=1, PROBE_PHASE_WIDTH=1024,
-PROBE_PHASE_TIMEOUT=180, PROBE_KEYS_FROM_PHASE=1, and PROBE_LEAVE_OK=1.
+Do one bounded idiom-class audit of `slotDispatcherIter` at guest PC
+`0x80007904`, which crashed the canonical route at VI 640 in session 3554.
+Before building an instrument, enumerate the generated function and callers,
+then inspect the existing audio-slot state layout and independent-oracle
+availability. Do not change heap, audio, PCM, image-task, output, or texture
+records.
+
+Initial commands:
+
+    rg -n "slotDispatcherIter|0x80007904|waitForAnyAudioSlot|audio.*slot" src lib RecompiledFuncs tools docs
+    rg -n "^## Session " PORTING-STATE.md | tail -15
+    sed -n '<bounded-hit-window>p' <matching source file>
 
 Competing hypotheses and the discriminator:
 
-- H-RouteRequalifies: target phases return, making the caller/entry join
-  evaluable.
-- H-RouteStill640: positive controls fire but VI 1024 never arrives; the
-  current caller hypotheses remain unevaluable and the next unit must inspect
-  the 640 route blocker.
-- H-RouteCrashes: a crash occurs before the gate; classify only with a crash
-  marker and last guest PC.
-- H-ControlsInvalid: autopilot or the phase control is absent; discard the run
-  and fix the recipe.
+- H-DispatcherInput: the dispatcher receives an invalid slot index or state;
+  its entry table will show a malformed value before the crashing read, with
+  a stable caller and slot-state witness.
+- H-DispatcherRoute: the input is valid, but the pre-title route reaches the
+  dispatcher in an invalid lifecycle state; entry values are valid while the
+  phase/caller sequence differs at the failing iteration.
+- H-DispatcherOverlay: the guest PC is executing the wrong overlay/function
+  body; a caller/overlay or function-map witness will disagree with the
+  expected pre-title dispatch despite valid slot state.
+- H-CrashArtifact: the native SIGBUS is unrelated to the guest slot contract;
+  the same run reaches the dispatcher positive control but has no stable
+  guest-side bad read or route divergence.
 
-The discriminating measurement is the same-run control/phase table:
-autopilot arm and fire, VI 1024 and 512, heap-entry rows, and caller rows.
-Only if both target VIs and heap-entry rows are live may caller rows be joined
-by phase and ordinal; edge 1 versus edge 2 then selects the caller path,
-while neither edge selects an alternate path. Missing controls make the
-capture invalid.
-
-Capture under scratch/agent/s3554_m5_heap_route_requalify/ with SIGKILL
-cleanup. Do not change heap, audio, PCM, image-task, output, or texture-record
-writes.
+The discriminating measurement is one same-build, phase-scoped table covering
+dispatcher entry, caller/guest PC, slot index, slot pointer/state, and the
+read immediately preceding the crash, plus the existing autopilot and VI
+controls. H-DispatcherInput requires a bad slot value; H-DispatcherRoute
+requires valid input with a lifecycle/phase mismatch; H-DispatcherOverlay
+requires dispatch-body mismatch; absent guest evidence with a live control
+selects H-CrashArtifact. A missing positive control invalidates the capture.
+Build all fields once, run the canonical real-audio/LLE-solo/spin-yield route
+once, and use SIGKILL cleanup from `build/`.

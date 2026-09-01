@@ -2,7 +2,16 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3552 (2026-09-01).
+evidence documents are listed below. Updated for session 3554 (2026-09-01).
+
+Session 3554 re-ran the canonical real-audio/LLE-solo/spin-yield/autopilot
+heap-route capture with the caller table. The autopilot control fired and the
+table produced 32 rows on each known caller edge plus 32 callee-entry rows,
+but all were pre-title phase 3; the run never reached VI 1024 or 512 and then
+crashed in `slotDispatcherIter+3508` with guest PC `0x80007904` and SIGBUS.
+This selects `H-RouteCrashes`, leaves the caller/entry join unevaluable, and
+moves the next boundary to the pre-title audio-slot dispatcher route. See
+[M5-S3554-HEAP-ROUTE-REQUALIFICATION.md](M5-S3554-HEAP-ROUTE-REQUALIFICATION.md).
 
 Session 3553 added the regeneration-safe caller table for both generated
 heapFreeListDequeue edges. The first corrected command used a wrong probe
@@ -400,19 +409,16 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. Requalify the canonical real-audio/LLE-solo/spin-yield/autopilot route
-   before interpreting the new caller table. Session 3553's positive control
-   fired, but both the fresh-regenerated and preserved generated trees stalled
-   at VI 640; target-phase caller/entry joins are therefore still absent.
-   Do not classify the cached head or add a mitigation until title and hangar
-   phases are live in the same capture.
+0. Audit the pre-title `slotDispatcherIter` crash boundary at guest PC
+   `0x80007904` as one audio-slot dispatcher idiom class. Enumerate its slot
+   index/state reads and all generated callers, then use the existing positive
+   control and a phase-scoped table to distinguish an invalid dispatcher input
+   from a route/overlay mismatch before revisiting the heap caller join.
 
-1. Add one phase-scoped caller/route table at the two known generated
-   `heapFreeListDequeue` edges (`0x800104A8`, `0x80010CD8`), joined to the
-   existing entry witness. The current valid run entered the function 96
-   times but took the `0x8000D700`/`0x8000D704` path zero times; do not
-   classify the cached head or add a mitigation until a caller/path split is
-   observed.
+1. Requalify the canonical real-audio/LLE-solo/spin-yield/autopilot route only
+   after the dispatcher boundary has a discriminator. Session 3554 had live
+   autopilot and heap controls, but crashed at VI 640; do not classify the
+   cached head or add a mitigation from those pre-title rows.
 2. Keep the HMT role result as valid at this discriminator: nullable `a2` is
    an intended branch, and the sampled required pointers were mapped. Do not
    repeat the provisional non-pointer scalar classifier or treat its old

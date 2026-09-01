@@ -134027,3 +134027,24 @@ Evidence: `docs/M5-S3552-HEAP-BRANCH.md` and
 `scratch/agent/s3552_m5_heap_branch/fixed/run.log`.
 
 ORIGIN: diagnostic-only observation; no mitigation was added.
+## Session 3554 (2026-09-01) — canonical heap route crashed in slot dispatcher
+
+The prescribed real-audio/LLE-solo/spin-yield/autopilot requalification used
+the existing regeneration-safe heap caller table without changing heap,
+audio, PCM, image-task, output, or texture-record state. The autopilot control
+fired and the run reached VI 640, but it never reached VI 1024 or VI 512.
+Before the crash, the table emitted 32 rows from each known caller edge,
+`0x800104A8` and `0x80010CD8`, plus 32 callee-entry rows; all were pre-title
+phase 3 and therefore cannot be joined to target-phase behavior. The process
+then crashed with SIGBUS in `slotDispatcherIter+3508`, guest PC `0x80007904`,
+fault address `0x37fff0019`.
+
+This selects `H-RouteCrashes` and moves the next discriminator to the
+pre-title audio-slot dispatcher route. It rules out only a successful
+requalification in this capture; it does not select either heap caller,
+classify the cached head, or identify a writer.
+
+Evidence: `docs/M5-S3554-HEAP-ROUTE-REQUALIFICATION.md` and
+`scratch/agent/s3554_m5_heap_route_requalify/run.log`.
+
+ORIGIN: diagnostic-only route instrumentation; no mitigation was added.
