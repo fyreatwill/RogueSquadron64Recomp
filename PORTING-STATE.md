@@ -134403,6 +134403,29 @@ immediate CPU writer or stale-only explanation at this boundary. It leaves the
 producer or clear that makes the writeback DMEM payload zero open. No behavior
 change was made. See `docs/M5-S3568-SOURCE-RANGE-PRODUCER.md`.
 
+## Session 3570 (2026-09-01) — identified zero source-DMA input boundary
+
+Ran the planned source-DMA producer census. The first standalone image launch
+was invalid because it stopped at VI 640; the corrected launch used the
+validated comma-separated autopilot schedule, real audio, LLE-solo,
+spin-yield, and `ROGUESQ_STUB_MISSING_FUNCS=1` from `build/`. It reached title
+VI 1024 at `0x00790400` and hangar VI 512 at `0x006AB400`, passed phase,
+RSP-source, source-DMA, source-range-writer, and writer controls, and was
+stopped with SIGKILL after 38 captured frames. No crash marker appeared.
+
+In hangar, source DMAs from `0x1797B0` and `0x1798B0` repeatedly had zero
+source hashes and zero nonzero bytes. All source-span writes were zero
+`dmem_to_rdram` writebacks. The phase-matched `field348-writer` witness at
+`0x800078EC` fired 322 times, but its stores were also zero. This selects
+`H-SourceDmaZeroInput` and rules out a productive CPU or RSP/DMA producer at
+this boundary; the next probe is the pre-task zero initializer/data handoff.
+The retail oracle passed its whole-RDRAM positive control (10,000 callbacks)
+but did not reach the target phase in the 8-second preflight, so its target
+watch was unevaluable. Detailed evidence: `docs/M5-S3570-SOURCE-DMA-PRODUCER.md`.
+
+ORIGIN: diagnostic-only census; no output, PCM, task, or DMA behavior was
+changed, and no mitigation was added.
+
 ## Session 3569 (2026-09-01) — identified zero-DMEM-payload boundary
 
 The first two port attempts were discarded: one omitted the validated
