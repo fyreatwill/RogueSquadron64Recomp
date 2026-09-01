@@ -132755,3 +132755,24 @@ covered by Sessions 3502–3503. Evidence: [M5-S3504-LLE-OFF-REAL-AUDIO.md](docs
 ORIGIN: diagnostic-only route, phase, audio-dispatch, and selector
 observations; no audio state, selector value, task field, or output was
 rewritten, skipped, or validated.
+
+## Session 3505 (2026-08-31) — LLE-off no-spin remains pre-title blocked
+
+Ran the next bounded real-audio route arm from `build/` with
+`ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LLE_FORCE=0`, and `ROGUESQ_SPIN_YIELD=0`,
+retaining the validated autopilot and existing startup, phase, dispatch,
+audio-return, and selector controls. Startup and phase controls fired; real
+audio remained active; and the run reached VI 640 at origin `0x0066A500` at
+3.1 seconds, then stayed in the VI-640 scheduler path through the 30-second
+SIGKILL. Title 1024 and hangar 512 were absent. Two audio-return rows were
+seen, but no target-phase selector rows appeared. No crash, access violation,
+assertion, or abort marker appeared.
+
+This selects `H-LLEOffAdvanceBlocker` and rejects a spin-yield dependency
+within the LLE-off arm. It does not qualify selector-table writer/index/value
+hypotheses because their target phase was not reached. Evidence:
+[M5-S3505-LLE-OFF-NO-SPIN.md](M5-S3505-LLE-OFF-NO-SPIN.md).
+
+ORIGIN: diagnostic-only route, phase, audio-return, and selector observations;
+no audio state, selector value, task field, or output was rewritten, skipped,
+or validated.

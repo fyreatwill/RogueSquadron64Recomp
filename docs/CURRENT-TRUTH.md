@@ -736,13 +736,28 @@ ORIGIN: diagnostic-only route, phase, audio-dispatch, and selector
 observations; no audio state, selector value, task field, or output was
 rewritten, skipped, or validated.
 
+Session 3505 ran the new real-audio arm with `ROGUESQ_LLE_FORCE=0` and
+`ROGUESQ_SPIN_YIELD=0`, preserving the validated autopilot and existing
+controls. Startup and phase controls fired; real audio remained active; the
+run reached VI 640 at origin `0x0066A500` and stayed there through the 30-second
+watchdog. It did not reach title 1024 or hangar 512, emitted two audio-return
+rows but no target-phase selector rows, and showed no crash or abort marker.
+This selects the LLE-off pre-title advance blocker and rejects a spin-yield
+dependency within the LLE-off arm; selector-table hypotheses remain
+unevaluable. Evidence: [M5-S3505-LLE-OFF-NO-SPIN.md](M5-S3505-LLE-OFF-NO-SPIN.md).
+
+ORIGIN: diagnostic-only route, phase, audio-return, and selector observations;
+no audio state, selector value, task field, or output was rewritten, skipped,
+or validated.
+
 ## Next steps
 
-1. Test the next real-audio route discriminator with `ROGUESQ_LLE_FORCE=0`
-   and `ROGUESQ_SPIN_YIELD=0`. Require the startup control and a 1024 title
-   transition; title reach selects a spin-yield dependency, continued VI 640
-   selects the LLE-off advance blocker, and a new crash selects a distinct
-   route failure. Do not repeat either unchanged route recipe.
+1. Test the next route discriminator with real audio, `ROGUESQ_LLE_FORCE=1`,
+   and `ROGUESQ_SPIN_YIELD=0`, retaining the validated autopilot and controls.
+   Require startup control and phase-gated outcome: title 1024 selects a
+   spin-yield dependency, continued VI 640 selects a broader no-spin advance
+   blocker, and a new crash selects a distinct LLE-on route failure. Do not
+   repeat either unchanged route recipe.
 2. Once that route is qualified, trace the writer/initializer and selector-index source feeding the
    `0x80150000`/`0x80150004` table entries used by `0x8009131C`, with one
    batched retail/port discriminator keyed by title origin, table address,
