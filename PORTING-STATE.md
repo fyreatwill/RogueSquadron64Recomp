@@ -133419,3 +133419,29 @@ capture remains a route failure, not evidence about the target boundary.
 ORIGIN: diagnostic-only source-writer, input-load, allocator, store, phase, and
 independent retail observations. The `0x80091CC8` write is a legitimate audio
 frequency setup write; no audio, selector, task, or output state was rewritten.
+
+## Session 3531 (2026-08-31) — qualified selector setup contract
+
+Enumerated the generated setup path before building: `reapplyAudioConfig` has
+one generated caller at `0x8008EBC0`; it preserves `a0` as `s1`, loads the AI
+argument from `MEM_W(s1)`, calls `osAiSetFrequency_recomp`, and consumes `v0`
+at the setup store. The Debug build succeeded with a regeneration-safe,
+phase-keyed setup-contract witness.
+
+The corrected real-audio/LLE/solo, spin-yield, canonical-autopilot port run
+passed its positive controls and reached title 1024 and hangar 512. At title,
+the witness observed `a0=0x80165ED0`, `a1=0x12`, AI input `0x5622`, and AI
+return `v0=0x5622`; hangar repeated the AI-return `v0=0x5622` row. Existing
+downstream entry, allocation, and selector-store controls remained live.
+
+An independent retail run was attempted with whole-RDRAM and target-write
+controls and the corresponding execution watches, but exited before emulation
+because `libmupen64plus.dylib` is absent. Thus the port-side source/return
+contract is qualified, but retail parity versus divergence remains
+unevaluable; this is single-source evidence and does not close either
+hypothesis. The missing core is the next setup blocker, not evidence about the
+game boundary.
+
+ORIGIN: diagnostic-only setup-entry, mutex, AI-call/return, phase, positive,
+downstream, and failed-oracle-start observations. No audio, selector, task, or
+output state was rewritten.

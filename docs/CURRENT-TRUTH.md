@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3530 (2026-08-31).
+evidence documents are listed below. Updated for session 3531 (2026-08-31).
 
 ## Current state
 
@@ -148,6 +148,16 @@ a load-only or allocator explanation. The retail writer watch did not capture
 its value, so the numeric writer-value comparison is single-source. See
 [M5-S3530-SELECTOR-SOURCE-WRITER.md](M5-S3530-SELECTOR-SOURCE-WRITER.md).
 
+Session 3531 qualified the port-side setup source/return contract: the
+phase-keyed witness reached title and hangar, preserved `a0=0x80165ED0` and
+`a1=0x12` through the setup/mutex path, loaded AI input `0x5622`, and observed
+AI return `v0=0x5622`; all downstream selector controls remained live. The
+independent retail watch could not start because `libmupen64plus.dylib` is
+absent in this checkout. This is single-source port evidence: it rules out an
+internal port-side ABI/return clobber at the qualified path, but does not
+select retail source/value parity versus divergence. See
+[M5-S3531-SELECTOR-SETUP-CONTRACT.md](M5-S3531-SELECTOR-SETUP-CONTRACT.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -174,13 +184,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Build one discriminator for the selected `0x80091CC8` setup-writer edge:
-   qualify its source arguments and return/value contract against retail, in
-   the same phase-keyed table as the input-load, caller, entry, allocation,
-   store, producer-context, mixer, phase, and positive controls. A matching
-   source/value moves the search into the setup-writer producer or return
-   contract; a differing source/value identifies the next producer. Do not
-   rewrite audio or selector state.
+1. Re-run the selected `0x80091CC8` setup-writer discriminator only after the
+   independent retail oracle's missing `libmupen64plus.dylib` is restored or
+   built. Reuse the existing port table and compare retail source arguments
+   and AI return/value in the same phase buckets. Do not repeat the valid port
+   capture alone or rewrite audio/selector state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
