@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3536 (2026-08-31).
+evidence documents are listed below. Updated for session 3537 (2026-08-31).
 
 ## Current state
 
@@ -205,6 +205,17 @@ This selects `H-ContractGap` at the payload scope, not a missing dispatch or
 completion edge. No writer/value was identified, so no output state may be
 changed. See [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md).
 
+Session 3537 qualified the next output boundary with a batch oracle/port
+capture. Retail passed whole-RDRAM and target-phase controls and produced
+nonzero bytes in the PCM ring and image destinations. The port reached both
+target phases and executed source DMA, image-stage, completion, PCM source,
+and PCM consumer joins, but sampled payloads remained zero; its bounded
+PCM-writer rows were DMA rows rather than a nonzero CPU writer. Retail
+attribution at `0x1935E0` identified `0x800078EC` in title and
+`0x80018F5C`/`0x80018F60` in hangar. This selects an output-writer/ordering
+contract gap, not missing task dispatch or completion. The port-side writer
+remains open; see [M5-S3537-OUTPUT-WRITER.md](M5-S3537-OUTPUT-WRITER.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -231,9 +242,10 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify one phase-qualified source-payload writer/consumer edge behind the
-   zero image-stage and PCM payloads, using a new independent retail writer
-   attribution; only then implement that single selected edge.
+1. Attribute the port-side writer/ordering edge corresponding to retail's
+   nonzero output writers (`0x800078EC`, `0x80018F5C`, `0x80018F60`) at the
+   watched destinations, using phase-qualified port writer rows and the
+   already-qualified retail controls; only then implement that edge.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -257,7 +269,12 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the image-task output payload contract. The
+The active work unit is now the image-task output payload contract. Session
+3537 selected `H-MissingOutputWriter`/`H-OutputContractGap` at the observed
+destination scope: retail's independent writer watches produced legitimate
+nonzero bytes, while the port's corresponding joins emitted zero bytes. The
+port writer/order edge is still unidentified, so no output state is to be
+rewritten. The
 `0x80091CC8` internal return contract is closed by Sessions 3534–3535. The
 silent-arm route defect is parked separately.
 

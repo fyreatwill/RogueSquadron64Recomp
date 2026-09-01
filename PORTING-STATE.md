@@ -133568,3 +133568,35 @@ independent retail writer attribution. Details:
 ORIGIN: diagnostic-only task, DMA, completion, route, host-boundary, and PCM
 observations; no audio state, task field, selector value, writeback, or output
 was rewritten, skipped, or validated.
+
+## Session 3537 (2026-08-31) — qualified output writer boundary
+
+Ran the single M5 output-contract work unit after checking oracle watch
+capacity and the existing source/image/PCM joins. The batch included a
+whole-RDRAM positive control, PCM-ring/image-destination watches, phase-gated
+writer histograms, and the real-audio port's existing source, image-stage,
+DMA, completion, PCM source/consumer, and writer joins. Two early harness
+attempts stopped the port at title because the schedule was absolute and then
+because the driver killed the process after 15 seconds; both were corrected
+and the fixed run was used for the comparison.
+
+The oracle passed controls with 22,324 whole-RDRAM writes, reached title
+`0x00790400/1024` and hangar `0x006AB400/512`, and observed nonzero snapshots
+in the PCM ring (12,054/12,288 bytes) and image ranges (761/768 and 761/768).
+At `0x1935E0`, title attribution included `0x800078EC` with 12/16 nonzero
+samples; hangar attribution included `0x80018F5C` and `0x80018F60` with two
+nonzero samples each.
+
+The fixed port run reached both target phases with controls live and executed
+5,758 image-stage, 2,856 image-join, 2,863 DMA-range, 90 PCM-source, and 90
+PCM-consumer rows. Sampled image and PCM payloads were zero
+(`FNV=F59C39C5`, `nz=0`), and its bounded PCM-writer rows were DMA
+(`kind=2`) rows. It later emitted 36 crash markers after advancing beyond
+hangar; those post-qualified crashes do not invalidate the target-phase rows.
+
+This selects `H-MissingOutputWriter`/`H-OutputContractGap` at the observed
+output scope: retail writes legitimate nonzero payload bytes at the watched
+destinations, while port dispatch/completion and the corresponding joins are
+live but payloads remain zero. It rules out missing task dispatch, missing SP
+completion, and a simple target-phase capture failure. It does not identify
+the port-side writer or ordering, so no output state was changed.
