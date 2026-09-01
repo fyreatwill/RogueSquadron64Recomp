@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3521 (2026-08-31).
+documents are listed below. Updated for session 3522 (2026-08-31).
 
 ## Current state
 
@@ -51,6 +51,17 @@ fired there. This selects a missing or route-gated port call at the qualified
 scope, not a target-phase argument mismatch. The route gate and any other
 caller remain open; see [M5-S3521-SELECTOR-CALLSITE-BOUNDARY.md](M5-S3521-SELECTOR-CALLSITE-BOUNDARY.md).
 
+Session 3522 statically enumerated the generated tree: exactly two direct
+`0x80029D20`/`osAiSetFrequency_recomp` references exist, in
+`initAudioSubsystem` and `reapplyAudioConfig`, whose only generated callers
+are `setDisplayMode` and `reapplyDisplayMode`. A new caller-entry witness was
+built, but both port captures failed before title; the corrected run crashed
+at `0x8000B650` in `fillSampleStreamRange`. The independent retail controls
+remained valid and again observed one hangar execution of `0x80029E78` from
+`0x80029E64`. This rules out an unenumerated direct generated caller at static
+scope, but leaves the runtime route gate unevaluable until a real-audio port
+run reaches hangar. See [M5-S3522-SELECTOR-ROUTE-CENSUS.md](M5-S3522-SELECTOR-ROUTE-CENSUS.md).
+
 Session 3516 qualified the selector-store boundary independently: retail
 whole-RDRAM and selector-span controls fired, with five executions at each of
 `0x8008F228` and `0x8008F264` in hangar. The port context hook at those same
@@ -85,11 +96,16 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify the route gate or alternate caller that suppresses the two known
-   port AI callsites in hangar. Use a whole-RDRAM control, the selector span,
-   the qualified retail `0x80029E78` watch, and the port producer/store controls;
-   distinguish a route-gated call from an unenumerated caller without
-   rewriting audio or selector state.
+1. Re-qualify the real-audio port route with the new `setDisplayMode` /
+   `reapplyDisplayMode` caller-entry witness before interpreting route-gate or
+   alternate-caller rows. Session 3522's corrected canonical arm crashed at
+   `0x8000B650`, so its port discriminator was invalid; retain the independent
+   retail `0x80029E78` and whole-RDRAM/selector controls.
+8. Identify the route gate or alternate caller that suppresses the two known
+   port AI callsites in hangar once the port reaches that phase. The static
+   census finds no additional direct generated caller; distinguish a
+   route-gated enclosing caller from a semantic retail-equivalence mismatch
+   without rewriting audio or selector state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.

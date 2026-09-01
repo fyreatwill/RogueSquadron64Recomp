@@ -133182,3 +133182,32 @@ rewritten or skipped.
 
 ORIGIN: the callsite labels and host witness are diagnostic-only; all observed
 audio and selector values remained untouched.
+
+## Session 3522 (2026-08-31) — censused selector route callers
+
+Enumerated every generated reference to `0x80029D20` and
+`osAiSetFrequency_recomp` before building. The tree has exactly two direct
+calls: `0x80091BAC` in `initAudioSubsystem` and `0x80091CB8` in
+`reapplyAudioConfig`; their only generated callers are `setDisplayMode` at
+`0x8008EA78` and `reapplyDisplayMode` at `0x8008EBC0`. Both calls are
+unconditional after entry. Added the regeneration-safe
+`tools/apply_s3522_m5_selector_route.py` witness at those two caller entries;
+the Debug target built successfully.
+
+The initial port run omitted the validated route settings and stalled at VI
+640. The corrected real-audio/LLE ungated+solo/spin-yield/autopilot run still
+crashed before title at `fillSampleStreamRange+932`, guest PC `0x8000B650`, so
+the port-side route discriminator was invalid. The independent retail oracle
+was valid: whole-RDRAM control fired 10,012 times, selector span
+`0x00149758..0x00149760` fired 12 times, and the hangar watch at
+`0x80029E78` fired once from `0x80029E64` with `a0=0x5622`, `a1=0x8A0`,
+`a2=0x10`, `s1=0x80165ED0`, and `v0=0x561F`.
+
+This rules out an unenumerated direct generated caller at static scope, but
+does not identify the runtime route gate or establish retail/host semantic
+equivalence because the port never reached the target phase. The failed port
+captures are a documented dead end, not target-phase evidence. No audio,
+selector, task, or output state was rewritten or skipped.
+
+ORIGIN: the new caller-entry witness observes caller registers and phase only;
+it performs no guest-memory or control-flow mutation.
