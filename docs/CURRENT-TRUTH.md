@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3520 (2026-08-31).
+documents are listed below. Updated for session 3521 (2026-08-31).
 
 ## Current state
 
@@ -43,6 +43,14 @@ positive control but had zero hangar rows, while the downstream selector
 stores and their controls remained live. This selects an execution-path
 difference at the AI boundary, but not yet its caller or equivalence.
 
+Session 3521 labeled both generated port callsites into the native AI
+primitive. Retail's independent execution watch reached hangar with caller
+`0x80029E64`; the port reached the same hangar phase with producer/store
+controls live, but neither labeled callsite nor the host AI-boundary witness
+fired there. This selects a missing or route-gated port call at the qualified
+scope, not a target-phase argument mismatch. The route gate and any other
+caller remain open; see [M5-S3521-SELECTOR-CALLSITE-BOUNDARY.md](M5-S3521-SELECTOR-CALLSITE-BOUNDARY.md).
+
 Session 3516 qualified the selector-store boundary independently: retail
 whole-RDRAM and selector-span controls fired, with five executions at each of
 `0x8008F228` and `0x8008F264` in hangar. The port context hook at those same
@@ -77,10 +85,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify the port callsites entering `osAiSetFrequency_recomp` and compare
-   them with the retail caller context for `0x80029E78`, retaining whole-RDRAM,
-   selector-span, and hangar selector-store controls. Distinguish a missing
-   port call from a caller/route mismatch; do not rewrite the value.
+1. Identify the route gate or alternate caller that suppresses the two known
+   port AI callsites in hangar. Use a whole-RDRAM control, the selector span,
+   the qualified retail `0x80029E78` watch, and the port producer/store controls;
+   distinguish a route-gated call from an unenumerated caller without
+   rewriting audio or selector state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -103,9 +112,9 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the caller/route boundary for the retail
-`0x80029E78` execution on the real-audio route. The silent-arm route defect is
-parked separately.
+The active work unit is now the route-gate or alternate-caller boundary for
+the retail `0x80029E78` execution on the real-audio route. The silent-arm route
+defect is parked separately.
 
 For the silent-arm route:
 
@@ -145,14 +154,10 @@ hangar, the port hook's startup positive control fired, and the port hook had
 zero hangar rows while downstream stores remained live. This is a path result,
 not a proof that the host primitive is the exact instruction equivalence.
 
-The next discriminating measurement is one independent retail caller-context
-capture and one qualified port capture that labels every port callsite into the
-native AI primitive. A matching caller with no target-phase port entry selects
-a missing/route-gated call; a target-phase entry with differing arguments
-selects caller context; failed controls make the capture invalid.
-Matching predecessor fields with a later writer difference selects a mutation;
-the first differing predecessor field selects its producer; failed controls
- select capture invalidity only.
+Session 3521 selected `H-PortCallMissing`: both labeled generated calls had
+startup controls but zero hangar rows, while retail's independent watch and the
+port producer/store controls were live. The next discriminator is a route-gate
+or alternate-caller census, not another repeat of these two callsites.
 
 Session 3514 adds a retail-qualified mixer-entry candidate at `0x80090E04`,
 but the port did not reach its target phase on either tested arm. See
@@ -229,6 +234,7 @@ Latest selector boundary:
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
 - [M5-S3519-SELECTOR-CALLSITE-CONTEXT.md](M5-S3519-SELECTOR-CALLSITE-CONTEXT.md)
 - [M5-S3520-SELECTOR-AI-BOUNDARY.md](M5-S3520-SELECTOR-AI-BOUNDARY.md)
+- [M5-S3521-SELECTOR-CALLSITE-BOUNDARY.md](M5-S3521-SELECTOR-CALLSITE-BOUNDARY.md)
 - [M5-S3516-SELECTOR-STORE-CONTEXT.md](M5-S3516-SELECTOR-STORE-CONTEXT.md)
 - [M5-S3517-SELECTOR-PRODUCER-CONTEXT.md](M5-S3517-SELECTOR-PRODUCER-CONTEXT.md)
 - [M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md](M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md)

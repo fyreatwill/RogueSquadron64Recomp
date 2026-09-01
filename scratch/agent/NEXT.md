@@ -1,36 +1,36 @@
-# NEXT work unit — identify port callers of the selector AI boundary
+# NEXT work unit — census the selector route gate or alternate caller
 
-HYPOTHESIS-ID: m5-selector-producer-context
+HYPOTHESIS-ID: m5-selector-route-gate
 
-Session 3520 qualified retail execution at `0x80029E78`, but the port's
-corresponding `osAiSetFrequency_recomp` hook was absent in the hangar despite
-a startup positive control and live downstream selector-store controls. The
-next single work unit is to label every generated port callsite entering
-`osAiSetFrequency_recomp`, then run the independent retail caller watch and
-the qualified real-audio port route in one batched build/run.
+Session 3521 selected `H-PortCallMissing`: retail executed `0x80029E78` in
+hangar, while both known generated port calls (`0x80091BAC`, `0x80091CB8`)
+were absent there despite startup controls and live producer/store controls.
+The next single work unit is a static census plus one phase-qualified runtime
+probe of the route gate or an alternate caller; do not repeat those callsites.
 
-Before building, arm the oracle with whole-RDRAM and selector-span controls,
-`--watch-pc 0x80029E78`, and `--pc-phase-log-width 0x006AB400:512`. Add
-callsite IDs to the two known generated calls at `0x80091BAC` and
-`0x80091CB8`; keep the native boundary positive control and hangar rows, plus
-the existing producer/store controls. Use `PROBE_PHASE_WIDTH=1024`,
-`PROBE_KEYS_FROM_PHASE=1`, and the validated real-audio LLE/spin-yield/
-autopilot route. Do not rewrite audio, selector, task, or output state.
+Before building, enumerate every generated reference to `0x80029D20` and
+`osAiSetFrequency_recomp` across `../N64Recomp/RecompiledFuncs`; inspect the
+smallest enclosing generated functions and branch guards. Add labels to any
+additional direct/wrapper call, and one phase-scoped probe at the first route
+gate that can suppress those calls. Run the independent retail
+`--watch-pc 0x80029E78` capture with whole-RDRAM and selector-span controls in
+the same iteration. Use `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`,
+and the validated real-audio LLE/spin-yield/autopilot route.
 
 Competing hypotheses:
 
-- `H-PortCallMissing`: no port callsite enters the native AI primitive during
-  hangar, selecting a missing or route-gated call.
-- `H-PortCallerMismatch`: a target-phase port call exists but its caller or
-  arguments differ from retail, selecting that caller edge.
+- `H-RouteGate`: the known calls are suppressed by a branch/state gate before
+  their callsites during hangar.
+- `H-AlternateCaller`: a different generated caller or wrapper reaches the
+  equivalent host primitive, so the known-call census is incomplete.
 - `H-RetailEquivalentMismatch`: the retail instruction is not equivalent to
-  the host primitive, so matching callsite activity does not explain the
-  watch-PC row.
+  the host primitive; a port-side call may be elsewhere or absent for an
+  intentional route difference.
 - `H-CaptureInvalid`: whole-RDRAM, selector-span, startup hook, or phase/store
   controls fail.
 
-The discriminator is the first phase-matched port callsite row against the
-retail `0x80029E78` caller row. No target-phase port call with live controls
-selects `H-PortCallMissing`; a target-phase call with differing arguments
-selects `H-PortCallerMismatch`; matching call activity with no correspondence
-selects `H-RetailEquivalentMismatch`; failed controls select capture invalid.
+The discriminator is the first phase-matched gate/call row against the retail
+`0x80029E78` caller row. A live gate with a suppressed known call selects
+`H-RouteGate`; a target-phase alternate call selects `H-AlternateCaller`; no
+gate or alternate call with all controls live selects
+`H-RetailEquivalentMismatch`; failed controls select capture invalid.

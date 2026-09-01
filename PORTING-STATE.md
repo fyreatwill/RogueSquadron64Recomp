@@ -133158,3 +133158,27 @@ audio, selector, task, or output state was rewritten, skipped, or validated.
 Evidence: `docs/M5-S3520-SELECTOR-AI-BOUNDARY.md`,
 `scratch/agent/s3520_selector_oracle.log`, and
 `scratch/agent/s3520_selector_port/run.log`.
+
+## Session 3521 (2026-08-31) — qualified selector AI callsite boundary
+
+Ran one batched retail/port capture after rebuilding the Debug target. The
+retail oracle's whole-RDRAM control fired 10,012 times, the physical selector
+span fired 12 times, and the hangar-phase execution watch at `0x80029E78`
+fired once with caller `0x80029E64`, `a0=0x5622`, `a1=0x8A0`, `a2=0x10`,
+`s1=0x80165ED0`, and `v0=0x561F`. The real-audio port reached title 1024 and
+hangar 512; producer/store controls fired, but the labeled generated calls at
+`0x80091BAC` and `0x80091CB8` produced zero hangar rows. The host AI-boundary
+target row was also absent; its startup control fired.
+
+This selects `H-PortCallMissing` at the qualified scope and rules out a
+target-phase argument mismatch at those two callers. It does not identify the
+route gate, an alternate caller, or prove exact semantic equivalence between
+the retail routine and the host primitive. The new helper
+`tools/patch_selector_callsite_probe.py` preserves the generated diagnostic
+after regeneration. Failed/limited attempt: the first helper invocation used
+the wrong sibling path and stopped before build; correcting it allowed the
+same build/run unit to complete. No audio, selector, task, or output state was
+rewritten or skipped.
+
+ORIGIN: the callsite labels and host witness are diagnostic-only; all observed
+audio and selector values remained untouched.
