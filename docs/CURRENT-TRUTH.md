@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3516 (2026-08-31).
+documents are listed below. Updated for session 3517 (2026-08-31).
 
 ## Current state
 
@@ -59,17 +59,13 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Trace a new upstream producer/context boundary for the live
-   `0x8008F228`/`0x8008F264` stores. Ask the independent retail oracle first
-   with a phase-gated execution range over `0x8009189C..0x80091B3C`, retaining
-   whole-RDRAM and selector-store controls. Add one regeneration-safe port
-   witness at the first live caller/context edge, then run the validated
-   real-image/LLE/spin-yield/autopilot route with title and hangar buckets.
-   Join by hangar origin, writer PC, store ordinal, value, and context.
-2. Resolve or newly qualify the pre-title audio route before attempting the
+1. Resolve or newly qualify the pre-title audio route before attempting the
    mixer-entry join: Session 3514's real-audio arm crashed in
    `fillSampleStreamRange` and its silent retry stopped before title. Do not
    treat zero mixer rows as evidence.
+2. Revisit the selector producer/context join only after a port route reaches
+   the 512 hangar phase. Session 3517's retail range was positive, but both
+   port attempts remained at VI 640; do not repeat those schedules unchanged.
 3. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
    baseline; do not repeat that arm unchanged.
 4. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
@@ -177,6 +173,7 @@ Latest selector boundary:
 
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
 - [M5-S3516-SELECTOR-STORE-CONTEXT.md](M5-S3516-SELECTOR-STORE-CONTEXT.md)
+- [M5-S3517-SELECTOR-PRODUCER-CONTEXT.md](M5-S3517-SELECTOR-PRODUCER-CONTEXT.md)
 - [M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md](M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md)
 - [M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md](M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md)
 - [M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md](M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md)

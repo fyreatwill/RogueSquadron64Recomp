@@ -133050,3 +133050,34 @@ Evidence: `docs/M5-S3516-SELECTOR-STORE-CONTEXT.md`,
 `scratch/agent/s3516_selector_writer_context_oracle.log`,
 `scratch/agent/s3516_selector_writer_context_oracle_fields.log`, and
 `scratch/agent/s3516_selector_writer_context_port/run.log`.
+
+## Session 3517 (2026-08-31) — selector producer context join was blocked by port route
+
+The independent retail oracle ran first with a whole-RDRAM positive control,
+the physical selector span, and the range `0x8009189C..0x80091B3C`. Controls
+were live: 10,012 whole-RDRAM writes, 12 selector-span writes, and 123 range
+execution hits. The hangar phase armed at width 512, origin `0x006AB400`.
+The selector writer histogram remained `0x8008F228` and `0x8008F264`, six
+hits each. Retail range rows showed the first entry context as
+`s1=a0=0x80165ED0`, `a1=0x12`; later rows retained `s1=0x80165ED0`.
+
+Added the regeneration-safe `rs64_m5_selector_producer_context` witness at
+the port's `initN64RspMixer` entry (`0x8009189C`) and rebuilt the Debug target.
+The first port attempt remained at VI 640 through a 120-second phase wait; a
+fixed retry using the previously qualified `ROGUESQ_AUTOPILOT=1` route also
+remained at VI 640 through 180 seconds. Neither port attempt reached the 512
+hangar phase, so the new witness and selector-store witness had no target-phase
+rows. The producer/context hypotheses remain unevaluable on the port side;
+the retail range result is qualified but not joined.
+
+This selects the pre-title route blocker as the next work unit and rules out
+only the two unchanged port schedules as a way to reach the target phase. No
+audio, selector, task, or output state was rewritten.
+
+ORIGIN: diagnostic-only oracle watches and port entry witness; all stores and
+audio state remained untouched.
+
+Evidence: `docs/M5-S3517-SELECTOR-PRODUCER-CONTEXT.md`,
+`scratch/agent/oracle_s3517_selector_producer.log`,
+`scratch/agent/s3517_selector_producer_port/run.log`, and
+`scratch/agent/s3517_selector_producer_port_fixed/run.log`.
