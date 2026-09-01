@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3591 (2026-09-01).
+notes are linked below. Updated for session 3592 (2026-09-01).
 
 ## Current state
 
@@ -66,7 +66,16 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    record stride, `L_1740` writer, `L_17F0` consumer, and clip gate; no
    concrete invalid writer/value was found. Runtime value legitimacy remains
    unproven. See [M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md](M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md).
-   Retail-entry and SP-yield/MORT publication threads remain parked.
+   Session 3592 structurally closed the CPU MORT decode/output publication
+   idiom: the requested range has complete bounded filter, delay, lattice,
+   mix, compand, and voice-state publication edges, with no concrete invalid
+   writer/value. Runtime descriptor contents, allocator state, and DMA timing
+   remain unproven. See
+   [M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md](M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md).
+   Retail-entry and SP-yield threads remain parked. The next M3 unit is the
+   indirect audio mix-table provenance audit: classify every initializer and
+   selector writer for `voice+0x168`/`voice+0x188` before considering any
+   runtime guard.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -81,8 +90,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-RetailProducer | `0x800052C4` is repeatedly the immediate caller of `0x800078E0`; no earlier constructor was exposed by the repeated field table. |
 | H-RetailDmaOrder | No separate DMA event identifier was exposed; ordering remains open. |
 | H-CaptureInvalid | Refuted for this run: whole-RDRAM, source-span, writer-PC, and target-phase controls all fired. |
+| H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
+| H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
+| H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
 
-The current work-unit slug is `m5-image-task-retail-source-writer`.
+The current work-unit slug is `m3-audio-mix-table-provenance-audit`.
 
 ## Recent evidence ledger
 
@@ -145,6 +157,11 @@ and evidence notes retain the full history.
   invalid value was found. The source-field ranges remain unclassified and
   no guard was added. See
   [M3-S3589-AUDIO-RECORD-FIELDS.md](M3-S3589-AUDIO-RECORD-FIELDS.md).
+- **3592 — CPU MORT publication idiom audit:** the complete requested range
+  has bounded filter, delay, lattice, mix, compand, and voice-state
+  publication edges. No concrete invalid writer/value, alternate base, or
+  unchecked count was found; runtime legitimacy remains unproven. See
+  [M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md](M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies
@@ -234,6 +251,8 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 ## Evidence index
 
 Latest boundary notes:
+
+- [M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md](M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md)
 
 - [M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md)
 - [M5-S3579-RETAIL-SOURCE-WRITER.md](M5-S3579-RETAIL-SOURCE-WRITER.md)

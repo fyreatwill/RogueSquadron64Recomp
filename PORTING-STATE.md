@@ -112816,6 +112816,24 @@ positive control and title `1024 / 0x00790400` plus hangar `512 / 0x006AB400`
 controls. Both silent and image port arms passed title and hangar in the same
 capture.
 
+## Session 3592 (2026-09-01) — audited CPU MORT decode/output publication idiom
+
+Performed the single bounded static M3 audit from `scratch/agent/NEXT.md`.
+The complete relevant census is in
+`docs/M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md`. The generated
+`0x8009D7D0..0x8009DD7C` path has classified filter, delay, lattice, mix,
+compand, and voice-state publication edges. Caller loops use explicit 4,
+13, 40, 0x28, 0x77, and caller-supplied bounded iteration counts; render
+publishes all eight stage pointers and the selector/count. No concrete invalid
+writer/value, alternate base, or missing decoded-sample edge was found, so
+H-MortComplete is selected structurally and no guard was added. This rules out
+the requested generated idiom as a static writer/consumer mismatch, but does
+not prove runtime descriptor contents, allocator state, or MORT DMA timing.
+
+ORIGIN: no mitigation was added; all identified stores are legitimate
+fixed-point filter/output or state-publication operations at this static
+boundary.
+
 The silent arm emitted 1,413 task-ABI rows with unchanged DMEM and zero
 generated DMA rows. The image arm emitted 1,055 task-ABI rows, 2,197 DMA-range
 rows, 2,190 image-stage rows, and repeated `run-task-return`,

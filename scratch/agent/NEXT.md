@@ -1,33 +1,32 @@
-# NEXT work unit — audit the CPU MORT decode/output publication idiom
+# NEXT work unit — audit indirect audio mix-table provenance
 
-HYPOTHESIS-ID: m3-mort-publication-idiom-audit
+HYPOTHESIS-ID: m3-audio-mix-table-provenance-audit
 
-Session 3591 closed the hangar `0x8000` Y/accumulator idiom structurally. Do
-not repeat that census, re-watch `0x4B7800`, or add a guard. See
-`docs/M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md`.
-
-Next work unit: perform one complete grep-enumerate/classify audit of the
-CPU-side MORT decode/output publication path at `0x8009D7D0..0x8009DD7C`.
-Enumerate every entry, descriptor read, decoded-sample writer, PCM consumer,
-buffer base/stride, and bound/sentinel check in the relevant generated
-functions. Do not change runtime code unless the audit identifies a concrete
-invalid writer/value; any mitigation would need an ORIGIN line naming that
-writer and assessing legitimacy.
+Next work unit: perform one complete grep-enumerate/classify audit of every
+initializer, selector writer, and indirect consumer for the voice mix-table
+fields at `voice+0x168` and `voice+0x188`. Start with generated
+`../N64Recomp/RecompiledFuncs/funcs_*.c`; include named callers and all
+address-derived aliases, but do not re-audit the closed MORT body at
+`0x8009D7D0..0x8009DD7C`. Do not change runtime code unless a concrete
+invalid table base, selector, or writer is identified. Any mitigation needs an
+ORIGIN line naming the writer and assessing legitimacy.
 
 Competing hypotheses and discriminator:
 
-- H-MortComplete: all decode/output writers and consumers form one bounded
-  descriptor-to-PCM publication contract.
-- H-MortGap: a concrete decoded-sample writer or consumer is missing, bypassed,
-  or uses an invalid base/length.
-- H-MortMisread: the suspected MORT address range is not the active output
-  publication path.
+- H-MixTableComplete: all table/function-pointer initializers and selector
+  writers establish the two 8-entry banks consumed by `audioMixStereoBlock8`.
+- H-MixTableGap: a concrete table initializer, selector writer, or consumer
+  uses a missing/invalid base, bank, count, or function pointer.
+- H-MixTableMisread: `+0x168`/`+0x188` are not the active voice mix-table
+  fields and the indirect path is mislabeled.
 
-Discriminator: the complete entry/descriptor/writer/consumer/base table.
-Select H-MortGap only with a concrete missing/invalid edge; select
-H-MortComplete only when all sites and bases are covered; otherwise leave it
+Discriminator: one complete table of field writers, initialization values,
+bank layout, selector/count bounds, and all indirect consumers. Select
+H-MixTableGap only with a concrete invalid edge; select H-MixTableComplete
+only when all writers and consumers are covered; otherwise leave it
 unclassified.
 
-Exact check:
+Exact checks:
 
-    rg -n -i '8009D7|8009D8|8009D9|8009DA|8009DB|8009DC|8009DD|mort|pcm|sample|descriptor' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n -i '0x168|0x188|168\(|188\(|audioMixStereoBlock8|jalr|voice.*mix|mix.*table' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n -i '0x8009DC98|0x8009DC9C|0x8009DCAC|0x8009C4C8|0x8009C4D0' ../N64Recomp/RecompiledFuncs/funcs_*.c
