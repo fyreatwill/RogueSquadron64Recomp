@@ -134565,3 +134565,20 @@ task, DMA, or source contents were changed. See
 ORIGIN: diagnostic-only retail caller/entry qualification. The zero-hit
 caller result is a route/address mismatch or an unobserved edge, not a value
 mitigation.
+
+## Session 3576 (2026-09-01) — qualified retail zero-fill predecessor input
+
+The planned retail predecessor table passed the whole-RDRAM and source-span
+positive controls: 10,674 and 674 writes. The target phase contained 3,165
+executions of `0x800078E0`; observed predecessors were `0x800C825C` (2,260)
+and `0x800052C4` (866). Detailed rows on the `0x800052C4` edge carried
+lengths `0x18`, `0x3C`, `0x208`, `0x4F0`, `0x1008`, and `0x8000`, unlike the
+port tuple `dst=0x801797B0`, `fill=0`, `len=0x298`. This selects
+`H-ObservedEdgeInput` for that edge. The `0x800C825C` tuple and ordering
+against the first source DMA remain unevaluable because its argument rows
+were not retained by the capped output. No game state, output, PCM, task,
+DMA, or source contents were changed. See
+`docs/M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md`.
+
+ORIGIN: diagnostic-only retail predecessor/entry qualification. No
+mitigation was added.

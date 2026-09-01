@@ -2,15 +2,16 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3575 (2026-09-01).
+documents are listed below. Updated for session 3576 (2026-09-01).
 
-Session 3575 passed the retail whole-RDRAM, source-span, and target-phase
-controls: 10,674, 674, and 3,166 hits respectively. Retail executed
-`0x800078E0` in the `0x006AB400:512` bucket, but presumed caller
-`0x8008F2CC` had zero hits. The entry is live, while tuple parity and ordering
-remain unevaluable; observed entry predecessors are led by `0x800C825C` and
-`0x800052C4`. See
-[M5-S3575-RETAIL-ZERO-FILL-CALLER.md](M5-S3575-RETAIL-ZERO-FILL-CALLER.md).
+Session 3576 passed the retail whole-RDRAM, source-span, and target-phase
+controls: 10,674, 674, and 3,165 entry hits respectively. Retail's observed
+predecessor `0x800052C4` reaches `0x800078E0` with varied lengths, including
+`0x18`, `0x3C`, `0x208`, `0x4F0`, `0x1008`, and `0x8000`, rather than the
+port's `0x801797B0/0/0x298` tuple. This selects an observed-edge input
+divergence for that predecessor; exact tuple parity for `0x800C825C` and
+source-DMA ordering remain unevaluable. See
+[M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md](M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md).
 
 Session 3574 qualified the retail entry watch as live in the target bucket:
 the oracle recorded 3,165 executions of `0x800078E0` at
@@ -643,8 +644,9 @@ to be rewritten as a diagnostic mitigation.
    entry executes in the target bucket, but did not retain a
    caller-filtered `0x8008F2CC` row. Session 3575 confirmed the caller watch
    itself had zero hits while entry execution and controls were positive;
-   parity and ordering remain unevaluable. Watch observed predecessors
-   `0x800C825C` and `0x800052C4` with entry `0x800078E0` next.
+   parity and ordering remain unevaluable. Session 3576 found a varied
+   non-port input tuple on the observed `0x800052C4` edge; qualify
+   `0x800C825C` separately or move upstream to the writer context.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -679,12 +681,11 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 retail caller-to-entry zero-fill join.
-Session 3575 recorded 3,166 target-bucket executions of `0x800078E0` and
-positive whole-RDRAM/source-span controls, but zero executions of presumed
-caller `0x8008F2CC`; observed entry predecessors were led by `0x800C825C` and
-`0x800052C4`. The exact retail tuple and ordering remain unevaluable; see
-[M5-S3575-RETAIL-ZERO-FILL-CALLER.md](M5-S3575-RETAIL-ZERO-FILL-CALLER.md).
+The active work unit is now M5 Step 3 retail zero-fill input qualification.
+Session 3576 retained positive whole-RDRAM/source-span controls and found
+`0x800052C4`-to-`0x800078E0` calls with lengths unlike the port's `0x298`.
+The `0x800C825C` tuple and source-DMA ordering remain open; see
+[M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md](M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md).
 
 The prior active work unit was retail zero-fill entry qualification.
 Session 3573 established the port tuple `dst=0x801797B0`, `fill=0`,
@@ -902,6 +903,7 @@ the oracle did not provide a matching register tuple.
 Latest output boundary:
 
 - [M5-S3573-ZERO-FILL-CONTRACT.md](M5-S3573-ZERO-FILL-CONTRACT.md)
+- [M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md](M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md)
 - [M5-S3572-SOURCE-TRANSITION-JOIN.md](M5-S3572-SOURCE-TRANSITION-JOIN.md)
 - [M5-S3565-IMAGE-STAGING-SOURCE.md](M5-S3565-IMAGE-STAGING-SOURCE.md)
 - [M5-S3566-SOURCE-RANGE-WRITER.md](M5-S3566-SOURCE-RANGE-WRITER.md)

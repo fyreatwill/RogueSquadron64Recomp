@@ -1,29 +1,26 @@
-# NEXT work unit — retail observed zero-fill predecessor join
+# NEXT work unit — qualify the remaining retail zero-fill predecessor
 
 HYPOTHESIS-ID: m5-image-task-zero-fill-contract
 
-Session 3575 established that the retail entry watch is live in the target
-bucket, but presumed caller `0x8008F2CC` itself has zero hits. The observed
-entry predecessors are `0x800C825C` and `0x800052C4`.
+Session 3576 established that the retail entry watch is live in the target
+bucket and that observed edge `0x800052C4` supplies varied lengths rather
+than the port's `0x298`; exact arguments for `0x800C825C` remain open.
 The port target entry remains `dst=0x801797B0`, `fill=0`, `len=0x298`.
 
 Competing hypotheses and discriminator:
 
-- H-ObservedEdgeParity: an observed retail predecessor reaches `0x800078E0`
-  with the port tuple before the first target source DMA.
-- H-ObservedEdgeInput: an observed predecessor reaches the entry, but its
-  argument tuple differs from the port tuple.
-- H-ObservedEdgeOrdering: tuple matches, but predecessor/entry versus first
-  source DMA ordering differs.
+- H-RemainingEdgeParity: `0x800C825C` reaches `0x800078E0` with the port tuple.
+- H-RemainingEdgeInput: `0x800C825C` reaches the entry with a different tuple.
+- H-RemainingEdgeOrdering: its tuple matches, but ordering differs.
 
-The single table must watch retail predecessors `0x800C825C,0x800052C4` and
-entry `0x800078E0` in the same run, phase-gated with
+The single table must watch retail predecessor `0x800C825C` and entry
+`0x800078E0` in the same run, phase-gated with
 `--pc-phase-log-width 0x006AB400:512`, while retaining whole-RDRAM and
 source-span watches. Use `--detail-watch 2`. Match each predecessor's
 arguments to the port tuple and order it against the first source DMA.
-Matching tuple/order selects H-ObservedEdgeParity; a tuple difference selects
-H-ObservedEdgeInput; a matching tuple with ordering difference selects
-H-ObservedEdgeOrdering. Missing any control is unevaluable.
+Matching tuple/order selects H-RemainingEdgeParity; a tuple difference selects
+H-RemainingEdgeInput; a matching tuple with ordering difference selects
+H-RemainingEdgeOrdering. Missing any control is unevaluable.
 
 Run from the repo root:
 
