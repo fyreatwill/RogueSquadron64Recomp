@@ -134457,3 +134457,28 @@ behavior change was made. See `docs/M5-S3569-DMEM-PAYLOAD-PRODUCER.md`.
 ORIGIN: diagnostic-only source-window census; the existing DMA writeback is
 the writer of the zero bytes, and that payload is not legitimate image/audio
 content. No game state, output, PCM state, or DMA behavior was rewritten.
+
+## Session 3571 (2026-09-01) — bounded the pre-task source initializer boundary
+
+The first standalone attempt was discarded because it omitted the qualified
+`ROGUESQ_LLE_FORCE=1` and `ROGUESQ_LLE_UNGATED=1` route variables and stalled
+at VI 640. The corrected image arm used the validated autopilot, real audio,
+LLE-force/ungated/solo, spin-yield, missing-function stubs, `ROGUESQ_LOG_ALL`,
+and phase controls from `build/`. It reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`, then was stopped with SIGKILL. Phase, RSP-source,
+DMEM-source, source-range-writer, and field348-writer positive controls fired;
+no crash or abort marker appeared.
+
+The fixed run recorded 14 target source-DMA rows from `0x1797B0`/`0x1798B0`,
+all with `nz=0`. The source-range writer table reached its 512-row cap, with
+sampled hangar writebacks carrying zero payload and zero post-write nonzero
+bytes. It also recorded 244 hangar source-span CPU rows, all from guest PC
+`0x800078EC`, all with zero values. This selects `H-PreTaskZeroContract` at
+the target handoff and rules out a productive CPU initializer in the observed
+target-phase window. It does not identify the earlier initializer because the
+existing hooks are phase-gated. The oracle frontend and ROM were present, but
+the debugger-enabled core dylib was absent, so the detailed result is
+single-source port evidence. See `docs/M5-S3571-PRE-TASK-SOURCE-INITIALIZER.md`.
+
+ORIGIN: diagnostic-only source handoff census. No output, PCM, task, DMA, or
+source state was rewritten.

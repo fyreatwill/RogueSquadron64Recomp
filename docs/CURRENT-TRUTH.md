@@ -2,9 +2,18 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3570 (2026-09-01).
+documents are listed below. Updated for session 3571 (2026-09-01).
 
-Updated for session 3570 (2026-09-01).
+Session 3571 ran the corrected target-valid standalone image arm for the
+pre-task source initializer boundary. Title 1024 and hangar 512 controls,
+source-DMA, source-range-writer, DMEM-source, and field348-writer controls all
+fired. Fourteen target source-DMA rows read zero; sampled source-range
+writebacks were zero payload/post-state; and 244 hangar source-span CPU rows
+from `0x800078EC` stored zero. This selects `H-PreTaskZeroContract` at the
+qualified handoff, but the phase-gated hooks do not yet identify the earlier
+initializer. The retail oracle core dylib was absent, so this is single-source
+port evidence. See
+[M5-S3571-PRE-TASK-SOURCE-INITIALIZER.md](M5-S3571-PRE-TASK-SOURCE-INITIALIZER.md).
 
 Session 3570 closed the productive source-DMA producer discriminator on a
 target-valid standalone image arm. Hangar source DMAs from `0x1797B0` and
@@ -584,10 +593,11 @@ to be rewritten as a diagnostic mitigation.
 
 0. M5 Step 3 image-task source initialization: identify the writer or
    initializer that leaves `0x1797B0`/`0x1798B0` at zero before the image task.
-   Session 3570 selected `H-SourceDmaZeroInput`: target source DMAs and all
-   source-span writebacks were zero, while the `0x800078EC` field348 witness
-   also supplied only zero stores. Census the pre-task zeroing/data handoff
-   with phase and task joins; do not rewrite output or PCM state.
+   Session 3571 selected `H-PreTaskZeroContract` only at the qualified target
+   handoff: source DMAs and observed source-span writers were zero, but the
+   phase-gated hooks could not see the earlier transition. Add one bounded,
+   phase-independent source-span transition table and join its last event to
+   the first target source DMA; do not rewrite output or PCM state.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -623,12 +633,13 @@ to be rewritten as a diagnostic mitigation.
 ### Active hypothesis table
 
 The active work unit is now M5 Step 3 source initialization qualification.
-Session 3570 selected `H-SourceDmaZeroInput`: target-phase source DMAs and
-source-range writebacks were zero, and the `field348-writer` witness at
-`0x800078EC` supplied only zero stores. The next witness must identify the
-pre-task initializer/data handoff that leaves the source span empty. Retail
-supplied only a boot/attract positive control for this iteration; the detailed
-producer selection is port-only.
+Session 3571 selected `H-PreTaskZeroContract` at the target handoff: 14 source
+DMAs read zero, source-range writebacks were zero, and 244 hangar source-span
+CPU rows from `0x800078EC` stored zero. The hooks were phase-gated, so the
+earlier initializer remains unidentified. The next witness must be
+phase-independent and join its last source-span transition to the first target
+source DMA. Retail was unavailable because the debugger-enabled core dylib was
+absent; this detailed result is single-source port evidence.
 
 Session 3567 selected `H-DmemPayloadRdramDma`: target-phase RDRAM-to-DMEM
 DMAs sourced `0x1797B0`/`0x1798B0` into the image-task payload windows with
