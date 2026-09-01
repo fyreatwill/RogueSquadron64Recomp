@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3590 (2026-09-01).
+notes are linked below. Updated for session 3591 (2026-09-01).
 
 ## Current state
 
@@ -61,8 +61,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    concrete invalid source value was found, but the cross-layout range
    contract remains unclassified. See
    [M3-S3590-AUDIO-SOURCE-FIELD-AUDIT.md](M3-S3590-AUDIO-SOURCE-FIELD-AUDIT.md).
-   Retail-entry, hangar `0x8000`
-   Y/accumulator, and SP-yield/MORT publication threads remain parked.
+   Session 3591 structurally closed the hangar `0x8000` Y/accumulator idiom:
+   all relevant Factor 5 generated overlays share the `0x670` base, `0x50`
+   record stride, `L_1740` writer, `L_17F0` consumer, and clip gate; no
+   concrete invalid writer/value was found. Runtime value legitimacy remains
+   unproven. See [M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md](M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md).
+   Retail-entry and SP-yield/MORT publication threads remain parked.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 

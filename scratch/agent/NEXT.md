@@ -1,31 +1,33 @@
-# NEXT work unit — audit the hangar 0x8000 Y/accumulator idiom
+# NEXT work unit — audit the CPU MORT decode/output publication idiom
 
-HYPOTHESIS-ID: m3-hangar-y-accumulator-idiom-audit
+HYPOTHESIS-ID: m3-mort-publication-idiom-audit
 
-Session 3590 completed the `+0x64`/`+0x58`/`+0x59` source-field census. No
-concrete invalid writer/value was found; do not repeat that census or add a
-guard. See `docs/M3-S3590-AUDIO-SOURCE-FIELD-AUDIT.md`.
+Session 3591 closed the hangar `0x8000` Y/accumulator idiom structurally. Do
+not repeat that census, re-watch `0x4B7800`, or add a guard. See
+`docs/M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md`.
 
 Next work unit: perform one complete grep-enumerate/classify audit of the
-hangar `0x8000` Y/accumulator idiom named in CURRENT-TRUTH. Enumerate every
-writer, consumer, record base/stride, and bound/sentinel check in the relevant
-generated functions. Do not instrument or change runtime code unless the
-audit identifies a concrete invalid writer/value; any mitigation would need
-an ORIGIN line naming that writer and assessing legitimacy.
+CPU-side MORT decode/output publication path at `0x8009D7D0..0x8009DD7C`.
+Enumerate every entry, descriptor read, decoded-sample writer, PCM consumer,
+buffer base/stride, and bound/sentinel check in the relevant generated
+functions. Do not change runtime code unless the audit identifies a concrete
+invalid writer/value; any mitigation would need an ORIGIN line naming that
+writer and assessing legitimacy.
 
-Competing hypotheses and the discriminator:
+Competing hypotheses and discriminator:
 
-- H-HangarYBounded: every `0x8000` Y/accumulator writer is bounded and its
-  consumers use a valid record/stride contract.
-- H-HangarYUnsafe: a concrete writer publishes an invalid value or base that
-  reaches the hangar failure.
-- H-HangarYMisread: the suspected Y/accumulator field or record base is
-  misidentified.
+- H-MortComplete: all decode/output writers and consumers form one bounded
+  descriptor-to-PCM publication contract.
+- H-MortGap: a concrete decoded-sample writer or consumer is missing, bypassed,
+  or uses an invalid base/length.
+- H-MortMisread: the suspected MORT address range is not the active output
+  publication path.
 
-Discriminator: the complete writer/consumer/base table. Select unsafe only
-with a concrete writer and value; select bounded only when all sites and bases
-are covered; otherwise leave it unclassified.
+Discriminator: the complete entry/descriptor/writer/consumer/base table.
+Select H-MortGap only with a concrete missing/invalid edge; select
+H-MortComplete only when all sites and bases are covered; otherwise leave it
+unclassified.
 
 Exact check:
 
-    rg -n '0x8000|Y|accum|accumulator' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n -i '8009D7|8009D8|8009D9|8009DA|8009DB|8009DC|8009DD|mort|pcm|sample|descriptor' ../N64Recomp/RecompiledFuncs/funcs_*.c

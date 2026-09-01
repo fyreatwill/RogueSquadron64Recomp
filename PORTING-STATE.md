@@ -134847,3 +134847,18 @@ rule out a runtime allocator/lifetime defect. See
 
 ORIGIN: no mitigation was added. Cleanup origins deliberately publish
 sentinel/zero values; the remaining source origins were not proven invalid.
+## Session 3591 (2026-09-01) — audited hangar 0x8000 Y/accumulator idiom
+
+Performed the single bounded static M3 audit from `scratch/agent/NEXT.md`.
+The complete relevant census is in
+`docs/M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md`. The Factor 5 generated
+ucode overlays consistently use DMEM `0x670` as the vertex-record base, a
+`0x50` record stride, `L_1740` as the `v6` XY writer, `L_17F0` as the sorted
+Y/XY consumer and RDP restager, and `L_112C` as the `0xD60` flush boundary.
+The `+0x24` clip flags gate the consumer before the Y reads. No concrete
+invalid writer, literal `0x8000` Y writer, unchecked stride, or alternate
+record base was found; H-HangarYBounded is selected structurally. Runtime
+allocator/input legitimacy remains unproven, so no guard or runtime change
+was made. This closes the structural idiom audit and rules out a generated
+writer/consumer/base mismatch as the explanation at this boundary, but does
+not close the unavailable live hangar accumulator capture.
