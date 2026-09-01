@@ -134149,3 +134149,36 @@ oracle line.
 ORIGIN: diagnostic-only task, DMEM/DMA, completion, slot/voice, MORT, PCM,
 and phase observations; no audio state, task field, output, or gate was
 rewritten or skipped.
+
+## Session 3559 (2026-09-01) — image output join was route-invalid
+
+The independent retail control passed: a whole-RDRAM watch recorded 59,854
+writes in 75 seconds, the VI trace reached the 512-wide hangar origin
+`0x006AB400`, and watched output/source spans recorded 640 and 49,214 writes.
+
+The same-build port pair used the validated LLE-solo/spin-yield/AUTOPILOT
+recipe. The silent `ROGUESQ_AUDIO_UCODE=0` arm reached title origin
+`0x00790400` at width 1024 and captured 65 frames. Its log contained 2,542
+ABI rows, 2,542 stub task rows, 2,461 PCM-source rows, and 2,451
+PCM-consumer rows. These are controls for the silent arm, not image output.
+
+The image arm exited before width 1024 in the concurrent pair with
+`last-guest-pc=0x8000834C`. An identical single-image retry reached only
+width 640 before the 180-second phase wait expired. It emitted no target-phase
+image-stage, DMA-join, completion-join, downstream, or PCM rows. The crash
+and single-arm stall make the target join unevaluable; the shared-runtime
+contention explanation is not selected by the single-arm retry.
+
+This selects `H-RouteOnly`, rules out neither image-output contract arm, and
+does not authorize any task, output, gate, slot, PCM, or writeback change. The
+next boundary is a complete pre-title caller/input/phase table at the existing
+`0x8000834C` route boundary.
+
+Evidence: docs/M5-S3559-IMAGE-OUTPUT-JOIN.md,
+scratch/agent/oracle_s3559_groundtruth.log,
+scratch/agent/s3559_m5_image_output/run.log,
+scratch/agent/s3559_m5_silent_output/run.log, and
+scratch/agent/s3559_m5_image_output_single/run.log.
+
+ORIGIN: diagnostic-only retail watches, route controls, and output-join
+observations; no mitigation or value rewrite was added.

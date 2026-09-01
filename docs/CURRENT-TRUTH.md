@@ -2,7 +2,18 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3558 (2026-09-01).
+documents are listed below. Updated for session 3559 (2026-09-01).
+
+Session 3559 attempted the planned same-build image-versus-silent output join
+after an independent retail control. Retail passed the whole-RDRAM positive
+control with 59,854 writes, reached the `0x006AB400` 512-wide hangar, and
+wrote both watched source/output spans. The silent port arm reached title
+1024 and captured 65 frames with task/PCM controls live. The image arm crashed
+before 1024 at guest PC `0x8000834C` in the paired launch; an identical
+single-image retry reached only width 640 and stalled through the phase wait.
+No image target-phase rows were emitted, so the image/PCM destination join is
+unevaluable and this selects `H-RouteOnly`. See
+[M5-S3559-IMAGE-OUTPUT-JOIN.md](M5-S3559-IMAGE-OUTPUT-JOIN.md).
 
 Session 3558 completed the M5 Step 1 same-build image/silent qualification on
 the corrected AUTOPILOT route. Retail independently passed the whole-RDRAM
@@ -453,12 +464,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. M5 Step 3 preparation: identify one image-task output/destination contract
-   edge that can close the image-stage-to-PCM/slot join. Keep image and silent
-   arms in one build, phase-gate title and hangar, and compare the image
-   `dest`, `field348+0x100`, DMA spans, PCM addresses/hashes, service return,
-   slot/status, voice/reap, and MORT rows. Do not change behavior until one
-   writer and legitimate destination are named.
+0. M5 Step 3 route repair: qualify the pre-title image-arm boundary at guest
+   PC `0x8000834C` with a complete caller/input/phase table. Keep the silent
+   arm as the same-build route control and retain the independent retail
+   whole-RDRAM and target-phase controls. Do not interpret image-output joins
+   or change behavior until the image arm reaches title and hangar.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
