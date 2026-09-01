@@ -134361,3 +134361,24 @@ the retail run supplies an independent oracle-control and span-activity line.
 The only code change was the regeneration-surviving diagnostic hook in the
 runtime DMA path; no game-state mitigation was added. See
 `docs/M5-S3566-SOURCE-RANGE-WRITER.md`.
+
+## Session 3567 (2026-09-01) — identified image DMEM payload producer
+
+The retail oracle passed its whole-RDRAM positive control with 10,674 writes
+and independently observed 674 writes in physical `0x1797B0:0x179930`; its
+writer-PC histogram included 384 writes from `0x800078EC` and the expected
+texture-record PCs. The standalone port image arm reached title `1024` and
+hangar `512` with phase, source-DMA, DMEM-store, image-stage, join, and
+audio-return controls live; it produced 1,023 source-DMA rows, 2,048 DMEM-store
+rows, 8,062 image-stage rows, and 4,044 joins, with no crash before deliberate
+SIGKILL.
+
+For target hangar tasks, RDRAM-to-DMEM DMAs from `0x1797B0`/`0x1798B0` into
+DMEM `0x6F0`/`0xCB0` had zero hashes and zero nonzero counts immediately before
+the corresponding zero DMEM-to-RDRAM writebacks. No CPU/RSP DMEM-store row
+overlapped the payload window. This selects `H-DmemPayloadRdramDma`, refutes
+CPU/RSP DMEM-store production and stale-DMEM at this boundary, and leaves the
+producer of the source-range RDRAM bytes open. The retail source-span activity
+is independent evidence that the range is legitimate and active; it does not
+attribute the port writer. No behavior change was made. See
+`docs/M5-S3567-DMEM-PAYLOAD-PRODUCER.md`.

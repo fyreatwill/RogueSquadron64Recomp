@@ -4,6 +4,18 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
 documents are listed below. Updated for session 3566 (2026-09-01).
 
+Updated for session 3567 (2026-09-01).
+
+Session 3567 closed the immediate zero-DMEM-payload producer question on a
+target-valid standalone image arm. In the hangar phase, RDRAM-to-DMEM DMAs
+from `0x1797B0`/`0x1798B0` into `0x6F0`/`0xCB0` carried zero hashes and zero
+nonzero counts before the corresponding zero writebacks; no CPU/RSP DMEM-store
+row overlapped the payload window. This selects `H-DmemPayloadRdramDma` and
+leaves the producer of the source-range RDRAM bytes open. The retail oracle
+independently passed its whole-RDRAM control and observed 674 writes in the
+watched source span, including 384 from guest PC `0x800078EC`. See
+[M5-S3567-DMEM-PAYLOAD-PRODUCER.md](M5-S3567-DMEM-PAYLOAD-PRODUCER.md).
+
 Session 3566 closed the immediate RDRAM source-range writer question on a
 target-valid standalone image arm. The exact-span writer table found nine
 hangar DMEM-to-RDRAM writebacks into `0x1797B0`/`0x1798B0`; their payloads and
@@ -538,13 +550,13 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. M5 Step 3 image-task staging/clear: identify the producer of the zero DMEM
-   payload used by the now-qualified source-range DMEM-to-RDRAM writebacks.
-   Session 3566 found the immediate RDRAM writer and its zero payload, while
-   earlier CPU zero stores at `0x800078EC` remain upstream context. The next
-   census must join the route/task ordinal to the DMEM bytes immediately before
-   each `0xC30`/`0xCB0` writeback and to every writer of those DMEM regions.
-   Do not rewrite output or PCM state.
+0. M5 Step 3 image-task staging/clear: identify the producer of the zero
+   source-range RDRAM bytes before the image-task RDRAM-to-DMEM DMA. Session
+   3567 selected `H-DmemPayloadRdramDma`: target DMEM payloads are supplied by
+   zero-valued DMAs from `0x1797B0`/`0x1798B0`, with no overlapping CPU/RSP DMEM
+   store observed. Join each image-task ordinal to the preceding source-range
+   CPU/DMA writer, its guest PC/source range, and post-write hash. Do not
+   rewrite output or PCM state.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -579,13 +591,13 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 image-task DMEM payload qualification.
-Session 3566 selected `H-SourceRangeDmaWriter`: nine target-phase
-DMEM-to-RDRAM writebacks into the source range had zero payload and followed
-earlier zero CPU stores, so the immediate source-range writer is known. The
-next witness must identify the producer of the zero `0xC30`/`0xCB0` DMEM
-payload before those writebacks. Session 3565's `H-ZeroDmaOrdering` result is
-superseded at this narrower source-writer scope; no behavior changed.
+The active work unit is now M5 Step 3 source-range producer qualification.
+Session 3567 selected `H-DmemPayloadRdramDma`: target-phase RDRAM-to-DMEM
+DMAs sourced `0x1797B0`/`0x1798B0` into the image-task payload windows with
+zero hashes, and no overlapping CPU/RSP DMEM store was observed. The next
+witness must identify who produced those source-range RDRAM bytes before the
+DMA. Session 3566's `H-SourceRangeDmaWriter` remains the immediate writeback
+boundary; no behavior changed.
 
 Session 3564 selected `H-DmemProducerWrong`: target DMEM windows received
 nonzero vector-store staging activity, but repeated zero-valued source DMAs
@@ -775,6 +787,7 @@ Latest output boundary:
 
 - [M5-S3565-IMAGE-STAGING-SOURCE.md](M5-S3565-IMAGE-STAGING-SOURCE.md)
 - [M5-S3566-SOURCE-RANGE-WRITER.md](M5-S3566-SOURCE-RANGE-WRITER.md)
+- [M5-S3567-DMEM-PAYLOAD-PRODUCER.md](M5-S3567-DMEM-PAYLOAD-PRODUCER.md)
 - [M5-S3564-IMAGE-DMEM-PRODUCER.md](M5-S3564-IMAGE-DMEM-PRODUCER.md)
 - [M5-S3539-SOURCE-WRITER.md](M5-S3539-SOURCE-WRITER.md)
 - [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md)
