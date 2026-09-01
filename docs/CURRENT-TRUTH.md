@@ -2,7 +2,16 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3551 (2026-09-01).
+evidence documents are listed below. Updated for session 3552 (2026-09-01).
+
+Session 3552 requalified the cached-head branch with a fixed canonical route.
+The first attempt stalled at VI 640 and was not used as evidence. The retry
+passed the autopilot/VI controls, reached title `0x00790400` and hangar
+`0x006AB400`, emitted 96 phase-bucketed heap-dequeue entry rows, and emitted
+zero `0x8000D704` pre-store rows before deliberate SIGKILL. This selects
+`H-HeapPathAbsent`: the cached-head state is not classified as corrupt, and
+the next boundary is the caller/route before the branch. See
+[M5-S3552-HEAP-BRANCH.md](M5-S3552-HEAP-BRANCH.md).
 
 Session 3551 resolved guest `0x8000D704` as the cached free-list head cleanup
 store after the `0x801163B0` load at `0x8000D6F4`. The final phase-bucketed
@@ -382,11 +391,12 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Requalify the pre-title `heapFreeListDequeue` path with one phase-bucketed
-   table joining the `0x8000D6F4` cached-head load, `0x8000D700` branch outcome,
-   `0x8000D704` store, and both caller edges. The current run did not execute
-   the failing store, so do not classify the node words or add a mitigation
-   until the failing path and its writer are observed.
+1. Add one phase-scoped caller/route table at the two known generated
+   `heapFreeListDequeue` edges (`0x800104A8`, `0x80010CD8`), joined to the
+   existing entry witness. The current valid run entered the function 96
+   times but took the `0x8000D700`/`0x8000D704` path zero times; do not
+   classify the cached head or add a mitigation until a caller/path split is
+   observed.
 2. Keep the HMT role result as valid at this discriminator: nullable `a2` is
    an intended branch, and the sampled required pointers were mapped. Do not
    repeat the provisional non-pointer scalar classifier or treat its old
@@ -580,6 +590,7 @@ Latest output boundary:
 
 - [M5-S3539-SOURCE-WRITER.md](M5-S3539-SOURCE-WRITER.md)
 - [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md)
+- [M5-S3552-HEAP-BRANCH.md](M5-S3552-HEAP-BRANCH.md)
 
 Latest selector boundary:
 

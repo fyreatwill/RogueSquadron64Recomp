@@ -133981,3 +133981,26 @@ Evidence: `docs/M5-S3551-HEAP-FAILURE.md` and
 `scratch/agent/s3551_m5_heap_failure_final/run.log`.
 
 ORIGIN: diagnostic-only observation; no mitigation was added.
+
+## Session 3552 (2026-09-01) — heap cached-head branch was not taken
+
+The requested phase-bucketed heap table was already present in the
+regeneration hook and generated output. The first capture omitted the
+qualified `ROGUESQ_M5_C88_VALUE=0` route aid and stalled at pre-title VI 640;
+it was discarded as capture-invalid. The fixed retry passed its same-run
+autopilot and VI controls, reached title `0x00790400` and hangar
+`0x006AB400`, emitted 96 `[heap-dequeue-entry]` rows, and emitted zero
+`[heap-dequeue-site]` rows before deliberate SIGKILL. No crash marker appeared.
+
+This selects `H-HeapPathAbsent`: the heap entry ran, but the
+`0x8000D700`/`0x8000D704` path was not taken, so the cached head is not
+classified as corrupt. The next discriminator is a phase-scoped table at
+the two known generated caller edges `0x800104A8` and `0x80010CD8`, joined to
+the existing entry witness. This is single-source port evidence; no retail
+branch-equivalence or writer evidence was collected. No heap, audio, PCM,
+image-task, output, or texture-record write changed.
+
+Evidence: `docs/M5-S3552-HEAP-BRANCH.md` and
+`scratch/agent/s3552_m5_heap_branch/fixed/run.log`.
+
+ORIGIN: diagnostic-only observation; no mitigation was added.
