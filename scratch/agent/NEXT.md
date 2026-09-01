@@ -1,34 +1,36 @@
-# NEXT work unit — qualify the complete M5 audio task contract
+# NEXT work unit — identify the image-task output join
 
-HYPOTHESIS-ID: m5-audio-step1-image-silent-qualification
+HYPOTHESIS-ID: m5-step3-image-output-join
 
-Run one same-build, phase-gated qualification of the current default
-`factor5_ucode_b` image arm against the explicit silent `musyx_stub` control.
-Do not change behavior, gates, slot values, PCM, or output. Identify one
-missing contract edge before any de-stub.
+Run one diagnostic-only, phase-gated comparison of the current image arm and
+silent control. Do not change task fields, output, gates, slot values, PCM, or
+writeback behavior. Use the validated route from s3558:
 
-Competing hypotheses and discriminator:
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+      ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+      ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
+      ROGUESQ_AUTOPILOT_STOP_WIDTH=512 ROGUESQ_LOG_M5_TASK_CONTRACT=1 \
+      ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_AUDIO_RETURN=1 \
+      PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
+      PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+      zsh tools/probe.sh scratch/agent/s3559_m5_image_output 75 1
 
-- H-AudioContractComplete: image and silent arms both reach title/hangar with
-  expected task/SP/service/slot/PCM rows; no contract edge is selected.
-- H-ImageTaskContractGap: image DMEM/DMA and `Broke`/SP completion are live,
-  but a task-field, service, slot, voice, or PCM join is absent at target VI.
-- H-AudioRouteOnly: one arm fails before title while controls show the route is
-  not phase-valid; target-phase audio nulls are unevaluable.
+Build both image and `ROGUESQ_AUDIO_UCODE=0` arms together. The single
+discriminator is a phase-keyed join table for each image-stage row:
+`field348`, `field348+0x100`, stage `dest`, DMA source/range/hash, PCM source
+and consumer address/range/hash/nonzero count, task ordinal, service return,
+slot/status, voice/reap, and MORT class. Positive controls required for each
+arm are route dispatch, title 1024, hangar 512, and SP completion.
 
-The single discriminator is one phase-keyed A/B row containing dispatch, task
-fields/source, DMEM/DMA, image exit, SP completion, service return,
-status/slot, voice/reap, MORT class, PCM source/consumer, and route phase.
-Both arms must be built together and each must visibly fire the positive
-controls: port route controls, title 1024, and hangar 512.
+- H-DestinationIsPCM: image `dest` or `field348+0x100` equals the nonzero PCM
+  source/consumer span with matching ordinal and completion ordering.
+- H-DestinationIsNotPCM: image stage and PCM are both live but their addresses,
+  hashes, or ordering do not join; the next probe must follow the legitimate
+  writer/consumer boundary.
+- H-RouteOnly: either arm fails to reach both target VIs; all target nulls are
+  unevaluable and the route recipe must be repaired before interpretation.
 
-Required source/config checks before building:
-
-    rg -n "ROGUESQ_AUDIO_UCODE|musyx_stub|factor5_ucode_b|audtask-dispatch|sp-complete|pcm-boundary|MORT" src lib docs tools
-    sed -n '180,260p' docs/M5-AUDIO-PLAN.md
-
-Build and run both arms from `build/`, using `ROGUESQ_AUDIO_UCODE=0` only for
-the silent control. Preserve passive breadcrumb env vars, phase-gate on VI
-transitions, capture under `scratch/agent/soak_results/`, and terminate each
-game/process group with SIGKILL. Do not interpret a pre-title null as evidence
-for H-ImageTaskContractGap.
+Do not implement Step 3 until the selected destination has an identified
+writer and independent legitimacy evidence. If the complete table remains
+unresolved, record the missing join and choose the highest-information-value
+producer witness; do not add another counter field alone.

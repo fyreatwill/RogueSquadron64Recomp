@@ -134118,3 +134118,34 @@ route comparison.
 
 ORIGIN: diagnostic-only table and SP guard; no mitigation or value rewrite was
 added.
+
+## Session 3558 (2026-09-01) — qualified the image versus silent audio contract
+
+The first paired launch was invalid because `ROGUESQ_AUTOPILOT=1` arms no
+schedule; both arms stopped at VI 640 and its target-phase nulls were
+discarded. The fixed same-build image/silent pair used the validated
+AUTOPILOT/LLE-solo/spin-yield route. Retail independently passed the
+whole-RDRAM positive control (10,000 writes) and reached the hangar origin.
+Both port arms reached title `0x00790400`/1024 and hangar
+`0x006AB400`/512 without crash or abort.
+
+Image `factor5_ucode_b` emitted 2,494 task-ABI rows, 7,773 DMA-range rows,
+and 9,693 image-stage rows; silent `musyx_stub` emitted 2,520 ABI rows and
+zero DMA-range/image-stage rows. Both arms emitted dispatch, return,
+SP-completion, route, and PCM controls. Image PCM samples were nonzero
+(`nz=768` in representative source and consumer rows); silent PCM samples
+were zero. The image-stage summary nevertheless reported zero source/consumer
+matches in both title and hangar, and no named slot/status or MORT join was
+present. This selects `H-ImageTaskContractGap`: image task progress does not
+close the downstream output/slot/MORT contract. It rules out a route-only
+explanation and the claim that the image arm is merely the silent no-DMA path,
+but does not identify a legitimate destination writer.
+
+Evidence: docs/M5-S3558-AUDIO-CONTRACT-QUALIFICATION.md and
+scratch/agent/s3558_m5_audio_contract/. Detailed audio evidence is
+single-source from the port logs; route validity has the independent retail
+oracle line.
+
+ORIGIN: diagnostic-only task, DMEM/DMA, completion, slot/voice, MORT, PCM,
+and phase observations; no audio state, task field, output, or gate was
+rewritten or skipped.

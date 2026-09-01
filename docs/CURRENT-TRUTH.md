@@ -2,7 +2,21 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3557 (2026-09-01).
+documents are listed below. Updated for session 3558 (2026-09-01).
+
+Session 3558 completed the M5 Step 1 same-build image/silent qualification on
+the corrected AUTOPILOT route. Retail independently passed the whole-RDRAM
+positive control and reached the target route. Both port arms reached title
+1024 and hangar 512 with dispatch, return, SP-completion, and PCM controls
+live. The image arm emitted 2,494 ABI rows, 7,773 DMA-range rows, and 9,693
+image-stage rows; the silent arm emitted no DMA-range or image-stage rows.
+Image PCM samples were nonzero while silent samples were zero, but the image
+summary reported zero source/consumer matches and no named slot/status or MORT
+join. This selects `H-ImageTaskContractGap`: image task progress does not yet
+close the downstream task-output/slot/MORT contract. The first invalid launch
+used `ROGUESQ_AUTOPILOT=1` and stalled at VI 640; it is route-invalid and its
+nulls are discarded. No behavior change was made. See
+[M5-S3558-AUDIO-CONTRACT-QUALIFICATION.md](M5-S3558-AUDIO-CONTRACT-QUALIFICATION.md).
 
 Session 3557 requalified the separate s3554 `slotDispatcherIter` boundary on
 the canonical real-audio/LLE-solo/spin-yield/autopilot route. Autopilot and VI
@@ -439,10 +453,12 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. M5 Step 1: run the same-build default-image versus silent-control audio
-   qualification at title and hangar, with task fields, DMEM/DMA, SP
-   completion, service, slot/status, voice/reap, MORT, and PCM joins. The
-   route must reach both target VIs; a pre-title null is unevaluable.
+0. M5 Step 3 preparation: identify one image-task output/destination contract
+   edge that can close the image-stage-to-PCM/slot join. Keep image and silent
+   arms in one build, phase-gate title and hangar, and compare the image
+   `dest`, `field348+0x100`, DMA spans, PCM addresses/hashes, service return,
+   slot/status, voice/reap, and MORT rows. Do not change behavior until one
+   writer and legitimate destination are named.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -455,27 +471,33 @@ to be rewritten as a diagnostic mitigation.
 3. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
-3. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
+4. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
    baseline; do not repeat that arm unchanged.
-4. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
+5. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
    Session 3488 silent qualification, and Sessions 3482–3486 producer/pointer
    captures as baselines; do not repeat unchanged captures.
-5. Keep the controlled phase/PC/ordinal join rule: sequential animated-scene
+6. Keep the controlled phase/PC/ordinal join rule: sequential animated-scene
    A/B rows are not evidence. A missing positive control makes a comparison
    unevaluable; matching fields close a boundary and the first divergent field
    selects the next producer edge.
-6. M5 Step 3 remains gated until one output comparison names a missing
-   image-task/output contract edge. The AI-frequency contract is now corrected;
+7. M5 Step 3 is now the active boundary: the image task/output comparison
+   named a missing destination/join edge, but the writer and legitimacy are
+   still open. The AI-frequency contract is now corrected;
    `docs/M5-AUDIO-PLAN.md` is complete;
    configured-host PatchesLib validation is unavailable in this Unix checkout.
-7. After M5 closes or a new discriminator is found, resume only systematic M3
+8. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep retail-entry, hangar `0x8000` Y/accumulator, and
    SP-yield/MORT publication threads parked. Generated-symbol renaming remains
    last priority and closed at its measured scope.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 1 audio qualification. Session 3557
+The active work unit is now M5 Step 3 image-task/output qualification. Session
+3558 selected `H-ImageTaskContractGap`: the corrected same-build image/silent
+pair reached title and hangar; image DMEM/DMA/stage activity and nonzero PCM
+were present, while the image-stage summary had zero source/consumer matches
+and no named slot/status or MORT join. The next witness must name the image
+writer/destination relation before any writeback or gate change. Session 3557
 selected `H-SlotCrashAbsent` for the separate s3554 slot-dispatch failure:
 the route-valid table had valid KSEG0 inputs and no failing consumer, so the
 slot input/lifecycle/overlay hypotheses remain parked. Session 3556
