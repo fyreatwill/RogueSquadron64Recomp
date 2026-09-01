@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3538 (2026-09-01).
+evidence documents are listed below. Updated for session 3539 (2026-09-01).
 
 ## Current state
 
@@ -227,6 +227,18 @@ violation. This selects `H-PortMissingWriter` at the nonzero payload-producer
 edge and rules out a later zero overwrite or invalid capture. See
 [M5-S3538-OUTPUT-WRITER.md](M5-S3538-OUTPUT-WRITER.md).
 
+Session 3539 completed the source-writer census after extending coverage from
+scalar to vector RSP DMEM stores. The first scalar-only capture was invalid
+for this question despite live controls. The fixed real-audio port run
+reached title and hangar, logged 2,048 bounded source-window vector-store
+rows, and observed nonzero broad DMEM-span contents during the producer
+sequence; later image-stage snapshots remained zero (`F59C39C5`, `nz=0`), as
+did PCM output. Retail independently passed its whole-RDRAM control, reached
+the target run, and wrote nonzero bytes in both watched source/state ranges.
+This selects `H-PortSourceOverwritten` at the broad DMEM-span boundary and
+rules out an absent RSP producer and scalar-only coverage. Exact per-window
+ordering remains open; see [M5-S3539-SOURCE-WRITER.md](M5-S3539-SOURCE-WRITER.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -253,10 +265,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify the legitimate nonzero source writer for the port's zero RSP
-   image/PCM payload, starting upstream of the phase-qualified DMA source;
-   use the retail PCs only as attribution anchors and do not copy retail
-   bytes. The writer/order table is now complete; see Session 3538.
+1. Identify the exact zeroing edge after the port's vector source writes: add
+   per-window (`0x6F0..0x9F0`, `0xCB0..0xE48`) pre/post hashes and event joins
+   at every RSP DMA read and vector store, then compare the result with the
+   existing image-stage/source-DMA/completion/PCM ordinals. Do not copy retail
+   bytes; see Session 3539.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -288,6 +301,12 @@ CPU/host writer and no later overwrite. The legitimate port-side source
 writer is still unidentified, so no output state is to be rewritten. The
 `0x80091CC8` internal return contract is closed by Sessions 3534–3535. The
 silent-arm route defect is parked separately.
+
+Session 3539 moves the live boundary upstream into the image-task DMEM source.
+Vector stores execute in both source-window address classes and broad-span
+contents become nonzero during that sequence, but the stage-2 source snapshot
+is zero. The next discriminator is exact per-window ordering, not another
+scalar-store census.
 
 For the silent-arm route:
 
@@ -431,6 +450,7 @@ the oracle did not provide a matching register tuple.
 
 Latest output boundary:
 
+- [M5-S3539-SOURCE-WRITER.md](M5-S3539-SOURCE-WRITER.md)
 - [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md)
 
 Latest selector boundary:

@@ -2275,6 +2275,80 @@ static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
     }
 }
 
+static thread_local bool g_rs64_audio_vector_store = false;
+
+extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
+                                           uint32_t len, uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SOURCE_WRITER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || len == 0u) return;
+
+    const Rs64AudioRouteIdentity& route = g_rs64_audio_identity;
+    if (!route.valid ||
+        !((route.width == 1024u && route.origin == 0x00790400u) ||
+          (route.width == 512u && route.origin == 0x006AB400u))) return;
+
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    static bool control_seen = false;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (route.width << 24) ^ route.origin;
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+        control_seen = false;
+    }
+    if (!control_seen) {
+        control_seen = true;
+        std::fprintf(stderr,
+            "[m5-dmem-source-control] phase=%u width=%u origin=0x%06X "
+            "dmem=0x%03X len=0x%X value=0x%08X\n",
+            rs64_phase_ord(), route.width, route.origin, dmem_addr, len, value);
+        std::fflush(stderr);
+    }
+
+    const uint32_t end = dmem_addr + len;
+    if (dmem_addr >= 0xE48u || end <= 0x3F0u || rows >= 1024u) return;
+
+    uint32_t fnv = 2166136261u;
+    uint32_t nonzero = 0;
+    for (uint32_t i = 0; i < 0xAB8u; ++i) {
+        const uint8_t b = dmem[((0x3F0u + i) & 0xFFFu) ^ 3u];
+        fnv = (fnv * 16777619u) ^ b;
+        nonzero += b != 0;
+    }
+    const uint32_t value_bytes = len > 4u ? 4u : len;
+    uint32_t value_nz = 0;
+    if (!g_rs64_audio_vector_store) {
+        for (uint32_t i = 0; i < value_bytes; ++i) {
+            value_nz += ((value >> ((value_bytes - 1u - i) * 8u)) & 0xFFu) != 0;
+        }
+    }
+    std::fprintf(stderr,
+        "[m5-dmem-source-writer] row=%u phase=%u width=%u origin=0x%06X "
+        "route_ordinal=%u route_row=%u dmem=0x%03X len=0x%X kind=%s "
+        "value=0x%08X value_nz=%u span_fnv=%08X span_nz=%u "
+        "prepare_seq=%u identity_edge_seq=%u\n",
+        rows, rs64_phase_ord(), route.width, route.origin, route.ordinal,
+        route.row, dmem_addr, len, g_rs64_audio_vector_store ? "vector" : "scalar",
+        value, value_nz, fnv, nonzero,
+        route.prepare_seq, g_rs64_audio_identity_edge_seq.load());
+    std::fflush(stderr);
+    ++rows;
+}
+
+extern "C" void rs64_m5_audio_dmem_vector_store(uint32_t dmem_addr,
+                                                  uint32_t len) {
+    g_rs64_audio_vector_store = true;
+    rs64_m5_audio_dmem_store(dmem_addr, len, 0u);
+    g_rs64_audio_vector_store = false;
+}
+
 extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
                                           uint32_t addr, uint32_t value) {
     static const bool enabled = [] {

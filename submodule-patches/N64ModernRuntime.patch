@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..8499f5f 100644
+index b0d6bef..05eadcd 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -22,7 +22,34 @@ index b0d6bef..8499f5f 100644
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -94,6 +95,40 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -37,6 +38,10 @@ using RspUcodeFunc = RspExitReason(uint8_t* rdram, uint32_t ucode_addr);
+ extern uint8_t dmem[];
+ extern uint16_t rspReciprocals[512];
+ extern uint16_t rspInverseSquareRoots[512];
++extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
++                                            uint32_t len, uint32_t value);
++extern "C" void rs64_m5_audio_dmem_vector_store(uint32_t dmem_addr,
++                                                   uint32_t len);
+ 
+ #define RSP_MEM_B(offset, addr) \
+     (*reinterpret_cast<int8_t*>(dmem + (0xFFF & (((offset) + (addr)) ^ 3))))
+@@ -56,6 +61,7 @@ static inline void RSP_MEM_W_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+     for (int i = 0; i < 4; i++) {
+         RSP_MEM_BU(offset + i, addr) = reinterpret_cast<uint8_t*>(&val)[i ^ 3];
+     }
++    rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 4u, val);
+ }
+ 
+ static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
+@@ -78,6 +84,7 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+     for (int i = 0; i < 2; i++) {
+         RSP_MEM_BU(offset + i, addr) = reinterpret_cast<uint8_t*>(&val)[(i + 2) ^ 3];
+     }
++    rs64_m5_audio_dmem_store((offset + addr) & 0xFFFu, 2u, val);
+ }
+ 
+ #define RSP_ADD32(a, b) \
+@@ -94,6 +101,40 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -63,7 +90,7 @@ index b0d6bef..8499f5f 100644
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,11 +136,99 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,11 +142,99 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -164,7 +191,7 @@ index b0d6bef..8499f5f 100644
      for (uint32_t i = 0; i < rd_len; i++) {
          RSP_MEM_B(i, dmem_addr) = MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
      }
-@@ -121,9 +244,11 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -121,9 +250,11 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
@@ -176,6 +203,106 @@ index b0d6bef..8499f5f 100644
  }
  
  namespace recomp {
+diff --git a/librecomp/include/librecomp/rsp_vu_impl.hpp b/librecomp/include/librecomp/rsp_vu_impl.hpp
+index dbf46b2..25db4e6 100644
+--- a/librecomp/include/librecomp/rsp_vu_impl.hpp
++++ b/librecomp/include/librecomp/rsp_vu_impl.hpp
+@@ -313,6 +313,7 @@ template<u8 e>
+ auto RSP::SBV(cr128& vt, cr32& rs, s8 imm) -> void {
+     auto address = rs + imm;
+     RSP_MEM_B(0, address) = vt.byte(e);
++    rs64_m5_audio_dmem_vector_store(address, 1);
+ }
+ 
+ template<u8 e>
+@@ -323,6 +324,7 @@ auto RSP::SDV(cr128& vt, cr32& rs, s8 imm) -> void {
+     for (u32 offset = start; offset < end; offset++) {
+         RSP_MEM_B(0, address++) = vt.byte(offset & 15);
+     }
++    rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8);
+ }
+ 
+ template<u8 e>
+@@ -380,6 +382,7 @@ auto RSP::SFV(cr128& vt, cr32& rs, s8 imm) -> void {
+         RSP_MEM_B(0, address + (base + 12 & 15)) = 0;
+         break;
+     }
++    rs64_m5_audio_dmem_vector_store(address, 16);
+ }
+ 
+ template<u8 e>
+@@ -392,6 +395,7 @@ auto RSP::SHV(cr128& vt, cr32& rs, s8 imm) -> void {
+         auto value = vt.byte(byte + 0 & 15) << 1 | vt.byte(byte + 1 & 15) >> 7;
+         RSP_MEM_B(0, address + (index + offset * 2 & 15)) = value;
+     }
++    rs64_m5_audio_dmem_vector_store(address, 16);
+ }
+ 
+ template<u8 e>
+@@ -402,6 +406,7 @@ auto RSP::SLV(cr128& vt, cr32& rs, s8 imm) -> void {
+     for (u32 offset = start; offset < end; offset++) {
+         RSP_MEM_B(0, address++) = vt.byte(offset & 15);
+     }
++    rs64_m5_audio_dmem_vector_store(rs + imm * 4, 4);
+ }
+ 
+ template<u8 e>
+@@ -416,6 +421,7 @@ auto RSP::SPV(cr128& vt, cr32& rs, s8 imm) -> void {
+             RSP_MEM_B(0, address++) = vt.element(offset & 7) >> 7;
+         }
+     }
++    rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8);
+ }
+ 
+ template<u8 e>
+@@ -426,6 +432,7 @@ auto RSP::SQV(cr128& vt, cr32& rs, s8 imm) -> void {
+     for (u32 offset = start; offset < end; offset++) {
+         RSP_MEM_B(0, address++) = vt.byte(offset & 15);
+     }
++    rs64_m5_audio_dmem_vector_store(address, end - start);
+ }
+ 
+ template<u8 e>
+@@ -438,6 +445,7 @@ auto RSP::SRV(cr128& vt, cr32& rs, s8 imm) -> void {
+     for (u32 offset = start; offset < end; offset++) {
+         RSP_MEM_B(0, address++) = vt.byte(offset + base & 15);
+     }
++    rs64_m5_audio_dmem_vector_store(address, end - start);
+ }
+ 
+ template<u8 e>
+@@ -448,6 +456,7 @@ auto RSP::SSV(cr128& vt, cr32& rs, s8 imm) -> void {
+     for (u32 offset = start; offset < end; offset++) {
+         RSP_MEM_B(0, address++) = vt.byte(offset & 15);
+     }
++    rs64_m5_audio_dmem_vector_store(rs + imm * 2, 2);
+ }
+ 
+ template<u8 e>
+@@ -462,6 +471,7 @@ auto RSP::STV(u8 vt, cr32& rs, s8 imm) -> void {
+         RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
+         RSP_MEM_B(0, address + (base++ & 15)) = vpu.r[offset].byte(element++ & 15);
+     }
++    rs64_m5_audio_dmem_vector_store(address, 16);
+ }
+ 
+ template<u8 e>
+@@ -476,6 +486,7 @@ auto RSP::SUV(cr128& vt, cr32& rs, s8 imm) -> void {
+             RSP_MEM_B(0, address++) = vt.byte((offset & 7) << 1);
+         }
+     }
++    rs64_m5_audio_dmem_vector_store(rs + imm * 8, 8);
+ }
+ 
+ template<u8 e>
+@@ -488,6 +499,7 @@ auto RSP::SWV(cr128& vt, cr32& rs, s8 imm) -> void {
+     for (u32 offset = start; offset < end; offset++) {
+         RSP_MEM_B(0, address + (base++ & 15)) = vt.byte(offset & 15);
+     }
++    rs64_m5_audio_dmem_vector_store(address, 16);
+ }
+ 
+ template<u8 e>
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
 index 0195f2b..fde9f3f 100644
 --- a/librecomp/src/ai.cpp
