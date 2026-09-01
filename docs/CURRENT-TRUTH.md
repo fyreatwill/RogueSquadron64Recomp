@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3556 (2026-09-01).
+documents are listed below. Updated for session 3557 (2026-09-01).
+
+Session 3557 requalified the separate s3554 `slotDispatcherIter` boundary on
+the canonical real-audio/LLE-solo/spin-yield/autopilot route. Autopilot and VI
+controls reached title 1024 and hangar 512; the existing table emitted 2,771
+entry, 2,048 pre-call, and 2,048 post-call rows, all sampled pre-call slots
+were valid KSEG0, and the SP guard was silent. No crash or `0x80007904` failure
+appeared before deliberate SIGKILL. This selects `H-SlotCrashAbsent`: the
+s3554 failure is route-specific, while slot input, lifecycle, and overlay
+causes remain unevaluable. The evidence is single-source for this iteration;
+see [M5-S3557-SLOT-DISPATCH-REQUALIFICATION.md](M5-S3557-SLOT-DISPATCH-REQUALIFICATION.md).
 
 Session 3556 requalified the port-only boundary reported as
 `musyxSynthFrame+3828` with last guest PC `0x80001B08`. Static inspection shows
@@ -429,14 +439,15 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. Requalify the separate s3554 `slotDispatcherIter` failure using a new
-   discriminator that joins the valid pre-call slot rows to the caller/entry
-   route and records the first failing consumer. Do not reuse
-   `0x80001B08` as a MusyX boundary; s3556 selected `H-StaleCrashLabel` there.
+0. M5 Step 1: run the same-build default-image versus silent-control audio
+   qualification at title and hangar, with task fields, DMEM/DMA, SP
+   completion, service, slot/status, voice/reap, MORT, and PCM joins. The
+   route must reach both target VIs; a pre-title null is unevaluable.
 
-1. In that route-valid capture, use the existing slot-dispatch table to
-   distinguish invalid input from lifecycle/overlay mismatch. Session 3555's
-   valid KSEG0 pre-call rows remain unevaluable for the s3554 failure.
+1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
+   s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
+   add a slot guard or rewrite slot data. Revisit only with a new route
+   discriminator.
 2. Keep the HMT role result as valid at this discriminator: nullable `a2` is
    an intended branch, and the sampled required pointers were mapped. Do not
    repeat the provisional non-pointer scalar classifier or treat its old
@@ -464,7 +475,10 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is the separate s3554 slot-dispatch failure. Session 3556
+The active work unit is now M5 Step 1 audio qualification. Session 3557
+selected `H-SlotCrashAbsent` for the separate s3554 slot-dispatch failure:
+the route-valid table had valid KSEG0 inputs and no failing consumer, so the
+slot input/lifecycle/overlay hypotheses remain parked. Session 3556
 selected `H-StaleCrashLabel` at the previously reported `0x80001B08` boundary:
 that PC is the delay slot of `osRecvMesg` in port `rs_malloc`, and a validated
 same-build route completed through hangar with the new table live. The next

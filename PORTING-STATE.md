@@ -134094,3 +134094,27 @@ scratch/agent/soak_results/s3556_pretitle_musyx/run.log.
 
 ORIGIN: diagnostic-only route table; no mitigation, guard, or value rewrite was
 added.
+
+## Session 3557 (2026-09-01) — slot-dispatch failure was route-specific
+
+Ran the existing regeneration-safe slot-dispatch entry/pre/post table and
+SP guard on the canonical real-audio/LLE-solo/spin-yield/autopilot route. The
+same run passed autopilot and VI controls at widths 640, 1024, and 512,
+reaching title origin `0x00790400` and hangar origin `0x006AB400`.
+
+The table emitted 2,771 entry rows, 2,048 pre-call rows, and 2,048 post-call
+rows, all in phase 3. Every sampled pre-call slot was a valid KSEG0 pointer;
+the SP guard emitted zero rows. No crash marker, last guest PC, SIGBUS, or
+guest PC `0x80007904` failure appeared before deliberate SIGKILL. This selects
+`H-SlotCrashAbsent`: the s3554 failure is route-specific, while slot input,
+lifecycle, and overlay hypotheses remain unevaluable because the consumer did
+not fail in this route-valid run. It rules out only a stable failure on this
+route, not the earlier crash's writer or legitimacy.
+
+Evidence: docs/M5-S3557-SLOT-DISPATCH-REQUALIFICATION.md and
+scratch/agent/soak_results/s3557_slot_dispatch_requal/run.log. This is
+single-source for the current capture; the prior s3554 crash is the separate
+route comparison.
+
+ORIGIN: diagnostic-only table and SP guard; no mitigation or value rewrite was
+added.

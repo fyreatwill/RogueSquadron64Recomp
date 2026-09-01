@@ -1,42 +1,34 @@
-# NEXT work unit — requalify the s3554 slot-dispatch failure
+# NEXT work unit — qualify the complete M5 audio task contract
 
-HYPOTHESIS-ID: m5-slot-dispatch-route-requalification
+HYPOTHESIS-ID: m5-audio-step1-image-silent-qualification
 
-Run one canonical real-audio/LLE-solo/spin-yield/autopilot capture focused on
-`slotDispatcherIter` guest PC `0x80007904`, using the existing regeneration-safe
-slot-dispatch table and its caller/entry rows. First enumerate the generated
-callers and the exact failing dereference around `0x80007904`; do not change
-heap, audio, PCM, image-task, output, or texture records. Session 3556 showed
-the old `0x80001B08` report is a stale boundary and the route can reach hangar.
+Run one same-build, phase-gated qualification of the current default
+`factor5_ucode_b` image arm against the explicit silent `musyx_stub` control.
+Do not change behavior, gates, slot values, PCM, or output. Identify one
+missing contract edge before any de-stub.
 
 Competing hypotheses and discriminator:
 
-- H-SlotInput: a route-valid capture reaches `0x80007904` with malformed slot
-  data and a preceding writer breadcrumb.
-- H-SlotLifecycle: slot data is valid, but caller/entry ordinals or phase state
-  diverge before the failing consumer.
-- H-SlotOverlay: caller and slot data match expected shapes, but the selected
-  overlay/function body differs.
-- H-SlotCrashAbsent: controls remain live but the s3554 failure does not
-  reproduce, making the prior crash route-specific rather than a stable slot
-  boundary.
+- H-AudioContractComplete: image and silent arms both reach title/hangar with
+  expected task/SP/service/slot/PCM rows; no contract edge is selected.
+- H-ImageTaskContractGap: image DMEM/DMA and `Broke`/SP completion are live,
+  but a task-field, service, slot, voice, or PCM join is absent at target VI.
+- H-AudioRouteOnly: one arm fails before title while controls show the route is
+  not phase-valid; target-phase audio nulls are unevaluable.
 
-The single discriminator is a phase-scoped joined table containing every known
-slot-dispatch caller edge, dispatcher entry, pre-call slot pointer/fields,
-post-call result, and first-failure breadcrumb in one build/run. Valid versus
-invalid pointer fields split input from lifecycle; matching fields with a
-wrong body split overlay; no failure with live controls selects route-specific
-absence. Do not add a guard or rewrite a value.
+The single discriminator is one phase-keyed A/B row containing dispatch, task
+fields/source, DMEM/DMA, image exit, SP completion, service return,
+status/slot, voice/reap, MORT class, PCM source/consumer, and route phase.
+Both arms must be built together and each must visibly fire the positive
+controls: port route controls, title 1024, and hangar 512.
 
-Required census before building:
+Required source/config checks before building:
 
-    rg -n "slotDispatcherIter|0x80007904|80007904|slot-dispatch|slot.*caller" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py src docs
-    grep -n '^## Session ' PORTING-STATE.md | tail -15
+    rg -n "ROGUESQ_AUDIO_UCODE|musyx_stub|factor5_ucode_b|audtask-dispatch|sp-complete|pcm-boundary|MORT" src lib docs tools
+    sed -n '180,260p' docs/M5-AUDIO-PLAN.md
 
-Build and run from `build/` with the canonical route:
-
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_LOG_SLOT_SP_GUARD=1 ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a' ROGUESQ_AUTOPILOT_STOP_WIDTH=512 ./RogueSquadron64Recomp
-
-Positive controls must visibly fire in the same run: autopilot, VI width
-transitions, and the slot-dispatch table. Capture output under
-`scratch/agent/soak_results/` and kill the game with SIGKILL only.
+Build and run both arms from `build/`, using `ROGUESQ_AUDIO_UCODE=0` only for
+the silent control. Preserve passive breadcrumb env vars, phase-gate on VI
+transitions, capture under `scratch/agent/soak_results/`, and terminate each
+game/process group with SIGKILL. Do not interpret a pre-title null as evidence
+for H-ImageTaskContractGap.
