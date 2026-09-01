@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3581 (2026-09-01).
+notes are linked below. Updated for session 3582 (2026-09-01).
 
 ## Current state
 
@@ -23,9 +23,12 @@ pointers from `0x800C825C`, unlike the port tuple. The target-phase retail
 source writer is `0x800078EC` and runs before the first observed target VI. A
 new oracle capture observed nonzero words and joined the
 `0x800052C4 -> 0x800078E0 -> 0x800078EC` path with changing buffer/length
-tuples. This selects a retail-versus-port stored-value divergence at the
-writer boundary; the earlier producer and exact DMA ordering remain open.
-This is single-source oracle evidence.
+tuples. Session 3582 passed both positive controls, recorded 384 target-phase
+writer hits, and observed nonzero post-store words. This selects a
+retail-versus-port stored-value divergence at the writer boundary and
+qualifies the immediate producer context; the earlier producer and exact DMA
+ordering remain open. See
+[M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md](M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md).
 
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
@@ -36,12 +39,11 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: independently qualify the nonzero retail source value and its
-   producer/order. The oracle selects nonzero target-phase words and joins
-   changing buffers and lengths through `0x800078EC`, but has no separate DMA
-   event identifier. Use the source-span writer histogram plus phase-gated
-   field table in `scratch/agent/NEXT.md`; keep DMA ordering open if no event
-   is exposed.
+1. M5 Step 3: resolve the earlier producer of the nonzero retail source
+   buffer, or close that boundary if the next ground-truth discriminator cannot
+   distinguish it. The immediate target path and writer are qualified, but the
+   oracle still exposes no separate DMA event identifier. Do not infer DMA
+   ordering from the writer histogram.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -85,6 +87,12 @@ and evidence notes retain the full history.
   length tuples and nonzero post-store words. No independent DMA event was
   exposed, so producer construction and exact DMA order remain open. See
   [M5-S3581-RETAIL-SOURCE-PRODUCER.md](M5-S3581-RETAIL-SOURCE-PRODUCER.md).
+- **3582 — retail source-writer table:** controls fired; target phase VI 2803
+  at 47.4 s recorded 384 `0x800078EC` source-span writes and nonzero
+  post-store words, while field rows joined `0x800052C4 -> 0x800078E0 ->
+  0x800078EC` with `0x8065E0A0/0x1C`. No DMA event identifier was exposed;
+  earlier construction and exact ordering remain open. See
+  [M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md](M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md).
 - **3576 — retail predecessor input:** retail `0x800052C4` reached
   `0x800078E0` with varied lengths (`0x18`, `0x3C`, `0x208`, `0x4F0`,
   `0x1008`, `0x8000`), not the port tuple. This selected an observed-edge

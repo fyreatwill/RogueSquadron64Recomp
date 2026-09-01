@@ -134675,3 +134675,25 @@ evidence; no runtime behavior changed. Capture: `/tmp/rs64_next_oracle.log`.
 
 ORIGIN: diagnostic-only retail producer/value qualification. No mitigation
 was added.
+
+## Session 3582 (2026-09-01) — qualified retail source-writer table
+
+Ran the prescribed 60-second retail oracle capture from `NEXT.md`, preserving
+the complete output at `/tmp/rs64_next_oracle.log`. The whole-RDRAM positive
+control reached 10,674 writes and the source-span watch reached 674 writes;
+the target phase reached VI 2803 at 47.4 seconds (1024 -> 512, origin
+`0x006AB400`). The phase-scoped writer table recorded 384 writes by
+`0x800078EC` and joined the immediate path
+`0x800052C4 -> 0x800078E0 -> 0x800078EC` with source `0x8065E0A0`, length
+`0x1C`. Post-value rows at the preceding 1024-wide VI showed nonzero words,
+including `0x00941376` at `0x801797B0`.
+
+This selects the retail immediate producer/context and nonzero stored-value
+divergence at the writer boundary. It does not identify the earlier producer
+that constructed the source words, and the oracle exposed no independent DMA
+event identifier, so exact DMA ordering remains open. It rules out an invalid
+capture and a target-phase absence; it does not explain the port-side zero
+fill. See `docs/M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md`.
+
+ORIGIN: diagnostic-only retail source-writer qualification. No mitigation was
+added.
