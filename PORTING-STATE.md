@@ -132798,6 +132798,29 @@ ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
 audio state, selector value, task field, or output was rewritten, skipped, or
 validated.
 
+## Session 3510 (2026-08-31) — selector-table input join phase mismatch
+
+Ran the independent retail oracle before the port with whole-RDRAM and
+corrected table-span controls. The positive control fired 10,010 times and
+title reached 632–633 width-1024 VIs. Retail table writes were live at
+`0x8008F228`/`0x8008F264`, but both occurred at hangar origin `0x006AB400`
+with values `0x80171E70`/`0x80173CB0`; the phase-gated writer-field table had
+zero rows, while post-store PC rows confirmed the values.
+
+Built and ran the validated real-image/LLE/spin-yield/autopilot port. Title
+origin `0x00790400` and all selector controls fired; producer/caller/
+predecessor rows were live and the two table stores were
+`0x80171CE0`/`0x80173B20`. The port stores were title-phase while retail stores
+were hangar-phase, so the cross-runtime writer-input/initializer/index join is
+unevaluable. This rules out neither candidate input nor route hypothesis.
+
+Evidence: `docs/M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md`,
+`scratch/agent/s3510_selector_retail_hangar.log`, and
+`scratch/agent/s3510_selector_port/run.log`.
+
+ORIGIN: diagnostic-only oracle and port observations; no table, selector,
+audio, task, or output value was rewritten, skipped, or validated.
+
 ## Session 3509 (2026-08-31) — corrected selector-table port writer
 
 Ran the independent retail preflight with the whole-RDRAM positive control,

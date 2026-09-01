@@ -808,13 +808,27 @@ writer input/initializer and selector-index source remain unresolved. Evidence:
 ORIGIN: the new witness observes the two guest stores and register contexts;
 it does not rewrite, skip, or validate table or selector values.
 
+Session 3510 ran the planned retail/port selector-table input join with all
+positive controls. Retail whole-RDRAM control fired 10,010 times and the
+corrected table stores were live, but both retail writer events occurred at
+hangar origin `0x006AB400`; the oracle writer-field rows were zero because
+that phase bucket was not active. The port route reached title origin
+`0x00790400`, fired its selector controls, and captured the two stores as
+`0x80171CE0`/`0x80173B20`. The phases are not joinable, so no input,
+initializer, index, or route hypothesis is selected. Evidence:
+[M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md](M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md).
+
+ORIGIN: diagnostic-only oracle and port observations; no table, selector,
+audio, task, or output value was rewritten, skipped, or validated.
+
 1. Trace the writer input/initializer and selector-index source producing the
    differing values at the corrected `0x80149758`/`0x8014975C` table entries
-   used by `0x8009131C`, with one batched retail/port discriminator keyed by
-   title origin, table address,
-   stored value, index, and caller arguments. Keep the independent
-   whole-RDRAM control and port pre-call/caller controls positive; the first
-   matching or differing table write selects the next edge.
+   using a phase-matched hangar capture. Extend the port table-store witness to
+   origin `0x006AB400`/width 1024 while retaining the title bucket, then join
+   retail/port rows by origin, table address, stored value, writer PC, and
+   writer inputs. Matching inputs with differing values selects an initializer
+   edge; a first differing input/index selects its producer; missing controls
+   make the join unevaluable.
 2. Keep the silent forced-LLE/no-spin result as the route blocker baseline;
    do not repeat that arm unchanged.
 3. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's
