@@ -134697,3 +134697,25 @@ fill. See `docs/M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md`.
 
 ORIGIN: diagnostic-only retail source-writer qualification. No mitigation was
 added.
+
+## Session 3583 (2026-09-01) — repeated retail producer discriminator
+
+Ran the prescribed 60-second retail oracle capture from `NEXT.md` with the
+whole-RDRAM, target-span, phase-gated writer histogram, PC field table, and
+post-value controls. The complete output is preserved at
+`/tmp/rs64_next_oracle.log`. The whole-RDRAM control recorded 10,674 writes;
+the target span recorded 674 writes; and the run completed normally after
+1,305,471 execution-watch hits and 3,026 VIs. The target phase reached
+512-wide origin `0x006AB400` at VI 2813 (48.5 seconds).
+
+The phase writer histogram again recorded 384 writes by `0x800078EC`. Joined
+rows again showed `0x800052C4 -> 0x800078E0 -> 0x800078EC`; a target tuple
+used source `0x8065FA30`, length `0x1C`, and source word `0x59050000`.
+Post-value samples again included nonzero `0x00941376`, `0x008317BD`, and
+`0x0042154D`. No stable earlier constructor beyond `0x800052C4` and no
+separate DMA event identifier appeared. This strengthens the immediate
+producer/value result and leaves the earlier construction and exact DMA order
+open. See `docs/M5-S3583-RETAIL-PRODUCER-REPEAT.md`.
+
+ORIGIN: diagnostic-only retail producer qualification. No mitigation was
+added.
