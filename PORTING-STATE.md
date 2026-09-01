@@ -133367,3 +133367,27 @@ selector, task, or output state was rewritten.
 
 ORIGIN: diagnostic-only pre/post allocation, entry, store, phase, and oracle
 execution observations. Allocator and selector state remained untouched.
+
+## Session 3529 (2026-08-31) — qualified selector input load boundary
+
+Ran the planned s3529 discriminator after enumerating generated `funcs_24.c`:
+the immediate load is `0x8009192C` and its direct call is `0x80091934`. Before
+building, a retail oracle run with a whole-RDRAM positive control observed both
+PCs and reported `a1=0x561F` at the call. Its actual hangar origin was
+`0x006AB800`; the stale `0x006AB400` bucket did not arm and was not used as
+evidence.
+
+Added the regeneration-safe s3529 load witness to `fixup_game_funcs.py`, the
+current-output helper, and the host hook. The Debug build succeeded. The
+canonical real-audio/LLE/spin-yield/autopilot port run passed startup and
+title/hangar phase controls; the witness loaded `0x5622` at `0x8009192C` in
+both target phases. Existing caller, allocator, producer-context, and
+selector-store controls also fired.
+
+This selects `H-InputLoadDivergence`: the first qualified difference is the
+value loaded from `MEM_W(0x80165ED0)`, not the call ABI or allocator. It rules
+out `H-InputLoadParity` and `H-CaptureInvalid` for this run. It does not yet
+identify the writer/source of `0x80165ED0`; that is the next discriminator.
+
+ORIGIN: diagnostic-only load, caller, allocator, store, phase, and independent
+retail observations. No audio, selector, task, or output state was rewritten.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3528 (2026-08-31).
+evidence documents are listed below. Updated for session 3529 (2026-08-31).
 
 ## Current state
 
@@ -130,6 +130,15 @@ allocator-return defect. This selects `H-AllocParity` and moves the active
 boundary upstream to the producer of `allocateSongChannelArray`'s `a1`/`s1`.
 See [M5-S3528-SELECTOR-ALLOC-BOUNDARY.md](M5-S3528-SELECTOR-ALLOC-BOUNDARY.md).
 
+Session 3529 independently qualified the immediate mixer input. Retail's
+whole-RDRAM control and PC watches observed `0x8009192C`/`0x80091934` with
+loaded `a1=0x561F`; the same-build port's positive controls and title/hangar
+phase buckets were live, but its load witness observed `a1=0x5622`. The port
+then reached the existing allocator and selector-store controls. This selects
+`H-InputLoadDivergence` and moves the boundary to the writer/source of
+`MEM_W(0x80165ED0)`, not the call ABI or allocator. See
+[M5-S3529-SELECTOR-INPUT-BOUNDARY.md](M5-S3529-SELECTOR-INPUT-BOUNDARY.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -156,17 +165,12 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Build one new producer/context discriminator between the live
-   `allocateSongChannelArray`'s `a1`/`s1` argument. Keep the allocation table,
-   caller, entry, store, producer-context, mixer, phase, and positive controls
-   in one build/run. A differing producer argument selects that edge; matching
-   context moves the search to the next boundary; missing controls invalidate
-   the join.
-   Keep the new caller table, entry, producer-context, store-context, mixer,
-   phase, and positive controls in one build/run. A first differing producer
-   argument or context selects that edge; matching context through the next
-   witness selects a later mutation; missing controls invalidate the join.
-   Do not rewrite audio or selector state.
+1. Build one source/writer discriminator for `MEM_W(0x80165ED0)`, the field
+   loaded by `0x8009192C`. Keep the input-load, caller, entry, allocation,
+   store, producer-context, mixer, phase, and positive controls in one
+   build/run. A differing source value or writer PC selects that edge; matching
+   source and load values move the search to the next instruction. Do not
+   rewrite audio or selector state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -210,10 +214,10 @@ For the next upstream argument boundary:
 
 - `H-AllocParity`: all three allocator edges match retail through their
   returns, so the divergence is upstream of the callee entry.
-- `H-CallerArgDivergence`: the producer of the caller's `a1` differs, selecting
-  that argument edge.
-- `H-CaptureInvalid`: a same-run positive control or phase-matched writer
-  control fails; the join is unevaluable.
+- `H-InputLoadDivergence`: session 3529 observed retail load `0x561F` versus
+  port load `0x5622`, selecting the source/writer edge at `0x80165ED0`.
+- `H-InputLoadParity`: the loaded value matches but differs before the call,
+  selecting an intervening generated instruction or wrapper contract.
 - `H-CaptureInvalid`: a same-run positive control or phase-matched writer
   control fails; the join is unevaluable.
 
@@ -326,6 +330,7 @@ the oracle did not provide a matching register tuple.
 
 Latest selector boundary:
 
+- [M5-S3529-SELECTOR-INPUT-BOUNDARY.md](M5-S3529-SELECTOR-INPUT-BOUNDARY.md)
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
 - [M5-S3528-SELECTOR-ALLOC-BOUNDARY.md](M5-S3528-SELECTOR-ALLOC-BOUNDARY.md)
 - [M5-S3525-SELECTOR-STORE-ENTRY.md](M5-S3525-SELECTOR-STORE-ENTRY.md)

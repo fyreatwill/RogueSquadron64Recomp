@@ -2838,6 +2838,42 @@ extern "C" void rs64_m5_selector_alloc_edge(const char* stage, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_selector_input_load(uint32_t pc, uint32_t value,
+                                                uint32_t source, uint32_t s1,
+                                                uint32_t a0, uint32_t a2,
+                                                uint32_t a3) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_INPUT");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const uint32_t width = rs64_vi_committed_width();
+    const bool target_phase =
+        (width == 1024u && (origin == 0x00790400u || origin == 0x00790800u)) ||
+        (width == 512u && (origin == 0x006AB400u || origin == 0x006AB800u));
+    if (!target_phase) return;
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) { phase_seen = phase; rows = 0; }
+    if (rows == 0) {
+        std::fprintf(stderr,
+            "[m5-selector-input-control] phase=%u width=%u origin=0x%06X pc=0x%08X\n",
+            phase, width, origin, pc);
+        std::fflush(stderr);
+    }
+    if (rows >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-selector-input] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X value=0x%08X source=0x%08X s1=0x%08X "
+        "a0=0x%08X a2=0x%08X a3=0x%08X\n",
+        rows++, phase, width, origin, pc, value, source, s1, a0, a2, a3);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_selector_store_entry(uint32_t pc, uint32_t ra,
                                                 uint32_t a0, uint32_t a1,
                                                 uint32_t a2, uint32_t a3) {
