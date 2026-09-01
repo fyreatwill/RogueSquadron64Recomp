@@ -2,7 +2,18 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3560 (2026-09-01).
+documents are listed below. Updated for session 3561 (2026-09-01).
+
+Session 3561 closed the paired-contention question with a target-valid
+standalone image retry. The concurrent image arm was route-invalid and
+crashed at `0x8000834C`, but the same-build standalone image arm reached title
+1024 and hangar 512 with route, audio-return, and PCM controls live; the
+concurrent silent arm reached both targets as well. The deeper caller/HMT,
+base/index, task-contract, and selector rows were absent in the image arm, so
+`H-ImageInputBoundary` versus `H-ImageRouteGate` remains unevaluable. The
+retail oracle was unavailable because its core and ROM were absent. Resume at
+the downstream image-task contract. See
+[M5-S3561-IMAGE-ROUTE-TABLE.md](M5-S3561-IMAGE-ROUTE-TABLE.md).
 
 Session 3560 refuted shared contention as the explanation for the s3559 image
 route failure. A same-build image/silent pair and a standalone image arm all

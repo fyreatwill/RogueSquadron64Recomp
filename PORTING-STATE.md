@@ -134210,3 +134210,30 @@ logs under `scratch/agent/s3560_image_route/`.
 
 ORIGIN: diagnostic-only route controls and task/return/PCM observations; no
 mitigation or value rewrite was added.
+
+## Session 3561 (2026-09-01) — image route table was target-valid standalone
+
+The independent retail preflight was unavailable in this checkout: the oracle
+frontend exists, but its documented Mupen64Plus core and retail ROM were
+absent. No retail null is used as evidence. The full target rebuilt cleanly.
+
+A concurrent validated image/silent launch made the image arm route-invalid:
+it crashed before VI 1024 at guest PC `0x8000834C`. The silent arm reached
+title 1024 and hangar 512. The same image recipe was then retried standalone
+from the same build; it reached title 1024 at 11.7s and hangar 512 at 19.9s,
+with no crash marker or `0x8000834C` last-PC failure. Its controls included
+14,358 route-order, 7,462 route-handoff, 141 route-transition, 20 route-state,
+530 audio-return, and 196 PCM rows. The silent control had 14,558 route-order,
+7,378 route-handoff, 20 route-state, 529 audio-return, and 196 PCM rows.
+
+The deeper caller/input, HMT, base/index, task-contract, and selector rows
+were zero in the standalone image arm. This closes the paired-contention
+question but does not split `H-ImageInputBoundary` from
+`H-ImageRouteGate`: the requested rows were absent, not negative. The paired
+crash is nondeterministic route evidence. The next boundary is the downstream
+image-task output/slot/MORT contract. No game state, task field, output, gate,
+slot, PCM, or writeback behavior changed. See
+`docs/M5-S3561-IMAGE-ROUTE-TABLE.md`.
+
+ORIGIN: diagnostic-only route, task, audio-return, PCM, and phase observations;
+no mitigation or value rewrite was added.
