@@ -133391,3 +133391,31 @@ identify the writer/source of `0x80165ED0`; that is the next discriminator.
 
 ORIGIN: diagnostic-only load, caller, allocator, store, phase, and independent
 retail observations. No audio, selector, task, or output state was rewritten.
+
+## Session 3530 (2026-08-31) — qualified selector source writer
+
+Ran the prescribed source/writer discriminator. Before changing the port, an
+independent retail oracle used a whole-RDRAM positive control and a physical
+watch on `0x165ED0`; it reached the target route and included `0x80091CC8` in
+the phase-gated writer census. The previously qualified retail load at
+`0x8009192C` was `0x561F`.
+
+Added a regeneration-safe `0x80091CC8` setup-writer witness to
+`fixup_game_funcs.py`, the current generated output, and the host hook. The
+Debug build succeeded. The first port capture was invalid because it crashed
+pre-title at `0x8000834C`; the fixed-build retry reached title 1024 and hangar
+512. In both target phases the witness fired at `addr=0x80165ED0` with
+`value=0x5622`; the input-load, producer-context, allocator, selector-store,
+and phase controls were live.
+
+This selects `H-SetupWriterInputDivergence` at the qualified scope and rules
+out a load-only or allocator explanation. It does not numerically prove the
+retail writer value because the oracle writer watch reports PCs, not values;
+that part is single-source, supported by the independent retail writer-PC
+presence and the prior independent retail load value. The next discriminator
+is the setup writer's source arguments/return contract. The first pre-title
+capture remains a route failure, not evidence about the target boundary.
+
+ORIGIN: diagnostic-only source-writer, input-load, allocator, store, phase, and
+independent retail observations. The `0x80091CC8` write is a legitimate audio
+frequency setup write; no audio, selector, task, or output state was rewritten.

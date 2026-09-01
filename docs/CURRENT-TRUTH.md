@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3529 (2026-08-31).
+evidence documents are listed below. Updated for session 3530 (2026-08-31).
 
 ## Current state
 
@@ -139,6 +139,15 @@ then reached the existing allocator and selector-store controls. This selects
 `MEM_W(0x80165ED0)`, not the call ABI or allocator. See
 [M5-S3529-SELECTOR-INPUT-BOUNDARY.md](M5-S3529-SELECTOR-INPUT-BOUNDARY.md).
 
+Session 3530 qualified the setup writer at `0x80091CC8`. Retail's independent
+physical watch included that PC in the target phase, while the same-build
+real-audio port witness fired at the store with value `0x5622` in title and
+hangar; the following input load and downstream controls were live. This
+selects the setup-writer/input divergence at the qualified scope and rules out
+a load-only or allocator explanation. The retail writer watch did not capture
+its value, so the numeric writer-value comparison is single-source. See
+[M5-S3530-SELECTOR-SOURCE-WRITER.md](M5-S3530-SELECTOR-SOURCE-WRITER.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -165,11 +174,12 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Build one source/writer discriminator for `MEM_W(0x80165ED0)`, the field
-   loaded by `0x8009192C`. Keep the input-load, caller, entry, allocation,
-   store, producer-context, mixer, phase, and positive controls in one
-   build/run. A differing source value or writer PC selects that edge; matching
-   source and load values move the search to the next instruction. Do not
+1. Build one discriminator for the selected `0x80091CC8` setup-writer edge:
+   qualify its source arguments and return/value contract against retail, in
+   the same phase-keyed table as the input-load, caller, entry, allocation,
+   store, producer-context, mixer, phase, and positive controls. A matching
+   source/value moves the search into the setup-writer producer or return
+   contract; a differing source/value identifies the next producer. Do not
    rewrite audio or selector state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
@@ -193,8 +203,8 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the upstream producer of
-`allocateSongChannelArray`'s `a1`/`s1` argument on the real-audio route. The
+The active work unit is now the source/return contract feeding the
+`0x80091CC8` setup writer on the real-audio route. The
 silent-arm route defect is parked separately.
 
 For the silent-arm route:
@@ -220,6 +230,11 @@ For the next upstream argument boundary:
   selecting an intervening generated instruction or wrapper contract.
 - `H-CaptureInvalid`: a same-run positive control or phase-matched writer
   control fails; the join is unevaluable.
+
+Session 3530 selected `H-SetupWriterInputDivergence` at the qualified scope.
+`H-SetupWriterParity` remains open because the retail writer watch did not
+record its numeric value; the next unit must qualify the writer's source
+arguments/return contract rather than repeat the same store census.
 
 Session 3519 selected `H-ContextProducerParity` at the callsite and
 `H-LaterContextMutation` for the first observed value difference: retail and
@@ -330,6 +345,7 @@ the oracle did not provide a matching register tuple.
 
 Latest selector boundary:
 
+- [M5-S3530-SELECTOR-SOURCE-WRITER.md](M5-S3530-SELECTOR-SOURCE-WRITER.md)
 - [M5-S3529-SELECTOR-INPUT-BOUNDARY.md](M5-S3529-SELECTOR-INPUT-BOUNDARY.md)
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
 - [M5-S3528-SELECTOR-ALLOC-BOUNDARY.md](M5-S3528-SELECTOR-ALLOC-BOUNDARY.md)
