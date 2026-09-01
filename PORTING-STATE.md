@@ -134799,3 +134799,22 @@ build, instrument, guard, or behavior change was made. See
 
 ORIGIN: no mitigation was added. Candidate indices originate from the bounded
 slot-count scans; no invalid value was observed or introduced.
+
+## Session 3588 (2026-09-01) — audited packed voice-handle table writers
+
+Audited the complete generated writer class for the per-voice `-0x271C`
+packed-handle field used by low-byte-to-0x17C voice-table lookups. The census
+found exactly three stores: `stopVoiceByKey:0x80086984` writes the `-1`
+cleanup sentinel, `startNoteOnVoice:0x80087294` writes the composite handle
+after successful allocator selection, and `resetMusyXEngineState:0x8008E660`
+writes `-1` across the initialized 0x20 records. The four low-byte consumers
+were classified as handle scans or slot-count-bounded record scans. No
+concrete invalid writer/value was found, selecting the structurally bounded
+hypothesis for this class and ruling it out as the next guard target. Runtime
+allocator state, record lifetime, and stale packed-handle legitimacy remain
+unproven. No build, instrument, guard, or behavior change was made. See
+`docs/M3-S3588-VOICE-HANDLE-TABLE-WRITERS.md`.
+
+ORIGIN: no mitigation was added. The only non-sentinel origin is
+`startNoteOnVoice:0x80087294`; its slot component is allocator-selected and
+the cleanup/reset writers deliberately publish `-1`.

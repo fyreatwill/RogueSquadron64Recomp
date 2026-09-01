@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3587 (2026-09-01).
+notes are linked below. Updated for session 3588 (2026-09-01).
 
 ## Current state
 
@@ -52,10 +52,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    real-audio target path, and do not infer target behavior from it.
 4. M5's exact DMA ordering remains unresolved and unavailable to the current
    oracle. While it is parked, perform only systematic M3 idiom-class audits;
-   the s3586 `stopVoicesByHandle` class is structurally closed for writer
-   identity and low-byte range, but runtime allocator/lifetime legitimacy
-   remains unproven. Retail-entry, hangar
-   `0x8000` Y/accumulator, and SP-yield/MORT publication threads remain parked.
+   the s3588 `-0x271C` packed voice-handle writer class is structurally closed
+   for writer identity and sentinel/slot provenance, but runtime allocator/
+   lifetime legitimacy remains unproven. Retail-entry, hangar `0x8000`
+   Y/accumulator, and SP-yield/MORT publication threads remain parked.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -121,6 +121,12 @@ and evidence notes retain the full history.
   selected candidate is checked against `-1` and its per-slot limit before
   returning. No concrete invalid writer/value or unchecked index was found,
   so no guard was added. See [M3-S3587-ALLOCATOR-STRIDE-AUDIT.md](M3-S3587-ALLOCATOR-STRIDE-AUDIT.md).
+- **3588 — packed voice-handle table writer audit:** all three stores to the
+  per-slot `-0x271C` field were enumerated. Cleanup/reset write `-1`, while
+  `startNoteOnVoice` writes the composite handle after allocator selection.
+  Low-byte consumers were classified; runtime allocator/lifetime legitimacy
+  remains unproven, so no guard was added. See
+  [M3-S3588-VOICE-HANDLE-TABLE-WRITERS.md](M3-S3588-VOICE-HANDLE-TABLE-WRITERS.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies

@@ -1,39 +1,36 @@
-# NEXT work unit — audit the next M3 unchecked voice-table consumer
+# NEXT work unit — audit the next M3 unchecked audio-table address
 
-HYPOTHESIS-ID: m3-voice-table-consumer-audit
+HYPOTHESIS-ID: m3-audio-table-address-audit
 
-Session 3587 completed the `allocateSynthVoice` 0x17C-stride scan audit. The
-allocator's table indices are loop counters bounded by the slot-count byte;
-the selected candidates are checked against `-1` and per-slot limits before
-the record is returned. No invalid writer/value or unchecked index was found
-in this class. The field audit from session 3586 remains closed: the field is a
-packed handle, not a standalone slot index: `startNoteOnVoice` writes the
-allocator-returned slot in the low byte and cleanup/reset paths write `-1`.
-No concrete invalid low-byte writer was found. Do not repeat either closed
-class or add a guard.
+Session 3588 completed the `-0x271C` packed voice-handle writer census. All
+three stores were classified: cleanup/reset write `-1`, and
+`startNoteOnVoice` writes the composite handle after successful allocator
+selection. Low-byte consumers were enumerated; no concrete invalid writer was
+found. Do not repeat this class or add a guard.
 
-Next work unit: select the next M3 idiom class from the generated audio path
-with an unchecked voice-table index or record-derived address, enumerate the
-whole class statically, and land a guard only if a concrete invalid writer is
+Next work unit: audit the complete generated audio path that computes a table
+address from voice-record fields `0x4E/0x4F` in `refreshVoicePlaybackRate` and
+any same-idiom consumers. Enumerate every writer of those fields and every
+record/table base edge; land a guard only if a concrete invalid writer is
 identified.
 
 Competing hypotheses and the discriminator:
 
-- H-NextConsumerBounded: the next unchecked consumer's index is bounded by its
-  producer contract.
-- H-NextConsumerUnsafe: a concrete writer can publish an invalid index to the
-  next consumer.
-- H-NextConsumerMisread: the apparent index or table layout is misidentified.
+- H-AudioRecordFieldsBounded: fields `0x4E/0x4F` stay within the table's
+  intended dimensions at every writer.
+- H-AudioRecordFieldsUnsafe: a concrete writer can publish an invalid field
+  value used in the computed address.
+- H-AudioRecordFieldsMisread: the apparent fields or table layout are
+  misidentified.
 
-Discriminator: choose one complete unchecked-index idiom, enumerate every
-writer and base-producing edge in that class, and classify the value range at
-the consumer. Select unsafe only with a concrete writer and value; select
-bounded only when every writer is covered; otherwise leave the boundary
-unclassified. No guard is authorized without an ORIGIN naming the legitimate
-writer and assessing the value.
+Discriminator: enumerate every writer of `0x4E/0x4F`, every computed-address
+consumer in the idiom, and the range checks or loop bounds on each edge. Select
+unsafe only with a concrete writer and value; select bounded only when every
+writer and base edge is covered; otherwise leave the boundary unclassified.
+No guard is authorized without an ORIGIN naming the legitimate writer and
+assessing the value.
 
 Exact checks:
 
-    rg -n 'andi.*0xFF|sll.*17C|D_8013D880|0x17C' ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c
-    rg -n 'RECOMP_FUNC void ' ../N64Recomp/RecompiledFuncs/funcs_21.c | head -100
-    rg -n 'lw +\$[^,]+, -0x27|sw +\$[^,]+, -0x27' ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c
+    rg -n '0x4E|0x4F|-0x7C30|refreshVoicePlaybackRate' ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c
+    rg -n 'sw .* -0x26C[45]|sw .* -0x272[789A]' ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c
