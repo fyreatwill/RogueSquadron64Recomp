@@ -132513,3 +132513,18 @@ contract hypothesis because the selector phase was never reached. Evidence:
 ORIGIN: diagnostic-only oracle, dispatch, phase, selector, and crash
 observations; no audio state, selector value, task field, or route behavior was
 rewritten, skipped, or validated.
+## Session 3494 (2026-08-31) — qualified real-audio route on retry
+
+Ran the prescribed same-build real-audio/LLE/spin-yield capture with the
+existing phase, dispatch, selector, and audio-return controls. The 60-second
+SIGKILL-watchdog run reached title origin `0x00790400`; both selector controls
+fired, with 1,024 selector-load and 1,024 selector-writer rows, plus 62
+audio-dispatch and 260 audio-return rows. No crash, abort, access-violation,
+or last-guest-PC marker occurred. The first title source was `0x8018DD30`,
+with later rows in the known `0x80171CE0`/`0x80173B20` families.
+
+This selects `H-RealAudioRouteTransient` for the measured retry and refutes a
+stable pre-title `fillSampleStreamRange` failure for this recipe. It does not
+yet compare selector data with retail; the next unit is that selector
+load/writer comparison. The capture was diagnostic-only and rewrote no game
+state. Evidence: `docs/M5-S3494-REAL-AUDIO-ROUTE.md`.

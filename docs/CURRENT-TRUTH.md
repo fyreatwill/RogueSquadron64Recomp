@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3493 (2026-08-31). This record was
+Current active marker: Session 3494 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -563,25 +563,37 @@ ORIGIN: diagnostic-only oracle, dispatch, phase, selector, and crash
 observations; no audio state, selector value, task field, or route behavior was
 rewritten, skipped, or validated.
 
+Session 3494 repeated the prescribed real-audio/LLE/spin-yield capture with
+the existing positive controls. The route reached title origin `0x00790400`,
+fired both selector controls, emitted 1,024 selector-load and 1,024
+selector-writer rows, and recorded 62 audio-dispatch plus 260 audio-return
+rows. No crash, abort, or last-guest-PC marker occurred during the 60-second
+watchdog window; the first title source included `0x8018DD30`, followed by
+the known `0x80171CE0`/`0x80173B20` families. This selects
+`H-RealAudioRouteTransient` and refutes a stable pre-title
+`fillSampleStreamRange` failure for this recipe, but it does not compare the
+selector rows against retail. Evidence: [M5-S3494-REAL-AUDIO-ROUTE.md](M5-S3494-REAL-AUDIO-ROUTE.md).
+
+ORIGIN: diagnostic-only route, selector, audio-dispatch, and audio-return
+observations; no audio state, selector value, task field, or route behavior
+was rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Qualify the real-audio route at `fillSampleStreamRange` (`0x8000B650`) with
-   one bounded ground-truth/port capture; require the existing dispatch and
-   whole-RDRAM controls, and do not interpret selector zeros until title is
-   reached. Session 3493's real-audio selector capture failed before title.
-2. After the real-audio route and both selector controls fire, run the
+1. After the real-audio route and both selector controls fire, run the
    selector-load/writer capture with the existing four-PC controls and the
    independent retail task-dispatch control in the same iteration. The
    discriminator is whether both port selector controls fire at title and
    whether their source/value rows match the retail title route.
-3. After the selector controls fire, trace the
+2. If the selector comparison identifies a first divergent source/value,
+   trace the
    upstream selector/table producer feeding `0x80091074` with one batched
    retail/port discriminator keyed by source family and title origin.
-4. Keep Session 3492's dispatch result as the silent-route baseline; do not
+3. Keep Session 3494's route qualification and Session 3492's dispatch result
+   as baselines; do not repeat either unchanged.
+4. Keep Session 3488's silent route as the qualification baseline; do not
    repeat the same silent gate audit unchanged.
-5. Keep the Session 3488 silent route as the qualification baseline; do not
-   repeat the audio-disabled reachability run unchanged.
-6. Retain the Session 3486 pointer-word result; do not repeat the exact
+5. Retain the Session 3486 pointer-word result; do not repeat the exact
    pointer-word writer histogram unchanged.
 7. Retain the Session 3484 retail writer census and port source-span rows; do
    not repeat the rejected candidate-span store capture unchanged.

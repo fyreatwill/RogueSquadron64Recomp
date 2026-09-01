@@ -1,28 +1,28 @@
-# NEXT work unit — qualify the real-audio route at fillSampleStreamRange
+# NEXT work unit — compare selector load/writer rows against retail
 
-HYPOTHESIS-ID: m5-real-audio-route-qualification
+HYPOTHESIS-ID: m5-selector-load-writer-comparison
 
-Session 3493 selected `H-RealAudioRouteFails`: dispatch selected
-`real_ucode=1`, but the port crashed before title at guest PC `0x8000B650`
-inside `fillSampleStreamRange`. The independent retail control was positive,
-so the zero selector rows are unevaluable.
+Session 3494 qualified the real-audio route on retry: title and both selector
+controls fired, with 1,024 load rows and 1,024 writer rows. Evidence is in
+`docs/M5-S3494-REAL-AUDIO-ROUTE.md` and
+`scratch/agent/s3493_m5_real_selector/`.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-RealAudioRouteTransient`: a bounded retry with the same qualified route
-  reaches title and fires the selector controls.
-- `H-RealAudioRouteStableCrash`: the same route reproducibly fails at or below
-  `0x8000B650` before title, despite positive dispatch and phase controls.
-- `H-RouteFailureElsewhere`: the retry reaches title or fails at a different
-  audio/scheduler boundary, moving the next probe to that site.
+- `H-SelectorParity`: title-gated port selector source/value families match
+  the independently captured retail families.
+- `H-SelectorSourceDivergence`: both controls fire, but the first stable
+  source/value family differs between port and retail.
+- `H-SelectorRouteNull`: one selector control or its title rows are absent in
+  the new port capture despite the route qualification.
 
-Discriminating measurement: one same-build real-audio route capture with the
-existing whole-RDRAM/dispatch/phase controls and `ROGUESQ_LOG_AUDIO_RETURN=1`;
-the outcome is title reachability plus the first crash guest PC. Do not
-interpret selector zeros unless title is reached.
+Discriminating measurement: one batched port/retail selector-load/writer
+comparison keyed by title origin, writer PC, source/value family, and
+phase-scoped ordinal. Positive controls must fire in both runtimes. Matching
+families select parity; a first stable mismatch selects source divergence;
+missing controls make the result unevaluable and require route repair.
 
-Exact command: use `env ROGUESQ_LOG_AUDIO_RETURN=1 zsh
-scratch/agent/run_s3493_m5_real_selector.sh`. Keep SIGKILL watchdog behavior
-and capture under `scratch/agent/s3493_m5_real_selector/`. If title is reached,
-then the following iteration may run the selector join; otherwise record the
-route failure and choose the newly identified boundary.
+Exact starting point: reuse the existing selector capture and independent
+retail task-dispatch recipe referenced by Sessions 3490–3493; build all arms
+once, then run the controlled comparison. Keep SIGKILL watchdog behavior,
+title VI phase gating, and capture paths under `scratch/agent/`.
