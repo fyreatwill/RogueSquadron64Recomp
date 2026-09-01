@@ -133695,3 +133695,25 @@ from retail's independently observed writer family and nonzero final range.
 It rules out an absent writer and invalid phase capture. The host/writeback
 origin and legitimacy of the zero payload remain open. No audio, PCM, or
 output state was changed. See `docs/M5-S3541-SOURCE-RDRAM-WRITER.md`.
+
+## Session 3542 (2026-09-01) — identified port source zero-fill origin
+
+Static enumeration identifies `0x800078EC` as the `sb` inside generated
+`rs_memset`, with direct generated callers invoking `jal 0x800078E0`. The
+build added a phase-qualified `rs_memset` entry witness and passed. One
+real-audio LLE/spin-yield/autopilot capture passed the positive controls,
+reaching title VI 1024 at `0x00790400` and hangar VI 512 at `0x006AB400`, with
+field-writer, RSP-source, image-stage, and downstream controls live.
+
+The entry witness recorded `dst=0x80178C80, fill=0, len=0x298` in title and
+`dst=0x801797B0, fill=0, len=0x298` in hangar. The selected byte stores were
+therefore a concrete 0x298-byte zero clear; its FNV-1a is `C0EFD6A5`.
+Candidate scalar-store and host memset hooks were silent because the writer
+is the generated `rs_memset` body itself. The wrapper's `ra=0` is an artifact
+of the generated indirect call path, so the static caller census is the
+caller evidence.
+
+This selects `H-WritebackOrigin` and rules out an unattributed DMA write or a
+per-byte hook mismatch. It moves the active boundary upstream to the
+producer of the source range before this legitimate clear. No audio, PCM, or
+output state was changed. See `docs/M5-S3542-WRITEBACK-ORIGIN.md`.

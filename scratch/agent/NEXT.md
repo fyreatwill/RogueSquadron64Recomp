@@ -1,46 +1,41 @@
-# NEXT work unit — attribute the port 0x800078EC zero-fill origin
+# NEXT work unit — identify the producer before the source-range clear
 
-HYPOTHESIS-ID: m5-output-source-writer
+HYPOTHESIS-ID: m5-output-preclear-producer
 
-Session 3541 completed the corrected source-RDRAM writer probe. Retail passed
-the whole-RDRAM control, reached title and hangar, and showed a distinct
-multi-PC writer family with a nonzero final snapshot. The port reached both
-target phases and recorded 768 span-writer rows; the selected `0x178C80` span
-was written as zero bytes by one port writer PC, `0x800078EC`. Candidate-store
-and memset hooks were silent, while downstream image-stage and join controls
-remained live. See `docs/M5-S3541-SOURCE-RDRAM-WRITER.md`.
+Session 3542 closed the `0x800078EC` identity: it is the generated
+`rs_memset` byte loop clearing `0x80178C80`/`0x801797B0` for `0x298` bytes.
 
-Next unit: identify the port-side writeback/DMA path represented by writer PC
-`0x800078EC`, including its source address, length, and payload hash at the
-same phase-qualified zero write. Use static callsite enumeration plus one
-same-build capture with the existing positive control and downstream joins.
+Do exactly one bounded work unit: enumerate and capture writers to the source
+range before each clear. The competing hypotheses and discriminator are:
 
-Competing hypotheses and discriminator:
+- `H-PreclearProducer`: a concrete port CPU/RSP/DMA writer populates the range
+  before `rs_memset`; the phase-ordered writer and nonzero payload identify it.
+- `H-ClearBeforeProducer`: the clear legitimately precedes all producers; the
+  first producer is after the clear and the pre-clear snapshot is zero.
+- `H-WriterHookMismatch`: the existing writer attribution misses an earlier
+  writer; an independent range snapshot/writer control disagrees with the
+  `rs_memset` ordering.
+- `H-CaptureInvalid`: any positive control, title/hangar phase, or join is
+  absent.
 
-- `H-WritebackOrigin`: `0x800078EC` maps to a concrete port writeback/DMA
-  source whose zero payload explains the selected RDRAM write.
-- `H-WriterHookMismatch`: the hook's PC/address contract is not the actual
-  source of the zero write; select a corrected attribution instrument.
-- `H-WritebackUnknown`: the writer is real but its source path remains
-  unresolved after the static census and capture.
-- `H-CaptureInvalid`: any positive control, target phase, or event join fails.
+The one-run table must include phase, source-range snapshot before clear,
+writer kind/PC or DMA source, source/destination/length, payload FNV/nonzero
+count, and the `rs_memset` ordinal plus nearest image-stage/source-DMA/join
+ordinals. A nonzero pre-clear writer selects `H-PreclearProducer`; zero before
+all clears selects `H-ClearBeforeProducer`; an ordering/attribution mismatch
+selects `H-WriterHookMismatch`; missing controls select `H-CaptureInvalid`.
 
-The one-run table must contain phase, writer PC, port callsite/source kind,
-source address, length, payload hash/nonzero count, and nearest source-DMA,
-stage, completion, and PCM ordinals. Missing controls or phase rows select
-`H-CaptureInvalid`; a concrete source path with matching zero payload selects
-`H-WritebackOrigin`; a PC/address mismatch selects `H-WriterHookMismatch`;
-an unresolved but valid writer selects `H-WritebackUnknown`.
+Before building, use the existing positive-control and downstream joins. Add
+all pre-clear counters in one build and one phase-gated real-audio capture;
+do not change audio, PCM, or output state.
 
-Exact commands:
+Commands:
 
     cmake --build build -j8
-    # run one real-audio LLE/spin-yield/autopilot capture from build/ with
-    # ROGUESQ_LOG_M5_SOURCE_WRITER=1, ROGUESQ_LOG_M5_FIELD348_WRITER=1,
-    # ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1, ROGUESQ_LOG_M5_FIELD348_MEMSET=1,
-    # ROGUESQ_LOG_M5_RSP_SOURCE=1,
-    # ROGUESQ_LOG_M5_STAGE_CALLS=1, ROGUESQ_LOG_M5_STAGE_BYTES=1,
-    # ROGUESQ_LOG_PCM_BOUNDARY=1, ROGUESQ_LOG_M5_PCM_WRITER=1,
-    # ROGUESQ_LOG_M5_TASK_CONTRACT=1.
+    # Run from build/ with the validated real-audio LLE/spin-yield/autopilot
+    # route, ROGUESQ_LOG_M5_WRITER_ENTRY=1, the existing source-writer,
+    # field348-writer, RSP-source, stage-call/bytes, PCM, and task controls,
+    # plus the new pre-clear snapshot/writer controls.
 
-Do not change audio, PCM, or output state.
+Do not repeat the closed `0x800078EC` identity probe without pre-clear
+ordering. Do not modify audio, PCM, or output state.
