@@ -1,32 +1,32 @@
-# NEXT work unit — audit indirect audio mix-table provenance
+# NEXT work unit — audit pan-coefficient input and selector lifecycle
 
-HYPOTHESIS-ID: m3-audio-mix-table-provenance-audit
+HYPOTHESIS-ID: m3-pan-coefficient-input-provenance-audit
 
 Next work unit: perform one complete grep-enumerate/classify audit of every
-initializer, selector writer, and indirect consumer for the voice mix-table
-fields at `voice+0x168` and `voice+0x188`. Start with generated
-`../N64Recomp/RecompiledFuncs/funcs_*.c`; include named callers and all
-address-derived aliases, but do not re-audit the closed MORT body at
-`0x8009D7D0..0x8009DD7C`. Do not change runtime code unless a concrete
-invalid table base, selector, or writer is identified. Any mitigation needs an
-ORIGIN line naming the writer and assessing legitimacy.
+caller input and source-structure writer feeding
+`computeVoicePanCoefficients` (`0x8009C2D0`), plus the lifecycle of
+`voice+0x188` from slot initialization through the three callers. Do not
+re-audit the closed table consumer/producer body. Do not change runtime code
+unless a concrete invalid input, selector, or source writer is identified.
+Any mitigation needs an ORIGIN line naming the writer and assessing
+legitimacy.
 
 Competing hypotheses and discriminator:
 
-- H-MixTableComplete: all table/function-pointer initializers and selector
-  writers establish the two 8-entry banks consumed by `audioMixStereoBlock8`.
-- H-MixTableGap: a concrete table initializer, selector writer, or consumer
-  uses a missing/invalid base, bank, count, or function pointer.
-- H-MixTableMisread: `+0x168`/`+0x188` are not the active voice mix-table
-  fields and the indirect path is mislabeled.
+- H-PanInputsComplete: all callers supply bounded, initialized source fields
+  and a valid selector lifecycle.
+- H-PanInputsGap: a concrete caller/source writer supplies an invalid field,
+  selector, or voice-object base.
+- H-PanInputsMisread: the apparent pan source fields are not the active inputs
+  to the mix-table writer.
 
-Discriminator: one complete table of field writers, initialization values,
-bank layout, selector/count bounds, and all indirect consumers. Select
-H-MixTableGap only with a concrete invalid edge; select H-MixTableComplete
-only when all writers and consumers are covered; otherwise leave it
-unclassified.
+Discriminator: one complete caller/source-field table with writer PCs, field
+layouts, selector values/bounds, and initialization order. Select
+H-PanInputsGap only with a concrete invalid edge; select
+H-PanInputsComplete only when every caller and source writer is covered;
+otherwise leave it unclassified.
 
 Exact checks:
 
-    rg -n -i '0x168|0x188|168\(|188\(|audioMixStereoBlock8|jalr|voice.*mix|mix.*table' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    rg -n -i '0x8009DC98|0x8009DC9C|0x8009DCAC|0x8009C4C8|0x8009C4D0' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n 'computeVoicePanCoefficients|0x8009C2D0|0x8009C2E0|0x8009C4C8|0x8009C4D0|0X188|0X168' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n -i 'voice.*pan|pan.*voice|0x164|0x166|0x168|0x188' ../N64Recomp/RecompiledFuncs/funcs_{22,23,24,25,26,27}.c

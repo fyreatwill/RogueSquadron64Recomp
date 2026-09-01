@@ -134880,3 +134880,19 @@ allocator/input legitimacy remains unproven, so no guard or runtime change
 was made. This closes the structural idiom audit and rules out a generated
 writer/consumer/base mismatch as the explanation at this boundary, but does
 not close the unavailable live hangar accumulator capture.
+## Session 3592 (2026-09-01) — audited audio mix-table provenance
+
+Performed the planned source-only M3 idiom audit over all generated
+`funcs_*.c` matches and audio-family aliases for `voice+0x168`/`voice+0x188`.
+`initMusyXVoiceSlot` clears the 0x190-byte voice object; the `+0x188` selector
+is read by `computeVoicePanCoefficients`, toggled only by
+`updateVoiceChannelParams`, and used as a two-bank selector. The pan writer
+populates eight halfwords at `+0x168+(selector<<4)`. `audioMixStereoBlock8`
+consumes eight paired entries and dispatches through the four known
+return-link-derived targets supplied by `renderVoiceAudioBlock`. Other literal
+matches were classified as stack slots, unrelated structures, or sequence
+helpers. No concrete invalid base, selector, count, writer, or target was
+found, so no guard or runtime change was made. This structurally closes the
+mix-table class; runtime descriptor contents, allocator state, and DMA timing
+remain unproven. It rules out a generated writer/consumer mismatch, not a
+runtime value defect.

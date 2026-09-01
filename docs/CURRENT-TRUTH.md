@@ -75,7 +75,17 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    Retail-entry and SP-yield threads remain parked. The next M3 unit is the
    indirect audio mix-table provenance audit: classify every initializer and
    selector writer for `voice+0x168`/`voice+0x188` before considering any
-   runtime guard.
+   runtime guard. Session 3592 structurally closed this class: `+0x188` is
+   zero-initialized and toggled between two banks; `computeVoicePanCoefficients`
+   writes eight halfwords at `+0x168+(selector<<4)`, and
+   `audioMixStereoBlock8` consumes both banks through eight bounded indirect
+   calls. No concrete invalid writer/base/selector or target was found.
+   Runtime descriptor contents, allocator state, and DMA timing remain
+   unproven. See
+   [M3-S3592-AUDIO-MIX-TABLE-PROVENANCE-AUDIT.md](M3-S3592-AUDIO-MIX-TABLE-PROVENANCE-AUDIT.md).
+   The next M3 unit is a provenance audit of the pan-coefficient inputs and
+   selector lifecycle at `computeVoicePanCoefficients`, including all callers
+   and writes to its source structures.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
