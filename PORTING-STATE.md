@@ -136152,3 +136152,39 @@ ORIGIN: writer of a live `0x1C`/`0x20` is
 paths there is no writer this occupancy; the pool carve
 does not zero the slot. Those unwritten values are not
 legitimate heap pointers. No mitigation was added.
+
+## Session 3637 (2026-09-03) — audited load_full_header_image rs_free of $s1
+
+Performed the planned static census of
+`load_full_header_image` `jal rs_free` at
+`0x800544D8` (`$a0` = `$s1` = matching
+`get_asset_size_extra` `rs_malloc` at `0x80054428`,
+flags-0). `$s1` is never stored to a global. `$s0` is
+the `+4` convert/register alias;
+`full_header_image_offset_convert` relocates interior
+words into the buffer; `registerHmtTextureInTable`
+copies pixels and returns a texture id. The delay slot
+of the free stores that id at `0x80137C70`, which
+`dispatchOverlaySetupByParentAssetName` loads as `$a2`
+for `setMaterialFlagByIdInMeshTree` — a halfword, not
+this pointer, and not the s3636 overlay `0x1C`/`0x20`
+writer. Five generated callers (`loadLevelAssets`,
+`mallocCraftSelectionData`, `initVwingHudAndSlotState`,
+`initInteractiveSceneContext`, `runModelViewerLoop`);
+zero overlay lookup; one `jr $ra`; straight-line body.
+`funcs_11.c` `jal rs_free` is exhausted. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static
+scope. Runtime allocator legitimacy remains unproven.
+No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3637-LOAD-FULL-HEADER-IMAGE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `$s1` is `load_full_header_image`
+`0x80054428` (`rs_malloc` of `get_asset_size_extra`,
+flags-0). The stored value is the matching allocator
+return and is a legitimate DMA scratch pointer. The
+`0x80137C70` halfword is a texture id from
+`registerHmtTextureInTable`, not this pointer. No
+mitigation was added.
+
