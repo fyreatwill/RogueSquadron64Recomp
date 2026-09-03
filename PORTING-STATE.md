@@ -136057,3 +136057,36 @@ ORIGIN: writers are `0x80054F50` (flags-4 `rs_malloc`)
 and `0x80054F68` (flags-0 retry). Each value is a
 legitimate constructor return or NULL. No mitigation was
 added.
+
+## Session 3634 (2026-09-03) — audited freeAnimationPhasePool rs_free of slot +0x0 / 0x80137C84
+
+Performed the planned static census of
+`freeAnimationPhasePool` `jal rs_free` at
+`0x80054AC8` (`$a0` = `0x0(0x80137C84 + index*16)`,
+gated by `lhu +0x6 & 0x8000`) and `0x80054AEC`
+(`$a0` = `0x80137C84`). The only original store of
+`0x80137C84` is `allocAnimationPhasePool` `0x80054A50`
+(`rs_malloc(count*28, 0)`). The only original store of
+slot `+0x0` is `loadAssetIntoNewSlot` `0x80054970`
+(converted-buffer `rs_malloc`). `+0x6` is zeroed at
+alloc, claimed with `0x8000` in that loader, and
+overlaid with `$a2 | 0xC000` by
+`setPoolEntryPhaseAndMarkActive`; the overlay does not
+write `+0x0`. Tick consumers write `+0x8` / `+0xC` and
+do not free. One generated destructor via two mutually
+exclusive `mainGameLoop` `LOOKUP_FUNC(0x800FB9E4)`
+arms. Zero overlay lookup. One `jr $ra`. The other
+five `funcs_11.c` `jal rs_free` sites do not load this
+pool base or slot `+0x0`. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static
+scope. Runtime allocator legitimacy remains unproven,
+matching s3586–s3633. No build, run, guard, or
+mitigation was performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3634-FREE-ANIMATION-PHASE-POOL-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `allocAnimationPhasePool`
+`0x80054A50` (pool `rs_malloc`) and
+`loadAssetIntoNewSlot` `0x80054970` (converted-buffer
+`rs_malloc`). Each value is a legitimate constructor
+return or NULL. No mitigation was added.
