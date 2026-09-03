@@ -135560,3 +135560,31 @@ Soak-queue tail added no post-3577 result. Evidence is recorded in
 ORIGIN: writer is `allocateAndInitCraftNpcContext`'s
 `rs_malloc(0x1E4)` store to `0x4C(0x4(wrapper))` (or NULL from
 the AT-ST lethal path). No mitigation was added.
+
+## Session 3618 (2026-09-03) — audited remaining playerAtStUpdate 0xA4/0xBC rs_free
+
+Performed the planned static census of every generated original
+`jal rs_free` in `playerAtStUpdate`. `0x800D25A0` frees
+`0xA4($s2)` on opcode 2 after restoring the 0x168 template at
+`0x8009E5F8` from that backup. `0x800D25D4` frees `0xBC($s4)`
+on the same opcode. Neither has a NULL skip or post-free NULL.
+The 0xA4 store is opcode-1 delay-slot `sw $a0, 0xA4($s2)` of
+`rs_malloc(0x168)` at `0x800D2298`. The 0xBC store is opcode-1
+`sw $v0, 0xBC($s4)` of `allocateAndInitCraftNpcContext`
+`rs_malloc(0x1E4)` at table base `0x80137DBC`. `$s2` is
+`0x4(wrapper)`; `$s4` is slot 0. `npcAtStUpdate`
+`sw $v0, 0xA4($s2)` is packed NPC fields, not this pointer.
+`destroyNpcSlotByIndex` `jalr`s opcode 2 once then
+`reinsertNpcIntoSortedFreeList`. Sibling player-craft updates
+free `0xBC($s1)` of `0x80137DBC+0x2A0*index` and remain a
+later class. This selects H-NextClassComplete. H-NextClassGap
+is refuted at static scope. Runtime allocator/lifetime
+legitimacy remains unproven, matching s3586–s3617. No build,
+run, guard, or mitigation was performed. Soak-queue tail added
+no post-3577 result. Evidence is recorded in
+`docs/M3-S3618-PLAYER-ATST-A4-BC-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are opcode-1 `rs_malloc(0x168)` to
+`0xA4(0x4(wrapper))` and `allocateAndInitCraftNpcContext`'s
+`rs_malloc(0x1E4)` to `0xBC(0x80137DBC)`. No mitigation was
+added.
