@@ -1,20 +1,20 @@
-# NEXT work unit — freeNpcSlotArray *0x80130BB0 rs_free
+# NEXT work unit — reinsertNpcIntoSortedFreeList 0x4($npc) rs_free
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`freeNpcSlotArray` `jal rs_free`
-at `0x8003FC0C` (`$a0` = `*0x80130BB0`). Enumerate every
-original load/store of that word (including the
-matching malloc store in `initNpcSlotList` at
-`0x8003E584`, every later store that can become this
-`$a0`, and whether any caller holds the buffer) and
-every `jal rs_free` that can receive that pointer.
-`0x80130BB0` is the 8-byte-stride slot-chain table
-consumed by `findActiveNpcInSlotChain` /
-`destroyNpcSlotByIndex` / spawn walks; classify those
-loads as table-base consumers or as a second free.
+`reinsertNpcIntoSortedFreeList` `jal rs_free`
+at `0x8003EC34` (`$a0` = `0x4($npc)`). Enumerate
+every original load/store of NPC `+0x4` that can
+become this `$a0` (including the matching
+`slotDispatcherInner` `rs_malloc(0x204C, 0)`
+interior `sw $v0, 0x4($s1)`, every later store,
+and whether any caller holds the buffer) and
+every `jal rs_free` that can receive that
+pointer. Classify other `0x4($reg)` loads as
+chunk-interior consumers or as a second free.
 Do not repeat the closed
+freeNpcSlotArray `*0x80130BB0`,
 destroyNpcContextArrays `*0x80130BC0`/`*0x80130BC4`/
 `*0x80130BBC`/`*0x80130BB8`,
 freeNpcBurstSpawnerTables `*0x80130BD0`/`*0x80130C08`/
@@ -61,9 +61,10 @@ legitimacy. Do not land a skip-path NULL store for
 the s3636 overlay Gap unless this census identifies
 that same writer as this word.
 
-If this census closes `funcs_9.c` `jal rs_free`,
-the following unit is `reinsertNpcIntoSortedFreeList`
-`0x4($npc)` `rs_free` at `0x8003EC34` (`funcs_8.c`).
+If this census closes `funcs_8.c` `jal rs_free`,
+the following unit is the next remaining original
+`jal 0x80001C98` in `funcs_7.c` (or the nearest
+earlier `funcs_*.c` that still has one).
 
 Competing hypotheses and discriminator:
 
@@ -78,20 +79,19 @@ Competing hypotheses and discriminator:
 
 Discriminator: the single complete original census of that
 `jal rs_free` site plus every original `lw`/`sw`/`addu`
-of `0x80130BB0` and every caller-side store that can become
-this `$a0`, and every `jal rs_free` that can receive
-that pointer. Include any overlay duplicate of
-`freeNpcSlotArray` / `0x8003FBF8` if it is a
-second generated body of the same PCs.
-Select Gap only with a concrete non-allocator or
-already-freed edge; select Complete only when all remaining
-edges are covered; otherwise select Unevaluable.
+of NPC `+0x4` that can become this `$a0`, and every
+`jal rs_free` that can receive that pointer. Include any
+overlay duplicate of `reinsertNpcIntoSortedFreeList` /
+`0x8003EC10` if it is a second generated body of the
+same PCs. Select Gap only with a concrete non-allocator
+or already-freed edge; select Complete only when all
+remaining edges are covered; otherwise select Unevaluable.
 
 Exact checks before any build:
 
-    grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_9.c
-    grep -n -- 'freeNpcSlotArray\|0x8003FBF8\|0x8003FC0C\|initNpcSlotList' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- '0xBB0' ../N64Recomp/RecompiledFuncs/funcs_8.c ../N64Recomp/RecompiledFuncs/funcs_9.c
+    grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_8.c
+    grep -n -- 'reinsertNpcIntoSortedFreeList\|0x8003EC34\|0x8003EC10\|slotDispatcherInner' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0x4(\$s1)\|0x4(\$a0)\|0x4(\$s0)' ../N64Recomp/RecompiledFuncs/funcs_8.c | head
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`

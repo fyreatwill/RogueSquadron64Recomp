@@ -136495,3 +136495,43 @@ those chunk mallocs. Those stored values are the
 matching allocator returns and are legitimate
 pool/table/list-head pointers. No mitigation was
 added.
+
+## Session 3646 (2026-09-03) — audited freeNpcSlotArray rs_free of *0x80130BB0
+
+Performed the planned static census of
+`freeNpcSlotArray` `jal rs_free` at
+`0x8003FC0C` (`$a0` = `*0x80130BB0`).
+The only original heap-pointer writer is
+`initNpcSlotList` flags-0 `rs_malloc(0x4000, 0)`
+at `0x8003E584`. The destructor NULLs after and
+does not skip NULL. Fifty-seven consumer loads
+use the word as a table base (`+0x0` NPC /
+`+0x4` next / `+0x6` prev) and do not
+`jal rs_free`. `unregisterAndFreeNpcSlot` loads
+into `$a0` for `addu` table-base arithmetic and
+relinks a slot index onto `0xBB4`; it does not
+heap-free the table. `0x8003EC34` frees
+`0x4($npc)`, not this word. One destructor via
+`endMissionCleanup`; two mutually exclusive
+`mainGameLoop` arms. Three inits overwrite
+without freeing; menu
+`initInteractiveSceneContext` without this
+destructor leaks. Zero overlay lookup; one
+`jr $ra`. `funcs_9.c` `jal rs_free` is
+exhausted. Sibling
+`reinsertNpcIntoSortedFreeList` `0x4($npc)` is
+a different destructor and is the next unit.
+This selects H-NextClassComplete. H-NextClassGap
+is refuted at static scope. Runtime allocator
+legitimacy remains unproven. No build, run,
+guard, or mitigation was performed. Soak-queue
+tail added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer is `initNpcSlotList`
+`0x8003E584` (flags-0 `rs_malloc(0x4000, 0)`).
+That stored value is the matching allocator
+return and is a legitimate 0x800-entry slot-table
+pointer. No mitigation was added.
+

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3645 (2026-09-03).
+notes are linked below. Updated for session 3646 (2026-09-03).
 
 ## Current state
 
@@ -168,24 +168,24 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    added. See
    [M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md](M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md).
    Session 3645 selected Complete for
-   `destroyNpcContextArrays`: matching flags-0
-   `rs_malloc(0x2D00, 0)` of `0x80130BB8`,
-   `rs_malloc(0x300, 0)` of `0x80130BBC`, and
-   `rs_malloc(0x204C, 0)` list heads at
-   `0x80130BC0`/`0x80130BC4` (init zeros plus
-   `0x48` relinks of those mallocs). One
-   destructor via `endMissionCleanup`; `0xBC0`/
-   `0xBC4` NULL-skip; `0xBBC`/`0xBB8` NULL after.
-   Spawn consumers load `0xBBC` as a table base
-   and do not `jal rs_free`. Sibling
-   `freeNpcSlotArray` `*0x80130BB0` is a
-   different destructor. No guard was added. See
-   [M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md](M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md).
+   `destroyNpcContextArrays` `*0x80130BC0` /
+   `*0x80130BC4` / `*0x80130BBC` / `*0x80130BB8`.
+   Session 3646 selected Complete for
+   `freeNpcSlotArray`: matching flags-0
+   `rs_malloc(0x4000, 0)` of `0x80130BB0`
+   (0x800 × 8-byte slot table). One
+   destructor via `endMissionCleanup`; no NULL
+   skip; NULL after. Consumers load the word
+   as a table base and do not `jal rs_free`.
+   `0x80130BB4` is a free-list head halfword,
+   not a pointer. `funcs_9.c` `jal rs_free`
+   is exhausted. No guard was added. See
+   [M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md](M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `freeNpcSlotArray` `*0x80130BB0`
-   `rs_free` at `0x8003FC0C`. Do not add a
-   pointer guard without a concrete invalid
-   writer.
+   M3 unit is `reinsertNpcIntoSortedFreeList`
+   `0x4($npc)` `rs_free` at `0x8003EC34`. Do
+   not add a pointer guard without a concrete
+   invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -203,9 +203,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `destroyNpcContextArrays`: matching flags-0 0x2D00/0x300 mallocs and 0x204C list heads; one destructor. |
-| H-NextClassGap | Refuted for these four words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: four pointer identities and matching allocator/relink stores. |
+| H-NextClassComplete | Selected for `freeNpcSlotArray`: matching flags-0 `rs_malloc(0x4000, 0)` of `0x80130BB0`; one destructor. |
+| H-NextClassGap | Refuted for this word. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: one pointer identity and matching allocator store. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -306,6 +306,28 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3646 — freeNpcSlotArray rs_free of
+  *0x80130BB0:** Matching flags-0
+  `rs_malloc(0x4000, 0)` of `0x80130BB0`
+  (0x800 × 8-byte slot table). One original
+  heap-pointer store in `initNpcSlotList`.
+  Post-free NULL; no NULL skip. Fifty-seven
+  consumer loads use the word as a table
+  base (`+0x0` NPC / `+0x4` next / `+0x6`
+  prev); none `jal rs_free`.
+  `unregisterAndFreeNpcSlot` relinks a slot
+  index onto `0xBB4` and does not heap-free
+  the table. One destructor via two mutually
+  exclusive `mainGameLoop` arms. Three inits
+  overwrite without freeing; menu
+  `initInteractiveSceneContext` without this
+  destructor leaks. Zero overlay lookup. One
+  `jr $ra`. `funcs_9.c` `jal rs_free` is
+  exhausted. Sibling
+  `reinsertNpcIntoSortedFreeList` `0x4($npc)`
+  is a different destructor. This selects
+  `H-NextClassComplete`. See
+  [M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md](M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md).
 - **3645 — destroyNpcContextArrays rs_free of
   *0x80130BC0 / *0x80130BC4 / *0x80130BBC /
   *0x80130BB8:** Matching flags-0
@@ -893,6 +915,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md](M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md)
 - [M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md](M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md)
 - [M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md](M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md)
 - [M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md](M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md)
