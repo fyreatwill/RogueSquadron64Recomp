@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3603 (2026-09-03).
+notes are linked below. Updated for session 3604 (2026-09-03).
 
 ## Current state
 
@@ -61,21 +61,19 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    class. Session 3601 closed the remaining `0x88`-stride voice-table
    indexers as complete. Session 3602 closed the remaining `-0x6908`
    non-a0 table-base users as complete. Session 3603 closed the `-0x6904`
-   pointer-alias class as complete: the only writer is
-   `allocateSongChannelArray` storing the `rs_malloc` result beside
-   `-0x6908`; the init walk is count-bounded versus `-0x6900`;
-   `shutdownAudioEngine` and `waitForMusyXAudioTaskDone` both `rs_free`
-   that same word without NULLing either alias. Shutdown's wrapper has
-   no generated JAL; wait's only JAL is `musyxNoopStub` from
-   `runVideoFrameTick`, and B40 zeros after that wrapper so a later
-   sequential destructor skips. Runtime allocator/lifetime legitimacy
+   pointer-alias class as complete. Session 3604 closed the remaining
+   destructor unchecked-free class as complete: each of `-0x68D8`,
+   `-0x6644`, `-0x6640`, `-0x68A8`, `-0x68A4`, `-0x689C`, and
+   shutdown-only `-0x6638`, `-0x663C`, `-0x6950`, `-0x69A0` has a
+   single original `0x8015` writer that stores the matching
+   `rs_malloc` result. Sequential double-free of the six shared words
+   is blocked by the unreferenced shutdown wrapper and B40 zeroing
+   after `musyxNoopStub`. Runtime allocator/lifetime legitimacy
    remains unproven. See
-   [M3-S3603-6904-POINTER-ALIAS-AUDIT.md](M3-S3603-6904-POINTER-ALIAS-AUDIT.md).
-   Retail-entry and SP-yield threads remain parked. The next M3 unit is
-   the remaining destructor unchecked-free class: `lw a0; jal rs_free`
-   with neither a `beq a0, zero` skip nor a post-free NULL store, on
-   `-0x68D8`, `-0x6644`, `-0x6640`, `-0x68A8`, `-0x68A4`, `-0x689C`,
-   and shutdown-only `-0x6638`, `-0x663C`, `-0x6950`, `-0x69A0`. Do not
+   [M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md](M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md).
+   Retail-entry and SP-yield threads remain parked. The next M3 unit
+   is the skipped-NULL destructor-free class: `lw; beq zero; jal
+   rs_free` of `-0x6898`, `-0x6890`, and wrapper `-0x50EC`. Do not
    add a pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -94,9 +92,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the `-0x6904` pointer-alias class: allocator store, count-bounded init walk, or destructor of that same pointer. |
+| H-NextClassComplete | Selected for the destructor unchecked-free class: each of the ten remaining pointers is a matching `rs_malloc` store, and both destructors free that same word. |
 | H-NextClassGap | Refuted for this class: no untrusted load and no concrete sibling-free of a non-allocator pointer. |
-| H-NextClassUnevaluable | Not selected: the word is the same malloc pointer stored at `-0x6908`, not a mixed object. |
+| H-NextClassUnevaluable | Not selected: `-0x6950` is a static slice table whose word 0 is the malloc pointer, not a mixed object. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -197,6 +195,16 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3604 — destructor unchecked-free class:** ten remaining
+  `lw a0; jal rs_free` sites with no zero-skip and no post-free NULL.
+  Each pointer has a single original `0x8015` writer that stores the
+  matching `rs_malloc` result (`allocateSongChannelArray`,
+  `setupSongRenderBuffers`, `buildSongDecodeBufferRing`,
+  `initSampleStreamBlockCache`, `runAiAudioStreamPlaybackLoop` word 0
+  of the `-0x6950` slice table, `initAudioSubsystem`). Sequential
+  double-free of the six shared words is blocked by B40. This selects
+  `H-NextClassComplete`. See
+  [M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md](M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md).
 - **3603 — `-0x6904` pointer alias:** six original `lw`/`sw` sites. The
   only writer is `allocateSongChannelArray` storing the `rs_malloc`
   result; the init walk is count-bounded versus `-0x6900`; both
@@ -332,6 +340,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md](M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md)
 - [M3-S3603-6904-POINTER-ALIAS-AUDIT.md](M3-S3603-6904-POINTER-ALIAS-AUDIT.md)
 - [M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md](M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md)
 - [M3-S3601-REMAINING-88-STRIDE-INDEXER-AUDIT.md](M3-S3601-REMAINING-88-STRIDE-INDEXER-AUDIT.md)

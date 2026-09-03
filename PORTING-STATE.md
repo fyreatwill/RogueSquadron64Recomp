@@ -135167,3 +135167,36 @@ ORIGIN: the only writer is `allocateSongChannelArray` storing the
 `rs_malloc` result; the init walk indexes that pointer by the
 live-count halfword written in the same function; both frees pass
 that same word to `rs_free`. No mitigation was added.
+
+## Session 3604 (2026-09-03) — audited destructor unchecked-free class
+
+Performed the planned static census of every remaining generated
+original `lw a0; jal rs_free` in `shutdownAudioEngine` and
+`waitForMusyXAudioTaskDone` with neither a `beq a0, zero` skip nor a
+post-free NULL store. Ten pointers: `-0x68A8`/`-0x68A4`/`-0x689C`
+stored by `allocateSongChannelArray` as `rs_malloc` results (`0xA10 *
+lhu -0x68B2`, twice, then `0x298`); `-0x68D8` stored by
+`setupSongRenderBuffers`; `-0x6640`/`-0x6644` stored by
+`buildSongDecodeBufferRing`; shutdown-only `-0x663C`/`-0x6638` stored
+by `initSampleStreamBlockCache`; shutdown-only `-0x6950` word 0 stored
+by the audio-thread entry `runAiAudioStreamPlaybackLoop` after
+`rs_malloc(0x3000)` into the static 16-word slice table at
+`0x801496B0`; shutdown-only `-0x69A0` stored by `initAudioSubsystem`
+as the `0x400` thread stack. No other original `0x8015` store of any
+of the ten words exists. Neither destructor NULLs them. Sequential
+double-free of the six shared words is blocked: shutdown's wrapper is
+unreferenced, and wait's wrapper zeros B40 so a later pair skips.
+This selects H-NextClassComplete. H-NextClassGap is refuted at static
+scope: no untrusted load and no concrete sibling-free of a
+non-allocator pointer. Runtime allocator/lifetime legitimacy remains
+unproven, matching s3586–s3603. No build, run, guard, or mitigation
+was performed. Soak-queue tail added no post-3577 result. Evidence is
+recorded in `docs/M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md`.
+
+ORIGIN: writers are `allocateSongChannelArray` (`-0x68A8`, `-0x68A4`,
+`-0x689C`), `setupSongRenderBuffers` (`-0x68D8`),
+`buildSongDecodeBufferRing` (`-0x6640`, `-0x6644`),
+`initSampleStreamBlockCache` (`-0x663C`, `-0x6638`),
+`runAiAudioStreamPlaybackLoop` (`-0x6950` word 0), and
+`initAudioSubsystem` (`-0x69A0`); each stores the matching
+`rs_malloc` result. No mitigation was added.
