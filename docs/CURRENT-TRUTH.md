@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3631 (2026-09-03).
+notes are linked below. Updated for session 3632 (2026-09-03).
 
 ## Current state
 
@@ -82,18 +82,18 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `freeTxtFile` globals `rs_free`,
    `freeSubtitleOverlay` `*0x80139010` `rs_free`, and
    `load_hmt_and_hob` `$s3`/`0x6C($sp)`/`0x74($sp)`
-   `rs_free`, and `releaseMeshAsset` `$s5` `rs_free` as
-   complete. Session 3631 closed `0x8005794C`: `$s5` is the
-   incoming `$a0`; every caller store is
-   `walkMeshdef0List` / `instantiateNamedMeshInstance` /
-   `createMeshInstanceFromSource`. The `0x1000` gate skips
-   the mesh-walk; `0x4` recycles the `0xB4` pool; flag `1`
-   skips `rs_free`. Runtime allocator legitimacy remains
-   unproven. See
-   [M3-S3631-RELEASE-MESH-ASSET-RS-FREE-AUDIT.md](M3-S3631-RELEASE-MESH-ASSET-RS-FREE-AUDIT.md).
+   `rs_free`, `releaseMeshAsset` `$s5` `rs_free`, and
+   `freeAllHobFiles` slot `+0x8` `rs_free` as complete.
+   Session 3632 closed `0x80059244`: the only heap-pointer
+   writer of `0x80139020+index*12+0x8` is `load_hmt_and_hob`
+   object-0 `0x68($sp)` (`rs_malloc`); later objects store
+   0. The walk NULL-skips and collapses buckets to `0xFFFF`.
+   Runtime allocator legitimacy remains unproven. See
+   [M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md](M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `freeAllHobFiles` `0x80059244`. Do not add a
-   pointer guard without a concrete invalid writer.
+   M3 unit is `loadAssetAndIterateSubchunks` `0x8005519C`.
+   Do not add a pointer guard without a concrete invalid
+   writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -111,9 +111,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `releaseMeshAsset`: `$s5` is the incoming instance; three matching constructors; one destructor. |
+| H-NextClassComplete | Selected for `freeAllHobFiles`: slot `+0x8` is the matching kept-HOB `rs_malloc`; one destructor. |
 | H-NextClassGap | Refuted for this class: no free of a non-allocator or already-freed value. |
-| H-NextClassUnevaluable | Not selected: one instance layout and three identified constructors. |
+| H-NextClassUnevaluable | Not selected: one slot layout and one heap-pointer writer. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -214,6 +214,20 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3632 — freeAllHobFiles rs_free of slot +0x8:**
+  `0x8($s0)` is `0x80139020+index*12+0x8`. The only
+  heap-pointer writer is `load_hmt_and_hob` `0x80056D20`
+  storing kept `0x68($sp)` (`rs_malloc` then optional
+  packed-copy malloc). Non-first objects store 0.
+  `beq $a0, $zero` skips; the walk collapses buckets to
+  `0xFFFF` so a second call does not re-free. Hash-table
+  consumers load `+0x4` and do not free `+0x8`. One
+  generated destructor; two mutually exclusive
+  `mainGameLoop` teardown arms. Zero HOB count leaks
+  unpublished `0x68`; that is not a second pointer source.
+  `funcs_12.c` `jal rs_free` is exhausted. This selects
+  `H-NextClassComplete`. See
+  [M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md](M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md).
 - **3631 — releaseMeshAsset rs_free of $s5:**
   `$s5` is incoming `$a0`. `walkMeshdef0List` is the
   pool (`sh 4`) or heap (`sh 0`) constructor;
@@ -597,6 +611,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md](M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md)
 - [M3-S3631-RELEASE-MESH-ASSET-RS-FREE-AUDIT.md](M3-S3631-RELEASE-MESH-ASSET-RS-FREE-AUDIT.md)
 - [M3-S3630-LOAD-HMT-AND-HOB-RS-FREE-AUDIT.md](M3-S3630-LOAD-HMT-AND-HOB-RS-FREE-AUDIT.md)
 - [M3-S3629-FREE-SUBTITLE-OVERLAY-RS-FREE-AUDIT.md](M3-S3629-FREE-SUBTITLE-OVERLAY-RS-FREE-AUDIT.md)

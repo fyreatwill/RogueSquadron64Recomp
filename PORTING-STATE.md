@@ -135992,3 +135992,37 @@ ORIGIN: writers are `walkMeshdef0List` pool-pop / heap
 and `createMeshInstanceFromSource` `rs_malloc(0xB4)` or
 provided `0x3A20` interior. Each value is a legitimate
 constructor return. No mitigation was added.
+
+## Session 3632 (2026-09-03) — audited freeAllHobFiles rs_free of slot +0x8
+
+Performed the planned static census of `freeAllHobFiles`
+`jal rs_free` at `0x80059244` (`$a0` = `0x8($s0)` of
+`0x80139020 + index*12`). The only original heap-pointer
+writer of slot `+0x8` is `load_hmt_and_hob` `0x80056D20`
+storing kept `0x68($sp)` (`rs_malloc` of the HOB DMA,
+optionally overwritten by the packed-copy `rs_malloc`).
+Non-first objects store 0 via the `bnel 0x78($sp)` delay
+slot. `beq $a0, $zero` skips; the bucket walk collapses
+each chain to `0xFFFF`, so a second call does not re-free
+without a post-free NULL. Hash-table consumers
+(`isHobObjectLoaded`, `walkMeshdef0List`,
+`instantiateNamedMeshInstance`,
+`releaseFlaggedMeshInstanceMeshes`, `getHobObjectByName`)
+load slot `+0x4` and do not free `+0x8`. `initNpcBookkeepingTables`
+writes slot `+0x0` next-index halfwords only. One generated
+destructor; two mutually exclusive `mainGameLoop` overlay
+calls to `endMissionCleanup`. Zero HOB object count leaks
+unpublished `0x68`; that is not a second pointer source.
+`funcs_12.c` `jal rs_free` is exhausted. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static
+scope. Runtime allocator legitimacy and pairing of every
+load with this destructor remain unproven, matching
+s3586–s3631. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result.
+Evidence is recorded in
+`docs/M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `load_hmt_and_hob` `0x80056D20`
+(`0x68` kept-HOB `rs_malloc`) and `0x80056D18` (zero for
+non-first objects). Each value is a legitimate constructor
+return or a deliberate NULL. No mitigation was added.
