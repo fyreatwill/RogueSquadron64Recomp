@@ -1,20 +1,20 @@
-# NEXT work unit — teardownAnimatedMapGridLayer remaining rs_free
+# NEXT work unit — computeGridTileEdgeAdjacencyMasks $s1 rs_free
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`teardownAnimatedMapGridLayer` remaining `jal rs_free`
-at `0x80045730` (`$a0` = `*0x80136DC8`), plus the
-sibling frees of `*0x80136DCC` at `0x8004573C`,
-`*0x80136FC4` at `0x80045748`, `*0x80136FCC` at
-`0x80045780`, and `*0x80136E1C` at `0x80045790`.
-Enumerate every original load/store of those five
-words (including the matching `rs_malloc` of the
-`loadLevelAssets` `n*24` sibling at `0x80136E1C`,
-every later store that can become these `$a0`s, and
-whether any caller holds the buffers) and every
-`jal rs_free` that can receive those pointers. Do
-not repeat the closed teardownGridLayerWorker
+`computeGridTileEdgeAdjacencyMasks` `jal rs_free`
+at `0x800453AC` (`$a0` = `$s1`, the
+`rs_malloc(lhu 0x18(*0x80136FC4), 0)` scratch).
+Enumerate every original load/store of that
+`$s1` (including the matching malloc at
+`0x80044C00`, every later store that can become
+this `$a0`, and whether any caller holds the
+buffer) and every `jal rs_free` that can receive
+that pointer. Do not repeat the closed
+teardownAnimatedMapGridLayer remaining
+`*0x80136DC8`/`*0x80136DCC`/`*0x80136FC4`/
+`*0x80136FCC`/`*0x80136E1C`, teardownGridLayerWorker
 `*0x80137614`, freeGridCellBuffers
 `*0x80137A5C`/`*0x80137A54`/`*0x80137A4C`/
 `*0x80137A68`, loadLevelTextureCache `$s0` 0x136C
@@ -52,7 +52,7 @@ invalid writer/value is identified; any mitigation
 needs an ORIGIN line naming the writer and assessing
 legitimacy. Do not land a skip-path NULL store for
 the s3636 overlay Gap unless this census identifies
-that same writer as one of these five words.
+that same writer as this `$s1`.
 
 Competing hypotheses and discriminator:
 
@@ -65,12 +65,13 @@ Competing hypotheses and discriminator:
 - H-NextClassUnevaluable: mixed object identities or unshared
   writers prevent a complete classification of a pointer source.
 
-Discriminator: the single complete original census of those
-`jal rs_free` sites plus every original `lw`/`sw`/`addu`
-of `0x80136DC8` / `0x80136DCC` / `0x80136FC4` /
-`0x80136FCC` / `0x80136E1C` and every caller-side store
-that can become these `$a0`s, and every `jal rs_free`
-that can receive those pointers.
+Discriminator: the single complete original census of that
+`jal rs_free` site plus every original `lw`/`sw`/`addu`
+of this `$s1` and every caller-side store that can
+become this `$a0`, and every `jal rs_free` that can
+receive that pointer. Include the overlay duplicate
+`static_3_80045024` in `funcs_49.c` if it is a
+second generated body of the same PCs.
 Select Gap only with a concrete non-allocator or
 already-freed edge; select Complete only when all remaining
 edges are covered; otherwise select Unevaluable.
@@ -78,8 +79,8 @@ edges are covered; otherwise select Unevaluable.
 Exact checks before any build:
 
     grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_9.c
-    grep -n -- 'teardownAnimatedMapGridLayer\|loadLevelAssets' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- '0x80045730\|0x80136DC8\|0x80136DCC\|0x80136FC4\|0x80136FCC\|0x80136E1C\|0x6DC8\|0x6DCC\|0x6FC4\|0x6FCC\|0x6E1C' ../N64Recomp/RecompiledFuncs/funcs_9.c
+    grep -n -- 'computeGridTileEdgeAdjacencyMasks\|0x80044BE4\|0x800453AC' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0x80044C00\|0x800453AC\|0x80044BF0' ../N64Recomp/RecompiledFuncs/funcs_9.c
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`

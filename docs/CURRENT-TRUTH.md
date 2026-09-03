@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3641 (2026-09-03).
+notes are linked below. Updated for session 3642 (2026-09-03).
 
 ## Current state
 
@@ -135,11 +135,21 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    skip is paired. No guard was added.
    `funcs_10.c` `jal rs_free` is exhausted. See
    [M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md](M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md).
+   Session 3642 selected Complete for
+   `teardownAnimatedMapGridLayer` remaining
+   `rs_free`: matching flags-0 HMP
+   `rs_malloc` of `0x80136FC4`, W*H grid of
+   `0x80136DC8`, second asset of `0x80136DCC`,
+   `n*12` node pool of `0x80136FCC`, and
+   `n*24` of `0x80136E1C`. One destructor;
+   `0x80136FC4` is NULLed after its free.
+   Type-`0xA` skips the `n*24` publish and
+   the `0x6FCC`/`0x6E1C` frees. No guard was
+   added. See
+   [M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md](M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `teardownAnimatedMapGridLayer`
-   remaining `rs_free` of `*0x80136DC8` /
-   `*0x80136DCC` / `*0x80136FC4` /
-   `*0x80136FCC` / `*0x80136E1C`. Do not add a
+   M3 unit is `computeGridTileEdgeAdjacencyMasks`
+   `$s1` `rs_free` at `0x800453AC`. Do not add a
    pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -158,9 +168,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `teardownGridLayerWorker`: matching flags-0 `rs_malloc(count*12, 0)` of `0x80137614`, one destructor. |
-| H-NextClassGap | Refuted for this word. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: one pointer identity and one allocator store. |
+| H-NextClassComplete | Selected for `teardownAnimatedMapGridLayer` remaining five words: matching flags-0 `rs_malloc` stores, one destructor. |
+| H-NextClassGap | Refuted for these words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: five pointer identities and one allocator store each. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -261,6 +271,24 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3642 — teardownAnimatedMapGridLayer remaining
+  rs_free of *0x80136DC8 / *0x80136DCC /
+  *0x80136FC4 / *0x80136FCC / *0x80136E1C:**
+  Matching flags-0 `rs_malloc` stores in
+  `load_level_hmp` (HMP / W*H grid / second
+  asset), `allocAndInitDoublyLinkedNodePool12`
+  (`n*12`), and `loadLevelAssets` (`n*24`).
+  Descriptor `0x80136DC0` `+0x0`/`+0x4` are
+  interior HMP pointers. Adjacency `$s1` is a
+  different scratch. Consumers load the five
+  words as table bases and do not `jal rs_free`.
+  `0x80136FC4` NULL-skips and NULLs after.
+  Type `0xA` paired-skips `0x80136E1C` and
+  leaks `0x80136FCC`. One destructor via two
+  route wrappers. Zero overlay lookup. One
+  `jr $ra`. This selects
+  `H-NextClassComplete`. See
+  [M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md](M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md).
 - **3641 — teardownGridLayerWorker rs_free of
   *0x80137614:** Matching flags-0
   `rs_malloc(count*12, 0)` store at
@@ -768,6 +796,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md](M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md)
 - [M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md](M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md)
 - [M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md](M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md)
 - [M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md](M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md)

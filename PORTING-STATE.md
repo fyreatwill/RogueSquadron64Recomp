@@ -136343,3 +136343,44 @@ ORIGIN: writer of `0x80137614` is
 `rs_malloc(count*12, 0)` return). That stored
 value is the matching allocator return and is a
 legitimate count table. No mitigation was added.
+
+## Session 3642 (2026-09-03) — audited teardownAnimatedMapGridLayer remaining rs_free
+
+Performed the planned static census of
+`teardownAnimatedMapGridLayer` `jal rs_free` at
+`0x80045730` (`*0x80136DC8`), `0x8004573C`
+(`*0x80136DCC`), `0x80045748` (`*0x80136FC4`),
+`0x80045780` (`*0x80136FCC`), and `0x80045790`
+(`*0x80136E1C`). The only original heap-pointer
+stores are the flags-0 `rs_malloc` results in
+`load_level_hmp` (`0x80043DF8` HMP,
+`0x800440C0` W*H grid, `0x800441D0` second
+asset), `allocAndInitDoublyLinkedNodePool12`
+(`0x80041F24` `n*12`), and `loadLevelAssets`
+(`0x80045450` `n*24`). Descriptor `0x80136DC0`
+`+0x0`/`+0x4` are interior HMP pointers.
+Adjacency `$s1` is a different scratch.
+Consumers load the five words as table bases
+and do not `jal rs_free`. `0x80136FC4`
+NULL-skips and NULLs after. Type `0xA`
+paired-skips `0x80136E1C` and leaks
+`0x80136FCC`. One destructor via two route
+wrappers (mission `mainGameLoop` `0x8003E2C4` /
+`0x8003E388` and cinematic shutdown). Zero
+overlay lookup; one `jr $ra`. This selects
+H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime allocator
+legitimacy remains unproven. No build, run,
+guard, or mitigation was performed. Soak-queue
+tail added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers of the five words are
+`load_level_hmp` `0x80043DF8` / `0x800440C0` /
+`0x800441D0`, `allocAndInitDoublyLinkedNodePool12`
+`0x80041F24`, and `loadLevelAssets` `0x80045450`
+(flags-0 `rs_malloc` returns). Those stored
+values are the matching allocator returns and
+are legitimate HMP / grid / node-pool / `n*24`
+buffers. No mitigation was added.
