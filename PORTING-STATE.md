@@ -136941,3 +136941,50 @@ flags-9 `rs_malloc` return. Those values
 are legitimate heap pointers (or NULL on
 allocator failure). Type-2 enqueue stores
 NULL. No mitigation was added.
+
+## Session 3656 (2026-09-03) — audited findManifestEntryByName rs_free of $s2
+
+Performed the planned static census of
+`findManifestEntryByName` `jal rs_free` at
+`0x8000490C` (`$a0` = `$s2` from
+`addu $a0, $s2` at `0x80004900`). `$s2`
+is flags-9 `rs_malloc(8)` at `0x800048A4`,
+kept in-register at `0x800048AC` and never
+stored. DMA dest then destructor; the
+`lw $s2, 0x0($a0)` at `0x80004908` consumes
+header word 0 as a ROM offset while `$a0`
+still holds the malloc pointer. Skip when
+name-table `entry+0x18 != 0` leaks the
+unpublished 8-byte buffer; that word is
+ROM-DMA'd by `initDmaSlots` into
+`*0x80110A74` from cart `0xB0144340`, not
+this pointer. Slot `+0x40` is the later
+payload malloc stored at `0x80004920` and
+is not this `$s2`. Six generated callers
+pass ROM name strings. Zero LOOKUP. One
+overlay entry (`section_3_text` rom
+`0x43B4`, size `0x1A0`); not a second
+generated body. Single `jr $ra` at
+`0x8000498C`. `submitDmaSlot` /
+`waitDmaSlotComplete` /
+`teardownAssetDma` have zero `jal rs_free`.
+This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope.
+Runtime allocator legitimacy remains
+unproven. The next remaining original
+`jal 0x80001C98` is `funcs_1.c`
+`freeManifestSegmentAssets` `0x80004A0C`
+(sibling `0x80004A80` loads the same
+`0x40($s0)`). No build, run, guard, or
+mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3656-FIND-MANIFEST-ENTRY-BY-NAME-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `$s2` is
+`findManifestEntryByName` `0x800048A4`
+storing the flags-9 `rs_malloc(8)` return
+into `$s2`. That value is a legitimate
+heap pointer (or NULL on allocator
+failure). It is never published. No
+mitigation was added.
