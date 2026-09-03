@@ -136188,3 +136188,41 @@ return and is a legitimate DMA scratch pointer. The
 `registerHmtTextureInTable`, not this pointer. No
 mitigation was added.
 
+## Session 3638 (2026-09-03) — audited freeLevelDatBuffers rs_free of *0x801375D0 / *0x801375D8 / *0x801375F4
+
+Performed the planned static census of
+`freeLevelDatBuffers` `jal rs_free` at
+`0x80047B0C` (`$a0` = `*0x801375D0`), plus sibling
+frees of `*0x801375D8` at `0x80047B20` (delay-slot
+NULL of D0) and `0x1C($s0)` at `0x80047B2C`
+(`$s0` = `0x801375D8`, so `0x801375F4`). D8 is the
+matching `load_asset` `$s2` stored only when
+`0x80130B3A != 1`. F4 is the matching
+`rs_malloc((W*H)<<1, 0)` at global `+0x1C`. D0 is
+the matching `rs_malloc(count<<2, 0)` or NULL when
+count is 0. Interior `0x1C($s2)` is an in-buffer
+convert, not F4. The skip path returns `$s2` and does
+not store D8; caller `$v0` stores (`0x800D03CC`,
+`0x800CDCE8`, `0x800CC58C`) are that xor, not a
+second D8 source. s3614 inverted B3A polarity; the
+generated branch is `bne $v1, 1` then store.
+One generated destructor via two mutually exclusive
+`mainGameLoop` arms; zero overlay lookup; one
+`jr $ra`; straight-line body. D8 consumers including
+`preloadSceneReferencedSongs` do not `jal rs_free`
+of these words. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator legitimacy remains unproven. No build, run,
+guard, or mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is recorded in
+`docs/M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of D8 is `loadDatFile` `0x80046DBC`
+(`load_asset` `$s2`). Writer of F4 is `loadDatFile`
+`0x8004702C` (`rs_malloc` of `(W*H)<<1`, flags-0).
+Writer of D0 is `loadDatFile` `0x80047144`
+(`rs_malloc` of `count<<2`, flags-0) or the matching
+NULL at `0x800471E0`. Those stored values are the
+matching allocator returns (or NULL) and are
+legitimate DAT-context pointers. No mitigation was
+added.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3637 (2026-09-03).
+notes are linked below. Updated for session 3638 (2026-09-03).
 
 ## Current state
 
@@ -87,8 +87,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `loadAssetAndIterateSubchunks` `$s6` `rs_free`, and
    `freeAnimationPhasePool` slot `+0x0` / `0x80137C84`
    `rs_free`, `loadAssetIntoNewSlot` `$s6` DMA
-   scratch `rs_free`, and `load_full_header_image`
-   `$s1` `rs_free` as complete.
+   scratch `rs_free`, `load_full_header_image`
+   `$s1` `rs_free`, and `freeLevelDatBuffers`
+   `*0x801375D0` / `*0x801375D8` / `*0x801375F4`
+   `rs_free` as complete.
    Session 3636 selected Gap for
    `attachedMeshOverlayNpcHandler` `0x80054344`: the
    two-iter `rs_malloc(0x80, 0)` at `0x80053DBC` is the
@@ -98,20 +100,17 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    stores type `-1` or when parent mesh `+0xC` is NULL.
    Neither skip stores NULL first. No guard was added. See
    [M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md](M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md).
-   Session 3637 selected Complete for
-   `load_full_header_image` `$s1`: matching flags-0
-   `rs_malloc` at `0x80054428`, DMA dest then
-   `registerHmtTextureInTable` copy, one `rs_free` at
-   `0x800544D8`. Never stored to a global. Delay-slot
-   `0x80137C70` is a texture-id halfword, not this
-   pointer, and is not the s3636 overlay writer. Five
-   generated callers; `funcs_11.c` `jal rs_free` is
-   exhausted. No guard was added. See
-   [M3-S3637-LOAD-FULL-HEADER-IMAGE-RS-FREE-AUDIT.md](M3-S3637-LOAD-FULL-HEADER-IMAGE-RS-FREE-AUDIT.md).
+   Session 3638 selected Complete for
+   `freeLevelDatBuffers`: matching `load_asset` store of
+   D8, flags-0 grid malloc of F4, and flags-0
+   count-sized malloc of D0 (or NULL when count is 0).
+   One destructor; skip-path `$v0` is `$s2` xor the D8
+   store. No guard was added. See
+   [M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md](M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `freeLevelDatBuffers` `0x80047B0C`
-   (`*0x801375D0`). Do not add a pointer guard without a
-   concrete invalid writer.
+   M3 unit is `loadLevelTextureCache` `0x80048378`
+   (`$s0` rebound to `rs_malloc(0x136C, 0)`). Do not add
+   a pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -129,9 +128,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `load_full_header_image` `$s1`: matching flags-0 malloc, one destructor, never stored. |
-| H-NextClassGap | Refuted for this `$s1`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: one DMA-buffer identity and one allocator store. |
+| H-NextClassComplete | Selected for `freeLevelDatBuffers` D8/F4/D0: matching `load_asset` / two flags-0 mallocs, one destructor. |
+| H-NextClassGap | Refuted for these three words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: three pointer identities and one allocator store each. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -232,6 +231,19 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3638 — freeLevelDatBuffers rs_free of *0x801375D0 /
+  *0x801375D8 / *0x801375F4:** D8 is the matching
+  `load_asset` `$s2` stored only when `0x80130B3A != 1`.
+  F4 is the matching `rs_malloc((W*H)<<1, 0)` at global
+  `+0x1C`. D0 is the matching `rs_malloc(count<<2, 0)`
+  or NULL when count is 0. Interior `0x1C($s2)` is an
+  in-buffer convert, not F4. Skip-path `$v0` is `$s2`
+  xor the D8 store; `shutdownModelViewer` of
+  `0x800D03CC` is that skip return (s3614 polarity
+  corrected). One generated destructor via two mutually
+  exclusive `mainGameLoop` arms. This selects
+  `H-NextClassComplete`. See
+  [M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md](M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md).
 - **3637 — load_full_header_image rs_free of $s1:**
   `$s1` is the matching `get_asset_size_extra`
   `rs_malloc` (flags-0). Never stored to a global.
@@ -683,6 +695,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md](M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md)
 - [M3-S3637-LOAD-FULL-HEADER-IMAGE-RS-FREE-AUDIT.md](M3-S3637-LOAD-FULL-HEADER-IMAGE-RS-FREE-AUDIT.md)
 - [M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md](M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md)
 - [M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md](M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md)
