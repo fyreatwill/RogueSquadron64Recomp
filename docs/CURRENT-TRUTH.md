@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3599 (2026-09-02).
+notes are linked below. Updated for session 3600 (2026-09-02).
 
 ## Current state
 
@@ -54,20 +54,21 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    oracle. While it is parked, perform only systematic M3 idiom-class audits.
    Sessions 3586–3593 structurally closed packed-handle, allocator-stride,
    record-field, hangar-Y, MORT publication, mix-table, and pan-input classes
-   with no concrete invalid writer; runtime allocator/lifetime legitimacy
-   remains unproven. Sessions 3594–3598 selected structural unevaluability
-   for mixed-layout families `+0x60`, `+0x30..+0x40`, `+0x28..+0x2C`,
-   `+0x18..+0x24`, and `+0x66..+0x74`. Session 3599 spanned `funcs_23.c` and
-   `funcs_24.c` for envelope companion `+0x5C`/`+0x64`: voice-table envelope
-   floats now have a complete writer/consumer chain including
-   `advanceVolumeFadeEnvelope`, but the same spelling also covers
-   command-list sample fields and the `0x17C` packed handle. No concrete
-   invalid writer was found. See
-   [M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md](M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md).
+   with no concrete invalid writer. Sessions 3594–3599 selected structural
+   unevaluability for mixed-layout families `+0x60`, `+0x30..+0x40`,
+   `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
+   `+0x5C`/`+0x64`. Session 3600 closed the unmasked release/fade index
+   class as complete: the four generated call edges are count-bounded or
+   gated by `record+0x0==0` against the `-1` packed-handle sentinel; no
+   concrete out-of-range writer was found. Runtime allocator/lifetime
+   legitimacy remains unproven. See
+   [M3-S3600-RELEASE-FADE-INDEX-AUDIT.md](M3-S3600-RELEASE-FADE-INDEX-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next M3 unit is the
-   unmasked release/fade voice-table index: classify every caller of
-   `musyxStartVoiceRelease` and `beginVoiceFadeRelease` and the synth-voice
-   `+0x67` byte they pass; do not add an index guard without a concrete
+   remaining `0x88`-stride voice-table indexers (`isAudioSlotActive`,
+   `stopVoiceMarkRetrigger`, `musyxInitVoiceFromSample`,
+   `musyxStoreVoiceAdsrParams`, `musyxStopVoice`, `musyxSetVoicePitchBend`,
+   `deactivateVoice`, `getVoiceUserField`, and mix/attack if they still
+   take an index). Do not add an index guard without a concrete
    out-of-range writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -86,6 +87,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
+| H-NextClassComplete | Selected for the release/fade index class: every generated JAL is count-bounded or gated so `-1` cannot be a live index. |
+| H-NextClassGap | Refuted for this class: no sentinel-as-index or out-of-range caller pair. |
+| H-NextClassUnevaluable | Not selected: `+0x67` is the packed-handle low byte feeding the `0x88` table. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -186,6 +190,14 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3600 — unmasked release/fade voice-table index:** four generated
+  call sites. `tickAudioChannel` opcode 17 and unreferenced
+  `soundMacroOpKeyOff` load record `+0x67`; `tickAllAudioChannels` skips
+  `+0x0==0`, and every `-1` handle writer also zeros `+0x0`.
+  `stopAllSynthVoices` is count-bounded; `stopVoicesByHandle` fades the
+  matched live slot after rejecting full-word `-1`. Consumers still lack
+  a local count check. This selects `H-NextClassComplete`. See
+  [M3-S3600-RELEASE-FADE-INDEX-AUDIT.md](M3-S3600-RELEASE-FADE-INDEX-AUDIT.md).
 - **3599 — MusyX voice `+0x5C`/`+0x64` envelope companion audit:** 36
   generated accesses in `funcs_23.c`/`funcs_24.c` split across voice-table
   envelope floats, command-list sample halfword/word fields, and the
@@ -291,6 +303,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3600-RELEASE-FADE-INDEX-AUDIT.md](M3-S3600-RELEASE-FADE-INDEX-AUDIT.md)
 - [M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md](M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md)
 - [M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md](M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md)
 - [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md)

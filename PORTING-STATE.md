@@ -135054,3 +135054,32 @@ ORIGIN: voice-table `+0x5C`/`+0x64` writers are `musyxTriggerVoiceAttack`
 Command-list writers are `musyxRenderVoiceSamples`. Packed-handle writers
 are the s3586 cleanup/publish set. Those values are legitimate state or
 copies from identified sources; capacity and lifetime remain unproven.
+
+## Session 3600 (2026-09-02) — audited unmasked release/fade voice-table index
+
+Performed the planned static census of every generated caller of
+`musyxStartVoiceRelease` and `beginVoiceFadeRelease`, and of every
+`MEM_BU(..., 0x67)` load in `funcs_22.c` through `funcs_24.c`. Four
+call sites: `tickAudioChannel` opcode 17 and unreferenced
+`soundMacroOpKeyOff` load record `+0x67` with `a1=1`; `stopVoicesByHandle`
+passes the matched handle low byte after rejecting full-word `-1`;
+`stopAllSynthVoices` loops `0 .. count-1` from `0x80141AD0`. Both
+consumers form `D_801496F8 + a0*0x88` with no local count check; fade
+has the s484 KSEG0 base-pointer guard, release does not.
+
+`tickAllAudioChannels` skips `record+0x0==0` before the key-off JAL.
+Every generated `-1` packed-handle writer also zeros `+0x0`.
+`startNoteOnVoice` bails on allocator `-1` before publishing a handle.
+Opcode 0 (stop) writes `-1` and sets the interpreter done-gate so it
+cannot fall through to opcode 17 in the same tick. This selects
+H-NextClassComplete for the class. H-NextClassGap is refuted at static
+scope: no sentinel-as-index or out-of-range live JAL. Runtime
+allocator/lifetime legitimacy remains unproven, matching s3586–s3588.
+No build, run, guard, or mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is recorded in
+`docs/M3-S3600-RELEASE-FADE-INDEX-AUDIT.md`.
+
+ORIGIN: the only non-sentinel writer of the index byte is
+`startNoteOnVoice` at `0x80087294`; the value is legitimate by
+construction if the allocator contract holds. Cleanup writers
+deliberately publish `-1` together with `+0x0 = 0`.
