@@ -135511,3 +135511,26 @@ ORIGIN: writers are `buildModelViewerTextPage`'s `rs_malloc(0x60)`
 node store via `appendNodeToListHead`, the `rs_malloc($s4)`
 `0x5C`/`0x24` store (or NULL), and the `rs_malloc(count*56)`
 store to `0x800D0110`. No mitigation was added.
+
+## Session 3616 (2026-09-03) — audited remaining tickMultiPartVoiceLine rs_free of $s0
+
+Performed the planned static census of every generated original
+`jal rs_free` in `tickMultiPartVoiceLine`. `0x800CBF04` frees
+`$s0` (`$a0` of the tick). `mallocVoiceLineStruct` is the only
+allocator: `rs_malloc(0x24)` at `0x800CBF88`, returned in `$v0`
+and stored at `0x800CDA18` (`-0x25E8`), `0x800CDFB0` (`-0x2050`),
+or `0x800CF154` (`-0xEAC`). The four tick callers load those
+slots, skip NULL, and `sw $zero` on return 1. Hangar and
+craft-select mallocs refuse a live slot; menu malloc2 does the
+same. Menu malloc1 and the three screen-init zeros can leak a
+live line. The `+0x1E==1 && +0x1C!=0` path returns 1 without
+freeing. Neither is a second pointer source. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static scope.
+Runtime allocator/lifetime legitimacy remains unproven, matching
+s3586–s3615. No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3616-TICK-VOICE-LINE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer is `mallocVoiceLineStruct`'s `rs_malloc(0x24)`
+store to `0x800CDA18` / `0x800CDFB0` / `0x800CF154` (or NULL
+from screen-init / done-tick). No mitigation was added.

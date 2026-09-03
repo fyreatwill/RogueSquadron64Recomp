@@ -1,15 +1,15 @@
-# NEXT work unit — remaining tickMultiPartVoiceLine rs_free
+# NEXT work unit — remaining actor +0x4C rs_free
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of every generated
-original `jal rs_free` in `tickMultiPartVoiceLine`. Remaining
-funcs_37 voice-line free after the closed model-viewer mesh-chain
-class: `0x800CBF04` of `$s0` (`$a0` of the tick). Classify the
-pointer's writer and whether a free can run on a non-allocator or
-already-freed value, including `mallocVoiceLineStruct`'s
-`rs_malloc(0x24)` at `0x800CBF88` and every original store of that
-return. Do not repeat the closed freeModelViewerMeshChain,
+original `jal rs_free` of actor field `+0x4C` in `npcAtAtUpdate`
+and `npcAtStUpdate`. Remaining funcs_37 actor frees after the
+closed tickMultiPartVoiceLine class: `0x800CDE8C` of `0x4C($s1)`
+and `0x800D0480` of `0x4C($s2)`. Classify each pointer's writer
+and whether a free can run on a non-allocator or already-freed
+value. Do not include `playerAtStUpdate`'s `0xA4`/`0xBC` frees.
+Do not repeat the closed tickMultiPartVoiceLine, freeModelViewerMeshChain,
 shutdownModelViewer header-word, lookup-table, loadCharTextureSet
 DMA-array, load_asset-then-free, texture-scratch rs_free,
 text-texture rs_free, format-message rs_free, speech-file rs_free,
@@ -32,17 +32,17 @@ Competing hypotheses and discriminator:
 - H-NextClassUnevaluable: mixed object identities or unshared writers
   prevent a complete classification of a pointer source.
 
-Discriminator: the single complete original census of that
-`jal rs_free` site plus every original `sw` of the pointer. Select
+Discriminator: the single complete original census of those
+`jal rs_free` sites plus every original `sw` of `+0x4C`. Select
 Gap only with a concrete non-allocator or already-freed edge; select
 Complete only when all remaining edges are covered; otherwise select
 Unevaluable.
 
 Exact checks before any build:
 
-    grep -n -- 'tickMultiPartVoiceLine\|mallocVoiceLineStruct' ../N64Recomp/RecompiledFuncs/funcs_37.c | head
+    grep -n -- 'npcAtAtUpdate\|npcAtStUpdate' ../N64Recomp/RecompiledFuncs/funcs_37.c | head
     grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_37.c
-    grep -n -- 'jal         0x800CBE00\|jal         0x800CBF60' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0x800CDE8C\|0x800D0480\|0x800D0DC0' ../N64Recomp/RecompiledFuncs/funcs_37.c
 
 No build or runtime run is expected for this static audit. If the census
 is complete, write a new `docs/M3-S<session>-...md` evidence note and
