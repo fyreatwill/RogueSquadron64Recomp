@@ -33,17 +33,17 @@ route/configuration issue; do not force `0x800B0934`.
 Step 3 is parked at exact DMA ordering: the source-buffer oracle
 boundary is unavailable (s3584), not disproven. M3 is limited to
 idiom-class audits; the generated `jal rs_free` census is closed through
-`funcs_7.c` and the `destroyTextureLUTs` pair in `funcs_6.c`, with one
-remaining Gap (s3636 overlay `0x1C`/`0x20`). M4 hangar/512 Y=0x8000 is
+`funcs_7.c` and all of `funcs_6.c`, with one remaining Gap (s3636 overlay
+`0x1C`/`0x20`). M4 hangar/512 Y=0x8000 is
 not live on the first hangar capture. See `CURRENT-TRUTH.md`.
 
-**Current handoff (s3650):** M5 Step 3 source-buffer identity is
+**Current handoff (s3651):** M5 Step 3 source-buffer identity is
 `0x800078EC` (`rs_memset`) with a retail-versus-port stored-value
 divergence; exact DMA order has no identifier in the current oracle.
 While that stays parked, the next unit is the M3 census of
-`uploadTextureDescriptorData` `$s1` at `0x800232CC`. The generated-symbol
-sweep stays last. Exact live state is in `CURRENT-TRUTH.md`. Closed M3
-`rs_free` classes are in §56.
+`freeRenderSubsystemResources` `*0x8011A444` at `0x80018668`. The
+generated-symbol sweep stays last. Exact live state is in
+`CURRENT-TRUTH.md`. Closed M3 `rs_free` classes are in §56.
 
 ## 2. How the pipeline fits together
 
@@ -4888,11 +4888,11 @@ without a concrete invalid writer.
 
 Hangar-Y and mix-table were closed in the same window with no invalid writer.
 
-### Destructor / `jal rs_free` census (s3600–s3650)
+### Destructor / `jal rs_free` census (s3600–s3651)
 
 Complete through `funcs_13.c` then `funcs_12.c` / `funcs_11.c` / `funcs_10.c`
-/ `funcs_9.c` / `funcs_8.c` / `funcs_7.c` and the `destroyTextureLUTs`
-pair in `funcs_6.c`, except the one Gap below.
+/ `funcs_9.c` / `funcs_8.c` / `funcs_7.c` / `funcs_6.c`, except the one
+Gap below.
 
 Closed Complete classes, in audit order: unmasked release/fade;
 remaining `0x88`-stride indexers; remaining `-0x6908` non-a0; `-0x6904`
@@ -4922,7 +4922,7 @@ scratch, `freeEffectAssetBuffers` globals, `loadExplosionTextures`
 `*0x80130BC0` / `*0x80130BC4` / `*0x80130BBC` / `*0x80130BB8`,
 `freeNpcSlotArray` `*0x80130BB0`, `reinsertNpcIntoSortedFreeList`
 `0x4($npc)`, `loadDebugAssets` `$s0`, `destroyTextureLUTs`
-`*0x80128F08` / `*0x80128EFC`.
+`*0x80128F08` / `*0x80128EFC`, `uploadTextureDescriptorData` `$s1`.
 
 **Gap (s3636, still open):** `attachedMeshOverlayNpcHandler` `0x80054344`
 opcode 2 frees `0x1C`/`0x20` on the pool-carved `0x4($wrapper)` body.
@@ -4935,7 +4935,7 @@ census identifies that same writer. See
 `docs/M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md`.
 
 **Next unit (live in CURRENT-TRUTH / NEXT.md):**
-`uploadTextureDescriptorData` `$s1` at `0x800232CC` (last remaining
-original `jal 0x80001C98` in `funcs_6.c`). Host
-`TEXDATA_TABLE_GUARD` / `TEXDATA_PTR_ARRAY_GUARD` substitutions at
-`*0x80128F08` / `*0x80128EFC` (s468/s470) are not original skips.
+`freeRenderSubsystemResources` `*0x8011A444` at `0x80018668` (first
+remaining original `jal 0x80001C98` in `funcs_4.c`; `funcs_5.c` has
+zero sites). Host `MATERIAL_ARRAY_PTR_GUARD` at `0x80018664` is not
+an original skip.

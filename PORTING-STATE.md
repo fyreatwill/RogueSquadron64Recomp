@@ -136689,3 +136689,55 @@ stored values are matching allocator
 returns and are legitimate LUT-table /
 pointer-array bases. No mitigation was
 added.
+
+## Session 3651 (2026-09-03) — audited uploadTextureDescriptorData rs_free of $s1
+
+Performed the planned static census of
+`uploadTextureDescriptorData` `jal rs_free`
+at `0x800232CC` (`$a0` = `$s1` = incoming
+`$a1`). `$s1` is the delay-slot interior
+`0x0($s2) + (*(*s2+0xC)*($s1&0xFFFF)+0x14)`
+of the animation-phase-pool converted
+buffer. The only generated caller is
+`tickWrappingTimerAccumulatorList`
+`0x8005477C` (three outer callers:
+`cinematicLoopBody`, `runHangarSelectionFrame`,
+`runInMissionFrame`). The matching allocator
+of slot `+0x0` is `loadAssetIntoNewSlot`
+`rs_malloc(frameCount*stride+0x14, 0)` at
+`0x80054970`; the interior is never that
+stored return (minimum offset `0x14`).
+Byte 2 of the header is 0 from
+`fillTextureDescriptorNoCopy` `sb $zero`
+and dest-already-set `loadAndDecodeTexture`
+`sb $zero`. `copyTextureDescriptorWithData`
+(malloc-and-set-1) has zero generated jal,
+zero LOOKUP, zero lui/addiu. The original
+byte-2 skip is taken; `$s1` is never passed
+to `rs_free`. Matching destructor of the
+header is `freeAnimationPhasePool` (closed
+s3634), a different pointer. Caller holds
+the header, not the interior. One overlay
+entry; not a second generated body. Host
+`MATERIAL_ARRAY_PTR_GUARD` at `0x80023290`
+is not an original skip. This selects
+H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime allocator
+legitimacy remains unproven. `funcs_6.c`
+original `jal 0x80001C98` is exhausted.
+No build, run, guard, or mitigation was
+performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded
+in
+`docs/M3-S3651-UPLOAD-TEXTURE-DESCRIPTOR-DATA-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `$s1` is
+`tickWrappingTimerAccumulatorList`
+`0x80054780` computing an interior of the
+`loadAssetIntoNewSlot` converted-buffer
+malloc stored at `0x80054970`. That value
+is a legitimate frame-pixel address, not
+a legitimate `rs_free` argument. The
+original byte-2 skip prevents the free
+from receiving it. No mitigation was
+added.
