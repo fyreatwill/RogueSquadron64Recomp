@@ -135294,3 +135294,29 @@ ORIGIN: writers are `loadSpeechFile` (`$s0` from `rs_malloc(4, 8)`;
 DMA `rs_malloc(count<<2)` of `0x467C`; KSEG0 `a0+4` of `0x467C`
 with `0x5120=0`) and `initMusyXVoiceTable` (zero of `0x467C`;
 `rs_malloc` of `0x4674`). No mitigation was added.
+## Session 3608 (2026-09-03) — audited remaining format-message rs_free class
+
+Performed the planned static census of every generated original
+`jal rs_free` in `tickFormatMessageWorker` and
+`disposeFormatMsgQueueMember`. Glyph `+0x38` is always
+`rs_malloc` at `0x800B2A50` after `rs_memset(s2+0x38, 0, 0x34)`;
+tick `0x800B37E4` and dispose `0x800B3E94` free that store with no
+post-free NULL. Glyph `+0x3C` is malloc'd at `0x800B2A6C` only when
+`0x1C(element)&6`; both frees (`0x800B37CC`, `0x800B3E7C`) skip on
+the same flag, so the memset-zero slot cannot reach a free. `$s3`
+is `enqueueFormatMessage`'s `rs_malloc(0x60)`; the only generated
+`lw $a1, -0x37A8` send to the worker is that enqueue. Tick never
+calls dispose; dispose's two callers never enqueue. Sequential
+double-free is blocked by distinct stack glyph objects and by tick
+rebuilding the slots before the next free. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static scope.
+Runtime allocator/lifetime legitimacy remains unproven, matching
+s3586–s3607. No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3608-FORMAT-MESSAGE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `buildFormatMessageGlyphBuffer` (memset then
+`rs_malloc` of glyph `+0x38`; flag-gated `rs_malloc` of `+0x3C`)
+and `enqueueFormatMessage` (`rs_malloc(0x60)` of `$s3`). No
+mitigation was added.
+
