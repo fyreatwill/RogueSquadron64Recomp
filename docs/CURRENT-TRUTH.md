@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3649 (2026-09-03).
+notes are linked below. Updated for session 3650 (2026-09-03).
 
 ## Current state
 
@@ -52,10 +52,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    real-audio target path, and do not infer target behavior from it.
 4. M5's exact DMA ordering remains unresolved and unavailable to the current
    oracle. While it is parked, perform only systematic M3 idiom-class audits.
-   Sessions 3586–3648 closed the generated `jal rs_free` census through
-   `funcs_7.c` plus the earlier MusyX/MORT field families. The only remaining
-   Gap is s3636 `attachedMeshOverlayNpcHandler` `0x1C`/`0x20`: opcode 2 frees
-   those words when setup stores type `-1` or parent mesh `+0xC` is NULL,
+   Sessions 3586–3650 closed the generated `jal rs_free` census through
+   `funcs_7.c` and the `destroyTextureLUTs` pair in `funcs_6.c`, plus the
+   earlier MusyX/MORT field families. The only remaining Gap is s3636
+   `attachedMeshOverlayNpcHandler` `0x1C`/`0x20`: opcode 2 frees those
+   words when setup stores type `-1` or parent mesh `+0xC` is NULL,
    without a prior NULL store. Do not re-audit a Complete class. Do not add a
    pointer guard without a concrete invalid writer. Do not land a skip-path
    NULL store for that Gap unless a later census identifies that same writer.
@@ -63,9 +64,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `*0x80128F08` / `*0x80128EFC` (s468/s470) are not original skips. The
    closed-class list and per-session notes live in
    [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §56.
-   The next M3 unit is `destroyTextureLUTs` `*0x80128F08` / `*0x80128EFC`
-   `rs_free` at `0x8001E344` / `0x8001E354`. If that census closes both
-   sites, follow with `uploadTextureDescriptorData` `$s1` `rs_free` at
+   The next M3 unit is `uploadTextureDescriptorData` `$s1` `rs_free` at
    `0x800232CC` (last remaining original `jal 0x80001C98` in `funcs_6.c`).
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -84,18 +83,28 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `loadDebugAssets` `$s0`: matching flags-8 `get_asset_size_extra` `rs_malloc`; one destructor. |
-| H-NextClassGap | Refuted for this register. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: one scratch-buffer identity and one allocator store. |
+| H-NextClassComplete | Selected for `destroyTextureLUTs` `*0x80128F08` / `*0x80128EFC`: matching flags-0 malloc stores; one destructor pair. |
+| H-NextClassGap | Refuted for these words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: one 0x24-stride LUT-table identity and one word-stride pointer-array identity. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
 ## Recent evidence ledger
 
 Only the latest boundary transitions are repeated here; the append-only ledger
-and evidence notes retain the full history. Sessions 3586–3648 M3 class
+and evidence notes retain the full history. Sessions 3586–3650 M3 class
 closeouts are archived in PROJECT-OVERVIEW §56.
 
+- **3650 — destroyTextureLUTs rs_free of *0x80128F08 / *0x80128EFC:**
+  Live writers are `initTextureLUTAndAllocBuffers` flags-0
+  `rs_malloc` stores at `0x8001E274` / `0x8001E290`.
+  `initTextureMaterialPools` is an unreferenced clone of the same
+  formula. One destructor pair; no original NULL skip; no post-free
+  NULL. Host TEXDATA substitutions at the destructor loads are not
+  original skips. 54 other 0x8013-base loads are table-base
+  consumers; `uploadTextureDescriptorData` `$s1` is incoming `$a1`,
+  not these words. This selects `H-NextClassComplete`. See
+  [M3-S3650-DESTROY-TEXTURE-LUTS-RS-FREE-AUDIT.md](M3-S3650-DESTROY-TEXTURE-LUTS-RS-FREE-AUDIT.md).
 - **3649 — maintenance compaction:** `docs/CURRENT-TRUTH.md` exceeded the
   60,000-byte trigger (60,386 bytes / 1,020 lines). Closed M3 `rs_free`
   session-by-session narrative was migrated to PROJECT-OVERVIEW §56; the
@@ -208,10 +217,11 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 ## Evidence index
 
-Latest boundary notes. Remaining M3 `rs_free` notes for s3586–s3647 stay on
+Latest boundary notes. Remaining M3 `rs_free` notes for s3586–s3648 stay on
 disk and are indexed in PROJECT-OVERVIEW §56; do not treat absence here as
 deletion.
 
+- [M3-S3650-DESTROY-TEXTURE-LUTS-RS-FREE-AUDIT.md](M3-S3650-DESTROY-TEXTURE-LUTS-RS-FREE-AUDIT.md)
 - [M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md](M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md)
 - [M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md](M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md)
 - [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md)
@@ -222,6 +232,6 @@ deletion.
 - [M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3648 remain in the append-only ledger; archived boundary detail is
+Sessions 1–3650 remain in the append-only ledger; archived boundary detail is
 in `PROJECT-OVERVIEW.md` and the notes above. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.

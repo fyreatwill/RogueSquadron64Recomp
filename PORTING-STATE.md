@@ -136641,3 +136641,51 @@ unit; M5 exact DMA ordering remains open, and the next M3 census is
 still `destroyTextureLUTs` `*0x80128F08` / `*0x80128EFC`.
 
 ORIGIN: documentation-only maintenance. No mitigation was added.
+
+## Session 3650 (2026-09-03) — audited destroyTextureLUTs rs_free of *0x80128F08 / *0x80128EFC
+
+Performed the planned static census of
+`destroyTextureLUTs` `jal rs_free` at
+`0x8001E344` (`$a0` = `*0x80128F08`) and
+the sibling `jal rs_free` at `0x8001E354`
+(`$a0` = `*0x80128EFC`). The words are
+gp-relative `-0x70F8` / `-0x7104` from
+`0x80130000`. Live writers are
+`initTextureLUTAndAllocBuffers` flags-0
+`rs_malloc` stores at `0x8001E274`
+(size `(a0&0xFFFF)*0x24`) and `0x8001E290`
+(size `(*0x80128F04)<<2`).
+`initTextureMaterialPools` is an
+unreferenced clone of the same formula
+(zero generated jal, zero LOOKUP, zero
+lui/addiu). One destructor pair; no
+original NULL skip; no post-free NULL.
+Host TEXDATA substitutions at the
+destructor loads (s468/s470) are not
+original skips. 54 other 0x8013-base
+loads are table-base consumers;
+`uploadTextureDescriptorData` `$s1` is
+incoming `$a1`, not these words. One
+generated destructor caller
+(`freeRenderSubsystemResources`
+`0x80018658`); that wrapper has no
+generated caller. One overlay-table
+entry per function; not a second
+generated body. Sibling `*0x80128F00`
+is not this class. This selects
+H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime
+allocator legitimacy remains unproven.
+No build, run, guard, or mitigation was
+performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded
+in
+`docs/M3-S3650-DESTROY-TEXTURE-LUTS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers of the freed words are
+the flags-0 `rs_malloc` stores at
+`0x8001E274` and `0x8001E290`. Those
+stored values are matching allocator
+returns and are legitimate LUT-table /
+pointer-array bases. No mitigation was
+added.
