@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3624 (2026-09-03).
+notes are linked below. Updated for session 3625 (2026-09-03).
 
 ## Current state
 
@@ -74,19 +74,20 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `allocateAndInitCraftNpcContext` destructor `rs_free`, and
    leftover `spawnCutsceneObjectsFromList` `0x6C` store,
    `cinematicSplineWalkerNpcHandler` nested `rs_free`,
-   `loadSkyHorizonHob` stack-scratch `rs_free`, and
-   `freeEffectAssetBuffers` globals `rs_free` as complete.
-   Session 3624 closed that pair: `0x8013961C` is
-   `load_asset`'s `rs_malloc`; `0x80139740` is
-   `rs_malloc(0x400)`. Cue-table and spawn consumers load
-   those words and do not free them. Only
-   `freeEffectAssetBuffers` `jal rs_free` receives either
-   pointer. Runtime allocator/lifetime legitimacy remains
-   unproven. See
-   [M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md](M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md).
+   `loadSkyHorizonHob` stack-scratch `rs_free`,
+   `freeEffectAssetBuffers` globals `rs_free`, and
+   `loadExplosionTextures` `load_asset` `rs_free` as complete.
+   Session 3625 closed that last `funcs_13.c` site: `$a0` is
+   `load_asset("smkexp_PAL")`'s `rs_malloc`, never stored.
+   The 16-iter walk copies RGB bytes into `0x801398C0` and
+   `0x80139920`; spawn consumers pass those table addresses
+   and do not free the heap pointer. Only `0x80061254`
+   receives it. Runtime allocator/`0x80130B70` legitimacy
+   remains unproven. See
+   [M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md](M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `loadExplosionTextures` `0x80061254`
-   (`$a0` = `load_asset` return at `0x8006119C`). Do not add
+   M3 unit is `loadAndRelocateAsset` `0x800555C4`
+   (`$s1` = `load_asset` return at `0x800554F8`). Do not add
    a pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -105,9 +106,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the effect-asset globals: `0x8013961C` is `load_asset`'s `rs_malloc`; `0x80139740` is `rs_malloc(0x400)`. |
-| H-NextClassGap | Refuted for this class: no free of a non-allocator value; only `freeEffectAssetBuffers` receives either pointer. |
-| H-NextClassUnevaluable | Not selected: both words have a single original heap-pointer writer in `loadWeaponsHobObjects`. |
+| H-NextClassComplete | Selected for `loadExplosionTextures`: `$a0` is `load_asset`'s `rs_malloc`; dest tables are RGB copies. |
+| H-NextClassGap | Refuted for this class: no free of a non-allocator value; only `0x80061254` receives the pointer. |
+| H-NextClassUnevaluable | Not selected: one original heap-pointer writer, never stored. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -208,6 +209,15 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3625 — loadExplosionTextures load_asset rs_free:**
+  `$a0` is the matching `load_asset("smkexp_PAL")`
+  `rs_malloc`. Never stored. The 16-iter walk copies RGB
+  into `0x801398C0`/`0x80139920`; spawn consumers pass
+  those table addresses and do not free the heap pointer.
+  One generated caller; one `jr $ra` after the free.
+  `funcs_13.c` `jal rs_free` is exhausted. This selects
+  `H-NextClassComplete`. See
+  [M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md](M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md).
 - **3624 — freeEffectAssetBuffers globals rs_free:**
   `0x8013961C` is the matching `load_asset` `rs_malloc`
   store; `0x80139740` is the matching `rs_malloc(0x400)`.
@@ -520,6 +530,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md](M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md)
 - [M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md](M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md)
 - [M3-S3623-LOAD-SKY-HORIZON-HOB-RS-FREE-AUDIT.md](M3-S3623-LOAD-SKY-HORIZON-HOB-RS-FREE-AUDIT.md)
 - [M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md](M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md)

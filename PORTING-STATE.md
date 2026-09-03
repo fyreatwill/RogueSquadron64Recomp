@@ -135759,3 +135759,30 @@ ORIGIN: writer of `0x8013961C` is `loadWeaponsHobObjects`
 `0x80139740` is `loadWeaponsHobObjects` `rs_malloc(0x400)` at
 `0x8005E8C4`. Both values are legitimate allocator returns.
 No mitigation was added.
+
+## Session 3625 (2026-09-03) — audited loadExplosionTextures load_asset rs_free
+
+Performed the planned static census of `loadExplosionTextures`
+`jal rs_free` at `0x80061254` (`$a0` = `load_asset` return
+copied at `0x8006119C`). `$a0` is `load_asset("smkexp_PAL")`'s
+`rs_malloc`; it is never stored to a global, stack, or object
+word. The 16-iter walk uses `$a0` as a source base indexed by
+`0x80130B70<<2` and copies RGB bytes into `0x801398C0` and
+`0x80139920`. Spawn consumers pass those table addresses into
+`spawnNpcOfType` extra-args and do not `jal rs_free`. No `jal`
+occurs between the `addu $a0, $v0` and the free. One generated
+caller (`loadWeaponsHobObjects` `0x8005E88C`); both
+`0x80130B63` arms reach the free; one `jr $ra` after it.
+`funcs_13.c` `jal rs_free` is now exhausted. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static
+scope. Runtime allocator/`0x80130B70` legitimacy remains
+unproven, matching s3586–s3624. No build, run, guard, or
+mitigation was performed. Soak-queue tail added no post-3577
+result. Evidence is recorded in
+`docs/M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `$a0` is `loadExplosionTextures`
+`load_asset` (`rs_malloc`) at `0x8006119C`. The value is a
+legitimate allocator return. Dest tables at `0x801398C0` and
+`0x80139920` receive RGB copies, not the heap pointer. No
+mitigation was added.

@@ -1,19 +1,19 @@
-# NEXT work unit — loadExplosionTextures load_asset rs_free
+# NEXT work unit — loadAndRelocateAsset load_asset rs_free
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`loadExplosionTextures` `jal rs_free` at `0x80061254`
-(`$a0` = `load_asset` return copied at `0x8006119C`).
-Enumerate every original load/store of that pointer
-(including the 16-iter copy that uses it as a source
-base into `0x801398C0` / `-0x6740` and `0x80139920` /
-`-0x66E0`) and every `jal rs_free` that can receive it.
+`loadAndRelocateAsset` `jal rs_free` at `0x800555C4`
+(`$a0` = `$s1` = `load_asset` return copied at
+`0x800554F8`). Enumerate every original load/store of that
+pointer (including the 8-iter relocate walk that uses
+`$s1+4` as a base and the `0x20`/`0x24` pointer-add
+stores) and every `jal rs_free` that can receive it.
 Classify the pointer's writer and whether a free can run
 on a non-allocator or already-freed value. Do not repeat
-the closed freeEffectAssetBuffers globals, loadSkyHorizonHob
-stack scratch, cinematicSplineWalkerNpcHandler nested
-0xF00/0x2B44, spawnCutsceneObjectsFromList 0x6C, NPC
+the closed loadExplosionTextures load_asset, freeEffectAssetBuffers
+globals, loadSkyHorizonHob stack scratch, cinematicSplineWalkerNpcHandler
+nested 0xF00/0x2B44, spawnCutsceneObjectsFromList 0x6C, NPC
 allocateAndInit destructor, player-craft `+0xBC`,
 playerAtStUpdate 0xA4/0xBC, actor +0x4C,
 tickMultiPartVoiceLine, freeModelViewerMeshChain,
@@ -42,7 +42,7 @@ Competing hypotheses and discriminator:
 
 Discriminator: the single complete original census of that
 `jal rs_free` site plus every original `lw`/`sw`/`addu` of
-the `load_asset` return kept in `$a0` (and any store of it
+the `load_asset` return kept in `$s1` (and any store of it
 to a global or stack word) and every `jal rs_free` that can
 receive it. Select Gap only with a concrete non-allocator or
 already-freed edge; select Complete only when all remaining
@@ -50,9 +50,9 @@ edges are covered; otherwise select Unevaluable.
 
 Exact checks before any build:
 
-    grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_13.c
-    grep -n -- 'loadExplosionTextures' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- '-0x6740\|-0x66E0' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_12.c
+    grep -n -- 'loadAndRelocateAsset' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0x800555C4' ../N64Recomp/RecompiledFuncs/funcs_*.c
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`
