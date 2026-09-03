@@ -136384,3 +136384,35 @@ ORIGIN: writers of the five words are
 values are the matching allocator returns and
 are legitimate HMP / grid / node-pool / `n*24`
 buffers. No mitigation was added.
+
+## Session 3643 (2026-09-03) — audited computeGridTileEdgeAdjacencyMasks rs_free of $s1
+
+Performed the planned static census of
+`computeGridTileEdgeAdjacencyMasks` `jal rs_free`
+at `0x800453AC` (`$a0` = `$s1`). The only original
+heap-pointer writer is the flags-0 `rs_malloc` at
+`0x80044C00` (`addu $s1, $v0` at `0x80044C08`),
+size `lhu 0x18(*0x80136FC4)`. `$s1` is never stored
+to a global. `rs_memset` fills it `0xFF`; tile `sb`
+and the second-loop `lbu` use it as a byte table.
+Second-loop `MEM_B` stores write into
+`*0x80136DC4+0x10` records, not `$s1`. One
+destructor; H==0 and count==0 skips still reach it.
+One generated caller (`loadLevelAssets` `0x80045598`),
+skipped when `*0x80130B39 != 0` or type `0x11`.
+`static_3_80045024` is an unreferenced same-PC tail
+clone; the only `jal 0x80045024` is float-as-code
+inside `__OSGlobalIntMask`. Zero overlay lookup;
+one `jr $ra`. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator legitimacy remains unproven. No build,
+run, guard, or mitigation was performed. Soak-queue
+tail added no post-3577 result. Evidence is recorded
+in
+`docs/M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `$s1` is `computeGridTileEdgeAdjacencyMasks`
+`0x80044C08` (flags-0 `rs_malloc` return of
+`lhu 0x18(*0x80136FC4)`). That stored value is the
+matching allocator return and is a legitimate
+per-call scratch. No mitigation was added.

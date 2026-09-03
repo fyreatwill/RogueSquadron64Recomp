@@ -1,17 +1,19 @@
-# NEXT work unit — computeGridTileEdgeAdjacencyMasks $s1 rs_free
+# NEXT work unit — freeNpcBurstSpawnerTables globals rs_free
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`computeGridTileEdgeAdjacencyMasks` `jal rs_free`
-at `0x800453AC` (`$a0` = `$s1`, the
-`rs_malloc(lhu 0x18(*0x80136FC4), 0)` scratch).
-Enumerate every original load/store of that
-`$s1` (including the matching malloc at
-`0x80044C00`, every later store that can become
-this `$a0`, and whether any caller holds the
-buffer) and every `jal rs_free` that can receive
-that pointer. Do not repeat the closed
+`freeNpcBurstSpawnerTables` `jal rs_free`
+at `0x80041B58` (`$a0` = `*0x80130BD0`), plus the
+sibling frees of `*0x80130C08` at `0x80041B68` and
+`*0x80130C04` at `0x80041B78`. Enumerate every
+original load/store of those three words (including
+the matching malloc stores at `0x80040334` /
+`0x800403A8` / `0x800403B8`, every later store that
+can become these `$a0`s, and whether any caller
+holds the buffers) and every `jal rs_free` that can
+receive those pointers. Do not repeat the closed
+computeGridTileEdgeAdjacencyMasks `$s1`,
 teardownAnimatedMapGridLayer remaining
 `*0x80136DC8`/`*0x80136DCC`/`*0x80136FC4`/
 `*0x80136FCC`/`*0x80136E1C`, teardownGridLayerWorker
@@ -52,7 +54,7 @@ invalid writer/value is identified; any mitigation
 needs an ORIGIN line naming the writer and assessing
 legitimacy. Do not land a skip-path NULL store for
 the s3636 overlay Gap unless this census identifies
-that same writer as this `$s1`.
+that same writer as one of these three words.
 
 Competing hypotheses and discriminator:
 
@@ -65,13 +67,14 @@ Competing hypotheses and discriminator:
 - H-NextClassUnevaluable: mixed object identities or unshared
   writers prevent a complete classification of a pointer source.
 
-Discriminator: the single complete original census of that
-`jal rs_free` site plus every original `lw`/`sw`/`addu`
-of this `$s1` and every caller-side store that can
-become this `$a0`, and every `jal rs_free` that can
-receive that pointer. Include the overlay duplicate
-`static_3_80045024` in `funcs_49.c` if it is a
-second generated body of the same PCs.
+Discriminator: the single complete original census of those
+`jal rs_free` sites plus every original `lw`/`sw`/`addu`
+of `0x80130BD0` / `0x80130C08` / `0x80130C04` and every
+caller-side store that can become these `$a0`s, and every
+`jal rs_free` that can receive those pointers. Include any
+overlay duplicate of `freeNpcBurstSpawnerTables` /
+`0x80041B48` if it is a second generated body of the
+same PCs.
 Select Gap only with a concrete non-allocator or
 already-freed edge; select Complete only when all remaining
 edges are covered; otherwise select Unevaluable.
@@ -79,8 +82,8 @@ edges are covered; otherwise select Unevaluable.
 Exact checks before any build:
 
     grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_9.c
-    grep -n -- 'computeGridTileEdgeAdjacencyMasks\|0x80044BE4\|0x800453AC' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- '0x80044C00\|0x800453AC\|0x80044BF0' ../N64Recomp/RecompiledFuncs/funcs_9.c
+    grep -n -- 'freeNpcBurstSpawnerTables\|0x80041B48\|0x80041B58' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0xBD0\|0xC08\|0xC04' ../N64Recomp/RecompiledFuncs/funcs_9.c
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`

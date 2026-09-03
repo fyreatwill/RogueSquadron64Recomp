@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3642 (2026-09-03).
+notes are linked below. Updated for session 3643 (2026-09-03).
 
 ## Current state
 
@@ -147,10 +147,21 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    the `0x6FCC`/`0x6E1C` frees. No guard was
    added. See
    [M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md](M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md).
+   Session 3643 selected Complete for
+   `computeGridTileEdgeAdjacencyMasks` `$s1`:
+   matching flags-0 `rs_malloc(lhu 0x18(*0x80136FC4), 0)`
+   at `0x80044C00`. Never stored. One destructor
+   at `0x800453AC`; skipped walks still reach it.
+   `static_3_80045024` is an unreferenced tail
+   clone of the same PCs, not a second destructor.
+   No guard was added. See
+   [M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md](M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `computeGridTileEdgeAdjacencyMasks`
-   `$s1` `rs_free` at `0x800453AC`. Do not add a
-   pointer guard without a concrete invalid writer.
+   M3 unit is `freeNpcBurstSpawnerTables`
+   `*0x80130BD0` / `*0x80130C08` / `*0x80130C04`
+   `rs_free` at `0x80041B58` / `0x80041B68` /
+   `0x80041B78`. Do not add a pointer guard
+   without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -168,9 +179,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `teardownAnimatedMapGridLayer` remaining five words: matching flags-0 `rs_malloc` stores, one destructor. |
-| H-NextClassGap | Refuted for these words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: five pointer identities and one allocator store each. |
+| H-NextClassComplete | Selected for `computeGridTileEdgeAdjacencyMasks` `$s1`: matching flags-0 `rs_malloc` into `$s1`, one destructor. |
+| H-NextClassGap | Refuted for this `$s1`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: one pointer identity and one allocator store. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -271,6 +282,24 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3643 — computeGridTileEdgeAdjacencyMasks
+  rs_free of $s1:** `$s1` is the matching
+  flags-0 `rs_malloc(lhu 0x18(*0x80136FC4), 0)`
+  at `0x80044C00`. Never stored to a global.
+  `rs_memset` fills it `0xFF`; tile `sb` and
+  second-loop `lbu` use it as a byte table.
+  Second-loop `MEM_B` stores go into
+  `*0x80136DC4+0x10` records, not `$s1`.
+  One destructor; H==0 and count==0 skips
+  still reach it. One generated caller
+  (`loadLevelAssets`); skipped when
+  `*0x80130B39 != 0` or type `0x11`.
+  `static_3_80045024` is an unreferenced
+  same-PC tail clone (`__OSGlobalIntMask`
+  jal is float-as-code). Zero overlay
+  lookup. One `jr $ra`. This selects
+  `H-NextClassComplete`. See
+  [M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md](M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md).
 - **3642 — teardownAnimatedMapGridLayer remaining
   rs_free of *0x80136DC8 / *0x80136DCC /
   *0x80136FC4 / *0x80136FCC / *0x80136E1C:**
@@ -796,6 +825,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md](M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md)
 - [M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md](M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md)
 - [M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md](M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md)
 - [M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md](M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md)
