@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3619 (2026-09-03).
+notes are linked below. Updated for session 3620 (2026-09-03).
 
 ## Current state
 
@@ -57,7 +57,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    with no concrete invalid writer. Sessions 3594–3599 selected structural
    unevaluability for mixed-layout families `+0x60`, `+0x30..+0x40`,
    `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
-   `+0x5C`/`+0x64`. Sessions 3600–3619 closed unmasked release/fade,
+   `+0x5C`/`+0x64`. Sessions 3600–3620 closed unmasked release/fade,
    remaining `0x88`-stride indexers, remaining `-0x6908` non-a0,
    `-0x6904` alias, destructor unchecked-free, skipped-NULL
    destructor-free, remaining speech/cache `rs_free`, remaining
@@ -69,23 +69,23 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    header-word `rs_free`, remaining model-viewer mesh-chain
    `rs_free`, remaining `tickMultiPartVoiceLine` `$s0`
    `rs_free`, remaining actor `+0x4C` `rs_free`, remaining
-   `playerAtStUpdate` `0xA4`/`0xBC` `rs_free`, and remaining
-   player-craft table `+0xBC` `rs_free` as complete.
-   Session 3619 closed the nine sibling player-craft
-   `0xBC($s1)` frees: each is opcode-2 of the matching
-   opcode-1 `allocateAndInitCraftNpcContext`
-   `rs_malloc(0x1E4)` at `0x80137DBC+0x2A0*index`, with
-   `index` the init-stored `0x0(actor)` word. Index 0 aliases
-   the closed AT-ST slot-0 word as the same per-player table
-   slot; sequential double-free is blocked by
-   `destroyNpcSlotByIndex`. Runtime allocator/lifetime
-   legitimacy remains unproven. See
-   [M3-S3619-PLAYER-CRAFT-BC-RS-FREE-AUDIT.md](M3-S3619-PLAYER-CRAFT-BC-RS-FREE-AUDIT.md).
+   `playerAtStUpdate` `0xA4`/`0xBC` `rs_free`, remaining
+   player-craft table `+0xBC` `rs_free`, and remaining NPC
+   `allocateAndInitCraftNpcContext` destructor `rs_free` as
+   complete. Session 3620 closed the eleven remaining NPC
+   destructor frees: each is opcode-2 of the matching opcode-1
+   `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)` on
+   actor `+0xC`/`+0x3C`/`+0x7C`/`+0xA4`/`+0x8C`/`+0x54`/
+   `+0x4C`. Probe hop-state and wingman steer-toward sibling
+   `+0x3C` frees NULL after release; sequential double-free is
+   blocked by `destroyNpcSlotByIndex`. Runtime
+   allocator/lifetime legitimacy remains unproven. See
+   [M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md](M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is the remaining NPC `allocateAndInitCraftNpcContext`
-   destructor `rs_free` family outside the closed AT-AT/AT-ST
-   `+0x4C` and player-craft `+0xBC` paths. Do not add a
-   pointer guard without a concrete invalid writer.
+   M3 unit is the leftover `spawnCutsceneObjectsFromList`
+   `0x6C($v1)` store of that same malloc, which has no
+   same-function `jal rs_free`. Do not add a pointer guard
+   without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -103,9 +103,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the remaining player-craft table +0xBC class: each of the nine `0xBC($s1)` words is the matching `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)` at `0x80137DBC+0x2A0*index`. |
-| H-NextClassGap | Refuted for this class: no non-allocator last writer, index 0 is the same per-player slot as closed AT-ST, and sequential double-free is blocked by `destroyNpcSlotByIndex`. |
-| H-NextClassUnevaluable | Not selected: `$s1` is `0x80137DBC+0x2A0*index` with `index` the init-stored `0x0(actor)` word. |
+| H-NextClassComplete | Selected for the remaining NPC allocateAndInit destructor class: each of the eleven opcode-2 frees is the matching `rs_malloc(0x1E4)` on `0x4(wrapper)`. |
+| H-NextClassGap | Refuted for this class: no non-allocator last writer; probe/wingman sibling `+0x3C` frees NULL after release; sequential double-free is blocked by `destroyNpcSlotByIndex`. |
+| H-NextClassUnevaluable | Not selected: each actor register is `0x4(wrapper)` and each field has a single original heap-pointer writer. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -206,6 +206,14 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3620 — remaining NPC allocateAndInit destructor rs_free:**
+  eleven remaining NPC updates each store opcode-1
+  `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)` on
+  actor `+0xC`/`+0x3C`/`+0x7C`/`+0xA4`/`+0x8C`/`+0x54`/
+  `+0x4C` and free that word on opcode 2. Probe hop-state and
+  wingman steer-toward sibling `+0x3C` frees NULL after
+  release. This selects `H-NextClassComplete`. See
+  [M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md](M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md).
 - **3619 — remaining player-craft table +0xBC rs_free:**
   nine sibling updates each store opcode-1
   `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)` at
@@ -475,6 +483,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md](M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md)
 - [M3-S3619-PLAYER-CRAFT-BC-RS-FREE-AUDIT.md](M3-S3619-PLAYER-CRAFT-BC-RS-FREE-AUDIT.md)
 - [M3-S3618-PLAYER-ATST-A4-BC-RS-FREE-AUDIT.md](M3-S3618-PLAYER-ATST-A4-BC-RS-FREE-AUDIT.md)
 - [M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md](M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md)

@@ -135615,3 +135615,32 @@ is recorded in `docs/M3-S3619-PLAYER-CRAFT-BC-RS-FREE-AUDIT.md`.
 ORIGIN: writer is opcode-1 `allocateAndInitCraftNpcContext`
 `rs_malloc(0x1E4)` to `0xBC(0x80137DBC+0x2A0*index)`. No
 mitigation was added.
+
+## Session 3620 (2026-09-03) — audited remaining NPC allocateAndInit destructor rs_free
+
+Performed the planned static census of every generated original
+`jal rs_free` in remaining `allocateAndInitCraftNpcContext`
+callers outside closed AT-AT/AT-ST `+0x4C` and player-craft
+`+0xBC`. Eleven NPC updates each have one free
+(`0x8006C4A8`, `0x8006C650`, `0x800CAF3C`, `0x800D9854`,
+`0x800DB760`, `0x800DEE4C`, `0x800E2E3C`, `0x800E678C`,
+`0x800E7FF8`, `0x800E9400`, `0x800EAAE4`) and one matching
+opcode-1 store of `allocateAndInitCraftNpcContext`
+`rs_malloc(0x1E4)` on actor `+0xC` (spline/stub), `+0x3C`
+(probe/wingman/tie/troop), `+0x7C` (transport), `+0xA4`
+(train), `+0x8C` (water), `+0x54` (phased), or `+0x4C`
+(AT-PT). Each actor register is `0x4(wrapper)`. Probe
+`updateProbeDroidHopState` and wingman `npcWingmanSteerToward`
+sibling `+0x3C` frees NULL after release; opcode 2 then
+NULL-skips. Sequential double-free is blocked by
+`destroyNpcSlotByIndex`. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/lifetime legitimacy remains unproven, matching
+s3586–s3619. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result. Evidence
+is recorded in
+`docs/M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer is opcode-1 `allocateAndInitCraftNpcContext`
+`rs_malloc(0x1E4)` to `0x4(wrapper)+field`. No mitigation was
+added.

@@ -1,24 +1,17 @@
-# NEXT work unit — remaining NPC allocateAndInit destructor rs_free
+# NEXT work unit — leftover spawnCutsceneObjectsFromList 0x6C store
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
-Next work unit: perform one complete static census of every
-generated original `jal rs_free` in remaining
-`allocateAndInitCraftNpcContext` callers outside the closed
-AT-AT/AT-ST `+0x4C` and player-craft table `+0xBC` paths:
-`splineWalkerCraftNpcHandler` `0x8006C4A8`,
-`stubNpcHandler` `0x8006C650`,
-`npcProbeDriod` `0x800CAF3C`,
-`npcWingmanUpdate` `0x800D9854`,
-`npcTieVariantUpdate` `0x800DB760`,
-`npcGroundTransportUpdate` `0x800DEE4C`,
-`npcTrainCarUpdate` `0x800E2E3C`,
-`npcWaterCraftUpdate` `0x800E678C`,
-`npcGroundTroopUpdate` `0x800E7FF8`,
-`tickCraftWithPhasedDestruction` `0x800E9400`, and
-`npcAtPtUpdate` `0x800EAAE4`. Classify each pointer's writer
-and whether a free can run on a non-allocator or already-freed
-value. Do not repeat the closed player-craft `+0xBC`,
+Next work unit: perform one complete static census of the
+leftover `allocateAndInitCraftNpcContext` store that has no
+same-function `jal rs_free`: `spawnCutsceneObjectsFromList`
+`sw $v0, 0x6C($v1)` at `0x800A826C` (`$v1 = 0x800B1900+$s1`).
+Enumerate every original load/store of that `0x6C` word and
+every `jal rs_free` that can receive it, including
+`cutsceneActorNpcHandler` `0x800447C4` / `0x80044B08`.
+Classify the pointer's writer and whether a free can run on a
+non-allocator or already-freed value. Do not repeat the closed
+NPC allocateAndInit destructor, player-craft `+0xBC`,
 playerAtStUpdate 0xA4/0xBC, actor +0x4C, tickMultiPartVoiceLine,
 freeModelViewerMeshChain, shutdownModelViewer header-word,
 lookup-table, loadCharTextureSet DMA-array, load_asset-then-free,
@@ -44,18 +37,18 @@ Competing hypotheses and discriminator:
 - H-NextClassUnevaluable: mixed object identities or unshared
   writers prevent a complete classification of a pointer source.
 
-Discriminator: the single complete original census of those
-`jal rs_free` sites plus every original store of the
-`allocateAndInitCraftNpcContext` return in those eleven
-functions. Select Gap only with a concrete non-allocator or
+Discriminator: the single complete original census of that
+`0x6C($v1)` store plus every original `lw`/`sw` of the same
+cutscene-object `+0x6C` word and every `jal rs_free` that can
+receive it. Select Gap only with a concrete non-allocator or
 already-freed edge; select Complete only when all remaining
 edges are covered; otherwise select Unevaluable.
 
 Exact checks before any build:
 
-    grep -n -- 'jal         0x8006BD18' ../N64Recomp/RecompiledFuncs/funcs_16.c ../N64Recomp/RecompiledFuncs/funcs_36.c ../N64Recomp/RecompiledFuncs/funcs_38.c ../N64Recomp/RecompiledFuncs/funcs_39.c
-    grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_16.c ../N64Recomp/RecompiledFuncs/funcs_36.c ../N64Recomp/RecompiledFuncs/funcs_38.c ../N64Recomp/RecompiledFuncs/funcs_39.c
-    grep -n -- 'sw          $v0, 0x4C' ../N64Recomp/RecompiledFuncs/funcs_16.c ../N64Recomp/RecompiledFuncs/funcs_36.c ../N64Recomp/RecompiledFuncs/funcs_38.c ../N64Recomp/RecompiledFuncs/funcs_39.c
+    grep -n -- 'jal         0x8006BD18' ../N64Recomp/RecompiledFuncs/funcs_27.c
+    grep -n -- 'sw          $v0, 0x6C' ../N64Recomp/RecompiledFuncs/funcs_27.c ../N64Recomp/RecompiledFuncs/funcs_9.c
+    grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_27.c ../N64Recomp/RecompiledFuncs/funcs_9.c
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`
