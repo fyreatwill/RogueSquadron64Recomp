@@ -136620,3 +136620,24 @@ flags-8 `rs_malloc` store at `0x80024768`.
 That stored value is a matching allocator
 return and is a legitimate DMA-scratch
 pointer. No mitigation was added.
+
+## Session 3649 (2026-09-03) — compacted CURRENT-TRUTH past 60 KB cap
+
+Maintenance iteration: `docs/CURRENT-TRUTH.md` was 1,020 lines / 60,386
+bytes, over the 60,000-byte trigger. It was compacted to 227 lines /
+13,927 bytes (net −793 lines, −46,459 bytes). Closed M3 `jal rs_free`
+session-by-session narrative (s3586–s3648) moved to
+`docs/PROJECT-OVERVIEW.md` §56; the live five-item backlog, M5 Step 3
+source-buffer boundary, s3636 overlay Gap, and `destroyTextureLUTs`
+next unit stayed. The overview intro/handoff and §4.0.1 M5 archive were
+refreshed from the stale s3309 cinematic-stall handoff to the current
+hangar-reaching / s3584-unavailable-constructor state. `NEXT.md` was
+rewritten with the same competing hypotheses and discriminator. No
+experiment or runtime behavior changed. The soak tail was read; it
+added no post-3577 verdict.
+
+This rules out only documentation drift as the reason to defer the next
+unit; M5 exact DMA ordering remains open, and the next M3 census is
+still `destroyTextureLUTs` `*0x80128F08` / `*0x80128EFC`.
+
+ORIGIN: documentation-only maintenance. No mitigation was added.

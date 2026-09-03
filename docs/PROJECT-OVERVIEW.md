@@ -20,30 +20,30 @@ built on `MikeSemicolonD/RogueSquadron64Recomp` with local forks of N64Recomp, N
 RT64. The goal was to get the game building and rendering correctly on Apple Silicon.
 
 **Where it stands:** the game boots and renders through attribution, N64 logo, intro cinematic,
-star flare, Factor 5 logo, title-like 1024 (`0x00790400`), and hangar 512
-(`0x006AB400`) once `ROGUESQ_SPIN_YIELD=1` yields both `menuOverlayInit`
-`L_800C5930` and `menuControllerInput` `L_800B8050` (s1942, s1949), with
-`ROGUESQ_LLE_UNGATED=1` and `ROGUESQ_LLE_SOLO=1`. Overlay dispatch is fixed
-enough for mission entry and post-sec2 outdoor presentation. The war-room
-floor band defect (s12–s48) is fixed. The qualified M5 audio path is the
-Factor 5 image arm; `ROGUESQ_AUDIO_UCODE=0` selects the silent `Broke` stub as
-its control. Yield stays default-off.
+star flare, Factor 5 logo, title VI 1024 (`0x00790400`), and hangar 512
+(`0x006AB400`) on the validated real-image/LLE/spin-yield/autopilot route.
+Overlay dispatch is fixed enough for mission entry and post-sec2 outdoor
+presentation. The war-room floor band defect (s12–s48) is fixed. The
+qualified M5 audio path is the Factor 5 image arm;
+`ROGUESQ_AUDIO_UCODE=0` selects the silent `Broke` stub as its control.
+The default route's null stage-advancer input remains a known
+route/configuration issue; do not force `0x800B0934`.
 
-**What is not done:** hangar visuals have geometry/color artifacts. M5 audio
-de-stubbing remains open at the task-output metadata and destination-to-slot
-boundary; the image arm is qualified but not fully de-stubbed. M3 is limited
-to idiom-class audits. M4 hangar/512 Y=0x8000 is not live on the first
-hangar capture. See `CURRENT-TRUTH.md`.
+**What is not done:** hangar visuals have geometry/color artifacts. M5
+Step 3 is parked at exact DMA ordering: the source-buffer oracle
+boundary is unavailable (s3584), not disproven. M3 is limited to
+idiom-class audits; the generated `jal rs_free` census is closed through
+`funcs_7.c` with one remaining Gap (s3636 overlay `0x1C`/`0x20`). M4
+hangar/512 Y=0x8000 is not live on the first hangar capture. See
+`CURRENT-TRUTH.md`.
 
-**Current handoff (s3309):** Session 3304's completion-aware SP-yield
-default returns from the attract viewer. The port then enters
-`cinematicLoopBody` and stays at VI `640 @ 0x0066A500` because
-`cinematicStageAdvancer` skips on a null `0x800B0934` (s3308). Retail
-exits that loop at 48.8 s and reaches title `1024 @ 0x00790400` at
-49.2 s (s3306). The next unit is an independent retail write-watch of
-physical `0x000B0934`. The generated-symbol sweep is closed
-(s3210/s3212/s3217). M5 Step 3 remains gated until a like-for-like
-target row exists. Exact live state is in `CURRENT-TRUTH.md`.
+**Current handoff (s3649):** M5 Step 3 source-buffer identity is
+`0x800078EC` (`rs_memset`) with a retail-versus-port stored-value
+divergence; exact DMA order has no identifier in the current oracle.
+While that stays parked, the next unit is the M3 census of
+`destroyTextureLUTs` `*0x80128F08` / `*0x80128EFC`. The generated-symbol
+sweep stays last. Exact live state is in `CURRENT-TRUTH.md`. Closed M3
+`rs_free` classes are in §56.
 
 ## 2. How the pipeline fits together
 
@@ -123,14 +123,22 @@ catalog and day-to-day state: `CURRENT-TRUTH.md`.
 
 ### 4.0.1 Current M5 handoff archive
 
-The compact live state is in `CURRENT-TRUTH.md`. At session 3578, M5 Step 3
-is the image-task source-range boundary (`0x1797B0..0x179930`): the port
-deliberately zero-fills before zero source-DMA payloads, while retail reaches
-the same target phase with source-span writes and an
-`0x800C825C -> 0x800078E0` edge carrying `a2=0x80` and changing structure
-pointers. The next measurement is the retail writer identity/value/order
-relative to its first source DMA. Full chronological evidence remains in
-`PORTING-STATE.md`; the detailed notes are `M5-S3571` through `M5-S3577`.
+The compact live state is in `CURRENT-TRUTH.md`. At session 3649, M5 Step 3
+is still the image-task source-range boundary (`0x1797B0..0x179930`): the
+port deliberately zero-fills from `0x800078EC` (`rs_memset`,
+`dst=0x801797B0, fill=0, len=0x298`) before zero source-DMA payloads.
+Retail independently reaches the same target phase; `0x800078EC` writes
+the watched span at 47.4 s before the first 512-wide target VI at 48.5 s,
+and the joined producer path is `0x800052C4 -> 0x800078E0 -> 0x800078EC`
+with `a2=0x80` and changing structure pointers from `0x800C825C`. Session
+3584 watched the qualified source buffer: controls and target phase
+fired, but the histogram mixed and exposed no stable earlier constructor
+or distinct DMA/copy PC. That earlier-constructor boundary is unavailable
+to this oracle, not disproven; exact DMA ordering remains open. Do not
+repeat that watch or implement a writeback/zero-fill mitigation without a
+new independent writer/order discriminator. Full chronological evidence
+remains in `PORTING-STATE.md`; the detailed notes are `M5-S3571` through
+`M5-S3584`.
 
 
 ### 4.0 M5 audio/image investigation through s2515
@@ -4858,3 +4866,75 @@ upstream producer at the entry boundary, and supersedes the broader
 `docs/M5-S3443-FREQUENCY-OUTPUT-JOIN.md`,
 `docs/M5-S3444-STATE-POINTER-PRODUCER.md`, and
 `docs/M5-S3445-STATE-POINTER-ENTRY.md`.
+
+## 56. M3 rs_free / audio-idiom closeout (s3586–s3648)
+
+Migrated from `CURRENT-TRUTH.md` during the s3649 maintenance pass. Exact
+per-site writer/consumer tables remain in the `docs/M3-S3586-*.md` through
+`docs/M3-S3648-*.md` notes and `PORTING-STATE.md`. No runtime guard was
+added for any Complete class; runtime allocator legitimacy stays unproven
+everywhere. Do not re-audit a closed class. Do not add a pointer guard
+without a concrete invalid writer.
+
+### MusyX/MORT field families (s3586–s3599)
+
+| Sessions | Class | Verdict |
+|---|---|---|
+| 3586–3588 | `voice_record+0x64` packed handle, `allocateSynthVoice` 0x17C stride, per-slot `-0x271C` | Complete. Field is a packed handle (low byte = slot); s3585 standalone-index label is superseded. |
+| 3589 | audio record fields / `-0x7C30` | Complete. Writers are `musyxKeyOnVoice` and `tickAudioChannel`. |
+| 3592 | CPU MORT publication `0x8009D7D0..0x8009DD7C` | Complete. Bounded filter/delay/lattice/mix/compand/voice-state edges. |
+| 3593 | pan-coefficient input/selector | Complete. Selector is a two-bank toggle at `voice+0x188`. |
+| 3594–3599 | mixed-layout `+0x60`, `+0x30..+0x40`, `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, envelope `+0x5C`/`+0x64` | Unevaluable. Split across voice-table, command-list, descriptor, and stack layouts. No concrete invalid writer. |
+
+Hangar-Y and mix-table were closed in the same window with no invalid writer.
+
+### Destructor / `jal rs_free` census (s3600–s3648)
+
+Complete through `funcs_13.c` then `funcs_12.c` / `funcs_11.c` / `funcs_10.c`
+/ `funcs_9.c` / `funcs_8.c` / `funcs_7.c`, except the one Gap below.
+
+Closed Complete classes, in audit order: unmasked release/fade;
+remaining `0x88`-stride indexers; remaining `-0x6908` non-a0; `-0x6904`
+alias; destructor unchecked-free; skipped-NULL destructor-free; remaining
+speech/cache, speech-file, format-message, text-texture, texture-scratch,
+`load_asset`-then-free, `loadCharTextureSet` DMA-array, lookup-table,
+`shutdownModelViewer` header-word, model-viewer mesh-chain,
+`tickMultiPartVoiceLine` `$s0`, actor `+0x4C`, `playerAtStUpdate`
+`0xA4`/`0xBC`, player-craft table `+0xBC`, NPC
+`allocateAndInitCraftNpcContext` destructor, leftover
+`spawnCutsceneObjectsFromList` `0x6C` store,
+`cinematicSplineWalkerNpcHandler` nested, `loadSkyHorizonHob` stack
+scratch, `freeEffectAssetBuffers` globals, `loadExplosionTextures`
+`load_asset`, `loadAndRelocateAsset` `load_asset`,
+`loadSpriteSheetTextureFrames` inlined-malloc, `freeTxtFile` globals,
+`freeSubtitleOverlay` `*0x80139010`, `load_hmt_and_hob`
+`$s3`/`0x6C($sp)`/`0x74($sp)`, `releaseMeshAsset` `$s5`,
+`freeAllHobFiles` slot `+0x8`, `loadAssetAndIterateSubchunks` `$s6`,
+`freeAnimationPhasePool` slot `+0x0` / `0x80137C84`,
+`loadAssetIntoNewSlot` `$s6`, `load_full_header_image` `$s1`,
+`freeLevelDatBuffers` `*0x801375D0` / `*0x801375D8` / `*0x801375F4`,
+`loadLevelTextureCache` `$s0`, `freeGridCellBuffers` `*0x80137A5C` /
+`*0x80137A54` / `*0x80137A4C` / `*0x80137A68`, `teardownGridLayerWorker`
+`*0x80137614`, `teardownAnimatedMapGridLayer` remaining,
+`computeGridTileEdgeAdjacencyMasks` `$s1`, `freeNpcBurstSpawnerTables`
+`*0x80130BD0` / `*0x80130C08` / `*0x80130C04`, `destroyNpcContextArrays`
+`*0x80130BC0` / `*0x80130BC4` / `*0x80130BBC` / `*0x80130BB8`,
+`freeNpcSlotArray` `*0x80130BB0`, `reinsertNpcIntoSortedFreeList`
+`0x4($npc)`, `loadDebugAssets` `$s0`.
+
+**Gap (s3636, still open):** `attachedMeshOverlayNpcHandler` `0x80054344`
+opcode 2 frees `0x1C`/`0x20` on the pool-carved `0x4($wrapper)` body.
+The only heap-pointer writer is `dispatchOverlaySetupByParentAssetName`
+`rs_malloc(0x80, 0)` at `0x80053DBC`. Opcode 2 still frees those words
+when setup stores type `-1` or parent mesh `+0xC` is NULL, without a
+prior NULL store. Sibling `freeListEntryPointers` is unreferenced. No
+guard was added. Do not land a skip-path NULL store unless a later
+census identifies that same writer. See
+`docs/M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md`.
+
+**Next unit (live in CURRENT-TRUTH / NEXT.md):** `destroyTextureLUTs`
+`*0x80128F08` / `*0x80128EFC` at `0x8001E344` / `0x8001E354`. Host
+`TEXDATA_TABLE_GUARD` / `TEXDATA_PTR_ARRAY_GUARD` substitutions at those
+loads (s468/s470) are not original skips. If both sites close, follow
+with `uploadTextureDescriptorData` `$s1` at `0x800232CC` (last remaining
+original `jal 0x80001C98` in `funcs_6.c`).
