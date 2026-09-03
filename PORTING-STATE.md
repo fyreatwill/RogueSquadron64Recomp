@@ -135588,3 +135588,30 @@ ORIGIN: writers are opcode-1 `rs_malloc(0x168)` to
 `0xA4(0x4(wrapper))` and `allocateAndInitCraftNpcContext`'s
 `rs_malloc(0x1E4)` to `0xBC(0x80137DBC)`. No mitigation was
 added.
+
+## Session 3619 (2026-09-03) — audited remaining player-craft table +0xBC rs_free
+
+Performed the planned static census of every generated original
+`jal rs_free` of player-craft table `0xBC($s1)` outside closed
+`playerAtStUpdate`. Nine sibling updates each have one free
+(`0x800AD168`, `0x800B56EC`, `0x800B7410`, `0x800B8748`,
+`0x800BA228`, `0x800BBAD8`, `0x800BCAB8`, `0x800BD7D8`,
+`0x800BEA8C`) and one matching opcode-1 `sw $v0, 0xBC($s1)` of
+`allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)`. `$s1` is
+`0x80137DBC+0x2A0*index` with `index` the `player*Init`
+`sw $a1, 0x0(actor)` word, reloaded on opcode 2 from
+`0x0(wrapper+4)`. No NULL skip and no post-free NULL. Tick
+`lw $a3, 0xBC($s1)` is a consumer of `advanceNpcOnCurvedPath`.
+Index 0 aliases the closed AT-ST slot-0 word as the same
+per-player table slot; sequential double-free is blocked by
+`destroyNpcSlotByIndex`. Snowspeeder's cinematic-flag opcode-2
+shortcut joins the same free. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/lifetime legitimacy remains unproven, matching
+s3586–s3618. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result. Evidence
+is recorded in `docs/M3-S3619-PLAYER-CRAFT-BC-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer is opcode-1 `allocateAndInitCraftNpcContext`
+`rs_malloc(0x1E4)` to `0xBC(0x80137DBC+0x2A0*index)`. No
+mitigation was added.
