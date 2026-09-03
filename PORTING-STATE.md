@@ -136789,3 +136789,57 @@ a legitimate heap pointer (or NULL on
 allocator failure). The four siblings are
 the matching malloc/NULL stores in the
 same function. No mitigation was added.
+
+## Session 3653 (2026-09-03) — audited initSaveData rs_free of $s2 and freeSaveDataBuffer *0x80112724
+
+Performed the planned static census of
+`initSaveData` `jal rs_free` at
+`0x8000671C` (`$a0` = `$s2` from
+`addu $a0, $s2` at `0x80006708`) and the
+sibling at `0x8000672C` (same `$s2`), plus
+`freeSaveDataBuffer` `0x80006774`
+(`$a0` = `*0x80112724`). `$s2` is not
+published to that word. The live original
+heap-pointer writer of `$s2` is
+`rs_malloc(*0x801126C4, 8)` at
+`0x800065E0`; the pointer stays in `$s2`
+and is used as memset dest, interior
+checksum base, and `osEepromLongWrite`
+source. The two frees are mutually
+exclusive per allocation (fail-return vs
+success-then-reread). The live original
+heap-pointer writer of `*0x80112724` is
+`rs_malloc(*0x801126C8+0x118, 0x81)`
+stored at `0x800063D0`. Twelve remaining
+`0x2724` loads are memset / pak /
+EEPROM / adler32 consumers; `0x80031BDC`
+is `osPfsReadWriteFile_recomp`. One
+generated caller of `initSaveData`
+(`runIdleFramesAndLoadSaveData`
+`0x8006DA0C`). Zero generated `jal` of
+`freeSaveDataBuffer`, zero LOOKUP, zero
+lui/addiu. One overlay entry each; not a
+second generated body. Re-init leaks the
+published buffer; it is not a second
+free. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope.
+Runtime allocator legitimacy remains
+unproven. The last remaining original
+`jal 0x80001C98` in `funcs_2.c` is
+`unregisterServiceWorker` `0x80007128`.
+No build, run, guard, or mitigation was
+performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3653-INIT-SAVEDATA-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `$s2` is `initSaveData`
+`0x800065E0` storing the flags-8
+`rs_malloc(*0x801126C4)` return in `$s2`.
+That value is a legitimate heap pointer
+(or NULL on allocator failure). Writer of
+`*0x80112724` is `initSaveData`
+`0x800063D0` storing the flags-0x81
+`rs_malloc(*0x801126C8+0x118)` return.
+That value is a legitimate heap pointer
+(or NULL on allocator failure). No
+mitigation was added.

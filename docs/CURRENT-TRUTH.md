@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3652 (2026-09-03).
+notes are linked below. Updated for session 3653 (2026-09-03).
 
 ## Current state
 
@@ -52,20 +52,20 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    real-audio target path, and do not infer target behavior from it.
 4. M5's exact DMA ordering remains unresolved and unavailable to the current
    oracle. While it is parked, perform only systematic M3 idiom-class audits.
-   Sessions 3586–3652 closed the generated `jal rs_free` census through
-   `funcs_7.c`, all of `funcs_6.c`, and all of `funcs_4.c`, plus the earlier
-   MusyX/MORT field families. `funcs_5.c` and `funcs_3.c` have zero sites.
-   The only remaining Gap is s3636
+   Sessions 3586–3653 closed the generated `jal rs_free` census through
+   `funcs_7.c`, all of `funcs_6.c`, all of `funcs_4.c`, and the
+   `initSaveData` / `freeSaveDataBuffer` sites in `funcs_2.c`, plus the
+   earlier MusyX/MORT field families. `funcs_5.c`, `funcs_3.c`, and
+   `funcs_0.c` have zero sites. The only remaining Gap is s3636
    `attachedMeshOverlayNpcHandler` `0x1C`/`0x20`: opcode 2 frees those
    words when setup stores type `-1` or parent mesh `+0xC` is NULL,
    without a prior NULL store. Do not re-audit a Complete class. Do not add a
    pointer guard without a concrete invalid writer. Do not land a skip-path
    NULL store for that Gap unless a later census identifies that same writer.
-   Host `MATERIAL_ARRAY_PTR_GUARD` at `0x80018664` is not an original skip
-   of the s3652 free. The closed-class list and per-session notes live in
+   The closed-class list and per-session notes live in
    [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §56.
-   The next M3 unit is `initSaveData` `rs_free` of `$s2` at `0x8000671C`
-   (first remaining original `jal 0x80001C98` in `funcs_2.c`).
+   The next M3 unit is `unregisterServiceWorker` `rs_free` of `$s0` at
+   `0x80007128` (last remaining original `jal 0x80001C98` in `funcs_2.c`).
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -83,26 +83,34 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `freeRenderSubsystemResources` five globals: matching `buildAndRegisterDefaultMaterial` flags-0 malloc stores; one destructor wrapper; no second free. |
-| H-NextClassGap | Refuted for these five words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: five globals, one live allocator, one destructor wrapper. |
+| H-NextClassComplete | Selected for `initSaveData` `$s2` and `*0x80112724`: matching malloc / mutually exclusive `$s2` frees / one published-word destructor; consumer loads only. |
+| H-NextClassGap | Refuted for `$s2` and `*0x80112724`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: two objects, one live allocator function, three destructor sites. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
 ## Recent evidence ledger
 
 Only the latest boundary transitions are repeated here; the append-only ledger
-and evidence notes retain the full history. Sessions 3586–3652 M3 class
+and evidence notes retain the full history. Sessions 3586–3653 M3 class
 closeouts are archived in PROJECT-OVERVIEW §56.
 
+- **3653 — initSaveData rs_free of $s2 and freeSaveDataBuffer *0x80112724:**
+  `$s2` is flags-8 `rs_malloc(*0x801126C4)` at `0x800065E0`, never
+  stored to a global. The two frees (`0x8000671C` fail-return,
+  `0x8000672C` success-then-reread) are mutually exclusive per
+  allocation. `*0x80112724` is flags-0x81
+  `rs_malloc(*0x801126C8+0x118)` stored at `0x800063D0`; twelve
+  remaining loads are memset / pak / EEPROM / adler32 consumers.
+  Zero generated `jal` of `freeSaveDataBuffer`. Re-init leaks; it is
+  not a second free. This selects `H-NextClassComplete`. See
+  [M3-S3653-INIT-SAVEDATA-RS-FREE-AUDIT.md](M3-S3653-INIT-SAVEDATA-RS-FREE-AUDIT.md).
 - **3652 — freeRenderSubsystemResources rs_free of *0x8011A444 and four siblings:**
   Live writers are `buildAndRegisterDefaultMaterial` flags-0 `rs_malloc`
   stores at `0x80017D28` / `0x80017D4C` / `0x80017D80` / `0x80017E64` /
-  `0x80017E74` (plus two `$s1`-bit NULL stores for `0x63B4` / `0x43AC`).
-  One destructor wrapper; zero generated callers of it. Host
-  `MATERIAL_ARRAY_PTR_GUARD` at `0x80018664` is not an original skip.
-  Re-init leaks; it is not a second free. `funcs_4.c` `jal rs_free` is
-  exhausted. This selects `H-NextClassComplete`. See
+  `0x80017E74`. One destructor wrapper; host
+  `MATERIAL_ARRAY_PTR_GUARD` is not an original skip. `funcs_4.c`
+  `jal rs_free` is exhausted. See
   [M3-S3652-FREE-RENDER-SUBSYSTEM-RESOURCES-RS-FREE-AUDIT.md](M3-S3652-FREE-RENDER-SUBSYSTEM-RESOURCES-RS-FREE-AUDIT.md).
 - **3651 — uploadTextureDescriptorData rs_free of $s1:**
   `$s1` is incoming `$a1`, the delay-slot interior
@@ -238,10 +246,11 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 ## Evidence index
 
-Latest boundary notes. Remaining M3 `rs_free` notes for s3586–s3651 stay on
+Latest boundary notes. Remaining M3 `rs_free` notes for s3586–s3652 stay on
 disk and are indexed in PROJECT-OVERVIEW §56; do not treat absence here as
 deletion.
 
+- [M3-S3653-INIT-SAVEDATA-RS-FREE-AUDIT.md](M3-S3653-INIT-SAVEDATA-RS-FREE-AUDIT.md)
 - [M3-S3652-FREE-RENDER-SUBSYSTEM-RESOURCES-RS-FREE-AUDIT.md](M3-S3652-FREE-RENDER-SUBSYSTEM-RESOURCES-RS-FREE-AUDIT.md)
 - [M3-S3651-UPLOAD-TEXTURE-DESCRIPTOR-DATA-RS-FREE-AUDIT.md](M3-S3651-UPLOAD-TEXTURE-DESCRIPTOR-DATA-RS-FREE-AUDIT.md)
 - [M3-S3650-DESTROY-TEXTURE-LUTS-RS-FREE-AUDIT.md](M3-S3650-DESTROY-TEXTURE-LUTS-RS-FREE-AUDIT.md)
@@ -255,6 +264,6 @@ deletion.
 - [M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3652 remain in the append-only ledger; archived boundary detail is
+Sessions 1–3653 remain in the append-only ledger; archived boundary detail is
 in `PROJECT-OVERVIEW.md` and the notes above. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.
