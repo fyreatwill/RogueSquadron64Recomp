@@ -136226,3 +136226,41 @@ NULL at `0x800471E0`. Those stored values are the
 matching allocator returns (or NULL) and are
 legitimate DAT-context pointers. No mitigation was
 added.
+
+## Session 3639 (2026-09-03) — audited loadLevelTextureCache rs_free of $s0
+
+Performed the planned static census of
+`loadLevelTextureCache` `jal rs_free` at
+`0x80048378` (`$a0` = `$s0` rebound at
+`0x80048248` to `rs_malloc(0x136C, 0)` at
+`0x80048240`). Incoming `$a0` is a reserved-size
+constant (`initMission` `0x1000`, `load_cutscene`
+`0x5DC0`), used only to size `0x80137A44`, then
+overwritten by `lui $s0, 0x8013` and the malloc.
+The `0x80137614` count-table malloc in the same
+function is a different identity (next
+`teardownGridLayerWorker` class). `$s0` is never
+stored to a global. Interior `+0x0/+0x20/+0x24`
+are self-pointers that die with the buffer.
+`registerHmtTextureInTable` copies pixels and
+publishes texture-id halfwords into that count
+table; `parseHmtMaterials` `sw $a2, 0xC($v0)`
+stores descriptor `+0x10` (flag word), not `$s0`.
+One destructor; the count<=5 skip still frees.
+Two generated callers; zero overlay lookup; one
+`jr $ra`. `funcs_10.c` has 9 original `jal rs_free`
+(s3638's "10" was an off-by-one). This selects
+H-NextClassComplete. H-NextClassGap is refuted at
+static scope. Runtime allocator legitimacy remains
+unproven. No build, run, guard, or mitigation was
+performed. The existing s620 host malloc-range
+jump is unchanged. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of this `$s0` is
+`loadLevelTextureCache` `0x80048248`
+(`rs_malloc(0x136C, 0)`, flags-0). That stored
+value is the matching allocator return and is a
+legitimate scratch texture header. No mitigation
+was added.

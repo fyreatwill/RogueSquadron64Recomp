@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3638 (2026-09-03).
+notes are linked below. Updated for session 3639 (2026-09-03).
 
 ## Current state
 
@@ -107,9 +107,18 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    One destructor; skip-path `$v0` is `$s2` xor the D8
    store. No guard was added. See
    [M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md](M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md).
+   Session 3639 selected Complete for
+   `loadLevelTextureCache` `$s0`: matching flags-0
+   `rs_malloc(0x136C, 0)` rebound at `0x80048248`.
+   Incoming `$a0` is a reserved-size constant
+   (`0x1000` / `0x5DC0`). The `0x80137614` count
+   table is a different identity. One destructor; no
+   caller holds the buffer. No guard was added. See
+   [M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md](M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `loadLevelTextureCache` `0x80048378`
-   (`$s0` rebound to `rs_malloc(0x136C, 0)`). Do not add
+   M3 unit is `freeGridCellBuffers` `0x8004956C`
+   (`*0x80137A5C`, plus sibling `*0x80137A54` /
+   `*0x80137A4C` / `*0x80137A68`). Do not add
    a pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -128,9 +137,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `freeLevelDatBuffers` D8/F4/D0: matching `load_asset` / two flags-0 mallocs, one destructor. |
-| H-NextClassGap | Refuted for these three words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: three pointer identities and one allocator store each. |
+| H-NextClassComplete | Selected for `loadLevelTextureCache` `$s0`: matching flags-0 `rs_malloc(0x136C, 0)`, one destructor. |
+| H-NextClassGap | Refuted for this `$s0`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: one scratch-buffer identity and one allocator store. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -231,6 +240,20 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3639 — loadLevelTextureCache rs_free of $s0:**
+  `$s0` is the matching flags-0 `rs_malloc(0x136C, 0)`
+  at `0x80048248`. Incoming `$a0` is `0x1000`
+  (`initMission`) or `0x5DC0` (`load_cutscene`),
+  overwritten by `lui 0x8013` then the malloc.
+  Never stored to a global. Interior `+0x0/+0x20/+0x24`
+  die with the buffer. `registerHmtTextureInTable`
+  copies pixels and keeps texture-id halfwords in the
+  `0x80137614` table (a different malloc). One
+  destructor; both the register loop and the count<=5
+  skip reach it. Two generated callers; zero overlay
+  lookup. One `jr $ra`. This selects
+  `H-NextClassComplete`. See
+  [M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md](M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md).
 - **3638 — freeLevelDatBuffers rs_free of *0x801375D0 /
   *0x801375D8 / *0x801375F4:** D8 is the matching
   `load_asset` `$s2` stored only when `0x80130B3A != 1`.
@@ -695,6 +718,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md](M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md)
 - [M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md](M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md)
 - [M3-S3637-LOAD-FULL-HEADER-IMAGE-RS-FREE-AUDIT.md](M3-S3637-LOAD-FULL-HEADER-IMAGE-RS-FREE-AUDIT.md)
 - [M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md](M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md)
