@@ -137035,3 +137035,46 @@ into the DMA-slot payload word. That
 value is a legitimate heap pointer (or
 NULL on allocator failure). No
 mitigation was added.
+
+## Session 3658 (2026-09-03) — audited teardownAssetManifestService rs_free of *0x80110D50
+
+Performed the planned static census of
+`teardownAssetManifestService` `jal rs_free` at
+`0x80005000` (`$a0` = `*0x80110D50` from
+`lw $a0, 0xD50($v0)` at `0x80004FF4`).
+The live writer is `initDmaSlots` flags-0x81
+`rs_malloc($s3)` store at `0x80004708`.
+The flag-zero path stores NULL at `0x8000471C`.
+The only generated `initDmaSlots` caller is
+boot `0x800011EC` with `$a0 = 0`, so the
+malloc is an unreferenced original branch.
+Destructor has an original `beq $a0, $zero`
+skip and zero generated callers. Zero LOOKUP.
+One overlay entry (`section_3_text` rom
+`0x4B98`, size `0x40`); not a second
+generated body. Single `jr $ra` at
+`0x80005010`. `initRsMallocHeap` and
+`*0x80111260` are consumers of the extra-heap
+base, not a second free. Adjacent
+`0xD48`/`0xD4C`/`0xD54` are size and
+worker-handle words. `funcs_33.c`
+`sh 0xD50($s1)` is a different object.
+This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope.
+Runtime allocator legitimacy remains
+unproven. The next remaining original
+`jal 0x80001C98` is `funcs_1.c`
+`rs_zcfree` `0x80005268` (incoming `$a0`).
+No build, run, guard, or mitigation was
+performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3658-TEARDOWN-ASSET-MANIFEST-SERVICE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `*0x80110D50` is
+`initDmaSlots` `0x80004708` storing the
+flags-0x81 `rs_malloc` return (or the
+flag-zero NULL store at `0x8000471C`).
+That value is a legitimate heap pointer
+(or NULL on the generated size-0 / flag-zero
+paths, or on allocator failure). No
+mitigation was added.

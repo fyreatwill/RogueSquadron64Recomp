@@ -4869,11 +4869,11 @@ upstream producer at the entry boundary, and supersedes the broader
 `docs/M5-S3444-STATE-POINTER-PRODUCER.md`, and
 `docs/M5-S3445-STATE-POINTER-ENTRY.md`.
 
-## 56. M3 rs_free / audio-idiom closeout (s3586–s3657)
+## 56. M3 rs_free / audio-idiom closeout (s3586–s3658)
 
 Migrated from `CURRENT-TRUTH.md` during the s3649 maintenance pass. Exact
 per-site writer/consumer tables remain in the `docs/M3-S3586-*.md` through
-`docs/M3-S3657-*.md` notes and `PORTING-STATE.md`. No runtime guard was
+`docs/M3-S3658-*.md` notes and `PORTING-STATE.md`. No runtime guard was
 added for any Complete class; runtime allocator legitimacy stays unproven
 everywhere. Do not re-audit a closed class. Do not add a pointer guard
 without a concrete invalid writer.
@@ -4890,13 +4890,14 @@ without a concrete invalid writer.
 
 Hangar-Y and mix-table were closed in the same window with no invalid writer.
 
-### Destructor / `jal rs_free` census (s3600–s3657)
+### Destructor / `jal rs_free` census (s3600–s3658)
 
 Complete through `funcs_13.c` then `funcs_12.c` / `funcs_11.c` / `funcs_10.c`
 / `funcs_9.c` / `funcs_8.c` / `funcs_7.c` / `funcs_6.c` / `funcs_4.c` /
 all of `funcs_2.c`, plus `processAssetLoadStep` `0x48($s0)`,
-`findManifestEntryByName` `$s2`, and `freeManifestSegmentAssets`
-`0x40($s0)`, except the one Gap below. `funcs_5.c`,
+`findManifestEntryByName` `$s2`, `freeManifestSegmentAssets`
+`0x40($s0)`, and `teardownAssetManifestService` `*0x80110D50`,
+except the one Gap below. `funcs_5.c`,
 `funcs_3.c`, and `funcs_0.c` have zero sites.
 
 Closed Complete classes, in audit order: unmasked release/fade;
@@ -4933,7 +4934,8 @@ scratch, `freeEffectAssetBuffers` globals, `loadExplosionTextures`
 `freeSaveDataBuffer` `*0x80112724`, `unregisterServiceWorker` `$s0` /
 `*0x801128D0`, `processAssetLoadStep` `0x48($s0)` /
 `mainEventQueueWorker` `0x8000450C`, `findManifestEntryByName` `$s2`,
-`freeManifestSegmentAssets` `0x40($s0)`.
+`freeManifestSegmentAssets` `0x40($s0)`,
+`teardownAssetManifestService` `*0x80110D50`.
 
 **Gap (s3636, still open):** `attachedMeshOverlayNpcHandler` `0x80054344`
 opcode 2 frees `0x1C`/`0x20` on the pool-carved `0x4($wrapper)` body.
@@ -4946,8 +4948,10 @@ census identifies that same writer. See
 `docs/M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md`.
 
 **Next unit (live in CURRENT-TRUTH / NEXT.md):**
-`teardownAssetManifestService` `rs_free` of `*0x80110D50` at
-`0x80005000` (two remaining original `jal 0x80001C98` in
-`funcs_1.c`; `0x80004A0C`/`0x80004A80` closed as DMA-slot
-`0x40($s0)`; `funcs_2.c` / `funcs_4.c` are exhausted;
-`funcs_3.c` / `funcs_5.c` / `funcs_0.c` have zero sites).
+`rs_zcfree` `rs_free` of incoming `$a0` at `0x80005268`
+(last remaining original `jal 0x80001C98` in `funcs_1.c`).
+`teardownAssetManifestService` `*0x80110D50` closed s3658.
+`funcs_2.c` / `funcs_4.c` / `funcs_6.c` / `funcs_7.c` are
+exhausted; `funcs_3.c` / `funcs_5.c` / `funcs_0.c` have
+zero sites. See
+`docs/M3-S3658-TEARDOWN-ASSET-MANIFEST-SERVICE-RS-FREE-AUDIT.md`.

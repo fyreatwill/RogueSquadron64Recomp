@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3657 (2026-09-03).
+notes are linked below. Updated for session 3658 (2026-09-03).
 
 ## Current state
 
@@ -52,11 +52,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    real-audio target path, and do not infer target behavior from it.
 4. M5's exact DMA ordering remains unresolved and unavailable to the current
    oracle. While it is parked, perform only systematic M3 idiom-class audits.
-   Sessions 3586–3657 closed the generated `jal rs_free` census through
+   Sessions 3586–3658 closed the generated `jal rs_free` census through
    `funcs_7.c`, all of `funcs_6.c`, all of `funcs_4.c`, all of
    `funcs_2.c`, plus `processAssetLoadStep`/`mainEventQueueWorker`
    `0x48($s0)`, `findManifestEntryByName` `$s2`,
-   `freeManifestSegmentAssets` `0x40($s0)`, and the earlier
+   `freeManifestSegmentAssets` `0x40($s0)`,
+   `teardownAssetManifestService` `*0x80110D50`, and the earlier
    MusyX/MORT field families. `funcs_5.c`, `funcs_3.c`, and `funcs_0.c`
    have zero sites. The only remaining Gap is s3636
    `attachedMeshOverlayNpcHandler` `0x1C`/`0x20`: opcode 2 frees those
@@ -66,9 +67,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    NULL store for that Gap unless a later census identifies that same writer.
    The closed-class list and per-session notes live in
    [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §56.
-   The next M3 unit is `teardownAssetManifestService` `rs_free` of
-   `*0x80110D50` at `0x80005000` (two original `jal 0x80001C98`
-   remain in `funcs_1.c`).
+   The next M3 unit is `rs_zcfree` `rs_free` of incoming `$a0` at
+   `0x80005268` (last original `jal 0x80001C98` in `funcs_1.c`).
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -86,18 +86,28 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `freeManifestSegmentAssets` `0x40($s0)`: one flags-9 payload malloc store / two mutually exclusive destructors of that DMA-slot word; directory walk is a consumer. |
-| H-NextClassGap | Refuted for this `0x40($s0)`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: one slot field, one malloc store, two mutually exclusive destructors. |
+| H-NextClassComplete | Selected for `teardownAssetManifestService` `*0x80110D50`: one flags-0x81 extra-heap malloc store / one destructor with original NULL skip; generated boot caller passes size 0 so the malloc is an unreferenced original branch. |
+| H-NextClassGap | Refuted for this `*0x80110D50`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: one word, one malloc store, one destructor. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
 ## Recent evidence ledger
 
 Only the latest boundary transitions are repeated here; the append-only ledger
-and evidence notes retain the full history. Sessions 3586–3656 M3 class
+and evidence notes retain the full history. Sessions 3586–3657 M3 class
 closeouts are archived in PROJECT-OVERVIEW §56.
 
+- **3658 — teardownAssetManifestService rs_free of *0x80110D50:**
+  Live writer is `initDmaSlots` flags-0x81 `rs_malloc($s3)`
+  store at `0x80004708`. Flag-zero path stores NULL. The only
+  generated `initDmaSlots` caller is boot `0x800011EC` with
+  `$a0 = 0`, so the malloc is an unreferenced original branch.
+  Destructor `0x80005000` has an original NULL skip and zero
+  generated callers. `initRsMallocHeap` and `*0x80111260` are
+  consumers. Adjacent `0xD48`/`0xD4C`/`0xD54` are size and
+  worker-handle words. This selects `H-NextClassComplete`. See
+  [M3-S3658-TEARDOWN-ASSET-MANIFEST-SERVICE-RS-FREE-AUDIT.md](M3-S3658-TEARDOWN-ASSET-MANIFEST-SERVICE-RS-FREE-AUDIT.md).
 - **3657 — freeManifestSegmentAssets rs_free of 0x40($s0):** `$s0`
   is `0x80110A80 + idx*0x50`. Live writer is flags-9
   `rs_malloc` store at `0x80004920`. Two mutually exclusive
@@ -273,10 +283,11 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 ## Evidence index
 
-Latest boundary notes. Remaining M3 `rs_free` notes for s3586–s3656 stay on
+Latest boundary notes. Remaining M3 `rs_free` notes for s3586–s3657 stay on
 disk and are indexed in PROJECT-OVERVIEW §56; do not treat absence here as
 deletion.
 
+- [M3-S3658-TEARDOWN-ASSET-MANIFEST-SERVICE-RS-FREE-AUDIT.md](M3-S3658-TEARDOWN-ASSET-MANIFEST-SERVICE-RS-FREE-AUDIT.md)
 - [M3-S3657-FREE-MANIFEST-SEGMENT-ASSETS-RS-FREE-AUDIT.md](M3-S3657-FREE-MANIFEST-SEGMENT-ASSETS-RS-FREE-AUDIT.md)
 - [M3-S3656-FIND-MANIFEST-ENTRY-BY-NAME-RS-FREE-AUDIT.md](M3-S3656-FIND-MANIFEST-ENTRY-BY-NAME-RS-FREE-AUDIT.md)
 - [M3-S3655-PROCESS-ASSET-LOAD-STEP-RS-FREE-AUDIT.md](M3-S3655-PROCESS-ASSET-LOAD-STEP-RS-FREE-AUDIT.md)
@@ -295,6 +306,6 @@ deletion.
 - [M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3657 remain in the append-only ledger; archived boundary detail is
+Sessions 1–3658 remain in the append-only ledger; archived boundary detail is
 in `PROJECT-OVERVIEW.md` and the notes above. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.
