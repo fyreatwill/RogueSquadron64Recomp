@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3606 (2026-09-03).
+notes are linked below. Updated for session 3607 (2026-09-03).
 
 ## Current state
 
@@ -57,23 +57,23 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    with no concrete invalid writer. Sessions 3594–3599 selected structural
    unevaluability for mixed-layout families `+0x60`, `+0x30..+0x40`,
    `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
-   `+0x5C`/`+0x64`. Sessions 3600–3605 closed unmasked release/fade,
+   `+0x5C`/`+0x64`. Sessions 3600–3606 closed unmasked release/fade,
    remaining `0x88`-stride indexers, remaining `-0x6908` non-a0,
-   `-0x6904` alias, destructor unchecked-free, and skipped-NULL
-   destructor-free as complete. Session 3606 closed the remaining
-   speech/cache `rs_free` class as complete: `-0x64AC`/`-0x64B0`/
-   `-0x64B4` are `loadSndFiles` stores of `load_asset_with_malloc_flags`
-   `rs_malloc`; cinematic `waitForAnyAudioSlot` is skipped by
-   `0x80130B39` and the B39-clear waits pair a `loadSndFiles` in the
-   same init/cleanup. Cache `+0x4` is the `loadSongAssetByName` malloc
-   store; `freeAudioCacheEntry` marks the key `-1`. `-0x648C` is
-   init-zero on every generated `initSpeechSubsystem` (a0==0). Runtime
-   allocator/lifetime legitimacy remains unproven. See
-   [M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md](M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md).
+   `-0x6904` alias, destructor unchecked-free, skipped-NULL
+   destructor-free, and remaining speech/cache `rs_free` as complete.
+   Session 3607 closed the remaining speech-file `rs_free` class as
+   complete: the 4-byte `$s0` scratch is a matching `rs_malloc(4, 8)`
+   free; `0x80154674` is the `initMusyXVoiceTable` malloc store;
+   `0x8015467C` is either that path's DMA malloc or a KSEG0
+   `a0+4` interior pointer that both frees skip via `0x800A5120`.
+   Sequential double-free is blocked by generated init/finalize
+   pairing. Runtime allocator/lifetime legitimacy remains unproven.
+   See
+   [M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md](M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next M3 unit
-   is the remaining speech-file `rs_free` class in `loadSpeechFile`
-   and `shutdownMusyXVoices`. Do not add a pointer guard without
-   a concrete invalid writer.
+   is the remaining format-message `rs_free` class in
+   `tickFormatMessageWorker` and `disposeFormatMsgQueueMember`. Do
+   not add a pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -91,9 +91,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the remaining speech/cache `rs_free` class: three SND words and cache `+0x4` are matching malloc stores; `-0x648C` is generated init-zero. |
-| H-NextClassGap | Refuted for this class: no untrusted load and no concrete sibling-free of a non-allocator pointer. |
-| H-NextClassUnevaluable | Not selected: the four BSS words and the 16-entry cache are plain pointer slots. |
+| H-NextClassComplete | Selected for the remaining speech-file `rs_free` class: `$s0` and `0x4674` are matching malloc stores; `0x467C` DMA malloc is matching, and the KSEG0 `a0+4` store cannot reach a free. |
+| H-NextClassGap | Refuted for this class: no free can pass the KSEG0 interior pointer, and sequential double-free is blocked by init/finalize pairing. |
+| H-NextClassUnevaluable | Not selected: the three BSS words and the header scratch are plain slots. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -194,6 +194,15 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3607 — remaining speech-file rs_free class:** `$s0` is
+  `rs_malloc(4, 8)` then `rs_free($s0)` after copying the count to
+  `0x80154670`. `0x80154674` is the `initMusyXVoiceTable` malloc
+  store; shutdown frees it unchecked. `0x8015467C` is either the
+  DMA `rs_malloc(count<<2)` or KSEG0 `a0+4`; both frees skip when
+  `0x800A5120 == 0`, and that flag is set only after the DMA store.
+  Sequential double-free is blocked by generated init/finalize
+  pairing. This selects `H-NextClassComplete`. See
+  [M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md](M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md).
 - **3606 — remaining speech/cache rs_free class:** `-0x64AC`/
   `-0x64B0`/`-0x64B4` are `loadSndFiles` stores of
   `load_asset_with_malloc_flags` `rs_malloc`; cinematic wait is
@@ -357,6 +366,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md](M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md)
 - [M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md](M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md)
 - [M3-S3605-SKIPPED-NULL-DESTRUCTOR-FREE-AUDIT.md](M3-S3605-SKIPPED-NULL-DESTRUCTOR-FREE-AUDIT.md)
 - [M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md](M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md)

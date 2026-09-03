@@ -135265,3 +135265,32 @@ from `load_asset_with_malloc_flags` `rs_malloc`),
 `initSpeechSubsystem` (zero of `-0x648C` on the generated a0==0
 path; unreferenced `load_asset` store on a0!=0). No mitigation was
 added.
+
+## Session 3607 (2026-09-03) — audited remaining speech-file rs_free class
+
+Performed the planned static census of every generated original
+`jal rs_free` in `loadSpeechFile` and `shutdownMusyXVoices`. The
+4-byte `$s0` scratch is `rs_malloc(4, 8)` then `rs_free($s0)` after
+copying `0x0($s0)` to `0x80154670` (a count, never freed as a
+pointer). `0x80154674` is the matching `initMusyXVoiceTable`
+`rs_malloc(streamSampleCountToByteSize(0x10E0))` store; shutdown
+frees it unchecked with no post-free NULL. `0x8015467C` has three
+original writers: init zero, DMA `rs_malloc(count<<2)`, and KSEG0
+`a0+4`. Both `0x467C` frees skip when the pointer is NULL or
+`0x800A5120 == 0`; that flag is written only by `loadSpeechFile`
+(`sb 1` after the DMA malloc store, `sb 0` on KSEG0), so the
+interior pointer cannot reach a free. Sequential double-free is
+blocked: every generated finalize is the exit of a function that
+inited in the same activation, and `menuOverlayInit` screen cases
+are mutually exclusive. Re-init without shutdown leaks, matching
+s3604/s3606 overwrites, not a Gap. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/lifetime legitimacy remains unproven, matching s3586–s3606.
+No build, run, guard, or mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is recorded in
+`docs/M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `loadSpeechFile` (`$s0` from `rs_malloc(4, 8)`;
+DMA `rs_malloc(count<<2)` of `0x467C`; KSEG0 `a0+4` of `0x467C`
+with `0x5120=0`) and `initMusyXVoiceTable` (zero of `0x467C`;
+`rs_malloc` of `0x4674`). No mitigation was added.
