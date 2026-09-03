@@ -135459,3 +135459,28 @@ ORIGIN: writers are `rebuildActiveDisplayObjectList`'s
 `rs_malloc(0x400)` into `$a0` and `allocateSlotTable`'s header
 malloc plus `sw $v0, 0($s1)` of the slots array. No mitigation
 was added.
+
+## Session 3614 (2026-09-03) — audited remaining shutdownModelViewer header-word rs_free
+
+Performed the planned static census of every generated original
+`jal rs_free` in `shutdownModelViewer`. `0x800CBB68` frees
+`0x800D0360` and `0x800CBB58` frees `0x800D0364`, the two
+`initModelViewer` `allocateSlotTable(8)` headers stored at
+`0x800CA6D0`/`0x800CA6EC`. `0x800CBB40` frees `0x800D03CC`,
+the `loadDatFile` return: `load_asset`'s `rs_malloc` in `$s2`,
+or NULL on the other epilogue edges. Those three `sw $v0` are
+the only original stores. Consumers are lookup/dat helpers with
+no `jal rs_free`. `runModelViewerLoop` pairs one init with one
+shutdown and is the only generated caller of either. Header
+frees skip `destroyLookupTable` and leak `0x0(header)`; that is
+a missing slots destructor, not a second pointer source for
+these three sites. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/lifetime legitimacy remains unproven, matching
+s3586–s3613. No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `initModelViewer`'s two `allocateSlotTable`
+header stores and `loadDatFile`'s `load_asset` `$v0` (or NULL).
+No mitigation was added.

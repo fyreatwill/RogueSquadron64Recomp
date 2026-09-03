@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3613 (2026-09-03).
+notes are linked below. Updated for session 3614 (2026-09-03).
 
 ## Current state
 
@@ -57,25 +57,28 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    with no concrete invalid writer. Sessions 3594–3599 selected structural
    unevaluability for mixed-layout families `+0x60`, `+0x30..+0x40`,
    `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
-   `+0x5C`/`+0x64`. Sessions 3600–3613 closed unmasked release/fade,
+   `+0x5C`/`+0x64`. Sessions 3600–3614 closed unmasked release/fade,
    remaining `0x88`-stride indexers, remaining `-0x6908` non-a0,
    `-0x6904` alias, destructor unchecked-free, skipped-NULL
    destructor-free, remaining speech/cache `rs_free`, remaining
    speech-file `rs_free`, remaining format-message `rs_free`,
    remaining text-texture `rs_free`, remaining texture-scratch
    `rs_free`, remaining load_asset-then-free clones, remaining
-   `loadCharTextureSet` DMA-array `rs_free`, and remaining
-   lookup-table `rs_free` as complete.
-   Session 3613 closed the rebuild 0x400 scratch (`rs_malloc` then
-   `rs_free` of `$a0`; `0x0($a0)` is the returned list head) and
-   the unreferenced `destroyLookupTable` pair (`0x0(header)` then
-   the header; matching `allocateSlotTable`). Runtime
-   allocator/lifetime legitimacy remains unproven. See
-   [M3-S3613-LOOKUP-TABLE-RS-FREE-AUDIT.md](M3-S3613-LOOKUP-TABLE-RS-FREE-AUDIT.md).
-   Retail-entry and SP-yield threads remain parked. The next M3 unit
-   is the remaining lookup-table header `rs_free` in
-   `shutdownModelViewer`. Do not add a pointer guard without a
-   concrete invalid writer.
+   `loadCharTextureSet` DMA-array `rs_free`, remaining
+   lookup-table `rs_free`, and remaining `shutdownModelViewer`
+   header-word `rs_free` as complete.
+   Session 3614 closed `0x800D0360`/`0x800D0364` as the two
+   `initModelViewer` `allocateSlotTable(8)` headers and
+   `0x800D03CC` as the `loadDatFile`/`load_asset` return (or
+   NULL). Those frees skip `destroyLookupTable` and leak
+   `0x0(header)`; that is a missing slots destructor, not a
+   second pointer source. Runtime allocator/lifetime legitimacy
+   remains unproven. See
+   [M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md](M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md).
+   Retail-entry and SP-yield threads remain parked. The next M3
+   unit is the remaining model-viewer mesh `rs_free` in
+   `freeModelViewerMeshChain`. Do not add a pointer guard without
+   a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -93,9 +96,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the remaining lookup-table class: rebuild scratch is a matching 0x400 malloc/free, and `destroyLookupTable` frees the matching `allocateSlotTable` slots word then header with no generated caller. |
-| H-NextClassGap | Refuted for this class: no non-allocator last writer of the three pointers, and sequential double-free through `destroyLookupTable` is blocked by the missing caller. |
-| H-NextClassUnevaluable | Not selected: the three pointers are the rebuild scratch and the `allocateSlotTable` header/slots pair. |
+| H-NextClassComplete | Selected for the remaining `shutdownModelViewer` header-word class: `0x800D0360`/`0x800D0364` are the matching `allocateSlotTable` headers, and `0x800D03CC` is the matching `loadDatFile`/`load_asset` return or NULL. |
+| H-NextClassGap | Refuted for this class: no non-allocator last writer of the three words, and sequential double-free is blocked by the single `runModelViewerLoop` init/shutdown pair. |
+| H-NextClassUnevaluable | Not selected: the three pointers are the two lookup headers and the dat-file asset. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -196,12 +199,20 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3614 — remaining shutdownModelViewer header-word rs_free:**
+  `0x800D0360`/`0x800D0364` are the two `allocateSlotTable(8)`
+  headers; `0x800D03CC` is `loadDatFile`'s `load_asset` return
+  or NULL. `runModelViewerLoop` pairs one init with one shutdown.
+  Header frees skip `destroyLookupTable` and leak `0x0(header)`.
+  This selects `H-NextClassComplete`. See
+  [M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md](M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md).
 - **3613 — remaining lookup-table rs_free:** rebuild scratch is
   `rs_malloc(0x400)` in `$a0`, freed at `0x800645AC`; `0x0($a0)`
   is the returned list head. `destroyLookupTable` frees
   `0x0(header)` then the header from `allocateSlotTable` and has
   no generated caller. `shutdownModelViewer`'s header-word frees
-  are a later class. This selects `H-NextClassComplete`. See
+  were the next class and are now closed. This selects
+  `H-NextClassComplete`. See
   [M3-S3613-LOOKUP-TABLE-RS-FREE-AUDIT.md](M3-S3613-LOOKUP-TABLE-RS-FREE-AUDIT.md).
 - **3612 — remaining loadCharTextureSet DMA-array rs_free:** the
   8-slot stack array at `$sp+0xB8` is zero-init, then each live
@@ -410,6 +421,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md](M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md)
 - [M3-S3613-LOOKUP-TABLE-RS-FREE-AUDIT.md](M3-S3613-LOOKUP-TABLE-RS-FREE-AUDIT.md)
 - [M3-S3612-LOADCHAR-DMA-ARRAY-RS-FREE-AUDIT.md](M3-S3612-LOADCHAR-DMA-ARRAY-RS-FREE-AUDIT.md)
 - [M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md](M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md)
