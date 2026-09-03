@@ -135140,3 +135140,30 @@ ORIGIN: walk indices are the live-count halfword written only by
 that same count times `0x88`; render's pointer is mix's already-formed
 slot; key-on does not index this table; shutdown frees the allocator
 alias. No mitigation was added.
+
+## Session 3603 (2026-09-03) — audited -0x6904 voice-table pointer alias
+
+Performed the planned static census of every generated original
+`lui 0x8015; lw/sw -0x6904` site and every generated JAL of
+`waitForMusyXAudioTaskDone`. Six original sites in three functions:
+`allocateSongChannelArray` stores the `rs_malloc` result at
+`0x8008F0E4` (same `v0` as `-0x6908`) and walks `a1` from 0 while
+`(a1 & 0xFFFF) < lhu -0x6900`, writing `+0x0/+0x85/+0x84` through that
+base; `shutdownAudioEngine` `rs_free`s the word at `0x80091E48`;
+`waitForMusyXAudioTaskDone` `rs_free`s it at `0x80091F98`. Neither
+destructor NULLs `-0x6904` or `-0x6908`. Shutdown's only generated
+caller is `shutdownMusyXEngine`, which has no generated JAL. Wait's
+only generated JAL is `musyxNoopStub` from `runVideoFrameTick`; both
+wrapper and inner early-out on B40 == 0, and the wrapper zeros B40
+after, so a later sequential destructor skips. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static scope: no
+untrusted load and no concrete sibling-free of a non-allocator
+pointer. Runtime allocator/lifetime legitimacy remains unproven,
+matching s3586–s3602. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result. Evidence is
+recorded in `docs/M3-S3603-6904-POINTER-ALIAS-AUDIT.md`.
+
+ORIGIN: the only writer is `allocateSongChannelArray` storing the
+`rs_malloc` result; the init walk indexes that pointer by the
+live-count halfword written in the same function; both frees pass
+that same word to `rs_free`. No mitigation was added.
