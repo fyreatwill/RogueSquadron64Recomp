@@ -134997,3 +134997,33 @@ and `musyxRenderVoiceSamples` (computed volumes). Command-list byte `+0x22`
 writers are the two `musyxMixActiveVoices` stores. Key-on dest writers are
 `musyxKeyOnVoice`. Those values are legitimate state or copies from
 identified sources; capacity and lifetime remain unproven.
+
+## Session 3598 (2026-09-02) — audited MusyX voice 0x66-0x74 publication family
+
+Performed the planned static census of every generated access to offsets
+`0x66` through `0x74` in `RecompiledFuncs/funcs_24.c`. 15 stores and 12
+loads matched `MEM_[BHW]`; three additional `MEM_BU` loads read voice-table
+`+0x6D`. The remaining accesses split across two layouts: the
+`D_80149708/0C` command-list ping-pong volume halfwords written by
+`musyxRenderVoiceSamples` from voice-table `+0x18..+0x26` and consumed by
+`musyxKeyOnVoice` as current volumes and slope numerators, and the
+`D_801496F8` voice-table `+0x6D` decode-mode byte plus `+0x68`/`+0x6C`
+envelope word/phase written by init, attack, release, and fade. Mix and
+the command-list builder only pass pointers; they do not touch these
+offsets directly.
+
+The result selects structural unevaluability, not a concrete invalid
+writer: stores are identified volume copies, a descriptor-byte copy,
+`0`/`3` envelope phases, zeros, or the `+0x5C` float. Object identity,
+capacity checks, the funcs_23.c envelope-tick consumer, allocator size,
+and runtime value legitimacy remain open. No build, run, guard, or
+mitigation was performed. Evidence is recorded in
+`docs/M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md`.
+
+ORIGIN: command-list halfword writers are `musyxRenderVoiceSamples`
+(copies of voice-table `+0x18..+0x26`). Voice-table `+0x6D` is written by
+`musyxInitVoiceFromSample` from descriptor `+0x18`. Voice-table `+0x6C`/
+`+0x68` writers are `musyxTriggerVoiceAttack` (zero),
+`musyxStartVoiceRelease`, and `beginVoiceFadeRelease` (`3` and the `+0x5C`
+float). Those values are legitimate state or copies from identified
+sources; capacity and lifetime remain unproven.

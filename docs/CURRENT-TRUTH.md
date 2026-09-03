@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3597 (2026-09-02).
+notes are linked below. Updated for session 3598 (2026-09-02).
 
 ## Current state
 
@@ -116,8 +116,17 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    concrete invalid writer was found. Layout mix and missing capacity
    checks select structural unevaluability. See
    [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
-   The next M3 unit is the `+0x66..+0x74` publication family that render
-   copies these volumes into and that key-on consumes for slope division.
+   Session 3598 audited `+0x66..+0x74`: command-list halfwords are copies
+   of voice-table `+0x18..+0x26` consumed by key-on slope division, while
+   the same numeric offsets on `D_801496F8` are the `+0x6D` decode-mode
+   byte and the `+0x68`/`+0x6C` envelope word/phase. No concrete invalid
+   writer was found. Layout mix, missing capacity checks, and envelope
+   consumers living in `funcs_23.c` select structural unevaluability. See
+   [M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md](M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md).
+   The next M3 unit is the voice-table envelope companion `+0x5C`/`+0x64`
+   spanning `funcs_24.c` attack/release/fade writers and
+   `funcs_23.c` `advanceVolumeFadeEnvelope`; do not add an envelope guard
+   without a new runtime writer discriminator.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -235,6 +244,13 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3598 — MusyX voice `+0x66..+0x74` publication audit:** 15 stores, 12
+  loads, and 3 `+0x6D` byte reads were enumerated. Command-list halfwords
+  are render copies of voice-table volumes consumed by key-on; voice-table
+  `+0x6D`/`+0x6C`/`+0x68` are decode-mode and envelope fields. No concrete
+  invalid writer/value was found. This selects `H-NextClassUnevaluable`.
+  See
+  [M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md](M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies
@@ -325,6 +341,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md](M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md)
 - [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md)
 - [M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md](M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md)
 
