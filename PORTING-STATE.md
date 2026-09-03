@@ -135381,3 +135381,28 @@ ORIGIN: writers are `loadBackdropAsset` (`rs_malloc` of
 `0x60($sp)`; `load_asset` of `+0x10`), `initCinematicSceneAssets`
 (`rs_malloc` of `0x38($sp)`), and `buildPlayerCraftAssetTemplate`
 (`rs_malloc` of `0x38($sp)`). No mitigation was added.
+
+## Session 3611 (2026-09-03) — audited remaining load_asset-then-free clones
+
+Performed the planned static census of every generated original
+`jal rs_free` in `hangarLoadShadows` and `loadFontAsset`. Hangar
+`$s4` is the `load_asset` result assigned at `0x800AEA0C`;
+`0x800AEA94` frees that register after a 14-iteration image walk
+that only advances `$s1`. Font `$s0` is the `load_asset` result
+assigned at `0x80061B6C` each of 6 loop iterations; `0x80061C24`
+frees it after `registerHmtTextureInTable`. Neither pointer is
+stored to a global. Callers (`mallocCraftSelectionData`,
+`initCraftSelectScreen`, `initVwingHudAndSlotState`) consume
+texture-id halfword tables, not the freed assets.
+`registerHmtTextureInTable` and `full_header_image_offset_convert`
+do not `jal rs_free` of these pointers. Sequential double-free is
+blocked by rebuild-before-next-free. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static scope.
+Runtime allocator/lifetime legitimacy remains unproven, matching
+s3586–s3610. No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md`.
+
+ORIGIN: writers are `hangarLoadShadows` (`load_asset` of `$s4`) and
+`loadFontAsset` (`load_asset` of `$s0` per glyph). No mitigation was
+added.

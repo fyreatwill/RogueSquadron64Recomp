@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3610 (2026-09-03).
+notes are linked below. Updated for session 3611 (2026-09-03).
 
 ## Current state
 
@@ -57,24 +57,23 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    with no concrete invalid writer. Sessions 3594–3599 selected structural
    unevaluability for mixed-layout families `+0x60`, `+0x30..+0x40`,
    `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
-   `+0x5C`/`+0x64`. Sessions 3600–3608 closed unmasked release/fade,
+   `+0x5C`/`+0x64`. Sessions 3600–3611 closed unmasked release/fade,
    remaining `0x88`-stride indexers, remaining `-0x6908` non-a0,
    `-0x6904` alias, destructor unchecked-free, skipped-NULL
    destructor-free, remaining speech/cache `rs_free`, remaining
-   speech-file `rs_free`, remaining format-message `rs_free`, and
-   remaining text-texture `rs_free` as complete. Session 3610
-   closed the remaining texture-scratch `rs_free` class as
-   complete: backdrop scratch `0x60($sp)` and cinematic/craft
-   scratch `0x38($sp)` are matching `rs_malloc` stores on the
-   callee stack; backdrop `+0x10` is a matching `load_asset`
-   malloc, NULLed after its free. Callers consume `+0xC`/`+0x14`,
-   not the freed words. Runtime allocator/lifetime legitimacy
-   remains unproven. See
-   [M3-S3610-TEXTURE-SCRATCH-RS-FREE-AUDIT.md](M3-S3610-TEXTURE-SCRATCH-RS-FREE-AUDIT.md).
+   speech-file `rs_free`, remaining format-message `rs_free`,
+   remaining text-texture `rs_free`, remaining texture-scratch
+   `rs_free`, and remaining load_asset-then-free clones as complete.
+   Session 3611 closed hangar `$s4` and font `$s0`: both are matching
+   `load_asset` returns in callee-saved registers, rebuilt before
+   the next free, and not stored to a global. Callers consume
+   texture-id halfwords, not the freed assets. Runtime
+   allocator/lifetime legitimacy remains unproven. See
+   [M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md](M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next M3 unit
-   is the remaining load_asset-then-free clones in
-   `hangarLoadShadows` and `loadFontAsset`. Do not add a pointer
-   guard without a concrete invalid writer.
+   is the remaining `loadCharTextureSet` `rs_free` of the 8-slot
+   stack DMA array at `$sp+0xB8`. Do not add a pointer guard
+   without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -92,9 +91,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the remaining texture-scratch `rs_free` class: scratch `0x60($sp)`/`0x38($sp)` are matching `rs_malloc` stores; backdrop `+0x10` is a matching `load_asset` malloc. |
-| H-NextClassGap | Refuted for this class: no non-allocator last writer, `+0x10` is NULLed after its free, and stack scratch is rebuilt before the next free. |
-| H-NextClassUnevaluable | Not selected: the four pointers are the three stack scratch words and the descriptor `+0x10` asset. |
+| H-NextClassComplete | Selected for the remaining load_asset-then-free class: hangar `$s4` and font `$s0` are matching `load_asset` returns, rebuilt before the next free. |
+| H-NextClassGap | Refuted for this class: no non-allocator last writer, no sibling destructor, and both registers are rebuilt before the next free. |
+| H-NextClassUnevaluable | Not selected: the two pointers are the hangar `$s4` asset and the per-iter font `$s0` asset. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -195,6 +194,12 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3611 — remaining load_asset-then-free clones:** hangar `$s4`
+  and font `$s0` are matching `load_asset` returns. Neither is
+  stored to a global; callers read texture-id halfwords. Sequential
+  double-free is blocked by rebuild-before-next-free. This selects
+  `H-NextClassComplete`. See
+  [M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md](M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md).
 - **3610 — remaining texture-scratch rs_free class:** backdrop
   scratch `0x60($sp)` and cinematic/craft scratch `0x38($sp)` are
   matching `rs_malloc` stores on the callee stack. Backdrop
@@ -389,6 +394,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md](M3-S3611-LOAD-ASSET-THEN-FREE-AUDIT.md)
 - [M3-S3610-TEXTURE-SCRATCH-RS-FREE-AUDIT.md](M3-S3610-TEXTURE-SCRATCH-RS-FREE-AUDIT.md)
 - [M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md](M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md)
 - [M3-S3608-FORMAT-MESSAGE-RS-FREE-AUDIT.md](M3-S3608-FORMAT-MESSAGE-RS-FREE-AUDIT.md)
