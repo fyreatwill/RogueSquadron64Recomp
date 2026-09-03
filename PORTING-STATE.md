@@ -135349,3 +135349,35 @@ ORIGIN: writers are `loadNamedTextureDescriptor` (`rs_malloc` of
 `0x60($sp)`; `load_asset` of `+0x10`), `allocTextRenderTarget`
 (`rs_malloc` of `0x38($sp)`), and `bridgeLoadShipBlueprints`
 (`load_asset` of `$s1`). No mitigation was added.
+
+## Session 3610 (2026-09-03) — audited remaining texture-scratch rs_free class
+
+Performed the planned static census of every generated original
+`jal rs_free` in `loadBackdropAsset`, `initCinematicSceneAssets`,
+and `buildPlayerCraftAssetTemplate`. Backdrop scratch `0x60($sp)`
+is `rs_malloc` at `0x800AE270` after a 0x34-byte memset;
+`0x800AE468` frees that store. Backdrop `+0x10` is the
+`load_asset` result stored at `0x800ADFF0`; `0x800AE4E0` frees it
+and `0x800AE4E8` NULLs the word. Cinematic scratch `0x38($sp)` is
+the `rs_malloc` at `0x800AE718` overwriting a ROM template first
+word; `0x800AE778` frees that store. Craft scratch `0x38($sp)` is
+the `rs_malloc` at `0x800639B0` overwriting a ROM template first
+word; `0x800639E4` frees that store. Callers of the backdrop
+descriptor (`setupCutsceneLevel`) store `$v0` and pass it to
+`getCinematicStateSubObject`, which consumes `+0xC`, not `+0x10`.
+`cinematicInitializer` keeps `$s3` and loads `+0xC`.
+`initPlayerSlotAnimationChannelFull` stores the returned `$s1`
+object, not the scratch. `registerHmtTextureInTable` does not
+`jal rs_free` of these pointers. Sequential double-free of stack
+scratch is blocked by rebuild-before-next-call; `+0x10` is NULLed.
+This selects H-NextClassComplete. H-NextClassGap is refuted at
+static scope. Runtime allocator/lifetime legitimacy remains
+unproven, matching s3586–s3609. No build, run, guard, or
+mitigation was performed. Soak-queue tail added no post-3577
+result. Evidence is recorded in
+`docs/M3-S3610-TEXTURE-SCRATCH-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `loadBackdropAsset` (`rs_malloc` of
+`0x60($sp)`; `load_asset` of `+0x10`), `initCinematicSceneAssets`
+(`rs_malloc` of `0x38($sp)`), and `buildPlayerCraftAssetTemplate`
+(`rs_malloc` of `0x38($sp)`). No mitigation was added.
