@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3626 (2026-09-03).
+notes are linked below. Updated for session 3627 (2026-09-03).
 
 ## Current state
 
@@ -76,21 +76,22 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `cinematicSplineWalkerNpcHandler` nested `rs_free`,
    `loadSkyHorizonHob` stack-scratch `rs_free`,
    `freeEffectAssetBuffers` globals `rs_free`,
-   `loadExplosionTextures` `load_asset` `rs_free`, and
-   `loadAndRelocateAsset` `load_asset` `rs_free` as complete.
-   Session 3626 closed `0x800555C4`: `$s1` is the matching
-   `load_asset` `rs_malloc`, never stored. The 8-iter walk
-   plus `0x20`/`0x24($s1+4)` stores relocate interior words
-   into that buffer; `registerHmtTextureInTable` copies
-   pixels and keeps a texture id. Only `0x800555C4`
-   receives the pointer. Ten generated callers pass `$a1=0`
-   and store the returned halfword. Runtime allocator/DMA
+   `loadExplosionTextures` `load_asset` `rs_free`,
+   `loadAndRelocateAsset` `load_asset` `rs_free`, and
+   `loadSpriteSheetTextureFrames` inlined-malloc `rs_free`
+   as complete.
+   Session 3627 closed `0x80055450`: `$s2` is the matching
+   inlined `load_asset` `rs_malloc`, never stored. The 8-iter
+   walk plus `0x20`/`0x24($s2+4)` stores relocate interior
+   words into that buffer; the frame loop copies pixels and
+   keeps texture-id halfwords. Only `0x80055450` receives
+   the pointer. One generated caller. Runtime allocator/DMA
    legitimacy remains unproven. See
-   [M3-S3626-LOAD-AND-RELOCATE-ASSET-RS-FREE-AUDIT.md](M3-S3626-LOAD-AND-RELOCATE-ASSET-RS-FREE-AUDIT.md).
+   [M3-S3627-LOAD-SPRITE-SHEET-TEXTURE-FRAMES-RS-FREE-AUDIT.md](M3-S3627-LOAD-SPRITE-SHEET-TEXTURE-FRAMES-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `loadSpriteSheetTextureFrames` `0x80055450`
-   (`$s2` = inlined `rs_malloc` at `0x8005524C`). Do not add
-   a pointer guard without a concrete invalid writer.
+   M3 unit is `freeTxtFile` `0x800558F8`/`0x80055910`
+   (`*0x8009ECA0` / `*0x8009ECA8`). Do not add a pointer
+   guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -108,8 +109,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `loadAndRelocateAsset`: `$s1` is `load_asset`'s `rs_malloc`; relocate stores write into that buffer. |
-| H-NextClassGap | Refuted for this class: no free of a non-allocator value; only `0x800555C4` receives the pointer. |
+| H-NextClassComplete | Selected for `loadSpriteSheetTextureFrames`: `$s2` is the inlined `load_asset` `rs_malloc`; relocate stores write into that buffer. |
+| H-NextClassGap | Refuted for this class: no free of a non-allocator value; only `0x80055450` receives the pointer. |
 | H-NextClassUnevaluable | Not selected: one original heap-pointer writer, never stored. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
@@ -211,6 +212,16 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3627 — loadSpriteSheetTextureFrames inlined-malloc rs_free:**
+  `$s2` is the matching inlined `load_asset` `rs_malloc`.
+  Never stored. The 8-iter walk plus `0x20`/`0x24($s2+4)`
+  stores relocate interior words into the buffer; the frame
+  loop `sprintf`/`rs_strcpy`/`registerHmtTextureInTable`
+  copies pixels and keeps texture-id halfwords. One
+  generated caller; one `jr $ra` after the free. Format
+  jump table and `blez $s4` still reach the free. This
+  selects `H-NextClassComplete`. See
+  [M3-S3627-LOAD-SPRITE-SHEET-TEXTURE-FRAMES-RS-FREE-AUDIT.md](M3-S3627-LOAD-SPRITE-SHEET-TEXTURE-FRAMES-RS-FREE-AUDIT.md).
 - **3626 — loadAndRelocateAsset load_asset rs_free:**
   `$s1` is the matching `load_asset` `rs_malloc`. Never
   stored. The 8-iter walk plus `0x20`/`0x24($s1+4)` stores
@@ -540,6 +551,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3627-LOAD-SPRITE-SHEET-TEXTURE-FRAMES-RS-FREE-AUDIT.md](M3-S3627-LOAD-SPRITE-SHEET-TEXTURE-FRAMES-RS-FREE-AUDIT.md)
 - [M3-S3626-LOAD-AND-RELOCATE-ASSET-RS-FREE-AUDIT.md](M3-S3626-LOAD-AND-RELOCATE-ASSET-RS-FREE-AUDIT.md)
 - [M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md](M3-S3625-LOAD-EXPLOSION-TEXTURES-RS-FREE-AUDIT.md)
 - [M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md](M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md)

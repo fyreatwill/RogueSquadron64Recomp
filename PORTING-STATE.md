@@ -135814,3 +135814,35 @@ ORIGIN: writer of `$s1` is `loadAndRelocateAsset`
 legitimate allocator return. Relocate stores write interior
 pointers into that buffer, not a second heap-pointer source.
 No mitigation was added.
+
+## Session 3627 (2026-09-03) — audited loadSpriteSheetTextureFrames inlined-malloc rs_free
+
+Performed the planned static census of `loadSpriteSheetTextureFrames`
+`jal rs_free` at `0x80055450` (`$a0` = `$s2` = inlined
+`get_asset_size_extra` / `rs_malloc` return copied at
+`0x8005524C`). `$s2` is the matching inlined `load_asset`
+`rs_malloc`; it is never stored to a global, object, or live
+stack word (only the DMA dest arg at `0x14($sp)` and the
+callee-saved spill of the *old* `$s2` at `0x48($sp)`). The
+8-iter walk at `$s2+4` plus the `0x20`/`0x24($a1)` stores
+relocate interior words *into* that buffer. The frame loop
+`sprintf`/`rs_strcpy`/`registerHmtTextureInTable` copies
+pixels and publishes texture-id halfwords into the caller's
+array; none `jal rs_free` of `$s2` or `$s2+4`.
+`setupAssetDma`'s slot `+0x24` dest is the same transient
+fill target `load_asset` uses; `teardownAssetDma` does not
+free it. One generated caller (`initHudStruct` `0x800C0910`)
+keeps only those halfwords. One `jr $ra` after the free.
+The format jump table and `blez $s4` skip still reach the
+free. This selects H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime allocator/DMA/relocate-offset
+legitimacy remains unproven, matching s3586–s3626. No build,
+run, guard, or mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is recorded in
+`docs/M3-S3627-LOAD-SPRITE-SHEET-TEXTURE-FRAMES-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `$s2` is `loadSpriteSheetTextureFrames`
+inlined `rs_malloc` at `0x8005524C` (the `load_asset` body).
+The value is a legitimate allocator return. Relocate stores
+write interior pointers into that buffer, not a second
+heap-pointer source. No mitigation was added.
