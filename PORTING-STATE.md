@@ -136090,3 +136090,30 @@ ORIGIN: writers are `allocAnimationPhasePool`
 `loadAssetIntoNewSlot` `0x80054970` (converted-buffer
 `rs_malloc`). Each value is a legitimate constructor
 return or NULL. No mitigation was added.
+
+## Session 3635 (2026-09-03) — audited loadAssetIntoNewSlot rs_free of $s6 DMA scratch
+
+Performed the planned static census of
+`loadAssetIntoNewSlot` `jal rs_free` at `0x800549E4`
+(`$a0` = `$s6` = matching `get_asset_size_extra`
+`rs_malloc` at `0x800548A8`, flags-0). `$s6` is never
+stored to a global. `$s3` is the walk alias; interior
+`full_header_image_offset_convert` stores die with the
+buffer. `0x14($sp)` is the `setupAssetDma` dest argument
+and is torn down before this free. Slot `+0x0` is a
+different converted-buffer malloc (closed s3634). Return
+is `$s5` (slot index); twelve generated callers store
+that halfword and do not free `$s6`. Zero overlay lookup.
+One `jr $ra`. The other six `funcs_11.c` `jal rs_free`
+sites do not load this `$s6`. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static
+scope. Runtime allocator legitimacy remains unproven,
+matching s3586–s3634. No build, run, guard, or
+mitigation was performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer is `loadAssetIntoNewSlot` `0x800548A8`
+(`get_asset_size_extra` `rs_malloc`, flags-0). The value
+is a legitimate constructor return or NULL. No mitigation
+was added.

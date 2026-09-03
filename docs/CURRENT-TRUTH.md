@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3634 (2026-09-03).
+notes are linked below. Updated for session 3635 (2026-09-03).
 
 ## Current state
 
@@ -86,17 +86,20 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `freeAllHobFiles` slot `+0x8` `rs_free`,
    `loadAssetAndIterateSubchunks` `$s6` `rs_free`, and
    `freeAnimationPhasePool` slot `+0x0` / `0x80137C84`
-   `rs_free` as complete.
-   Session 3634 closed `0x80054AC8` / `0x80054AEC`:
-   `0x80137C84` is the matching `allocAnimationPhasePool`
-   `rs_malloc`; slot `+0x0` is the matching
-   `loadAssetIntoNewSlot` converted-buffer `rs_malloc`.
-   The `0xC000` `+0x6` overlay does not write `+0x0`.
-   Runtime allocator legitimacy remains unproven. See
-   [M3-S3634-FREE-ANIMATION-PHASE-POOL-RS-FREE-AUDIT.md](M3-S3634-FREE-ANIMATION-PHASE-POOL-RS-FREE-AUDIT.md).
+   `rs_free`, and `loadAssetIntoNewSlot` `$s6` DMA
+   scratch `rs_free` as complete.
+   Session 3635 closed `0x800549E4`: `$s6` is the matching
+   `get_asset_size_extra` `rs_malloc` (flags-0). Never
+   stored to a global. `$s3` is the walk alias; interior
+   relocate stores die with the buffer. Slot `+0x0` is a
+   different converted-buffer malloc (closed s3634).
+   Return is `$s5`, not `$s6`. Twelve generated callers;
+   zero overlay lookup. One `jr $ra`. Runtime allocator
+   legitimacy remains unproven. See
+   [M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md](M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `loadAssetIntoNewSlot` `0x800549E4` (`$s6`
-   DMA scratch). Do not add a pointer guard without a
+   M3 unit is `attachedMeshOverlayNpcHandler` `0x80054344`
+   (`0x1C($s0)`). Do not add a pointer guard without a
    concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -115,9 +118,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `freeAnimationPhasePool`: pool base and slot `+0x0` are matching `rs_malloc` stores; one destructor. |
+| H-NextClassComplete | Selected for `loadAssetIntoNewSlot` `$s6`: matching flags-0 `rs_malloc`; one destructor; return is the slot index. |
 | H-NextClassGap | Refuted for this class: no free of a non-allocator or already-freed value. |
-| H-NextClassUnevaluable | Not selected: one pool identity and one converted-buffer identity. |
+| H-NextClassUnevaluable | Not selected: one DMA-buffer identity and one allocator store. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -218,6 +221,15 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3635 — loadAssetIntoNewSlot rs_free of $s6:**
+  `$s6` is the matching `get_asset_size_extra`
+  `rs_malloc` (flags-0). Never stored to a global.
+  `$s3` is the walk alias; interior relocate stores die
+  with the buffer. Slot `+0x0` is a different converted-
+  buffer malloc (closed s3634). Return is `$s5`, not
+  `$s6`. Twelve generated callers; zero overlay lookup.
+  One `jr $ra`. This selects `H-NextClassComplete`. See
+  [M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md](M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md).
 - **3634 — freeAnimationPhasePool rs_free of slot +0x0 /
   0x80137C84:** `0x80137C84` is the matching
   `allocAnimationPhasePool` `rs_malloc(count*28, 0)`.
@@ -637,6 +649,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md](M3-S3635-LOAD-ASSET-INTO-NEW-SLOT-RS-FREE-AUDIT.md)
 - [M3-S3634-FREE-ANIMATION-PHASE-POOL-RS-FREE-AUDIT.md](M3-S3634-FREE-ANIMATION-PHASE-POOL-RS-FREE-AUDIT.md)
 - [M3-S3633-LOAD-ASSET-ITERATE-SUBCHUNKS-RS-FREE-AUDIT.md](M3-S3633-LOAD-ASSET-ITERATE-SUBCHUNKS-RS-FREE-AUDIT.md)
 - [M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md](M3-S3632-FREE-ALL-HOB-FILES-RS-FREE-AUDIT.md)
