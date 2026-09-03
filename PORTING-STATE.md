@@ -135406,3 +135406,28 @@ Soak-queue tail added no post-3577 result. Evidence is recorded in
 ORIGIN: writers are `hangarLoadShadows` (`load_asset` of `$s4`) and
 `loadFontAsset` (`load_asset` of `$s0` per glyph). No mitigation was
 added.
+
+## Session 3612 (2026-09-03) — audited remaining loadCharTextureSet DMA-array rs_free
+
+Performed the planned static census of every generated original
+`jal rs_free` in `loadCharTextureSet`. The 8-slot stack array at
+`$sp+0xB8` is zeroed at `0x80061560`, then each live slot is
+`sw $v0` at `0x80061604` from `rs_malloc` of `get_asset_size_extra`
+for `fonts/%s%s` (`_mm%ld` suffix when `$s2!=0`). `0x80061910`
+walks all 8 words, skips NULL, frees, and `sw $zero`. Helpers
+(`get_asset_size_extra`, `findAssetAcrossSegments`, `setupAssetDma`,
+`teardownAssetDma`, `zmemcpy`, `registerHmtTextureInTable`,
+`sprintf`) do not `jal rs_free` of these pointers. Callers do not
+keep the array. Sequential double-free is blocked by the post-free
+NULL and by zero-init on the next frame. A `0x1D($s4)>8` overflow
+would store past `$sp+0xD4`, outside the 8-word free walk, and is
+not a second pointer source for the freed slots. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static scope.
+Runtime allocator/lifetime legitimacy remains unproven, matching
+s3586–s3611. No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3612-LOADCHAR-DMA-ARRAY-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `loadCharTextureSet` zero-init of `$sp+0xB8`
+and its DMA-loop `rs_malloc` stores into those 8 words. No
+mitigation was added.
