@@ -135705,3 +135705,31 @@ ORIGIN: writer of `+0xF00` is `loadTopCloudsAsset`
 `rs_malloc((chunk_count+1)<<1)` at `0x80055014` with `$a2=0`.
 Both values are legitimate allocator returns. No mitigation
 was added.
+
+## Session 3623 (2026-09-03) — audited loadSkyHorizonHob stack-scratch rs_free
+
+Performed the planned static census of `loadSkyHorizonHob`
+`jal rs_free` at `0x8005B350` (`$a0 = 0x84($sp)`) and
+`0x8005B364` (`$a0 = 0x0($s0)` walking `$sp+0x10`). The
+function is `0x8005AB34`..`0x8005B3A4` with one generated
+caller (`cinematicSplineWalkerNpcHandler` `0x8005BE28`) and
+one `jr $ra`. The 16-word array is filled by a 16-iter
+`rs_malloc((0xC($s6)<<1), 0)` at `0x8005ABDC`; fill/work
+loops load those slots as buffer bases and `sh` into the
+buffers, and never `sw` a second pointer. `L_8005AEEC`
+always `rs_malloc`s `$s4&0xFFFF` into `0x84($sp)` (size 0
+when `0xC($s6)==0`). The epilogue frees the packed buffer
+then each of the 16 slots once. No other `jal rs_free`
+receives either pointer. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/lifetime legitimacy remains unproven, matching
+s3586–s3622. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result.
+Evidence is recorded in
+`docs/M3-S3623-LOAD-SKY-HORIZON-HOB-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `0x84($sp)` is `loadSkyHorizonHob`
+`rs_malloc($s4&0xFFFF)` at `0x8005AEF4`; writer of
+`$sp+0x10[i]` is `loadSkyHorizonHob`
+`rs_malloc((0xC($s6)<<1))` at `0x8005ABDC`. Both values are
+legitimate allocator returns. No mitigation was added.
