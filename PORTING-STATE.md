@@ -136305,3 +136305,41 @@ ORIGIN: writers of these four words are
 are the matching allocator returns and are
 legitimate grid-cell / table buffers. No
 mitigation was added.
+
+## Session 3641 (2026-09-03) — audited teardownGridLayerWorker rs_free of *0x80137614
+
+Performed the planned static census of
+`teardownGridLayerWorker` `jal rs_free` at
+`0x800495C0` (`$a0` = `*0x80137614`). The only
+original store is the flags-0
+`rs_malloc(count*12, 0)` result in
+`loadLevelTextureCache` at `0x80048180`. Interior
+table halfwords, the 0x136C scratch `$s0` (closed
+s3639), worker `0x80137A40`, DMA `0x80137A48`, and
+BSS `0x80137620` are different identities.
+Incoming `$a0` is a reserved-size constant
+(`0x1000` / `0x5DC0`). Type `0xA` skip is paired
+on `initMission` / `load_cutscene` /
+`teardownAnimatedMapGridLayer`. Consumers
+(`buildGridCellAdjacencyTable`,
+`processGridCellByDistance`,
+`recycleGridCellToFreeList`) load the word as a
+table base and do not `jal rs_free`. One
+destructor via two route wrappers (mission
+`mainGameLoop` `0x8003E2C4` / `0x8003E388` and
+cinematic shutdown). Zero overlay lookup; one
+`jr $ra`. No NULL skip or post-free NULL.
+`funcs_10.c` `jal rs_free` is exhausted. This
+selects H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime allocator
+legitimacy remains unproven. No build, run,
+guard, or mitigation was performed. Soak-queue
+tail added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `0x80137614` is
+`loadLevelTextureCache` `0x80048180` (flags-0
+`rs_malloc(count*12, 0)` return). That stored
+value is the matching allocator return and is a
+legitimate count table. No mitigation was added.

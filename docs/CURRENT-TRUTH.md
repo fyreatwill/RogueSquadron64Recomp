@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3640 (2026-09-03).
+notes are linked below. Updated for session 3641 (2026-09-03).
 
 ## Current state
 
@@ -126,10 +126,21 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `teardownAnimatedMapGridLayer`; type-`0xA`
    skip is paired. No guard was added. See
    [M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md](M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md).
+   Session 3641 selected Complete for
+   `teardownGridLayerWorker`: matching flags-0
+   `rs_malloc(count*12, 0)` of `0x80137614`.
+   Consumers load it as a table base and do not
+   `jal rs_free`. One destructor via
+   `teardownAnimatedMapGridLayer`; type-`0xA`
+   skip is paired. No guard was added.
+   `funcs_10.c` `jal rs_free` is exhausted. See
+   [M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md](M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `teardownGridLayerWorker` `0x800495C0`
-   (`*0x80137614`). Do not add a pointer guard
-   without a concrete invalid writer.
+   M3 unit is `teardownAnimatedMapGridLayer`
+   remaining `rs_free` of `*0x80136DC8` /
+   `*0x80136DCC` / `*0x80136FC4` /
+   `*0x80136FCC` / `*0x80136E1C`. Do not add a
+   pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -147,9 +158,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `freeGridCellBuffers`: four matching flags-0 `rs_malloc` stores, one destructor. |
-| H-NextClassGap | Refuted for these four words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: four pointer identities and one allocator store each. |
+| H-NextClassComplete | Selected for `teardownGridLayerWorker`: matching flags-0 `rs_malloc(count*12, 0)` of `0x80137614`, one destructor. |
+| H-NextClassGap | Refuted for this word. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: one pointer identity and one allocator store. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -250,6 +261,20 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3641 — teardownGridLayerWorker rs_free of
+  *0x80137614:** Matching flags-0
+  `rs_malloc(count*12, 0)` store at
+  `0x80048180`. Interior halfwords, the 0x136C
+  scratch `$s0`, worker/DMA handles, and BSS
+  `0x80137620` are different identities.
+  Consumers load the word as a table base and do
+  not `jal rs_free`. Type `0xA` skip is paired.
+  One destructor via two route wrappers (mission
+  `mainGameLoop` arms and cinematic shutdown).
+  Zero overlay lookup. One `jr $ra`. No NULL skip
+  or post-free NULL. This selects
+  `H-NextClassComplete`. See
+  [M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md](M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md).
 - **3640 — freeGridCellBuffers rs_free of *0x80137A5C /
   *0x80137A54 / *0x80137A4C / *0x80137A68:**
   Four matching flags-0 `rs_malloc` stores in
@@ -743,6 +768,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md](M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md)
 - [M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md](M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md)
 - [M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md](M3-S3639-LOAD-LEVEL-TEXTURE-CACHE-RS-FREE-AUDIT.md)
 - [M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md](M3-S3638-FREE-LEVEL-DAT-BUFFERS-RS-FREE-AUDIT.md)
