@@ -136026,3 +136026,34 @@ ORIGIN: writers are `load_hmt_and_hob` `0x80056D20`
 (`0x68` kept-HOB `rs_malloc`) and `0x80056D18` (zero for
 non-first objects). Each value is a legitimate constructor
 return or a deliberate NULL. No mitigation was added.
+
+## Session 3633 (2026-09-03) — audited loadAssetAndIterateSubchunks rs_free of $s6
+
+Performed the planned static census of
+`loadAssetAndIterateSubchunks` `jal rs_free` at
+`0x8005519C` (`$a0` = `$s6`). The only original
+heap-pointer writers of `$s6` are the flags-4
+`get_asset_size_extra` `rs_malloc` at `0x80054F50` and
+the flags-0 retry at `0x80054F68`. `$s2` is a walk alias;
+interior relocate stores at `$s2+4` / `+0x20` / `+0x24`
+die with the buffer. `sw $s6, 0x14($sp)` is the
+`setupAssetDma` dest, not a second pointer. `$a2` /
+`0x70($sp)` selects the returned index table (caller
+BSS / HUD `rs_malloc(0xF80)` / `(count+1)<<1` malloc)
+and the `0xFFFF` terminator; both arms still
+`rs_free($s6)`. Return is `$s4`, not `$s6`. Eight
+generated callers; zero overlay lookup. None store or
+free `$s6`. `rs_free` itself NULL-skips a failed malloc.
+One `jr $ra`. The other six `funcs_11.c` `jal rs_free`
+sites do not load this `$s6`. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static
+scope. Runtime allocator legitimacy remains unproven,
+matching s3586–s3632. No build, run, guard, or
+mitigation was performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3633-LOAD-ASSET-ITERATE-SUBCHUNKS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `0x80054F50` (flags-4 `rs_malloc`)
+and `0x80054F68` (flags-0 retry). Each value is a
+legitimate constructor return or NULL. No mitigation was
+added.
