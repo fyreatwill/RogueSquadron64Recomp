@@ -1,20 +1,21 @@
-# NEXT work unit — loadDebugAssets $s0 rs_free
+# NEXT work unit — destroyTextureLUTs *0x80128F08 / *0x80128EFC rs_free
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`loadDebugAssets` `jal rs_free`
-at `0x80024824` (`$a0` = `$s0`). Enumerate
-every original load/store of that `$s0`
-(including the matching
-`get_asset_size_extra` `rs_malloc` at
-`0x80024750` with `$a1 = 8`, every later
-store, and whether any caller holds the
-buffer) and every `jal rs_free` that can
-receive that pointer. Classify other
-`$s0` / DMA-dest loads as consumers or as
-a second free.
+`destroyTextureLUTs` `jal rs_free`
+at `0x8001E344` (`$a0` = `*0x80128F08`) and
+the sibling `jal rs_free` at `0x8001E354`
+(`$a0` = `*0x80128EFC`). Enumerate
+every original load/store of those two
+words (including the matching
+allocator stores, every later store, and
+whether any caller holds the buffers) and
+every `jal rs_free` that can receive those
+pointers. Classify other loads as consumers
+or as a second free.
 Do not repeat the closed
+loadDebugAssets `$s0`,
 reinsertNpcIntoSortedFreeList `0x4($npc)`,
 freeNpcSlotArray `*0x80130BB0`,
 destroyNpcContextArrays `*0x80130BC0`/`*0x80130BC4`/
@@ -61,12 +62,17 @@ invalid writer/value is identified; any mitigation
 needs an ORIGIN line naming the writer and assessing
 legitimacy. Do not land a skip-path NULL store for
 the s3636 overlay Gap unless this census identifies
-that same writer as this word.
+that same writer as this word. Existing host
+TEXDATA_TABLE_GUARD / TEXDATA_PTR_ARRAY_GUARD
+substitutions at these two loads (s468/s470) are
+not this work unit and must not be treated as an
+original skip.
 
-If this census closes `funcs_7.c` `jal rs_free`,
-the following unit is the next remaining original
-`jal 0x80001C98` in `funcs_6.c` (or the nearest
-earlier `funcs_*.c` that still has one).
+If this census closes both `destroyTextureLUTs`
+sites, the following unit is
+`uploadTextureDescriptorData` `$s1`
+`rs_free` at `0x800232CC` (the last remaining
+original `jal 0x80001C98` in `funcs_6.c`).
 
 Competing hypotheses and discriminator:
 
@@ -79,21 +85,22 @@ Competing hypotheses and discriminator:
 - H-NextClassUnevaluable: mixed object identities or unshared
   writers prevent a complete classification of a pointer source.
 
-Discriminator: the single complete original census of that
-`jal rs_free` site plus every original `lw`/`sw`/`addu`
-of `loadDebugAssets` `$s0` that can become this `$a0`, and every
-`jal rs_free` that can receive that pointer. Include any
-overlay duplicate of `loadDebugAssets` /
-`0x800246E8` if it is a second generated body of the
-same PCs. Select Gap only with a concrete non-allocator
-or already-freed edge; select Complete only when all
-remaining edges are covered; otherwise select Unevaluable.
+Discriminator: the single complete original census of those
+two `jal rs_free` sites plus every original `lw`/`sw`/`addu`
+of `*0x80128F08` and `*0x80128EFC` that can become this
+`$a0`, and every `jal rs_free` that can receive those
+pointers. Include any overlay duplicate of
+`destroyTextureLUTs` / `0x8001E334` if it is a second
+generated body of the same PCs. Select Gap only with a
+concrete non-allocator or already-freed edge; select
+Complete only when all remaining edges are covered;
+otherwise select Unevaluable.
 
 Exact checks before any build:
 
-    grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_7.c
-    grep -n -- 'loadDebugAssets\|0x80024824\|0x800246E8\|0x80024750' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- 'addu        \$s0, \$v0' ../N64Recomp/RecompiledFuncs/funcs_7.c | head
+    grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_6.c
+    grep -n -- 'destroyTextureLUTs\|0x8001E334\|0x8001E344\|0x8001E354\|-0x70F8\|-0x7104' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0x80128F08\|0x80128EFC' ../N64Recomp/RecompiledFuncs/funcs_*.c | head
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`

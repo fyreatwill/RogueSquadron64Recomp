@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3647 (2026-09-03).
+notes are linked below. Updated for session 3648 (2026-09-03).
 
 ## Current state
 
@@ -183,20 +183,20 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    [M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md](M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md).
    Session 3647 selected Complete for
    `reinsertNpcIntoSortedFreeList`
-   `0x4($npc)`: bit `0x4` of `+0x14` owns
-   the opcode-1 flags-0 `rs_malloc` body;
-   this is the only `jal rs_free` of that
-   pointer (NULL skip; no post-free NULL).
-   Bit-clear is the 0x204C interior and is
-   not this free. Opcode 2 frees interiors
-   of the body, not `+0x4`. One generated
-   caller (`destroyNpcSlotByIndex`).
-   `funcs_8.c` `jal rs_free` is exhausted.
+   `0x4($npc)`. Session 3648 selected
+   Complete for `loadDebugAssets` `$s0`:
+   matching `get_asset_size_extra`
+   `rs_malloc($s2, 8)` rebound at
+   `0x80024768`. Never stored. One
+   destructor; `-1` skip is paired.
+   `funcs_7.c` `jal rs_free` is exhausted.
    No guard was added. See
-   [M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md](M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md).
+   [M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md](M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `loadDebugAssets` `$s0`
-   `rs_free` at `0x80024824`. Do
+   M3 unit is `destroyTextureLUTs`
+   `*0x80128F08` / `*0x80128EFC`
+   `rs_free` at `0x8001E344` /
+   `0x8001E354`. Do
    not add a pointer guard without a concrete
    invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
@@ -216,9 +216,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `reinsertNpcIntoSortedFreeList` `0x4($npc)`: matching opcode-1 flags-0 `rs_malloc` of the owned body; one destructor. |
-| H-NextClassGap | Refuted for this word. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: owned vs pooled split is complete; only the owned arm is this free. |
+| H-NextClassComplete | Selected for `loadDebugAssets` `$s0`: matching flags-8 `get_asset_size_extra` `rs_malloc`; one destructor. |
+| H-NextClassGap | Refuted for this register. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: one scratch-buffer identity and one allocator store. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -227,6 +227,22 @@ The current work-unit slug is `m3-next-audio-idiom-audit`.
 Only the latest boundary transitions are repeated here; the append-only ledger
 and evidence notes retain the full history.
 
+- **3648 — loadDebugAssets rs_free of $s0:** `$s0`
+  is the matching `get_asset_size_extra`
+  `rs_malloc($s2, 8)` at `0x80024768`. Never
+  stored to a global. Incoming `$s3` is
+  `*0x8010E008`. The ROM string at
+  `0x80000A48` is overwritten before the free.
+  DMA slot `+0x24` is dest only;
+  `teardownAssetDma` does not `jal rs_free`.
+  `registerHmtTextureInTable` copies pixels and
+  keeps a texture-id halfword at `0x80128F22`.
+  One destructor; `-1` skip is paired. Two
+  generated callers; zero overlay lookup. One
+  `jr $ra`. `funcs_7.c` `jal rs_free` is
+  exhausted. This selects `H-NextClassComplete`.
+  See
+  [M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md](M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md).
 - **3577 — remaining retail zero-fill edge:** retail controls fired and
   `0x800C825C` repeatedly reached `0x800078E0` with `a2=0x80` and changing
   structure pointers, unlike the port's `0x801797B0/0/0x298` tuple. Input
@@ -932,6 +948,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md](M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md)
 - [M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md](M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md)
 - [M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md](M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md)
 - [M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md](M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md)

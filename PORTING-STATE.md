@@ -136580,3 +136580,43 @@ allocator returns and are legitimate owned-body
 pointers. The pooled interior store at
 `0x8003EB48` is not this free. No mitigation was
 added.
+
+## Session 3648 (2026-09-03) — audited loadDebugAssets rs_free of $s0
+
+Performed the planned static census of
+`loadDebugAssets` `jal rs_free` at
+`0x80024824` (`$a0` = `$s0`). `$s0` is
+rebound at `0x80024768` to the matching
+`get_asset_size_extra` `rs_malloc($s2, 8)`
+at `0x80024750`. Flags `8` is the
+heap-search qualifier inside `rs_malloc`
+(`andi 0x88` compared to `8`), not flags-4.
+The pointer is never stored to a global.
+Incoming `$s3` is `*0x8010E008`. The ROM
+string at `0x80000A48` occupies `$s0` only
+before the malloc rebind and is not the
+free. DMA slot `+0x24` holds dest for the
+transfer; `teardownAssetDma` does not
+`jal rs_free` of that word.
+`registerHmtTextureInTable` copies pixels
+and keeps a texture-id halfword at
+`0x80128F22`. One destructor; the
+`findManifestEntryByName == -1` skip is
+paired (no malloc). Two generated callers
+(`mainBootstrapWorker`, `advanceVideoFrame`);
+zero overlay lookup; one `jr $ra`.
+`funcs_7.c` `jal rs_free` is exhausted.
+This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope.
+Runtime allocator legitimacy remains
+unproven. No build, run, guard, or
+mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of the freed register is the
+flags-8 `rs_malloc` store at `0x80024768`.
+That stored value is a matching allocator
+return and is a legitimate DMA-scratch
+pointer. No mitigation was added.
