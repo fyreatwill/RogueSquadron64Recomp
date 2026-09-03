@@ -134970,3 +134970,30 @@ ORIGIN: visible `+0x28..+0x2C` stores originate in
 and render-path descriptor updates; zero initialization is legitimate and
 copied values have identified descriptor sources, while the unmasked
 secondary index is a contract gap, not proof of a bad runtime value.
+
+## Session 3597 (2026-09-02) — audited MusyX voice 0x18-0x24 field family
+
+Performed the planned static census of every generated access to offsets
+`0x18`, `0x1A`, `0x1C`, `0x1E`, `0x20`, `0x22`, and `0x24` in
+`RecompiledFuncs/funcs_24.c`. 81 stores and 81 loads matched; 48 of each
+are `r29` spills. The remaining accesses split across four layouts: the
+`D_801496F8` `0x88`-stride voice-table volume halfwords (init zeros plus
+render truncated-float writes), the `D_80149708/0C` command-list ping-pong
+byte `+0x22` key-on/terminator flag written by mix and read by
+`musyxBuildVoiceCommandList`, the `D_80149750` `0xA10`/`0x50` key-on dest
+slope/pitch words and halfwords, and a sample-descriptor/resample param
+block. `musyxStartVoiceRelease`, `musyxStoreVoiceAdsrParams`, and
+`musyxTriggerVoiceAttack` have no access in this window.
+
+The result selects structural unevaluability, not a concrete invalid
+writer: stores are identified zeros, `0/1` flags, truncated volumes, or
+named copies, while object identity, capacity checks, allocator size, and
+runtime value legitimacy remain open. No build, run, guard, or mitigation
+was performed. Evidence is recorded in
+`docs/M3-S3597-VOICE-18-24-FIELD-AUDIT.md`.
+
+ORIGIN: voice-table halfword writers are `musyxInitVoiceFromSample` (zero)
+and `musyxRenderVoiceSamples` (computed volumes). Command-list byte `+0x22`
+writers are the two `musyxMixActiveVoices` stores. Key-on dest writers are
+`musyxKeyOnVoice`. Those values are legitimate state or copies from
+identified sources; capacity and lifetime remain unproven.

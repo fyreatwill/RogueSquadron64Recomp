@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3596 (2026-09-01).
+notes are linked below. Updated for session 3597 (2026-09-02).
 
 ## Current state
 
@@ -109,6 +109,15 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    writer/value was found. Runtime index, allocator, lifetime, and value
    legitimacy remain unproven. See
    [M3-S3596-VOICE-28-2C-FIELD-AUDIT.md](../scratch/agent/M3-S3596-VOICE-28-2C-FIELD-AUDIT.md).
+   Session 3597 audited `+0x18..+0x24`: the spelling covers the voice-table
+   volume halfwords, the command-list ping-pong `+0x22` flag, the key-on
+   dest slope/pitch fields, and a descriptor/param block. Stores are
+   identified zeros, `0/1` flags, truncated volumes, or named copies; no
+   concrete invalid writer was found. Layout mix and missing capacity
+   checks select structural unevaluability. See
+   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+   The next M3 unit is the `+0x66..+0x74` publication family that render
+   copies these volumes into and that key-on consumes for slope division.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -219,6 +228,13 @@ and evidence notes retain the full history.
   concrete invalid writer/value was found. This selects
   `H-NextClassUnevaluable`. See
   [M3-S3596-VOICE-28-2C-FIELD-AUDIT.md](../scratch/agent/M3-S3596-VOICE-28-2C-FIELD-AUDIT.md).
+- **3597 — MusyX voice `+0x18..+0x24` field audit:** 81 stores and 81 loads
+  were enumerated. Stack spills aside, the offsets belong to the `0x88`
+  voice-table volume halfwords, the command-list ping-pong `+0x22` flag,
+  the `0xA10`/`0x50` key-on dest slope/pitch fields, and a separate
+  descriptor/param block. No concrete invalid writer/value was found.
+  This selects `H-NextClassUnevaluable`. See
+  [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies
@@ -309,6 +325,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md)
 - [M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md](M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md)
 
 - [M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md)
