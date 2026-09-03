@@ -136988,3 +136988,50 @@ into `$s2`. That value is a legitimate
 heap pointer (or NULL on allocator
 failure). It is never published. No
 mitigation was added.
+
+## Session 3657 (2026-09-03) — audited freeManifestSegmentAssets rs_free of 0x40($s0)
+
+Performed the planned static census of
+`freeManifestSegmentAssets` `jal rs_free` at
+`0x80004A0C` (`$a0` = `0x40($s0)` from
+`lw $a0, 0x40($s0)` at `0x80004A08`) and
+the sibling at `0x80004A80`. `$s0` is
+`0x80110A80 + idx*0x50`. The live writer
+is flags-9 `rs_malloc` store at
+`0x80004920`; busy is set at `0x4E`.
+Two mutually exclusive destructors: all
+slots when `$a0 == -1` gated by
+`0x4E==1`, else single-slot. Post-free
+clears `0x4E`, not `0x40`.
+`find_manifest_entry` `0x80003AC8` walks
+the payload as a directory and does not
+`jal rs_free`. ROM name-table `+0x18` is
+0 for both `data` and `dbg_data`; the
+skip that would omit the store does not
+fire. Six generated callers pass the find
+return or leftover `*0x80137CFC`. Zero
+LOOKUP. One overlay entry
+(`section_3_text` rom `0x4554`, size
+`0x118`); not a second generated body.
+Single `jr $ra` at `0x80004AA4`.
+`submitDmaSlot` / `waitDmaSlotComplete` /
+`teardownAssetDma` have zero `jal rs_free`.
+This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope.
+Runtime allocator legitimacy remains
+unproven. The next remaining original
+`jal 0x80001C98` is `funcs_1.c`
+`teardownAssetManifestService` `0x80005000`
+(`*0x80110D50`). No build, run, guard, or
+mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3657-FREE-MANIFEST-SEGMENT-ASSETS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `0x40($s0)` is
+`findManifestEntryByName` `0x80004920`
+storing the flags-9 `rs_malloc` return
+into the DMA-slot payload word. That
+value is a legitimate heap pointer (or
+NULL on allocator failure). No
+mitigation was added.
