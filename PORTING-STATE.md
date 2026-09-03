@@ -135881,3 +135881,40 @@ at `0x80055770` stored at `0x800557A4`. Writer of
 stored at `0x80055838`. Both values are legitimate allocator
 returns. `0x8009ECA4` is an asset handle, not a malloc.
 No mitigation was added.
+
+## Session 3629 (2026-09-03) — audited freeSubtitleOverlay rs_free of *0x80139010
+
+Performed the planned static census of `freeSubtitleOverlay`
+`jal rs_free` at `0x800562CC` (`$a0` = `*0x80139010`).
+The word is the matching `initVoiceSubtitleSystem`
+`rs_malloc(0x20, 0)` store at `0x80055A78`. Every original
+`-0x6FF0` site in `funcs_12.c` uses `lui 0x8014` as its
+base; 31 unique original hits, one store, 30 overlay-field
+loads, one `jal rs_free`. No NULL skip and no post-free
+NULL. Sibling `0x80139014` (`-0x6FEC`) is a slot index
+(`0xA`/`0x4`/`0xB`) consumed by overlay helpers, tick,
+pause-menu, and `resetPlayerSlotChannelTransform`, which
+zeros transform words on the slot object and does not
+`rs_free`. Two init callers (`initSceneForMission`,
+`initMission`); one destructor via two mutually exclusive
+`mainGameLoop` `endMissionCleanup` arms. Cinematic init
+without this destructor leaks the first malloc; that is not
+a second pointer source. Consumers
+(`linkHudNodeAndComputeScreenPos`, `tickVoiceSubtitleDisplay`,
+`setSubtitleOverlayScreenPos`, `setActiveVoiceLine`,
+`clearActiveVoiceLine`) do not `jal rs_free`. The
+`funcs_49.c` `-0x6FF0($zero)` byte is mis-disassembled data,
+not this word. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/scene-pairing legitimacy remains unproven,
+matching s3586–s3628. No build, run, guard, or mitigation
+was performed. Soak-queue tail added no post-3577 result.
+Evidence is recorded in
+`docs/M3-S3629-FREE-SUBTITLE-OVERLAY-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `0x80139010` is `initVoiceSubtitleSystem`
+`rs_malloc(0x20, 0)` at `0x80055A64` stored at `0x80055A78`.
+The value is a legitimate allocator return. Sibling
+`0x80139014` is a slot index, not a malloc. No mitigation
+was added.
+

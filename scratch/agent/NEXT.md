@@ -1,21 +1,22 @@
-# NEXT work unit — freeSubtitleOverlay rs_free
+# NEXT work unit — load_hmt_and_hob rs_free
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`freeSubtitleOverlay` `jal rs_free` at `0x800562CC`
-(`$a0` = `*0x80139010`, `lui $v0, 0x8014` + `-0x6FF0`,
-no NULL skip, no post-free NULL). Enumerate every original
-load/store of that word (including `initVoiceSubtitleSystem`
-`rs_malloc(0x20, 0)` at `0x80055A78` and every overlay
-consumer) and every `jal rs_free` that can receive it. The
-preceding `resetPlayerSlotChannelTransform` of
-`lhu *0x80139014` (`-0x6FEC`) is in scope only as a sibling
-lifetime edge, not as a second `rs_free`. Do not repeat the
-closed freeTxtFile globals, loadSpriteSheetTextureFrames
-inlined-malloc, loadAndRelocateAsset load_asset,
-loadExplosionTextures load_asset, freeEffectAssetBuffers
-globals, loadSkyHorizonHob stack scratch,
+`load_hmt_and_hob` `jal rs_free` at `0x80056798`
+(`$a0` = `$s3`), `0x80056D60` (`$a0` = `0x6C($sp)`, gated
+by `lbu 0x8F($sp)`), and `0x80056D6C` (`$a0` = `0x74($sp)`).
+Enumerate every original load/store of `$s3` / `0x6C($sp)` /
+`0x74($sp)` (including the `get_asset_size_extra`
+`rs_malloc` at `0x80056580` flags-4 / `0x80056598` flags-0
+retry into `$s3`, and every later stack malloc that can
+land in `0x6C`/`0x74`) and every `jal rs_free` that can
+receive those pointers. Do not repeat the closed
+freeSubtitleOverlay `*0x80139010`, freeTxtFile globals,
+loadSpriteSheetTextureFrames inlined-malloc,
+loadAndRelocateAsset load_asset, loadExplosionTextures
+load_asset, freeEffectAssetBuffers globals,
+loadSkyHorizonHob stack scratch,
 cinematicSplineWalkerNpcHandler nested 0xF00/0x2B44,
 spawnCutsceneObjectsFromList 0x6C, NPC allocateAndInit
 destructor, player-craft `+0xBC`, playerAtStUpdate 0xA4/0xBC,
@@ -44,19 +45,19 @@ Competing hypotheses and discriminator:
 - H-NextClassUnevaluable: mixed object identities or unshared
   writers prevent a complete classification of a pointer source.
 
-Discriminator: the single complete original census of that
-`jal rs_free` site plus every original `lw`/`sw` of
-`0x80139010` (`-0x6FF0` from `0x80140000`) and every
-`jal rs_free` that can receive that word. Select Gap only
-with a concrete non-allocator or already-freed edge; select
-Complete only when all remaining edges are covered; otherwise
-select Unevaluable.
+Discriminator: the single complete original census of those
+three `jal rs_free` sites plus every original `lw`/`sw` of
+`$s3`, `0x6C($sp)`, and `0x74($sp)` in `load_hmt_and_hob`
+and every `jal rs_free` that can receive those pointers.
+Select Gap only with a concrete non-allocator or
+already-freed edge; select Complete only when all remaining
+edges are covered; otherwise select Unevaluable.
 
 Exact checks before any build:
 
     grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_12.c
-    grep -n -- 'freeSubtitleOverlay\|initVoiceSubtitleSystem' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- '0x800562CC\|0x80139010\|-0x6FF0' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- 'load_hmt_and_hob' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0x80056798\|0x80056D60\|0x80056D6C\|0x80056580\|0x80056598' ../N64Recomp/RecompiledFuncs/funcs_12.c
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`
