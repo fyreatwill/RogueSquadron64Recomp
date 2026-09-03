@@ -135673,3 +135673,35 @@ tail added no post-3577 result. Evidence is recorded in
 ORIGIN: writer is `spawnCutsceneObjectsFromList` storing
 `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)` at
 cutscene-entry `+0x6C`. No mitigation was added.
+
+## Session 3622 (2026-09-03) — audited cinematicSplineWalkerNpcHandler nested rs_free
+
+Performed the planned static census of
+`cinematicSplineWalkerNpcHandler` opcode-2 `jal rs_free` at
+`0x8005C35C` (`$a0 = 0x2B44(0xF00($s2))`) and `0x8005C368`
+(`$a0 = 0xF00($s2)`). `$s2` is the opcode-1 `rs_malloc(0xF14)`
+body at wrapper `+0x4`. Opcode 1 always zeros `+0xF00` before
+the `0x80130B70` jump table; only case 10 calls
+`loadTopCloudsAsset($s2)`, which stores `rs_malloc(0x2C90)` at
+`0x8005A174` and stores the `loadAssetAndIterateSubchunks`
+return at wrapper `+0x2B44`. That callee `rs_free`s its DMA
+`$s6` internally and, with `$a2=0` (the only path used here),
+returns `rs_malloc((chunk_count+1)<<1)`. Opcode 2 NULL-skips
+on `+0xF00`, then frees the table then the wrapper, with no
+post-free NULL. Inner `wrapper+i*0x5C+0xF00` zeros and
+`0x80112B44` are different words. No other `jal rs_free`
+receives either pointer. `destroyNpcSlotByIndex` sends opcode
+2 once then free-lists the wrapper. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static
+scope. Runtime allocator/lifetime legitimacy remains unproven,
+matching s3586–s3621. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result. Evidence
+is recorded in
+`docs/M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `+0xF00` is `loadTopCloudsAsset`
+`rs_malloc(0x2C90)` at `0x8005A154`; writer of wrapper
+`+0x2B44` is `loadAssetAndIterateSubchunks`
+`rs_malloc((chunk_count+1)<<1)` at `0x80055014` with `$a2=0`.
+Both values are legitimate allocator returns. No mitigation
+was added.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3621 (2026-09-03).
+notes are linked below. Updated for session 3622 (2026-09-03).
 
 ## Current state
 
@@ -72,22 +72,22 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `playerAtStUpdate` `0xA4`/`0xBC` `rs_free`, remaining
    player-craft table `+0xBC` `rs_free`, remaining NPC
    `allocateAndInitCraftNpcContext` destructor `rs_free`, and
-   leftover `spawnCutsceneObjectsFromList` `0x6C` store as
-   complete. Session 3621 closed that leftover: `*0x800B1900
-   + index*0x13C + 0x6C` is the matching
-   `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)`;
-   dispatch loads it for `advanceNpcOnCurvedPath` behind the
-   same `+0x3` bit-`0x4` gate; no `jal rs_free` receives it.
-   `cutsceneActorNpcHandler` `+0x6C` is a different 0x118-byte
-   actor field. All 24 `allocateAndInitCraftNpcContext`
-   callers are now classified. Runtime allocator/lifetime
+   leftover `spawnCutsceneObjectsFromList` `0x6C` store, and
+   `cinematicSplineWalkerNpcHandler` nested `rs_free` as
+   complete. Session 3622 closed that nested pair:
+   `0xF00($s2)` is `loadTopCloudsAsset` `rs_malloc(0x2C90)`
+   on the opcode-1 0xF14 body; `0x2B44` of that wrapper is
+   `loadAssetAndIterateSubchunks` `rs_malloc((chunk_count+1)<<1)`
+   with `$a2=0`. Opcode 2 frees the table then the wrapper
+   behind a NULL skip on `+0xF00`. Jump-table cases other
+   than 10 leave the word zero. No other `jal rs_free`
+   receives either pointer. Runtime allocator/lifetime
    legitimacy remains unproven. See
-   [M3-S3621-SPAWN-CUTSCENE-6C-RS-FREE-AUDIT.md](M3-S3621-SPAWN-CUTSCENE-6C-RS-FREE-AUDIT.md).
+   [M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md](M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `cinematicSplineWalkerNpcHandler`
-   `0x8005C35C`/`0x8005C368` (`0x2B44(0xF00($s2))` then
-   `0xF00($s2)`). Do not add a pointer guard without a
-   concrete invalid writer.
+   M3 unit is `loadSkyHorizonHob` `0x8005B350`/`0x8005B364`
+   (`0x84($sp)` then the 16-word `$sp+0x10` walk). Do not
+   add a pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -105,9 +105,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the leftover spawn `+0x6C` store: the only heap-pointer writer is `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)`; no `jal rs_free` receives it. |
-| H-NextClassGap | Refuted for this class: no free of a non-allocator or already-freed value; handler `+0x6C` is a different 0x118-byte actor field. |
-| H-NextClassUnevaluable | Not selected: the entry is `*0x800B1900 + index*0x13C` and the word has a single original heap-pointer writer. |
+| H-NextClassComplete | Selected for the spline-walker nested frees: `+0xF00` is `rs_malloc(0x2C90)`; wrapper `+0x2B44` is the `$a2=0` index-table malloc. |
+| H-NextClassGap | Refuted for this class: no free of a non-allocator or already-freed value; inner `+0xF00` slot zeros and `0x80112B44` are different words. |
+| H-NextClassUnevaluable | Not selected: both words have a single original heap-pointer writer on the 0xF14 body / 0x2C90 wrapper. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -208,6 +208,15 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3622 — cinematicSplineWalkerNpcHandler nested rs_free:**
+  `0xF00($s2)` is `loadTopCloudsAsset` `rs_malloc(0x2C90)`
+  on the opcode-1 0xF14 body. Wrapper `+0x2B44` is
+  `loadAssetAndIterateSubchunks` `rs_malloc((chunk_count+1)<<1)`
+  with `$a2=0`; the DMA `$s6` is freed inside that callee.
+  Opcode 2 frees the table then the wrapper. Inner
+  `wrapper+i*0x5C+0xF00` zeros and `0x80112B44` are different
+  words. This selects `H-NextClassComplete`. See
+  [M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md](M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md).
 - **3621 — leftover spawnCutsceneObjectsFromList 0x6C store:**
   `*0x800B1900 + index*0x13C + 0x6C` is the matching
   `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)`.
@@ -493,6 +502,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md](M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md)
 - [M3-S3621-SPAWN-CUTSCENE-6C-RS-FREE-AUDIT.md](M3-S3621-SPAWN-CUTSCENE-6C-RS-FREE-AUDIT.md)
 - [M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md](M3-S3620-NPC-ALLOCATE-INIT-DESTRUCTOR-RS-FREE-AUDIT.md)
 - [M3-S3619-PLAYER-CRAFT-BC-RS-FREE-AUDIT.md](M3-S3619-PLAYER-CRAFT-BC-RS-FREE-AUDIT.md)
