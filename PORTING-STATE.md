@@ -135958,3 +135958,37 @@ ORIGIN: writers are `rs_malloc` of the HMT size into `$s3`,
 `rs_malloc` copied to `0x6C($sp)` when flag bit 0 is set.
 Each value is a legitimate allocator return. No mitigation
 was added.
+
+## Session 3631 (2026-09-03) — audited releaseMeshAsset rs_free of $s5
+
+Performed the planned static census of `releaseMeshAsset`
+`jal rs_free` at `0x8005794C` (`$a0` = `$s5` = incoming
+`$a0`). `$s5` is written only by `addu $s5, $a0` (plus
+callee-saved spill). The `lhu 0x8($s5) & 0x1000` gate
+skips the four-slot mesh walk and HOB `+0x3A` decrement.
+`0x8 & 0x4` recycles a `0xB4` slot from the
+`initNpcBookkeepingTables` `rs_malloc(0x4380)` pool at
+`0x801394E8` and jumps past `rs_free`. `lw 0x8 &
+0x10010000 == 0x10000` skips `rs_free` for
+`createMeshInstanceFromSource` (`sh 1, 0x8`). Heap
+`walkMeshdef0List` (`sh 0`) and
+`instantiateNamedMeshInstance` (`sh 0x1001`) reach
+`rs_free($s5)`. Sixty-three generated callers pass those
+constructor returns (NPC `0x30`, player `0x0`, DAT
+`0x0($s0)`, temps, effect-pool `+0x40`, viewer
+`0x34(0x800D00B0)`). `freeJfifDecodeState` `0x30($s2)` is
+a JPEG buffer, not this instance. `funcs_12.c` `jal
+rs_free` other than `0x8005794C` do not load this `$s5`.
+One `jr $ra`. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator legitimacy and HOB pairing with `freeAllHobFiles`
+remain unproven, matching s3586–s3630. No build, run,
+guard, or mitigation was performed. Soak-queue tail added
+no post-3577 result. Evidence is recorded in
+`docs/M3-S3631-RELEASE-MESH-ASSET-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `walkMeshdef0List` pool-pop / heap
+`rs_malloc`, `instantiateNamedMeshInstance` `rs_malloc`,
+and `createMeshInstanceFromSource` `rs_malloc(0xB4)` or
+provided `0x3A20` interior. Each value is a legitimate
+constructor return. No mitigation was added.
