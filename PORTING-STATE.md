@@ -135644,3 +135644,32 @@ is recorded in
 ORIGIN: writer is opcode-1 `allocateAndInitCraftNpcContext`
 `rs_malloc(0x1E4)` to `0x4(wrapper)+field`. No mitigation was
 added.
+
+## Session 3621 (2026-09-03) — audited leftover spawnCutsceneObjectsFromList 0x6C store
+
+Performed the planned static census of the leftover
+`allocateAndInitCraftNpcContext` store with no same-function
+`jal rs_free`: `spawnCutsceneObjectsFromList` `sw $v0, 0x6C($v1)`
+at `0x800A826C`. `$v1 = *0x800B1900 + index*0x13C`. The only
+heap-pointer writer is `allocateAndInitCraftNpcContext`
+`rs_malloc(0x1E4)` at `0x8006BD44`, gated on entry byte `+0x3`
+bit `0x4`. The same-function reload at `0x800A8274` writes
+context `+0x10`. `cutsceneDispatchSlotsByFlag` `0x800A86A4`
+loads that word as `$a3` of `advanceNpcOnCurvedPath` behind
+the same bit-`0x4` gate (`word0 & 0xFF000004 == 0x4`).
+`load_cutscene` memset-zeros the table first. No function both
+loads `0x800B1900` and `jal rs_free`; no `jal rs_free` receives
+this pointer. `cutsceneActorNpcHandler` `0x800447C4` /
+`0x80044B08` write `+0x6C` of a separate `rs_malloc(0x118)`
+actor (terrain-grid return on opcode 4; opcode 2 is epilogue).
+This selects H-NextClassComplete. H-NextClassGap is refuted at
+static scope. Runtime allocator/lifetime legitimacy remains
+unproven, matching s3586–s3620. All 24
+`allocateAndInitCraftNpcContext` callers are now classified.
+No build, run, guard, or mitigation was performed. Soak-queue
+tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3621-SPAWN-CUTSCENE-6C-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer is `spawnCutsceneObjectsFromList` storing
+`allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)` at
+cutscene-entry `+0x6C`. No mitigation was added.
