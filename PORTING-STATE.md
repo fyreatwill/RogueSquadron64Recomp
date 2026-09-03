@@ -136117,3 +136117,38 @@ ORIGIN: writer is `loadAssetIntoNewSlot` `0x800548A8`
 (`get_asset_size_extra` `rs_malloc`, flags-0). The value
 is a legitimate constructor return or NULL. No mitigation
 was added.
+
+## Session 3636 (2026-09-03) — audited attachedMeshOverlayNpcHandler rs_free of 0x1C($s0)
+
+Performed the planned static census of
+`attachedMeshOverlayNpcHandler` `jal rs_free` at
+`0x80054344` (`$a0` = `0x1C($s0)`, two-iter `+0x4` walk
+so the second pass is `0x20($s0)`; `$s0` starts as
+`$s2` = `0x4($s1)` on opcode 2). The only original
+heap-pointer writer of those words is
+`dispatchOverlaySetupByParentAssetName` `rs_malloc(0x80, 0)`
+at `0x80053DBC`. Opcode 1 calls that setup on a non-NULL
+parent mesh. An unmatched parent name (`awing`/`vwing`/
+`xwing`/`ywing`/`snowspeeder`/`falcon`/`tie_inter`/
+`koelsch`/`t16`) stores type `-1` and `bltz`-skips the
+malloc loop without NULLing `0x1C`/`0x20`. A NULL parent
+mesh skips setup and defers opcode 2 via
+`destroyNpcSlotByIndex`. Opcode 2 still frees both words.
+`slotDispatcherInner` carves a 128-byte pool slot at
+wrapper `+0x4` (`$a2=1`) and does not memset it. Sibling
+`freeListEntryPointers` `0x80054620` is the same walk and
+has zero generated callers. Nine `spawnNpcOfType` sites.
+Zero overlay lookup. One `jr $ra`. This selects
+H-NextClassGap. H-NextClassComplete is refuted at static
+scope. Runtime occupancy of the skip path remains unproven.
+No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of a live `0x1C`/`0x20` is
+`dispatchOverlaySetupByParentAssetName` `0x80053DBC`
+(`rs_malloc(0x80, 0)`). On the type-`-1` and NULL-parent
+paths there is no writer this occupancy; the pool carve
+does not zero the slot. Those unwritten values are not
+legitimate heap pointers. No mitigation was added.

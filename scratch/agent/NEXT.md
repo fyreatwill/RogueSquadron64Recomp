@@ -1,18 +1,20 @@
-# NEXT work unit — attachedMeshOverlayNpcHandler rs_free of 0x1C($s0)
+# NEXT work unit — load_full_header_image rs_free of $s1
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`attachedMeshOverlayNpcHandler` `jal rs_free` at
-`0x80054344` (`$a0` = `0x1C($s0)`, two-iter `+0x4`
-walk so the second pass is `0x20($s0)`; `$s0` starts as
-`$s2` = `0x4($s1)` on opcode 2). Enumerate every original
-load/store of those two words (including the matching
-`rs_malloc` if any, every later store that can become this
-`$a0`, and the sibling `freeListEntryPointers`
-`0x80054620` walk of the same `0x1C`/`0x20` pair) and
-every `jal rs_free` that can receive those pointers. Do
-not repeat the closed loadAssetIntoNewSlot `$s6`,
+`load_full_header_image` `jal rs_free` at
+`0x800544D8` (`$a0` = `$s1` = matching
+`get_asset_size_extra` `rs_malloc` at `0x80054428`,
+flags-0; DMA dest then `sh` a halfword at `0x80137C70`
+in the delay slot of the free). Enumerate every original
+load/store of `$s1` (including the DMA dest, every later
+store that can become this `$a0`, and whether any caller
+holds the buffer) and every `jal rs_free` that can receive
+that pointer. Do not repeat the closed
+attachedMeshOverlayNpcHandler `0x1C`/`0x20` (Gap, s3636;
+sibling `freeListEntryPointers` unreferenced),
+loadAssetIntoNewSlot `$s6`,
 freeAnimationPhasePool slot `+0x0` / `0x80137C84`,
 loadAssetAndIterateSubchunks `$s6`, freeAllHobFiles slot
 `+0x8`, releaseMeshAsset `$s5`, load_hmt_and_hob
@@ -36,7 +38,9 @@ remaining-indexer, `-0x6908` non-a0, release/fade,
 mix-table, pan-input, or hangar-Y audits. Do not change
 runtime code unless a concrete invalid writer/value is
 identified; any mitigation needs an ORIGIN line naming the
-writer and assessing legitimacy.
+writer and assessing legitimacy. Do not land a skip-path
+NULL store for the s3636 overlay Gap unless this census
+identifies that same writer as this `$s1`.
 
 Competing hypotheses and discriminator:
 
@@ -50,10 +54,10 @@ Competing hypotheses and discriminator:
   writers prevent a complete classification of a pointer source.
 
 Discriminator: the single complete original census of that
-`jal rs_free` site plus every original `lw`/`sw`/`addu` of
-`0x1C($s0)` / `0x20($s0)` on the `0x4($s1)` object and
-every caller-side store that can become this `$a0`, and
-every `jal rs_free` that can receive those pointers.
+`jal rs_free` site plus every original `lw`/`sw`/`addu`
+of `$s1` in `load_full_header_image` and every caller-side
+store that can become this `$a0`, and every `jal rs_free`
+that can receive that pointer.
 Select Gap only with a concrete non-allocator or
 already-freed edge; select Complete only when all remaining
 edges are covered; otherwise select Unevaluable.
@@ -61,8 +65,8 @@ edges are covered; otherwise select Unevaluable.
 Exact checks before any build:
 
     grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_11.c
-    grep -n -- 'attachedMeshOverlayNpcHandler' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- '0x80054344\|0x80054620\|0x1C(\$s0)' ../N64Recomp/RecompiledFuncs/funcs_11.c
+    grep -n -- 'load_full_header_image' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0x800544D8\|0x80054428\|0x80054444' ../N64Recomp/RecompiledFuncs/funcs_11.c
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`
