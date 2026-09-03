@@ -33,15 +33,16 @@ route/configuration issue; do not force `0x800B0934`.
 Step 3 is parked at exact DMA ordering: the source-buffer oracle
 boundary is unavailable (s3584), not disproven. M3 is limited to
 idiom-class audits; the generated `jal rs_free` census is closed through
-`funcs_7.c` and all of `funcs_6.c`, with one remaining Gap (s3636 overlay
+`funcs_7.c`, all of `funcs_6.c` / `funcs_4.c` / `funcs_2.c`, and
+`processAssetLoadStep` `0x48($s0)`, with one remaining Gap (s3636 overlay
 `0x1C`/`0x20`). M4 hangar/512 Y=0x8000 is
 not live on the first hangar capture. See `CURRENT-TRUTH.md`.
 
-**Current handoff (s3651):** M5 Step 3 source-buffer identity is
+**Current handoff (s3655):** M5 Step 3 source-buffer identity is
 `0x800078EC` (`rs_memset`) with a retail-versus-port stored-value
 divergence; exact DMA order has no identifier in the current oracle.
 While that stays parked, the next unit is the M3 census of
-`freeRenderSubsystemResources` `*0x8011A444` at `0x80018668`. The
+`findManifestEntryByName` `$s2` at `0x8000490C`. The
 generated-symbol sweep stays last. Exact live state is in
 `CURRENT-TRUTH.md`. Closed M3 `rs_free` classes are in §56.
 
@@ -4867,11 +4868,11 @@ upstream producer at the entry boundary, and supersedes the broader
 `docs/M5-S3444-STATE-POINTER-PRODUCER.md`, and
 `docs/M5-S3445-STATE-POINTER-ENTRY.md`.
 
-## 56. M3 rs_free / audio-idiom closeout (s3586–s3654)
+## 56. M3 rs_free / audio-idiom closeout (s3586–s3655)
 
 Migrated from `CURRENT-TRUTH.md` during the s3649 maintenance pass. Exact
 per-site writer/consumer tables remain in the `docs/M3-S3586-*.md` through
-`docs/M3-S3653-*.md` notes and `PORTING-STATE.md`. No runtime guard was
+`docs/M3-S3655-*.md` notes and `PORTING-STATE.md`. No runtime guard was
 added for any Complete class; runtime allocator legitimacy stays unproven
 everywhere. Do not re-audit a closed class. Do not add a pointer guard
 without a concrete invalid writer.
@@ -4888,12 +4889,12 @@ without a concrete invalid writer.
 
 Hangar-Y and mix-table were closed in the same window with no invalid writer.
 
-### Destructor / `jal rs_free` census (s3600–s3654)
+### Destructor / `jal rs_free` census (s3600–s3655)
 
 Complete through `funcs_13.c` then `funcs_12.c` / `funcs_11.c` / `funcs_10.c`
 / `funcs_9.c` / `funcs_8.c` / `funcs_7.c` / `funcs_6.c` / `funcs_4.c` /
-all of `funcs_2.c`, except the one Gap below. `funcs_5.c`, `funcs_3.c`,
-and `funcs_0.c` have zero sites.
+all of `funcs_2.c`, plus `processAssetLoadStep` `0x48($s0)`, except the
+one Gap below. `funcs_5.c`, `funcs_3.c`, and `funcs_0.c` have zero sites.
 
 Closed Complete classes, in audit order: unmasked release/fade;
 remaining `0x88`-stride indexers; remaining `-0x6908` non-a0; `-0x6904`
@@ -4927,7 +4928,8 @@ scratch, `freeEffectAssetBuffers` globals, `loadExplosionTextures`
 `freeRenderSubsystemResources` `*0x8011A444` / `*0x801163B4` /
 `*0x801143AC` / `*0x8010E8A8` / `*0x8010E8AC`, `initSaveData` `$s2` /
 `freeSaveDataBuffer` `*0x80112724`, `unregisterServiceWorker` `$s0` /
-`*0x801128D0`.
+`*0x801128D0`, `processAssetLoadStep` `0x48($s0)` /
+`mainEventQueueWorker` `0x8000450C`.
 
 **Gap (s3636, still open):** `attachedMeshOverlayNpcHandler` `0x80054344`
 opcode 2 frees `0x1C`/`0x20` on the pool-carved `0x4($wrapper)` body.
@@ -4940,8 +4942,8 @@ census identifies that same writer. See
 `docs/M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md`.
 
 **Next unit (live in CURRENT-TRUTH / NEXT.md):**
-`processAssetLoadStep` `rs_free` of `0x48($s0)` at `0x80003E7C`
-(first of seven remaining original `jal 0x80001C98` in `funcs_1.c`;
-`funcs_2.c` / `funcs_4.c` are exhausted; `funcs_3.c` / `funcs_5.c` /
-`funcs_0.c` have zero sites). Post-free `sw $zero, 0x48($s0)` at
-`0x80003E8C`.
+`findManifestEntryByName` `rs_free` of `$s2` at `0x8000490C`
+(first of five remaining original `jal 0x80001C98` in `funcs_1.c`;
+`0x80003E7C` and `0x8000450C` closed together as the same
+`0x48($s0)` field; `funcs_2.c` / `funcs_4.c` are exhausted;
+`funcs_3.c` / `funcs_5.c` / `funcs_0.c` have zero sites).

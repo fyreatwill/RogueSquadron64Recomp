@@ -136892,3 +136892,52 @@ return in `$s5` and publishing it to
 value is a legitimate heap pointer
 (or NULL on allocator failure). No
 mitigation was added.
+
+## Session 3655 (2026-09-03) — audited processAssetLoadStep rs_free of 0x48($s0)
+
+Performed the planned static census of
+`processAssetLoadStep` `jal rs_free` at
+`0x80003E7C` (`$a0` = `0x48($s0)` from
+`lw $a0, 0x48($s0)` at `0x80003E78`).
+`$s0` is event-queue slot
+`D_80110D60 + (*0x80111240)*0x74`.
+Live original heap-pointer writers are
+flags-9 `rs_malloc(0x10)` at
+`0x80003EA0`/`0x80003F0C` (`ori 0x8400`)
+and `rs_malloc(0x1000)` at `0x80003FC4`
+(`ori 0x4000`). Type-2 enqueue
+(`pushEventToRingBuffer` `0x80003C88`)
+NULLs the word first. Destructor A
+(`0x80003E7C`) frees the 0x10 staging
+buffer after DMA complete and NULLs at
+`0x80003E8C`. Destructor B
+(`mainEventQueueWorker` `0x8000450C`)
+frees leftover `0x48` when the step
+returns 1: already-NULL after A, or the
+0x1000 inflate input after `inflateEnd`.
+`0x10($s0)` is z_stream `next_in`, not a
+sibling free. Remaining `0x48` loads are
+memcpy/DMA consumers. One generated
+caller (type 2 only). Zero LOOKUP. One
+overlay entry each (`section_3_text`
+rom `0x4964` / `0x4F60` / `0x47CC`); not
+second generated bodies. Single `jr $ra`
+at `0x80004358`. This selects
+H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime
+allocator legitimacy remains unproven.
+The next remaining original
+`jal 0x80001C98` is `funcs_1.c`
+`findManifestEntryByName` `0x8000490C`.
+No build, run, guard, or mitigation was
+performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3655-PROCESS-ASSET-LOAD-STEP-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers of `0x48($s0)` are
+`processAssetLoadStep` `0x80003EA0` /
+`0x80003F0C` / `0x80003FC4` storing the
+flags-9 `rs_malloc` return. Those values
+are legitimate heap pointers (or NULL on
+allocator failure). Type-2 enqueue stores
+NULL. No mitigation was added.
