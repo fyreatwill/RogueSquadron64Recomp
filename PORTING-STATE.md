@@ -135027,3 +135027,30 @@ ORIGIN: command-list halfword writers are `musyxRenderVoiceSamples`
 `musyxStartVoiceRelease`, and `beginVoiceFadeRelease` (`3` and the `+0x5C`
 float). Those values are legitimate state or copies from identified
 sources; capacity and lifetime remain unproven.
+
+## Session 3599 (2026-09-02) — audited MusyX voice 0x5C-0x64 envelope companion
+
+Performed the planned static census of every generated access to offsets
+`0x5C` and `0x64` in `RecompiledFuncs/funcs_23.c` and `funcs_24.c`. 36
+`MEM_[BHW]` matches split across three layouts: voice-table envelope
+floats on `D_801496F8` (stride `0x88`) written by attack/release/fade and
+ticked by `advanceVolumeFadeEnvelope`, command-list sample halfword/word
+fields on the ping-pong records, and the `0x17C` packed-handle word
+already closed in s3586. Two hits are `tickAudioChannel` stack spills.
+
+The envelope writer/consumer chain now spans both files, closing s3598's
+`funcs_23.c` hole. Mix's `+0x0` gate covers init's missing envelope
+stores. Release still uses an unmasked index with no KSEG0 guard; that is
+a missing bound, not a concrete invalid value. No wild constant or
+demonstrably invalid writer was found. Layout mix and missing capacity
+checks select structural unevaluability. No build, run, guard, or
+mitigation was performed. Evidence is recorded in
+`docs/M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md`.
+
+ORIGIN: voice-table `+0x5C`/`+0x64` writers are `musyxTriggerVoiceAttack`
+(zero current, rodata target), `musyxStartVoiceRelease` /
+`beginVoiceFadeRelease` (zero target, copy current to `+0x68`), and
+`advanceVolumeFadeEnvelope` (interpolation, sustain copy, or zero).
+Command-list writers are `musyxRenderVoiceSamples`. Packed-handle writers
+are the s3586 cleanup/publish set. Those values are legitimate state or
+copies from identified sources; capacity and lifetime remain unproven.

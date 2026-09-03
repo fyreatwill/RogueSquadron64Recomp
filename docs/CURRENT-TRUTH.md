@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3598 (2026-09-02).
+notes are linked below. Updated for session 3599 (2026-09-02).
 
 ## Current state
 
@@ -51,82 +51,24 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
    real-audio target path, and do not infer target behavior from it.
 4. M5's exact DMA ordering remains unresolved and unavailable to the current
-   oracle. While it is parked, perform only systematic M3 idiom-class audits;
-   the s3588 `-0x271C` packed voice-handle writer class is structurally closed
-   for writer identity and sentinel/slot provenance, but runtime allocator/
-   lifetime legitimacy remains unproven. Session 3589 found no concrete
-   invalid writer in the `0x4E/0x4F` audio-record/table-address class.
-   Session 3590 completed the source-field writer census for
-   `+0x64`/`+0x58`/`+0x59`: cleanup writers are sentinel/zero stores and no
-   concrete invalid source value was found, but the cross-layout range
-   contract remains unclassified. See
-   [M3-S3590-AUDIO-SOURCE-FIELD-AUDIT.md](M3-S3590-AUDIO-SOURCE-FIELD-AUDIT.md).
-   Session 3591 structurally closed the hangar `0x8000` Y/accumulator idiom:
-   all relevant Factor 5 generated overlays share the `0x670` base, `0x50`
-   record stride, `L_1740` writer, `L_17F0` consumer, and clip gate; no
-   concrete invalid writer/value was found. Runtime value legitimacy remains
-   unproven. See [M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md](M3-S3591-HANGAR-Y-ACCUMULATOR-IDIOM-AUDIT.md).
-   Session 3592 structurally closed the CPU MORT decode/output publication
-   idiom: the requested range has complete bounded filter, delay, lattice,
-   mix, compand, and voice-state publication edges, with no concrete invalid
-   writer/value. Runtime descriptor contents, allocator state, and DMA timing
-   remain unproven. See
-   [M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md](M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md).
+   oracle. While it is parked, perform only systematic M3 idiom-class audits.
+   Sessions 3586–3593 structurally closed packed-handle, allocator-stride,
+   record-field, hangar-Y, MORT publication, mix-table, and pan-input classes
+   with no concrete invalid writer; runtime allocator/lifetime legitimacy
+   remains unproven. Sessions 3594–3598 selected structural unevaluability
+   for mixed-layout families `+0x60`, `+0x30..+0x40`, `+0x28..+0x2C`,
+   `+0x18..+0x24`, and `+0x66..+0x74`. Session 3599 spanned `funcs_23.c` and
+   `funcs_24.c` for envelope companion `+0x5C`/`+0x64`: voice-table envelope
+   floats now have a complete writer/consumer chain including
+   `advanceVolumeFadeEnvelope`, but the same spelling also covers
+   command-list sample fields and the `0x17C` packed handle. No concrete
+   invalid writer was found. See
+   [M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md](M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next M3 unit is the
-   indirect audio mix-table provenance audit: classify every initializer and
-   selector writer for `voice+0x168`/`voice+0x188` before considering any
-   runtime guard. Session 3592 structurally closed this class: `+0x188` is
-   zero-initialized and toggled between two banks; `computeVoicePanCoefficients`
-   writes eight halfwords at `+0x168+(selector<<4)`, and
-   `audioMixStereoBlock8` consumes both banks through eight bounded indirect
-   calls. No concrete invalid writer/base/selector or target was found.
-   Runtime descriptor contents, allocator state, and DMA timing remain
-   unproven. See
-   [M3-S3592-AUDIO-MIX-TABLE-PROVENANCE-AUDIT.md](M3-S3592-AUDIO-MIX-TABLE-PROVENANCE-AUDIT.md).
-   Session 3593 structurally closed the pan-coefficient input and selector
-   provenance class: all three direct callers and their 16-byte source-vector
-   paths are covered; `voice+0x188` is a bounded two-bank toggle with no
-   concrete invalid writer or base. Runtime source contents, allocator state,
-   and DMA timing remain unproven. See
-   [M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md](M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md).
-   The next M3 unit is the highest-information-value remaining audio idiom
-   audit; do not add a pan guard without a new runtime writer discriminator.
-   Session 3594 audited the MusyX voice `+0x60` class. Generated accesses
-   split across channel, envelope, render-voice, and source-descriptor
-   layouts, with word/halfword differences and no complete caller-proven
-   slot bounds. This selects structural unevaluability, not a concrete bad
-   writer, so no guard was added. See
-   [M3-S3594-VOICE-60-FIELD-AUDIT.md](../scratch/agent/M3-S3594-VOICE-60-FIELD-AUDIT.md).
-   Session 3595 audited `+0x30..+0x40`: accesses split across global voice
-   slots, sample/command descriptors, and stack frames, with byte/halfword/
-   word aliases and no complete caller-proven slot bound. This selects the
-   same structural unevaluability boundary; no guard was added. See
-   [M3-S3595-VOICE-30-40-FIELD-AUDIT.md](../scratch/agent/M3-S3595-VOICE-30-40-FIELD-AUDIT.md).
-   Session 3596 audited `+0x28..+0x2C`: accesses split across stack
-   temporaries, source/command descriptors, and global voice slots. The slot
-   writers are identified initialization/copy paths, but the 64-slot bound
-   and secondary unmasked-index contract are not proven; no concrete invalid
-   writer/value was found. Runtime index, allocator, lifetime, and value
-   legitimacy remain unproven. See
-   [M3-S3596-VOICE-28-2C-FIELD-AUDIT.md](../scratch/agent/M3-S3596-VOICE-28-2C-FIELD-AUDIT.md).
-   Session 3597 audited `+0x18..+0x24`: the spelling covers the voice-table
-   volume halfwords, the command-list ping-pong `+0x22` flag, the key-on
-   dest slope/pitch fields, and a descriptor/param block. Stores are
-   identified zeros, `0/1` flags, truncated volumes, or named copies; no
-   concrete invalid writer was found. Layout mix and missing capacity
-   checks select structural unevaluability. See
-   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
-   Session 3598 audited `+0x66..+0x74`: command-list halfwords are copies
-   of voice-table `+0x18..+0x26` consumed by key-on slope division, while
-   the same numeric offsets on `D_801496F8` are the `+0x6D` decode-mode
-   byte and the `+0x68`/`+0x6C` envelope word/phase. No concrete invalid
-   writer was found. Layout mix, missing capacity checks, and envelope
-   consumers living in `funcs_23.c` select structural unevaluability. See
-   [M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md](M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md).
-   The next M3 unit is the voice-table envelope companion `+0x5C`/`+0x64`
-   spanning `funcs_24.c` attack/release/fade writers and
-   `funcs_23.c` `advanceVolumeFadeEnvelope`; do not add an envelope guard
-   without a new runtime writer discriminator.
+   unmasked release/fade voice-table index: classify every caller of
+   `musyxStartVoiceRelease` and `beginVoiceFadeRelease` and the synth-voice
+   `+0x67` byte they pass; do not add an index guard without a concrete
+   out-of-range writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -244,6 +186,14 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3599 — MusyX voice `+0x5C`/`+0x64` envelope companion audit:** 36
+  generated accesses in `funcs_23.c`/`funcs_24.c` split across voice-table
+  envelope floats, command-list sample halfword/word fields, and the
+  `0x17C` packed handle. The envelope writer/consumer chain including
+  `advanceVolumeFadeEnvelope` is now identified; mix's `+0x0` gate covers
+  init's missing envelope stores. No concrete invalid writer/value was
+  found. This selects `H-NextClassUnevaluable`. See
+  [M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md](M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md).
 - **3598 — MusyX voice `+0x66..+0x74` publication audit:** 15 stores, 12
   loads, and 3 `+0x6D` byte reads were enumerated. Command-list halfwords
   are render copies of voice-table volumes consumed by key-on; voice-table
@@ -341,6 +291,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md](M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md)
 - [M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md](M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md)
 - [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md)
 - [M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md](M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md)
