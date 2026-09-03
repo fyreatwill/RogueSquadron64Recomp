@@ -1,23 +1,22 @@
-# NEXT work unit — destroyNpcContextArrays globals rs_free
+# NEXT work unit — freeNpcSlotArray *0x80130BB0 rs_free
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`destroyNpcContextArrays` `jal rs_free`
-at `0x8003FE28` (`$a0` = `*0x80130BC0`),
-`0x8003FE50` (`$a0` = `*0x80130BC4`),
-`0x8003FE6C` (`$a0` = `*0x80130BBC`), and
-`0x8003FE78` (`$a0` = `*0x80130BB8`). Enumerate every
-original load/store of those four words (including the
-matching malloc stores, every later store that can
-become these `$a0`s — including the linked-list
-`0x48($a0)` walk that republishes `0xBC0`/`0xBC4` —
-and whether any caller holds the buffers) and every
-`jal rs_free` that can receive those pointers. Also
-classify sibling `freeNpcSlotArray` `*0x80130BB0`
-at `0x8003FC0C` only if it is the same destructor
-family; otherwise leave it as the following unit.
+`freeNpcSlotArray` `jal rs_free`
+at `0x8003FC0C` (`$a0` = `*0x80130BB0`). Enumerate every
+original load/store of that word (including the
+matching malloc store in `initNpcSlotList` at
+`0x8003E584`, every later store that can become this
+`$a0`, and whether any caller holds the buffer) and
+every `jal rs_free` that can receive that pointer.
+`0x80130BB0` is the 8-byte-stride slot-chain table
+consumed by `findActiveNpcInSlotChain` /
+`destroyNpcSlotByIndex` / spawn walks; classify those
+loads as table-base consumers or as a second free.
 Do not repeat the closed
+destroyNpcContextArrays `*0x80130BC0`/`*0x80130BC4`/
+`*0x80130BBC`/`*0x80130BB8`,
 freeNpcBurstSpawnerTables `*0x80130BD0`/`*0x80130C08`/
 `*0x80130C04`, computeGridTileEdgeAdjacencyMasks `$s1`,
 teardownAnimatedMapGridLayer remaining
@@ -60,7 +59,11 @@ invalid writer/value is identified; any mitigation
 needs an ORIGIN line naming the writer and assessing
 legitimacy. Do not land a skip-path NULL store for
 the s3636 overlay Gap unless this census identifies
-that same writer as one of these four words.
+that same writer as this word.
+
+If this census closes `funcs_9.c` `jal rs_free`,
+the following unit is `reinsertNpcIntoSortedFreeList`
+`0x4($npc)` `rs_free` at `0x8003EC34` (`funcs_8.c`).
 
 Competing hypotheses and discriminator:
 
@@ -73,13 +76,12 @@ Competing hypotheses and discriminator:
 - H-NextClassUnevaluable: mixed object identities or unshared
   writers prevent a complete classification of a pointer source.
 
-Discriminator: the single complete original census of those
-`jal rs_free` sites plus every original `lw`/`sw`/`addu`
-of `0x80130BC0` / `0x80130BC4` / `0x80130BBC` /
-`0x80130BB8` and every caller-side store that can become
-these `$a0`s, and every `jal rs_free` that can receive
-those pointers. Include any overlay duplicate of
-`destroyNpcContextArrays` / `0x8003FDD8` if it is a
+Discriminator: the single complete original census of that
+`jal rs_free` site plus every original `lw`/`sw`/`addu`
+of `0x80130BB0` and every caller-side store that can become
+this `$a0`, and every `jal rs_free` that can receive
+that pointer. Include any overlay duplicate of
+`freeNpcSlotArray` / `0x8003FBF8` if it is a
 second generated body of the same PCs.
 Select Gap only with a concrete non-allocator or
 already-freed edge; select Complete only when all remaining
@@ -88,8 +90,8 @@ edges are covered; otherwise select Unevaluable.
 Exact checks before any build:
 
     grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_9.c
-    grep -n -- 'destroyNpcContextArrays\|0x8003FDD8\|0x8003FE28' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- '0xBC0\|0xBC4\|0xBBC\|0xBB8' ../N64Recomp/RecompiledFuncs/funcs_9.c
+    grep -n -- 'freeNpcSlotArray\|0x8003FBF8\|0x8003FC0C\|initNpcSlotList' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0xBB0' ../N64Recomp/RecompiledFuncs/funcs_8.c ../N64Recomp/RecompiledFuncs/funcs_9.c
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`

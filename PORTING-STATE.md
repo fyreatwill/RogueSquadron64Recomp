@@ -136453,3 +136453,45 @@ ORIGIN: writers are `allocAndInitParticlePool`
 are the matching allocator returns and are
 legitimate pool/table pointers. No mitigation was
 added.
+
+## Session 3645 (2026-09-03) — audited destroyNpcContextArrays rs_free of *0x80130BC0 / *0x80130BC4 / *0x80130BBC / *0x80130BB8
+
+Performed the planned static census of
+`destroyNpcContextArrays` `jal rs_free` at
+`0x8003FE28` / `0x8003FE50` / `0x8003FE6C` /
+`0x8003FE78` (`$a0` = `*0x80130BC0` /
+`*0x80130BC4` / `*0x80130BBC` / `*0x80130BB8`).
+The only original heap-pointer writers are
+`allocNpcContextArrays` flags-0 `rs_malloc(0x2D00, 0)`
+at `0x8003FD7C` (`0xBB8`) and `rs_malloc(0x300, 0)`
+at `0x8003FD90` (`0xBBC`), plus
+`slotDispatcherInner` flags-0 `rs_malloc(0x204C, 0)`
+published as `0xBC0`/`0xBC4` list heads (bit `0x1`
+selects which; alloc zeros both). `0x48` relinks and
+`reinsertNpcIntoSortedFreeList` republish those same
+mallocs. Five spawn consumers load `0xBBC` as a table
+base and do not `jal rs_free`. `0x8003EC34` frees
+`0x4($npc)`, not these words. One destructor via
+`endMissionCleanup`; two mutually exclusive
+`mainGameLoop` arms. Three inits overwrite without
+freeing; menu `initInteractiveSceneContext` without
+this destructor leaks. Zero overlay lookup; one
+`jr $ra`. `0xBC0`/`0xBC4` NULL-skip; `0xBBC`/`0xBB8`
+NULL after. Sibling `freeNpcSlotArray` `*0x80130BB0`
+is a different destructor and is the next unit. This
+selects H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime allocator legitimacy
+remains unproven. No build, run, guard, or mitigation
+was performed. Soak-queue tail added no post-3577
+result. Evidence is recorded in
+`docs/M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `allocNpcContextArrays`
+`0x8003FD7C` (flags-0 `rs_malloc(0x2D00, 0)`),
+`0x8003FD90` (flags-0 `rs_malloc(0x300, 0)`), and
+`slotDispatcherInner` `0x8003EA94` (flags-0
+`rs_malloc(0x204C, 0)`) plus `0x48` relinks of
+those chunk mallocs. Those stored values are the
+matching allocator returns and are legitimate
+pool/table/list-head pointers. No mitigation was
+added.
