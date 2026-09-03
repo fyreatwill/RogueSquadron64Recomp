@@ -135431,3 +135431,31 @@ Soak-queue tail added no post-3577 result. Evidence is recorded in
 ORIGIN: writers are `loadCharTextureSet` zero-init of `$sp+0xB8`
 and its DMA-loop `rs_malloc` stores into those 8 words. No
 mitigation was added.
+
+## Session 3613 (2026-09-03) — audited remaining lookup-table rs_free class
+
+Performed the planned static census of every generated original
+`jal rs_free` in `rebuildActiveDisplayObjectList` and
+`destroyLookupTable`. Rebuild `$a0` is `rs_malloc(0x400)` at
+`0x800644A0` and is never rewritten; `0x800645AC` frees that
+scratch. `lw $s0, 0x0($a0)` is the returned list head, not the
+free argument. `destroyLookupTable` frees `0x0($s0)` then `$s0`,
+matching `allocateSlotTable`'s slots-word store at `0x80064604`
+and its 8-byte header malloc. No generated `jal 0x80064628` or
+`lui`/`ori` of that address exists. Callers store headers at
+`0x800CD668`, `0x800B0AFC`/`0x800B0B00`, `0x800CDCDC`,
+`0x800CF078`/`0x800CF07C`/`0x800CF080`, and `0x800D0360`/
+`0x800D0364`. `findLookupEntryByKey` / `removeLookupTableEntry`
+write slot records, not the slots pointer. `shutdownModelViewer`
+header-word frees are a later class and cannot double-free with
+this unreferenced destructor. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/lifetime legitimacy remains unproven, matching
+s3586–s3612. No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3613-LOOKUP-TABLE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `rebuildActiveDisplayObjectList`'s
+`rs_malloc(0x400)` into `$a0` and `allocateSlotTable`'s header
+malloc plus `sw $v0, 0($s1)` of the slots array. No mitigation
+was added.
