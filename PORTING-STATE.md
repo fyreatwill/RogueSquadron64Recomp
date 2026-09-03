@@ -136264,3 +136264,44 @@ ORIGIN: writer of this `$s0` is
 value is the matching allocator return and is a
 legitimate scratch texture header. No mitigation
 was added.
+
+## Session 3640 (2026-09-03) — audited freeGridCellBuffers rs_free of *0x80137A5C / *0x80137A54 / *0x80137A4C / *0x80137A68
+
+Performed the planned static census of
+`freeGridCellBuffers` `jal rs_free` at
+`0x8004956C` (`$a0` = `*0x80137A5C`), plus sibling
+frees of `*0x80137A54` at `0x8004957C`,
+`*0x80137A4C` at `0x8004958C`, and `*0x80137A68`
+at `0x8004959C`. The only original stores are the
+four flags-0 `rs_malloc` results in
+`allocAndInitGridCellArray`: `n*0xB8` at
+`0x80137A5C`, `12*(10n+1)` at `0x80137A54`,
+`n*4` at `0x80137A4C`, and `200*(n/10)` at
+`0x80137A68`. `0x80137A6C` is an interior split
+of that last buffer, loaded as a table base by
+`buildVisibleTerrainGridAroundCamera`, never
+independently freed. Incoming `$a0` is cell count
+(`getLevelExpansionMemoryBudget` or a cutscene
+halfword). Type `0xA` skip is paired on
+`loadLevelAssets` / `teardownAnimatedMapGridLayer`.
+Consumers load the four words as table bases and
+do not `jal rs_free`. One destructor via two route
+wrappers (mission `mainGameLoop` `0x8003E2C4` /
+`0x8003E388` and cinematic shutdown). Zero overlay
+lookup; one `jr $ra`. Sibling `n*24` at
+`0x80136E1C` and the `0x80137614` count table are
+different identities. This selects
+H-NextClassComplete. H-NextClassGap is refuted at
+static scope. Runtime allocator legitimacy remains
+unproven. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577
+result. Evidence is recorded in
+`docs/M3-S3640-FREE-GRID-CELL-BUFFERS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers of these four words are
+`allocAndInitGridCellArray` `0x80047E90` /
+`0x80048030` / `0x8004804C` / `0x800480CC`
+(flags-0 `rs_malloc` returns). Those stored values
+are the matching allocator returns and are
+legitimate grid-cell / table buffers. No
+mitigation was added.

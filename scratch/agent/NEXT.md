@@ -1,21 +1,19 @@
-# NEXT work unit — freeGridCellBuffers rs_free of *0x80137A5C / *0x80137A54 / *0x80137A4C / *0x80137A68
+# NEXT work unit — teardownGridLayerWorker rs_free of *0x80137614
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of
-`freeGridCellBuffers` `jal rs_free` at
-`0x8004956C` (`$a0` = `*0x80137A5C`), plus the sibling
-frees of `*0x80137A54` at `0x8004957C`, `*0x80137A4C`
-at `0x8004958C`, and `*0x80137A68` at `0x8004959C`.
-Enumerate every original load/store of those four words
-(including the matching `rs_malloc` in
-`allocAndInitGridCellArray`, every later store that can
-become these `$a0`s, and whether any caller holds the
-buffers) and every `jal rs_free` that can receive those
-pointers. Do not repeat the closed
-loadLevelTextureCache `$s0` 0x136C scratch,
-freeLevelDatBuffers `*0x801375D0`/`*0x801375D8`/
-`*0x801375F4`, load_full_header_image `$s1`,
+`teardownGridLayerWorker` `jal rs_free` at
+`0x800495C0` (`$a0` = `*0x80137614`). Enumerate every
+original load/store of that word (including the matching
+`rs_malloc` in `loadLevelTextureCache` at `0x80048180`,
+every later store that can become this `$a0`, and whether
+any caller holds the buffer) and every `jal rs_free` that
+can receive that pointer. Do not repeat the closed
+freeGridCellBuffers `*0x80137A5C`/`*0x80137A54`/
+`*0x80137A4C`/`*0x80137A68`, loadLevelTextureCache `$s0`
+0x136C scratch, freeLevelDatBuffers `*0x801375D0`/
+`*0x801375D8`/`*0x801375F4`, load_full_header_image `$s1`,
 attachedMeshOverlayNpcHandler `0x1C`/`0x20` (Gap, s3636;
 sibling `freeListEntryPointers` unreferenced),
 loadAssetIntoNewSlot `$s6`,
@@ -44,10 +42,8 @@ runtime code unless a concrete invalid writer/value is
 identified; any mitigation needs an ORIGIN line naming the
 writer and assessing legitimacy. Do not land a skip-path
 NULL store for the s3636 overlay Gap unless this census
-identifies that same writer as one of these four words.
-Leave `teardownGridLayerWorker` `*0x80137614` for the
-following unit unless this census proves it is the same
-pointer identity.
+identifies that same writer as this word. After this site,
+`funcs_10.c` `jal rs_free` is exhausted.
 
 Competing hypotheses and discriminator:
 
@@ -60,12 +56,11 @@ Competing hypotheses and discriminator:
 - H-NextClassUnevaluable: mixed object identities or unshared
   writers prevent a complete classification of a pointer source.
 
-Discriminator: the single complete original census of those
-`jal rs_free` sites plus every original `lw`/`sw`/`addu`
-of `0x80137A5C` / `0x80137A54` / `0x80137A4C` /
-`0x80137A68` and every caller-side store that can become
-these `$a0`s, and every `jal rs_free` that can receive
-those pointers.
+Discriminator: the single complete original census of that
+`jal rs_free` site plus every original `lw`/`sw`/`addu`
+of `0x80137614` and every caller-side store that can become
+this `$a0`, and every `jal rs_free` that can receive that
+pointer.
 Select Gap only with a concrete non-allocator or
 already-freed edge; select Complete only when all remaining
 edges are covered; otherwise select Unevaluable.
@@ -73,8 +68,8 @@ edges are covered; otherwise select Unevaluable.
 Exact checks before any build:
 
     grep -n -- 'jal         0x80001C98' ../N64Recomp/RecompiledFuncs/funcs_10.c
-    grep -n -- 'freeGridCellBuffers\|allocAndInitGridCellArray' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    grep -n -- '0x8004956C\|0x8004957C\|0x8004958C\|0x8004959C\|0x80137A5C\|0x80137A54\|0x80137A4C\|0x80137A68' ../N64Recomp/RecompiledFuncs/funcs_10.c
+    grep -n -- 'teardownGridLayerWorker\|loadLevelTextureCache' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    grep -n -- '0x800495C0\|0x80137614\|0x7614' ../N64Recomp/RecompiledFuncs/funcs_10.c
 
 No build or runtime run is expected for this static audit. If
 the census is complete, write a new `docs/M3-S<session>-...md`
