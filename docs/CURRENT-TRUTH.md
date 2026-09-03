@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3646 (2026-09-03).
+notes are linked below. Updated for session 3647 (2026-09-03).
 
 ## Current state
 
@@ -181,9 +181,22 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    not a pointer. `funcs_9.c` `jal rs_free`
    is exhausted. No guard was added. See
    [M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md](M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md).
+   Session 3647 selected Complete for
+   `reinsertNpcIntoSortedFreeList`
+   `0x4($npc)`: bit `0x4` of `+0x14` owns
+   the opcode-1 flags-0 `rs_malloc` body;
+   this is the only `jal rs_free` of that
+   pointer (NULL skip; no post-free NULL).
+   Bit-clear is the 0x204C interior and is
+   not this free. Opcode 2 frees interiors
+   of the body, not `+0x4`. One generated
+   caller (`destroyNpcSlotByIndex`).
+   `funcs_8.c` `jal rs_free` is exhausted.
+   No guard was added. See
+   [M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md](M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `reinsertNpcIntoSortedFreeList`
-   `0x4($npc)` `rs_free` at `0x8003EC34`. Do
+   M3 unit is `loadDebugAssets` `$s0`
+   `rs_free` at `0x80024824`. Do
    not add a pointer guard without a concrete
    invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
@@ -203,9 +216,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `freeNpcSlotArray`: matching flags-0 `rs_malloc(0x4000, 0)` of `0x80130BB0`; one destructor. |
+| H-NextClassComplete | Selected for `reinsertNpcIntoSortedFreeList` `0x4($npc)`: matching opcode-1 flags-0 `rs_malloc` of the owned body; one destructor. |
 | H-NextClassGap | Refuted for this word. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: one pointer identity and matching allocator store. |
+| H-NextClassUnevaluable | Not selected: owned vs pooled split is complete; only the owned arm is this free. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -306,6 +319,24 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3647 — reinsertNpcIntoSortedFreeList
+  rs_free of 0x4($npc):** Bit `0x4` of
+  NPC `+0x14` is spawn-time only. Owned
+  arm: spawn zeros `+0x4`;
+  `slotDispatcherInner` skips; opcode 1
+  stores flags-0 `rs_malloc` at `+0x4`;
+  this site is the only `jal rs_free` of
+  that pointer (NULL skip). Opcode 2
+  frees interiors of the body
+  (`0x38`/`0x230`/`0xF00`), not `+0x4`.
+  Bit-clear arm reconstructs the 0x204C
+  chunk and does not free `+0x4`. One
+  generated caller; zero overlay lookup;
+  one `jr $ra`. `funcs_8.c` `jal rs_free`
+  is exhausted. Sibling `freeNpcSlotArray`
+  `*0x80130BB0` is a different destructor.
+  This selects `H-NextClassComplete`. See
+  [M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md](M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md).
 - **3646 — freeNpcSlotArray rs_free of
   *0x80130BB0:** Matching flags-0
   `rs_malloc(0x4000, 0)` of `0x80130BB0`
@@ -825,25 +856,11 @@ and evidence notes retain the full history.
   invalid writer/value was found. This selects `H-NextClassUnevaluable`.
   See
   [M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md](M3-S3598-VOICE-66-74-PUBLICATION-AUDIT.md).
-- **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
-  callers iterate the two linked-list heads and pass node `+0x8`; the visible
-  constructor stores the generated handle at `+0x8` and copies
-  `voice_record+0x64` to node `+0xC`. The node/layout interpretation is
-  consistent, but the consumer has no local bound check on the copied slot
-  index and its complete writer/lifecycle legitimacy remains unclassified.
-  No guard or runtime change followed. See
-  [M3-S3585-STOP-VOICES-HANDLE-AUDIT.md](M3-S3585-STOP-VOICES-HANDLE-AUDIT.md).
-- **3576 — retail predecessor input:** retail `0x800052C4` reached
-  `0x800078E0` with varied lengths (`0x18`, `0x3C`, `0x208`, `0x4F0`,
-  `0x1008`, `0x8000`), not the port tuple. This selected an observed-edge
-  input divergence.
-- **3573–3575 — entry contract:** port zero-fill arguments were qualified;
-  the retail entry and controls were live, but the first caller watch was
-  not retained. Those runs were unevaluable for parity/order, not evidence of
-  absence.
-- **3571–3572 — transition join:** port nonzero initialization preceded a
-  zero-fill from `0x800078EC`, and the first target source DMA carried zero.
-  Retail independently showed the writer family in the source span.
+- **3571–3576 — source/input boundary:** port zero-fill from
+  `0x800078EC` preceded a zero first target DMA; retail independently
+  reached `0x800078E0` with varied lengths, not the port tuple.
+  Sessions 3573–3575 were unevaluable for parity/order (caller watch
+  not retained). Full notes remain in the evidence index.
 - **3563–3570 — source/output chain:** target image-stage and source-range
   DMAs completed, but payloads were zero; the immediate observed writer was a
   legitimate zero-valued DMA/writeback. No missing dispatch or completion was
@@ -915,6 +932,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md](M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md)
 - [M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md](M3-S3646-FREE-NPC-SLOT-ARRAY-RS-FREE-AUDIT.md)
 - [M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md](M3-S3645-DESTROY-NPC-CONTEXT-ARRAYS-RS-FREE-AUDIT.md)
 - [M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md](M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md)

@@ -136535,3 +136535,48 @@ That stored value is the matching allocator
 return and is a legitimate 0x800-entry slot-table
 pointer. No mitigation was added.
 
+
+## Session 3647 (2026-09-03) — audited reinsertNpcIntoSortedFreeList rs_free of 0x4($npc)
+
+Performed the planned static census of
+`reinsertNpcIntoSortedFreeList` `jal rs_free` at
+`0x8003EC34` (`$a0` = `0x4($npc)`). Bit `0x4` of
+NPC `+0x14` is spawn-time only (fourteen
+`spawnNpcOfType` sites pass `$a2 = 0x4`; no later
+`ori 0x4` of that halfword). On the owned arm,
+spawn zeros `+0x4`, `slotDispatcherInner` skips,
+and opcode 1 of the handler stores a flags-0
+`rs_malloc` at `+0x4` (sizes include `0xA0`,
+`0x110`, `0x120`, `0x214`, `0x2E0`, `0xF80`).
+Opcode 2 frees interiors of that body
+(`0x38($body)`, `0x230($body)`, nested `0xF00`,
+`releaseMeshAsset` of mesh words), not `+0x4`.
+This site is the only `jal rs_free` of the owned
+pointer; it NULL-skips and does not NULL after a
+live free. On the bit-clear arm the word is the
+0x204C interior (`chunk + (index << 7 or << 8) +
+0x4C`) and this site reconstructs the chunk
+instead of freeing `+0x4`. One generated caller
+(`destroyNpcSlotByIndex`); zero overlay lookup;
+one `jr $ra`. `funcs_8.c` `jal rs_free` is
+exhausted. Sibling `freeNpcSlotArray`
+`*0x80130BB0` is a different destructor. This
+selects H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime allocator
+legitimacy remains unproven. No build, run,
+guard, or mitigation was performed. Soak-queue
+tail added no post-3577 result. Evidence is
+recorded in
+`docs/M3-S3647-REINSERT-NPC-SORTED-FREE-LIST-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers of the freed word are the
+opcode-1 flags-0 `rs_malloc` stores at NPC `+0x4`
+(`0x80040488`, `0x80044790`, `0x8005BD54`,
+`0x8005C998`, `0x80070114`, `0x80074DC8`,
+`0x8007BC8C`, `0x80077B84`, `0x8007EFB4`,
+`0x80081B34`, `0x800C0110`, `0x800C691C`,
+`0x800D52A0`). Those stored values are matching
+allocator returns and are legitimate owned-body
+pointers. The pooled interior store at
+`0x8003EB48` is not this free. No mitigation was
+added.
