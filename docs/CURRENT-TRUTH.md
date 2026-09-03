@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3623 (2026-09-03).
+notes are linked below. Updated for session 3624 (2026-09-03).
 
 ## Current state
 
@@ -73,20 +73,21 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    player-craft table `+0xBC` `rs_free`, remaining NPC
    `allocateAndInitCraftNpcContext` destructor `rs_free`, and
    leftover `spawnCutsceneObjectsFromList` `0x6C` store,
-   `cinematicSplineWalkerNpcHandler` nested `rs_free`, and
-   `loadSkyHorizonHob` stack-scratch `rs_free` as complete.
-   Session 3623 closed that pair: `0x84($sp)` is
-   `rs_malloc($s4&0xFFFF)` after the vertex walk; `$sp+0x10[i]`
-   is the 16-iter `rs_malloc((0xC($s6)<<1))`. The epilogue
-   frees the packed buffer then the 16 slots. No other
-   `jal rs_free` receives either pointer. Runtime
-   allocator/lifetime legitimacy remains unproven. See
-   [M3-S3623-LOAD-SKY-HORIZON-HOB-RS-FREE-AUDIT.md](M3-S3623-LOAD-SKY-HORIZON-HOB-RS-FREE-AUDIT.md).
+   `cinematicSplineWalkerNpcHandler` nested `rs_free`,
+   `loadSkyHorizonHob` stack-scratch `rs_free`, and
+   `freeEffectAssetBuffers` globals `rs_free` as complete.
+   Session 3624 closed that pair: `0x8013961C` is
+   `load_asset`'s `rs_malloc`; `0x80139740` is
+   `rs_malloc(0x400)`. Cue-table and spawn consumers load
+   those words and do not free them. Only
+   `freeEffectAssetBuffers` `jal rs_free` receives either
+   pointer. Runtime allocator/lifetime legitimacy remains
+   unproven. See
+   [M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md](M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `freeEffectAssetBuffers`
-   `0x8005EBB4`/`0x8005EBC4` (globals `0x8013961C` /
-   `0x80139740`). Do not add a pointer guard without a
-   concrete invalid writer.
+   M3 unit is `loadExplosionTextures` `0x80061254`
+   (`$a0` = `load_asset` return at `0x8006119C`). Do not add
+   a pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -104,9 +105,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the sky-horizon stack frees: `0x84($sp)` is `rs_malloc($s4&0xFFFF)`; `$sp+0x10[i]` is the 16-iter `rs_malloc((0xC($s6)<<1))`. |
-| H-NextClassGap | Refuted for this class: no free of a non-allocator or already-freed value; both words stay on the callee frame and are freed once. |
-| H-NextClassUnevaluable | Not selected: both words have a single original heap-pointer writer on this callee frame. |
+| H-NextClassComplete | Selected for the effect-asset globals: `0x8013961C` is `load_asset`'s `rs_malloc`; `0x80139740` is `rs_malloc(0x400)`. |
+| H-NextClassGap | Refuted for this class: no free of a non-allocator value; only `freeEffectAssetBuffers` receives either pointer. |
+| H-NextClassUnevaluable | Not selected: both words have a single original heap-pointer writer in `loadWeaponsHobObjects`. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -207,6 +208,15 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3624 — freeEffectAssetBuffers globals rs_free:**
+  `0x8013961C` is the matching `load_asset` `rs_malloc`
+  store; `0x80139740` is the matching `rs_malloc(0x400)`.
+  Cue-table and spawn consumers load those words and do
+  not free them. One generated destructor; no NULL skip
+  or post-free NULL. Two mutually exclusive
+  `mainGameLoop` teardown arms. This selects
+  `H-NextClassComplete`. See
+  [M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md](M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md).
 - **3623 — loadSkyHorizonHob stack-scratch rs_free:**
   `0x84($sp)` is the matching `rs_malloc($s4&0xFFFF)` packed
   copy; `$sp+0x10[i]` is the matching 16-iter
@@ -510,6 +520,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md](M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md)
 - [M3-S3623-LOAD-SKY-HORIZON-HOB-RS-FREE-AUDIT.md](M3-S3623-LOAD-SKY-HORIZON-HOB-RS-FREE-AUDIT.md)
 - [M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md](M3-S3622-SPLINE-WALKER-NESTED-RS-FREE-AUDIT.md)
 - [M3-S3621-SPAWN-CUTSCENE-6C-RS-FREE-AUDIT.md](M3-S3621-SPAWN-CUTSCENE-6C-RS-FREE-AUDIT.md)

@@ -135733,3 +135733,29 @@ ORIGIN: writer of `0x84($sp)` is `loadSkyHorizonHob`
 `$sp+0x10[i]` is `loadSkyHorizonHob`
 `rs_malloc((0xC($s6)<<1))` at `0x8005ABDC`. Both values are
 legitimate allocator returns. No mitigation was added.
+
+## Session 3624 (2026-09-03) — audited freeEffectAssetBuffers globals rs_free
+
+Performed the planned static census of `freeEffectAssetBuffers`
+`jal rs_free` at `0x8005EBB4` (`$a0 = 0x8013961C`) and
+`0x8005EBC4` (`$a0 = 0x80139740`). Both words have a single
+original writer in `loadWeaponsHobObjects`: `0x80139740` is
+`rs_malloc(0x400, 0)` at `0x8005E898`; `0x8013961C` is the
+`load_asset` return at `0x8005E938` (`load_asset` itself
+`rs_malloc`s). DMA fill and cue-table/spawn consumers load
+those words and do not `jal rs_free`. One generated destructor
+caller (`endMissionCleanup` `0x800FBA5C`); two mutually
+exclusive `mainGameLoop` teardown arms. No NULL skip and no
+post-free NULL. No other `jal rs_free` receives either
+pointer. This selects H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime allocator/lifetime legitimacy
+remains unproven, matching s3586–s3623. No build, run, guard,
+or mitigation was performed. Soak-queue tail added no post-3577
+result. Evidence is recorded in
+`docs/M3-S3624-FREE-EFFECT-ASSET-BUFFERS-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `0x8013961C` is `loadWeaponsHobObjects`
+`load_asset` (`rs_malloc`) at `0x8005E960`; writer of
+`0x80139740` is `loadWeaponsHobObjects` `rs_malloc(0x400)` at
+`0x8005E8C4`. Both values are legitimate allocator returns.
+No mitigation was added.
