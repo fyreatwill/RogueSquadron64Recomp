@@ -135083,3 +135083,32 @@ ORIGIN: the only non-sentinel writer of the index byte is
 `startNoteOnVoice` at `0x80087294`; the value is legitimate by
 construction if the allocator contract holds. Cleanup writers
 deliberately publish `-1` together with `+0x0 = 0`.
+
+## Session 3601 (2026-09-02) — audited remaining 0x88-stride voice-table indexers
+
+Performed the planned static census of every remaining generated
+`D_801496F8 + idx*0x88` consumer other than the s3600 release/fade pair.
+Ten remaining consumers in `funcs_24.c`; `deactivateVoice` has no
+generated `jal` and no data-word reference. Direct callers of
+`isAudioSlotActive`, `stopVoiceMarkRetrigger`, `musyxInitVoiceFromSample`,
+`musyxStoreVoiceAdsrParams`, `musyxStopVoice`, `musyxSetVoicePitchBend`,
+`musyxTriggerVoiceAttack`, `setVoiceModulationParams`, and
+`getVoiceUserField` resolve to three constructions: count-bounded loops
+versus the slot-count byte at `0x80141AD0`; packed-handle `+0x67` loads
+behind the s3600 `tickAllAudioChannels` `record+0x0==0` skip; or
+`allocateSynthVoice` / `startStreamedSampleVoice` returns after a `-1`
+skip. The speech-slot word at `0x8015462C` (`+0x120C` on the `0x1228`
+object) is that same streamed-voice allocator return, written at
+`0x8009B794` or explicitly `-1` at `0x8009B20C`; consumers reject
+full-word `-1` before the JAL. This selects H-NextClassComplete for the
+class. H-NextClassGap is refuted at static scope: no sentinel-as-index
+or out-of-range live JAL. Runtime allocator/lifetime legitimacy remains
+unproven, matching s3586–s3588. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result. Evidence is
+recorded in `docs/M3-S3601-REMAINING-88-STRIDE-INDEXER-AUDIT.md`.
+
+ORIGIN: non-sentinel index sources are `allocateSynthVoice` (legitimate
+by construction if the s3587 contract holds), the packed-handle low byte
+whose `-1` writers also zero `+0x0` (s3600), count-bounded loop counters
+versus `0x80141AD0`, and the `0x462C` speech-slot word written from
+`startStreamedSampleVoice`'s allocator return. No mitigation was added.
