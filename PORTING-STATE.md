@@ -136741,3 +136741,51 @@ a legitimate `rs_free` argument. The
 original byte-2 skip prevents the free
 from receiving it. No mitigation was
 added.
+
+## Session 3652 (2026-09-03) — audited freeRenderSubsystemResources rs_free of *0x8011A444 and four siblings
+
+Performed the planned static census of
+`freeRenderSubsystemResources` `jal rs_free`
+at `0x80018668` (`$a0` = `*0x8011A444`,
+`lui 0x8012; lw -0x5BBC`) and the four
+sibling `jal rs_free` in the same wrapper
+(`*0x801163B4`, `*0x801143AC`,
+`*0x8010E8A8`, `*0x8010E8AC`). The only
+live original heap-pointer writers are
+`buildAndRegisterDefaultMaterial` flags-0
+`rs_malloc` stores at `0x80017D28` /
+`0x80017D4C` / `0x80017D80` / `0x80017E64`
+/ `0x80017E74`, plus two `$s1`-bit NULL
+stores for `0x63B4` / `0x43AC`. Two
+generated callers of the allocator
+(`advanceVideoFrame` `0x800183F8`,
+`initVideoBootWrapper` `0x800185DC`).
+Zero generated `jal 0x80018650`, zero
+LOOKUP, zero lui/addiu. One overlay entry
+(rom `0x18210`, size `0x88`); not a second
+generated body. All remaining `-0x5BBC`
+loads are table-base consumers; the
+`funcs_9.c` `lwc1` is `lui 0x8004`. Host
+`MATERIAL_ARRAY_PTR_GUARD` at `0x80018664`
+is not an original skip. Re-init leaks
+the previous set; it is not a second free.
+s3650's `*0x8012A444` label for this
+`-0x5BBC` word is a transcription error.
+This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope.
+Runtime allocator legitimacy remains
+unproven. `funcs_4.c` original
+`jal 0x80001C98` is exhausted. No build,
+run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result.
+Evidence is recorded in
+`docs/M3-S3652-FREE-RENDER-SUBSYSTEM-RESOURCES-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `*0x8011A444` is
+`buildAndRegisterDefaultMaterial`
+`0x80017D28` storing the flags-0
+`rs_malloc($t0<<2)` return. That value is
+a legitimate heap pointer (or NULL on
+allocator failure). The four siblings are
+the matching malloc/NULL stores in the
+same function. No mitigation was added.
