@@ -135484,3 +135484,30 @@ Soak-queue tail added no post-3577 result. Evidence is recorded in
 ORIGIN: writers are `initModelViewer`'s two `allocateSlotTable`
 header stores and `loadDatFile`'s `load_asset` `$v0` (or NULL).
 No mitigation was added.
+
+## Session 3615 (2026-09-03) — audited remaining model-viewer mesh-chain rs_free
+
+Performed the planned static census of every generated original
+`jal rs_free` in `freeModelViewerMeshChain`. `0x800CBBE8` frees
+`0x5C($s1)` after a NULL skip, `0x800CBBF0` frees `$s1`, and
+`0x800CBC08` frees `0x800D0110`. `buildModelViewerTextPage` is
+the only writer: `rs_malloc(0x60)` nodes are linked at
+`0x10($sp+0x40)` by `appendNodeToListHead`; `0x5C` is
+`rs_malloc($s4)` (also stored at `0x24`) or NULL; `0x800D0110`
+is `rs_malloc(count*56)`. The wrap-retry `rs_free` at
+`0x800CA9B4` of that `0x5C` jumps to `L_800CA80C`, which zeros
+the slot before reuse. `releaseMeshLinkedList` copies GPU fields
+and does not `jal rs_free`. `0x20(node)` holds interior slices
+of the table; the destructor does not free them. The only
+generated callers are the single `runModelViewerLoop`
+build/free pair. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/lifetime legitimacy remains unproven, matching
+s3586–s3614. No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3615-MODEL-VIEWER-MESH-CHAIN-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `buildModelViewerTextPage`'s `rs_malloc(0x60)`
+node store via `appendNodeToListHead`, the `rs_malloc($s4)`
+`0x5C`/`0x24` store (or NULL), and the `rs_malloc(count*56)`
+store to `0x800D0110`. No mitigation was added.
