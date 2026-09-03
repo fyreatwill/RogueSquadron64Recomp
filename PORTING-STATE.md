@@ -135846,3 +135846,38 @@ inlined `rs_malloc` at `0x8005524C` (the `load_asset` body).
 The value is a legitimate allocator return. Relocate stores
 write interior pointers into that buffer, not a second
 heap-pointer source. No mitigation was added.
+
+## Session 3628 (2026-09-03) — audited freeTxtFile globals rs_free
+
+Performed the planned static census of `freeTxtFile`
+`jal rs_free` at `0x800558F8` (`$a0` = `*0x8009ECA0`) and
+`0x80055910` (`$a0` = `*0x8009ECA8`). Both words are the
+matching `loadTxtFile` `rs_malloc` stores: `$a1==0`
+(`loadGameOrFrontTxtFile`) writes `0x8009ECA0` in the
+`setupAssetDma` delay slot; `$a1!=0` (`loadVoiceTxtFile`)
+writes `0x8009ECA8`. Each free NULL-skips; both words NULL
+after the frees even when a skip was taken. Sibling
+`0x8009ECA4` is the `findAssetAcrossSegments` handle stored
+only on the voice path and torn down when not `-1`; it is
+not a heap pointer and is not a third `rs_free`.
+`getGameOrFrontText` (161 callers) and `getVoiceText`
+(2 callers) load the words as table bases / DMA source and
+do not `jal rs_free`. Four destructor callers:
+`freeCutsceneResources`, `menuControllerInput` (free then
+reload), `menuOverlayInit` (load then post-wait free;
+`L_800C5928` re-enters load after the NULL), and
+`endMissionCleanup`. A second same-mode load without free
+leaks the previous malloc; that is not a second pointer
+source. This selects H-NextClassComplete. H-NextClassGap is
+refuted at static scope. Runtime allocator/DMA/scene-pairing
+legitimacy remains unproven, matching s3586–s3627. No build,
+run, guard, or mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is recorded in
+`docs/M3-S3628-FREE-TXT-FILE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `0x8009ECA0` is `loadTxtFile` `rs_malloc`
+at `0x80055770` stored at `0x800557A4`. Writer of
+`0x8009ECA8` is `loadTxtFile` `rs_malloc` at `0x80055804`
+stored at `0x80055838`. Both values are legitimate allocator
+returns. `0x8009ECA4` is an asset handle, not a malloc.
+No mitigation was added.
