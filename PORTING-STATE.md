@@ -136843,3 +136843,52 @@ That value is a legitimate heap pointer
 That value is a legitimate heap pointer
 (or NULL on allocator failure). No
 mitigation was added.
+
+## Session 3654 (2026-09-03) — audited unregisterServiceWorker rs_free of $s0
+
+Performed the planned static census of
+`unregisterServiceWorker` `jal rs_free` at
+`0x80007128` (`$a0` = `$s0` from
+`addu $a0, $s0` at `0x8000712C`). `$s0`
+walks `*0x801128D0` (`lui 0x8011; 0x28D0`)
+by matching `0x0($s0)` against the caller
+ID. The live original heap-pointer writer
+is `registerServiceWorker`
+`rs_malloc(size, 0x81)` at `0x80006C78`;
+`$s5` is published as list head at
+`0x80006D50` or appended at
+`0x80006D5C`/`0x80006D70`. Destructor
+unlinks (`0x8000711C` head or
+`0x80007124` mid) then `rs_free`s the
+node. `0x18($s0)` is the next-link;
+`0x20($s0)` is the interior OSThread
+passed to `osDestroyThread`, not a
+sibling free. Sixteen remaining `0x28D0`
+loads are ID-walk consumers. Six generated
+callers pass the ID, not the node. Zero
+LOOKUP, zero lui/addiu. One overlay entry
+(`section_3_text` rom `0x6C7C`, size
+`0x8C`); not a second generated body.
+Single `jr $ra` at `0x80007140`. ID-miss
+and malloc-fail reach `rs_free(0)`, the
+same unchecked-NULL edge already closed
+as Complete. `funcs_2.c` `jal rs_free` is
+exhausted. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope.
+Runtime allocator legitimacy remains
+unproven. The next remaining original
+`jal 0x80001C98` is `funcs_1.c`
+`processAssetLoadStep` `0x80003E7C`.
+No build, run, guard, or mitigation was
+performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3654-UNREGISTER-SERVICE-WORKER-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of the node is
+`registerServiceWorker` `0x80006C78`
+storing the flags-0x81 `rs_malloc`
+return in `$s5` and publishing it to
+`*0x801128D0` or `0x18(tail)`. That
+value is a legitimate heap pointer
+(or NULL on allocator failure). No
+mitigation was added.

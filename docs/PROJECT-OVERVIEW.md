@@ -4867,7 +4867,7 @@ upstream producer at the entry boundary, and supersedes the broader
 `docs/M5-S3444-STATE-POINTER-PRODUCER.md`, and
 `docs/M5-S3445-STATE-POINTER-ENTRY.md`.
 
-## 56. M3 rs_free / audio-idiom closeout (s3586–s3653)
+## 56. M3 rs_free / audio-idiom closeout (s3586–s3654)
 
 Migrated from `CURRENT-TRUTH.md` during the s3649 maintenance pass. Exact
 per-site writer/consumer tables remain in the `docs/M3-S3586-*.md` through
@@ -4888,12 +4888,12 @@ without a concrete invalid writer.
 
 Hangar-Y and mix-table were closed in the same window with no invalid writer.
 
-### Destructor / `jal rs_free` census (s3600–s3653)
+### Destructor / `jal rs_free` census (s3600–s3654)
 
 Complete through `funcs_13.c` then `funcs_12.c` / `funcs_11.c` / `funcs_10.c`
 / `funcs_9.c` / `funcs_8.c` / `funcs_7.c` / `funcs_6.c` / `funcs_4.c` /
-`initSaveData` and `freeSaveDataBuffer` in `funcs_2.c`, except the one Gap
-below. `funcs_5.c`, `funcs_3.c`, and `funcs_0.c` have zero sites.
+all of `funcs_2.c`, except the one Gap below. `funcs_5.c`, `funcs_3.c`,
+and `funcs_0.c` have zero sites.
 
 Closed Complete classes, in audit order: unmasked release/fade;
 remaining `0x88`-stride indexers; remaining `-0x6908` non-a0; `-0x6904`
@@ -4926,7 +4926,8 @@ scratch, `freeEffectAssetBuffers` globals, `loadExplosionTextures`
 `*0x80128F08` / `*0x80128EFC`, `uploadTextureDescriptorData` `$s1`,
 `freeRenderSubsystemResources` `*0x8011A444` / `*0x801163B4` /
 `*0x801143AC` / `*0x8010E8A8` / `*0x8010E8AC`, `initSaveData` `$s2` /
-`freeSaveDataBuffer` `*0x80112724`.
+`freeSaveDataBuffer` `*0x80112724`, `unregisterServiceWorker` `$s0` /
+`*0x801128D0`.
 
 **Gap (s3636, still open):** `attachedMeshOverlayNpcHandler` `0x80054344`
 opcode 2 frees `0x1C`/`0x20` on the pool-carved `0x4($wrapper)` body.
@@ -4939,7 +4940,8 @@ census identifies that same writer. See
 `docs/M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md`.
 
 **Next unit (live in CURRENT-TRUTH / NEXT.md):**
-`unregisterServiceWorker` `rs_free` of `$s0` at `0x80007128` (last
-remaining original `jal 0x80001C98` in `funcs_2.c`; `funcs_4.c` is
-exhausted; `funcs_3.c` / `funcs_5.c` / `funcs_0.c` have zero sites).
-`$s0` walks `*0x801128D0`.
+`processAssetLoadStep` `rs_free` of `0x48($s0)` at `0x80003E7C`
+(first of seven remaining original `jal 0x80001C98` in `funcs_1.c`;
+`funcs_2.c` / `funcs_4.c` are exhausted; `funcs_3.c` / `funcs_5.c` /
+`funcs_0.c` have zero sites). Post-free `sw $zero, 0x48($s0)` at
+`0x80003E8C`.
