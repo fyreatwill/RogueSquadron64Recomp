@@ -135200,3 +135200,35 @@ ORIGIN: writers are `allocateSongChannelArray` (`-0x68A8`, `-0x68A4`,
 `runAiAudioStreamPlaybackLoop` (`-0x6950` word 0), and
 `initAudioSubsystem` (`-0x69A0`); each stores the matching
 `rs_malloc` result. No mitigation was added.
+
+## Session 3605 (2026-09-03) — audited skipped-NULL destructor-free class
+
+Performed the planned static census of every generated original
+`lw; beq $zero; jal rs_free` in `shutdownAudioEngine`,
+`waitForMusyXAudioTaskDone`, `shutdownMusyXEngine`, and
+`musyxNoopStub`. Three remaining skipped-NULL pointers: `-0x6898`
+is the matching `rs_malloc(0x48)` from `buildSongTempoSchedule`
+(`sw $s2` at `0x8008F074`); every destructor and
+`freeAudioScratchBuffer` NULLs the slot then `jal rs_free` with
+delay-slot `addu $a0, $zero, $zero`, which is original MIPS and
+leaks the header rather than freeing a non-allocator pointer.
+`-0x6890` is the matching `initN64RspMixer` malloc store
+(`0x800919BC`) or zero (`0x800919CC` when `a2 == 0`); both inner
+destructors `lw $a0; beq $a0, $zero; jal rs_free` of that word
+without a post-free NULL. Sequential double-free of `-0x6890` is
+blocked: shutdown's wrapper is unreferenced, and wait's wrapper
+zeros B40 so a later pair skips. Wrapper `-0x50EC` (`0x8013AF14`)
+has no original `sw` in the generated tree; nearby voice-handle
+heads at `-0x5100..-0x50F4` are a different object. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static scope:
+no untrusted load and no concrete sibling-free of a non-allocator
+pointer. Runtime allocator/lifetime legitimacy remains unproven,
+matching s3586–s3604. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result. Evidence is
+recorded in `docs/M3-S3605-SKIPPED-NULL-DESTRUCTOR-FREE-AUDIT.md`.
+
+ORIGIN: writers are `buildSongTempoSchedule` (`-0x6898` nonzero
+`rs_malloc(0x48)`), `initN64RspMixer` (`-0x6890` malloc or zero,
+and zero of `-0x6898`), plus destructor/scratch NULL stores of
+`-0x6898`. `-0x50EC` has no original writer. No mitigation was
+added.
