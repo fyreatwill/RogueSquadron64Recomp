@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3608 (2026-09-03).
+notes are linked below. Updated for session 3609 (2026-09-03).
 
 ## Current state
 
@@ -57,23 +57,24 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    with no concrete invalid writer. Sessions 3594–3599 selected structural
    unevaluability for mixed-layout families `+0x60`, `+0x30..+0x40`,
    `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
-   `+0x5C`/`+0x64`. Sessions 3600–3607 closed unmasked release/fade,
+   `+0x5C`/`+0x64`. Sessions 3600–3608 closed unmasked release/fade,
    remaining `0x88`-stride indexers, remaining `-0x6908` non-a0,
    `-0x6904` alias, destructor unchecked-free, skipped-NULL
-   destructor-free, remaining speech/cache `rs_free`, and remaining
-   speech-file `rs_free` as complete. Session 3608 closed the remaining
-   format-message `rs_free` class as complete: glyph `+0x38`/`+0x3C` are matching
-   `buildFormatMessageGlyphBuffer` malloc stores on the stack
-   output, with `+0x3C` skipped when `0x1C&6 == 0`; `$s3` is the
-   matching `enqueueFormatMessage` `rs_malloc(0x60)` payload.
-   Worker and direct paths do not share a glyph object. Runtime
-   allocator/lifetime legitimacy remains unproven. See
-   [M3-S3608-FORMAT-MESSAGE-RS-FREE-AUDIT.md](M3-S3608-FORMAT-MESSAGE-RS-FREE-AUDIT.md).
+   destructor-free, remaining speech/cache `rs_free`, remaining
+   speech-file `rs_free`, and remaining format-message `rs_free` as
+   complete. Session 3609 closed the remaining text-texture
+   `rs_free` class as complete: named scratch `0x60($sp)` and
+   text-target scratch `0x38($sp)` are matching `rs_malloc` stores
+   on the callee stack; named `+0x10` and blueprint `$s1` are
+   matching `load_asset` mallocs, with `+0x10` NULLed after its
+   free. Callers consume `+0xC`/`+0x14`, not the freed words.
+   Runtime allocator/lifetime legitimacy remains unproven. See
+   [M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md](M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next M3 unit
-   is the remaining text-texture `rs_free` class in
-   `loadNamedTextureDescriptor`, `allocTextRenderTarget`, and
-   `bridgeLoadShipBlueprints`. Do not add a pointer guard without a
-   concrete invalid writer.
+   is the remaining texture-scratch `rs_free` clones in
+   `loadBackdropAsset`, `initCinematicSceneAssets`, and
+   `buildPlayerCraftAssetTemplate`. Do not add a pointer guard
+   without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -91,9 +92,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the remaining format-message `rs_free` class: glyph `+0x38`/`+0x3C` are matching `buildFormatMessageGlyphBuffer` malloc stores; `$s3` is the matching enqueue 0x60 malloc. |
-| H-NextClassGap | Refuted for this class: worker and direct paths use distinct stack glyphs, `+0x3C` is skipped when not malloc'd, and no second sender to `-0x37A8` exists. |
-| H-NextClassUnevaluable | Not selected: the three pointers are the stack glyph pair and the 0x60 message. |
+| H-NextClassComplete | Selected for the remaining text-texture `rs_free` class: scratch `0x60($sp)`/`0x38($sp)` are matching `rs_malloc` stores; `+0x10` and `$s1` are matching `load_asset` mallocs. |
+| H-NextClassGap | Refuted for this class: no non-allocator last writer, `+0x10` is NULLed after its free, and stack scratch is rebuilt before the next free. |
+| H-NextClassUnevaluable | Not selected: the four pointers are the two stack scratch words, the descriptor `+0x10` asset, and the per-iter `$s1` asset. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -194,6 +195,13 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3609 — remaining text-texture rs_free class:** named scratch
+  `0x60($sp)` and text-target scratch `0x38($sp)` are matching
+  `rs_malloc` stores on the callee stack. Named `+0x10` and
+  blueprint `$s1` are matching `load_asset` mallocs; `+0x10` is
+  NULLed after its free. Callers read `+0xC`/`+0x14`. This selects
+  `H-NextClassComplete`. See
+  [M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md](M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md).
 - **3608 — remaining format-message rs_free class:** glyph `+0x38`
   is always `rs_malloc` after a 0x34-byte memset; `+0x3C` is that
   malloc only when `0x1C&6`, otherwise memset-zero and both frees
@@ -374,6 +382,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md](M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md)
 - [M3-S3608-FORMAT-MESSAGE-RS-FREE-AUDIT.md](M3-S3608-FORMAT-MESSAGE-RS-FREE-AUDIT.md)
 - [M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md](M3-S3607-SPEECH-FILE-RS-FREE-AUDIT.md)
 - [M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md](M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md)

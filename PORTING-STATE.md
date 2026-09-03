@@ -135320,3 +135320,32 @@ ORIGIN: writers are `buildFormatMessageGlyphBuffer` (memset then
 and `enqueueFormatMessage` (`rs_malloc(0x60)` of `$s3`). No
 mitigation was added.
 
+
+## Session 3609 (2026-09-03) — audited remaining text-texture rs_free class
+
+Performed the planned static census of every generated original
+`jal rs_free` in `loadNamedTextureDescriptor`,
+`allocTextRenderTarget`, and `bridgeLoadShipBlueprints`. Named
+scratch `0x60($sp)` is `rs_malloc` at `0x800B304C` after a 0x34-byte
+memset; `0x800B3244` frees that store. Named `+0x10` is the
+`load_asset` result stored at `0x800B2DCC`; `0x800B32BC` frees it
+and `0x800B32C8` NULLs the word. Text-target scratch `0x38($sp)` is
+the `rs_malloc` at `0x800B34EC` overwriting a ROM template first
+word; `0x800B354C` frees that store. Blueprint `$s1` is
+`load_asset` each of nine loop iterations and is freed at
+`0x800B17C8` before the next overwrite. Callers of the named
+descriptor pass `$v0` to `getStructField0xC` and consume `+0xC`/
+`+0x14`, not `+0x10`. `registerHmtTextureInTable` does not
+`jal rs_free` of these pointers. Sequential double-free of stack
+scratch is blocked by rebuild-before-next-call; `+0x10` is NULLed.
+This selects H-NextClassComplete. H-NextClassGap is refuted at
+static scope. Runtime allocator/lifetime legitimacy remains
+unproven, matching s3586–s3608. No build, run, guard, or
+mitigation was performed. Soak-queue tail added no post-3577
+result. Evidence is recorded in
+`docs/M3-S3609-TEXT-TEXTURE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `loadNamedTextureDescriptor` (`rs_malloc` of
+`0x60($sp)`; `load_asset` of `+0x10`), `allocTextRenderTarget`
+(`rs_malloc` of `0x38($sp)`), and `bridgeLoadShipBlueprints`
+(`load_asset` of `$s1`). No mitigation was added.
