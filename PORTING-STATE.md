@@ -135534,3 +135534,29 @@ Soak-queue tail added no post-3577 result. Evidence is recorded in
 ORIGIN: writer is `mallocVoiceLineStruct`'s `rs_malloc(0x24)`
 store to `0x800CDA18` / `0x800CDFB0` / `0x800CF154` (or NULL
 from screen-init / done-tick). No mitigation was added.
+
+## Session 3617 (2026-09-03) — audited remaining actor +0x4C rs_free
+
+Performed the planned static census of every generated original
+`jal rs_free` of actor `+0x4C` in `npcAtAtUpdate` and
+`npcAtStUpdate`. `0x800CDE8C` frees `0x4C($s1)` on AT-AT opcode 2
+with no NULL skip and no post-free NULL. `0x800D0480` frees
+`0x4C($s2)` on AT-ST opcode 2 with a NULL skip and no post-free
+NULL. `0x800D0DC0` frees the same AT-ST word on lethal opcode 5
+with a NULL skip and `sw $zero, 0x4C($s2)`. Both opcode-1 stores
+are `allocateAndInitCraftNpcContext`'s `rs_malloc(0x1E4)` at
+`0x8006BD44`, returned in `$v0` (`$s1` of the allocator).
+`destroyNpcSlotByIndex` `jalr`s opcode 2 once then
+`reinsertNpcIntoSortedFreeList`; a destroy during a live opcode
+defers via wrapper flag `0x8`. AT-ST lethal NULL then deferred
+opcode 2 skips. Other `+0x4C` stores in these functions are
+flag bits on `0x34(actor)+0x4C`, not this pointer. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static scope.
+Runtime allocator/lifetime legitimacy remains unproven, matching
+s3586–s3616. No build, run, guard, or mitigation was performed.
+Soak-queue tail added no post-3577 result. Evidence is recorded in
+`docs/M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer is `allocateAndInitCraftNpcContext`'s
+`rs_malloc(0x1E4)` store to `0x4C(0x4(wrapper))` (or NULL from
+the AT-ST lethal path). No mitigation was added.

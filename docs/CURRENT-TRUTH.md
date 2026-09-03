@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3616 (2026-09-03).
+notes are linked below. Updated for session 3617 (2026-09-03).
 
 ## Current state
 
@@ -57,7 +57,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    with no concrete invalid writer. Sessions 3594–3599 selected structural
    unevaluability for mixed-layout families `+0x60`, `+0x30..+0x40`,
    `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
-   `+0x5C`/`+0x64`. Sessions 3600–3616 closed unmasked release/fade,
+   `+0x5C`/`+0x64`. Sessions 3600–3617 closed unmasked release/fade,
    remaining `0x88`-stride indexers, remaining `-0x6908` non-a0,
    `-0x6904` alias, destructor unchecked-free, skipped-NULL
    destructor-free, remaining speech/cache `rs_free`, remaining
@@ -67,18 +67,19 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `loadCharTextureSet` DMA-array `rs_free`, remaining
    lookup-table `rs_free`, remaining `shutdownModelViewer`
    header-word `rs_free`, remaining model-viewer mesh-chain
-   `rs_free`, and remaining `tickMultiPartVoiceLine` `$s0`
-   `rs_free` as complete.
-   Session 3616 closed `tickMultiPartVoiceLine`: `$s0` is `$a0`
-   of the tick, always a `mallocVoiceLineStruct` `rs_malloc(0x24)`
-   stored at `0x800CDA18` / `0x800CDFB0` / `0x800CF154` (or
-   NULL). All four tick callers NULL the slot on return 1.
-   Runtime allocator/lifetime legitimacy remains unproven. See
-   [M3-S3616-TICK-VOICE-LINE-RS-FREE-AUDIT.md](M3-S3616-TICK-VOICE-LINE-RS-FREE-AUDIT.md).
+   `rs_free`, remaining `tickMultiPartVoiceLine` `$s0`
+   `rs_free`, and remaining actor `+0x4C` `rs_free` as complete.
+   Session 3617 closed `npcAtAtUpdate` / `npcAtStUpdate` actor
+   `+0x4C`: both stores are `allocateAndInitCraftNpcContext`
+   `rs_malloc(0x1E4)`. AT-ST lethal opcode 5 NULLs before
+   deferred opcode 2; `destroyNpcSlotByIndex` sends opcode 2
+   once then free-lists the wrapper. Runtime allocator/lifetime
+   legitimacy remains unproven. See
+   [M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md](M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next M3
-   unit is the remaining actor `+0x4C` `rs_free` in
-   `npcAtAtUpdate` / `npcAtStUpdate`. Do not add a pointer
-   guard without a concrete invalid writer.
+   unit is the remaining `playerAtStUpdate` `0xA4`/`0xBC`
+   `rs_free`. Do not add a pointer guard without a concrete
+   invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -96,9 +97,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the remaining tickMultiPartVoiceLine class: `$s0` is the matching `mallocVoiceLineStruct` `rs_malloc(0x24)` stored at `0x800CDA18` / `0x800CDFB0` / `0x800CF154`, or NULL. |
-| H-NextClassGap | Refuted for this class: no non-allocator last writer of the three slots, and sequential double-free is blocked by return-1 plus the caller's NULL. |
-| H-NextClassUnevaluable | Not selected: `$s0` is the 0x24 voice-line object from `mallocVoiceLineStruct`. |
+| H-NextClassComplete | Selected for the remaining actor +0x4C class: `0x4C(0x4(wrapper))` is the matching `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)`, or NULL. |
+| H-NextClassGap | Refuted for this class: no non-allocator last writer of the two actor words, and sequential double-free is blocked by `destroyNpcSlotByIndex` plus the AT-ST lethal NULL. |
+| H-NextClassUnevaluable | Not selected: `$s1`/`$s2` are `0x4(wrapper)` and `+0x4C` is that one craft-context object. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -199,6 +200,16 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3617 — remaining actor +0x4C rs_free:**
+  `0x4C($s1)` / `0x4C($s2)` are the matching
+  `allocateAndInitCraftNpcContext` `rs_malloc(0x1E4)` stores
+  from opcode 1. AT-ST lethal opcode 5 NULLs after its free;
+  teardown NULL-skips. `destroyNpcSlotByIndex` sends opcode 2
+  once then free-lists the wrapper. AT-AT teardown does not
+  NULL; that is a dangling word on a detached actor, not a
+  second pointer source. This selects `H-NextClassComplete`.
+  See
+  [M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md](M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md).
 - **3616 — remaining tickMultiPartVoiceLine rs_free of $s0:**
   `$s0` is `$a0` of the tick. The only allocator is
   `mallocVoiceLineStruct` `rs_malloc(0x24)`, stored at
@@ -440,6 +451,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md](M3-S3617-ACTOR-4C-RS-FREE-AUDIT.md)
 - [M3-S3616-TICK-VOICE-LINE-RS-FREE-AUDIT.md](M3-S3616-TICK-VOICE-LINE-RS-FREE-AUDIT.md)
 - [M3-S3615-MODEL-VIEWER-MESH-CHAIN-RS-FREE-AUDIT.md](M3-S3615-MODEL-VIEWER-MESH-CHAIN-RS-FREE-AUDIT.md)
 - [M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md](M3-S3614-MODEL-VIEWER-HEADER-RS-FREE-AUDIT.md)
