@@ -135918,3 +135918,43 @@ The value is a legitimate allocator return. Sibling
 `0x80139014` is a slot index, not a malloc. No mitigation
 was added.
 
+
+## Session 3630 (2026-09-03) — audited load_hmt_and_hob rs_free of $s3 / 0x6C / 0x74
+
+Performed the planned static census of `load_hmt_and_hob`
+`jal rs_free` at `0x80056798` (`$a0` = `$s3`), `0x80056D60`
+(`$a0` = `0x6C($sp)`, gated by `0x8F($sp)`), and `0x80056D6C`
+(`$a0` = `0x74($sp)`). `$s3` is the matching
+`get_asset_size_extra` `rs_malloc` at `0x80056580` flags-4 /
+`0x80056598` flags-0. `0x74($sp)` is the matching
+`lhu 0x0($s3)<<1` `rs_malloc` texture-id table, filled with
+`registerHmtTextureInTable` halfwords and consumed as `$a3`
+by `meshdef1_offset_convert` / `meshdef0_offset_convert`
+(neither `jal rs_free`; neither stores the table pointer).
+`0x6C($sp)` is written only when `$a2` bit 0 is set: the
+HOB DMA `0x68($sp)` is copied there, a packed
+`rs_malloc(0x4(hob)+4, 0x10)` overwrites `0x68`, `zmemcpy`
+copies from `0x6C`, and the epilogue frees `0x6C`. When the
+flag is clear, `0x6C` is never stored and its free is
+skipped. Kept `0x68` is published at
+`0x80139020 + index*12 + 0x8` for object 0 and is
+`freeAllHobFiles` `0x80059244`, not this class. After the
+HMT free, `$s3` is overwritten with the flag byte, then with
+interior HOB pointers; those later values are not passed to
+`rs_free`. Zero HMT count jumps to `L_80056D74` and leaks
+`$s3` while skipping the other two frees; that is a leak of
+the matching allocator, not a second pointer source. One
+`jr $ra`. Forty-three generated callers. This selects
+H-NextClassComplete. H-NextClassGap is refuted at static
+scope. Runtime allocator legitimacy and pairing of kept
+`0x68` with `freeAllHobFiles` remain unproven, matching
+s3586–s3629. No build, run, guard, or mitigation was
+performed. Soak-queue tail added no post-3577 result.
+Evidence is recorded in
+`docs/M3-S3630-LOAD-HMT-AND-HOB-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `rs_malloc` of the HMT size into `$s3`,
+`rs_malloc(count<<1)` into `0x74($sp)`, and the HOB DMA
+`rs_malloc` copied to `0x6C($sp)` when flag bit 0 is set.
+Each value is a legitimate allocator return. No mitigation
+was added.
