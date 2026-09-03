@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3605 (2026-09-03).
+notes are linked below. Updated for session 3606 (2026-09-03).
 
 ## Current state
 
@@ -57,25 +57,22 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    with no concrete invalid writer. Sessions 3594–3599 selected structural
    unevaluability for mixed-layout families `+0x60`, `+0x30..+0x40`,
    `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
-   `+0x5C`/`+0x64`. Session 3600 closed the unmasked release/fade index
-   class. Session 3601 closed the remaining `0x88`-stride voice-table
-   indexers as complete. Session 3602 closed the remaining `-0x6908`
-   non-a0 table-base users as complete. Session 3603 closed the `-0x6904`
-   pointer-alias class as complete. Session 3604 closed the remaining
-   destructor unchecked-free class as complete. Session 3605 closed
-   the skipped-NULL destructor-free class as complete: `-0x6898` is
-   the matching `rs_malloc(0x48)` store and every free NULLs it then
-   passes delay-slot `$a0 = 0`; `-0x6890` is the matching
-   `initN64RspMixer` malloc store; wrapper `-0x50EC` has no original
-   writer (BSS zero skip). Sequential double-free of `-0x6890` is
-   blocked by the unreferenced shutdown wrapper and B40 zeroing after
-   `musyxNoopStub`. Runtime allocator/lifetime legitimacy remains
-   unproven. See
-   [M3-S3605-SKIPPED-NULL-DESTRUCTOR-FREE-AUDIT.md](M3-S3605-SKIPPED-NULL-DESTRUCTOR-FREE-AUDIT.md).
+   `+0x5C`/`+0x64`. Sessions 3600–3605 closed unmasked release/fade,
+   remaining `0x88`-stride indexers, remaining `-0x6908` non-a0,
+   `-0x6904` alias, destructor unchecked-free, and skipped-NULL
+   destructor-free as complete. Session 3606 closed the remaining
+   speech/cache `rs_free` class as complete: `-0x64AC`/`-0x64B0`/
+   `-0x64B4` are `loadSndFiles` stores of `load_asset_with_malloc_flags`
+   `rs_malloc`; cinematic `waitForAnyAudioSlot` is skipped by
+   `0x80130B39` and the B39-clear waits pair a `loadSndFiles` in the
+   same init/cleanup. Cache `+0x4` is the `loadSongAssetByName` malloc
+   store; `freeAudioCacheEntry` marks the key `-1`. `-0x648C` is
+   init-zero on every generated `initSpeechSubsystem` (a0==0). Runtime
+   allocator/lifetime legitimacy remains unproven. See
+   [M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md](M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next M3 unit
-   is the remaining speech/cache `rs_free` class in
-   `waitForAnyAudioSlot`, `freeAudioCacheEntry`, and
-   `finalizeCurrentSpeechBuffer`. Do not add a pointer guard without
+   is the remaining speech-file `rs_free` class in `loadSpeechFile`
+   and `shutdownMusyXVoices`. Do not add a pointer guard without
    a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -94,9 +91,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the skipped-NULL destructor-free class: `-0x6898`/`-0x6890` are matching malloc stores, and `-0x50EC` is never-stored BSS. |
-| H-NextClassGap | Refuted for this class: no untrusted load and no concrete sibling-free of a non-allocator pointer. The delay-slot `$a0 = 0` is an original leak of the `0x48` header, not a Gap. |
-| H-NextClassUnevaluable | Not selected: `-0x50EC` is a never-stored BSS word, not a mixed object. |
+| H-NextClassComplete | Selected for the remaining speech/cache `rs_free` class: three SND words and cache `+0x4` are matching malloc stores; `-0x648C` is generated init-zero. |
+| H-NextClassGap | Refuted for this class: no untrusted load and no concrete sibling-free of a non-allocator pointer. |
+| H-NextClassUnevaluable | Not selected: the four BSS words and the 16-entry cache are plain pointer slots. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -197,6 +194,15 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3606 — remaining speech/cache rs_free class:** `-0x64AC`/
+  `-0x64B0`/`-0x64B4` are `loadSndFiles` stores of
+  `load_asset_with_malloc_flags` `rs_malloc`; cinematic wait is
+  skipped by `0x80130B39`, and the other waits pair a matching
+  load. Cache `+0x4` is the `loadSongAssetByName` malloc store;
+  free-all marks the key `-1`. `-0x648C` is init-zero on every
+  generated `initSpeechSubsystem`. This selects
+  `H-NextClassComplete`. See
+  [M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md](M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md).
 - **3605 — skipped-NULL destructor-free class:** `-0x6898` is the
   matching `rs_malloc(0x48)` from `buildSongTempoSchedule`; every
   destructor and `freeAudioScratchBuffer` NULLs the slot then
@@ -351,6 +357,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md](M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md)
 - [M3-S3605-SKIPPED-NULL-DESTRUCTOR-FREE-AUDIT.md](M3-S3605-SKIPPED-NULL-DESTRUCTOR-FREE-AUDIT.md)
 - [M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md](M3-S3604-DESTRUCTOR-UNCHECKED-FREE-AUDIT.md)
 - [M3-S3603-6904-POINTER-ALIAS-AUDIT.md](M3-S3603-6904-POINTER-ALIAS-AUDIT.md)

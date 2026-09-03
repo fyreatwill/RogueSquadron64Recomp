@@ -135232,3 +135232,36 @@ ORIGIN: writers are `buildSongTempoSchedule` (`-0x6898` nonzero
 and zero of `-0x6898`), plus destructor/scratch NULL stores of
 `-0x6898`. `-0x50EC` has no original writer. No mitigation was
 added.
+
+## Session 3606 (2026-09-03) — audited remaining speech/cache rs_free class
+
+Performed the planned static census of every generated original
+`jal rs_free` in `waitForAnyAudioSlot`, `freeAudioCacheEntry`, and
+`finalizeCurrentSpeechBuffer`. `-0x64AC`/`-0x64B0`/`-0x64B4`
+(`0x80139B54`/`0x80139B50`/`0x80139B4C`) are the matching
+`loadSndFiles` stores of `load_asset_with_malloc_flags` `rs_malloc`.
+`waitForAnyAudioSlot` frees those words unchecked with no post-free
+NULL. Sequential double-free is blocked: `cinematicLoopBody` waits
+on the exit path with `0x80130B39 == 1` so the three frees skip, and
+the B39-clear waits pair a `loadSndFiles` in the same caller
+(`menuOverlayInit`; `mainGameLoop` `initMission` then
+`endMissionCleanup`). Cache `+0x4` at `0x80139A00` is the matching
+`loadSongAssetByName` `rs_malloc` store; both `freeAudioCacheEntry`
+callers pass `a0 = -1` and store `-1` at the key, so a later free-all
+skips. `-0x648C` (`0x80139B74`) is `sw $zero` on every generated
+`initSpeechSubsystem` (all pass `a0 = 0`); `finalizeCurrentSpeechBuffer`
+therefore takes the DMA teardown path and the skipped `rs_free` is of
+init zero. This selects H-NextClassComplete. H-NextClassGap is
+refuted at static scope: no untrusted load and no concrete
+sibling-free of a non-allocator pointer. Runtime allocator/lifetime
+legitimacy remains unproven, matching s3586–s3605. No build, run,
+guard, or mitigation was performed. Soak-queue tail added no
+post-3577 result. Evidence is recorded in
+`docs/M3-S3606-SPEECH-CACHE-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `loadSndFiles` (`-0x64AC`/`-0x64B0`/`-0x64B4`
+from `load_asset_with_malloc_flags` `rs_malloc`),
+`loadSongAssetByName` (cache `+0x4` `rs_malloc`), and
+`initSpeechSubsystem` (zero of `-0x648C` on the generated a0==0
+path; unreferenced `load_asset` store on a0!=0). No mitigation was
+added.
