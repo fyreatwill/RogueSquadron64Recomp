@@ -135786,3 +135786,31 @@ ORIGIN: writer of `$a0` is `loadExplosionTextures`
 legitimate allocator return. Dest tables at `0x801398C0` and
 `0x80139920` receive RGB copies, not the heap pointer. No
 mitigation was added.
+
+## Session 3626 (2026-09-03) — audited loadAndRelocateAsset load_asset rs_free
+
+Performed the planned static census of `loadAndRelocateAsset`
+`jal rs_free` at `0x800555C4` (`$a0` = `$s1` = `load_asset`
+return copied at `0x800554F8`). `$s1` is `load_asset`'s
+`rs_malloc`; it is never stored to a global, object, or
+live stack word (only the callee-saved spill of the *old*
+`$s1` at `0x3C($sp)`). The 8-iter walk at `$s1+4` plus the
+`0x20`/`0x24($a1)` stores relocate interior words *into*
+that buffer. `registerHmtTextureInTable` / `parseHmtMaterials`
+/ `loadTextureToMemory` copy pixels and publish a texture-id
+halfword; none `jal rs_free` of `$s1` or `$s1+4`. Ten
+generated callers, all `$a1=0`, keep only the returned
+halfword. One `jr $ra` after the free. The `$s2!=0` name
+override is original-dead. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator/DMA/relocate-offset legitimacy remains unproven,
+matching s3586–s3625. No build, run, guard, or mitigation
+was performed. Soak-queue tail added no post-3577 result.
+Evidence is recorded in
+`docs/M3-S3626-LOAD-AND-RELOCATE-ASSET-RS-FREE-AUDIT.md`.
+
+ORIGIN: writer of `$s1` is `loadAndRelocateAsset`
+`load_asset` (`rs_malloc`) at `0x800554F8`. The value is a
+legitimate allocator return. Relocate stores write interior
+pointers into that buffer, not a second heap-pointer source.
+No mitigation was added.
