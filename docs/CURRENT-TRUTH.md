@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3601 (2026-09-02).
+notes are linked below. Updated for session 3602 (2026-09-03).
 
 ## Current state
 
@@ -59,18 +59,19 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `+0x28..+0x2C`, `+0x18..+0x24`, `+0x66..+0x74`, and envelope companion
    `+0x5C`/`+0x64`. Session 3600 closed the unmasked release/fade index
    class. Session 3601 closed the remaining `0x88`-stride voice-table
-   indexers as complete: every generated remaining JAL is count-bounded
-   against `0x80141AD0`, gated by `record+0x0==0` before a `+0x67` load,
-   or taken from `allocateSynthVoice` / `startStreamedSampleVoice` after
-   a `-1` skip; `deactivateVoice` has no generated caller. Runtime
-   allocator/lifetime legitimacy remains unproven. See
-   [M3-S3601-REMAINING-88-STRIDE-INDEXER-AUDIT.md](M3-S3601-REMAINING-88-STRIDE-INDEXER-AUDIT.md).
+   indexers as complete. Session 3602 closed the remaining `-0x6908`
+   non-a0 table-base users as complete: mix and synth are live-count
+   walks versus `-0x6900`; `allocateSongChannelArray` stores the malloc
+   pointer and uses `(count&0xFFFF)*0x88` as size (caller clamps to
+   `<=0x20`); render consumes mix's already-formed slot pointer; key-on
+   indexes the mix-table ping-pong, not this base; shutdown frees the
+   `-0x6904` alias. Runtime allocator/lifetime legitimacy remains
+   unproven. See
+   [M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md](M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next M3 unit is
-   the remaining `-0x6908` table-base users that do not take `a0` as a
-   slot index (`musyxMixActiveVoices`, `musyxRenderVoiceSamples`,
-   `musyxKeyOnVoice`, `musyxSynthFrame`, `shutdownAudioEngine`,
-   `allocateSongChannelArray`). Do not add an index guard without a
-   concrete out-of-range writer.
+   the `-0x6904` pointer-alias class (`allocateSongChannelArray` store
+   and init walk, `shutdownAudioEngine` free, `waitForMusyXAudioTaskDone`
+   free). Do not add a pointer guard without a concrete invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -88,9 +89,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for the remaining `0x88`-stride indexer class: every generated remaining JAL is count-bounded, `+0x0`-gated, or allocator-`-1`-gated. |
-| H-NextClassGap | Refuted for this class: no sentinel-as-index or out-of-range caller pair. |
-| H-NextClassUnevaluable | Not selected: every remaining `a0` resolved to a count, a `+0x67` load, or an allocator slot. |
+| H-NextClassComplete | Selected for the remaining `-0x6908` non-a0 table-base class: count-bounded walks, malloc-size store, or non-index loads. |
+| H-NextClassGap | Refuted for this class: no untrusted or sentinel-as-index edge on this base. |
+| H-NextClassUnevaluable | Not selected: the `-0x6904` alias is the same malloc pointer, not a mixed object. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -191,6 +192,12 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3602 — remaining `-0x6908` table-base users:** original loads are
+  mix (count-bounded `s0` walk), synth (count-bounded `+0x88` pointer
+  walk), and allocate (malloc-size store). Render, key-on, and shutdown
+  have no original `-0x6908` load. This selects `H-NextClassComplete`.
+  See
+  [M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md](M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md).
 - **3601 — remaining 0x88-stride voice-table indexers:** ten remaining
   consumers, including unreferenced `deactivateVoice`. Callers resolve
   to count-bounded loops versus `0x80141AD0`, `+0x67` loads behind the
@@ -312,6 +319,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md](M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md)
 - [M3-S3601-REMAINING-88-STRIDE-INDEXER-AUDIT.md](M3-S3601-REMAINING-88-STRIDE-INDEXER-AUDIT.md)
 - [M3-S3600-RELEASE-FADE-INDEX-AUDIT.md](M3-S3600-RELEASE-FADE-INDEX-AUDIT.md)
 - [M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md](M3-S3599-VOICE-5C-64-ENVELOPE-AUDIT.md)

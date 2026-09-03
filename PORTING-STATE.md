@@ -135112,3 +135112,31 @@ by construction if the s3587 contract holds), the packed-handle low byte
 whose `-1` writers also zero `+0x0` (s3600), count-bounded loop counters
 versus `0x80141AD0`, and the `0x462C` speech-slot word written from
 `startStreamedSampleVoice`'s allocator return. No mitigation was added.
+
+## Session 3602 (2026-09-03) — audited remaining -0x6908 table-base users
+
+Performed the planned static census of every generated function that
+loads `lui 0x8015; lw -0x6908` but does not form `D_801496F8 + a0*0x88`
+from incoming `a0`. Original `-0x6908` sites across all `funcs_*.c` are
+the s3600/s3601 incoming-`a0` indexers plus three remaining users:
+`allocateSongChannelArray` stores the malloc pointer and uses
+`(count&0xFFFF)*0x88` as size (`initN64RspMixer` clamps count to
+`<=0x20`); `musyxMixActiveVoices` walks `s0` from 0 while
+`s0 < lhu -0x6900` and JALs render with the formed slot pointer;
+`musyxSynthFrame` loads the base once and advances `+0x88` while
+`a1 <` that same count. `musyxRenderVoiceSamples`, `musyxKeyOnVoice`,
+`shutdownAudioEngine`, and `tickAllAudioChannels` have no original
+`-0x6908` load (patch reverse-maps only). Key-on indexes the mix-table
+ping-pong; shutdown frees the `-0x6904` alias. This selects
+H-NextClassComplete for the class. H-NextClassGap is refuted at static
+scope: no untrusted or sentinel-as-index edge on this base. Runtime
+allocator/lifetime legitimacy remains unproven, matching s3586–s3601.
+No build, run, guard, or mitigation was performed. Soak-queue tail
+added no post-3577 result. Evidence is recorded in
+`docs/M3-S3602-REMAINING-6908-TABLE-BASE-AUDIT.md`.
+
+ORIGIN: walk indices are the live-count halfword written only by
+`allocateSongChannelArray` from the clamped init count; malloc size is
+that same count times `0x88`; render's pointer is mix's already-formed
+slot; key-on does not index this table; shutdown frees the allocator
+alias. No mitigation was added.
