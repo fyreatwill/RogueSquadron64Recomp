@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3643 (2026-09-03).
+notes are linked below. Updated for session 3644 (2026-09-03).
 
 ## Current state
 
@@ -156,12 +156,24 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    clone of the same PCs, not a second destructor.
    No guard was added. See
    [M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md](M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md).
+   Session 3644 selected Complete for
+   `freeNpcBurstSpawnerTables`: matching flags-0
+   `rs_malloc(0x3600, 0)` of `0x80130BD0`,
+   `loadAssetAndIterateSubchunks` `$a2=0` index
+   table of `0x80130C08`, and `load_asset` of
+   `0x80130C04`. One destructor via
+   `endMissionCleanup`; no NULL skip or post-free
+   NULL. Consumers load the three words as table
+   bases and do not `jal rs_free`. No guard was
+   added. See
+   [M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md](M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md).
    Retail-entry and SP-yield threads remain parked. The next
-   M3 unit is `freeNpcBurstSpawnerTables`
-   `*0x80130BD0` / `*0x80130C08` / `*0x80130C04`
-   `rs_free` at `0x80041B58` / `0x80041B68` /
-   `0x80041B78`. Do not add a pointer guard
-   without a concrete invalid writer.
+   M3 unit is `destroyNpcContextArrays`
+   `*0x80130BC0` / `*0x80130BC4` / `*0x80130BBC` /
+   `*0x80130BB8` `rs_free` at `0x8003FE28` /
+   `0x8003FE50` / `0x8003FE6C` / `0x8003FE78`.
+   Do not add a pointer guard without a concrete
+   invalid writer.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -179,9 +191,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
-| H-NextClassComplete | Selected for `computeGridTileEdgeAdjacencyMasks` `$s1`: matching flags-0 `rs_malloc` into `$s1`, one destructor. |
-| H-NextClassGap | Refuted for this `$s1`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
-| H-NextClassUnevaluable | Not selected: one pointer identity and one allocator store. |
+| H-NextClassComplete | Selected for `freeNpcBurstSpawnerTables`: matching flags-0 pool malloc, index-table return, and `load_asset`; one destructor. |
+| H-NextClassGap | Refuted for these three words. Remains selected for overlay `0x1C`/`0x20` (s3636). |
+| H-NextClassUnevaluable | Not selected: three pointer identities and one allocator store each. |
 
 The current work-unit slug is `m3-next-audio-idiom-audit`.
 
@@ -282,6 +294,27 @@ and evidence notes retain the full history.
   descriptor/param block. No concrete invalid writer/value was found.
   This selects `H-NextClassUnevaluable`. See
   [M3-S3597-VOICE-18-24-FIELD-AUDIT.md](M3-S3597-VOICE-18-24-FIELD-AUDIT.md).
+- **3644 — freeNpcBurstSpawnerTables rs_free of
+  *0x80130BD0 / *0x80130C08 / *0x80130C04:**
+  Matching flags-0 `rs_malloc(0x3600, 0)` of
+  `0x80130BD0` (128×0x6C pool),
+  `loadAssetAndIterateSubchunks` `$a2=0`
+  `(count+1)<<1` table of `0x80130C08` (DMA
+  `$s6` is freed inside that callee, s3633),
+  and `load_asset` of `0x80130C04`. One
+  original store each. `0x80130BD4` is a
+  free-list head halfword, not a pointer.
+  Consumers load the three words as table
+  bases; stack extra-arg copies do not
+  `jal rs_free`. One destructor via two
+  mutually exclusive `mainGameLoop` arms.
+  Three inits overwrite without freeing;
+  menu `initInteractiveSceneContext` without
+  this destructor leaks. Zero overlay lookup.
+  One `jr $ra`. No NULL skip or post-free
+  NULL. This selects `H-NextClassComplete`.
+  See
+  [M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md](M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md).
 - **3643 — computeGridTileEdgeAdjacencyMasks
   rs_free of $s1:** `$s1` is the matching
   flags-0 `rs_malloc(lhu 0x18(*0x80136FC4), 0)`
@@ -825,6 +858,7 @@ low byte, so the runtime allocator/lifetime boundary remains open.
 
 Latest boundary notes:
 
+- [M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md](M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md)
 - [M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md](M3-S3643-COMPUTE-GRID-TILE-EDGE-ADJACENCY-MASKS-RS-FREE-AUDIT.md)
 - [M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md](M3-S3642-TEARDOWN-ANIMATED-MAP-GRID-LAYER-RS-FREE-AUDIT.md)
 - [M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md](M3-S3641-TEARDOWN-GRID-LAYER-WORKER-RS-FREE-AUDIT.md)

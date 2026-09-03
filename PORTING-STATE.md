@@ -136416,3 +136416,40 @@ ORIGIN: writer of `$s1` is `computeGridTileEdgeAdjacencyMasks`
 `lhu 0x18(*0x80136FC4)`). That stored value is the
 matching allocator return and is a legitimate
 per-call scratch. No mitigation was added.
+
+## Session 3644 (2026-09-03) — audited freeNpcBurstSpawnerTables rs_free of *0x80130BD0 / *0x80130C08 / *0x80130C04
+
+Performed the planned static census of
+`freeNpcBurstSpawnerTables` `jal rs_free` at
+`0x80041B58` / `0x80041B68` / `0x80041B78`
+(`$a0` = `*0x80130BD0` / `*0x80130C08` /
+`*0x80130C04`). The only original heap-pointer
+writers are `allocAndInitParticlePool`: flags-0
+`rs_malloc(0x3600, 0)` at `0x80040334`,
+`loadAssetAndIterateSubchunks` `$a2=0` index-table
+return at `0x800403A8`, and `load_asset` at
+`0x800403B8`. `0x80130BD4` is a free-list head
+halfword, not a pointer. Consumers load the three
+words as table bases; stack extra-arg copies do
+not `jal rs_free`. One destructor via
+`endMissionCleanup`; two mutually exclusive
+`mainGameLoop` arms. Three inits overwrite without
+freeing; menu `initInteractiveSceneContext`
+without this destructor leaks. Zero overlay
+lookup; one `jr $ra`. No NULL skip or post-free
+NULL. This selects H-NextClassComplete.
+H-NextClassGap is refuted at static scope. Runtime
+allocator legitimacy remains unproven. No build,
+run, guard, or mitigation was performed. Soak-queue
+tail added no post-3577 result. Evidence is recorded
+in
+`docs/M3-S3644-FREE-NPC-BURST-SPAWNER-TABLES-RS-FREE-AUDIT.md`.
+
+ORIGIN: writers are `allocAndInitParticlePool`
+`0x80040334` (flags-0 `rs_malloc(0x3600, 0)`),
+`0x800403A8` (`loadAssetAndIterateSubchunks`
+`$a2=0` table return), and `0x800403B8`
+(`load_asset` malloc return). Those stored values
+are the matching allocator returns and are
+legitimate pool/table pointers. No mitigation was
+added.
