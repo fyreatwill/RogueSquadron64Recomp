@@ -195,6 +195,10 @@ struct post_value_pc_entry {
     long samples;
     long zero_words;
     long nonzero_words;
+    long scalar_samples;
+    long scalar_zero;
+    long scalar_nonzero;
+    long scalar_mismatch;
 };
 struct post_value_stats {
     struct post_value_entry hist[MAX_POST_VALUE_HIST];
@@ -216,6 +220,8 @@ static int g_post_value_pending_watch = -1;
 static int g_post_value_armed;
 static uint32_t g_post_value_addr;
 static uint32_t g_post_value_pc_addr;
+static uint32_t g_post_store_mask;
+static uint32_t g_post_store_expected;
 static long g_post_value_pending_vi;
 static uint32_t g_post_value_pending_width;
 static uint32_t g_post_value_pending_origin;
@@ -1064,6 +1070,37 @@ static void emit_checkpoint(void)
     fflush(stdout);
 }
 
+/* A byte clear can leave its containing word nonzero. Compare only the
+ * bytes written by the instruction, using big-endian guest byte lanes. */
+static uint32_t scalar_store_mask(uint32_t instruction, uint32_t address)
+{
+    unsigned lane = address & 3u;
+    switch (instruction >> 26) {
+    case 0x28: return 0xFFu << ((3u - lane) * 8u);
+    case 0x29: return (lane & 1u) ? 0u : 0xFFFFu << ((2u - lane) * 8u);
+    case 0x2B: return lane ? 0u : UINT32_MAX;
+    default: return 0u;
+    }
+}
+
+static uint32_t scalar_store_expected(uint32_t mask, uint32_t value)
+{
+    if (!mask) return 0;
+    unsigned shift = 0;
+    while (!(mask & (1u << shift))) shift++;
+    return (value << shift) & mask;
+}
+
+static void count_scalar_store(struct post_value_pc_entry *entry, uint32_t value)
+{
+    if (!g_post_store_mask) return;
+    uint32_t stored = value & g_post_store_mask;
+    entry->scalar_samples++;
+    entry->scalar_zero += stored == 0;
+    entry->scalar_nonzero += stored != 0;
+    entry->scalar_mismatch += stored != g_post_store_expected;
+}
+
 static void count_post_value(int watch, uint32_t pc, uint32_t value)
 {
     struct post_value_stats *stats;
@@ -1088,6 +1125,7 @@ static void count_post_value(int watch, uint32_t pc, uint32_t value)
     }
     for (i = 0; i < stats->n_pc; i++) {
         if (stats->pc[i].pc == pc) {
+            count_scalar_store(&stats->pc[i], value);
             stats->pc[i].samples++;
             if (value == 0)
                 stats->pc[i].zero_words++;
@@ -1101,6 +1139,7 @@ static void count_post_value(int watch, uint32_t pc, uint32_t value)
         stats->pc[stats->n_pc].samples = 1;
         stats->pc[stats->n_pc].zero_words = value == 0;
         stats->pc[stats->n_pc].nonzero_words = value != 0;
+        count_scalar_store(&stats->pc[stats->n_pc], value);
         stats->n_pc++;
     } else {
         stats->pc_overflow++;
@@ -1519,6 +1558,15 @@ static void dbg_update(unsigned int pc)
                     g_post_value_pending_watch = i;
                     g_post_value_addr = accessed;
                     g_post_value_pc_addr = pc;
+                    uint32_t instruction = pDebugMemRead32(pc);
+                    /* The core reports a 4-byte memory transaction even for sb/sh. */
+                    uint32_t effective = gpr32((instruction >> 21) & 31u) +
+                        (uint32_t)(int32_t)(int16_t)instruction;
+                    g_post_store_mask = ((effective & 0x1FFFFFFCu) ==
+                                         (accessed & 0x1FFFFFFCu)) ?
+                        scalar_store_mask(instruction, effective) : 0;
+                    g_post_store_expected = scalar_store_expected(
+                        g_post_store_mask, gpr32((instruction >> 16) & 31u));
                     g_post_value_pending_vi = g_vis;
                     g_post_value_pending_width = pDebugMemRead32(VI_WIDTH_ADDR);
                     g_post_value_pending_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
@@ -2359,6 +2407,12 @@ int main(int argc, char **argv)
                 printf("[oracle] post-value-pc watch=%d pc=0x%08x samples=%ld zero=%ld nonzero=%ld\n",
                        watch, stats->pc[j].pc, stats->pc[j].samples,
                        stats->pc[j].zero_words, stats->pc[j].nonzero_words);
+            for (int j = 0; j < stats->n_pc; j++)
+                printf("[oracle] post-store-scalar watch=%d pc=0x%08x samples=%ld zero=%ld nonzero=%ld mismatch=%ld unsupported=%ld\n",
+                       watch, stats->pc[j].pc, stats->pc[j].scalar_samples,
+                       stats->pc[j].scalar_zero, stats->pc[j].scalar_nonzero,
+                       stats->pc[j].scalar_mismatch,
+                       stats->pc[j].samples - stats->pc[j].scalar_samples);
             if (stats->pc_overflow)
                 printf("[oracle] post-value-pc watch=%d overflow=%ld\n",
                        watch, stats->pc_overflow);

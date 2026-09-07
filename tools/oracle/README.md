@@ -101,6 +101,21 @@ and a final physical-range FNV/nonzero summary; repeat it to sample multiple
 watches in one run. `--post-value-pc` can force a post-store sample for
 selected writer PCs after the title/hangar phase gate arms.
 
+The `post-value` rows describe the entire aligned word, including bytes the
+instruction did not write. They do not establish the value written by an `sb`
+or `sh`. `post-store-scalar` rows separately count the bytes written by `sb`,
+aligned `sh`, and aligned `sw`, comparing them with the source register saved
+before the store. `mismatch` must be zero before using these samples as store
+evidence. `unsupported` counts other instructions or unaligned addresses.
+These rows use the same phase gate and sampling budget as `post-value`.
+
+Run the byte-lane regression test with:
+
+    cc -O1 -g -Wall -Wextra -std=c11 -fsanitize=undefined \
+      -I../rs64-oracle/src/mupen64plus-core/src/api \
+      -o /tmp/rs64-test-store-samples tools/oracle/test_store_samples.c
+    /tmp/rs64-test-store-samples
+
 Exit status: 0 = hits, 3 = clean run with zero hits, 1/2 = setup error. The
 VI count is emulated frames, so a run always reports how far the *game* got,
 not just how long the wall clock ran.

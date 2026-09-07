@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3658 (2026-09-03).
+notes are linked below. Updated for session 3659 (2026-09-07).
 
 ## Current state
 
@@ -27,9 +27,11 @@ tuples. Session 3584 watched the qualified source buffer itself: all controls
 and the target phase fired, but its phase histogram was mixed and exposed no
 stable earlier constructor or distinct DMA/copy PC. The earlier-constructor
 boundary is therefore unavailable to this oracle, not disproven; exact DMA
-ordering remains open. This still selects a retail-versus-port stored-value
-divergence at the writer boundary and qualifies the immediate producer
-context. See
+ordering remains open. The immediate producer context remains qualified, but
+session 3659 found
+that the stored-value divergence is not established: the oracle sampled an
+aligned word after `sb`, including three bytes that instruction did not write.
+Nonzero intermediate words cannot establish nonzero bytes written by memset. See
 [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md).
 
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
@@ -41,11 +43,11 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: the source-buffer oracle boundary is now closed as unavailable;
-   do not repeat that watch or the saturated field table. Exact DMA ordering
-   remains open, but no DMA identifier is exposed by the current capture. Do
-   not implement a writeback or zero-fill mitigation without a new independent
-   writer/order discriminator.
+1. M5 Step 3: identify the live retail audio task and its source object before
+   comparing physical heap addresses. The s3659 scalar-store capture refuted
+   the old nonzero-memset inference: 1,844 sampled stores wrote zero, all
+   matching the source register. The aligned words were nonzero in 829 cases.
+   Exact DMA ordering remains open; do not add a writeback/zero-fill mitigation.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -79,7 +81,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-RetailWriterSame | Selected for target-phase identity/order: `0x800078EC` writes at 47.4 s before target VI at 48.5 s. |
 | H-RetailWriterOther | Refuted for the target-phase write; earlier setup writers are separate activity. |
 | H-RetailOrdering | Exact DMA ordering remains unmeasured. |
-| H-RetailValue | Nonzero target-phase words selected; parity against the port remains open. |
+| H-RetailValue | Whole-word nonzero samples do not establish a nonzero byte store; s3659 measured 1,844 zero bytes with zero mismatches. |
 | H-RetailProducer | `0x800052C4` is repeatedly the immediate caller of `0x800078E0`; no earlier constructor was exposed by the repeated field table. |
 | H-RetailDmaOrder | No separate DMA event identifier was exposed; ordering remains open. |
 | H-CaptureInvalid | Refuted for this run: whole-RDRAM, source-span, writer-PC, and target-phase controls all fired. |
@@ -90,9 +92,14 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-NextClassGap | Refuted for this `*0x80110D50`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
 | H-NextClassUnevaluable | Not selected: one word, one malloc store, one destructor. |
 
-The current work-unit slug is `m3-next-audio-idiom-audit`.
+The current work-unit slug is `m5-audio-source-ownership`.
 
 ## Recent evidence ledger
+
+- **3659 — corrected store-width evidence:** all 1,844 sampled retail memset
+  stores were zero with zero mismatches, despite 829 nonzero containing words.
+  Oracle build and UBSan regression tests passed. Both title/hangar controls
+  fired. See [M5-S3659-SCALAR-STORE-EVIDENCE.md](M5-S3659-SCALAR-STORE-EVIDENCE.md).
 
 Only the latest boundary transitions are repeated here; the append-only ledger
 and evidence notes retain the full history. Sessions 3586–3657 M3 class
@@ -255,6 +262,12 @@ must propagate to the outer recovery boundary; and RT64's interpreter safety
 limit prevents a missing DL terminator from becoming an access violation.
 
 ## Superseded conclusions
+
+The s3579–s3584 inference of a retail-versus-port stored-value divergence at
+`0x800078EC` is unsupported. The retail ROM instruction is `sb $a1, 0($v0)`
+(`0xA0450000` at ROM offset `0x84EC`), but the oracle read the entire aligned
+word. A byte zero-fill legitimately leaves nonzero neighboring bytes until
+later stores clear them. The new scalar-store samples distinguish this case.
 
 The original overlay/menu-only explanation, intrinsic VI-640 flakiness,
 missing-input and wait-return explanations, global-zero image-DMA theory,
