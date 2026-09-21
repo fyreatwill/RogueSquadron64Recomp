@@ -101,6 +101,8 @@ extern "C" uint64_t rs64_audio_join_m5_event(
     uint32_t row, uint32_t idx, uint32_t dest, uint32_t value0,
     uint32_t value1, uint32_t value2, uint32_t value3);
 
+static thread_local const OSTask* s_pending_audio_task = nullptr;
+
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
 
 extern "C" void rs64_m5_dispatch_boundary(uint32_t target_pc) {
@@ -1040,17 +1042,22 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
         std::lock_guard<std::mutex> lock(source_mutex);
         const uint32_t slot = width == 1024u ? 0u : 1u;
         if (source_rows[slot] < 512u) {
+            const uint32_t task_data_ptr = s_pending_audio_task == nullptr ?
+                0u : static_cast<uint32_t>(s_pending_audio_task->t.data_ptr);
+            const uint32_t task_data_size = s_pending_audio_task == nullptr ?
+                0u : static_cast<uint32_t>(s_pending_audio_task->t.data_size);
             std::fprintf(stderr,
                 "[m5-source-range-reader] event=%llu row=%u op=dma_to_dmem "
                 "phase=%u width=%u origin=0x%06X arm=%s route_ordinal=%u "
                 "route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
                 "overlap=0x%06X..0x%06X source_fnv=%08X source_nz=%u "
-                "dmem_fnv=%08X dmem_nz=%u exit=%d\n",
+                "dmem_fnv=%08X dmem_nz=%u task_data_ptr=0x%08X "
+                "task_data_size=0x%X exit=%d\n",
                 static_cast<unsigned long long>(g_rs64_m5_source_event++),
                 source_rows[slot]++, phase, width, origin, arm ? arm : "n/a",
                 route_ordinal, route_row, dram_addr, len, dmem_addr,
                 overlap_first, overlap_last, source_fnv, source_nz, dmem_fnv,
-                dmem_nz, exit_reason);
+                dmem_nz, task_data_ptr, task_data_size, exit_reason);
             std::fflush(stderr);
         }
     }
@@ -1544,7 +1551,6 @@ static thread_local uint32_t s_pending_task_data_ptr  = 0;
 static thread_local uint32_t s_pending_task_data_size = 0;
 static thread_local uint32_t s_pending_task_ucode_data = 0;
 static thread_local uint32_t s_pending_task_ucode_data_size = 0;
-static thread_local const OSTask* s_pending_audio_task = nullptr;
 // The task submitter and RSP dispatcher are different threads. Release/acquire
 // publishes the guest task address without making it part of audio behavior.
 static std::atomic<uint32_t> s_pending_task_guest_ptr{0};

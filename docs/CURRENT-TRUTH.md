@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3672 (2026-09-21).
+ notes are linked below. Updated for session 3673 (2026-09-21).
 
 ## Current state
 
@@ -152,6 +152,16 @@ phases. This selects `H-InputDmaObserved` and refutes
 global explanation. Direction/value rows remain single-source port evidence.
 See [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md).
 
+Session 3673 joined each source-span input row to the active port audio task
+by recording `s_pending_audio_task->data_ptr` in the reader witness. All 512
+title rows carried `0x80171CE0` and nonzero source payloads; all 512 hangar
+rows carried `0x80171E70` and zero source payloads. The ABI/task-object rows
+and live task-pointer rows agree in the same run, selecting
+`H-SameTaskInput` and `H-HangarZeroProducer` for this span and refuting
+`H-InterleavedTaskInput`/`H-HangarZeroTransform` there. Other image-stage
+objects and the producer of the hangar-zero bytes remain open. See
+[M5-S3673-INPUT-TASK-OWNERSHIP.md](M5-S3673-INPUT-TASK-OWNERSHIP.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -211,8 +221,14 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    are zero and hash-identical after staging. Next join the observed input-DMA
    event/route ordinal to the selected task object and determine whether the
    hangar zero source is produced by the same logical object or a distinct
-   pre-task state. See [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md)
-   and [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md).
+   pre-task state. S3673 selected matching task ownership for the watched
+   source span and phase-specific pre-staging zero; it did not identify the
+   hangar-zero producer or other stage ownership. Next join the input-DMA
+   event/route ordinal to image-stage task rows for the interleaved
+   `0x80173B20`/`0x80173CB0` objects. See
+   [M5-S3673-INPUT-TASK-OWNERSHIP.md](M5-S3673-INPUT-TASK-OWNERSHIP.md),
+   [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md), and
+   [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the

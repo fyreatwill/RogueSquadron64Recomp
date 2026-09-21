@@ -137458,3 +137458,24 @@ Evidence: `docs/M5-S3672-INPUT-DMA-ORDER.md`,
 `scratch/agent/s3671_m5_dma_order/summary.log`, and
 `src/main/main.cpp`. ORIGIN: diagnostic-only input-DMA overlap/hash witness;
 no guest or host state was rewritten, skipped, or guarded.
+
+## Session 3673 (2026-09-21) — joined source-span input DMA to audio task ownership
+
+The single-arm build added the active audio task data pointer and size to each
+bounded source-span input-DMA row. The concurrent 55-second run passed the
+oracle whole-RDRAM and title/hangar phase controls, port title/hangar and RSP
+source controls, and 1,822 type-2 ABI/DMA rows; it emitted 1,024 reader rows
+with no crash or abort marker.
+
+All 512 title rows carried `0x80171CE0` and source nonzero counts of 112 or
+216; all 512 hangar rows carried `0x80171E70` and zero source/post-DMEM bytes.
+The live task pointer agrees with the ABI/task-object rows. This selects
+`H-SameTaskInput` and `H-HangarZeroProducer` for the watched span and refutes
+`H-InterleavedTaskInput` and `H-HangarZeroTransform` there. It does not
+resolve the other interleaved image-stage objects or the writer that leaves
+the hangar source zero. No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3673-INPUT-TASK-OWNERSHIP.md`,
+`scratch/agent/s3671_m5_dma_order/summary.log`, and `src/main/main.cpp`.
+ORIGIN: diagnostic-only task-pointer witness; no value was skipped, guarded,
+or rewritten.
