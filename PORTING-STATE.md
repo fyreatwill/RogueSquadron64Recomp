@@ -137480,6 +137480,28 @@ Evidence: `docs/M5-S3673-INPUT-TASK-OWNERSHIP.md`,
 ORIGIN: diagnostic-only task-pointer witness; no value was skipped, guarded,
 or rewritten.
 
+## Session 3675 (2026-09-21) — classified sparse image-stage task exceptions
+
+The corrected concurrent 55-second capture passed the oracle whole-RDRAM,
+source-span, descriptor, title, hangar, and type-2 controls plus the port
+source-hook, phase, ABI, and stage controls. It emitted 1,024 source-span
+reader rows and 3,939 bounded stage rows, with no crash or abort marker.
+
+Title stage-2/3 alternate task pointer `0x80173B20` occurred at route
+ordinals 1, 460, and 463. Their stage-2 destinations varied across
+`0x80167350`, `0x80166A50`/`0x80166D50`, and `0x80167650`; stage 3 used
+`0x80178D80`. Hangar's alternate `0x80171CE0` occurred at ordinal 464, with
+stage-2 destination `0x80167950` and stage-3 destination `0x80178D80`.
+This favors route-sequence correlation over a single destination mapping, but
+the source-reader and stage witness still lack one exact event key, so stale
+callback timing is not refuted. No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3675-SPARSE-STAGE-EXCEPTIONS.md`,
+`scratch/agent/s3674_m5_stage_task_join/{oracle.log,port.log}`, and
+`src/main/main.cpp`.
+ORIGIN: diagnostic-only stage/task witness; no value was skipped, guarded,
+or rewritten.
+
 ## Session 3674 (2026-09-21) — joined image stages to live audio task pointers
 
 The stage witness added the live `s_pending_audio_task` data pointer and size.

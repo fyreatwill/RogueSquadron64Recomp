@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3674 (2026-09-21).
+ notes are linked below. Updated for session 3675 (2026-09-21).
 
 ## Current state
 
@@ -174,6 +174,17 @@ to-stage-row ordinal joining was not established because the two route ordinal
 streams did not align in this capture. See
 [M5-S3674-STAGE-TASK-JOIN.md](M5-S3674-STAGE-TASK-JOIN.md).
 
+Session 3675's corrected concurrent capture passed the oracle whole-RDRAM,
+source-span, descriptor, title, hangar, and type-2 controls plus the port
+source-hook, phase, ABI, and stage controls. Title stage-2/3 alternate task
+pointer `0x80173B20` occurred at route ordinals 1, 460, and 463; its stage-2
+destinations varied across `0x80167350`, `0x80166A50`/`0x80166D50`, and
+`0x80167650`. Hangar's alternate `0x80171CE0` occurred at ordinal 464 with
+stage-2 destination `0x80167950`. This selects route-sequence correlation
+over a single destination mapping, but exact source-reader/stage event joining
+remains open, so callback timing is not refuted. See
+[M5-S3675-SPARSE-STAGE-EXCEPTIONS.md](M5-S3675-SPARSE-STAGE-EXCEPTIONS.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -237,9 +248,15 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    source span and phase-specific pre-staging zero; it did not identify the
    hangar-zero producer or other stage ownership. Session 3674 found
    phase-dominant stage-task matches but sparse pointer exceptions, and the
-   exact source/stage route ordinals did not align. Next classify those sparse
-   stage exceptions by destination and establish a same-event route join before
-   assigning ownership to `0x80173B20`/`0x80173CB0`. See
+   exact source/stage route ordinals did not align. Session 3675 classified
+   the sparse exceptions: title alternates occurred at route ordinals 1, 460,
+   and 463 with varying stage-2 destinations, while the hangar alternate
+   occurred at ordinal 464. This favors route-sequence selection over a fixed
+   destination mapping, but the source-reader/stage event key is still
+   missing. Next add one shared event/route sequence to the stage and source
+   witnesses, then test whether each exception's input-DMA event carries the
+   same pointer. See
+   [M5-S3675-SPARSE-STAGE-EXCEPTIONS.md](M5-S3675-SPARSE-STAGE-EXCEPTIONS.md),
    [M5-S3674-STAGE-TASK-JOIN.md](M5-S3674-STAGE-TASK-JOIN.md),
    [M5-S3673-INPUT-TASK-OWNERSHIP.md](M5-S3673-INPUT-TASK-OWNERSHIP.md),
    [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md), and
