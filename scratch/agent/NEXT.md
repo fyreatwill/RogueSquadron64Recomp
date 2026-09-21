@@ -4,7 +4,8 @@ HYPOTHESIS-ID: m5-audio-source-ownership
 
 Session 3677 showed that task data pointers are reused: the corrected shared
 record produced 0 exact task-pointer/route matches and mostly same-pointer,
-different-route fallbacks. The next bounded unit is to carry one monotonic
+different-route fallbacks (3,760 report fallbacks across 1,922 stage rows).
+The next bounded unit is to carry one monotonic
 audio-task generation from the actual `get_rsp_microcode`/task handoff into
 both the source-reader and image-stage witnesses. This is one shared key, not
 another pointer-only join.
