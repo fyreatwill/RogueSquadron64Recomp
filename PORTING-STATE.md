@@ -137181,3 +137181,31 @@ task rows. No mitigation or game-state change was made.
 Evidence: `docs/M5-S3661-DESCRIPTOR-WRITERS.md`,
 `scratch/agent/s3661_m5_descriptor_writers/oracle.log`,
 `scratch/agent/s3661_m5_descriptor_writers/port.log`.
+
+## Session 3662 (2026-09-21) — joined descriptor writer arguments to tasks
+
+The prescribed batched M5 writer-argument census ran the retail oracle and
+the rebuilt real-audio/LLE/spin-yield/autopilot port concurrently. The oracle
+whole-RDRAM positive control produced 194,945 writes; its phase-gated type-2
+task dump recorded 1,617 valid rows with zero invalid pointers. The port
+reached title `0x00790400`/1024 and hangar `0x006AB400`/512 with 3,519 ABI
+rows, 1,027 source rows, and 88 bounded audio-object rows.
+
+Retail title task rows used task `0x80149470`, `data_ptr=0x80173B20` (627
+rows), while hangar rows used the same task and `data_ptr=0x80171E70` (990
+rows). The dominant writer family headed by `0x80090DE4` joined those task
+arguments through `$s1=0x80173B30` in title and `$s1=0x80171E80` in hangar.
+The phase-specific writer fields are therefore offsets within the same
+logical task contract, not evidence of separate target producers. Two
+requested low-level PCs had zero executions and were not promoted to
+producer evidence.
+
+This selects `H-SharedLogicalProducer` and closes the discriminator between
+shared logical ownership and separate logical objects for the active ranges.
+It leaves phase-inactive initialization and exact payload/source-DMA ordering
+open. No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3662-WRITER-ARGUMENTS.md`,
+`scratch/agent/s3662_m5_writer_arguments/summary.log`, `oracle.log`, and
+`port.log`. ORIGIN: diagnostic-only writer-argument/task joins; no guest or
+host value was skipped, rewritten, or guarded.

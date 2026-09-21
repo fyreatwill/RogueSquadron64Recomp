@@ -1,40 +1,37 @@
-# Next: join dominant descriptor writers to logical task fields
+# Next: resolve phase-inactive descriptor ownership and payload ordering
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3661 completed the phase-gated writer census. Positive controls passed:
-the oracle whole-RDRAM watch produced 194,936 writes and 1,610 valid phase
-task rows; the port reached title and hangar with 3,582 ABI rows and 1,024
-RSP-source rows. The result is mixed: active ranges share the
-`0x80090DE4`-headed writer family, but title writes `0x173B20`/`0x173CB0`
-while hangar writes `0x171E70`/`0x173CB0`; phase-inactive ranges remain
-ambiguous between pre-phase initialization and another producer.
+Session 3662 selected `H-SharedLogicalProducer`: the retail task dump and
+writer field dump joined title `data_ptr=0x80173B20` to writer `$s1=0x80173B30`
+and hangar `data_ptr=0x80171E70` to `$s1=0x80171E80`. Controls passed: 194,945
+whole-RDRAM writes, 1,617 valid type-2 task rows, title and hangar port VIs,
+3,519 port ABI rows, and 1,027 source rows.
 
-Next unit: one batched logical-argument census of the dominant retail writer
-family (`0x80090DE4`, `0x80090AAC`, `0x80090AF4`, `0x80090B58`,
-`0x80090CA4`, `0x80090DE4`, `0x80091078`, `0x8009114C`, `0x80091168`, and
-`0x80091170`) using `--watch-pc`, `--pc-field-dump`, and the same four
-descriptor watches/task dump. Keep title and hangar phase buckets and the
-whole-RDRAM positive control. In the port, retain `audtask-abi`,
-`audio-objects`, task/DMA, and RSP-source rows.
+Next unit: one batched phase-gated retail caller/field census for the dominant
+writer family and the four descriptor ranges, retaining the whole-RDRAM and
+type-2 task controls. Add the writer `prev_pc`/`$ra` join and explicit
+pre-phase buckets so the phase-inactive ranges can be separated into an
+earlier initializer versus a different logical producer. Keep the port's
+`audtask-abi`, task/DMA, RSP-source, and audio-object rows in the same paired
+run. Use the existing validated route and SIGKILL watchdog.
 
 Competing hypotheses and discriminator:
 
-- H-SharedLogicalProducer: the dominant PCs receive the same logical task or
-  descriptor base and select different fields/ranges by phase. Expected:
-  phase rows join to the same task/object arguments while destination offsets
-  explain the active subset.
-- H-PrePhaseInitialization: phase-inactive target ranges were initialized
-  earlier. Expected: writer executions or field values occur before the title
-  or hangar gate, with no matching target-phase task row.
-- H-SeparateProducer: the active ranges are produced by distinct logical
-  objects despite sharing some low-level PCs. Expected: writer argument
-  fields separate by range/object after task-row joining.
-- H-CaptureInvalid: expected only if whole-RDRAM, task, phase, or port controls
-  fail; discard the census rather than infer ownership.
+- H-PrePhaseInitialization: inactive ranges have writer/caller rows before
+  their phase gate and no matching target-phase task tuple.
+- H-SeparateLogicalProducer: inactive ranges have a distinct logical
+  descriptor base or caller/`$ra` family, while active rows retain the s3662
+  `data_ptr+0x10` join.
+- H-SharedLogicalProducerAllPhases: the same task/caller argument family owns
+  all four ranges, with inactive writes simply occurring before the phase
+  bucket.
+- H-CaptureInvalid: selected only if whole-RDRAM, task, phase, or port
+  controls fail; discard the census rather than infer ownership.
 
-Discriminating outcome: a valid same-run join of writer PC, logical arguments,
-destination range, and task row. One shared argument tuple with field-specific
-destinations selects H-SharedLogicalProducer; pre-gate-only rows select
-H-PrePhaseInitialization; separated tuples select H-SeparateProducer. Do not
-add a writeback, zero-fill, guard, or game-state forcing.
+Discriminating outcome: a valid same-run join of each range's writer PC,
+caller/`$ra`, phase bucket, logical base, and task row. Pre-gate-only rows
+select H-PrePhaseInitialization; a distinct base/caller selects
+H-SeparateLogicalProducer; one shared task/caller family across pre- and
+target-phase rows selects H-SharedLogicalProducerAllPhases. Do not add a
+writeback, zero-fill, guard, or game-state forcing.

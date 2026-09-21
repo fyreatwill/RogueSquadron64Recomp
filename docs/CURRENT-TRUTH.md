@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3661 (2026-09-21).
+notes are linked below. Updated for session 3662 (2026-09-21).
 
 ## Current state
 
@@ -50,8 +50,12 @@ phase-active descriptor ranges share a writer family headed by `0x80090DE4`,
 but the phase-inactive ranges have no phase-gated writes: title writes
 `0x173B20`/`0x173CB0`, while hangar writes `0x171E70`/`0x173CB0`. This selects
 a shared producer for active ranges, not one universal writer for all four;
-pre-phase initialization and interleaved-object ownership remain open. See
-[M5-S3661-DESCRIPTOR-WRITERS.md](M5-S3661-DESCRIPTOR-WRITERS.md).
+pre-phase initialization and interleaved-object ownership remain open. Session
+3662 joined the family arguments to the task rows: title uses task data
+`0x80173B20` and writer `$s1=0x80173B30`, while hangar uses `0x80171E70` and
+`$s1=0x80171E80`. This selects a shared logical producer with phase-specific
+field offsets; exact payload/DMA ordering remains open. See
+[M5-S3662-WRITER-ARGUMENTS.md](M5-S3662-WRITER-ARGUMENTS.md).
 
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
@@ -63,13 +67,12 @@ real-audio route is the comparison arm.
 The backlog is one monotonic sequence. Work only the first applicable item.
 
 1. M5 Step 3: resolve descriptor ownership across phase boundaries. Session
-   3661 selected the shared writer family headed by `0x80090DE4` for the
-   phase-active ranges, but title has no live writes to `0x171CE0`/`0x171E70`
-   and hangar has no live writes to `0x173B20`. Next join the dominant retail
-   writer PCs to their logical descriptor/task arguments and the port's
-   corresponding task/source rows, distinguishing pre-phase initialization
-   from a different producer. Session 3660 qualified the matching target
-   descriptors, but the port interleaves additional source objects. Continue
+   3662 selected `H-SharedLogicalProducer`: the dominant writer family joins
+   the phase task rows at `data_ptr+0x10` in both title and hangar. Next
+   distinguish the phase-inactive ranges from pre-phase initialization and
+   identify the payload writer/source-DMA ordering for matching and
+   interleaved objects. Session 3660 qualified matching target descriptors,
+   but the port interleaves additional source objects. Continue
    to identify the writer/ownership boundary for the target and interleaved
    descriptor ranges (`0x80171CE0`, `0x80171E70`, `0x80173B20`, `0x80173CB0`)
    with phase-gated retail writer-PC watches and the existing port task/source
@@ -116,6 +119,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SameLogicalObject | Selected at s3660 for matching target task rows; the same task contract and target descriptor addresses recur, while interleaved objects have differing payload/source-DMA identities. |
 | H-DifferentObject | Applies only to s3660's interleaved helper rows; not selected for matching target rows. |
 | H-SharedPhaseProducer | Selected at s3661 for phase-active descriptor ranges: the same `0x80090DE4`-headed writer family writes target/interleaved ranges within each phase. |
+| H-SharedLogicalProducer | Selected at s3662: title task `0x80173B20` joins writer `$s1=0x80173B30`, and hangar task `0x80171E70` joins `$s1=0x80171E80`; phase-specific fields use the same logical task contract. |
+| H-SeparateLogicalProducer | Refuted for the joined target rows at s3662; separate low-level destination bases were not observed after task-argument joining. |
 | H-OneWriterAllRanges | Refuted at s3661: title and hangar have different phase-active subsets, with no phase-gated writes to the other ranges. |
 | H-PrePhaseInitialization | Remains open for phase-inactive ranges; absence inside a phase does not identify their earlier writer. |
 | H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
@@ -144,6 +149,10 @@ The current work-unit slug is `m5-audio-source-ownership`.
   `0x171E70`/`0x173CB0` ranges share the `0x80090DE4`-headed writer family;
   inactive ranges were not written during their phase. See
   [M5-S3661-DESCRIPTOR-WRITERS.md](M5-S3661-DESCRIPTOR-WRITERS.md).
+- **3662 — writer-argument/task join:** whole-RDRAM and task controls passed.
+  The title and hangar task data pointers joined the dominant writer-family
+  `$s1` fields at `+0x10`, selecting shared logical ownership. See
+  [M5-S3662-WRITER-ARGUMENTS.md](M5-S3662-WRITER-ARGUMENTS.md).
 
 Only the latest boundary transitions are repeated here; the append-only ledger
 and evidence notes retain the full history. Sessions 3586–3657 M3 class
