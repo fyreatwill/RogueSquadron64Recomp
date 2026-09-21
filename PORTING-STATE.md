@@ -137600,3 +137600,23 @@ is the next discriminator. The result is single-source port evidence because
 the independent retail arm cannot expose a host generation. No guest value was
 skipped, rewritten, or guarded. See
 docs/M5-S3678-TASK-GENERATION-JOIN.md.
+
+## Session 3679 (2026-09-21) — joined audio-task generation to host threads
+
+Ran the qualified concurrent retail/port recipe after adding a stable numeric
+host-thread key to the existing M_AUDTASK handoff, source-range, and image-stage
+witnesses. The build succeeded and the run used SIGKILL cleanup. Retail passed
+the whole-RDRAM, descriptor, title, hangar, and type-2 task controls. The port
+passed its source, phase, ABI, and stage controls and reached title and hangar.
+
+The port emitted 1,024 source-range input rows and 1,254 stage-2 rows. Every
+stage-2 row had `handoff_thread=1,event_thread=1`; the positive thread-key
+instrument therefore fired and found no cross-thread split. Combined with s3678's
+generation mismatch dominance and residual route drift, this selects
+H-SameThreadPublicationLag over H-CrossThreadOwnership for this run. It does
+not identify whether the remaining defect is stale thread-local publication or
+route sequencing. This is single-source port evidence for thread identity;
+retail independently confirms the driven phases and task controls. No guest
+value was skipped, rewritten, or guarded. See
+docs/M5-S3679-TASK-THREAD-JOIN.md.
+ORIGIN: diagnostic-only host-thread witness; no mitigation was added.

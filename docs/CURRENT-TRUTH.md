@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3678 (2026-09-21).
+notes are linked below. Updated for session 3679 (2026-09-21).
 
 ## Current state
 
@@ -221,6 +221,17 @@ but route drift also occurs. It is single-source port evidence because retail
 cannot expose a host generation. See
 [M5-S3678-TASK-GENERATION-JOIN.md](M5-S3678-TASK-GENERATION-JOIN.md).
 
+Session 3679 carried a stable host-thread key from the port `M_AUDTASK`
+handoff into the source and stage witnesses. The qualified concurrent run
+passed the oracle whole-RDRAM, descriptor, title, hangar, and type-2 controls
+and the port source/phase/ABI/stage controls. It recorded 1,024 source rows
+and 1,254 stage-2 rows; every stage row had `handoff_thread=1` and
+`event_thread=1`. This selects `H-SameThreadPublicationLag` over
+`H-CrossThreadOwnership` for this run, while leaving the stale-record or
+publication-order mechanism open. It is single-source port evidence for
+thread identity; retail supplies the independent reachability controls. See
+[M5-S3679-TASK-THREAD-JOIN.md](M5-S3679-TASK-THREAD-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -238,7 +249,9 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: resolve exact DMA ordering and downstream task ownership after
+1. M5 Step 3: distinguish stale same-thread task publication from route
+   sequencing, then resolve exact DMA ordering and downstream task ownership
+   after
    selector interleave. Session 3667 selected `H-PayloadBeforeSelector`
    for source span `0x1797B0..0x179930`: its first writes were at 6.8–7.0 s,
    before title/hangar VI, and no writes landed in target phase buckets. The
