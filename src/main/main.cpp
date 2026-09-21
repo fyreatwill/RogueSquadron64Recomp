@@ -88,12 +88,13 @@ extern "C" void rs64_audio_join_image_stage(const char* arm,
                                                uint32_t dest, uint32_t len,
                                                uint32_t fnv, uint32_t nonzero,
                                                uint32_t dest_valid,
-                                               uint32_t task_data_ptr);
+                                               uint32_t task_data_ptr,
+                                               uint64_t task_generation);
 extern "C" void rs64_audio_join_image_source(
     const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
     uint32_t width, uint32_t origin, uint64_t source_event,
     uint32_t task_data_ptr, uint32_t dram, uint32_t len, uint32_t fnv,
-    uint32_t nonzero);
+    uint32_t nonzero, uint64_t task_generation);
 extern "C" void rs64_audio_join_image_complete(const char* arm,
                                                   uint32_t ordinal, uint32_t row,
                                                   uint32_t phase, uint32_t width,
@@ -108,6 +109,8 @@ extern "C" uint64_t rs64_audio_join_m5_event(
     uint32_t value1, uint32_t value2, uint32_t value3);
 
 static thread_local const OSTask* s_pending_audio_task = nullptr;
+static thread_local uint64_t s_pending_audio_generation = 0;
+static std::atomic<uint64_t> g_audio_task_generation{1};
 
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
 
@@ -1061,17 +1064,19 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 "route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
                 "overlap=0x%06X..0x%06X source_fnv=%08X source_nz=%u "
                 "dmem_fnv=%08X dmem_nz=%u task_data_ptr=0x%08X "
-                "task_data_size=0x%X exit=%d\n",
+                "task_data_size=0x%X task_generation=%llu exit=%d\n",
                 static_cast<unsigned long long>(event),
                 source_rows[slot]++, phase, width, origin, arm ? arm : "n/a",
                 route_ordinal, route_row, dram_addr, len, dmem_addr,
                 overlap_first, overlap_last, source_fnv, source_nz, dmem_fnv,
-                dmem_nz, task_data_ptr, task_data_size, exit_reason);
+                dmem_nz, task_data_ptr, task_data_size,
+                static_cast<unsigned long long>(s_pending_audio_generation),
+                exit_reason);
             std::fflush(stderr);
             rs64_audio_join_image_source(
                 arm, route_ordinal, route_row, phase, width, origin, event,
                 task_data_ptr, dram_addr, overlap_last - overlap_first,
-                source_fnv, source_nz);
+                source_fnv, source_nz, s_pending_audio_generation);
         }
     }
 
@@ -2386,12 +2391,13 @@ static void rs64_m5_task_handoff(const OSTask* task) {
     std::fprintf(stderr,
         "[m5-task-handoff] phase=%u width=%u origin=0x%06X arm=%s "
         "ordinal=%u row=%u task_ptr=0x%08X data_ptr=0x%08X data_size=0x%08X "
-        "data_ptr_plus_100=0x%08X\n",
+        "data_ptr_plus_100=0x%08X task_generation=%llu\n",
         g_rs64_audio_identity.phase, g_rs64_audio_identity.width,
         g_rs64_audio_identity.origin, g_rs64_audio_identity.arm,
         g_rs64_audio_identity.ordinal, g_rs64_audio_identity.row,
         s_pending_task_guest_ptr.load(std::memory_order_acquire), data_ptr,
-        static_cast<uint32_t>(task->t.data_size), data_ptr + 0x100u);
+        static_cast<uint32_t>(task->t.data_size), data_ptr + 0x100u,
+        static_cast<unsigned long long>(s_pending_audio_generation));
     std::fflush(stderr);
 }
 
@@ -3140,7 +3146,8 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
             route.arm, route.ordinal, route.row, route.phase, route.width,
             route.origin, stage, (dest & 0xFFFFF8u) & 0x007FFFFFu, dest_len,
             dma_fnv_a, dma_nz_a,
-            dest_valid ? 1u : 0u, task_data_ptr);
+            dest_valid ? 1u : 0u, task_data_ptr,
+            s_pending_audio_generation);
     }
     std::fprintf(stderr,
         "[audtask-image-stage] arm=%s ordinal=%u row=%u phase=%u width=%u"
@@ -3148,7 +3155,7 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         " dest=0x%08X dmem_a=0x%03X len_a=0x%X fnv_a=%08X nz_a=%u"
         " dmem_b=0x%03X len_b=0x%X fnv_b=%08X nz_b=%u"
         " source_event=%llu"
-        " task_data_ptr=0x%08X task_data_size=0x%X"
+        " task_data_ptr=0x%08X task_data_size=0x%X task_generation=%llu"
         " field348_fnv=%08X field348_nz=%u field348_valid=%u"
         " dma_fnv_a=%08X dma_nz_a=%u dest_valid=%u dest_fnv=%08X dest_nz=%u\n",
         route.arm, route.ordinal, route.row, route.phase, route.width,
@@ -3156,7 +3163,9 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         fnv_a, nz_a, dmem_b, len_b, fnv_b, nz_b,
         static_cast<unsigned long long>(g_rs64_m5_last_source_event),
         task_data_ptr,
-        task_data_size, field348_fnv, field348_nz,
+        task_data_size,
+        static_cast<unsigned long long>(s_pending_audio_generation),
+        field348_fnv, field348_nz,
         field348_valid ? 1u : 0u, dma_fnv_a, dma_nz_a,
         dest_valid ? 1u : 0u, dest_fnv, dest_nz);
     std::fflush(stderr);
@@ -4198,6 +4207,8 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         return &factor5_gfx_runner;
     case M_AUDTASK:
         s_pending_audio_task = task;
+        s_pending_audio_generation = g_audio_task_generation.fetch_add(
+            1, std::memory_order_relaxed);
         s_pending_task_data_ptr = (uint32_t)task->t.data_ptr;
         s_pending_task_data_size = (uint32_t)task->t.data_size;
         rs64_m5_pcm_task_data_set(s_pending_task_data_ptr);

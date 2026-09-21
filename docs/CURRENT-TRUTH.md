@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3677 (2026-09-21).
+notes are linked below. Updated for session 3678 (2026-09-21).
 
 ## Current state
 
@@ -208,6 +208,19 @@ route/callback timing without distinguishing cross-thread timing from
 publication lag. See
 [M5-S3677-TASK-KEYED-SOURCE-STAGE-JOIN.md](M5-S3677-TASK-KEYED-SOURCE-STAGE-JOIN.md).
 
+Session 3678 carried a monotonic generation from each port `M_AUDTASK`
+`get_rsp_microcode` handoff into the source and stage witnesses. The qualified
+run passed the oracle whole-RDRAM, descriptor, title, hangar, and type-2
+controls plus the port source/phase/ABI/stage controls. It recorded 1,024
+source rows and 1,903 stage-2 rows: 0 exact generation/route matches, 230
+same-generation/different-route rows, 1,671 different-generation/
+same-pointer rows, 1 different-generation/same-route row, and 1 unmatched row.
+This refutes universal handoff-generation/route identity and leaves a mixed
+cross-thread-or-stale-publication explanation: generation mismatch dominates,
+but route drift also occurs. It is single-source port evidence because retail
+cannot expose a host generation. See
+[M5-S3678-TASK-GENERATION-JOIN.md](M5-S3678-TASK-GENERATION-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -285,11 +298,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    [M5-S3673-INPUT-TASK-OWNERSHIP.md](M5-S3673-INPUT-TASK-OWNERSHIP.md),
    [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md), and
    [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md).
-   S3677 refuted pointer-only and exact route/task matching: the same task
-   pointer is reused, producing 0 exact joins and mostly same-pointer,
-   different-route fallbacks. Carry a monotonic task-generation key from the
-   actual audio-task handoff into both witnesses, then test whether sparse
-   rows share that generation. Preserve the same positive controls.
+   S3677 refuted pointer-only and exact route/task matching. S3678 found 0
+   exact generation/route matches, but 230 same-generation route drifts and
+   1,671 different-generation same-pointer rows. Add one execution-thread key
+   at handoff, source-reader, and stage-row creation, then classify the whole
+   generation/route/thread table in one qualified run. A same-thread dominant
+   mismatch selects publication lag; cross-thread mismatches select ownership
+   timing. Preserve the existing positive controls and do not add a guard.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -355,10 +370,21 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-ExceptionTiming | Supported at s3677: 0 exact route/task joins, 3,760 same-pointer/different-route report fallbacks, and stale sparse records; cross-thread timing versus publication lag remains open. |
 | H-ExactTaskRoute | Refuted at s3677: the shared task-pointer/route-keyed record produced 0 exact matches across 1,922 stage rows and 3,770 report observations. |
 | H-TaskPointerReuse | Selected at s3677: same task pointers were reused across route ordinals, so pointer-only joins attached older source records. |
+| H-GenerationRouteIdentity | Refuted at s3678: 0 exact generation/route matches across 1,903 stage-2 rows. |
+| H-RoutePublicationLag | Remains supported: 230 rows shared a generation but differed in route. |
+| H-CrossThreadTask | Remains supported, single-source: 1,671 rows had different generations despite the same task pointer. Thread identity is the next discriminator. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
 
 ## Recent evidence ledger
+
+- **3678 — task-generation source/stage join:** the qualified concurrent
+  capture passed all controls and recorded 1,024 source rows and 1,903
+  stage-2 rows. There were 0 exact generation/route matches, 230
+  same-generation/different-route rows, and 1,671 different-generation/
+  same-pointer rows. This is mixed, single-source port evidence; thread
+  identity remains open. See
+  [M5-S3678-TASK-GENERATION-JOIN.md](M5-S3678-TASK-GENERATION-JOIN.md).
 
 - **3677 — task-keyed source/stage join:** the corrected concurrent capture
   passed all oracle and port controls and recorded 1,024 source rows and
@@ -645,6 +671,7 @@ deletion.
 - [M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md](M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md)
 - [M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md](M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md)
 - [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md)
+- [M5-S3678-TASK-GENERATION-JOIN.md](M5-S3678-TASK-GENERATION-JOIN.md)
 - [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md)
 - [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md)
 - [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md)

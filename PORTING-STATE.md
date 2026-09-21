@@ -137576,3 +137576,27 @@ Evidence: `docs/M5-S3677-TASK-KEYED-SOURCE-STAGE-JOIN.md`,
 `src/main/main.cpp`, and the runtime patch export.
 ORIGIN: diagnostic-only shared source/stage witness; no value was skipped,
 guarded, or rewritten.
+## Session 3678 (2026-09-21) — joined source and image stages by audio-task generation
+
+Ran the required retail ground-truth check before changing the port. The
+oracle passed the whole-RDRAM positive control with 98,736 writes, reached the
+title and hangar phase buckets, and emitted valid type-2 task rows at
+0x80033FCC. Added a monotonic generation at each port M_AUDTASK
+get_rsp_microcode handoff and carried it into the existing source-range and
+image-stage witnesses. Rebuilt successfully, then ran the qualified concurrent
+55-second oracle/port recipe with SIGKILL cleanup.
+
+The oracle arm recorded 343,395 whole-RDRAM writes, 674 source-span writes,
+and 909 valid type-2 task rows. The port reached title and hangar and emitted
+1,024 source rows and 1,903 stage-2 rows; generation and handoff controls were
+present. Classification found 0 exact generation/route matches, 230
+same-generation/different-route rows, 1,671 different-generation/
+same-pointer rows, 1 different-generation/same-route row, and 1 unmatched row.
+
+This refutes a universal handoff-generation/route identity. It leaves a mixed
+explanation: route-publication drift is present, while generation mismatch is
+dominant and may indicate cross-thread or stale publication. Thread identity
+is the next discriminator. The result is single-source port evidence because
+the independent retail arm cannot expose a host generation. No guest value was
+skipped, rewritten, or guarded. See
+docs/M5-S3678-TASK-GENERATION-JOIN.md.
