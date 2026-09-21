@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3662 (2026-09-21).
+notes are linked below. Updated for session 3663 (2026-09-21).
 
 ## Current state
 
@@ -57,6 +57,15 @@ pre-phase initialization and interleaved-object ownership remain open. Session
 field offsets; exact payload/DMA ordering remains open. See
 [M5-S3662-WRITER-ARGUMENTS.md](M5-S3662-WRITER-ARGUMENTS.md).
 
+Session 3663 added writer caller fields and an all-phase bucket. The retail
+positive controls fired, and `0x80090DE4` retained `prev_pc=0x80090DE0` and
+`$ra=0x80090ABC` across target and non-target phase buckets, ruling out a
+caller-family split. Its task rows were title `0x80173B20` and hangar
+`0x80173CB0`, unlike s3662's hangar `0x80171E70`; logical ownership remains
+unresolved. The paired port arm crashed before phase controls, so this caller
+result is single-source retail evidence. See
+[M5-S3663-WRITER-CALLERS.md](M5-S3663-WRITER-CALLERS.md).
+
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
 stage-advancer input is a known route/configuration issue; the validated
@@ -67,7 +76,10 @@ real-audio route is the comparison arm.
 The backlog is one monotonic sequence. Work only the first applicable item.
 
 1. M5 Step 3: resolve descriptor ownership across phase boundaries. Session
-   3662 selected `H-SharedLogicalProducer`: the dominant writer family joins
+   3663 ruled out a caller-family split, but its hangar task tuple differs
+   from s3662's. Do not select an all-phase logical producer until that
+   route-dependent object difference is explained. Session 3662 selected
+   `H-SharedLogicalProducer`: the dominant writer family joins
    the phase task rows at `data_ptr+0x10` in both title and hangar. Next
    distinguish the phase-inactive ranges from pre-phase initialization and
    identify the payload writer/source-DMA ordering for matching and
@@ -121,6 +133,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SharedPhaseProducer | Selected at s3661 for phase-active descriptor ranges: the same `0x80090DE4`-headed writer family writes target/interleaved ranges within each phase. |
 | H-SharedLogicalProducer | Selected at s3662: title task `0x80173B20` joins writer `$s1=0x80173B30`, and hangar task `0x80171E70` joins `$s1=0x80171E80`; phase-specific fields use the same logical task contract. |
 | H-SeparateLogicalProducer | Refuted for the joined target rows at s3662; separate low-level destination bases were not observed after task-argument joining. |
+| H-SharedCallerSeparateObject | Selected only at caller level by s3663: `0x80090DE0`/`0x80090ABC` spans target and non-target buckets, but task-object identity remains route-dependent. |
 | H-OneWriterAllRanges | Refuted at s3661: title and hangar have different phase-active subsets, with no phase-gated writes to the other ranges. |
 | H-PrePhaseInitialization | Remains open for phase-inactive ranges; absence inside a phase does not identify their earlier writer. |
 | H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
@@ -153,6 +166,10 @@ The current work-unit slug is `m5-audio-source-ownership`.
   The title and hangar task data pointers joined the dominant writer-family
   `$s1` fields at `+0x10`, selecting shared logical ownership. See
   [M5-S3662-WRITER-ARGUMENTS.md](M5-S3662-WRITER-ARGUMENTS.md).
+- **3663 — writer caller/all-phase census:** whole-RDRAM, title/hangar VI,
+  and task controls passed. The caller identity was stable across phase
+  buckets, but the hangar task tuple differed from s3662; logical ownership
+  remains unresolved. See [M5-S3663-WRITER-CALLERS.md](M5-S3663-WRITER-CALLERS.md).
 
 Only the latest boundary transitions are repeated here; the append-only ledger
 and evidence notes retain the full history. Sessions 3586–3657 M3 class

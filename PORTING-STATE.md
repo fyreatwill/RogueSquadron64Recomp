@@ -137209,3 +137209,26 @@ Evidence: `docs/M5-S3662-WRITER-ARGUMENTS.md`,
 `scratch/agent/s3662_m5_writer_arguments/summary.log`, `oracle.log`, and
 `port.log`. ORIGIN: diagnostic-only writer-argument/task joins; no guest or
 host value was skipped, rewritten, or guarded.
+
+## Session 3663 (2026-09-21) — censused writer callers across all phases
+
+The prescribed caller/all-phase oracle instrument was built and run for 70
+seconds. Its whole-RDRAM positive control produced 133,677 writes; the
+phase-gated type-2 task dump recorded 1,107 valid rows with zero invalid
+pointers, including title and hangar VI buckets. The new field dump fired at
+the dominant writer `0x80090DE4` and recorded `prev_pc=0x80090DE0` with
+`$ra=0x80090ABC` across target and non-target 512 buckets.
+
+This rules out a caller-family split as the explanation for phase-inactive
+ranges, but does not close logical ownership. This route's task rows selected
+title `data_ptr=0x80173B20` and hangar `data_ptr=0x80173CB0`, unlike s3662's
+validated hangar `0x80171E70`. The paired port arm crashed before phase
+controls, so it is invalid for this census; s3662 remains the independent
+port-side evidence line. The route-dependent task-object difference is the
+next discriminator. No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3663-WRITER-CALLERS.md`,
+`scratch/agent/s3663_m5_writer_callers/oracle-final.log`, and the diagnostic
+instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only caller,
+field, phase, and task observations; no guest or host value was skipped,
+rewritten, or guarded.

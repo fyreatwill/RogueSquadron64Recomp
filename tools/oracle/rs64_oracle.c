@@ -305,6 +305,8 @@ static long g_vi_context_overflow;
 struct pc_field_dump_row {
     uint32_t s0;
     uint32_t s1;
+    uint32_t prev_pc;
+    uint32_t ra;
     uint32_t source_word;
     uint32_t source_byte;
     uint32_t branch_selector;
@@ -321,6 +323,7 @@ struct pc_field_dump_bucket {
 static struct pc_field_dump_bucket
     g_pc_field_dump[MAX_PC_FIELD_DUMP_PCS];
 static int g_n_pc_field_dump;
+static int g_pc_field_dump_any_phase;
 struct store_field_dump_pc {
     uint32_t pc;
     uint64_t watch_mask;
@@ -485,7 +488,7 @@ static void dump_pc_field(uint32_t pc)
     int index;
     int i;
 
-    if (!pc_phase_log_match())
+    if (!g_pc_field_dump_any_phase && !pc_phase_log_match())
         return;
     index = pc_field_dump_index(pc);
     if (index < 0)
@@ -494,6 +497,8 @@ static void dump_pc_field(uint32_t pc)
     bucket->hits++;
     row.s0 = gpr32(16);
     row.s1 = gpr32(17);
+    row.prev_pc = (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC);
+    row.ra = gpr32(31);
     row.source_word = pDebugMemRead32(debug_rdram_addr((row.s0 + 0x60u) & ~3u));
     row.source_byte = debug_mem_u8(row.s0 + 0x22u);
     row.branch_selector = gpr32(2);
@@ -501,6 +506,8 @@ static void dump_pc_field(uint32_t pc)
     for (i = 0; i < bucket->n_rows; i++) {
         if (bucket->rows[i].s0 == row.s0 &&
             bucket->rows[i].s1 == row.s1 &&
+            bucket->rows[i].prev_pc == row.prev_pc &&
+            bucket->rows[i].ra == row.ra &&
             bucket->rows[i].source_word == row.source_word &&
             bucket->rows[i].source_byte == row.source_byte &&
             bucket->rows[i].branch_selector == row.branch_selector &&
@@ -516,11 +523,12 @@ static void dump_pc_field(uint32_t pc)
     row.n = 1;
     bucket->rows[bucket->n_rows++] = row;
     printf("[pc-field-dump] pc=0x%08x width=%u origin=0x%08x "
-           "s0=0x%08x s1=0x%08x source_word=0x%08x "
+           "prev_pc=0x%08x ra=0x%08x s0=0x%08x s1=0x%08x source_word=0x%08x "
            "source_byte=0x%02x branch_selector=0x%08x "
            "branch_state=0x%04x n=1\n",
            pc, pDebugMemRead32(VI_WIDTH_ADDR),
-           pDebugMemRead32(VI_ORIGIN_ADDR), row.s0, row.s1,
+           pDebugMemRead32(VI_ORIGIN_ADDR), row.prev_pc, row.ra,
+           row.s0, row.s1,
            row.source_word, row.source_byte, row.branch_selector,
            row.branch_state);
     fflush(stdout);
@@ -2114,6 +2122,7 @@ static void usage(void)
         "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
         "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
         "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
+        "  --pc-field-dump-any-phase allow field rows before/after phase buckets\n"
         "  --store-field-dump W:A[,B...] dump phase-gated fields at exact writes on watch W\n"
         "  --store-field-dump-any-phase allow store-field-dump rows in any VI phase\n"
         "  --pc-task-dump A   dump phase-gated OSTask fields at PC A\n"
@@ -2213,6 +2222,8 @@ int main(int argc, char **argv)
             add_pc_phase_log_width(argv[++i]);
         else if (!strcmp(argv[i], "--pc-field-dump") && i + 1 < argc)
             add_pc_field_dump_pcs(argv[++i]);
+        else if (!strcmp(argv[i], "--pc-field-dump-any-phase"))
+            g_pc_field_dump_any_phase = 1;
         else if (!strcmp(argv[i], "--store-field-dump") && i + 1 < argc)
             add_store_field_dump(argv[++i]);
         else if (!strcmp(argv[i], "--store-field-dump-any-phase"))
