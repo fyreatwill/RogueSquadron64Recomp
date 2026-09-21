@@ -137483,6 +137483,10 @@ or rewritten.
 ## Session 3674 (2026-09-21) — joined image stages to live audio task pointers
 
 The stage witness added the live `s_pending_audio_task` data pointer and size.
+Two preliminary captures were invalid: one omitted the qualified route and
+stayed in the 640/menu loop with no stage rows; one added the unrelated C88
+behavior arm and crashed in the scheduler before target phases. Removing that
+arm and matching the s3671 route produced the valid capture below.
 The corrected concurrent 55-second run passed the oracle whole-RDRAM and
 title/hangar controls, port title/hangar and RSP-source controls, and emitted
 1,041 type-2 ABI/DMA rows, 1,024 source-span reader rows, and 2,024 bounded
