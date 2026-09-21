@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3665 (2026-09-21).
+ notes are linked below. Updated for session 3666 (2026-09-21).
 
 ## Current state
 
@@ -87,6 +87,14 @@ one-task-per-origin route rule, supports a shared caller family, and leaves
 object selection unresolved. See
 [M5-S3665-HANGAR-TASK-JOIN.md](M5-S3665-HANGAR-TASK-JOIN.md).
 
+Session 3666 joined the selector publication to the task stream. The
+immediately preceding selector value matched every task data pointer: title
+selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
+`0x80171E70`/`0x80173CB0`. The dominant writer caller remained shared. This
+selects `H-SelectorInterleave` and refutes stable-selector downstream object
+selection; payload writer and DMA ordering remain open. See
+[M5-S3666-SELECTOR-INTERLEAVE.md](M5-S3666-SELECTOR-INTERLEAVE.md).
+
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
 stage-advancer input is a known route/configuration issue; the validated
@@ -96,17 +104,16 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: resolve descriptor ownership across phase boundaries. Session
-   3665 passed all controls and showed title's route mapping, but both hangar
-   origins interleave `0x80171E70` and `0x80173CB0`; the dominant caller is
-   shared, with a minor `$ra` variant. This refutes a simple one-task-per-origin
-   rule and does not select universal logical ownership. Next join the selector
-   or source field immediately before task submission to the alternating object
-   rows. `H-SelectorInterleave` selects if the field changes with the object;
-   `H-SeparateProducer` selects if caller and field change together;
-   `H-SharedProducerWithTwoObjects` selects if the field stays stable. Require
-   whole-RDRAM, title, and hangar controls. The s3665 initial zero-row capture
-   omitted `--watch-pc` and is an instrument setup failure, not evidence.
+1. M5 Step 3: resolve payload ownership and exact DMA ordering after selector
+   interleave. Session 3666 passed all controls and joined the immediately
+   preceding selector publication to every task row, including both hangar
+   objects. This selects `H-SelectorInterleave`, refutes stable-selector
+   downstream switching, and leaves the shared writer's payload/source-DMA
+   ordering open. Next phase-gate source-byte writes or DMA events together
+   with selector publication (`0x80091060`/`0x80091074`), task submission, and
+   `0x80090DE4`; distinguish payload-before-selector, DMA-after-selector, and
+   separate-payload-writer outcomes. Require whole-RDRAM, title, and hangar
+   controls. See [M5-S3666-SELECTOR-INTERLEAVE.md](M5-S3666-SELECTOR-INTERLEAVE.md).
    Session 3664 ruled out neither hangar object ownership nor a shared
    all-phase producer. Session 3662 selected
    `H-SharedLogicalProducer`: the dominant writer family joins
@@ -166,9 +173,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SharedCallerSeparateObject | Selected only at caller level by s3663: `0x80090DE0`/`0x80090ABC` spans target and non-target buckets, but task-object identity remains route-dependent. |
 | H-RouteTaskSelection | Selected within s3664/s3665 title buffers, but refuted as a complete rule for hangar: both 512 origins interleave `0x80171E70` and `0x80173CB0`. |
 | H-SharedLogicalProducerAllPhases | Not selected: s3665 confirms a shared caller but not one logical task object across hangar rows. |
-| H-SelectorInterleave | Open: s3665 did not watch the selector/source field immediately before task submission. |
+| H-SelectorInterleave | Selected at s3666: the immediately preceding selector publication equals each task data pointer, including both alternating hangar objects. |
 | H-SeparateProducer | Not supported at caller level: dominant `0x80090DE0` remains shared; minor `$ra` variant needs field joining. |
-| H-SharedProducerWithTwoObjects | Open: stable caller plus alternating task objects is consistent, but selector/source identity is unmeasured. |
+| H-SharedProducerWithTwoObjects | Refuted at s3666: selector source changes with the task object. |
+| H-PayloadBeforeSelector | Open: source-byte completion versus selector publication remains unmeasured. |
+| H-DmaAfterSelector | Open: exact source-DMA ordering remains unmeasured. |
+| H-SeparatePayloadWriter | Open: shared caller is established, but object-specific payload/source ownership is not. |
 | H-OneWriterAllRanges | Refuted at s3661: title and hangar have different phase-active subsets, with no phase-gated writes to the other ranges. |
 | H-PrePhaseInitialization | Remains open for phase-inactive ranges; absence inside a phase does not identify their earlier writer. |
 | H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
@@ -182,6 +192,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 The current work-unit slug is `m5-audio-source-ownership`.
 
 ## Recent evidence ledger
+
+- **3666 — selector interleave:** the corrected phase-gated oracle capture
+  passed all controls and joined the selector publication to 1,878 task rows.
+  Selector source matched task data exactly, including both alternating hangar
+  objects, selecting `H-SelectorInterleave`. Payload writer and source-DMA
+  ordering remain open. See
+  [M5-S3666-SELECTOR-INTERLEAVE.md](M5-S3666-SELECTOR-INTERLEAVE.md).
 
 - **3664 — route task join:** the fixed bucket-local join passed the
   whole-RDRAM and title controls and emitted 120 rows. Title buffer origins

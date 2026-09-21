@@ -137285,3 +137285,26 @@ Evidence: `docs/M5-S3665-HANGAR-TASK-JOIN.md`,
 instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only task,
 field, phase, and caller observations; no guest or host value was skipped,
 rewritten, or guarded.
+
+## Session 3666 (2026-09-21) — joined selector publication to task objects
+
+The selector/task join capture ran for 55 seconds and passed the whole-RDRAM
+positive control (`322,682` writes), all four descriptor watches, both title
+origins, and both hangar origins. It produced `1,878` valid type-2 task rows
+with zero invalid pointers and zero overflow. Explicit execution watches for
+`0x80091060`, `0x80091074`, `0x80033FCC`, and `0x80090DE4` all fired.
+
+The selector publication immediately preceding each task row matched its data
+pointer exactly: title origins selected `0x80173B20` and `0x80171CE0`, while
+each hangar origin interleaved `0x80171E70` and `0x80173CB0`. The dominant
+writer caller remained `prev_pc=0x80090DE0` with `$ra=0x80090ABC`; the minor
+`0x80090BB4` return variant did not define a separate object producer. This
+selects `H-SelectorInterleave`, refutes stable-selector downstream object
+selection, and leaves payload writer/source-DMA ordering open. No mitigation or
+game-state change was made.
+
+Evidence: `docs/M5-S3666-SELECTOR-INTERLEAVE.md`,
+`scratch/agent/s3666_m5_hangar_selector_join/oracle.log`, and the diagnostic
+instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only selector,
+task, phase, and caller observations; no guest or host value was skipped,
+rewritten, or guarded.

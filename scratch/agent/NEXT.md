@@ -1,32 +1,34 @@
-# Next: identify the selector that interleaves hangar task objects
+# Next: identify payload writer and DMA ordering after selector interleave
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3665's corrected execution-watch capture passed whole-RDRAM, all four
-descriptor, title, and hangar controls. Title reproduced s3664's origin split,
-but each hangar origin interleaved `0x80171E70` and `0x80173CB0` task objects.
-The dominant writer caller remained `prev_pc=0x80090DE0`, `$ra=0x80090ABC`,
-with a minor `$ra=0x80090BB4` variant on hangar rows.
+Session 3666 passed whole-RDRAM, descriptor, title, and hangar controls. The
+selector publication immediately preceding each task row matched its task data
+pointer exactly, including both alternating hangar objects. The dominant writer
+caller remained `prev_pc=0x80090DE0`, `$ra=0x80090ABC`; the minor
+`$ra=0x80090BB4` variant remains non-separating.
 
-Next unit: use one new phase-gated oracle capture to join the task object's
-selector/source field before `0x80033FCC` to each hangar task row. Keep the
-same positive controls and explicit `--watch-pc 0x80033FCC,0x80090DE4`; add the
-smallest existing selector watch that distinguishes `0x80171E70` from
-`0x80173CB0` (the prior selector table is `0x80149758/0x8014975C`). Capture
-both 512 origins and retain `$ra` in the join. Do not infer ownership from
-the shared caller alone.
+Next unit: run one phase-gated oracle capture that joins source-byte writes or
+DMA events, selector publication (`0x80091060`/`0x80091074`), task submission
+(`0x80033FCC`), and the shared writer (`0x80090DE4`) for both hangar origins.
+Use the existing source descriptor watches and positive controls; do not infer
+payload ownership from the selector pointer alone.
 
 Discriminator:
 
-- H-SelectorInterleave: selector/source field changes before alternating
-  `0x80171E70`/`0x80173CB0` rows while caller identity stays stable.
-- H-SeparateProducer: selector/source field and writer caller change together.
-- H-SharedProducerWithTwoObjects: selector remains stable while the object
-  pointer alternates, indicating downstream double-buffer/object selection.
+- H-PayloadBeforeSelector: source bytes are written before selector publication
+  for each object, so the selector only exposes an already-complete payload.
+- H-DmaAfterSelector: source DMA/write activity follows selector publication and
+  task selection, making ordering the active divergence.
+- H-SeparatePayloadWriter: source writer or DMA identity changes with the
+  selected object despite the shared `0x80090DE0` caller.
 - H-CaptureInvalid: any whole-RDRAM, title, or hangar control fails; discard
   the census.
 
-Build: `bash tools/oracle/build.sh`. Run from `build/` for 55 seconds with the
-s3665 fixed route, controls, phase buckets, task join, and selector watch.
-Capture to `scratch/agent/s3666_m5_hangar_selector_join/`; use the built-in
-finite lifetime so the shutdown summary is retained.
+The discriminator is the relative order and identity of source writes/DMA,
+selector publication, and task rows. A missing whole-RDRAM, title, or hangar
+control is H-CaptureInvalid and makes the run unevaluable.
+
+Build: `bash tools/oracle/build.sh`. Run from `build/` for one finite
+phase-gated capture with all controls and explicit `--watch-pc` arms. Capture
+the result under `scratch/agent/` with a non-dot final path component.
