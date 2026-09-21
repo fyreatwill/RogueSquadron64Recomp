@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3673 (2026-09-21).
+ notes are linked below. Updated for session 3674 (2026-09-21).
 
 ## Current state
 
@@ -162,6 +162,18 @@ and live task-pointer rows agree in the same run, selecting
 objects and the producer of the hangar-zero bytes remain open. See
 [M5-S3673-INPUT-TASK-OWNERSHIP.md](M5-S3673-INPUT-TASK-OWNERSHIP.md).
 
+Session 3674 extended the stage witness with the live task pointer. Title
+stage-2/3 rows were dominated by `0x80171CE0` (467/469 and 463/465), with two
+rows per stage using `0x80173B20`; hangar stage-2/3 rows were dominated by
+`0x80171E70` (796/797 each), with one row per stage using `0x80171CE0`.
+Source-span rows remained `0x80171CE0` in title and `0x80171E70` in hangar,
+and retail task controls reported those same dominant pointers. This selects
+phase-dominant same-task ownership and stable hangar ownership, but refutes a
+universal selector because sparse interleaved rows remain. Exact source-row
+to-stage-row ordinal joining was not established because the two route ordinal
+streams did not align in this capture. See
+[M5-S3674-STAGE-TASK-JOIN.md](M5-S3674-STAGE-TASK-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -223,9 +235,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    hangar zero source is produced by the same logical object or a distinct
    pre-task state. S3673 selected matching task ownership for the watched
    source span and phase-specific pre-staging zero; it did not identify the
-   hangar-zero producer or other stage ownership. Next join the input-DMA
-   event/route ordinal to image-stage task rows for the interleaved
-   `0x80173B20`/`0x80173CB0` objects. See
+   hangar-zero producer or other stage ownership. Session 3674 found
+   phase-dominant stage-task matches but sparse pointer exceptions, and the
+   exact source/stage route ordinals did not align. Next classify those sparse
+   stage exceptions by destination and establish a same-event route join before
+   assigning ownership to `0x80173B20`/`0x80173CB0`. See
+   [M5-S3674-STAGE-TASK-JOIN.md](M5-S3674-STAGE-TASK-JOIN.md),
    [M5-S3673-INPUT-TASK-OWNERSHIP.md](M5-S3673-INPUT-TASK-OWNERSHIP.md),
    [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md), and
    [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md).

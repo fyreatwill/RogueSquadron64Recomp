@@ -3055,6 +3055,10 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
     }
 
     uint32_t fnv_a = 0, nz_a = 0, fnv_b = 0, nz_b = 0;
+    const uint32_t task_data_ptr = s_pending_audio_task == nullptr ?
+        0u : static_cast<uint32_t>(s_pending_audio_task->t.data_ptr);
+    const uint32_t task_data_size = s_pending_audio_task == nullptr ?
+        0u : static_cast<uint32_t>(s_pending_audio_task->t.data_size);
     if (len_a) rs64_audio_hash_dmem(dmem_a, len_a, fnv_a, nz_a);
     if (len_b) rs64_audio_hash_dmem(dmem_b, len_b, fnv_b, nz_b);
     uint32_t field348_fnv = 2166136261u, field348_nz = 0;
@@ -3130,12 +3134,14 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         " origin=0x%06X stage=%u r2=0x%03X field348=0x%08X field44=0x%08X"
         " dest=0x%08X dmem_a=0x%03X len_a=0x%X fnv_a=%08X nz_a=%u"
         " dmem_b=0x%03X len_b=0x%X fnv_b=%08X nz_b=%u"
+        " task_data_ptr=0x%08X task_data_size=0x%X"
         " field348_fnv=%08X field348_nz=%u field348_valid=%u"
         " dma_fnv_a=%08X dma_nz_a=%u dest_valid=%u dest_fnv=%08X dest_nz=%u\n",
         route.arm, route.ordinal, route.row, route.phase, route.width,
         route.origin, stage, r2, field348, field44, dest, dmem_a, len_a,
-        fnv_a, nz_a, dmem_b, len_b, fnv_b, nz_b, field348_fnv,
-        field348_nz, field348_valid ? 1u : 0u, dma_fnv_a, dma_nz_a,
+        fnv_a, nz_a, dmem_b, len_b, fnv_b, nz_b, task_data_ptr,
+        task_data_size, field348_fnv, field348_nz,
+        field348_valid ? 1u : 0u, dma_fnv_a, dma_nz_a,
         dest_valid ? 1u : 0u, dest_fnv, dest_nz);
     std::fflush(stderr);
 }

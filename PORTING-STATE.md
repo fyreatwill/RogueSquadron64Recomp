@@ -137479,3 +137479,27 @@ Evidence: `docs/M5-S3673-INPUT-TASK-OWNERSHIP.md`,
 `scratch/agent/s3671_m5_dma_order/summary.log`, and `src/main/main.cpp`.
 ORIGIN: diagnostic-only task-pointer witness; no value was skipped, guarded,
 or rewritten.
+
+## Session 3674 (2026-09-21) — joined image stages to live audio task pointers
+
+The stage witness added the live `s_pending_audio_task` data pointer and size.
+The corrected concurrent 55-second run passed the oracle whole-RDRAM and
+title/hangar controls, port title/hangar and RSP-source controls, and emitted
+1,041 type-2 ABI/DMA rows, 1,024 source-span reader rows, and 2,024 bounded
+stage rows with no crash or abort marker.
+
+For stages 2 and 3, title rows carried `0x80171CE0` in 467/469 and 463/465
+rows, with two rows per stage carrying `0x80173B20`. Hangar rows carried
+`0x80171E70` in 796/797 rows for both stages, with one row per stage carrying
+`0x80171CE0`. Source-span rows and the independent retail task dump reported
+the same dominant phase pointers. This selects phase-dominant
+`H-StageSameTask` and `H-HangarZeroStable`, while sparse pointer exceptions
+refute a universal stable-selector rule. The exact source-reader/stage ordinal
+join did not align in this capture, so the sparse rows remain open. No
+mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3674-STAGE-TASK-JOIN.md`,
+`scratch/agent/s3674_m5_stage_task_join/{oracle.log,port.log}`, and
+`src/main/main.cpp`.
+ORIGIN: diagnostic-only task-pointer witness; no value was skipped, guarded,
+or rewritten.
