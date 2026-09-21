@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3671 (2026-09-21).
+ notes are linked below. Updated for session 3672 (2026-09-21).
 
 ## Current state
 
@@ -142,6 +142,16 @@ discriminator. The DMA result is single-source port evidence, with the
 oracle providing independent drive/task controls. See
 [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md).
 
+Session 3672 added a phase-gated RDRAM-to-DMEM witness for the same source span
+and reran the qualified concurrent capture. All controls passed; 1,024 input
+rows were observed (512 title, 512 hangar) alongside 512 writeback rows. Title
+input payloads were nonzero (`source_nz=112/216` for its two chunks), while
+hangar input payloads were zero; source and post-DMEM hashes matched in both
+phases. This selects `H-InputDmaObserved` and refutes
+`H-OnlyWritebackObserved`, but makes zero input phase-specific rather than a
+global explanation. Direction/value rows remain single-source port evidence.
+See [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -196,11 +206,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    the smaller sites populate texture-data records. The next discriminator is
    a same-run ordering/join of source-DMA events with the selected task rows.
    S3671 showed that the existing watched span reports `dmem_to_rdram`
-   zero-payload writebacks, so do not treat those rows as source reads. Add
-   or enable a discriminator for the opposite direction before interpreting
-   payload ownership. See [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md);
-   do not infer that ordering from these initialization stores. See
-   [M5-S3670-REMAINING-STORE-CONTEXT.md](M5-S3670-REMAINING-STORE-CONTEXT.md).
+   zero-payload writebacks, so those rows are not source reads. S3672 exposed
+   the opposite direction: title reads carry nonzero data, while hangar reads
+   are zero and hash-identical after staging. Next join the observed input-DMA
+   event/route ordinal to the selected task object and determine whether the
+   hangar zero source is produced by the same logical object or a distinct
+   pre-task state. See [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md)
+   and [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the

@@ -1017,6 +1017,44 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
     if (!active || !((width == 1024u && origin == 0x00790400u) ||
                      (width == 512u && origin == 0x006AB400u))) return;
 
+    const uint32_t source_first = 0x1797B0u, source_last = 0x179930u;
+    const uint32_t source_end = dram_addr + len;
+    if (dram_addr < source_last && source_end > source_first) {
+        const uint32_t overlap_first = dram_addr > source_first ?
+            dram_addr : source_first;
+        const uint32_t overlap_last = source_end < source_last ?
+            source_end : source_last;
+        uint32_t source_fnv = 2166136261u, source_nz = 0u;
+        uint32_t dmem_fnv = 2166136261u, dmem_nz = 0u;
+        for (uint32_t addr = overlap_first; addr < overlap_last; ++addr) {
+            const uint32_t offset = addr - dram_addr;
+            const uint8_t source = rdram[addr & 0x007FFFFFu];
+            const uint8_t staged = RSP_MEM_BU(0, dmem_addr + offset);
+            source_fnv = (source_fnv * 16777619u) ^ source;
+            source_nz += source != 0u;
+            dmem_fnv = (dmem_fnv * 16777619u) ^ staged;
+            dmem_nz += staged != 0u;
+        }
+        static std::mutex source_mutex;
+        static uint32_t source_rows[2] = {};
+        std::lock_guard<std::mutex> lock(source_mutex);
+        const uint32_t slot = width == 1024u ? 0u : 1u;
+        if (source_rows[slot] < 512u) {
+            std::fprintf(stderr,
+                "[m5-source-range-reader] event=%llu row=%u op=dma_to_dmem "
+                "phase=%u width=%u origin=0x%06X arm=%s route_ordinal=%u "
+                "route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
+                "overlap=0x%06X..0x%06X source_fnv=%08X source_nz=%u "
+                "dmem_fnv=%08X dmem_nz=%u exit=%d\n",
+                static_cast<unsigned long long>(g_rs64_m5_source_event++),
+                source_rows[slot]++, phase, width, origin, arm ? arm : "n/a",
+                route_ordinal, route_row, dram_addr, len, dmem_addr,
+                overlap_first, overlap_last, source_fnv, source_nz, dmem_fnv,
+                dmem_nz, exit_reason);
+            std::fflush(stderr);
+        }
+    }
+
     const bool window2 = dmem_addr < 0x9F0u && dmem_addr + len > 0x6F0u;
     const bool window3 = dmem_addr < 0xE48u && dmem_addr + len > 0xCB0u;
     uint32_t fnv = 2166136261u, nonzero = 0;

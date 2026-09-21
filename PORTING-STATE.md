@@ -137435,3 +137435,26 @@ Evidence: `docs/M5-S3671-DMA-ORDER.md`,
 `scratch/agent/run_s3671_m5_dma_order.sh`. ORIGIN:
 diagnostic-only oracle and port tracing; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3672 (2026-09-21) — exposed source-span input DMA ordering
+
+The new phase-gated port witness ran in the same concurrent 55-second recipe.
+The oracle whole-RDRAM and task controls, port title/hangar VI controls, the
+RSP-source hook control, and 1,800 port audio-task rows were positive; there
+were no crash or abort markers. The witness recorded 1,024 input-span rows
+(512 title and 512 hangar) plus 512 existing writeback rows.
+
+Title input DMAs had nonzero source payloads (`source_nz=112` and `216` for
+the two chunks), and source-RDRAM and post-DMEM hashes/nonzero counts matched.
+Hangar input DMAs had zero source and post-DMEM payloads. This selects
+`H-InputDmaObserved` and refutes `H-OnlyWritebackObserved`; zero input is
+phase-specific, not a global explanation. The direction/value result is
+single-source port evidence, while the oracle independently validates drive,
+VI, and task activity but does not observe the port DMA implementation. It
+does not yet join input-DMA events exactly to task-object ownership. No
+mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3672-INPUT-DMA-ORDER.md`,
+`scratch/agent/s3671_m5_dma_order/summary.log`, and
+`src/main/main.cpp`. ORIGIN: diagnostic-only input-DMA overlap/hash witness;
+no guest or host state was rewritten, skipped, or guarded.

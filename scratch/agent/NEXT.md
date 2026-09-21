@@ -1,35 +1,36 @@
-# Next: expose input RDRAM-to-DMEM ordering
+# Next: join input DMA payloads to task ownership
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3671 passed all drive/task controls, but the watched source-span rows
-were `dmem_to_rdram` zero-payload writebacks. They do not measure the planned
-input/source DMA, so the next unit must first expose the opposite direction in
-the existing port instrumentation.
+Session 3672 exposed the opposite direction. The qualified capture passed all
+controls and produced 1,024 input-span rows plus 512 writeback rows. Title
+input chunks had nonzero payloads (`nz=112/216`), while hangar input chunks
+were zero; source and post-DMEM hashes matched.
 
 Competing hypotheses:
 
-- H-InputDmaObserved: the existing hook can be phase-gated to report
-  RDRAM-to-DMEM reads for the watched source span and can join them to task
-  rows.
-- H-OnlyWritebackObserved: the hook reports only DMEM-to-RDRAM writebacks;
-  input ordering remains unavailable and needs a new hook.
-- H-InputDmaZeroPayload: input reads are observed and carry zero payloads after
-  the fixed zero-fill.
-- H-CaptureInvalid: whole-RDRAM, title, hangar, or type-2 controls fail;
-  discard the capture rather than interpreting a null.
+- H-SameTaskInput: the new input-DMA event lies in the same route/task ordinal
+  as the matching audio task row and its source object.
+- H-InterleavedTaskInput: input-DMA ordinals map to a different or alternating
+  task object than the immediately reported target task.
+- H-HangarZeroProducer: hangar's zero input is already present at the input
+  DMA source and belongs to a distinct producer/object state.
+- H-HangarZeroTransform: hangar input is nonzero before the DMA but becomes
+  zero only in the audio-task staging path.
 
-Discriminating measurement: inspect the existing DMA hook's direction and
-instrument one phase-gated table for both RDRAM-to-DMEM and DMEM-to-RDRAM
-events, preserving source/destination, payload hash/nonzero count, task data
-pointer, and route ordinal. Run one validated real-audio capture with the
-whole-RDRAM, title, hangar, and type-2 controls. Input rows select
-H-InputDmaObserved; only writeback rows select H-OnlyWritebackObserved; input
-rows with zero payload select H-InputDmaZeroPayload. A missing control is
-capture-invalid, not a null result.
+The prior capture established `H-InputDmaObserved` and refuted
+`H-OnlyWritebackObserved`; those are closed for this source-span hook.
 
-Before building, read the relevant port instrumentation in
-`docs/debug-trace-env-vars.md` and inspect the s3671 recipe. Build once, run
-one 55-second validated real-audio capture from `build/`, and store the log
-under `scratch/agent/` with a non-dot final component. No guest-state rewrite
-or mitigation is in scope.
+Discriminating measurement: in one validated real-audio capture, join each
+`m5-source-range-reader` row by route ordinal/event to the nearest
+`audtask-abi`/`audtask-dma-range` row, retaining task data pointer, source
+object, direction, source/post-DMEM hashes, and phase. Matching ordinals and
+object select H-SameTaskInput; alternate objects select H-InterleavedTaskInput.
+For hangar rows, source_nz=0 before staging selects H-HangarZeroProducer;
+nonzero source with zero staged data selects H-HangarZeroTransform. Require
+whole-RDRAM, title, hangar, RSP-source-hook, and type-2 controls; a missing
+control invalidates the capture.
+
+Before building, read the existing source/task join code and the relevant env
+catalog. Build one instrumentation arm and run one 55-second capture from
+`build/`. No guest-state rewrite or mitigation is in scope.
