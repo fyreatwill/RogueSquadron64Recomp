@@ -137366,3 +137366,26 @@ Evidence: `docs/M5-S3668-PRESELECTOR-WRITER-JOIN.md`,
 `scratch/agent/run_s3668_m5_preselector_writer_join.sh`. ORIGIN:
 diagnostic-only oracle execution, field, task, descriptor, and physical-write
 watches; no guest or host value was skipped, rewritten, or guarded.
+
+## Session 3669 (2026-09-21) — identified primary pre-selector zero-fill
+
+The independent retail oracle passed the whole-RDRAM positive control, all four
+descriptor watches, title VI `0x00790400`, hangar VI `0x006AB400`, and the
+type-2 task control. It recorded 293,638 whole-RDRAM writes, 674 writes to
+`0x1797B0..0x179930`, and 813 valid type-2 task rows with zero invalid pointers
+or overflow.
+
+The bounded exact-store arm recorded 384 callbacks and 384 unique rows for
+writer `0x800078EC`, all with invariant `$a0=0x801797B0`, `$a1=0`,
+`$a2=0x298`, and `$ra=0x8008F2D4`. The changing store address and aligned
+pre-store word came from the byte loop. This selects a fixed zero-fill
+initializer for the primary writer and rules it out as the object-specific
+payload writer in this single-source retail capture. The remaining 290
+source-span writes and exact DMA ordering remain open. No mitigation or game
+state change was made.
+
+Evidence: `docs/M5-S3669-PRIMARY-STORE-CONTEXT.md`,
+`scratch/agent/s3669_m5_primary_store_join/oracle.log`, and
+`scratch/agent/run_s3669_m5_primary_store_join.sh`. ORIGIN:
+diagnostic-only oracle execution and physical-write watches; no guest or host
+value was skipped, rewritten, or guarded.

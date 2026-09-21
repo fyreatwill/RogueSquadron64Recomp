@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3668 (2026-09-21).
+ notes are linked below. Updated for session 3669 (2026-09-21).
 
 ## Current state
 
@@ -109,6 +109,14 @@ high-cardinality rows prevented the first run reaching hangar. This is
 single-source retail evidence and leaves primary-writer ownership unresolved.
 See [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md).
 
+Session 3669's bounded exact-store capture passed whole-RDRAM, all four
+descriptor, title, hangar, and type-2 task controls. All 384 stores by primary
+writer `0x800078EC` carried invariant `$a0=0x801797B0`, `$a1=0`, `$a2=0x298`,
+and `$ra=0x8008F2D4`, selecting a fixed zero-fill initializer rather than an
+object-specific payload writer. This is single-source retail evidence; the
+remaining source-span writers and exact DMA ordering remain open. See
+[M5-S3669-PRIMARY-STORE-CONTEXT.md](M5-S3669-PRIMARY-STORE-CONTEXT.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -149,9 +157,16 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    the old nonzero-memset inference: 1,844 sampled stores wrote zero, all
    matching the source register. The aligned words were nonzero in 829 cases.
    Exact DMA ordering remains open; do not add a writeback/zero-fill mitigation.
-   S3668's smaller-writer joins are only single-source,
-   latest-task-per-VI-bucket evidence: continue with a bounded discriminator
-   for primary `0x800078EC` context and the alternate
+   S3669's exact-store context identifies primary `0x800078EC` as a fixed
+   zero-fill initializer (`a0=0x801797B0`, `a1=0`, `a2=0x298`, `ra=0x8008F2D4`)
+   rather than an object-specific writer. This is single-source evidence and
+   removes the primary writer from the object-ownership candidate set; join
+   the remaining `290` source-span writes, especially `0x80007670` and the
+   smaller writer PCs, to selector/task objects and any exposed DMA/copy
+   event. S3668's smaller-writer joins are only single-source,
+   latest-task-per-VI-bucket evidence. See
+   [M5-S3669-PRIMARY-STORE-CONTEXT.md](M5-S3669-PRIMARY-STORE-CONTEXT.md).
+   Continue with the alternate
    `0x80171CE0`/`0x80171E70` ownership. See
    [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
@@ -205,7 +220,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SeparatePayloadWriter | Open: source span has multiple writers (`0x800078EC` dominates), but object-specific ownership is not joined. |
 | H-PayloadBeforeSelector | Selected for watched source span at s3667: first writes at 6.8–7.0 s preceded title VI at 17.4 s and hangar VI at 38.4 s. |
 | H-PreSelectorObjectWriter | Limited single-source selection at s3668 for smaller writer sites: title joins `0x80173B20`, hangar joins `0x80173CB0`; latest-task-per-VI-bucket only. |
-| H-PrimaryWriterContext | Open: `0x800078EC` field dumping was too high-cardinality, and alternate `0x80171CE0`/`0x80171E70` ownership was not joined. |
+| H-PrimaryWriterContext | Superseded at s3669: bounded exact-store context identifies `0x800078EC` as fixed initialization; alternate ownership remains open. |
+| H-PrimaryInitialization | Selected single-source at s3669: all 384 exact `0x800078EC` stores used invariant `a0=0x801797B0`, `a1=0`, `a2=0x298`, `ra=0x8008F2D4`; remaining writers are open. |
 | H-OneWriterAllRanges | Refuted at s3661: title and hangar have different phase-active subsets, with no phase-gated writes to the other ranges. |
 | H-PrePhaseInitialization | Remains open for phase-inactive ranges; absence inside a phase does not identify their earlier writer. |
 | H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
@@ -219,6 +235,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 The current work-unit slug is `m5-audio-source-ownership`.
 
 ## Recent evidence ledger
+
+- **3669 — primary exact-store context:** the corrected retail oracle capture
+  passed all controls and recorded 384 exact `0x800078EC` stores, all from the
+  same zero-fill call context (`a0=0x801797B0`, `a1=0`, `a2=0x298`,
+  `ra=0x8008F2D4`). This selects primary initialization but is single-source;
+  the remaining 290 source-span writes and DMA ordering remain open. See
+  [M5-S3669-PRIMARY-STORE-CONTEXT.md](M5-S3669-PRIMARY-STORE-CONTEXT.md).
 
 - **3668 — pre-selector writer context:** the corrected retail oracle capture
   passed all controls and reached title and hangar. Smaller writer-site field
