@@ -1,37 +1,36 @@
-# Next: task-keyed exact join for sparse image-stage exceptions
+# Next: task-generation join at audio-task handoff
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3676 found title alternate task pointers at route ordinals 1, 460,
-and 463, with varying stage-2 destinations, and a hangar alternate at ordinal
-464. This favors route-sequence selection but does not yet exclude stale
-callback timing because source-reader and stage rows lack one shared event key.
+Session 3677 showed that task data pointers are reused: the corrected shared
+record produced 0 exact task-pointer/route matches and mostly same-pointer,
+different-route fallbacks. The next bounded unit is to carry one monotonic
+audio-task generation from the actual `get_rsp_microcode`/task handoff into
+both the source-reader and image-stage witnesses. This is one shared key, not
+another pointer-only join.
 
 Competing hypotheses:
 
-- H-ExceptionDestination: sparse pointer changes are selected by the image
-  destination/window, not by the source-span input route.
-- H-ExceptionRoute: sparse pointer changes follow a distinct route ordinal or
-  route-row sequence; destination is only correlated.
-- H-ExceptionTiming: sparse rows are stale/current-task timing at the stage
-  callback and do not represent the task that supplied the source DMA.
+- H-HandoffGeneration: source and stage rows share the same task generation;
+  route-ordinal drift is only publication timing.
+- H-CrossThreadTask: source and stage rows have different generations despite
+  matching task pointers; the current thread-local task is not ownership-safe.
+- H-RoutePublicationLag: generations match but route ordinals still drift;
+  the route identity is published at a different callback boundary.
 
-Discriminating measurement: replace the thread-local source event with a
-bounded task-keyed shared record containing source event, task pointer, route
-ordinal, phase, and age. A hit with matching route/task selects H-SameTaskInput;
-a miss with a completed earlier record selects H-ExceptionTiming; a hit with
-a different task pointer selects H-InterleavedTaskInput. Require oracle
-whole-RDRAM, title, hangar, type-2, RSP-source, source-span, and stage-row
-positive controls in the same run.
+Discriminating measurement: emit the generation in every bounded source and
+stage row and classify exact generation/route, same-generation/different-route,
+and different-generation matches. Exact generation/route hits select
+H-HandoffGeneration; same-generation/different-route hits select
+H-RoutePublicationLag; different-generation hits select H-CrossThreadTask.
+Require oracle whole-RDRAM, descriptor, title, hangar, and type-2 controls plus
+port source-hook, source, phase, ABI, and stage controls.
 
-Exact recipe base:
+Commands:
 
     cmake --build build -j8
     zsh scratch/agent/run_s3674_m5_stage_task_join.sh
 
-For the next build, modify only the existing stage/source diagnostics in
-`src/main/main.cpp` and caller-side event propagation. Preserve the qualified
-route (`ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LLE_FORCE=1`,
-`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`,
-`PROBE_LEAVE_OK=1`) and SIGKILL cleanup. Do not alter guest state or add a
-mitigation.
+Preserve the qualified route and SIGKILL cleanup in the existing recipe. Do not
+alter guest state or add a mitigation. If the generation instrument does not
+emit its positive control in the same run, discard the result.

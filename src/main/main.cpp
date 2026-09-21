@@ -87,7 +87,13 @@ extern "C" void rs64_audio_join_image_stage(const char* arm,
                                                uint32_t origin, uint32_t stage,
                                                uint32_t dest, uint32_t len,
                                                uint32_t fnv, uint32_t nonzero,
-                                               uint32_t dest_valid);
+                                               uint32_t dest_valid,
+                                               uint32_t task_data_ptr);
+extern "C" void rs64_audio_join_image_source(
+    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
+    uint32_t width, uint32_t origin, uint64_t source_event,
+    uint32_t task_data_ptr, uint32_t dram, uint32_t len, uint32_t fnv,
+    uint32_t nonzero);
 extern "C" void rs64_audio_join_image_complete(const char* arm,
                                                   uint32_t ordinal, uint32_t row,
                                                   uint32_t phase, uint32_t width,
@@ -1062,6 +1068,10 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 overlap_first, overlap_last, source_fnv, source_nz, dmem_fnv,
                 dmem_nz, task_data_ptr, task_data_size, exit_reason);
             std::fflush(stderr);
+            rs64_audio_join_image_source(
+                arm, route_ordinal, route_row, phase, width, origin, event,
+                task_data_ptr, dram_addr, overlap_last - overlap_first,
+                source_fnv, source_nz);
         }
     }
 
@@ -3130,7 +3140,7 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
             route.arm, route.ordinal, route.row, route.phase, route.width,
             route.origin, stage, (dest & 0xFFFFF8u) & 0x007FFFFFu, dest_len,
             dma_fnv_a, dma_nz_a,
-            dest_valid ? 1u : 0u);
+            dest_valid ? 1u : 0u, task_data_ptr);
     }
     std::fprintf(stderr,
         "[audtask-image-stage] arm=%s ordinal=%u row=%u phase=%u width=%u"

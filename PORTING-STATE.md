@@ -137549,3 +137549,29 @@ Evidence: `docs/M5-S3674-STAGE-TASK-JOIN.md`,
 `src/main/main.cpp`.
 ORIGIN: diagnostic-only task-pointer witness; no value was skipped, guarded,
 or rewritten.
+## Session 3677 (2026-09-21) — keyed source/stage joins by task and route
+
+Added a shared source/stage record to the existing M5 diagnostics. The first
+build/run keyed only by `task_data_ptr`, and was rejected because stage ordinal
+1179 attached to an older source ordinal 656. The fixed build required task
+pointer plus route ordinal/row for an exact match and retained explicit
+same-pointer/different-route and prior-different-task fallbacks.
+
+The corrected qualified concurrent 55-second run passed oracle whole-RDRAM,
+descriptor, title, hangar, and type-2 controls plus port source-hook, source,
+phase, ABI, and stage controls. It recorded 1,024 source rows and 1,922 stage
+rows. Join classes were 0 exact, 1,972 same-pointer/different-route, 2
+different-task fallback, and 8 missing. Normal rows often differed by one
+route ordinal; sparse rows retained much older same-pointer records. This
+refutes pointer-only matching and an exact route/task join, and supports
+route/callback timing without distinguishing cross-thread timing from
+publication lag. The independent oracle run reached title and hangar and
+recorded 343,272 whole-RDRAM writes, 674 source-span writes, and 905 type-2
+task rows. No crash or abort marker appeared. No mitigation or guest-state
+change was made.
+
+Evidence: `docs/M5-S3677-TASK-KEYED-SOURCE-STAGE-JOIN.md`,
+`scratch/agent/s3674_m5_stage_task_join/{oracle.log,port.log}`,
+`src/main/main.cpp`, and the runtime patch export.
+ORIGIN: diagnostic-only shared source/stage witness; no value was skipped,
+guarded, or rewritten.
