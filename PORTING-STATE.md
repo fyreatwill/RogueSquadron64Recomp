@@ -137389,3 +137389,27 @@ Evidence: `docs/M5-S3669-PRIMARY-STORE-CONTEXT.md`,
 `scratch/agent/run_s3669_m5_primary_store_join.sh`. ORIGIN:
 diagnostic-only oracle execution and physical-write watches; no guest or host
 value was skipped, rewritten, or guarded.
+
+## Session 3670 (2026-09-21) — classified remaining pre-selector source stores
+
+The corrected retail-oracle capture retained the whole-RDRAM positive control,
+all four descriptor watches, title and hangar VI controls, and the type-2 task
+control. It reached 3043 VI (`~50.7` emulated seconds), recorded 299,812
+whole-RDRAM writes, 674 source-span writes, and 820 valid type-2 task rows with
+zero invalid pointers or overflow. The bounded exact-store arm covered all
+290 non-primary source-span stores: `0x80007670` 172 and eleven smaller writer
+sites totaling 118, with 290 rows and no overflow.
+
+Independent static disassembly identifies `0x80007670` as zero padding in
+`rs_strncpy`; the smaller `0x8001FAxx`/`0x8001FBxx` sites populate texture-data
+table record fields. Their exact-store contexts match those roles. This
+selects `H-RemainingInitialization` and refutes these sites as object-specific
+audio payload owners. It does not expose source-DMA ordering or prove which
+later task consumes each initialized record. No mitigation or game-state change
+was made.
+
+Evidence: `docs/M5-S3670-REMAINING-STORE-CONTEXT.md`,
+`scratch/agent/s3670_m5_remaining_store_join/oracle.log`, and
+`scratch/agent/run_s3670_m5_remaining_store_join.sh`. ORIGIN:
+diagnostic-only retail execution and physical-write watches plus static
+disassembly; no guest or host state was rewritten, skipped, or guarded.

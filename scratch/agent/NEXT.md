@@ -1,34 +1,34 @@
-# Next: join the remaining pre-selector source writers
+# Next: expose exact source-DMA ordering
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3669 passed whole-RDRAM, all four descriptor, title, hangar, and
-type-2 task controls. The bounded exact-store arm showed that all 384 writes
-from primary `0x800078EC` share one zero-fill context (`a0=0x801797B0`,
-`a1=0`, `a2=0x298`, `ra=0x8008F2D4`). This is single-source evidence for
-`H-PrimaryInitialization`; primary initialization is no longer the object
-payload-owner candidate. The remaining 290 source-span writes are open.
+Session 3670 removed the 290 remaining CPU stores from the object-payload
+candidate set: `0x80007670` is `rs_strncpy` zero padding and the smaller sites
+populate texture-data records. The next unit is one bounded source-DMA ordering
+join, not another CPU-store census.
 
-Next unit: add bounded exact-store context rows for `0x80007670` and the
-smaller source-span writer PCs identified by the existing writer histogram,
-then compare each row's context with the next selector and task object. Keep
-the whole-RDRAM positive control, all four descriptor watches, selector/task
-watches, and title/hangar phase controls in the same run. Do not re-arm the
-unbounded `--pc-field-dump 0x800078EC` arm.
+Competing hypotheses:
 
-Discriminator:
+- H-DmaConsumesInitializedRecord: each target source-DMA read follows a
+  matching initialized record and can be joined to the selected task object.
+- H-DmaConsumesZeroFill: source-DMA reads follow the fixed primary zero-fill
+  and carry zero payloads despite the earlier record initialization.
+- H-DmaObjectInterleave: DMA source/destination pairs alternate with the
+  `0x80171E70`/`0x80173CB0` task objects.
+- H-CaptureInvalid: any whole-RDRAM, source-span, title, hangar, or type-2
+  task control fails; discard the capture.
 
-- H-RemainingObjectWriter: exact stores carry context that identifies the
-  next selected object or a stable object-specific payload contract.
-- H-RemainingInitialization: exact stores have invariant setup context like
-  the primary zero-fill and do not distinguish selected objects.
-- H-RemainingSeparateObjects: context transitions align with alternating
-  `0x80171E70`/`0x80173CB0` hangar objects.
-- H-CaptureInvalid: whole-RDRAM, title, or hangar control fails; discard the
-  capture.
+Discriminating measurement: use the existing port M5 source-DMA and task-row
+instrumentation in one run, phase-gated to title and hangar, and emit a joined
+sequence table containing DMA source, destination, payload hash/nonzero count,
+task data pointer, and route ordinal. Require all five controls above. A
+matching nonzero DMA payload tied to a task selects H-DmaConsumesInitialized-
+Record; zero payloads after the primary fill select H-DmaConsumesZeroFill;
+alternating task/object identities select H-DmaObjectInterleave. A missing
+control is capture-invalid, not a null result.
 
-Before building, read `tools/oracle/README.md` and
-`docs/F5-UCODE-REFERENCE.md`. Build once with `bash tools/oracle/build.sh`,
-run one 55-second capture from `build/`, and store the log under
-`scratch/agent/` with a non-dot final component. A mitigation or guest-state
-rewrite is out of scope.
+Before building, read the relevant port instrumentation in
+`docs/debug-trace-env-vars.md` and the existing M5 source-DMA run script. Build
+once, run one 55-second validated real-audio capture from `build/`, and store
+the log under `scratch/agent/` with a non-dot final component. No guest-state
+rewrite or mitigation is in scope.

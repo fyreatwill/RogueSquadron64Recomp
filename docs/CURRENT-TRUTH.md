@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3669 (2026-09-21).
+ notes are linked below. Updated for session 3670 (2026-09-21).
 
 ## Current state
 
@@ -117,6 +117,17 @@ object-specific payload writer. This is single-source retail evidence; the
 remaining source-span writers and exact DMA ordering remain open. See
 [M5-S3669-PRIMARY-STORE-CONTEXT.md](M5-S3669-PRIMARY-STORE-CONTEXT.md).
 
+Session 3670's corrected bounded exact-store capture passed the same controls
+and covered all 290 remaining source-span stores: `0x80007670` accounted for
+172 and the eleven smaller writer sites accounted for the rest. Static
+disassembly identifies `0x80007670` as zero-padding in `rs_strncpy`, while the
+smaller sites populate texture-data table record fields; their exact-store
+contexts match those roles. This selects `H-RemainingInitialization` and
+refutes these sites as object-specific audio payload owners. It is supported
+by independent retail execution evidence plus static disassembly, but source
+DMA ordering and later task ownership remain open. See
+[M5-S3670-REMAINING-STORE-CONTEXT.md](M5-S3670-REMAINING-STORE-CONTEXT.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -134,8 +145,8 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: resolve object-specific payload ownership and exact DMA ordering
-   after selector interleave. Session 3667 selected `H-PayloadBeforeSelector`
+1. M5 Step 3: resolve exact DMA ordering and downstream task ownership after
+   selector interleave. Session 3667 selected `H-PayloadBeforeSelector`
    for source span `0x1797B0..0x179930`: its first writes were at 6.8–7.0 s,
    before title/hangar VI, and no writes landed in target phase buckets. The
    span has multiple writers, dominated by `0x800078EC`, so join each source
@@ -166,9 +177,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    event. S3668's smaller-writer joins are only single-source,
    latest-task-per-VI-bucket evidence. See
    [M5-S3669-PRIMARY-STORE-CONTEXT.md](M5-S3669-PRIMARY-STORE-CONTEXT.md).
-   Continue with the alternate
-   `0x80171CE0`/`0x80171E70` ownership. See
-   [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md).
+   Session 3670 removed all 290 remaining source-span CPU stores from the
+   object-payload candidate set: `0x80007670` is `rs_strncpy` zero padding and
+   the smaller sites populate texture-data records. The next discriminator is
+   a same-run ordering/join of source-DMA events with the selected task rows;
+   do not infer that ordering from these initialization stores. See
+   [M5-S3670-REMAINING-STORE-CONTEXT.md](M5-S3670-REMAINING-STORE-CONTEXT.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
