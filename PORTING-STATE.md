@@ -137232,3 +137232,29 @@ Evidence: `docs/M5-S3663-WRITER-CALLERS.md`,
 instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only caller,
 field, phase, and task observations; no guest or host value was skipped,
 rewritten, or guarded.
+
+## Session 3664 (2026-09-21) — joined task rows by VI buffer origin
+
+The route-task join instrument was built and run against retail. Its first
+capture passed the whole-RDRAM and title controls but exposed a diagnostic bug:
+the join retained only the globally latest task row, so alternating VI buffers
+could not match. The fixed version selects the latest task row within the
+current `(width, origin)` bucket and emitted 120 joined rows. Quiet mode also
+removed per-hit phase logging and task audio-object dumps to bound overhead.
+
+The fixed capture passed the whole-RDRAM threshold and reached both title 1024
+origins, but remained in the title task loop through about 37.5 seconds and
+never reached hangar origin `0x006AB400`; the watchdog SIGKILLed it. Title
+origin `0x00790400` joined task data `0x80171CE0`, while `0x00790800` joined
+`0x80173B20`. Both retained writer `prev_pc=0x80090DE0` and `$ra=0x80090ABC`.
+This selects route-specific task selection within title, but does not
+discriminate all-phase ownership. The absent hangar control rules out using
+this run to select a universal producer. The initial un-fixed join and the
+fixed rerun are both retained under
+`scratch/agent/s3664_m5_route_reconciliation/`; the first is a diagnostic
+dead end, not an evidence null.
+
+Evidence: `docs/M5-S3664-ROUTE-TASK-JOIN.md`,
+`scratch/agent/s3664_m5_route_reconciliation/oracle-quiet.log`, and the
+diagnostic instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only
+task/writer joins; no guest or host value was skipped, rewritten, or guarded.

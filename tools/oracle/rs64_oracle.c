@@ -373,6 +373,8 @@ struct pc_task_dump_row {
     uint32_t yield_data_size;
     uint32_t data_ptr_plus_100;
     uint32_t field_phys;
+    uint32_t width;
+    uint32_t origin;
 };
 static struct pc_task_dump_row
     g_pc_task_dump_rows[MAX_PC_TASK_DUMP_ROWS];
@@ -382,6 +384,23 @@ static long g_pc_task_dump_invalid;
 static long g_pc_task_dump_non_type2;
 static long g_pc_task_dump_overflow;
 static int g_n_pc_task_dump_rows;
+static int g_pc_task_join_enabled;
+static int g_pc_phase_quiet;
+struct pc_task_join_row {
+    uint32_t width;
+    uint32_t origin;
+    uint32_t task_ptr;
+    uint32_t data_ptr;
+    uint32_t data_size;
+    uint32_t s1;
+    uint32_t prev_pc;
+    uint32_t ra;
+    long n;
+};
+static struct pc_task_join_row
+    g_pc_task_join_rows[MAX_PC_TASK_DUMP_ROWS];
+static int g_n_pc_task_join_rows;
+static long g_pc_task_join_overflow;
 
 static uint32_t debug_rdram_addr(uint32_t physical);
 static uint32_t to_phys(uint32_t a);
@@ -503,6 +522,57 @@ static void dump_pc_field(uint32_t pc)
     row.source_byte = debug_mem_u8(row.s0 + 0x22u);
     row.branch_selector = gpr32(2);
     row.branch_state = debug_mem_u16(row.s1 + 0x22u);
+    if (g_pc_task_join_enabled && g_n_pc_task_dump_rows > 0) {
+        uint32_t width = pDebugMemRead32(VI_WIDTH_ADDR);
+        uint32_t origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        int task_i = g_n_pc_task_dump_rows - 1;
+        struct pc_task_dump_row *task = NULL;
+        while (task_i >= 0) {
+            if (g_pc_task_dump_rows[task_i].width == width &&
+                g_pc_task_dump_rows[task_i].origin == origin) {
+                task = &g_pc_task_dump_rows[task_i];
+                break;
+            }
+            task_i--;
+        }
+        if (task != NULL) {
+            int join_i;
+            for (join_i = 0; join_i < g_n_pc_task_join_rows; join_i++) {
+                struct pc_task_join_row *joined = &g_pc_task_join_rows[join_i];
+                if (joined->width == width && joined->origin == origin &&
+                    joined->task_ptr == task->task_ptr &&
+                    joined->data_ptr == task->data_ptr &&
+                    joined->data_size == task->data_size &&
+                    joined->s1 == row.s1 && joined->prev_pc == row.prev_pc &&
+                    joined->ra == row.ra) {
+                    joined->n++;
+                    goto joined_done;
+                }
+            }
+            if (g_n_pc_task_join_rows >= MAX_PC_TASK_DUMP_ROWS) {
+                g_pc_task_join_overflow++;
+            } else {
+                struct pc_task_join_row *joined =
+                    &g_pc_task_join_rows[g_n_pc_task_join_rows++];
+                joined->width = width;
+                joined->origin = origin;
+                joined->task_ptr = task->task_ptr;
+                joined->data_ptr = task->data_ptr;
+                joined->data_size = task->data_size;
+                joined->s1 = row.s1;
+                joined->prev_pc = row.prev_pc;
+                joined->ra = row.ra;
+                joined->n = 1;
+                printf("[pc-task-join] field_pc=0x%08x width=%u origin=0x%08x "
+                       "task_ptr=0x%08x data_ptr=0x%08x data_size=0x%08x "
+                       "s1=0x%08x prev_pc=0x%08x ra=0x%08x n=1\n",
+                       pc, width, origin, task->task_ptr, task->data_ptr,
+                       task->data_size, row.s1, row.prev_pc, row.ra);
+                fflush(stdout);
+            }
+        }
+    }
+joined_done:
     for (i = 0; i < bucket->n_rows; i++) {
         if (bucket->rows[i].s0 == row.s0 &&
             bucket->rows[i].s1 == row.s1 &&
@@ -740,12 +810,15 @@ static void dump_pc_task(uint32_t pc)
     row->data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x34u));
     row->yield_data_ptr = pDebugMemRead32(debug_rdram_addr(task_phys + 0x38u));
     row->yield_data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x3Cu));
-    if (row->type == 2) dump_audio_objects(task_phys, row->data_ptr, row->data_size);
+    if (row->type == 2 && !g_pc_task_join_enabled)
+        dump_audio_objects(task_phys, row->data_ptr, row->data_size);
     data_ptr = row->data_ptr;
     row->data_ptr_plus_100 = data_ptr + 0x100u;
     row->field_phys = row->data_ptr_plus_100 & 0x007FFFFFu;
     width = pDebugMemRead32(VI_WIDTH_ADDR);
     origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    row->width = width;
+    row->origin = origin;
     printf("[pc-task-dump] pc=0x%08x width=%u origin=0x%08x "
            "task_n=%ld task_ptr=0x%08x task_phys=0x%08x type=0x%08x "
            "data_ptr=0x%08x data_size=0x%08x "
@@ -1634,7 +1707,7 @@ static void dbg_update(unsigned int pc)
         detail_hit = 1;
         g_exec_logged++;
     }
-    if ((flags & M64P_BKP_FLAG_EXEC) && pc_phase_log_match())
+    if ((flags & M64P_BKP_FLAG_EXEC) && !g_pc_phase_quiet && pc_phase_log_match())
         detail_hit = 1;
     if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].write_hits == 10000) {
         int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX,
@@ -2127,6 +2200,8 @@ static void usage(void)
         "  --store-field-dump-any-phase allow store-field-dump rows in any VI phase\n"
         "  --pc-task-dump A   dump phase-gated OSTask fields at PC A\n"
         "  --pc-task-type N   OSTask type to dump (default 2=audio; 1=gfx; 0=any)\n"
+        "  --pc-task-join     join each field dump to the latest valid task row in its VI bucket\n"
+        "  --pc-phase-quiet   suppress per-hit phase execution lines (keep bounded dumps)\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
         "  --post-swap-any-vi      allow the post-swap join to accept any next VI width/origin\n"
@@ -2232,6 +2307,10 @@ int main(int argc, char **argv)
             g_pc_task_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_pc_task_dump_enabled = 1;
         }
+        else if (!strcmp(argv[i], "--pc-task-join"))
+            g_pc_task_join_enabled = 1;
+        else if (!strcmp(argv[i], "--pc-phase-quiet"))
+            g_pc_phase_quiet = 1;
         else if (!strcmp(argv[i], "--pc-task-type") && i + 1 < argc)
             g_pc_task_dump_type = (uint32_t)strtoul(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--mode-dump-pc") && i + 1 < argc) {

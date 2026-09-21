@@ -1,35 +1,32 @@
-# Next: reconcile the route-dependent hangar task tuple
+# Next: obtain the missing 512 route-task join
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3663 ruled out a caller-family split: the retail oracle saw
-`prev_pc=0x80090DE0`/`$ra=0x80090ABC` for the dominant writer across target and
-non-target buckets. Controls passed with 133,677 whole-RDRAM writes and 1,107
-valid type-2 task rows, but task tuples were title `data_ptr=0x80173B20` and
-hangar `data_ptr=0x80173CB0`. This differs from s3662's validated hangar
-`0x80171E70`; the paired s3663 port arm crashed before phase controls.
+Session 3664's fixed bucket-local join passed whole-RDRAM and title controls
+and emitted 120 rows. Retail title buffers select different task objects:
+`0x00790400 -> 0x80171CE0` and `0x00790800 -> 0x80173B20`, under the stable
+writer caller `prev_pc=0x80090DE0`, `$ra=0x80090ABC`. The capture remained in
+title and did not reach hangar 512, so this is not yet an all-phase result.
 
-Next unit: one bounded route-reconciliation capture using the exact s3662
-validated route and the s3663 all-phase oracle fields in one run. Join every
-phase task row to writer `$s1`, `prev_pc`, `$ra`, and the four range watches;
-retain whole-RDRAM and port title/hangar controls. Do not add a mitigation or
-infer ownership from caller identity alone.
+Next unit: run one phase-valid 512 capture using the same `--pc-task-join`
+oracle instrument, with the validated hangar-driving press schedule. Keep the
+whole-RDRAM watch, both title origins, both hangar origins, the four descriptor
+watches, and the type-2 task/writer controls. Use `--pc-phase-quiet`; the join
+mode already suppresses per-task audio-object dumps. The discriminating
+outcomes are:
 
-Competing hypotheses and discriminator:
+- H-RouteTaskSelection: each 512 VI origin joins a distinct task tuple, with
+  stable writer caller fields.
+- H-SharedLogicalProducerAllPhases: both 512 origins join one logical task
+  tuple/field family consistent with the title mapping.
+- H-SeparateLogicalProducer: writer caller or joined `$s1` family changes after
+  a phase-valid task join.
+- H-CaptureInvalid: whole-RDRAM, title, or hangar controls fail; discard the
+  census and do not infer ownership.
 
-- H-RouteTaskSelection: the s3662 and s3663 schedules select different live
-  task objects, explaining `0x80171E70` versus `0x80173CB0`.
-- H-SharedLogicalProducerAllPhases: both routes join each selected task's
-  `data_ptr+0x10` to the same caller family and range ownership.
-- H-SeparateLogicalProducer: the tuple difference persists within one route,
-  or its caller/field family changes after exact joining.
-- H-CaptureInvalid: selected only if whole-RDRAM, task, phase, or port controls
-  fail; discard the census rather than infer ownership.
-
-Planned command: add the route-reconciliation join to the existing oracle
-field/task instrument, build `tools/oracle/rs64_oracle`, then run one paired
-SIGKILL-watchdog capture from `build/` with the validated real-audio/LLE route.
-Matching route-specific tuples select H-RouteTaskSelection; one stable tuple
-and shared join select H-SharedLogicalProducerAllPhases; a persistent split
-selects H-SeparateLogicalProducer; failed controls select H-CaptureInvalid.
-Do not add a writeback, zero-fill, guard, or game-state forcing.
+Build command: `bash tools/oracle/build.sh`.
+Run from `build/` with the prior s3664 oracle command, retaining
+`--watch-write 0x0:0x800000`, `--pc-task-dump 0x80033FCC`,
+`--pc-field-dump 0x80090DE4`, `--pc-task-join`, `--pc-phase-quiet`, and the
+four phase buckets. Capture to `scratch/agent/s3665_m5_hangar_task_join/` and
+SIGKILL the process group after the watchdog deadline.

@@ -1,8 +1,8 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
-background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3663 (2026-09-21).
+ background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
+ notes are linked below. Updated for session 3664 (2026-09-21).
 
 ## Current state
 
@@ -66,6 +66,15 @@ unresolved. The paired port arm crashed before phase controls, so this caller
 result is single-source retail evidence. See
 [M5-S3663-WRITER-CALLERS.md](M5-S3663-WRITER-CALLERS.md).
 
+Session 3664's fixed route-task join passed the whole-RDRAM and title controls
+and emitted 120 joined rows, but the capture remained in the title task loop
+and never reached hangar 512. Within title, VI origin `0x00790400` selected
+task data `0x80171CE0`, while `0x00790800` selected `0x80173B20`; both joined
+the same `0x80090DE0`/`0x80090ABC` writer caller. This selects route-specific
+task selection for the title buffer pair, not an all-phase producer. Hangar
+ownership remains unevaluable. See
+[M5-S3664-ROUTE-TASK-JOIN.md](M5-S3664-ROUTE-TASK-JOIN.md).
+
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
 stage-advancer input is a known route/configuration issue; the validated
@@ -76,9 +85,19 @@ real-audio route is the comparison arm.
 The backlog is one monotonic sequence. Work only the first applicable item.
 
 1. M5 Step 3: resolve descriptor ownership across phase boundaries. Session
-   3663 ruled out a caller-family split, but its hangar task tuple differs
-   from s3662's. Do not select an all-phase logical producer until that
-   route-dependent object difference is explained. Session 3662 selected
+   3664 selected route-specific task selection within title: origin
+   `0x00790400` joined `0x80171CE0`, while `0x00790800` joined `0x80173B20`.
+   It did not reach hangar, so do not promote this to an all-phase conclusion.
+   Next obtain a phase-valid 512 capture with the same bounded join, using the
+   validated hangar-driving schedule and no per-task audio-object dump; require
+   whole-RDRAM, title, and hangar controls before comparing task tuples.
+   Matching hangar tuple-to-origin mapping selects `H-RouteTaskSelection`; a
+   stable tuple across both 512 buffers selects
+   `H-SharedLogicalProducerAllPhases`; absent hangar control selects
+   `H-CaptureInvalid` and leaves ownership open. Session 3663 ruled out a
+   caller-family split, but its hangar task tuple differs from s3662's. Do not
+   select an all-phase logical producer until that route-dependent object
+   difference is explained. Session 3662 selected
    `H-SharedLogicalProducer`: the dominant writer family joins
    the phase task rows at `data_ptr+0x10` in both title and hangar. Next
    distinguish the phase-inactive ranges from pre-phase initialization and
@@ -134,6 +153,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SharedLogicalProducer | Selected at s3662: title task `0x80173B20` joins writer `$s1=0x80173B30`, and hangar task `0x80171E70` joins `$s1=0x80171E80`; phase-specific fields use the same logical task contract. |
 | H-SeparateLogicalProducer | Refuted for the joined target rows at s3662; separate low-level destination bases were not observed after task-argument joining. |
 | H-SharedCallerSeparateObject | Selected only at caller level by s3663: `0x80090DE0`/`0x80090ABC` spans target and non-target buckets, but task-object identity remains route-dependent. |
+| H-RouteTaskSelection | Selected within s3664 title buffers: `0x00790400` joins `0x80171CE0`, while `0x00790800` joins `0x80173B20`; hangar remains unevaluable. |
+| H-SharedLogicalProducerAllPhases | Not selected: s3664 did not reach the 512 hangar bucket. |
 | H-OneWriterAllRanges | Refuted at s3661: title and hangar have different phase-active subsets, with no phase-gated writes to the other ranges. |
 | H-PrePhaseInitialization | Remains open for phase-inactive ranges; absence inside a phase does not identify their earlier writer. |
 | H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
@@ -147,6 +168,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 The current work-unit slug is `m5-audio-source-ownership`.
 
 ## Recent evidence ledger
+
+- **3664 — route task join:** the fixed bucket-local join passed the
+  whole-RDRAM and title controls and emitted 120 rows. Title buffer origins
+  selected distinct task data pointers (`0x80171CE0` versus `0x80173B20`)
+  under one writer caller family; the capture never reached hangar, so
+  all-phase ownership remains open. See
+  [M5-S3664-ROUTE-TASK-JOIN.md](M5-S3664-ROUTE-TASK-JOIN.md).
 
 - **3659 — corrected store-width evidence:** all 1,844 sampled retail memset
   stores were zero with zero mismatches, despite 829 nonzero containing words.
