@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3660 (2026-09-21).
+notes are linked below. Updated for session 3661 (2026-09-21).
 
 ## Current state
 
@@ -44,6 +44,15 @@ different sizes, hashes, and DMA sources. This selects
 and ownership of the interleaved objects open. See
 [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md).
 
+Session 3661's phase-gated writer census passed the whole-RDRAM and task
+controls in the oracle and the title/hangar and ABI controls in the port. The
+phase-active descriptor ranges share a writer family headed by `0x80090DE4`,
+but the phase-inactive ranges have no phase-gated writes: title writes
+`0x173B20`/`0x173CB0`, while hangar writes `0x171E70`/`0x173CB0`. This selects
+a shared producer for active ranges, not one universal writer for all four;
+pre-phase initialization and interleaved-object ownership remain open. See
+[M5-S3661-DESCRIPTOR-WRITERS.md](M5-S3661-DESCRIPTOR-WRITERS.md).
+
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
 stage-advancer input is a known route/configuration issue; the validated
@@ -53,10 +62,15 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: identify the live retail audio task and its source object before
-   comparing physical heap addresses. Session 3660 qualified the matching
-   target descriptors, but the port interleaves additional source objects.
-   Next identify the writer/ownership boundary for the target and interleaved
+1. M5 Step 3: resolve descriptor ownership across phase boundaries. Session
+   3661 selected the shared writer family headed by `0x80090DE4` for the
+   phase-active ranges, but title has no live writes to `0x171CE0`/`0x171E70`
+   and hangar has no live writes to `0x173B20`. Next join the dominant retail
+   writer PCs to their logical descriptor/task arguments and the port's
+   corresponding task/source rows, distinguishing pre-phase initialization
+   from a different producer. Session 3660 qualified the matching target
+   descriptors, but the port interleaves additional source objects. Continue
+   to identify the writer/ownership boundary for the target and interleaved
    descriptor ranges (`0x80171CE0`, `0x80171E70`, `0x80173B20`, `0x80173CB0`)
    with phase-gated retail writer-PC watches and the existing port task/source
    rows. The s3659 scalar-store capture refuted
@@ -101,6 +115,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-RetailDmaOrder | No separate DMA event identifier was exposed; ordering remains open. |
 | H-SameLogicalObject | Selected at s3660 for matching target task rows; the same task contract and target descriptor addresses recur, while interleaved objects have differing payload/source-DMA identities. |
 | H-DifferentObject | Applies only to s3660's interleaved helper rows; not selected for matching target rows. |
+| H-SharedPhaseProducer | Selected at s3661 for phase-active descriptor ranges: the same `0x80090DE4`-headed writer family writes target/interleaved ranges within each phase. |
+| H-OneWriterAllRanges | Refuted at s3661: title and hangar have different phase-active subsets, with no phase-gated writes to the other ranges. |
+| H-PrePhaseInitialization | Remains open for phase-inactive ranges; absence inside a phase does not identify their earlier writer. |
 | H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
@@ -122,6 +139,11 @@ The current work-unit slug is `m5-audio-source-ownership`.
   hangar. Matching target descriptors recur, but interleaved port objects have
   different sizes, hashes, and DMA ranges; source ownership remains open. See
   [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md).
+- **3661 — descriptor writer-PC census:** whole-RDRAM and task controls passed.
+  Title's active `0x173B20`/`0x173CB0` ranges and hangar's active
+  `0x171E70`/`0x173CB0` ranges share the `0x80090DE4`-headed writer family;
+  inactive ranges were not written during their phase. See
+  [M5-S3661-DESCRIPTOR-WRITERS.md](M5-S3661-DESCRIPTOR-WRITERS.md).
 
 Only the latest boundary transitions are repeated here; the append-only ledger
 and evidence notes retain the full history. Sessions 3586–3657 M3 class

@@ -137155,3 +137155,29 @@ invalid capture, but does not prove the differing payload is erroneous.
 Evidence: `docs/M5-S3660-AUDIO-SOURCE-OWNERSHIP.md`,
 `scratch/agent/s3660_audio_ownership/retail-fixed.log`, and `port.log`.
 No runtime behavior or mitigation changed.
+
+## Session 3661 (2026-09-21) — censused audio descriptor writer PCs
+
+The prescribed M5 writer-PC work unit ran one paired 90-second retail-oracle
+and validated real-audio port capture. The oracle whole-RDRAM positive control
+produced 194,936 writes; its phase-gated `0x80033FCC` task dump recorded 1,610
+valid type-2 rows with zero invalid pointers. The port reached title
+`0x00790400`/1024 and hangar `0x006AB400`/512 with 3,582 ABI rows, 1,024
+RSP-source rows, and 88 audio-object rows.
+
+The writer census selected a shared low-level producer family, headed by
+`0x80090DE4`, for phase-active ranges but rejected one writer for all ranges.
+Title had phase writes to `0x173B20` and `0x173CB0`; hangar had phase writes to
+`0x171E70` and `0x173CB0`. The other watched ranges had no writes inside that
+phase gate. Hangar task rows selected `data_ptr=0x80171E70`, matching the
+port's target descriptor.
+
+This selects `H-SharedPhaseProducer` for the active ranges and leaves
+`H-PrePhaseInitialization` open for inactive ranges. It rules out neither an
+earlier initializer nor a distinct logical object behind the shared low-level
+writer family. The next census must join those PCs to logical arguments and
+task rows. No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3661-DESCRIPTOR-WRITERS.md`,
+`scratch/agent/s3661_m5_descriptor_writers/oracle.log`,
+`scratch/agent/s3661_m5_descriptor_writers/port.log`.

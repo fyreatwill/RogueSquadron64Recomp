@@ -1,39 +1,40 @@
-# Next: identify audio descriptor writers
+# Next: join dominant descriptor writers to logical task fields
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3660 qualified the shared type-2/task/phase contract and found the
-target retail descriptors at `0x80171CE0` (title) and `0x80171E70` (hangar).
-The port also uses those objects but interleaves `0x80173B20` and
-`0x80173CB0` objects with different source hashes and DMA ranges. The source
-writer and ownership boundary are still open. Do not compare a reused
-physical address without joining the logical task row first. Do not add a
-writeback, zero-fill, guard, or game-state forcing.
+Session 3661 completed the phase-gated writer census. Positive controls passed:
+the oracle whole-RDRAM watch produced 194,936 writes and 1,610 valid phase
+task rows; the port reached title and hangar with 3,582 ABI rows and 1,024
+RSP-source rows. The result is mixed: active ranges share the
+`0x80090DE4`-headed writer family, but title writes `0x173B20`/`0x173CB0`
+while hangar writes `0x171E70`/`0x173CB0`; phase-inactive ranges remain
+ambiguous between pre-phase initialization and another producer.
 
-Next unit: one phase-gated writer-PC census for the four descriptor ranges,
-using the retail oracle's task dump as the ground-truth object selector and
-the existing port `audtask-abi`, `audio-objects`, and `m5-rsp-source` rows as
-the comparison arm. Register `0x80033FCC` with `--watch-pc` and
-`--pc-task-dump`; add bounded writer histograms for physical ranges covering
-`0x171CE0`, `0x171E70`, `0x173B20`, and `0x173CB0`, plus the whole-RDRAM
-positive control. Use title/hangar phase buckets, not elapsed time. Run the
-port from `build/` with the qualified LLE/spin-yield/autopilot recipe and the
-existing source/object logs.
+Next unit: one batched logical-argument census of the dominant retail writer
+family (`0x80090DE4`, `0x80090AAC`, `0x80090AF4`, `0x80090B58`,
+`0x80090CA4`, `0x80090DE4`, `0x80091078`, `0x8009114C`, `0x80091168`, and
+`0x80091170`) using `--watch-pc`, `--pc-field-dump`, and the same four
+descriptor watches/task dump. Keep title and hangar phase buckets and the
+whole-RDRAM positive control. In the port, retain `audtask-abi`,
+`audio-objects`, task/DMA, and RSP-source rows.
 
 Competing hypotheses and discriminator:
 
-- H-SameWriter: matching logical task rows and interleaved objects are written
-  by one shared producer. Expected: the same writer PC dominates each selected
-  physical range within a phase.
-- H-PerObjectWriter: descriptor identity selects different producers or
-  allocator paths. Expected: writer-PC histograms separate by range/object,
-  with the task rows still valid.
-- H-CaptureInvalid: range watches or logical selectors fail. Expected: the
-  whole-RDRAM control, title/hangar controls, or task rows fail; discard the
-  census rather than infer ownership.
+- H-SharedLogicalProducer: the dominant PCs receive the same logical task or
+  descriptor base and select different fields/ranges by phase. Expected:
+  phase rows join to the same task/object arguments while destination offsets
+  explain the active subset.
+- H-PrePhaseInitialization: phase-inactive target ranges were initialized
+  earlier. Expected: writer executions or field values occur before the title
+  or hangar gate, with no matching target-phase task row.
+- H-SeparateProducer: the active ranges are produced by distinct logical
+  objects despite sharing some low-level PCs. Expected: writer argument
+  fields separate by range/object after task-row joining.
+- H-CaptureInvalid: expected only if whole-RDRAM, task, phase, or port controls
+  fail; discard the census rather than infer ownership.
 
-Discriminating outcome: a valid run with task rows and positive controls that
-shows one writer family versus separated writer families. If the writer
-histograms are saturated or no longer phase-selectable, stop and redesign the
-table; do not add another isolated counter. M3 `rs_zcfree` remains parked
-because its stream+0x24 indirect consumers still need a separate census.
+Discriminating outcome: a valid same-run join of writer PC, logical arguments,
+destination range, and task row. One shared argument tuple with field-specific
+destinations selects H-SharedLogicalProducer; pre-gate-only rows select
+H-PrePhaseInitialization; separated tuples select H-SeparateProducer. Do not
+add a writeback, zero-fill, guard, or game-state forcing.
