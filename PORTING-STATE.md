@@ -137480,6 +137480,26 @@ Evidence: `docs/M5-S3673-INPUT-TASK-OWNERSHIP.md`,
 ORIGIN: diagnostic-only task-pointer witness; no value was skipped, guarded,
 or rewritten.
 
+## Session 3676 (2026-09-21) — joined sparse stages to source events
+
+Added a thread-local source-span input-DMA event to the image-stage witness and
+ran the qualified concurrent oracle/port recipe. Oracle whole-RDRAM,
+descriptor/task, and VI controls fired; the port produced 1,024 source-span
+input rows and 1,854 stage rows. Sparse title ordinal 1 had no source event;
+title ordinals 460/463 and hangar ordinal 464 retained event 1029, whose
+source row belonged to route ordinal 92. Later hangar stages retained event
+6372 from route ordinal 667. This selects callback/task timing over a stable
+destination map within the port instrument, but is single-source evidence
+because the thread-local handoff cannot model cross-thread ownership. It rules
+out treating the sparse destination as an exact source-DMA join and requires a
+task-keyed shared record next. No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3676-SPARSE-STAGE-EVENT-JOIN.md`,
+`scratch/agent/s3674_m5_stage_task_join/{oracle.log,port.log}`, and
+`src/main/main.cpp`.
+ORIGIN: diagnostic-only event witness; no value was skipped, guarded, or
+rewritten.
+
 ## Session 3675 (2026-09-21) — classified sparse image-stage task exceptions
 
 The corrected concurrent 55-second capture passed the oracle whole-RDRAM,

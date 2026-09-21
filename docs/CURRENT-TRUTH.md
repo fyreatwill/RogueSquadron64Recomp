@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3675 (2026-09-21).
+ notes are linked below. Updated for session 3676 (2026-09-21).
 
 ## Current state
 
@@ -185,6 +185,16 @@ over a single destination mapping, but exact source-reader/stage event joining
 remains open, so callback timing is not refuted. See
 [M5-S3675-SPARSE-STAGE-EXCEPTIONS.md](M5-S3675-SPARSE-STAGE-EXCEPTIONS.md).
 
+Session 3676 added a thread-local source-span input event to stage rows. The
+oracle and port controls fired, with 1,024 source-span input rows and 1,854
+stage rows. Sparse title ordinal 1 had no source event; title ordinals 460/463
+and hangar ordinal 464 retained event 1029, whose source row belonged to route
+ordinal 92. Later hangar stages retained event 6372 from route ordinal 667.
+This is single-source port evidence for callback/task timing, but the
+thread-local handoff cannot distinguish cross-thread timing from missing
+ownership. Use a bounded task-keyed shared record next. See
+[M5-S3676-SPARSE-STAGE-EVENT-JOIN.md](M5-S3676-SPARSE-STAGE-EVENT-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -257,6 +267,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    witnesses, then test whether each exception's input-DMA event carries the
    same pointer. See
    [M5-S3675-SPARSE-STAGE-EXCEPTIONS.md](M5-S3675-SPARSE-STAGE-EXCEPTIONS.md),
+   [M5-S3676-SPARSE-STAGE-EVENT-JOIN.md](M5-S3676-SPARSE-STAGE-EVENT-JOIN.md),
    [M5-S3674-STAGE-TASK-JOIN.md](M5-S3674-STAGE-TASK-JOIN.md),
    [M5-S3673-INPUT-TASK-OWNERSHIP.md](M5-S3673-INPUT-TASK-OWNERSHIP.md),
    [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md), and
@@ -323,6 +334,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-NextClassComplete | Selected for `teardownAssetManifestService` `*0x80110D50`: one flags-0x81 extra-heap malloc store / one destructor with original NULL skip; generated boot caller passes size 0 so the malloc is an unreferenced original branch. |
 | H-NextClassGap | Refuted for this `*0x80110D50`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
 | H-NextClassUnevaluable | Not selected: one word, one malloc store, one destructor. |
+| H-ExceptionTiming | Selected single-source at s3676: sparse stage rows had no source event or retained an earlier route's event; the thread-local handoff cannot yet distinguish cross-thread timing from missing ownership. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
 

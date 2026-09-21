@@ -825,6 +825,7 @@ uint32_t g_rs64_m5_second_range_rows = 0;
 std::atomic<uint32_t> g_rs64_pcm_task_data_ptr{0};
 uint64_t g_rs64_m5_source_event = 0;
 uint32_t g_rs64_m5_source_window_rows = 0;
+static thread_local uint64_t g_rs64_m5_last_source_event = 0;
 
 bool rs64_pcm_writer_enabled() {
     static int enabled = -1;
@@ -1042,6 +1043,8 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
         std::lock_guard<std::mutex> lock(source_mutex);
         const uint32_t slot = width == 1024u ? 0u : 1u;
         if (source_rows[slot] < 512u) {
+            const uint64_t event = g_rs64_m5_source_event++;
+            g_rs64_m5_last_source_event = event;
             const uint32_t task_data_ptr = s_pending_audio_task == nullptr ?
                 0u : static_cast<uint32_t>(s_pending_audio_task->t.data_ptr);
             const uint32_t task_data_size = s_pending_audio_task == nullptr ?
@@ -1053,7 +1056,7 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 "overlap=0x%06X..0x%06X source_fnv=%08X source_nz=%u "
                 "dmem_fnv=%08X dmem_nz=%u task_data_ptr=0x%08X "
                 "task_data_size=0x%X exit=%d\n",
-                static_cast<unsigned long long>(g_rs64_m5_source_event++),
+                static_cast<unsigned long long>(event),
                 source_rows[slot]++, phase, width, origin, arm ? arm : "n/a",
                 route_ordinal, route_row, dram_addr, len, dmem_addr,
                 overlap_first, overlap_last, source_fnv, source_nz, dmem_fnv,
@@ -3134,12 +3137,15 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         " origin=0x%06X stage=%u r2=0x%03X field348=0x%08X field44=0x%08X"
         " dest=0x%08X dmem_a=0x%03X len_a=0x%X fnv_a=%08X nz_a=%u"
         " dmem_b=0x%03X len_b=0x%X fnv_b=%08X nz_b=%u"
+        " source_event=%llu"
         " task_data_ptr=0x%08X task_data_size=0x%X"
         " field348_fnv=%08X field348_nz=%u field348_valid=%u"
         " dma_fnv_a=%08X dma_nz_a=%u dest_valid=%u dest_fnv=%08X dest_nz=%u\n",
         route.arm, route.ordinal, route.row, route.phase, route.width,
         route.origin, stage, r2, field348, field44, dest, dmem_a, len_a,
-        fnv_a, nz_a, dmem_b, len_b, fnv_b, nz_b, task_data_ptr,
+        fnv_a, nz_a, dmem_b, len_b, fnv_b, nz_b,
+        static_cast<unsigned long long>(g_rs64_m5_last_source_event),
+        task_data_ptr,
         task_data_size, field348_fnv, field348_nz,
         field348_valid ? 1u : 0u, dma_fnv_a, dma_nz_a,
         dest_valid ? 1u : 0u, dest_fnv, dest_nz);

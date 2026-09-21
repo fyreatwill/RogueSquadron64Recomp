@@ -1,8 +1,8 @@
-# Next: exact-join sparse image-stage exceptions to source DMA
+# Next: task-keyed exact join for sparse image-stage exceptions
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3675 found title alternate task pointers at route ordinals 1, 460,
+Session 3676 found title alternate task pointers at route ordinals 1, 460,
 and 463, with varying stage-2 destinations, and a hangar alternate at ordinal
 464. This favors route-sequence selection but does not yet exclude stale
 callback timing because source-reader and stage rows lack one shared event key.
@@ -16,14 +16,13 @@ Competing hypotheses:
 - H-ExceptionTiming: sparse rows are stale/current-task timing at the stage
   callback and do not represent the task that supplied the source DMA.
 
-Discriminating measurement: in one build/run, add a bounded shared event key
-to both the stage witness and source-DMA witness, retaining route identity,
-live task pointer, and destination/window. Join each sparse stage row to its
-source-DMA event and preceding/following task rows. A stable destination map
-selects H-ExceptionDestination; a route-sequence map selects H-ExceptionRoute;
-an event-joined source pointer disagreeing with the callback pointer selects
-H-ExceptionTiming. Require oracle whole-RDRAM, title, hangar, type-2,
-RSP-source, source-span, and stage-row positive controls in the same run.
+Discriminating measurement: replace the thread-local source event with a
+bounded task-keyed shared record containing source event, task pointer, route
+ordinal, phase, and age. A hit with matching route/task selects H-SameTaskInput;
+a miss with a completed earlier record selects H-ExceptionTiming; a hit with
+a different task pointer selects H-InterleavedTaskInput. Require oracle
+whole-RDRAM, title, hangar, type-2, RSP-source, source-span, and stage-row
+positive controls in the same run.
 
 Exact recipe base:
 
