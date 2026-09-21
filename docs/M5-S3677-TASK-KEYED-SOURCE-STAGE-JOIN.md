@@ -10,10 +10,10 @@ and prior-different-task fallbacks.
 The corrected concurrent run passed the oracle whole-RDRAM, descriptor, title,
 hangar, and type-2 controls, plus the port source-hook, source, phase, ABI,
 and stage controls. It recorded 1,024 source rows (512 title and 512 hangar),
-1,922 stage rows, and 1,942 stage joins. The join classes were:
+1,922 stage rows and 3,770 join-report observations. The report classes were:
 
 - `source_match=1` exact task-pointer/route match: 0
-- `source_match=2` same task pointer but earlier/different route record: 1,972
+- `source_match=2` same task pointer but earlier/different route record: 3,760
 - `source_match=3` prior record from a different task pointer: 2
 - no source record: 8
 

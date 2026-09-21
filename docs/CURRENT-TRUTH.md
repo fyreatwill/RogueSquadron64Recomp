@@ -198,8 +198,9 @@ ownership. This led to the bounded task-keyed shared-record run in s3677. See
 Session 3677 added and corrected a shared source/stage record keyed by task
 pointer plus route ordinal/row. The qualified run passed oracle whole-RDRAM,
 descriptor, title, hangar, and type-2 controls plus all port source/phase/ABI/
-stage controls. It recorded 1,024 source rows and 1,922 stage rows: 0 exact
-task-and-route matches, 1,972 same-pointer/different-route fallbacks, 2
+stage controls. It recorded 1,024 source rows and 1,922 stage rows. Across
+3,770 bounded join-report observations there were 0 exact task-and-route
+matches, 3,760 same-pointer/different-route fallbacks, 2
 different-task fallbacks, and 8 missing records. Normal rows often differed by
 one route ordinal; sparse rows retained much older same-pointer records. This
 refutes pointer-only matching and an exact route/task join, while supporting
@@ -351,8 +352,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-NextClassComplete | Selected for `teardownAssetManifestService` `*0x80110D50`: one flags-0x81 extra-heap malloc store / one destructor with original NULL skip; generated boot caller passes size 0 so the malloc is an unreferenced original branch. |
 | H-NextClassGap | Refuted for this `*0x80110D50`. Remains selected for overlay `0x1C`/`0x20` (s3636). |
 | H-NextClassUnevaluable | Not selected: one word, one malloc store, one destructor. |
-| H-ExceptionTiming | Supported at s3677: 0 exact route/task joins, 1,972 same-pointer/different-route fallbacks, and stale sparse records; cross-thread timing versus publication lag remains open. |
-| H-ExactTaskRoute | Refuted at s3677: the shared task-pointer/route-keyed record produced 0 exact matches in 1,922 stage rows. |
+| H-ExceptionTiming | Supported at s3677: 0 exact route/task joins, 3,760 same-pointer/different-route report fallbacks, and stale sparse records; cross-thread timing versus publication lag remains open. |
+| H-ExactTaskRoute | Refuted at s3677: the shared task-pointer/route-keyed record produced 0 exact matches across 1,922 stage rows and 3,770 report observations. |
 | H-TaskPointerReuse | Selected at s3677: same task pointers were reused across route ordinals, so pointer-only joins attached older source records. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
@@ -361,8 +362,9 @@ The current work-unit slug is `m5-audio-source-ownership`.
 
 - **3677 — task-keyed source/stage join:** the corrected concurrent capture
   passed all oracle and port controls and recorded 1,024 source rows and
-  1,922 stage rows. There were 0 exact task-pointer/route matches, 1,972
-  same-pointer/different-route fallbacks, 2 different-task fallbacks, and 8
+  1,922 stage rows. Across 3,770 report observations there were 0 exact
+  task-pointer/route matches, 3,760 same-pointer/different-route fallbacks, 2
+  different-task fallbacks, and 8
   missing records. This selects task-pointer reuse and supports timing or
   publication lag, but does not distinguish cross-thread ownership. See
   [M5-S3677-TASK-KEYED-SOURCE-STAGE-JOIN.md](M5-S3677-TASK-KEYED-SOURCE-STAGE-JOIN.md).

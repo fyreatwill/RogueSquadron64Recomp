@@ -137560,8 +137560,9 @@ same-pointer/different-route and prior-different-task fallbacks.
 The corrected qualified concurrent 55-second run passed oracle whole-RDRAM,
 descriptor, title, hangar, and type-2 controls plus port source-hook, source,
 phase, ABI, and stage controls. It recorded 1,024 source rows and 1,922 stage
-rows. Join classes were 0 exact, 1,972 same-pointer/different-route, 2
-different-task fallback, and 8 missing. Normal rows often differed by one
+rows. Across 3,770 join-report observations, classes were 0 exact, 3,760
+same-pointer/different-route, 2 different-task fallback, and 8 missing.
+Normal rows often differed by one
 route ordinal; sparse rows retained much older same-pointer records. This
 refutes pointer-only matching and an exact route/task join, and supports
 route/callback timing without distinguishing cross-thread timing from
