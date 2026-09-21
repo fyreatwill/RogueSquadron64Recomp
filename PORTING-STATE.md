@@ -137258,3 +137258,30 @@ Evidence: `docs/M5-S3664-ROUTE-TASK-JOIN.md`,
 `scratch/agent/s3664_m5_route_reconciliation/oracle-quiet.log`, and the
 diagnostic instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only
 task/writer joins; no guest or host value was skipped, rewritten, or guarded.
+
+## Session 3665 (2026-09-21) — joined interleaved hangar task objects
+
+The first finite capture passed the whole-RDRAM and descriptor-range controls
+but produced zero task/field rows because the command selected dump PCs without
+adding `--watch-pc`; its zero is an instrument setup failure. The corrected
+capture explicitly armed `0x80033FCC` and `0x80090DE4`, passed whole-RDRAM
+(`275,347` writes), all four descriptor watches, both title origins, and both
+hangar origins. It produced `1,876` valid type-2 task rows and `2,656` field
+rows, with zero invalid pointers and zero overflow.
+
+Title reproduced the s3664 mapping: `0x00790400 -> 0x80171CE0` and
+`0x00790800 -> 0x80173B20`, 60 joined rows each. Hangar did not preserve a
+one-to-one origin mapping: `0x006AB400` joined both `0x80171E70` (9 rows) and
+`0x80173CB0` (78 rows), while `0x006AB800` joined both `0x80171E70` (80 rows)
+and `0x80173CB0` (16 rows). The dominant writer caller remained
+`prev_pc=0x80090DE0`, `$ra=0x80090ABC`; a minor `$ra=0x80090BB4` variant was
+present only on hangar rows. This refutes a simple one-task-per-origin route
+rule and supports a shared caller family, but does not identify the selector
+or source field that chooses the alternating objects. No mitigation or
+game-state change was made.
+
+Evidence: `docs/M5-S3665-HANGAR-TASK-JOIN.md`,
+`scratch/agent/s3665_m5_hangar_task_join/oracle-fixed.log`, and the diagnostic
+instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only task,
+field, phase, and caller observations; no guest or host value was skipped,
+rewritten, or guarded.
