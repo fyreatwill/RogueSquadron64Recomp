@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3666 (2026-09-21).
+ notes are linked below. Updated for session 3667 (2026-09-21).
 
 ## Current state
 
@@ -87,6 +87,17 @@ one-task-per-origin route rule, supports a shared caller family, and leaves
 object selection unresolved. See
 [M5-S3665-HANGAR-TASK-JOIN.md](M5-S3665-HANGAR-TASK-JOIN.md).
 
+Session 3667 phase-gated the image source span against selector/task activity.
+The first source-span writes occurred at 6.8–7.0 s, before title VI at 17.4 s
+and hangar VI at 38.4 s. The span had 674 writes; writer `0x800078EC`
+accounted for 384, `0x80007670` for 172, and twelve smaller sites for 118.
+No source-span writes appeared in the phase-gated title or hangar buckets,
+while all whole-RDRAM, descriptor, selector, title, hangar, and task controls
+fired. This selects `H-PayloadBeforeSelector` for the watched span and refutes
+post-selector source activity, but object-specific writer/DMA ownership remains
+open because multiple writers were observed. See
+[M5-S3667-PAYLOAD-ORDER.md](M5-S3667-PAYLOAD-ORDER.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -104,16 +115,14 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: resolve payload ownership and exact DMA ordering after selector
-   interleave. Session 3666 passed all controls and joined the immediately
-   preceding selector publication to every task row, including both hangar
-   objects. This selects `H-SelectorInterleave`, refutes stable-selector
-   downstream switching, and leaves the shared writer's payload/source-DMA
-   ordering open. Next phase-gate source-byte writes or DMA events together
-   with selector publication (`0x80091060`/`0x80091074`), task submission, and
-   `0x80090DE4`; distinguish payload-before-selector, DMA-after-selector, and
-   separate-payload-writer outcomes. Require whole-RDRAM, title, and hangar
-   controls. See [M5-S3666-SELECTOR-INTERLEAVE.md](M5-S3666-SELECTOR-INTERLEAVE.md).
+1. M5 Step 3: resolve object-specific payload ownership and exact DMA ordering
+   after selector interleave. Session 3667 selected `H-PayloadBeforeSelector`
+   for source span `0x1797B0..0x179930`: its first writes were at 6.8–7.0 s,
+   before title/hangar VI, and no writes landed in target phase buckets. The
+   span has multiple writers, dominated by `0x800078EC`, so join each source
+   writer (and any exposed DMA/copy event) to the selected object and task.
+   Require whole-RDRAM, title, and hangar controls. See
+   [M5-S3667-PAYLOAD-ORDER.md](M5-S3667-PAYLOAD-ORDER.md).
    Session 3664 ruled out neither hangar object ownership nor a shared
    all-phase producer. Session 3662 selected
    `H-SharedLogicalProducer`: the dominant writer family joins
@@ -176,9 +185,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SelectorInterleave | Selected at s3666: the immediately preceding selector publication equals each task data pointer, including both alternating hangar objects. |
 | H-SeparateProducer | Not supported at caller level: dominant `0x80090DE0` remains shared; minor `$ra` variant needs field joining. |
 | H-SharedProducerWithTwoObjects | Refuted at s3666: selector source changes with the task object. |
-| H-PayloadBeforeSelector | Open: source-byte completion versus selector publication remains unmeasured. |
-| H-DmaAfterSelector | Open: exact source-DMA ordering remains unmeasured. |
-| H-SeparatePayloadWriter | Open: shared caller is established, but object-specific payload/source ownership is not. |
+| H-DmaAfterSelector | Refuted for watched source span at s3667: all 674 writes preceded title/hangar phase buckets; DMA identity remains unexposed. |
+| H-SeparatePayloadWriter | Open: source span has multiple writers (`0x800078EC` dominates), but object-specific ownership is not joined. |
+| H-PayloadBeforeSelector | Selected for watched source span at s3667: first writes at 6.8–7.0 s preceded title VI at 17.4 s and hangar VI at 38.4 s. |
 | H-OneWriterAllRanges | Refuted at s3661: title and hangar have different phase-active subsets, with no phase-gated writes to the other ranges. |
 | H-PrePhaseInitialization | Remains open for phase-inactive ranges; absence inside a phase does not identify their earlier writer. |
 | H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
@@ -192,6 +201,14 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 The current work-unit slug is `m5-audio-source-ownership`.
 
 ## Recent evidence ledger
+
+- **3667 — payload ordering:** the corrected phase-gated oracle capture passed
+  whole-RDRAM, descriptor, title, hangar, selector, and task controls. The
+  first writes to `0x1797B0..0x179930` occurred at 6.8–7.0 s, before title VI
+  at 17.4 s and hangar VI at 38.4 s; 674 writes were attributed to multiple
+  PCs, dominated by `0x800078EC` (384). This selects payload-before-selector
+  for the watched span and leaves object-specific ownership/DMA identity open.
+  See [M5-S3667-PAYLOAD-ORDER.md](M5-S3667-PAYLOAD-ORDER.md).
 
 - **3666 — selector interleave:** the corrected phase-gated oracle capture
   passed all controls and joined the selector publication to 1,878 task rows.

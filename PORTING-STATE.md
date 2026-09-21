@@ -137308,3 +137308,32 @@ Evidence: `docs/M5-S3666-SELECTOR-INTERLEAVE.md`,
 instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only selector,
 task, phase, and caller observations; no guest or host value was skipped,
 rewritten, or guarded.
+
+## Session 3667 (2026-09-21) — measured pre-selector image payload ordering
+
+The first source-span watch capture passed the whole-RDRAM positive control,
+all four descriptor watches, both title origins, both hangar origins, and
+1,811 valid type-2 task rows. A fixed repeat with `--first-watch 1
+--detail-watch 1` timestamped the source writes. It recorded 343,741
+whole-RDRAM writes and 674 writes to `0x1797B0..0x179930`, with zero task
+pointer invalids or dump overflow.
+
+The first source writes occurred at 6.8 seconds from `0x8001E2C0`; the bulk
+began at 7.0 seconds from `0x80007670`. Title VI began at 17.4 seconds and
+hangar VI at 38.4 seconds. The source writer histogram was `0x800078EC` 384,
+`0x80007670` 172, and twelve smaller sites totaling 118. No source-span
+writes appeared in the phase-gated title or hangar buckets. Selector and task
+controls stayed live through both phases.
+
+This selects `H-PayloadBeforeSelector` for the watched source span and refutes
+`H-DmaAfterSelector` for that span. It does not select object ownership:
+multiple source writers remain, and the oracle exposes no DMA event identity.
+The next probe must join pre-selector writer context to the selected object.
+No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3667-PAYLOAD-ORDER.md`,
+`scratch/agent/s3667_m5_payload_order/oracle.log`,
+`scratch/agent/s3667_m5_payload_order_fixed/oracle.log`, and the diagnostic
+instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only physical
+write, task, selector, and phase observations; no guest or host value was
+skipped, rewritten, or guarded.
