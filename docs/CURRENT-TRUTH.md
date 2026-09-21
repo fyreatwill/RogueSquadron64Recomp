@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3670 (2026-09-21).
+ notes are linked below. Updated for session 3671 (2026-09-21).
 
 ## Current state
 
@@ -128,6 +128,20 @@ by independent retail execution evidence plus static disassembly, but source
 DMA ordering and later task ownership remain open. See
 [M5-S3670-REMAINING-STORE-CONTEXT.md](M5-S3670-REMAINING-STORE-CONTEXT.md).
 
+Session 3671's concurrent 55-second capture passed the oracle whole-RDRAM and
+type-2 task controls and the port title/hangar and audio-task controls. The
+port emitted 7,221 DMA rows; every watched source-span row was
+`dmem_to_rdram` with zero nonzero payload bytes, including repeated
+`0x1798B0..0x179930` writebacks. Target-phase task rows were dominated by
+`0x80171E70`, while `0x80171CE0` appeared in the preceding phase. This
+selects a zero-payload writeback path for the observed port rows and rejects
+the claim that those rows are input DMAs consuming initialized records. It
+does not expose the input RDRAM-to-DMEM ordering or join it exactly to task
+ownership; the DMA direction was the opposite of the planned source-read
+discriminator. The DMA result is single-source port evidence, with the
+oracle providing independent drive/task controls. See
+[M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -180,7 +194,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    Session 3670 removed all 290 remaining source-span CPU stores from the
    object-payload candidate set: `0x80007670` is `rs_strncpy` zero padding and
    the smaller sites populate texture-data records. The next discriminator is
-   a same-run ordering/join of source-DMA events with the selected task rows;
+   a same-run ordering/join of source-DMA events with the selected task rows.
+   S3671 showed that the existing watched span reports `dmem_to_rdram`
+   zero-payload writebacks, so do not treat those rows as source reads. Add
+   or enable a discriminator for the opposite direction before interpreting
+   payload ownership. See [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md);
    do not infer that ordering from these initialization stores. See
    [M5-S3670-REMAINING-STORE-CONTEXT.md](M5-S3670-REMAINING-STORE-CONTEXT.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
@@ -528,6 +546,7 @@ deletion.
 - [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md)
 - [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md)
 - [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md)
+- [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md)
 - [M5-S3583-RETAIL-PRODUCER-REPEAT.md](M5-S3583-RETAIL-PRODUCER-REPEAT.md)
 - [M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md](M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md)
 - [M5-S3581-RETAIL-SOURCE-PRODUCER.md](M5-S3581-RETAIL-SOURCE-PRODUCER.md)

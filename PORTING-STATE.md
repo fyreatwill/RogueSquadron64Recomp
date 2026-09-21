@@ -137413,3 +137413,25 @@ Evidence: `docs/M5-S3670-REMAINING-STORE-CONTEXT.md`,
 `scratch/agent/run_s3670_m5_remaining_store_join.sh`. ORIGIN:
 diagnostic-only retail execution and physical-write watches plus static
 disassembly; no guest or host state was rewritten, skipped, or guarded.
+
+## Session 3671 (2026-09-21) — distinguished source-span writeback direction
+
+The concurrent 55-second capture passed the oracle whole-RDRAM positive
+control with 98,456 writes and recorded 930 type-2 task rows. The real-audio
+port reached title VI `0x00790400` and hangar VI `0x006AB400`, with 1,775
+audio-task ABI rows, 7,221 DMA rows, and no crash or abort markers.
+
+Every observed port DMA row overlapping `0x1797B0..0x179930` was
+`dmem_to_rdram`, not an input RDRAM-to-DMEM read, and had zero nonzero payload
+bytes. Target-phase task rows were dominated by `0x80171E70`; `0x80171CE0`
+appeared in the preceding phase. This selects a zero-payload writeback path
+for the observed port rows and rules out treating them as input DMAs consuming
+initialized records. It does not expose input DMA ordering or an exact
+writeback-to-task ownership edge; the source-read discriminator measured the
+opposite direction. No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3671-DMA-ORDER.md`,
+`scratch/agent/s3671_m5_dma_order/summary.log`, and
+`scratch/agent/run_s3671_m5_dma_order.sh`. ORIGIN:
+diagnostic-only oracle and port tracing; no guest or host state was rewritten,
+skipped, or guarded.
