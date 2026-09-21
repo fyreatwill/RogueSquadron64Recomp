@@ -658,6 +658,38 @@ static void add_pc_field_dump_pcs(const char *arg)
     free(copy);
 }
 
+static void dump_audio_objects(uint32_t task, uint32_t data, uint32_t count) {
+    uint32_t width = pDebugMemRead32(VI_WIDTH_ADDR);
+    uint32_t origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    static uint32_t rows[2];
+    uint32_t row = rows[width == 512]++;
+    if (row >= 8 && (row % 128 != 0 || row >= 4096)) return;
+    data &= 0x1FFFFFFF;
+    printf("[audio-objects-task] width=%u origin=%08X row=%u ucode=%08X data=%08X count=%u\n",
+           width, origin, row, pDebugMemRead32(debug_rdram_addr(task + 0x10)), data, count);
+    if (count > 8 || data > RDRAM_SIZE || count * 0xA10 > RDRAM_SIZE - data) return;
+    for (uint32_t frame = 0; frame < count; frame++) {
+        uint32_t base = data + frame * 0xA10;
+        uint32_t state = pDebugMemRead32(debug_rdram_addr(base + 8)) & 0x1FFFFFFF;
+        uint32_t nz = 0, active = 0, output = 0;
+        int valid = state <= RDRAM_SIZE - 0x298;
+        if (valid) for (uint32_t i = 0; i < 0x298; i++) nz += debug_mem_u8(state + i) != 0;
+        for (uint32_t voice = 0; voice < 32; voice++) {
+            uint32_t v = base + 0x10 + voice * 0x50;
+            output = pDebugMemRead32(debug_rdram_addr(v + 0x44));
+            if (debug_mem_u16(v + 0x2C) == 0) break;
+            active++;
+            if (output) break;
+        }
+        printf("[audio-objects-frame] width=%u row=%u frame=%u base=%08X h0=%08X h4=%08X state=%08X hc=%08X valid=%u state_nz=%u active=%u output=%08X first=",
+               width, row, frame, base, pDebugMemRead32(debug_rdram_addr(base)),
+               pDebugMemRead32(debug_rdram_addr(base + 4)), state,
+               pDebugMemRead32(debug_rdram_addr(base + 12)), valid, nz, active, output);
+        for (uint32_t i = 0; i < 0x50; i += 4) printf("%08X,", pDebugMemRead32(debug_rdram_addr(base + 0x10 + i)));
+        printf("\n");
+    }
+}
+
 static void dump_pc_task(uint32_t pc)
 {
     struct pc_task_dump_row *row;
@@ -700,6 +732,7 @@ static void dump_pc_task(uint32_t pc)
     row->data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x34u));
     row->yield_data_ptr = pDebugMemRead32(debug_rdram_addr(task_phys + 0x38u));
     row->yield_data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x3Cu));
+    if (row->type == 2) dump_audio_objects(task_phys, row->data_ptr, row->data_size);
     data_ptr = row->data_ptr;
     row->data_ptr_plus_100 = data_ptr + 0x100u;
     row->field_phys = row->data_ptr_plus_100 & 0x007FFFFFu;

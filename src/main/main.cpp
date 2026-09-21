@@ -3121,18 +3121,66 @@ static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
     g_rs64_audio_identity.valid = false;
 }
 
+static void rs64_audio_source_objects(uint8_t* rdram, const OSTask* task);
+
 static RspExitReason musyx_stub_probe(uint8_t* rdram, uint32_t ucode_addr) {
     rs64_audio_route_prepare("musyx_stub");
     rs64_m5_task_handoff(s_pending_audio_task);
+    rs64_audio_source_objects(rdram, s_pending_audio_task);
     const RspExitReason reason = musyx_stub(rdram, ucode_addr);
     rs64_log_audio_return("musyx_stub", reason);
     return reason;
+}
+
+static void rs64_audio_source_objects(uint8_t* rdram, const OSTask* task) {
+    static const bool enabled = [] {
+        const char* value = std::getenv("ROGUESQ_LOG_AUDIO_OBJECTS");
+        return value && value[0] && value[0] != '0';
+    }();
+    if (!enabled || !task) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin();
+    if (!((width == 1024 && origin == 0x790400) ||
+          (width == 512 && origin == 0x6AB400))) return;
+    static uint32_t rows[2] = {};
+    uint32_t row = rows[width == 512]++;
+    if (row >= 8 && (row % 128 != 0 || row >= 4096)) return;
+    auto word = [rdram](uint32_t addr) {
+        uint32_t value;
+        std::memcpy(&value, rdram + (addr & 0x7FFFFC), sizeof(value));
+        return value;
+    };
+    const uint32_t data = static_cast<uint32_t>(task->t.data_ptr) & 0x1FFFFFFF;
+    const uint32_t count = static_cast<uint32_t>(task->t.data_size);
+    std::fprintf(stderr, "[audio-objects-task] width=%u origin=%08X row=%u ucode=%08X data=%08X count=%u\n",
+                 width, origin, row, (uint32_t)task->t.ucode, data, count);
+    if (count > 8 || data > 0x800000 || count * 0xA10 > 0x800000 - data) return;
+    for (uint32_t frame = 0; frame < count; frame++) {
+        const uint32_t base = data + frame * 0xA10;
+        const uint32_t state = word(base + 8) & 0x1FFFFFFF;
+        uint32_t nz = 0, active = 0, output = 0;
+        const bool valid = state <= 0x800000 - 0x298;
+        if (valid) for (uint32_t i = 0; i < 0x298; i++) nz += rdram[(state + i) ^ 3] != 0;
+        for (uint32_t voice = 0; voice < 32; voice++) {
+            uint32_t v = base + 0x10 + voice * 0x50;
+            output = word(v + 0x44);
+            if ((word(v + 0x2C) >> 16) == 0) break;
+            active++;
+            if (output) break;
+        }
+        std::fprintf(stderr, "[audio-objects-frame] width=%u row=%u frame=%u base=%08X h0=%08X h4=%08X state=%08X hc=%08X valid=%u state_nz=%u active=%u output=%08X first=",
+                     width, row, frame, base, word(base), word(base + 4), state,
+                     word(base + 12), valid, nz, active, output);
+        for (uint32_t i = 0; i < 0x50; i += 4) std::fprintf(stderr, "%08X,", word(base + 0x10 + i));
+        std::fprintf(stderr, "\n");
+    }
 }
 
 static RspExitReason factor5_ucode_b_probe(uint8_t* rdram, uint32_t ucode_addr) {
     g_rs64_audio_break_pc = 0;
     rs64_audio_route_prepare("factor5_ucode_b");
     rs64_m5_task_handoff(s_pending_audio_task);
+    rs64_audio_source_objects(rdram, s_pending_audio_task);
     const RspExitReason reason = factor5_ucode_b(rdram, ucode_addr);
     rs64_log_audio_return("factor5_ucode_b", reason);
     return reason;

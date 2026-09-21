@@ -137128,3 +137128,30 @@ comparing reused physical heap addresses across retail and port.
 
 ORIGIN: no runtime mitigation or game-state change. Corrected diagnostic
 interpretation of a legitimate zero byte store.
+
+## Session 3660 (2026-09-21) — joined retail and port audio source ownership
+
+The prescribed M5 source-ownership work unit used the existing retail
+`--pc-task-dump` and port task/source diagnostics. The first retail command
+omitted `--watch-pc`, producing zero task rows despite a live whole-RDRAM
+control; registering `0x80033FCC` as both watch and dump fixed that setup
+error.
+
+The fixed retail run reached title and hangar, recorded 10,000 whole-RDRAM
+callbacks, 1,786 task-PC phase hits, and 1,126 type-2 rows with zero invalid
+task pointers. The rebuilt port run reached title VI 1024 and hangar VI 512,
+with 2,171 `audtask-abi`/`audtask-dma-row` rows, 1,024 M5 source-DMA rows,
+and 39 audio-object frame samples. Every sampled port real-arm task had type
+2, ucode `0x80099FE0`, zero output/yield fields, and exit PC `0x1328`.
+
+Retail's task pointer stayed `0x80149470`; target descriptor data pointers
+were `0x80171CE0` at title and `0x80171E70` at hangar. The port reproduced
+those pointers in the matching phases, but also interleaved `0x80173B20` and
+`0x80173CB0` objects with distinct data sizes, source hashes, and DMA ranges.
+This selects `H-SameLogicalObject` for matching target rows and leaves the
+payload writer/ownership boundary open. It rules out a missing task hook or
+invalid capture, but does not prove the differing payload is erroneous.
+
+Evidence: `docs/M5-S3660-AUDIO-SOURCE-OWNERSHIP.md`,
+`scratch/agent/s3660_audio_ownership/retail-fixed.log`, and `port.log`.
+No runtime behavior or mitigation changed.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3659 (2026-09-07).
+notes are linked below. Updated for session 3660 (2026-09-21).
 
 ## Current state
 
@@ -34,6 +34,16 @@ aligned word after `sb`, including three bytes that instruction did not write.
 Nonzero intermediate words cannot establish nonzero bytes written by memset. See
 [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md).
 
+Session 3660 joined the live audio task/source contract. Retail's independent
+`0x80033FCC` task watch and the port's task ABI/source-DMA rows both reached
+title and hangar under positive controls. Target retail descriptors use
+`0x80171CE0` (title) and `0x80171E70` (hangar), and the port reproduces those
+addresses, but the port also interleaves `0x80173B20`/`0x80173CB0` objects with
+different sizes, hashes, and DMA sources. This selects
+`H-SameLogicalObject` for matching target rows while leaving the payload writer
+and ownership of the interleaved objects open. See
+[M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md).
+
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
 stage-advancer input is a known route/configuration issue; the validated
@@ -44,7 +54,12 @@ real-audio route is the comparison arm.
 The backlog is one monotonic sequence. Work only the first applicable item.
 
 1. M5 Step 3: identify the live retail audio task and its source object before
-   comparing physical heap addresses. The s3659 scalar-store capture refuted
+   comparing physical heap addresses. Session 3660 qualified the matching
+   target descriptors, but the port interleaves additional source objects.
+   Next identify the writer/ownership boundary for the target and interleaved
+   descriptor ranges (`0x80171CE0`, `0x80171E70`, `0x80173B20`, `0x80173CB0`)
+   with phase-gated retail writer-PC watches and the existing port task/source
+   rows. The s3659 scalar-store capture refuted
    the old nonzero-memset inference: 1,844 sampled stores wrote zero, all
    matching the source register. The aligned words were nonzero in 829 cases.
    Exact DMA ordering remains open; do not add a writeback/zero-fill mitigation.
@@ -84,7 +99,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-RetailValue | Whole-word nonzero samples do not establish a nonzero byte store; s3659 measured 1,844 zero bytes with zero mismatches. |
 | H-RetailProducer | `0x800052C4` is repeatedly the immediate caller of `0x800078E0`; no earlier constructor was exposed by the repeated field table. |
 | H-RetailDmaOrder | No separate DMA event identifier was exposed; ordering remains open. |
-| H-CaptureInvalid | Refuted for this run: whole-RDRAM, source-span, writer-PC, and target-phase controls all fired. |
+| H-SameLogicalObject | Selected at s3660 for matching target task rows; the same task contract and target descriptor addresses recur, while interleaved objects have differing payload/source-DMA identities. |
+| H-DifferentObject | Applies only to s3660's interleaved helper rows; not selected for matching target rows. |
+| H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
 | H-MortComplete | Selected structurally: the `0x8009D7D0..0x8009DD7C` path has complete bounded stages and publication edges. |
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
@@ -100,6 +117,11 @@ The current work-unit slug is `m5-audio-source-ownership`.
   stores were zero with zero mismatches, despite 829 nonzero containing words.
   Oracle build and UBSan regression tests passed. Both title/hangar controls
   fired. See [M5-S3659-SCALAR-STORE-EVIDENCE.md](M5-S3659-SCALAR-STORE-EVIDENCE.md).
+- **3660 — audio task/source ownership join:** the independent retail task
+  dump and port ABI/source-DMA rows passed controls and reached title and
+  hangar. Matching target descriptors recur, but interleaved port objects have
+  different sizes, hashes, and DMA ranges; source ownership remains open. See
+  [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md).
 
 Only the latest boundary transitions are repeated here; the append-only ledger
 and evidence notes retain the full history. Sessions 3586–3657 M3 class
@@ -312,6 +334,7 @@ deletion.
 - [M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md](M3-S3648-LOAD-DEBUG-ASSETS-RS-FREE-AUDIT.md)
 - [M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md](M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md)
 - [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md)
+- [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md)
 - [M5-S3583-RETAIL-PRODUCER-REPEAT.md](M5-S3583-RETAIL-PRODUCER-REPEAT.md)
 - [M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md](M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md)
 - [M5-S3581-RETAIL-SOURCE-PRODUCER.md](M5-S3581-RETAIL-SOURCE-PRODUCER.md)
