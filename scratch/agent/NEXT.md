@@ -1,39 +1,33 @@
-# Next: join pre-selector payload writers to selected objects
+# Next: exact-store join for the primary pre-selector writer
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3666 passed whole-RDRAM, descriptor, title, and hangar controls. The
-selector publication immediately preceding each task row matched its task data
-pointer exactly, including both alternating hangar objects. The dominant writer
-caller remained `prev_pc=0x80090DE0`, `$ra=0x80090ABC`; the minor
-`$ra=0x80090BB4` variant remains non-separating.
+Session 3668 passed whole-RDRAM, descriptor, title, hangar, and type-2 task
+controls. Smaller source-writer context joined title task data
+`0x80173B20` and hangar task data `0x80173CB0`, but the join was latest-task
+per VI bucket and did not cover primary `0x800078EC` or alternate objects
+`0x80171CE0`/`0x80171E70`.
 
-Next unit: use one phase-gated oracle capture to join each pre-selector source
-writer (`0x8001E2C0`, `0x80007670`, `0x800078EC`, and the smaller sites) to the
-selected object/task fields. Keep the source-span watch, selector publication
-(`0x80091060`/`0x80091074`), task submission (`0x80033FCC`), shared writer
-(`0x80090DE4`), and all four descriptor watches in one run. Add the writer
-GPR/field context needed to distinguish initialization from object payload
-formation; do not infer object ownership from PC identity alone.
+Next unit: add one bounded retail oracle instrument that records the GPR/field
+context at each exact `0x800078EC` store into
+`0x1797B0..0x179930`, then joins that store ordinal to the next selector and
+task object. Keep whole-RDRAM, all four descriptor watches, selector watches,
+task dump, and title/hangar phase controls in the same run. Do not use the
+unbounded `--pc-field-dump 0x800078EC` arm.
 
 Discriminator:
 
-- H-PreSelectorObjectWriter: a pre-selector source writer's arguments/fields
-  identify the selected object or its stable payload contract.
-- H-PreSelectorInitialization: all source writes are shared setup with no
-  object-specific context; payload ownership remains downstream/unobserved.
-- H-SeparatePayloadWriter: source writer context changes with the selected
-  object despite the shared `0x80090DE0` caller.
-- H-CaptureInvalid: any whole-RDRAM, title, or hangar control fails; discard
-  the census.
+- H-PrimaryObjectWriter: exact stores carry context that identifies the next
+  selected object or a stable object-specific payload contract.
+- H-PrimaryInitialization: exact stores have invariant setup context and do
+  not distinguish selected objects.
+- H-PrimarySeparateObjects: exact-store context changes in step with the
+  alternating `0x80171E70`/`0x80173CB0` hangar objects.
+- H-CaptureInvalid: whole-RDRAM, title, or hangar control fails; discard the
+  capture.
 
-The discriminator is the writer's pre-selector arguments/pointed fields joined
-to the next selector/task object. Object-specific context selects
-H-PreSelectorObjectWriter or H-SeparatePayloadWriter; identical setup context
-selects H-PreSelectorInitialization. A missing whole-RDRAM, title, or hangar
-control is H-CaptureInvalid and makes the run unevaluable.
-
-Build: `bash tools/oracle/build.sh`. Run from `build/` for one 55-second
-phase-gated capture with all controls and explicit watches for the four source
-writer PCs plus their field/context dumps. Capture under `scratch/agent/` with
-a non-dot final path component.
+Before building the instrument, read `tools/oracle/README.md` and
+`docs/F5-UCODE-REFERENCE.md`. Build once with `bash tools/oracle/build.sh`,
+run the single 55-second capture from `build/`, and store the log under
+`scratch/agent/` with a non-dot final path component. A mitigation or guest
+state rewrite is out of scope.

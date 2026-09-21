@@ -137337,3 +137337,32 @@ Evidence: `docs/M5-S3667-PAYLOAD-ORDER.md`,
 instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only physical
 write, task, selector, and phase observations; no guest or host value was
 skipped, rewritten, or guarded.
+
+## Session 3668 (2026-09-21) — joined smaller pre-selector writer context
+
+The independent retail oracle passed the whole-RDRAM positive control, all
+four descriptor watches, title VI `0x00790400`, hangar VI `0x006AB400`, and
+the type-2 task control. The corrected capture ran 50.6 emulated seconds and
+recorded 299,080 whole-RDRAM writes, 674 writes to
+`0x1797B0..0x179930`, and 822 valid type-2 task rows with zero invalid
+pointers or overflow.
+
+Bounded field-context joins for smaller source-writer sites followed task
+data `0x80173B20` in title and `0x80173CB0` in hangar. Six sites each
+produced 217 title and 203 hangar joins; `0x8001FBE4` produced 13 title and
+11 hangar joins. No alternate `0x80171CE0`/`0x80171E70` object joined. These
+are latest-task-per-VI-bucket joins, not exact store-to-task edges, so they
+select only a limited `H-PreSelectorObjectWriter` result for the smaller
+writer family and do not establish primary `0x800078EC` ownership.
+
+The first capture was capture-invalid: unbounded `0x800078EC` field dumping
+produced 1,404,783 hits and stopped at 30 emulated seconds. Removing only
+that high-cardinality field dump allowed the fixed run to reach hangar. This
+rules out neither primary-writer initialization nor alternating-object
+ownership. No mitigation or game-state change was made.
+
+Evidence: `docs/M5-S3668-PRESELECTOR-WRITER-JOIN.md`,
+`scratch/agent/s3668_m5_preselector_writer_join/oracle.log`, and
+`scratch/agent/run_s3668_m5_preselector_writer_join.sh`. ORIGIN:
+diagnostic-only oracle execution, field, task, descriptor, and physical-write
+watches; no guest or host value was skipped, rewritten, or guarded.

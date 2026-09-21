@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
- notes are linked below. Updated for session 3667 (2026-09-21).
+ notes are linked below. Updated for session 3668 (2026-09-21).
 
 ## Current state
 
@@ -98,6 +98,17 @@ post-selector source activity, but object-specific writer/DMA ownership remains
 open because multiple writers were observed. See
 [M5-S3667-PAYLOAD-ORDER.md](M5-S3667-PAYLOAD-ORDER.md).
 
+Session 3668's corrected oracle capture passed whole-RDRAM, all four
+descriptor, title, hangar, and type-2 task controls. It recorded 674 source
+span writes and 822 valid task rows. Bounded field-context joins for the
+smaller source-writer sites followed task data `0x80173B20` in title and
+`0x80173CB0` in hangar, but did not join the alternate `0x80171CE0`/
+`0x80171E70` objects. The joins are latest-task-per-VI-bucket, not exact
+store-to-task edges; `0x800078EC` was excluded from field dumping after its
+high-cardinality rows prevented the first run reaching hangar. This is
+single-source retail evidence and leaves primary-writer ownership unresolved.
+See [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -138,6 +149,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    the old nonzero-memset inference: 1,844 sampled stores wrote zero, all
    matching the source register. The aligned words were nonzero in 829 cases.
    Exact DMA ordering remains open; do not add a writeback/zero-fill mitigation.
+   S3668's smaller-writer joins are only single-source,
+   latest-task-per-VI-bucket evidence: continue with a bounded discriminator
+   for primary `0x800078EC` context and the alternate
+   `0x80171CE0`/`0x80171E70` ownership. See
+   [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -188,6 +204,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-DmaAfterSelector | Refuted for watched source span at s3667: all 674 writes preceded title/hangar phase buckets; DMA identity remains unexposed. |
 | H-SeparatePayloadWriter | Open: source span has multiple writers (`0x800078EC` dominates), but object-specific ownership is not joined. |
 | H-PayloadBeforeSelector | Selected for watched source span at s3667: first writes at 6.8–7.0 s preceded title VI at 17.4 s and hangar VI at 38.4 s. |
+| H-PreSelectorObjectWriter | Limited single-source selection at s3668 for smaller writer sites: title joins `0x80173B20`, hangar joins `0x80173CB0`; latest-task-per-VI-bucket only. |
+| H-PrimaryWriterContext | Open: `0x800078EC` field dumping was too high-cardinality, and alternate `0x80171CE0`/`0x80171E70` ownership was not joined. |
 | H-OneWriterAllRanges | Refuted at s3661: title and hangar have different phase-active subsets, with no phase-gated writes to the other ranges. |
 | H-PrePhaseInitialization | Remains open for phase-inactive ranges; absence inside a phase does not identify their earlier writer. |
 | H-CaptureInvalid | Refuted for s3659 and s3660: whole-RDRAM, source/task, writer-PC, and target-phase controls fired. |
@@ -201,6 +219,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 The current work-unit slug is `m5-audio-source-ownership`.
 
 ## Recent evidence ledger
+
+- **3668 — pre-selector writer context:** the corrected retail oracle capture
+  passed all controls and reached title and hangar. Smaller writer-site field
+  joins followed `0x80173B20` in title and `0x80173CB0` in hangar, but did not
+  establish exact store-to-task edges or primary `0x800078EC` ownership. This
+  is single-source evidence. See
+  [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md).
 
 - **3667 — payload ordering:** the corrected phase-gated oracle capture passed
   whole-RDRAM, descriptor, title, hangar, selector, and task controls. The
@@ -465,6 +490,7 @@ deletion.
 - [M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md](M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md)
 - [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md)
 - [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md)
+- [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md)
 - [M5-S3583-RETAIL-PRODUCER-REPEAT.md](M5-S3583-RETAIL-PRODUCER-REPEAT.md)
 - [M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md](M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md)
 - [M5-S3581-RETAIL-SOURCE-PRODUCER.md](M5-S3581-RETAIL-SOURCE-PRODUCER.md)
