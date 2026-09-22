@@ -412,6 +412,8 @@ static thread_local uint32_t g_rs64_m5_field348_static_callsite = 0;
 static thread_local uint32_t g_rs64_m5_pcm_callsite = 0;
 static thread_local uint32_t g_rs64_m5_static_rs_memset_callsite = 0;
 static thread_local uint32_t g_rs64_m5_static_rs_memset_ra = 0;
+extern "C" uint64_t rs64_m5_clear_branch_dmem_sequence();
+extern "C" uint64_t rs64_m5_clear_branch_source_sequence();
 
 extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, uint32_t ra,
                                               uint32_t a0, uint32_t a2,
@@ -452,6 +454,46 @@ extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, ui
         s0, s1, t0, t1,
         (a0 == 0x801797B0u && a2 == 0x298u) ? 1u : 0u,
         word(a0), word(a0 + 4u), word(s0 + 0x60u), word(s1 + 0x60u), word(0x801797B0u), word(0x801797B4u));
+    std::fflush(stderr);
+    ++rows;
+}
+
+extern "C" void rs64_m5_clear_branch(uint32_t pc, uint32_t branch_taken,
+                                       uint32_t v0, uint32_t v1,
+                                       uint32_t a0, uint32_t a1, uint32_t a2,
+                                       uint32_t s0, uint32_t s1, uint32_t ra) {
+    static int enabled = -1;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static unsigned rows = 0;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_CLEAR_BRANCH");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x006AB800u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    const uint32_t next_bucket = (width << 24) ^ origin;
+    if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
+    if (rows >= 128u) return;
+    uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &route_row, &exit_reason, &arm);
+    std::fprintf(stderr,
+        "[m5-clear-branch] n=%u pc=0x%08X taken=%u v0=0x%08X v1=0x%08X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X s0=0x%08X s1=0x%08X ra=0x%08X "
+        "phase=%u width=%u origin=0x%06X arm=%s active=%u route_ordinal=%u "
+        "route_row=%u dmem_seq=%llu source_event=%llu exit=%d\n",
+        rows, pc, branch_taken, v0, v1, a0, a1, a2, s0, s1, ra,
+        rs64_phase_ord(), width, origin, arm ? arm : "n/a", active ? 1u : 0u,
+        ordinal, route_row,
+        static_cast<unsigned long long>(rs64_m5_clear_branch_dmem_sequence()),
+        static_cast<unsigned long long>(rs64_m5_clear_branch_source_sequence()), exit_reason);
     std::fflush(stderr);
     ++rows;
 }
@@ -898,6 +940,14 @@ static thread_local uint32_t g_rs64_m5_last_dmem_writer_fnv = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_nonzero = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_kind = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_route_ordinal = 0xFFFFFFFFu;
+
+extern "C" uint64_t rs64_m5_clear_branch_dmem_sequence() {
+    return g_rs64_m5_last_dmem_writer_seq;
+}
+
+extern "C" uint64_t rs64_m5_clear_branch_source_sequence() {
+    return g_rs64_m5_source_event;
+}
 
 struct Rs64M5DmemCoverage {
     uint64_t sequence = 0;

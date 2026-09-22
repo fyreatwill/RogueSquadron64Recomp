@@ -1,25 +1,28 @@
-# Next work unit: identify the branch that schedules the zero clear
+# Next work unit: identify the caller route entering the zero-clear allocator
 
-HYPOTHESIS-ID: m5-source-clear-branch
+HYPOTHESIS-ID: m5-source-clear-caller-route
 
-S3707 selected `H-ProducerInputZero`: the shared `0x801797B0` object was
-nonzero immediately before the legitimate zero clear in both paired arms.
+S3708 selected `H-ClearBranchRoute`: retail and both port arms showed the same
+target-phase branch shape and allocator inputs. The clear is entered through
+the stable route, but the route/selector inputs at caller `0x80091934` remain
+unexplained.
 
 Competing hypotheses:
 
-- `H-ClearBranchRoute`: a route/phase branch intentionally schedules the clear
-  before payload production.
-- `H-ClearCallerState`: caller state is wrong and selects the zero-clear path.
-- `H-ClearCallOrdering`: the same caller is reached in the wrong order relative
-  to the producer setup.
+- `H-CallerSelectorRoute`: selector/mixer state intentionally enters the clear
+  allocator before payload production.
+- `H-CallerStateDivergence`: the port reaches the same allocator with a
+  different caller input that is not visible in the local branch table.
+- `H-CallerOrdering`: the caller's preceding route publication/order differs
+  from retail even though the allocator's local inputs match.
 
-Discriminator: one phase-gated caller table at `0x8008F2CC` and its immediate
-predecessor branch, carrying route ordinal, caller PC/RA, branch outcome,
-`a0/a1/a2`, and the last producer-family sequence. A stable route branch with
-the same zero-clear arguments selects `H-ClearBranchRoute`; changed caller
-state selects `H-ClearCallerState`; a producer sequence after the clear selects
-`H-ClearCallOrdering`. Keep the existing positive controls and run real and
-silent arms in one build/run.
+Discriminator: one phase-gated table at caller `0x80091934` and allocator
+entry `0x8008F0A0`, carrying caller PC/RA, `a0/a1/a2`, selector/mixer fields,
+route ordinal/row, and the last producer sequence. A retail/port-matching
+selector tuple selects `H-CallerSelectorRoute`; a port-only tuple selects
+`H-CallerStateDivergence`; a changed route ordinal/order before the same tuple
+selects `H-CallerOrdering`. The oracle whole-RDRAM control and caller/entry
+execution controls must fire; run real and silent arms in one build/run.
 
 Build:
 
@@ -27,6 +30,6 @@ Build:
 
 Run:
 
-`zsh scratch/agent/run_s3707_m5_source_clear_input.sh`
+`zsh scratch/agent/run_s3708_m5_caller_route.sh`
 
 Do not alter the clear or add a mitigation.

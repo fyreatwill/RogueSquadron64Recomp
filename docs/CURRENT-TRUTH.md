@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3707 (2026-09-21).
+Updated for session 3708 (2026-09-21).
 
 ## Current state
 
@@ -154,6 +154,15 @@ silent arm emitted none. This selects `H-ProducerInputZero` and refutes an
 already-zero shared object at this boundary. See
 [M5-S3707-CLEAR-INPUT.md](M5-S3707-CLEAR-INPUT.md).
 
+Session 3708 added the phase-gated branch table for the clear caller. The
+independent retail oracle passed its whole-RDRAM control and executed all four
+candidate PCs in the target phase. Both port arms had the same one-entry
+`0x8008F108` branch, 18-entry `0x8008F168` loop, terminating zero, and
+not-taken `0x8008F1C4`, with matching allocator inputs and route shape. This
+selects `H-ClearBranchRoute` and refutes caller-state and post-clear-ordering
+explanations at the measured boundary. See
+[M5-S3708-CLEAR-BRANCH.md](M5-S3708-CLEAR-BRANCH.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -173,9 +182,11 @@ real-audio route is the comparison arm.
 The backlog is one monotonic sequence. Work only the first applicable item.
 
 1. **M5 Step 4 — explain why the legitimate clear is scheduled before payload production.**
-   Session 3707 selects `H-ProducerInputZero`: the shared clear receives zero
-   while its object is nonzero immediately before the clear. Trace the caller's
-   branch/route decision; do not add a mitigation or alter the clear.
+   Session 3708 selects `H-ClearBranchRoute`: the stable allocator route at
+   `0x8008F108..0x8008F1C4` reaches the clear with matching state in both
+   arms. Trace caller `0x80091934` and its route/selector inputs to explain why
+   this route is entered before payload production; do not add a mitigation or
+   alter the clear.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -215,6 +226,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ClearToDmaOrdering` | Confirmed at s3705: real-arm clear ordinal 525 preceded source/output ordinals 669–670; allocation-object identity remains unevaluable. |
 | `H-ClearTooEarly` | Selected at s3706: setup and clear both used `0x801797B0`/`0x298`, while the final `0x800078EC` writer was zero before the later zero DMAs. |
 | `H-ProducerInputZero` | Selected at s3707: paired setup rows had identical nonzero pre-clear object words while the static-clear witness reported zero fill. |
+| `H-ClearBranchRoute` | Selected at s3708: retail and both port arms showed the same target-phase loop/branch outcomes and allocator inputs before the clear. |
+| `H-ClearCallerState` | Refuted at s3708 for the measured caller branch inputs: real and silent arms matched, and retail matched the same loop shape. |
+| `H-ClearCallOrdering` | Refuted at s3708 for the measured boundary: no producer sequence followed the clear before qualified zero source DMAs. |
 | `H-ProducerStateClobbered` | Refuted at s3707 for the measured boundary: the shared object was nonzero immediately before the clear. |
 | `H-ProducerUsesOtherState` | Unsupported at s3707: paired setup/object rows exposed no alternate state object. |
 | `H-DifferentProducerObject` | Refuted at s3706 for the measured target call: the setup object matched the clear destination. |
@@ -307,6 +321,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 - **3706 — producer-object join:** the regenerated setup witness matched the
   clear object and the final zero writer preceded the zero source DMA. See
   [M5-S3706-WRITER-SETUP-REQUALIFICATION.md](M5-S3706-WRITER-SETUP-REQUALIFICATION.md).
+- **3708 — clear-caller branch qualification:** the retail oracle and paired
+  port arms showed the same target-phase allocator branch shape and inputs;
+  this selects the stable route explanation. See
+  [M5-S3708-CLEAR-BRANCH.md](M5-S3708-CLEAR-BRANCH.md).
 - **3702 — pre-phase producer and overwrite:** the paired port arms each
   recorded 652 source-range stores, including retail-shaped producer PCs, but
   the later `0x800078EC` zero-fill remained before zero output DMA payloads.
@@ -417,6 +435,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3697-DMEM-PREDECESSOR-CLASS.md](M5-S3697-DMEM-PREDECESSOR-CLASS.md)
 - [M5-S3699-DMEM-DMA-COVERAGE.md](M5-S3699-DMEM-DMA-COVERAGE.md)
 - [M5-S3702-SOURCE-PRODUCER-OVERWRITE.md](M5-S3702-SOURCE-PRODUCER-OVERWRITE.md)
+- [M5-S3708-CLEAR-BRANCH.md](M5-S3708-CLEAR-BRANCH.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`

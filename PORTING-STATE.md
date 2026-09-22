@@ -138201,3 +138201,30 @@ was discarded; the fixed paired retry passed all controls with no crash.
 
 ORIGIN: diagnostic-only clear-input provenance; the writer is the legitimate
 `0x800078EC` zero-fill and no mitigation or guest/RDRAM state change was added.
+
+## Session 3708 (2026-09-21) — selected the stable zero-clear caller route
+
+The independent retail oracle ran first with a whole-RDRAM positive control
+(10,021 hits) and target-phase execution watches at `0x8008F108`,
+`0x8008F168`, `0x8008F1C4`, and `0x8008F2CC`. All four PCs executed in the
+`0x006AB400:512` phase. Retail showed the same 18-iteration allocator loop as
+the port: `0x8008F168` had `v0=1` for 17 rows and `v0=0` on the terminating
+row, followed by a not-taken `0x8008F1C4` and the clear caller with
+`a0=0x801797B0`.
+
+The one-build paired port run fired all target controls in both real-audio and
+silent arms. Both emitted one `0x8008F108` row with `v1=0x12`, 18 loop rows,
+the same terminating branch outcome, not-taken `0x8008F1C4`, and matching
+allocator inputs (`s0=0x12`, `s1=0x561F`, and matching loop arguments). The
+clear caller used the same route in both arms. The real arm had producer
+sequence state before the call and the silent arm did not; neither showed a
+producer sequence after the clear before the qualified zero source DMAs.
+
+This selects `H-ClearBranchRoute`, refutes `H-ClearCallerState` at the
+measured branch inputs, and refutes `H-ClearCallOrdering` at the measured
+clear-to-source boundary. The oracle and paired port are independent evidence
+lines, each with a positive control. The next boundary is the caller at
+`0x80091934` and its selector/route inputs.
+
+ORIGIN: diagnostic-only branch and route tracing. No game logic, clear, or
+payload behavior was changed.
