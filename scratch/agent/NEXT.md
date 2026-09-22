@@ -1,11 +1,13 @@
-# Next work unit: M5 Step 1 same-build audio qualification
+# Next work unit: M5 Step 1 control-valid qualification retry
 
 HYPOTHESIS-ID: m5-step1-audio-contract-qualification
 
-The retail shared guest tuple is now qualified. The next M5 unit is the
-existing Step 1 checkpoint from `docs/M5-AUDIO-PLAN.md`: re-baseline the
-current real Factor 5 image against the silent `M_AUDTASK` control using one
-fresh build and concurrent, phase-gated runs.
+The s3724 attempt was control-invalid: the first recipe omitted the known
+route settings and both arms crashed before VI 512; the corrected rerun
+reached VI 512 only in real audio, while silent died at VI 320 and real
+crashed shortly after target entry. Re-run the unchanged Step 1 comparison
+with the full validated route settings below. Do not interpret downstream
+nulls unless both arms reach VI 512 and pass their route/RSP controls.
 
 Competing hypotheses:
 
@@ -29,9 +31,9 @@ Exact commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-mkdir -p /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s3724_audio_real /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s3724_audio_silent
-(env ROGUESQ_LOG_ALL=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' zsh tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s3724_audio_real 180 2) &
-(env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_LOG_ALL=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' zsh tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s3724_audio_silent 180 2) &
+mkdir -p scratch/agent/s3725_audio_real scratch/agent/s3725_audio_silent
+(env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M4_Y8000_WIDTH=512 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' zsh tools/probe.sh "$PWD/scratch/agent/s3725_audio_real" 180 2) &
+(env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_M4_Y8000_WIDTH=512 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' zsh tools/probe.sh "$PWD/scratch/agent/s3725_audio_silent" 180 2) &
 wait
 ```
 

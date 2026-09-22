@@ -138557,3 +138557,17 @@ retail evidence. See `docs/M5-S3722-RETAIL-94648-ORIGIN.md` and
 
 ORIGIN: diagnostic-only oracle execution watches and field dumps. No guest or
 host behavior was changed.
+## Session 3724 (2026-09-21) — attempted control-valid M5 audio qualification
+
+Ran the planned Step 1 same-build real-vs-silent qualification after a clean
+Debug build. The first prescribed recipe omitted the known route settings
+`ROGUESQ_M4_Y8000_WIDTH=512` and `ROGUESQ_STUB_MISSING_FUNCS=1`; both arms
+reached width 640 and crashed in `musyxSynthFrame`, so that attempt was
+invalid. The fixed concurrent rerun restored the real arm through VI 1024 and
+VI 512 and fired image dispatch, task ABI/DMA, image completion, SP completion,
+image-stage, and PCM controls. It then crashed 2.1 seconds into VI 512 in
+`viRetraceHandlerThread` at guest PC `0x80007904`. The silent arm crashed at
+VI 320 in `spTaskSchedulerThread` and never reached the target phase. This
+selects `H-AudioControlInvalid` for this iteration and rules out any paired
+real-vs-silent audio-contract conclusion; the qualification must be repeated
+with both arms target-valid.

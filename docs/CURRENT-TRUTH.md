@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3723 (2026-09-21).
+Updated for session 3724 (2026-09-21).
 
 ## Current state
 
@@ -317,6 +317,19 @@ common-field capture artifact for the measured paths. The distinct
 `0x80094648` and `0x80033FCC` paths remain distinct; host callback parity is
 still open. See [M5-S3723-RETAIL-SHARED-TUPLE.md](M5-S3723-RETAIL-SHARED-TUPLE.md).
 
+Session 3724 attempted the Step 1 same-build real-vs-silent qualification.
+The initial prescribed recipe omitted the known `ROGUESQ_M4_Y8000_WIDTH=512`
+and `ROGUESQ_STUB_MISSING_FUNCS=1` route settings; both arms reached width
+640 and crashed in `musyxSynthFrame`. The corrected rerun restored the real
+arm through title and hangar VI 512, with image dispatch, task ABI/DMA, image
+completion, SP completion, image-stage, and PCM controls, but it crashed 2.1
+seconds into the target phase at `viRetraceHandlerThread` (guest PC
+`0x80007904`). The silent arm crashed at width 320 in
+`spTaskSchedulerThread` and never reached target phase. This is
+`H-AudioControlInvalid`, not an audio-contract comparison; both-arm target
+qualification remains open. The corrected rerun is retained under
+`scratch/agent/s3724_audio_*_retry/`.
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -335,19 +348,24 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 host callback parity boundary.** Determine whether the remaining
+1. **M5 Step 1 control-valid qualification.** Re-run the unchanged real-vs-
+   silent comparison with the full validated route settings in
+   `scratch/agent/NEXT.md`; require both arms to reach VI 512 and pass route
+   and RSP controls before interpreting contract rows.
+
+2. **M5 host callback parity boundary.** Determine whether the remaining
    real-audio image-stage difference is explained by host callback/queue state
    rather than the now-qualified guest tuple. Use a new ground-truth-backed
    table before adding instrumentation; do not change selector, clear, task,
    audio-route, or payload state.
 
-2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
+3. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy of the value, and land a guard only if
    a concrete invalid writer is found. The closed `rs_free` audits and their
    evidence are archived in PROJECT-OVERVIEW §56; do not re-audit them.
 
-3. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
+4. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
    M3 has no new discriminator. Use one bounded region/census per session and
    preserve the slug `generated-symbol-renaming-sweep` for that campaign.
 
@@ -374,6 +392,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-SharedTupleIntentional` | Selected at s3723: both shared-tuple PCs matched on fields and independent register rows at both 512-wide origins. |
 | `H-SharedTuplePhaseAlias` | Refuted at s3723 for the measured origin/phase buckets. |
 | `H-SharedTupleFieldArtifact` | Refuted at s3723 by agreement between field dumps and execution-watch register rows. |
+| `H-AudioControlInvalid` | Selected at s3724 for the attempted Step 1 comparison: the corrected real arm reached VI 512 but crashed in target phase, while silent crashed at VI 320; no paired contract conclusion is valid. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
