@@ -138070,3 +138070,28 @@ source.
 
 ORIGIN: diagnostic source-producer provenance only; no mitigation or
 guest/RDRAM state change. See docs/M5-S3701-SOURCE-PRODUCER-BOUNDARY.md.
+
+## Session 3702 (2026-09-21) — found the pre-phase source producer and overwrite
+
+The required independent retail preflight passed its whole-RDRAM positive
+control, reached title and hangar, and again attributed the source range to
+`0x80007670`, `0x8001E2C0`, the `0x8001F...` family, and `0x800078EC`.
+
+The paired real-audio and silent port arms both reached the qualified target
+phases and fired the RSP/DMEM/source controls. Removing the target-route gate
+from the scalar source-range witness produced 652 stores in each arm: 172 at
+`0x80007670`, 11 at `0x8001E2C0`, 64 in the `0x8001F...` family, and 384 at
+`0x800078EC`. The first groups included nonzero values and occurred before
+target-route publication; the later `0x800078EC` stores were zero-fill. The
+first qualified output source DMAs still carried zero payload and wrote zero
+post-DMA bytes.
+
+This selects `H-PrePhaseScalarProducer` and refutes `H-ProducerOmission` and
+`H-InputDescriptorWrong` at the measured range. The source producer exists;
+the current boundary is ordering/overwrite by `0x800078EC`, not a missing DMA
+descriptor. The next experiment must join the final source-range writer to
+the first 512 output DMAs. See
+docs/M5-S3702-SOURCE-PRODUCER-OVERWRITE.md.
+
+ORIGIN: diagnostic source-producer provenance only; no mitigation or guest/RDRAM
+state change.

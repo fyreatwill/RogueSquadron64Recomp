@@ -902,8 +902,16 @@ extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_INPUT_WRITER");
+        const char* producer = std::getenv("ROGUESQ_LOG_M5_SOURCE_PRODUCER");
         return (all && all[0] && all[0] != '0') ||
-               (own && own[0] && own[0] != '0');
+               (own && own[0] && own[0] != '0') ||
+               (producer && producer[0] && producer[0] != '0');
+    }();
+    static const bool producer_enabled = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_SOURCE_PRODUCER");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (e && e[0] && e[0] != '0') ||
+               (all && all[0] && all[0] != '0');
     }();
     static std::atomic<bool> control{false};
     if (!control.exchange(true, std::memory_order_relaxed)) {
@@ -922,10 +930,11 @@ extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
     uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
     int exit_reason = 0;
     const char* arm = "n/a";
-    if (!rs64_audio_current_route_snapshot(&phase, &width_n, &origin,
-                                           &ordinal, &row, &exit_reason, &arm)) return;
-    if (!((width_n == 1024u && origin == 0x00790400u) ||
-          (width_n == 512u && origin == 0x006AB400u))) return;
+    const bool route_active = rs64_audio_current_route_snapshot(
+        &phase, &width_n, &origin, &ordinal, &row, &exit_reason, &arm);
+    const bool target_phase = (width_n == 1024u && origin == 0x00790400u) ||
+                              (width_n == 512u && origin == 0x006AB400u);
+    if (!producer_enabled && (!route_active || !target_phase)) return;
 
     const uint64_t seq = g_rs64_m5_pre_dma_writer_seq.fetch_add(
         1u, std::memory_order_relaxed) + 1u;
@@ -933,7 +942,16 @@ extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
     g_rs64_m5_pre_dma_writer_phys.store(phys, std::memory_order_relaxed);
     g_rs64_m5_pre_dma_writer_len.store(len, std::memory_order_relaxed);
     g_rs64_m5_pre_dma_writer_value.store(value, std::memory_order_relaxed);
-    if (seq <= 4096u) {
+    if (producer_enabled && seq <= 4096u) {
+        std::fprintf(stderr,
+            "[m5-source-producer] seq=%llu route_active=%u phase=%u width=%u "
+            "origin=0x%06X arm=%s route_ordinal=%u route_row=%u pc=0x%08X "
+            "phys=0x%06X len=%u value=0x%08X exit=%d\n",
+            static_cast<unsigned long long>(seq), route_active ? 1u : 0u,
+            phase, width_n, origin, arm ? arm : "n/a", ordinal, row, pc,
+            phys, len, value, exit_reason);
+        std::fflush(stderr);
+    } else if (seq <= 4096u) {
         std::fprintf(stderr,
             "[m5-input-writer] seq=%llu phase=%u width=%u origin=0x%06X arm=%s "
             "route_ordinal=%u route_row=%u pc=0x%08X phys=0x%06X len=%u value=0x%08X\n",

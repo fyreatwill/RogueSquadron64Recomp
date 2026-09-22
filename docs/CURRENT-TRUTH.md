@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3701 (2026-09-21).
+Updated for session 3702 (2026-09-21).
 
 ## Current state
 
@@ -105,13 +105,13 @@ This selects `H-RetailSourceDifferent` and refutes a descriptor mismatch for
 the measured range. See [M5-S3700-DMA-SOURCE-PRODUCER.md](M5-S3700-DMA-SOURCE-PRODUCER.md).
 
 Session 3701 extended the source-side qualification through `0x179A48`.
-Retail's positive control reached hangar and showed 1,125 writes from the
-known hangar writer families. The qualified port reached hangar with all
-controls live; its first 512 source rows joined the expected DMA, but source
-and post-DMA payloads remained zero and no current scalar writer was present.
-This confirms `H-RetailSourceDifferent`; the next boundary is the producer or
-layout that supplies the zero RDRAM source. See
-[M5-S3701-SOURCE-PRODUCER-BOUNDARY.md](M5-S3701-SOURCE-PRODUCER-BOUNDARY.md).
+Session 3702 removed the target-route gate from the source-range scalar census.
+The paired port arms each showed 652 stores, including the retail families
+`0x80007670`, `0x8001E2C0`, and `0x8001F...`; the later `0x800078EC` zero-fill
+also ran. The output source DMA still carried zero bytes. This selects
+`H-PrePhaseScalarProducer`: the producer exists before route publication, then
+the legitimate zero-fill overwrites the range before the output DMA. See
+[M5-S3702-SOURCE-PRODUCER-OVERWRITE.md](M5-S3702-SOURCE-PRODUCER-OVERWRITE.md).
 
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
@@ -131,15 +131,14 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — identify the producer/layout of the zero RDRAM source.**
-   `H-RetailSourceDifferent` is selected: the first 512 qualified hangar rows
-   joined the correct `0x1798B0..0x179A48` source DMA, but its source bytes
-   were zero and no current port writer matched retail's hangar families.
-   Trace the source descriptor's producer and publication before the DMA,
-   carrying the retail writer census, RSP, DMEM, and 512-row controls in one
-   phase-gated run. A legitimate nonzero producer matching retail selects
-   `H-PortSourceProducer`; no producer selects `H-ProducerOmission`; a
-   divergent owner/range reopens `H-InputDescriptorWrong`.
+1. **M5 Step 4 — identify why the legitimate producer is overwritten.**
+   `H-PrePhaseScalarProducer` is selected: the port performs the retail-shaped
+   source stores before target-route publication, then `0x800078EC` performs a
+   zero-fill before the output DMA. Join the last source-range writer and its
+   ordering to the first 512 output DMAs, with retail and all RSP/DMEM controls
+   live. A later nonzero producer selects `H-ProducerAfterClear`; only the
+   zero-fill selects `H-ClearIsFinal`; a changed range/owner reopens
+   `H-InputDescriptorWrong`.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -172,7 +171,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ZeroDMEMProducer` | Refuted as a complete explanation at s3698: a repeated 16-byte output-DMEM gap had no observed covering writer. |
 | `H-UninstrumentedDMEMWriter` | Selected at s3699: the missing gap coverage was an RDRAM-to-DMEM DMA writer on all 255 `0xCB0` hangar rows. |
 | `H-RetailSourceDifferent` | Selected at s3700: 512/512 output rows joined the expected `0x1798B0..0x179A48` source DMA, whose bytes were zero; retail had distinct hangar writer families while the port retained the title zero-fill. |
-| `H-PortSourceProducer` | Refuted at s3701 for the first 512 qualified rows: the port source DMA was correct but had zero payload and no current writer matching retail's hangar families. |
+| `H-PortSourceProducer` | Selected at s3702 for the producer census: both port arms had the retail-shaped source writer families before the target route was published. |
+| `H-PrePhaseScalarProducer` | Selected at s3702: 652 source-range stores preceded/straddled the qualified run, including retail-shaped nonzero writers; the later `0x800078EC` zero-fill preceded zero output payloads. |
+| `H-ProducerOmission` | Refuted at s3702 by the phase-independent port census. |
 | `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
 | `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
 | `H-InputDmaKeyStillUnavailable` | Selected only at the output-DMA boundary by s3688; superseded by the input-DMA key. |
@@ -242,6 +243,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   qualified port's first 512 rows joined the correct DMA, but source and
   post-DMA payloads were zero and no current scalar writer was present. See
   [M5-S3701-SOURCE-PRODUCER-BOUNDARY.md](M5-S3701-SOURCE-PRODUCER-BOUNDARY.md).
+- **3702 — pre-phase producer and overwrite:** the paired port arms each
+  recorded 652 source-range stores, including retail-shaped producer PCs, but
+  the later `0x800078EC` zero-fill remained before zero output DMA payloads.
+  See [M5-S3702-SOURCE-PRODUCER-OVERWRITE.md](M5-S3702-SOURCE-PRODUCER-OVERWRITE.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity
@@ -347,6 +352,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3695-AUDIO-PUMP-BOUNDARY.md](M5-S3695-AUDIO-PUMP-BOUNDARY.md)
 - [M5-S3697-DMEM-PREDECESSOR-CLASS.md](M5-S3697-DMEM-PREDECESSOR-CLASS.md)
 - [M5-S3699-DMEM-DMA-COVERAGE.md](M5-S3699-DMEM-DMA-COVERAGE.md)
+- [M5-S3702-SOURCE-PRODUCER-OVERWRITE.md](M5-S3702-SOURCE-PRODUCER-OVERWRITE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
