@@ -1,30 +1,29 @@
-# Next work unit: M5 retail-to-port source byte/layout join
+# Next work unit: M5 exact retail-to-port byte join
 
-HYPOTHESIS-ID: m5-retail-port-byte-layout-join
+HYPOTHESIS-ID: m5-exact-retail-port-byte-join
 
-Build one batched port/retail capture that samples the same source subranges
-and computes phase-gated byte counts/FNVs at the retail source boundary and
-the port source-DMA handoff. Keep the whole-RDRAM oracle positive control and
-the validated Start/autopilot schedules. Do not add a mitigation or change
-port behavior.
+Add an oracle-side exact byte-position/FNV export for the same source subranges
+already watched by the port capture, then run one batched port/retail capture.
+Keep the whole-RDRAM oracle positive control and the validated Start/autopilot
+schedules. Do not add a mitigation or change port behavior.
 
 Competing hypotheses:
 
-- `H-LayoutEquivalent`: retail and port sample the same nonzero source layout,
-  and the port zero is introduced after the corresponding handoff.
-- `H-LayoutDivergent`: retail's nonzero bytes occupy a different source
-  layout/range, so the current port comparison is misaligned.
-- `H-RetailOnlyProducer`: the aligned retail source is nonzero but the port's
-  corresponding producer input is already zero before its source DMA.
+- `H-ExactLayoutEquivalent`: exact nonzero positions/FNVs match across retail
+  and the corresponding port source subranges.
+- `H-LayoutDivergent`: retail's exact nonzero positions/FNV differ, proving the
+  current comparison is misaligned.
+- `H-RetailOnlyProducer`: exact retail source bytes are populated but the port
+  source-DMA payload remains zero at those same positions.
 
 Discriminator: the oracle positive-control count and both target phases must
 be nonzero, and both arms must pass their source controls. Matching nonzero
-byte positions/FNV across aligned subranges selects `H-LayoutEquivalent`;
-nonzero retail with zero port at matched positions selects
-`H-RetailOnlyProducer`; a shifted/nonmatching retail pattern selects
-`H-LayoutDivergent`. Any missing control or target phase is unevaluable.
+byte positions/FNV selects `H-ExactLayoutEquivalent`; nonmatching positions/FNV
+selects `H-LayoutDivergent`; matching retail positions with zero port payload
+selects `H-RetailOnlyProducer`. Any missing control or target phase is
+unevaluable.
 
-Exact command basis: adapt the fixed oracle command in
-`scratch/agent/run_s3733_m5_retail_source_payload.sh` and the qualified port
-source-DMA capture nearest `scratch/agent/run_s3730_m5_source_layout_join.sh`.
-Add all byte/FNV fields in one build/run.
+Exact command basis: adapt
+`scratch/agent/run_s3733_m5_retail_source_payload.sh` and
+`scratch/agent/run_s3730_m5_source_layout.sh`; add the oracle export and all
+port/retail byte/FNV fields in one build/run.

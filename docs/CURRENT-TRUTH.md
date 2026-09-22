@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3733 (2026-09-22).
+Updated for session 3734 (2026-09-22).
 
 ## Current state
 
@@ -12,6 +12,14 @@ flare, Factor 5 logo, title VI 1024 (`0x00790400`), and hangar VI 512
 Hangar geometry and color artifacts remain. The image task is the qualified
 real-audio arm; `ROGUESQ_AUDIO_UCODE=0` / `Broke` is the silent control. Audio
 is not production-complete.
+
+Session 3734 paired the independent retail oracle with the qualified port source
+capture. Both target phases and all positive controls fired. Retail contained
+189/256 and 106/256 nonzero sampled bytes in the two source subranges, while
+1,819 real-port phase-5 joins had zero source-DMEM, output, and destination
+payloads. This selects `H-RetailOnlyProducer` at the measured boundary. Exact
+retail byte offsets/FNV were not exported, so a shifted-layout explanation is
+not formally closed. See [M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md](M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md).
 
 Session 3733 requalified the independent retail source-payload boundary with
 a valid positive control and both target phases. Retail target-phase samples
@@ -435,10 +443,11 @@ retail payload parity remains unmeasured. See
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 retail source-payload boundary.** Use the independent oracle to watch
-   the retail image-task source/output spans and writer PCs in the target
-   phases. Compare retail payload polarity and writer attribution with the
-   port's qualified zero source/DMEM/output table before any behavior change.
+1. **M5 exact retail-to-port byte join.** Extend the oracle capture to export
+   exact sampled byte offsets and a subrange FNV for
+   `0x1797B0..0x179A48`, then compare those positions/FNVs with the port's
+   phase-gated zero source-DMA table. Keep the positive control and both target
+   phases mandatory; do not change port behavior.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -483,6 +492,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-GuestContractDownstream` | Open after s3727: the port callback table establishes a host ownership split, but the retail task witness still cannot join the port's payload contract. |
 | `H-SharedQueueState` | Open after s3727: the port has distinct image/consumer owners; retail host-side queue parity remains unavailable, and the next discriminator is the image payload table. |
 | `H-PortSourceWriterDivergence` | Selected at s3730 for the observed boundary: retail retained nonzero source content with distinct producer families, while the port's target source/DMEM/output rows remained zero and its observed source producer was the earlier `0x800078EC` zero fill. |
+| `H-RetailOnlyProducer` | Selected at s3734 at the measured source boundary: retail had 189/256 and 106/256 nonzero samples in the two source spans, while 1,819 qualified real-port joins had zero source-DMEM/output/destination payloads. Exact retail offsets/FNV remain unevaluable. |
 | `H-PortSourceClearOrdering` | Selected at s3731 for the full measured span: 78 nonzero extension stores occurred before the target route, while all 280 target-phase extension stores and later source payloads were zero under the known `0x800078EC` clear. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for `0x1797B0..0x179A48`: the full-span target-phase producer census had no nonzero store outside the known clear sequence. |
 | `H-SourceLayoutMismatch` | Not supported at s3731 for the measured handoff: the port repeatedly used the expected `0x1798B0`/`0xCB0` source descriptor and matched zero source/output joins across the full `0x1797B0..0x179A48` producer census. |

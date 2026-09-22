@@ -138746,3 +138746,24 @@ and moves the next boundary to a retail-to-port byte/layout join. Evidence:
 
 ORIGIN: independent retail oracle payload watches and phase histograms. No
 port, guest, or runtime behavior changed.
+
+## Session 3734 (2026-09-22) — joined retail and port source payload boundaries
+
+Ran the independent retail oracle concurrently with the qualified real/silent
+port source capture. The oracle passed the whole-RDRAM positive control and
+reached title `0x00790400` and hangar `0x006AB400`. The real port arm reached
+both target phases, fired its RSP control, and emitted 1,819 phase-5 image-DMA
+joins; the silent arm reached both phases but emitted no image joins.
+
+Every sampled real-port join for the `0x1798B0..0x179A48` source descriptor had
+zero source-DMEM, output, and destination payload (`762B22A5`). Retail
+independently retained 189/256 and 106/256 nonzero sampled bytes in the two
+source subranges and showed writer families `0x80007670`, `0x8001E2C0`, and
+`0x8001F...`, alongside the later `0x800078EC` clear. This selects
+`H-RetailOnlyProducer` at the measured boundary and makes a source-layout error
+less likely. Exact retail byte positions/FNV were not exported, so a shifted
+layout remains unevaluable rather than refuted. Evidence:
+`docs/M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md`.
+
+ORIGIN: independent oracle source watches and the port's phase-gated source-DMA
+join. No guest, port, RSP, audio, or payload behavior changed.
