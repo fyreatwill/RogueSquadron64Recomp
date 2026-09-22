@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3709 (2026-09-21).
+Updated for session 3710 (2026-09-21).
 
 ## Current state
 
