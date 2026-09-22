@@ -138785,3 +138785,27 @@ joined to the qualified port source-DMA rows.
 
 ORIGIN: documentation compaction triggered by the 60,000-byte maintenance
 gate. No guest, port, RSP, audio, or payload behavior changed.
+
+## Session 3736 (2026-09-22) — exported exact retail source bytes
+
+Added and built the oracle's phase-scoped `--phase-snapshot-watch` export,
+then ran the required whole-RDRAM/source-watch retail capture with title and
+hangar VI gates. The positive control recorded 11,166 writes; source watches
+recorded 449 and 717 writes. Retail title snapshots were nonzero in both
+subranges: 105/256 with `FNV=0x8611C3AF` and 168/408 with
+`FNV=0xD4E10CCC`. Hangar snapshots were all zero: 256/256 with
+`FNV=0xE6A1D1C5` and 408/408 with `FNV=0x762B22A5`.
+
+The same-iteration real and silent port arms reached title and hangar; the
+real arm's qualified source-DMA payload remained zero with
+`FNV=0x762B22A5`. This closes the missing exact-position/FNV export and
+selects `H-RetailOnlyProducer` at the measured hangar boundary. It does not
+prove layout parity because the port payload is zero before byte comparison.
+The first full-watch retail attempt was too slow and was SIGKILLed before its
+summary; the aligned-word instrument fix and 45-second capture completed.
+Evidence: `docs/M5-S3736-EXACT-RETAIL-BYTE-JOIN.md` and
+`scratch/agent/s3736_m5_exact_byte_join/retail-span.log`.
+
+ORIGIN: independent retail oracle phase snapshots and same-iteration port
+source-DMA/writer rows. No guest, port, RSP, audio, or payload behavior
+changed.

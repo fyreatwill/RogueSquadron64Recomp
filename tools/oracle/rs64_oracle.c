@@ -62,6 +62,7 @@
 #define MAX_STORE_FIELD_DUMP_PCS 32
 #define MAX_STORE_FIELD_DUMP_ROWS 32768
 #define MAX_PC_TASK_DUMP_ROWS 8192
+#define MAX_PHASE_SNAPSHOTS 8
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
 #define VI_CURRENT_ADDR 0xA4400010u
@@ -132,6 +133,7 @@ static unsigned int g_detail_watch_mask;
 static int g_first_watch = -1;
 static uint64_t g_pc_hist_watch_mask;
 static uint64_t g_post_value_watch_mask;
+static uint64_t g_phase_snapshot_watch_mask;
 static uint32_t g_post_value_requested_pc[32];
 static int g_post_value_requested_seen[32];
 static uint32_t g_post_value_requested_value[32];
@@ -214,6 +216,17 @@ struct post_value_stats {
     int snapshot_valid;
 };
 static struct post_value_stats g_post_value_stats[MAX_WATCHES];
+struct phase_snapshot {
+    uint32_t origin;
+    uint32_t width;
+    long vi;
+    uint32_t fnv;
+    unsigned long nonzero;
+    unsigned long bytes;
+    int valid;
+    unsigned char values[4096];
+};
+static struct phase_snapshot g_phase_snapshots[MAX_WATCHES][MAX_PHASE_SNAPSHOTS];
 static int g_post_value_pending;
 static int g_post_value_pending_target = -1;
 static int g_post_value_pending_watch = -1;
@@ -1439,6 +1452,61 @@ static void summarize_post_snapshot(int watch)
     g_post_value_stats[watch].snapshot_bytes = bytes;
     g_post_value_stats[watch].snapshot_valid = 1;
 }
+
+static void capture_phase_snapshot(int watch, unsigned width, unsigned origin)
+{
+    struct phase_snapshot *snapshot;
+    uint32_t addr;
+    int phase = -1;
+
+    if (watch < 0 || watch >= g_nwatch ||
+        !(g_phase_snapshot_watch_mask & (UINT64_C(1) << watch)))
+        return;
+    if ((width == 1024 && origin == 0x00790400u)) phase = 0;
+    if ((width == 512 && origin == 0x006AB400u)) phase = 1;
+    if (phase < 0 || g_phase_snapshots[watch][phase].valid)
+        return;
+    if (g_watch[watch].end - g_watch[watch].start > 4096u)
+        return;
+
+    snapshot = &g_phase_snapshots[watch][phase];
+    snapshot->origin = origin;
+    snapshot->width = width;
+    snapshot->vi = g_vis;
+    snapshot->fnv = 2166136261u;
+    for (addr = g_watch[watch].start; addr < g_watch[watch].end; addr += 4) {
+        uint32_t word = pDebugMemRead32(debug_rdram_addr(addr));
+        for (unsigned lane = 0; lane < 4 && addr + lane < g_watch[watch].end; lane++) {
+            unsigned byte = (word >> ((3u - lane) * 8u)) & 0xFFu;
+            snapshot->values[addr + lane - g_watch[watch].start] = (unsigned char)byte;
+            snapshot->fnv = (snapshot->fnv * 16777619u) ^ byte;
+            snapshot->nonzero += byte != 0;
+            snapshot->bytes++;
+        }
+    }
+    snapshot->valid = 1;
+}
+
+static void emit_phase_snapshot(int watch, int phase)
+{
+    struct phase_snapshot *snapshot;
+    uint32_t addr;
+
+    if (watch < 0 || watch >= g_nwatch || phase < 0 || phase >= MAX_PHASE_SNAPSHOTS)
+        return;
+    snapshot = &g_phase_snapshots[watch][phase];
+    if (!snapshot->valid)
+        return;
+    printf("[oracle] phase-snapshot watch=%d phase=%d vi=%ld width=%u origin=0x%08x bytes=%lu nonzero=%lu fnv=0x%08x\n",
+           watch, phase, snapshot->vi, snapshot->width, snapshot->origin,
+           snapshot->bytes, snapshot->nonzero, snapshot->fnv);
+    for (addr = g_watch[watch].start; addr < g_watch[watch].end; addr++) {
+        unsigned byte = snapshot->values[addr - g_watch[watch].start];
+        if (byte != 0)
+            printf("[oracle] phase-snapshot-byte watch=%d phase=%d offset=0x%04x value=0x%02x\n",
+                   watch, phase, addr - g_watch[watch].start, byte);
+    }
+}
 static int g_voice_base_write_seen;
 static int g_voice_base_read_after_write_seen;
 static int g_voice_base_post_step_pending;
@@ -1816,6 +1884,10 @@ static void dbg_vi(void)
     g_latched_phase_width = pDebugMemRead32(VI_WIDTH_ADDR);
     g_latched_phase_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
     arm_deferred_exec_watches(g_latched_phase_width, g_latched_phase_origin);
+
+    for (int watch = 0; watch < g_nwatch; watch++)
+        capture_phase_snapshot(watch, g_latched_phase_width,
+                               g_latched_phase_origin);
 
     if (g_post_swap_table_enabled) {
         width = pDebugMemRead32(VI_WIDTH_ADDR);
@@ -2211,6 +2283,7 @@ static void usage(void)
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
         "  --pc-hist-phase ORIGIN[:WIDTH]  add a writer histogram bucket (default WIDTH=640)\n"
         "  --post-value-watch N  sample post-store words and final range summary\n"
+        "  --phase-snapshot-watch N  capture exact nonzero bytes at target VI phases\n"
         "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
         "  --post-value-pc-detail  print every requested-writer post-store tuple\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
@@ -2360,6 +2433,11 @@ int main(int argc, char **argv)
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
                 g_post_value_watch_mask |= UINT64_C(1) << watch;
+        }
+        else if (!strcmp(argv[i], "--phase-snapshot-watch") && i + 1 < argc) {
+            int watch = atoi(argv[++i]);
+            if (watch >= 0 && watch < MAX_WATCHES)
+                g_phase_snapshot_watch_mask |= UINT64_C(1) << watch;
         }
         else if (!strcmp(argv[i], "--post-value-pc") && i + 1 < argc)
             add_post_value_pcs(argv[++i]);
@@ -2594,6 +2672,12 @@ int main(int argc, char **argv)
                    g_post_value_requested_sequence[j].addr,
                    g_post_value_requested_sequence[j].value,
                    g_post_value_requested_sequence[j].sentinel ? "sentinel" : "non-sentinel");
+    }
+    for (int watch = 0; watch < g_nwatch; watch++) {
+        if (!(g_phase_snapshot_watch_mask & (UINT64_C(1) << watch)))
+            continue;
+        for (int phase = 0; phase < 2; phase++)
+            emit_phase_snapshot(watch, phase);
     }
     if (g_post_value_pc_detail) {
         for (int i = 0; i < g_n_post_value_pc_detail_rows; i++)

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3735 (2026-09-22).
+Updated for session 3736 (2026-09-22).
 
 ## Current state
 
@@ -15,24 +15,25 @@ the qualified audio arm; `ROGUESQ_AUDIO_UCODE=0` selects the silent `Broke`
 control. Audio is not production-complete.
 
 The latest independent retail/port boundary is source payload, not rendering:
-retail target-phase samples in the two source subranges were nonzero (189/256
-and 106/256), while 1,819 qualified real-port joins had zero source-DMEM,
-output, and destination payloads. The port's measured source span is
-`0x1797B0..0x179A48`; its expected source descriptor is `0x1798B0 -> DMEM
-0xCB0`. The port's final observed writer is the legitimate zero-valued
-`0x800078EC` fill before the image DMA. Exact retail byte offsets/FNV have not
-yet been exported, so shifted layout is open. See
-[M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md](M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md).
+retail title snapshots contain nonzero bytes in both source subranges (105/256
+and 168/408), while hangar snapshots are zero (the exact FNV values are in
+the evidence note). The qualified real-port source-DMA joins remain zero
+(`FNV=0x762B22A5`) in the same measured span. The port's expected source
+descriptor is `0x1798B0 -> DMEM 0xCB0`; its final observed writer is the
+legitimate zero-valued `0x800078EC` fill before the image DMA. Exact retail
+byte positions are now exported, but layout parity is still not testable at a
+zero-valued port payload. See
+[M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md).
 
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 exact retail-to-port byte join.** Export exact sampled byte positions
-   and subrange FNV from the retail oracle for `0x1797B0..0x179A48`, then
-   compare them with the port's phase-gated zero source-DMA table. Keep the
-   whole-RDRAM control, both target phases, and both port controls mandatory;
-   do not change port behavior.
+1. **M5 retail writer-family join at the exact source boundary.** Join the
+   retail target-phase nonzero byte positions to the writer PCs and ordering
+   around `0x800078EC`, then compare the qualified port writer census. Keep
+   whole-RDRAM, both target phases, and both port controls mandatory; name the
+   writer and legitimacy before proposing any mitigation.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -45,10 +46,10 @@ Work only the first applicable item. This is one monotonic backlog.
 
 | Hypothesis | Status |
 |---|---|
-| `H-RetailOnlyProducer` | Selected at s3734 for the measured source boundary; exact positions/FNV remain open. |
+| `H-RetailOnlyProducer` | Selected at s3736 for the measured hangar source boundary; retail exact positions/FNV are now exported. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
-| `H-SourceLayoutMismatch` | Not supported by the repeated expected port descriptor, but exact retail byte parity is still unevaluable. |
+| `H-SourceLayoutMismatch` | Still unevaluable as a parity claim: the port payload is zero, although both source descriptors are aligned. |
 | `H-ImageProducerZero` | Selected at s3728 for 1,804 joined hangar image rows. |
 | `H-GuestContractDownstream` | Open: port callback ownership is split, but retail host-side parity and exact payload contract remain unjoined. |
 | `H-AudioDrainNotConsumed` | Open after s3715; queue state is not directly joined to image-stage consumption. |
@@ -58,10 +59,16 @@ Work only the first applicable item. This is one monotonic backlog.
 
 ## Evidence ledger — live boundary only
 
-- **3734 — retail/port byte-layout join:** retail target-phase samples were
-  nonzero in both source subranges; 1,819 qualified real-port joins had zero
-  source-DMEM/output/destination payloads. Exact retail offsets/FNV were not
-  exported, so the next discriminator is byte-position parity.
+- **3736 — exact retail byte join:** the oracle exported exact phase-gated
+  byte positions and FNV for both source subranges. Retail title was
+  nonzero (105/256 and 168/408); retail hangar was zero (256/256 and 408/408
+  zero). The same-iteration real and silent port arms reached both phases;
+  real source-DMA payload remained zero. This closes the export gap and keeps
+  the boundary at the retail-versus-port writer family, not layout.
+- **3734 — prior retail/port byte-layout join:** retail target-phase samples
+  were nonzero in both source subranges; 1,819 qualified real-port joins had
+  zero source-DMEM/output/destination payloads. Session 3736 added the exact
+  retail positions/FNV that were missing here.
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.
@@ -136,6 +143,7 @@ unreconciled.
 ## Evidence index
 
 - [M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md](M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md)
+- [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md)
 - [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md)
 - [M5-S3731-FULL-SPAN-PRODUCER.md](M5-S3731-FULL-SPAN-PRODUCER.md)
@@ -146,5 +154,5 @@ unreconciled.
 - [M5-S3706-WRITER-SETUP-REQUALIFICATION.md](M5-S3706-WRITER-SETUP-REQUALIFICATION.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3734 remain in the append-only ledger. Use bounded `grep`/`sed`
+Sessions 1–3736 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.
