@@ -426,8 +426,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioControlInvalid` | Superseded at s3725 for Step 1: the corrected full-route pair reached both target phases and passed controls; it remains applicable only to the invalid s3724 recipe. |
 | `H-ImageContractProgress` | Selected at s3725: both arms were target-qualified, while only real audio produced target image completion, source-range DMA, and image-stage rows. |
 | `H-ImageRouteOnly` | Refuted at s3725 for the paired port boundary: the valid real/silent arms differed in target image-task contract edges, not only route reachability. |
-| `H-GuestContractDownstream` | Open after s3726: retail task activity is confirmed, but the oracle task witness cannot join the port's host callback sequence. |
-| `H-SharedQueueState` | Open after s3726: the required retail host-side queue witness is unavailable; the next discriminator is a same-build port callback table. |
+| `H-GuestContractDownstream` | Open after s3727: the port callback table establishes a host ownership split, but the retail task witness still cannot join the port's payload contract. |
+| `H-SharedQueueState` | Open after s3727: the port has distinct image/consumer owners; retail host-side queue parity remains unavailable, and the next discriminator is the image payload table. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
