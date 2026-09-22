@@ -138050,3 +138050,23 @@ the source tail through `0x179A48`.
 
 ORIGIN: diagnostic source-DMA provenance only; no mitigation or guest/RDRAM
 state change. See docs/M5-S3700-DMA-SOURCE-PRODUCER.md.
+
+## Session 3701 (2026-09-21) — identified the zero source producer boundary
+
+The required retail preflight passed its whole-RDRAM positive control with
+22,324 writes, reached title and hangar, and recorded 1,125 writes in
+`0x1798B0..0x179A48`. Its hangar writer census included `0x80007670`,
+`0x8001E2C0`, the `0x8001F...` family, and `0x800078EC`.
+
+The qualified real-audio/LLE port run reached hangar, fired the RSP and
+source/DMEM controls, and produced no crash or abort. Its first 512 qualified
+source rows joined the expected `0x1798B0..0x179A48` RDRAM-to-DMEM DMA at
+`0xCB0`; source and post-DMA payloads were zero, with `prev_writer_pc=0` and
+the title `0x800078EC` fill remaining the only prior writer snapshot. This
+selects `H-RetailSourceDifferent` and refutes `H-PortSourceProducer` and
+`H-InputDescriptorWrong` at this boundary. It rules out a missing source-DMA
+descriptor/range, but not the producer/layout that supplied its zero RDRAM
+source.
+
+ORIGIN: diagnostic source-producer provenance only; no mitigation or
+guest/RDRAM state change. See docs/M5-S3701-SOURCE-PRODUCER-BOUNDARY.md.
