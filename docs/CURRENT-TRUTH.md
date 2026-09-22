@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3727 (2026-09-21).
+Updated for session 3729 (2026-09-21).
 
 ## Current state
 
@@ -25,6 +25,14 @@ and ownership is now classified: the qualified input-DMA capture joined all
 identity, with no later or missing/contradictory joins. The payload capture
 then showed that the selected input task already carries the zero payload;
 the remaining question is its pre-DMA writer or descriptor boundary.
+
+Session 3729 supplied the independent retail payload witness. The oracle
+reached both target phases with a positive whole-RDRAM control. Retail had
+90/664 sampled source bytes nonzero in the target-phase snapshot, with source
+and task writer families including `0x80007670`, `0x8001E2C0`, and
+`0x8001F...`; the main candidate output window had no target-phase writers.
+This selects `H-RetailSourceNonzero` and refutes retail-source-zero at the
+measured boundary. See [M5-S3729-RETAIL-SOURCE-PAYLOAD.md](M5-S3729-RETAIL-SOURCE-PAYLOAD.md).
 
 Session 3690 added the input-DMA event before output DMAs could overwrite the
 thread-local identity. Session 3691 added pre-copy payload fields. In the
@@ -641,6 +649,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   origins; the qualified port real arm joined 1,804 hangar output-DMA rows
   with zero source DMEM and zero output, and 268 zero PCM consumers. See
   [M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md).
+- **3729 — retail source payload boundary:** the independent oracle reached
+  both target origins and passed its whole-RDRAM control. Retail's target-phase
+  source snapshot was nonzero (90/664 sampled bytes), with the known producer
+  families active; the main candidate output window had no target-phase
+  writers. This selects `H-RetailSourceNonzero` and moves the next boundary to
+  byte/layout parity with the port. See
+  [M5-S3729-RETAIL-SOURCE-PAYLOAD.md](M5-S3729-RETAIL-SOURCE-PAYLOAD.md).
 
 Earlier M3 class closeouts (sessions 3586–3658) are archived in
 PROJECT-OVERVIEW §56. Earlier M5 boundary notes remain in `docs/` and the
@@ -724,6 +739,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3723-RETAIL-SHARED-TUPLE.md](M5-S3723-RETAIL-SHARED-TUPLE.md)
 - [M5-S3725-STEP1-CONTROL-VALID.md](M5-S3725-STEP1-CONTROL-VALID.md)
 - [M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md)
+- [M5-S3729-RETAIL-SOURCE-PAYLOAD.md](M5-S3729-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`

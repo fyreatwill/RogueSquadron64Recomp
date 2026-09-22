@@ -1,36 +1,33 @@
-# Next work unit: M5 retail source-payload boundary
+# Next work unit: M5 retail/port source-layout join
 
-HYPOTHESIS-ID: m5-retail-source-payload-boundary
+HYPOTHESIS-ID: m5-retail-port-source-layout
 
-Session 3728 selected `H-ImageProducerZero` only at the port boundary. The
-retail oracle reached the same target task path, but the run did not measure
-retail payload bytes or writer attribution. Do one ground-truth oracle run
-before any port behavior change.
+Session 3729 selected `H-RetailSourceNonzero`: retail retains nonzero source
+content while the qualified port's corresponding image source is zero. Do one
+batched diagnostic port run that captures the same source range, task-data
+range, writer PCs, and phase/timing fields as the oracle, then join by target
+VI phase and source-DMA ordinal. Do not change behavior.
 
 Competing hypotheses:
 
-- `H-RetailSourceZero`: retail's image-task source span is legitimately zero
-  at the target task boundary, matching the port.
-- `H-RetailSourceNonzero`: retail writes nonzero source/task data before the
-  image task, so the port's producer path is divergent.
-- `H-RetailOutputOnly`: retail source is zero but a separate output producer
-  supplies nonzero destination data.
+- `H-PortSourceWriterDivergence`: the port's source writer/content producer
+  differs from retail before the same image-task handoff.
+- `H-PortSourceClearOrdering`: the port has matching producer content but a
+  later legitimate clear erases it before the source DMA.
+- `H-SourceLayoutMismatch`: the ranges or source-DMA descriptor mapping differ
+  even though the producer timing is equivalent.
 
-Discriminator: in one oracle run, arm the whole-RDRAM positive control plus
-phase-gated writer watches/histograms for the retail source span around
-`0x1797B0..0x179A48`, task-data spans observed at `0x80171E70`/`0x80173CB0`,
-and the known output windows around `0x166450..0x169450` and
-`0x1935E0..0x193778`. Retail nonzero source/task writes select
-`H-RetailSourceNonzero`; zero source with nonzero output writers selects
-`H-RetailOutputOnly`; zero values and no nonzero writer in both spans select
-`H-RetailSourceZero`. The whole-RDRAM watch and target VI/task execution are
-positive controls; a missing target phase is unevaluable.
+Discriminator: in one port run, source bytes nonzero before the source DMA
+with a matching producer sequence select `H-PortSourceClearOrdering` if the
+later clear is final; a writer/content mismatch selects
+`H-PortSourceWriterDivergence`; matching writer/content timing but different
+DMA source/task joins selects `H-SourceLayoutMismatch`. The phase/RSP controls
+and a nonzero source snapshot are required; a missing target phase is
+unevaluable.
 
-Exact command basis: adapt
-`scratch/agent/run_s3728_m5_image_payload.sh`'s oracle invocation, retaining
-`--watch-write 0x0:0x800000`, Rice video, the validated Start schedule,
-`--pc-task-dump 0x80033FCC`, and both target `--pc-phase-log-width` buckets;
-add the source/task/output watches and `--pc-hist-phase`/`--post-value-watch`
-for each target range. Save the result under
-`scratch/agent/s3729_retail_source_payload/`, then write
-`docs/M5-S3729-*.md`.
+Exact command basis: adapt the port arm in
+`scratch/agent/run_s3728_m5_image_payload.sh`, retain all passive M5 logs,
+and add the source/task/output payload fields to the existing phase-gated
+image-DMA table. Save the result under
+`scratch/agent/s3730_m5_source_layout_join/`, then write
+`docs/M5-S3730-*.md`.

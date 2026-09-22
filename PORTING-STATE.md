@@ -138639,3 +138639,22 @@ retail payload parity.
 ORIGIN: diagnostic-only source/DMEM/output/consumer hashes, task completion,
 route joins, and oracle watches. No guest, RSP, task, audio, selector, clear,
 writeback, or consumer behavior changed.
+
+## Session 3729 (2026-09-21) — qualified retail source payload boundary
+
+Ran one independent retail-oracle capture with Rice video, the validated Start
+schedule, phase-gated source/task/output watches, writer histograms, and
+post-value summaries. The oracle reached title and hangar target phases and
+passed the whole-RDRAM positive control with 266,969 writes. The source range
+`0x1797B0..0x179A48` retained 90 nonzero sampled bytes out of 664 in the
+target-phase snapshot; its writer census included `0x80007670`, `0x8001E2C0`,
+the `0x8001F...` family, and `0x800078EC`. The task-data range also had a
+nonzero target snapshot. The main candidate output window was nonzero in its
+final snapshot but had no target-phase writer rows. This selects
+`H-RetailSourceNonzero`, refutes retail-source-zero, and rules out output-only
+as the primary explanation at this boundary. The next work unit is a
+byte/layout and timing join between this retail source content and the port's
+zero source payload. Evidence: `docs/M5-S3729-RETAIL-SOURCE-PAYLOAD.md`.
+
+ORIGIN: diagnostic-only oracle watches, phase histograms, and post-store
+summaries. No guest or host behavior changed.
