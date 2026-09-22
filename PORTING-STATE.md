@@ -138571,3 +138571,15 @@ VI 320 in `spTaskSchedulerThread` and never reached the target phase. This
 selects `H-AudioControlInvalid` for this iteration and rules out any paired
 real-vs-silent audio-contract conclusion; the qualification must be repeated
 with both arms target-valid.
+## Session 3725 (2026-09-21) — qualified M5 Step 1 audio contract
+
+Ran one build and a same-build, phase-gated real-vs-silent pair with the full
+validated route settings. Both arms reached VI 1024 and VI 512 and passed
+phase, RSP-source, task-handoff, and SP-completion controls. Real audio
+produced target image completion, source-range DMA, and image-stage rows;
+silent repeatedly used `musyx_stub`, with unchanged DMEM, `dma_count=0`, and
+no target image queue or source-range rows. This selects
+`H-ImageContractProgress` and refutes route-only and control-invalid
+explanations at the paired port boundary. It does not establish retail host
+callback parity; that is the next boundary. Evidence is in
+`docs/M5-S3725-STEP1-CONTROL-VALID.md`.

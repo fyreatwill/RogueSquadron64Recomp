@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3724 (2026-09-21).
+Updated for session 3725 (2026-09-21).
 
 ## Current state
 
@@ -330,6 +330,17 @@ seconds into the target phase at `viRetraceHandlerThread` (guest PC
 qualification remains open. The corrected rerun is retained under
 `scratch/agent/s3724_audio_*_retry/`.
 
+Session 3725 repeated the unchanged Step 1 comparison with the full validated
+route settings. Both real and silent arms reached VI 1024 and VI 512 and
+passed the phase, RSP-source, task-handoff, and SP-completion controls. The
+real arm produced target image completion, target source-range DMA, and image
+queue rows; the silent arm repeatedly used the intentional `musyx_stub`, with
+unchanged DMEM, `dma_count=0`, and no target image queue or source-range rows.
+This selects `H-ImageContractProgress` and refutes `H-ImageRouteOnly` and
+`H-AudioControlInvalid` for the measured paired port boundary. Host queue
+activity appeared in both arms, so host callback parity remains the next
+boundary. See [M5-S3725-STEP1-CONTROL-VALID.md](M5-S3725-STEP1-CONTROL-VALID.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -348,24 +359,19 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 1 control-valid qualification.** Re-run the unchanged real-vs-
-   silent comparison with the full validated route settings in
-   `scratch/agent/NEXT.md`; require both arms to reach VI 512 and pass route
-   and RSP controls before interpreting contract rows.
-
-2. **M5 host callback parity boundary.** Determine whether the remaining
+1. **M5 host callback parity boundary.** Determine whether the remaining
    real-audio image-stage difference is explained by host callback/queue state
    rather than the now-qualified guest tuple. Use a new ground-truth-backed
    table before adding instrumentation; do not change selector, clear, task,
    audio-route, or payload state.
 
-3. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
+2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy of the value, and land a guard only if
    a concrete invalid writer is found. The closed `rs_free` audits and their
    evidence are archived in PROJECT-OVERVIEW §56; do not re-audit them.
 
-4. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
+3. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
    M3 has no new discriminator. Use one bounded region/census per session and
    preserve the slug `generated-symbol-renaming-sweep` for that campaign.
 
@@ -392,7 +398,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-SharedTupleIntentional` | Selected at s3723: both shared-tuple PCs matched on fields and independent register rows at both 512-wide origins. |
 | `H-SharedTuplePhaseAlias` | Refuted at s3723 for the measured origin/phase buckets. |
 | `H-SharedTupleFieldArtifact` | Refuted at s3723 by agreement between field dumps and execution-watch register rows. |
-| `H-AudioControlInvalid` | Selected at s3724 for the attempted Step 1 comparison: the corrected real arm reached VI 512 but crashed in target phase, while silent crashed at VI 320; no paired contract conclusion is valid. |
+| `H-AudioControlInvalid` | Superseded at s3725 for Step 1: the corrected full-route pair reached both target phases and passed controls; it remains applicable only to the invalid s3724 recipe. |
+| `H-ImageContractProgress` | Selected at s3725: both arms were target-qualified, while only real audio produced target image completion, source-range DMA, and image-stage rows. |
+| `H-ImageRouteOnly` | Refuted at s3725 for the paired port boundary: the valid real/silent arms differed in target image-task contract edges, not only route reachability. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
@@ -568,6 +576,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   phase passed; three watched PCs produced rows with one distinct tuple and
   two shared tuples, while the fourth execution watch produced no field rows.
   See [M5-S3721-RETAIL-GUEST-FIELD-TABLE.md](M5-S3721-RETAIL-GUEST-FIELD-TABLE.md).
+- **3725 — control-valid Step 1 qualification:** both paired arms reached the
+  target phase and passed controls; real audio produced image-task/source/DMA
+  and image-stage rows, while the silent `musyx_stub` had zero DMA count and
+  no target image/source rows. See
+  [M5-S3725-STEP1-CONTROL-VALID.md](M5-S3725-STEP1-CONTROL-VALID.md).
 
 Earlier M3 class closeouts (sessions 3586–3658) are archived in
 PROJECT-OVERVIEW §56. Earlier M5 boundary notes remain in `docs/` and the
@@ -649,6 +662,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3708-CLEAR-BRANCH.md](M5-S3708-CLEAR-BRANCH.md)
 - [M5-S3721-RETAIL-GUEST-FIELD-TABLE.md](M5-S3721-RETAIL-GUEST-FIELD-TABLE.md)
 - [M5-S3723-RETAIL-SHARED-TUPLE.md](M5-S3723-RETAIL-SHARED-TUPLE.md)
+- [M5-S3725-STEP1-CONTROL-VALID.md](M5-S3725-STEP1-CONTROL-VALID.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
