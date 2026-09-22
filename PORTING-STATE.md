@@ -137853,3 +137853,26 @@ for the measured class, and leaves the pre-DMA writer/descriptor boundary as
 the next question. ORIGIN: diagnostic pre-copy input-DMA payload witness;
 input activity is legitimate and no guest or RDRAM state was changed. See
 docs/M5-S3691-STALE-INPUT-PAYLOAD.md.
+
+## Session 3692 (2026-09-21) — identified hangar input-writer gap
+
+Obtained independent retail ground truth before instrumentation: the
+whole-RDRAM positive control fired 11,058 writes, the watched source span
+fired 1,058 writes, and the hangar phase produced 370 VI samples. Retail's
+hangar source-span writer histogram included `0x800078EC`, `0x80007670`, and
+several `0x8001F...` PCs. Added a regeneration-preserved scalar-store witness
+covering all generated functions and carried its latest writer snapshot into
+input-DMA rows. The build completed successfully.
+
+The validated real-audio recipe reached title and hangar and produced 3,178
+hangar input-DMA rows and 512 source-reader rows. The witness positive control
+fired and recorded 384 title stores, all zero stores at `0x800078EC`. Every
+hangar input row carried that same stale title snapshot (`seq=384`,
+`pc=0x800078EC`, `phys=0x17992C`, `len=1`, zero value); no hangar scalar
+writer row fired. This refutes an input descriptor/range mismatch and an
+immediate port-side pre-DMA clear. It does not select a legitimate hangar
+zero writer: retail writes the span during hangar while the port reuses the
+title zero-fill. The remaining boundary is the missing writer versus a
+non-scalar or phase-gated writer path. ORIGIN: diagnostic scalar-store
+witness; no guest or RDRAM state changed. See
+docs/M5-S3692-INPUT-WRITER-BOUNDARY.md.

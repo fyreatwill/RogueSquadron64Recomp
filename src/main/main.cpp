@@ -857,6 +857,57 @@ static thread_local uint32_t g_rs64_m5_last_input_dram = 0;
 static thread_local uint32_t g_rs64_m5_last_input_len = 0;
 static thread_local uint32_t g_rs64_m5_last_input_dmem = 0;
 static thread_local uint32_t g_rs64_m5_last_input_task_data_ptr = 0;
+static std::atomic<uint64_t> g_rs64_m5_pre_dma_writer_seq{0};
+static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_pc{0};
+static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_phys{0};
+static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_len{0};
+static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_value{0};
+
+extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
+                                                uint32_t addr, uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_INPUT_WRITER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    static std::atomic<bool> control{false};
+    if (!control.exchange(true, std::memory_order_relaxed)) {
+        std::fprintf(stderr, "[m5-input-writer-control] any_store=1 pc=0x%08X\n", pc);
+        std::fflush(stderr);
+    }
+    if (!enabled) return;
+    if ((addr & 0xFFF00000u) != 0x80100000u) return;
+
+    const uint32_t adjust = width == 'B' ? 3u : (width == 'H' ? 2u : 0u);
+    const uint32_t len = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
+    const uint32_t phys = ((addr ^ adjust) - 0x80000000u) & 0x007FFFFFu;
+    if (phys >= 0x179930u || phys + len <= 0x1797B0u) return;
+
+    uint32_t phase = 0, width_n = 0, origin = 0;
+    uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    if (!rs64_audio_current_route_snapshot(&phase, &width_n, &origin,
+                                           &ordinal, &row, &exit_reason, &arm)) return;
+    if (!((width_n == 1024u && origin == 0x00790400u) ||
+          (width_n == 512u && origin == 0x006AB400u))) return;
+
+    const uint64_t seq = g_rs64_m5_pre_dma_writer_seq.fetch_add(
+        1u, std::memory_order_relaxed) + 1u;
+    g_rs64_m5_pre_dma_writer_pc.store(pc, std::memory_order_relaxed);
+    g_rs64_m5_pre_dma_writer_phys.store(phys, std::memory_order_relaxed);
+    g_rs64_m5_pre_dma_writer_len.store(len, std::memory_order_relaxed);
+    g_rs64_m5_pre_dma_writer_value.store(value, std::memory_order_relaxed);
+    if (seq <= 4096u) {
+        std::fprintf(stderr,
+            "[m5-input-writer] seq=%llu phase=%u width=%u origin=0x%06X arm=%s "
+            "route_ordinal=%u route_row=%u pc=0x%08X phys=0x%06X len=%u value=0x%08X\n",
+            static_cast<unsigned long long>(seq), phase, width_n, origin,
+            arm ? arm : "n/a", ordinal, row, pc, phys, len, value);
+        std::fflush(stderr);
+    }
+}
 
 extern "C" void rs64_m5_audio_input_dma(uint8_t* rdram, uint32_t dram_addr,
                                            uint32_t len, uint32_t dmem_addr) {
@@ -896,12 +947,20 @@ extern "C" void rs64_m5_audio_input_dma(uint8_t* rdram, uint32_t dram_addr,
         "route_ordinal=%u route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
         "overlap=0x%06X..0x%06X input_fnv=%08X input_nz=%u "
         "input_task_data_ptr=0x%08X "
+        "prev_writer_seq=%llu prev_writer_pc=0x%08X prev_writer_phys=0x%06X "
+        "prev_writer_len=%u prev_writer_value=0x%08X "
         "task_generation=%llu latest_generation=%llu latest_route_seq=%u "
         "latest_route_ordinal=%u latest_route_row=%u exit=%d\n",
         static_cast<unsigned long long>(event), phase, width, origin,
         arm ? arm : "n/a", route_ordinal, route_row, dram_addr, len,
         dmem_addr, overlap_first, overlap_last, input_fnv, input_nonzero,
         g_rs64_m5_last_input_task_data_ptr,
+        static_cast<unsigned long long>(g_rs64_m5_pre_dma_writer_seq.load(
+            std::memory_order_relaxed)),
+        g_rs64_m5_pre_dma_writer_pc.load(std::memory_order_relaxed),
+        g_rs64_m5_pre_dma_writer_phys.load(std::memory_order_relaxed),
+        g_rs64_m5_pre_dma_writer_len.load(std::memory_order_relaxed),
+        g_rs64_m5_pre_dma_writer_value.load(std::memory_order_relaxed),
         static_cast<unsigned long long>(s_pending_audio_generation),
         static_cast<unsigned long long>(g_m5_latest_audio_generation.load(
             std::memory_order_acquire)),

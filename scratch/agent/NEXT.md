@@ -1,36 +1,36 @@
-# Next work unit: identify the writer that makes the input payload zero
+# Next work unit: close the port-versus-retail hangar-writer gap
 
-HYPOTHESIS-ID: m5-input-payload-writer
+HYPOTHESIS-ID: m5-hangar-writer-gap
 
-S3691 selected `H-StaleInputPayload`: all 512 qualified hangar source rows
-had equal zero input-DMA, source-RDRAM, and post-DMA DMEM payload fields, and
-the input/source task-data pointers matched. The next unit is one
-phase-scoped writer/descriptor boundary instrument and one qualified capture.
+S3692 added a complete scalar-store witness. Retail had hangar writers at
+`0x800078EC`, `0x80007670`, and `0x8001F...` sites. The port produced 384
+title rows, all `0x800078EC` zero-fill stores, and all 3,178 hangar input rows
+carried that stale writer snapshot; no hangar scalar writer fired.
 
 Competing hypotheses:
 
-- `H-InputWriterZero`: a legitimate game writer zeroes `0x1797B0..0x179930`
-  before the input DMA.
-- `H-InputDescriptorWrong`: the task descriptor selects a distinct zero-filled
-  source range or stale descriptor rather than the visible source witness.
-- `H-PreDmaHostClear`: the port clears the source range before input DMA.
+- `H-MissingGeneratedWriter`: a retail hangar writer family is absent from
+  the port dispatch.
+- `H-WriterOutsidePhaseGate`: the port writer runs but route publication makes
+  it invisible to the phase gate.
+- `H-NonScalarWriterPath`: the port writes through `rs_memset` or a DMA/host
+  path not covered by the scalar witness.
 
-Discriminating measurement: one table for every title positive-control and
-hangar input-DMA row, joining the immediately preceding writer PC/value or
-descriptor source/length to the input-DMA row. A retail writer attribution
-matching the port selects `H-InputWriterZero`; a descriptor/range mismatch
-selects `H-InputDescriptorWrong`; a port-only clear with no retail counterpart
-selects `H-PreDmaHostClear`. Missing whole-RDRAM positive control or missing
-title nonzero rows is unevaluable.
+Discriminating measurement: one phase-scoped table for every title and
+hangar input-DMA row, joining the immediately preceding scalar, memset, or
+host/DMA writer event, while the retail arm supplies the PC histogram. A
+matching hangar writer selects `H-WriterOutsidePhaseGate` only if the port
+event is present outside the gate; a missing scalar plus matching memset/DMA
+event selects `H-NonScalarWriterPath`; no port event with retail attribution
+selects `H-MissingGeneratedWriter`. Missing positive controls or missing title
+nonzero rows is unevaluable.
 
-Before building, obtain retail ground truth with the existing whole-RDRAM,
-descriptor, source-span, title, hangar, and type-2 controls. Then batch the
-writer/descriptor instrumentation into one build and run both real-audio and
-silent arms together. Kill both game processes with SIGKILL and run from
-`build/`.
+Before building, obtain retail ground truth with whole-RDRAM, source-span,
+writer-PC, title, hangar, and type-2 controls. Then batch scalar, memset, and
+host/DMA event fields into one build and run the real-audio and silent arms
+together. Kill both game processes with SIGKILL and run from `build/`.
 
 Required commands once the instrument is written:
 
-    ./submodule-patches/export.sh
     cmake --build build -j8
-    env zsh scratch/agent/run_s3691_m5_input_payload_writer.sh
+    env zsh scratch/agent/run_s3692_m5_input_payload_writer.sh
