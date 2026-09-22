@@ -1,9 +1,10 @@
 #!/bin/zsh
 set -u
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-OUT=$ROOT/scratch/agent/s3436_m5_port_frequency_contract_paired
+OUT=$ROOT/scratch/agent/s3436_m5_port_frequency_contract_paired_retry
 mkdir -p "$OUT"
 pkill -KILL -x RogueSquadron64Recomp 2>/dev/null || true
+sleep 2
 cd "$ROOT/build" || exit 2
 common=(
   ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1

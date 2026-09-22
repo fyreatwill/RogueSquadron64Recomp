@@ -138379,3 +138379,31 @@ and the retail target phase was absent in this iteration.
 ORIGIN: diagnostic-only host queue instrumentation. The legitimate writer is
 the existing `osAiSetNextBuffer` -> SDL queue path; no mitigation or behavior
 change was added.
+
+## Session 3716 (2026-09-21) — joined image-stage queue state
+
+Added a phase-gated `[m5-image-queue]` snapshot at the image-stage callback,
+including queue bytes and the phase-local PCM consumer count already seen. The
+first two paired launches were invalid: one real arm crashed before hangar and
+the next launcher left the real output at startup while the silent process
+continued. The launcher was fixed to wait after SIGKILL cleanup and use a fresh
+output directory.
+
+The fixed same-build real-audio/silent pair reached title VI 1024 and hangar VI
+512 in both arms, and both passed the RSP source positive control. Real audio
+produced 190 hangar image-stage rows (95 stage-2 and 95 stage-3), with queued
+depth 0–4581 bytes. Its first hangar image-stage row saw 3045 queued bytes and
+four PCM consumers already seen; later rows included 4581, 3301, 2021, 767,
+and zero bytes. Silent audio produced no image-stage rows because its RSP arm
+is the intentional stub, but it reached hangar and emitted its RSP control.
+
+This rejects a simple `H-AudioStageQueueGate` explanation requiring one
+consistently low/drained queue threshold. It does not establish retail callback
+parity or separate `H-AudioDrainNotConsumed` from downstream host-state parity;
+the queue and consumer observations are single-source port evidence. The next
+work unit attaches the exact consumer-row queue snapshot to the image-stage
+`pcm_consumers_seen` join key.
+
+ORIGIN: diagnostic-only SDL queue observations. The legitimate producer is the
+existing `osAiSetNextBuffer` to SDL queue path; no mitigation or behavior
+change was added.

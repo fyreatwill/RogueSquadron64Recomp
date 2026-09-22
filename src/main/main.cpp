@@ -81,6 +81,10 @@ extern "C" void rs64_audio_route_set(const char* arm, uint32_t phase,
                                        uint32_t width, uint32_t origin,
                                        uint32_t ordinal, uint32_t row,
                                        int exit_reason);
+static bool rs64_m5_audio_host_probe_enabled(uint32_t& phase, uint32_t& width,
+                                               uint32_t& origin);
+static uint32_t rs64_m5_audio_queue_snapshot();
+static uint32_t rs64_m5_pcm_consumer_count();
 extern "C" void rs64_audio_join_image_stage(const char* arm,
                                                uint32_t ordinal, uint32_t row,
                                                uint32_t phase, uint32_t width,
@@ -3647,6 +3651,20 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
             rs64_m5_identity_thread_id(), latest_generation, latest_route_seq,
             latest_route_ordinal, latest_route_row);
     }
+    if (stage >= 2) {
+        uint32_t queue_phase = 0, queue_width = 0, queue_origin = 0;
+        if (rs64_m5_audio_host_probe_enabled(queue_phase, queue_width,
+                                             queue_origin)) {
+            std::fprintf(stderr,
+                "[m5-image-queue] arm=%s stage=%u phase=%u width=%u "
+                "origin=0x%06X route_ordinal=%u route_row=%u "
+                "queued_bytes=%u pcm_consumers_seen=%u\n",
+                route.arm, stage, queue_phase, queue_width, queue_origin,
+                route.ordinal, route.row, rs64_m5_audio_queue_snapshot(),
+                rs64_m5_pcm_consumer_count());
+            std::fflush(stderr);
+        }
+    }
     std::fprintf(stderr,
         "[audtask-image-stage] arm=%s ordinal=%u row=%u phase=%u width=%u"
         " origin=0x%06X stage=%u r2=0x%03X field348=0x%08X field44=0x%08X"
@@ -4774,6 +4792,8 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
 // ---------------------------------------------------------------------------
 static SDL_AudioDeviceID audio_device = 0;
 static uint32_t audio_sample_rate = 48000;
+static std::atomic<uint32_t> g_rs64_pcm_consumer_count{0};
+static std::atomic<uint32_t> g_rs64_pcm_consumer_phase_key{0xFFFFFFFFu};
 
 static bool rs64_m5_audio_host_probe_enabled(uint32_t& phase, uint32_t& width,
                                                uint32_t& origin) {
@@ -4825,6 +4845,14 @@ static void rs64_m5_audio_host_row(const char* edge, uint32_t queued_before,
         static_cast<unsigned>(audio_device));
     std::fflush(stderr);
     previous_queue = queued_after;
+}
+
+static uint32_t rs64_m5_audio_queue_snapshot() {
+    return audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
+}
+
+static uint32_t rs64_m5_pcm_consumer_count() {
+    return g_rs64_pcm_consumer_count.load(std::memory_order_relaxed);
 }
 
 static void set_frequency(uint32_t freq) {
@@ -4944,7 +4972,15 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                 s_phase_key = phase_key;
                 s_phase_n = 0;
             }
+            uint32_t observed_key = g_rs64_pcm_consumer_phase_key.load(
+                std::memory_order_relaxed);
+            if (observed_key != phase_key &&
+                g_rs64_pcm_consumer_phase_key.compare_exchange_strong(
+                    observed_key, phase_key, std::memory_order_relaxed)) {
+                g_rs64_pcm_consumer_count.store(0, std::memory_order_relaxed);
+            }
             const uint32_t n = s_phase_n++;
+            g_rs64_pcm_consumer_count.fetch_add(1, std::memory_order_relaxed);
             const size_t full_byte_count = num_samples * sizeof(int16_t);
             const uint8_t* p = reinterpret_cast<const uint8_t*>(samples);
             uint32_t fnv = 2166136261u;

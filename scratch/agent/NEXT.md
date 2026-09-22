@@ -1,34 +1,31 @@
-# Next work unit: join host queue state to image-stage
+# Next work unit: join image-stage queue state to exact PCM consumer
 
 HYPOTHESIS-ID: m5-ai-post-pcm-consumer
 
-Session 3715 added `[m5-audio-host]` rows. In hangar origin `0x006AB400`,
-real audio had 79 queue/78 remaining rows, depth 0–4581 bytes, and 58/79
-negative inter-sample deltas; silent had 16/16, depth 0–3813, and 8/16.
-Both arms passed 1,024 RSP-source controls; real had 5,060 image-stage rows,
-silent zero. This is single-source port evidence. The oracle positive control
-fired but its attempt did not reach target hangar, so it adds no retail queue
-observation.
+Session 3716 added `[m5-image-queue]` rows. In valid hangar origin
+`0x006AB400`, real audio had 190 image-stage rows (95 stage-2 and 95 stage-3)
+with queue depth 0–4581 bytes; the first row saw 3045 bytes and four PCM
+consumers already seen. Silent reached hangar and passed its RSP control but,
+as the intentional stub arm, had no image-stage rows. This rejects a simple
+consistently-low/drained image-stage queue gate and remains single-source port
+evidence.
 
 Competing hypotheses:
 
-- `H-AudioDrainNotConsumed`: image-stage sees buffered/low queue state that is
-  not the same state as the PCM consumer, so the host queue divergence is not
-  the stage discriminator.
-- `H-AudioStageQueueGate`: image-stage is reached only after a distinct queue
-  threshold or drain cadence, explaining real-versus-silent stage divergence.
-- `H-AudioDrainParity`: at the image-stage event, both arms expose matching
-  queue state despite different producer-side cadence; the unresolved boundary
-  is downstream of the host queue.
+- `H-AudioDrainNotConsumed`: image-stage sees queue state that differs from the
+  exact PCM consumer at the same phase-local ordinal.
+- `H-AudioStageQueueGate`: image-stage depends on a distinct queue threshold or
+  drain cadence. A simple consistently-low threshold was rejected at s3716.
+- `H-AudioDrainParity`: image-stage and the exact PCM consumer expose matching
+  queue state while stage counts still diverge.
 
-Discriminator: add one phase-gated host queue-depth snapshot at each
-`audtask-image-stage` event and join it to the first `[pcm-boundary-consumer]`
-row by arm-local phase/ordinal. A consistent low/drained queue only on real
-audio selects `H-AudioStageQueueGate`; matching image-stage queue state with
-different image-stage counts selects `H-AudioDrainNotConsumed` or
-`H-AudioDrainParity` according to the consumer join. Keep both arms and the
-existing RSP controls in one build/run. Do not alter selector, clear, task,
-audio route, or payload state.
+Discriminator: add the exact phase-local consumer ordinal and queue snapshot to
+each `[pcm-boundary-consumer]` row, then join it to the image-stage
+`pcm_consumers_seen` value by arm, phase, and ordinal. A mismatch between the
+image-stage snapshot and the exact consumer snapshot selects
+`H-AudioDrainNotConsumed`; matching snapshots with stage divergence selects
+`H-AudioDrainParity`. The existing RSP controls must fire in both arms. Do not
+alter selector, clear, task, audio route, or payload state.
 
 Exact commands:
 

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3715 (2026-09-21).
+Updated for session 3716 (2026-09-21).
 
 ## Current state
 
@@ -235,6 +235,17 @@ control rows; real had 5,060 image-stage rows and silent had none. This is
 single-source port evidence for `H-AudioDrainDivergence`, not retail callback
 parity. See [M5-S3715-AUDIO-HOST-QUEUE-TABLE.md](M5-S3715-AUDIO-HOST-QUEUE-TABLE.md).
 
+Session 3716 joined SDL queue depth to image-stage callbacks. The valid paired
+run reached title and hangar in both arms and passed both RSP controls. Real
+audio produced 190 hangar image-stage queue rows (95 stage-2 and 95 stage-3),
+with queue depth 0–4581 bytes; its first hangar image-stage row saw 3045 bytes
+and four PCM consumers already seen. Silent audio produced no image-stage rows
+because its RSP arm is the intentional stub. The variable real-arm queue state
+rejects a simple consistently-low/drained image-stage threshold, but this is
+single-source port evidence and does not establish retail callback parity or
+separate `H-AudioDrainNotConsumed` from downstream host-state parity. See
+[M5-S3716-IMAGE-QUEUE-JOIN.md](M5-S3716-IMAGE-QUEUE-JOIN.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -253,16 +264,17 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — join host queue state to image-stage.** Session 3715 found
-   phase-gated SDL queue consumption between producer-side samples, with real
-   and silent cadence/depth diverging. The current push-mode SDL setup has no
-   application callback, so add one host queue-depth snapshot at the
-   `audtask-image-stage` event and join it to the first PCM consumer row. If
-   image-stage consistently follows a drained/low queue only in real audio,
-   select `H-AudioDrainNotConsumed`; if it sees matching queue state while
-   image-stage still diverges, keep the downstream stage consumer open. Keep
-   the existing RSP controls and both audio arms; do not alter selector, clear,
-   task, audio route, or payload state.
+1. **M5 Step 4 — join image-stage queue state to the exact PCM consumer.**
+   Session 3716 rejected a simple low/drained queue threshold: real-arm
+   hangar image-stage rows sampled 0–4581 bytes, with the first row already
+   seeing four PCM consumers. Add the exact phase-local consumer ordinal and
+   queue snapshot to the PCM-consumer row, then join it to
+   `pcm_consumers_seen` in the existing image-stage table. If image-stage rows
+   consistently see a queue state unlike the consumer at that ordinal, select
+   `H-AudioDrainNotConsumed`; if the joined states match while stage counts
+   still diverge, keep downstream host-state parity open. Keep the existing
+   RSP controls and both audio arms; do not alter selector, clear, task, audio
+   route, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -529,6 +541,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3695-AUDIO-PUMP-BOUNDARY.md](M5-S3695-AUDIO-PUMP-BOUNDARY.md)
 - [M5-S3697-DMEM-PREDECESSOR-CLASS.md](M5-S3697-DMEM-PREDECESSOR-CLASS.md)
 - [M5-S3699-DMEM-DMA-COVERAGE.md](M5-S3699-DMEM-DMA-COVERAGE.md)
+- [M5-S3716-IMAGE-QUEUE-JOIN.md](M5-S3716-IMAGE-QUEUE-JOIN.md)
 - [M5-S3702-SOURCE-PRODUCER-OVERWRITE.md](M5-S3702-SOURCE-PRODUCER-OVERWRITE.md)
 - [M5-S3708-CLEAR-BRANCH.md](M5-S3708-CLEAR-BRANCH.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
