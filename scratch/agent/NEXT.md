@@ -1,33 +1,36 @@
-# Next work unit: M5 image-task/output payload boundary
+# Next work unit: M5 retail source-payload boundary
 
-HYPOTHESIS-ID: m5-image-output-payload-boundary
+HYPOTHESIS-ID: m5-retail-source-payload-boundary
 
-The s3727 same-build retry was control-valid: both arms reached VI 1024 and
-VI 512, RSP/task controls fired, and the callback table selected a distinct
-real-arm image owner/thread. The remaining boundary is the zero image-task
-payload. Build one diagnostic-only table joining source DMA, DMEM window,
-output-DMA payload, image-stage, PCM source/consumer, and task completion by
-route ordinal. Do not change selector, clear, task, audio-route, or payload
-behavior.
+Session 3728 selected `H-ImageProducerZero` only at the port boundary. The
+retail oracle reached the same target task path, but the run did not measure
+retail payload bytes or writer attribution. Do one ground-truth oracle run
+before any port behavior change.
 
 Competing hypotheses:
 
-- `H-ImageProducerZero`: the image task receives legitimate zero source/DMEM
-  data before output.
-- `H-ImageWritebackGap`: the task produces nonzero data but output writeback is
-  absent or ordered incorrectly.
-- `H-ConsumerPayloadGap`: output writeback is nonzero but the downstream PCM
-  consumer sees a different or zero span.
+- `H-RetailSourceZero`: retail's image-task source span is legitimately zero
+  at the target task boundary, matching the port.
+- `H-RetailSourceNonzero`: retail writes nonzero source/task data before the
+  image task, so the port's producer path is divergent.
+- `H-RetailOutputOnly`: retail source is zero but a separate output producer
+  supplies nonzero destination data.
 
-Discriminator: source/DMEM/output/consumer hashes and nonzero counts in one
-same-build, phase-gated table. Matching nonzero DMEM with zero output selects
-`H-ImageWritebackGap`; nonzero output with zero or mismatched consumer payload
-selects `H-ConsumerPayloadGap`; zero source and DMEM before the image task
-selects `H-ImageProducerZero`. The positive controls are both VI transitions,
-RSP-source/task controls, and real image-stage rows; a missing control is
-unevaluable, not a null.
+Discriminator: in one oracle run, arm the whole-RDRAM positive control plus
+phase-gated writer watches/histograms for the retail source span around
+`0x1797B0..0x179A48`, task-data spans observed at `0x80171E70`/`0x80173CB0`,
+and the known output windows around `0x166450..0x169450` and
+`0x1935E0..0x193778`. Retail nonzero source/task writes select
+`H-RetailSourceNonzero`; zero source with nonzero output writers selects
+`H-RetailOutputOnly`; zero values and no nonzero writer in both spans select
+`H-RetailSourceZero`. The whole-RDRAM watch and target VI/task execution are
+positive controls; a missing target phase is unevaluable.
 
-Build/run: add all fields through the regeneration-safe fixup path in one
-build, run real and silent arms concurrently with the validated route, phase
-gate on VI 512, retain passive breadcrumbs, SIGKILL both processes, and write
-a new `docs/M5-S3728-*.md` evidence note.
+Exact command basis: adapt
+`scratch/agent/run_s3728_m5_image_payload.sh`'s oracle invocation, retaining
+`--watch-write 0x0:0x800000`, Rice video, the validated Start schedule,
+`--pc-task-dump 0x80033FCC`, and both target `--pc-phase-log-width` buckets;
+add the source/task/output watches and `--pc-hist-phase`/`--post-value-watch`
+for each target range. Save the result under
+`scratch/agent/s3729_retail_source_payload/`, then write
+`docs/M5-S3729-*.md`.

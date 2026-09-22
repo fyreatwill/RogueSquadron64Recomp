@@ -138617,3 +138617,25 @@ image-task/output payload contract. Evidence: `docs/M5-S3727-CALLBACK-PARITY.md`
 
 ORIGIN: diagnostic-only callback/source/thread/queue fields. No guest, RSP,
 task, audio-route, selector, clear, or payload behavior changed.
+
+## Session 3728 (2026-09-21) — qualified image payload boundary
+
+Ran one rebuilt diagnostic configuration with an independent retail oracle and
+concurrent real/silent port arms. The oracle whole-RDRAM positive control fired
+10,000 writes, retail reached 1024-wide `0x00790400` and 512-wide
+`0x006AB400`/`0x006AB800`, and the type-2 task watch produced 1,148
+phase-qualified rows. The first port pair was invalid because real audio
+crashed before title; the fixed retry reached both target phases in both arms.
+
+The real arm emitted 1,820 hangar stage-2 rows, 1,818 stage-3 rows, 1,804
+joined output-DMA rows, and 1,830 completion calls. All joined stage-3 rows
+had zero source-DMEM and zero output payload (`762B22A5`, `nz=0`); stage 2 was
+zero in 1,818/1,820 rows. The 268 sampled hangar PCM consumers were also
+zero. Silent audio passed controls but emitted no image rows. This selects
+`H-ImageProducerZero` at the measured port boundary and rules out a nonzero
+writeback or downstream consumer payload gap there. It does not establish
+retail payload parity.
+
+ORIGIN: diagnostic-only source/DMEM/output/consumer hashes, task completion,
+route joins, and oracle watches. No guest, RSP, task, audio, selector, clear,
+writeback, or consumer behavior changed.

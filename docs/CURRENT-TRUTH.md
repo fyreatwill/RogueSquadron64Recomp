@@ -368,6 +368,18 @@ rewrite task, audio, PCM, selector, or output state. The default route's null
 stage-advancer input is a known route/configuration issue; the validated
 real-audio route is the comparison arm.
 
+Session 3728 qualified the image payload table. The independent retail oracle
+passed its whole-RDRAM control, reached both target origins, and exposed
+phase-qualified type-2 audio tasks. The valid real port arm reached hangar
+with 1,804 joined output-DMA rows: stage-3 source DMEM and output were both
+`762B22A5`/zero in every joined row, while 268 sampled PCM consumers were
+`F59C39C5`/zero. Stage 2 was also zero in 1,818/1,820 rows; two early rows
+had nonzero transform buffers but no nonzero stage-3 output. The silent arm
+passed controls and emitted no image rows. This selects `H-ImageProducerZero`
+at the measured port boundary and refutes writeback/consumer payload gaps;
+retail payload parity remains unmeasured. See
+[M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md).
+
 ## Next steps
 
 The backlog is one monotonic sequence. Work only the first applicable item.
@@ -386,13 +398,18 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    DMEM/source payload selects producer-zero. Do not change task, selector,
    clear, audio-route, or payload behavior.
 
-2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
+2. **M5 retail source-payload boundary.** Use the independent oracle to watch
+   the retail image-task source/output spans and writer PCs in the target
+   phases. Compare retail payload polarity and writer attribution with the
+   port's qualified zero source/DMEM/output table before any behavior change.
+
+3. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy of the value, and land a guard only if
    a concrete invalid writer is found. The closed `rs_free` audits and their
    evidence are archived in PROJECT-OVERVIEW §56; do not re-audit them.
 
-3. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
+4. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
    M3 has no new discriminator. Use one bounded region/census per session and
    preserve the slug `generated-symbol-renaming-sweep` for that campaign.
 
@@ -412,9 +429,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioDrainNotConsumed` | Open after s3715: the current queue table is not joined directly to image-stage, so host queue state cannot yet be separated from downstream stage consumption. |
 | `H-CallbackOwnershipBoundary` | Selected single-source at s3719: image-stage and PCM-consumer source/thread identities differ on the port, including 96 shared route ordinals. Retail parity remains open. |
 | `H-CallbackQueueOwnership` | Selected single-source at s3727 for the port: real-only image callbacks had a stable owner/thread distinct from the PCM consumer, with joined route ordinals and callback sequence; silent retained consumers but no image stream. Retail host parity remains unavailable. |
-| `H-ImageProducerZero` | Open after s3727: the callback table proves the real image stream is host-owned and target-qualified, but does not identify whether zero payload originates before or during the image task. |
-| `H-ImageWritebackGap` | Open after s3727: source/output payload hashes and ordering are the next discriminator. |
-| `H-ConsumerPayloadGap` | Open after s3727: host callback ownership is measured, but consumer payload identity has not been joined to image output bytes. |
+| `H-ImageProducerZero` | Selected at the measured port boundary by s3728: joined stage-3 source DMEM and output were zero in 1,804 hangar rows; stage-2 was zero in 1,818/1,820 rows. Retail payload parity remains open. |
+| `H-ImageWritebackGap` | Refuted at the qualified port boundary by s3728: no nonzero source/DMEM payload was available for writeback to lose. |
+| `H-ConsumerPayloadGap` | Refuted at the qualified port boundary by s3728: all 268 sampled hangar PCM consumers were zero, matching the zero image output. |
 | `H-RetailGuestPathSplit` | Selected at execution level at s3720; s3721 field rows were mixed, and s3722 resolved the apparent `0x80094648` gap as an origin-gate mismatch. |
 | `H-RetailGuestFieldSplitPartial` | Selected at s3721 for the measured rows: one retail path has a distinct tuple while two paths share a tuple; the fourth path still needs a capture explanation. |
 | `H-Retail94648-OriginMismatch` | Selected single-source at s3722: all 128 `0x80094648` field rows appeared at target origin `0x006AB800`; the prior empty table used only `0x006AB400`. |
@@ -620,6 +637,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   distinct stable image-callback owner, while silent audio had no image rows
   but the same bounded PCM-consumer stream. See
   [M5-S3727-CALLBACK-PARITY.md](M5-S3727-CALLBACK-PARITY.md).
+- **3728 — image payload boundary:** the retail control reached both target
+  origins; the qualified port real arm joined 1,804 hangar output-DMA rows
+  with zero source DMEM and zero output, and 268 zero PCM consumers. See
+  [M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md).
 
 Earlier M3 class closeouts (sessions 3586–3658) are archived in
 PROJECT-OVERVIEW §56. Earlier M5 boundary notes remain in `docs/` and the
@@ -702,6 +723,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3721-RETAIL-GUEST-FIELD-TABLE.md](M5-S3721-RETAIL-GUEST-FIELD-TABLE.md)
 - [M5-S3723-RETAIL-SHARED-TUPLE.md](M5-S3723-RETAIL-SHARED-TUPLE.md)
 - [M5-S3725-STEP1-CONTROL-VALID.md](M5-S3725-STEP1-CONTROL-VALID.md)
+- [M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
