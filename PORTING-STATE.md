@@ -138514,3 +138514,24 @@ unevaluable. See `docs/M5-S3721-RETAIL-GUEST-FIELD-TABLE.md` and
 
 ORIGIN: diagnostic-only oracle execution watches and field dumps. No guest or
 host behavior was changed.
+
+## Session 3722 (2026-09-21) — resolved retail 94648 field origin
+
+The first oracle invocation was invalid because `--pc-field-dump-any-phase`
+is a flag rather than a PC argument. The corrected same work-unit invocation
+included `0x80094648` in the field-dump PC list and enabled that flag. It
+exited `rc=0`, reached the whole-RDRAM positive-control threshold of 10,000
+writes, and reached both 512-wide target origins `0x006AB400` and
+`0x006AB800`.
+
+The `0x80094648` execution watch fired and produced 128 field rows. All 128
+rows were at origin `0x006AB800`; none were at `0x006AB400`. This selects
+`H-Retail94648-OriginMismatch`, refutes `H-Retail94648-FieldUnsupported` for
+the measured second origin, and refutes `H-Retail94648-PreTargetOnly` because
+the rows were in a target 512-wide phase. The shared tuple at
+`0x80029E80`/`0x80029F30` remains open. This is single-source independent
+retail evidence. See `docs/M5-S3722-RETAIL-94648-ORIGIN.md` and
+`scratch/agent/oracle_s3722_retail_94648_fields/oracle.log`.
+
+ORIGIN: diagnostic-only oracle execution watches and field dumps. No guest or
+host behavior was changed.

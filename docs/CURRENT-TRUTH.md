@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3721 (2026-09-21).
+Updated for session 3722 (2026-09-21).
 
 ## Current state
 
@@ -297,6 +297,16 @@ This is a mixed guest-state result: it rejects both an all-distinct and an
 all-aliased reading, and leaves the last path unevaluable. See
 [M5-S3721-RETAIL-GUEST-FIELD-TABLE.md](M5-S3721-RETAIL-GUEST-FIELD-TABLE.md).
 
+Session 3722 corrected the field capture to include both 512-wide origins and
+to pass `--pc-field-dump-any-phase` as a flag. The independent whole-RDRAM
+control reached 10,000 writes, both `0x006AB400` and `0x006AB800` target
+origins were reached, and `0x80094648` produced 128 field rows, all at
+`0x006AB800`. This selects `H-Retail94648-OriginMismatch` and refutes
+`H-Retail94648-FieldUnsupported` for the measured second origin and
+`H-Retail94648-PreTargetOnly`. The result is single-source oracle evidence;
+the shared tuple at `0x80029E80`/`0x80029F30` remains open. See
+[M5-S3722-RETAIL-94648-ORIGIN.md](M5-S3722-RETAIL-94648-ORIGIN.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -315,12 +325,11 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 retail guest-field boundary.** Explain the empty field table at
-   `0x80094648` while retaining its positive execution watch, and determine
-   whether the `0x80029E80`/`0x80029F30` shared tuple is intentional. Use one
-   oracle run with the whole-RDRAM and hangar controls, first checking the
-   field-dump implementation/help for PC-specific capture requirements; do
-   not change selector, clear, task, audio-route, or payload state.
+1. **M5 retail shared guest-field tuple.** Determine whether the shared
+   `s0=0x801496B0`, `s1=0`, `source_byte=0x7C`, `branch_state=0x10` tuple at
+   `0x80029E80`/`0x80029F30` is intentional or a phase/field-capture alias.
+   Keep both 512-wide origins, the whole-RDRAM control, and all four watches;
+   do not change selector, clear, task, audio-route, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -349,6 +358,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-CallbackOwnershipBoundary` | Selected single-source at s3719: image-stage and PCM-consumer source/thread identities differ on the port, including 96 shared route ordinals. Retail parity remains open. |
 | `H-RetailGuestPathSplit` | Selected only at execution level at s3720; s3721 field rows are mixed: `0x80033FCC` is distinct, `0x80029E80`/`0x80029F30` share fields, and `0x80094648` is unevaluable. |
 | `H-RetailGuestFieldSplitPartial` | Selected at s3721 for the measured rows: one retail path has a distinct tuple while two paths share a tuple; the fourth path still needs a capture explanation. |
+| `H-Retail94648-OriginMismatch` | Selected single-source at s3722: all 128 `0x80094648` field rows appeared at target origin `0x006AB800`; the prior empty table used only `0x006AB400`. |
+| `H-Retail94648-FieldUnsupported` | Refuted at s3722 for the measured second origin: the corrected any-phase capture produced 128 rows. |
+| `H-Retail94648-PreTargetOnly` | Refuted at s3722: the 128 rows were at 512-wide target origin `0x006AB800`. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
