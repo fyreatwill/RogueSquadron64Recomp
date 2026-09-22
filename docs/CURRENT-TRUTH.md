@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3731 (2026-09-21).
+Updated for session 3732 (2026-09-21).
 
 ## Current state
 
@@ -23,6 +23,16 @@ target writer, and source/DMEM/writeback payloads remained zero. This selects
 `H-PortSourceClearOrdering` and refutes an uninstrumented target producer for
 the measured full span. The independent retail witness still supplies the
 second evidence line. See [M5-S3731-FULL-SPAN-PRODUCER.md](M5-S3731-FULL-SPAN-PRODUCER.md).
+
+Session 3732 requalified the remaining port image boundary after two paired
+captures lost the real-audio arm before target: one bus error occurred at VI
+640 and the retry stopped at guest PC `0x8000834C`. A fixed real-audio-only
+capture reached title and hangar, fired the RSP positive control, and emitted
+2,557 phase-5 output-DMA joins; all 1,903 sampled phase-5 joins had zero
+source-DMEM, output, and destination payloads. This confirms
+`H-ImageProducerZero` for the port, but the paired A/B was unevaluable and
+retail payload parity remains open. See
+[M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md).
 
 Session 3730 joined the retail source payload witness to a fixed real-audio
 port capture. The port reached hangar VI 512 and emitted 512 source-range
@@ -414,24 +424,18 @@ retail payload parity remains unmeasured. See
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 image-task/output payload boundary.** Explain the remaining zero
-   image-task payload after the source boundary closed. Build one phase-gated
-   table joining source DMA, DMEM window, output-DMA payload, image-stage,
-   PCM source/consumer rows, and task completion in one route ordinal. Keep
-   the silent arm and all positive controls; do not change payload behavior.
-
-2. **M5 retail source-payload boundary.** Use the independent oracle to watch
+1. **M5 retail source-payload boundary.** Use the independent oracle to watch
    the retail image-task source/output spans and writer PCs in the target
    phases. Compare retail payload polarity and writer attribution with the
    port's qualified zero source/DMEM/output table before any behavior change.
 
-3. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
+2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy of the value, and land a guard only if
    a concrete invalid writer is found. The closed `rs_free` audits and their
    evidence are archived in PROJECT-OVERVIEW §56; do not re-audit them.
 
-4. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
+3. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
    M3 has no new discriminator. Use one bounded region/census per session and
    preserve the slug `generated-symbol-renaming-sweep` for that campaign.
 

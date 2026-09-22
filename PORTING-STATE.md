@@ -138705,3 +138705,25 @@ the full-span source boundary. See
 ORIGIN: diagnostic-only full-span source producer/transition hooks, payload
 hash joins, and existing phase/RSP controls. No guest, RSP, task, audio-route,
 or payload behavior changed.
+
+## Session 3732 (2026-09-21) — requalified port image payload boundary
+
+Ran the required M5 image/source/consumer capture with an independent retail
+oracle and concurrent real/silent arms. The oracle passed its whole-RDRAM
+positive control and reached the 512 target. Both paired attempts lost the
+real-audio arm before target: the first hit a VI-retrace bus error at width
+640, and the retry hit the known scheduler/audio boundary at guest PC
+`0x8000834C`; the silent arm reached 512 and fired its control on both.
+
+The fixed real-audio-only retry reached VI 1024 and 512, fired the RSP
+positive control, and emitted 2,557 phase-5 output-DMA joins, 2,561 completion
+calls, and 528 PCM-consumer rows. All 1,903 phase-5 joins had zero
+source-DMEM, output, and destination payloads (`762B22A5`). This requalifies
+`H-ImageProducerZero` for the port boundary, but the paired A/B remains
+unevaluable and no retail parity conclusion was drawn. The next work unit is
+the independent retail source-payload boundary. Evidence:
+`docs/M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md`.
+
+ORIGIN: diagnostic-only paired image/source/consumer capture and one fixed
+real-audio-only recheck. No guest, RSP, task, audio, selector, clear,
+writeback, or consumer behavior changed.
