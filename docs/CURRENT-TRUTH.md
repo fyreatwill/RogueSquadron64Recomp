@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3686 (2026-09-21).
+notes are linked below. Updated for session 3687 (2026-09-21).
 
 ## Current state
 
@@ -12,6 +12,18 @@ flare, Factor 5 logo, title VI 1024 (`0x00790400`), and hangar VI 512
 Hangar geometry and color artifacts remain. The Factor 5 image task is the
 qualified real-audio arm; `ROGUESQ_AUDIO_UCODE=0`/`Broke` is the silent control.
 Audio is not production-complete.
+
+Session 3687 joined the absent-generation hangar source rows to the existing
+DMA and later-stage streams. Retail controls and port phase/source/ABI/DMA/
+source/stage controls all fired. The port recorded 512 source rows, 2,750
+stage rows, and 1,368 DMA rows; 260 absent-generation source rows had later
+same-pointer stages. DMA rows expose only the task pointer and task-local
+hash, with no source event, generation, route, or shared ordering key. The
+source-span hash is a different domain, and cross-thread log order is not an
+ownership join. This selects `H-DmaJoinUnavailable` rather than later-route
+ownership or stale-input ownership. It is single-source port evidence with
+independent retail controls; no guest value was changed. See
+[M5-S3687-ABSENT-DMA-OWNER-JOIN.md](M5-S3687-ABSENT-DMA-OWNER-JOIN.md).
 
 The active M5 Step 3 boundary is the image-task source range
 `0x1797B0..0x179930`. The port's target handoff sees a deliberate zero-fill
@@ -331,6 +343,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    writer (and any exposed DMA/copy event) to the selected object and task.
    Require whole-RDRAM, title, and hangar controls. See
    [M5-S3667-PAYLOAD-ORDER.md](M5-S3667-PAYLOAD-ORDER.md).
+   S3687 showed that the current `audtask-dma-row` has no stable join key:
+   add its source event, task generation, and route publication key at the
+   DMA emission boundary, export the submodule patch, and rerun the qualified
+   capture. Do not infer ownership from the task pointer or cross-thread log
+   order.
    Session 3664 ruled out neither hangar object ownership nor a shared
    all-phase producer. Session 3662 selected
    `H-SharedLogicalProducer`: the dominant writer family joins
@@ -831,6 +848,7 @@ deletion.
 - [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md)
 - [M5-S3678-TASK-GENERATION-JOIN.md](M5-S3678-TASK-GENERATION-JOIN.md)
 - [M5-S3680-PUBLICATION-ROUTE-JOIN.md](M5-S3680-PUBLICATION-ROUTE-JOIN.md)
+- [M5-S3687-ABSENT-DMA-OWNER-JOIN.md](M5-S3687-ABSENT-DMA-OWNER-JOIN.md)
 - [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md)
 - [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md)
 - [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md)

@@ -137765,3 +137765,21 @@ H-SameRoutePublicationLag and H-NoStableRouteJoin for the measured rows;
 input-DMA ownership remains open. ORIGIN: diagnostic source/stage route
 classifier; no mitigation or guest-state rewrite. See
 docs/M5-S3686-ABSENT-ROUTE-JOIN.md.
+
+## Session 3687 (2026-09-21) — bounded absent-source DMA ownership join
+
+Ran the qualified concurrent s3687 capture after exporting submodule patches
+and rebuilding. Retail whole-RDRAM, descriptor, source-span, title, hangar,
+and type-2 controls fired; the port reached both target phases and emitted
+source, stage, ABI, and DMA controls with no crash or abort. The run recorded
+512 hangar source rows, 2,750 hangar stage rows, and 1,368 hangar DMA rows.
+Of 260 source rows without a same-generation stage row, every row had a later
+same-pointer stage. The DMA rows, however, carried only the task pointer and
+task-local hash: they had no source event, generation, route ordinal, or route
+row. The source-span hash is a different domain, and cross-thread log order
+cannot identify ownership. This selects H-DmaJoinUnavailable at the current
+instrumentation boundary and does not select later-route ownership or stale
+input ownership. The first hash-equality classifier was corrected before this
+result was recorded. ORIGIN: diagnostic DMA/stage ownership witness; no
+mitigation or guest-state rewrite. See
+docs/M5-S3687-ABSENT-DMA-OWNER-JOIN.md.
