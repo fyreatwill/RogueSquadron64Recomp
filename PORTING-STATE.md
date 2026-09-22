@@ -138476,3 +138476,22 @@ ORIGIN: diagnostic-only callback source/thread/route instrumentation. The
 legitimate producer and consumer remain the existing image-stage callback and
 `queue_samples` SDL queue path; no mitigation or audio behavior change was
 added.
+## Session 3720 (2026-09-21) — qualified retail guest callback paths
+
+Ran the independent retail oracle with the Rice plugin, the validated Start
+schedule, a whole-RDRAM positive control, and a 512/hangar phase gate. The
+positive control reached 10,000 writes and the run reached 475 target VI rows
+at origin `0x006AB400`. Target-phase execution watches fired at `0x80033FCC`
+(2,449), `0x80029E80` (3,639), `0x80029F30` (3,639), and `0x80094648` (128);
+the one-shot setup sites `0x8008EB8C` and `0x8008EBBC` also fired.
+
+This independently establishes multiple retail guest-side paths in the target
+route, consistent with the port's distinct image-stage and PCM-consumer
+sources. It does not establish host callback/thread parity because the oracle
+has no host-thread or SDL queue witness. It rules out using the missing oracle
+core as the current blocker, but leaves retail shared-versus-split host
+ownership open.
+
+ORIGIN: diagnostic-only oracle execution watches and existing port callback
+fields. No guest or host behavior was changed. Evidence:
+`scratch/agent/oracle_s3720_callback_parity/oracle.log`.

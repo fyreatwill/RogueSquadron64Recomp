@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3719 (2026-09-21).
+Updated for session 3720 (2026-09-21).
 
 ## Current state
 
@@ -278,6 +278,15 @@ explanation, but does not establish stale route ordinals or retail parity.
 The result is single-source port evidence. See
 [M5-S3719-CALLBACK-OWNERSHIP.md](M5-S3719-CALLBACK-OWNERSHIP.md).
 
+Session 3720 ran the independent retail oracle after the debugger-enabled core
+became available. Its whole-RDRAM control reached 10,000 writes and the run
+reached 475 hangar VI samples. Retail exposed distinct target-phase guest
+execution paths at `0x80033FCC`, `0x80029E80`, `0x80029F30`, and `0x80094648`,
+consistent with the port's split image/consumer sources. The oracle does not
+expose host callback thread or SDL queue ownership, so retail host callback
+parity remains unmeasured. See
+[M5-S3720-RETAIL-CALLBACK-PARITY.md](M5-S3720-RETAIL-CALLBACK-PARITY.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -296,16 +305,12 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — qualify retail parity for callback ownership.** Session 3719
-   selected a distinct host callback boundary: image-stage and PCM-consumer
-   source/thread identities differ even on 96 shared route ordinals. Run the
-   retail oracle with the same target-phase callback/source/thread and route
-   join if its debugger-enabled core is available. If retail shows the same
-   split, retain the ownership boundary cross-implementation; if retail
-   shares one callback path, reopen the port callback/queue bridge. If the
-   oracle binary is unavailable, record that blocker and do not claim retail
-   parity. Keep selector, clear, task, audio route, and payload state
-   unchanged.
+1. **M5 host callback ownership boundary.** Session 3720 independently
+   confirmed multiple retail guest-side target paths, but the oracle cannot
+   identify host callback threads or SDL queue ownership. Use a bounded
+   port/retail guest-PC field table to classify the watched retail paths before
+   making another host-ownership claim. Keep selector, clear, task, audio
+   route, and payload state unchanged.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -332,6 +337,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioDrainDivergence` | Selected at s3714 and strengthened single-source at s3715: real and silent port arms differ in target-phase queue cadence/depth; retail callback/depth parity remains unmeasured. |
 | `H-AudioDrainNotConsumed` | Open after s3715: the current queue table is not joined directly to image-stage, so host queue state cannot yet be separated from downstream stage consumption. |
 | `H-CallbackOwnershipBoundary` | Selected single-source at s3719: image-stage and PCM-consumer source/thread identities differ on the port, including 96 shared route ordinals. Retail parity remains open. |
+| `H-RetailGuestPathSplit` | Selected at s3720: independent retail target-phase execution watches fired at four distinct guest PCs, with positive control and hangar phase reached. This is not host-thread parity. |
+| `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
 | `H-ZeroDMEMProducer` | Next boundary after s3693; the DMA payload was already zero, but its producer is not yet joined. |
