@@ -137960,3 +137960,25 @@ stall; the s3695 pre-320 stall is intermittent. It validates the predecessor
 instrument and reopens producer classification. See
 docs/M5-S3696-AUDIO-PUMP-QUALIFICATION.md. ORIGIN: diagnostic DMEM/DMA
 provenance witnesses; no guest or RDRAM state changed.
+
+## Session 3697 (2026-09-21) — classified the DMEM predecessor window
+
+Obtained independent retail ground truth before the port build. The oracle's
+whole-RDRAM positive control reached 10,000 callbacks and was removed; the
+target range recorded 1,058 writes through the 512-width hangar phase. The
+phase-gated retail writer PCs were `0x800078EC` (768), `0x80007670` (172),
+`0x8001E2C0` (11), and the `0x8001F...` family (107). The scalar sample at
+`0x800078EC` was 256/256 zero with zero mismatches.
+
+Rebuilt the Debug target once and ran the qualified real-audio/LLE-solo/
+spin-yield/autopilot port route, phase-gated at VI 1024 and followed into the
+512 hangar phase. The RSP and DMEM positive controls fired. The port emitted
+512 hangar source-range rows; every DMEM payload and post-write span was zero.
+Every latest joined predecessor was a zero vector write, but only 147/512
+overlapped the output-DMEM window and 365/512 did not. The predecessor route
+ordinal was newer on 274/512 rows and equal on 238/512. This selects
+`H-DMEMWriterWrongWindow` for the latest-global-predecessor explanation and
+keeps `H-RetailSourceDifferent` open. The bounded census also exposed earlier
+overlapping zero vector writes, so the actual coverage-aware producer remains
+the next boundary. See docs/M5-S3697-DMEM-PREDECESSOR-CLASS.md. ORIGIN:
+diagnostic DMEM/DMA provenance witnesses; no guest or RDRAM state changed.

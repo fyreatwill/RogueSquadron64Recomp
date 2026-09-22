@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3696 (2026-09-21).
+Updated for session 3697 (2026-09-21).
 
 ## Current state
 
@@ -68,6 +68,17 @@ route gate and reopens the DMEM predecessor classification; it does not select
 which producer explanation is correct. See
 [M5-S3696-AUDIO-PUMP-QUALIFICATION.md](M5-S3696-AUDIO-PUMP-QUALIFICATION.md).
 
+Session 3697 classified the qualified predecessor table. Retail's independent
+oracle positive control fired, and its hangar writer PCs were `0x800078EC`
+(768), `0x80007670` (172), `0x8001E2C0` (11), and the `0x8001F...` family (107);
+the sampled `0x800078EC` scalar stores were legitimately zero. The port's
+positive controls fired, with 512 hangar source rows: all payload/post-write
+bytes were zero, all 512 latest predecessors were zero vector stores, but only
+147/512 overlapped the output window and 274/512 belonged to a newer route
+ordinal. This selects `H-DMEMWriterWrongWindow` for the latest predecessor and
+keeps `H-RetailSourceDifferent` open. See
+[M5-S3697-DMEM-PREDECESSOR-CLASS.md](M5-S3697-DMEM-PREDECESSOR-CLASS.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -86,16 +97,18 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — classify the qualified DMEM predecessor table.** Use the
-   existing DMEM-store and source-range hooks; do not add another join field.
-   The discriminator is one phase-gated table for all sampled source rows,
-   carrying predecessor sequence/address/length/kind/value/nonzero/overlap and
-   the source payload, with the RSP and DMEM positive controls live. A
-   legitimate zero producer predicts a stable matching writer class and
-   zero-valued DMEM; a wrong-window join predicts non-overlapping or unrelated
-   predecessors; a retail-only path remains open only if the qualified port
-   writer table cannot account for the source rows. Obtain independent retail
-   ground truth before any new build.
+1. **M5 Step 4 — coverage-aware DMEM producer census.** The latest-writer
+   join is closed as `H-DMEMWriterWrongWindow`, but the existing census shows
+   earlier zero vector writes that do overlap the `0xC30..0xE48` output-DMEM
+   union. Add one phase-gated coverage-aware table that retains, for every
+   source-range DMA row, the latest writer covering each output subrange (not
+   merely the latest writer globally), with sequence/address/length/kind/value/
+   nonzero/route and source payload. Keep RSP and DMEM positive controls live.
+   A stable covering zero writer selects `H-ZeroDMEMProducer`; no covering
+   writer selects `H-DMEMProducerAbsent`; a covering class that cannot be
+   reconciled with retail's named writer families keeps
+   `H-RetailSourceDifferent` open. Obtain independent retail ground truth
+   before the build.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -122,7 +135,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ZeroDMEMProducer` | Next boundary after s3693; the DMA payload was already zero, but its producer is not yet joined. |
 | `H-DMEMJoinUnevaluable` | Selected at s3694 for the new instrument only: the qualified retry reached both target VIs, but the target source-range branch produced no rows and its positive control did not fire. |
 | `H-AudioPumpStableGate` | Refuted at s3696: the fixed paired real-audio arm reached both target phases and emitted all target controls. |
-| `H-DMEMPredecessorClass` | Open at s3696: 512/512 source rows carried a predecessor sequence, 139 overlapped the output range, and all sampled values/payloads were zero. |
+| `H-DMEMPredecessorClass` | Closed at s3697: 512/512 source rows carried zero vector predecessors; the latest predecessor overlapped only 147/512 rows and was on a newer route ordinal for 274/512. |
+| `H-DMEMWriterWrongWindow` | Selected at s3697 for the latest-predecessor explanation: 365/512 joined stores did not overlap the output window, and the 147 overlapping stores covered only a two-byte edge. |
+| `H-RetailSourceDifferent` | Open at s3697: retail has named scalar/vector writer families that the port's host-side vector DMEM table does not account for. |
 | `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
 | `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
 | `H-InputDmaKeyStillUnavailable` | Selected only at the output-DMA boundary by s3688; superseded by the input-DMA key. |
@@ -168,6 +183,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   sequences and 139/512 overlaps. The route stall is intermittent and the
   predecessor table is now evaluable. See
   [M5-S3696-AUDIO-PUMP-QUALIFICATION.md](M5-S3696-AUDIO-PUMP-QUALIFICATION.md).
+- **3697 — DMEM predecessor classification:** retail ground truth passed its
+  whole-RDRAM positive control and named four writer families. The qualified
+  port emitted 512 hangar source rows; all payloads were zero, while the latest
+  zero vector predecessor overlapped only 147/512 rows. See
+  [M5-S3697-DMEM-PREDECESSOR-CLASS.md](M5-S3697-DMEM-PREDECESSOR-CLASS.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity
@@ -271,6 +291,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3692-INPUT-WRITER-BOUNDARY.md](M5-S3692-INPUT-WRITER-BOUNDARY.md)
 - [M5-S3693-DMA-WRITER-BOUNDARY.md](M5-S3693-DMA-WRITER-BOUNDARY.md)
 - [M5-S3695-AUDIO-PUMP-BOUNDARY.md](M5-S3695-AUDIO-PUMP-BOUNDARY.md)
+- [M5-S3697-DMEM-PREDECESSOR-CLASS.md](M5-S3697-DMEM-PREDECESSOR-CLASS.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
