@@ -9,6 +9,7 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <functional>
 
 #include "ultramodern/ultra64.h"
 #include "ultramodern/ultramodern.hpp"
@@ -1133,6 +1134,11 @@ bool rs64_pcm_writer_phase(uint32_t& phase, uint32_t& width,
           (width == 512u && origin == 0x006AB400u))) return false;
     key = (width << 24) ^ origin;
     return true;
+}
+
+static uint64_t rs64_m5_callback_host_thread() {
+    return static_cast<uint64_t>(
+        std::hash<std::thread::id>{}(std::this_thread::get_id()));
 }
 
 void rs64_pcm_writer_phase_reset(uint32_t key) {
@@ -3661,13 +3667,17 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
             uint64_t callback_time_us = 0;
             const bool callback_order = rs64_m5_callback_order_event(
                 queue_width, queue_origin, callback_seq, callback_time_us);
+            const uint64_t callback_thread = rs64_m5_callback_host_thread();
             std::fprintf(stderr,
                 "[m5-image-queue] arm=%s stage=%u phase=%u width=%u "
                 "origin=0x%06X route_ordinal=%u route_row=%u "
+                "callback_source=image_stage callback_thread=%llu "
                 "queued_bytes=%u pcm_consumers_seen=%u callback_seq=%u "
                 "callback_t_us=%llu callback_order=%u\n",
                 route.arm, stage, queue_phase, queue_width, queue_origin,
-                route.ordinal, route.row, rs64_m5_audio_queue_snapshot(),
+                route.ordinal, route.row,
+                static_cast<unsigned long long>(callback_thread),
+                rs64_m5_audio_queue_snapshot(),
                 rs64_m5_pcm_consumer_count(), callback_seq,
                 static_cast<unsigned long long>(callback_time_us),
                 callback_order ? 1u : 0u);
@@ -5033,6 +5043,7 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
             uint64_t callback_time_us = 0;
             const bool callback_order = rs64_m5_callback_order_event(
                 width, origin, callback_seq, callback_time_us);
+            const uint64_t callback_thread = rs64_m5_callback_host_thread();
             ultramodern::rs64_audio_join_pcm(
                 "consumer", rs64_phase_ord(), width, origin, ordinal, row,
                 n, rdram_addr,
@@ -5041,11 +5052,16 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
             if (n < 256 || (n % 128) == 0) {
                 fprintf(stderr,
                     "[pcm-boundary-consumer] n=%u phase=%u width=%u origin=0x%06X"
+                    " route_ordinal=%u route_row=%u"
                     " rdram=0x%08X samples=%zu bytes=%zu fnv=0x%08X nz=%u"
+                    " callback_source=queue_samples callback_thread=%llu"
                     " queued_bytes=%u callback_seq=%u callback_t_us=%llu"
                     " callback_order=%u\n",
-                    n, rs64_phase_ord(), width, origin, rdram_addr, num_samples,
-                    full_byte_count, fnv, nonzero, queued_bytes, callback_seq,
+                    n, rs64_phase_ord(), width, origin, ordinal, row, rdram_addr,
+                    num_samples,
+                    full_byte_count, fnv, nonzero,
+                    static_cast<unsigned long long>(callback_thread),
+                    queued_bytes, callback_seq,
                     static_cast<unsigned long long>(callback_time_us),
                     callback_order ? 1u : 0u);
                 fflush(stderr);

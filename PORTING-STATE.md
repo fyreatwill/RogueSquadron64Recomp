@@ -138451,3 +138451,28 @@ ownership/cadence.
 ORIGIN: diagnostic-only callback sequence/timestamp instrumentation. The
 legitimate producer and consumer remain the existing `osAiSetNextBuffer` SDL
 queue path and PCM callback; no mitigation or audio behavior change was added.
+
+## Session 3719 (2026-09-21) — qualified callback ownership boundary
+
+Added explicit callback source and host-thread fields to the phase-gated image
+and PCM-consumer rows. The build succeeded after correcting the format
+argument order, and the paired real/silent run reached VI 512 and fired the
+RSP-source positive control in both arms. Real audio produced 201 target image
+rows and 101 target consumer rows; silent produced 33 consumer rows and no
+image rows, as expected for its intentional silent RSP stub.
+
+The real image rows consistently identified `image_stage` on host thread
+`14050803808701975833`; consumer rows identified `queue_samples` on the
+different host thread `5506149817041922107`. Ninety-six target route ordinals
+were shared by the two streams, and all 96 shared ordinals retained different
+host-thread identities. Source, thread, route, queue, sequence, and timestamp
+fields were present, so the table was evaluable. This selects
+`H-CallbackOwnershipBoundary` and refutes `H-SharedCallbackState` as a
+complete explanation. It does not show stale route ordinals, and retail parity
+remains open because the debugger-enabled oracle core was unavailable. The
+result is single-source port evidence.
+
+ORIGIN: diagnostic-only callback source/thread/route instrumentation. The
+legitimate producer and consumer remain the existing image-stage callback and
+`queue_samples` SDL queue path; no mitigation or audio behavior change was
+added.

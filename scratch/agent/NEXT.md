@@ -1,40 +1,36 @@
-# Next work unit: qualify callback ownership/cadence after interleaved order
+# Next work unit: qualify retail parity for callback ownership
 
 HYPOTHESIS-ID: m5-ai-post-pcm-consumer-ownership
 
-Session 3718 rejected a stable image-before-consumer scheduling boundary. The
-real hangar arm had 174 image-stage rows and 83 printed consumer rows; adjacent
-cross-stream events occurred in both directions (46 image-after-consumer and
-47 consumer-after-image). Silent reached the target phase and fired its RSP
-control but emitted no image rows because its RSP arm is intentionally stubbed.
-The retail oracle remains unavailable because its debugger-enabled core is
-absent.
-
-This next unit is one complete phase-gated source/thread/route table, not
-another queue-threshold field.
+Session 3719 selected a distinct port callback ownership boundary: image-stage
+and PCM-consumer rows had different explicit sources and stable host-thread
+identities, including 96 shared route ordinals. Retail parity is still open
+because the debugger-enabled oracle core was unavailable.
 
 Competing hypotheses:
 
-- `H-CallbackOwnershipBoundary`: image-stage and PCM callbacks use distinct
-  source/thread paths and route ordinals, selecting a host ownership boundary.
-- `H-SharedCallbackState`: both callbacks use the same source/thread and route
-  generation while queue mismatches persist, keeping
-  `H-AudioDrainNotConsumed` open at host consumer state.
-- `H-CallbackInstrumentAbsent`: any missing source/thread/route control makes
-  the table unevaluable; no ownership conclusion is allowed.
+- `H-RetailCallbackParity`: retail exposes the same distinct image-stage and
+  PCM-consumer callback ownership, strengthening the cross-implementation
+  boundary.
+- `H-RetailSharedCallbackState`: retail uses one callback source/thread, so
+  the port's split is a host-bridge divergence and the queue explanation must
+  be reopened.
+- `H-RetailOracleUnavailable`: the required debugger-enabled core is absent;
+  no retail conclusion is allowed and the blocker must be recorded.
 
-Discriminator: one phase-gated table containing callback source, thread ID,
-route ordinal, queue depth, callback sequence, and timestamp for every target
-image-stage and exact consumer event. Both target VI transitions and the
-RSP-source positive control must fire in both arms. If the callbacks have
-distinct source/thread and stale route ordinals, select
-`H-CallbackOwnershipBoundary`; if they share source/thread and route
-generation while queue mismatches persist, keep `H-AudioDrainNotConsumed`
-open; if fields or controls are absent, repair the instrument before inferring
-anything.
+Discriminator: verify the oracle debugger-enabled core before building. If it
+exists, run the retail oracle with the target-phase callback/source/thread and
+route join, after arming its independent whole-RDRAM positive control. A
+matching split selects `H-RetailCallbackParity`; a shared retail path selects
+`H-RetailSharedCallbackState`; absent core selects `H-RetailOracleUnavailable`.
+Do not change selector, clear, task, audio route, or payload state.
 
 Commands:
 
-`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
+`rg -n "debugger|core|mupen|oracle" tools/oracle README.md docs | head -80`
 
-`zsh scratch/agent/run_s3436_m5_port_frequency_contract.sh`
+`sed -n '1,220p' tools/oracle/README.md`
+
+`make -C tools/oracle`
+
+`tools/oracle/<existing-retail-recipe-with-positive-control>`

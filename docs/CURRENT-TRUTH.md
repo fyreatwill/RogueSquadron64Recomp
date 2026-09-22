@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3718 (2026-09-21).
+Updated for session 3719 (2026-09-21).
 
 ## Current state
 
@@ -266,6 +266,18 @@ rejects a stable image-before-consumer scheduling boundary but leaves
 single-source port evidence. See
 [M5-S3718-CALLBACK-ORDER.md](M5-S3718-CALLBACK-ORDER.md).
 
+Session 3719 completed the callback ownership table by adding explicit source
+and host-thread fields to image and PCM-consumer rows. Both paired arms
+reached VI 512 and fired the RSP positive control. The real arm had 201 image
+rows and 101 consumer rows; image callbacks consistently came from
+`image_stage` on one host thread and consumers from `queue_samples` on a
+different host thread. Ninety-six route ordinals were shared across streams,
+and all 96 retained different host-thread identities. This selects
+`H-CallbackOwnershipBoundary` and refutes shared callback state as a complete
+explanation, but does not establish stale route ordinals or retail parity.
+The result is single-source port evidence. See
+[M5-S3719-CALLBACK-OWNERSHIP.md](M5-S3719-CALLBACK-OWNERSHIP.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -284,17 +296,16 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — qualify callback ownership/cadence after interleaved order.**
-   Session 3718 rejected a stable image-before-consumer order: both directions
-   occurred in the same real-arm hangar phase. Build one table joining every
-   target image-stage event and exact PCM consumer event to callback source,
-   thread identity, phase-local sequence, queue depth, and route ordinal. If
-   image rows consistently come from a distinct thread/source and stale route
-   ordinal, select a callback-ownership boundary; if source/thread and route
-   are shared while queue mismatches persist, keep `H-AudioDrainNotConsumed`
-   open at the host consumer state; if controls or fields are absent, stop and
-   repair the instrument. Keep selector, clear, task, audio route, and payload
-   state unchanged; retail parity remains required before a final explanation.
+1. **M5 Step 4 — qualify retail parity for callback ownership.** Session 3719
+   selected a distinct host callback boundary: image-stage and PCM-consumer
+   source/thread identities differ even on 96 shared route ordinals. Run the
+   retail oracle with the same target-phase callback/source/thread and route
+   join if its debugger-enabled core is available. If retail shows the same
+   split, retain the ownership boundary cross-implementation; if retail
+   shares one callback path, reopen the port callback/queue bridge. If the
+   oracle binary is unavailable, record that blocker and do not claim retail
+   parity. Keep selector, clear, task, audio route, and payload state
+   unchanged.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -320,6 +331,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AIStateParity` | Selected at s3712 for the port: both arms matched host `set-frequency` and first PCM-consumer state at `22047 Hz`; only real audio reached image-stage rows. |
 | `H-AudioDrainDivergence` | Selected at s3714 and strengthened single-source at s3715: real and silent port arms differ in target-phase queue cadence/depth; retail callback/depth parity remains unmeasured. |
 | `H-AudioDrainNotConsumed` | Open after s3715: the current queue table is not joined directly to image-stage, so host queue state cannot yet be separated from downstream stage consumption. |
+| `H-CallbackOwnershipBoundary` | Selected single-source at s3719: image-stage and PCM-consumer source/thread identities differ on the port, including 96 shared route ordinals. Retail parity remains open. |
+| `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
 | `H-ZeroDMEMProducer` | Next boundary after s3693; the DMA payload was already zero, but its producer is not yet joined. |
 | `H-DMEMJoinUnevaluable` | Selected at s3694 for the new instrument only: the qualified retry reached both target VIs, but the target source-range branch produced no rows and its positive control did not fire. |
