@@ -1,29 +1,40 @@
-# Next work unit: qualify the shared retail guest-field tuple
+# Next work unit: M5 Step 1 same-build audio qualification
 
-HYPOTHESIS-ID: m5-retail-shared-field-tuple
+HYPOTHESIS-ID: m5-step1-audio-contract-qualification
 
-Session 3722 resolved the empty `0x80094648` table: the corrected oracle
-capture produced 128 rows, all at target origin `0x006AB800`. The next
-bounded experiment keeps both 512-wide origins and asks whether the shared
-`0x80029E80`/`0x80029F30` tuple is intentional.
+The retail shared guest tuple is now qualified. The next M5 unit is the
+existing Step 1 checkpoint from `docs/M5-AUDIO-PLAN.md`: re-baseline the
+current real Factor 5 image against the silent `M_AUDTASK` control using one
+fresh build and concurrent, phase-gated runs.
 
 Competing hypotheses:
 
-- `H-SharedTupleIntentional`: both PCs intentionally consume the same state
-  object/fields. Repeated rows with the same `s0`, `s1`, source byte, and
-  branch state at both origins select this.
-- `H-SharedTuplePhaseAlias`: the tuple is shared only because the two PCs are
-  sampled in a common phase/route bucket. Distinct tuples when origin and
-  predecessor context are retained select this.
-- `H-SharedTupleFieldArtifact`: the PCs do not share the relevant state, but
-  the current field dumper reads a common or wrong location. Stable execution
-  and origin rows with distinct register/pointer context but equal dumped
-  fields select this.
+- `H-ImageContractProgress`: the real image completes the task contract and
+  produces downstream service/slot/PCM progress that the silent arm cannot.
+- `H-ImageRouteOnly`: the real image differs only in route reachability; it
+  has no additional valid task, service, slot, or nonzero PCM contract edge.
+- `H-AudioControlInvalid`: one or both arms fail the qualification route or
+  positive controls, so no audio conclusion is valid.
 
-Discriminator: one oracle run's full field-row table for both PCs at both
-512-wide origins, retaining the 10,000-write whole-RDRAM control and all four
-execution watches. A run that does not reach a 512-wide target is invalid.
+Discriminator: same-build paired rows after VI 1024 and VI 512. The real arm
+must show dispatch, task fields, nonzero DMEM/DMA, image completion at
+`0x1328`, `Broke`, SP completion, and downstream service/slot/PCM rows; the
+silent arm must show its intentional `Broke` stub with no DMEM/DMA. If both
+arms fail to reach a target phase, select `H-AudioControlInvalid` and do not
+interpret downstream nulls. A real-arm task/control chain without downstream
+rows selects `H-ImageContractProgress` only up to the missing edge; identical
+chains apart from route reachability select `H-ImageRouteOnly`.
 
-Exact command:
+Exact commands:
 
-`OUT=scratch/agent/oracle_s3723_retail_shared_tuple; mkdir -p "$OUT"; tools/oracle/build/rs64_oracle --core "$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom "$HOME/Documents/Tools/rogue_squadron64/rogue_squadron.z64" --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 70 --hit-cap 64 --watch-write 0x0:0x800000 --watch-pc 0x80033FCC,0x80029E80,0x80029F30,0x80094648 --pc-phase-log-width 0x006AB400:512 --pc-phase-log-width 0x006AB800:512 --pc-field-dump 0x80033FCC,0x80029E80,0x80029F30,0x80094648 --pc-field-dump-any-phase --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > "$OUT/oracle.log" 2>&1; rc=$?; printf 'rc=%s\n' "$rc" > "$OUT/result.txt"; exit "$rc"`
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+mkdir -p /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s3724_audio_real /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s3724_audio_silent
+(env ROGUESQ_LOG_ALL=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' zsh tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s3724_audio_real 180 2) &
+(env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_LOG_ALL=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' zsh tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s3724_audio_silent 180 2) &
+wait
+```
+
+Require positive controls in both logs before classifying any null: phase
+transitions, RSP-source/task dispatch, and SP completion. Do not change task,
+selector, clear, payload, or audio gate behavior in this checkpoint.

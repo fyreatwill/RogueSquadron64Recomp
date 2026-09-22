@@ -138514,6 +138514,28 @@ unevaluable. See `docs/M5-S3721-RETAIL-GUEST-FIELD-TABLE.md` and
 
 ORIGIN: diagnostic-only oracle execution watches and field dumps. No guest or
 host behavior was changed.
+## Session 3723 (2026-09-21) — qualified retail shared guest-field tuple
+
+Ran the single planned independent retail-oracle work unit with the
+whole-RDRAM positive control, both 512-wide origins, and all four execution
+and field watches. The oracle exited `rc=0`; the positive-control threshold
+reached 10,000 writes; both `0x006AB400` and `0x006AB800` were reached.
+
+At both origins, `0x80029E80` and `0x80029F30` produced matching field rows:
+`s0=0x801496B0`, `s1=0`, `source_byte=0x7C`, and `branch_state=0x10`.
+Each PC had 335 rows at the first origin and 286 at the second. Independent
+execution-watch register rows agreed with the field dumps. This selects
+`H-SharedTupleIntentional` and refutes phase aliasing and a common-field
+capture artifact for the measured paths. The distinct `0x80094648` and
+`0x80033FCC` paths remain distinct, and host callback parity remains open.
+
+This rules out treating the shared tuple as the immediate explanation for the
+remaining image-stage discrepancy. Evidence is in
+`docs/M5-S3723-RETAIL-SHARED-TUPLE.md` and
+`scratch/agent/oracle_s3723_retail_shared_tuple/oracle.log`.
+
+ORIGIN: diagnostic-only oracle execution watches and field dumps. No guest or
+host behavior was changed.
 
 ## Session 3722 (2026-09-21) — resolved retail 94648 field origin
 

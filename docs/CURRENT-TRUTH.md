@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3722 (2026-09-21).
+Updated for session 3723 (2026-09-21).
 
 ## Current state
 
@@ -307,6 +307,16 @@ origins were reached, and `0x80094648` produced 128 field rows, all at
 the shared tuple at `0x80029E80`/`0x80029F30` remains open. See
 [M5-S3722-RETAIL-94648-ORIGIN.md](M5-S3722-RETAIL-94648-ORIGIN.md).
 
+Session 3723 qualified the shared guest-field tuple with both 512-wide origins.
+The independent whole-RDRAM control reached 10,000 writes; each of
+`0x80029E80` and `0x80029F30` produced 335 rows at `0x006AB400` and 286 rows
+at `0x006AB800`, with identical `s0=0x801496B0`, `s1=0`, `source_byte=0x7C`,
+and `branch_state=0x10`. Independent execution-watch rows matched the field
+rows. This selects `H-SharedTupleIntentional` and refutes phase aliasing and a
+common-field capture artifact for the measured paths. The distinct
+`0x80094648` and `0x80033FCC` paths remain distinct; host callback parity is
+still open. See [M5-S3723-RETAIL-SHARED-TUPLE.md](M5-S3723-RETAIL-SHARED-TUPLE.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -325,11 +335,11 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 retail shared guest-field tuple.** Determine whether the shared
-   `s0=0x801496B0`, `s1=0`, `source_byte=0x7C`, `branch_state=0x10` tuple at
-   `0x80029E80`/`0x80029F30` is intentional or a phase/field-capture alias.
-   Keep both 512-wide origins, the whole-RDRAM control, and all four watches;
-   do not change selector, clear, task, audio-route, or payload state.
+1. **M5 host callback parity boundary.** Determine whether the remaining
+   real-audio image-stage difference is explained by host callback/queue state
+   rather than the now-qualified guest tuple. Use a new ground-truth-backed
+   table before adding instrumentation; do not change selector, clear, task,
+   audio-route, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -361,6 +371,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-Retail94648-OriginMismatch` | Selected single-source at s3722: all 128 `0x80094648` field rows appeared at target origin `0x006AB800`; the prior empty table used only `0x006AB400`. |
 | `H-Retail94648-FieldUnsupported` | Refuted at s3722 for the measured second origin: the corrected any-phase capture produced 128 rows. |
 | `H-Retail94648-PreTargetOnly` | Refuted at s3722: the 128 rows were at 512-wide target origin `0x006AB800`. |
+| `H-SharedTupleIntentional` | Selected at s3723: both shared-tuple PCs matched on fields and independent register rows at both 512-wide origins. |
+| `H-SharedTuplePhaseAlias` | Refuted at s3723 for the measured origin/phase buckets. |
+| `H-SharedTupleFieldArtifact` | Refuted at s3723 by agreement between field dumps and execution-watch register rows. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
@@ -616,6 +629,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3702-SOURCE-PRODUCER-OVERWRITE.md](M5-S3702-SOURCE-PRODUCER-OVERWRITE.md)
 - [M5-S3708-CLEAR-BRANCH.md](M5-S3708-CLEAR-BRANCH.md)
 - [M5-S3721-RETAIL-GUEST-FIELD-TABLE.md](M5-S3721-RETAIL-GUEST-FIELD-TABLE.md)
+- [M5-S3723-RETAIL-SHARED-TUPLE.md](M5-S3723-RETAIL-SHARED-TUPLE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
