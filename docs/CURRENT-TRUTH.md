@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3736 (2026-09-22).
+Updated for session 3737 (2026-09-22).
 
 ## Current state
 
@@ -29,10 +29,11 @@ zero-valued port payload. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 retail writer-family join at the exact source boundary.** Join the
-   retail target-phase nonzero byte positions to the writer PCs and ordering
-   around `0x800078EC`, then compare the qualified port writer census. Keep
-   whole-RDRAM, both target phases, and both port controls mandatory; name the
+1. **M5 port writer-family census at the exact source boundary.** The retail
+   join selected an earlier writer family (`0x80007670`, `0x8001E2C0`, and
+   setup-family PCs) absent from the qualified port source path. Enumerate all
+   phase-gated port stores touching `0x1797B0..0x179A48`, with whole-RDRAM,
+   both target phases, and real/silent controls mandatory. Name the port-side
    writer and legitimacy before proposing any mitigation.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
@@ -46,7 +47,8 @@ Work only the first applicable item. This is one monotonic backlog.
 
 | Hypothesis | Status |
 |---|---|
-| `H-RetailOnlyProducer` | Selected at s3736 for the measured hangar source boundary; retail exact positions/FNV are now exported. |
+| `H-RetailOnlyProducer` | Selected at s3737 for the measured hangar source boundary; retail exact positions/FNV and writer-family join are now exported. |
+| `H-RetailWriterEarlier` | Selected at s3737: retail title source bytes have earlier writer PCs absent from the qualified port source path. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
 | `H-SourceLayoutMismatch` | Still unevaluable as a parity claim: the port payload is zero, although both source descriptors are aligned. |
@@ -69,6 +71,14 @@ Work only the first applicable item. This is one monotonic backlog.
   were nonzero in both source subranges; 1,819 qualified real-port joins had
   zero source-DMEM/output/destination payloads. Session 3736 added the exact
   retail positions/FNV that were missing here.
+- **3737 — retail writer-family join:** after rebuilding a stale executable,
+  the oracle again passed controls and reached both target phases. Retail
+  title source bytes were written by `0x80007670`/`0x8001E2C0` families before
+  the later `0x800078EC` clear; the real port reached hangar but its 512
+  source writer rows and 4,082 image joins were all zero-valued. The silent
+  arm emitted no source/image rows. This selects `H-RetailWriterEarlier` and
+  moves the boundary to a port-side all-store census. See
+  [M5-S3737-RETAIL-WRITER-FAMILY-JOIN.md](M5-S3737-RETAIL-WRITER-FAMILY-JOIN.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.
@@ -154,5 +164,5 @@ unreconciled.
 - [M5-S3706-WRITER-SETUP-REQUALIFICATION.md](M5-S3706-WRITER-SETUP-REQUALIFICATION.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3736 remain in the append-only ledger. Use bounded `grep`/`sed`
+Sessions 1–3737 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.

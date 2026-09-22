@@ -138809,3 +138809,27 @@ Evidence: `docs/M5-S3736-EXACT-RETAIL-BYTE-JOIN.md` and
 ORIGIN: independent retail oracle phase snapshots and same-iteration port
 source-DMA/writer rows. No guest, port, RSP, audio, or payload behavior
 changed.
+## Session 3737 (2026-09-22) — joined retail writer families to port source boundary
+
+The first batched capture was invalid because the executable was stale: both
+port arms crashed before a target phase. Rebuilt the existing target cleanly,
+then reran the identical retail-oracle, real-audio-port, and silent-port arms.
+The fixed oracle passed the whole-RDRAM positive control, reached title and
+hangar, and exported the same exact snapshots as s3736: title nonzero counts
+105/256 and 168/408, hangar zero in both ranges, with FNVs
+`8611C3AF`/`D4E10CCC` and `E6A1D1C5`/`762B22A5` respectively. Retail writer
+histograms named `0x80007670` and `0x8001E2C0` in the title source path and the
+later `0x800078EC` clear in hangar. The real port reached hangar, emitted 512
+source reader rows, 512 source writer rows, and 4,082 image joins, all with
+zero-valued source/output/destination payloads; its input-writer control fired.
+The silent arm emitted no source/image rows and did not crash.
+
+This selects `H-RetailWriterEarlier` at the measured boundary and rules out a
+same-port-writer conclusion for the currently instrumented source path. It
+does not explain why the earlier family is absent or authorize suppressing the
+clear. The next work unit is a phase-gated all-store port census over the
+exact source span. Evidence: `docs/M5-S3737-RETAIL-WRITER-FAMILY-JOIN.md` and
+`scratch/agent/s3737_m5_retail_writer_join_fixed/`.
+
+ORIGIN: independent retail writer-PC/snapshot watches and phase-gated port
+source/DMA rows. No guest or port behavior changed.

@@ -1,38 +1,35 @@
-# Next work unit: M5 retail writer-family join at the exact source boundary
+# Next work unit: M5 port writer-family census at the exact source boundary
 
-HYPOTHESIS-ID: m5-retail-writer-family-join
+HYPOTHESIS-ID: m5-port-writer-family-census
 
-Run one batched retail/port capture that retains the exact phase snapshots
-from s3736 and joins the retail source-span writer PCs/order to the port
-writer census around `0x800078EC`. Do not change port behavior or add a
-mitigation. Keep whole-RDRAM, both target phases, and both real/silent port
-controls mandatory.
+Run one batched port capture that enumerates every phase-gated store touching
+`0x1797B0..0x179A48`, retaining the retail oracle snapshot and writer control
+as an independent reference. Do not change port behavior or add a mitigation.
+Keep whole-RDRAM, both target phases, and both real/silent port controls
+mandatory.
 
 Competing hypotheses:
 
-- `H-RetailWriterEarlier`: retail nonzero bytes are produced by an earlier
-  legitimate writer family before `0x800078EC`; the port lacks that writer or
-  reaches it with different state.
-- `H-RetailWriterSameButCleared`: retail and port share the producer, but the
-  port's legitimate `0x800078EC` clear occurs before the image DMA while the
-  retail target-phase ordering differs.
-- `H-RetailLayoutContract`: the exact retail positions belong to a different
-  source object despite the matching descriptor, so the apparent writer join
-  is a layout/ownership mismatch.
+- `H-PortEarlierWriterAbsent`: no port store reaches the exact source span
+  before the zero-valued DMA; the retail-only writer boundary is real.
+- `H-PortWriterUnlogged`: a port writer reaches the span but the current
+  phase-gated instrumentation misses its instruction family.
+- `H-PortWriterLegitimateClear`: the port has a legitimate nonzero producer,
+  then clears the object before the source DMA; the current zero rows are an
+  ordering artifact.
 
-Discriminator: in one run, the retail target-phase writer-PC histogram and
-ordered source-span rows must identify whether nonzero stores occur before or
-after `0x800078EC`; the port real arm must provide the corresponding ordered
-writer rows and zero-payload DMA rows, while the silent arm and whole-RDRAM
-control pass. An earlier retail writer with no port counterpart selects
-`H-RetailWriterEarlier`; same writer plus different clear ordering selects
-`H-RetailWriterSameButCleared`; only a descriptor/position mismatch with a
-matching writer selects `H-RetailLayoutContract`. Missing any control or
-phase is unevaluable.
+Discriminator: the all-store port census must report the writer PC, store
+value/nonzero status, and ordering for every target-span store in both target
+phases. No target-span store plus valid controls selects
+`H-PortEarlierWriterAbsent`; stores absent from the existing M5 writer hook but
+present in the all-store census selects `H-PortWriterUnlogged`; a nonzero store
+followed by the clear selects `H-PortWriterLegitimateClear`. Missing any
+control or phase is unevaluable.
 
 Exact command basis: adapt
-`scratch/agent/run_s3733_m5_retail_source_payload.sh` and
-`scratch/agent/run_s3730_m5_source_layout.sh`; add the s3736
-`--phase-snapshot-watch 1 --phase-snapshot-watch 2` oracle options and keep
+`scratch/agent/run_s3737_m5_retail_writer_join.sh`; add the phase-gated
+all-store source-span census to the existing real/silent arms, retain
+`--watch-write 0x0:0x800000`, both source watches, both
+`--phase-snapshot-watch` options, and
 `ROGUESQ_LOG_M5_SOURCE_TRANSITION=1`, `ROGUESQ_LOG_M5_SOURCE_WRITER=1`, and
-`ROGUESQ_LOG_M5_INPUT_WRITER=1` in both port arms.
+`ROGUESQ_LOG_M5_INPUT_WRITER=1`.
