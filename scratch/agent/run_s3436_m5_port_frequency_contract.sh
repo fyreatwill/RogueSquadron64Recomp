@@ -19,6 +19,7 @@ common=(
   ROGUESQ_LOG_M5_RSP_SOURCE=1 ROGUESQ_LOG_M5_PCM_WRITER=1
   ROGUESQ_LOG_M5_AUDIO_DRAIN=1 ROGUESQ_LOG_PCM_BOUNDARY=1
   ROGUESQ_LOG_M5_AUDIO_HOST=1
+  ROGUESQ_LOG_M5_CALLBACK_ORDER=1
 )
 run_arm() {
   local arm="$1" audio="$2"
@@ -45,9 +46,9 @@ pkill -KILL -x RogueSquadron64Recomp 2>/dev/null || true
 for arm in real silent; do
   {
     printf 'arm=%s\n' "$arm"
-    grep -a -E '\[(phase|m5-frequency-contract|m5-rsp|m5-pcm|m5-audio-drain|m5-audio-drain-raw|m5-audio-host|pcm-boundary-(source|consumer)|audtask-image-stage|CRASH|ABORT)' "$OUT/$arm.log" | head -800 || true
+    grep -a -E '\[(phase|m5-frequency-contract|m5-rsp|m5-pcm|m5-audio-drain|m5-audio-drain-raw|m5-audio-host|m5-image-queue|pcm-boundary-(source|consumer)|audtask-image-stage|CRASH|ABORT)' "$OUT/$arm.log" | head -800 || true
     printf '\ncounts\n'
-    for marker in phase m5-frequency-contract m5-rsp m5-pcm m5-audio-drain m5-audio-drain-raw m5-audio-host pcm-boundary-source pcm-boundary-consumer audtask-image-stage CRASH ABORT; do
+    for marker in phase m5-frequency-contract m5-rsp m5-pcm m5-audio-drain m5-audio-drain-raw m5-audio-host m5-image-queue pcm-boundary-source pcm-boundary-consumer audtask-image-stage CRASH ABORT; do
       printf '%s=' "$marker"
       grep -a -c "\[$marker\]" "$OUT/$arm.log" || printf '0\n'
     done

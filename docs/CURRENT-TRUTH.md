@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3717 (2026-09-21).
+Updated for session 3718 (2026-09-21).
 
 ## Current state
 
@@ -255,6 +255,17 @@ absent. This is single-source port evidence selecting
 `H-AudioDrainNotConsumed`; it is not retail callback parity. See
 [M5-S3717-PCM-CONSUMER-QUEUE-JOIN.md](M5-S3717-PCM-CONSUMER-QUEUE-JOIN.md).
 
+Session 3718 added one phase-local callback sequence/timestamp shared by image
+and PCM-consumer rows. The valid real-arm hangar sample had 174 image rows and
+83 printed consumer rows; adjacent cross-stream events were interleaved in
+both directions (46 image-after-consumer and 47 consumer-after-image), with
+timestamps agreeing with sequence order. Silent reached hangar and fired the
+RSP control but emitted no image rows, as expected for its stub arm. This
+rejects a stable image-before-consumer scheduling boundary but leaves
+`H-AudioDrainNotConsumed` open. The oracle was unavailable, so this remains
+single-source port evidence. See
+[M5-S3718-CALLBACK-ORDER.md](M5-S3718-CALLBACK-ORDER.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -273,16 +284,17 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — qualify image-stage ordering against the exact consumer.**
-   Session 3717 found 129/191 queue mismatches after joining the image-stage
-   count to the exact consumer ordinal, with the same result in stage 2 and
-   stage 3. Add one phase-local callback sequence/timestamp to both rows and
-   classify image-before-consumer versus consumer-before-image ordering. A
-   stable image-before-consumer ordering selects a scheduling boundary; an
-   interleaved order keeps `H-AudioDrainNotConsumed` open. The silent arm and
-   retail oracle remain required for an independent qualification. Keep the
-   existing RSP/task controls and do not alter selector, clear, task, audio
-   route, or payload state.
+1. **M5 Step 4 — qualify callback ownership/cadence after interleaved order.**
+   Session 3718 rejected a stable image-before-consumer order: both directions
+   occurred in the same real-arm hangar phase. Build one table joining every
+   target image-stage event and exact PCM consumer event to callback source,
+   thread identity, phase-local sequence, queue depth, and route ordinal. If
+   image rows consistently come from a distinct thread/source and stale route
+   ordinal, select a callback-ownership boundary; if source/thread and route
+   are shared while queue mismatches persist, keep `H-AudioDrainNotConsumed`
+   open at the host consumer state; if controls or fields are absent, stop and
+   repair the instrument. Keep selector, clear, task, audio route, and payload
+   state unchanged; retail parity remains required before a final explanation.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,

@@ -85,6 +85,8 @@ static bool rs64_m5_audio_host_probe_enabled(uint32_t& phase, uint32_t& width,
                                                uint32_t& origin);
 static uint32_t rs64_m5_audio_queue_snapshot();
 static uint32_t rs64_m5_pcm_consumer_count();
+static bool rs64_m5_callback_order_event(uint32_t width, uint32_t origin,
+                                         uint32_t& sequence, uint64_t& time_us);
 extern "C" void rs64_audio_join_image_stage(const char* arm,
                                                uint32_t ordinal, uint32_t row,
                                                uint32_t phase, uint32_t width,
@@ -3655,13 +3657,20 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         uint32_t queue_phase = 0, queue_width = 0, queue_origin = 0;
         if (rs64_m5_audio_host_probe_enabled(queue_phase, queue_width,
                                              queue_origin)) {
+            uint32_t callback_seq = 0;
+            uint64_t callback_time_us = 0;
+            const bool callback_order = rs64_m5_callback_order_event(
+                queue_width, queue_origin, callback_seq, callback_time_us);
             std::fprintf(stderr,
                 "[m5-image-queue] arm=%s stage=%u phase=%u width=%u "
                 "origin=0x%06X route_ordinal=%u route_row=%u "
-                "queued_bytes=%u pcm_consumers_seen=%u\n",
+                "queued_bytes=%u pcm_consumers_seen=%u callback_seq=%u "
+                "callback_t_us=%llu callback_order=%u\n",
                 route.arm, stage, queue_phase, queue_width, queue_origin,
                 route.ordinal, route.row, rs64_m5_audio_queue_snapshot(),
-                rs64_m5_pcm_consumer_count());
+                rs64_m5_pcm_consumer_count(), callback_seq,
+                static_cast<unsigned long long>(callback_time_us),
+                callback_order ? 1u : 0u);
             std::fflush(stderr);
         }
     }
@@ -4855,6 +4864,32 @@ static uint32_t rs64_m5_pcm_consumer_count() {
     return g_rs64_pcm_consumer_count.load(std::memory_order_relaxed);
 }
 
+static bool rs64_m5_callback_order_event(uint32_t width, uint32_t origin,
+                                         uint32_t& sequence, uint64_t& time_us) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_CALLBACK_ORDER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || !((width == 1024u && origin == 0x00790400u) ||
+                      (width == 512u && origin == 0x006AB400u))) return false;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t next_sequence = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        next_sequence = 0;
+    }
+    sequence = next_sequence++;
+    const auto now = std::chrono::steady_clock::now().time_since_epoch();
+    time_us = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+    return true;
+}
+
 static void set_frequency(uint32_t freq) {
     static const bool probe_enabled = [] {
         const char* all = getenv("ROGUESQ_LOG_ALL");
@@ -4994,6 +5029,10 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
             rs64_audio_current_route_snapshot(nullptr, nullptr, nullptr,
                                               &ordinal, &row, nullptr, nullptr);
             const uint32_t queued_bytes = rs64_m5_audio_queue_snapshot();
+            uint32_t callback_seq = 0;
+            uint64_t callback_time_us = 0;
+            const bool callback_order = rs64_m5_callback_order_event(
+                width, origin, callback_seq, callback_time_us);
             ultramodern::rs64_audio_join_pcm(
                 "consumer", rs64_phase_ord(), width, origin, ordinal, row,
                 n, rdram_addr,
@@ -5003,9 +5042,12 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                 fprintf(stderr,
                     "[pcm-boundary-consumer] n=%u phase=%u width=%u origin=0x%06X"
                     " rdram=0x%08X samples=%zu bytes=%zu fnv=0x%08X nz=%u"
-                    " queued_bytes=%u\n",
+                    " queued_bytes=%u callback_seq=%u callback_t_us=%llu"
+                    " callback_order=%u\n",
                     n, rs64_phase_ord(), width, origin, rdram_addr, num_samples,
-                    full_byte_count, fnv, nonzero, queued_bytes);
+                    full_byte_count, fnv, nonzero, queued_bytes, callback_seq,
+                    static_cast<unsigned long long>(callback_time_us),
+                    callback_order ? 1u : 0u);
                 fflush(stderr);
             }
         }

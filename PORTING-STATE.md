@@ -138429,3 +138429,25 @@ is a phase-local callback ordering field on both image and consumer rows.
 ORIGIN: diagnostic-only callback snapshots. The legitimate producer and
 consumer are the existing `osAiSetNextBuffer` SDL queue path and PCM callback;
 no mitigation or audio behavior change was added.
+
+## Session 3718 (2026-09-21) — rejected stable image-before-consumer order
+
+Added a phase-local callback sequence and steady-clock timestamp shared by the
+image-stage and exact PCM-consumer rows. The build succeeded. The valid paired
+run reached title VI 1024 and hangar VI 512 in both arms; both fired the
+RSP-source positive control. Real audio produced 174 hangar image-stage rows
+(87 stage-2 and 87 stage-3) and 83 printed consumer rows. Of 257 observed
+callback events, adjacent cross-stream events included 46 image-after-consumer
+and 47 consumer-after-image cases; timestamps agreed with sequence order.
+
+The silent arm reached the target and emitted 21 consumer rows but no image
+rows, as expected for the intentional silent RSP stub. The retail oracle was
+unavailable because its debugger-enabled core is absent. This rejects a stable
+image-before-consumer scheduling boundary in the measured real port arm but
+leaves `H-AudioDrainNotConsumed` open; it is single-source port evidence and
+does not establish retail callback parity. The next boundary is callback
+ownership/cadence.
+
+ORIGIN: diagnostic-only callback sequence/timestamp instrumentation. The
+legitimate producer and consumer remain the existing `osAiSetNextBuffer` SDL
+queue path and PCM callback; no mitigation or audio behavior change was added.
