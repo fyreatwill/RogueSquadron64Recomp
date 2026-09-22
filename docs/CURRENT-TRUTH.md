@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3738 (2026-09-22).
+Updated for session 3739 (2026-09-22).
 
 ## Current state
 
@@ -29,13 +29,13 @@ zero-valued port payload. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 port entry/setup census for the retail earlier-writer families.** The
-   s3738 phase-scoped port census selected absence of target-span scalar stores
-   before/through hangar: title saw only legitimate zero-fill stores from
-   `0x800078EC`, and hangar saw no target-span scalar store. Join port entry,
-   setup, and call edges for the retail families `0x80007670` and
-   `0x8001E2C0`; name the first missing edge and its writer legitimacy before
-   proposing any mitigation. See [M5-S3738-PORT-WRITER-CENSUS.md](M5-S3738-PORT-WRITER-CENSUS.md).
+1. **M5 family-value/setup provenance census.** s3739 found both retail
+   earlier-writer families executing in the port and touching the source span,
+   but their observed entries were shared pre-route setup; the qualified real
+   hangar writer still emitted only zero payload. Join each family’s call
+   arguments, source/value setup, and route phase to identify the first missing
+   value edge. Do not suppress or alter the legitimate `0x800078EC` fill. See
+   [M5-S3739-PORT-ENTRY-SETUP-CENSUS.md](M5-S3739-PORT-ENTRY-SETUP-CENSUS.md).
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -53,6 +53,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-PortEarlierWriterAbsent` | Selected at s3738 for the measured scalar-store class: title has only legitimate zero-fill `0x800078EC`; hangar has no target-span scalar store. |
 | `H-PortWriterUnlogged` | Refuted at s3738 for the generated scalar-store witness; its positive control fired and no other target-span writer appeared. |
 | `H-PortWriterLegitimateClear` | Refuted at s3738 for the measured port span: no nonzero port store preceded the zero DMA payload. |
+| `H-PortFamilyNeverEntered` | Refuted at s3739 for the measured family-entry hook: both families execute in the port. |
+| `H-PortFamilyEnteredWrongArgs` | Refined at s3739: families touch the target span, but value/setup provenance remains open. |
+| `H-PortFamilyWritesThenClear` | Refuted at s3739 for the qualified hangar source path: all real source-range writer payloads remained zero. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
 | `H-SourceLayoutMismatch` | Still unevaluable as a parity claim: the port payload is zero, although both source descriptors are aligned. |
@@ -90,6 +93,12 @@ Work only the first applicable item. This is one monotonic backlog.
   `H-PortEarlierWriterAbsent` for the measured scalar-store class and names
   `0x800078EC` as a legitimate zero-fill writer, not a mitigation target. See
   [M5-S3738-PORT-WRITER-CENSUS.md](M5-S3738-PORT-WRITER-CENSUS.md).
+- **3739 — port family entry/setup census:** both `0x80007670` and
+  `0x8001E2C0` executed and touched the measured source span, but the entries
+  were shared pre-route setup and the qualified real source writer still had
+  512 zero-payload rows. This refutes missing family entry and a nonzero
+  family-write-then-clear path; value/setup provenance remains the boundary.
+  See [M5-S3739-PORT-ENTRY-SETUP-CENSUS.md](M5-S3739-PORT-ENTRY-SETUP-CENSUS.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.

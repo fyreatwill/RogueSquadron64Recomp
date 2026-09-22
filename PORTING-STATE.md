@@ -138860,3 +138860,28 @@ port entry/setup census for those families. Evidence is in
 ORIGIN: the `0x800078EC` value is a legitimate zero fill observed by the
 phase-scoped port writer hook before image DMA; the instrumentation changed
 only logging budget scope and did not suppress or alter that writer.
+## Session 3739 (2026-09-22) — joined port earlier-writer family entry and setup
+
+Ran the batched M5 entry/setup capture with the independent retail oracle,
+whole-RDRAM positive control, real-audio and silent port arms, both source
+watches, and both target VI phases. The oracle control fired and reached title
+and hangar. The real port reached the qualified source route; the silent arm
+produced no source-DMA rows; neither port arm crashed.
+
+The port entered both candidate retail families: `0x80007670` appeared in
+300 producer rows and `0x8001E2C0` in 19. Their observed entries touched the
+source span but were shared pre-route setup: the former had 54 nonzero and 246
+zero values, while the latter had 19 zero values. The same family-entry counts
+occurred in the silent control. The real qualified source-range writer still
+emitted 512 rows with zero payload (`FNV=0x762B22A5`), and image-DMA rows still
+named the legitimate `0x800078EC` zero fill as the previous writer.
+
+This refutes missing family entry and a nonzero family-write-then-clear path
+at the measured scope. It also means the original wrong-arguments branch is
+too coarse: the families do target the span, but their value/setup provenance
+is not joined to the qualified route. No behavior or mitigation changed.
+Evidence: `docs/M5-S3739-PORT-ENTRY-SETUP-CENSUS.md` and
+`scratch/agent/s3739_m5_port_entry_setup/`.
+
+ORIGIN: the only changed artifacts are phase/entry diagnostics and evidence
+notes; `0x800078EC` remains an observed legitimate zero fill, not a mitigation target.
