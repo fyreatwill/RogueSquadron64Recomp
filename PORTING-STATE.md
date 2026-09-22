@@ -138028,3 +138028,25 @@ retry is documented as a failed experiment rather than a null result.
 
 ORIGIN: diagnostic DMA/DMEM provenance witness; no mitigation or guest/RDRAM
 state change. See docs/M5-S3699-DMEM-DMA-COVERAGE.md.
+
+## Session 3700 (2026-09-21) — joined the DMA source producer boundary
+
+The independent retail preflight passed its whole-RDRAM positive control at
+10,000 callbacks, reached title VI 1024 and hangar VI 512, and exposed hangar
+target-span writers at `0x800078EC`, `0x80007670`, `0x8001E2C0`, and the
+`0x8001F...` family. The first direct port run was invalid: it stalled in the
+640 attract phase and hit the known RT64 `findTileCopyId(height > 0)` abort.
+The established qualified driver then reached both target VIs and fired the
+RSP, DMEM, and 512-row controls.
+
+The source-side witness joined all 512 hangar output rows to the expected
+RDRAM-to-DMEM DMA at `0x1798B0`, length `0x198`, destination `0xCB0`; every
+join overlapped. All source snapshots and output payloads were zero. The
+paired input-DMA rows retained the port's latest writer as the title
+`0x800078EC` zero-fill, unlike retail's hangar writer families. This selects
+`H-RetailSourceDifferent` and refutes `H-InputDescriptorWrong` for the measured
+range. The next boundary is the port-side writer/layout producer, including
+the source tail through `0x179A48`.
+
+ORIGIN: diagnostic source-DMA provenance only; no mitigation or guest/RDRAM
+state change. See docs/M5-S3700-DMA-SOURCE-PRODUCER.md.

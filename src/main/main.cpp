@@ -857,6 +857,18 @@ static thread_local uint32_t g_rs64_m5_last_input_dram = 0;
 static thread_local uint32_t g_rs64_m5_last_input_len = 0;
 static thread_local uint32_t g_rs64_m5_last_input_dmem = 0;
 static thread_local uint32_t g_rs64_m5_last_input_task_data_ptr = 0;
+static thread_local uint64_t g_rs64_m5_last_source_dma_seq = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma_dram = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma_len = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma_dmem = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma_fnv = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma_nonzero = 0;
+static thread_local uint64_t g_rs64_m5_last_source_dma3_seq = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma3_dram = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma3_len = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma3_dmem = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma3_fnv = 0;
+static thread_local uint32_t g_rs64_m5_last_source_dma3_nonzero = 0;
 static std::atomic<uint64_t> g_rs64_m5_pre_dma_writer_seq{0};
 static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_pc{0};
 static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_phys{0};
@@ -1207,6 +1219,34 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
 
     const uint32_t source_first = 0x1797B0u, source_last = 0x179930u;
     const uint32_t source_end = dram_addr + len;
+
+    const bool source_window2 = dmem_addr < 0x9F0u &&
+                                dmem_addr + len > 0x6F0u;
+    const bool source_window3 = dmem_addr < 0xE48u &&
+                                dmem_addr + len > 0xCB0u;
+    if (source_window2 || source_window3) {
+        uint32_t source_dma_fnv = 2166136261u;
+        uint32_t source_dma_nonzero = 0u;
+        for (uint32_t i = 0; i < len; ++i) {
+            const uint8_t byte = rdram[(dram_addr + i) & 0x007FFFFFu];
+            source_dma_fnv = (source_dma_fnv * 16777619u) ^ byte;
+            source_dma_nonzero += byte != 0u;
+        }
+        g_rs64_m5_last_source_dma_seq = g_rs64_m5_source_event++;
+        g_rs64_m5_last_source_dma_dram = dram_addr;
+        g_rs64_m5_last_source_dma_len = len;
+        g_rs64_m5_last_source_dma_dmem = dmem_addr;
+        g_rs64_m5_last_source_dma_fnv = source_dma_fnv;
+        g_rs64_m5_last_source_dma_nonzero = source_dma_nonzero;
+        if (source_window3) {
+            g_rs64_m5_last_source_dma3_seq = g_rs64_m5_last_source_dma_seq;
+            g_rs64_m5_last_source_dma3_dram = dram_addr;
+            g_rs64_m5_last_source_dma3_len = len;
+            g_rs64_m5_last_source_dma3_dmem = dmem_addr;
+            g_rs64_m5_last_source_dma3_fnv = source_dma_fnv;
+            g_rs64_m5_last_source_dma3_nonzero = source_dma_nonzero;
+        }
+    }
     if (dram_addr < source_last && source_end > source_first) {
         const uint32_t overlap_first = dram_addr > source_first ?
             dram_addr : source_first;
@@ -1447,6 +1487,20 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
     }
     if (rows[slot] >= 512u) return;
     const uint64_t event = g_rs64_m5_source_event++;
+    const bool output_window3 = dmem_addr < 0xE48u &&
+                                dmem_addr + len > 0xCB0u;
+    const uint64_t source_dma_seq = output_window3 ?
+        g_rs64_m5_last_source_dma3_seq : g_rs64_m5_last_source_dma_seq;
+    const uint32_t source_dma_dram = output_window3 ?
+        g_rs64_m5_last_source_dma3_dram : g_rs64_m5_last_source_dma_dram;
+    const uint32_t source_dma_len = output_window3 ?
+        g_rs64_m5_last_source_dma3_len : g_rs64_m5_last_source_dma_len;
+    const uint32_t source_dma_dmem = output_window3 ?
+        g_rs64_m5_last_source_dma3_dmem : g_rs64_m5_last_source_dma_dmem;
+    const uint32_t source_dma_fnv = output_window3 ?
+        g_rs64_m5_last_source_dma3_fnv : g_rs64_m5_last_source_dma_fnv;
+    const uint32_t source_dma_nonzero = output_window3 ?
+        g_rs64_m5_last_source_dma3_nonzero : g_rs64_m5_last_source_dma_nonzero;
     std::fprintf(stderr,
         "[m5-source-range-writer] event=%llu op=dma_to_rdram row=%u "
         "phase=%u width=%u origin=0x%06X arm=%s route_ordinal=%u "
@@ -1455,6 +1509,9 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
         "prev_dmem_seq=%llu prev_dmem_addr=0x%03X prev_dmem_len=0x%X "
         "prev_dmem_kind=%s prev_dmem_value=0x%08X prev_dmem_fnv=%08X "
         "prev_dmem_nz=%u prev_dmem_route_ordinal=%u prev_dmem_overlap=%u "
+        "source_dma_seq=%llu source_dma_dram=0x%06X source_dma_len=0x%X "
+        "source_dma_dmem=0x%03X source_dma_fnv=%08X source_dma_nz=%u "
+        "source_dma_overlap=%u "
         "exit=%d\n",
         static_cast<unsigned long long>(event), rows[slot]++, phase, width,
         origin, arm ? arm : "n/a", route_ordinal, route_row, dram_addr, len,
@@ -1470,6 +1527,10 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
         (g_rs64_m5_last_dmem_writer_addr < dmem_addr + len &&
          dmem_addr < g_rs64_m5_last_dmem_writer_addr +
              g_rs64_m5_last_dmem_writer_len) ? 1u : 0u,
+        static_cast<unsigned long long>(source_dma_seq), source_dma_dram,
+        source_dma_len, source_dma_dmem, source_dma_fnv, source_dma_nonzero,
+        (source_dma_dmem < dmem_addr + len &&
+         dmem_addr < source_dma_dmem + source_dma_len) ? 1u : 0u,
         exit_reason);
     std::fflush(stderr);
 }

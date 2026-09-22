@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3699 (2026-09-21).
+Updated for session 3700 (2026-09-21).
 
 ## Current state
 
@@ -96,6 +96,14 @@ on all of them. This selects `H-UninstrumentedDMEMWriter` and refutes
 payload and its producer/layout. See
 [M5-S3699-DMEM-DMA-COVERAGE.md](M5-S3699-DMEM-DMA-COVERAGE.md).
 
+Session 3700 joined each zero output source to its RDRAM-to-DMEM source DMA.
+All 512 hangar rows used the expected `0x1798B0..0x179A48` source descriptor,
+with zero source bytes and zero output payload; the paired port writer snapshot
+was still the title `0x800078EC` zero-fill. Retail independently showed
+hangar writers at `0x80007670`, `0x8001E2C0`, and the `0x8001F...` family.
+This selects `H-RetailSourceDifferent` and refutes a descriptor mismatch for
+the measured range. See [M5-S3700-DMA-SOURCE-PRODUCER.md](M5-S3700-DMA-SOURCE-PRODUCER.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -114,17 +122,15 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — join the zero DMA source to its RDRAM producer.** The
-   coverage join is closed as `H-UninstrumentedDMEMWriter`: the missing
-   `0xCC0..0xCD0` records were RDRAM-to-DMEM DMA writes. Add one phase-gated
-   table carrying, for each `0xCB0` input DMA and each hangar source row, the
-   source RDRAM range, pre-DMA bytes/FNV/nonzero, task/event identity, and the
-   latest guest scalar/vector writer covering that source range. Keep the RSP,
-   DMEM, and 512-row controls live. A nonzero or retail-matching source
-   producer selects a legitimate path; zero source bytes with a missing/foreign
-   producer selects `H-RetailSourceDifferent`; a descriptor mismatch selects
-   `H-InputDescriptorWrong` only if range/owner diverges. Obtain independent
-   retail ground truth before the build.
+1. **M5 Step 4 — identify the port-side writer/layout producer for the zero
+   source.** `H-RetailSourceDifferent` is selected: all 512 output rows joined
+   the expected `0x1798B0..0x179A48` source DMA, but its source bytes were zero
+   and the latest port writer was the title zero-fill. Extend the same
+   phase-gated source-side table through `0x179A48`, classify every writer or
+   descriptor producer covering that range, and keep the retail writer census,
+   RSP, DMEM, and 512-row controls live. A port writer matching a retail hangar
+   family selects a legitimate route; a missing writer selects the producer
+   omission; a divergent range/owner reopens `H-InputDescriptorWrong`.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -156,7 +162,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-DMEMProducerAbsent` | Selected at s3698: 255/512 hangar rows had no observed DMEM writer for `0xCC0..0xCD0`; covered bytes were zero vector stores. |
 | `H-ZeroDMEMProducer` | Refuted as a complete explanation at s3698: a repeated 16-byte output-DMEM gap had no observed covering writer. |
 | `H-UninstrumentedDMEMWriter` | Selected at s3699: the missing gap coverage was an RDRAM-to-DMEM DMA writer on all 255 `0xCB0` hangar rows. |
-| `H-RetailSourceDifferent` | Open at s3697: retail has named scalar/vector writer families that the port's host-side vector DMEM table does not account for. |
+| `H-RetailSourceDifferent` | Selected at s3700: 512/512 output rows joined the expected `0x1798B0..0x179A48` source DMA, whose bytes were zero; retail had distinct hangar writer families while the port retained the title zero-fill. |
 | `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
 | `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
 | `H-InputDmaKeyStillUnavailable` | Selected only at the output-DMA boundary by s3688; superseded by the input-DMA key. |
@@ -216,6 +222,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   `0xCB0` window had zero-valued DMA coverage for `0xCC0..0xCD0`. The next
   boundary is the zero RDRAM source payload and its producer/layout. See
   [M5-S3699-DMEM-DMA-COVERAGE.md](M5-S3699-DMEM-DMA-COVERAGE.md).
+- **3700 — DMA source producer boundary:** the qualified port joined all 512
+  hangar output rows to the expected `0x1798B0..0x179A48` source DMA; source
+  and output payloads were zero, while the port's latest writer was the title
+  zero-fill and retail exposed distinct hangar writers. See
+  [M5-S3700-DMA-SOURCE-PRODUCER.md](M5-S3700-DMA-SOURCE-PRODUCER.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity
