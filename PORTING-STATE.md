@@ -137899,3 +137899,27 @@ is already zero. It rules out a missing hangar scalar writer as the immediate
 boundary, but does not yet identify the DMEM producer. ORIGIN: diagnostic
 scalar/DMEM/DMA provenance instrumentation; no guest or RDRAM state changed.
 See docs/M5-S3693-DMA-WRITER-BOUNDARY.md.
+
+## Session 3694 (2026-09-21) — added DMEM predecessor join
+
+Obtained independent retail ground truth before the port build: the
+whole-RDRAM positive control fired 11,058 writes, the source span fired 1,058,
+the title subspan fired 48, and the retail run reached 444 hangar VI samples.
+The phase-gated retail source histogram included `0x800078EC` (768),
+`0x80007670` (172), and the `0x8001F...` family.
+
+Added a phase-scoped port join carrying the immediately preceding DMEM
+scalar/vector store's sequence, address, length, kind, value, hash, nonzero
+count, and route ordinal into source-range DMA rows. The build passed. The
+first paired run was invalid because `ROGUESQ_LLE_UNGATED=1` was omitted. The
+corrected pair qualified the silent arm at title and hangar, but the real arm
+hit the recurring audio-pump stall before target source callbacks. A corrected
+real-arm retry reached both target VIs but emitted only the RSP source-hook
+positive control; the target DMEM/source controls and source-range rows did
+not fire. The transition logger's phase-gate bypass was removed and rebuilt.
+
+No DMEM producer hypothesis is selected. The missing target branch is
+unevaluable, not evidence for a zero producer; the retry rules out neither
+`H-ZeroDMEMProducer`, `H-DMEMJoinMismatch`, nor `H-RetailSourceIsDifferent`.
+ORIGIN: diagnostic predecessor join and gate correction; no guest or RDRAM
+state changed. See docs/M5-S3694-DMEM-PRODUCER-JOIN.md.

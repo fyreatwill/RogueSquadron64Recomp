@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3693 (2026-09-21).
+Updated for session 3694 (2026-09-21).
 
 ## Current state
 
@@ -49,6 +49,14 @@ post-write span, while its DMEM-side writer census was active. This selects
 already zero. The next boundary is the DMEM payload producer, not a missing
 guest scalar writer. See [M5-S3693-DMA-WRITER-BOUNDARY.md](M5-S3693-DMA-WRITER-BOUNDARY.md).
 
+Session 3694 added a predecessor join for DMEM scalar/vector stores, but the
+qualified real-audio retry reached title and hangar without emitting the
+target source-range callback; only the RSP source-hook positive control
+fired. The first paired attempt omitted `ROGUESQ_LLE_UNGATED=1` and was
+invalid. No DMEM producer hypothesis is selected. The optional transition
+logger was corrected so it cannot bypass the target-phase row cap. See
+[M5-S3694-DMEM-PRODUCER-JOIN.md](M5-S3694-DMEM-PRODUCER-JOIN.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -67,7 +75,10 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — identify the zero DMEM payload producer.** Join each
+1. **M5 Step 4 — qualify and identify the zero DMEM payload producer.** Use
+   the new predecessor join only after the real-audio route has passed its
+   target DMEM/source positive controls; if the source callback is absent,
+   classify the audio-pump route failure before adding fields. Join each
    hangar source-range DMA-to-RDRAM row to its immediately preceding DMEM
    store/vector-store, RSP source, memset, or host-side producer, carrying
    payload FNV/nonzero fields and route identity. Competing hypotheses are
@@ -101,6 +112,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-NonScalarWriterPath` | Selected at s3693: 512 hangar DMA-to-RDRAM rows were visible in phase, with zero payload and zero post-write span; no hangar scalar writer fired. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
 | `H-ZeroDMEMProducer` | Next boundary after s3693; the DMA payload was already zero, but its producer is not yet joined. |
+| `H-DMEMJoinUnevaluable` | Selected at s3694 for the new instrument only: the qualified retry reached both target VIs, but the target source-range branch produced no rows and its positive control did not fire. |
 | `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
 | `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
 | `H-InputDmaKeyStillUnavailable` | Selected only at the output-DMA boundary by s3688; superseded by the input-DMA key. |
@@ -130,6 +142,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   DMA-to-RDRAM rows. The hangar DMA payload and post-write span were both zero;
   no hangar scalar writer fired. See
   [M5-S3693-DMA-WRITER-BOUNDARY.md](M5-S3693-DMA-WRITER-BOUNDARY.md).
+- **3694 — DMEM predecessor join unevaluable:** retail controls passed and the
+  port build added scalar/vector predecessor fields, but the corrected
+  real-audio retry emitted no target source-range rows before the audio-pump
+  stall. The transition logger's phase-gate bypass was fixed. See
+  [M5-S3694-DMEM-PRODUCER-JOIN.md](M5-S3694-DMEM-PRODUCER-JOIN.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity

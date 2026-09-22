@@ -862,6 +862,15 @@ static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_pc{0};
 static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_phys{0};
 static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_len{0};
 static std::atomic<uint32_t> g_rs64_m5_pre_dma_writer_value{0};
+static std::atomic<uint64_t> g_rs64_m5_dmem_writer_seq{0};
+static thread_local uint64_t g_rs64_m5_last_dmem_writer_seq = 0;
+static thread_local uint32_t g_rs64_m5_last_dmem_writer_addr = 0;
+static thread_local uint32_t g_rs64_m5_last_dmem_writer_len = 0;
+static thread_local uint32_t g_rs64_m5_last_dmem_writer_value = 0;
+static thread_local uint32_t g_rs64_m5_last_dmem_writer_fnv = 0;
+static thread_local uint32_t g_rs64_m5_last_dmem_writer_nonzero = 0;
+static thread_local uint32_t g_rs64_m5_last_dmem_writer_kind = 0;
+static thread_local uint32_t g_rs64_m5_last_dmem_writer_route_ordinal = 0xFFFFFFFFu;
 
 extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
                                                 uint32_t addr, uint32_t value) {
@@ -1350,7 +1359,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
             &exit_reason, &arm);
     const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
                               (width == 512u && origin == 0x006AB400u);
-    if (!transition_enabled && (!route_active || !target_phase)) return;
+    if (!route_active || !target_phase) return;
 
     const uint32_t first = 0x1797B0u, last = 0x179930u;
     const uint32_t end = dram_addr + len;
@@ -1394,11 +1403,25 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
         "[m5-source-range-writer] event=%llu op=dma_to_rdram row=%u "
         "phase=%u width=%u origin=0x%06X arm=%s route_ordinal=%u "
         "route_row=%u dram=0x%06X len=0x%X dmem=0x%03X overlap=0x%06X..0x%06X "
-        "payload_fnv=%08X payload_nz=%u post_fnv=%08X post_nz=%u exit=%d\n",
+        "payload_fnv=%08X payload_nz=%u post_fnv=%08X post_nz=%u "
+        "prev_dmem_seq=%llu prev_dmem_addr=0x%03X prev_dmem_len=0x%X "
+        "prev_dmem_kind=%s prev_dmem_value=0x%08X prev_dmem_fnv=%08X "
+        "prev_dmem_nz=%u prev_dmem_route_ordinal=%u prev_dmem_overlap=%u "
+        "exit=%d\n",
         static_cast<unsigned long long>(event), rows[slot]++, phase, width,
         origin, arm ? arm : "n/a", route_ordinal, route_row, dram_addr, len,
         dmem_addr, overlap_first, overlap_last, payload_fnv, payload_nz,
-        post_fnv, post_nz, exit_reason);
+        post_fnv, post_nz,
+        static_cast<unsigned long long>(g_rs64_m5_last_dmem_writer_seq),
+        g_rs64_m5_last_dmem_writer_addr, g_rs64_m5_last_dmem_writer_len,
+        g_rs64_m5_last_dmem_writer_kind ? "vector" : "scalar",
+        g_rs64_m5_last_dmem_writer_value, g_rs64_m5_last_dmem_writer_fnv,
+        g_rs64_m5_last_dmem_writer_nonzero,
+        g_rs64_m5_last_dmem_writer_route_ordinal,
+        (g_rs64_m5_last_dmem_writer_addr < dmem_addr + len &&
+         dmem_addr < g_rs64_m5_last_dmem_writer_addr +
+             g_rs64_m5_last_dmem_writer_len) ? 1u : 0u,
+        exit_reason);
     std::fflush(stderr);
 }
 
@@ -2872,6 +2895,22 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
     if (!route.valid ||
         !((route.width == 1024u && route.origin == 0x00790400u) ||
           (route.width == 512u && route.origin == 0x006AB400u))) return;
+
+    g_rs64_m5_last_dmem_writer_seq =
+        g_rs64_m5_dmem_writer_seq.fetch_add(1u, std::memory_order_relaxed) + 1u;
+    g_rs64_m5_last_dmem_writer_addr = dmem_addr & 0xFFFu;
+    g_rs64_m5_last_dmem_writer_len = len;
+    g_rs64_m5_last_dmem_writer_value = value;
+    g_rs64_m5_last_dmem_writer_kind = g_rs64_audio_vector_store ? 1u : 0u;
+    g_rs64_m5_last_dmem_writer_route_ordinal = route.ordinal;
+    g_rs64_m5_last_dmem_writer_fnv = 2166136261u;
+    g_rs64_m5_last_dmem_writer_nonzero = 0u;
+    for (uint32_t i = 0; i < len && i < 16u; ++i) {
+        const uint8_t byte = dmem[((dmem_addr + i) & 0xFFFu) ^ 3u];
+        g_rs64_m5_last_dmem_writer_fnv =
+            (g_rs64_m5_last_dmem_writer_fnv * 16777619u) ^ byte;
+        g_rs64_m5_last_dmem_writer_nonzero += byte != 0u;
+    }
 
     static std::mutex mutex;
     static uint32_t phase_key = 0xFFFFFFFFu;
