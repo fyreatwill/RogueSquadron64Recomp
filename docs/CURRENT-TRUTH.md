@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3697 (2026-09-21).
+Updated for session 3698 (2026-09-21).
 
 ## Current state
 
@@ -79,6 +79,14 @@ ordinal. This selects `H-DMEMWriterWrongWindow` for the latest predecessor and
 keeps `H-RetailSourceDifferent` open. See
 [M5-S3697-DMEM-PREDECESSOR-CLASS.md](M5-S3697-DMEM-PREDECESSOR-CLASS.md).
 
+Session 3698 added a per-byte coverage-aware DMEM table. The qualified run
+reached both target phases, fired the RSP and DMEM controls, and emitted 512
+hangar source rows. Covered bytes were zero vector stores, but 255 rows had no
+observed writer for exactly `0xCC0..0xCD0`. This selects
+`H-DMEMProducerAbsent` for the observed writer census and refutes a complete
+`H-ZeroDMEMProducer` explanation; the retail-vs-port writer mismatch remains
+open. See [M5-S3698-DMEM-COVERAGE-GAP.md](M5-S3698-DMEM-COVERAGE-GAP.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -108,7 +116,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    writer selects `H-DMEMProducerAbsent`; a covering class that cannot be
    reconciled with retail's named writer families keeps
    `H-RetailSourceDifferent` open. Obtain independent retail ground truth
-   before the build.
+   before the build. The result moves the boundary to the repeated
+   `0xCC0..0xCD0` hole: determine whether it is an uninstrumented DMEM writer,
+   a legitimate preserved zero region, or a retail/port layout mismatch.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -137,6 +147,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioPumpStableGate` | Refuted at s3696: the fixed paired real-audio arm reached both target phases and emitted all target controls. |
 | `H-DMEMPredecessorClass` | Closed at s3697: 512/512 source rows carried zero vector predecessors; the latest predecessor overlapped only 147/512 rows and was on a newer route ordinal for 274/512. |
 | `H-DMEMWriterWrongWindow` | Selected at s3697 for the latest-predecessor explanation: 365/512 joined stores did not overlap the output window, and the 147 overlapping stores covered only a two-byte edge. |
+| `H-DMEMProducerAbsent` | Selected at s3698: 255/512 hangar rows had no observed DMEM writer for `0xCC0..0xCD0`; covered bytes were zero vector stores. |
+| `H-ZeroDMEMProducer` | Refuted as a complete explanation at s3698: a repeated 16-byte output-DMEM gap had no observed covering writer. |
 | `H-RetailSourceDifferent` | Open at s3697: retail has named scalar/vector writer families that the port's host-side vector DMEM table does not account for. |
 | `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
 | `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
@@ -188,6 +200,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   port emitted 512 hangar source rows; all payloads were zero, while the latest
   zero vector predecessor overlapped only 147/512 rows. See
   [M5-S3697-DMEM-PREDECESSOR-CLASS.md](M5-S3697-DMEM-PREDECESSOR-CLASS.md).
+- **3698 — coverage-aware DMEM gap:** the qualified port emitted 512 hangar
+  rows and 9,683 subrange records; 255 rows had no observed writer for
+  `0xCC0..0xCD0`, while covered bytes were zero vector stores. See
+  [M5-S3698-DMEM-COVERAGE-GAP.md](M5-S3698-DMEM-COVERAGE-GAP.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity

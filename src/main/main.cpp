@@ -872,6 +872,19 @@ static thread_local uint32_t g_rs64_m5_last_dmem_writer_nonzero = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_kind = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_route_ordinal = 0xFFFFFFFFu;
 
+struct Rs64M5DmemCoverage {
+    uint64_t sequence = 0;
+    uint32_t addr = 0;
+    uint32_t len = 0;
+    uint32_t kind = 0;
+    uint32_t value = 0;
+    uint32_t fnv = 0;
+    uint32_t nonzero = 0;
+    uint32_t route_ordinal = 0xFFFFFFFFu;
+};
+static Rs64M5DmemCoverage g_rs64_m5_dmem_coverage[0x1000];
+static std::mutex g_rs64_m5_dmem_coverage_mutex;
+
 extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
                                                 uint32_t addr, uint32_t value) {
     static const bool enabled = [] {
@@ -1380,6 +1393,39 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
     static uint32_t rows[2] = {};
     std::lock_guard<std::mutex> lock(mutex);
     const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] < 512u) {
+        const uint32_t mapped_first = dmem_addr + (overlap_first - dram_addr);
+        const uint32_t mapped_last = dmem_addr + (overlap_last - dram_addr);
+        std::lock_guard<std::mutex> coverage_lock(g_rs64_m5_dmem_coverage_mutex);
+        uint32_t segment_first = mapped_first;
+        uint64_t segment_sequence = 0;
+        while (segment_first < mapped_last && segment_first < 0x1000u) {
+            const Rs64M5DmemCoverage& first_coverage =
+                g_rs64_m5_dmem_coverage[segment_first];
+            segment_sequence = first_coverage.sequence;
+            uint32_t segment_last = segment_first + 1u;
+            while (segment_last < mapped_last && segment_last < 0x1000u &&
+                   g_rs64_m5_dmem_coverage[segment_last].sequence == segment_sequence) {
+                ++segment_last;
+            }
+            std::fprintf(stderr,
+                "[m5-dmem-coverage] row=%u phase=%u width=%u origin=0x%06X "
+                "route_ordinal=%u source_dram=0x%06X source_len=0x%X "
+                "source_fnv=%08X source_nz=%u post_fnv=%08X post_nz=%u "
+                "dmem_subrange=0x%03X..0x%03X seq=%llu writer_addr=0x%03X "
+                "writer_len=0x%X kind=%s value=0x%08X writer_fnv=%08X "
+                "writer_nz=%u writer_route=%u\n",
+                rows[slot], phase, width, origin, route_ordinal, dram_addr, len,
+                payload_fnv, payload_nz, post_fnv, post_nz, segment_first,
+                segment_last, static_cast<unsigned long long>(segment_sequence),
+                first_coverage.addr, first_coverage.len,
+                first_coverage.kind ? "vector" : "scalar", first_coverage.value,
+                first_coverage.fnv, first_coverage.nonzero,
+                first_coverage.route_ordinal);
+            segment_first = segment_last;
+        }
+        std::fflush(stderr);
+    }
     if (transition_enabled) {
         static uint32_t transition_rows = 0;
         if (transition_rows < 4096u) {
@@ -2910,6 +2956,23 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
         g_rs64_m5_last_dmem_writer_fnv =
             (g_rs64_m5_last_dmem_writer_fnv * 16777619u) ^ byte;
         g_rs64_m5_last_dmem_writer_nonzero += byte != 0u;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(g_rs64_m5_dmem_coverage_mutex);
+        const uint32_t first = dmem_addr & 0xFFFu;
+        const uint32_t count = len > 0x1000u ? 0x1000u : len;
+        for (uint32_t i = 0; i < count; ++i) {
+            Rs64M5DmemCoverage& coverage = g_rs64_m5_dmem_coverage[(first + i) & 0xFFFu];
+            coverage.sequence = g_rs64_m5_last_dmem_writer_seq;
+            coverage.addr = first;
+            coverage.len = len;
+            coverage.kind = g_rs64_audio_vector_store ? 1u : 0u;
+            coverage.value = value;
+            coverage.fnv = g_rs64_m5_last_dmem_writer_fnv;
+            coverage.nonzero = g_rs64_m5_last_dmem_writer_nonzero;
+            coverage.route_ordinal = route.ordinal;
+        }
     }
 
     static std::mutex mutex;

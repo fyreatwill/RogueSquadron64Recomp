@@ -1,48 +1,38 @@
-# Next work unit: classify coverage-aware DMEM producers
+# Next work unit: resolve the DMEM 0xCC0..0xCD0 coverage gap
 
-HYPOTHESIS-ID: m5-dmem-predecessor-classification
+HYPOTHESIS-ID: m5-dmem-cc0-gap
 
-S3697 retail ground truth passed its positive control: the whole-RDRAM watch
-reached 10,000 callbacks and was removed, while the target range produced
-1,058 writes through the 512-width hangar phase. Retail's phase-gated writer
-PCs were `0x800078EC` (768), `0x80007670` (172), `0x8001E2C0` (11), and the
-`0x8001F...` family (107). The scalar samples at `0x800078EC` were zero with
-zero mismatches. The independent contract is therefore a live retail writer
-set, with a legitimate zero-valued scalar member and additional non-scalar or
-vector members.
-
-S3696 fixed the omitted `ROGUESQ_LOG_M5_SOURCE_WRITER` gate and ran the real
-audio and silent arms concurrently from one binary. Both reached VI 1024 and
-512. The real arm emitted 2,048 DMEM rows and 512 source-range rows; every
-sampled DMEM value and source/post-write payload was zero, all source rows had
-predecessor sequences, and 139/512 predecessors overlapped the output range.
-The silent arm emitted no target DMEM/source rows. The s3695 pre-320 stall is
-therefore intermittent, not a stable route gate.
-
-S3697's port run selected `H-DMEMWriterWrongWindow` for the latest global
-predecessor: 365/512 joined stores did not overlap the output window, while
-147/512 overlapped only a two-byte edge. However, the same bounded DMEM census
-contains earlier zero vector stores that do overlap the broader
-`0xC30..0xE48` output-DMEM union, so the actual producer remains open.
+S3698 qualified the per-byte coverage table. All 512 hangar source rows had
+zero payloads; 255 rows had no observed DMEM writer for exactly `0xCC0..0xCD0`,
+while the other observed bytes were zero-valued vector stores. Retail's named
+writer families remain independent ground truth, but the fresh oracle process
+did not emit its shutdown histogram.
 
 Competing hypotheses:
 
-- `H-ZeroDMEMProducer`: a stable coverage-aware DMEM writer legitimately
-  writes zero data across the output-DMEM union, so the zero payload follows
-  directly from that writer.
-- `H-DMEMProducerAbsent`: no observed DMEM writer covers the bytes emitted by
-  the source-range DMA; the zero comes from initialization or a missed DMA.
-- `H-RetailSourceDifferent`: the port's qualified DMEM path is not the retail
-  source path even though its route controls and output writer are live.
+- `H-UninstrumentedDMEMWriter`: a DMEM write path exists but bypasses the
+  current `rs64_m5_audio_dmem_store` witness.
+- `H-GenuineZeroGap`: no writer touches `0xCC0..0xCD0`; the zero bytes are
+  preserved or initialized state.
+- `H-RetailLayoutMismatch`: the port's source-DMA/DMEM layout differs from
+  retail's image producer, so the apparent gap is not the retail field.
 
-Discriminator: retail ground truth is now available from the positive-control
-run above. Before the build, obtain the retail writer contract again if needed;
-then add the coverage-aware table in one build and run the qualified
-real-audio/LLE-solo/spin-yield/autopilot route with
-`ROGUESQ_LOG_M5_RSP_SOURCE=1` and `ROGUESQ_LOG_M5_SOURCE_WRITER=1`. The one
-table must cover every sampled source-range row and report, for each output
-subrange, the covering predecessor sequence/address/length/kind/value/
-nonzero/route plus source and post-write payload, with both positive controls
-visible. A stable covering zero class selects `H-ZeroDMEMProducer`; no covering
-writer selects `H-DMEMProducerAbsent`; a live class that cannot account for
-retail's named writers keeps `H-RetailSourceDifferent` open.
+Discriminator: refresh retail ground truth with the whole-RDRAM watch and
+hangar source-span watch, then in one build enumerate every port DMEM write
+path that can touch `0xCC0..0xCD0` (scalar/vector store hooks and DMEM DMA
+copies) and carry a per-byte writer record into each source-DMA row. A writer
+record in the gap selects `H-UninstrumentedDMEMWriter`; no record in the gap
+with positive controls selects `H-GenuineZeroGap`; a complete port record that
+still cannot reconcile the retail writer contract selects
+`H-RetailLayoutMismatch`.
+
+Exact commands:
+
+1. `tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-video-rice.dylib --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --secs 65 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-write 0x1797B0:0x179930 --pc-hist-watch 1 --pc-hist-phase 0x006AB400:512 --vi-trace`.
+2. `rg -n "dmem\\[|dma_.*dmem|audio_dmem|RSP_MEM_ADDR|SP_WR_LEN" src lib/N64ModernRuntime lib/rt64` and add the complete gap witness in the existing regeneration-preserved path.
+3. `cmake --build build --config Debug --target RogueSquadron64Recomp`, then
+   run the qualified real-audio/LLE-solo/spin-yield/autopilot route with
+   `ROGUESQ_LOG_M5_RSP_SOURCE=1` and `ROGUESQ_LOG_M5_SOURCE_WRITER=1`.
+
+The run is invalid unless the RSP, DMEM, and 512-row source-DMA controls all
+fire in the same process.

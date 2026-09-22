@@ -137982,3 +137982,25 @@ keeps `H-RetailSourceDifferent` open. The bounded census also exposed earlier
 overlapping zero vector writes, so the actual coverage-aware producer remains
 the next boundary. See docs/M5-S3697-DMEM-PREDECESSOR-CLASS.md. ORIGIN:
 diagnostic DMEM/DMA provenance witnesses; no guest or RDRAM state changed.
+
+## Session 3698 (2026-09-21) — classified the coverage-aware DMEM gap
+
+The fresh retail oracle run passed its whole-RDRAM positive control at 10,000
+callbacks and reached the 1024-to-512 transition at origin `0x006AB400`; its
+normal shutdown summary was not emitted, so the prior independent retail
+writer contract remains the attribution source.
+
+Rebuilt the Debug target once with a per-byte DMEM coverage table and ran the
+qualified real-audio/LLE-solo/spin-yield/autopilot route. The RSP control fired,
+the DMEM control fired in both target phases, and the run reached VI 1024 at
+14.5 seconds and VI 512 at 23.7 seconds. All 512 hangar source rows had zero
+source and post-write payloads. The table emitted 9,683 subrange records;
+covered bytes were zero vector stores, but 255 rows had no observed writer for
+exactly `0xCC0..0xCD0`.
+
+This selects `H-DMEMProducerAbsent` for the observed host DMEM-writer census
+and refutes a complete `H-ZeroDMEMProducer` explanation. It rules out neither
+an uninstrumented write path nor the open retail-vs-port layout mismatch. No
+guest or RDRAM state was changed. ORIGIN: diagnostic per-byte DMEM coverage
+and source-DMA provenance witnesses. See
+docs/M5-S3698-DMEM-COVERAGE-GAP.md.
