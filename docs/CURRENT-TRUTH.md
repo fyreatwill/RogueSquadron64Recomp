@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3711 (2026-09-21).
+Updated for session 3712 (2026-09-21).
 
 ## Current state
 
@@ -192,6 +192,17 @@ This selects `H-AIFrequencyReturnParity` and refutes return divergence and
 producer-state divergence at this boundary. The image discrepancy remains
 downstream. See [M5-S3711-AI-FREQUENCY-QUALIFICATION.md](M5-S3711-AI-FREQUENCY-QUALIFICATION.md).
 
+Session 3712 qualified the next host boundary in a same-configuration paired
+run. Real-audio and silent arms both reached title and hangar, passed the RSP
+positive control, and produced identical host `set-frequency` and first PCM
+consumer rows at `22047 Hz` (67 state rows per arm). Only real audio produced
+image-stage rows. This selects `H-AIStateParity` for the port host side effect
+and first consumer, and refutes audio-route-specific host-frequency divergence;
+the image discrepancy remains downstream. The oracle retry passed its
+whole-RDRAM control but ended before a target 512-phase post-return row, so it
+adds no new retail-side-effect observation. See
+[M5-S3712-AI-STATE-CONSUMER.md](M5-S3712-AI-STATE-CONSUMER.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -210,12 +221,12 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — qualify the post-return AI side-effect boundary.** Session
-   3711 selects `H-AIFrequencyReturnParity`: retail and the port both pass
-   `0x5622` through `0x80029D20` to the actual result `0x561F`. Trace the
-   next hardware/host audio-state side effect and its consumer in the same
-   phase-gated paired route. Keep the probe diagnostic-only and do not alter
-   the selector, clear, task, or payload state.
+1. **M5 Step 4 — qualify the first consumer after PCM queueing.** Session
+   3712 selects `H-AIStateParity` for the port: both arms retain `22047 Hz`
+   through the host callback and first PCM consumer, while only real audio
+   reaches the image-stage path. Next trace audio drain/status and its
+   image-stage join in the same phase-gated paired route; keep it
+   diagnostic-only and do not alter selector, clear, task, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -238,6 +249,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-InputDescriptorWrong` | Refuted at s3692 for 3,178 hangar input rows: the port input ranges were the expected `0x1797B0..0x179930` span. |
 | `H-PreDmaHostClear` | Refuted as an immediate pre-DMA action at s3692: no hangar scalar writer fired; the latest port writer was the earlier title zero-fill. |
 | `H-NonScalarWriterPath` | Selected at s3693: 512 hangar DMA-to-RDRAM rows were visible in phase, with zero payload and zero post-write span; no hangar scalar writer fired. |
+| `H-AIStateParity` | Selected at s3712 for the port: both arms matched host `set-frequency` and first PCM-consumer state at `22047 Hz`; only real audio reached image-stage rows. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
 | `H-ZeroDMEMProducer` | Next boundary after s3693; the DMA payload was already zero, but its producer is not yet joined. |
 | `H-DMEMJoinUnevaluable` | Selected at s3694 for the new instrument only: the qualified retry reached both target VIs, but the target source-range branch produced no rows and its positive control did not fire. |

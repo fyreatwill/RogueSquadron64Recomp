@@ -1,28 +1,27 @@
-# Next work unit: qualify the post-return AI side-effect boundary
+# Next work unit: qualify the first consumer after PCM queueing
 
-HYPOTHESIS-ID: m5-ai-post-return-side-effect
+HYPOTHESIS-ID: m5-ai-post-pcm-consumer
 
-Session 3711 selected `H-AIFrequencyReturnParity`: the valid port run and
-independent retail evidence both show `a0=0x5622` entering `0x80029D20` and
-the actual result `0x561F` reaching the setup store. The next boundary is the
-post-return hardware/host audio-state side effect and its consumer.
+Session 3712 selected `H-AIStateParity` for the port: real and silent arms both
+reached title/hangar and matched host `set-frequency` plus first PCM-consumer
+rows at `22047 Hz`; only real audio reached image-stage rows. The next boundary
+is audio drain/status and its image-stage join.
 
 Competing hypotheses:
 
-- `H-AIStateParity`: retail and port perform the same post-return state update
-  and consumer sees the same frequency/state tuple.
-- `H-AIStateDivergence`: the host side effect or consumer state differs after
-  the matched `0x561F` return.
-- `H-AIStateNotConsumed`: the side effect matches, but the downstream image
-  path does not consume it or consumes a later value.
+- `H-AudioDrainParity`: both arms expose the same queued-byte drain/status
+  state and join it to the image-stage handoff.
+- `H-AudioDrainDivergence`: drain/status or its handoff differs after the
+  matched host state.
+- `H-AudioDrainNotConsumed`: drain/status matches, but the image-stage path
+  consumes a different or later audio state.
 
-Discriminator: one phase-gated table of the post-return AI state write,
-host `set_audio_frequency` input, and the first downstream consumer, carrying
-the matched `0x5622 -> 0x561F` tuple and state/consumer identity on retail and
-both port arms. Matching side-effect and consumer rows select parity; a
-different state or consumer selects the corresponding divergence; matching
-state with no consumer match selects `H-AIStateNotConsumed`. All arms must
-pass whole-RDRAM/RSP positive controls and reach title/hangar.
+Discriminator: one phase-gated table of `get_remaining_audio_bytes`, AI status,
+PCM drain/queue identity, and the first image-stage join, carrying the matched
+`22047 Hz` state on both port arms. Matching drain/status and join rows select
+parity; a different drain or join selects divergence; matching drain with no
+image-stage join selects not-consumed. Both arms must pass RSP controls and
+reach title/hangar.
 
 Use the existing bounded frequency-contract driver as the route qualification
 and extend its one build with the new side-effect/consumer table:

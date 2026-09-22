@@ -138297,3 +138297,20 @@ rewritten.
 ORIGIN: diagnostic-only host AI entry/return observations paired with
 independent retail execution/value evidence. The legitimate writer is
 `osAiSetFrequency` at `0x80029D20`.
+
+## Session 3712 (2026-09-21) — qualified post-return AI state and PCM consumer
+
+Added a phase-gated host table at `set_frequency` and `queue_samples`, then
+ran the real-audio route and a same-configuration `ROGUESQ_AUDIO_UCODE=0`
+control with the existing selector/frequency/RSP controls. Both arms reached
+title VI 1024 and hangar VI 512, and both passed the RSP positive control. Each
+produced 67 AI-state rows retaining `22047 Hz` through the host callback and
+384-sample PCM consumer; only real audio produced image-stage rows (4,826 vs
+0). This selects `H-AIStateParity` for the port host state/first consumer and
+rules out audio-route-specific host-frequency divergence. The retail oracle
+retry passed its whole-RDRAM positive control but ended before the target 512
+phase, so it adds no new retail-side-effect observation. It rules out neither
+the later drain/status join nor the downstream image discrepancy.
+
+ORIGIN: diagnostic-only host callback/consumer observations. The legitimate
+writer is `osAiSetFrequency` at `0x80029D20`; no mitigation was added.

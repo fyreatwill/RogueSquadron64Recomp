@@ -4776,6 +4776,31 @@ static SDL_AudioDeviceID audio_device = 0;
 static uint32_t audio_sample_rate = 48000;
 
 static void set_frequency(uint32_t freq) {
+    static const bool probe_enabled = [] {
+        const char* all = getenv("ROGUESQ_LOG_ALL");
+        const char* own = getenv("ROGUESQ_LOG_M5_AI_STATE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (probe_enabled) {
+        const uint32_t width = rs64_vi_committed_width();
+        const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+        const bool target = (width == 1024u &&
+                             (origin == 0x00790400u || origin == 0x00790800u)) ||
+                            (width == 512u && origin == 0x006AB400u);
+        static std::atomic<uint32_t> rows{0};
+        if (target) {
+            const uint32_t n = rows.fetch_add(1, std::memory_order_relaxed);
+            if (n < 64u) {
+                fprintf(stderr,
+                        "[m5-ai-state] n=%u phase=%u width=%u origin=0x%06X "
+                        "api=set-frequency previous=%u requested=%u device=%u\n",
+                        n, rs64_phase_ord(), width, origin, audio_sample_rate,
+                        freq, (unsigned)audio_device);
+                fflush(stderr);
+            }
+        }
+    }
     if (audio_device) {
         SDL_CloseAudioDevice(audio_device);
         audio_device = 0;
@@ -4812,6 +4837,32 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
     // overturned (docs/CURRENT-TRUTH.md superseded section, this session).
     if (audio_device) {
         SDL_QueueAudio(audio_device, samples, (Uint32)(num_samples * sizeof(int16_t)));
+    }
+
+    static const bool ai_state_probe = [] {
+        const char* all = getenv("ROGUESQ_LOG_ALL");
+        const char* own = getenv("ROGUESQ_LOG_M5_AI_STATE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (ai_state_probe) {
+        const uint32_t width = rs64_vi_committed_width();
+        const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+        const bool target = (width == 1024u &&
+                             (origin == 0x00790400u || origin == 0x00790800u)) ||
+                            (width == 512u && origin == 0x006AB400u);
+        static std::atomic<uint32_t> rows{0};
+        if (target) {
+            const uint32_t n = rows.fetch_add(1, std::memory_order_relaxed);
+            if (n < 64u) {
+                fprintf(stderr,
+                        "[m5-ai-state] n=%u phase=%u width=%u origin=0x%06X "
+                        "api=queue-samples rate=%u samples=%zu rdram=0x%08X device=%u\n",
+                        n, rs64_phase_ord(), width, origin, audio_sample_rate,
+                        num_samples, rdram_addr, (unsigned)audio_device);
+                fflush(stderr);
+            }
+        }
     }
 
     static int s_log_pcm_boundary = -1;
