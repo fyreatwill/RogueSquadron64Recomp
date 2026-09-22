@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3706 (2026-09-21).
+Updated for session 3707 (2026-09-21).
 
 ## Current state
 
@@ -146,6 +146,14 @@ This selects `H-ClearTooEarly` and refutes different-object and post-clear
 writer explanations at the measured boundary. See
 [M5-S3706-WRITER-SETUP-REQUALIFICATION.md](M5-S3706-WRITER-SETUP-REQUALIFICATION.md).
 
+Session 3707 added the clear-input/state table. Both paired arms fired its
+positive control and reached identical target setup registers with identical
+nonzero pre-clear object words; existing static-clear rows independently
+reported zero fill. The real arm still produced zero source DMAs and the
+silent arm emitted none. This selects `H-ProducerInputZero` and refutes an
+already-zero shared object at this boundary. See
+[M5-S3707-CLEAR-INPUT.md](M5-S3707-CLEAR-INPUT.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -164,11 +172,10 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — explain the legitimate early clear's zero producer.**
-   The regeneration-safe join now selects `H-ClearTooEarly`: the clear and
-   producer object are the same, and no later nonzero source-range writer was
-   observed. Trace the producer's input/state at the clear-to-output boundary
-   with a new discriminator; do not add a mitigation or alter the clear.
+1. **M5 Step 4 — explain why the legitimate clear is scheduled before payload production.**
+   Session 3707 selects `H-ProducerInputZero`: the shared clear receives zero
+   while its object is nonzero immediately before the clear. Trace the caller's
+   branch/route decision; do not add a mitigation or alter the clear.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -207,6 +214,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ClearLegitimateButEarly` | Selected at s3704: both arms joined caller `0x8008F2CC` to the expected `0x801797B0`/`0x298` zero-fill before later source/output ordinals. |
 | `H-ClearToDmaOrdering` | Confirmed at s3705: real-arm clear ordinal 525 preceded source/output ordinals 669–670; allocation-object identity remains unevaluable. |
 | `H-ClearTooEarly` | Selected at s3706: setup and clear both used `0x801797B0`/`0x298`, while the final `0x800078EC` writer was zero before the later zero DMAs. |
+| `H-ProducerInputZero` | Selected at s3707: paired setup rows had identical nonzero pre-clear object words while the static-clear witness reported zero fill. |
+| `H-ProducerStateClobbered` | Refuted at s3707 for the measured boundary: the shared object was nonzero immediately before the clear. |
+| `H-ProducerUsesOtherState` | Unsupported at s3707: paired setup/object rows exposed no alternate state object. |
 | `H-DifferentProducerObject` | Refuted at s3706 for the measured target call: the setup object matched the clear destination. |
 | `H-ProducerAfterClear` | Refuted at s3706 for the captured source range: no later nonzero writer was observed. |
 | `H-ClearWrongObject` | Refuted at s3704 for the measured target range: destination and length matched the expected image-source object. |

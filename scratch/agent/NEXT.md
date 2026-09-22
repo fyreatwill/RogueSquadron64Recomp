@@ -1,36 +1,32 @@
-# Next work unit: identify the input/state that makes the shared producer zero
+# Next work unit: identify the branch that schedules the zero clear
 
-HYPOTHESIS-ID: m5-source-clear-input
+HYPOTHESIS-ID: m5-source-clear-branch
 
-S3706 repaired the regeneration fixup and requalified the paired arms. The
-target setup and clear use the same `0x801797B0`/`0x298` object, and the final
-observed `0x800078EC` writer is a legitimate zero fill before later zero DMAs.
-The next work unit must identify why the shared producer's input/state is zero.
+S3707 selected `H-ProducerInputZero`: the shared `0x801797B0` object was
+nonzero immediately before the legitimate zero clear in both paired arms.
 
 Competing hypotheses:
 
-- `H-ProducerInputZero`: the producer receives a legitimate zero input on the
-  real-audio route.
-- `H-ProducerStateClobbered`: an earlier store changes the producer state before
-  the shared-object clear.
-- `H-ProducerUsesOtherState`: the observed source-range stores are setup/padding,
-  while the actual payload comes from a different state object.
+- `H-ClearBranchRoute`: a route/phase branch intentionally schedules the clear
+  before payload production.
+- `H-ClearCallerState`: caller state is wrong and selects the zero-clear path.
+- `H-ClearCallOrdering`: the same caller is reached in the wrong order relative
+  to the producer setup.
 
-Discriminator: add one phase-gated table at the producer entry/call boundary
-that records every candidate input pointer/value and the shared-object word
-immediately before the clear, retaining the existing RSP/DMEM/source controls
-and both audio arms in one build/run. A zero producer input with unchanged
-shared state selects `H-ProducerInputZero`; a changed shared-state word with a
-prior writer selects `H-ProducerStateClobbered`; unchanged shared state plus a
-different candidate input selects `H-ProducerUsesOtherState`.
+Discriminator: one phase-gated caller table at `0x8008F2CC` and its immediate
+predecessor branch, carrying route ordinal, caller PC/RA, branch outcome,
+`a0/a1/a2`, and the last producer-family sequence. A stable route branch with
+the same zero-clear arguments selects `H-ClearBranchRoute`; changed caller
+state selects `H-ClearCallerState`; a producer sequence after the clear selects
+`H-ClearCallOrdering`. Keep the existing positive controls and run real and
+silent arms in one build/run.
 
-Before building, use the retail writer PCs already established at
-`0x80007670`, `0x8001E2C0`, and `0x8001F...` as the ground-truth matching set;
-do not add a new instrument until its positive control is specified. Build once
-with:
+Build:
 
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run from the build directory through the paired driver
-`scratch/agent/run_s3692_m5_input_payload_writer.sh`, preserving all controls.
-Kill with SIGKILL after qualified hangar rows are captured.
+Run:
+
+`zsh scratch/agent/run_s3707_m5_source_clear_input.sh`
+
+Do not alter the clear or add a mitigation.

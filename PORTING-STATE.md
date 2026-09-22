@@ -138182,3 +138182,22 @@ producer-input/state table, not a mitigation.
 
 ORIGIN: diagnostic-only producer-object join; `0x800078EC` is the legitimate
 zero-fill writer and no guest/RDRAM behavior changed.
+
+## Session 3707 (2026-09-21) — selected the zero-clear input boundary
+
+The one-build paired real-audio and silent qualification reached VI 512 in
+both arms. The new regeneration-safe writer-setup input table fired its
+positive control and 128 rows in each arm. At the target setup both arms used
+`a0=0x801797B0`, `a2=0x298`, `s0=0x12`, `s1=0x561F`, `t0=1`, and `t1=0`.
+The pre-clear target words were identical and nonzero (`0x7613940E`,
+`0xBD178316`); existing static-clear rows independently reported zero fill.
+The real arm continued with zero source-DMA payloads, while the silent arm
+emitted no image source DMA.
+
+This selects `H-ProducerInputZero` and refutes `H-ProducerStateClobbered` at
+the measured boundary. `H-ProducerUsesOtherState` remains unsupported. The
+first corrected ABI retry crashed before emitting the phase-gated witness and
+was discarded; the fixed paired retry passed all controls with no crash.
+
+ORIGIN: diagnostic-only clear-input provenance; the writer is the legitimate
+`0x800078EC` zero-fill and no mitigation or guest/RDRAM state change was added.

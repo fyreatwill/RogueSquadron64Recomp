@@ -413,7 +413,7 @@ static thread_local uint32_t g_rs64_m5_pcm_callsite = 0;
 static thread_local uint32_t g_rs64_m5_static_rs_memset_callsite = 0;
 static thread_local uint32_t g_rs64_m5_static_rs_memset_ra = 0;
 
-extern "C" void rs64_m5_writer_setup_state(uint32_t callsite, uint32_t ra,
+extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, uint32_t ra,
                                               uint32_t a0, uint32_t a2,
                                               uint32_t s0, uint32_t s1,
                                               uint32_t t0, uint32_t t1) {
@@ -434,13 +434,24 @@ extern "C" void rs64_m5_writer_setup_state(uint32_t callsite, uint32_t ra,
     uint32_t next_bucket = (width << 24) ^ origin;
     if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
     if (rows >= 128u) return;
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (!rdram || guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        uint32_t p = guest - 0x80000000u;
+        return (uint32_t(rdram[p]) << 24) | (uint32_t(rdram[p + 1]) << 16) |
+               (uint32_t(rdram[p + 2]) << 8) | rdram[p + 3];
+    };
+    if (rows == 0u) {
+        std::fprintf(stderr, "[m5-writer-setup-input-control] phase=%u width=%u origin=0x%06X\n", rs64_phase_ord(), width, origin);
+        std::fflush(stderr);
+    }
     std::fprintf(stderr,
         "[m5-writer-setup] n=%u edge=0x%08X phase=%u width=%u origin=0x%06X "
         "ra=0x%08X a0=0x%08X a2=0x%08X s0=0x%08X s1=0x%08X "
-        "t0=0x%08X t1=0x%08X target=%u\n",
+        "t0=0x%08X t1=0x%08X target=%u obj0=0x%08X obj4=0x%08X s0p60=0x%08X s1p60=0x%08X clear0=0x%08X clear4=0x%08X\n",
         rows, callsite, rs64_phase_ord(), width, origin, ra, a0, a2,
         s0, s1, t0, t1,
-        (a0 == 0x801797B0u && a2 == 0x298u) ? 1u : 0u);
+        (a0 == 0x801797B0u && a2 == 0x298u) ? 1u : 0u,
+        word(a0), word(a0 + 4u), word(s0 + 0x60u), word(s1 + 0x60u), word(0x801797B0u), word(0x801797B4u));
     std::fflush(stderr);
     ++rows;
 }
