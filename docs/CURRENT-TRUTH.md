@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3687 (2026-09-21).
+notes are linked below. Updated for session 3688 (2026-09-21).
 
 ## Current state
 
@@ -13,17 +13,17 @@ Hangar geometry and color artifacts remain. The Factor 5 image task is the
 qualified real-audio arm; `ROGUESQ_AUDIO_UCODE=0`/`Broke` is the silent control.
 Audio is not production-complete.
 
-Session 3687 joined the absent-generation hangar source rows to the existing
-DMA and later-stage streams. Retail controls and port phase/source/ABI/DMA/
-source/stage controls all fired. The port recorded 512 source rows, 2,750
-stage rows, and 1,368 DMA rows; 260 absent-generation source rows had later
-same-pointer stages. DMA rows expose only the task pointer and task-local
-hash, with no source event, generation, route, or shared ordering key. The
-source-span hash is a different domain, and cross-thread log order is not an
-ownership join. This selects `H-DmaJoinUnavailable` rather than later-route
-ownership or stale-input ownership. It is single-source port evidence with
-independent retail controls; no guest value was changed. See
-[M5-S3687-ABSENT-DMA-OWNER-JOIN.md](M5-S3687-ABSENT-DMA-OWNER-JOIN.md).
+Session 3688 carried source event, task generation, and route publication
+fields into every per-range DMA record. Retail controls and port
+phase/source/ABI/DMA/source/stage controls all fired. The port recorded 512
+hangar source rows, 2,762 stage rows, and 5,975 keyed DMA ranges; 258 source
+rows lacked a same-generation stage. Of those, 257 had no DMA range with the
+same source event and one had a contradictory key. The fields visibly fire,
+but the output-DMA boundary still does not preserve a joinable key for the
+absent-source class. This selects `H-DmaKeyStillUnavailable` rather than
+later-route ownership or stale-input ownership. It is single-source port
+evidence with independent retail controls; no guest value was changed. See
+[M5-S3688-KEYED-DMA-EMISSION.md](M5-S3688-KEYED-DMA-EMISSION.md).
 
 The active M5 Step 3 boundary is the image-task source range
 `0x1797B0..0x179930`. The port's target handoff sees a deliberate zero-fill
@@ -343,11 +343,14 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    writer (and any exposed DMA/copy event) to the selected object and task.
    Require whole-RDRAM, title, and hangar controls. See
    [M5-S3667-PAYLOAD-ORDER.md](M5-S3667-PAYLOAD-ORDER.md).
-   S3687 showed that the current `audtask-dma-row` has no stable join key:
-   add its source event, task generation, and route publication key at the
-   DMA emission boundary, export the submodule patch, and rerun the qualified
-   capture. Do not infer ownership from the task pointer or cross-thread log
-   order.
+   S3687 showed that the current `audtask-dma-row` had no stable join key.
+   S3688 added source event, task generation, and route publication fields to
+   each per-range output-DMA row; the fields visibly fire, but 257/258
+   absent-generation hangar source rows still have no matching source event
+   at that boundary and one is contradictory. Add a per-input-DMA event and
+   task/route snapshot before later output DMAs overwrite the thread's last
+   source event, export the submodule patch, and rerun the qualified capture.
+   Do not infer ownership from the task pointer or cross-thread log order.
    Session 3664 ruled out neither hangar object ownership nor a shared
    all-phase producer. Session 3662 selected
    `H-SharedLogicalProducer`: the dominant writer family joins

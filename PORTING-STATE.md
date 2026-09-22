@@ -137783,3 +137783,20 @@ input ownership. The first hash-equality classifier was corrected before this
 result was recorded. ORIGIN: diagnostic DMA/stage ownership witness; no
 mitigation or guest-state rewrite. See
 docs/M5-S3687-ABSENT-DMA-OWNER-JOIN.md.
+
+## Session 3688 (2026-09-21) — keyed per-range DMA emission boundary
+
+Added source event, task generation, and latest route sequence/ordinal/row to
+each per-range DMA record at the runtime observer, exported the submodule
+patch, and rebuilt. The first corrected capture crashed before phase controls
+in the existing scheduler path and was discarded. The repeated qualified
+capture passed retail whole-RDRAM, descriptor, source-span, title, hangar, and
+type-2 controls plus port source, stage, ABI, and DMA controls with no crash or
+abort. It recorded 512 hangar source rows, 2,762 hangar stage rows, and 5,975
+keyed DMA ranges. Of 258 source rows without a same-generation stage, 257 had
+no per-range DMA with the same source event and one had a contradictory key.
+The added fields visibly fired, but the output-DMA boundary did not preserve a
+joinable key for the absent-source class. This selects H-DmaKeyStillUnavailable
+and rules out neither later-route ownership nor stale-input ownership. ORIGIN:
+diagnostic DMA ownership witness; no mitigation or guest-state rewrite. See
+docs/M5-S3688-KEYED-DMA-EMISSION.md.

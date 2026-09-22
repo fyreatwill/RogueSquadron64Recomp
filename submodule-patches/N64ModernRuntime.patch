@@ -876,7 +876,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..74fe5e7 100644
+index 1cb3f6a..c44e8d5 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -890,7 +890,7 @@ index 1cb3f6a..74fe5e7 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1510 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1569 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -992,6 +992,11 @@ index 1cb3f6a..74fe5e7 100644
 +    bool yield_overlap;
 +    bool data_overlap;
 +    uint64_t event;
++    uint64_t source_event;
++    uint64_t task_generation;
++    uint32_t latest_route_seq;
++    uint32_t latest_route_ordinal;
++    uint32_t latest_route_row;
 +};
 +
 +struct AudioDmaProbe {
@@ -1023,7 +1028,14 @@ index 1cb3f6a..74fe5e7 100644
 +    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
 +    uint32_t width, uint32_t origin, uint64_t dma_event, uint32_t dram,
 +    uint32_t len, uint32_t fnv, uint32_t nonzero,
-+    uint32_t source_dmem_fnv, uint32_t source_dmem_nonzero);
++    uint32_t source_dmem_fnv, uint32_t source_dmem_nonzero,
++    uint64_t source_event, uint64_t task_generation,
++    uint32_t latest_route_seq, uint32_t latest_route_ordinal,
++    uint32_t latest_route_row);
++extern "C" void rs64_m5_audio_dma_identity(
++    uint64_t* source_event, uint64_t* task_generation,
++    uint32_t* latest_route_seq, uint32_t* latest_route_ordinal,
++    uint32_t* latest_route_row);
 +extern "C" bool rs64_audio_current_route_snapshot(
 +    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
 +    uint32_t* row, int* exit_reason, const char** arm);
@@ -1604,7 +1616,10 @@ index 1cb3f6a..74fe5e7 100644
 +    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
 +    uint32_t width, uint32_t origin, uint64_t dma_event, uint32_t dram,
 +    uint32_t len, uint32_t fnv, uint32_t nonzero,
-+    uint32_t source_dmem_fnv, uint32_t source_dmem_nonzero) {
++    uint32_t source_dmem_fnv, uint32_t source_dmem_nonzero,
++    uint64_t source_event, uint64_t task_generation,
++    uint32_t latest_route_seq, uint32_t latest_route_ordinal,
++    uint32_t latest_route_row) {
 +    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
 +    audio_image_scope_locked(phase, width, origin);
 +    int best = -1;
@@ -1632,11 +1647,15 @@ index 1cb3f6a..74fe5e7 100644
 +            " width=%u origin=0x%06X dma_event=%" PRIu64
 +            " dram=0x%06X len=0x%X fnv=%08X nz=%u stage=%u"
 +            " stage_event=%" PRIu64 " source_dmem_fnv=%08X source_dmem_nz=%u"
++            " source_event=%" PRIu64 " task_generation=%" PRIu64
++            " latest_route_seq=%u latest_route_ordinal=%u latest_route_row=%u"
 +            " post_transform_fnv=%08X post_transform_nz=%u"
 +            " destination_fnv=%08X destination_nz=%u\n",
 +            arm ? arm : "n/a", ordinal, row, phase, width, origin, dma_event,
 +            stage.dma_dram, len, fnv, nonzero, stage.stage,
 +            stage.stage_event, stage.source_dmem_fnv, stage.source_dmem_nonzero,
++            source_event, task_generation, latest_route_seq,
++            latest_route_ordinal, latest_route_row,
 +            stage.fnv, stage.nonzero, fnv, nonzero);
 +    fflush(stderr);
 +}
@@ -2016,6 +2035,11 @@ index 1cb3f6a..74fe5e7 100644
 +                           task.yield_data_size),
 +        audio_dma_overlaps(dram_addr, len, task.data_ptr, task.data_size),
 +        audio_join_next_event(),
++        0,
++        0,
++        0,
++        0xFFFFFFFFu,
++        0xFFFFFFFFu,
 +    });
 +    uint32_t payload_fnv = 2166136261u;
 +    uint32_t payload_nz = 0;
@@ -2040,15 +2064,30 @@ index 1cb3f6a..74fe5e7 100644
 +    uint32_t route_origin = probe->origin;
 +    uint32_t route_ordinal = probe->n;
 +    uint32_t route_row = probe->n;
++    uint64_t source_event = 0;
++    uint64_t task_generation = 0;
++    uint32_t latest_route_seq = 0;
++    uint32_t latest_route_ordinal = 0xFFFFFFFFu;
++    uint32_t latest_route_row = 0xFFFFFFFFu;
 +    int route_exit = 0;
 +    const char* route_arm = probe->arm;
 +    rs64_audio_current_route_snapshot(
 +        &route_phase, &route_width, &route_origin, &route_ordinal,
 +        &route_row, &route_exit, &route_arm);
++    rs64_m5_audio_dma_identity(
++        &source_event, &task_generation, &latest_route_seq,
++        &latest_route_ordinal, &latest_route_row);
++    probe->ranges.back().source_event = source_event;
++    probe->ranges.back().task_generation = task_generation;
++    probe->ranges.back().latest_route_seq = latest_route_seq;
++    probe->ranges.back().latest_route_ordinal = latest_route_ordinal;
++    probe->ranges.back().latest_route_row = latest_route_row;
 +    rs64_audio_join_image_dma(
 +        route_arm, route_ordinal, route_row, route_phase, route_width,
 +        route_origin, probe->ranges.back().event, dram_addr, len,
-+        payload_fnv, payload_nz, source_dmem_fnv, source_dmem_nz);
++        payload_fnv, payload_nz, source_dmem_fnv, source_dmem_nz,
++        source_event, task_generation, latest_route_seq,
++        latest_route_ordinal, latest_route_row);
 +    static thread_local uint32_t observer_control_key = 0xFFFFFFFFu;
 +    const uint32_t observer_key = (probe->width << 24) ^ probe->origin;
 +    if (observer_control_key != observer_key) {
@@ -2301,6 +2340,15 @@ index 1cb3f6a..74fe5e7 100644
 +                audio_dmem_last_changed = i;
 +            }
 +        }
++        uint64_t dma_source_event = 0;
++        uint64_t dma_task_generation = 0;
++        uint32_t dma_latest_route_seq = 0;
++        uint32_t dma_latest_route_ordinal = 0xFFFFFFFFu;
++        uint32_t dma_latest_route_row = 0xFFFFFFFFu;
++        rs64_m5_audio_dma_identity(
++            &dma_source_event, &dma_task_generation,
++            &dma_latest_route_seq, &dma_latest_route_ordinal,
++            &dma_latest_route_row);
 +        fprintf(stderr,
 +                "[audtask-abi] n=%u arm=%s canary_arm=%s type=%" PRIu32
 +                " flags=0x%08X ucode=0x%08X ucode_size=0x%X"
@@ -2356,7 +2404,10 @@ index 1cb3f6a..74fe5e7 100644
 +                " output_buff=0x%08X output_buff_size=0x%08X"
 +                " yield_ptr=0x%08X yield_size=0x%X"
 +                " dmem_pre=0x%08X dmem_post=0x%08X"
-+                " dma_count=%zu break_pc=0x%04X exit=%d\n",
++                " dma_count=%zu source_event=%" PRIu64
++                " task_generation=%" PRIu64
++                " latest_route_seq=%u latest_route_ordinal=%u"
++                " latest_route_row=%u break_pc=0x%04X exit=%d\n",
 +                audio_dma_probe.n, audio_dma_probe.phase, audio_dma_probe.width,
 +                audio_dma_probe.origin, audio_dma_probe.arm,
 +                audio_dma_probe.canary_arm,
@@ -2376,7 +2427,10 @@ index 1cb3f6a..74fe5e7 100644
 +                static_cast<uint32_t>(task->t.yield_data_ptr),
 +                static_cast<uint32_t>(task->t.yield_data_size),
 +                audio_dma_probe.pre_hash, audio_dmem_post_hash,
-+                audio_dma_probe.ranges.size(), audio_break_pc,
++                audio_dma_probe.ranges.size(), dma_source_event,
++                dma_task_generation, dma_latest_route_seq,
++                dma_latest_route_ordinal, dma_latest_route_row,
++                audio_break_pc,
 +                static_cast<int>(exit_reason));
 +        for (size_t i = 0; i < audio_dma_probe.ranges.size(); ++i) {
 +            const AudioDmaRange& range = audio_dma_probe.ranges[i];
@@ -2385,13 +2439,18 @@ index 1cb3f6a..74fe5e7 100644
 +                    " event=%" PRIu64 " direction=dmem_to_rdram"
 +                    " dram=0x%06X..0x%06X output_overlap=%u"
 +                    " yield_overlap=%u data_overlap=%u payload_fnv=%08X"
-+                    " payload_nz=%u\n",
++                    " payload_nz=%u source_event=%" PRIu64
++                    " task_generation=%" PRIu64
++                    " latest_route_seq=%u latest_route_ordinal=%u"
++                    " latest_route_row=%u\n",
 +                    audio_dma_probe.n, i, range.dmem, range.len, range.event,
 +                    range.dram, range.dram + range.len,
 +                    range.output_overlap ? 1u : 0u,
 +                    range.yield_overlap ? 1u : 0u,
 +                    range.data_overlap ? 1u : 0u, range.payload_fnv,
-+                    range.payload_nz);
++                    range.payload_nz, range.source_event,
++                    range.task_generation, range.latest_route_seq,
++                    range.latest_route_ordinal, range.latest_route_row);
 +        }
 +        audio_join_register_task(audio_dma_probe, audio_dmem_changed,
 +                                 audio_canary_pre == audio_canary_post,

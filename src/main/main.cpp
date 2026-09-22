@@ -849,6 +849,26 @@ uint64_t g_rs64_m5_source_event = 0;
 uint32_t g_rs64_m5_source_window_rows = 0;
 static thread_local uint64_t g_rs64_m5_last_source_event = 0;
 
+extern "C" void rs64_m5_audio_dma_identity(
+    uint64_t* source_event, uint64_t* task_generation,
+    uint32_t* latest_route_seq, uint32_t* latest_route_ordinal,
+    uint32_t* latest_route_row) {
+    if (source_event) *source_event = g_rs64_m5_last_source_event;
+    if (task_generation) *task_generation = s_pending_audio_generation;
+    if (latest_route_seq) {
+        *latest_route_seq = g_m5_latest_audio_route_seq.load(
+            std::memory_order_acquire);
+    }
+    if (latest_route_ordinal) {
+        *latest_route_ordinal = g_m5_latest_audio_route_ordinal.load(
+            std::memory_order_acquire);
+    }
+    if (latest_route_row) {
+        *latest_route_row = g_m5_latest_audio_route_row.load(
+            std::memory_order_acquire);
+    }
+}
+
 bool rs64_pcm_writer_enabled() {
     static int enabled = -1;
     if (enabled < 0) {
