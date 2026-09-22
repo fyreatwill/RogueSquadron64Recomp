@@ -137750,3 +137750,18 @@ measured minority, while exact route sequencing and input-DMA ownership remain
 open. The ABI publication key was not joinable, so it was not used as evidence.
 ORIGIN: diagnostic source/stage publication join; no mitigation or guest-state
 rewrite. See docs/M5-S3685-ABSENT-PUBLICATION-JOIN.md.
+
+## Session 3686 (2026-09-21) — distinguished absent-source route reuse
+
+Ran the qualified concurrent s3686 capture after exporting submodule patches
+and rebuilding. Retail whole-RDRAM, descriptor, source-span, title, hangar,
+and type-2 controls fired; the port reached both target phases and emitted
+source, stage, ABI, and DMA controls with no crash or abort. The classifier
+recorded 512 hangar source rows and 2,822 hangar stage rows. Of 244 source
+rows without a same-generation stage row, 0 had a later same-pointer stage on
+the same route, 244 advanced to a later route ordinal/row, and 0 were
+contradictory or missing. This selects H-LaterRouteReuse over
+H-SameRoutePublicationLag and H-NoStableRouteJoin for the measured rows;
+input-DMA ownership remains open. ORIGIN: diagnostic source/stage route
+classifier; no mitigation or guest-state rewrite. See
+docs/M5-S3686-ABSENT-ROUTE-JOIN.md.

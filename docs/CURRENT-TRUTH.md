@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3685 (2026-09-21).
+notes are linked below. Updated for session 3686 (2026-09-21).
 
 ## Current state
 
@@ -482,7 +482,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SourcePublicationRace | Refuted for the s3683 measured source rows: 0 reversed stage-before-source rows; title and matched hangar rows were source-before-stage. |
 | H-AbsentDistinctTask | Refuted at s3684's pointer level: all 220 generation-absent hangar source rows used `0x80171E70`, also present in the stage stream. |
 | H-AbsentNoStageConsumer | Refuted for the measured s3685 rows: all 236 generation-absent rows had a later same-pointer stage generation. |
-| H-AbsentPublicationGap | Selected at s3685 for 236/236 generation-absent hangar rows; exact route sequencing remains open. |
+| H-AbsentPublicationGap | Selected at s3685 for generation-absent hangar rows; s3686 resolved the measured route relation. |
+| H-SameRoutePublicationLag | Refuted at s3686: 0/244 absent-generation rows had a later same-pointer stage on the source route. |
+| H-LaterRouteReuse | Selected at s3686: 244/244 classified absent-generation rows advanced to a later route ordinal/row while retaining pointer `0x80171E70`. |
+| H-NoStableRouteJoin | Refuted at s3686 for the measured rows: 0 contradictory or missing-route classifications. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
 
@@ -512,6 +515,14 @@ The current work-unit slug is `m5-audio-source-ownership`.
   `H-AbsentNoStageConsumer`, while exact route sequencing and input-DMA
   ownership remain open. See
   [M5-S3685-ABSENT-PUBLICATION-JOIN.md](M5-S3685-ABSENT-PUBLICATION-JOIN.md).
+
+- **3686 — absent-source route join:** the qualified concurrent capture
+  passed all retail and port controls and recorded 512 hangar source rows.
+  Among 244 rows without a same-generation stage, 0 matched the source route,
+  244 matched a later route, and 0 were contradictory or missing. This selects
+  `H-LaterRouteReuse` over same-route publication lag for the measured rows;
+  exact input-DMA ownership remains open. See
+  [M5-S3686-ABSENT-ROUTE-JOIN.md](M5-S3686-ABSENT-ROUTE-JOIN.md).
 
 - **3678 — task-generation source/stage join:** the qualified concurrent
   capture passed all controls and recorded 1,024 source rows and 1,903
