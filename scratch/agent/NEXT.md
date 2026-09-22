@@ -1,41 +1,36 @@
-# Next work unit: identify the stale-input payload boundary
+# Next work unit: identify the writer that makes the input payload zero
 
-HYPOTHESIS-ID: m5-stale-input-payload
+HYPOTHESIS-ID: m5-input-payload-writer
 
-S3690 selected `H-StaleInputAcrossReuse`: 244/244 absent-generation hangar
-source rows joined an earlier/equal input-DMA task identity. The next unit is
-one phase-scoped instrumentation change and one qualified capture.
+S3691 selected `H-StaleInputPayload`: all 512 qualified hangar source rows
+had equal zero input-DMA, source-RDRAM, and post-DMA DMEM payload fields, and
+the input/source task-data pointers matched. The next unit is one
+phase-scoped writer/descriptor boundary instrument and one qualified capture.
 
 Competing hypotheses:
 
-- `H-StaleInputPayload`: the earlier input task already transfers the zero
-  payload seen by the hangar source witness.
-- `H-SourceOverwrittenAfterInput`: the selected input task transfers nonzero
-  data, but RDRAM is overwritten before the source witness observes it.
-- `H-StaleTaskPointerOnly`: the task-data pointer is stale while the input
-  payload identity belongs to a distinct task.
+- `H-InputWriterZero`: a legitimate game writer zeroes `0x1797B0..0x179930`
+  before the input DMA.
+- `H-InputDescriptorWrong`: the task descriptor selects a distinct zero-filled
+  source range or stale descriptor rather than the visible source witness.
+- `H-PreDmaHostClear`: the port clears the source range before input DMA.
 
-Discriminating measurement: add input-DMA source FNV/nonzero and task-data
-pointer fields, carry them through the source witness, and classify every
-absent-generation hangar row in one table against the later stage row. Title
-input rows must be the same-run nonzero positive control. Input/source equal
-zero selects `H-StaleInputPayload`; nonzero input followed by a changed source
-selects `H-SourceOverwrittenAfterInput`; a pointer/payload identity mismatch
-selects `H-StaleTaskPointerOnly`. Missing controls or rows are unevaluable.
+Discriminating measurement: one table for every title positive-control and
+hangar input-DMA row, joining the immediately preceding writer PC/value or
+descriptor source/length to the input-DMA row. A retail writer attribution
+matching the port selects `H-InputWriterZero`; a descriptor/range mismatch
+selects `H-InputDescriptorWrong`; a port-only clear with no retail counterpart
+selects `H-PreDmaHostClear`. Missing whole-RDRAM positive control or missing
+title nonzero rows is unevaluable.
 
-Before building, obtain the independent retail ground-truth capture with the
-whole-RDRAM, descriptor, source-span, title, hangar, and type-2 controls. Keep
-the silent and real-audio port arms in one build/run, phase-gate on VI, and do
-not alter guest state or add a mitigation. The implementation belongs in the
-runtime input-DMA hook and its source-witness fields; export submodule patches
-if `lib/` changes.
+Before building, obtain retail ground truth with the existing whole-RDRAM,
+descriptor, source-span, title, hangar, and type-2 controls. Then batch the
+writer/descriptor instrumentation into one build and run both real-audio and
+silent arms together. Kill both game processes with SIGKILL and run from
+`build/`.
 
-Commands after the instrument is written:
+Required commands once the instrument is written:
 
     ./submodule-patches/export.sh
     cmake --build build -j8
-    env zsh scratch/agent/run_s3690_m5_stale_input_payload.sh
-
-Kill both processes with SIGKILL. The recipe must launch and watchdog both
-arms itself, run from `build/`, and retain positive controls in the same
-capture.
+    env zsh scratch/agent/run_s3691_m5_input_payload_writer.sh

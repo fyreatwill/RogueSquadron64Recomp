@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..bbe14a2 100644
+index b0d6bef..3170941 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -51,7 +51,7 @@ index b0d6bef..bbe14a2 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,6 +103,58 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,6 +103,60 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -101,7 +101,9 @@ index b0d6bef..bbe14a2 100644
 +    uint32_t width, uint32_t origin, uint64_t source_event,
 +    uint32_t task_data_ptr, uint32_t dram, uint32_t len, uint32_t fnv,
 +    uint32_t nonzero, uint64_t task_generation, uint32_t handoff_thread,
-+    uint32_t event_thread);
++    uint32_t event_thread, uint32_t input_fnv, uint32_t input_nonzero,
++    uint32_t input_dram, uint32_t input_len, uint32_t input_dmem,
++    uint32_t input_task_data_ptr);
 +extern "C" void rs64_audio_join_image_complete(const char* arm,
 +                                                  uint32_t ordinal, uint32_t row,
 +                                                  uint32_t phase, uint32_t width,
@@ -110,7 +112,7 @@ index b0d6bef..bbe14a2 100644
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,14 +162,104 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,14 +164,104 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -216,7 +218,7 @@ index b0d6bef..bbe14a2 100644
  }
  
  static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t wr_len) {
-@@ -121,9 +272,12 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -121,9 +274,12 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
@@ -879,7 +881,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..c44e8d5 100644
+index 1cb3f6a..736446c 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -893,7 +895,7 @@ index 1cb3f6a..c44e8d5 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1569 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1624 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -1116,6 +1118,12 @@ index 1cb3f6a..c44e8d5 100644
 +    uint32_t source_task_data_ptr = 0;
 +    uint32_t source_route_ordinal = 0xFFFFFFFFu;
 +    uint32_t source_route_row = 0xFFFFFFFFu;
++    uint32_t source_input_fnv = 0;
++    uint32_t source_input_nonzero = 0;
++    uint32_t source_input_dram = 0;
++    uint32_t source_input_len = 0;
++    uint32_t source_input_dmem = 0;
++    uint32_t source_input_task_data_ptr = 0;
 +    uint64_t source_age = 0;
 +    uint32_t source_match = 0;
 +    uint64_t dma_event = 0;
@@ -1164,6 +1172,12 @@ index 1cb3f6a..c44e8d5 100644
 +    uint32_t len;
 +    uint32_t fnv;
 +    uint32_t nonzero;
++    uint32_t input_fnv;
++    uint32_t input_nonzero;
++    uint32_t input_dram;
++    uint32_t input_len;
++    uint32_t input_dmem;
++    uint32_t input_task_data_ptr;
 +};
 +static std::vector<AudioImageSource> g_audio_image_sources;
 +static uint64_t g_audio_image_scope_key = UINT64_MAX;
@@ -1262,6 +1276,8 @@ index 1cb3f6a..c44e8d5 100644
 +            " stage_fnv=%08X stage_nz=%u dest_valid=%u classification=%s"
 +            " task_data_ptr=0x%08X source_match=%u source_join_event=%" PRIu64
 +            " source_event=%" PRIu64 " source_task_data_ptr=0x%08X"
++            " input_fnv=%08X input_nz=%u input_dram=0x%06X input_len=0x%X"
++            " input_dmem=0x%03X input_task_data_ptr=0x%08X"
 +            " stage_task_generation=%" PRIu64
 +            " source_task_generation=%" PRIu64
 +            " source_route_ordinal=%u source_route_row=%u source_age=%" PRIu64
@@ -1279,6 +1295,9 @@ index 1cb3f6a..c44e8d5 100644
 +            stage.dest_valid ? 1u : 0u, classification,
 +            stage.task_data_ptr, stage.source_match, stage.source_join_event,
 +            stage.source_event, stage.source_task_data_ptr,
++            stage.source_input_fnv, stage.source_input_nonzero,
++            stage.source_input_dram, stage.source_input_len,
++            stage.source_input_dmem, stage.source_input_task_data_ptr,
 +            stage.task_generation, stage.source_task_generation,
 +            stage.source_route_ordinal, stage.source_route_row, stage.source_age,
 +            source ? source->event : 0, source ? source->n : 0,
@@ -1412,6 +1431,12 @@ index 1cb3f6a..c44e8d5 100644
 +        stage.source_task_data_ptr = source.task_data_ptr;
 +        stage.source_route_ordinal = source.ordinal;
 +        stage.source_route_row = source.row;
++        stage.source_input_fnv = source.input_fnv;
++        stage.source_input_nonzero = source.input_nonzero;
++        stage.source_input_dram = source.input_dram;
++        stage.source_input_len = source.input_len;
++        stage.source_input_dmem = source.input_dmem;
++        stage.source_input_task_data_ptr = source.input_task_data_ptr;
 +        stage.source_age = stage.stage_event - source.join_event;
 +        return;
 +    }
@@ -1438,6 +1463,12 @@ index 1cb3f6a..c44e8d5 100644
 +        stage.source_task_data_ptr = source.task_data_ptr;
 +        stage.source_route_ordinal = source.ordinal;
 +        stage.source_route_row = source.row;
++        stage.source_input_fnv = source.input_fnv;
++        stage.source_input_nonzero = source.input_nonzero;
++        stage.source_input_dram = source.input_dram;
++        stage.source_input_len = source.input_len;
++        stage.source_input_dmem = source.input_dmem;
++        stage.source_input_task_data_ptr = source.input_task_data_ptr;
 +        stage.source_age = stage.stage_event - source.join_event;
 +        return;
 +    }
@@ -1459,6 +1490,12 @@ index 1cb3f6a..c44e8d5 100644
 +        stage.source_task_data_ptr = source.task_data_ptr;
 +        stage.source_route_ordinal = source.ordinal;
 +        stage.source_route_row = source.row;
++        stage.source_input_fnv = source.input_fnv;
++        stage.source_input_nonzero = source.input_nonzero;
++        stage.source_input_dram = source.input_dram;
++        stage.source_input_len = source.input_len;
++        stage.source_input_dmem = source.input_dmem;
++        stage.source_input_task_data_ptr = source.input_task_data_ptr;
 +        stage.source_age = stage.stage_event - source.join_event;
 +        return;
 +    }
@@ -1480,6 +1517,12 @@ index 1cb3f6a..c44e8d5 100644
 +        stage.source_task_data_ptr = source.task_data_ptr;
 +        stage.source_route_ordinal = source.ordinal;
 +        stage.source_route_row = source.row;
++        stage.source_input_fnv = source.input_fnv;
++        stage.source_input_nonzero = source.input_nonzero;
++        stage.source_input_dram = source.input_dram;
++        stage.source_input_len = source.input_len;
++        stage.source_input_dmem = source.input_dmem;
++        stage.source_input_task_data_ptr = source.input_task_data_ptr;
 +        stage.source_age = stage.stage_event - source.join_event;
 +    }
 +}
@@ -1576,12 +1619,18 @@ index 1cb3f6a..c44e8d5 100644
 +            " width=%u origin=0x%06X stage=%u event=%" PRIu64
 +            " dest=0x%06X len=0x%X fnv=%08X nz=%u dest_valid=%u"
 +            " task_data_ptr=0x%08X task_generation=%" PRIu64
++            " input_fnv=%08X input_nz=%u input_dram=0x%06X input_len=0x%X"
++            " input_dmem=0x%03X input_task_data_ptr=0x%08X"
 +            " handoff_thread=%u event_thread=%u latest_generation=%" PRIu64
 +            " latest_route_seq=%u latest_route_ordinal=%u latest_route_row=%u\n",
 +            arm, ordinal, row, phase, width, origin, stage,
 +            registered.stage_event, registered.dest, len, fnv, nonzero,
 +            registered.dest_valid ? 1u : 0u, registered.task_data_ptr,
 +            registered.task_generation, registered.handoff_thread,
++            registered.source_input_fnv, registered.source_input_nonzero,
++            registered.source_input_dram, registered.source_input_len,
++            registered.source_input_dmem,
++            registered.source_input_task_data_ptr,
 +            registered.event_thread, registered.latest_generation,
 +            registered.latest_route_seq, registered.latest_route_ordinal,
 +            registered.latest_route_row);
@@ -1593,7 +1642,9 @@ index 1cb3f6a..c44e8d5 100644
 +    uint32_t width, uint32_t origin, uint64_t source_event,
 +    uint32_t task_data_ptr, uint32_t dram, uint32_t len, uint32_t fnv,
 +    uint32_t nonzero, uint64_t task_generation, uint32_t handoff_thread,
-+    uint32_t event_thread) {
++    uint32_t event_thread, uint32_t input_fnv, uint32_t input_nonzero,
++    uint32_t input_dram, uint32_t input_len, uint32_t input_dmem,
++    uint32_t input_task_data_ptr) {
 +    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
 +    audio_image_scope_locked(phase, width, origin);
 +    if (len == 0 || g_audio_image_sources.size() >= 8192) return;
@@ -1601,6 +1652,12 @@ index 1cb3f6a..c44e8d5 100644
 +                            audio_join_next_event(), source_event,
 +                            task_data_ptr, task_generation, handoff_thread,
 +                            event_thread, dram & 0x007FFFFFu, len, fnv, nonzero};
++    source.input_fnv = input_fnv;
++    source.input_nonzero = input_nonzero;
++    source.input_dram = input_dram;
++    source.input_len = input_len;
++    source.input_dmem = input_dmem;
++    source.input_task_data_ptr = input_task_data_ptr;
 +    g_audio_image_sources.push_back(source);
 +    if ((g_audio_image_sources.size() & 0xFFu) == 0) {
 +        audio_image_source_census_locked(phase, width, origin);

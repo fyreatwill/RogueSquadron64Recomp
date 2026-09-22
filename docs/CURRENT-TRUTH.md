@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3690 (2026-09-21).
+Updated for session 3691 (2026-09-21).
 
 ## Current state
 
@@ -22,15 +22,17 @@ writes the watched source span, and repeatedly calls `0x800078E0` with
 writer is `0x800078EC` before the first target VI. The exact input-DMA ordering
 and ownership is now classified: the qualified input-DMA capture joined all
 244 absent-generation hangar source rows to an earlier/equal input task
-identity, with no later or missing/contradictory joins. The remaining question
-is whether that stale input task already carries the zero payload.
+identity, with no later or missing/contradictory joins. The payload capture
+then showed that the selected input task already carries the zero payload;
+the remaining question is its pre-DMA writer or descriptor boundary.
 
 Session 3690 added the input-DMA event before output DMAs could overwrite the
-thread-local identity. The qualified rerun produced 512 hangar source rows,
-2,724 stage rows, and 8,136 input-DMA events; 244/244 absent-generation rows
-joined an earlier/equal input task identity. This selects
-`H-StaleInputAcrossReuse`. Session 3688's `H-DmaKeyStillUnavailable` result
-was limited to the output-DMA boundary.
+thread-local identity. Session 3691 added pre-copy payload fields. In the
+qualified real-audio arm, all 512 hangar source rows had equal zero
+input/source/DMEM FNV and nonzero fields, and equal input/source task-data
+pointers. This selects `H-StaleInputPayload` and refutes post-input overwrite
+and pointer-only staleness for that class. See
+[M5-S3691-STALE-INPUT-PAYLOAD.md](M5-S3691-STALE-INPUT-PAYLOAD.md).
 
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
@@ -50,25 +52,16 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — identify the stale-input payload boundary.** Add one
-   phase-scoped input-DMA record containing the source payload hash/nonzero
-   count and task-data pointer, then join it to the source witness and later
-   stage row. Competing hypotheses are `H-StaleInputPayload` (the earlier
-   task's input is already zero), `H-SourceOverwrittenAfterInput` (RDRAM is
-   overwritten after input-DMA selection), and `H-StaleTaskPointerOnly` (the
-   pointer is stale but the input belongs to a distinct task). The discriminator
-   is one table for every absent-generation hangar row, with title as the
-   positive nonzero control. Use the same retail and port controls; do not add
-   a mitigation.
-
-   Required commands:
-
-       ./submodule-patches/export.sh
-       cmake --build build -j8
-       env zsh scratch/agent/run_s3690_m5_stale_input_payload.sh
-
-   Kill both processes with SIGKILL. Keep all arms in one build/run and retain
-   positive controls in the same capture.
+1. **M5 Step 4 — identify the writer that makes the selected input payload
+   zero.** Classify the complete pre-DMA writer boundary for
+   `0x1797B0..0x179930`. Competing hypotheses are `H-InputWriterZero` (a
+   legitimate game writer zeroes the source before input DMA),
+   `H-InputDescriptorWrong` (the task descriptor points at a zero-filled
+   alternate source), and `H-PreDmaHostClear` (the port clears the source
+   before input DMA). The discriminator must join every title positive-control
+   and hangar row to its immediately preceding writer/descriptor event in one
+   phase-scoped table, with retail ground truth requested before instrumentation.
+   Do not add a mitigation.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -86,6 +79,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 |---|---|
 | `H-LaterRouteOwnsInput` | Refuted for 244/244 measured absent rows at s3690; no input-DMA key joined the later task. |
 | `H-StaleInputAcrossReuse` | Selected at s3690: 244/244 absent-generation hangar rows joined an earlier/equal input task identity. |
+| `H-StaleInputPayload` | Selected at s3691: 512/512 hangar rows had equal zero input/source/DMEM payloads and equal task pointers. |
+| `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
+| `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
 | `H-InputDmaKeyStillUnavailable` | Selected only at the output-DMA boundary by s3688; superseded by the input-DMA key. |
 | `H-SourceBeforePublish` | Selected for 778/1,024 source rows at s3680; source reads can precede route publication. |
 | `H-SourceSameGeneration` | Selected for the generation-joinable stage class at s3682 and title source rows at s3683. |
@@ -101,6 +97,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   source rows joined an earlier/equal input task identity; none joined a
   later task and none was missing or contradictory. See
   [M5-S3690-INPUT-DMA-OWNERSHIP.md](M5-S3690-INPUT-DMA-OWNERSHIP.md).
+- **3691 — stale input payload boundary:** 512/512 hangar source rows had
+  equal zero input/source/DMEM payload fields and equal task-data pointers.
+  See [M5-S3691-STALE-INPUT-PAYLOAD.md](M5-S3691-STALE-INPUT-PAYLOAD.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity

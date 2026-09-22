@@ -137833,3 +137833,23 @@ single-source port ownership evidence; the retail run independently validates
 the target phases and watched activity. ORIGIN: diagnostic input-DMA ownership
 witness; no guest-state rewrite or mitigation. See
 docs/M5-S3690-INPUT-DMA-OWNERSHIP.md.
+
+## Session 3691 (2026-09-21) — identified stale input payload
+
+Obtained the independent retail control before building: whole-RDRAM positive
+control callbacks fired, title and hangar VI phases were reached, and 15
+hangar type-2 task rows were observed. Narrow oracle memory watches were
+armed but non-observable and were not treated as null evidence. Added
+pre-copy input-DMA FNV/nonzero, range, DMEM, and task-data pointer fields,
+carried them through the source witness and stage/join rows, exported the
+submodule patch, and built successfully.
+
+Ran real-audio and silent arms together with SIGKILL cleanup. The real arm
+produced 512 hangar source rows, 3,729 stage/join rows, and no crash or abort.
+All 512 hangar rows had equal zero input/source/DMEM payload fields, and the
+input and source task-data pointers matched at `0x80171E70`. This selects
+`H-StaleInputPayload`, refutes post-input overwrite and pointer-only staleness
+for the measured class, and leaves the pre-DMA writer/descriptor boundary as
+the next question. ORIGIN: diagnostic pre-copy input-DMA payload witness;
+input activity is legitimate and no guest or RDRAM state was changed. See
+docs/M5-S3691-STALE-INPUT-PAYLOAD.md.

@@ -101,7 +101,9 @@ extern "C" void rs64_audio_join_image_source(
     uint32_t width, uint32_t origin, uint64_t source_event,
     uint32_t task_data_ptr, uint32_t dram, uint32_t len, uint32_t fnv,
     uint32_t nonzero, uint64_t task_generation, uint32_t handoff_thread,
-    uint32_t event_thread);
+    uint32_t event_thread, uint32_t input_fnv, uint32_t input_nonzero,
+    uint32_t input_dram, uint32_t input_len, uint32_t input_dmem,
+    uint32_t input_task_data_ptr);
 extern "C" void rs64_audio_join_image_complete(const char* arm,
                                                   uint32_t ordinal, uint32_t row,
                                                   uint32_t phase, uint32_t width,
@@ -849,6 +851,12 @@ uint64_t g_rs64_m5_source_event = 0;
 uint32_t g_rs64_m5_source_window_rows = 0;
 static thread_local uint64_t g_rs64_m5_last_source_event = 0;
 static thread_local uint64_t g_rs64_m5_last_input_event = 0;
+static thread_local uint32_t g_rs64_m5_last_input_fnv = 0;
+static thread_local uint32_t g_rs64_m5_last_input_nonzero = 0;
+static thread_local uint32_t g_rs64_m5_last_input_dram = 0;
+static thread_local uint32_t g_rs64_m5_last_input_len = 0;
+static thread_local uint32_t g_rs64_m5_last_input_dmem = 0;
+static thread_local uint32_t g_rs64_m5_last_input_task_data_ptr = 0;
 
 extern "C" void rs64_m5_audio_input_dma(uint8_t* rdram, uint32_t dram_addr,
                                            uint32_t len, uint32_t dmem_addr) {
@@ -864,16 +872,37 @@ extern "C" void rs64_m5_audio_input_dma(uint8_t* rdram, uint32_t dram_addr,
     if (!active || !((width == 1024u && origin == 0x00790400u) ||
                      (width == 512u && origin == 0x006AB400u)) ||
         dram_addr >= source_last || dram_addr + len <= source_first) return;
+    const uint32_t overlap_first = dram_addr > source_first ?
+        dram_addr : source_first;
+    const uint32_t overlap_last = dram_addr + len < source_last ?
+        dram_addr + len : source_last;
+    uint32_t input_fnv = 2166136261u, input_nonzero = 0u;
+    for (uint32_t addr = overlap_first; addr < overlap_last; ++addr) {
+        const uint8_t byte = rdram[addr & 0x007FFFFFu];
+        input_fnv = (input_fnv * 16777619u) ^ byte;
+        input_nonzero += byte != 0u;
+    }
     const uint64_t event = g_rs64_m5_source_event++;
     g_rs64_m5_last_input_event = event;
+    g_rs64_m5_last_input_fnv = input_fnv;
+    g_rs64_m5_last_input_nonzero = input_nonzero;
+    g_rs64_m5_last_input_dram = dram_addr;
+    g_rs64_m5_last_input_len = len;
+    g_rs64_m5_last_input_dmem = dmem_addr;
+    g_rs64_m5_last_input_task_data_ptr = s_pending_audio_task == nullptr ?
+        0u : static_cast<uint32_t>(s_pending_audio_task->t.data_ptr);
     std::fprintf(stderr,
         "[m5-input-dma] event=%llu phase=%u width=%u origin=0x%06X arm=%s "
         "route_ordinal=%u route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
+        "overlap=0x%06X..0x%06X input_fnv=%08X input_nz=%u "
+        "input_task_data_ptr=0x%08X "
         "task_generation=%llu latest_generation=%llu latest_route_seq=%u "
         "latest_route_ordinal=%u latest_route_row=%u exit=%d\n",
         static_cast<unsigned long long>(event), phase, width, origin,
         arm ? arm : "n/a", route_ordinal, route_row, dram_addr, len,
-        dmem_addr, static_cast<unsigned long long>(s_pending_audio_generation),
+        dmem_addr, overlap_first, overlap_last, input_fnv, input_nonzero,
+        g_rs64_m5_last_input_task_data_ptr,
+        static_cast<unsigned long long>(s_pending_audio_generation),
         static_cast<unsigned long long>(g_m5_latest_audio_generation.load(
             std::memory_order_acquire)),
         g_m5_latest_audio_route_seq.load(std::memory_order_acquire),
@@ -1132,11 +1161,21 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 g_m5_latest_audio_route_ordinal.load(std::memory_order_acquire);
             const uint32_t latest_route_row =
                 g_m5_latest_audio_route_row.load(std::memory_order_acquire);
+            const uint32_t input_fnv = g_rs64_m5_last_input_fnv;
+            const uint32_t input_nonzero = g_rs64_m5_last_input_nonzero;
+            const uint32_t input_dram = g_rs64_m5_last_input_dram;
+            const uint32_t input_len = g_rs64_m5_last_input_len;
+            const uint32_t input_dmem = g_rs64_m5_last_input_dmem;
+            const uint32_t input_task_data_ptr =
+                g_rs64_m5_last_input_task_data_ptr;
             std::fprintf(stderr,
                 "[m5-source-range-reader] event=%llu row=%u op=dma_to_dmem "
                 "phase=%u width=%u origin=0x%06X arm=%s route_ordinal=%u "
                 "route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
                 "overlap=0x%06X..0x%06X source_fnv=%08X source_nz=%u "
+                "input_event=%llu input_dram=0x%06X input_len=0x%X "
+                "input_dmem=0x%03X input_fnv=%08X input_nz=%u "
+                "input_task_data_ptr=0x%08X "
                 "dmem_fnv=%08X dmem_nz=%u task_data_ptr=0x%08X "
                 "task_data_size=0x%X task_generation=%llu handoff_thread=%u "
                 "event_thread=%u latest_generation=%llu latest_route_seq=%u "
@@ -1144,7 +1183,10 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 static_cast<unsigned long long>(event),
                 source_rows[slot]++, phase, width, origin, arm ? arm : "n/a",
                 route_ordinal, route_row, dram_addr, len, dmem_addr,
-                overlap_first, overlap_last, source_fnv, source_nz, dmem_fnv,
+                overlap_first, overlap_last, source_fnv, source_nz,
+                static_cast<unsigned long long>(event), input_dram, input_len,
+                input_dmem, input_fnv, input_nonzero, input_task_data_ptr,
+                dmem_fnv,
                 dmem_nz, task_data_ptr, task_data_size,
                 static_cast<unsigned long long>(s_pending_audio_generation),
                 s_pending_audio_thread_id, rs64_m5_identity_thread_id(),
@@ -1156,7 +1198,9 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 arm, route_ordinal, route_row, phase, width, origin, event,
                 task_data_ptr, dram_addr, overlap_last - overlap_first,
                 source_fnv, source_nz, s_pending_audio_generation,
-                s_pending_audio_thread_id, rs64_m5_identity_thread_id());
+                s_pending_audio_thread_id, rs64_m5_identity_thread_id(),
+                input_fnv, input_nonzero, input_dram, input_len, input_dmem,
+                input_task_data_ptr);
         }
     }
 
