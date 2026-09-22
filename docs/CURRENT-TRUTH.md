@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3692 (2026-09-21).
+Updated for session 3693 (2026-09-21).
 
 ## Current state
 
@@ -39,8 +39,15 @@ writers at `0x800078EC`, `0x80007670`, and `0x8001F...` sites. The port had
 384 title zero-fill rows, all at `0x800078EC`, and every one of 3,178 hangar
 input rows still carried that title writer as its latest snapshot; no hangar
 scalar writer ran. This refutes an immediate port-side pre-DMA clear and
-selects the port-versus-retail hangar-writer gap as the next boundary. See
+identified the port-versus-retail hangar-writer gap as the next boundary. See
 [M5-S3692-INPUT-WRITER-BOUNDARY.md](M5-S3692-INPUT-WRITER-BOUNDARY.md).
+
+Session 3693 closed the immediate writer-class boundary. The qualified port
+had 512 hangar DMA-to-RDRAM source-range rows, all with zero payload and zero
+post-write span, while its DMEM-side writer census was active. This selects
+`H-NonScalarWriterPath`: the hangar path is visible, but the DMA payload is
+already zero. The next boundary is the DMEM payload producer, not a missing
+guest scalar writer. See [M5-S3693-DMA-WRITER-BOUNDARY.md](M5-S3693-DMA-WRITER-BOUNDARY.md).
 
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
@@ -60,16 +67,16 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — close the port-versus-retail hangar-writer gap.** Extend the
-   pre-DMA writer table to include `rs_memset`, host/DMA writes, and every
-   scalar writer family, then join each hangar input row to the immediately
-   preceding event. Competing hypotheses are `H-MissingGeneratedWriter` (a
-   retail hangar writer family is absent from the port dispatch),
-   `H-WriterOutsidePhaseGate` (the writer runs but route publication makes it
-   invisible), and `H-NonScalarWriterPath` (the write is through memset/DMA,
-   not a scalar guest store). The discriminator is a same-run table with
-   retail PC attribution and port event-kind/PC attribution for all 512-row
-   hangar controls. Do not add a mitigation.
+1. **M5 Step 4 — identify the zero DMEM payload producer.** Join each
+   hangar source-range DMA-to-RDRAM row to its immediately preceding DMEM
+   store/vector-store, RSP source, memset, or host-side producer, carrying
+   payload FNV/nonzero fields and route identity. Competing hypotheses are
+   `H-ZeroDMEMProducer` (the port produces zero in DMEM),
+   `H-DMEMJoinMismatch` (the observed zero payload belongs to another route),
+   and `H-RetailSourceIsDifferent` (retail's writer PCs produce a different
+   source path). The discriminator is one same-run table covering all 512
+   hangar DMA-to-RDRAM rows and a retail phase-gated writer-PC control. Do not
+   add a mitigation.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -88,9 +95,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-LaterRouteOwnsInput` | Refuted for 244/244 measured absent rows at s3690; no input-DMA key joined the later task. |
 | `H-StaleInputAcrossReuse` | Selected at s3690: 244/244 absent-generation hangar rows joined an earlier/equal input task identity. |
 | `H-StaleInputPayload` | Selected at s3691: 512/512 hangar rows had equal zero input/source/DMEM payloads and equal task pointers. |
-| `H-MissingGeneratedWriter` | Selected as the next boundary at s3692: retail emitted hangar writers, while the port's latest writer remained the title zero-fill for 3,178/3,178 hangar input rows. |
+| `H-MissingGeneratedWriter` | Superseded at s3693 as the immediate explanation: the qualified port exposed a phase-visible DMA-to-RDRAM writer, so the boundary moved upstream to its zero DMEM payload. |
 | `H-InputDescriptorWrong` | Refuted at s3692 for 3,178 hangar input rows: the port input ranges were the expected `0x1797B0..0x179930` span. |
 | `H-PreDmaHostClear` | Refuted as an immediate pre-DMA action at s3692: no hangar scalar writer fired; the latest port writer was the earlier title zero-fill. |
+| `H-NonScalarWriterPath` | Selected at s3693: 512 hangar DMA-to-RDRAM rows were visible in phase, with zero payload and zero post-write span; no hangar scalar writer fired. |
+| `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
+| `H-ZeroDMEMProducer` | Next boundary after s3693; the DMA payload was already zero, but its producer is not yet joined. |
 | `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
 | `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
 | `H-InputDmaKeyStillUnavailable` | Selected only at the output-DMA boundary by s3688; superseded by the input-DMA key. |
@@ -115,6 +125,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   PCs; the port had 384 title zero-fill scalar rows and 3,178/3,178 hangar
   input rows carried that stale writer snapshot. See
   [M5-S3692-INPUT-WRITER-BOUNDARY.md](M5-S3692-INPUT-WRITER-BOUNDARY.md).
+- **3693 — DMA writer boundary:** the qualified real-audio port reached title
+  and hangar, with 3,178 hangar input-DMA rows and 512 source-range
+  DMA-to-RDRAM rows. The hangar DMA payload and post-write span were both zero;
+  no hangar scalar writer fired. See
+  [M5-S3693-DMA-WRITER-BOUNDARY.md](M5-S3693-DMA-WRITER-BOUNDARY.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity
@@ -216,7 +231,8 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3669-PRIMARY-STORE-CONTEXT.md](M5-S3669-PRIMARY-STORE-CONTEXT.md)
 - [M5-S3667-PAYLOAD-ORDER.md](M5-S3667-PAYLOAD-ORDER.md)
 - [M5-S3692-INPUT-WRITER-BOUNDARY.md](M5-S3692-INPUT-WRITER-BOUNDARY.md)
+- [M5-S3693-DMA-WRITER-BOUNDARY.md](M5-S3693-DMA-WRITER-BOUNDARY.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3688 remain in the append-only ledger. Use bounded `grep`/`sed`
+Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.

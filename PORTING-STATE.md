@@ -137876,3 +137876,26 @@ title zero-fill. The remaining boundary is the missing writer versus a
 non-scalar or phase-gated writer path. ORIGIN: diagnostic scalar-store
 witness; no guest or RDRAM state changed. See
 docs/M5-S3692-INPUT-WRITER-BOUNDARY.md.
+
+## Session 3693 (2026-09-21) — identified DMA writer boundary
+
+Obtained independent retail ground truth before the port run: the whole-RDRAM
+positive control fired 33,934,346 writes, the watched source span fired 1,058
+writes, title and type-2 controls fired 108 and 17 writes, the selector
+control fired 16 writes, and the retail oracle reached hangar with a
+phase-gated writer histogram. The build completed successfully.
+
+The paired real-audio/silent run had a real-audio crash before qualification;
+the silent arm reached title and hangar. A standalone rerun of the identical
+real-audio recipe reached both phases and supplied the qualified comparison.
+Its positive control fired, with 384 title scalar rows, 3,178 hangar input-DMA
+rows, and 512 source-range DMA-to-RDRAM rows. No hangar scalar writer row ran.
+The hangar DMA-to-RDRAM rows carried zero source payload and zero post-write
+span (`payload_nz=0`, `post_nz=0`) while the DMEM-side writer census was live.
+
+This selects `H-NonScalarWriterPath` and refutes `H-WriterOutsidePhaseGate`
+for the measured port rows: the visible writer is a DMA path, but its payload
+is already zero. It rules out a missing hangar scalar writer as the immediate
+boundary, but does not yet identify the DMEM producer. ORIGIN: diagnostic
+scalar/DMEM/DMA provenance instrumentation; no guest or RDRAM state changed.
+See docs/M5-S3693-DMA-WRITER-BOUNDARY.md.
