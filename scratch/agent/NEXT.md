@@ -1,39 +1,35 @@
-# Next work unit: identify the selector input writer before the early clear
+# Next work unit: qualify the internal AI-frequency return contract
 
-HYPOTHESIS-ID: m5-selector-input-writer
+HYPOTHESIS-ID: m5-ai-frequency-return-contract
 
-S3709 selected `H-CallerSelectorRoute`: retail and both port arms matched at
-`0x80091934`/`0x8008F0A0` (`a1=0x561F`, `a2=0`, `s0=0x12`, `s2=1`, `s3=0`).
-The next boundary is the value loaded from `MEM_W(0x80165ED0)` at
-`0x8009192C`, immediately before the allocator call.
+Session 3710 selected `H-SelectorInputWriterParity`: independent retail and
+both port arms agree that `0x80091CC8` writes `0x561F` to `0x80165ED0`, and
+the `0x8009192C` load/caller preserve it. The remaining boundary is the
+internal producer that receives source `0x5622` and returns the setup value
+before that store.
 
 Competing hypotheses:
 
-- `H-SelectorInputWriterParity`: the port writer PC/value sequence matches
-  retail and the input is legitimately `0x561F`; the early clear is downstream
-  of a matching selector state.
-- `H-SelectorInputWriterDivergence`: the port writes `0x561F` from a different
-  PC or with a different preceding state than retail, selecting the clear route
-  through a port-specific producer difference.
-- `H-SelectorInputNotWriter`: the observed load is stale or sourced from an
-  earlier publication, so the relevant discriminator is the pointer/source
-  chain rather than the final scalar writer.
+- `H-AIFrequencyReturnParity`: retail and port execute the same internal call
+  and return `0x561F`; the remaining image divergence is downstream.
+- `H-AIFrequencyReturnDivergence`: the port's internal call or return differs
+  and causes the selector setup to take a different later path.
+- `H-AIFrequencyProducerState`: the call/return ABI matches, but the producer
+  reads different state or table data before returning.
 
-Discriminator: one phase-gated writer/source table for physical
-`0x80165ED0`, the `0x8009192C` load, and the `0x80091934` caller, carrying
-writer PC, value, source pointer, route ordinal/row, latest producer sequence,
-and predecessor ordering. Retail and both port arms must pass positive
-controls. A matching writer PC/value/order selects `H-SelectorInputWriterParity`;
-a port-only writer/state selects `H-SelectorInputWriterDivergence`; no writer
-with a valid pointer/source join selects `H-SelectorInputNotWriter`.
+Discriminator: one phase-gated call/entry/return table for the internal
+AI-frequency producer, carrying call PC, callee PC, source argument,
+returned value, return PC, and relevant state/table pointer on retail and
+both port arms. Matching call/return/source/state rows select parity;
+different callee, return, or state selects the corresponding divergence;
+matching ABI with different producer state selects `H-AIFrequencyProducerState`.
+All arms must pass whole-RDRAM/RSP positive controls and reach title/hangar.
 
-Build:
+Use the existing bounded frequency-contract driver if its inputs are still
+valid; otherwise repair it before running:
 
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run the real/silent paired arms from one build with the existing route recipe,
-adding the new phase-gated writer probe:
+`zsh scratch/agent/run_s3436_m5_port_frequency_contract.sh`
 
-`zsh scratch/agent/run_s3710_m5_selector_input_writer.sh`
-
-Do not alter the clear, selector state, audio route, or payload.
+Do not alter the selector, clear, audio route, task, or payload.

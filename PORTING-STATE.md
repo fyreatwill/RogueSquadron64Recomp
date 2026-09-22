@@ -138252,3 +138252,26 @@ or source of `MEM_W(0x80165ED0)` loaded at `0x8009192C`.
 
 ORIGIN: diagnostic-only caller/entry argument and route tracing. No clear,
 selector, audio, task, or payload behavior was changed.
+
+## Session 3710 (2026-09-21) — selected selector input writer parity
+
+The one-build paired port run reached title VI 1024 and hangar VI 512 in both
+the real-audio and silent arms. Source, input, caller, and RSP positive
+controls fired. The phase-gated source table recorded `0x80091CC8` writing
+`0x561F` to `0x80165ED0`; `0x8009192C` loaded `0x561F`, and
+`0x80091934` passed it unchanged in both arms.
+
+Independent retail evidence had already identified `0x80091CC8` as the
+phase-qualified writer and recorded `v0=0x561F` at the setup stores. This
+selects `H-SelectorInputWriterParity` and refutes writer divergence and a
+stale-load explanation at the measured boundary. The next boundary is the
+internal AI-frequency call/return contract before the setup store.
+
+The first fresh oracle attempt armed the wrong 1024 origin and emitted no
+target-PC rows despite its whole-RDRAM control; the corrected-origin retry
+also produced no target rows in that recipe. Those attempts are not used as
+retail null evidence; the independent retail writer/value evidence is from
+the prior qualified captures cited above.
+
+ORIGIN: diagnostic-only source-store, load, and caller observations. No
+selector, audio, task, clear, or payload state was changed.

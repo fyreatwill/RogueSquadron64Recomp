@@ -173,6 +173,16 @@ This selects `H-CallerSelectorRoute`, refutes caller-state divergence, and
 moves the boundary to the writer/source of `MEM_W(0x80165ED0)` loaded at
 `0x8009192C`. See [M5-S3709-CALLER-ROUTE.md](M5-S3709-CALLER-ROUTE.md).
 
+Session 3710 joined that selector input to its source writer. In one paired
+port build/run, both real-audio and silent arms reached title and hangar; the
+phase-gated source witness saw `0x80091CC8` write `0x561F` to `0x80165ED0`,
+the `0x8009192C` load read `0x561F`, and the caller preserved it. Independent
+retail evidence identifies the same source PC and `v0=0x561F` at the setup
+stores. This selects `H-SelectorInputWriterParity` and refutes writer
+divergence and stale-load explanations at this boundary. The next boundary
+is the internal AI-frequency call/return contract. See
+[M5-S3710-SELECTOR-INPUT-WRITER.md](M5-S3710-SELECTOR-INPUT-WRITER.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -191,11 +201,12 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — identify the selector input writer before the early clear.**
-   Session 3709 selects `H-CallerSelectorRoute`: retail and both port arms
-   agree on the allocator tuple at `0x80091934`/`0x8008F0A0`. Trace the writer
-   and source of `MEM_W(0x80165ED0)` loaded at `0x8009192C`; keep the probe
-   phase-gated and do not alter the clear or selector state.
+1. **M5 Step 4 — qualify the internal AI-frequency return contract.** Session
+   3710 selects `H-SelectorInputWriterParity`: retail and both port arms agree
+   that `0x80091CC8` supplies `0x561F` to `MEM_W(0x80165ED0)`. Trace the
+   internal call/return producer that receives source `0x5622` and supplies
+   the setup value before that store. Keep the probe phase-gated and do not
+   alter the clear, selector, audio, task, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -237,6 +248,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ProducerInputZero` | Selected at s3707: paired setup rows had identical nonzero pre-clear object words while the static-clear witness reported zero fill. |
 | `H-ClearBranchRoute` | Selected at s3708: retail and both port arms showed the same target-phase loop/branch outcomes and allocator inputs before the clear. |
 | `H-CallerSelectorRoute` | Selected at s3709: retail and both port arms matched `a1=0x561F`, `a2=0`, `s0=0x12`, `s2=1`, and the caller-to-entry handoff. |
+| `H-SelectorInputWriterParity` | Selected at s3710: both port arms saw `0x80091CC8` write `0x561F`; independent retail evidence saw the same PC and value. |
+| `H-SelectorInputWriterDivergence` | Refuted at s3710 at the measured setup boundary: source PC and value matched independent retail evidence. |
+| `H-SelectorInputNotWriter` | Refuted at s3710: the source store, load, and caller formed an ordered `0x561F` chain in both port arms. |
 | `H-CallerStateDivergence` | Refuted at s3709: real and silent arms had identical caller/allocator selector tuples. |
 | `H-CallerOrdering` | Not supported at s3709: route ordinals differed only by arm-local publication counts while the handoff tuple matched retail. |
 | `H-ClearCallerState` | Refuted at s3708 for the measured caller branch inputs: real and silent arms matched, and retail matched the same loop shape. |
