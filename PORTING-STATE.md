@@ -138495,3 +138495,22 @@ ownership open.
 ORIGIN: diagnostic-only oracle execution watches and existing port callback
 fields. No guest or host behavior was changed. Evidence:
 `scratch/agent/oracle_s3720_callback_parity/oracle.log`.
+## Session 3721 (2026-09-21) — classified retail guest field split
+
+Ran the independent retail oracle with the whole-RDRAM positive control and
+the `0x006AB400:512` hangar phase gate. The control reached 10,000 writes and
+the run reached the 512-wide hangar phase. All four execution watches fired;
+field rows were captured at `0x80033FCC` (4), `0x80029E80` (464), and
+`0x80029F30` (464). The latter two shared `s0=0x801496B0`, `s1=0`,
+`source_byte=0x7C`, and `branch_state=0x10`; `0x80033FCC` used a distinct
+tuple. `0x80094648` executed 128 times but produced no field rows.
+
+This selects a partial retail guest-field split: the measured paths are not
+uniformly distinct or uniformly aliased. It rules out using the four execution
+watches alone as proof of four distinct state owners. It does not establish
+host callback/thread parity, and the empty `0x80094648` field table remains
+unevaluable. See `docs/M5-S3721-RETAIL-GUEST-FIELD-TABLE.md` and
+`scratch/agent/oracle_s3721_retail_guest_fields/oracle.log`.
+
+ORIGIN: diagnostic-only oracle execution watches and field dumps. No guest or
+host behavior was changed.

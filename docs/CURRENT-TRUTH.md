@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3720 (2026-09-21).
+Updated for session 3721 (2026-09-21).
 
 ## Current state
 
@@ -287,6 +287,16 @@ expose host callback thread or SDL queue ownership, so retail host callback
 parity remains unmeasured. See
 [M5-S3720-RETAIL-CALLBACK-PARITY.md](M5-S3720-RETAIL-CALLBACK-PARITY.md).
 
+Session 3721 added the retail field table. The independent control reached
+10,000 writes and the run reached the 512-wide hangar phase. Field rows were
+captured at `0x80033FCC` (4), `0x80029E80` (464), and `0x80029F30` (464);
+the latter two shared `s0=0x801496B0`, `s1=0`, `source_byte=0x7C`, and
+`branch_state=0x10`, while `0x80033FCC` used a distinct tuple. The
+`0x80094648` execution watch fired 128 times but its field table was empty.
+This is a mixed guest-state result: it rejects both an all-distinct and an
+all-aliased reading, and leaves the last path unevaluable. See
+[M5-S3721-RETAIL-GUEST-FIELD-TABLE.md](M5-S3721-RETAIL-GUEST-FIELD-TABLE.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -305,12 +315,12 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 host callback ownership boundary.** Session 3720 independently
-   confirmed multiple retail guest-side target paths, but the oracle cannot
-   identify host callback threads or SDL queue ownership. Use a bounded
-   port/retail guest-PC field table to classify the watched retail paths before
-   making another host-ownership claim. Keep selector, clear, task, audio
-   route, and payload state unchanged.
+1. **M5 retail guest-field boundary.** Explain the empty field table at
+   `0x80094648` while retaining its positive execution watch, and determine
+   whether the `0x80029E80`/`0x80029F30` shared tuple is intentional. Use one
+   oracle run with the whole-RDRAM and hangar controls, first checking the
+   field-dump implementation/help for PC-specific capture requirements; do
+   not change selector, clear, task, audio-route, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -337,7 +347,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioDrainDivergence` | Selected at s3714 and strengthened single-source at s3715: real and silent port arms differ in target-phase queue cadence/depth; retail callback/depth parity remains unmeasured. |
 | `H-AudioDrainNotConsumed` | Open after s3715: the current queue table is not joined directly to image-stage, so host queue state cannot yet be separated from downstream stage consumption. |
 | `H-CallbackOwnershipBoundary` | Selected single-source at s3719: image-stage and PCM-consumer source/thread identities differ on the port, including 96 shared route ordinals. Retail parity remains open. |
-| `H-RetailGuestPathSplit` | Selected at s3720: independent retail target-phase execution watches fired at four distinct guest PCs, with positive control and hangar phase reached. This is not host-thread parity. |
+| `H-RetailGuestPathSplit` | Selected only at execution level at s3720; s3721 field rows are mixed: `0x80033FCC` is distinct, `0x80029E80`/`0x80029F30` share fields, and `0x80094648` is unevaluable. |
+| `H-RetailGuestFieldSplitPartial` | Selected at s3721 for the measured rows: one retail path has a distinct tuple while two paths share a tuple; the fourth path still needs a capture explanation. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
@@ -509,6 +520,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   silent had none. The oracle control reached its whole-RDRAM threshold but not
   the target hangar phase, so retail consumer parity remains unmeasured. See
   [M5-S3715-AUDIO-HOST-QUEUE-TABLE.md](M5-S3715-AUDIO-HOST-QUEUE-TABLE.md).
+- **3721 — retail guest field table:** the independent control and hangar
+  phase passed; three watched PCs produced rows with one distinct tuple and
+  two shared tuples, while the fourth execution watch produced no field rows.
+  See [M5-S3721-RETAIL-GUEST-FIELD-TABLE.md](M5-S3721-RETAIL-GUEST-FIELD-TABLE.md).
 
 Earlier M3 class closeouts (sessions 3586–3658) are archived in
 PROJECT-OVERVIEW §56. Earlier M5 boundary notes remain in `docs/` and the
@@ -584,6 +599,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3716-IMAGE-QUEUE-JOIN.md](M5-S3716-IMAGE-QUEUE-JOIN.md)
 - [M5-S3702-SOURCE-PRODUCER-OVERWRITE.md](M5-S3702-SOURCE-PRODUCER-OVERWRITE.md)
 - [M5-S3708-CLEAR-BRANCH.md](M5-S3708-CLEAR-BRANCH.md)
+- [M5-S3721-RETAIL-GUEST-FIELD-TABLE.md](M5-S3721-RETAIL-GUEST-FIELD-TABLE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
