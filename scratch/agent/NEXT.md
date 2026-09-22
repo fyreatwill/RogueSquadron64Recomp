@@ -1,36 +1,36 @@
-# Next work unit: restore the producer-object join through the fixup path
+# Next work unit: identify the input/state that makes the shared producer zero
 
-HYPOTHESIS-ID: m5-source-clear-handoff
+HYPOTHESIS-ID: m5-source-clear-input
 
-S3705 confirmed the clear-to-DMA ordering: the real arm joined the clear at
-ordinal 525 and later zero source/output rows at ordinals 669–670. Both arms
-reached hangar. The intended writer-setup probe was absent from generated
-`funcs_23.c`, so object identity was not measured.
+S3706 repaired the regeneration fixup and requalified the paired arms. The
+target setup and clear use the same `0x801797B0`/`0x298` object, and the final
+observed `0x800078EC` writer is a legitimate zero fill before later zero DMAs.
+The next work unit must identify why the shared producer's input/state is zero.
 
 Competing hypotheses:
 
-- `H-DifferentProducerObject`: the pre-clear producer writes a different
-  object from the one handed to the source DMA.
-- `H-ClearTooEarly`: the expected object is cleared before the producer's
-  output is consumed or copied.
-- `H-ProducerAfterClear`: a later nonzero producer exists but remains missed.
+- `H-ProducerInputZero`: the producer receives a legitimate zero input on the
+  real-audio route.
+- `H-ProducerStateClobbered`: an earlier store changes the producer state before
+  the shared-object clear.
+- `H-ProducerUsesOtherState`: the observed source-range stores are setup/padding,
+  while the actual payload comes from a different state object.
 
-Discriminator: repair the missing writer-setup injection in the fixup path,
-then retain the retail writer census, RSP/DMEM controls, and output rows in
-one phase-gated paired run. Join the `0x8008F2CC` allocation result and source
-producer stores to the first output-DMA ordinal. A producer pointer different
-from `0x801797B0` selects `H-DifferentProducerObject`; a same-object producer
-overwritten before consumption selects `H-ClearTooEarly`; a later nonzero
-same-object writer selects `H-ProducerAfterClear`.
+Discriminator: add one phase-gated table at the producer entry/call boundary
+that records every candidate input pointer/value and the shared-object word
+immediately before the clear, retaining the existing RSP/DMEM/source controls
+and both audio arms in one build/run. A zero producer input with unchanged
+shared state selects `H-ProducerInputZero`; a changed shared-state word with a
+prior writer selects `H-ProducerStateClobbered`; unchanged shared state plus a
+different candidate input selects `H-ProducerUsesOtherState`.
 
-Before building, inspect the generated-function fixup that should inject
-`rs64_m5_writer_setup_state` and verify the retail matching writer PCs. Build
-once with:
+Before building, use the retail writer PCs already established at
+`0x80007670`, `0x8001E2C0`, and `0x8001F...` as the ground-truth matching set;
+do not add a new instrument until its positive control is specified. Build once
+with:
 
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run from the build directory through a self-contained paired driver based on
+Run from the build directory through the paired driver
 `scratch/agent/run_s3692_m5_input_payload_writer.sh`, preserving all controls.
-Kill with SIGKILL after the qualified hangar rows are captured. Expected
-splits are different producer object, same-object early clear, or a missed
-post-clear writer.
+Kill with SIGKILL after qualified hangar rows are captured.

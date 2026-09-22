@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3705 (2026-09-21).
+Updated for session 3706 (2026-09-21).
 
 ## Current state
 
@@ -137,6 +137,15 @@ absent, so allocation-object identity remains unevaluable rather than null.
 This confirms ordering but does not split different-object from early-clear.
 See [M5-S3705-CLEAR-HANDOFF.md](M5-S3705-CLEAR-HANDOFF.md).
 
+Session 3706 restored the writer-setup injection through the regeneration
+fixup, then requalified both paired arms. The target setup used the same
+`0x801797B0`/`0x298` object as the clear; the five setup-step rows and the
+source controls were positive. The final observed writer remained the
+legitimate zero-valued `0x800078EC` fill before later zero input/output DMAs.
+This selects `H-ClearTooEarly` and refutes different-object and post-clear
+writer explanations at the measured boundary. See
+[M5-S3706-WRITER-SETUP-REQUALIFICATION.md](M5-S3706-WRITER-SETUP-REQUALIFICATION.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -155,14 +164,11 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — make the producer-object join regeneration-safe.**
-   The s3705 clear-to-DMA ordering is positive, but the expected writer-setup
-   probe was absent from generated `funcs_23.c`. Restore that injection through
-   the fixup path, rebuild once, and run the same paired driver. A producer
-   pointer different from `0x801797B0` selects `H-DifferentProducerObject`; a
-   same-object producer overwritten before the first output DMA selects
-   `H-ClearTooEarly`; a later nonzero same-object writer selects
-   `H-ProducerAfterClear`.
+1. **M5 Step 4 — explain the legitimate early clear's zero producer.**
+   The regeneration-safe join now selects `H-ClearTooEarly`: the clear and
+   producer object are the same, and no later nonzero source-range writer was
+   observed. Trace the producer's input/state at the clear-to-output boundary
+   with a new discriminator; do not add a mitigation or alter the clear.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -200,6 +206,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ClearIsFinal` | Selected at s3703: the final observed writer was the zero-valued `0x800078EC` fill before all 512 qualified zero output DMAs. |
 | `H-ClearLegitimateButEarly` | Selected at s3704: both arms joined caller `0x8008F2CC` to the expected `0x801797B0`/`0x298` zero-fill before later source/output ordinals. |
 | `H-ClearToDmaOrdering` | Confirmed at s3705: real-arm clear ordinal 525 preceded source/output ordinals 669–670; allocation-object identity remains unevaluable. |
+| `H-ClearTooEarly` | Selected at s3706: setup and clear both used `0x801797B0`/`0x298`, while the final `0x800078EC` writer was zero before the later zero DMAs. |
+| `H-DifferentProducerObject` | Refuted at s3706 for the measured target call: the setup object matched the clear destination. |
+| `H-ProducerAfterClear` | Refuted at s3706 for the captured source range: no later nonzero writer was observed. |
 | `H-ClearWrongObject` | Refuted at s3704 for the measured target range: destination and length matched the expected image-source object. |
 | `H-ProducerAfterClear` | Refuted at s3703 for the measured 512-row boundary: no later nonzero source-range writer was observed. |
 | `H-DescriptorOrdering` | Refuted at s3703: the final-writer sequence and output-DMA rows had no route/task mismatch. |
@@ -285,6 +294,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   joined clear ordinal 525 to later zero source/output rows at ordinals
   669–670. The generated allocation probe was absent, so object identity was
   not inferred. See [M5-S3705-CLEAR-HANDOFF.md](M5-S3705-CLEAR-HANDOFF.md).
+- **3706 — producer-object join:** the regenerated setup witness matched the
+  clear object and the final zero writer preceded the zero source DMA. See
+  [M5-S3706-WRITER-SETUP-REQUALIFICATION.md](M5-S3706-WRITER-SETUP-REQUALIFICATION.md).
 - **3702 — pre-phase producer and overwrite:** the paired port arms each
   recorded 652 source-range stores, including retail-shaped producer PCs, but
   the later `0x800078EC` zero-fill remained before zero output DMA payloads.

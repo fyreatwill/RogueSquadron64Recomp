@@ -138160,3 +138160,25 @@ changed.
 
 ORIGIN: diagnostic-only clear/DMA provenance; the writer is the legitimate
 `0x800078EC` zero-fill, and no mitigation was added.
+
+## Session 3706 (2026-09-21) — selected the shared-object early-clear boundary
+
+The regeneration fixup now restores the s3423/s3424 writer-setup join. One
+Debug build ran real-audio and silent arms concurrently. Both reached VI 512;
+the setup positive control, all five setup-step rows, and existing RSP/DMEM/
+source controls fired, with no crash or abort.
+
+The real target setup at `0x8008F2CC` used `a0=0x801797B0`, `a2=0x298`,
+`s0=0x12`, and `s1=0x561F`; all five steps retained `s1=0x561F`, `t0=1`,
+and `t1=0`. The clear used the same destination and length. The final
+observed writer was the legitimate zero-valued `0x800078EC` fill (384 stores),
+and later input-DMA rows remained zero with no later nonzero source-range
+writer. The silent arm matched setup but emitted no image source DMA.
+
+This selects `H-ClearTooEarly` and refutes a different producer object and a
+post-clear nonzero writer at the measured boundary. It does not yet explain
+why the shared producer's input/state is zero. The next work unit is a new
+producer-input/state table, not a mitigation.
+
+ORIGIN: diagnostic-only producer-object join; `0x800078EC` is the legitimate
+zero-fill writer and no guest/RDRAM behavior changed.
