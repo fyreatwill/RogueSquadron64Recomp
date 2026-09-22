@@ -876,7 +876,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..03649fa 100644
+index 1cb3f6a..74fe5e7 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -890,7 +890,7 @@ index 1cb3f6a..03649fa 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1463 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1510 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -1154,6 +1154,44 @@ index 1cb3f6a..03649fa 100644
 +static uint64_t g_audio_image_scope_key = UINT64_MAX;
 +static uint32_t g_audio_image_consumer_only = 0;
 +
++static void audio_image_source_census_locked(uint32_t phase, uint32_t width,
++                                             uint32_t origin) {
++    size_t source_rows = 0;
++    size_t same_generation = 0;
++    size_t reversed = 0;
++    size_t absent_generation = 0;
++    size_t zero_generation = 0;
++    for (const AudioImageSource& source : g_audio_image_sources) {
++        if (source.phase != phase || source.width != width ||
++            source.origin != origin) continue;
++        ++source_rows;
++        if (source.task_generation == 0) {
++            ++zero_generation;
++            continue;
++        }
++        bool found_generation = false;
++        bool found_after = false;
++        for (const AudioImageStage& stage : g_audio_image_stages) {
++            if (stage.phase != phase || stage.width != width ||
++                stage.origin != origin || stage.task_generation != source.task_generation ||
++                std::strcmp(stage.arm ? stage.arm : "n/a",
++                            source.arm ? source.arm : "n/a") != 0) continue;
++            found_generation = true;
++            if (stage.stage_event >= source.source_event) found_after = true;
++        }
++        if (!found_generation) ++absent_generation;
++        else if (found_after) ++same_generation;
++        else ++reversed;
++    }
++    fprintf(stderr,
++            "[audtask-image-source-census] phase=%u width=%u origin=0x%06X"
++            " source_rows=%zu same_generation=%zu reversed=%zu"
++            " absent_generation=%zu zero_generation=%zu stage_rows=%zu\n",
++            phase, width, origin, source_rows, same_generation, reversed,
++            absent_generation, zero_generation, g_audio_image_stages.size());
++    fflush(stderr);
++}
++
 +static uint64_t audio_join_next_event() {
 +    return g_audio_join_event.fetch_add(1, std::memory_order_relaxed);
 +}
@@ -1300,6 +1338,12 @@ index 1cb3f6a..03649fa 100644
 +        (static_cast<uint64_t>(width) << 24) | (origin & 0xFFFFFFu);
 +    if (key == g_audio_image_scope_key) return;
 +    audio_image_summary_locked();
++    if (g_audio_image_scope_key != UINT64_MAX) {
++        const uint32_t old_phase = static_cast<uint32_t>(g_audio_image_scope_key >> 40);
++        const uint32_t old_width = static_cast<uint32_t>((g_audio_image_scope_key >> 24) & 0xFFFFu);
++        const uint32_t old_origin = static_cast<uint32_t>(g_audio_image_scope_key & 0xFFFFFFu);
++        audio_image_source_census_locked(old_phase, old_width, old_origin);
++    }
 +    g_audio_image_scope_key = key;
 +    g_audio_image_consumer_only = 0;
 +}
@@ -1543,6 +1587,9 @@ index 1cb3f6a..03649fa 100644
 +                            task_data_ptr, task_generation, handoff_thread,
 +                            event_thread, dram & 0x007FFFFFu, len, fnv, nonzero};
 +    g_audio_image_sources.push_back(source);
++    if ((g_audio_image_sources.size() & 0xFFu) == 0) {
++        audio_image_source_census_locked(phase, width, origin);
++    }
 +    for (AudioImageStage& stage : g_audio_image_stages) {
 +        if (stage.source_match == 0 && stage.phase == phase &&
 +            stage.width == width && stage.origin == origin &&

@@ -137695,3 +137695,26 @@ remains open for that minority; exact input-DMA ownership remains open. Retail
 provides the independent reachability/activity evidence. No guest value was
 skipped, rewritten, or guarded. See docs/M5-S3682-GENERATION-FIRST-SOURCE-STAGE-JOIN.md.
 ORIGIN: diagnostic-only generation matcher; no mitigation was added.
+
+## Session 3683 (2026-09-21) — classified source-centric generation census
+
+The prescribed s3683 runner was absent, so I reused the qualified s3682
+concurrent oracle/port recipe after adding a diagnostic-only source-centric
+generation census to the existing runtime join. Exported the submodule patch,
+rebuilt successfully, and ran one capture with SIGKILL cleanup.
+
+Retail passed whole-RDRAM, descriptor, source-span, title, hangar, and type-2
+task controls. The port passed phase, source-hook, ABI, DMA, source, and stage
+controls, reached title and hangar, and emitted no crash or abort marker.
+
+The census ended with 512 title source rows: 512 same-generation, 0 reversed,
+0 generation-absent. Hangar ended with 512 source rows: 282 same-generation,
+0 reversed, and 230 generation-absent. The intermediate 256-row hangar census
+was 146 same-generation and 110 absent. This selects H-SourceWrongTask for the
+measured hangar minority over H-SourcePublicationRace and extends
+H-SourceSameGeneration to the hangar majority. It is single-source port
+evidence; absent generation does not identify the guest producer or exact
+input-DMA owner. Retail supplies independent reachability and control evidence.
+No guest value was skipped, rewritten, or guarded. See
+docs/M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md.
+ORIGIN: diagnostic source-generation census; no mitigation was added.

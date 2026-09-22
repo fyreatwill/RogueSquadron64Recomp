@@ -1,37 +1,38 @@
-# Next work unit: source-centric generation census for unmatched rows
+# Next work unit: join generation-absent source rows to input DMA and task
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3682 added a generation-first stage matcher. The qualified capture
-passed controls and produced 442 generation-first stage matches (182 title,
-260 hangar), but the stage-first report cannot classify source rows for which
-no stage callback arrives. The prior 240-source-row minority therefore remains
-source-centric and unevaluable.
+S3683 classified the source-centric minority without changing guest state:
+title 512/512 same-generation; hangar 282/512 same-generation, 230
+generation-absent, 0 reversed. The next unit must identify whether those 230
+hangar rows are attached to a distinct selected task or are source records
+that never feed an image stage.
 
 Competing hypotheses:
 
-- H-SourceSameGeneration: an unmatched source row's generation is present in a
-  later/current stage record, but route/order drift hid the join.
-- H-SourceWrongTask: an unmatched source generation is absent from all stage
-  records in its phase bucket.
-- H-SourcePublicationRace: generation matches, but source and stage event order
-  is reversed or publication is observed out of order.
+- H-AbsentDistinctTask: a generation-absent source row's input-DMA event
+  carries a task pointer/object different from the stage stream's current
+  task, selecting a distinct producer/object.
+- H-AbsentNoStageConsumer: the source row has no corresponding stage task or
+  input-DMA consumer in the target phase.
+- H-AbsentPublicationGap: the source generation is present in a later stage
+  or task publication, but the current census window misses the join.
 
-Discriminating measurement: add a source-centric bounded census at source
-publication that records each source generation, then at stage publication
-classify the source generation as matched, later-only, reversed-order, or
-absent without replacing the existing report. A generation match with source
-event before stage selects H-SourceSameGeneration; no generation match selects
-H-SourceWrongTask; a reversed event order selects H-SourcePublicationRace.
-Require the same positive controls: oracle
-whole-RDRAM, descriptor, title, hangar, and type-2 controls plus port
-phase/source-hook/ABI/DMA/source/stage controls.
+Discriminating measurement: retain every source row's generation, task
+pointer, source event, and phase; join each generation-absent row to the exact
+input-DMA event and live task object in the same run, then report distinct-task,
+no-consumer, and later-publication classes. Distinct task selects
+H-AbsentDistinctTask; no input-DMA/stage record selects H-AbsentNoStageConsumer;
+a later same-generation publication selects H-AbsentPublicationGap. Require
+the same positive controls: retail whole-RDRAM, descriptor, source-span,
+title, hangar, and type-2 controls plus port phase/source-hook/ABI/DMA/source/
+stage controls.
 
 Before running:
 
     ./submodule-patches/export.sh
     cmake --build build -j8
-    env zsh scratch/agent/run_s3683_m5_source_centric_generation_census.sh
+    env zsh scratch/agent/run_s3684_m5_absent_source_dma_join.sh
 
 Use one qualified concurrent capture, SIGKILL cleanup, and do not alter guest
 state or add a mitigation.

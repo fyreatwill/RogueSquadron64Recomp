@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3682 (2026-09-21).
+notes are linked below. Updated for session 3683 (2026-09-21).
 
 ## Current state
 
@@ -273,6 +273,18 @@ joinable class, but a stage-first matcher cannot classify source rows with no
 stage callback; source-centric ownership of the prior 240-row minority remains
 open. See [M5-S3682-GENERATION-FIRST-SOURCE-STAGE-JOIN.md](M5-S3682-GENERATION-FIRST-SOURCE-STAGE-JOIN.md).
 
+Session 3683 added a source-centric generation census to the same qualified
+capture. Retail whole-RDRAM, descriptor, source-span, title, hangar, and type-2
+controls fired; the port reached title and hangar with source/stage/ABI/DMA
+controls and no crash or abort. Title ended with 512/512 source rows having a
+same-generation stage record and source-before-stage ordering. Hangar ended
+with 282/512 same-generation rows, 230 generation-absent rows, and 0 reversed
+rows. This selects `H-SourceWrongTask` for the measured hangar minority over
+`H-SourcePublicationRace`, while extending `H-SourceSameGeneration` to the
+hangar majority. It is single-source port evidence; generation absence does
+not identify the guest producer or exact input-DMA owner. See
+[M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md](M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -362,8 +374,14 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    source/stage ordering, but 240 source rows had no same-generation stage row.
    Session 3682 made the matcher prefer task generation before pointer/history
    fallback and classified 442 stage rows, but did not classify source rows
-   lacking a stage callback. Next add a source-centric generation census for
-   that minority without changing guest state. Do not add a guard.
+   lacking a stage callback. S3683's source-centric census classified title
+   source rows as 512/512 same-generation and hangar rows as 282/512
+   same-generation, 230 generation-absent, and 0 reversed. This selects
+   `H-SourceWrongTask` for the hangar minority over a publication race, but
+   does not identify its guest producer or exact input-DMA owner. Next join
+   generation-absent source rows to the input-DMA event and selected task
+   object in one phase-gated capture. Do not add a guard. See
+   [M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md](M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -435,10 +453,21 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-StageCurrentPublication | Selected at s3680: all 3,836 stage rows matched latest generation and route publication; s3678's mismatch used the wrong boundary. |
 | H-SourceBeforePublication | Selected at s3680 for 778/1,024 source rows: generation matched but source route identity preceded the latest route publication. |
 | H-SourceSameGeneration | Selected at s3682 for 442 stage rows: generation-first matching found equal nonzero source/stage generations with source before stage; source rows lacking a stage callback remain open. |
+| H-SourceWrongTask | Selected single-source at s3683 for 230/512 hangar source rows with no same-generation stage record; guest producer/ownership remains open. |
+| H-SourcePublicationRace | Refuted for the s3683 measured source rows: 0 reversed stage-before-source rows; title and matched hangar rows were source-before-stage. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
 
 ## Recent evidence ledger
+
+- **3683 — source-centric generation census:** the qualified concurrent
+  capture passed retail whole-RDRAM, descriptor, source-span, title, hangar,
+  and type-2 controls plus port source/stage/ABI/DMA controls. Title had
+  512/512 same-generation source rows; hangar had 282/512 same-generation,
+  230 generation-absent, and 0 reversed. This selects `H-SourceWrongTask` for
+  the measured hangar minority over a publication race, but is single-source
+  port evidence and leaves guest producer/input-DMA ownership open. See
+  [M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md](M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md).
 
 - **3678 — task-generation source/stage join:** the qualified concurrent
   capture passed all controls and recorded 1,024 source rows and 1,903
