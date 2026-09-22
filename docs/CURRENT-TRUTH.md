@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3732 (2026-09-21).
+Updated for session 3733 (2026-09-22).
 
 ## Current state
 
@@ -12,6 +12,17 @@ flare, Factor 5 logo, title VI 1024 (`0x00790400`), and hangar VI 512
 Hangar geometry and color artifacts remain. The image task is the qualified
 real-audio arm; `ROGUESQ_AUDIO_UCODE=0` / `Broke` is the silent control. Audio
 is not production-complete.
+
+Session 3733 requalified the independent retail source-payload boundary with
+a valid positive control and both target phases. Retail target-phase samples
+were nonzero in both halves of `0x1797B0..0x179A48` (189/256 and 106/256
+nonzero samples), while the candidate `0x166450..0x169450` output watch had no
+target samples. The full source writer census included `0x80007670`,
+`0x8001E2C0`, and the `0x8001F...` family; the hangar-phase source histogram
+also saw the later `0x800078EC` clear. This selects `H-RetailSourceNonzero`
+and moves the next boundary to an explicit retail-to-port byte/layout join.
+The retail type-2 task dump was zero-row and is unevaluable, not evidence of
+absent descriptors. See [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md).
 
 Session 3731 extended the port producer census through the full retail span
 `0x1797B0..0x179A48` in one paired build/run. The real arm reached both target
@@ -771,6 +782,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md)
 - [M5-S3729-RETAIL-SOURCE-PAYLOAD.md](M5-S3729-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3730-SOURCE-LAYOUT-JOIN.md](M5-S3730-SOURCE-LAYOUT-JOIN.md)
+- [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`

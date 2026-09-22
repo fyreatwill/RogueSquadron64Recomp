@@ -138727,3 +138727,22 @@ the independent retail source-payload boundary. Evidence:
 ORIGIN: diagnostic-only paired image/source/consumer capture and one fixed
 real-audio-only recheck. No guest, RSP, task, audio, selector, clear,
 writeback, or consumer behavior changed.
+
+## Session 3733 (2026-09-22) — requalified retail source payload boundary
+
+The first oracle attempt was invalid: unrestricted writer execution output
+grew to about 1 GB before shutdown summaries. The fixed capture removed those
+per-instruction watches and retained bounded payload/histogram instruments.
+The independent retail oracle passed the whole-RDRAM positive control, reached
+1024 `0x00790400` and hangar 512 `0x006AB400`, and ran 120.2 seconds / 7,184
+VI. Target-phase samples in `0x1797B0..0x1798B0` were 189/256 nonzero; the
+adjacent `0x1798B0..0x179A48` range was 106/256 nonzero. The candidate output
+range had no target samples. The full writer census included `0x80007670`,
+`0x8001E2C0`, and `0x8001F...`; hangar-phase source writes were attributed to
+the later `0x800078EC` clear. The type-2 task dump produced zero rows and is
+unevaluable. This selects `H-RetailSourceNonzero`, refutes retail-source-zero,
+and moves the next boundary to a retail-to-port byte/layout join. Evidence:
+`docs/M5-S3733-RETAIL-SOURCE-PAYLOAD.md`.
+
+ORIGIN: independent retail oracle payload watches and phase histograms. No
+port, guest, or runtime behavior changed.

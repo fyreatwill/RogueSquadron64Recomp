@@ -1,30 +1,30 @@
-# Next work unit: M5 retail source-payload boundary
+# Next work unit: M5 retail-to-port source byte/layout join
 
-HYPOTHESIS-ID: m5-retail-source-payload-boundary
+HYPOTHESIS-ID: m5-retail-port-byte-layout-join
 
-Run one independent retail-oracle capture using the existing validated Start
-schedule. Watch the full source span `0x1797B0..0x179A48`, the source/output
-task ranges, target-phase writer PCs, and type-2 task descriptors at both
-`0x00790400` and `0x006AB400`. Keep the whole-RDRAM positive control and do
-not change port behavior.
+Build one batched port/retail capture that samples the same source subranges
+and computes phase-gated byte counts/FNVs at the retail source boundary and
+the port source-DMA handoff. Keep the whole-RDRAM oracle positive control and
+the validated Start/autopilot schedules. Do not add a mitigation or change
+port behavior.
 
 Competing hypotheses:
 
-- `H-RetailSourceZero`: retail source/output payload is also zero at the
-  target boundary.
-- `H-RetailSourceNonzero`: retail retains nonzero source bytes and writer PCs,
-  confirming a port-versus-retail producer divergence.
-- `H-RetailOutputOnly`: only the retail output span is nonzero, moving the
-  discrepancy downstream of source production.
+- `H-LayoutEquivalent`: retail and port sample the same nonzero source layout,
+  and the port zero is introduced after the corresponding handoff.
+- `H-LayoutDivergent`: retail's nonzero bytes occupy a different source
+  layout/range, so the current port comparison is misaligned.
+- `H-RetailOnlyProducer`: the aligned retail source is nonzero but the port's
+  corresponding producer input is already zero before its source DMA.
 
-Discriminator: the oracle's positive-control count must be nonzero and both
-target phases must be reached. Nonzero source bytes plus target-phase writer
-PCs selects `H-RetailSourceNonzero`; zero source and output selects
-`H-RetailSourceZero`; source-zero/output-nonzero selects
-`H-RetailOutputOnly`. A missing positive control or target phase is
-unevaluable, not a null result.
+Discriminator: the oracle positive-control count and both target phases must
+be nonzero, and both arms must pass their source controls. Matching nonzero
+byte positions/FNV across aligned subranges selects `H-LayoutEquivalent`;
+nonzero retail with zero port at matched positions selects
+`H-RetailOnlyProducer`; a shifted/nonmatching retail pattern selects
+`H-LayoutDivergent`. Any missing control or target phase is unevaluable.
 
-Exact command basis: adapt the oracle portion of
-`scratch/agent/run_s3732_m5_image_payload.sh`, save output under
-`scratch/agent/s3733_m5_retail_source_payload/`, and write
-`docs/M5-S3733-RETAIL-SOURCE-PAYLOAD.md`.
+Exact command basis: adapt the fixed oracle command in
+`scratch/agent/run_s3733_m5_retail_source_payload.sh` and the qualified port
+source-DMA capture nearest `scratch/agent/run_s3730_m5_source_layout_join.sh`.
+Add all byte/FNV fields in one build/run.
