@@ -1,35 +1,34 @@
-# Next work unit: join the final source writer to the zero output DMA
+# Next work unit: validate the zero-fill object and ordering
 
-HYPOTHESIS-ID: m5-source-overwrite-order
+HYPOTHESIS-ID: m5-source-clear-legitimacy
 
-S3702 selected `H-PrePhaseScalarProducer`: both qualified port arms recorded
-652 source-range stores, including retail-shaped producer PCs before target
-route publication, followed by the zero-valued `0x800078EC` fill. The output
-DMA still carried zero bytes.
+S3703 selected `H-ClearIsFinal`: both qualified port arms recorded 652
+source-range stores, and the final observed writer was the zero-valued
+`0x800078EC` fill. The real arm then emitted 512 zero output-DMA rows.
 
 Competing hypotheses:
 
-- `H-ProducerAfterClear`: a nonzero source-range writer follows `0x800078EC`
-  and is the producer consumed by the output DMA.
-- `H-ClearIsFinal`: `0x800078EC` is the final source-range writer before the
-  output DMA, explaining the zero payload.
-- `H-DescriptorOrdering`: a descriptor/publication edge makes the apparent
-  final writer belong to another task or range.
+- `H-ClearWrongObject`: the fill destination/length or route/task identity does
+  not match the image source object.
+- `H-ClearLegitimateButEarly`: the fill is the expected `0x801797B0`/`0x298`
+  clear on the same route, but occurs at the wrong stage of the producer.
+- `H-ProducerAfterClear`: a later nonzero producer exists but was missed by the
+  current source-store witness.
 
 Discriminator: retain the retail writer census, RSP/DMEM controls, and 512
-output rows in one phase-gated port run, but log the monotonic source-store
-sequence in each output-DMA row (writer PC/range/value/sequence and DMA source
-FNV). A nonzero writer after the zero-fill selects `H-ProducerAfterClear`;
-only the zero-fill immediately before zero DMA selects `H-ClearIsFinal`; a
-writer with a different route/task identity selects `H-DescriptorOrdering`.
+output rows in one phase-gated port run, but join the `0x800078EC` call's
+destination, length, route/task identity, and ordering to each output-DMA row.
+A wrong range/owner selects `H-ClearWrongObject`; the expected clear on the
+same route selects `H-ClearLegitimateButEarly`; a later nonzero writer selects
+`H-ProducerAfterClear`.
 
-Use the existing source-writer driver as the starting point, keep the RSP,
-DMEM, retail, and 512-row positive controls live, build once with:
+Before building, inspect the existing `0x800078EC` call-site witness and the
+retail oracle's matching PC watch. Build once with:
 
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run from the build directory through the existing paired driver with
-`env ROGUESQ_LOG_M5_SOURCE_PRODUCER=1 zsh
-scratch/agent/run_s3692_m5_input_payload_writer.sh`, and kill with SIGKILL
-after the qualified 512 hangar rows are captured. Expected splits are:
-post-clear nonzero writer, final zero-fill, or mismatched route/task identity.
+Run from the build directory through a self-contained paired driver based on
+`scratch/agent/run_s3692_m5_input_payload_writer.sh`, adding the clear-call
+fields and preserving all controls. Kill with SIGKILL after the qualified 512
+hangar rows are captured. Expected splits are wrong object/range, expected
+clear on the same route, or a missed post-clear writer.

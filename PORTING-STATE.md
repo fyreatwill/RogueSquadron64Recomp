@@ -138095,3 +138095,28 @@ docs/M5-S3702-SOURCE-PRODUCER-OVERWRITE.md.
 
 ORIGIN: diagnostic source-producer provenance only; no mitigation or guest/RDRAM
 state change.
+
+## Session 3703 (2026-09-21) — identified the final source clear ordering
+
+The independent retail preflight passed its whole-RDRAM positive control at
+10,000 callbacks, reached title and hangar, and recorded 674 writes to
+`0x1797B0..0x179930`.
+
+The paired real-audio and silent port arms both reached the qualified target
+phases and fired the RSP/DMEM/source controls. Each recorded 652 source-range
+stores: 172 at `0x80007670`, 11 at `0x8001E2C0`, 64 in the `0x8001F...`
+family, and 384 at `0x800078EC`. The first groups included nonzero values and
+preceded target-route publication; the final `0x800078EC` group was a zero-fill.
+The real arm produced 512 qualified output-DMA rows, all with zero source and
+post-DMA payloads, and the final predecessor remained `0x800078EC` with no
+later source-range writer. The silent arm produced no output-DMA rows.
+
+This selects `H-ClearIsFinal` and refutes `H-ProducerAfterClear` and
+`H-DescriptorOrdering` at the measured 512-row boundary. Retail attribution
+and the port's phase-independent census are the two evidence lines. It rules
+out a missing final writer, but does not yet establish whether the clear's
+object, length, and route identity are legitimate.
+
+ORIGIN: diagnostic source-clear provenance only; the writer is the observed
+`0x800078EC` zero-fill and its legitimacy is not yet established. No
+mitigation or guest/RDRAM state change.

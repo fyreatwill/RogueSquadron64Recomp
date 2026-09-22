@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3702 (2026-09-21).
+Updated for session 3703 (2026-09-21).
 
 ## Current state
 
@@ -113,6 +113,14 @@ also ran. The output source DMA still carried zero bytes. This selects
 the legitimate zero-fill overwrites the range before the output DMA. See
 [M5-S3702-SOURCE-PRODUCER-OVERWRITE.md](M5-S3702-SOURCE-PRODUCER-OVERWRITE.md).
 
+Session 3703 joined the final source-store sequence to qualified output DMAs.
+In both port arms the final observed writer was the 384-store, zero-valued
+`0x800078EC` fill; the real arm then emitted 512 zero source and post-DMA
+payload rows, with no later nonzero writer or route mismatch. Retail passed its
+whole-RDRAM control and wrote the target span. This selects `H-ClearIsFinal`
+and refutes `H-ProducerAfterClear` and `H-DescriptorOrdering` at the measured
+boundary. See [M5-S3703-SOURCE-CLEAR-ORDER.md](M5-S3703-SOURCE-CLEAR-ORDER.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -131,14 +139,14 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — identify why the legitimate producer is overwritten.**
-   `H-PrePhaseScalarProducer` is selected: the port performs the retail-shaped
-   source stores before target-route publication, then `0x800078EC` performs a
-   zero-fill before the output DMA. Join the last source-range writer and its
-   ordering to the first 512 output DMAs, with retail and all RSP/DMEM controls
-   live. A later nonzero producer selects `H-ProducerAfterClear`; only the
-   zero-fill selects `H-ClearIsFinal`; a changed range/owner reopens
-   `H-InputDescriptorWrong`.
+1. **M5 Step 4 — establish whether the final zero-fill is legitimate.**
+   `H-ClearIsFinal` is selected: the port's final source-range writer is the
+   zero-valued `0x800078EC` fill. Join that call's destination, length,
+   route/task identity, and ordering to the first 512 output DMAs, with retail
+   and all RSP/DMEM controls live. A wrong object/range selects `H-ClearWrongObject`; the expected
+   `0x801797B0`/`0x298` fill on the same route selects
+   `H-ClearLegitimateButEarly`; a later nonzero writer reopens
+   `H-ProducerAfterClear`.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -173,6 +181,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-RetailSourceDifferent` | Selected at s3700: 512/512 output rows joined the expected `0x1798B0..0x179A48` source DMA, whose bytes were zero; retail had distinct hangar writer families while the port retained the title zero-fill. |
 | `H-PortSourceProducer` | Selected at s3702 for the producer census: both port arms had the retail-shaped source writer families before the target route was published. |
 | `H-PrePhaseScalarProducer` | Selected at s3702: 652 source-range stores preceded/straddled the qualified run, including retail-shaped nonzero writers; the later `0x800078EC` zero-fill preceded zero output payloads. |
+| `H-ClearIsFinal` | Selected at s3703: the final observed writer was the zero-valued `0x800078EC` fill before all 512 qualified zero output DMAs. |
+| `H-ProducerAfterClear` | Refuted at s3703 for the measured 512-row boundary: no later nonzero source-range writer was observed. |
+| `H-DescriptorOrdering` | Refuted at s3703: the final-writer sequence and output-DMA rows had no route/task mismatch. |
 | `H-ProducerOmission` | Refuted at s3702 by the phase-independent port census. |
 | `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
 | `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
@@ -243,6 +254,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   qualified port's first 512 rows joined the correct DMA, but source and
   post-DMA payloads were zero and no current scalar writer was present. See
   [M5-S3701-SOURCE-PRODUCER-BOUNDARY.md](M5-S3701-SOURCE-PRODUCER-BOUNDARY.md).
+- **3703 — final source-writer ordering:** both paired port arms recorded 652
+  source stores; the final 384-store group was the zero-valued `0x800078EC`
+  fill, and the real arm's 512 output DMAs remained zero. See
+  [M5-S3703-SOURCE-CLEAR-ORDER.md](M5-S3703-SOURCE-CLEAR-ORDER.md).
 - **3702 — pre-phase producer and overwrite:** the paired port arms each
   recorded 652 source-range stores, including retail-shaped producer PCs, but
   the later `0x800078EC` zero-fill remained before zero output DMA payloads.
