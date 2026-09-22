@@ -356,7 +356,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioDrainDivergence` | Selected at s3714 and strengthened single-source at s3715: real and silent port arms differ in target-phase queue cadence/depth; retail callback/depth parity remains unmeasured. |
 | `H-AudioDrainNotConsumed` | Open after s3715: the current queue table is not joined directly to image-stage, so host queue state cannot yet be separated from downstream stage consumption. |
 | `H-CallbackOwnershipBoundary` | Selected single-source at s3719: image-stage and PCM-consumer source/thread identities differ on the port, including 96 shared route ordinals. Retail parity remains open. |
-| `H-RetailGuestPathSplit` | Selected only at execution level at s3720; s3721 field rows are mixed: `0x80033FCC` is distinct, `0x80029E80`/`0x80029F30` share fields, and `0x80094648` is unevaluable. |
+| `H-RetailGuestPathSplit` | Selected at execution level at s3720; s3721 field rows were mixed, and s3722 resolved the apparent `0x80094648` gap as an origin-gate mismatch. |
 | `H-RetailGuestFieldSplitPartial` | Selected at s3721 for the measured rows: one retail path has a distinct tuple while two paths share a tuple; the fourth path still needs a capture explanation. |
 | `H-Retail94648-OriginMismatch` | Selected single-source at s3722: all 128 `0x80094648` field rows appeared at target origin `0x006AB800`; the prior empty table used only `0x006AB400`. |
 | `H-Retail94648-FieldUnsupported` | Refuted at s3722 for the measured second origin: the corrected any-phase capture produced 128 rows. |
@@ -584,6 +584,10 @@ superseded by the MusyX voice-table measurement.
 The claim that `0x8002BEEC` is the retail JAL dispatch to `0x800078EC` is
 route-dependent and unreconciled. Do not treat it as a writer without a new
 independent discriminator.
+
+The s3721 statement that the `0x80094648` retail field table was unevaluable
+was superseded by s3722: its exact `0x006AB400` gate excluded the PC's actual
+target origin `0x006AB800`; a corrected capture produced 128 rows there.
 
 Sessions 3512/3516 selected non-observable predecessor watches; their positive
 controls remain useful, but absent predecessor rows do not establish parity,
