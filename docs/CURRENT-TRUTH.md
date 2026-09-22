@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for maintenance session 3689 (2026-09-21).
+Updated for session 3690 (2026-09-21).
 
 ## Current state
 
@@ -13,22 +13,24 @@ Hangar geometry and color artifacts remain. The image task is the qualified
 real-audio arm; `ROGUESQ_AUDIO_UCODE=0` / `Broke` is the silent control. Audio
 is not production-complete.
 
-The active M5 Step 3 boundary is the image-task source range
+The active M5 Step 4 boundary is the image-task source range
 `0x1797B0..0x179930`. The port's target handoff performs a zero-fill from
 `0x800078EC` (`rs_memset`, commonly `dst=0x801797B0, fill=0, len=0x298`)
 followed by zero source-DMA payloads. Retail reaches the same target phase,
 writes the watched source span, and repeatedly calls `0x800078E0` with
 `a2=0x80` and changing structure pointers from `0x800C825C`; its source
 writer is `0x800078EC` before the first target VI. The exact input-DMA ordering
-and ownership are still open.
+and ownership is now classified: the qualified input-DMA capture joined all
+244 absent-generation hangar source rows to an earlier/equal input task
+identity, with no later or missing/contradictory joins. The remaining question
+is whether that stale input task already carries the zero payload.
 
-Session 3688 carried source event, task generation, and route publication into
-every per-range output-DMA record. Controls fired and the fields visibly
-populated, but 257/258 generation-absent hangar source rows had no output-DMA
-range with the same source event and one had a contradictory key. This selects
-`H-DmaKeyStillUnavailable` at that boundary. The next probe must capture the
-input-DMA event before later output DMAs overwrite the thread's last source
-event.
+Session 3690 added the input-DMA event before output DMAs could overwrite the
+thread-local identity. The qualified rerun produced 512 hangar source rows,
+2,724 stage rows, and 8,136 input-DMA events; 244/244 absent-generation rows
+joined an earlier/equal input task identity. This selects
+`H-StaleInputAcrossReuse`. Session 3688's `H-DmaKeyStillUnavailable` result
+was limited to the output-DMA boundary.
 
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
@@ -48,23 +50,22 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 3 — capture input-DMA ownership.** Add one monotonic event at
-   `dma_rdram_to_dmem`, together with the current task generation and route
-   publication snapshot. Carry that record through the source witness and
-   classify every absent-generation hangar source row in one table as:
-   later-route/task, earlier-route/task, or missing/contradictory key. A
-   dominant later join selects `H-LaterRouteOwnsInput`; a dominant earlier join
-   selects `H-StaleInputAcrossReuse`; missing or contradictory identity selects
-   `H-InputDmaKeyStillUnavailable`. Use the qualified concurrent capture with
-   retail whole-RDRAM, descriptor, source-span, title, hangar, and type-2
-   controls plus port phase/source-hook/ABI/DMA/source/stage controls. Do not
-   add a mitigation or infer ownership from cross-thread ordering.
+1. **M5 Step 4 — identify the stale-input payload boundary.** Add one
+   phase-scoped input-DMA record containing the source payload hash/nonzero
+   count and task-data pointer, then join it to the source witness and later
+   stage row. Competing hypotheses are `H-StaleInputPayload` (the earlier
+   task's input is already zero), `H-SourceOverwrittenAfterInput` (RDRAM is
+   overwritten after input-DMA selection), and `H-StaleTaskPointerOnly` (the
+   pointer is stale but the input belongs to a distinct task). The discriminator
+   is one table for every absent-generation hangar row, with title as the
+   positive nonzero control. Use the same retail and port controls; do not add
+   a mitigation.
 
    Required commands:
 
        ./submodule-patches/export.sh
        cmake --build build -j8
-       env zsh scratch/agent/run_s3688_m5_input_dma_owner_join.sh
+       env zsh scratch/agent/run_s3690_m5_stale_input_payload.sh
 
    Kill both processes with SIGKILL. Keep all arms in one build/run and retain
    positive controls in the same capture.
@@ -83,9 +84,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 
 | Hypothesis | Status and discriminating evidence |
 |---|---|
-| `H-LaterRouteOwnsInput` | Open. Would be selected by a dominant input-DMA key joining absent source rows to the later route/task. |
-| `H-StaleInputAcrossReuse` | Open. Would be selected by a dominant input-DMA key joining the earlier source generation/route while later stages reuse the pointer. |
-| `H-InputDmaKeyStillUnavailable` | Selected at the output-DMA boundary by s3688; input-DMA capture is the next discriminator. |
+| `H-LaterRouteOwnsInput` | Refuted for 244/244 measured absent rows at s3690; no input-DMA key joined the later task. |
+| `H-StaleInputAcrossReuse` | Selected at s3690: 244/244 absent-generation hangar rows joined an earlier/equal input task identity. |
+| `H-InputDmaKeyStillUnavailable` | Selected only at the output-DMA boundary by s3688; superseded by the input-DMA key. |
 | `H-SourceBeforePublish` | Selected for 778/1,024 source rows at s3680; source reads can precede route publication. |
 | `H-SourceSameGeneration` | Selected for the generation-joinable stage class at s3682 and title source rows at s3683. |
 | `H-LaterRouteReuse` | Selected at s3686 for 244/244 measured absent-generation hangar rows. |
@@ -96,6 +97,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 
 ## Recent evidence ledger
 
+- **3690 — input-DMA ownership boundary:** 244/244 absent-generation hangar
+  source rows joined an earlier/equal input task identity; none joined a
+  later task and none was missing or contradictory. See
+  [M5-S3690-INPUT-DMA-OWNERSHIP.md](M5-S3690-INPUT-DMA-OWNERSHIP.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity

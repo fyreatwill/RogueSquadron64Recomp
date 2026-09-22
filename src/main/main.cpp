@@ -848,6 +848,39 @@ std::atomic<uint32_t> g_rs64_pcm_task_data_ptr{0};
 uint64_t g_rs64_m5_source_event = 0;
 uint32_t g_rs64_m5_source_window_rows = 0;
 static thread_local uint64_t g_rs64_m5_last_source_event = 0;
+static thread_local uint64_t g_rs64_m5_last_input_event = 0;
+
+extern "C" void rs64_m5_audio_input_dma(uint8_t* rdram, uint32_t dram_addr,
+                                           uint32_t len, uint32_t dmem_addr) {
+    (void)rdram;
+    uint32_t phase = 0, width = 0, origin = 0;
+    uint32_t route_ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &phase, &width, &origin, &route_ordinal, &route_row, &exit_reason,
+        &arm);
+    const uint32_t source_first = 0x1797B0u, source_last = 0x179930u;
+    if (!active || !((width == 1024u && origin == 0x00790400u) ||
+                     (width == 512u && origin == 0x006AB400u)) ||
+        dram_addr >= source_last || dram_addr + len <= source_first) return;
+    const uint64_t event = g_rs64_m5_source_event++;
+    g_rs64_m5_last_input_event = event;
+    std::fprintf(stderr,
+        "[m5-input-dma] event=%llu phase=%u width=%u origin=0x%06X arm=%s "
+        "route_ordinal=%u route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
+        "task_generation=%llu latest_generation=%llu latest_route_seq=%u "
+        "latest_route_ordinal=%u latest_route_row=%u exit=%d\n",
+        static_cast<unsigned long long>(event), phase, width, origin,
+        arm ? arm : "n/a", route_ordinal, route_row, dram_addr, len,
+        dmem_addr, static_cast<unsigned long long>(s_pending_audio_generation),
+        static_cast<unsigned long long>(g_m5_latest_audio_generation.load(
+            std::memory_order_acquire)),
+        g_m5_latest_audio_route_seq.load(std::memory_order_acquire),
+        g_m5_latest_audio_route_ordinal.load(std::memory_order_acquire),
+        g_m5_latest_audio_route_row.load(std::memory_order_acquire), exit_reason);
+    std::fflush(stderr);
+}
 
 extern "C" void rs64_m5_audio_dma_identity(
     uint64_t* source_event, uint64_t* task_generation,
@@ -1085,7 +1118,7 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
         std::lock_guard<std::mutex> lock(source_mutex);
         const uint32_t slot = width == 1024u ? 0u : 1u;
         if (source_rows[slot] < 512u) {
-            const uint64_t event = g_rs64_m5_source_event++;
+            const uint64_t event = g_rs64_m5_last_input_event;
             g_rs64_m5_last_source_event = event;
             const uint32_t task_data_ptr = s_pending_audio_task == nullptr ?
                 0u : static_cast<uint32_t>(s_pending_audio_task->t.data_ptr);

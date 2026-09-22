@@ -137813,3 +137813,23 @@ input-DMA ownership experiment, competing hypotheses, and its discriminating
 measurement. This rules out neither later-route ownership nor stale-input
 reuse; it only completes the required state compaction. ORIGIN: documentation
 maintenance; no runtime or guest-state change.
+
+## Session 3690 (2026-09-21) — identified stale input-DMA ownership
+
+Added a phase-scoped monotonic event at `dma_rdram_to_dmem`, carried it into
+the source-range witness, exported the submodule patch, and rebuilt. The first
+capture was unevaluable because the port hit the known scheduler startup
+crash before phase controls; the independent oracle controls passed. The
+rerun passed the retail whole-RDRAM, descriptor, source-span, title, hangar,
+and type-2 controls, and the port produced 190 phase rows, 1,024 source rows,
+3,784 stage rows, and 8,136 input-DMA events with no crash or abort.
+
+The complete qualified capture had 512 hangar source rows and 2,724 hangar
+stage rows. Of 244 source rows without a same-generation stage, all 244
+joined an earlier/equal input task identity; none joined a later task and none
+was missing or contradictory. This selects `H-StaleInputAcrossReuse` and
+refutes `H-LaterRouteOwnsInput` for the measured class. The result is
+single-source port ownership evidence; the retail run independently validates
+the target phases and watched activity. ORIGIN: diagnostic input-DMA ownership
+witness; no guest-state rewrite or mitigation. See
+docs/M5-S3690-INPUT-DMA-OWNERSHIP.md.

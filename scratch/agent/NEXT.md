@@ -1,37 +1,41 @@
-# Next work unit: record the input-DMA ownership boundary
+# Next work unit: identify the stale-input payload boundary
 
-HYPOTHESIS-ID: m5-audio-source-ownership
+HYPOTHESIS-ID: m5-stale-input-payload
 
-Maintenance session 3689 compacted CURRENT-TRUTH; no experiment was run.
-S3688 selected `H-DmaKeyStillUnavailable` at the output-DMA boundary: the
-fields fire, but 257/258 absent-generation hangar source rows have no matching
-source event there and one has a contradictory key.
+S3690 selected `H-StaleInputAcrossReuse`: 244/244 absent-generation hangar
+source rows joined an earlier/equal input-DMA task identity. The next unit is
+one phase-scoped instrumentation change and one qualified capture.
 
 Competing hypotheses:
 
-- `H-LaterRouteOwnsInput`: the input-DMA key joins absent source rows to the
-  later route/task.
-- `H-StaleInputAcrossReuse`: the input-DMA key joins the earlier source
-  generation/route while the later stage consumes the reused pointer.
-- `H-InputDmaKeyStillUnavailable`: the input-DMA boundary still produces
-  missing or contradictory identity.
+- `H-StaleInputPayload`: the earlier input task already transfers the zero
+  payload seen by the hangar source witness.
+- `H-SourceOverwrittenAfterInput`: the selected input task transfers nonzero
+  data, but RDRAM is overwritten before the source witness observes it.
+- `H-StaleTaskPointerOnly`: the task-data pointer is stale while the input
+  payload identity belongs to a distinct task.
 
-Discriminating measurement: add one monotonic input-DMA event and the current
-task generation plus route publication snapshot at `dma_rdram_to_dmem`, carry
-it through the source witness, and classify every absent-generation hangar
-source row in one table as later-route/task, earlier-route/task, or
-missing/contradictory. A dominant later join selects the first hypothesis; a
-dominant earlier join selects the second; missing or contradictory identity
-selects the third. Require whole-RDRAM, descriptor, source-span, title, hangar,
-and type-2 retail controls plus port phase/source-hook/ABI/DMA/source/stage
-controls. Keep all arms in one build/run. Do not alter guest state or add a
-mitigation.
+Discriminating measurement: add input-DMA source FNV/nonzero and task-data
+pointer fields, carry them through the source witness, and classify every
+absent-generation hangar row in one table against the later stage row. Title
+input rows must be the same-run nonzero positive control. Input/source equal
+zero selects `H-StaleInputPayload`; nonzero input followed by a changed source
+selects `H-SourceOverwrittenAfterInput`; a pointer/payload identity mismatch
+selects `H-StaleTaskPointerOnly`. Missing controls or rows are unevaluable.
 
-Exact commands:
+Before building, obtain the independent retail ground-truth capture with the
+whole-RDRAM, descriptor, source-span, title, hangar, and type-2 controls. Keep
+the silent and real-audio port arms in one build/run, phase-gate on VI, and do
+not alter guest state or add a mitigation. The implementation belongs in the
+runtime input-DMA hook and its source-witness fields; export submodule patches
+if `lib/` changes.
+
+Commands after the instrument is written:
 
     ./submodule-patches/export.sh
     cmake --build build -j8
-    env zsh scratch/agent/run_s3688_m5_input_dma_owner_join.sh
+    env zsh scratch/agent/run_s3690_m5_stale_input_payload.sh
 
-Kill both processes with SIGKILL. Run the game from `build/` with the ROM
-present. If `lib/` changes, commit the refreshed submodule patch export.
+Kill both processes with SIGKILL. The recipe must launch and watchdog both
+arms itself, run from `build/`, and retain positive controls in the same
+capture.
