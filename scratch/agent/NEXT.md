@@ -1,11 +1,11 @@
-# Next work unit: M5 host callback parity boundary
+# Next work unit: M5 port callback parity table
 
 HYPOTHESIS-ID: m5-host-callback-parity
 
-The s3725 Step 1 retry was control-valid. Do not change selector, clear, task,
-audio-route, or payload behavior. The next work unit is one bounded host
-callback/queue comparison, using an independent ground-truth request before
-building any new instrument.
+The s3726 retail ground-truth request was control-valid: it reached both target
+origins and showed active audio task paths, but cannot expose host callback
+threads or SDL queue ownership. Build one diagnostic-only port table. Do not
+change selector, clear, task, audio-route, or payload behavior.
 
 Competing hypotheses:
 
@@ -23,8 +23,8 @@ real-only owner/thread or cadence split at matched callback rows selects
 `H-CallbackQueueOwnership`; matched queue state with a real-only preceding
 guest contract edge selects `H-GuestContractDownstream`; identical joined
 queue/callback rows with no contract split selects `H-SharedQueueState`.
-Obtain the retail ground-truth request and positive-control design before
-adding the instrument.
-
-Exact commands and the ground-truth request are to be written after that
-request is answered; do not build first.
+Build/run: use the existing validated real-vs-silent pair recipe and add the
+full callback table in the same build; phase-gate on VI 512 and retain all
+RSP/task/SP positive controls. Capture both arms concurrently, kill both with
+SIGKILL, and write the bounded comparison to a new `docs/M5-S3727-*.md`
+evidence note.

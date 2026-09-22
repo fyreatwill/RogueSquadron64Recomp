@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3725 (2026-09-21).
+Updated for session 3726 (2026-09-21).
 
 ## Current state
 
@@ -359,10 +359,11 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 host callback parity boundary.** Determine whether the remaining
-   real-audio image-stage difference is explained by host callback/queue state
-   rather than the now-qualified guest tuple. Use a new ground-truth-backed
-   table before adding instrumentation; do not change selector, clear, task,
+1. **M5 host callback parity boundary.** Add the single same-build,
+   phase-gated port table now that the retail ground-truth request is answered.
+   Join callback sequence, route ordinal, queue owner/thread, enqueue and
+   remaining depth, callback source, PCM-consumer count, and image-stage order
+   for real and silent arms after VI 512. Do not change selector, clear, task,
    audio-route, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
@@ -401,6 +402,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioControlInvalid` | Superseded at s3725 for Step 1: the corrected full-route pair reached both target phases and passed controls; it remains applicable only to the invalid s3724 recipe. |
 | `H-ImageContractProgress` | Selected at s3725: both arms were target-qualified, while only real audio produced target image completion, source-range DMA, and image-stage rows. |
 | `H-ImageRouteOnly` | Refuted at s3725 for the paired port boundary: the valid real/silent arms differed in target image-task contract edges, not only route reachability. |
+| `H-CallbackQueueOwnership` | Open after s3726: retail ground truth confirmed active guest audio-task paths at both target origins but cannot expose host callback/thread or SDL queue ownership. |
+| `H-GuestContractDownstream` | Open after s3726: retail task activity is confirmed, but the oracle task witness cannot join the port's host callback sequence. |
+| `H-SharedQueueState` | Open after s3726: the required retail host-side queue witness is unavailable; the next discriminator is a same-build port callback table. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
@@ -452,6 +456,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-PayloadBeforeSelector` | Selected at s3667; watched-span writes preceded title and hangar VI phases. |
 
 ## Recent evidence ledger
+
+- **3726 — callback ground-truth request:** the independent retail oracle
+  passed its 10,000-write positive control, reached both target 512-wide
+  origins, and showed alternating audio-task data pointers at `0x80033FCC`.
+  It cannot expose host callback threads or SDL queue ownership, so the
+  host-side discriminator remains open and a port-side table is now justified.
+  See [M5-S3726-CALLBACK-GROUND-TRUTH.md](M5-S3726-CALLBACK-GROUND-TRUTH.md).
 
 - **3690 — input-DMA ownership boundary:** 244/244 absent-generation hangar
   source rows joined an earlier/equal input task identity; none joined a

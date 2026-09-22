@@ -138583,3 +138583,19 @@ no target image queue or source-range rows. This selects
 explanations at the paired port boundary. It does not establish retail host
 callback parity; that is the next boundary. Evidence is in
 `docs/M5-S3725-STEP1-CONTROL-VALID.md`.
+
+## Session 3726 (2026-09-21) — requested retail callback ground truth
+
+Ran the independent retail oracle before adding a port instrument. The
+whole-RDRAM positive control reached 10,000 callbacks; retail reached both
+target 512-wide origins and the watched guest PCs fired. The joined
+`0x80033FCC` audio-task rows alternated data pointers `0x80171E70` at
+`0x006AB400` and `0x80173CB0` at `0x006AB800`, both type 2. This confirms
+active retail guest audio-task paths at both target origins and rules out an
+oracle reachability failure. The oracle cannot expose host callback threads,
+SDL queue ownership, or callback sequence, so it does not select among the
+three host-boundary hypotheses; the next work unit is the same-build port
+callback table. Evidence: `docs/M5-S3726-CALLBACK-GROUND-TRUTH.md`.
+
+ORIGIN: diagnostic-only oracle execution watches, task dumps, and the existing
+whole-RDRAM positive control. No guest or host behavior was changed.
