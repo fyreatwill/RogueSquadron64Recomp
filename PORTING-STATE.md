@@ -137923,3 +137923,21 @@ unevaluable, not evidence for a zero producer; the retry rules out neither
 `H-ZeroDMEMProducer`, `H-DMEMJoinMismatch`, nor `H-RetailSourceIsDifferent`.
 ORIGIN: diagnostic predecessor join and gate correction; no guest or RDRAM
 state changed. See docs/M5-S3694-DMEM-PRODUCER-JOIN.md.
+
+## Session 3695 (2026-09-21) — qualified audio-pump route boundary
+
+Obtained independent retail ground truth before the port run: the whole-RDRAM
+positive control produced 10,000 callbacks, the retail run reached the hangar
+512 phase at `0x006AB400`, and the phase-gated source-range writer census
+recorded `0x800078EC` (384), `0x80007670` (172), and the `0x8001F...` family.
+
+Ran the existing qualified real-audio/LLE/spin-yield/autopilot port arm with
+the DMEM predecessor diagnostics. It stalled at the initial 320 VI for 35
+seconds. Neither the RSP source-hook positive control nor the target DMEM and
+source-range controls fired, and no 1024 or 512 phase was reached. The DMEM
+predecessor table is therefore unevaluable: this selects no producer
+hypothesis and distinguishes neither a zero DMEM producer, a join mismatch,
+nor a retail-only source path. The next boundary is the audio-pump route that
+prevents the real-audio arm from reaching the target. ORIGIN: diagnostic-only
+run and independent retail writer control; no guest or RDRAM state changed.
+See docs/M5-S3695-AUDIO-PUMP-BOUNDARY.md.

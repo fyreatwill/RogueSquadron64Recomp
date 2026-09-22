@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3694 (2026-09-21).
+Updated for session 3695 (2026-09-21).
 
 ## Current state
 
@@ -57,6 +57,15 @@ invalid. No DMEM producer hypothesis is selected. The optional transition
 logger was corrected so it cannot bypass the target-phase row cap. See
 [M5-S3694-DMEM-PRODUCER-JOIN.md](M5-S3694-DMEM-PRODUCER-JOIN.md).
 
+Session 3695 re-ran the existing qualified real-audio arm after an independent
+retail control. Retail reached hangar and its phase-gated writer census was
+active, but the port remained at the initial 320 VI for 35 seconds: neither
+the RSP source-hook positive control nor the target DMEM/source controls fired.
+The DMEM predecessor join is therefore unevaluable, and no producer
+hypothesis is selected. The next boundary is the audio-pump route that blocks
+the real-audio arm before target phases. See
+[M5-S3695-AUDIO-PUMP-BOUNDARY.md](M5-S3695-AUDIO-PUMP-BOUNDARY.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -75,19 +84,14 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — qualify and identify the zero DMEM payload producer.** Use
-   the new predecessor join only after the real-audio route has passed its
-   target DMEM/source positive controls; if the source callback is absent,
-   classify the audio-pump route failure before adding fields. Join each
-   hangar source-range DMA-to-RDRAM row to its immediately preceding DMEM
-   store/vector-store, RSP source, memset, or host-side producer, carrying
-   payload FNV/nonzero fields and route identity. Competing hypotheses are
-   `H-ZeroDMEMProducer` (the port produces zero in DMEM),
-   `H-DMEMJoinMismatch` (the observed zero payload belongs to another route),
-   and `H-RetailSourceIsDifferent` (retail's writer PCs produce a different
-   source path). The discriminator is one same-run table covering all 512
-   hangar DMA-to-RDRAM rows and a retail phase-gated writer-PC control. Do not
-   add a mitigation.
+1. **M5 Step 4 — qualify the audio-pump route boundary.** The existing real-
+   audio arm stalled at the initial 320 VI before both M5 positive controls;
+   determine the route gate or pump condition that prevents target-phase
+   callbacks. The discriminator is a same-run phase/control table showing
+   whether the RSP source control, 1024 VI, 512 VI, DMEM source control, and
+   source-range writer become live in order. Do not add another DMEM join field
+   or infer a producer from absent rows. Once the route qualifies, resume the
+   predecessor table for the three producer hypotheses.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -147,6 +151,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   real-audio retry emitted no target source-range rows before the audio-pump
   stall. The transition logger's phase-gate bypass was fixed. See
   [M5-S3694-DMEM-PRODUCER-JOIN.md](M5-S3694-DMEM-PRODUCER-JOIN.md).
+- **3695 — audio-pump route boundary:** retail reached hangar with active
+  writer controls, while the existing qualified port arm stayed at 320 VI and
+  emitted neither its RSP nor target source controls. The DMEM producer join
+  remains unevaluable. See
+  [M5-S3695-AUDIO-PUMP-BOUNDARY.md](M5-S3695-AUDIO-PUMP-BOUNDARY.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity
@@ -249,6 +258,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3667-PAYLOAD-ORDER.md](M5-S3667-PAYLOAD-ORDER.md)
 - [M5-S3692-INPUT-WRITER-BOUNDARY.md](M5-S3692-INPUT-WRITER-BOUNDARY.md)
 - [M5-S3693-DMA-WRITER-BOUNDARY.md](M5-S3693-DMA-WRITER-BOUNDARY.md)
+- [M5-S3695-AUDIO-PUMP-BOUNDARY.md](M5-S3695-AUDIO-PUMP-BOUNDARY.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
