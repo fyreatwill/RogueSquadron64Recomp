@@ -137718,3 +137718,19 @@ input-DMA owner. Retail supplies independent reachability and control evidence.
 No guest value was skipped, rewritten, or guarded. See
 docs/M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md.
 ORIGIN: diagnostic source-generation census; no mitigation was added.
+
+## Session 3684 (2026-09-21) — joined generation-absent source rows to task and DMA
+
+Ran the reconstructed qualified concurrent s3684 capture after exporting
+submodule patches and rebuilding. The retail arm passed whole-RDRAM,
+descriptor, source-span, title, hangar, and type-2 controls; the port reached
+both target phases and emitted source, stage, ABI, and DMA controls without a
+crash or abort. The hangar source census recorded 512 input-DMA rows, with
+220 lacking a matching stage generation. All 220 carried task pointer
+0x80171E70, which also appeared in the stage stream, so a distinct task object
+was not selected at the task-pointer level. This refutes
+H-AbsentDistinctTask as measured here, but does not distinguish a later
+same-pointer publication from a source row with no stage consumer. The first
+classifier had an indexing/phase bug and was corrected and rerun in this
+iteration; the fixed result is the one recorded above. ORIGIN: diagnostic
+source/DMA/task join; no mitigation or guest-state rewrite was added.

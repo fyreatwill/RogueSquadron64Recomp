@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3683 (2026-09-21).
+notes are linked below. Updated for session 3684 (2026-09-21).
 
 ## Current state
 
@@ -285,6 +285,15 @@ hangar majority. It is single-source port evidence; generation absence does
 not identify the guest producer or exact input-DMA owner. See
 [M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md](M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md).
 
+Session 3684 joined the generation-absent hangar source rows to input-DMA
+and stage task pointers. The qualified capture passed all retail and port
+controls, reached title and hangar, and recorded 512 hangar source rows; 220
+had no matching stage generation. All 220 carried task pointer `0x80171E70`,
+which also occurred in the stage stream, so no distinct task object was
+selected by pointer. This refutes `H-AbsentDistinctTask` at the measured
+pointer level and leaves later publication versus no-stage-consumer open. See
+[M5-S3684-ABSENT-SOURCE-DMA-JOIN.md](M5-S3684-ABSENT-SOURCE-DMA-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -380,8 +389,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    `H-SourceWrongTask` for the hangar minority over a publication race, but
    does not identify its guest producer or exact input-DMA owner. Next join
    generation-absent source rows to the input-DMA event and selected task
-   object in one phase-gated capture. Do not add a guard. See
-   [M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md](M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md).
+   object in one phase-gated capture. S3684 found 220 absent-generation
+   hangar rows, all with `0x80171E70`, also present in the stage stream. Next
+   compare later same-pointer publications against no-stage-consumer rows.
+   Do not add a guard. See
+   [M5-S3684-ABSENT-SOURCE-DMA-JOIN.md](M5-S3684-ABSENT-SOURCE-DMA-JOIN.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -455,6 +467,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SourceSameGeneration | Selected at s3682 for 442 stage rows: generation-first matching found equal nonzero source/stage generations with source before stage; source rows lacking a stage callback remain open. |
 | H-SourceWrongTask | Selected single-source at s3683 for 230/512 hangar source rows with no same-generation stage record; guest producer/ownership remains open. |
 | H-SourcePublicationRace | Refuted for the s3683 measured source rows: 0 reversed stage-before-source rows; title and matched hangar rows were source-before-stage. |
+| H-AbsentDistinctTask | Refuted at s3684's pointer level: all 220 generation-absent hangar source rows used `0x80171E70`, also present in the stage stream. |
+| H-AbsentNoStageConsumer | Open for the generation-absent hangar rows; later publication was not tested. |
+| H-AbsentPublicationGap | Open for the generation-absent hangar rows; same-pointer later publication remains to be tested. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
 
@@ -468,6 +483,13 @@ The current work-unit slug is `m5-audio-source-ownership`.
   the measured hangar minority over a publication race, but is single-source
   port evidence and leaves guest producer/input-DMA ownership open. See
   [M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md](M5-S3683-SOURCE-CENTRIC-GENERATION-CENSUS.md).
+
+- **3684 — absent-source DMA/task join:** the qualified concurrent capture
+  passed all controls and recorded 512 hangar source rows, 220 without a
+  matching stage generation. Every absent row used task pointer `0x80171E70`,
+  also present in the stage stream; distinct task-pointer ownership was not
+  selected. Later publication versus no stage consumer remains open. See
+  [M5-S3684-ABSENT-SOURCE-DMA-JOIN.md](M5-S3684-ABSENT-SOURCE-DMA-JOIN.md).
 
 - **3678 — task-generation source/stage join:** the qualified concurrent
   capture passed all controls and recorded 1,024 source rows and 1,903
