@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3684 (2026-09-21).
+notes are linked below. Updated for session 3685 (2026-09-21).
 
 ## Current state
 
@@ -294,6 +294,16 @@ selected by pointer. This refutes `H-AbsentDistinctTask` at the measured
 pointer level and leaves later publication versus no-stage-consumer open. See
 [M5-S3684-ABSENT-SOURCE-DMA-JOIN.md](M5-S3684-ABSENT-SOURCE-DMA-JOIN.md).
 
+Session 3685 reran the qualified capture after fixing the census parser. All
+retail and port controls passed, and the port reached title and hangar without
+a crash or abort. Hangar had 512 source rows, 236 without a same-generation
+stage row; every one used `0x80171E70` and had a later stage row with that
+pointer and a greater generation. This selects `H-AbsentPublicationGap` over
+`H-AbsentNoStageConsumer` for the measured minority. The later-stage relation
+is single-source port evidence; exact route sequencing and input-DMA ownership
+remain open. See
+[M5-S3685-ABSENT-PUBLICATION-JOIN.md](M5-S3685-ABSENT-PUBLICATION-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -392,8 +402,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    object in one phase-gated capture. S3684 found 220 absent-generation
    hangar rows, all with `0x80171E70`, also present in the stage stream. Next
    compare later same-pointer publications against no-stage-consumer rows.
-   Do not add a guard. See
-   [M5-S3684-ABSENT-SOURCE-DMA-JOIN.md](M5-S3684-ABSENT-SOURCE-DMA-JOIN.md).
+   S3685 found all 236 generation-absent rows had a later same-pointer stage
+   generation, selecting `H-AbsentPublicationGap`; the ABI publication key
+   was not joinable. Next classify whether the later stage is on the same or
+   a later route ordinal and preserve the source event/DMA identity. Do not
+   add a guard. See [M5-S3685-ABSENT-PUBLICATION-JOIN.md](M5-S3685-ABSENT-PUBLICATION-JOIN.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -468,8 +481,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-SourceWrongTask | Selected single-source at s3683 for 230/512 hangar source rows with no same-generation stage record; guest producer/ownership remains open. |
 | H-SourcePublicationRace | Refuted for the s3683 measured source rows: 0 reversed stage-before-source rows; title and matched hangar rows were source-before-stage. |
 | H-AbsentDistinctTask | Refuted at s3684's pointer level: all 220 generation-absent hangar source rows used `0x80171E70`, also present in the stage stream. |
-| H-AbsentNoStageConsumer | Open for the generation-absent hangar rows; later publication was not tested. |
-| H-AbsentPublicationGap | Open for the generation-absent hangar rows; same-pointer later publication remains to be tested. |
+| H-AbsentNoStageConsumer | Refuted for the measured s3685 rows: all 236 generation-absent rows had a later same-pointer stage generation. |
+| H-AbsentPublicationGap | Selected at s3685 for 236/236 generation-absent hangar rows; exact route sequencing remains open. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
 
@@ -490,6 +503,15 @@ The current work-unit slug is `m5-audio-source-ownership`.
   also present in the stage stream; distinct task-pointer ownership was not
   selected. Later publication versus no stage consumer remains open. See
   [M5-S3684-ABSENT-SOURCE-DMA-JOIN.md](M5-S3684-ABSENT-SOURCE-DMA-JOIN.md).
+
+- **3685 — absent-source publication join:** the fixed qualified capture
+  passed all controls and recorded 512 hangar source rows, 236 without a
+  same-generation stage row. Every absent row used `0x80171E70` and had a
+  later stage row with that pointer and a greater generation; no row lacked a
+  later same-pointer stage. This selects `H-AbsentPublicationGap` over
+  `H-AbsentNoStageConsumer`, while exact route sequencing and input-DMA
+  ownership remain open. See
+  [M5-S3685-ABSENT-PUBLICATION-JOIN.md](M5-S3685-ABSENT-PUBLICATION-JOIN.md).
 
 - **3678 — task-generation source/stage join:** the qualified concurrent
   capture passed all controls and recorded 1,024 source rows and 1,903

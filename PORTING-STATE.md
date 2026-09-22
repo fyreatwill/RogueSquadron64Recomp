@@ -137734,3 +137734,19 @@ same-pointer publication from a source row with no stage consumer. The first
 classifier had an indexing/phase bug and was corrected and rerun in this
 iteration; the fixed result is the one recorded above. ORIGIN: diagnostic
 source/DMA/task join; no mitigation or guest-state rewrite was added.
+
+## Session 3685 (2026-09-21) — distinguished absent-source publication gap
+
+Ran the qualified concurrent s3685 capture after exporting submodule patches
+and rebuilding. The first capture hit an early scheduler crash before phase
+controls; a rerun reached both target phases, passed retail whole-RDRAM,
+descriptor, source-span, title, hangar, and type-2 controls, and emitted port
+source, stage, ABI, and DMA controls without a crash or abort. The fixed
+census recorded 512 hangar source rows, 236 without a same-generation stage
+row. Every one used task pointer 0x80171E70 and had a later stage row with the
+same pointer and a greater generation; zero lacked a later same-pointer stage.
+This selects H-AbsentPublicationGap over H-AbsentNoStageConsumer for the
+measured minority, while exact route sequencing and input-DMA ownership remain
+open. The ABI publication key was not joinable, so it was not used as evidence.
+ORIGIN: diagnostic source/stage publication join; no mitigation or guest-state
+rewrite. See docs/M5-S3685-ABSENT-PUBLICATION-JOIN.md.

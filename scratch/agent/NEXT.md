@@ -1,34 +1,37 @@
-# Next work unit: distinguish absent-source no-consumer from publication gap
+# Next work unit: classify route sequencing for absent-source later stages
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-S3684 classified the source-centric minority without changing guest state:
-hangar had 512 source rows, 220 generation-absent, and 0 distinct task
-pointers: every absent row used 0x80171E70, which also occurs in the stage
-stream. The next unit must distinguish a later publication from a source row
-that is never consumed by an image stage.
+S3685 selected `H-AbsentPublicationGap`: all 236 hangar source rows lacking a
+same-generation stage row had task pointer `0x80171E70` and a later stage row
+with that pointer and a greater generation. The next unit must distinguish a
+same-route publication delay from a later-route handoff/reuse.
 
 Competing hypotheses:
 
-- H-AbsentNoStageConsumer: the source row has no corresponding stage task or
-  input-DMA consumer in the target phase.
-- H-AbsentPublicationGap: the source generation is present in a later stage
-  or task publication, but the current census window misses the join.
-Discriminating measurement: retain every source row's generation, source event,
-task pointer, and route ordinal; compare each absent row against all later
-stage generations and all later task publications for the same pointer, then
-report later-publication versus no-stage-consumer classes. A later same-pointer
-generation selects H-AbsentPublicationGap; no later stage/publication selects
-H-AbsentNoStageConsumer. Require
-the same positive controls: retail whole-RDRAM, descriptor, source-span,
-title, hangar, and type-2 controls plus port phase/source-hook/ABI/DMA/source/
-stage controls.
+- H-SameRoutePublicationLag: the later stage row retains the source row's
+  route ordinal/row, so the gap is publication timing within one route.
+- H-LaterRouteReuse: the later stage row has a greater route ordinal/row, so
+  the source was associated with an earlier route and the pointer was reused.
+- H-NoStableRouteJoin: route identity is absent or contradictory even though
+  generation and pointer match.
+
+Discriminating measurement: retain every absent source row's event, generation,
+route ordinal/row, pointer, and DMA hash; find the first later stage row with
+the same pointer and greater generation, then classify exact route, later route,
+or missing/contradictory route. A complete route match selects
+H-SameRoutePublicationLag; a later route selects H-LaterRouteReuse; missing
+route identity selects H-NoStableRouteJoin. Require the same positive controls:
+retail whole-RDRAM, descriptor, source-span, title, hangar, and type-2 controls
+plus port phase/source-hook/ABI/DMA/source/stage controls.
 
 Before running:
 
     ./submodule-patches/export.sh
     cmake --build build -j8
-    env zsh scratch/agent/run_s3685_m5_absent_publication_join.sh
+    env zsh scratch/agent/run_s3686_m5_absent_route_join.sh
 
 Use one qualified concurrent capture, SIGKILL cleanup, and do not alter guest
-state or add a mitigation.
+state or add a mitigation. The new classifier must report counts for all three
+classes and must not use the ABI publication counter unless it has a stable
+join key.
