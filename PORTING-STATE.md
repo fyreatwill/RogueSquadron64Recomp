@@ -138833,3 +138833,30 @@ exact source span. Evidence: `docs/M5-S3737-RETAIL-WRITER-FAMILY-JOIN.md` and
 
 ORIGIN: independent retail writer-PC/snapshot watches and phase-gated port
 source/DMA rows. No guest or port behavior changed.
+## Session 3738 (2026-09-22) — phase-scoped port source writer census
+
+Ran the M5 exact-span writer census with a rebuilt executable, retaining the
+retail oracle, whole-RDRAM positive control, real-audio arm, and silent arm.
+The oracle control fired and reached title and hangar. Both port arms reached
+the same two target VI phases; real audio produced source-DMA rows while the
+silent arm produced none.
+
+The writer log budget was changed from lifetime-scoped to numeric-VI-phase
+scoped, because title stores could otherwise exhaust the budget before hangar.
+The valid run recorded 664 title-span scalar stores, all byte stores at
+`0x800078EC`, all with value zero, and no target-span scalar store after the
+hangar phase armed. Hangar DMA rows retained `prev_writer_pc=0x800078EC`,
+`prev_writer_value=0`, and zero source payload. This selects
+`H-PortEarlierWriterAbsent` for the measured scalar-store class and refutes
+`H-PortWriterUnlogged` and `H-PortWriterLegitimateClear` at that scope.
+
+The `0x800078EC` writer is a legitimate zero fill observed before the image
+DMA; no mitigation was added. Retail's independent census still shows the
+earlier nonzero families `0x80007670` and `0x8001E2C0`, so the next unit is a
+port entry/setup census for those families. Evidence is in
+`docs/M5-S3738-PORT-WRITER-CENSUS.md` and
+`scratch/agent/s3738b_m5_port_writer_census/`.
+
+ORIGIN: the `0x800078EC` value is a legitimate zero fill observed by the
+phase-scoped port writer hook before image DMA; the instrumentation changed
+only logging budget scope and did not suppress or alter that writer.

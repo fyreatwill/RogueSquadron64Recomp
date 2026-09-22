@@ -1014,7 +1014,20 @@ extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
     g_rs64_m5_pre_dma_writer_phys.store(phys, std::memory_order_relaxed);
     g_rs64_m5_pre_dma_writer_len.store(len, std::memory_order_relaxed);
     g_rs64_m5_pre_dma_writer_value.store(value, std::memory_order_relaxed);
-    if (producer_enabled && seq <= 4096u) {
+    static std::mutex producer_log_mutex;
+    static uint32_t producer_phase_key = 0xFFFFFFFFu;
+    static uint32_t producer_phase_rows = 0;
+    std::lock_guard<std::mutex> producer_log_lock(producer_log_mutex);
+    const uint32_t phase_key = (width_n << 24) ^ origin;
+    if (phase_key != producer_phase_key) {
+        producer_phase_key = phase_key;
+        producer_phase_rows = 0;
+        std::fprintf(stderr,
+            "[m5-source-producer-phase-control] width=%u origin=0x%06X\n",
+            width_n, origin);
+        std::fflush(stderr);
+    }
+    if (producer_enabled && producer_phase_rows++ < 4096u) {
         std::fprintf(stderr,
             "[m5-source-producer] seq=%llu route_active=%u phase=%u width=%u "
             "origin=0x%06X arm=%s route_ordinal=%u route_row=%u pc=0x%08X "
