@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3714 (2026-09-21).
+Updated for session 3715 (2026-09-21).
 
 ## Current state
 
@@ -227,6 +227,14 @@ boundary, rules out the guest status/length shims as the measured discriminator,
 and leaves the actual host consumer/callback writer open. See
 [M5-S3714-POST-PCM-DRAIN-QUALIFICATION.md](M5-S3714-POST-PCM-DRAIN-QUALIFICATION.md).
 
+Session 3715 added a phase-gated host queue table. In the target hangar origin,
+real audio had 79 enqueue and 78 remaining-depth rows, queue depth 0–4581
+bytes, and 58/79 negative inter-sample deltas; silent had 16/16 rows, depth
+0–3813, and 8/16 negative deltas. Both arms passed 1,024 RSP-source positive
+control rows; real had 5,060 image-stage rows and silent had none. This is
+single-source port evidence for `H-AudioDrainDivergence`, not retail callback
+parity. See [M5-S3715-AUDIO-HOST-QUEUE-TABLE.md](M5-S3715-AUDIO-HOST-QUEUE-TABLE.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -245,14 +253,16 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — identify the host drain consumer.** Session 3714 confirms
-   `H-AudioDrainDivergence`: retail has a busy/success set-next chain, while
-   the paired port arms differ in host queue depth and cadence; neither port
-   arm calls guest status/length, and both have zero nonzero PCM rows. Add one
-   phase-gated host table covering enqueue, SDL callback/dequeue, queue depth,
-   and first image-stage join, with positive controls in both arms. Do not
-   alter selector, clear, task, audio route, or payload state. Retail queue
-   depth remains unmeasured.
+1. **M5 Step 4 — join host queue state to image-stage.** Session 3715 found
+   phase-gated SDL queue consumption between producer-side samples, with real
+   and silent cadence/depth diverging. The current push-mode SDL setup has no
+   application callback, so add one host queue-depth snapshot at the
+   `audtask-image-stage` event and join it to the first PCM consumer row. If
+   image-stage consistently follows a drained/low queue only in real audio,
+   select `H-AudioDrainNotConsumed`; if it sees matching queue state while
+   image-stage still diverges, keep the downstream stage consumer open. Keep
+   the existing RSP controls and both audio arms; do not alter selector, clear,
+   task, audio route, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -276,6 +286,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-PreDmaHostClear` | Refuted as an immediate pre-DMA action at s3692: no hangar scalar writer fired; the latest port writer was the earlier title zero-fill. |
 | `H-NonScalarWriterPath` | Selected at s3693: 512 hangar DMA-to-RDRAM rows were visible in phase, with zero payload and zero post-write span; no hangar scalar writer fired. |
 | `H-AIStateParity` | Selected at s3712 for the port: both arms matched host `set-frequency` and first PCM-consumer state at `22047 Hz`; only real audio reached image-stage rows. |
+| `H-AudioDrainDivergence` | Selected at s3714 and strengthened single-source at s3715: real and silent port arms differ in target-phase queue cadence/depth; retail callback/depth parity remains unmeasured. |
+| `H-AudioDrainNotConsumed` | Open after s3715: the current queue table is not joined directly to image-stage, so host queue state cannot yet be separated from downstream stage consumption. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
 | `H-ZeroDMEMProducer` | Next boundary after s3693; the DMA payload was already zero, but its producer is not yet joined. |
 | `H-DMEMJoinUnevaluable` | Selected at s3694 for the new instrument only: the qualified retry reached both target VIs, but the target source-range branch produced no rows and its positive control did not fire. |
@@ -438,6 +450,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 - **3659–3666 — task and selector ownership:** scalar stores were zero;
   target descriptors use a shared writer family but phase-specific task
   objects; selector publication interleaves those objects.
+- **3715 — host queue boundary:** the batched host table observed real-arm
+  target queue rows `79/78` (enqueue/remaining), silent `16/16`, queue-depth
+  maxima `4581/3813`, and negative inter-sample deltas `58/79` versus `8/16`.
+  Both arms passed the RSP controls; real had `5060` image-stage rows and
+  silent had none. The oracle control reached its whole-RDRAM threshold but not
+  the target hangar phase, so retail consumer parity remains unmeasured. See
+  [M5-S3715-AUDIO-HOST-QUEUE-TABLE.md](M5-S3715-AUDIO-HOST-QUEUE-TABLE.md).
 
 Earlier M3 class closeouts (sessions 3586–3658) are archived in
 PROJECT-OVERVIEW §56. Earlier M5 boundary notes remain in `docs/` and the

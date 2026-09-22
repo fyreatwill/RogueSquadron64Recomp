@@ -138354,3 +138354,28 @@ crashed at 320 and real never reached 512; the corrected pair is the result.
 ORIGIN: diagnostic-only oracle and host queue observations. No mitigation was
 added; the legitimate producer remains `osAiSetNextBuffer` and the unresolved
 boundary is the host audio consumer/callback cadence.
+
+## Session 3715 (2026-09-21) — added phase-gated host audio queue table
+
+Before building, the retail oracle was run with a whole-RDRAM positive control
+and `osAiSetNextBuffer` execution watch. The positive control reached its
+threshold, but this attempt stopped before the target 512 hangar origin, so it
+provides no retail queue-consumer observation.
+
+Added `[m5-audio-host]` rows around the existing SDL queued-audio bridge and
+rebuilt once. The paired real-audio/silent run reached title and hangar in both
+arms; each emitted 1,024 RSP-source positive-control rows and neither crashed.
+At hangar origin `0x006AB400`, real audio had 79 queue-enqueue and 78
+remaining-depth rows, queued-before range 0–4581 bytes, and 58/79 negative
+inter-sample deltas. Silent had 16/16 rows, range 0–3813 bytes, and 8/16
+negative deltas. Real had 5,060 image-stage rows; silent had zero.
+
+This strengthens `H-AudioDrainDivergence` for the measured port boundary and
+rules out a stable equal queue cadence between the two port arms. It does not
+identify a retail callback or separate queue state from downstream image-stage
+consumption: the SDL setup is push/queued mode with no application callback,
+and the retail target phase was absent in this iteration.
+
+ORIGIN: diagnostic-only host queue instrumentation. The legitimate writer is
+the existing `osAiSetNextBuffer` -> SDL queue path; no mitigation or behavior
+change was added.

@@ -4775,6 +4775,58 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
 static SDL_AudioDeviceID audio_device = 0;
 static uint32_t audio_sample_rate = 48000;
 
+static bool rs64_m5_audio_host_probe_enabled(uint32_t& phase, uint32_t& width,
+                                               uint32_t& origin) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_AUDIO_HOST");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return false;
+    phase = rs64_phase_ord();
+    width = rs64_vi_committed_width();
+    origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    return (width == 1024u && origin == 0x00790400u) ||
+           (width == 512u && origin == 0x006AB400u);
+}
+
+static void rs64_m5_audio_host_row(const char* edge, uint32_t queued_before,
+                                    uint32_t queued_after, uint32_t pcm_bytes,
+                                    uint32_t samples) {
+    uint32_t phase = 0, width = 0, origin = 0;
+    if (!rs64_m5_audio_host_probe_enabled(phase, width, origin)) return;
+    static uint32_t row_phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    static uint32_t previous_queue = 0;
+    static uint64_t sequence = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != row_phase_key) {
+        row_phase_key = key;
+        rows = 0;
+        previous_queue = queued_before;
+    }
+    if (rows >= 1024u) return;
+    const auto now = std::chrono::steady_clock::now().time_since_epoch();
+    const uint64_t now_us = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(now).count());
+    const int64_t sample_delta = static_cast<int64_t>(queued_before) -
+                                 static_cast<int64_t>(previous_queue);
+    const int64_t call_delta = static_cast<int64_t>(queued_after) -
+                               static_cast<int64_t>(queued_before);
+    std::fprintf(stderr,
+        "[m5-audio-host] seq=%llu n=%u edge=%s phase=%u width=%u "
+        "origin=0x%06X t_us=%llu queued_before=%u queued_after=%u "
+        "sample_delta=%lld call_delta=%lld pcm_bytes=%u samples=%u device=%u\n",
+        static_cast<unsigned long long>(sequence++), rows++, edge, phase, width,
+        origin, static_cast<unsigned long long>(now_us), queued_before,
+        queued_after, static_cast<long long>(sample_delta),
+        static_cast<long long>(call_delta), pcm_bytes, samples,
+        static_cast<unsigned>(audio_device));
+    std::fflush(stderr);
+    previous_queue = queued_after;
+}
+
 static void set_frequency(uint32_t freq) {
     static const bool probe_enabled = [] {
         const char* all = getenv("ROGUESQ_LOG_ALL");
@@ -4835,9 +4887,14 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
     // this host bridge as "already fully implemented and functional,
     // confirmed by the runtime survey, not assumed" -- that claim is
     // overturned (docs/CURRENT-TRUTH.md superseded section, this session).
+    const uint32_t queued_before = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
     if (audio_device) {
         SDL_QueueAudio(audio_device, samples, (Uint32)(num_samples * sizeof(int16_t)));
     }
+    const uint32_t queued_after = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
+    rs64_m5_audio_host_row("queue", queued_before, queued_after,
+                           static_cast<uint32_t>(num_samples * sizeof(int16_t)),
+                           static_cast<uint32_t>(num_samples));
 
     static const bool ai_state_probe = [] {
         const char* all = getenv("ROGUESQ_LOG_ALL");
@@ -4946,6 +5003,7 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
 static size_t get_frames_remaining() {
     if (!audio_device) return 0;
     Uint32 queued = SDL_GetQueuedAudioSize(audio_device);
+    rs64_m5_audio_host_row("remaining", queued, queued, 0, 0);
     static const bool probe_enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_AUDIO_DRAIN");
