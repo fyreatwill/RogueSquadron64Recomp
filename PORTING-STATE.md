@@ -137669,3 +137669,29 @@ and watched activity. No guest value was skipped, rewritten, or guarded.
 See docs/M5-S3681-SOURCE-PUBLICATION-ORDER.md.
 ORIGIN: diagnostic-only publication and event-order witness; no mitigation
 was added.
+
+## Session 3682 (2026-09-21) — added generation-first source/stage join
+
+The prescribed s3682 runner was absent, so I restored a self-contained copy of
+the qualified s3681 concurrent oracle/port recipe. Added a diagnostic-only
+generation-first source/stage matcher after exact route/ordinal matching and
+before pointer/history fallback, exported the submodule patch, rebuilt, and
+ran one capture with SIGKILL cleanup.
+
+Retail registered the whole-RDRAM and descriptor/source watches, emitted 909
+type-2 task rows, and reached the target phases. The port passed phase,
+source-hook, ABI, DMA, source, and stage controls, reached title and hangar,
+and emitted 1,024 source rows, 1,879 stage rows, 1,565 ABI rows, and 1,570 DMA
+rows. No crash or abort marker appeared.
+
+The new class produced 442 stage matches by equal nonzero task generation: 182
+title and 260 hangar. Those rows logged source event before stage event and
+equal source/stage generations. Existing classification accounted for 2,046
+pointer-history matches, 5 broad-history matches, and 10 unmatched rows.
+This selects H-SourceSameGeneration for the generation-joinable stage class,
+but does not classify the prior 240 source rows source-centrically because a
+stage-first matcher cannot report a missing stage callback. H-SourceWrongTask
+remains open for that minority; exact input-DMA ownership remains open. Retail
+provides the independent reachability/activity evidence. No guest value was
+skipped, rewritten, or guarded. See docs/M5-S3682-GENERATION-FIRST-SOURCE-STAGE-JOIN.md.
+ORIGIN: diagnostic-only generation matcher; no mitigation was added.

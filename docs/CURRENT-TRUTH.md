@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3681 (2026-09-21).
+notes are linked below. Updated for session 3682 (2026-09-21).
 
 ## Current state
 
@@ -261,6 +261,18 @@ unmatched class. The ordering result is single-source port evidence; retail
 independently validates route reachability and activity. See
 [M5-S3681-SOURCE-PUBLICATION-ORDER.md](M5-S3681-SOURCE-PUBLICATION-ORDER.md).
 
+Session 3682 added a generation-first stage matcher after the exact
+route/ordinal class. The qualified run passed retail whole-RDRAM, descriptor,
+title, hangar, and type-2 controls plus port phase/source-hook/ABI/DMA/source/
+stage controls. It emitted 1,024 source rows and 1,879 stage rows with no crash
+or abort. Generation-first matching produced 442 stage rows (182 title, 260
+hangar), with equal source/stage generations and source events preceding stage
+events. The remaining stage rows were 2,046 pointer-history, 5 broad-history,
+and 10 unmatched. This selects `H-SourceSameGeneration` for the generation-
+joinable class, but a stage-first matcher cannot classify source rows with no
+stage callback; source-centric ownership of the prior 240-row minority remains
+open. See [M5-S3682-GENERATION-FIRST-SOURCE-STAGE-JOIN.md](M5-S3682-GENERATION-FIRST-SOURCE-STAGE-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -348,9 +360,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    publication ordering and exact input-DMA ownership. S3681 selected
    source-before-publication for 784 route-lagged rows and found no reversed
    source/stage ordering, but 240 source rows had no same-generation stage row.
-   Next make the diagnostic source/stage matcher prefer task generation before
-   its ordinal fallback, then classify those 240 rows without changing guest
-   state. Do not add a guard.
+   Session 3682 made the matcher prefer task generation before pointer/history
+   fallback and classified 442 stage rows, but did not classify source rows
+   lacking a stage callback. Next add a source-centric generation census for
+   that minority without changing guest state. Do not add a guard.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -421,6 +434,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-CrossThreadTask | Remains supported, single-source: 1,671 rows had different generations despite the same task pointer. Thread identity is the next discriminator. |
 | H-StageCurrentPublication | Selected at s3680: all 3,836 stage rows matched latest generation and route publication; s3678's mismatch used the wrong boundary. |
 | H-SourceBeforePublication | Selected at s3680 for 778/1,024 source rows: generation matched but source route identity preceded the latest route publication. |
+| H-SourceSameGeneration | Selected at s3682 for 442 stage rows: generation-first matching found equal nonzero source/stage generations with source before stage; source rows lacking a stage callback remain open. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
 
@@ -511,6 +525,14 @@ The current work-unit slug is `m5-audio-source-ownership`.
 Only the latest boundary transitions are repeated here; the append-only ledger
 and evidence notes retain the full history. Sessions 3586–3657 M3 class
 closeouts are archived in PROJECT-OVERVIEW §56.
+
+- **3682 — generation-first source/stage join:** the qualified capture passed
+  retail and port controls and reached title and hangar. Generation-first
+  matching produced 442 stage rows (182 title, 260 hangar) with equal
+  nonzero generations and source-before-stage ordering. The stage-first
+  diagnostic cannot classify source rows with no stage callback; exact
+  input-DMA ownership remains open. See
+  [M5-S3682-GENERATION-FIRST-SOURCE-STAGE-JOIN.md](M5-S3682-GENERATION-FIRST-SOURCE-STAGE-JOIN.md).
 
 - **3658 — teardownAssetManifestService rs_free of *0x80110D50:**
   Live writer is `initDmaSlots` flags-0x81 `rs_malloc($s3)`
