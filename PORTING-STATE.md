@@ -138407,3 +138407,25 @@ work unit attaches the exact consumer-row queue snapshot to the image-stage
 ORIGIN: diagnostic-only SDL queue observations. The legitimate producer is the
 existing `osAiSetNextBuffer` to SDL queue path; no mitigation or behavior
 change was added.
+## Session 3717 (2026-09-21) — joined exact PCM consumer queue state
+
+Added a phase-gated `queued_bytes` field to `[pcm-boundary-consumer]`, with a
+budget through consumer ordinal 255, and built the normal target. The first
+fixed-budget paired retry had real audio reach hangar but silent stall at
+title; a second retry had the same silent-arm failure. The valid real-arm
+hangar sample reached `0x006AB400`, emitted the existing task/SP completion
+controls, and joined 191 image-stage rows to the consumer ordinal named by
+`pcm_consumers_seen`: stage 2 was 31/96 queue matches and 65 mismatches, while
+stage 3 was 31/95 matches and 64 mismatches. This selects
+`H-AudioDrainNotConsumed` as single-source port evidence and refutes queue
+parity in that sample; it does not establish retail callback parity.
+
+The independent retail oracle was attempted with a whole-RDRAM positive
+control but could not load its required debugger-enabled Mupen64Plus core, so
+it contributes no ground-truth result. The silent arm's failure to reach the
+target means no real/silent hangar A/B conclusion is claimed. The next probe
+is a phase-local callback ordering field on both image and consumer rows.
+
+ORIGIN: diagnostic-only callback snapshots. The legitimate producer and
+consumer are the existing `osAiSetNextBuffer` SDL queue path and PCM callback;
+no mitigation or audio behavior change was added.

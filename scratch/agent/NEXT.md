@@ -1,31 +1,33 @@
-# Next work unit: join image-stage queue state to exact PCM consumer
+# Next work unit: qualify image-stage ordering against the exact consumer
 
-HYPOTHESIS-ID: m5-ai-post-pcm-consumer
+HYPOTHESIS-ID: m5-ai-post-pcm-consumer-order
 
-Session 3716 added `[m5-image-queue]` rows. In valid hangar origin
-`0x006AB400`, real audio had 190 image-stage rows (95 stage-2 and 95 stage-3)
-with queue depth 0–4581 bytes; the first row saw 3045 bytes and four PCM
-consumers already seen. Silent reached hangar and passed its RSP control but,
-as the intentional stub arm, had no image-stage rows. This rejects a simple
-consistently-low/drained image-stage queue gate and remains single-source port
-evidence.
+Session 3717 added the exact consumer queue snapshot. In the valid real-arm
+hangar sample, 191 image rows joined to a logged consumer ordinal: stage 2 was
+31/96 queue matches and 65 mismatches; stage 3 was 31/95 matches and 64
+mismatches. The silent arm stalled at title on the fixed-budget retries, and
+the retail oracle was unavailable because its debugger-enabled core is absent.
+The result is single-source port evidence for `H-AudioDrainNotConsumed`.
 
 Competing hypotheses:
 
 - `H-AudioDrainNotConsumed`: image-stage sees queue state that differs from the
-  exact PCM consumer at the same phase-local ordinal.
+  exact PCM consumer at the same phase-local ordinal. Selected provisionally
+  by 129/191 mismatches, with stage-2 and stage-3 support.
 - `H-AudioStageQueueGate`: image-stage depends on a distinct queue threshold or
-  drain cadence. A simple consistently-low threshold was rejected at s3716.
+  drain cadence. A simple consistently-low threshold was rejected at s3716;
+  the next run must test ordering rather than add another threshold counter.
 - `H-AudioDrainParity`: image-stage and the exact PCM consumer expose matching
-  queue state while stage counts still diverge.
+  queue state while stage counts still diverge. Refuted in the measured real
+  arm, but not independently confirmed against retail.
 
-Discriminator: add the exact phase-local consumer ordinal and queue snapshot to
-each `[pcm-boundary-consumer]` row, then join it to the image-stage
-`pcm_consumers_seen` value by arm, phase, and ordinal. A mismatch between the
-image-stage snapshot and the exact consumer snapshot selects
-`H-AudioDrainNotConsumed`; matching snapshots with stage divergence selects
-`H-AudioDrainParity`. The existing RSP controls must fire in both arms. Do not
-alter selector, clear, task, audio route, or payload state.
+Discriminator: add a phase-local callback sequence/timestamp to both image-stage
+and consumer rows, then classify each mismatch as image-before-consumer,
+consumer-before-image, or same-callback-order. A stable image-before-consumer
+ordering with mismatched queue snapshots selects a scheduling boundary;
+interleaving with no stable order keeps `H-AudioDrainNotConsumed` open. Require
+both target origins and the RSP/task controls; do not alter selector, clear,
+task, audio route, or payload state.
 
 Exact commands:
 

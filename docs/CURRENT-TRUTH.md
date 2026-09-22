@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3716 (2026-09-21).
+Updated for session 3717 (2026-09-21).
 
 ## Current state
 
@@ -246,6 +246,15 @@ single-source port evidence and does not establish retail callback parity or
 separate `H-AudioDrainNotConsumed` from downstream host-state parity. See
 [M5-S3716-IMAGE-QUEUE-JOIN.md](M5-S3716-IMAGE-QUEUE-JOIN.md).
 
+Session 3717 joined `pcm_consumers_seen` to the exact phase-local consumer
+queue snapshot. The valid real-arm hangar sample had 191 image rows: stage 2
+was 31/96 queue matches and 65 mismatches, while stage 3 was 31/95 matches
+and 64 mismatches. The silent arm stalled at title on fixed-budget retries,
+and the retail oracle was unavailable because its debugger-enabled core was
+absent. This is single-source port evidence selecting
+`H-AudioDrainNotConsumed`; it is not retail callback parity. See
+[M5-S3717-PCM-CONSUMER-QUEUE-JOIN.md](M5-S3717-PCM-CONSUMER-QUEUE-JOIN.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -264,16 +273,15 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — join image-stage queue state to the exact PCM consumer.**
-   Session 3716 rejected a simple low/drained queue threshold: real-arm
-   hangar image-stage rows sampled 0–4581 bytes, with the first row already
-   seeing four PCM consumers. Add the exact phase-local consumer ordinal and
-   queue snapshot to the PCM-consumer row, then join it to
-   `pcm_consumers_seen` in the existing image-stage table. If image-stage rows
-   consistently see a queue state unlike the consumer at that ordinal, select
-   `H-AudioDrainNotConsumed`; if the joined states match while stage counts
-   still diverge, keep downstream host-state parity open. Keep the existing
-   RSP controls and both audio arms; do not alter selector, clear, task, audio
+1. **M5 Step 4 — qualify image-stage ordering against the exact consumer.**
+   Session 3717 found 129/191 queue mismatches after joining the image-stage
+   count to the exact consumer ordinal, with the same result in stage 2 and
+   stage 3. Add one phase-local callback sequence/timestamp to both rows and
+   classify image-before-consumer versus consumer-before-image ordering. A
+   stable image-before-consumer ordering selects a scheduling boundary; an
+   interleaved order keeps `H-AudioDrainNotConsumed` open. The silent arm and
+   retail oracle remain required for an independent qualification. Keep the
+   existing RSP/task controls and do not alter selector, clear, task, audio
    route, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
