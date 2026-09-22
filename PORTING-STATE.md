@@ -138658,3 +138658,27 @@ zero source payload. Evidence: `docs/M5-S3729-RETAIL-SOURCE-PAYLOAD.md`.
 
 ORIGIN: diagnostic-only oracle watches, phase histograms, and post-store
 summaries. No guest or host behavior changed.
+
+## Session 3730 (2026-09-21) — joined port and retail source layout
+
+The first concurrent port capture was invalid: the real arm crashed during
+the first Factor 5 boot task at guest PC `0x8000B650`, and the silent arm did
+not reach a target phase. A real-only retry with the same diagnostic build
+reached hangar VI 512 at 24.5 seconds, passed the phase/RSP controls, and
+produced 512 source-range writeback rows plus 2,456 image-DMA joins. The
+repeated source descriptor was `0x1798B0 -> DMEM 0xCB0`, length `0x198`.
+Source-DMEM, output, and post-write payloads were all zero. The observed
+source-range producer was the earlier zero-valued `0x800078EC` fill; no target
+nonzero producer row appeared.
+
+Independent retail evidence from s3729 reached the same target phases and
+showed 90/664 nonzero source bytes with writer families `0x80007670`,
+`0x8001E2C0`, and `0x8001F...`. This selects `H-PortSourceWriterDivergence`
+at the observed boundary, does not support `H-SourceLayoutMismatch`, and
+leaves hidden-producer versus later-clear ordering open. The next work unit is
+an exhaustive full-span port producer census. Evidence:
+`docs/M5-S3730-SOURCE-LAYOUT-JOIN.md`.
+
+ORIGIN: diagnostic-only source producer/transition hooks, source-DMA and
+image-DMA payload hashes, route joins, and existing phase controls. No guest,
+RSP, task, audio-route, or payload behavior changed.

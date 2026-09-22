@@ -1,33 +1,35 @@
-# Next work unit: M5 retail/port source-layout join
+# Next work unit: M5 full-span source producer census
 
 HYPOTHESIS-ID: m5-retail-port-source-layout
 
-Session 3729 selected `H-RetailSourceNonzero`: retail retains nonzero source
-content while the qualified port's corresponding image source is zero. Do one
-batched diagnostic port run that captures the same source range, task-data
-range, writer PCs, and phase/timing fields as the oracle, then join by target
-VI phase and source-DMA ordinal. Do not change behavior.
+Run one diagnostic-only, phase-gated real-audio port capture that extends the
+source producer census from `0x1797B0..0x179930` to the full retail-measured
+span `0x1797B0..0x179A48`. Join every producer/store or DMA segment to the
+source DMA, clear sequence, route ordinal, and payload hash. Keep the existing
+retail source witness and positive controls as the independent comparison;
+do not change behavior.
 
 Competing hypotheses:
 
-- `H-PortSourceWriterDivergence`: the port's source writer/content producer
-  differs from retail before the same image-task handoff.
-- `H-PortSourceClearOrdering`: the port has matching producer content but a
-  later legitimate clear erases it before the source DMA.
-- `H-SourceLayoutMismatch`: the ranges or source-DMA descriptor mapping differ
-  even though the producer timing is equivalent.
+- `H-UninstrumentedPortProducer`: a port producer writes the retail-shaped
+  nonzero source bytes in the extension or an unobserved path.
+- `H-PortSourceClearOrdering`: a port producer creates nonzero content, then a
+  legitimate later clear erases it before the source DMA.
+- `H-PortSourceWriterDivergence`: no complete port producer row carries the
+  retail-shaped nonzero content before the source DMA; the zero fill remains
+  the final observed writer.
 
-Discriminator: in one port run, source bytes nonzero before the source DMA
-with a matching producer sequence select `H-PortSourceClearOrdering` if the
-later clear is final; a writer/content mismatch selects
-`H-PortSourceWriterDivergence`; matching writer/content timing but different
-DMA source/task joins selects `H-SourceLayoutMismatch`. The phase/RSP controls
-and a nonzero source snapshot are required; a missing target phase is
-unevaluable.
+Discriminator: a full-span nonzero producer segment before the source DMA
+selects `H-UninstrumentedPortProducer`; an ordered nonzero producer followed
+by the known clear selects `H-PortSourceClearOrdering`; an exhaustive
+zero-only producer/clear sequence with zero source DMA selects
+`H-PortSourceWriterDivergence`. The RSP/source positive controls, target VI,
+and source-DMA joins must all fire; otherwise the result is unevaluable.
 
-Exact command basis: adapt the port arm in
-`scratch/agent/run_s3728_m5_image_payload.sh`, retain all passive M5 logs,
-and add the source/task/output payload fields to the existing phase-gated
-image-DMA table. Save the result under
-`scratch/agent/s3730_m5_source_layout_join/`, then write
-`docs/M5-S3730-*.md`.
+Exact command basis: extend `scratch/agent/run_s3730_m5_source_layout.sh`
+and the source-range hook's upper bound to `0x179A48`, then run it from
+`build/` with SIGKILL cleanup. Capture both A/B arms in one build/run if the
+real arm is stable; otherwise record the pre-target failure and rerun the
+fixed arm immediately. Save results under
+`scratch/agent/s3731_m5_full_span_producer/` and write
+`docs/M5-S3731-*.md`.

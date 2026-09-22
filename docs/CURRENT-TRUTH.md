@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3729 (2026-09-21).
+Updated for session 3730 (2026-09-21).
 
 ## Current state
 
@@ -12,6 +12,17 @@ flare, Factor 5 logo, title VI 1024 (`0x00790400`), and hangar VI 512
 Hangar geometry and color artifacts remain. The image task is the qualified
 real-audio arm; `ROGUESQ_AUDIO_UCODE=0` / `Broke` is the silent control. Audio
 is not production-complete.
+
+Session 3730 joined the retail source payload witness to a fixed real-audio
+port capture. The port reached hangar VI 512 and emitted 512 source-range
+writeback rows plus 2,456 image-DMA joins; the repeated `0x1798B0` to DMEM
+`0xCB0` source descriptor carried zero source-DMEM and output payload, and the
+observed source-range CPU producer was the earlier zero-valued `0x800078EC`
+fill. Retail independently retained 90/664 nonzero sampled source bytes and
+showed `0x80007670`, `0x8001E2C0`, and `0x8001F...` writer families. This
+selects `H-PortSourceWriterDivergence` at the observed boundary and leaves
+clear ordering open; it does not support a source-layout mismatch. See
+[M5-S3730-SOURCE-LAYOUT-JOIN.md](M5-S3730-SOURCE-LAYOUT-JOIN.md).
 
 The active M5 Step 4 boundary is the image-task source range
 `0x1797B0..0x179930`. The port's target handoff performs a zero-fill from
@@ -392,7 +403,15 @@ retail payload parity remains unmeasured. See
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 image-task/output payload boundary.** Build one phase-gated table that
+1. **M5 port source producer boundary.** Explain the observed port-versus-
+   retail source-writer/content divergence before changing payload behavior.
+   The next discriminator is a complete port producer census for the full
+   retail source span `0x1797B0..0x179A48`, joined to the source DMA and clear
+   sequence; distinguish an uninstrumented producer from a legitimate later
+   clear. Preserve the independent retail writer/payload witness and positive
+   controls.
+
+2. **M5 image-task/output payload boundary.** Build one phase-gated table that
    joins the real-arm image task's source DMA, DMEM window, output-DMA payload,
    image-stage callback, PCM source/consumer rows, and task completion in the
    same route ordinal. Keep the silent arm and all positive controls. Competing
@@ -406,18 +425,18 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    DMEM/source payload selects producer-zero. Do not change task, selector,
    clear, audio-route, or payload behavior.
 
-2. **M5 retail source-payload boundary.** Use the independent oracle to watch
+3. **M5 retail source-payload boundary.** Use the independent oracle to watch
    the retail image-task source/output spans and writer PCs in the target
    phases. Compare retail payload polarity and writer attribution with the
    port's qualified zero source/DMEM/output table before any behavior change.
 
-3. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
+4. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy of the value, and land a guard only if
    a concrete invalid writer is found. The closed `rs_free` audits and their
    evidence are archived in PROJECT-OVERVIEW §56; do not re-audit them.
 
-4. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
+5. **Generated-symbol renaming sweep.** Resume only after M5 is closed and
    M3 has no new discriminator. Use one bounded region/census per session and
    preserve the slug `generated-symbol-renaming-sweep` for that campaign.
 
@@ -453,6 +472,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ImageRouteOnly` | Refuted at s3725 for the paired port boundary: the valid real/silent arms differed in target image-task contract edges, not only route reachability. |
 | `H-GuestContractDownstream` | Open after s3727: the port callback table establishes a host ownership split, but the retail task witness still cannot join the port's payload contract. |
 | `H-SharedQueueState` | Open after s3727: the port has distinct image/consumer owners; retail host-side queue parity remains unavailable, and the next discriminator is the image payload table. |
+| `H-PortSourceWriterDivergence` | Selected at s3730 for the observed boundary: retail retained nonzero source content with distinct producer families, while the port's target source/DMEM/output rows remained zero and its observed source producer was the earlier `0x800078EC` zero fill. |
+| `H-PortSourceClearOrdering` | Open after s3730: the port capture did not show nonzero producer content followed by a clear, so it cannot distinguish a hidden producer from a later legitimate clear. |
+| `H-SourceLayoutMismatch` | Not supported at s3730 for the measured handoff: the port repeatedly used the expected `0x1798B0`/`0xCB0` source descriptor and matched the zero source/output joins; full-span producer coverage remains open. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
 | `H-SharedCallbackState` | Refuted as a complete explanation at s3719: the paired port table shows distinct callback sources and stable distinct host-thread identities. |
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
@@ -649,6 +671,14 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   origins; the qualified port real arm joined 1,804 hangar output-DMA rows
   with zero source DMEM and zero output, and 268 zero PCM consumers. See
   [M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md).
+- **3730 — port source-layout join:** the fixed real-audio port retry reached
+  hangar and emitted 512 source-range writeback rows and 2,456 image-DMA
+  joins. The source descriptor remained `0x1798B0 -> DMEM 0xCB0`; source-DMEM,
+  output, and post-write payloads were zero, with the observed producer being
+  the earlier `0x800078EC` zero fill. Together with retail's nonzero source
+  snapshot and distinct writer families, this selects the observed port writer
+  divergence and leaves hidden-producer versus later-clear ordering open. See
+  [M5-S3730-SOURCE-LAYOUT-JOIN.md](M5-S3730-SOURCE-LAYOUT-JOIN.md).
 - **3729 — retail source payload boundary:** the independent oracle reached
   both target origins and passed its whole-RDRAM control. Retail's target-phase
   source snapshot was nonzero (90/664 sampled bytes), with the known producer
@@ -740,6 +770,7 @@ divergence, or mutation. The s3585 standalone-slot interpretation of
 - [M5-S3725-STEP1-CONTROL-VALID.md](M5-S3725-STEP1-CONTROL-VALID.md)
 - [M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3728-IMAGE-PAYLOAD-BOUNDARY.md)
 - [M5-S3729-RETAIL-SOURCE-PAYLOAD.md](M5-S3729-RETAIL-SOURCE-PAYLOAD.md)
+- [M5-S3730-SOURCE-LAYOUT-JOIN.md](M5-S3730-SOURCE-LAYOUT-JOIN.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
 Sessions 1–3693 remain in the append-only ledger. Use bounded `grep`/`sed`
