@@ -137800,3 +137800,16 @@ joinable key for the absent-source class. This selects H-DmaKeyStillUnavailable
 and rules out neither later-route ownership nor stale-input ownership. ORIGIN:
 diagnostic DMA ownership witness; no mitigation or guest-state rewrite. See
 docs/M5-S3688-KEYED-DMA-EMISSION.md.
+
+## Session 3689 (2026-09-21) — maintenance-compacted current truth
+
+Ran the mandated maintenance check before selecting a work unit: CURRENT-TRUTH
+was 60,258 bytes and 867 lines, over the 60,000-byte threshold. No experiment
+or build was run. Rewrote CURRENT-TRUTH to 12,264 bytes and 202 lines, keeping
+the live M5 input-DMA boundary, active hypotheses, latest evidence, operating
+rules, and a single monotonic backlog; closed M3 session detail remains in
+PROJECT-OVERVIEW §56 and the append-only ledger. Rewrote NEXT.md with the
+input-DMA ownership experiment, competing hypotheses, and its discriminating
+measurement. This rules out neither later-route ownership nor stale-input
+reuse; it only completes the required state compaction. ORIGIN: documentation
+maintenance; no runtime or guest-state change.
