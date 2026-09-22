@@ -404,9 +404,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    compare later same-pointer publications against no-stage-consumer rows.
    S3685 found all 236 generation-absent rows had a later same-pointer stage
    generation, selecting `H-AbsentPublicationGap`; the ABI publication key
-   was not joinable. Next classify whether the later stage is on the same or
-   a later route ordinal and preserve the source event/DMA identity. Do not
-   add a guard. See [M5-S3685-ABSENT-PUBLICATION-JOIN.md](M5-S3685-ABSENT-PUBLICATION-JOIN.md).
+   was not joinable. S3686 classified 244 such rows: 0 later stages retained
+   the source route, 244 advanced to a later route ordinal/row, and 0 were
+   contradictory or missing. This selects `H-LaterRouteReuse`; next join the
+   source input-DMA event to the later route's task/ABI rows to distinguish
+   later-task ownership from stale data across pointer reuse. Do not add a
+   guard. See [M5-S3685-ABSENT-PUBLICATION-JOIN.md](M5-S3685-ABSENT-PUBLICATION-JOIN.md)
+   and [M5-S3686-ABSENT-ROUTE-JOIN.md](M5-S3686-ABSENT-ROUTE-JOIN.md).
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
