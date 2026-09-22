@@ -138767,3 +138767,21 @@ layout remains unevaluable rather than refuted. Evidence:
 
 ORIGIN: independent oracle source watches and the port's phase-gated source-DMA
 join. No guest, port, RSP, audio, or payload behavior changed.
+
+## Session 3735 (2026-09-22) — compacted current truth after maintenance threshold
+
+The maintenance check measured `docs/CURRENT-TRUTH.md` at 60,067 bytes, so no
+experiment or build was run. Compacted the live truth file from 845 lines to
+150 lines, retaining the current M5 source-payload boundary, active/open
+hypotheses, the monotonic backlog, durable operating rules, superseded
+conclusions, and links to the detailed M5 evidence notes. Updated
+`docs/PROJECT-OVERVIEW.md` to move the durable current handoff there and
+rewrote `scratch/agent/NEXT.md` for the exact retail-to-port byte join.
+
+This maintenance result rules out neither byte-layout parity nor retail-only
+production; it only removes duplicated historical ledger detail from the live
+state file. The next discriminator remains exact retail sampled positions/FNV
+joined to the qualified port source-DMA rows.
+
+ORIGIN: documentation compaction triggered by the 60,000-byte maintenance
+gate. No guest, port, RSP, audio, or payload behavior changed.
