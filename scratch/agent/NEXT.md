@@ -1,37 +1,36 @@
-# Next work unit: distinguish stale task publication from route sequencing
+# Next work unit: join source-read ordering to the published task route
 
 HYPOTHESIS-ID: m5-audio-source-ownership
 
-Session 3679 found one host execution thread for all observed audio-task
-handoffs, source reads, and stage-2 rows: 1,254/1,254 stage rows had
-`handoff_thread=1,event_thread=1`. Session 3678 still found dominant generation
-mismatch and residual route drift. Do not repeat the thread-key instrument.
+Session 3680 found that all 3,698 stage rows used the current generation and
+current route publication, while source rows split 250 exact route matches and
+774 generation-only rows. Do not repeat the generation/thread instrument.
 
 Competing hypotheses:
 
-- H-StaleTaskPublication: source/stage callbacks use a carried generation that
-  is older than the latest handoff on the same thread; the mismatch is a stale
-  task record.
-- H-RouteSequencing: carried generation is current at each callback, but route
-  ordinal/row advances independently; the mismatch is route publication order.
-- H-MixedPublication: both stale-generation and route-sequencing rows occur.
+- H-SourceBeforePublish: source DMA reads occur before `rs64_audio_route_prepare`
+  publishes the route, then the same task reaches the current stage callback.
+- H-SourceWrongTask: source reads carry a route/task identity different from
+  the stage task, so the stage's current publication is not the source owner.
+- H-DmaPublicationRace: source rows are current but the input-DMA event is
+  published or consumed out of order relative to the route publication.
 
-Discriminating measurement: add one atomic latest-M_AUDTASK generation and one
-same-thread route-publication sequence to the existing source/stage rows, then
-classify every stage-2 row by carried-generation==latest-generation and
-carried-route==(latest route at callback). Same-thread stale generation with
-stable route selects H-StaleTaskPublication; current generation with route drift
-selects H-RouteSequencing; both select H-MixedPublication. Require the existing
-positive controls in the same run: oracle whole-RDRAM, descriptor, title,
-hangar, and type-2 controls plus port source/phase/ABI/stage controls.
+Discriminating measurement: add one publication sequence snapshot to each
+source input-DMA row and join each source event to the next stage row by task
+generation plus route ordinal/row. Classify source rows as pre-publication,
+same-task exact, or different-task, and report source-event-to-stage-event
+ordering. Pre-publication rows that join the same task select H-SourceBefore-
+Publish; different task identity selects H-SourceWrongTask; current identity
+with reversed event ordering selects H-DmaPublicationRace. Require the same
+positive controls: oracle whole-RDRAM, descriptor, title, hangar, and type-2
+controls plus port phase/source-hook/ABI/DMA/source/stage controls.
 
 Before running:
 
     ./submodule-patches/export.sh
     cmake --build build -j8
-    env zsh scratch/agent/run_s3674_m5_stage_task_join.sh
+    env zsh scratch/agent/run_s3681_m5_source_publication_join.sh
 
-Parse `[m5-source-range-reader]`, `[audtask-image-stage-row]`, and the new
-latest-generation/route fields from
-`scratch/agent/s3674_m5_stage_task_join/port.log`. Preserve the qualified route
-and SIGKILL cleanup. Do not alter guest state or add a mitigation.
+Use one qualified concurrent capture and SIGKILL cleanup. Parse
+`[m5-source-range-reader]` and `[audtask-image-stage-row]` from the new run
+directory. Do not alter guest state or add a mitigation.

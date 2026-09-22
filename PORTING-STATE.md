@@ -137620,3 +137620,27 @@ retail independently confirms the driven phases and task controls. No guest
 value was skipped, rewritten, or guarded. See
 docs/M5-S3679-TASK-THREAD-JOIN.md.
 ORIGIN: diagnostic-only host-thread witness; no mitigation was added.
+
+## Session 3680 (2026-09-21) — corrected audio publication-boundary join
+
+Ran one qualified concurrent oracle/port capture after adding latest audio-task
+generation and route-publication sequence fields to the existing source and
+stage witnesses. The first build exposed a switch-scope error and was fixed;
+the runtime submodule witness was then updated and exported through
+submodule-patches before the final rebuild. The final run used SIGKILL cleanup.
+
+Retail passed the whole-RDRAM, descriptor, title, hangar, and type-2 task
+controls. The port passed phase, source-hook, ABI, DMA, source, and stage
+controls and reached both target phases. It emitted 1,024 source rows and
+3,836 stage rows.
+
+The final boundary samples route identity when `rs64_audio_route_prepare`
+publishes it, rather than at M_AUDTASK handoff. All 3,836 stage rows matched
+both carried generation and latest route ordinal/row. Source rows split 246
+exact generation/route matches and 778 generation-only rows. This refutes
+stale stage publication and stage-route sequencing as explanations of s3678's
+mismatch; that mismatch was a handoff-boundary measurement artifact. It
+selects current stage publication with source reads preceding route publication
+and leaves exact input-DMA ownership open. No guest value was skipped,
+rewritten, or guarded. See docs/M5-S3680-PUBLICATION-ROUTE-JOIN.md.
+ORIGIN: diagnostic-only publication-boundary witness; no mitigation was added.

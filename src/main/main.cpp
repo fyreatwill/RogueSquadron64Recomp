@@ -91,7 +91,11 @@ extern "C" void rs64_audio_join_image_stage(const char* arm,
                                                uint32_t task_data_ptr,
                                                uint64_t task_generation,
                                                uint32_t handoff_thread,
-                                               uint32_t event_thread);
+                                               uint32_t event_thread,
+                                               uint64_t latest_generation,
+                                               uint32_t latest_route_seq,
+                                               uint32_t latest_route_ordinal,
+                                               uint32_t latest_route_row);
 extern "C" void rs64_audio_join_image_source(
     const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
     uint32_t width, uint32_t origin, uint64_t source_event,
@@ -116,6 +120,10 @@ static thread_local const OSTask* s_pending_audio_task = nullptr;
 static thread_local uint64_t s_pending_audio_generation = 0;
 static thread_local uint32_t s_pending_audio_thread_id = 0;
 static std::atomic<uint64_t> g_audio_task_generation{1};
+static std::atomic<uint64_t> g_m5_latest_audio_generation{0};
+static std::atomic<uint32_t> g_m5_latest_audio_route_seq{0};
+static std::atomic<uint32_t> g_m5_latest_audio_route_ordinal{0xFFFFFFFFu};
+static std::atomic<uint32_t> g_m5_latest_audio_route_row{0xFFFFFFFFu};
 
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
 
@@ -1063,6 +1071,14 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 0u : static_cast<uint32_t>(s_pending_audio_task->t.data_ptr);
             const uint32_t task_data_size = s_pending_audio_task == nullptr ?
                 0u : static_cast<uint32_t>(s_pending_audio_task->t.data_size);
+            const uint64_t latest_generation =
+                g_m5_latest_audio_generation.load(std::memory_order_acquire);
+            const uint32_t latest_route_seq =
+                g_m5_latest_audio_route_seq.load(std::memory_order_acquire);
+            const uint32_t latest_route_ordinal =
+                g_m5_latest_audio_route_ordinal.load(std::memory_order_acquire);
+            const uint32_t latest_route_row =
+                g_m5_latest_audio_route_row.load(std::memory_order_acquire);
             std::fprintf(stderr,
                 "[m5-source-range-reader] event=%llu row=%u op=dma_to_dmem "
                 "phase=%u width=%u origin=0x%06X arm=%s route_ordinal=%u "
@@ -1070,7 +1086,8 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 "overlap=0x%06X..0x%06X source_fnv=%08X source_nz=%u "
                 "dmem_fnv=%08X dmem_nz=%u task_data_ptr=0x%08X "
                 "task_data_size=0x%X task_generation=%llu handoff_thread=%u "
-                "event_thread=%u exit=%d\n",
+                "event_thread=%u latest_generation=%llu latest_route_seq=%u "
+                "latest_route_ordinal=%u latest_route_row=%u exit=%d\n",
                 static_cast<unsigned long long>(event),
                 source_rows[slot]++, phase, width, origin, arm ? arm : "n/a",
                 route_ordinal, route_row, dram_addr, len, dmem_addr,
@@ -1078,6 +1095,8 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                 dmem_nz, task_data_ptr, task_data_size,
                 static_cast<unsigned long long>(s_pending_audio_generation),
                 s_pending_audio_thread_id, rs64_m5_identity_thread_id(),
+                static_cast<unsigned long long>(latest_generation),
+                latest_route_seq, latest_route_ordinal, latest_route_row,
                 exit_reason);
             std::fflush(stderr);
             rs64_audio_join_image_source(
@@ -2278,6 +2297,11 @@ static void rs64_audio_route_prepare(const char* arm) {
         g_rs64_audio_ordinal.fetch_add(1, std::memory_order_relaxed),
         g_rs64_audio_phase_row++, prepare_seq
     };
+    g_m5_latest_audio_route_seq.fetch_add(1, std::memory_order_acq_rel);
+    g_m5_latest_audio_route_ordinal.store(g_rs64_audio_identity.ordinal,
+                                          std::memory_order_release);
+    g_m5_latest_audio_route_row.store(g_rs64_audio_identity.row,
+                                      std::memory_order_release);
     if (order_probe_enabled) {
         std::fprintf(stderr,
             "[m5-route-prepare] seq=%u accepted=1 phase=%u width=%u "
@@ -3086,6 +3110,14 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         0u : static_cast<uint32_t>(s_pending_audio_task->t.data_ptr);
     const uint32_t task_data_size = s_pending_audio_task == nullptr ?
         0u : static_cast<uint32_t>(s_pending_audio_task->t.data_size);
+    const uint64_t latest_generation =
+        g_m5_latest_audio_generation.load(std::memory_order_acquire);
+    const uint32_t latest_route_seq =
+        g_m5_latest_audio_route_seq.load(std::memory_order_acquire);
+    const uint32_t latest_route_ordinal =
+        g_m5_latest_audio_route_ordinal.load(std::memory_order_acquire);
+    const uint32_t latest_route_row =
+        g_m5_latest_audio_route_row.load(std::memory_order_acquire);
     if (len_a) rs64_audio_hash_dmem(dmem_a, len_a, fnv_a, nz_a);
     if (len_b) rs64_audio_hash_dmem(dmem_b, len_b, fnv_b, nz_b);
     uint32_t field348_fnv = 2166136261u, field348_nz = 0;
@@ -3156,7 +3188,8 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
             dma_fnv_a, dma_nz_a,
             dest_valid ? 1u : 0u, task_data_ptr,
             s_pending_audio_generation, s_pending_audio_thread_id,
-            rs64_m5_identity_thread_id());
+            rs64_m5_identity_thread_id(), latest_generation, latest_route_seq,
+            latest_route_ordinal, latest_route_row);
     }
     std::fprintf(stderr,
         "[audtask-image-stage] arm=%s ordinal=%u row=%u phase=%u width=%u"
@@ -3165,7 +3198,8 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         " dmem_b=0x%03X len_b=0x%X fnv_b=%08X nz_b=%u"
         " source_event=%llu"
         " task_data_ptr=0x%08X task_data_size=0x%X task_generation=%llu"
-        " handoff_thread=%u event_thread=%u"
+        " handoff_thread=%u event_thread=%u latest_generation=%llu"
+        " latest_route_seq=%u latest_route_ordinal=%u latest_route_row=%u"
         " field348_fnv=%08X field348_nz=%u field348_valid=%u"
         " dma_fnv_a=%08X dma_nz_a=%u dest_valid=%u dest_fnv=%08X dest_nz=%u\n",
         route.arm, route.ordinal, route.row, route.phase, route.width,
@@ -3176,6 +3210,8 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         task_data_size,
         static_cast<unsigned long long>(s_pending_audio_generation),
         s_pending_audio_thread_id, rs64_m5_identity_thread_id(),
+        static_cast<unsigned long long>(latest_generation), latest_route_seq,
+        latest_route_ordinal, latest_route_row,
         field348_fnv, field348_nz,
         field348_valid ? 1u : 0u, dma_fnv_a, dma_nz_a,
         dest_valid ? 1u : 0u, dest_fnv, dest_nz);
@@ -4216,11 +4252,13 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         s_pending_task_ucode_data      = (uint32_t)task->t.ucode_data;
         s_pending_task_ucode_data_size = (uint32_t)task->t.ucode_data_size;
         return &factor5_gfx_runner;
-    case M_AUDTASK:
+    case M_AUDTASK: {
         s_pending_audio_task = task;
         s_pending_audio_thread_id = rs64_m5_identity_thread_id();
         s_pending_audio_generation = g_audio_task_generation.fetch_add(
             1, std::memory_order_relaxed);
+        g_m5_latest_audio_generation.store(s_pending_audio_generation,
+                                           std::memory_order_release);
         s_pending_task_data_ptr = (uint32_t)task->t.data_ptr;
         s_pending_task_data_size = (uint32_t)task->t.data_size;
         rs64_m5_pcm_task_data_set(s_pending_task_data_ptr);
@@ -4261,6 +4299,7 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
             if (use_real_audio_ucode) return &factor5_ucode_b_probe;
         }
         return &musyx_stub_probe;
+    }
     default:
         // Don't crash — log once per distinct type and stub it out.
         static thread_local uint32_t last_unknown = 0;

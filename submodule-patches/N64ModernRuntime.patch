@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..f28f8e8 100644
+index b0d6bef..a5b9e06 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -49,7 +49,7 @@ index b0d6bef..f28f8e8 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,6 +101,54 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,6 +101,58 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -89,7 +89,11 @@ index b0d6bef..f28f8e8 100644
 +                                               uint32_t task_data_ptr,
 +                                               uint64_t task_generation,
 +                                               uint32_t handoff_thread,
-+                                               uint32_t event_thread);
++                                               uint32_t event_thread,
++                                               uint64_t latest_generation,
++                                               uint32_t latest_route_seq,
++                                               uint32_t latest_route_ordinal,
++                                               uint32_t latest_route_row);
 +extern "C" void rs64_audio_join_image_source(
 +    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
 +    uint32_t width, uint32_t origin, uint64_t source_event,
@@ -104,7 +108,7 @@ index b0d6bef..f28f8e8 100644
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,14 +156,103 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,14 +160,103 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -209,7 +213,7 @@ index b0d6bef..f28f8e8 100644
  }
  
  static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t wr_len) {
-@@ -121,9 +265,12 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -121,9 +269,12 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
@@ -872,7 +876,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..2463bcb 100644
+index 1cb3f6a..e152773 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -886,7 +890,7 @@ index 1cb3f6a..2463bcb 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1418 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1433 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -1086,6 +1090,10 @@ index 1cb3f6a..2463bcb 100644
 +    uint64_t task_generation;
 +    uint32_t handoff_thread;
 +    uint32_t event_thread;
++    uint64_t latest_generation;
++    uint32_t latest_route_seq;
++    uint32_t latest_route_ordinal;
++    uint32_t latest_route_row;
 +    uint64_t stage_event;
 +    uint64_t source_join_event = 0;
 +    uint64_t source_event = 0;
@@ -1439,7 +1447,11 @@ index 1cb3f6a..2463bcb 100644
 +                                               uint32_t task_data_ptr,
 +                                               uint64_t task_generation,
 +                                               uint32_t handoff_thread,
-+                                               uint32_t event_thread) {
++                                               uint32_t event_thread,
++                                               uint64_t latest_generation,
++                                               uint32_t latest_route_seq,
++                                               uint32_t latest_route_ordinal,
++                                               uint32_t latest_route_row) {
 +    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
 +    audio_image_scope_locked(phase, width, origin);
 +    if ((stage != 2 && stage != 3) || len == 0 ||
@@ -1461,6 +1473,10 @@ index 1cb3f6a..2463bcb 100644
 +    image.task_generation = task_generation;
 +    image.handoff_thread = handoff_thread;
 +    image.event_thread = event_thread;
++    image.latest_generation = latest_generation;
++    image.latest_route_seq = latest_route_seq;
++    image.latest_route_ordinal = latest_route_ordinal;
++    image.latest_route_row = latest_route_row;
 +    image.stage_event = audio_join_next_event();
 +    g_audio_image_stages.push_back(image);
 +    AudioImageStage& registered = g_audio_image_stages.back();
@@ -1471,12 +1487,15 @@ index 1cb3f6a..2463bcb 100644
 +            " width=%u origin=0x%06X stage=%u event=%" PRIu64
 +            " dest=0x%06X len=0x%X fnv=%08X nz=%u dest_valid=%u"
 +            " task_data_ptr=0x%08X task_generation=%" PRIu64
-+            " handoff_thread=%u event_thread=%u\n",
++            " handoff_thread=%u event_thread=%u latest_generation=%" PRIu64
++            " latest_route_seq=%u latest_route_ordinal=%u latest_route_row=%u\n",
 +            arm, ordinal, row, phase, width, origin, stage,
 +            registered.stage_event, registered.dest, len, fnv, nonzero,
 +            registered.dest_valid ? 1u : 0u, registered.task_data_ptr,
 +            registered.task_generation, registered.handoff_thread,
-+            registered.event_thread);
++            registered.event_thread, registered.latest_generation,
++            registered.latest_route_seq, registered.latest_route_ordinal,
++            registered.latest_route_row);
 +    fflush(stderr);
 +}
 +

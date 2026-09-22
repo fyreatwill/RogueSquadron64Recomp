@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3679 (2026-09-21).
+notes are linked below. Updated for session 3680 (2026-09-21).
 
 ## Current state
 
@@ -232,6 +232,19 @@ publication-order mechanism open. It is single-source port evidence for
 thread identity; retail supplies the independent reachability controls. See
 [M5-S3679-TASK-THREAD-JOIN.md](M5-S3679-TASK-THREAD-JOIN.md).
 
+Session 3680 corrected the publication boundary by recording latest route
+identity when `rs64_audio_route_prepare` publishes it, rather than sampling
+the older route at `M_AUDTASK` handoff. The qualified run passed oracle watch/
+task controls and port phase, source-hook, ABI, DMA, source, and stage controls.
+All 3,836 stage rows matched both carried generation and latest route
+ordinal/row. Source rows split 246 exact generation/route matches and 778
+generation-only rows, showing source reads can precede route publication while
+stage callbacks observe the current publication. This refutes stale stage
+publication and stage-route sequencing as explanations of s3678's mismatch;
+that mismatch was a handoff-boundary measurement artifact. Source-publication
+ordering and exact input-DMA ownership remain open. See
+[M5-S3680-PUBLICATION-ROUTE-JOIN.md](M5-S3680-PUBLICATION-ROUTE-JOIN.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -311,13 +324,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    [M5-S3673-INPUT-TASK-OWNERSHIP.md](M5-S3673-INPUT-TASK-OWNERSHIP.md),
    [M5-S3672-INPUT-DMA-ORDER.md](M5-S3672-INPUT-DMA-ORDER.md), and
    [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md).
-   S3677 refuted pointer-only and exact route/task matching. S3678 found 0
-   exact generation/route matches, but 230 same-generation route drifts and
-   1,671 different-generation same-pointer rows. Add one execution-thread key
-   at handoff, source-reader, and stage-row creation, then classify the whole
-   generation/route/thread table in one qualified run. A same-thread dominant
-   mismatch selects publication lag; cross-thread mismatches select ownership
-   timing. Preserve the existing positive controls and do not add a guard.
+   S3677 refuted pointer-only and exact route/task matching. S3678's mismatch
+   was measured against the handoff-boundary route and is superseded by s3680:
+   after moving the route sample to actual publication, all 3,836 stage rows
+   matched both generation and route. Source rows still split 246 exact versus
+   778 generation-only, so the next discriminator is source-read versus route-
+   publication ordering and exact input-DMA ownership. Do not repeat the
+   generation/thread join or add a guard.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -386,6 +399,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-GenerationRouteIdentity | Refuted at s3678: 0 exact generation/route matches across 1,903 stage-2 rows. |
 | H-RoutePublicationLag | Remains supported: 230 rows shared a generation but differed in route. |
 | H-CrossThreadTask | Remains supported, single-source: 1,671 rows had different generations despite the same task pointer. Thread identity is the next discriminator. |
+| H-StageCurrentPublication | Selected at s3680: all 3,836 stage rows matched latest generation and route publication; s3678's mismatch used the wrong boundary. |
+| H-SourceBeforePublication | Selected at s3680 for 778/1,024 source rows: generation matched but source route identity preceded the latest route publication. |
 
 The current work-unit slug is `m5-audio-source-ownership`.
 
@@ -685,6 +700,7 @@ deletion.
 - [M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md](M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md)
 - [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md)
 - [M5-S3678-TASK-GENERATION-JOIN.md](M5-S3678-TASK-GENERATION-JOIN.md)
+- [M5-S3680-PUBLICATION-ROUTE-JOIN.md](M5-S3680-PUBLICATION-ROUTE-JOIN.md)
 - [M5-S3660-AUDIO-SOURCE-OWNERSHIP.md](M5-S3660-AUDIO-SOURCE-OWNERSHIP.md)
 - [M5-S3668-PRESELECTOR-WRITER-JOIN.md](M5-S3668-PRESELECTOR-WRITER-JOIN.md)
 - [M5-S3671-DMA-ORDER.md](M5-S3671-DMA-ORDER.md)
