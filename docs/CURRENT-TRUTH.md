@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
  background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3680 (2026-09-21).
+notes are linked below. Updated for session 3681 (2026-09-21).
 
 ## Current state
 
@@ -245,6 +245,22 @@ that mismatch was a handoff-boundary measurement artifact. Source-publication
 ordering and exact input-DMA ownership remain open. See
 [M5-S3680-PUBLICATION-ROUTE-JOIN.md](M5-S3680-PUBLICATION-ROUTE-JOIN.md).
 
+Session 3681 added the publication snapshot to every source-span input-DMA
+row and joined source events to stage events by task generation. The qualified
+capture passed all oracle and port controls, reached title and hangar, and
+emitted 1,024 source rows and 3,903 stage rows with no crash or abort. All
+source rows had current task generation; 240 had current route publication and
+784 were route-lagged. Every route-lagged source event preceded the first stage
+event with the same generation, and no reversed source/stage ordering occurred.
+The remaining 240 source rows had no same-generation stage row in the bounded
+census; the existing fallback joined their stages to older source records, so
+they do not prove a different-task owner. This selects
+`H-SourceBeforePublish` for the dominant class and refutes the measured
+`H-DmaPublicationRace` form, while leaving `H-SourceWrongTask` open for the
+unmatched class. The ordering result is single-source port evidence; retail
+independently validates route reachability and activity. See
+[M5-S3681-SOURCE-PUBLICATION-ORDER.md](M5-S3681-SOURCE-PUBLICATION-ORDER.md).
+
 Session 3666 joined the selector publication to the task stream. The
 immediately preceding selector value matched every task data pointer: title
 selected `0x80173B20`/`0x80171CE0`, while each hangar origin interleaved
@@ -329,8 +345,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    after moving the route sample to actual publication, all 3,836 stage rows
    matched both generation and route. Source rows still split 246 exact versus
    778 generation-only, so the next discriminator is source-read versus route-
-   publication ordering and exact input-DMA ownership. Do not repeat the
-   generation/thread join or add a guard.
+   publication ordering and exact input-DMA ownership. S3681 selected
+   source-before-publication for 784 route-lagged rows and found no reversed
+   source/stage ordering, but 240 source rows had no same-generation stage row.
+   Next make the diagnostic source/stage matcher prefer task generation before
+   its ordinal fallback, then classify those 240 rows without changing guest
+   state. Do not add a guard.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the

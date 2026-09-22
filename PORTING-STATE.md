@@ -137644,3 +137644,28 @@ selects current stage publication with source reads preceding route publication
 and leaves exact input-DMA ownership open. No guest value was skipped,
 rewritten, or guarded. See docs/M5-S3680-PUBLICATION-ROUTE-JOIN.md.
 ORIGIN: diagnostic-only publication-boundary witness; no mitigation was added.
+
+## Session 3681 (2026-09-21) — joined source-read order to route publication
+
+Ran one qualified concurrent oracle/port capture after adding the publication
+snapshot to each source-span input-DMA row and joining source events to stage
+events by task generation. The retail arm passed whole-RDRAM, descriptor,
+title, hangar, and type-2 task controls. The port passed phase, source-hook,
+ABI, DMA, source, and stage controls, reached both target phases, and emitted
+1,024 source rows, 3,903 stage rows, and 1,973 ABI/DMA rows. No crash or abort
+marker appeared.
+
+All source rows had current task generation. 240 rows had current route
+publication at the source read; 784 were route-lagged. Every route-lagged
+source event preceded the first stage event with the same generation, with no
+reversed source/stage ordering. The remaining 240 rows had no same-generation
+stage row in the bounded census; the existing diagnostic fallback matched
+their stages to older source records, so they do not establish a different
+task owner. This selects H-SourceBeforePublish for the dominant class and
+refutes the measured reversed-order form of H-DmaPublicationRace, while
+leaving H-SourceWrongTask open for the unmatched class. The ordering result
+is single-source port evidence; retail independently validates reachability
+and watched activity. No guest value was skipped, rewritten, or guarded.
+See docs/M5-S3681-SOURCE-PUBLICATION-ORDER.md.
+ORIGIN: diagnostic-only publication and event-order witness; no mitigation
+was added.
