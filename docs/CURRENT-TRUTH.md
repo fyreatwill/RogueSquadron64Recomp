@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3713 (2026-09-21).
+Updated for session 3714 (2026-09-21).
 
 ## Current state
 
@@ -214,6 +214,19 @@ joins, and only real audio had image-stage rows. No target-phase guest
 port source, so this is single-source evidence; no retail drain parity claim
 is made. See [M5-S3713-POST-PCM-DRAIN.md](M5-S3713-POST-PCM-DRAIN.md).
 
+Session 3714 repeated the post-PCM drain qualification with the independent
+retail oracle and a corrected same-build port pair. Retail passed its
+whole-RDRAM control and showed a 1:1 hangar chain of 4,335 `set-next`, device-
+busy, and success executions, with zero reject-branch executions and no named
+status/length execution. Both port arms reached hangar and passed phase/RSP
+controls. Real audio had 114 target `set-next` rows, queue depth 741–3813,
+and 471 image-stage rows; silent had 29 rows, depth 741–4581, and zero
+image-stage rows. Both had zero target status/length calls and zero nonzero PCM
+rows. This confirms `H-AudioDrainDivergence` at the host queue/cadence
+boundary, rules out the guest status/length shims as the measured discriminator,
+and leaves the actual host consumer/callback writer open. See
+[M5-S3714-POST-PCM-DRAIN-QUALIFICATION.md](M5-S3714-POST-PCM-DRAIN-QUALIFICATION.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -232,14 +245,14 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — identify the post-PCM drain divergence.** Session 3713
-   selects `H-AudioDrainDivergence` for the measured host boundary: real and
-   silent arms differ in phase-gated queue depth and `set-next` cadence, while
-   both produce zero PCM and only real audio reaches image-stage rows. Next
-   identify the writer/consumer of this cadence and make guest AI
-   status/length call sites phase-visible; do not alter selector, clear, task,
-   or payload state. This remains single-source until retail drain evidence is
-   obtained.
+1. **M5 Step 4 — identify the host drain consumer.** Session 3714 confirms
+   `H-AudioDrainDivergence`: retail has a busy/success set-next chain, while
+   the paired port arms differ in host queue depth and cadence; neither port
+   arm calls guest status/length, and both have zero nonzero PCM rows. Add one
+   phase-gated host table covering enqueue, SDL callback/dequeue, queue depth,
+   and first image-stage join, with positive controls in both arms. Do not
+   alter selector, clear, task, audio route, or payload state. Retail queue
+   depth remains unmeasured.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,

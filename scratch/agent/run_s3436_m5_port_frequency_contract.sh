@@ -23,11 +23,11 @@ run_arm() {
   env "${common[@]}" ROGUESQ_AUDIO_UCODE="$audio" ./RogueSquadron64Recomp >"$OUT/$arm.log" 2>&1 &
   RUN_PID=$!
 }
-run_arm silent 0
-SILENT_PID=$RUN_PID
-sleep 3
 run_arm real 1
 REAL_PID=$RUN_PID
+sleep 3
+run_arm silent 0
+SILENT_PID=$RUN_PID
 for tick in {1..240}; do
   real_done=0 silent_done=0
   grep -a -q '\[phase\].*width=512\|vi_width=512' "$OUT/real.log" 2>/dev/null && real_done=1

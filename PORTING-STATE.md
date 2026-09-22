@@ -138333,3 +138333,24 @@ ORIGIN: diagnostic-only host drain/consumer observations. The legitimate
 writers are the existing `osAiSetNextBuffer`/SDL queue path; no mitigation was
 added. Raw and adjusted depth are single-source port evidence, not retail
 parity evidence.
+
+## Session 3714 (2026-09-21) — qualified host audio drain consumer boundary
+
+Ran the independent retail oracle with a whole-RDRAM positive control and
+targeted AI execution watches. The control fired 23,005 times; retail's hangar
+phase produced 4,335 `osAiSetNextBuffer`, `__osAiDeviceBusy`, and success
+triples, with zero reject-branch executions and no named status/length calls.
+Rebuilt the existing probe and ran a corrected same-build real-audio/silent
+pair. Both arms reached title 1024 and hangar 512 and passed phase/RSP
+controls. Real audio had 114 target set-next rows, raw queue depth 741–3813,
+and 471 image-stage rows; silent had 29 rows, depth 741–4581, and zero
+image-stage rows. Both arms had zero target status/length calls and zero
+nonzero PCM rows. This selects `H-AudioDrainDivergence` at the host
+queue/callback boundary and rules out the guest status/length shims as the
+measured discriminator. It does not identify the consumer or establish retail
+queue-depth parity. The first arm-order attempt was invalid because silent
+crashed at 320 and real never reached 512; the corrected pair is the result.
+
+ORIGIN: diagnostic-only oracle and host queue observations. No mitigation was
+added; the legitimate producer remains `osAiSetNextBuffer` and the unresolved
+boundary is the host audio consumer/callback cadence.
