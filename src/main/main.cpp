@@ -627,7 +627,7 @@ extern "C" void rs64_m5_preclear_snapshot(uint8_t* rdram, uint32_t dst,
     const uint32_t phys = dst & 0x007FFFFFu;
     const uint64_t end = static_cast<uint64_t>(phys) + len;
     const uint32_t spans[][2] = {{0x178C80u, 0x178E00u},
-                                 {0x1797B0u, 0x179930u}};
+                                 {0x1797B0u, 0x179A48u}};
     uint32_t span = 0;
     for (uint32_t i = 0; i < 2u; ++i) {
         if (phys < spans[i][1] && end > spans[i][0]) { span = i + 1u; break; }
@@ -996,7 +996,7 @@ extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
     const uint32_t adjust = width == 'B' ? 3u : (width == 'H' ? 2u : 0u);
     const uint32_t len = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
     const uint32_t phys = ((addr ^ adjust) - 0x80000000u) & 0x007FFFFFu;
-    if (phys >= 0x179930u || phys + len <= 0x1797B0u) return;
+    if (phys >= 0x179A48u || phys + len <= 0x1797B0u) return;
 
     uint32_t phase = 0, width_n = 0, origin = 0;
     uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
@@ -1043,7 +1043,7 @@ extern "C" void rs64_m5_audio_input_dma(uint8_t* rdram, uint32_t dram_addr,
     const bool active = rs64_audio_current_route_snapshot(
         &phase, &width, &origin, &route_ordinal, &route_row, &exit_reason,
         &arm);
-    const uint32_t source_first = 0x1797B0u, source_last = 0x179930u;
+    const uint32_t source_first = 0x1797B0u, source_last = 0x179A48u;
     if (!active || !((width == 1024u && origin == 0x00790400u) ||
                      (width == 512u && origin == 0x006AB400u)) ||
         dram_addr >= source_last || dram_addr + len <= source_first) return;
@@ -1312,7 +1312,7 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
     if (!active || !((width == 1024u && origin == 0x00790400u) ||
                      (width == 512u && origin == 0x006AB400u))) return;
 
-    const uint32_t source_first = 0x1797B0u, source_last = 0x179930u;
+    const uint32_t source_first = 0x1797B0u, source_last = 0x179A48u;
     const uint32_t source_end = dram_addr + len;
 
     const bool source_window2 = dmem_addr < 0x9F0u &&
@@ -1509,7 +1509,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
                               (width == 512u && origin == 0x006AB400u);
     if (!route_active || !target_phase) return;
 
-    const uint32_t first = 0x1797B0u, last = 0x179930u;
+    const uint32_t first = 0x1797B0u, last = 0x179A48u;
     const uint32_t end = dram_addr + len;
     if (dram_addr >= last || end <= first) return;
     const uint32_t overlap_first = dram_addr > first ? dram_addr : first;
@@ -3405,7 +3405,7 @@ extern "C" void rs64_m5_field348_candidate_store(uint32_t writer_pc,
 
     const uint32_t span =
         (phys < 0x178E00u && phys + len > 0x178C80u) ? 1u :
-        ((phys < 0x179930u && phys + len > 0x1797B0u) ? 2u : 0u);
+        ((phys < 0x179A48u && phys + len > 0x1797B0u) ? 2u : 0u);
     const uint32_t route_ordinal = g_rs64_audio_identity.valid ?
         g_rs64_audio_identity.ordinal : 0xFFFFFFFFu;
     const uint32_t route_row = g_rs64_audio_identity.valid ?
@@ -3462,7 +3462,7 @@ extern "C" void rs64_m5_field348_memset(uint32_t dst, uint32_t fill,
     const uint32_t phys = dst & 0x007FFFFFu;
     const uint64_t end = static_cast<uint64_t>(phys) + len;
     const bool overlap_1 = len != 0u && phys < 0x178E00u && end > 0x178C80u;
-    const bool overlap_2 = len != 0u && phys < 0x179930u && end > 0x1797B0u;
+    const bool overlap_2 = len != 0u && phys < 0x179A48u && end > 0x1797B0u;
     const uint32_t span = overlap_1 ? 1u : (overlap_2 ? 2u : 0u);
     const uint32_t slot = width == 1024u ? 0u : 1u;
 

@@ -138682,3 +138682,26 @@ an exhaustive full-span port producer census. Evidence:
 ORIGIN: diagnostic-only source producer/transition hooks, source-DMA and
 image-DMA payload hashes, route joins, and existing phase controls. No guest,
 RSP, task, audio-route, or payload behavior changed.
+## Session 3731 (2026-09-21) — completed full-span source producer census
+
+Extended every port source-range producer, clear, input-DMA, source-reader,
+writeback, and transition bound from `0x1797B0..0x179930` to the full retail
+span `0x1797B0..0x179A48`. One paired build/run reached both target phases in
+both arms and fired the RSP positive control. The real arm emitted 512
+source-reader rows, 512 source-range writeback rows, 3,392 transition rows,
+and 13,824 DMEM-coverage rows; the silent arm emitted no image-source rows as
+expected for the stub.
+
+The extension added 478 producer rows overall. Seventy-eight were nonzero
+pre-target stores; 280 target-phase extension rows were all zero. The known
+`0x800078EC` zero-fill remained the target's final observed writer, and the
+source/DMEM/writeback/post-write payloads stayed zero. Independent retail
+evidence from s3729 still showed 90/664 nonzero target-phase source bytes and
+the corresponding writer families. This selects `H-PortSourceClearOrdering`,
+refutes `H-UninstrumentedPortProducer` for the measured full span, and closes
+the full-span source boundary. See
+`docs/M5-S3731-FULL-SPAN-PRODUCER.md`.
+
+ORIGIN: diagnostic-only full-span source producer/transition hooks, payload
+hash joins, and existing phase/RSP controls. No guest, RSP, task, audio-route,
+or payload behavior changed.
