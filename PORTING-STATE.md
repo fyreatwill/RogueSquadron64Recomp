@@ -138275,3 +138275,25 @@ the prior qualified captures cited above.
 
 ORIGIN: diagnostic-only source-store, load, and caller observations. No
 selector, audio, task, clear, or payload state was changed.
+
+## Session 3711 (2026-09-21) — qualified AI-frequency return parity
+
+The existing phase-gated frequency driver was corrected to enable both the
+selector AI-boundary and AI-return witnesses. One Debug build was used. A
+route-flake retry stopped before title and was discarded; the valid retry
+reached title VI 1024 and hangar VI 512, fired the RSP positive control and
+4,766 image-stage rows, and emitted no crash or abort marker.
+
+The hangar port row recorded `pc=0x80029E78`, `a0=0x5622`,
+`s1=0x80165ED0`, `v0=0x561F`, followed by AI return `input=0x561F`,
+`result=0x561F`. Independent retail captures passed their whole-RDRAM
+control, reached hangar, and recorded the same input and actual-frequency
+result; the retail ELF independently gives the rounded NTSC DAC-rate formula.
+This selects `H-AIFrequencyReturnParity` and refutes return divergence and
+producer-state divergence at the measured boundary. The image discrepancy
+remains downstream. No audio, selector, task, clear, or payload state was
+rewritten.
+
+ORIGIN: diagnostic-only host AI entry/return observations paired with
+independent retail execution/value evidence. The legitimate writer is
+`osAiSetFrequency` at `0x80029D20`.

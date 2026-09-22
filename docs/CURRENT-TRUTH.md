@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3710 (2026-09-21).
+Updated for session 3711 (2026-09-21).
 
 ## Current state
 
@@ -183,6 +183,15 @@ divergence and stale-load explanations at this boundary. The next boundary
 is the internal AI-frequency call/return contract. See
 [M5-S3710-SELECTOR-INPUT-WRITER.md](M5-S3710-SELECTOR-INPUT-WRITER.md).
 
+Session 3711 qualified that internal contract. The valid phase-gated port run
+reached title and hangar, passed the RSP/image controls, and recorded
+`0x80029E78` with `a0=0x5622`, followed by `v0=0x561F` at the AI return and
+the selector setup store. Independent retail evidence recorded the same input
+and result, while the retail ELF gives the rounded NTSC DAC-rate calculation.
+This selects `H-AIFrequencyReturnParity` and refutes return divergence and
+producer-state divergence at this boundary. The image discrepancy remains
+downstream. See [M5-S3711-AI-FREQUENCY-QUALIFICATION.md](M5-S3711-AI-FREQUENCY-QUALIFICATION.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -201,12 +210,12 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — qualify the internal AI-frequency return contract.** Session
-   3710 selects `H-SelectorInputWriterParity`: retail and both port arms agree
-   that `0x80091CC8` supplies `0x561F` to `MEM_W(0x80165ED0)`. Trace the
-   internal call/return producer that receives source `0x5622` and supplies
-   the setup value before that store. Keep the probe phase-gated and do not
-   alter the clear, selector, audio, task, or payload state.
+1. **M5 Step 4 — qualify the post-return AI side-effect boundary.** Session
+   3711 selects `H-AIFrequencyReturnParity`: retail and the port both pass
+   `0x5622` through `0x80029D20` to the actual result `0x561F`. Trace the
+   next hardware/host audio-state side effect and its consumer in the same
+   phase-gated paired route. Keep the probe diagnostic-only and do not alter
+   the selector, clear, task, or payload state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -249,6 +258,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ClearBranchRoute` | Selected at s3708: retail and both port arms showed the same target-phase loop/branch outcomes and allocator inputs before the clear. |
 | `H-CallerSelectorRoute` | Selected at s3709: retail and both port arms matched `a1=0x561F`, `a2=0`, `s0=0x12`, `s2=1`, and the caller-to-entry handoff. |
 | `H-SelectorInputWriterParity` | Selected at s3710: both port arms saw `0x80091CC8` write `0x561F`; independent retail evidence saw the same PC and value. |
+| `H-AIFrequencyReturnParity` | Selected at s3711: port and independent retail both observed `a0=0x5622` at `0x80029D20` and actual return `0x561F`; the next boundary is post-return side effect. |
+| `H-AIFrequencyReturnDivergence` | Refuted at s3711: the valid hangar port row matched the independent retail input/result pair. |
+| `H-AIFrequencyProducerState` | Refuted at s3711 for the measured call/return row: no differing producer state survived into the AI result. |
 | `H-SelectorInputWriterDivergence` | Refuted at s3710 at the measured setup boundary: source PC and value matched independent retail evidence. |
 | `H-SelectorInputNotWriter` | Refuted at s3710: the source store, load, and caller formed an ordered `0x561F` chain in both port arms. |
 | `H-CallerStateDivergence` | Refuted at s3709: real and silent arms had identical caller/allocator selector tuples. |
