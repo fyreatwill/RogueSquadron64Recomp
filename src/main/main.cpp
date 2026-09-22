@@ -1419,7 +1419,9 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
                 payload_fnv, payload_nz, post_fnv, post_nz, segment_first,
                 segment_last, static_cast<unsigned long long>(segment_sequence),
                 first_coverage.addr, first_coverage.len,
-                first_coverage.kind ? "vector" : "scalar", first_coverage.value,
+                first_coverage.kind == 2u ? "dma" :
+                    (first_coverage.kind ? "vector" : "scalar"),
+                first_coverage.value,
                 first_coverage.fnv, first_coverage.nonzero,
                 first_coverage.route_ordinal);
             segment_first = segment_last;
@@ -1460,7 +1462,8 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
         post_fnv, post_nz,
         static_cast<unsigned long long>(g_rs64_m5_last_dmem_writer_seq),
         g_rs64_m5_last_dmem_writer_addr, g_rs64_m5_last_dmem_writer_len,
-        g_rs64_m5_last_dmem_writer_kind ? "vector" : "scalar",
+        g_rs64_m5_last_dmem_writer_kind == 2u ? "dma" :
+            (g_rs64_m5_last_dmem_writer_kind ? "vector" : "scalar"),
         g_rs64_m5_last_dmem_writer_value, g_rs64_m5_last_dmem_writer_fnv,
         g_rs64_m5_last_dmem_writer_nonzero,
         g_rs64_m5_last_dmem_writer_route_ordinal,
@@ -3055,6 +3058,57 @@ extern "C" void rs64_m5_audio_dmem_vector_store(uint32_t dmem_addr,
     g_rs64_audio_vector_store = true;
     rs64_m5_audio_dmem_store(dmem_addr, len, 0u);
     g_rs64_audio_vector_store = false;
+}
+
+extern "C" void rs64_m5_audio_dmem_dma_write(uint32_t dmem_addr,
+                                                uint32_t len) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SOURCE_WRITER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || len == 0u) return;
+
+    const Rs64AudioRouteIdentity& route = g_rs64_audio_identity;
+    if (!route.valid ||
+        !((route.width == 1024u && route.origin == 0x00790400u) ||
+          (route.width == 512u && route.origin == 0x006AB400u))) return;
+
+    const uint32_t first = dmem_addr & 0xFFFu;
+    const uint32_t count = len > 0x1000u ? 0x1000u : len;
+    const uint64_t sequence =
+        g_rs64_m5_dmem_writer_seq.fetch_add(1u, std::memory_order_relaxed) + 1u;
+    uint32_t fnv = 2166136261u;
+    uint32_t nonzero = 0u;
+    for (uint32_t i = 0; i < count; ++i) {
+        const uint8_t byte = dmem[((first + i) & 0xFFFu) ^ 3u];
+        fnv = (fnv * 16777619u) ^ byte;
+        nonzero += byte != 0u;
+    }
+
+    g_rs64_m5_last_dmem_writer_seq = sequence;
+    g_rs64_m5_last_dmem_writer_addr = first;
+    g_rs64_m5_last_dmem_writer_len = len;
+    g_rs64_m5_last_dmem_writer_value = 0u;
+    g_rs64_m5_last_dmem_writer_kind = 2u;
+    g_rs64_m5_last_dmem_writer_fnv = fnv;
+    g_rs64_m5_last_dmem_writer_nonzero = nonzero;
+    g_rs64_m5_last_dmem_writer_route_ordinal = route.ordinal;
+
+    std::lock_guard<std::mutex> lock(g_rs64_m5_dmem_coverage_mutex);
+    for (uint32_t i = 0; i < count; ++i) {
+        Rs64M5DmemCoverage& coverage =
+            g_rs64_m5_dmem_coverage[(first + i) & 0xFFFu];
+        coverage.sequence = sequence;
+        coverage.addr = first;
+        coverage.len = len;
+        coverage.kind = 2u;
+        coverage.value = 0u;
+        coverage.fnv = fnv;
+        coverage.nonzero = nonzero;
+        coverage.route_ordinal = route.ordinal;
+    }
 }
 
 extern "C" void rs64_m5_field348_store(char width, uint32_t pc,

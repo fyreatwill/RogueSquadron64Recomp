@@ -138004,3 +138004,27 @@ an uninstrumented write path nor the open retail-vs-port layout mismatch. No
 guest or RDRAM state was changed. ORIGIN: diagnostic per-byte DMEM coverage
 and source-DMA provenance witnesses. See
 docs/M5-S3698-DMEM-COVERAGE-GAP.md.
+
+## Session 3699 (2026-09-21) — classified the DMEM DMA coverage gap
+
+The required retail preflight passed its whole-RDRAM positive control at
+10,000 callbacks, reported 1,058 watched source-span writes, and reached both
+title and hangar VI phases. The Debug target was rebuilt once after adding a
+regeneration-preserved witness for every RDRAM-to-DMEM DMA copy. The first
+port retry was invalid: it reached both target VIs but emitted no target DMEM
+or source rows, so it was not used as evidence. The fixed master-log retry
+fired the RSP control, DMEM controls in both phases, and 512 title plus 512
+hangar source rows.
+
+The hangar source rows split 255 to DMEM `0xCB0` and 257 to `0x6F0`. The new
+coverage census classified the formerly absent `0xCC0..0xCD0` interval as a
+zero-valued DMA writer for all 255 `0xCB0` rows; 9,380 vector and 256 DMA
+coverage records were emitted across the target phases. This selects
+`H-UninstrumentedDMEMWriter` and refutes `H-GenuineZeroGap` as the explanation
+for the missing census. It does not explain why the DMA source bytes are zero,
+and does not close the retail-vs-port source-layout question. The next work
+unit is to join the DMA's source RDRAM range and producer identity. The invalid
+retry is documented as a failed experiment rather than a null result.
+
+ORIGIN: diagnostic DMA/DMEM provenance witness; no mitigation or guest/RDRAM
+state change. See docs/M5-S3699-DMEM-DMA-COVERAGE.md.
