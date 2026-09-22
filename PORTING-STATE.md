@@ -138314,3 +138314,22 @@ the later drain/status join nor the downstream image discrepancy.
 
 ORIGIN: diagnostic-only host callback/consumer observations. The legitimate
 writer is `osAiSetFrequency` at `0x80029D20`; no mitigation was added.
+
+## Session 3713 (2026-09-21) — qualified post-PCM drain divergence
+
+Added phase-reset `[m5-audio-drain]` rows for AI set-next/status/length, raw
+SDL queue-depth rows, and a paired launcher with exact child cleanup. The
+same-build real-audio and silent arms both reached title VI 1024 and hangar VI
+512 and both passed the RSP positive control. At hangar, real audio produced
+43 set-next rows with raw queue depth 0–4581 bytes; silent produced 132 rows
+with 741–4581 bytes. Both arms produced zero PCM source/consumer hashes, and
+only real audio produced image-stage rows. No target-phase get-status or
+get-length call occurred. This selects `H-AudioDrainDivergence` at the port
+host boundary and leaves `H-AudioDrainNotConsumed` open. The first paired
+launcher attempts were invalid due to lifetime-capped counters and orphaned
+children; the fixed run is the result above.
+
+ORIGIN: diagnostic-only host drain/consumer observations. The legitimate
+writers are the existing `osAiSetNextBuffer`/SDL queue path; no mitigation was
+added. Raw and adjusted depth are single-source port evidence, not retail
+parity evidence.

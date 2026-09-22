@@ -336,10 +336,10 @@ index dbf46b2..25db4e6 100644
  
  template<u8 e>
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..fde9f3f 100644
+index 0195f2b..49fbcd3 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,86 @@
+@@ -1,29 +1,94 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
@@ -362,7 +362,9 @@ index 0195f2b..fde9f3f 100644
 +static bool rs64_ai_status_probe_enabled() {
 +    static const bool enabled = [] {
 +        const char* all = std::getenv("ROGUESQ_LOG_ALL");
-+        return all && all[0] && all[0] != '0';
++        const char* own = std::getenv("ROGUESQ_LOG_M5_AUDIO_DRAIN");
++        return (all && all[0] && all[0] != '0') ||
++               (own && own[0] && own[0] != '0');
 +    }();
 +    return enabled;
 +}
@@ -378,10 +380,16 @@ index 0195f2b..fde9f3f 100644
 +    static uint32_t target_rows = 0;
 +    static uint32_t control_rows = 0;
 +    if (target) {
-+        if (target_rows >= 256u) return;
++        static uint32_t phase_key = 0xFFFFFFFFu;
++        const uint32_t current_key = (width << 24) ^ origin;
++        if (current_key != phase_key) {
++            phase_key = current_key;
++            target_rows = 0;
++        }
++        if (target_rows >= 512u) return;
 +        ++target_rows;
 +        std::fprintf(stderr,
-+                     "[ai-status] api=%s phase=%u width=%u origin=0x%06X"
++                     "[m5-audio-drain] api=%s phase=%u width=%u origin=0x%06X"
 +                     " result=%u buffered=%u arg0=0x%08X arg1=0x%08X\n",
 +                     api, rs64_phase_ord(), width, origin, result, buffered,
 +                     arg0, arg1);

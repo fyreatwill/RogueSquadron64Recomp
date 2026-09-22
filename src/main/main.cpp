@@ -4946,6 +4946,36 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
 static size_t get_frames_remaining() {
     if (!audio_device) return 0;
     Uint32 queued = SDL_GetQueuedAudioSize(audio_device);
+    static const bool probe_enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_AUDIO_DRAIN");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (probe_enabled) {
+        const uint32_t width = rs64_vi_committed_width();
+        const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+        const bool target = (width == 1024u && origin == 0x00790400u) ||
+                            (width == 512u && origin == 0x006AB400u);
+        static uint32_t rows = 0;
+        static uint32_t phase_key = 0xFFFFFFFFu;
+        if (target) {
+            const uint32_t current_key = (width << 24) ^ origin;
+            if (current_key != phase_key) {
+                phase_key = current_key;
+                rows = 0;
+            }
+        }
+        if (target && rows < 512u) {
+            std::fprintf(stderr,
+                         "[m5-audio-drain-raw] n=%u phase=%u width=%u origin=0x%06X"
+                         " queued_bytes=%u frames=%u device=%u\n",
+                         rows++, rs64_phase_ord(), width, origin,
+                         (unsigned)queued, (unsigned)(queued / 4u),
+                         (unsigned)audio_device);
+            std::fflush(stderr);
+        }
+    }
     // queued is in bytes; 4 bytes per stereo frame (2 ch × 2 bytes)
     return queued / 4;
 }
