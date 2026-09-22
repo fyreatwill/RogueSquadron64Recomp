@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3695 (2026-09-21).
+Updated for session 3696 (2026-09-21).
 
 ## Current state
 
@@ -57,14 +57,16 @@ invalid. No DMEM producer hypothesis is selected. The optional transition
 logger was corrected so it cannot bypass the target-phase row cap. See
 [M5-S3694-DMEM-PRODUCER-JOIN.md](M5-S3694-DMEM-PRODUCER-JOIN.md).
 
-Session 3695 re-ran the existing qualified real-audio arm after an independent
-retail control. Retail reached hangar and its phase-gated writer census was
-active, but the port remained at the initial 320 VI for 35 seconds: neither
-the RSP source-hook positive control nor the target DMEM/source controls fired.
-The DMEM predecessor join is therefore unevaluable, and no producer
-hypothesis is selected. The next boundary is the audio-pump route that blocks
-the real-audio arm before target phases. See
-[M5-S3695-AUDIO-PUMP-BOUNDARY.md](M5-S3695-AUDIO-PUMP-BOUNDARY.md).
+Session 3695's pre-320 real-audio stall did not reproduce in the fixed s3696
+paired run. Both real and silent arms reached VI 1024 and 512 and both RSP
+positive controls fired. With `ROGUESQ_LOG_M5_SOURCE_WRITER=1`, the real arm
+emitted 2,048 DMEM-store rows and 512 source-range writer rows; every sampled
+DMEM value and source/post-write payload was zero, while all source rows had a
+predecessor sequence and 139/512 overlapped the output range. The silent arm
+had no target DMEM or source-range rows. This refutes a stable audio-pump
+route gate and reopens the DMEM predecessor classification; it does not select
+which producer explanation is correct. See
+[M5-S3696-AUDIO-PUMP-QUALIFICATION.md](M5-S3696-AUDIO-PUMP-QUALIFICATION.md).
 
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
@@ -84,14 +86,16 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — qualify the audio-pump route boundary.** The existing real-
-   audio arm stalled at the initial 320 VI before both M5 positive controls;
-   determine the route gate or pump condition that prevents target-phase
-   callbacks. The discriminator is a same-run phase/control table showing
-   whether the RSP source control, 1024 VI, 512 VI, DMEM source control, and
-   source-range writer become live in order. Do not add another DMEM join field
-   or infer a producer from absent rows. Once the route qualifies, resume the
-   predecessor table for the three producer hypotheses.
+1. **M5 Step 4 — classify the qualified DMEM predecessor table.** Use the
+   existing DMEM-store and source-range hooks; do not add another join field.
+   The discriminator is one phase-gated table for all sampled source rows,
+   carrying predecessor sequence/address/length/kind/value/nonzero/overlap and
+   the source payload, with the RSP and DMEM positive controls live. A
+   legitimate zero producer predicts a stable matching writer class and
+   zero-valued DMEM; a wrong-window join predicts non-overlapping or unrelated
+   predecessors; a retail-only path remains open only if the qualified port
+   writer table cannot account for the source rows. Obtain independent retail
+   ground truth before any new build.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -117,6 +121,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-WriterOutsidePhaseGate` | Refuted at s3693 for the measured port rows: the DMA writer was visible in the hangar gate. |
 | `H-ZeroDMEMProducer` | Next boundary after s3693; the DMA payload was already zero, but its producer is not yet joined. |
 | `H-DMEMJoinUnevaluable` | Selected at s3694 for the new instrument only: the qualified retry reached both target VIs, but the target source-range branch produced no rows and its positive control did not fire. |
+| `H-AudioPumpStableGate` | Refuted at s3696: the fixed paired real-audio arm reached both target phases and emitted all target controls. |
+| `H-DMEMPredecessorClass` | Open at s3696: 512/512 source rows carried a predecessor sequence, 139 overlapped the output range, and all sampled values/payloads were zero. |
 | `H-SourceOverwrittenAfterInput` | Refuted at s3691 for 512/512 hangar rows: input and source payload fields were equal. |
 | `H-StaleTaskPointerOnly` | Refuted at s3691 for 512/512 hangar rows: input and source task-data pointers were equal. |
 | `H-InputDmaKeyStillUnavailable` | Selected only at the output-DMA boundary by s3688; superseded by the input-DMA key. |
@@ -156,6 +162,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   emitted neither its RSP nor target source controls. The DMEM producer join
   remains unevaluable. See
   [M5-S3695-AUDIO-PUMP-BOUNDARY.md](M5-S3695-AUDIO-PUMP-BOUNDARY.md).
+- **3696 — qualified audio-pump route:** the fixed paired run reached all
+  target phases in both arms; real audio emitted 2,048 DMEM rows and 512
+  source-range rows, all sampled payloads zero, with 512/512 predecessor
+  sequences and 139/512 overlaps. The route stall is intermittent and the
+  predecessor table is now evaluable. See
+  [M5-S3696-AUDIO-PUMP-QUALIFICATION.md](M5-S3696-AUDIO-PUMP-QUALIFICATION.md).
 - **3688 — keyed per-range DMA boundary:** source event, task generation, and
   route publication fields fired in output-DMA rows, but 257/258 absent-source
   rows lacked a same-event range and one was contradictory. Input-DMA identity

@@ -137941,3 +137941,22 @@ nor a retail-only source path. The next boundary is the audio-pump route that
 prevents the real-audio arm from reaching the target. ORIGIN: diagnostic-only
 run and independent retail writer control; no guest or RDRAM state changed.
 See docs/M5-S3695-AUDIO-PUMP-BOUNDARY.md.
+
+## Session 3696 (2026-09-21) — qualified audio-pump route and predecessor table
+
+The first paired run omitted `ROGUESQ_LOG_M5_SOURCE_WRITER`, so its missing
+DMEM control was invalid. The fixed concurrent real-audio/silent run used the
+same existing binary and qualified LLE route. Both arms reached VI widths
+`0`, `320`, `640`, `1024`, and `512`; both RSP source-hook positive controls
+fired, with no crash or abort.
+
+The real arm emitted the DMEM positive control in both target phases and 2,048
+DMEM-store rows, plus 512 source-range DMA-to-RDRAM rows. All sampled DMEM
+writer values had zero nonzero bytes. All source rows had zero `payload_nz` and
+zero `post_nz`; every row carried a nonzero predecessor sequence, and 139/512
+predecessors overlapped the output DMA range. The silent arm emitted no target
+DMEM or source-range rows. This refutes a stable audio-pump gate or route
+stall; the s3695 pre-320 stall is intermittent. It validates the predecessor
+instrument and reopens producer classification. See
+docs/M5-S3696-AUDIO-PUMP-QUALIFICATION.md. ORIGIN: diagnostic DMEM/DMA
+provenance witnesses; no guest or RDRAM state changed.

@@ -1,33 +1,30 @@
-# Next work unit: identify the audio-pump route boundary
+# Next work unit: classify the qualified DMEM predecessor table
 
-HYPOTHESIS-ID: m5-audio-pump-route-boundary
+HYPOTHESIS-ID: m5-dmem-predecessor-classification
 
-S3695 showed that the existing qualified real-audio arm can stall at the
-initial 320 VI before the M5 RSP/source controls, while the independent retail
-control reaches hangar and observes its writer PCs. The predecessor join is
-unevaluable; do not interpret absent target rows as a DMEM producer result.
+S3696 fixed the omitted `ROGUESQ_LOG_M5_SOURCE_WRITER` gate and ran the real
+audio and silent arms concurrently from one binary. Both reached VI 1024 and
+512. The real arm emitted 2,048 DMEM rows and 512 source-range rows; every
+sampled DMEM value and source/post-write payload was zero, all source rows had
+predecessor sequences, and 139/512 predecessors overlapped the output range.
+The silent arm emitted no target DMEM/source rows. The s3695 pre-320 stall is
+therefore intermittent, not a stable route gate.
 
-Competing route hypotheses:
+Competing hypotheses:
 
-- `H-AudioPumpGate`: a required audio-pump gate prevents the real arm leaving
-  boot 320.
-- `H-LLERouteStall`: the selected LLE/audio route stalls before target VI due
-  to its task or yield configuration.
-- `H-PhaseInstrumentBlind`: the port reaches progress but the phase/control
-  callbacks are not live; this must be rejected by an independent VI control.
+- `H-ZeroDMEMProducer`: the qualified DMEM writer class legitimately writes
+  zero data, so the zero output payload follows directly from that writer.
+- `H-DMEMWriterWrongWindow`: the latest predecessor is an unrelated or
+  non-overlapping store, and the producer for the output window is elsewhere.
+- `H-RetailSourceDifferent`: the port's qualified DMEM path is not the retail
+  source path even though its route controls and output writer are live.
 
-Discriminator: one same-run table containing the port's RSP source positive
-control, VI 1024 and 512 transitions, DMEM source control, and source-range
-writer rows. A live RSP control followed by no VI transition selects a route
-stall; VI transitions with no M5 controls selects instrument blindness; all
-controls live reopens the DMEM predecessor unit.
-
-Use the existing binary from `build/` and batch the route arms in one run/build
-where possible. Keep the independent VI/phase logger and RSP positive control
-enabled. Start by comparing the current real-audio/LLE recipe against the
-known silent/Broke route or the smallest audio-pump gate toggle; do not add a
-DMEM join field.
-
-Require the discriminator table above. If the route stalls before 1024 again,
-inspect the existing audio-pump gate/task boundary; if it reaches 1024/512,
-resume the predecessor join without changing its fields.
+Discriminator: obtain independent retail ground truth before any new build,
+then run the existing port hooks with `ROGUESQ_LOG_M5_RSP_SOURCE=1` and
+`ROGUESQ_LOG_M5_SOURCE_WRITER=1`. The single table must join every sampled
+source-range row to predecessor sequence/address/length/kind/value/nonzero/
+overlap and payload fields, with both RSP and DMEM positive controls visible.
+Stable matching zero writers select `H-ZeroDMEMProducer`; unrelated or
+non-overlapping predecessors select `H-DMEMWriterWrongWindow`; a qualified
+port table that cannot account for the retail writer/source contract keeps
+`H-RetailSourceDifferent` open. Do not add another diagnostic field.
