@@ -138599,3 +138599,21 @@ callback table. Evidence: `docs/M5-S3726-CALLBACK-GROUND-TRUTH.md`.
 
 ORIGIN: diagnostic-only oracle execution watches, task dumps, and the existing
 whole-RDRAM positive control. No guest or host behavior was changed.
+
+## Session 3727 (2026-09-21) — qualified port callback parity table
+
+Built once and ran a same-build, phase-gated real-vs-silent pair with the
+existing callback table. Both arms reached VI 1024 and VI 512 and passed the
+RSP-source and audio-task controls. The fixed retry enabled the PCM boundary
+probe before interpretation. At hangar VI 512, real audio produced 3,677
+image-stage rows and 269 bounded consumer rows (consumer ordinal 1,792),
+while silent audio produced no image-stage rows and the same bounded consumer
+stream. Real image and PCM consumers used distinct stable host threads with
+overlapping route ordinals and callback sequence values; queue depth was
+joined in both streams. This selects `H-CallbackQueueOwnership` at the port
+boundary and refutes queue-presence as the explanation, while leaving retail
+host callback parity unavailable from the oracle. The next boundary is the
+image-task/output payload contract. Evidence: `docs/M5-S3727-CALLBACK-PARITY.md`.
+
+ORIGIN: diagnostic-only callback/source/thread/queue fields. No guest, RSP,
+task, audio-route, selector, clear, or payload behavior changed.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3726 (2026-09-21).
+Updated for session 3727 (2026-09-21).
 
 ## Current state
 
@@ -341,6 +341,19 @@ This selects `H-ImageContractProgress` and refutes `H-ImageRouteOnly` and
 activity appeared in both arms, so host callback parity remains the next
 boundary. See [M5-S3725-STEP1-CONTROL-VALID.md](M5-S3725-STEP1-CONTROL-VALID.md).
 
+Session 3727 completed the missing same-build port callback table. Both retry
+arms reached VI 1024 and 512 and passed the RSP-source and audio-task positive
+controls. At hangar VI 512, real audio produced 3,677 image-stage rows and
+269 bounded PCM-consumer rows (consumer ordinal reached 1,792), while silent
+audio produced no image-stage rows and the same bounded consumer stream. Real
+image and PCM consumers used distinct stable host threads, with overlapping
+route ordinals and callback sequence numbers. This selects
+`H-CallbackQueueOwnership` at the port boundary and refutes queue-presence as
+the explanation, but remains single-source port evidence; the retail oracle
+still cannot expose host callback/thread ownership. The next boundary is the
+image-task/output payload contract. See
+[M5-S3727-CALLBACK-PARITY.md](M5-S3727-CALLBACK-PARITY.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -359,12 +372,19 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 host callback parity boundary.** Add the single same-build,
-   phase-gated port table now that the retail ground-truth request is answered.
-   Join callback sequence, route ordinal, queue owner/thread, enqueue and
-   remaining depth, callback source, PCM-consumer count, and image-stage order
-   for real and silent arms after VI 512. Do not change selector, clear, task,
-   audio-route, or payload state.
+1. **M5 image-task/output payload boundary.** Build one phase-gated table that
+   joins the real-arm image task's source DMA, DMEM window, output-DMA payload,
+   image-stage callback, PCM source/consumer rows, and task completion in the
+   same route ordinal. Keep the silent arm and all positive controls. Competing
+   hypotheses are `H-ImageProducerZero` (the image task receives legitimate
+   zero data), `H-ImageWritebackGap` (the task produces data but the output
+   writeback is absent or ordered incorrectly), and `H-ConsumerPayloadGap`
+   (writeback is present but the downstream consumer sees a different span).
+   The discriminator is a same-build payload hash/nonzero table at each
+   handoff; matching nonzero DMEM with zero output selects writeback gap,
+   nonzero output with zero consumer payload selects consumer gap, and zero
+   DMEM/source payload selects producer-zero. Do not change task, selector,
+   clear, audio-route, or payload behavior.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -391,6 +411,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioDrainDivergence` | Selected at s3714 and strengthened single-source at s3715: real and silent port arms differ in target-phase queue cadence/depth; retail callback/depth parity remains unmeasured. |
 | `H-AudioDrainNotConsumed` | Open after s3715: the current queue table is not joined directly to image-stage, so host queue state cannot yet be separated from downstream stage consumption. |
 | `H-CallbackOwnershipBoundary` | Selected single-source at s3719: image-stage and PCM-consumer source/thread identities differ on the port, including 96 shared route ordinals. Retail parity remains open. |
+| `H-CallbackQueueOwnership` | Selected single-source at s3727 for the port: real-only image callbacks had a stable owner/thread distinct from the PCM consumer, with joined route ordinals and callback sequence; silent retained consumers but no image stream. Retail host parity remains unavailable. |
+| `H-ImageProducerZero` | Open after s3727: the callback table proves the real image stream is host-owned and target-qualified, but does not identify whether zero payload originates before or during the image task. |
+| `H-ImageWritebackGap` | Open after s3727: source/output payload hashes and ordering are the next discriminator. |
+| `H-ConsumerPayloadGap` | Open after s3727: host callback ownership is measured, but consumer payload identity has not been joined to image output bytes. |
 | `H-RetailGuestPathSplit` | Selected at execution level at s3720; s3721 field rows were mixed, and s3722 resolved the apparent `0x80094648` gap as an origin-gate mismatch. |
 | `H-RetailGuestFieldSplitPartial` | Selected at s3721 for the measured rows: one retail path has a distinct tuple while two paths share a tuple; the fourth path still needs a capture explanation. |
 | `H-Retail94648-OriginMismatch` | Selected single-source at s3722: all 128 `0x80094648` field rows appeared at target origin `0x006AB800`; the prior empty table used only `0x006AB400`. |
@@ -402,7 +426,6 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-AudioControlInvalid` | Superseded at s3725 for Step 1: the corrected full-route pair reached both target phases and passed controls; it remains applicable only to the invalid s3724 recipe. |
 | `H-ImageContractProgress` | Selected at s3725: both arms were target-qualified, while only real audio produced target image completion, source-range DMA, and image-stage rows. |
 | `H-ImageRouteOnly` | Refuted at s3725 for the paired port boundary: the valid real/silent arms differed in target image-task contract edges, not only route reachability. |
-| `H-CallbackQueueOwnership` | Open after s3726: retail ground truth confirmed active guest audio-task paths at both target origins but cannot expose host callback/thread or SDL queue ownership. |
 | `H-GuestContractDownstream` | Open after s3726: retail task activity is confirmed, but the oracle task witness cannot join the port's host callback sequence. |
 | `H-SharedQueueState` | Open after s3726: the required retail host-side queue witness is unavailable; the next discriminator is a same-build port callback table. |
 | `H-RetailHostCallbackParity` | Open at s3720: the oracle has no host callback/thread or SDL queue ownership witness. |
@@ -592,6 +615,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   and image-stage rows, while the silent `musyx_stub` had zero DMA count and
   no target image/source rows. See
   [M5-S3725-STEP1-CONTROL-VALID.md](M5-S3725-STEP1-CONTROL-VALID.md).
+- **3727 — port callback parity table:** both paired arms reached the target
+  phases and passed controls; real audio had 3,677 hangar image rows and a
+  distinct stable image-callback owner, while silent audio had no image rows
+  but the same bounded PCM-consumer stream. See
+  [M5-S3727-CALLBACK-PARITY.md](M5-S3727-CALLBACK-PARITY.md).
 
 Earlier M3 class closeouts (sessions 3586–3658) are archived in
 PROJECT-OVERVIEW §56. Earlier M5 boundary notes remain in `docs/` and the
