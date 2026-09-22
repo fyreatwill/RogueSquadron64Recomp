@@ -138228,3 +138228,27 @@ lines, each with a positive control. The next boundary is the caller at
 
 ORIGIN: diagnostic-only branch and route tracing. No game logic, clear, or
 payload behavior was changed.
+
+## Session 3709 (2026-09-21) — selected the retail-matching caller selector route
+
+The independent retail oracle ran first with a whole-RDRAM positive control
+(10,000 callbacks). Its first attempt armed the caller/allocator execution
+watches only when the 512 phase began and returned zero rows; this was an
+instrument-timing failure, not evidence of absent execution. The corrected
+same-run phase table covered the title and hangar origins, passed the control,
+and observed both `0x80091934` and `0x8008F0A0`. Retail reported the matching
+selector values `a1=0x561F`, `a2=0`, `s0=0x12`, and `s2=1`, with `a0=0x12` at
+the allocator entry.
+
+The one-build paired port run fired its caller-route control and both
+phase-controls in real-audio and silent arms. Both arms matched retail at the
+caller and allocator entry: `a1=0x561F`, `a2=0`, `s0=0x12`, `s2=1`, `s3=0`,
+and the same caller-to-entry handoff. Route identities were `525/526` in the
+real arm and `519/520` in the silent arm, which are arm-local publication
+counts rather than selector-state differences. This selects
+`H-CallerSelectorRoute`, refutes `H-CallerStateDivergence`, and does not
+support `H-CallerOrdering` at this boundary. The next boundary is the writer
+or source of `MEM_W(0x80165ED0)` loaded at `0x8009192C`.
+
+ORIGIN: diagnostic-only caller/entry argument and route tracing. No clear,
+selector, audio, task, or payload behavior was changed.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3708 (2026-09-21).
+Updated for session 3709 (2026-09-21).
 
 ## Current state
 
@@ -163,6 +163,16 @@ selects `H-ClearBranchRoute` and refutes caller-state and post-clear-ordering
 explanations at the measured boundary. See
 [M5-S3708-CLEAR-BRANCH.md](M5-S3708-CLEAR-BRANCH.md).
 
+Session 3709 added one phase-gated caller/allocator table. The independent
+retail oracle passed its whole-RDRAM control and executed both `0x80091934`
+and `0x8008F0A0` in the target route with `a1=0x561F`, `a2=0`, `s0=0x12`,
+and `s2=1`. Both paired port arms fired the probe controls and matched that
+selector tuple at the caller and allocator entry; the real/silent route
+ordinals differed only by their arm-local publication counts (`525` vs `519`).
+This selects `H-CallerSelectorRoute`, refutes caller-state divergence, and
+moves the boundary to the writer/source of `MEM_W(0x80165ED0)` loaded at
+`0x8009192C`. See [M5-S3709-CALLER-ROUTE.md](M5-S3709-CALLER-ROUTE.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -181,12 +191,11 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — explain why the legitimate clear is scheduled before payload production.**
-   Session 3708 selects `H-ClearBranchRoute`: the stable allocator route at
-   `0x8008F108..0x8008F1C4` reaches the clear with matching state in both
-   arms. Trace caller `0x80091934` and its route/selector inputs to explain why
-   this route is entered before payload production; do not add a mitigation or
-   alter the clear.
+1. **M5 Step 4 — identify the selector input writer before the early clear.**
+   Session 3709 selects `H-CallerSelectorRoute`: retail and both port arms
+   agree on the allocator tuple at `0x80091934`/`0x8008F0A0`. Trace the writer
+   and source of `MEM_W(0x80165ED0)` loaded at `0x8009192C`; keep the probe
+   phase-gated and do not alter the clear or selector state.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -227,6 +236,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-ClearTooEarly` | Selected at s3706: setup and clear both used `0x801797B0`/`0x298`, while the final `0x800078EC` writer was zero before the later zero DMAs. |
 | `H-ProducerInputZero` | Selected at s3707: paired setup rows had identical nonzero pre-clear object words while the static-clear witness reported zero fill. |
 | `H-ClearBranchRoute` | Selected at s3708: retail and both port arms showed the same target-phase loop/branch outcomes and allocator inputs before the clear. |
+| `H-CallerSelectorRoute` | Selected at s3709: retail and both port arms matched `a1=0x561F`, `a2=0`, `s0=0x12`, `s2=1`, and the caller-to-entry handoff. |
+| `H-CallerStateDivergence` | Refuted at s3709: real and silent arms had identical caller/allocator selector tuples. |
+| `H-CallerOrdering` | Not supported at s3709: route ordinals differed only by arm-local publication counts while the handoff tuple matched retail. |
 | `H-ClearCallerState` | Refuted at s3708 for the measured caller branch inputs: real and silent arms matched, and retail matched the same loop shape. |
 | `H-ClearCallOrdering` | Refuted at s3708 for the measured boundary: no producer sequence followed the clear before qualified zero source DMAs. |
 | `H-ProducerStateClobbered` | Refuted at s3707 for the measured boundary: the shared object was nonzero immediately before the clear. |

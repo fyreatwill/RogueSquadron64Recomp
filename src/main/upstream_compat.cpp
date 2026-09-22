@@ -39,6 +39,10 @@
 extern "C" bool rs64_audio_current_route_snapshot(
     uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
     uint32_t* row, int* exit_reason, const char** arm);
+extern "C" void rs64_m5_audio_dma_identity(
+    uint64_t* source_event, uint64_t* task_generation,
+    uint32_t* latest_route_seq, uint32_t* latest_route_ordinal,
+    uint32_t* latest_route_row);
 
 extern "C" uint32_t rs64_phase_ord(void);
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
@@ -976,6 +980,82 @@ extern "C" void rs64_m5_selector_route_caller(const char* name, uint32_t pc,
         "[m5-selector-route] ordinal=%u phase=%u width=%u origin=0x%06X "
         "name=%s pc=0x%08X ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X\n",
         rows++, phase, width, origin, name ? name : "?", pc, ra, a0, a1, a2, a3);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_caller_route(const char* edge, uint32_t pc,
+                                       uint32_t ra, uint32_t a0, uint32_t a1,
+                                       uint32_t a2, uint32_t a3, uint32_t s0,
+                                       uint32_t s1, uint32_t s2, uint32_t s3) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_M5_CALLER_ROUTE");
+        const char* master = std::getenv("ROGUESQ_LOG_ALL");
+        return (all && all[0] && all[0] != '0') ||
+               (master && master[0] && master[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    static bool control_seen = false;
+    if (!control_seen) {
+        control_seen = true;
+        std::fprintf(stderr,
+            "[m5-caller-route-control] pc=0x%08X width=%u origin=0x%06X\n",
+            pc, width, origin);
+        std::fflush(stderr);
+    }
+    const bool target =
+        (width == 1024u &&
+         (origin == 0x00790400u || origin == 0x00790800u)) ||
+        (width == 512u && origin == 0x006AB400u);
+    if (!target) return;
+
+    uint32_t phase = 0, route_width = width, route_origin = origin;
+    uint32_t route_ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &phase, &route_width, &route_origin, &route_ordinal, &route_row,
+        &exit_reason, &arm);
+    uint64_t source_event = 0;
+    uint64_t task_generation = 0;
+    uint32_t latest_route_seq = 0xFFFFFFFFu;
+    uint32_t latest_route_ordinal = 0xFFFFFFFFu;
+    uint32_t latest_route_row = 0xFFFFFFFFu;
+    rs64_m5_audio_dma_identity(&source_event, &task_generation,
+                               &latest_route_seq, &latest_route_ordinal,
+                               &latest_route_row);
+
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+    }
+    if (rows >= 512u) return;
+    if (rows == 0u) {
+        std::fprintf(stderr,
+            "[m5-caller-route-phase-control] phase=%u width=%u origin=0x%06X\n",
+            rs64_phase_ord(), width, origin);
+    }
+    std::fprintf(stderr,
+        "[m5-caller-route] row=%u edge=%s pc=0x%08X ra=0x%08X "
+        "phase=%u width=%u origin=0x%06X active=%u arm=%s "
+        "route_ordinal=%u route_row=%u exit=%d "
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X "
+        "s0=0x%08X s1=0x%08X s2=0x%08X s3=0x%08X "
+        "source_event=%llu task_generation=%llu latest_route_seq=%u "
+        "latest_route_ordinal=%u latest_route_row=%u\n",
+        rows++, edge ? edge : "?", pc, ra, active ? phase : rs64_phase_ord(),
+        active ? route_width : width, active ? route_origin : origin,
+        active ? 1u : 0u, active && arm ? arm : "n/a",
+        active ? route_ordinal : 0xFFFFFFFFu,
+        active ? route_row : 0xFFFFFFFFu, exit_reason, a0, a1, a2, a3,
+        s0, s1, s2, s3, static_cast<unsigned long long>(source_event),
+        static_cast<unsigned long long>(task_generation), latest_route_seq,
+        latest_route_ordinal, latest_route_row);
     std::fflush(stderr);
 }
 
