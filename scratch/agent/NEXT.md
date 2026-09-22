@@ -1,11 +1,11 @@
-# Next work unit: trace the legitimate clear into the producer handoff
+# Next work unit: restore the producer-object join through the fixup path
 
 HYPOTHESIS-ID: m5-source-clear-handoff
 
-S3704 selected `H-ClearLegitimateButEarly`: both qualified port arms joined
-caller `0x8008F2CC` to the expected `0x801797B0`/`0x298` zero-fill before the
-later source/output route ordinals. The real arm's source-DMA payload remained
-zero.
+S3705 confirmed the clear-to-DMA ordering: the real arm joined the clear at
+ordinal 525 and later zero source/output rows at ordinals 669–670. Both arms
+reached hangar. The intended writer-setup probe was absent from generated
+`funcs_23.c`, so object identity was not measured.
 
 Competing hypotheses:
 
@@ -15,16 +15,17 @@ Competing hypotheses:
   output is consumed or copied.
 - `H-ProducerAfterClear`: a later nonzero producer exists but remains missed.
 
-Discriminator: retain the retail writer census, RSP/DMEM controls, and output
-rows in one phase-gated port run. Join the `0x8008F2CC` caller's source object
-pointer, producer stores, and first output-DMA route ordinal to the clear's
-`ordinal=523` snapshot. A producer pointer different from `0x801797B0` selects
-`H-DifferentProducerObject`; a same-object producer overwritten before
-consumption selects `H-ClearTooEarly`; a later nonzero same-object writer
-selects `H-ProducerAfterClear`.
+Discriminator: repair the missing writer-setup injection in the fixup path,
+then retain the retail writer census, RSP/DMEM controls, and output rows in
+one phase-gated paired run. Join the `0x8008F2CC` allocation result and source
+producer stores to the first output-DMA ordinal. A producer pointer different
+from `0x801797B0` selects `H-DifferentProducerObject`; a same-object producer
+overwritten before consumption selects `H-ClearTooEarly`; a later nonzero
+same-object writer selects `H-ProducerAfterClear`.
 
-Before building, inspect the existing `0x8008F2CC` caller and the retail
-oracle's matching writer PCs. Build once with:
+Before building, inspect the generated-function fixup that should inject
+`rs64_m5_writer_setup_state` and verify the retail matching writer PCs. Build
+once with:
 
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
 

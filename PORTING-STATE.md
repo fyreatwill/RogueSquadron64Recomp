@@ -138139,3 +138139,24 @@ ORIGIN: diagnostic source-clear provenance only; the writer is the observed
 legitimate-range `0x800078EC` zero-fill, and the remaining question is why its
 handoff precedes the producer's usable payload. No mitigation or guest/RDRAM
 state change.
+
+## Session 3705 (2026-09-21) — qualified the clear-to-DMA handoff
+
+The one-build paired real-audio and silent run reached the qualified hangar
+phase and fired the phase/task/DMEM/static-call controls. Both arms reported
+the legitimate `0x8008F2CC` clear with `dst=0x801797B0`, `len=0x298`, and
+zero value. The real arm joined it at route ordinal 525; its later source
+range output rows were at ordinals 669–670, including `0x1798B0..0x179930`
+with zero payload and zero post-DMA bytes. The silent arm had no source-DMA
+rows, as expected for its control route.
+
+This confirms the clear precedes the qualified producer/output handoff. It
+does not split a different producer object from an early clear because the
+expected writer-setup probe was absent from the generated `funcs_23.c` used by
+the build. The probe's null is unevaluable; static disassembly still shows the
+clear receiving the fresh `rs_malloc(0x298)` result. The independent retail
+writer census remains the second evidence line. No guest or RDRAM behavior
+changed.
+
+ORIGIN: diagnostic-only clear/DMA provenance; the writer is the legitimate
+`0x800078EC` zero-fill, and no mitigation was added.
