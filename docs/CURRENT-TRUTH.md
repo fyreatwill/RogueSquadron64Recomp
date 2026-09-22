@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background and closed M3 audits are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
-Updated for session 3703 (2026-09-21).
+Updated for session 3704 (2026-09-21).
 
 ## Current state
 
@@ -121,6 +121,14 @@ whole-RDRAM control and wrote the target span. This selects `H-ClearIsFinal`
 and refutes `H-ProducerAfterClear` and `H-DescriptorOrdering` at the measured
 boundary. See [M5-S3703-SOURCE-CLEAR-ORDER.md](M5-S3703-SOURCE-CLEAR-ORDER.md).
 
+Session 3704 joined the target clear call itself. In both paired arms the
+target call came from `0x8008F2CC` with the expected `dst=0x801797B0`,
+`len=0x298`, and zero value. The clear was on the preceding route ordinal and
+the real arm's later `0x1798B0..0x179930` source-DMA payload remained zero.
+This selects `H-ClearLegitimateButEarly` and refutes `H-ClearWrongObject` and
+`H-ProducerAfterClear` at the measured boundary. See
+[M5-S3704-CLEAR-LEGITIMACY.md](M5-S3704-CLEAR-LEGITIMACY.md).
+
 The current source/stage picture is: title source rows are same-generation;
 the hangar minority is generation-absent, uses `0x80171E70`, and later stages
 reuse that pointer under a later route generation. Session 3686 classified
@@ -139,14 +147,12 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. **M5 Step 4 — establish whether the final zero-fill is legitimate.**
-   `H-ClearIsFinal` is selected: the port's final source-range writer is the
-   zero-valued `0x800078EC` fill. Join that call's destination, length,
-   route/task identity, and ordering to the first 512 output DMAs, with retail
-   and all RSP/DMEM controls live. A wrong object/range selects `H-ClearWrongObject`; the expected
-   `0x801797B0`/`0x298` fill on the same route selects
-   `H-ClearLegitimateButEarly`; a later nonzero writer reopens
-   `H-ProducerAfterClear`.
+1. **M5 Step 4 — trace the legitimate clear into the producer handoff.**
+   `H-ClearLegitimateButEarly` is selected: the expected `0x801797B0`/`0x298`
+   clear occurs before the later source/output route ordinals. Audit the
+   `0x8008F2CC` caller's object lifecycle and the first source-DMA handoff to
+   determine whether the producer writes a different object or the expected
+   object is intentionally cleared too early.
 
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Start
    only when M5 is unavailable or closed. Audit the complete idiom class,
@@ -182,6 +188,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | `H-PortSourceProducer` | Selected at s3702 for the producer census: both port arms had the retail-shaped source writer families before the target route was published. |
 | `H-PrePhaseScalarProducer` | Selected at s3702: 652 source-range stores preceded/straddled the qualified run, including retail-shaped nonzero writers; the later `0x800078EC` zero-fill preceded zero output payloads. |
 | `H-ClearIsFinal` | Selected at s3703: the final observed writer was the zero-valued `0x800078EC` fill before all 512 qualified zero output DMAs. |
+| `H-ClearLegitimateButEarly` | Selected at s3704: both arms joined caller `0x8008F2CC` to the expected `0x801797B0`/`0x298` zero-fill before later source/output ordinals. |
+| `H-ClearWrongObject` | Refuted at s3704 for the measured target range: destination and length matched the expected image-source object. |
 | `H-ProducerAfterClear` | Refuted at s3703 for the measured 512-row boundary: no later nonzero source-range writer was observed. |
 | `H-DescriptorOrdering` | Refuted at s3703: the final-writer sequence and output-DMA rows had no route/task mismatch. |
 | `H-ProducerOmission` | Refuted at s3702 by the phase-independent port census. |
@@ -258,6 +266,10 @@ The backlog is one monotonic sequence. Work only the first applicable item.
   source stores; the final 384-store group was the zero-valued `0x800078EC`
   fill, and the real arm's 512 output DMAs remained zero. See
   [M5-S3703-SOURCE-CLEAR-ORDER.md](M5-S3703-SOURCE-CLEAR-ORDER.md).
+- **3704 — clear object and ordering:** both paired port arms joined the
+  `0x8008F2CC` caller to the expected `0x801797B0`/`0x298` zero-fill; the
+  real arm's later source-DMA payload remained zero. See
+  [M5-S3704-CLEAR-LEGITIMACY.md](M5-S3704-CLEAR-LEGITIMACY.md).
 - **3702 — pre-phase producer and overwrite:** the paired port arms each
   recorded 652 source-range stores, including retail-shaped producer PCs, but
   the later `0x800078EC` zero-fill remained before zero output DMA payloads.

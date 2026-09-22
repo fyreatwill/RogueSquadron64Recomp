@@ -780,11 +780,15 @@ extern "C" void rs64_m5_052c4_join(uint8_t* rdram, uint32_t dst,
         const char* e = std::getenv("ROGUESQ_LOG_M5_052C4_JOIN");
         enabled = e && e[0] && e[0] != '0' ? 1 : 0;
     }
-    if (!enabled || g_rs64_m5_static_rs_memset_callsite != 0x800052C4u) return;
+    if (!enabled ||
+        (g_rs64_m5_static_rs_memset_callsite != 0x800052C4u &&
+         g_rs64_m5_static_rs_memset_callsite != 0x8008F2CCu)) return;
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     if (!((width == 1024u && origin == 0x00790400u) ||
           (width == 512u && origin == 0x006AB400u))) return;
+    const uint64_t end = static_cast<uint64_t>(dst) + len;
+    if (dst >= 0x80179A48u || end <= 0x801797B0u) return;
     uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
     int exit_reason = 0;
     const char* arm = "n/a";

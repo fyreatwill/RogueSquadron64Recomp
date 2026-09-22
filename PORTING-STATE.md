@@ -138120,3 +138120,22 @@ object, length, and route identity are legitimate.
 ORIGIN: diagnostic source-clear provenance only; the writer is the observed
 `0x800078EC` zero-fill and its legitimacy is not yet established. No
 mitigation or guest/RDRAM state change.
+
+## Session 3704 (2026-09-21) — identified the legitimate clear and early handoff
+
+The paired real-audio and silent port arms both reached the qualified hangar
+phase and fired the phase/task/DMEM controls. The caller-side witness found
+the target clear at `0x8008F2CC`, not `0x800052C4`. Both arms reported the
+expected `dst=0x801797B0`, `len=0x298`, and zero value. The real arm joined the
+clear at route ordinal 523 and the silent arm independently reported the same
+object under its silent route. The real arm's later `0x1798B0..0x179930`
+source-DMA payload remained zero.
+
+This selects `H-ClearLegitimateButEarly` and refutes `H-ClearWrongObject` and
+`H-ProducerAfterClear` at the measured boundary. The caller and exit probes
+were regeneration-safe instrumentation only; no guest or RDRAM state changed.
+
+ORIGIN: diagnostic source-clear provenance only; the writer is the observed
+legitimate-range `0x800078EC` zero-fill, and the remaining question is why its
+handoff precedes the producer's usable payload. No mitigation or guest/RDRAM
+state change.
