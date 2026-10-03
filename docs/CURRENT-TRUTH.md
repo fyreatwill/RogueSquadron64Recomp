@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3837 (2026-10-03).
+Updated for session 3838 (2026-10-03).
 
 ## Current state
 
@@ -46,13 +46,14 @@ zero in the qualified family rows.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image task/output contract edge.** Session 3837's same-build logger
-   stability A/B reached title 1024 in both image arms with no crash/abort;
-   logger-off had 0 task-contract rows and logger-on had 2,406. Neither arm
-   reached hangar 512 before the watchdog, so this refutes the logger as the
-   cause of the s3836 pre-title crash at the measured scope but does not yet
-   qualify a hangar contract comparison. Preserve this control set while
-   obtaining both target phases before interpreting task fields. Session 3835
+1. **M5 image task/output contract edge.** Session 3838's same-build logger
+   stability A/B reached title 1024 and hangar 512 in both image arms with no
+   crash/abort; logger-off had 0 task-contract rows and logger-on had 1,962.
+   This selects the logger-harmless hypothesis at the full target scope. The
+   next bounded probe must join logger-on task-contract rows to their
+   task-lifetime and exact input-DMA rows, classifying one named descriptor
+   edge before interpreting any zero payload as an output mismatch. Session
+   3835
    closes alternate-family
    ownership at the measured scope: retail reached title 1024 and hangar 512,
    executed the S/L family PCs, and had zero reads/writes in physical
@@ -182,7 +183,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyRouteContextOrder` | Selected H3 at s3834 scope: 130 entry and 1,011 store rows exactly joined the authoritative route context, all after it; PCM source/consumer matches remained zero. |
 | `H-M5-FamilyRetailObjectAccess` | Selected H2 at s3835: retail reached title/hangar and the S/L family PCs, but had zero reads/writes in physical `0x165000..0x16C000`; the port emitted 1,280 target-phase family stores. |
 | `H-M5-TaskContractCaptureCoverage` | Unevaluable at s3836: retail task rows and both target phases were positive, but both port attempts crashed at guest `0x8000834C` before VI 320, leaving all port task/output rows absent. |
-| `H-M5-TaskContractLoggerStartup` | Refuted at s3837's pre-title scope: logger-on and logger-off both reached title 1024 with no crash/abort; only logger-on emitted task-contract rows. Full hangar-phase stability remains unqualified. |
+| `H-M5-TaskContractLoggerStartup` | Refuted at s3838's full target scope: logger-on and logger-off both reached title 1024 and hangar 512 with no crash/abort; only logger-on emitted task-contract rows. |
 
 ## Evidence ledger — live boundary
 
@@ -684,6 +685,15 @@ line naming the writer and stating whether its value is legitimate.
   logger as the cause of the s3836 pre-title crash at this scope, but leaves
   full target-phase contract comparison unevaluable. Evidence:
   `scratch/agent/s3837_m5_task_contract_stability/`.
+- **3838 — task-contract logger target-phase stability A/B:** the Debug build
+  passed. Two concurrent image arms used identical validated controls, with
+  only `ROGUESQ_LOG_M5_TASK_CONTRACT=1` differing. Both arms fired title
+  `0x00790400`/1024 at about 13.4s and hangar `0x006AB400`/512 at about
+  33.6–33.7s, with no crash or abort. Logger-off emitted zero contract rows;
+  logger-on emitted 1,962 `[audtask-abi]` rows and 1,024 task-lifetime rows.
+  This selects logger harmlessness at the full target scope and does not yet
+  select a task/output mismatch. Evidence:
+  `scratch/agent/s3838_m5_task_contract_target_stability/`.
 
 ## Superseded conclusions
 
@@ -711,5 +721,5 @@ See the session-specific notes linked above and:
 - [M5-S3781-GUEST-ROUTE-SAMPLE.md](M5-S3781-GUEST-ROUTE-SAMPLE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3837 remain in the append-only ledger. Use bounded `grep`/`sed`
+Sessions 1–3838 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.

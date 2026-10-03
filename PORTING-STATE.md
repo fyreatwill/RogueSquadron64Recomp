@@ -140926,3 +140926,16 @@ This refutes the logger as the cause of the s3836 pre-title crash at this
 scope, but does not qualify a target-phase task-contract comparison. The next
 probe extends the same paired recipe to a 180-second target-phase stability
 run. Evidence: `scratch/agent/s3837_m5_task_contract_stability/`.
+## Session 3838 (2026-10-03) — qualified task-contract logger through hangar
+
+Ran the Debug build and `scratch/agent/run_s3838_m5_task_contract_target_stability.sh`,
+which launched concurrent logger-off and logger-on image arms with identical
+validated controls. Both arms reached title VI `0x00790400`/1024 at about
+13.4s and hangar VI `0x006AB400`/512 at about 33.6–33.7s; neither log showed
+`[CRASH]`, access violation, unhandled exception, or `[ABORT]`. Logger-off
+emitted zero `[audtask-abi]` rows; logger-on emitted 1,962 contract rows and
+1,024 task-lifetime rows. This selects logger harmlessness at the full target
+scope and rules out logger-induced hangar loss. It does not yet explain the
+zero source payload or establish an output-contract mismatch. The next probe
+must join one named contract to task lifetime and exact input DMA in one
+target-valid run.

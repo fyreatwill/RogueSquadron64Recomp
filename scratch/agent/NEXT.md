@@ -1,33 +1,36 @@
-# Next work unit: qualify both target phases with the task-contract logger
+# Next work unit: join one target-phase task contract to its input DMA
 
-HYPOTHESIS-ID: m5-task-contract-capture-stability
+HYPOTHESIS-ID: m5-task-contract-input-dma-join
 
-s3837 refuted logger-induced pre-title instability: the same-build logger-off
-and logger-on image arms both reached title VI `0x00790400`/1024 with no
-crash/abort. Logger-on emitted 2,406 task-contract rows; logger-off emitted
-none. Neither reached hangar VI `0x006AB400`/512 before the watchdog, so the
-contract comparison remains unevaluable at the target scope.
+s3838 qualified the same-build target phases: logger-off and logger-on both
+reached title VI `0x00790400`/1024 and hangar VI `0x006AB400`/512 with no
+crash/abort. Logger-on emitted 1,962 `[audtask-abi]` rows and 1,024
+task-lifetime rows; logger-off emitted none by design.
 
 Competing hypotheses and discriminator:
 
-- H1: The logger changes post-title scheduling and prevents hangar reachability.
-  Logger-off reaches hangar while logger-on does not, with both arms' phase
-  controls positive.
-- H2: The logger is harmless; both arms reach hangar or both stop before it,
-  with no crash/abort and identical phase outcomes.
-- H3: The pair is coverage-invalid. Either arm lacks its phase control, or a
-  crash/abort prevents a comparable target-phase result.
+- H1: The zero source payload is a task-descriptor/input-DMA property. The
+  same task generation and named `data_ptr=0x80171E70`, `data_size=1` contract
+  join the exact `0x1798B0 -> 0xCB0` input DMA, whose payload is zero.
+- H2: The task contract is valid but the output edge is missing downstream.
+  The task/DMA join is valid, while output-buffer or post-task rows show no
+  corresponding destination contract.
+- H3: The apparent rows cannot be joined at this scope. Positive target,
+  task-lifetime, contract, and exact-DMA controls remain live, but no stable
+  generation/ordinal/row key connects them.
 
-Discriminator: preserve the s3837 environment and script, extend only the
-watchdog to 180 seconds, and run logger-off/logger-on concurrently in one
-build. Require title and hangar phase markers in both logs. Do not interpret
-task rows unless the arm reaches hangar.
+Discriminator: one build and one target-valid logger-on run, with the existing
+task-contract, task-lifetime, route, source-range, and exact-DMA controls. Add
+one bounded join table keyed by task generation plus route ordinal/row, and
+report counts for contract -> lifetime -> exact input-DMA -> post-task output
+in that order. A complete join selects H1 or H2; positive controls with no
+stable join select H3. Do not add another logger stability A/B.
 
 Exact commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3838_m5_task_contract_target_stability.sh
+    zsh scratch/agent/run_s3839_m5_task_contract_input_dma_join.sh
 
-Positive controls: each arm must show `[phase]`, title origin
-`0x00790400`/1024, and hangar origin `0x006AB400`/512, with no `[CRASH]` or
-`[ABORT]`. Use SIGKILL cleanup.
+Positive controls: the logger-on arm must show `[phase]`, title origin
+`0x00790400`/1024, hangar origin `0x006AB400`/512, task-contract rows, and
+exact input-DMA rows, with no `[CRASH]` or `[ABORT]`. Use SIGKILL cleanup.
