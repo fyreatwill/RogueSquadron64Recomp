@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3830 (2026-10-03).
+Updated for session 3831 (2026-10-03).
 
 ## Current state
 
@@ -44,16 +44,16 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 alternate family-object ownership.** Session 3830's complete,
-   target-valid ownership table selected H3 at this scope: all 257 family
-   entries and 1,280 stores remained outside the clear-associated object, but
-   hangar rows carried an active route ordinal and nonzero queued-audio
-   snapshots while target-phase audio tasks were active; the RSP task joins
-   still reported zero source/consumer matches. This is task/service
-   correlation without an RSP-source-DMA join, not proof of semantic ownership.
-   The next probe must add the task-generation/route ordinal join directly to
-   each family row and determine whether the alternate objects belong to that
-   CPU-side stage or are merely concurrent backlog.
+1. **M5 alternate family-object ownership.** Session 3831's complete,
+   target-valid generation join selected H3 at this scope: 127 family-entry
+   rows and 755 family-store rows joined a same-route image-stage task
+   generation, while source and consumer PCM match event IDs stayed zero; the
+   independent image summaries reported 0 source/consumer matches and
+   stage-only rows. The alternate objects correlate with a CPU-side task/service
+   epoch but not an RSP PCM source or consumer. The next probe must add one
+   shared event sequence to family callbacks and image-stage records, then
+   classify whether family activity precedes, follows, or interleaves the image
+   stage; do not infer causality from route identity alone.
    Session 3829's complete,
    direct-VI-gated target-phase DMA census selected H2: no
    `rs64_m5_audio_source_dma` invocation occurred at title 1024 or hangar 512,
@@ -151,7 +151,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyOwnershipRouteWitness` | Unevaluable at s3828: target phases and route-preparation/order/transition/handoff controls fired, but exact-route DMA and source-range reader/writer rows remained absent. |
 | `H-M5-TargetPhaseAudioDmaAbsent` | Selected at s3829: direct-VI-gated census control and rows were zero at both target phases, while lifetime DMA, target-VI, route, and exact-DMA-hook controls were positive. |
 | `H-M5-TargetPhaseDmaCensusGate` | Refuted at s3829: the initial route-snapshot gate was too strict, but the corrected direct-VI gate reached both target phases without producing a callback row. |
-| `H-M5-FamilyTaskCorrelation` | Selected at s3830 scope: 257 family entries and 1,280 stores were target-valid and outside the clear object; hangar rows had active route/task context and nonzero queued audio, while target-phase RSP joins had zero source/consumer matches. Direct task-generation ownership remains open. |
+| `H-M5-FamilyTaskCorrelation` | Selected at s3831 scope: 127 family-entry rows and 755 family-store rows joined a same-route image-stage task generation, while source/consumer PCM match event IDs remained zero and image summaries were stage-only. Shared-event ordering is still needed for causality. |
 
 ## Evidence ledger — live boundary
 
@@ -566,6 +566,21 @@ line naming the writer and stating whether its value is legitimate.
   scope (task/service activity concurrent with family use, but no RSP-source
   DMA join). Direct task-generation ownership remains open. Evidence:
   `scratch/agent/s3830_m5_family_ownership/run_retry.log`.
+
+- **3831 — direct task-generation join for alternate family objects:** the
+  Debug build passed after exporting the runtime patch bundle. The corrected
+  launch from the actual macOS build directory reached title 1024 and hangar
+  512; the initial `build/Debug` launch was rejected because that directory is
+  absent on this host. Target controls were positive: 257 family-entry rows,
+  1,280 family-store rows, 4,071 image-stage rows, 2 audio-join controls, and
+  2,043 accepted route-prep rows. The new route-key join found nonzero task
+  generations and stage events on 127 entry and 755 store rows, but zero
+  source/consumer PCM match event IDs. Independent image summaries reported
+  1,058–1,059 zero stage-only rows per target scope, with 0 source and 0
+  consumer matches. H3 is selected at this scope: same-generation task/service
+  correlation without an RSP PCM join. This does not establish event order or
+  semantic ownership. Evidence:
+  `scratch/agent/s3831_m5_family_task_join/run.log`.
   positive. This refutes the census-gate H3 and selects H2: no
   `rs64_m5_audio_source_dma` invocation was observed during either target phase
   at this scope. Evidence: `scratch/agent/s3829_m5_dma_census/` and

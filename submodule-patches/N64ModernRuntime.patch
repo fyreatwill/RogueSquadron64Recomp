@@ -932,7 +932,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..bba4b7d 100644
+index 1cb3f6a..506f017 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -946,7 +946,7 @@ index 1cb3f6a..bba4b7d 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1626 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1661 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -1686,6 +1686,41 @@ index 1cb3f6a..bba4b7d 100644
 +            registered.latest_route_seq, registered.latest_route_ordinal,
 +            registered.latest_route_row);
 +    fflush(stderr);
++}
++
++extern "C" void rs64_m5_audio_join_snapshot(
++    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
++    uint32_t width, uint32_t origin, uint64_t* task_generation,
++    uint64_t* source_match_event, uint64_t* consumer_match_event,
++    uint64_t* stage_event) {
++    if (task_generation) *task_generation = 0;
++    if (source_match_event) *source_match_event = 0;
++    if (consumer_match_event) *consumer_match_event = 0;
++    if (stage_event) *stage_event = 0;
++    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
++    for (auto it = g_audio_image_stages.rbegin();
++         it != g_audio_image_stages.rend(); ++it) {
++        const AudioImageStage& image = *it;
++        if (image.ordinal != ordinal || image.row != row ||
++            image.phase != phase || image.width != width ||
++            image.origin != origin ||
++            std::strcmp(image.arm ? image.arm : "n/a", arm ? arm : "n/a") != 0) {
++            continue;
++        }
++        if (task_generation) *task_generation = image.task_generation;
++        if (stage_event) *stage_event = image.stage_event;
++        if (image.source_pcm >= 0 &&
++            static_cast<size_t>(image.source_pcm) < g_audio_join_pcm.size() &&
++            source_match_event) {
++            *source_match_event = g_audio_join_pcm[image.source_pcm].event;
++        }
++        if (image.consumer_pcm >= 0 &&
++            static_cast<size_t>(image.consumer_pcm) < g_audio_join_pcm.size() &&
++            consumer_match_event) {
++            *consumer_match_event = g_audio_join_pcm[image.consumer_pcm].event;
++        }
++        return;
++    }
 +}
 +
 +extern "C" void rs64_audio_join_image_source(

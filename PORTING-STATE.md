@@ -140809,3 +140809,18 @@ identity. The next probe must add that generation/route join. ORIGIN: the
 queued-audio and PCM fields were added as a bounded discriminator, not as a
 mitigation or runtime behavior change. Evidence:
 `scratch/agent/s3830_m5_family_ownership/run_retry.log`.
+## Session 3831 (2026-10-03) — joined family rows to audio task generations
+
+The M5 direct task-generation join was built and run as one target-valid
+instrument batch. The first launch command was rejected because this macOS
+workspace has `build/RogueSquadron64Recomp`, not `build/Debug`; no game process
+started in that attempt. The corrected run reached title VI 1024 and hangar VI
+512. Positive controls were live: 257 family-entry rows, 1,280 family-store
+rows, 4,071 image-stage rows, 2 audio-join controls, and 2,043 accepted
+route-prep rows. The route-key join found nonzero task generations and stage
+events on 127 family-entry and 755 family-store rows. Source and consumer PCM
+match event IDs were zero on all joined rows. Independent image summaries
+reported 1,058–1,059 zero stage-only rows per target scope with zero source and
+consumer matches. This selects H3 at the measured scope: same-generation
+task/service correlation without an RSP PCM join; it does not establish event
+order or semantic ownership. Evidence: `scratch/agent/s3831_m5_family_task_join/run.log`.
