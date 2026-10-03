@@ -140193,3 +140193,23 @@ changing the runtime contract or interpreting this run as an A/B result.
 
 ORIGIN: no mitigation or game-state change was landed; the only new machinery
 is a capture harness for the existing SP-yield diagnostics.
+
+## Session 3799 (2026-10-03) — SP-yield one-shot validation selected a downstream stall
+
+Built the Debug target and ran `tools/run_m5_yield_ab.sh` with the default and
+request-only arms concurrently. This run passed the positive controls in both
+arms and reached phase 640 in both: default logged two E60 rows and
+`returned=0,pending_after=1`; request-only logged twelve E70 and twelve E80F
+rows with `returned=1,pending_after=0`. Neither arm reached title 1024 or
+hangar 512, and neither reported a crash or abort.
+
+The corrected one-shot contract is therefore functioning, but it does not
+remove the later lifecycle stall. H1 (repeated request-only polling is the
+cause) is refuted at this scope; H2 (the blocker is elsewhere) is selected.
+This does not establish an audio or route conclusion. The next unit resumes
+paired image/silent qualification with a new arm-stability discriminator that
+keeps both controls positive.
+
+ORIGIN: no mitigation, generated-code, runtime, or submodule change was
+landed; this was a validation run of the existing `osSpTaskYielded_recomp`
+contract and harness.

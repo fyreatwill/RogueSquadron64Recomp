@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3798 (2026-10-03).
+Updated for session 3799 (2026-10-03).
 
 ## Current state
 
@@ -39,24 +39,25 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 SP-yield lifecycle validation, stability redesign next.** s3797 made
-   the explicit request-only rollback consume a pending yield request once;
-   completion-wins remains the default. The s3798 same-build validation was
-   coverage-invalid: the corrected request-only arm crashed before its control
-   rows, while the default arm stopped before phase 640. Preserve both controls
-   and solve arm stability before interpreting route or audio behavior.
-2. **M5 paired qualification, parked.** s3789 completed the independent retail
+1. **M5 paired qualification, next.** s3799 resolved the SP-yield validation
+   coverage failure: both default and request-only arms reached phase 640 and
+   passed their positive controls in one same-build run. Default reported
+   completion-wins (`returned=0,pending_after=1`); request-only reported the
+   one-shot contract (`returned=1,pending_after=0`). Neither arm reached title
+   1024 or hangar 512, selecting H2: the remaining stall is elsewhere. Resume
+   the image/silent qualification only with a new arm-stability discriminator
+   that preserves both controls; do not repeat launch-order variants.
+2. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
    times in the captured log. Do not repeat launch-order variants. Resume only
    with a new discriminator for arm stability that preserves both controls.
-3. **M3 runtime allocator qualification.** The complete generated
    `rs_zcfree` idiom is closed at s3790: `zcfree` forwards its callback `$a1`
    to the wrapper's `$a0`, and the callback is paired with `rs_zcalloc`.
    No generated invalid writer or guard is justified. Only resume this class
    if an independent runtime allocator witness identifies a concrete bad
    value; otherwise continue with the next systematic M3 class.
-4. **Generated-symbol renaming sweep.** Resume only after the M5 change is
+3. **Generated-symbol renaming sweep.** Resume only after the M5 change is
    validated and M3 has no new discriminator. Keep slug
    `generated-symbol-renaming-sweep`; s3796 found no stale callable symbol in
    `0x80009000..0x8000A000` with valid companion positive controls.
@@ -80,6 +81,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-SilentPreTargetCrash` | Not deterministic: s3762 reached targets, but paired stability remains parked. |
 | `H-M5-Step1ContractGap` | Open downstream of shared task/route/PCM progress; image-stage activity is the first arm difference. |
 | `H-M5-OutputConsumerGap` | Refuted at the measured chain: zero exists before image-stage output and PCM consumption. |
+| `H-M5-SPYieldOneShotContract` | Selected at s3799: default preserves a pending request while request-only consumes it once; both arms reach phase 640. |
+| `H-M5-SPYieldCauseOfStall` | Refuted at s3799: corrected one-shot behavior does not by itself reach title or hangar. |
 
 ## Evidence ledger — live boundary
 
@@ -168,6 +171,13 @@ Work only the first applicable item. This is one monotonic backlog.
   one-shot row (`returned=1`, `pending_after=0`) and default completion-wins in
   phase 640, but neither arm reached title 1024. H3 coverage failure selected;
   H1/H2 remain unevaluable. No runtime conclusion.
+- **3799 — SP-yield one-shot validation completed:** the same-build A/B run had
+  positive controls in both arms and reached phase 640 in both. Default produced
+  `returned=0,pending_after=1` with 2 E60 rows; request-only produced repeated
+  `returned=1,pending_after=0` with 12 E70 and 12 E80F rows. Neither arm reached
+  title 1024 or hangar 512; neither crashed or aborted. The one-shot contract is
+  validated, while the missing later progress selects H2 (a different
+  scheduler/lifecycle blocker). No audio or route conclusion follows.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

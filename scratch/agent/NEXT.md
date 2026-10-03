@@ -1,33 +1,39 @@
-# Next work unit: make SP-yield validation stable without changing the contract
+# Next work unit: qualify image versus silent audio with stable arm controls
 
-HYPOTHESIS-ID: m5-sp-yield-one-shot-control
+HYPOTHESIS-ID: m5-paired-qualification-arm-stability
 
-The runtime change in session 3797 is landed and built. The s3798 corrected
-validation was coverage-invalid: default stopped before phase 640 and the
-request-only arm crashed 36 times before its positive control. Design one
-stability-preserving same-build capture using the existing harness diagnostics;
-do not alter the runtime contract or add a new counter.
+The s3799 same-build SP-yield validation is complete: both arms reached phase
+640 and passed their positive controls. Default preserved the pending request;
+request-only consumed it once. Neither reached title or hangar, so the
+remaining blocker is elsewhere and the SP-yield contract is not the next
+discriminator.
 
 Competing hypotheses and discriminator:
 
-- H1: repeated request-only polling caused the scheduler retry loop. Both arms
-  reach phase 640; request-only reports `returned=1` once then
-  `pending_after=0`, default remains completion-wins, and lifecycle progress
-  can be compared.
-- H2: the scheduler hang is elsewhere. Both controls are positive, but route
-  and title/hangar progress remain unchanged between arms.
-- H3: arm stability/coverage is still the blocker. Missing phase/control rows
-  or a pre-control crash makes the run invalid, not evidence for H1/H2.
+- H1: the image-stage difference is caused by the audio/image arm itself. Both
+  image and silent arms reach title 1024 and hangar 512 with positive shared
+  task/route/PCM controls; only image produces image-stage/DMA rows.
+- H2: the silent arm is unstable before paired target coverage. Image reaches
+  target phases and silent misses a required positive control or crashes before
+  target; the pair is invalid and no route/audio conclusion is allowed.
+- H3: both arms are stable and share target coverage, but image-stage rows are
+  absent in both. This moves the boundary upstream of the audio-mode choice.
 
-The discriminating measurement is one same-build, phase-gated A/B run with
-both positive controls: default reset/completion-wins and request-only
-one-shot/pending-after-zero, plus E60/E70/E80F and title/hangar transitions.
+The discriminating measurement is one same-build image/silent run with
+phase-gated shared controls, title/hangar transitions, and image-stage/DMA
+rows. A valid result requires positive controls in both arms; otherwise select
+H2 and redesign stability rather than comparing route totals.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh tools/run_m5_yield_ab.sh
+    zsh scratch/agent/run_m5_paired_qualification.sh
 
-The helper launches both arms from `build/`, uses SIGKILL cleanup, and writes
-`scratch/agent/m5_yield_ab/driver.log`. Do not resume the rename sweep until
-this validation selects or refutes H1 with both controls positive.
+The first command in that work unit is to write the self-contained
+`scratch/agent/run_m5_paired_qualification.sh` recipe from the qualified
+s3789 image/silent setup, then execute it once; the script must launch both
+arms, preserve the independent retail control, phase-gate the comparison, and
+SIGKILL all children on exit.
+
+Use SIGKILL cleanup, run from `build/`, and preserve the independent retail
+control. Do not revisit launch-order variants or alter the SP-yield contract.
