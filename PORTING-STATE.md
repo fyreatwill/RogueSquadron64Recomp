@@ -140540,3 +140540,22 @@ by a demonstrated guest CPU store. The exact vector-fill origin remains open.
 No mitigation was added.
 
 Evidence: `scratch/agent/s3815_m5_zero_dmem_producer/image/run.log`.
+
+## Session 3816 (2026-10-03) — added RSP vector-store provenance to zero-DMEM join
+
+Added a `vector_op` provenance field to the shared RSP DMEM writer hook and
+threaded instruction-class tags through all vector-store helpers. Exported the
+N64ModernRuntime patch and rebuilt the Debug executable successfully.
+
+Ran the prescribed isolated real-image arm with the existing positive
+controls. It reached the target route with phase, RSP-source, source-DMA,
+DMEM-coverage, and input-DMA controls live, and had no crash or abort. Target
+coverage contains independent zero-valued `SQV` (`0x53515600`) and `SSV`
+(`0x53535600`) stores in the source window; the input DMA still reads
+`0xCB0..0xE48` as `FNV=0x762B22A5`, `nz=0`. This refutes the interpretation
+that `kind=vector` was merely DMA ancestry and selects H1 for an independent
+RSP vector writer. The new field does not yet establish whether those stores
+precede or follow the zero input DMA, so the writer-origin explanation remains
+open at ordering scope.
+
+Evidence: `scratch/agent/s3816_m5_zero_dmem_vector_origin/image/run.log`.

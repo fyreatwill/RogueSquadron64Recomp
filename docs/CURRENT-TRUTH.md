@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3815 (2026-10-03).
+Updated for session 3816 (2026-10-03).
 
 ## Current state
 
@@ -39,19 +39,16 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 DMEM vector-fill origin.** s3815 qualified the existing producer
-   census: title `0x00790400` at 13.4s, hangar `0x006AB400` at 24.6s, all
-   census controls live, and no crash/abort. At the target source join, the
-   RSP source row for DMEM `0xCB0` has `nz=0`; the input DMA repeatedly writes
-   `0x1798B0..0x179A48` with `FNV=0x762B22A5`, `nz=0`; and source-range
-   writer rows are DMA writes with zero payloads. DMEM coverage also records
-   zero-valued `kind=vector` writers around the source window, while the input
-   rows expose no nonzero CPU predecessor (`prev_writer_pc=0`). H2 is selected
-   at this route scope: the zero is produced in the RSP/DMEM initialization or
-   DMA chain, not by a guest CPU store. The next bounded probe must attribute
-   the vector writer/fill or prove it is only the preceding DMA, with a
-   positive control and the same target-valid join; do not repeat the census
-   unchanged.
+1. **M5 DMEM vector-fill origin.** s3816 added instruction-class provenance
+   to every RSP vector-store writer and ran the target-valid image arm with
+   all prior controls. Target-window coverage contains independent zero-valued
+   vector stores tagged `SQV` (`0x53515600`) and `SSV` (`0x53535600`); the
+   source-range join also carries those tags, so the vector rows are not
+   bookkeeping derived from the preceding DMA. H1 is selected for an
+   independent RSP vector writer, while the later zero input DMA remains an
+   overwrite in the same chain. The next bounded probe must join vector-store
+   sequence/order against the `0xCB0 -> 0xE48` input DMA and determine whether
+   the vector writes precede or follow that DMA; do not repeat the census.
 2. **M5 image-arm stability discriminator, closed at this scope.** The
    isolated image arm reached both target phases with independent phase and
    M5 controls; s3811/s3812 launch-order failures no longer block producer
@@ -102,7 +99,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-DMEMTaskBoundaryStartup` | Selected at s3810 scope: the legacy contract driver reproduced the pre-target image crash at guest PC `0x8000834C`; s3811 reproduced it after removing the legacy diagnostic bundle, so that bundle is not sufficient as the explanation. |
 | `H-M5-MinimalImageStartup` | Selected at s3812 scope: explicit image crashed at `0x8000834C` before target in both launch orderings; explicit silent reached title/hangar. |
 | `H-M5-IsolatedImageTargetValid` | Selected at s3813: image-only route reached title/hangar with phase, task, audio-return, route, and no-crash controls. |
-| `H-M5-ZeroDMEMProducer` | Selected as H2 at s3815 route scope: target-valid RSP/DMEM/DMA rows are zero, source writers are DMA/vector activity, and no nonzero CPU predecessor was observed; exact vector-fill origin remains open. |
+| `H-M5-ZeroDMEMProducer` | Refined at s3816: target-valid vector-store provenance is independent of DMA bookkeeping; the ordering of vector writes versus the later zero input DMA remains open. |
+| `H-M5-VectorStoreOrdering` | Open: `SQV`/`SSV` provenance reaches the target window, but its sequence relation to the `0xCB0 -> 0xE48` input DMA is not yet joined. |
 
 ## Evidence ledger — live boundary
 

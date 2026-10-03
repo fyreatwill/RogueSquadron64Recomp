@@ -1083,6 +1083,7 @@ static thread_local uint32_t g_rs64_m5_last_dmem_writer_value = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_fnv = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_nonzero = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_kind = 0;
+static thread_local uint32_t g_rs64_m5_last_dmem_writer_vector_op = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_route_ordinal = 0xFFFFFFFFu;
 
 extern "C" uint64_t rs64_m5_clear_branch_dmem_sequence() {
@@ -1101,6 +1102,7 @@ struct Rs64M5DmemCoverage {
     uint32_t value = 0;
     uint32_t fnv = 0;
     uint32_t nonzero = 0;
+    uint32_t vector_op = 0;
     uint32_t route_ordinal = 0xFFFFFFFFu;
 };
 static Rs64M5DmemCoverage g_rs64_m5_dmem_coverage[0x1000];
@@ -1793,7 +1795,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
                 "route_ordinal=%u source_dram=0x%06X source_len=0x%X "
                 "source_fnv=%08X source_nz=%u post_fnv=%08X post_nz=%u "
                 "dmem_subrange=0x%03X..0x%03X seq=%llu writer_addr=0x%03X "
-                "writer_len=0x%X kind=%s value=0x%08X writer_fnv=%08X "
+                "writer_len=0x%X kind=%s vector_op=0x%08X value=0x%08X writer_fnv=%08X "
                 "writer_nz=%u writer_route=%u\n",
                 rows[slot], phase, width, origin, route_ordinal, dram_addr, len,
                 payload_fnv, payload_nz, post_fnv, post_nz, segment_first,
@@ -1801,7 +1803,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
                 first_coverage.addr, first_coverage.len,
                 first_coverage.kind == 2u ? "dma" :
                     (first_coverage.kind ? "vector" : "scalar"),
-                first_coverage.value,
+                first_coverage.vector_op, first_coverage.value,
                 first_coverage.fnv, first_coverage.nonzero,
                 first_coverage.route_ordinal);
             segment_first = segment_last;
@@ -1848,7 +1850,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
         "payload_fnv=%08X payload_nz=%u post_fnv=%08X post_nz=%u "
         "prev_dmem_seq=%llu prev_dmem_addr=0x%03X prev_dmem_len=0x%X "
         "prev_dmem_kind=%s prev_dmem_value=0x%08X prev_dmem_fnv=%08X "
-        "prev_dmem_nz=%u prev_dmem_route_ordinal=%u prev_dmem_overlap=%u "
+        "prev_dmem_nz=%u prev_dmem_vector_op=0x%08X prev_dmem_route_ordinal=%u prev_dmem_overlap=%u "
         "source_dma_seq=%llu source_dma_dram=0x%06X source_dma_len=0x%X "
         "source_dma_dmem=0x%03X source_dma_fnv=%08X source_dma_nz=%u "
         "source_dma_overlap=%u "
@@ -1863,6 +1865,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
             (g_rs64_m5_last_dmem_writer_kind ? "vector" : "scalar"),
         g_rs64_m5_last_dmem_writer_value, g_rs64_m5_last_dmem_writer_fnv,
         g_rs64_m5_last_dmem_writer_nonzero,
+        g_rs64_m5_last_dmem_writer_vector_op,
         g_rs64_m5_last_dmem_writer_route_ordinal,
         (g_rs64_m5_last_dmem_writer_addr < dmem_addr + len &&
          dmem_addr < g_rs64_m5_last_dmem_writer_addr +
@@ -3332,7 +3335,8 @@ static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
 static thread_local bool g_rs64_audio_vector_store = false;
 
 extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
-                                           uint32_t len, uint32_t value) {
+                                           uint32_t len, uint32_t value,
+                                           uint32_t vector_op) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_SOURCE_WRITER");
@@ -3352,6 +3356,7 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
     g_rs64_m5_last_dmem_writer_len = len;
     g_rs64_m5_last_dmem_writer_value = value;
     g_rs64_m5_last_dmem_writer_kind = g_rs64_audio_vector_store ? 1u : 0u;
+    g_rs64_m5_last_dmem_writer_vector_op = g_rs64_audio_vector_store ? vector_op : 0u;
     g_rs64_m5_last_dmem_writer_route_ordinal = route.ordinal;
     g_rs64_m5_last_dmem_writer_fnv = 2166136261u;
     g_rs64_m5_last_dmem_writer_nonzero = 0u;
@@ -3372,6 +3377,7 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
             coverage.addr = first;
             coverage.len = len;
             coverage.kind = g_rs64_audio_vector_store ? 1u : 0u;
+            coverage.vector_op = g_rs64_audio_vector_store ? vector_op : 0u;
             coverage.value = value;
             coverage.fnv = g_rs64_m5_last_dmem_writer_fnv;
             coverage.nonzero = g_rs64_m5_last_dmem_writer_nonzero;
@@ -3419,11 +3425,11 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
     std::fprintf(stderr,
         "[m5-dmem-source-writer] row=%u phase=%u width=%u origin=0x%06X "
         "route_ordinal=%u route_row=%u dmem=0x%03X len=0x%X kind=%s "
-        "value=0x%08X value_nz=%u span_fnv=%08X span_nz=%u "
+        "vector_op=0x%08X value=0x%08X value_nz=%u span_fnv=%08X span_nz=%u "
         "prepare_seq=%u identity_edge_seq=%u\n",
         rows, rs64_phase_ord(), route.width, route.origin, route.ordinal,
         route.row, dmem_addr, len, g_rs64_audio_vector_store ? "vector" : "scalar",
-        value, value_nz, fnv, nonzero,
+        g_rs64_audio_vector_store ? vector_op : 0u, value, value_nz, fnv, nonzero,
         route.prepare_seq, g_rs64_audio_identity_edge_seq.load());
     std::fflush(stderr);
 
@@ -3455,9 +3461,10 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
 }
 
 extern "C" void rs64_m5_audio_dmem_vector_store(uint32_t dmem_addr,
-                                                  uint32_t len) {
+                                                  uint32_t len,
+                                                  uint32_t vector_op) {
     g_rs64_audio_vector_store = true;
-    rs64_m5_audio_dmem_store(dmem_addr, len, 0u);
+    rs64_m5_audio_dmem_store(dmem_addr, len, 0u, vector_op);
     g_rs64_audio_vector_store = false;
 }
 
@@ -3505,6 +3512,7 @@ extern "C" void rs64_m5_audio_dmem_dma_write(uint32_t dmem_addr,
         coverage.addr = first;
         coverage.len = len;
         coverage.kind = 2u;
+        coverage.vector_op = 0u;
         coverage.value = 0u;
         coverage.fnv = fnv;
         coverage.nonzero = nonzero;
