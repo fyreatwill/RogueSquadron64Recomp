@@ -141085,3 +141085,28 @@ state was rewritten, skipped, or guarded.
 Evidence: `scratch/agent/s3847_m5_task_output_contract_exact/driver.log`,
 `retail.log`, `port.log`, and
 `scratch/agent/run_s3847_m5_task_output_contract_exact.sh`.
+
+## Session 3848 (2026-10-03) — tested retail image-stage writer arguments
+
+Ran the paired retail/port capture with whole-RDRAM, title/hangar VI, type-2
+task, exact `0x167000..0x169B00` target, and live GPR watches at
+`0x80015BC8` and `0x8000F3A0`. The capture was valid: the positive control
+fired, retail reached 631 title VIs and 520 hangar VIs, produced 1,142 task
+rows, and the port arm reported 0 crashes and 0 aborts.
+
+The target-range histogram recorded `0x80015BC8` at 86,842 title and 11,294
+hangar writes, and `0x8000F3A0` at 37,025 hangar writes. Their live arguments
+did not expose the port stage-2 role: `0x80015BC8` iterated retail object
+addresses around `0x801697xx..0x80169axx`, while `0x8000F3A0` iterated
+`0x80114xxx` and `0x801e5xxx` structures. Port stage-2 rows independently
+carried `dest=0x8016xxxx` with `len=0x300`. This selects H2 for the
+writer-argument hypothesis and leaves only a callsite/task join as the next
+bounded route; it rules out neither the retail destination edge nor its
+underlying producer.
+
+ORIGIN: diagnostic-only oracle watches and port logging; no guest or host state
+was rewritten, skipped, or guarded.
+
+Evidence: `scratch/agent/s3848_m5_task_output_writer_args/driver.log`,
+`retail.log`, `port.log`, and
+`scratch/agent/run_s3848_m5_task_output_writer_args.sh`.
