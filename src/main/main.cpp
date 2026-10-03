@@ -1297,6 +1297,46 @@ extern "C" void rs64_m5_pcm_writer_dma(uint32_t addr, uint32_t len,
     rs64_pcm_writer_note(g_rs64_pcm_last_dma_phys, len, 0u, 2u, 0u);
 }
 
+extern "C" void rs64_m5_exact_route_dma_write(uint8_t* rdram,
+                                                 uint32_t dram_addr,
+                                                 uint32_t len,
+                                                 uint32_t dmem_addr) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_EXACT_ROUTE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    static std::atomic<bool> control{false};
+    if (!control.exchange(true, std::memory_order_relaxed)) {
+        std::fprintf(stderr, "[m5-exact-route-dma-control] DMA witness is live\n");
+        std::fflush(stderr);
+    }
+    if (!enabled || len == 0u) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    const uint32_t end = dram_addr + len;
+    const uint32_t fields[][2] = {{0x128C92u, 1u}, {0x128CD0u, 4u}};
+    static uint32_t rows = 0;
+    for (const auto& field : fields) {
+        if (dram_addr >= field[0] + field[1] || end <= field[0]) continue;
+        if (rows++ >= 512u) return;
+        uint32_t post = 0u;
+        for (uint32_t i = 0; i < field[1]; ++i) {
+            post = (post << 8) | rdram[(field[0] + i) & 0x007FFFFFu];
+        }
+        std::fprintf(stderr,
+            "[m5-exact-route-dma] n=%u phase=%u width=%u origin=0x%06X "
+            "dram=0x%06X len=0x%X dmem=0x%03X field=0x%06X field_len=%u post=0x%08X\n",
+            rows - 1u, rs64_phase_ord(), width, origin, dram_addr, len,
+            dmem_addr, field[0], field[1], post);
+        std::fflush(stderr);
+    }
+}
+
 extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                                            uint32_t len, uint32_t dmem_addr) {
     static const bool enabled = [] {

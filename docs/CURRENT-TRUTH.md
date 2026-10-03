@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3743 (2026-10-02).
+Updated for session 3744 (2026-10-02).
 
 ## Current state
 
@@ -29,13 +29,13 @@ zero-valued port payload. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 non-scalar/host exact route-field ownership.** s3743's oracle exact
-   watches and port generated-store witness both passed controls and reached
-   title/hangar, with zero exact-field rows. This closes the generated scalar
-   `+0x22/+0x60` writer class, but not DMA, host-side, or non-literal-address
-   writes. Join those remaining classes against route preparation and source
-   DMA. Do not alter `0x800078EC`. See
-   [M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md](M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md).
+1. **M5 arbitrary host-side exact route-field ownership.** s3744's oracle
+   exact watches and qualified port census passed controls and reached
+   title/hangar. Port generated scalar/non-literal stores and RSP DMA had zero
+   exact rows; retail writes `0x128CD0..D3` at `0x8001BB14`. Join remaining
+   host-side/runtime RDRAM writes against route preparation and source DMA.
+   Do not alter `0x800078EC`. See
+   [M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md](M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md).
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -64,7 +64,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-EarlierWriterClears` | Refuted at s3742 for the measured scalar-store class: no earlier nonzero writer was observed before the zero route state. |
 | `H-RouteStateNotSource` | Open after s3742: exact route fields had no scalar writer, so an uninstrumented/non-scalar producer versus control metadata remains unresolved. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
-| `H-ExactFieldNonScalar` | Open: s3743 did not cover DMA, host-side, or non-literal-address writes. |
+| `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
 | `H-PortFamilyWritesThenClear` | Refuted at s3739 for the qualified hangar source path: all real source-range writer payloads remained zero. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
@@ -139,6 +139,13 @@ Work only the first applicable item. This is one monotonic backlog.
   neighboring zero rows. This selects absent writer for that scalar class and
   leaves non-scalar/host ownership open. See
   [M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md](M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md).
+- **3744 — non-scalar/DMA exact-route census:** retail passed the whole-RDRAM
+  control and reached title/hangar; `0x128C92` had no writes and
+  `0x128CD0..D3` had five writes from `0x8001BB14`. The qualified port passed
+  both controls and both target phases; generated scalar/non-literal stores
+  and RSP DMA had zero exact rows, while 512 neighboring rows were legitimate
+  zero stores. Arbitrary host-side writes remain open. See
+  [M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md](M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.

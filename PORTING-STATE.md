@@ -138996,3 +138996,29 @@ Evidence: `docs/M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md`,
 `scratch/agent/s3743_oracle_groundtruth/oracle.log`, and
 `scratch/agent/s3743_m5_exact_route_ownership/real-alone.log` plus
 `silent.log`.
+
+## Session 3744 (2026-10-02) — censused non-scalar and DMA exact-route writers
+
+Before building, the independent retail oracle passed its whole-RDRAM positive
+control with 10,010 writes and reached title (632 VIs) and hangar (543 VIs).
+The exact physical watch at `0x128C92` had zero writes; `0x128CD0..D3` had
+five writes attributed to retail PC `0x8001BB14`.
+
+Added a regeneration-safe RSP DMA witness for the two exact fields. The Debug
+target rebuilt successfully, and the submodule patch export was refreshed. A
+paired real/silent port launch was invalid because both arms stalled at early
+640. A qualified real-alone run with real audio, ungated/solo LLE, spin-yield,
+and autopilot reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`; scalar and DMA positive controls fired, with zero exact
+rows. The fixed all-generated-store rerun passed the same controls and target
+phases, emitted 512 phase-scoped neighboring rows from `0x8001A06C/74` and
+`0x8001C21C/24`, all zero-valued, and emitted zero exact-field rows.
+
+This closes the measured port generated scalar, non-literal generated-store,
+and RSP-DMA classes. It rules out a port writer in those classes, but not
+arbitrary host-side/runtime RDRAM writes. The retail writer and neighboring
+port stores are legitimate observations; no mitigation changed behavior.
+
+Evidence: `docs/M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md`,
+`scratch/agent/s3744_oracle_groundtruth/clean/oracle.log`, and
+`scratch/agent/s3744_port_exact_route/qualified-real-allstores/real.log`.
