@@ -139694,3 +139694,26 @@ ORIGIN: existing family stores and the clear allocation are legitimate game
 operations; the launcher change is diagnostic scheduling only. Evidence:
 docs/M5-S3772-ALTERNATE-OBJECT-QUALIFICATION.md and
 scratch/agent/s3770_m5_family_store/.
+
+## Session 3773 (2026-10-02) — image-first alternate-object qualification remained unevaluable
+
+Rebuilt Debug and ran `scratch/agent/run_s3770_m5_family_store.sh`, launching
+image first beside silent and the retail oracle. The oracle whole-RDRAM
+positive control fired. Image passed all six family-store controls and
+reached title `1024 @ 0x00790400` at 13.5s and hangar `512 @ 0x006AB400` at
+33.7s. Silent passed the family-store controls but crashed before target at
+`spTaskSchedulerThread+9556`, with `last-guest-pc=0x8000834c`. The exact image
+PID was SIGKILLed after the wrapper left it live.
+
+This rules out image-first launch ordering as sufficient to qualify the silent
+control in this capture. It does not select legitimate alternate-object
+provenance, route/object mismatch, or the I hangar-edge hypothesis because
+the required paired silent target phase is absent. It is single-capture
+qualification evidence. After three consecutive unevaluable paired attempts
+(s3771–s3773), the paired arm-order experiment is parked; the next probe is
+an image-only clear/object join beside the retail oracle.
+
+ORIGIN: existing family stores and the clear allocation are legitimate game
+operations; this iteration changed no game value, clear, allocation, or audio
+gate. Evidence: docs/M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md and
+scratch/agent/s3770_m5_family_store/.

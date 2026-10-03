@@ -1,13 +1,14 @@
-# Next work unit: requalify the alternate-object join with image first
+# Next work unit: image-only alternate-object boundary
 
-HYPOTHESIS-ID: m5-retail-writer-port-edge
+HYPOTHESIS-ID: m5-alternate-object-image-only
 
-The s3772 capture remained unevaluable twice: silent reached both target VIs,
-but image crashed pre-target at `spTaskSchedulerThread+9556`, including after
-a two-second stagger. Run one fresh concurrent retail-oracle/image/silent
-capture with image launched first, retaining the existing family-store and
-writer-setup logs. Do not add another field, change the clear, inject a
-payload, or change an audio gate.
+The s3773 image-first paired qualification remained unevaluable: oracle
+controls passed, image reached title and hangar, and silent crashed before
+target. The paired arm-order experiment is parked after s3771–s3773. Run one
+image-only port arm beside the retail oracle using the existing clear/object
+and family-edge instrumentation. Do not add fields, change the clear, inject
+values, or change an audio gate. The image-only result cannot be used to claim
+an image-versus-silent difference.
 
 Competing hypotheses and the discriminating measurement:
 
@@ -15,34 +16,26 @@ Competing hypotheses and the discriminating measurement:
   object; predicted `clear_span=1` with a stable `clear_obj`.
 - H2: S/L stores belong to a distinct object/route and the route handoff is
   mismatched; predicted `clear_span=0` with stable clear and route identities.
-- H3: I's missing hangar stores are an absent hangar edge rather than object
-  mismatch; predicted I hangar rows or a positive retail/port I call edge with
-  no generated store.
+- H3: I's missing hangar stores are an absent hangar edge; predicted I hangar
+  rows or a positive I call edge with no generated store.
 
-The discriminating measurement is one same-build capture that has the retail
-whole-RDRAM positive control, both port target phases in both arms, and the
-family-store controls. Compare `clear_span`, `clear_obj`, route ordinal, and
-I hangar/call-edge rows in that one capture; any missing control makes the
-result unevaluable.
+The discriminator is one image-only capture with the retail whole-RDRAM
+positive control, image family controls, and both image target VIs. Compare
+`clear_span`, `clear_obj`, route ordinal, and I hangar/call-edge rows. The
+missing silent arm is a qualification limitation, not a null result.
 
 Exact commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3770_m5_family_store.sh
+    zsh scratch/agent/run_s3773_m5_image_only.sh
 
-Before interpreting rows, require the oracle whole-RDRAM positive control and
-both port arms' `origin=0x00790400` and `origin=0x006AB400` phase rows. The
-family-store controls must fire in the same run. The new clear-join control is
-the presence of `clear_obj=0x...` on family rows.
+Expected outcomes:
 
-Discriminator:
-
-- `clear_span=1` for alternate S/L rows, with a stable distinct clear object,
-  supports a legitimate alternate asset object.
-- `clear_span=0` with a stable clear object and matching route ordinals keeps
-  route/object identity mismatch live.
-- I rows in hangar, or a positive retail/port I call edge with no generated
-  store, selects the I hangar-edge hypothesis.
-- Missing either target phase or any positive control is an unevaluable
-  qualification failure; repair/requalify rather than update the hypothesis
-  table.
+- `clear_span=1` with stable `clear_obj` supports a legitimate alternate
+  asset object, subject to later paired-control validation.
+- `clear_span=0` with stable clear and route identities keeps route/object
+  mismatch live.
+- I hangar rows, or a positive I call edge with no generated store, selects
+  the I hangar-edge hypothesis.
+- Missing oracle control, family control, or either target VI is unevaluable;
+  do not update the hypothesis table from it.

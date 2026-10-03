@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3772 (2026-10-02).
+Updated for session 3773 (2026-10-02).
 
 ## Current state
 
@@ -181,23 +181,35 @@ with simultaneous and two-second-staggered startup. This is an unevaluable
 paired image-arm qualification, not evidence about clear/object legitimacy.
 See [M5-S3772-ALTERNATE-OBJECT-QUALIFICATION.md](M5-S3772-ALTERNATE-OBJECT-QUALIFICATION.md).
 
+Session 3773 launched the image arm first in the same paired capture. The
+retail whole-RDRAM control fired; image passed family-store controls and
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, while silent
+again crashed before target at `spTaskSchedulerThread+9556`
+(`last-guest-pc=0x8000834c`). Image-first ordering therefore did not qualify
+the silent control. This is single-capture qualification evidence only: the
+clear/object and I-edge hypotheses remain unevaluable, and the paired
+qualification is parked after three attempts. See
+[M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md](M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 alternate-object legitimacy versus route identity.** Requalify the
-   paired capture with the image arm launched first, then join the S/L
-   alternate store destinations and I's title-only setup object to the
-   `0x8008F2CC` clear-associated object, allocator result, and active route
-   ordinal in one phase-gated capture. Require the retail whole-RDRAM control
-   and both target VIs in image and silent arms. Distinguish a legitimate
-   alternate asset object from a route/object identity mismatch. Do not
-   suppress or replace the clear, inject values, or change an audio gate.
-2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
+1. **M5 alternate-object image-arm boundary.** Run the existing clear/object
+   and family-edge join in an image-only port arm beside the retail oracle.
+   This pivots after three unevaluable paired qualifications; use it only to
+   measure whether S/L rows join the `0x8008F2CC` clear object and whether I
+   has a hangar edge. Require the oracle whole-RDRAM control, image controls,
+   and both target VIs. Do not infer arm differences, suppress or replace
+   the clear, inject values, or change an audio gate.
+2. **M5 paired qualification, parked.** Resume only with a genuinely new
+   discriminator for the silent pre-target crash; do not repeat launch-order
+   variants of the existing recipe.
+3. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
    invalid writer. Closed `rs_free` audits are archived in PROJECT-OVERVIEW §56.
-3. **Generated-symbol renaming sweep.** Only after M5 is closed and M3 has no
+4. **Generated-symbol renaming sweep.** Only after M5 is closed and M3 has no
    new discriminator. Keep the campaign slug
    `generated-symbol-renaming-sweep` and work one bounded region per session.
 
@@ -603,6 +615,7 @@ silent control.
 - [M5-S3753-TASK-PRODUCER-CENSUS.md](M5-S3753-TASK-PRODUCER-CENSUS.md)
 - [M5-S3769-RETAIL-PORT-FAMILY-EDGE.md](M5-S3769-RETAIL-PORT-FAMILY-EDGE.md)
 - [M5-S3770-FAMILY-STORE-PROVENANCE.md](M5-S3770-FAMILY-STORE-PROVENANCE.md)
+- [M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md](M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)
