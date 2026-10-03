@@ -1,36 +1,38 @@
-# Next work unit: separate image-stage source from output/consumer boundary
+# Next work unit: identify the legitimate writer of the zero source span
 
-HYPOTHESIS-ID: m5-image-stage-source-vs-consumer
+HYPOTHESIS-ID: m5-source-input-writer
 
-The s3800 same-build image/silent qualification is complete. Retail passed its
-whole-RDRAM control and reached title/hangar. Both port arms reached title
-1024 and hangar 512, each passed exact-route and family-edge controls, and
-neither crashed or aborted. Image emitted 5,570 image-stage rows; silent
-emitted zero. Shared task/return/PCM controls were active in both arms.
+s3801 selected the source-input boundary. The same-build image/silent arms both
+reached title and hangar with positive phase, PCM, audio-return, and stability
+controls. Image-stage source DMA, stage DMEM/DMA, and destination payloads were
+zero while the image consumer callback was live; silent had no image-stage rows
+but retained PCM controls. Independent retail control reached title/hangar.
 
 Competing hypotheses and discriminator:
 
-- H1: image-stage input/source production is absent or zero before the stage;
-  the image-stage consumer is functioning and records the zero payload.
-- H2: the image-stage producer runs, but its output/consumer path is the gap;
-  source-side rows are valid while destination/consumer publication is absent.
-- H3: the apparent difference is instrumentation scope; a same-build control
-  shows the stage rows are not arm-specific after joining by task generation.
+- H1: the legitimate source-span writer/fill runs before the image input DMA
+  and writes zero; a phase-gated writer census names it and joins its value to
+  the zero DMA generation.
+- H2: a non-writer path or stale object supplies the zero source span; the
+  complete writer census has no matching zero writer, or its range/object does
+  not join the DMA source.
+- H3: the port source reader is observing the wrong physical range; the
+  independent retail watch and same-run descriptor/source controls disagree on
+  the span or producer PC.
 
-The discriminating measurement is one same-build image/silent run, phase-gated
-at title/hangar, joining each image-stage row by task generation to its source
-DMA/input FNV, destination FNV/nz, and consumer-only row. H1 predicts zero or
-constant input payload with valid stage/consumer publication; H2 predicts
-valid nonzero source rows but missing/invalid destination or consumer rows; H3
-predicts equal joined rows after generation alignment. Both arms must pass the
-existing exact-route and family-edge controls or the run is invalid.
+The discriminating measurement is one batched, phase-gated producer census for
+every CPU/RSP write class overlapping `0x1797B0..0x179A48`, joined by task
+generation and source-DMA event, with the retail oracle watching the same span
+and producer PC `0x800078EC`. H1 predicts a legitimate zero writer joined
+before each image input DMA; H2 predicts no complete writer join; H3 predicts
+retail/source-span or producer-PC disagreement. Whole-RDRAM and both target-VI
+controls must fire in the same run.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_m5_image_stage_boundary.sh
+    zsh scratch/agent/run_m5_source_input_writer.sh
 
-The next iteration must first obtain ground truth for the source and
-destination ranges from the retail oracle, then write the self-contained
-recipe and batch all join fields in one build/run. Preserve the independent
-retail control, use SIGKILL cleanup, and do not alter the SP-yield contract.
+Do not add a mitigation or alter the SP-yield/audio contract. If the census
+is incomplete or the retail arm misses title/hangar, classify the run invalid
+and repair coverage before drawing a writer conclusion.

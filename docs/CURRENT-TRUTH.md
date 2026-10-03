@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3800 (2026-10-03).
+Updated for session 3801 (2026-10-03).
 
 ## Current state
 
@@ -39,13 +39,16 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image-stage boundary, next.** s3800 qualified the image/silent pair:
+1. **M5 source-input producer, next.** s3801 qualified the image/silent pair:
    both arms reached title 1024 and hangar 512, both passed phase-scoped
-   controls, and neither crashed or aborted. Image emitted 5,570
-   `audtask-image-stage-row` rows; silent emitted zero. The next experiment
-   must distinguish an image-stage input/source producer gap from an
-   image-stage output/consumer gap, using one same-build run and a positive
-   control for each arm. Do not repeat launch-order or SP-yield variants.
+   controls, and neither crashed or aborted. Image emitted 2,240
+   `audtask-image-stage` rows; silent emitted zero. Image's source DMA, stage
+   DMEM/DMA payload, and destination were all zero-valued while its image
+   consumer callback was live; silent retained PCM and audio-return controls.
+   This selects the source-input producer gap. The next work unit must identify
+   the legitimate writer of the zero source span with one batched,
+   phase-gated producer census and an independent retail control. Do not repeat
+   launch-order, SP-yield, or source-versus-consumer comparisons.
 2. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
@@ -84,7 +87,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-SPYieldCauseOfStall` | Refuted at s3799: corrected one-shot behavior does not by itself reach title or hangar. |
 | `H-M5-PairedRouteCaptureStable` | Selected at s3800: image and silent both reached title/hangar with controls and no crash/abort. |
 | `H-M5-ImageStageOnly` | Selected at s3800: image emitted 5,570 stage rows while silent emitted zero; shared PCM/return controls remained active. |
-| `H-M5-ImageStageBoundary` | Open: the qualified difference does not identify whether zero-valued input is a source-producer gap or an output/consumer gap. |
+| `H-M5-ImageStageBoundary` | Selected at s3801: image's zero source/stage payload reaches a live image consumer; silent has no image-stage rows but retains PCM controls. |
+| `H-M5-SourceInputWriter` | Open: the legitimate writer or fill responsible for the zero source span remains unidentified. |
 
 ## Evidence ledger — live boundary
 
@@ -190,6 +194,17 @@ Work only the first applicable item. This is one monotonic backlog.
   consumer rows (image/silent respectively). H2 arm instability and H3 stage
   absence are refuted at this scope; H1 image-stage arm difference is selected.
   This does not identify the stage's zero-valued input writer or output consumer.
+- **3801 — image-stage source/consumer boundary:** the independent retail
+  control fired and reached title/hangar. The same-build image and silent arms
+  both reached title/hangar with phase, PCM, audio-return, and no-crash
+  controls. Image emitted 2,240 stage rows, 618 source-DMA reader rows, 16
+  stage-byte rows, and 1,118 image-queue rows; its hangar source DMA, stage
+  DMEM/DMA, and destination payloads were zero-valued while the image consumer
+  was live. Silent emitted no image-stage/source/queue rows but emitted 80 PCM
+  source, 295 PCM consumer, and 287 audio-return rows. This selects the
+  source-input producer gap and refutes output-only and instrumentation-scope
+  explanations at this scope; the writer of the zero source span remains open.
+  See [M5-S3801-IMAGE-STAGE-BOUNDARY.md](M5-S3801-IMAGE-STAGE-BOUNDARY.md).
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

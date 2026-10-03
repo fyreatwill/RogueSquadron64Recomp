@@ -140235,3 +140235,32 @@ ORIGIN: no mitigation or game-state change was landed. The new harness is
 phase-gated and retains independent retail, exact-route, and family-edge
 positive controls. The run also refreshed the existing generated
 `ucode_024A10.bin` dump artifact.
+
+## Session 3801 (2026-10-03) — image-stage source boundary selected
+
+Ran the independent retail oracle preflight before building. Its whole-RDRAM
+positive control fired and the VI trace reached title `0x00790400`/1024 and
+hangar `0x006AB400`/512. The added candidate stage watches produced no
+attributable target hit in that capture, so they were not treated as a retail
+null; the already-qualified retail source-span writer ground truth remains
+`0x1797B0..0x179A48` with producer `0x800078EC`.
+
+Built the Debug target and ran the new same-build image/silent boundary
+harness. Both port arms reached title and hangar, passed phase, PCM,
+audio-return, and stability controls, and reported no crash or abort. Image
+produced 2,240 image-stage rows, 618 source-DMA reader rows, 16 stage-byte
+rows, and 1,118 image-queue rows. Its hangar source DMA
+`0x1798B0 -> DMEM 0xCB0`, stage DMEM/DMA, and destination payloads were
+zero-valued while the image consumer callback was live. Silent produced no
+image-stage/source/queue rows but did produce 80 PCM-source, 295 PCM-consumer,
+and 287 audio-return rows.
+
+This selects the source-input producer gap at this discriminator and refutes
+an output-only gap and instrumentation-scope explanation. It does not identify
+the legitimate writer of the zero source span. The candidate stage-watch null
+is unevaluable, not evidence. See `docs/M5-S3801-IMAGE-STAGE-BOUNDARY.md` and
+`scratch/agent/s3801_m5_image_stage_boundary/`.
+
+ORIGIN: diagnostic-only source/stage/consumer logging and a capture harness;
+no game state, task, audio, scheduler, rendering, or mitigation behavior was
+changed.
