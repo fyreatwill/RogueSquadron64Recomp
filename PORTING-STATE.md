@@ -139884,3 +139884,23 @@ modify values, destinations, audio gates, or control flow.
 Evidence: `docs/M5-S3781-GUEST-ROUTE-SAMPLE.md`,
 `scratch/agent/s3781_oracle_ground_truth/oracle.log`, and
 `scratch/agent/s3781_port_guest_route/image.log`.
+
+## Session 3782 (2026-10-03) — retail family reachability recipe stayed pre-target
+
+The independent retail oracle ran the prescribed 120-second qualification with
+the whole-RDRAM positive control, candidate route-byte watches, S/I/L execution
+watches, target-VI width watches, and controlled return/Z input. The positive
+control fired 10,003 writes, so the oracle was live and the watch path was
+validated. Retail remained in the early 320-wide attract phase: neither target
+VI nor any S/I/L family PC fired. Candidate route-byte writes were 2, 1, and 0
+for the three watched ranges.
+
+This selects `H-M5-RetailRecipePreTarget` for this recipe and rules out using
+its zero family/target counts as evidence about retail route parity. A fresh
+input recipe is required; no port instrumentation, mitigation, or audio change
+was made.
+
+ORIGIN: this iteration only observed independent retail memory writes, guest PC
+execution, and VI transitions; it did not modify the ROM, guest state, or port.
+
+Evidence: `scratch/agent/s3782_oracle_family_reach/oracle.log`.

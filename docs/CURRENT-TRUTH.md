@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3781 (2026-10-03).
+Updated for session 3782 (2026-10-03).
 
 ## Current state
 
@@ -255,18 +255,28 @@ single-source port result: H1 versus H2 remains unevaluable, and no mitigation
 or audio change is authorized. See
 [M5-S3781-GUEST-ROUTE-SAMPLE.md](M5-S3781-GUEST-ROUTE-SAMPLE.md).
 
+Session 3782 reran the retail oracle with the required whole-RDRAM positive
+control, candidate route-byte watches, and S/I/L execution watches. The
+positive control fired 10,003 times, but retail remained in the early 320-wide
+attract phase for all 120 seconds: neither target VI nor any family PC fired.
+The route-byte watches saw only 2, 1, and 0 early writes. This selects
+`H-M5-RetailRecipePreTarget` for this input recipe; retail/port route parity is
+still unevaluable, and no port or audio change is authorized. See
+`scratch/agent/s3782_oracle_family_reach/oracle.log`.
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 qualify independent retail family reachability.** The s3781 port
-   witness read zero at all three guest route-state bytes on 257 target rows,
-   but the retail oracle stayed in attract and never executed S/I/L. Use one
-   new oracle input/phase recipe, with the whole-RDRAM and route-byte controls,
-   to reach a retail target VI and at least one family PC. A family hit with
-   route-state writes/values supplies the independent H1/H2 discriminator;
-   failure to reach target leaves the route question unevaluable. Do not
-   suppress or replace the clear, inject values, or change an audio gate.
+1. **M5 qualify independent retail family reachability.** The s3782 recipe
+   stayed in the 320-wide attract phase despite a positive whole-RDRAM control;
+   its return/Z input was therefore not qualified. Run one new oracle recipe
+   using repeated `start` pulses with `--hold-ms 150`, retaining the
+   whole-RDRAM, route-byte, S/I/L, and target-VI controls. A family hit plus a
+   target VI selects retail reachability and enables the H1/H2 route
+   comparison; target VI without a family hit is a route-PC mismatch; no target
+   VI is a recipe/input failure. Do not suppress or replace the clear, inject
+   values, or change an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
@@ -367,8 +377,17 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyEdgeHookAbsent` | Selected as the immediate instrumentation gap at s3778: six family-store controls and target phases fired, but no family-edge hook/control/row was present. |
 | `H-M5-PortGuestRouteZero` | Single-source selected at s3781: all 257 qualified port family rows read zero at `0x80141AD0`, `0x8013B038`, and `0x80141AD1`; retail family parity was not reached. |
 | `H-M5-RetailGuestRouteParity` | Unevaluable at s3781: the retail oracle passed its positive control and watched candidate writes, but reached no family PC or target VI in the 60-second run. |
+| `H-M5-RetailRecipePreTarget` | Selected at s3782 for the return/Z recipe: the whole-RDRAM control fired, but retail stayed in 320-wide attract for 120 seconds with no target VI or S/I/L family hit. |
 
 ## Evidence ledger — live boundary only
+
+- **3782 — retail family-reachability recipe qualification:** the independent
+  oracle's whole-RDRAM control fired 10,003 times. Candidate route-byte writes
+  were 2/1/0, but the VI trace remained at the early 320-wide attract phase;
+  target VIs and S/I/L execution watches were all zero. This selects a
+  pre-target recipe/input failure for this arm, not a route-state conclusion.
+  The next discriminator is a fresh repeated-Start recipe. See
+  `scratch/agent/s3782_oracle_family_reach/oracle.log`.
 
 - **3778 — repaired clear-object witness:** the Debug build and image-only
   capture passed the oracle whole-RDRAM control, six family-store controls, and
