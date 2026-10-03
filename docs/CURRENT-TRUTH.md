@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3769 (2026-10-02).
+Updated for session 3770 (2026-10-02).
 
 ## Current state
 
@@ -151,18 +151,29 @@ execution for S/L and absent target edge for I, while leaving the legitimacy
 of the other-object route unresolved. See
 [M5-S3769-RETAIL-PORT-FAMILY-EDGE.md](M5-S3769-RETAIL-PORT-FAMILY-EDGE.md).
 
+Session 3770 ran the regeneration-safe internal-store census in concurrent
+image and silent arms beside the retail oracle. The oracle whole-RDRAM control
+fired (77,858 writes) and reached both target VIs; both port arms reached
+both target VIs, passed all three family-store controls, and matched each
+other. S/L each produced 256 bounded store rows in title and hangar, all to
+alternate object addresses with zero target-range rows. I produced 256 title
+rows and no hangar-phase rows, also with zero target-range rows. This selects
+alternate-object provenance for S/L and absent target edge for I; legitimacy
+of the alternate route and its identity relative to the 0x8008F2CC clear
+remain open. No mitigation was added. See
+[M5-S3770-FAMILY-STORE-PROVENANCE.md](M5-S3770-FAMILY-STORE-PROVENANCE.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 family destination provenance versus route identity.** S/L execute in
-   both target phases on non-target object arguments, while I has no target
-   entry. Batch one regeneration-safe internal-store destination census for
-   the three family bodies, joined to phase, route ordinal, and the
-   `0x8008F2CC` clear; retain the whole-RDRAM control and require both target
-   VIs in image and silent arms. Distinguish legitimate alternate objects from
-   a route/object identity mismatch. Do not suppress or replace the clear,
-   inject values, or change an audio gate.
+1. **M5 alternate-object legitimacy versus route identity.** Join the S/L
+   alternate store destinations and I's title-only setup object to the
+   `0x8008F2CC` clear-associated object, allocator result, and active route
+   ordinal in one phase-gated capture. Require the retail whole-RDRAM control
+   and both target VIs in image and silent arms. Distinguish a legitimate
+   alternate asset object from a route/object identity mismatch. Do not
+   suppress or replace the clear, inject values, or change an audio gate.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -246,6 +257,11 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-DMEMProducerAbsent` | Closed at s3699: the apparent gap was an RDRAM-to-DMEM DMA writer. |
 | `H-ClearTooEarly` | Selected at s3706 for the measured source object; this is an explanation of the observed zero payload, not permission for a mitigation. |
 
+| `H-M5-FamilyStoresAlternateLegitimateObject` | Selected at s3770 for measured S/L stores: both arms wrote only alternate object destinations in title/hangar; legitimacy relative to the clear-associated route remains open. |
+| `H-M5-FamilyStoresExpectedTargetViaHiddenPointer` | Refuted at s3770 for the measured store sites: no internal store destination fell in either target buffer range in either arm. |
+| `H-M5-FamilyRouteIdentityMismatch` | Open at s3770: alternate destinations are proven, but their allocator/route identity is not yet joined to the clear object. |
+| `H-M5-FamilyAbsentTargetEdge` | Selected at s3770 for I: title setup stores were observed, but no hangar-phase I store bucket appeared in either arm. |
+
 ## Evidence ledger — live boundary only
 
 - **3768 — retail writer-family edge audit:** static generated code maps
@@ -266,6 +282,15 @@ Work only the first applicable item. This is one monotonic backlog.
   edge for I; internal store destinations and route identity remain open. No
   mitigation was added. See
   [M5-S3769-RETAIL-PORT-FAMILY-EDGE.md](M5-S3769-RETAIL-PORT-FAMILY-EDGE.md).
+
+- **3770 — family internal-store provenance:** the oracle whole-RDRAM control
+  fired and reached title/hangar. Image and silent matched: S/L each emitted
+  256 bounded title and 256 bounded hangar store rows, all outside the target
+  buffers; I emitted 256 title setup rows and no hangar rows. The value field
+  was retained and the family store controls fired. This selects alternate
+  object destinations for S/L and an absent I hangar edge, while leaving
+  clear/object/route identity open. No mitigation was added. See
+  [M5-S3770-FAMILY-STORE-PROVENANCE.md](M5-S3770-FAMILY-STORE-PROVENANCE.md).
 
 - **3762 — silent-route stability repeat:** the retail oracle passed its
   whole-RDRAM control and reached title/hangar; both image and silent arms
@@ -558,6 +583,7 @@ silent control.
 - [M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md](M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md)
 - [M5-S3753-TASK-PRODUCER-CENSUS.md](M5-S3753-TASK-PRODUCER-CENSUS.md)
 - [M5-S3769-RETAIL-PORT-FAMILY-EDGE.md](M5-S3769-RETAIL-PORT-FAMILY-EDGE.md)
+- [M5-S3770-FAMILY-STORE-PROVENANCE.md](M5-S3770-FAMILY-STORE-PROVENANCE.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)

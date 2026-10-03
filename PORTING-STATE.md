@@ -139621,3 +139621,32 @@ ORIGIN: diagnostic entry hooks only; the existing `0x800078EC` zero padding
 remains a legitimate observed writer. Evidence:
 `docs/M5-S3769-RETAIL-PORT-FAMILY-EDGE.md` and
 `scratch/agent/s3769_m5_family_edge/`.
+
+## Session 3770 (2026-10-02) — mapped family internal-store provenance
+
+The regeneration-safe s3770 census added one helper to every generated store
+in rs_strncpy, initTextureLUTAndAllocBuffers, and loadTextureToMemory,
+retaining family, store PC, width, effective destination, value, phase, route
+ordinal, and arm. The Debug build succeeded.
+
+The retail oracle passed its whole-RDRAM positive control with 77,858 writes,
+reached title 1024 @ 0x00790400 and hangar 512 @ 0x006AB400, and
+independently executed the relevant family PCs. In one concurrent image/silent
+capture, both port arms reached both target VIs, passed all three family-store
+controls, and matched: S/L each produced 256 bounded title and 256 bounded
+hangar rows, all outside the title and hangar target ranges; I produced 256
+title setup rows and no hangar-phase rows. No target-range store row appeared
+in either arm.
+
+This selects alternate-object destinations for S/L and an absent I hangar
+edge, refutes a hidden-pointer store into the measured target buffers, and
+leaves alternate-object legitimacy versus clear/route identity open. The
+first launcher was invalid because it killed at first hangar detection; the
+post-hangar-window rerun is the result. No mitigation, clear suppression,
+payload injection, or audio-gate change was made.
+
+ORIGIN: the observed family writer PCs and values are legitimate asset/setup
+stores; the new code only records effective destinations and values. Evidence:
+docs/M5-S3770-FAMILY-STORE-PROVENANCE.md,
+scratch/agent/s3770_m5_family_store/, and
+scratch/agent/s3770_retail_groundtruth_2/oracle.log.
