@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3835 (2026-10-03).
+Updated for session 3836 (2026-10-03).
 
 ## Current state
 
@@ -68,6 +68,14 @@ Work only the first applicable item. This is one monotonic backlog.
    service work, not the RSP PCM path. The s3835 retail object-access result
    now selects disconnected output at the measured scope. Do not infer an
    intended replacement destination from route identity alone.
+   Session 3836's paired task-field capture was coverage-invalid on the port
+   arm: retail passed whole-RDRAM and both target-VI controls and produced
+   1,165 phase-gated audio-task rows at `0x80033FCC`, but the port crashed at
+   guest `0x8000834C` before leaving VI 320 and emitted no task, DMA,
+   completion, service, or PCM rows. The exact validated recipe with restored
+   family controls reproduced the failure. Do not infer a task-contract
+   mismatch from this pair; first qualify whether the task-contract logger
+   changes startup stability.
    Session 3829's complete,
    direct-VI-gated target-phase DMA census selected H2: no
    `rs64_m5_audio_source_dma` invocation occurred at title 1024 or hangar 512,
@@ -166,6 +174,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyHandoffEventJoin` | Refuted at s3833: the handoff callback had no authoritative family join key. |
 | `H-M5-FamilyRouteContextOrder` | Selected H3 at s3834 scope: 130 entry and 1,011 store rows exactly joined the authoritative route context, all after it; PCM source/consumer matches remained zero. |
 | `H-M5-FamilyRetailObjectAccess` | Selected H2 at s3835: retail reached title/hangar and the S/L family PCs, but had zero reads/writes in physical `0x165000..0x16C000`; the port emitted 1,280 target-phase family stores. |
+| `H-M5-TaskContractCaptureCoverage` | Unevaluable at s3836: retail task rows and both target phases were positive, but both port attempts crashed at guest `0x8000834C` before VI 320, leaving all port task/output rows absent. |
 
 ## Evidence ledger — live boundary
 
@@ -649,6 +658,16 @@ line naming the writer and stating whether its value is legitimate.
   alternate output at the measured scope, not intended retail route state.
   Evidence: `scratch/agent/s3835_m5_alternate_object_oracle/`.
 
+- **3836 — task-field edge capture was coverage-invalid:** the retail oracle
+  passed whole-RDRAM control, title `0x00790400`/1024, and hangar
+  `0x006AB400`/512, with 1,165 phase-gated audio-task rows at `0x80033FCC`.
+  Rows showed type `0x2`, task `0x80149470`, data `0x80171E70`, and size
+  `1`/`2`. The port arm crashed 36 times at guest `0x8000834C` before leaving
+  VI 320, in both the initial and corrected recipe, so it emitted zero task,
+  DMA, completion, service, or PCM rows. H3 is selected for this capture; no
+  image contract mismatch follows. Evidence:
+  `scratch/agent/s3836_m5_task_contract_edge/`.
+
 ## Superseded conclusions
 
 The original overlay/menu-only explanation, intrinsic VI-640 flakiness,
@@ -675,5 +694,5 @@ See the session-specific notes linked above and:
 - [M5-S3781-GUEST-ROUTE-SAMPLE.md](M5-S3781-GUEST-ROUTE-SAMPLE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3785 remain in the append-only ledger. Use bounded `grep`/`sed`
+Sessions 1–3836 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.

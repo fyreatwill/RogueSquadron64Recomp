@@ -140899,3 +140899,17 @@ It rules out only retail access to this bounded physical range; it does not
 identify the missing image task/output contract edge. Evidence:
 `scratch/agent/s3835_m5_alternate_object_oracle/` and
 `scratch/agent/run_s3835_m5_alternate_object_oracle.sh`.
+
+## Session 3836 (2026-10-03) — task-field edge capture was coverage-invalid
+
+Added `scratch/agent/run_s3836_m5_task_contract_edge.sh`, built the Debug
+target successfully, and ran the paired retail/port task-field capture twice.
+The retail oracle's whole-RDRAM control fired, title VI 1024 and hangar VI 512
+were positive, and 1,165 phase-gated executions at `0x80033FCC` produced
+type-2 tasks with task pointer `0x80149470`, data pointer `0x80171E70`, and
+data size 1/2. The port arm crashed 36 times at guest `0x8000834C` before
+leaving VI 320 in both the initial and corrected recipe, with zero task, DMA,
+completion, service, or PCM rows. This selects H3 measurement-boundary
+failure, not an image contract mismatch, and rules out using this pair for
+retail/port field parity. Evidence:
+`scratch/agent/s3836_m5_task_contract_edge/`.
