@@ -139142,3 +139142,27 @@ This iteration selects no route-state hypothesis and rules out only the broad
 whole-generated-load transformer as a viable instrument. The planned question
 remains unevaluable. Next attempt must identify and hook only exact disassembled
 load sites, with a clean regeneration/fixup check before the runtime run.
+
+## Session 3750 (2026-10-02) — invalidated the route-state read hook target
+
+The active M5 unit was the route-state/source-use join. Static disassembly
+showed `0x80019CD8` is `lw a0,0x10(sp)` after queue receive, not a route-field
+load. The paired real/silent qualified run enabled the existing generated
+`osRecvMesg` caller census, route-preparation hook, and source-DMA census. Both
+arms passed source-hook controls and reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`; the 256-row caller census fired in each arm. Target
+route rows had `a0=0x80128C70/80` but sampled `s0=0`, so the logged source
+fields were not reads of `0x128CD0` or `0x128C92`. The real arm emitted the
+established target source-DMA family; the silent arm emitted none.
+
+This makes the planned read/use result unevaluable and rules out only the
+existing hook as a discriminator, not any route-state hypothesis. Static
+candidate enumeration bounded the next hook set to `0x800A5E00`, `0x800B4B08`,
+`0x80065854`, `0x8007BEEC`, `0x8008F548`, `0x8008F5F0`, `0x8008F640`,
+`0x800D989C`, and `0x800E8064`, pending effective-base filtering. No
+mitigation or value rewrite changed; `0x800078EC` remains untouched. ORIGIN:
+the diagnostic hook sampled queue-dispatch registers, and the legitimate
+zero-fill writer was not modified.
+
+Evidence: `docs/M5-S3750-ROUTE-STATE-HOOK-INVALID.md` and
+`scratch/agent/s3750_m5_route_state_source_join/{real,silent}.log`.

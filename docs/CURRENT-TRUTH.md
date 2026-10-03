@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3749 (2026-10-02).
+Updated for session 3750 (2026-10-02).
 
 ## Current state
 
@@ -29,14 +29,14 @@ zero-valued port payload. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 route-state interpretation.** s3748's macOS ARM64 native page-fault
-   watch fired its positive control in both qualified port arms, reached title
-   and hangar, and saw no exact-field host write at `0x128C92` or
-   `0x128CD0..0x128CD3`. The arbitrary host-writer class is closed for that
-   capture. Resolve `H-RouteStateNotSource`: determine whether the exact fields
-   are control metadata rather than the image source, using a phase-scoped
-   read/use-to-source-DMA join. Do not alter `0x800078EC`. See
-   [M5-S3748-HOST-WRITER-FAULT-WATCH.md](M5-S3748-HOST-WRITER-FAULT-WATCH.md).
+1. **M5 route-state interpretation.** s3750 showed the existing route hook is
+   mis-targeted: `0x80019CD8` is queue-message dispatch, and its sampled `s0`
+   is zero even when `a0` names `0x80128C70`. Do not treat its
+   `source_word/source_byte` fields as exact-field reads. Instrument only the
+   bounded static candidates listed in
+   [M5-S3750-ROUTE-STATE-HOOK-INVALID.md](M5-S3750-ROUTE-STATE-HOOK-INVALID.md),
+   filter on runtime base `0x80128C70`, then join each read to the next source
+   DMA. Do not alter `0x800078EC`.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -219,6 +219,11 @@ transformer was abandoned after nested `S32(...)` expressions caused an
 unterminated macro invocation; the regeneration recovery pass also stopped at
 the existing `s3556 entry anchor count=0` fixup gate. Treat the route-state
 read/use question as unevaluable, with no runtime conclusion.
+
+Session 3750 did not produce route-state evidence either, but static and
+runtime evidence invalidated the existing read/use hook itself: it samples
+queue-dispatch registers rather than the exact route fields. The next
+candidate list is bounded; no route-state hypothesis is selected.
 
 ## Durable operating rules
 
