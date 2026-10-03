@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3833 (2026-10-03).
+Updated for session 3834 (2026-10-03).
 
 ## Current state
 
@@ -51,14 +51,14 @@ Work only the first applicable item. This is one monotonic backlog.
    (882/882; none preceded or tied), while source and consumer PCM match event
    IDs remained zero. The alternate family is coupled to the same task/service
    epoch but is not the RSP PCM path at this scope; semantic ownership remains
-   open. Session 3833's target-valid event-stamp capture added event IDs to
-   route-prepare/handoff rows, but the handoff callback carried task generation
-   zero and route keys that did not match the nonzero family generations; all
-   129 parsed active family-entry rows therefore had no exact handoff join.
-   H1/H2/H3 are unevaluable, not selected. The next probe must stamp the
-   authoritative route identity at `rs64_audio_route_set`/audio-return, where
-   ordinal, row, and audio task generation coexist. Do not infer causality from
-   route identity alone.
+   open. Session 3834 stamped `rs64_audio_route_set`/audio-return, where route
+   ordinal, row, and audio task generation coexist. The target-valid capture
+   had 258 family-entry and 1,536 family-store events; 130 entry and 1,011
+   store events had an exact route-context ordinal/row join, and every joined
+   event followed its route-context event. Source and consumer PCM matches
+   remained zero. H3 is selected at this scope: the family is post-return
+   service work, not the RSP PCM path. Semantic ownership remains open. Do not
+   infer intended output from route identity alone.
    Session 3829's complete,
    direct-VI-gated target-phase DMA census selected H2: no
    `rs64_m5_audio_source_dma` invocation occurred at title 1024 or hangar 512,
@@ -158,7 +158,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-TargetPhaseDmaCensusGate` | Refuted at s3829: the initial route-snapshot gate was too strict, but the corrected direct-VI gate reached both target phases without producing a callback row. |
 | `H-M5-FamilyTaskCorrelation` | Selected at s3831 scope: 127 family-entry rows and 755 family-store rows joined a same-route image-stage task generation, while source/consumer PCM match event IDs remained zero and image summaries were stage-only. |
 | `H-M5-FamilyAfterImageStage` | Selected at s3832 scope: 882 active family rows with matched stage events all followed the stage event; none preceded or tied. This supports same-epoch post-stage CPU/service work, but not semantic ownership. |
-| `H-M5-FamilyHandoffEventJoin` | Unevaluable at s3833: target controls and event IDs were live, but the existing handoff callback exposed task generation zero and no exact route-key match to active family rows. |
+| `H-M5-FamilyHandoffEventJoin` | Refuted at s3833: the handoff callback had no authoritative family join key. |
+| `H-M5-FamilyRouteContextOrder` | Selected H3 at s3834 scope: 130 entry and 1,011 store rows exactly joined the authoritative route context, all after it; PCM source/consumer matches remained zero. |
 
 ## Evidence ledger — live boundary
 
@@ -618,6 +619,17 @@ line naming the writer and stating whether its value is legitimate.
   proposed callback as an authoritative join source; it does not show that the
   family is disconnected. Evidence:
   `scratch/agent/s3833_m5_family_handoff_order_corrected_retry/run.log`.
+- **3834 — authoritative route-context order:** the Debug build passed after
+  stamping audio generation and route identity at `rs64_audio_route_set`.
+  One target-valid image run reached title 1024 and hangar 512 with no crash or
+  abort. Positive controls were live: 1,190 route-context events at title,
+  4,902 at hangar, 258 family-entry rows, 1,536 family-store rows, and PCM
+  join controls. Exact ordinal/row joins covered 130 family-entry and 1,011
+  family-store events; all joined family events occurred after their route
+  context, while source and consumer PCM matches were zero. This selects H3 at
+  the measured scope: post-return service activity, not the RSP PCM path; it
+  does not establish semantic ownership. Evidence:
+  `scratch/agent/s3834_m5_family_route_context/run.log`.
 
 ## Superseded conclusions
 

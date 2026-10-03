@@ -1,40 +1,34 @@
-# Next work unit: stamp authoritative route identity at audio-return
+# Next work unit: independently classify alternate-family ownership
 
 HYPOTHESIS-ID: m5-alternate-family-object-ownership
 
-Session 3833's target-valid handoff capture was instrument-positive but
-discriminator-invalid: all target handoff rows had task_generation=0 and did
-not share route keys with active family rows. Do not repeat that callback.
+Session 3834 selected H3 at the port scope: 130 family-entry and 1,011
+family-store rows exactly joined the authoritative audio-return route context,
+all after that context, while source/consumer PCM matches stayed zero. This
+does not distinguish intended route/service state from disconnected output.
 
 Competing hypotheses and discriminator:
 
-- H1: the alternate family is intended route/service work. A stamp emitted at
-  `rs64_audio_route_set`/audio-return joins the same task generation, route
-  ordinal/row, and event order as family rows.
-- H2: the family is stale/disconnected output. The authoritative route stamp
-  remains absent or does not join family rows with the same generation and
-  route key.
-- H3: the family is a distinct post-stage branch. The authoritative route
-  stamp joins the same generation and route key, but every family event is
-  after the route/audio-return stamp and PCM source/consumer matches remain
-  zero.
+- H1: the alternate family is intended route/service state. An independent
+  retail target-phase watch sees the same alternate-object writes or reads,
+  with matching family PC and route ordinal/row evidence.
+- H2: the family is disconnected output. Retail reaches the family PCs and
+  target phases, but never touches the alternate object ranges corresponding to
+  the port family stores.
+- H3: the family is port-only post-return behavior. Retail has no qualified
+  family/object parity, while the port retains the exact post-return joins and
+  zero PCM matches.
 
-The discriminator is one target-valid image run whose complete joined table
-contains family entry/store events, image-stage events, and an explicit
-route-context event emitted where `rs64_audio_route_set` receives ordinal,
-row, and the current audio generation. Count exact joins and event ordering;
-do not use wall-clock order or route identity without generation.
+The discriminator is one paired capture with a positive whole-RDRAM retail
+watch, retail title/hangar VI gates, retail family-PC watches, and port
+family-entry/store plus route-context controls. Reject it unless both arms
+reach title 1024 and hangar 512 and all controls are positive. Classify only
+from alternate-object address overlap and family-PC reachability; do not use
+wall-clock order or infer ownership from the port route identity.
 
-Before building, add the route-context stamp in `src/main/main.cpp` around the
-existing `rs64_audio_route_set` call in `rs64_log_audio_return`; do not edit
-generated functions or the runtime submodule. Keep the existing event IDs and
-all positive controls from s3833.
-
-Build and run from the repository root:
-
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a' PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M5_FAMILY_EDGE=1 ROGUESQ_LOG_M5_FAMILY_STORE=1 ROGUESQ_LOG_M5_TASK_LIFETIME=1 ROGUESQ_LOG_M5_STAGE_CALLS=1 ROGUESQ_LOG_M5_STAGE_BYTES=1 ROGUESQ_LOG_M5_RSP_SOURCE=1 ROGUESQ_LOG_M5_PCM_WRITER=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_M5_EXACT_ROUTE=1 ROGUESQ_LOG_M5_SOURCE_TRANSITION=1 ROGUESQ_LOG_M5_ROUTE_ORDER=1 ROGUESQ_LOG_M5_ROUTE_TRANSITION=1 ROGUESQ_LOG_M5_SOURCE_RANGE=1 ROGUESQ_LOG_M5_ROUTE_PREPARE=1 ROGUESQ_LOG_M5_ROUTE_HANDOFF=1 ROGUESQ_LOG_M5_DYNAMIC_CALLBACK=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 zsh tools/probe.sh scratch/agent/s3834_m5_family_route_context 180 0.5
-
-Reject the run unless both target phases and every listed positive control are
-present. Use SIGKILL cleanup and classify H1/H2/H3 only from the complete
-generation/route/event joined table.
+Before building, verify the oracle debugger preflight and read
+`tools/oracle/README.md`; if the available core again lacks DEBUGGER=1 symbols,
+record that setup failure and do not treat it as H2. Preserve the validated
+port command from s3834, add only the independent retail watch arm, and use
+SIGKILL cleanup. The evidence paths should be
+`scratch/agent/s3835_m5_alternate_object_oracle/` and its oracle log.

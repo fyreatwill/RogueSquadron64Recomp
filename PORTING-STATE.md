@@ -140863,3 +140863,22 @@ it does not establish disconnected output. The next probe must stamp
 generation coexist. The retail oracle remained setup-invalid because the
 available Homebrew core lacks DEBUGGER=1 symbols. Evidence:
 `scratch/agent/s3833_m5_family_handoff_order_corrected_retry/run.log`.
+
+## Session 3834 (2026-10-03) — ordered family activity against authoritative route context
+
+Added a target-phase route-context event at `rs64_audio_route_set`/audio-return,
+carrying the route ordinal, row, audio-task generation, and event order. The
+Debug build passed after correcting one local argument-count error caught by the
+first compile. The target-valid run reached title VI 1024 and hangar VI 512
+with no crash or abort. Positive controls were live: 1,190 route-context events
+at title, 4,902 at hangar, 258 family-entry rows, 1,536 family-store rows,
+image-stage activity, route/task/input-DMA controls, and both PCM join controls.
+
+The complete event table found exact route-context ordinal/row joins for 130
+family-entry and 1,011 family-store rows; every joined family event had an
+event ID greater than its route-context event, with no ties or predecessors.
+Target-phase audio joins reported `source_matches=0` and
+`consumer_matches=0`. This selects H3 at the measured scope: alternate-family
+work is post-return service activity, not the RSP PCM path. It does not
+establish semantic ownership or whether that output is intended. Evidence:
+`scratch/agent/s3834_m5_family_route_context/run.log`.

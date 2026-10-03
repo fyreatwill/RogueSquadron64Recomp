@@ -4089,6 +4089,12 @@ static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
     rs64_audio_route_set(arm, route.phase, route.width, route.origin,
                          route.ordinal, route.row,
                          static_cast<int>(reason));
+    rs64_audio_join_m5_event(
+        "route-context", 0x52544358u, 1u, arm, route.phase, route.width,
+        route.origin, route.ordinal, route.row, 0u, 0u,
+        static_cast<uint32_t>(s_pending_audio_generation),
+        static_cast<uint32_t>(s_pending_audio_generation >> 32),
+        static_cast<uint32_t>(reason), 0u);
     const uint32_t clear_seq = g_rs64_audio_identity_edge_seq.fetch_add(
         1, std::memory_order_relaxed);
     rs64_m5_identity_edge("return-clear", route, route.prepare_seq, clear_seq,
