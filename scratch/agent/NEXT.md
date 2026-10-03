@@ -1,35 +1,34 @@
-# Next work unit: M5 Step 1 same-run contract comparison
+# Next work unit: M5 image-task source/output boundary
 
-HYPOTHESIS-ID: m5-step1-contract-gap
+HYPOTHESIS-ID: m5-image-stage-source-output
 
-Use the completed s3762 same-build capture to identify the first downstream
-contract edge that differs between the qualified image and silent arms. Do not
-add instrumentation, add another task-data value field, or change an audio
-gate until this comparison selects a missing edge.
+Use the existing s3762 capture and current source joins to identify the first
+legitimate producer boundary for the zero-valued image-stage/PCM payload. Do
+not add another task-data value field, change an audio gate, or implement a
+writeback/fill mitigation.
 
 Competing hypotheses:
 
-- `H-M5-ImageStageOnly`: the only meaningful arm difference is the expected
-  nonzero image-stage/DMA work; shared task completion, route, PCM, and target
-  phase prove no downstream contract gap in the measured Step 1 rows.
-- `H-M5-SilentContractEdge`: silent and image diverge at a measured task,
-  return, slot, voice, or PCM edge despite both reaching target phases; that
-  edge is the next de-stubbing boundary.
-- `H-M5-RunAccounting`: the apparent difference is caused by row budgets,
-  phase gating, or arm-specific sampling rather than behavior; control counts
-  or ordinal alignment will fail before an edge can be selected.
+- `H-M5-InputProducerGap`: the image task receives a zero-valued input because
+  the producer before image-stage input is absent or clears it.
+- `H-M5-OutputConsumerGap`: image-stage input/output is already the selected
+  boundary, and the first missing contract is after image-stage output or at
+  its consumer.
+- `H-M5-Accounting`: the apparent boundary is a join/window artifact; the
+  existing source/output ordinals or phase controls do not align.
 
-Discriminator: compare `scratch/agent/s3762_m5_step1_silent_repeat/driver.log`
-and both arm logs by phase and ordinal for dispatch, ABI/DMA, image-stage,
-audio-return/route, slot/voice, and PCM source/consumer rows. Positive controls
-are oracle whole-RDRAM=10000 plus title/hangar for oracle, image, and silent.
-An image-stage-only difference selects `H-M5-ImageStageOnly`; a first shared
-ordinal/phase edge selects `H-M5-SilentContractEdge`; missing controls or
-budget truncation selects `H-M5-RunAccounting` and requires a redesigned
-capture.
+Discriminator: build no new instrument initially. Extract the same phase-5
+image-stage rows, input-DMA rows, PCM source/consumer rows, and task join rows
+for the final shared ordinal from
+`scratch/agent/s3762_m5_step1_silent_repeat/image.log`; classify whether the
+first zero payload is before or after the image-stage output, and verify the
+same ordinal/phase keys. `H-M5-InputProducerGap` requires a named producer
+before the input DMA; `H-M5-OutputConsumerGap` requires a named post-stage
+consumer; `H-M5-Accounting` is selected by missing controls or mismatched
+keys. Require oracle whole-RDRAM positive control and title/hangar phases.
 
 Exact commands:
 
-`grep -a -E '^(oracle_gate|silent_hangar|image_hangar|.*=([0-9]+)|--- )' scratch/agent/s3762_m5_step1_silent_repeat/driver.log`
+`grep -a -E '^(\[audtask-image-stage|\[audtask-image-dma-join|\[m5-input-dma|\[audtask-join|\[audio-join-pcm|\[pcm-boundary)' scratch/agent/s3762_m5_step1_silent_repeat/image.log | grep 'phase=5 width=512' | tail -80`
 
-`grep -a -E '^\\[(audtask-|audio-|pcm-|slot-|filter-voice|phase)' scratch/agent/s3762_m5_step1_silent_repeat/{silent,image}.log | sed -n '1,240p'`
+`grep -a -E '^(oracle_gate|silent_hangar|image_hangar)' scratch/agent/s3762_m5_step1_silent_repeat/driver.log`

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3762 (2026-10-02).
+Updated for session 3763 (2026-10-02).
 
 ## Current state
 
@@ -73,6 +73,16 @@ deterministic silent pre-target failure and reopens the same-run Step 1
 contract comparison. See the run directory under
 `scratch/agent/s3762_m5_step1_silent_repeat/`.
 
+Session 3763 compared that capture. The oracle and both port arms passed the
+positive controls and reached both target VIs. Dispatch, audio return/route,
+SP delivery, and PCM source/consumer counts were shared; neither arm showed
+slot allocation/status or voice-audit activity. The only material arm-specific
+row was the expected image-stage/DMA work in the real image arm, so
+`H-M5-ImageStageOnly` is selected for Step 1. The image and PCM payloads remain
+zero-valued, leaving the source-versus-output contract boundary open; this is
+not authorization for a writeback or fill mitigation. See
+[M5-S3763-STEP1-CONTRACT-COMPARISON.md](M5-S3763-STEP1-CONTRACT-COMPARISON.md).
+
 Session 3761 repeated the same-build concurrent contract capture. The oracle
 positive control passed and reached both target VIs; image again reached title
 and hangar with 6,560 task/DMA rows, 26,248 image-stage rows, and audio/PCM
@@ -87,12 +97,14 @@ downstream Step 1 contract open. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 Step 1 same-run contract comparison.** s3762 qualified oracle,
-   image, and silent title/hangar coverage in one run. Compare the existing
-   silent/image task, route, PCM, slot, and voice rows to identify the first
-   downstream contract edge that differs; do not add another task-data value
-   field or change an audio gate. Any new claim must use the positive controls
-   and both target phases from the s3762 capture.
+1. **M5 image-task source/output boundary.** s3763 selected
+   `H-M5-ImageStageOnly`: the image arm adds only the expected image-stage/DMA
+   rows, while task return, SP delivery, PCM counts, slot, and voice rows are
+   shared with the silent control. Use one existing-build source/output join
+   to determine whether the first legitimate producer is before image-stage
+   input or after image-stage output. Do not add a task-data value field,
+   change an audio gate, or add a writeback/fill mitigation. Require the
+   oracle positive control and both title/hangar phases.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -139,6 +151,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-SilentPreTargetCrash` | Selected at s3760 for this paired capture: silent crashed at `spTaskSchedulerThread+9556` before target while image and retail controls passed. |
 | `H-M5-SilentPreTargetCrash` | Refuted as deterministic at s3762: oracle, image, and silent all reached title/hangar; silent emitted target-phase route/PCM rows and no crash marker. |
 | `H-M5-Step1ContractGap` | Open at s3762: silent and image shared task/route/PCM progress, while image alone emitted image-stage rows; the first meaningful downstream contract difference is not yet identified. |
+| `H-M5-ImageStageOnly` | Selected at s3763: same-build image/silent arms shared task return, SP delivery, PCM counts, slot/voice nulls, and both target phases; image-only work was image-stage/DMA activity. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |

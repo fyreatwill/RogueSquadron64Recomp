@@ -139460,3 +139460,24 @@ audio gate, task-data value field, or mitigation changed. Evidence:
 
 ORIGIN: no mitigation or value change was made; this iteration only reran the
 existing qualified diagnostic recipe.
+
+## Session 3763 (2026-10-02) — selected image-stage-only Step 1 difference
+
+Compared the existing s3762 same-build oracle/image/silent capture without a
+new build or instrument. The oracle whole-RDRAM control fired 10,000 times and
+all three runs reached title VI 1024 and hangar VI 512. Silent/image counts
+were 50/50 dispatch, 659/665 ABI-DMA rows, 278/283 audio returns, 870/885
+audio/SP route rows, and identical 70 PCM-source plus 285 PCM-consumer rows.
+Neither arm produced slot allocation/status or voice-audit rows. Image alone
+produced 2,693 image-stage rows, as expected for the selected real task; the
+silent terminal task had zero DMA by design.
+
+This selects `H-M5-ImageStageOnly` for the measured Step 1 row and rules out a
+slot, voice, PCM-count, or route edge as the first arm divergence. It does not
+explain the zero-valued image/PCM payloads and does not authorize a writeback,
+fill, gate, or task-data mitigation. Evidence:
+`docs/M5-S3763-STEP1-CONTRACT-COMPARISON.md` and
+`scratch/agent/s3762_m5_step1_silent_repeat/`.
+
+ORIGIN: no mitigation or value change was made; the result is a comparison of
+the existing qualified diagnostic capture.
