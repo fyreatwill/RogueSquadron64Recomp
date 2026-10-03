@@ -139815,3 +139815,25 @@ Evidence: `docs/M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md` and
 
 ORIGIN: the change corrected diagnostic placement after a game delay slot; it
 did not alter game state or route behavior.
+## Session 3779 (2026-10-03) — qualified family-edge witness and selected absent target edge
+
+The existing s3769 regeneration-safe family-entry transform was installed in
+the sentinel-protected generated tree through a narrowly scoped fixup dispatch
+and the Debug target rebuilt successfully. The image-only/oracle capture passed
+the oracle whole-RDRAM positive control, all six family-store controls, title
+VI 1024 (`0x00790400`), and hangar VI 512. Entry controls fired for S, I, and
+L; the target-phase log contained 257 edge rows (S=128, I=1, L=128), and all
+257 had `target_arg=0`. Family stores remained on alternate objects.
+
+This selects `H-M5-RetailWriterFamilyAbsentTargetEdge` for the measured class
+and refutes `H-M5-RetailWriterFamilyEntryHookMissing`. It rules out an absent
+instrument as the reason for s3778's missing rows, but does not distinguish a
+legitimate alternate object from a route/overlay mismatch. The next work unit
+joins the edge arguments, clear object, route key, and destination stores in
+one phase-gated capture. No mitigation or audio change was made.
+
+ORIGIN: the entry witness observes existing arguments and route state; it does
+not alter game values, destinations, or control flow.
+
+Evidence: `docs/M5-S3779-FAMILY-EDGE-QUALIFICATION.md` and
+`scratch/agent/s3778_m5_family_edge/image.log`.

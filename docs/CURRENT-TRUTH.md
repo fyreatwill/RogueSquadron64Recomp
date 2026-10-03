@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3778 (2026-10-02).
+Updated for session 3779 (2026-10-03).
 
 ## Current state
 
@@ -241,14 +241,13 @@ explanation, but leaves clear-object versus family-route identity open. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 install/qualify the missing family-edge witness.** Add a
-   regeneration-safe entry hook to the actual S/L/I generated family bodies;
-   preserve the six family-store controls and repaired clear-object row. Run
-   one image-only capture beside the retail oracle with both target VIs and
-   family-edge controls. A qualified edge row selects route identity mismatch;
-   a qualified run with no edge rows selects absent target edge. Missing
-   controls remain unevaluable. Do not suppress or replace the clear, inject
-   values, or change an audio gate.
+1. **M5 identify the route/object decision after the qualified family edge.**
+   The s3779 entry witness fired for S/I/L in title and hangar, but all 257
+   target-phase rows had `target_arg=0` while family stores remained on
+   alternate objects. Build one batched, regeneration-safe join that captures
+   the family entry arguments, clear object, route key, and first destination
+   stores in the same phase-gated image/oracle run. Do not suppress or replace
+   the clear, inject values, or change an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
@@ -311,6 +310,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailWriterFamilyOtherObject` | Selected at s3769 for S/L: both port arms executed each family in title and hangar, but zero entry arguments fell in either target buffer range. |
 | `H-M5-RetailWriterFamilyAbsentTargetEdge` | Selected at s3769 for I: both port arms passed the family control, but no target-phase entry occurred; retail independently reached the PC. |
 | `H-M5-RetailWriterFamilySameTarget` | Refuted at s3769: no S/L entry argument matched the title or hangar target ranges, and I had no target-phase entry. |
+| `H-M5-RetailWriterFamilyAbsentTargetEdge` | Selected at s3779: the qualified S/I/L entry controls fired and produced 257 target-phase rows, but none carried a target-buffer argument. |
+| `H-M5-RetailWriterFamilyEntryHookMissing` | Refuted at s3779: the regeneration-safe hook controls fired for all three family bodies in the qualified image run. |
 | `H-M5-ClearIsWrongOrder` | Refuted for the measured port caller/order: no legitimate producer was observed before the `0x8008F2CC` clear, and the static caller performs allocation, clear, then writeback. |
 | `H-M5-JoinMismatch` | Refuted for the measured target row: static callsite, destination, fill, length, phase-5 route, and source-DMA range joined in both arms. |
 | `H-M5-OutputConsumerGap` | Refuted at s3764 for the measured chain: the first observed zero preceded image-stage output and PCM consumption. |
