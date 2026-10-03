@@ -139230,3 +139230,29 @@ Evidence: `docs/M5-S3752-SOURCE-PRODUCER-BOUNDARY.md`,
 `scratch/agent/s3752_oracle_producer_boundary/oracle.log`,
 `scratch/agent/s3752_m5_source_producer_boundary/real-alone/run.log`, and
 `scratch/agent/s3752_m5_source_producer_boundary/silent-summary.txt`.
+## Session 3753 (2026-10-02) — censused generated task-data producers
+
+Ground truth first: the retail oracle's whole-RDRAM positive control fired
+127,554 times; the physical task-data span `0x171E70..0x171F70` fired 117,245
+times, including target-phase writers in the `0x80090A..0x800911` family. The
+source span fired 309 times. This proved the independent watch and retail
+writer path before the port instrument was built.
+
+Added `tools/apply_s3753_m5_task_producer.py`, a regeneration-safe census on
+the existing all-generated-scalar-store helper. Its any-store control fired
+in both arms. The 75-second qualified real/silent run reached title and
+hangar; each arm recorded 4,096 target-phase rows overlapping the task-data
+span, and every generated scalar value was zero. The real arm retained
+1,024 source-reader, 512 source-writer, and zero-valued source-DMA joins
+(`FNV=0x762B22A5`, nonzero=0); silent remained the no-source control. The
+real task handoff used `data_ptr=0x80171CE0`, distinct from the censused
+`0x80171E70` target.
+
+This selects `H-TaskDataProducerAbsent` for the complete generated scalar-store
+class and moves the boundary to host/RSP/non-scalar production. It rules out a
+missing nonzero generated scalar writer, but does not rule out arbitrary host
+writes, RSP DMA, or other non-scalar producers. No mitigation was added; the
+observed zero writer remains legitimate zero-fill/setup activity.
+
+Evidence: `docs/M5-S3753-TASK-PRODUCER-CENSUS.md` and
+`scratch/agent/s3753_m5_task_producer/`.

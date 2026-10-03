@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3752 (2026-10-02).
+Updated for session 3753 (2026-10-02).
 
 ## Current state
 
@@ -25,23 +25,24 @@ byte positions are now exported, but layout parity is still not testable at a
 zero-valued port payload. See
 [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md).
 
-The nine bounded exact-offset load candidates are closed, and the next
-port-side source producer/read census is also closed at the DMA edge: the
-qualified real arm reads the expected source descriptor from task data at
-`0x80171E70`, but the hangar payload is already zero. The next boundary is the
-producer of that task-data object.
+The nine bounded exact-offset load candidates are closed. The complete
+generated scalar-store census for the task-data object is also closed: both
+qualified port arms executed target-phase zero-valued stores, with no nonzero
+producer at `0x80171E70`. The next boundary is non-scalar/host/RSP production
+of that task-data object.
 
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 task-data producer boundary.** Session 3752 selected
-   `H-PortSourceProducerAbsent`: the real arm's qualified source reads at
-   `0x80171E70` were zero before DMA, while retail independently wrote the
-   source span from the known writer families. Census the bounded producer and
-   task-data identity upstream of `0x80171E70`, with real/silent controls and
-   retail writer attribution. Do not repeat the closed route-load list or
-   alter `0x800078EC`.
+1. **M5 non-scalar task-data producer boundary.** Session 3753 selected
+   `H-TaskDataProducerAbsent` for the complete generated scalar-store class:
+   both qualified port arms had 4,096 bounded target-phase rows and every value
+   was zero, while retail independently showed target-span writes from the
+   `0x80090A..0x800911` family. Census host pointer writes, RSP DMA, and any
+   remaining non-scalar producer of `0x80171E70`, with real/silent controls and
+   retail attribution. Do not repeat the scalar census, the closed route-load
+   list, or alter `0x800078EC`.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -73,6 +74,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-PortSourceProducerAbsent` | Selected at s3752: the qualified real arm read zero task data at `0x80171E70` before the expected source DMA; the next boundary is its producer. |
 | `H-PortSourceProducerPresent` | Refuted at s3752 for the measured source-DMA class: no nonzero hangar source payload was present at the joined reader. |
 | `H-PortSourceJoinMismatch` | Refuted at s3752 at the source-DMA edge: the reader used `0x1798B0 -> DMEM 0xCB0` and joined the active route/task. |
+| `H-TaskDataProducerAbsent` | Selected at s3753 for the complete generated scalar-store class: both qualified port arms had target-phase rows at `0x80171E70..0x171F70`, all zero-valued; host/RSP/non-scalar ownership remains open. |
+| `H-TaskDataScalarProducerPresent` | Refuted at s3753: the positive-control census covered all generated scalar stores and found no nonzero target-phase value in either arm. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
@@ -214,6 +217,15 @@ Work only the first applicable item. This is one monotonic backlog.
   This selects `H-PortSourceProducerAbsent` and moves the boundary upstream to
   task-data production. See
   [M5-S3752-SOURCE-PRODUCER-BOUNDARY.md](M5-S3752-SOURCE-PRODUCER-BOUNDARY.md).
+- **3753 — generated task-data producer census:** the retail oracle independently
+  passed its whole-RDRAM control and wrote the task-data span, including the
+  `0x80090A..0x800911` family. The regeneration-safe port census passed its
+  any-store control in both real/silent arms and recorded 4,096 target-phase
+  scalar rows per arm, all zero-valued. Real still reached hangar and retained
+  the zero source-DMA join; silent remained the no-source control. This selects
+  `H-TaskDataProducerAbsent` for generated scalar stores and moves the boundary
+  to host/RSP/non-scalar production. See
+  [M5-S3753-TASK-PRODUCER-CENSUS.md](M5-S3753-TASK-PRODUCER-CENSUS.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.
@@ -305,6 +317,7 @@ unreconciled.
 - [M5-S3745-HOST-EXACT-ROUTE-POLL.md](M5-S3745-HOST-EXACT-ROUTE-POLL.md)
 - [M5-S3746-HOST-WRITE-API-CENSUS.md](M5-S3746-HOST-WRITE-API-CENSUS.md)
 - [M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md](M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md)
+- [M5-S3753-TASK-PRODUCER-CENSUS.md](M5-S3753-TASK-PRODUCER-CENSUS.md)
 - [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md)
 - [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md)
