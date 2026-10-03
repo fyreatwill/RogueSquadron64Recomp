@@ -139330,3 +139330,26 @@ the only exact-range fault was pre-phase. The control instruction
 was obtained. This rules out neither nonzero nor zero native task-data stores;
 it rules out treating this run as evidence. The next probe is target-only
 decoding with the same positive control and explicit run-stability outcome.
+
+## Session 3757 (2026-10-02) — retried target-only native task-data value attribution
+
+Changed the macOS ARM64 task-data page-fault witness so the positive-control
+fault is not instruction-decoded. Exact task-data faults are decoded only when
+the target route phase is active; decoded faults publish a pending record for
+post-store byte sampling after the faulting store retries. The Debug build
+succeeded.
+
+Ran one 75-second paired real-audio/silent-control capture from `build/` using
+the validated LLE-solo, spin-yield, ungated, autopilot, and phase-gated route.
+Both arms passed the page positive control and reached title VI 1024. The real
+arm also reached hangar VI 512; the silent arm crashed in the existing VI
+retrace path before hangar, and real later crashed in
+`musyxBuildVoiceCommandList`. Neither arm emitted a target-range fault or a
+post-store row, so the target-only decoder was never exercised.
+
+This is run-instability/no-target-fault evidence for this capture, not a
+zero-value conclusion. It rules out interpreting this run as evidence for
+either native-value hypothesis. The next probe must retain the positive
+control while measuring page arm/rearm coverage through the target window.
+Evidence: `docs/M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md` and
+`scratch/agent/s3757_m5_task_value_retry/`.

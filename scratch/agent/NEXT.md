@@ -1,35 +1,37 @@
-# Next work unit: M5 native task-data value attribution — stable target-only retry
+# Next work unit: M5 task-data native watch coverage and value retry
 
 HYPOTHESIS-ID: m5-task-data-native-value
 
-Session 3756 added ARM64 source-register/value decoding to the phase-armed
-watch for `0x171E70..0x171F70`. The page positive control fired, but the
-paired run had no target-phase attribution rows: real later crashed in
-`musyxBuildVoiceCommandList`, while silent crashed in `spTaskSchedulerThread`
-before target gating. This is unevaluable, not a zero result.
+Session 3757 passed the page positive control and title phase in both arms,
+and hangar in real, but neither arm generated a target-range fault before the
+known MusyX/VI-retrace crash paths. The target-only decoder was therefore not
+exercised. This is run instability/no-target-fault, not evidence of a zero
+producer.
 
 Competing hypotheses:
 
-- `H-TaskDataNativeNonzero`: a generated native store writes a nonzero task-data value.
-- `H-TaskDataNativeZero`: the observed native stores are legitimate zero-valued stores.
-- `H-TaskDataNativeUnrelated`: the fault address overlaps the page, but the faulting instruction/value cannot be joined to the task-data field.
-- `H-TaskDataNativeRunUnstable`: the page watch perturbs or coincides with a crash before target attribution.
+- `H-TaskDataNativeFaultWindow`: target stores occur, but the page is not
+  protected at the relevant target-window times.
+- `H-TaskDataNativeNoStore`: this run reaches the target phase without native
+  stores to the watched range.
+- `H-TaskDataNativeRunUnstable`: a crash or page-watch interaction prevents a
+  complete target capture.
 
-Discriminator: patch the existing handler so instruction decoding runs only for
-phase-gated exact faults, retain the first-fault page positive control, and
-sample target bytes after the instruction retries. A phase-gated nonzero
-post-store sample selects `H-TaskDataNativeNonzero`; zero-only samples select
-`H-TaskDataNativeZero`; an undecodable or unmatched target fault selects
-`H-TaskDataNativeUnrelated`; another pre-phase crash selects
-`H-TaskDataNativeRunUnstable`. Missing controls or either target phase is
-unevaluable.
+Discriminator: add phase-scoped arm/rearm counters and a bounded first/last
+target-window heartbeat to the existing watcher, retaining the positive
+control, target-only ARM64 decode, and post-store sample. A target-window
+with continuous arm coverage plus no target faults selects `H-TaskDataNativeNoStore`
+for that run; a target-window gap selects `H-TaskDataNativeFaultWindow`;
+another pre-hangar crash or missing target window selects
+`H-TaskDataNativeRunUnstable`. Do not interpret post-store values unless a
+target fault is captured. Do not repeat the retail preflight, scalar census,
+central API census, route-load list, or alter `0x800078EC`.
 
-Ground truth already passed in session 3755: the retail oracle whole-RDRAM
-control and task-data watch fired in title/hangar, with the known
-`0x80090A..0x800911` writer family. Do not repeat the retail preflight,
-generated scalar census, central host/RSP API census, or closed route-load
-list. Build once with `cmake --build build --config Debug --target RogueSquadron64Recomp`,
-then run the documented LLE/spin-yield/autopilot real/silent pair from
-`build/` for 75 seconds with `ROGUESQ_LOG_M5_TASK_WRITE_FAULT=1`, killing both
-with SIGKILL. Expect a target-phase decoded value, target-phase zero rows,
-explicit run-unstable evidence, or an unevaluable control/phase.
+Build once:
+
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+Run once from `build/`, with both arms concurrently, 75 seconds, SIGKILL
+cleanup, using `scratch/agent/run_s3757_m5_task_value_retry.sh` as the base
+recipe and retaining `ROGUESQ_AUDIO_UCODE=1/0`, LLE-solo, spin-yield,
+autopilot, `PROBE_PHASE_WIDTH=1024`, and `PROBE_KEYS_FROM_PHASE=1`.

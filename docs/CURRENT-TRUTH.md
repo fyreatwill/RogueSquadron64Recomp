@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3756 (2026-10-02).
+Updated for session 3757 (2026-10-02).
 
 ## Current state
 
@@ -35,6 +35,11 @@ paired capture was unevaluable: the real arm hit the MusyX crash path and the
 silent arm crashed before target gating, with no target-phase rows. See
 [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 and [M5-S3756-TASK-DATA-NATIVE-VALUE.md](M5-S3756-TASK-DATA-NATIVE-VALUE.md).
+Session 3757 moved decoding to target-only faults and added post-store
+sampling; both controls and title passed, real reached hangar, but neither
+arm produced a target-range fault before the known real MusyX/silent VI
+retrace crashes. See
+[M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md](M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md).
 
 ## Next steps
 
@@ -50,8 +55,12 @@ Work only the first applicable item. This is one monotonic backlog.
    zero-only rows classify these as legitimate clears/stores and move the
    boundary onward. Session 3756's first value-decoding attempt was
    unevaluable because its paired run crashed before target attribution. Retry
-   with target-only instruction decoding and a single stable target-phase arm;
-   retain the same-run page positive control. Do not repeat the scalar census,
+   with a bounded stability improvement that keeps target-only instruction
+   decoding, the same-run page positive control, and post-store sampling, and
+   records page arm/rearm coverage through the target window. Session 3757's
+   retry had zero target faults in both arms before their known crash paths;
+   treat this as run instability/no-target-fault, not a zero result. Do not
+   repeat the scalar census,
    central API census, closed route-load list, or alter `0x800078EC`.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
@@ -91,6 +100,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-TaskDataNonScalarAbsent` | Selected at s3754 for the censused central host/RSP classes; arbitrary direct/native and other non-central writers remain open. |
 | `H-TaskDataNativeWriteObserved` | Selected at s3755: phase-armed native page faults touched the target span in both real/silent arms; stored value remains unevaluated. |
 | `H-TaskDataNativeValueDecoded` | Unevaluable at s3756: ARM64 decoding was added, but the paired run had no target-phase attribution rows; real/silent crashed in separate paths. |
+| `H-TaskDataNativeValueDecoded` | Unevaluable at s3757: target-only decoding and post-store sampling were installed, but both arms had zero target faults before their crash paths. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
@@ -112,6 +122,14 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-ClearTooEarly` | Selected at s3706 for the measured source object; this is an explanation of the observed zero payload, not permission for a mitigation. |
 
 ## Evidence ledger — live boundary only
+
+- **3757 — target-only native value retry:** the same-build real/silent pair
+  passed the task-page positive control and reached title VI 1024; real also
+  reached hangar VI 512. Neither arm produced a target-range fault or
+  post-store row. Real later crashed in `musyxBuildVoiceCommandList`; silent
+  crashed in the VI retrace path before hangar. This is run-instability/no
+  target-fault evidence, not a zero-value result. See
+  [M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md](M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md).
 
 - **3754 — non-scalar task-data producer census:** the retail oracle passed its
   whole-RDRAM control and recorded 50,387 task-data-span writes plus 717

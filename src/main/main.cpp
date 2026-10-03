@@ -6339,6 +6339,11 @@ static size_t g_m5_task_fault_page_size = 0;
 static std::atomic<uint64_t> g_m5_task_fault_n{0};
 static std::atomic<uint64_t> g_m5_task_fault_control_n{0};
 static std::atomic<uint64_t> g_m5_task_fault_exact_n{0};
+static std::atomic<uint64_t> g_m5_task_fault_pending_n{0};
+static std::atomic<uint32_t> g_m5_task_fault_pending_phys{0};
+static std::atomic<uint32_t> g_m5_task_fault_pending_width{0};
+static std::atomic<uint64_t> g_m5_task_fault_pending_value{0};
+static std::atomic<uint64_t> g_m5_task_fault_pending_pc{0};
 
 #if defined(__APPLE__) && defined(__aarch64__)
 static bool m5_task_decode_str(uint32_t insn, const ucontext_t* uc,
@@ -6378,8 +6383,16 @@ static bool m5_task_fault_try_handle(siginfo_t* info, void* ucontext_raw) {
     uint64_t pc = 0, lr = 0, store_value = 0;
     uint32_t store_width = 0, store_rt = 0, store_insn = 0;
     bool store_decoded = false;
+    uint32_t phase = 0, width = 0, origin = 0, ordinal = 0xFFFFFFFFu,
+             row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool route_active = rs64_audio_current_route_snapshot(
+        &phase, &width, &origin, &ordinal, &row, &exit_reason, &arm);
+    const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
+                             (width == 512u && origin == 0x006AB400u);
 #if defined(__APPLE__) && defined(__aarch64__)
-    if (ucontext_raw) {
+    if (exact && route_active && target_phase && ucontext_raw) {
         ucontext_t* uc = static_cast<ucontext_t*>(ucontext_raw);
         if (uc->uc_mcontext) {
             pc = (uint64_t)uc->uc_mcontext->__ss.__pc;
@@ -6392,19 +6405,10 @@ static bool m5_task_fault_try_handle(siginfo_t* info, void* ucontext_raw) {
 #else
     (void)ucontext_raw;
 #endif
-    uint32_t phase = 0, width = 0, origin = 0, ordinal = 0xFFFFFFFFu,
-             row = 0xFFFFFFFFu;
-    int exit_reason = 0;
-    const char* arm = "n/a";
-    const bool route_active = rs64_audio_current_route_snapshot(
-        &phase, &width, &origin, &ordinal, &row, &exit_reason, &arm);
-    const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
-                             (width == 512u && origin == 0x006AB400u);
     if (n == 1) {
         fprintf(stderr, "[m5-task-write-fault-control] first=1 phys=0x%06X pc=0x%llX "
-                       "insn=0x%08X decoded=%u width=%u rt=%u value=0x%llX\n",
-            phys, (unsigned long long)pc, store_insn, store_decoded ? 1u : 0u,
-            store_width, store_rt, (unsigned long long)store_value);
+                       "phase=%u width=%u origin=0x%06X\n",
+            phys, (unsigned long long)pc, phase, width, origin);
     }
     if (exact && route_active && target_phase && n <= 512) {
         fprintf(stderr,
@@ -6415,6 +6419,13 @@ static bool m5_task_fault_try_handle(siginfo_t* info, void* ucontext_raw) {
             ordinal, row, (unsigned long long)pc, (unsigned long long)lr,
             store_insn, store_decoded ? 1u : 0u, store_width, store_rt,
             (unsigned long long)store_value);
+        if (store_decoded) {
+            g_m5_task_fault_pending_phys.store(phys, std::memory_order_relaxed);
+            g_m5_task_fault_pending_width.store(store_width, std::memory_order_relaxed);
+            g_m5_task_fault_pending_value.store(store_value, std::memory_order_relaxed);
+            g_m5_task_fault_pending_pc.store(pc, std::memory_order_relaxed);
+            g_m5_task_fault_pending_n.store(n, std::memory_order_release);
+        }
     }
     fflush(stderr);
     return true;
@@ -6433,6 +6444,28 @@ static void start_m5_task_write_fault_watch() {
         bool armed = false;
         for (;;) {
             std::this_thread::sleep_for(std::chrono::microseconds(250));
+            const uint64_t pending = g_m5_task_fault_pending_n.exchange(
+                0, std::memory_order_acq_rel);
+            if (pending) {
+                const uint32_t phys = g_m5_task_fault_pending_phys.load(
+                    std::memory_order_relaxed);
+                const uint32_t sw = g_m5_task_fault_pending_width.load(
+                    std::memory_order_relaxed);
+                const uint64_t sv = g_m5_task_fault_pending_value.load(
+                    std::memory_order_relaxed);
+                const uint64_t spc = g_m5_task_fault_pending_pc.load(
+                    std::memory_order_relaxed);
+                const uint8_t* post = rdram + phys;
+                fprintf(stderr,
+                    "[m5-task-write-post] n=%llu phys=0x%06X width=%u "
+                    "source=0x%llX pc=0x%llX bytes="
+                    "%02X%02X%02X%02X%02X%02X%02X%02X\n",
+                    (unsigned long long)pending, phys, sw,
+                    (unsigned long long)sv, (unsigned long long)spc,
+                    post[0], post[1], post[2], post[3],
+                    post[4], post[5], post[6], post[7]);
+                fflush(stderr);
+            }
             const uint32_t width = rs64_vi_committed_width();
             const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
             const bool target = (width == 1024u && origin == 0x00790400u) ||
