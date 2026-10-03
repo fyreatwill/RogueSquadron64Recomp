@@ -1,34 +1,30 @@
-# Next work unit: qualify the retail image destination/writeback role
+# Next work unit: validate the M3 heap metadata-slot guard
 
-HYPOTHESIS-ID: m5-retail-image-destination-role
+HYPOTHESIS-ID: m3-heap-metadata-slot-validation
 
-Run one paired retail/port oracle capture that keeps the exact task joins from
-s3854 but measures the destination/writeback role directly. Use the known
-stage PCs and their phase-gated live structures, plus a phase-gated watch of
-the candidate destination span and the `0x1798B0` image output. Do not infer a
-destination from the task pointer alone.
+Build and smoke-test the existing `patches/heap_guards.c` metadata-slot guard.
+First verify the required tools and targets, then use the configured patch
+pipeline if available:
+
+    sed -n '1,260p' patches/README.md
+    command -v mips64-elf-gcc mips64-elf-ld
+    test -x build/Debug/N64Recomp.exe
+    cmake --build build --config Debug --target PatchesLib
+
+If that succeeds, run the allocator-route smoke described in
+`patches/README.md`; capture both the guarded fixed-slot path and a deliberately
+mispointed metadata-slot path in one run.
 
 Competing hypotheses and discriminator:
 
-- H1: retail stage activity writes a unique image destination/writeback tuple
-  for one of the joined task-pointer classes.
-- H2: retail stage activity is generic/alternate-object work and never reaches
-  the qualified image destination span.
-- H3: retail reaches the destination span, but the existing writer-PC and
-  phase bucket are too coarse to identify the tuple.
+- H1: the guard's fixed linker-published metadata-slot checks are reached and
+  preserve valid allocator queue-link stores.
+- H2: the configured build cannot compile/link the patch, so no validation is
+  possible in this environment.
+- H3: the smoke reaches a mismatched metadata slot, proving the invalid arm is
+  rejected while the valid arm remains live.
 
-The discriminator is one same-run paired capture passing whole-RDRAM, title/
-hangar VI, and no-crash positive controls. H1 requires a task-pointer class
-and writer event to share one destination/length tuple; H2 requires task rows
-and stage activity with zero qualified destination-span writes; H3 requires
-nonzero destination-span writes but multiple tuples after the combined join.
-
-Starting commands:
-
-    sed -n '1,260p' scratch/agent/run_s3854_m5_task_stage_data_join.sh
-    # Extend the s3854 script with destination-span writer attribution, then:
-    env zsh scratch/agent/run_s3855_m5_retail_destination_role.sh
-
-Run both arms in that one script/build, phase-gated on VI transitions. Fold the
-paired counts and destination tuple into the ledger; do not repeat the
-descriptor-only watch or claim a destination from a broad range alone.
+The discriminator is tool availability followed by one build and one paired
+allocator smoke. H1 requires successful patch build plus valid-route activity;
+H2 is selected only by this iteration's direct tool/target checks; H3 requires
+both valid and mismatched-slot outcomes in the same smoke.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3854 (2026-10-03).
+Updated for session 3855 (2026-10-03).
 
 ## Current state
 
@@ -36,13 +36,7 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image task/output edge — qualify the retail destination role.**
-   Session 3854 passed whole-RDRAM, both target-VI controls, and no-crash
-   validation. Retail task pointers `0x80171E70` and `0x80173CB0` joined both
-   stage PCs and multiple `s1` structures, with no unique destination/length
-   tuple. This selects reused generic task inputs, not a unique stage owner;
-   the remaining discriminator is the retail destination/writeback role.
-2. **M3 heap guard validation — open dependency.** Sessions 3852–3853 tightened
+1. **M3 heap guard validation — open dependency.** Sessions 3852–3853 tightened
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
    linker-published addresses before queue-link stores. ORIGIN: those globals are
@@ -55,16 +49,16 @@ Work only the first applicable item. This is one monotonic backlog.
    are absent, and `build/Debug/N64Recomp.exe` is absent. Restore/reconfigure
    those tools, build the patch ELF and library, then run the allocator-route
    smoke. Do not claim H1/H2 before that.
-3. **M5 image task/output edge — qualified port result.** Session 3839 joined
+2. **M5 image task/output edge — qualified port result.** Session 3839 joined
    the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
    found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
    `0x198`, despite empty ABI output fields. Do not add a writeback guard or
    infer a destination from the port address; qualify retail first.
-4. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
+3. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
    supplied independent retail and validated port target coverage and exact
    hangar zero-payload parity. Do not repeat standalone qualification or the
    retail zero-writer census unless the route/build changes.
-5. **Generated-symbol renaming sweep — parked.** Resume only after M5 has no
+4. **Generated-symbol renaming sweep — parked.** Resume only after M5 has no
    applicable discriminator and M3 has a toolchain or a new discriminator.
    Keep HYPOTHESIS-ID `generated-symbol-renaming-sweep`; do not use mapping
    edits to evade the engineering-change stall gate.
@@ -85,6 +79,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailTaskOutputFieldParity` | Selected at s3844 for empty fields; s3846 selects shared destination role at bounded scope, exact task join remains open. |
 | `H-M5-RetailTaskStageRole` | Selected at s3846: retail task and candidate image-stage region are both active in hangar with independent phase/whole-RDRAM controls. |
 | `H-M5-RetailTaskPointerGeneric` | Selected at s3854: `0x80171E70` and `0x80173CB0` join both known stage PCs and multiple `s1` structures without a unique destination/length tuple. |
+| `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855: retail writes the candidate stage span in hangar, but has zero phase-gated writes to `0x1798B0..0x179A48`; lifetime output writers are outside title/hangar buckets. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 
@@ -160,6 +155,15 @@ Work only the first applicable item. This is one monotonic backlog.
   destination/length tuple. Port produced 3,006 image-DMA joins with zero
   crashes/aborts. This selects `H-M5-RetailTaskPointerGeneric` and leaves the
   retail destination/writeback role open.
+- **3855:** Paired capture passed whole-RDRAM, title/hangar VI, and no-crash
+  controls. Retail had 408,980 writes in the candidate stage span and
+  hangar-phase writers at `0x8000F3A0`/`0x80015BC8`, but zero phase-gated
+  writers in `0x1798B0..0x179A48`; its 1,125 lifetime writes there came from
+  non-target-phase PCs, dominated by `0x800078EC`. The retail task join still
+  produced 21 rows. Port independently produced 2,866 image-DMA joins to
+  `0x1798B0`, length `0x198`, with zero crashes/aborts. This selects
+  `H-M5-RetailDestinationAbsentTargetPhase` and closes the destination-role
+  discriminator at the qualified target scope.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

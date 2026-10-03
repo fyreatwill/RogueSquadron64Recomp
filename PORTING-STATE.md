@@ -141222,3 +141222,32 @@ was rewritten, skipped, or guarded.
 Evidence: `scratch/agent/s3854_m5_task_stage_data_join/driver.log`,
 `retail.log`, `retail_join.txt`, `port.log`, and
 `scratch/agent/run_s3854_m5_task_stage_data_join.sh`.
+
+## Session 3855 (2026-10-03) — qualified retail destination role
+
+Ran `scratch/agent/run_s3855_m5_retail_destination_role.sh`, a paired
+75-second retail/oracle and port capture. Both arms passed their positive
+controls; retail reached 631 title VIs and 520 hangar VIs, while the port had
+176 phase markers and zero crash/abort markers. Retail wrote the candidate
+stage span 408,980 times overall and, during hangar, its writer histogram
+included `0x8000F3A0` (37,260) and `0x80015BC8` (11,309). It produced zero
+phase-gated writes to `0x1798B0..0x179A48` in either target bucket; the 1,125
+lifetime writes to that span were attributed outside those buckets, dominated
+by `0x800078EC` (816). The exact task/stage join still produced 21 rows across
+the reused task pointers.
+
+The port arm independently produced 2,866 image-DMA joins to `0x1798B0` with
+length `0x198`, and no crash/abort markers. This selects H2 at the qualified
+target-phase scope: retail stage activity reaches an alternate/candidate span
+but not the image-output destination during title/hangar. It rules out H1 for
+that scope and does not claim that the lifetime `0x800078EC` writer is the
+image producer. The positive control and phase transitions make the null
+instrument result usable; the retail and port traces are independent evidence
+lines.
+
+ORIGIN: diagnostic-only oracle watches and port logging; no guest or host state
+was rewritten, skipped, or guarded.
+
+Evidence: `scratch/agent/s3855_m5_retail_destination_role/driver.log`,
+`retail.log`, `retail_destination_join.txt`, `port.log`, and
+`scratch/agent/run_s3855_m5_retail_destination_role.sh`.
