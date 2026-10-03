@@ -139770,3 +139770,26 @@ clear, allocation, route, or audio-gate change was made.
 ORIGIN: the witness observes existing game writer setup; its values are not
 modified. Evidence: `docs/M5-S3776-PROBE-SPLIT.md` and
 `scratch/agent/s3775_m5_probe_split/`.
+
+## Session 3777 (2026-10-02) — clear-edge join remained unevaluable
+
+The Debug target built cleanly. Ran the prescribed image-only capture beside
+the retail oracle with writer-setup logging and the repaired family-store/edge
+instrumentation enabled. The oracle whole-RDRAM positive control fired. The
+image arm passed all six family-store controls and the writer-setup input
+control, reached title `0x00790400` / 1024 and hangar `0x006AB400` / 512, and
+had no crash marker. It emitted two writer-setup rows, both at edge
+`0x8008F2CC`, with `a2=0`, `alloc_len=0`, and `clear_obj=0`; family-edge rows
+remained absent. Counts: oracle positive 1, family-store controls 6, title
+5983, hangar 837, family-edge 0.
+
+This selects the explicitly qualified H3 outcome: the run and positive
+controls prove the phase and instrumentation paths were active, but the
+clear-object/I-edge join is still unevaluable. It does not prove a legitimate
+alternate object, and it rules out neither the clear-associated route nor a
+missing family edge. No mitigation or audio change was made. Evidence:
+`docs/M5-S3777-CLEAR-EDGE-WITNESS.md` and
+`scratch/agent/s3773_m5_image_only/summary.txt`.
+
+ORIGIN: the witness observes existing game state only; no game value or route
+was changed.

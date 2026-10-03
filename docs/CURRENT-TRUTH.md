@@ -219,19 +219,29 @@ clear-object/I-edge join. It does not establish alternate-object legitimacy or
 explain the absent edge row. See
 [M5-S3776-PROBE-SPLIT.md](M5-S3776-PROBE-SPLIT.md).
 
+Session 3777 ran the qualified image-only clear-object/I-edge join beside the
+retail oracle. The oracle positive control fired; the image arm passed all six
+family-store controls and the writer-setup input control, reached title and
+hangar, and emitted two writer-setup rows. Both rows had `edge=0x8008F2CC`,
+`a2=0`, `alloc_len=0`, and `clear_obj=0`; no family-edge row appeared. This is
+H3: the run was qualified but the clear-object/I-edge join remained
+unevaluable, so alternate-object legitimacy is not selected. See
+[M5-S3777-CLEAR-EDGE-WITNESS.md](M5-S3777-CLEAR-EDGE-WITNESS.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 clear-object/I-edge join on qualified image arm.** Run one image-only
-   capture beside the retail oracle with writer-setup logging enabled and the
-   repaired clear-edge witness. Require the oracle positive control, six
-   family-store controls, writer-setup control, both target VIs, and either
-   clear-object plus family-edge rows or an explicitly recorded missing-row
-   outcome. If the clear object joins the family stores, classify the
-   alternate destination against that object; if it does not, keep route/object
-   identity unevaluable. Do not suppress or replace the clear, inject values,
-   or change an audio gate.
+1. **M5 repair the clear-object/I-edge witness.** Audit the generated callsite
+   at `0x8008F2CC` and its allocator/clear predecessor, then add one
+   regeneration-safe witness at the actual clear/allocator boundary that
+   records the destination and length in the same target phases. Keep the
+   family-edge control in the same build. Run one image-only capture beside the
+   retail oracle; require the oracle positive control, six family-store
+   controls, writer-setup control, both target VIs, and either a nonzero
+   clear-object join plus family-edge rows or an explicitly recorded missing
+   row. Do not suppress or replace the clear, inject values, or change an audio
+   gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
