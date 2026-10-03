@@ -1,45 +1,31 @@
-# Next work unit: bounded generated-symbol lead after the main-overlay DMA/allocator range
+# Next work unit: bounded generated-symbol lead after the synchronized service/allocator range
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-M5 is parked pending a new arm-stability discriminator. The `rs_zcfree`
-incoming-`$a0` M3 class was closed at static scope in s3790 with no guard
-justified. This unit is one bounded, regeneration-safe symbol-renaming lead
-from the human-mapped decomp symbols, not a runtime experiment.
+M5 remains parked pending a new arm-stability discriminator, and the measured
+M3 `rs_zcfree` idiom remains closed at static scope. The next unit is one
+bounded, regeneration-safe symbol-renaming lead, not a runtime experiment.
 
-Competing hypotheses and discriminator for the lead:
+Competing hypotheses and discriminator:
 
-- H1: the selected placeholder functions have an unambiguous human mapping
-  from the companion symbol/decomp material; rename only those exact symbols.
-- H2: mappings are ambiguous or semantics are not visible; preserve the
-  placeholders and record the unresolved sites.
-- H3: the selected region is already named or outside the current generated
-  tree; select no rename and move to the next ranked lead.
+- H1: `0x800078E0..0x80009000` contains an exact companion semantic mapping
+  for one or more generated placeholders; rename only one-to-one mappings.
+- H2: the range contains candidates but they are ambiguous, fake fragments, or
+  lack semantic source; preserve placeholders and record them.
+- H3: the range has no stale placeholder references; select no rename.
 
-The discriminating measurement is a bounded table of every selected placeholder
-in `0x8000527C..0x800078E0`, joined against companion symbol names and the
-existing mapping source. A rename is accepted only for an exact one-to-one
-mapping; the result must either change the mapping source or produce a new
-bounded census. H1 predicts one or more changed references with selected
-companion rows; H2 predicts candidate rows but no safe rename; H3 predicts no
-placeholder references in the region. The prior audio lead selected H3 after
-its positive-control rows showed 19 already-synchronized candidates.
+The discriminating measurement is the rename tool's bounded table joined to
+the verified sibling `rogue_squadron64/symbol_files` directory. A valid run
+must show named companion rows such as `rs_zcalloc` as `already-synchronized`
+in the same output. H1 predicts selected mappings and changed generated
+references; H2 predicts candidate rows with no safe change; H3 predicts only
+positive-control/already-synchronized rows or no remaining placeholders.
 
-The completed lead found no stale callable symbol and propagated the exact
-fake/data-gap mapping at `0x800027B8`. The next unit is the contiguous
-range `0x8000527C..0x800078E0` (end exclusive), using the same tool and the
-same positive-control requirement. H1 predicts one or more exact semantic
-renames; H2 predicts only ambiguous/fake candidates and no safe rename; H3
-predicts no remaining placeholder references. Do not build unless the mapping
-pipeline requires it; do not start a second region.
-
-Exact preflight commands:
+Exact commands:
 
     grep -n '^## Session ' PORTING-STATE.md | tail -15
-    rg -n 'func_0x|func_[0-9A-Fa-f]{8}' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -200
-    rg -n '0x8000[0-9A-Fa-f]{4}|func_[0-9A-Fa-f]{8}' docs/game-architecture.md /Users/williambuckley/Documents/Tools/N64Recomp/rogue_squadron64 2>/dev/null | head -200
+    env RSR_FUNCS_DIR=/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800078E0 --end-address 0x80009000 --limit 32
 
-Choose only this contiguous lead, update the existing rename mapping/fixup
-source if and only if the mapping is exact, and verify that no generated C
-file is hand-edited. Do not build unless the mapping pipeline requires it; do
-not start a second region in the same iteration.
+Do not build unless the mapping pipeline requires it. Do not start a second
+range. If the companion positive control is absent, treat the run as invalid
+and fix the path before drawing a conclusion.

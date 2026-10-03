@@ -140091,3 +140091,22 @@ contiguous main-overlay range.
 ORIGIN: regeneration-safe symbol mapping only; the `0x800027B8` value is a
 companion-declared non-callable data gap, not a runtime mitigation or game
 state change.
+
+## Session 3794 (2026-10-03) — bounded main-overlay service/allocator range was synchronized
+
+Ran the regeneration-safe rename tool over the contiguous generated range
+`0x8000527C..0x800078E0` with the verified sibling companion
+`rogue_squadron64/symbol_files` directory. The valid bounded census reported 60
+companion rows, including named positive controls such as `rs_zcalloc`,
+service-worker routines, and string helpers; every row was
+`already-synchronized`, and the tool changed zero generated references. The
+first attempt used a nonexistent companion path and was discarded as
+unevaluable. H1 and H2 were not selected; H3 selected. The next bounded lead
+is `0x800078E0..0x80009000`.
+
+This rules out a stale callable placeholder in the measured range, but does not
+make any claim about the next range or runtime behavior. No build or runtime
+experiment was needed.
+
+ORIGIN: regeneration-safe symbol census only; no runtime mitigation, ROM, or
+game-state change.
