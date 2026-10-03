@@ -1557,8 +1557,42 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
     const bool active = rs64_audio_current_route_snapshot(
         &phase, &width, &origin, &route_ordinal, &route_row, &exit_reason,
         &arm);
-    if (!active || !((width == 1024u && origin == 0x00790400u) ||
-                     (width == 512u && origin == 0x006AB400u))) return;
+    const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
+                              (width == 512u && origin == 0x006AB400u);
+    if (!target_phase) return;
+
+    static std::mutex census_mutex;
+    static uint32_t census_key = 0xFFFFFFFFu;
+    static uint32_t census_rows = 0;
+    const uint32_t census_phase_key = (width << 24) ^ origin;
+    {
+        std::lock_guard<std::mutex> lock(census_mutex);
+        if (census_phase_key != census_key) {
+            census_key = census_phase_key;
+            census_rows = 0;
+            std::fprintf(stderr,
+                "[m5-rsp-dma-census-control] phase=%u width=%u origin=0x%06X arm=%s\n",
+                phase, width, origin, arm ? arm : "n/a");
+            std::fflush(stderr);
+        }
+        if (census_rows < 4096u) {
+            const bool dram_source = dram_addr < 0x1798B0u &&
+                                     dram_addr + len > 0x1797B0u;
+            const bool dmem_window2 = dmem_addr < 0x9F0u &&
+                                      dmem_addr + len > 0x6F0u;
+            const bool dmem_window3 = dmem_addr < 0xE48u &&
+                                      dmem_addr + len > 0xCB0u;
+            std::fprintf(stderr,
+                "[m5-rsp-dma-census] row=%u phase=%u width=%u origin=0x%06X arm=%s "
+                "route_ordinal=%u route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
+                "dram_source=%u dmem2=%u dmem3=%u exit=%d\n",
+                census_rows++, phase, width, origin, arm ? arm : "n/a",
+                route_ordinal, route_row, dram_addr, len, dmem_addr,
+                dram_source ? 1u : 0u, dmem_window2 ? 1u : 0u,
+                dmem_window3 ? 1u : 0u, exit_reason);
+            std::fflush(stderr);
+        }
+    }
 
     const uint32_t source_first = 0x1797B0u, source_last = 0x179A48u;
     const uint32_t source_end = dram_addr + len;

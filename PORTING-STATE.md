@@ -140770,3 +140770,20 @@ witness was captured, so H1/H2 remain unevaluable. The next probe must census
 all target-phase RSP audio-DMA descriptors to determine whether the expected
 descriptor uses an uninstrumented DMEM/RDRAM range or is absent. Evidence:
 `scratch/agent/s3826_m5_family_object_join/summary.txt` and `run.log`.
+
+## Session 3829 (2026-10-03) — selected absent target-phase audio DMA
+
+The Debug build passed. The first target-phase DMA census arm reached title
+1024 and hangar 512 with lifetime DMA, target-VI, route, and exact-DMA-hook
+controls, but the census used a route-snapshot gate that produced no target
+control; this was an instrument-gate failure, not evidence about the route.
+Changing only the census gate to committed VI and rerunning the same validated
+image recipe again reached both target phases with no crash or abort. The
+corrected census still produced zero target-phase control/rows, zero source
+rows, and zero exact-route DMA rows, while the lifetime DMA hook, target-VI,
+route, and exact-DMA-hook controls remained positive. Therefore H3 (census
+gate/callback not live) is refuted at the corrected scope and H2 (no
+`rs64_m5_audio_source_dma` invocation during either target phase) is selected.
+This does not yet explain the alternate family objects. Evidence:
+`scratch/agent/s3829_m5_dma_census/` and
+`scratch/agent/s3829_m5_dma_census_fixed/`.

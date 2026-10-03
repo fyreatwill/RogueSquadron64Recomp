@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3828 (2026-10-03).
+Updated for session 3829 (2026-10-03).
 
 ## Current state
 
@@ -44,7 +44,15 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 alternate family-object ownership.** Session 3825 selected H2 at the
+1. **M5 alternate family-object ownership.** Session 3829's complete,
+   direct-VI-gated target-phase DMA census selected H2: no
+   `rs64_m5_audio_source_dma` invocation occurred at title 1024 or hangar 512,
+   despite positive lifetime DMA, target-VI, route, and exact-DMA-hook controls.
+   The prior route-snapshot gate was separately shown to be too strict and was
+   corrected; do not call the absence an instrumentation null. Determine
+   whether the alternate family objects are intended route state or a
+   disconnected output family, now that target-phase input DMA absence is the
+   boundary. Session 3825 selected H2 at the
    qualified scope: 1,280 S/L/I stores and 257 family-entry rows stayed outside
    the clear-associated `0x801797B0..0x80179A47` object while route-order and
    source-range/source-transition controls were live. Determine whether these
@@ -131,6 +139,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyAlternateObject` | Selected at s3824 scope: 1,280 target-phase family stores and 257 family entries were positive, but none joined the clear object `0x801797B0` or its span; the active route snapshot was present. |
 | `H-M5-FamilyDisconnectedOutput` | Selected at s3825 scope: the fixed image route reached both target VIs with active route/source controls, while every sampled family entry/store remained outside the clear object and span. |
 | `H-M5-FamilyOwnershipRouteWitness` | Unevaluable at s3828: target phases and route-preparation/order/transition/handoff controls fired, but exact-route DMA and source-range reader/writer rows remained absent. |
+| `H-M5-TargetPhaseAudioDmaAbsent` | Selected at s3829: direct-VI-gated census control and rows were zero at both target phases, while lifetime DMA, target-VI, route, and exact-DMA-hook controls were positive. |
+| `H-M5-TargetPhaseDmaCensusGate` | Refuted at s3829: the initial route-snapshot gate was too strict, but the corrected direct-VI gate reached both target phases without producing a callback row. |
 
 ## Evidence ledger — live boundary
 
@@ -524,6 +534,18 @@ line naming the writer and stating whether its value is legitimate.
   family controls. The DMA hook control fired, but exact-route DMA and both
   source-range reader/writer witnesses were zero, so ownership remains
   unevaluable (H3). Evidence: `scratch/agent/s3826_m5_family_object_join/`.
+- **3829 — target-phase RSP audio-DMA descriptor census:** the Debug build
+  passed. The first census arm reached title 1024 and hangar 512 with lifetime
+  DMA, target-VI, route, and exact-DMA-hook controls, but its route-snapshot
+  gate produced no target census control; this was an instrument-gate failure,
+  not a route result. After changing only the census gate to committed VI, the
+  same validated recipe again reached both target phases with no crash or abort,
+  and still produced zero target census controls/rows, zero source rows, and
+  zero exact-route DMA rows. The lifetime DMA hook and route controls remained
+  positive. This refutes the census-gate H3 and selects H2: no
+  `rs64_m5_audio_source_dma` invocation was observed during either target phase
+  at this scope. Evidence: `scratch/agent/s3829_m5_dma_census/` and
+  `scratch/agent/s3829_m5_dma_census_fixed/`.
 
 ## Superseded conclusions
 
