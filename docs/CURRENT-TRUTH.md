@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3834 (2026-10-03).
+Updated for session 3835 (2026-10-03).
 
 ## Current state
 
@@ -35,52 +35,57 @@ fault attribution was absent or an arm crashed before target. Do not infer a
 zero producer from those nulls.
 
 The qualified port family bodies execute, but S/L stores go to alternate
-objects and I has no hangar edge. The repaired clear witness identifies
-`0x8008F2CC`, object `0x801797B0`, length `0x298`; family-edge and clear-object
-identity remain unresolved. Port guest route bytes are zero in the qualified
-family rows; independent retail family reachability is established, but its
-route-value parity remains unmeasured.
+objects and I has no hangar edge. A paired target-phase oracle capture found
+zero retail reads or writes in physical `0x165000..0x16C000`, while retail
+still executed the S/L family PCs. The alternate family is disconnected
+output at this measured scope. The repaired clear witness identifies
+`0x8008F2CC`, object `0x801797B0`, length `0x298`; port guest route bytes are
+zero in the qualified family rows.
 
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 alternate family-object ownership.** Session 3832's complete,
+1. **M5 image task/output contract edge.** Session 3835 closes alternate-family
+   ownership at the measured scope: retail reached title 1024 and hangar 512,
+   executed the S/L family PCs, and had zero reads/writes in physical
+   `0x165000..0x16C000`, while the port emitted 1,280 target-phase family
+   stores. Treat that family as disconnected output. Select one named image
+   task/output contract edge only after a same-run retail/port field join
+   identifies a concrete mismatch; do not revive the alternate-family join.
+   Session 3832's complete,
    target-valid shared-event join selected H3 at this scope: 882 active
    family rows with a matched image-stage event followed that stage event
    (882/882; none preceded or tied), while source and consumer PCM match event
    IDs remained zero. The alternate family is coupled to the same task/service
-   epoch but is not the RSP PCM path at this scope; semantic ownership remains
-   open. Session 3834 stamped `rs64_audio_route_set`/audio-return, where route
+   epoch but is not the RSP PCM path at that scope. Session 3834 stamped
+   `rs64_audio_route_set`/audio-return, where route
    ordinal, row, and audio task generation coexist. The target-valid capture
    had 258 family-entry and 1,536 family-store events; 130 entry and 1,011
    store events had an exact route-context ordinal/row join, and every joined
    event followed its route-context event. Source and consumer PCM matches
-   remained zero. H3 is selected at this scope: the family is post-return
-   service work, not the RSP PCM path. Semantic ownership remains open. Do not
-   infer intended output from route identity alone.
+   remained zero. H3 was selected at that scope: the family is post-return
+   service work, not the RSP PCM path. The s3835 retail object-access result
+   now selects disconnected output at the measured scope. Do not infer an
+   intended replacement destination from route identity alone.
    Session 3829's complete,
    direct-VI-gated target-phase DMA census selected H2: no
    `rs64_m5_audio_source_dma` invocation occurred at title 1024 or hangar 512,
    despite positive lifetime DMA, target-VI, route, and exact-DMA-hook controls.
    The prior route-snapshot gate was separately shown to be too strict and was
-   corrected; do not call the absence an instrumentation null. Determine
-   whether the alternate family objects are intended route state or a
-   disconnected output family, now that target-phase input DMA absence is the
-   boundary. Session 3825 selected H2 at the
+   corrected; do not call the absence an instrumentation null. The s3835
+   retail object watch resolves the alternate-family question at this scope;
+   do not repeat it. Session 3825 selected H2 at the
    qualified scope: 1,280 S/L/I stores and 257 family-entry rows stayed outside
    the clear-associated `0x801797B0..0x80179A47` object while route-order and
-   source-range/source-transition controls were live. Determine whether these
-   alternate objects are intended route state or a disconnected output family;
-   do not repeat the completed aliasing join. Session 3827's target-valid rerun
+   source-range/source-transition controls were live. Do not repeat the
+   completed aliasing join. Session 3827's target-valid rerun
    recorded accepted `[route-prep]` and route-handoff rows, correcting the
    stale summary marker, but emitted no exact-route DMA or source-range-reader/
    writer rows. Session 3828 corrected those gates and marker counts: target
    phases and route controls were positive, but exact-route DMA and
-   source-range reader/writer rows were still zero. Before interpreting
-   ownership, census every target-phase RSP audio-DMA descriptor to determine
-   whether the expected descriptor is outside the current overlap windows or
-   absent.
+   source-range reader/writer rows were still zero. These are historical
+   boundaries beneath the now-closed retail object-access discriminator.
 2. **M5 port target-phase qualification, closed at this scope.** s3821's pair
    was coverage-invalid because the port arm stopped at VI 640; s3822's
    standalone arm reached both target phases. Do not repeat standalone
@@ -160,6 +165,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyAfterImageStage` | Selected at s3832 scope: 882 active family rows with matched stage events all followed the stage event; none preceded or tied. This supports same-epoch post-stage CPU/service work, but not semantic ownership. |
 | `H-M5-FamilyHandoffEventJoin` | Refuted at s3833: the handoff callback had no authoritative family join key. |
 | `H-M5-FamilyRouteContextOrder` | Selected H3 at s3834 scope: 130 entry and 1,011 store rows exactly joined the authoritative route context, all after it; PCM source/consumer matches remained zero. |
+| `H-M5-FamilyRetailObjectAccess` | Selected H2 at s3835: retail reached title/hangar and the S/L family PCs, but had zero reads/writes in physical `0x165000..0x16C000`; the port emitted 1,280 target-phase family stores. |
 
 ## Evidence ledger — live boundary
 
@@ -630,6 +636,18 @@ line naming the writer and stating whether its value is legitimate.
   the measured scope: post-return service activity, not the RSP PCM path; it
   does not establish semantic ownership. Evidence:
   `scratch/agent/s3834_m5_family_route_context/run.log`.
+
+- **3835 — independent retail alternate-object access:** the first paired
+  capture was corrected from write-only to read/write coverage because its
+  positive controls showed retail family PCs carrying alternate-object
+  pointers without proving memory access. The fixed capture's whole-RDRAM
+  control fired, retail reached title `0x00790400`/1024 and hangar
+  `0x006AB400`/512, and retail executed S/L family PCs (1,618 and 686
+  logged executions). The physical watch `0x165000..0x16C000` recorded zero
+  reads/writes. The concurrent validated port arm reached both phases and
+  emitted 1,280 target-phase family stores. This selects H2: disconnected
+  alternate output at the measured scope, not intended retail route state.
+  Evidence: `scratch/agent/s3835_m5_alternate_object_oracle/`.
 
 ## Superseded conclusions
 

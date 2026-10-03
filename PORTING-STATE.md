@@ -140882,3 +140882,20 @@ Target-phase audio joins reported `source_matches=0` and
 work is post-return service activity, not the RSP PCM path. It does not
 establish semantic ownership or whether that output is intended. Evidence:
 `scratch/agent/s3834_m5_family_route_context/run.log`.
+
+## Session 3835 (2026-10-03) — selected disconnected alternate-family output
+
+Added the independent retail arm to the existing validated port family
+capture. The first run was rejected because the retail alternate-object watch
+was write-only; the same recipe was corrected to read/write coverage and
+rerun. The fixed capture's whole-RDRAM positive control fired, retail reached
+title VI 1024 and hangar VI 512, and retail executed the S/L family PCs
+(1,618 and 686 logged executions). The physical watch
+`0x165000..0x16C000` recorded zero reads and writes. The concurrent port arm
+reached both target phases with its family controls and emitted 1,280
+target-phase family stores. This selects H2: the alternate family is
+disconnected output at the measured scope, not intended retail route state.
+It rules out only retail access to this bounded physical range; it does not
+identify the missing image task/output contract edge. Evidence:
+`scratch/agent/s3835_m5_alternate_object_oracle/` and
+`scratch/agent/run_s3835_m5_alternate_object_oracle.sh`.
