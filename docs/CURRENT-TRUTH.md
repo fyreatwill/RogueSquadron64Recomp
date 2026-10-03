@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3780 (2026-10-03).
+Updated for session 3781 (2026-10-03).
 
 ## Current state
 
@@ -245,19 +245,28 @@ clear object and target ranges. The route snapshot was inactive on every row,
 so H3 is refuted for this capture but H1 versus H2 remains unevaluable. See
 [M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md](M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md).
 
+Session 3781 added a regeneration-safe direct guest-state witness at the S/I/L
+family entries. The image-only port run passed controls and both target VIs,
+with 257 target-phase rows; all three sampled guest bytes were zero on every
+row, matching the inactive host route snapshot. The independent retail oracle
+passed its whole-RDRAM control and observed writes to the candidate bytes, but
+did not reach any family entry or target phase in 60 seconds. This is a
+single-source port result: H1 versus H2 remains unevaluable, and no mitigation
+or audio change is authorized. See
+[M5-S3781-GUEST-ROUTE-SAMPLE.md](M5-S3781-GUEST-ROUTE-SAMPLE.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 obtain independent route identity at the qualified family edge.**
-   The s3780 join refuted target-argument transformation, but the host audio
-   route snapshot was inactive (`active=0`) on all 257 rows. Add one
-   regeneration-safe, phase-gated witness that samples the guest route/overlay
-   state directly at S/I/L entry and joins it to the existing clear object,
-   entry arguments, and first destination stores. Active matching state selects
-   H1; mismatched or inactive state with a stable alternate object selects H2.
-   Missing controls or target phases are unevaluable. Do not suppress or
-   replace the clear, inject values, or change an audio gate.
+1. **M5 qualify independent retail family reachability.** The s3781 port
+   witness read zero at all three guest route-state bytes on 257 target rows,
+   but the retail oracle stayed in attract and never executed S/I/L. Use one
+   new oracle input/phase recipe, with the whole-RDRAM and route-byte controls,
+   to reach a retail target VI and at least one family PC. A family hit with
+   route-state writes/values supplies the independent H1/H2 discriminator;
+   failure to reach target leaves the route question unevaluable. Do not
+   suppress or replace the clear, inject values, or change an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
@@ -356,6 +365,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-ClearEdgeQualification` | Unevaluable at s3775: oracle and family-store controls fired, but the image arm crashed pre-target before clear-setup or family-edge controls. |
 | `H-M5-ClearEdgeWitnessStaleArgs` | Refuted at s3778: the repaired witness recorded `a0=0x801797B0`, `a2=0x298`, and a matching clear object. |
 | `H-M5-FamilyEdgeHookAbsent` | Selected as the immediate instrumentation gap at s3778: six family-store controls and target phases fired, but no family-edge hook/control/row was present. |
+| `H-M5-PortGuestRouteZero` | Single-source selected at s3781: all 257 qualified port family rows read zero at `0x80141AD0`, `0x8013B038`, and `0x80141AD1`; retail family parity was not reached. |
+| `H-M5-RetailGuestRouteParity` | Unevaluable at s3781: the retail oracle passed its positive control and watched candidate writes, but reached no family PC or target VI in the 60-second run. |
 
 ## Evidence ledger — live boundary only
 
@@ -696,6 +707,7 @@ silent control.
 - [M5-S3775-CLEAR-EDGE-QUALIFICATION.md](M5-S3775-CLEAR-EDGE-QUALIFICATION.md)
 - [M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md](M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md)
 - [M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md](M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md)
+- [M5-S3781-GUEST-ROUTE-SAMPLE.md](M5-S3781-GUEST-ROUTE-SAMPLE.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)

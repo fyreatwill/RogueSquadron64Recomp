@@ -1,37 +1,45 @@
-# Next work unit: sample guest route identity at family entry
+# Next work unit: qualify retail family reachability
 
-HYPOTHESIS-ID: m5-family-route-object-join
+HYPOTHESIS-ID: m5-retail-family-ground-truth
 
-The s3780 image-only capture was qualified: the retail whole-RDRAM control,
-six family-store controls, title VI, and hangar VI all passed. S/I/L entry
-hooks produced 257 target-phase rows (S=128, I=1, L=128), all with
-`target_arg=0`; stores remained outside the clear object. The host audio-route
-snapshot was inactive on every row, so alternate-object legitimacy versus
-wrong-route state remains open.
+The s3781 port witness read zero at all three candidate guest route-state
+bytes, but the independent retail run stayed in attract and never reached
+S/I/L. Do one new retail-oracle input/phase qualification; do not add port
+instrumentation or change game behavior.
 
 Competing hypotheses and discriminator:
 
-- H1: the alternate object is legitimate; direct guest route/overlay state will
-  be active and match the family edge.
-- H2: the family calls are on the wrong route/overlay state; direct guest state
-  will be mismatched or inactive while the alternate object remains stable.
-- H3 is refuted by s3780: no family entry argument was target-relevant.
+- H1: the recipe reaches a retail target VI and at least one family PC; route
+  byte writes then provide an independent route-state boundary.
+- H2: the recipe reaches target VI but no family PC; the family entry is on a
+  different retail route or address and the current discriminator is
+  unevaluable.
+- H3: the recipe remains in attract/pre-target; the oracle driving recipe is
+  not qualified, so no route conclusion is allowed.
 
-The discriminating measurement is one same-build image/oracle capture with the
-existing positive controls and a new direct guest route/overlay-state sample at
-each S/I/L entry, joined by phase/ordinal to clear object, entry arguments,
-route key, destination addresses, and both target VIs. Active matching state
-selects H1; mismatched or inactive state selects H2. Missing controls or target
-phases are unevaluable.
+The discriminating measurement is one run with the whole-RDRAM positive
+control, candidate route-byte watches, all three family execution watches, VI
+trace, and controlled input. H1 requires a family hit plus target VI; H2 is
+target VI with zero family hits; H3 is no target VI. A missing whole-RDRAM
+control invalidates the run.
 
-Exact commands:
+Exact command:
 
-    rg -n "rs64_m5_family_entry|rs64_m5_family_store|route_state|clear_obj" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs tools src/main
-    sed -n '478,610p' src/main/main.cpp
-    sed -n '4870,4990p' /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3780_m5_guest_route_join.sh
+    mkdir -p scratch/agent/s3782_oracle_family_reach
+    tools/oracle/build/rs64_oracle \
+      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+      --secs 120 --press 8:return,20:return,35:z,50:return \
+      --watch-write 0x0:0x800000 \
+      --watch-write 0x141AD0:0x141AD2 \
+      --watch-write 0x13B038:0x13B039 \
+      --watch-write 0x141AD1:0x141AD2 \
+      --watch-pc 0x80007640,0x8001E230,0x8001F954 \
+      --pc-phase-log-width 0x00790400:1024 \
+      --pc-phase-log-width 0x006AB400:512 \
+      --hit-cap 12 --vi-trace \
+      > scratch/agent/s3782_oracle_family_reach/oracle.log 2>&1
 
-Use the existing macOS image/oracle recipe as the base, with paths corrected to
-`build/`. Do not suppress or replace the clear, inject values, or change an
-audio gate.
+Use SIGKILL only if a watchdog is needed. Record whether the positive control,
+target VI, and each family PC fired. Do not infer route identity from route
+byte writes alone.

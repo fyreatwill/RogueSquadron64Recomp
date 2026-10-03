@@ -139859,3 +139859,28 @@ game state or control flow.
 
 Evidence: `docs/M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md` and
 `scratch/agent/s3773_m5_image_only/summary.txt`.
+
+## Session 3781 (2026-10-03) — sampled guest route state at family entry
+
+The Debug target rebuilt successfully. Before adding the port witness, the
+retail oracle ran for 60 seconds with a whole-RDRAM positive control, exact
+watches on `0x80141AD0`, `0x8013B038`, and `0x80141AD1`, and execution watches
+on the S/I/L family entries. The positive control fired 10,003 times and the
+candidate-byte watches fired 2, 1, and 0 times, but retail stayed in attract:
+none of the family PCs or target phases executed. Retail route parity is
+unevaluable in this run.
+
+The image-only port capture passed its phase, six family-entry controls, title
+VI 1024, and hangar VI 512. The new regeneration-safe witness emitted 257
+target-phase rows (S=128, I=1, L=128); all rows read zero at the three guest
+route-state bytes. The existing host route snapshot was inactive on every
+row. This is a single-source port result and does not distinguish a legitimate
+alternate object from a wrong route/overlay state. It rules out neither H1 nor
+H2, and no mitigation or audio change was made.
+
+ORIGIN: the witness reads existing guest bytes at family entry and does not
+modify values, destinations, audio gates, or control flow.
+
+Evidence: `docs/M5-S3781-GUEST-ROUTE-SAMPLE.md`,
+`scratch/agent/s3781_oracle_ground_truth/oracle.log`, and
+`scratch/agent/s3781_port_guest_route/image.log`.

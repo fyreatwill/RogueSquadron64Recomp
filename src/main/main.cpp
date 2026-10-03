@@ -475,7 +475,7 @@ extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, ui
     ++rows;
 }
 
-extern "C" void rs64_m5_family_entry(const char* family, uint32_t pc,
+extern "C" void rs64_m5_family_entry(uint8_t* rdram, const char* family, uint32_t pc,
                                        uint32_t a0, uint32_t a1, uint32_t a2,
                                        uint32_t a3, uint32_t ra) {
     static int enabled = -1;
@@ -509,6 +509,13 @@ extern "C" void rs64_m5_family_entry(const char* family, uint32_t pc,
         rows[0] = rows[1] = rows[2] = 0;
     }
     if (rows[which] >= 64u) return;
+    auto guest_byte = [rdram](uint32_t guest) -> uint32_t {
+        if (!rdram || guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        return rdram[guest - 0x80000000u];
+    };
+    const uint32_t state_1ad0 = guest_byte(0x80141AD0u);
+    const uint32_t state_3b038 = guest_byte(0x8013B038u);
+    const uint32_t state_1ad1 = guest_byte(0x80141AD1u);
     uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
     int exit_reason = 0;
     const char* arm = "n/a";
@@ -524,12 +531,14 @@ extern "C" void rs64_m5_family_entry(const char* family, uint32_t pc,
         (a2 >= 0x801797B0u && a2 < 0x80179A48u) ||
         (a3 >= 0x801797B0u && a3 < 0x80179A48u);
     std::fprintf(stderr,
-        "[m5-family-edge] family=%s n=%u pc=0x%08X phase=%u width=%u origin=0x%06X "
+        "[m5-family-guest-route] family=%s n=%u pc=0x%08X phase=%u width=%u origin=0x%06X "
         "arm=%s active=%u ordinal=%u row=%u exit=%d target_arg=%u "
-        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X ra=0x%08X\n",
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X ra=0x%08X "
+        "state_1ad0=0x%02X state_3b038=0x%02X state_1ad1=0x%02X\n",
         family, rows[which], pc, rs64_phase_ord(), width, origin,
         arm ? arm : "n/a", active ? 1u : 0u, ordinal, route_row,
-        exit_reason, target_arg ? 1u : 0u, a0, a1, a2, a3, ra);
+        exit_reason, target_arg ? 1u : 0u, a0, a1, a2, a3, ra,
+        state_1ad0, state_3b038, state_1ad1);
     std::fflush(stderr);
     ++rows[which];
 }
