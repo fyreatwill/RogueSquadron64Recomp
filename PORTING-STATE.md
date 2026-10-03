@@ -141152,3 +141152,19 @@ route for `0x80019DEC` and rules out treating `0x80019D68` as the same task
 pointer route, but it does not establish a unique stage destination because the
 descriptor is reused and its output fields stay zero. The next discriminator is
 descriptor-field write activity at physical `0x149470..0x1494B0`.
+
+## Session 3851 (2026-10-03) — qualified retail task-descriptor writes
+
+Ran `scratch/agent/run_s3851_m5_task_descriptor_writes.sh`, including its
+value-qualified rerun. The paired retail/port capture passed the whole-RDRAM
+positive control, both title/hangar VI controls, and no-crash validation. Retail
+produced 1,143 type-2 task rows. The physical descriptor range
+`0x149470..0x1494B0` recorded 44,270 writes, all from the same ten PCs
+`0x80091718..0x80091784`; post-store sampling found 13 values.
+
+The stores repeatedly populated task input fields: values included
+`0x80171E70` and `0x80173CB0`, while output and yield fields remained zero.
+The task descriptor therefore changes, but this single-source oracle result
+does not expose a unique image-stage destination. It selects H3 (the task
+boundary needs a data-pointer/event join), rules out descriptor output fields
+as that owner, and rules out treating the ten stores as absent initialization.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3850 (2026-10-03).
+Updated for session 3851 (2026-10-03).
 
 ## Current state
 
@@ -45,17 +45,16 @@ Work only the first applicable item. This is one monotonic backlog.
    configured MIPS compiler is absent, and `build/Debug/N64Recomp.exe` is
    absent. Restore/reconfigure those tools, build the patch ELF and library,
    then run the allocator-route smoke. Do not claim H1/H2 before that.
-2. **M5 retail task-to-stage join — resolve descriptor-field ownership.** Session
-   3850 passed whole-RDRAM and both VI controls. `0x80019DEC` is a direct task
-   submission route: it precedes `0x80033FCC` with `a0=0x80149470`, the exact
-   descriptor dumped by the task probe, in 3,449 phase-qualified executions.
-   `0x80019D68` is a separate stable route with `a0=0x800377C8` and 1,706
-   executions. The descriptor is reused and its output fields remain zero, so
-   the caller result does not yet join a unique stage destination. In the next
-   paired capture, watch writes to physical `0x149470..0x1494B0` while retaining
-   the task dump and target controls. A descriptor-field write that changes with
-   task generation can join the route; no writes or constant-only fields leave
-   exact ownership unresolved.
+2. **M5 retail task-to-stage join — resolve the remaining data-pointer edge.**
+   Session 3851 passed whole-RDRAM, both target-VI controls, and no-crash
+   validation. The descriptor range had 44,270 writes, but all were the same ten
+   PCs (`0x80091718..0x80091784`) repeating a fixed 13-value schema. The only
+   changing pointer values were task input pointers (`0x80171E70`,
+   `0x80173CB0`, and related stage inputs); output and yield fields remained
+   zero. This single-source oracle result selects H3: the descriptor changes,
+   but it does not identify a unique image-stage destination. The next paired
+   capture must join these task data-pointer values to the stage/DMA event, not
+   watch descriptor fields again.
 3. **M5 image task/output edge — qualified port result.** Session 3839 joined
    the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
    found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
@@ -140,6 +139,12 @@ Work only the first applicable item. This is one monotonic backlog.
   descriptor's output fields stayed zero. This is a single-source oracle
   result: it selects the direct submission route but does not establish a
   unique stage destination.
+- **3851:** Paired capture passed whole-RDRAM and both target-VI controls with no
+  crash/abort. The descriptor range recorded 44,270 writes, all from the same
+  ten-PC store sequence. Post-store sampling found 13 values; task input
+  pointers varied between title/hangar routes, while the output/yield fields
+  stayed zero. This single-source oracle result selects H3 for the descriptor
+  boundary and rules out descriptor output fields as the unique stage owner.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

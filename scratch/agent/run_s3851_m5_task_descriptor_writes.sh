@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -u
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-OUT=$ROOT/scratch/agent/s3851_m5_task_descriptor_writes
+OUT=$ROOT/scratch/agent/s3851_m5_task_descriptor_writes_values
 mkdir -p "$OUT"
 ORACLE=$ROOT/tools/oracle/build/rs64_oracle
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
@@ -14,14 +14,16 @@ fi
 PRESS='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start'
 cd "$ROOT" || exit 2
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
-  --watch-write 0x0:0x800000 --watch-write 0x149470:0x1494B0 \
-  --watch-write 0x167000:0x169B00 --watch-write 0x173CB0:0x173DB0 \
-  --watch-write 0x1798B0:0x179A48 \
+  --watch-write 0x0:0x800000 --watch-write 0x167000:0x169B00 \
+  --watch-write 0x173CB0:0x173DB0 --watch-write 0x1798B0:0x179A48 \
+  --watch-write 0x149470:0x1494B0 \
   --watch-pc 0x80033FCC,0x80019DEC,0x80019D68 \
   --pc-task-dump 0x80033FCC --pc-task-type 2 \
   --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 \
   --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
-  --pc-hist-watch 1 --vi-trace --hit-cap 20 --press "$PRESS" --hold-ms 150 \
+  --pc-hist-watch 1 --pc-hist-watch 4 --post-value-watch 4 \
+  --post-value-pc 0x80091718,0x8009172c,0x8009173c,0x80091748,0x80091758,0x80091764,0x8009176c,0x80091774,0x8009177c,0x80091784 \
+  --post-value-pc-detail --vi-trace --hit-cap 20 --press "$PRESS" --hold-ms 150 \
   > "$OUT/retail.log" 2>&1 &
 retail=$!
 cd "$ROOT/build" || exit 2
@@ -45,9 +47,10 @@ done
 kill -KILL "$retail" "$port" 2>/dev/null || true
 wait "$retail" 2>/dev/null || true
 wait "$port" 2>/dev/null || true
-for marker in 'positive-control threshold reached' 'origin=0x00790400 width=1024' 'origin=0x006ab400 width=512' '[pc-task-dump]' 'pc=0x80019dec' 'pc=0x80019d68' '[oracle] pc-hist-phase' '[oracle] done:'; do
+for marker in 'positive-control threshold reached' 'origin=0x00790400 width=1024' 'origin=0x006ab400 width=512' '[pc-task-dump]' 'exec pc=0x80019dec' 'exec pc=0x80019d68' '[oracle] pc-hist-phase' '[oracle] writer-pc-phase' '[oracle] done:'; do
   print -r -- "retail_${marker// /_}=$(grep -a -F -c "$marker" "$OUT/retail.log" || true)" >> "$OUT/driver.log"
 done
 for marker in '[phase]' '[audtask-abi]' '[audtask-image-stage]' '[audtask-image-dma-join]' 'CRASH' 'ABORT'; do
   print -r -- "port_${marker// /_}=$(grep -a -F -c "$marker" "$OUT/port.log" || true)" >> "$OUT/driver.log"
 done
+print -r -- "descriptor_watch_hits=$(grep -a -F -c 'addr=0x001494' "$OUT/retail.log" || true)" >> "$OUT/driver.log"
