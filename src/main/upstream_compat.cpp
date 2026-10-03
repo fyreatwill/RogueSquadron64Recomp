@@ -1261,9 +1261,14 @@ extern "C" void rs64_m5_route_exact_load(uint8_t* rdram, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
+                                                uint32_t addr,
+                                                uint32_t value);
+
 extern "C" void rs64_m5_route_value_writer(char width, uint32_t pc,
                                               uint32_t addr,
                                               uint32_t value) {
+    rs64_m5_pre_dma_writer_store(width, pc, addr, value);
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_WRITER");

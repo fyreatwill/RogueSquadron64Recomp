@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3817 (2026-10-03).
+Updated for session 3818 (2026-10-03).
 
 ## Current state
 
@@ -18,8 +18,11 @@ The current M5 boundary is source payload, not rendering. Retail title
 snapshots contain nonzero bytes in both source subranges, while qualified port
 source-DMA joins are zero (`FNV=0x762B22A5`). The expected port descriptor is
 `0x1798B0 -> DMEM 0xCB0`; its final observed writer is the legitimate
-zero-valued `0x800078EC` fill before the image DMA. Exact retail byte positions
-are exported, but layout parity is not testable against a zero-valued port
+zero-valued `0x800078EC` fill before the image DMA. Session 3818 joined that
+writer through the active generated scalar-store census: sequence 664 at
+physical `0x179A44` is the final writer, and every target `0x1798B0 -> DMEM
+0xCB0` input DMA observed it with zero value. Exact retail byte positions are
+exported, but writer/value parity is not testable against a zero-valued port
 payload. See [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md).
 
 The complete generated scalar-store census, central host/RSP writer census,
@@ -39,15 +42,12 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 zero source-RDRAM writer.** s3817 joined the shared DMEM-writer
-   sequence to the `0xCB0 -> 0xE48` input DMA. In the target-valid image arm,
-   all 512 sampled `0xCB0`-window vector rows had sequence numbers greater
-   than the input DMA sequence; an independent broader `0xDxx` sample had the
-   same result for 4,096/4,096 rows. H1 is refuted and H2 is selected:
-   `SQV`/`SSV` stores occur after the zero input DMA and cannot produce its
-   zero payload. The next bounded probe must attribute the zero source-RDRAM
-   span to its legitimate writer or clear/fill chain, phase-gated at the same
-   input DMA; do not repeat the DMEM ordering census.
+1. **M5 retail/port source-writer parity.** s3818 attributed the qualified
+   port zero source span to the legitimate CPU fill at `0x800078EC` (sequence
+   664, physical `0x179A44`, value zero), joined to repeated target input DMAs.
+   The next bounded probe must use the independent retail oracle at the same
+   hangar phase to identify the byte-store writer/value and compare it with the
+   port writer. Do not repeat the port writer or DMEM ordering census.
 2. **M5 image-arm stability discriminator, closed at this scope.** The
    isolated image arm reached both target phases with independent phase and
    M5 controls; s3811/s3812 launch-order failures no longer block producer
@@ -100,7 +100,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-IsolatedImageTargetValid` | Selected at s3813: image-only route reached title/hangar with phase, task, audio-return, route, and no-crash controls. |
 | `H-M5-ZeroDMEMProducer` | Refined at s3817: target-valid `SQV`/`SSV` writes are independent of DMA bookkeeping but follow the zero input DMA; they are not its producer. |
 | `H-M5-VectorStoreOrdering` | Selected H2 at s3817: 512/512 `0xCB0` rows and 4,096/4,096 broader vector rows have vector sequence after the input DMA. |
-| `H-M5-SourceRdramWriter` | Open: the legitimate writer or clear/fill chain responsible for the zero source-RDRAM span remains unidentified. |
+| `H-M5-SourceRdramWriter` | Selected on the qualified port route at s3818: final writer is `0x800078EC`, physical `0x179A44`, zero byte; independent retail writer/value parity remains open. |
 
 ## Evidence ledger — live boundary
 
@@ -346,6 +346,15 @@ Work only the first applicable item. This is one monotonic backlog.
   precede and are overwritten by the input DMA, and selects a source-RDRAM
   writer/clear chain as the next boundary. Evidence:
   `scratch/agent/s3817_m5_vector_store_ordering/image/run.log`.
+- **3818 — qualified port source-RDRAM writer join:** the Debug build passed.
+  The isolated image arm reached title at 13.5s and hangar at 24.7s, captured
+  159 frames, and had no crash or abort. The scalar-store positive control
+  fired; target input-DMA rows repeatedly read `0x1798B0..0x179A48` with
+  `FNV=0x762B22A5`, `nz=0`, while the final joined CPU writer was sequence 664
+  at PC `0x800078EC`, physical `0x179A44`, length 1, value zero. This selects
+  the legitimate port clear/fill writer at the measured scope and closes the
+  port-side writer-attribution gap; retail writer/value parity remains open.
+  Evidence: `scratch/agent/s3818_m5_source_rdram_writer/image/run.log`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

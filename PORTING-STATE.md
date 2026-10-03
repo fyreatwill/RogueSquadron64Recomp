@@ -140576,3 +140576,22 @@ H2 is selected at this scope; the legitimate source-RDRAM writer or clear/fill
 chain remains open. No mitigation was added.
 
 Evidence: `scratch/agent/s3817_m5_vector_store_ordering/image/run.log`.
+
+## Session 3818 (2026-10-03) — qualified port source-RDRAM writer join
+
+Added the missing bridge from the active regeneration-safe scalar-store census
+to the existing M5 pre-input writer sequence tracker. The Debug build passed.
+The isolated real-image arm reached title at 13.5s and hangar at 24.7s,
+captured 159 frames, and had no crash or abort. The scalar-store positive
+control fired.
+
+At hangar, repeated input-DMA rows read `0x1798B0..0x179A48` from DMEM
+`0xCB0` with `FNV=0x762B22A5`, `nz=0`. Every row reported final writer
+sequence 664 at PC `0x800078EC`, physical `0x179A44`, length 1, value zero.
+The source-writer hook and the input-DMA snapshot are independent evidence
+lines in the same phase-gated run. H1 is selected for the qualified port scope:
+the source span is zero because the legitimate CPU clear/fill writer ran before
+the image input DMA. H2/H3 for the port-side writer attribution are refuted;
+retail writer/value parity remains open. No mitigation was added.
+
+Evidence: `scratch/agent/s3818_m5_source_rdram_writer/image/run.log`.
