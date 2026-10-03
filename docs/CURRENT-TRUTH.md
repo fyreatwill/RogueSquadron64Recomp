@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3797 (2026-10-03).
+Updated for session 3798 (2026-10-03).
 
 ## Current state
 
@@ -39,11 +39,12 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 SP-yield lifecycle change, validation next.** s3797 made the explicit
-   request-only rollback consume a pending yield request once; completion-wins
-   remains the default. Build validation is required before interpreting any
-   route change. Then resume paired M5 qualification with a discriminator that
-   preserves both controls.
+1. **M5 SP-yield lifecycle validation, stability redesign next.** s3797 made
+   the explicit request-only rollback consume a pending yield request once;
+   completion-wins remains the default. The s3798 same-build validation was
+   coverage-invalid: the corrected request-only arm crashed before its control
+   rows, while the default arm stopped before phase 640. Preserve both controls
+   and solve arm stability before interpreting route or audio behavior.
 2. **M5 paired qualification, parked.** s3789 completed the independent retail
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
@@ -160,6 +161,13 @@ Work only the first applicable item. This is one monotonic backlog.
   This prevents one request from being reported forever in the scheduler retry
   path. Build validation is required before drawing a route or audio
   conclusion.
+- **3798 — SP-yield one-shot validation:** the Debug build passed, but the
+  corrected paired harness was coverage-invalid: default produced SP completion
+  and reset controls without phase 640, while request-only crashed 36 times
+  before any yield/phase rows. An earlier harness attempt did show the intended
+  one-shot row (`returned=1`, `pending_after=0`) and default completion-wins in
+  phase 640, but neither arm reached title 1024. H3 coverage failure selected;
+  H1/H2 remain unevaluable. No runtime conclusion.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

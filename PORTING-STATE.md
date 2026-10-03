@@ -140167,3 +140167,29 @@ ORIGIN: the writer is `osSpTaskYield_recomp`, which sets the process-local
 request latch; the value is a legitimate host-side yield request, but repeated
 reporting of the same request is not a legitimate completion state. This is a
 contract correction, not a corruption mitigation.
+
+## Session 3798 (2026-10-03) — SP-yield one-shot validation was coverage-invalid
+
+Built the Debug target and ran the new same-build default/request-only harness
+from `build/`. The first attempt exposed a harness error: it required the
+request-only arm to show a later `requested_pre=1` reset even though the new
+one-shot exchange intentionally consumes that request. The corrected harness
+required the default arm's reset positive control and the request-only arm's
+one-shot positive control, then reran both arms concurrently with SIGKILL
+cleanup.
+
+The corrected run was invalid: the default arm produced 20 SP-completion rows
+and 20 reset rows but no phase-640 or yield rows; the request-only arm crashed
+36 times before producing any SP-yield row or phase transition. The earlier
+attempt did reach phase 640 in both arms and showed default completion-wins
+versus request-only `returned=1 pending_after=0`, but neither arm reached title
+1024, so it cannot establish lifecycle causality. H3 (instrument/control
+coverage failure) is selected; H1 and H2 remain unevaluable. No audio, route,
+or scheduler conclusion is added.
+
+The regeneration-safe harness is `tools/run_m5_yield_ab.sh`; the next attempt
+must preserve both positive controls while addressing arm stability, without
+changing the runtime contract or interpreting this run as an A/B result.
+
+ORIGIN: no mitigation or game-state change was landed; the only new machinery
+is a capture harness for the existing SP-yield diagnostics.
