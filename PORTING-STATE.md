@@ -140264,3 +140264,28 @@ is unevaluable, not evidence. See `docs/M5-S3801-IMAGE-STAGE-BOUNDARY.md` and
 ORIGIN: diagnostic-only source/stage/consumer logging and a capture harness;
 no game state, task, audio, scheduler, rendering, or mitigation behavior was
 changed.
+## Session 3802 (2026-10-03) — source writer census selected the immediate zero DMEM chain
+
+Ran the new self-contained `scratch/agent/run_m5_source_input_writer.sh`
+after a successful Debug build. The image and silent port arms ran concurrently
+with the retail oracle. Both port arms reached title `0x00790400`/1024 and
+hangar `0x006AB400`/512 with phase and stability controls active and no crash
+or abort. The oracle whole-RDRAM positive control fired and its
+`0x800078EC` execution watch was active in title; the bounded harness stopped
+when both port arms reached hangar, before a retail hangar target-span payload
+join, so retail span parity remains unevaluable.
+
+The image arm's hangar input DMA repeatedly read `0x1798B0..0x179A48` from
+DMEM `0xCB0` with `FNV=0x762B22A5` and zero nonzero bytes. Independent
+`m5-source-transition` and `m5-dmem-coverage` rows showed the same zero-valued
+vector/DMA producer chain before the source DMA wrote the zero span to RDRAM.
+No phase-gated guest CPU store overlapping `0x1797B0..0x179A48` was observed.
+This selects the immediate port-side RSP/vector/DMA chain as the source writer
+at this boundary and rules out a guest CPU store as the immediate writer. It
+does not identify the upstream source of the zero DMEM payload, and the retail
+hangar payload comparison is not a null result.
+
+ORIGIN: the writer is the Factor 5 RSP route's zero-valued DMEM/vector/DMA
+chain followed by source DMA to RDRAM. The zero is legitimate for the observed
+port route but not yet explained as the intended payload; no mitigation was
+added.

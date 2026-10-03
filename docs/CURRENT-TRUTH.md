@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3801 (2026-10-03).
+Updated for session 3802 (2026-10-03).
 
 ## Current state
 
@@ -39,16 +39,16 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 source-input producer, next.** s3801 qualified the image/silent pair:
-   both arms reached title 1024 and hangar 512, both passed phase-scoped
-   controls, and neither crashed or aborted. Image emitted 2,240
-   `audtask-image-stage` rows; silent emitted zero. Image's source DMA, stage
-   DMEM/DMA payload, and destination were all zero-valued while its image
-   consumer callback was live; silent retained PCM and audio-return controls.
-   This selects the source-input producer gap. The next work unit must identify
-   the legitimate writer of the zero source span with one batched,
-   phase-gated producer census and an independent retail control. Do not repeat
-   launch-order, SP-yield, or source-versus-consumer comparisons.
+1. **M5 upstream zero-DMEM producer, next.** s3802 qualified the port-side
+   immediate chain: the hangar image input reads all-zero DMEM `0xCB0..0xE48`,
+   zero-valued vector/DMA coverage precedes it, and the source DMA writes the
+   same all-zero payload to `0x1798B0..0x179A48`; no guest CPU store overlaps
+   the source span. Retail whole-RDRAM and `0x800078EC` controls were live, but
+   retail hangar payload parity was not reached before the bounded run stopped.
+   The next work unit must trace the upstream source of the zero DMEM payload
+   with one batched, phase-gated RSP source-DMA and DMEM-producer census,
+   retaining the same positive controls. Do not repeat launch-order, SP-yield,
+   or source-versus-consumer comparisons.
 2. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
@@ -205,6 +205,14 @@ Work only the first applicable item. This is one monotonic backlog.
   source-input producer gap and refutes output-only and instrumentation-scope
   explanations at this scope; the writer of the zero source span remains open.
   See [M5-S3801-IMAGE-STAGE-BOUNDARY.md](M5-S3801-IMAGE-STAGE-BOUNDARY.md).
+- **3802 — source writer census:** both port arms reached title/hangar with
+  positive controls and no crash/abort. The image arm's hangar input DMA read
+  all-zero `0x1798B0..0x179A48` from DMEM `0xCB0`; independent transition and
+  DMEM-coverage rows showed the same zero-valued vector/DMA producer chain
+  before the RDRAM write, with no guest CPU store overlapping the source span.
+  Retail whole-RDRAM and `0x800078EC` controls were live, but retail hangar
+  payload parity was not reached. See
+  [M5-S3802-SOURCE-WRITER-CENSUS.md](M5-S3802-SOURCE-WRITER-CENSUS.md).
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
