@@ -139573,3 +139573,25 @@ callers/entries. See `docs/M5-S3767-POSTCLEAR-PRODUCER-ORDER.md` and
 
 ORIGIN: the observed port writer is the legitimate zero-fill at `0x800078EC`;
 no mitigation was added.
+
+## Session 3768 (2026-10-02) — audited retail writer edges in generated port
+
+The bounded static audit mapped the retail source-span writer families to the
+generated port: `0x80007670` is `rs_strncpy`, `0x8001E2C0` is
+`initTextureLUTAndAllocBuffers`, and `0x8001FACC..0x8001FD2C` is
+`loadTextureToMemory`. The qualified s3767 port capture showed no family write
+to either target buffer (`0x178C80` title or `0x1797B0` hangar); its target
+span contained only the legitimate zero-valued `0x800078EC` padding after the
+`0x8008F2CC` clear. The independent retail arm passed its whole-RDRAM
+positive control, reached both target phases, and recorded the writer families
+and nonzero title snapshots.
+
+This selects `H-M5-RetailWriterPortEdgeAbsent` for the measured target-buffer
+phase and refutes `H-M5-RetailWriterHasPortEdge` for that joined buffer. It
+does not distinguish absent execution from a route/object identity mismatch;
+the next unit batches a phase-gated execution/destination census. No build,
+mitigation, clear suppression, value injection, or guest state change was
+made. See `docs/M5-S3768-RETAIL-PORT-EDGE-AUDIT.md`.
+
+ORIGIN: the observed `0x800078EC` writer is legitimate zero padding; the
+missing nonzero writer remains unexplained.

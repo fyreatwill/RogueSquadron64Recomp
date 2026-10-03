@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3767 (2026-10-02).
+Updated for session 3768 (2026-10-02).
 
 ## Current state
 
@@ -129,19 +129,28 @@ post-clear writer. Its input-DMA join was absent in this capture. The silent
 arm failed to reach a target VI and is unevaluable, not a null result. See
 [M5-S3767-POSTCLEAR-PRODUCER-ORDER.md](M5-S3767-POSTCLEAR-PRODUCER-ORDER.md).
 
+Session 3768 mapped the retail source-span writer families to generated port
+bodies: `0x80007670` is `rs_strncpy`, `0x8001E2C0` is
+`initTextureLUTAndAllocBuffers`, and `0x8001F...` is `loadTextureToMemory`.
+Those bodies exist in the port, but the qualified s3767 target-buffer capture
+showed no family write to either title or hangar target buffer; only the
+legitimate zero-valued `0x800078EC` padding followed the clear. This selects
+`H-M5-RetailWriterPortEdgeAbsent` for the measured target phase while leaving
+buffer/route identity mismatch open. See
+[M5-S3768-RETAIL-PORT-EDGE-AUDIT.md](M5-S3768-RETAIL-PORT-EDGE-AUDIT.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 retail writer-family to port edge join.** s3767 selected
-   `H-M5-PostClearProducerAbsent` for the measured port target span: after
-   the legitimate `0x8008F2CC` clear, only zero stores from `0x800078EC` were
-   observed in the image arm. Map the independent retail writer families
-   (`0x80007670`, `0x8001E2C0`, and the `0x8001F...` family) to their port
-   generated callers/entries and compare phase/order around the clear. Do not
-   suppress or replace the clear, add another task-data value field, or change
-   an audio gate. Require the oracle positive control and both title/hangar
-   phases; discard an arm that misses a target VI.
+1. **M5 target-buffer identity versus missing family execution edge.** The
+   static family audit selected `H-M5-RetailWriterPortEdgeAbsent` for the
+   measured title/hangar target buffers, but cannot distinguish absent
+   execution from a route/object identity mismatch. Batch one phase-gated port
+   execution census for `rs_strncpy`, `initTextureLUTAndAllocBuffers`, and
+   `loadTextureToMemory`, joined to destination ranges and the clear's route
+   ordinal; retain the existing positive controls and require both target VIs.
+   Do not suppress or replace the clear, inject values, or change an audio gate.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -195,6 +204,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-PostClearProducerAbsent` | Selected at s3767 for the measured image-arm target span: 244 phase-5 stores followed the clear, all zero-valued from `0x800078EC`; no nonzero port producer appeared. Retail independently reached both target phases and wrote both source ranges. |
 | `H-M5-PostClearProducerClears` | Refuted for the measured image-arm target span at s3767: no nonzero post-clear writer preceded a later zero writer. |
 | `H-M5-PostClearJoinMismatch` | Open for the downstream input-DMA join at s3767: the image arm reached both target VIs, but emitted no input-DMA row in this capture; prior s3766 coverage remains the join evidence. |
+| `H-M5-RetailWriterPortEdgeAbsent` | Selected at s3768 for the measured title/hangar target buffers: retail writer families have generated port bodies, but no family write joined either target buffer in the qualified port capture. |
+| `H-M5-RetailWriterHasPortEdge` | Refuted at s3768 for the measured target-buffer phases; no family write appeared in the target-span rows. |
+| `H-M5-RetailWriterJoinMismatch` | Open at s3768: static family bodies exist, but the capture does not distinguish absent execution from a buffer/route identity mismatch. |
 | `H-M5-ClearIsWrongOrder` | Refuted for the measured port caller/order: no legitimate producer was observed before the `0x8008F2CC` clear, and the static caller performs allocation, clear, then writeback. |
 | `H-M5-JoinMismatch` | Refuted for the measured target row: static callsite, destination, fill, length, phase-5 route, and source-DMA range joined in both arms. |
 | `H-M5-OutputConsumerGap` | Refuted at s3764 for the measured chain: the first observed zero preceded image-stage output and PCM consumption. |
@@ -220,6 +232,16 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-ClearTooEarly` | Selected at s3706 for the measured source object; this is an explanation of the observed zero payload, not permission for a mitigation. |
 
 ## Evidence ledger — live boundary only
+
+- **3768 — retail writer-family edge audit:** static generated code maps
+  `0x80007670` to `rs_strncpy`, `0x8001E2C0` to
+  `initTextureLUTAndAllocBuffers`, and `0x8001FACC..0x8001FD2C` to
+  `loadTextureToMemory`. The s3767 qualified port target rows contained only
+  the legitimate zero-valued `0x800078EC` padding after the clear; the retail
+  oracle independently recorded these families and nonzero title bytes. This
+  selects target-buffer edge absence, while leaving route/object identity
+  mismatch open. No mitigation was added. See
+  `docs/M5-S3768-RETAIL-PORT-EDGE-AUDIT.md`.
 
 - **3762 — silent-route stability repeat:** the retail oracle passed its
   whole-RDRAM control and reached title/hangar; both image and silent arms
