@@ -141059,3 +141059,29 @@ rewritten, skipped, or guarded.
 Evidence: `scratch/agent/s3846_m5_task_output_contract_retail/driver.log`,
 `retail.log`, `port.log`, and the updated
 `scratch/agent/run_s3844_m5_task_output_contract_retail.sh`.
+
+## Session 3847 (2026-10-03) — narrowed retail image-stage writer attribution
+
+Ran a paired capture using an exact retail candidate range,
+`0x167000..0x169B00`, with the whole-RDRAM positive control, title/hangar VI
+gates, type-2 task dump, phase writer histograms, and the validated port
+drain-in-loop controls. The capture was valid: whole-RDRAM fired 544,676
+times, retail reached 631 title VIs and 530 hangar VIs, and neither arm
+reported a crash or abort. Retail produced 627 title and 528 hangar task
+rows.
+
+The exact range's phase writer histogram was stable but not task-joined:
+title writers were `0x80015BC8` (86,146 stores) and `0x8000F3A0` (117), while
+hangar writers were `0x80015BC8` (12,706) and `0x8000F3A0` (38,214). Port
+continued to emit the corresponding stage-2 `0x166xxx..0x167xxx` rows and
+separate `0x1798B0` rows. This confirms phase-correlated retail writer
+activity and rules out a null phase writer, but does not prove that either
+writer owns an individual task generation or its exact length. The next
+discriminator is live argument capture at both writer PCs.
+
+ORIGIN: diagnostic-only oracle watches and port logging; no guest or host
+state was rewritten, skipped, or guarded.
+
+Evidence: `scratch/agent/s3847_m5_task_output_contract_exact/driver.log`,
+`retail.log`, `port.log`, and
+`scratch/agent/run_s3847_m5_task_output_contract_exact.sh`.

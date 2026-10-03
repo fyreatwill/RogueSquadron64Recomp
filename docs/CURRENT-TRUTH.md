@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3846 (2026-10-03).
+Updated for session 3847 (2026-10-03).
 
 ## Current state
 
@@ -45,13 +45,14 @@ Work only the first applicable item. This is one monotonic backlog.
    configured MIPS compiler is absent, and `build/Debug/N64Recomp.exe` is
    absent. Restore/reconfigure those tools, build the patch ELF and library,
    then run the allocator-route smoke. Do not claim H1/H2 before that.
-2. **M5 retail task-to-stage join — open exact discriminator.** Session 3846
-   selected the shared destination role at bounded scope: retail reached 1,144
-   hangar type-2 rows at `data_ptr=0x80173CB0`, wrote 930,770 times in
-   `0x167000..0x16C000` and 120,550 times in the task span, while port emitted
-   the corresponding stage-2 `0x166xxx..0x167xxx` destinations. The retail
-   watch is too broad to prove a task-generation edge or exact length; add
-   phase-scoped writer attribution and join it to the retail task rows.
+2. **M5 retail task-to-stage join — open exact discriminator.** Session 3847
+   narrowed the target to `0x167000..0x169B00` and found stable phase-scoped
+   retail writers `0x80015BC8` and `0x8000F3A0`, with 1,155 task rows and no
+   crash. This selects a real phase-correlated writer set, but the oracle
+   capture still does not expose an individual task generation's destination
+   and length. Watch both writer PCs with their live arguments and join their
+   rows to the target task sequence; do not infer exact ownership from the
+   phase histogram alone.
 3. **M5 image task/output edge — qualified port result.** Session 3839 joined
    the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
    found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
@@ -108,6 +109,12 @@ Work only the first applicable item. This is one monotonic backlog.
   `0x167000..0x16C000` (930,770). Port had 2,964 image-DMA joins. This
   selects shared destination role, but the broad retail watch does not yet
   join an individual task generation to an exact stage destination.
+- **3847:** Paired capture passed whole-RDRAM, title/hangar VI controls, and
+  no-crash validation. The exact target range had title writer PCs
+  `0x80015BC8`/`0x8000F3A0` at 86,146/117 stores and hangar counts
+  12,706/38,214; retail produced 627 title and 528 hangar type-2 task rows.
+  This confirms phase-correlated writer activity but leaves the per-task
+  destination/length join unresolved.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.
