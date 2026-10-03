@@ -140488,3 +140488,19 @@ deterministic image-arm startup failure. It does not qualify DMEM-byte
 consumption, identify a writer or consumer, or authorize a mitigation. The
 next work unit is an isolated image-arm qualification with the independent
 whole-RDRAM positive control.
+## Session 3813 (2026-10-03) — qualified isolated image route for zero-DMEM producer
+
+Built `RogueSquadron64Recomp` Debug successfully and ran one isolated real
+image arm with the phase-gated probe and independent positive controls. The
+arm reached title VI `0x00790400` at 13.4s and hangar VI `0x006AB400` at 24.6s,
+capturing 159 frames with no `[CRASH]` or `[ABORT]`. Phase, task-contract,
+audio-return, and route controls were active.
+
+At hangar, the image-stage consumer remained live. Stage 3 repeatedly read
+DMEM `0xCB0`, length `0x198`, into RDRAM `0x1798B0..0x179A48` with
+`FNV=0x762B22A5` and `nz=0`; the corresponding stage-2 destination was also
+zero-valued. This target-valid run selects the zero-DMEM producer boundary and
+refutes isolated image startup failure as the current blocker. It does not
+identify the upstream writer or authorize a mitigation.
+
+Evidence: `scratch/agent/s3813_m5_image_isolated_qualification/image/run.log`.

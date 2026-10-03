@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3812 (2026-10-03).
+Updated for session 3813 (2026-10-03).
 
 ## Current state
 
@@ -39,17 +39,17 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 upstream zero-DMEM producer, next qualified route.** s3812 completed
-   both launch orderings: the explicit image arm still crashed at guest PC
-   `0x8000834C` before target while the explicit silent arm reached title and
-   hangar. The startup failure is arm-specific at this scope, not a launch
-   order interaction. Resume source-producer work only with a target-valid
-   image arm; do not infer the boundary byte from the failed pair. s3802's
-   qualified chain reads all-zero DMEM `0xCB0..0xE48` into
-   `0x1798B0..0x179A48`, with no guest CPU store overlapping the source span.
-2. **M5 image-arm stability discriminator, parked.** A new probe must make the
-   image arm target-valid while retaining an independent positive control;
-   repeating launch-order pairs is closed.
+1. **M5 upstream zero-DMEM producer, next qualified route.** s3813 isolated
+   the real image arm and reached title `0x00790400` at 13.4s and hangar
+   `0x006AB400` at 24.6s with no crash/abort and live controls. In hangar,
+   repeated image-stage rows show the live consumer reading all-zero DMEM
+   `0xCB0..0xE48` into `0x1798B0..0x179A48` (`FNV=0x762B22A5`, `nz=0`).
+   Run the existing source-producer census on this now-qualified route; the
+   next boundary is the writer/fill that supplies the zero DMEM vector.
+2. **M5 image-arm stability discriminator, closed at this scope.** The
+   isolated image arm reached both target phases with independent phase and
+   M5 controls; s3811/s3812 launch-order failures no longer block producer
+   work. Keep the stability breadcrumb passive and do not repeat ordering A/B.
 3. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
@@ -95,6 +95,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-DMEMTaskBoundaryConsumed` | Unevaluable at s3810: the corrected image arm crashed before target while the silent arm reached hangar; the boundary byte was not observed by a qualified image task. |
 | `H-M5-DMEMTaskBoundaryStartup` | Selected at s3810 scope: the legacy contract driver reproduced the pre-target image crash at guest PC `0x8000834C`; s3811 reproduced it after removing the legacy diagnostic bundle, so that bundle is not sufficient as the explanation. |
 | `H-M5-MinimalImageStartup` | Selected at s3812 scope: explicit image crashed at `0x8000834C` before target in both launch orderings; explicit silent reached title/hangar. |
+| `H-M5-IsolatedImageTargetValid` | Selected at s3813: image-only route reached title/hangar with phase, task, audio-return, route, and no-crash controls. |
+| `H-M5-ZeroDMEMProducer` | Open: qualified image-stage rows repeatedly consume zero `0xCB0..0xE48`; the upstream writer/fill is not identified. |
 
 ## Evidence ledger — live boundary
 
@@ -302,6 +304,14 @@ Work only the first applicable item. This is one monotonic backlog.
   and selects deterministic image-arm startup failure at this scope; DMEM-byte
   consumption remains unevaluable. Evidence:
   `scratch/agent/s3812_m5_image_first_boundary_pair_fixed/`.
+- **3813 — isolated image-arm qualification:** the Debug build passed. One
+  image-only phase-gated run reached title at 13.4s and hangar at 24.6s,
+  captured 159 frames, and had no crash or abort. Positive phase/task/
+  audio-return/route controls were live. At hangar, the stage-3 input DMA
+  repeatedly read DMEM `0xCB0`, length `0x198`, to `0x1798B0`, with
+  `FNV=0x762B22A5` and `nz=0`; the stage consumer was live. This selects the
+  qualified zero-DMEM producer boundary and closes the isolated-startup
+  blocker. Evidence: `scratch/agent/s3813_m5_image_isolated_qualification/`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
