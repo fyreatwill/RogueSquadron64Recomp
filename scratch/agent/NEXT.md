@@ -1,39 +1,36 @@
-# Next work unit: qualify image versus silent audio with stable arm controls
+# Next work unit: separate image-stage source from output/consumer boundary
 
-HYPOTHESIS-ID: m5-paired-qualification-arm-stability
+HYPOTHESIS-ID: m5-image-stage-source-vs-consumer
 
-The s3799 same-build SP-yield validation is complete: both arms reached phase
-640 and passed their positive controls. Default preserved the pending request;
-request-only consumed it once. Neither reached title or hangar, so the
-remaining blocker is elsewhere and the SP-yield contract is not the next
-discriminator.
+The s3800 same-build image/silent qualification is complete. Retail passed its
+whole-RDRAM control and reached title/hangar. Both port arms reached title
+1024 and hangar 512, each passed exact-route and family-edge controls, and
+neither crashed or aborted. Image emitted 5,570 image-stage rows; silent
+emitted zero. Shared task/return/PCM controls were active in both arms.
 
 Competing hypotheses and discriminator:
 
-- H1: the image-stage difference is caused by the audio/image arm itself. Both
-  image and silent arms reach title 1024 and hangar 512 with positive shared
-  task/route/PCM controls; only image produces image-stage/DMA rows.
-- H2: the silent arm is unstable before paired target coverage. Image reaches
-  target phases and silent misses a required positive control or crashes before
-  target; the pair is invalid and no route/audio conclusion is allowed.
-- H3: both arms are stable and share target coverage, but image-stage rows are
-  absent in both. This moves the boundary upstream of the audio-mode choice.
+- H1: image-stage input/source production is absent or zero before the stage;
+  the image-stage consumer is functioning and records the zero payload.
+- H2: the image-stage producer runs, but its output/consumer path is the gap;
+  source-side rows are valid while destination/consumer publication is absent.
+- H3: the apparent difference is instrumentation scope; a same-build control
+  shows the stage rows are not arm-specific after joining by task generation.
 
-The discriminating measurement is one same-build image/silent run with
-phase-gated shared controls, title/hangar transitions, and image-stage/DMA
-rows. A valid result requires positive controls in both arms; otherwise select
-H2 and redesign stability rather than comparing route totals.
+The discriminating measurement is one same-build image/silent run, phase-gated
+at title/hangar, joining each image-stage row by task generation to its source
+DMA/input FNV, destination FNV/nz, and consumer-only row. H1 predicts zero or
+constant input payload with valid stage/consumer publication; H2 predicts
+valid nonzero source rows but missing/invalid destination or consumer rows; H3
+predicts equal joined rows after generation alignment. Both arms must pass the
+existing exact-route and family-edge controls or the run is invalid.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_m5_paired_qualification.sh
+    zsh scratch/agent/run_m5_image_stage_boundary.sh
 
-The first command in that work unit is to write the self-contained
-`scratch/agent/run_m5_paired_qualification.sh` recipe from the qualified
-s3789 image/silent setup, then execute it once; the script must launch both
-arms, preserve the independent retail control, phase-gate the comparison, and
-SIGKILL all children on exit.
-
-Use SIGKILL cleanup, run from `build/`, and preserve the independent retail
-control. Do not revisit launch-order variants or alter the SP-yield contract.
+The next iteration must first obtain ground truth for the source and
+destination ranges from the retail oracle, then write the self-contained
+recipe and batch all join fields in one build/run. Preserve the independent
+retail control, use SIGKILL cleanup, and do not alter the SP-yield contract.

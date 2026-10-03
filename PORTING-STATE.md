@@ -140213,3 +140213,25 @@ keeps both controls positive.
 ORIGIN: no mitigation, generated-code, runtime, or submodule change was
 landed; this was a validation run of the existing `osSpTaskYielded_recomp`
 contract and harness.
+
+## Session 3800 (2026-10-03) — paired image/silent qualification selected the image-stage difference
+
+Added and ran the self-contained `scratch/agent/run_m5_paired_qualification.sh`
+after a clean Debug build. The image and silent port arms and the independent
+retail oracle ran concurrently for the same bounded collection. The oracle
+whole-RDRAM positive control fired and its title `0x00790400` and hangar
+`0x006AB400` phases were observed. Both port arms reached title 1024 and
+hangar 512, each emitted the exact-route and family-edge positive controls,
+and neither reported a crash or abort.
+
+The image arm produced 5,570 `audtask-image-stage-row` rows; silent produced
+zero. Shared controls were active in both arms: task dispatch 83 each,
+audio-return 533/532, PCM source 101 each, and PCM consumer 531 each. This
+selects the image-stage arm difference at the measured scope and refutes arm
+instability and stage absence. It does not yet distinguish a zero-valued
+source/input producer from an output/consumer gap; that is the next probe.
+
+ORIGIN: no mitigation or game-state change was landed. The new harness is
+phase-gated and retains independent retail, exact-route, and family-edge
+positive controls. The run also refreshed the existing generated
+`ucode_024A10.bin` dump artifact.

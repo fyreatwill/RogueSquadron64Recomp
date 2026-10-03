@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3799 (2026-10-03).
+Updated for session 3800 (2026-10-03).
 
 ## Current state
 
@@ -39,14 +39,13 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 paired qualification, next.** s3799 resolved the SP-yield validation
-   coverage failure: both default and request-only arms reached phase 640 and
-   passed their positive controls in one same-build run. Default reported
-   completion-wins (`returned=0,pending_after=1`); request-only reported the
-   one-shot contract (`returned=1,pending_after=0`). Neither arm reached title
-   1024 or hangar 512, selecting H2: the remaining stall is elsewhere. Resume
-   the image/silent qualification only with a new arm-stability discriminator
-   that preserves both controls; do not repeat launch-order variants.
+1. **M5 image-stage boundary, next.** s3800 qualified the image/silent pair:
+   both arms reached title 1024 and hangar 512, both passed phase-scoped
+   controls, and neither crashed or aborted. Image emitted 5,570
+   `audtask-image-stage-row` rows; silent emitted zero. The next experiment
+   must distinguish an image-stage input/source producer gap from an
+   image-stage output/consumer gap, using one same-build run and a positive
+   control for each arm. Do not repeat launch-order or SP-yield variants.
 2. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
@@ -83,6 +82,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-OutputConsumerGap` | Refuted at the measured chain: zero exists before image-stage output and PCM consumption. |
 | `H-M5-SPYieldOneShotContract` | Selected at s3799: default preserves a pending request while request-only consumes it once; both arms reach phase 640. |
 | `H-M5-SPYieldCauseOfStall` | Refuted at s3799: corrected one-shot behavior does not by itself reach title or hangar. |
+| `H-M5-PairedRouteCaptureStable` | Selected at s3800: image and silent both reached title/hangar with controls and no crash/abort. |
+| `H-M5-ImageStageOnly` | Selected at s3800: image emitted 5,570 stage rows while silent emitted zero; shared PCM/return controls remained active. |
+| `H-M5-ImageStageBoundary` | Open: the qualified difference does not identify whether zero-valued input is a source-producer gap or an output/consumer gap. |
 
 ## Evidence ledger — live boundary
 
@@ -178,6 +180,16 @@ Work only the first applicable item. This is one monotonic backlog.
   title 1024 or hangar 512; neither crashed or aborted. The one-shot contract is
   validated, while the missing later progress selects H2 (a different
   scheduler/lifecycle blocker). No audio or route conclusion follows.
+- **3800 — paired image/silent qualification:** the same-build harness ran
+  image, silent, and the independent retail oracle concurrently. The oracle
+  whole-RDRAM control fired and reached title 1024 and hangar 512. Both port
+  arms reached title 1024 and hangar 512, each emitted the exact-route and
+  family-edge positive controls, and neither crashed or aborted. Image emitted
+  5,570 `audtask-image-stage-row` rows; silent emitted zero. Image and silent
+  shared 83 task-dispatch, 533/532 audio-return, 101 PCM-source, and 531 PCM-
+  consumer rows (image/silent respectively). H2 arm instability and H3 stage
+  absence are refuted at this scope; H1 image-stage arm difference is selected.
+  This does not identify the stage's zero-valued input writer or output consumer.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
