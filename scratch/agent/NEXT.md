@@ -24,7 +24,7 @@ run.
 
 Exact command (new paired Start+Z recipe):
 
-    mkdir -p scratch/agent/s3786_oracle_family_start_z
+    mkdir -p scratch/agent/s3787_oracle_family_start_z
     tools/oracle/build/rs64_oracle \
       --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
       --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
@@ -38,7 +38,7 @@ Exact command (new paired Start+Z recipe):
       --pc-phase-log-width 0x00790400:1024 \
       --pc-phase-log-width 0x006AB400:512 \
       --hit-cap 12 --vi-trace \
-      > scratch/agent/s3786_oracle_family_start_z/oracle.log 2>&1
+      > scratch/agent/s3787_oracle_family_start_z/oracle.log 2>&1
 
 Use SIGKILL only if a watchdog is needed. Record the positive control, first
 target VI/origin, each family-PC count, and route-byte counts. Do not infer

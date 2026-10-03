@@ -39,14 +39,15 @@ and `freeManifestSegmentAssets` `0x40($s0)`, with one remaining Gap
 (s3636 overlay `0x1C`/`0x20`). M4 hangar/512 Y=0x8000 is
 not live on the first hangar capture. See `CURRENT-TRUTH.md`.
 
-**Current handoff (s3735):** M5's measured source boundary is the full image
+**Current handoff (s3786):** M5's measured source boundary is the full image
 span `0x1797B0..0x179A48`. Retail target-phase bytes are nonzero while the
 qualified port's joined source-DMEM/output/destination payloads are zero; the
 port's final observed writer is the legitimate `0x800078EC` zero-fill. Exact
-retail byte positions and FNV are still missing, so the next unit is the
-single batched retail-to-port byte join. The generated-symbol sweep stays
-last. Exact live state is in `CURRENT-TRUTH.md`; the complete M5 inventory and
-step sequence are in `M5-AUDIO-PLAN.md`.
+retail byte positions and FNV are now exported. Four independent retail input
+recipes still remain in the 320-wide attract phase, so family reachability is
+the next discriminator. The generated-symbol sweep stays last. Exact live
+state is in `CURRENT-TRUTH.md`; the complete M5 inventory and step sequence
+are in `M5-AUDIO-PLAN.md`.
 
 ## 2. How the pipeline fits together
 

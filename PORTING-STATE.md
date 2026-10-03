@@ -139963,3 +139963,14 @@ PC execution, and VI transitions; it did not modify the ROM, guest state, or
 port.
 
 Evidence: `scratch/agent/s3785_oracle_family_start_a/oracle.log`.
+## Session 3786 (2026-10-03) — compacted current truth after maintenance threshold
+
+`docs/CURRENT-TRUTH.md` was 60,818 bytes, so this was a required maintenance
+iteration and no experiment was run. The document was compacted from 793 to
+164 lines while retaining the live M5 source boundary, latest retail recipe
+results, open hypotheses, operating rules, superseded conclusions, and the
+bounded evidence index. Durable handoff text in `docs/PROJECT-OVERVIEW.md`
+was refreshed from s3735 to s3786. This rules out no technical hypothesis; it
+reduces duplicated historical ledger material. The next work unit remains a
+new independently justified retail navigation recipe with whole-RDRAM and
+family/VI positive controls.
