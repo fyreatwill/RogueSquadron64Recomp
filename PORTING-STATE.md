@@ -140519,3 +140519,24 @@ The next run must arm the existing source-writer, RSP-source, and
 source-transition gates in the same qualified route. No mitigation was added.
 
 Evidence: `scratch/agent/s3814_m5_zero_dmem_producer/image/run.log`.
+
+## Session 3815 (2026-10-03) — qualified zero-DMEM producer census selects RSP/DMA chain
+
+Built `RogueSquadron64Recomp` Debug successfully and ran the isolated real-image
+route with the source-writer, RSP-source, DMEM-coverage, and source-transition
+gates armed. The route reached title VI `0x00790400` at 13.4s and hangar VI
+`0x006AB400` at 24.6s, captured 159 frames, and had no `[CRASH]` or `[ABORT]`.
+The phase, RSP-source, source-reader, DMEM-coverage, source-writer,
+source-transition, and input-DMA positive controls all fired.
+
+At the target join, the RSP source row for DMEM `0xCB0` was zero-valued. The
+input DMA repeatedly wrote `0x1798B0..0x179A48` with
+`FNV=0x762B22A5`, `input_nz=0`, and the corresponding source-range writer
+rows were zero-valued DMA writes. DMEM coverage also recorded zero-valued
+`kind=vector` writers in the source window; the captured input predecessor
+field had `prev_writer_pc=0x00000000`. This selects H2 at the qualified route
+scope: the zero is produced in the RSP/DMEM initialization or DMA chain, not
+by a demonstrated guest CPU store. The exact vector-fill origin remains open.
+No mitigation was added.
+
+Evidence: `scratch/agent/s3815_m5_zero_dmem_producer/image/run.log`.

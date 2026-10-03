@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3814 (2026-10-03).
+Updated for session 3815 (2026-10-03).
 
 ## Current state
 
@@ -39,20 +39,19 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 upstream zero-DMEM producer, next qualified route.** s3814 reached
-   both target phases, but the requested producer census was not armed: the
-   run had zero source-writer, DMEM-coverage, and producer-control rows. Treat
-   this attempt as coverage-invalid H3; the next run must arm the existing
-   `ROGUESQ_LOG_M5_SOURCE_WRITER`, `ROGUESQ_LOG_M5_RSP_SOURCE`, and
-   `ROGUESQ_LOG_M5_SOURCE_TRANSITION` gates in the same qualified image route.
-   Do not interpret the zero `m5-input-dma` payload from this run as a new
-   producer conclusion. s3813 isolated the real image arm and reached title
-   `0x00790400` at 13.4s and hangar
-   `0x006AB400` at 24.6s with no crash/abort and live controls. In hangar,
-   repeated image-stage rows show the live consumer reading all-zero DMEM
-   `0xCB0..0xE48` into `0x1798B0..0x179A48` (`FNV=0x762B22A5`, `nz=0`).
-   Run the existing source-producer census on this now-qualified route; the
-   next boundary is the writer/fill that supplies the zero DMEM vector.
+1. **M5 DMEM vector-fill origin.** s3815 qualified the existing producer
+   census: title `0x00790400` at 13.4s, hangar `0x006AB400` at 24.6s, all
+   census controls live, and no crash/abort. At the target source join, the
+   RSP source row for DMEM `0xCB0` has `nz=0`; the input DMA repeatedly writes
+   `0x1798B0..0x179A48` with `FNV=0x762B22A5`, `nz=0`; and source-range
+   writer rows are DMA writes with zero payloads. DMEM coverage also records
+   zero-valued `kind=vector` writers around the source window, while the input
+   rows expose no nonzero CPU predecessor (`prev_writer_pc=0`). H2 is selected
+   at this route scope: the zero is produced in the RSP/DMEM initialization or
+   DMA chain, not by a guest CPU store. The next bounded probe must attribute
+   the vector writer/fill or prove it is only the preceding DMA, with a
+   positive control and the same target-valid join; do not repeat the census
+   unchanged.
 2. **M5 image-arm stability discriminator, closed at this scope.** The
    isolated image arm reached both target phases with independent phase and
    M5 controls; s3811/s3812 launch-order failures no longer block producer
@@ -103,7 +102,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-DMEMTaskBoundaryStartup` | Selected at s3810 scope: the legacy contract driver reproduced the pre-target image crash at guest PC `0x8000834C`; s3811 reproduced it after removing the legacy diagnostic bundle, so that bundle is not sufficient as the explanation. |
 | `H-M5-MinimalImageStartup` | Selected at s3812 scope: explicit image crashed at `0x8000834C` before target in both launch orderings; explicit silent reached title/hangar. |
 | `H-M5-IsolatedImageTargetValid` | Selected at s3813: image-only route reached title/hangar with phase, task, audio-return, route, and no-crash controls. |
-| `H-M5-ZeroDMEMProducer` | Open: qualified image-stage rows repeatedly consume zero `0xCB0..0xE48`; the upstream writer/fill is not identified. |
+| `H-M5-ZeroDMEMProducer` | Selected as H2 at s3815 route scope: target-valid RSP/DMEM/DMA rows are zero, source writers are DMA/vector activity, and no nonzero CPU predecessor was observed; exact vector-fill origin remains open. |
 
 ## Evidence ledger — live boundary
 
@@ -327,6 +326,18 @@ Work only the first applicable item. This is one monotonic backlog.
   run therefore selects H3 coverage-invalid and adds no producer conclusion;
   its zero input payload is not independent evidence. Evidence:
   `scratch/agent/s3814_m5_zero_dmem_producer/image/run.log`.
+- **3815 — qualified zero-DMEM producer census:** the Debug build passed. The
+  isolated image route reached title at 13.4s and hangar at 24.6s, with 159
+  frames and no crash/abort. Positive phase, RSP-source, source-reader,
+  DMEM-coverage, source-writer, source-transition, and input-DMA controls all
+  fired. At hangar, the RSP source row for DMEM `0xCB0` was zero-valued; the
+  input DMA wrote `0x1798B0..0x179A48` with `FNV=0x762B22A5`, `nz=0`; and the
+  corresponding source-range writer rows were zero-valued DMA writes. DMEM
+  coverage showed zero `kind=vector` writes in the source window, while the
+  input predecessor field exposed no nonzero CPU writer (`prev_writer_pc=0`).
+  This selects H2 at the qualified route scope and leaves the exact vector
+  fill origin open. Evidence:
+  `scratch/agent/s3815_m5_zero_dmem_producer/image/run.log`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
