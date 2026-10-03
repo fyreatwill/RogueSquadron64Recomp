@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3822 (2026-10-03).
+Updated for session 3823 (2026-10-03).
 
 ## Current state
 
@@ -24,8 +24,8 @@ is the legitimate zero-valued `0x800078EC` fill before the image DMA. Session
 3818 joined that writer through the active generated scalar-store census:
 sequence 664 at physical `0x179A44` is the final writer, and every target
 `0x1798B0 -> DMEM 0xCB0` input DMA observed it with zero value. Retail/port
-target-phase parity is ready for a paired capture; no nonzero hangar producer
-is established.
+target-phase parity is now paired at the measured scope; no nonzero hangar
+producer is established.
 
 The complete generated scalar-store census, central host/RSP writer census,
 native page-fault census, and nine bounded exact-offset load candidates are
@@ -44,11 +44,11 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 target-phase retail/port route parity.** s3822 qualified the standalone
-   port image arm: title VI `0x00790400` at 14.3s and hangar VI `0x006AB400`
-   at 23.6s, with phase/task/route/source controls and no crash or abort. The
-   next bounded probe is the paired retail/port capture at the same target
-   phase, including the existing positive controls.
+1. **M5 family route/object identity join.** The source payload boundary is
+   paired at target phase; join the clear-associated route to the S/L/I family
+   objects and determine whether alternate-object stores can reach the image
+   source. Use the existing family-edge and clear-witness controls in one
+   bounded image run.
 2. **M5 port target-phase qualification, closed at this scope.** s3821's pair
    was coverage-invalid because the port arm stopped at VI 640; s3822's
    standalone arm reached both target phases. Do not repeat standalone
@@ -117,6 +117,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailZeroWriterLegitimate` | Selected at s3819: hangar-phase retail `0x800078EC` post-store scalar samples are 816 zero, 0 nonzero, 0 mismatch, 0 unsupported. |
 | `H-M5-RetailNonzeroWriterIdentity` | Closed at s3820 for hangar: exact phase snapshot has zero nonzero bytes; earlier 1024-wide nonzero bytes are erased before target. |
 | `H-M5-PortTargetPhase` | Selected at s3822 for the standalone image route: title 1024 and hangar 512 were reached with all requested controls and no crash/abort. |
+| `H-M5-PairedTargetCoverage` | Selected at s3823: the same-build port image and independent retail oracle both fired positive controls and reached title/hangar target phases without crash/abort. |
+| `H-M5-RetailPortRouteParity` | Selected at s3823 scope: port hangar source DMA was zero (`FNV=0x762B22A5`, `nz=0`), matching the independent s3820 retail hangar snapshot; the s3823 oracle shutdown snapshot was phase-mixed and is not used as exact-span evidence. |
 
 ## Evidence ledger — live boundary
 
@@ -463,6 +465,18 @@ line naming the writer and stating whether its value is legitimate.
   reachability and refutes the paired-run-only port stall at this scope. The
   route-parity result remains open until the paired retail/port capture.
   Evidence: `scratch/agent/s3822_port_target.log`.
+- **3823 — paired target-phase route parity:** the Debug build passed. The
+  same-build port image arm and independent retail oracle both fired their
+  positive controls and reached title `0x00790400` and hangar `0x006AB400`
+  without crash or abort. Port hangar source-DMA rows repeatedly read
+  `0x1798B0 -> DMEM 0xCB0` with `FNV=0x762B22A5`, `nz=0`. The oracle scalar
+  control independently fired at `0x800078EC` with 256/256 zero stores,
+  zero mismatches, and s3820 supplies the exact retail hangar-span parity
+  (`408 bytes`, `nz=0`, same FNV). The s3823 oracle shutdown snapshot was
+  phase-mixed and is not used as exact-span evidence. This selects paired
+  target coverage and parity at the measured scope; family route/object
+  identity remains open. Evidence:
+  `scratch/agent/s3823_m5_paired_route_parity/`.
 
 ## Superseded conclusions
 

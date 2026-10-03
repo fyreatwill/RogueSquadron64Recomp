@@ -140671,3 +140671,25 @@ paired-run-only port stall at this scope. It does not select retail/port route
 parity; the next probe is a complete paired target-phase capture.
 
 Evidence: `scratch/agent/s3822_port_target.log`.
+
+## Session 3823 (2026-10-03) — paired target-phase route parity
+
+Built the Debug target and ran the reconstructed paired s3823 driver. The
+same-build port image arm and independent retail oracle both fired their
+positive controls, reached title VI `0x00790400` and hangar VI `0x006AB400`,
+and had no crash or abort. Port hangar source-DMA rows repeatedly read
+`0x1798B0 -> DMEM 0xCB0` with `FNV=0x762B22A5`, nonzero=0. The oracle's
+independent scalar-store control at `0x800078EC` captured 256/256 zero stores,
+with zero mismatches and unsupported stores. The exact retail hangar snapshot
+from s3820 supplies the second parity line: 408 bytes, nonzero=0, the same FNV.
+
+The s3823 oracle shutdown snapshot was phase-mixed (the oracle's final-memory
+summary reported later nonzero bytes), so it was not used as exact hangar-span
+evidence. This selects paired target coverage and retail/port zero-payload
+parity at the measured scope. It rules out a missing target phase and a
+nonzero hangar writer as the current explanation, but does not identify the
+family route/object identity. The first driver attempt lacked exact oracle
+post-value instrumentation; the fixed driver added it, and the 35-second
+coverage attempt was correctly rejected because retail had not reached hangar.
+
+Evidence: `scratch/agent/s3823_m5_paired_route_parity/`.
