@@ -141034,3 +141034,28 @@ retaining the active M3/M5 boundaries, recent evidence, operating rules, and
 links to durable notes while leaving the append-only ledger unchanged. No
 experiment or runtime conclusion was made. The next unit remains the paired
 retail task-descriptor to image-destination join from s3844.
+## Session 3846 (2026-10-03) — qualified retail image-stage destination role
+
+Ran the paired s3844 recipe with the retail oracle watches expanded to
+`0x167000..0x16C000` and `0x173CB0..0x173DB0`, retaining the whole-RDRAM
+positive control, title/hangar VI gates, type-2 task dump, and the validated
+port drain-in-loop controls. The run was capture-valid: whole-RDRAM fired
+1,062,445 times, retail reached 632 title VIs and 518 hangar VIs, and the
+port produced 2,964 image-DMA joins with no crash or abort.
+
+Retail produced 1,144 phase-gated hangar type-2 task rows at
+`data_ptr=0x80173CB0`. The destination watches recorded 930,770 writes in
+`0x167000..0x16C000`, 120,550 writes in the retail task span, and 1,125 writes
+in the existing `0x1798B0..0x179A48` span. Port image-stage rows placed the
+intermediate destination in the same `0x166xxx..0x167xxx` role before the
+separate `0x1798B0` writeback. This selects the shared destination role at
+bounded scope and rules out H2 (port-only edge), but the broad retail watch
+does not join an individual task generation to an exact writer, length, or
+payload. Exact retail attribution remains open.
+
+ORIGIN: diagnostic-only oracle and port logging; no guest or host state was
+rewritten, skipped, or guarded.
+
+Evidence: `scratch/agent/s3846_m5_task_output_contract_retail/driver.log`,
+`retail.log`, `port.log`, and the updated
+`scratch/agent/run_s3844_m5_task_output_contract_retail.sh`.

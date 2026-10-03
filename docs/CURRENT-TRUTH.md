@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for maintenance session 3845 (2026-10-03).
+Updated for session 3846 (2026-10-03).
 
 ## Current state
 
@@ -45,12 +45,13 @@ Work only the first applicable item. This is one monotonic backlog.
    configured MIPS compiler is absent, and `build/Debug/N64Recomp.exe` is
    absent. Restore/reconfigure those tools, build the patch ELF and library,
    then run the allocator-route smoke. Do not claim H1/H2 before that.
-2. **M5 retail task destination role — open.** Session 3844 selected parity
-   for empty ABI output fields: 516 retail hangar task rows and 3,342 port
-   named rows had zero `output_buff` and `output_buff_size`. Retail uses
-   `data_ptr=0x80173CB0`, while port uses `0x80171E70`; the port span watch
-   does not qualify the retail edge. Join retail task generations to the
-   actual image-stage/writeback destination before declaring equivalence.
+2. **M5 retail task-to-stage join — open exact discriminator.** Session 3846
+   selected the shared destination role at bounded scope: retail reached 1,144
+   hangar type-2 rows at `data_ptr=0x80173CB0`, wrote 930,770 times in
+   `0x167000..0x16C000` and 120,550 times in the task span, while port emitted
+   the corresponding stage-2 `0x166xxx..0x167xxx` destinations. The retail
+   watch is too broad to prove a task-generation edge or exact length; add
+   phase-scoped writer attribution and join it to the retail task rows.
 3. **M5 image task/output edge — qualified port result.** Session 3839 joined
    the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
    found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
@@ -78,7 +79,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-TargetPhaseAudioDmaAbsent` | Selected at s3829: no `rs64_m5_audio_source_dma` invocation during target phases, despite lifetime controls. |
 | `H-M5-FamilyAfterImageStage` | Selected at s3832–s3834: joined family work follows image stage/route context and has no PCM source/consumer match. |
 | `H-M5-TaskOutputFieldsEmptySeparateWriteback` | Selected at s3840 port scope. |
-| `H-M5-RetailTaskOutputFieldParity` | Selected at s3844 for empty fields; retail destination-role equivalence remains open. |
+| `H-M5-RetailTaskOutputFieldParity` | Selected at s3844 for empty fields; s3846 selects shared destination role at bounded scope, exact task join remains open. |
+| `H-M5-RetailTaskStageRole` | Selected at s3846: retail task and candidate image-stage region are both active in hangar with independent phase/whole-RDRAM controls. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 
 ## Evidence ledger — recent durable boundary
@@ -100,6 +102,12 @@ Work only the first applicable item. This is one monotonic backlog.
   rows; port had 3,342 named rows, 11,582 stage rows, and 2,870 image-DMA
   joins. All qualified ABI output fields were zero; retail source was
   `0x80173CB0`, so destination-role equivalence remains open.
+- **3846:** Paired capture passed whole-RDRAM and both target-VI controls with
+  no crash/abort. Retail had 1,144 hangar type-2 task rows and writes in both
+  `0x173CB0..0x173DB0` (120,550) and candidate image-stage
+  `0x167000..0x16C000` (930,770). Port had 2,964 image-DMA joins. This
+  selects shared destination role, but the broad retail watch does not yet
+  join an individual task generation to an exact stage destination.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

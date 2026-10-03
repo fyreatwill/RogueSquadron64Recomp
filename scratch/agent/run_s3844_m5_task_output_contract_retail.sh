@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -u
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-OUT=$ROOT/scratch/agent/s3844_m5_task_output_contract_retail_fixed
+OUT=$ROOT/scratch/agent/s3846_m5_task_output_contract_retail
 mkdir -p "$OUT"
 ORACLE=$ROOT/tools/oracle/build/rs64_oracle
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
@@ -14,7 +14,8 @@ fi
 PRESS='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start'
 cd "$ROOT" || exit 2
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
-  --watch-write 0x0:0x800000 --watch-write 0x1798B0:0x179A48 \
+  --watch-write 0x0:0x800000 --watch-write 0x167000:0x16C000 \
+  --watch-write 0x173CB0:0x173DB0 --watch-write 0x1798B0:0x179A48 \
   --watch-pc 0x80033FCC --pc-task-dump 0x80033FCC --pc-task-type 2 \
   --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 \
   --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
