@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3782 (2026-10-03).
+Updated for session 3783 (2026-10-03).
 
 ## Current state
 
@@ -264,6 +264,16 @@ The route-byte watches saw only 2, 1, and 0 early writes. This selects
 still unevaluable, and no port or audio change is authorized. See
 `scratch/agent/s3782_oracle_family_reach/oracle.log`.
 
+Session 3783 repeated the independent retail qualification with eleven
+150-ms Start pulses. The whole-RDRAM positive control fired 10,003 times, but
+retail remained in the early 320-wide attract phase for all 120 seconds:
+target VIs and all three S/I/L family-PC watches were zero. Candidate
+route-byte writes were 2, 1, and 0. This selects
+`H-M5-RetailStartRecipePreTarget` for this recipe and leaves retail family
+reachability unevaluable; no port instrumentation, mitigation, or audio
+change was made. See
+`scratch/agent/s3783_oracle_family_start/oracle.log`.
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
@@ -271,7 +281,7 @@ Work only the first applicable item. This is one monotonic backlog.
 1. **M5 qualify independent retail family reachability.** The s3782 recipe
    stayed in the 320-wide attract phase despite a positive whole-RDRAM control;
    its return/Z input was therefore not qualified. Run one new oracle recipe
-   using repeated `start` pulses with `--hold-ms 150`, retaining the
+   using repeated `a` pulses with `--hold-ms 150`, retaining the
    whole-RDRAM, route-byte, S/I/L, and target-VI controls. A family hit plus a
    target VI selects retail reachability and enables the H1/H2 route
    comparison; target VI without a family hit is a route-PC mismatch; no target
@@ -378,6 +388,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-PortGuestRouteZero` | Single-source selected at s3781: all 257 qualified port family rows read zero at `0x80141AD0`, `0x8013B038`, and `0x80141AD1`; retail family parity was not reached. |
 | `H-M5-RetailGuestRouteParity` | Unevaluable at s3781: the retail oracle passed its positive control and watched candidate writes, but reached no family PC or target VI in the 60-second run. |
 | `H-M5-RetailRecipePreTarget` | Selected at s3782 for the return/Z recipe: the whole-RDRAM control fired, but retail stayed in 320-wide attract for 120 seconds with no target VI or S/I/L family hit. |
+| `H-M5-RetailStartRecipePreTarget` | Selected at s3783 for the repeated-Start recipe: the whole-RDRAM control fired, but retail stayed in 320-wide attract for 120 seconds with no target VI or S/I/L family hit. |
 
 ## Evidence ledger — live boundary only
 
@@ -388,6 +399,14 @@ Work only the first applicable item. This is one monotonic backlog.
   pre-target recipe/input failure for this arm, not a route-state conclusion.
   The next discriminator is a fresh repeated-Start recipe. See
   `scratch/agent/s3782_oracle_family_reach/oracle.log`.
+
+- **3783 — retail repeated-Start qualification:** the independent oracle's
+  whole-RDRAM control fired 10,003 times. Eleven 150-ms Start pulses still
+  left the VI trace in the early 320-wide attract phase; target VIs and S/I/L
+  execution watches were all zero, with route-byte writes 2/1/0. This selects
+  an input/recipe failure for this arm, not a route-state conclusion. The next
+  discriminator is a genuinely different repeated-A recipe. See
+  `scratch/agent/s3783_oracle_family_start/oracle.log`.
 
 - **3778 — repaired clear-object witness:** the Debug build and image-only
   capture passed the oracle whole-RDRAM control, six family-store controls, and
