@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3789 (2026-10-03).
+Updated for session 3790 (2026-10-03).
 
 ## Current state
 
@@ -44,10 +44,12 @@ Work only the first applicable item. This is one monotonic backlog.
    arm produced 258 family rows and both target VIs, while silent crashed 36
    times in the captured log. Do not repeat launch-order variants. Resume only
    with a new discriminator for arm stability that preserves both controls.
-2. **M3 audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Audit the
-   complete idiom class, identify the writer and legitimacy, and land a guard
-   only for a concrete invalid writer. Closed `rs_free` audits are in
-   PROJECT-OVERVIEW §56.
+2. **M3 runtime allocator qualification.** The complete generated
+   `rs_zcfree` idiom is closed at s3790: `zcfree` forwards its callback `$a1`
+   to the wrapper's `$a0`, and the callback is paired with `rs_zcalloc`.
+   No generated invalid writer or guard is justified. Only resume this class
+   if an independent runtime allocator witness identifies a concrete bad
+   value; otherwise continue with the next systematic M3 class.
 3. **Generated-symbol renaming sweep.** Only after M5 is closed and M3 has no
    new discriminator. Keep slug `generated-symbol-renaming-sweep`.
 
@@ -98,6 +100,12 @@ Work only the first applicable item. This is one monotonic backlog.
   paired family rows. This selects arm-stability H3, not route parity or
   mismatch. The capture script was repaired to use Start+Z, wait for retail
   hangar, wait for oracle completion, and stagger image before silent.
+- **3790 — generated `rs_zcfree` idiom census:** the sole caller at `0x80029CFC`
+  forwards zlib callback `$a1` into `rs_zcfree` `$a0`; `inflateInit2_` installs
+  the paired `rs_zcalloc`/`rs_zcfree` callbacks, and `rs_zcalloc` returns an
+  `rs_malloc` result. No alternate generated writer or invalid-value source
+  was found. H1 is selected at static scope; runtime allocator legitimacy is
+  still unqualified and no guard was added.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

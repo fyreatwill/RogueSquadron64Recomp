@@ -140023,3 +140023,22 @@ guest state, audio gate, or mitigation was changed.
 
 Evidence: `scratch/agent/s3769_m5_family_entry/summary.txt`,
 `scratch/agent/s3769_m5_family_entry/oracle.log`.
+
+## Session 3790 (2026-10-03) — audited the complete rs_zcfree incoming-a0 idiom
+
+Completed the generated-source census for the `rs_zcfree` wrapper at function
+entry `0x8000525C`, whose `rs_free` call is instruction `0x80005268`. There is
+one direct caller: `zcfree` at `0x80029CFC`, whose delay slot forwards callback
+`$a1` into `$a0`. `inflateInit2_` installs the paired `rs_zcalloc` and
+`rs_zcfree` callbacks at stream offsets `0x20` and `0x24`; `rs_zcalloc` returns
+an `rs_malloc` result. The complete generated idiom therefore selects H1 at
+static scope and finds no concrete invalid writer or alternate ABI
+interpretation. Runtime allocator/freelist legitimacy remains unproven, so no
+guard or other mitigation was added.
+
+This rules out manifest fields, DMA-slot payloads, and service-worker words as
+the incoming value for this generated edge. Evidence: `docs/M3-S3790-ZCFREE-
+INCOMING-A0-IDIOM-AUDIT.md`.
+
+ORIGIN: static generated-source audit only; no runtime mitigation or game-state
+change.

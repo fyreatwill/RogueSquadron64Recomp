@@ -1,35 +1,33 @@
-# Next work unit: audit the complete `rs_zcfree` incoming `$a0` idiom
+# Next work unit: bounded generated-symbol renaming lead
 
-HYPOTHESIS-ID: m3-zcfree-a0-idiom-audit
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-The M5 route comparison is parked: s3789 had a valid retail control and a
-valid image arm, but the silent arm crashed before paired family rows. Do not
-repeat that recipe without a new arm-stability discriminator.
+M5 is parked pending a new arm-stability discriminator. The `rs_zcfree`
+incoming-`$a0` M3 class was closed at static scope in s3790 with no guard
+justified. The next unit is one bounded, regeneration-safe symbol-renaming
+lead from the human-mapped decomp symbols, not a runtime experiment.
 
-Competing hypotheses and discriminator:
+Competing hypotheses and discriminator for the lead:
 
-- H1: every `rs_zcfree` call at `0x80005268` receives a legitimate heap
-  pointer from a known allocator/object lifetime; no guard is justified.
-- H2: one or more incoming writers produce a concrete invalid value; the
-  complete idiom census identifies the writer and a narrowly scoped guard is
-  justified only if the writer is proven non-legitimate.
-- H3: the apparent invalid input is a register/ABI interpretation artifact or
-  a dead path; callsites and value provenance cannot establish a real invalid
-  writer, so land no mitigation and document the boundary.
+- H1: the selected placeholder functions have an unambiguous human mapping
+  from the companion symbol/decomp material; rename only those exact symbols.
+- H2: mappings are ambiguous or semantics are not visible; preserve the
+  placeholders and record the unresolved sites.
+- H3: the selected region is already named or outside the current generated
+  tree; select no rename and move to the next ranked lead.
 
-The discriminating measurement is one complete source census of all calls and
-all incoming `$a0` setup idioms for `rs_zcfree` at `0x80005268`, joined to the
-existing generated symbols and allocator/object lifetime evidence. H1/H2/H3
-are decided only after every callsite in the idiom class is classified; a
-single crash or a single suspicious value is insufficient.
+The discriminating measurement is a bounded table of every selected placeholder
+in the chosen region, joined against companion symbol names and call/string
+evidence. A rename is accepted only for an exact one-to-one mapping; the
+result must either change the mapping source or produce a new bounded census.
 
-Exact commands:
+Exact preflight commands:
 
-    rg -n "80005268|rs_zcfree|zcfree" RecompiledFuncs docs src lib
-    rg -n "func_80005268|0x80005268" RecompiledFuncs docs PORTING-STATE.md | tail -40
+    grep -n '^## Session ' PORTING-STATE.md | tail -15
+    rg -n 'func_0x|func_[0-9A-Fa-f]{8}' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -200
+    rg -n '0x8000[0-9A-Fa-f]{4}|func_[0-9A-Fa-f]{8}' docs/game-architecture.md /Users/williambuckley/Documents/Tools/N64Recomp/rogue_squadron64 2>/dev/null | head -200
 
-Before any build, enumerate the complete callsite table in a new bounded note
-under `docs/`, including caller, `$a0` writer, object/lifetime proof, and
-legitimacy. If H2 is proven, implement one guarded override through the
-patches pipeline and build/validate it; otherwise land the census note with
-no mitigation.
+Choose one contiguous, bounded lead from the census, update the existing
+rename mapping/fixup source if and only if the mapping is exact, and verify
+that no generated C file is hand-edited. Do not build unless the mapping
+pipeline requires it; do not start a second region in the same iteration.
