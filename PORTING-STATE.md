@@ -138936,3 +138936,34 @@ Evidence: `docs/M5-S3741-ROUTE-HANDOFF-CENSUS.md`,
 ORIGIN: the changed script only enables diagnostic route candidate/prepare/
 handoff logs; `0x800078EC` remains an observed legitimate zero fill and was
 not suppressed or altered.
+
+## Session 3742 (2026-10-02) — censused earlier route-value writers
+
+Ran the independent retail oracle before building. Its whole-RDRAM positive
+control and route-PC watch fired, and a targeted title-phase write watch around
+physical `0x128C90..0x128D00` recorded retail route-state activity, including
+writer PC `0x8002BD58`. The oracle run was title-only; it did not reach the
+port's qualified hangar phase.
+
+Extended the durable generated-store helper and host diagnostic hook across all
+50 generated translation units, built once, and ran real-audio and silent arms
+concurrently with the qualified LLE/spin-yield/autopilot route. Both arms
+passed the hook positive control and reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`; neither produced a crash or abort before SIGKILL.
+
+The target-phase port census recorded 512 rows in each arm. Every row was a
+zero-valued byte or word store from `0x8001A06C/74` or `0x8001C21C/24` to
+neighboring fields `0x80128C80/84` and `0x80128CE0/E4`. No nonzero writer and
+no scalar writer to the exact route-value fields around `0x80128CD0` or
+`0x80128C92` appeared before the zero route-preparation/handoff rows. This
+selects `H-EarlierWriterAbsent` for the measured scalar-store class and rules
+out `H-EarlierWriterClears` for that class. It leaves exact-field non-scalar
+ownership versus route metadata open. No behavior or mitigation changed.
+
+Evidence: `docs/M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md`,
+`scratch/agent/s3742_oracle_groundtruth/`, and
+`scratch/agent/s3742_m5_route_writer_census/real4.log` plus `silent4.log`.
+
+ORIGIN: the changed runtime and generated-helper code is diagnostic-only. The
+observed neighboring zero writers are legitimate state writes, and
+`0x800078EC` was not suppressed or altered.

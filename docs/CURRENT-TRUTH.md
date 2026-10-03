@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3741 (2026-10-02).
+Updated for session 3742 (2026-10-02).
 
 ## Current state
 
@@ -29,13 +29,15 @@ zero-valued port payload. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 route-value producer census.** s3741 found zero
-   `source_word/source_byte/branch_state` at `0x80019CD8` and zero value
-   arguments at the `0x8000C628` handoff in both target phases; the real-arm
-   source DMA remained zero. Trace the earlier writer/state transition that
-   legitimately supplies this zero route state, with the same retail oracle
-   control and real/silent arms. Do not alter `0x800078EC`. See
-   [M5-S3741-ROUTE-HANDOFF-CENSUS.md](M5-S3741-ROUTE-HANDOFF-CENSUS.md).
+1. **M5 exact route-field ownership.** s3742's all-generated-store census
+   passed controls and reached title/hangar in both arms. It saw only
+   zero-valued neighboring writes at `0x80128C80/84` and `0x80128CE0/E4`,
+   with no nonzero writer to the exact route-value fields around
+   `0x80128CD0`/`0x80128C92`. Join those exact fields against non-scalar
+   stores and route-object setup to distinguish an uninstrumented producer
+   from route metadata unrelated to the image source. Do not alter
+   `0x800078EC`. See
+   [M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md](M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md).
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -60,6 +62,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-RouteHandoffValueAbsent` | Selected at s3741 for the measured route edge: route-preparation source fields and the `0x8000C628` handoff value fields were zero in title and hangar, followed by zero source DMA. |
 | `H-RouteHandoffDropsValue` | Refuted at s3741 for the measured edge: no nonzero predecessor value was observed before the zero handoff. |
 | `H-RouteHandoffAfterClear` | Refuted at s3741 for the measured edge: the handoff was already zero before the zero source DMA; no later-clear ordering was shown. |
+| `H-EarlierWriterAbsent` | Selected at s3742 for the measured scalar-store class: 512 target-phase rows per arm were all zero-valued neighboring writes, with no nonzero exact-field writer. |
+| `H-EarlierWriterClears` | Refuted at s3742 for the measured scalar-store class: no earlier nonzero writer was observed before the zero route state. |
+| `H-RouteStateNotSource` | Open after s3742: exact route fields had no scalar writer, so an uninstrumented/non-scalar producer versus control metadata remains unresolved. |
 | `H-PortFamilyWritesThenClear` | Refuted at s3739 for the qualified hangar source path: all real source-range writer payloads remained zero. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
@@ -119,6 +124,14 @@ Work only the first applicable item. This is one monotonic backlog.
   zero source-DMA rows; silent emitted none. This selects absent value at the
   measured handoff and rules out a nonzero-to-zero drop or later clear there.
   See [M5-S3741-ROUTE-HANDOFF-CENSUS.md](M5-S3741-ROUTE-HANDOFF-CENSUS.md).
+- **3742 — all-generated-store route writer census:** the independent oracle
+  passed its whole-RDRAM control and its title route-PC watch. The real and
+  silent port arms both passed the writer-hook control and reached title and
+  hangar. Their 512 target-phase route-span rows were all zero-valued writes
+  from `0x8001A06C/74` and `0x8001C21C/24` to neighboring fields; no nonzero
+  exact-field writer appeared. This selects absent earlier writer for the
+  measured scalar-store class, while leaving non-scalar ownership versus
+  metadata open. See [M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md](M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.

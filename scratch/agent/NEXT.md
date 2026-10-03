@@ -1,34 +1,34 @@
-# Next work unit: M5 route-value producer census
+# Next work unit: M5 exact route-field ownership
 
-HYPOTHESIS-ID: m5-route-value-producer-census
+HYPOTHESIS-ID: m5-exact-route-field-ownership
 
-Run one batched, phase-gated capture tracing the earlier writer/state
-transition that supplies the zero `source_word/source_byte/branch_state` seen
-at `0x80019CD8` and the zero value fields at the `0x8000C628` handoff. Retain
-the oracle whole-RDRAM control, both source watches, both VI snapshots, exact
-source-span stores, route candidate/prepare/handoff logs, and real/silent
+Run one batched, phase-gated capture that traces the exact route-object fields
+used by the qualified route (`a0=0x80128C70`, fields `+0x60` and `+0x22`) and
+joins every scalar and non-scalar store to the route prepare/handoff rows and
+source-DMA row. Retain the oracle whole-RDRAM control, title route-PC watch,
+both VI snapshots, route candidate/prepare/handoff logs, and real/silent
 controls. Do not change port behavior or suppress the legitimate
-`0x800078EC` zero fill. Extend the existing script/instrument in one build
-and one run; use the oracle before building.
+`0x800078EC` zero fill. Ask the oracle before building for an exact-field
+write watch and its writer-PC histogram; then make one build and one paired
+run.
 
 Competing hypotheses:
 
-- `H-EarlierWriterAbsent`: the earlier route-state writer never publishes a
-  nonzero source/value state before the qualified route.
-- `H-EarlierWriterClears`: an earlier legitimate writer clears a previously
-  nonzero route value before the qualified route.
-- `H-RouteStateNotSource`: the observed route fields are control metadata and
-  the missing source payload is produced by a separate unjoined state/object.
+- `H-ExactFieldUnwritten`: the exact fields have no writer before the qualified
+  route, so the zero route state is an absent producer.
+- `H-ExactFieldNonScalar`: a byte-lane, doubleword, DMA, or host-side write
+  supplies the fields outside the scalar census.
+- `H-RouteStateNotSource`: the exact fields are control metadata and the image
+  source is produced by a separate unjoined object.
 
-Discriminator: join the first earlier writer and its value to the first
-route-preparation row, handoff row, and qualified source-DMA row in each
-target phase. No earlier nonzero writer plus zero route state selects
-`H-EarlierWriterAbsent`; a nonzero earlier writer followed by zero route state
-selects `H-EarlierWriterClears`; matching route metadata with no source join
-selects `H-RouteStateNotSource`. Missing oracle control or either target phase
-is unevaluable.
+Discriminator: an exact-field writer with nonzero payload before a zero route
+row selects `H-ExactFieldNonScalar` (or proves a clear); no exact-field writer
+with a valid source-DMA join selects `H-ExactFieldUnwritten`; matching route
+metadata with no exact-field/source join selects `H-RouteStateNotSource`.
+Missing oracle control, positive port control, or either port target phase is
+unevaluable.
 
-Ground truth must be checked before building: retain the existing oracle
-whole-RDRAM watch, both phase watches, and retail writer-PC options. A
-positive-control miss, absent phase, or absent real-audio source route makes
-the result unevaluable.
+Ground truth must be checked before building: use the oracle whole-RDRAM watch,
+the exact physical route-field range, title route-PC watch, and writer-PC
+histogram. A positive-control miss, absent title/hangar phase, or absent
+real-audio source route makes the result unevaluable.
