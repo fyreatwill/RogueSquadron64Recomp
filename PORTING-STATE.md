@@ -139314,3 +139314,19 @@ the writer is generated game code and its value remains unevaluated.
 Evidence: `docs/M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md`,
 `scratch/agent/s3755_oracle_groundtruth/oracle.log`, and
 `scratch/agent/s3755_m5_taskdata_native_pair/{real,silent}.log`.
+
+## Session 3756 (2026-10-02) — attempted ARM64 native task-data value attribution
+
+Built a Debug binary after extending the existing macOS ARM64 task-data page
+fault witness to decode ordinary unsigned-immediate `STRB`/`STRH`/`STR` source
+registers and values. The first paired run was invalid because it omitted the
+validated LLE/spin-yield/autopilot route and never reached target VIs. The
+corrected route reached 1024 and 512 in both arms but omitted the explicit
+watcher gate. The final paired real/silent run enabled the gate and passed the
+page positive control. It was still unevaluable: the real arm later crashed in
+`musyxBuildVoiceCommandList`, silent crashed in `spTaskSchedulerThread`, and
+the only exact-range fault was pre-phase. The control instruction
+`0x782B6948` was undecodable; no target-phase decoded value or post-store row
+was obtained. This rules out neither nonzero nor zero native task-data stores;
+it rules out treating this run as evidence. The next probe is target-only
+decoding with the same positive control and explicit run-stability outcome.

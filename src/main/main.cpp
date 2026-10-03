@@ -6340,6 +6340,25 @@ static std::atomic<uint64_t> g_m5_task_fault_n{0};
 static std::atomic<uint64_t> g_m5_task_fault_control_n{0};
 static std::atomic<uint64_t> g_m5_task_fault_exact_n{0};
 
+#if defined(__APPLE__) && defined(__aarch64__)
+static bool m5_task_decode_str(uint32_t insn, const ucontext_t* uc,
+                               uint32_t& width, uint64_t& value,
+                               uint32_t& rt) {
+    uint32_t base = insn & 0xFFC00000u;
+    switch (base) {
+    case 0x39000000u: width = 1; break;
+    case 0x79000000u: width = 2; break;
+    case 0xB9000000u: width = 4; break;
+    case 0xF9000000u: width = 8; break;
+    default: return false;
+    }
+    rt = insn & 31u;
+    value = rt == 31u ? 0u : uc->uc_mcontext->__ss.__x[rt];
+    if (width < 8) value &= (1ull << (width * 8u)) - 1ull;
+    return true;
+}
+#endif
+
 static bool m5_task_fault_try_handle(siginfo_t* info, void* ucontext_raw) {
     if (!g_m5_task_fault_enabled.load(std::memory_order_acquire) ||
         !info || !info->si_addr) return false;
@@ -6356,13 +6375,18 @@ static bool m5_task_fault_try_handle(siginfo_t* info, void* ucontext_raw) {
     if (exact) g_m5_task_fault_exact_n.fetch_add(1, std::memory_order_relaxed);
     else g_m5_task_fault_control_n.fetch_add(1, std::memory_order_relaxed);
 
-    uint64_t pc = 0, lr = 0;
+    uint64_t pc = 0, lr = 0, store_value = 0;
+    uint32_t store_width = 0, store_rt = 0, store_insn = 0;
+    bool store_decoded = false;
 #if defined(__APPLE__) && defined(__aarch64__)
     if (ucontext_raw) {
         ucontext_t* uc = static_cast<ucontext_t*>(ucontext_raw);
         if (uc->uc_mcontext) {
             pc = (uint64_t)uc->uc_mcontext->__ss.__pc;
             lr = (uint64_t)uc->uc_mcontext->__ss.__lr;
+            store_insn = *reinterpret_cast<const uint32_t*>(pc);
+            store_decoded = m5_task_decode_str(store_insn, uc, store_width,
+                                               store_value, store_rt);
         }
     }
 #else
@@ -6377,15 +6401,20 @@ static bool m5_task_fault_try_handle(siginfo_t* info, void* ucontext_raw) {
     const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
                              (width == 512u && origin == 0x006AB400u);
     if (n == 1) {
-        fprintf(stderr, "[m5-task-write-fault-control] first=1 phys=0x%06X pc=0x%llX\n",
-            phys, (unsigned long long)pc);
+        fprintf(stderr, "[m5-task-write-fault-control] first=1 phys=0x%06X pc=0x%llX "
+                       "insn=0x%08X decoded=%u width=%u rt=%u value=0x%llX\n",
+            phys, (unsigned long long)pc, store_insn, store_decoded ? 1u : 0u,
+            store_width, store_rt, (unsigned long long)store_value);
     }
     if (exact && route_active && target_phase && n <= 512) {
         fprintf(stderr,
             "[m5-task-write-fault] n=%llu phys=0x%06X phase=%u width=%u "
-            "origin=0x%06X arm=%s route_ordinal=%u route_row=%u pc=0x%llX lr=0x%llX\n",
+            "origin=0x%06X arm=%s route_ordinal=%u route_row=%u pc=0x%llX lr=0x%llX "
+            "insn=0x%08X decoded=%u store_width=%u rt=%u store_value=0x%llX\n",
             (unsigned long long)n, phys, phase, width, origin, arm ? arm : "n/a",
-            ordinal, row, (unsigned long long)pc, (unsigned long long)lr);
+            ordinal, row, (unsigned long long)pc, (unsigned long long)lr,
+            store_insn, store_decoded ? 1u : 0u, store_width, store_rt,
+            (unsigned long long)store_value);
     }
     fflush(stderr);
     return true;

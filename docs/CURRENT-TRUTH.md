@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3755 (2026-10-02).
+Updated for session 3756 (2026-10-02).
 
 ## Current state
 
@@ -30,8 +30,11 @@ generated scalar-store census for the task-data object is also closed: both
 qualified port arms executed target-phase zero-valued stores, with no nonzero
 producer at `0x80171E70`. A new native page-fault census now proves generated
 game code also writes the task-data page in both arms, but it does not capture
-the stored value; the next boundary is value attribution for those native
-writers. See [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md).
+the stored value. Session 3756 added ARM64 source-register decoding, but its
+paired capture was unevaluable: the real arm hit the MusyX crash path and the
+silent arm crashed before target gating, with no target-phase rows. See
+[M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
+and [M5-S3756-TASK-DATA-NATIVE-VALUE.md](M5-S3756-TASK-DATA-NATIVE-VALUE.md).
 
 ## Next steps
 
@@ -45,8 +48,11 @@ Work only the first applicable item. This is one monotonic backlog.
    retaining the page positive control, scalar census, source join, and retail
    writer attribution. A nonzero value selects a concrete native producer;
    zero-only rows classify these as legitimate clears/stores and move the
-   boundary onward. Do not repeat the scalar census, central API census,
-   closed route-load list, or alter `0x800078EC`.
+   boundary onward. Session 3756's first value-decoding attempt was
+   unevaluable because its paired run crashed before target attribution. Retry
+   with target-only instruction decoding and a single stable target-phase arm;
+   retain the same-run page positive control. Do not repeat the scalar census,
+   central API census, closed route-load list, or alter `0x800078EC`.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -84,6 +90,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-TaskDataRspProducer` | Refuted at s3754 for central RSP DMEM-to-RDRAM transfers: the RSP API control fired in both arms but no target-span row appeared. |
 | `H-TaskDataNonScalarAbsent` | Selected at s3754 for the censused central host/RSP classes; arbitrary direct/native and other non-central writers remain open. |
 | `H-TaskDataNativeWriteObserved` | Selected at s3755: phase-armed native page faults touched the target span in both real/silent arms; stored value remains unevaluated. |
+| `H-TaskDataNativeValueDecoded` | Unevaluable at s3756: ARM64 decoding was added, but the paired run had no target-phase attribution rows; real/silent crashed in separate paths. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
