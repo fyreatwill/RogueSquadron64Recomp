@@ -141283,3 +141283,14 @@ edge has no qualified nonzero retail producer yet.
 
 ORIGIN: diagnostic-only oracle writer execution and scalar-store sampling; no
 guest or host state was rewritten, skipped, or guarded.
+## Session 3858 (2026-10-03) — re-confirmed M3 guard validation environment block
+
+Ran the prescribed M3 validation checks from `scratch/agent/NEXT.md` before
+building: `command -v mips64-elf-gcc` and `command -v mips64-elf-ld` found
+nothing, `build/Debug/N64Recomp.exe` was absent, and
+`cmake --build build --config Debug --target PatchesLib` failed with `No rule
+to make target PatchesLib`. The direct result selects the unavailable-pipeline
+hypothesis and provides no allocator or metadata-slot behavior evidence. It
+rules out only a successful validation in the current environment; the landed
+guard remains unvalidated. The next unit returns to the open M5 retail
+nonzero-producer census.

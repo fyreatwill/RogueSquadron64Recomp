@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3857 (2026-10-03).
+Updated for session 3858 (2026-10-03).
 
 ## Current state
 
@@ -45,7 +45,7 @@ Work only the first applicable item. This is one monotonic backlog.
    add a writeback guard or infer a destination from the port address. The
    remaining M5 work is to identify a legitimate nonzero retail producer or
    prove the task/output edge is absent at this scope.
-2. **M3 heap guard validation — blocked dependency.** Sessions 3852–3856
+2. **M3 heap guard validation — blocked dependency.** Sessions 3852–3858
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
    linker-published addresses before queue-link stores. ORIGIN: those globals are
@@ -57,7 +57,11 @@ Work only the first applicable item. This is one monotonic backlog.
    The configured generator has no `PatchesLib` target, the MIPS compiler/LD
    are absent, and `build/Debug/N64Recomp.exe` is absent. Restore/reconfigure
    those tools, build the patch ELF and library, then run the allocator-route
-   smoke. Do not claim allocator behavior from the guard until then.
+   smoke. Session 3858 repeated the direct prerequisite checks: neither MIPS
+   tool was on PATH, `build/Debug/N64Recomp.exe` was absent, and CMake still
+   had no `PatchesLib` target (`No rule to make target PatchesLib`). This
+   selects the environment block again; do not claim allocator behavior from
+   the guard until the patch pipeline is restored.
 3. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
    supplied independent retail and validated port target coverage and exact
    hangar zero-payload parity. Do not repeat standalone qualification or the
@@ -183,6 +187,12 @@ Work only the first applicable item. This is one monotonic backlog.
   mismatch=0. The port independently emitted target-phase image-DMA joins and
   no crash/abort markers. This selects `H-M5-800078ECZeroFill` and rules out
   that writer as the nonzero image producer at the qualified scope.
+- **3858:** The prescribed M3 validation was attempted once more. `command -v`
+  found neither `mips64-elf-gcc` nor `mips64-elf-ld`; the executable check for
+  `build/Debug/N64Recomp.exe` failed; and
+  `cmake --build build --config Debug --target PatchesLib` returned
+  `No rule to make target PatchesLib`. This is direct environment evidence,
+  not allocator behavior, so the metadata-slot guard remains unvalidated.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

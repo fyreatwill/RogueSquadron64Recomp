@@ -1,31 +1,40 @@
-# Next work unit: validate the landed M3 heap metadata-slot guard
+# Next work unit: census the remaining retail writers for the M5 image span
 
-HYPOTHESIS-ID: m3-heap-guard-validation
+HYPOTHESIS-ID: m5-retail-nonzero-producer-census
 
-M5 session 3857 ruled out the dominant `0x800078EC` writer as a nonzero
-image producer. No legitimate retail producer is currently identified, so do
-not add an M5 writeback guard or repeat the closed destination census.
+Session 3858 directly re-confirmed that the M3 patch pipeline is unavailable:
+the MIPS compiler/linker, generated N64Recomp executable, and `PatchesLib`
+target are all absent. Do not repeat the blocked build until those prerequisites
+change. M5 remains the highest-priority applicable unit; session 3857 ruled out
+the dominant `0x800078EC` writer as a nonzero image producer.
 
 Competing hypotheses and discriminator:
 
-- H1: the configured patch pipeline builds and the guard-linked allocator
-  smoke reaches the guarded metadata-slot stores without rejecting legitimate
-  fixed-slot pointers.
-- H2: the pipeline/toolchain is still unavailable, so allocator behavior is
-  unevaluable and no guard conclusion is allowed.
-- H3: the build succeeds but the smoke shows an unexpected metadata-slot
-  value; classify the writer and stop before changing the guard.
+- H1: another legitimate retail writer produces nonzero bytes in the qualified
+  `0x1798B0..0x179A48` hangar span.
+- H2: all remaining retail writers to that span are zero-fill or unrelated
+  activity, so no nonzero producer exists at the qualified target phase.
+- H3: the apparent remaining writer is an attribution/watch artifact; the
+  independent whole-RDRAM control or PC/value join fails and the census is
+  unevaluable.
 
-The discriminator is a successful `PatchesLib` build followed by the existing
-allocator-route smoke, with the fixed linker addresses and guard diagnostics
-captured. H1 requires the build and smoke; H2 is selected only by direct
-tool/target failure; H3 requires a completed smoke with a value mismatch.
+The discriminator is one same-run oracle capture that enumerates every PC
+writing the span during title/hangar phase, samples the written scalar value,
+and joins each writer to a positive whole-RDRAM watch plus both target-VI
+controls. H1 requires a phase-gated nonzero writer with an independent PC/value
+join; H2 requires complete writer coverage with only zero/unrelated values; H3
+is selected if either positive control or the PC/value attribution is missing.
+Do not add a writeback guard from H2.
 
-Exact checks:
+Exact preparation and run shape:
 
-    command -v mips64-elf-gcc mips64-elf-ld
-    test -x build/Debug/N64Recomp.exe
-    cmake --build build --config Debug --target PatchesLib
+    sed -n '1,220p' docs/F5-UCODE-REFERENCE.md
+    rg -n '1798B0|800078EC|retail.*writer|scalar.*store' scratch/agent tools docs
+    git status --short
+    # Reuse the existing paired retail/port oracle driver after locating its
+    # writer-census entrypoint; arm whole-RDRAM, title 1024, and hangar 512
+    # controls in the same run, with SIGKILL watchdog termination.
 
-If the prerequisites are restored, run the allocator-route smoke documented
-in `patches/README.md`; do not claim allocator behavior from a failed build.
+Before building instrumentation, verify the oracle driver is the independent
+retail witness and that the positive controls are armed. Batch the complete
+remaining-PC/value table in one build/run; do not run a single-PC follow-up.
