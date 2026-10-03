@@ -139650,3 +139650,26 @@ stores; the new code only records effective destinations and values. Evidence:
 docs/M5-S3770-FAMILY-STORE-PROVENANCE.md,
 scratch/agent/s3770_m5_family_store/, and
 scratch/agent/s3770_retail_groundtruth_2/oracle.log.
+
+## Session 3771 (2026-10-02) — attempted alternate-object clear/route join
+
+The s3771 work unit extended the existing family-store witness with a
+process-wide clear-associated allocation object from the `0x8008F2CC` handoff,
+exact/span membership in its `0x298`-byte allocation, and the existing route
+ordinal/row. The Debug build passed. The fixup was also repaired for the
+current regenerated source shape and the generated host ABI was corrected to
+pass `rdram` as the first argument after an initial witness crash identified
+the mismatch.
+
+The final concurrent retail-oracle/image/silent capture was unevaluable: both
+port arms crashed before title at `spTaskSchedulerThread+9556`, and therefore
+emitted no target family or clear-join rows. Retail reached its whole-RDRAM
+positive-control threshold but no target phase in this capture. This does not
+select or refute alternate-object legitimacy, route/object identity mismatch,
+or the I hangar-edge hypothesis. No game value, clear, allocation, or audio
+gate was changed.
+
+ORIGIN: existing family stores and the clear allocation are legitimate game
+operations; the added fields are diagnostic-only. Evidence:
+docs/M5-S3771-ALTERNATE-OBJECT-JOIN.md and
+scratch/agent/s3770_m5_family_store/.

@@ -419,6 +419,7 @@ static thread_local uint32_t g_rs64_m5_field348_static_callsite = 0;
 static thread_local uint32_t g_rs64_m5_pcm_callsite = 0;
 static thread_local uint32_t g_rs64_m5_static_rs_memset_callsite = 0;
 static thread_local uint32_t g_rs64_m5_static_rs_memset_ra = 0;
+static std::atomic<uint32_t> g_rs64_m5_clear_object{0};
 extern "C" uint64_t rs64_m5_clear_branch_dmem_sequence();
 extern "C" uint64_t rs64_m5_clear_branch_source_sequence();
 
@@ -432,10 +433,16 @@ extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, ui
     if (enabled < 0) {
         const char* e = std::getenv("ROGUESQ_LOG_M5_WRITER_SETUP");
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* family = std::getenv("ROGUESQ_LOG_M5_FAMILY_STORE");
         enabled = ((e && e[0] && e[0] != '0') ||
+                   (family && family[0] && family[0] != '0') ||
                    (all && all[0] && all[0] != '0')) ? 1 : 0;
     }
     if (!enabled) return;
+    if (callsite == 0x8008F2CCu && a2 == 0x298u &&
+        a0 >= 0x80000000u && a0 < 0x80800000u) {
+        g_rs64_m5_clear_object.store(a0, std::memory_order_release);
+    }
     uint32_t width = rs64_vi_committed_width();
     uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     if (!((width == 1024u && origin == 0x006AB800u) ||
@@ -456,10 +463,13 @@ extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, ui
     std::fprintf(stderr,
         "[m5-writer-setup] n=%u edge=0x%08X phase=%u width=%u origin=0x%06X "
         "ra=0x%08X a0=0x%08X a2=0x%08X s0=0x%08X s1=0x%08X "
-        "t0=0x%08X t1=0x%08X target=%u obj0=0x%08X obj4=0x%08X s0p60=0x%08X s1p60=0x%08X clear0=0x%08X clear4=0x%08X\n",
+        "t0=0x%08X t1=0x%08X target=%u clear_obj=0x%08X alloc_len=0x%X "
+        "obj0=0x%08X obj4=0x%08X s0p60=0x%08X s1p60=0x%08X clear0=0x%08X clear4=0x%08X\n",
         rows, callsite, rs64_phase_ord(), width, origin, ra, a0, a2,
         s0, s1, t0, t1,
         (a0 == 0x801797B0u && a2 == 0x298u) ? 1u : 0u,
+        g_rs64_m5_clear_object.load(std::memory_order_acquire),
+        a2,
         word(a0), word(a0 + 4u), word(s0 + 0x60u), word(s1 + 0x60u), word(0x801797B0u), word(0x801797B4u));
     std::fflush(stderr);
     ++rows;
@@ -565,12 +575,20 @@ extern "C" void rs64_m5_family_store(const char* family, uint32_t pc,
     const uint32_t lo = title ? 0x80178C80u : 0x801797B0u;
     const uint32_t hi = title ? 0x80178F80u : 0x80179A48u;
     const bool target = addr >= lo && addr < hi;
+    const uint32_t clear_object =
+        g_rs64_m5_clear_object.load(std::memory_order_acquire);
+    const bool clear_object_exact = clear_object != 0u && addr == clear_object;
+    const bool clear_object_span = clear_object != 0u &&
+                                   addr >= clear_object &&
+                                   addr < clear_object + 0x298u;
     std::fprintf(stderr,
         "[m5-family-store] family=%s n=%u pc=0x%08X width=%c phase=%u vi_width=%u origin=0x%06X "
-        "arm=%s active=%u ordinal=%u row=%u exit=%d addr=0x%08X value=0x%08X target=%u\n",
+        "arm=%s active=%u ordinal=%u row=%u exit=%d addr=0x%08X value=0x%08X target=%u "
+        "clear_obj=0x%08X clear_exact=%u clear_span=%u\n",
         family, rows[which], pc, width, rs64_phase_ord(), vi_width, origin,
         arm ? arm : "n/a", active ? 1u : 0u, ordinal, route_row,
-        exit_reason, addr, value, target ? 1u : 0u);
+        exit_reason, addr, value, target ? 1u : 0u, clear_object,
+        clear_object_exact ? 1u : 0u, clear_object_span ? 1u : 0u);
     std::fflush(stderr);
     ++rows[which];
 }

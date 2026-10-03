@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3770 (2026-10-02).
+Updated for session 3771 (2026-10-02).
 
 ## Current state
 
@@ -162,6 +162,16 @@ alternate-object provenance for S/L and absent target edge for I; legitimacy
 of the alternate route and its identity relative to the 0x8008F2CC clear
 remain open. No mitigation was added. See
 [M5-S3770-FAMILY-STORE-PROVENANCE.md](M5-S3770-FAMILY-STORE-PROVENANCE.md).
+
+Session 3771 added the next regeneration-safe join fields: the process-wide
+clear-associated allocation object from `0x8008F2CC`, exact/span membership,
+and the existing route key on S/L/I family-store rows. The Debug build passed,
+but the final concurrent oracle/image/silent capture was unevaluable: both
+port arms crashed before target at `spTaskSchedulerThread+9556`, while retail
+only reached its whole-RDRAM positive-control threshold. The first attempt
+also exposed and fixed a missing generated-host `rdram` argument in the new
+witness ABI. No alternate-object or route-identity hypothesis is selected or
+refuted. See [M5-S3771-ALTERNATE-OBJECT-JOIN.md](M5-S3771-ALTERNATE-OBJECT-JOIN.md).
 
 ## Next steps
 

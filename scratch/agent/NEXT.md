@@ -1,38 +1,31 @@
-# Next work unit: M5 alternate-object legitimacy versus route identity
+# Next work unit: qualify the repaired alternate-object join
 
 HYPOTHESIS-ID: m5-retail-writer-port-edge
 
-Use s3770's boundary: in both port arms, S/L internal stores reached only
-alternate object addresses in title and hangar; I produced title setup stores
-but no hangar-phase store bucket. No family store reached either target
-buffer. The next census must join those alternate objects to the clear
-associated object and active route.
+The s3771 join is ABI-correct and built, but the paired capture was
+unevaluable because both port arms stopped before target. Run one fresh
+concurrent retail-oracle/image/silent capture with the existing family-store
+and writer-setup logs. Do not add another field, change the clear, inject a
+payload, or change an audio gate.
 
-Competing hypotheses:
+Exact commands:
 
-- H-M5-AlternateObjectLegitimate: S/L write a legitimate alternate asset
-  object, and I is legitimately title-only setup.
-- H-M5-RouteObjectIdentityMismatch: the family bodies derive an object that
-  should be the clear-associated route object, but the port's route/object
-  identity is mismatched.
-- H-M5-I-HangarEdgeDropped: I's hangar absence is a call/phase edge loss,
-  not legitimate setup-only behavior.
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    zsh scratch/agent/run_s3770_m5_family_store.sh
 
-Discriminator: one regeneration-safe, phase-gated census that records each
-S/L/I family store destination together with the clear-associated allocation
-object from 0x8008F2CC, allocator return, route ordinal/row, and family
-phase. H-M5-AlternateObjectLegitimate wins if alternate destinations match a
-distinct, consistently allocated asset object and I remains setup-only.
-H-M5-RouteObjectIdentityMismatch wins if they should match the clear/route
-object but do not. H-M5-I-HangarEdgeDropped wins only if I's hangar call and
-object are present in retail/port controls but its generated store edge is
-missing.
+Before interpreting rows, require the oracle whole-RDRAM positive control and
+both port arms' `origin=0x00790400` and `origin=0x006AB400` phase rows. The
+family-store controls must fire in the same run. The new clear-join control is
+the presence of `clear_obj=0x...` on family rows.
 
-Before building, locate the existing clear, allocator, route snapshot, and
-s3770 store anchors with rg in funcs_2.c, funcs_6.c, funcs_23.c, and
-fixup_game_funcs.py.
+Discriminator:
 
-Use one fixup-script batch, one Debug build, and one concurrent oracle/image/
-silent run. Keep the whole-RDRAM control, both target VIs, and all passive
-breadcrumbs. Do not suppress or replace the clear, inject payloads, or change
-an audio gate.
+- `clear_span=1` for alternate S/L rows, with a stable distinct clear object,
+  supports a legitimate alternate asset object.
+- `clear_span=0` with a stable clear object and matching route ordinals keeps
+  route/object identity mismatch live.
+- I rows in hangar, or a positive retail/port I call edge with no generated
+  store, selects the I hangar-edge hypothesis.
+- Missing either target phase or any positive control is an unevaluable
+  qualification failure; repair/requalify rather than update the hypothesis
+  table.
