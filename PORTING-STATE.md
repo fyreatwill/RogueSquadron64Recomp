@@ -139674,26 +139674,6 @@ operations; the added fields are diagnostic-only. Evidence:
 docs/M5-S3771-ALTERNATE-OBJECT-JOIN.md and
 scratch/agent/s3770_m5_family_store/.
 
-## Session 3776 (2026-10-02) — split writer-setup probe from route crash
-
-Rebuilt Debug and ran `scratch/agent/run_s3775_m5_probe_split.sh`, with two
-same-build image arms beside the retail oracle: control had writer-setup
-logging disabled and probe had it enabled. The oracle whole-RDRAM positive
-control fired. Both arms fired all six family-store controls and the
-writer-setup input control, reached title `1024 @ 0x00790400` and hangar
-`512 @ 0x006AB400`, and produced no crash or `last-guest-pc` marker before
-SIGKILL cleanup. Neither arm emitted the family-edge control.
-
-This selects H3: enabling the writer-setup witness did not reproduce the s3775
-pre-target crash, so that witness is qualified for the next clear-object/I-edge
-join. The missing family-edge row remains unevaluable, and no conclusion about
-alternate-object legitimacy or route identity follows. No mitigation, value,
-clear, allocation, route, or audio-gate change was made.
-
-ORIGIN: the witness observes existing game writer setup; its values are not
-modified. Evidence: `docs/M5-S3776-PROBE-SPLIT.md` and
-`scratch/agent/s3775_m5_probe_split/`.
-
 ## Session 3772 (2026-10-02) — requalified alternate-object join attempt
 
 The s3772 work unit ran the existing clear/object join twice with the retail
