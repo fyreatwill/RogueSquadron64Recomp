@@ -141294,3 +141294,20 @@ hypothesis and provides no allocator or metadata-slot behavior evidence. It
 rules out only a successful validation in the current environment; the landed
 guard remains unvalidated. The next unit returns to the open M5 retail
 nonzero-producer census.
+
+## Session 3859 (2026-10-03) — added active-queue head integrity guard
+
+The M5 retail-writer census was not selected because it would have been
+another observation-only run after the mandatory no-engineering-change
+streak. The M3 patch pipeline remains unavailable, so I performed one bounded
+guard-class audit in `patches/heap_guards.c`. The queue insertion path now
+captures `*heap_other_listhead` and rejects a non-null value unless it is a
+complete aligned KSEG0 allocator block before dereferencing/linking it.
+ORIGIN: the active-queue head is published through the fixed metadata slot at
+`0x801163FC`; an arbitrary KSEG0 pointer is not a legitimate queue node.
+
+This is a real patch-source change, but runtime validation did not run because
+`mips64-elf-gcc`, `mips64-elf-ld`, `build/Debug/N64Recomp.exe`, and the CMake
+`PatchesLib` target remain absent. The change rules out no allocator behavior;
+the next discriminator is a successful patch build followed by the existing
+allocator-route smoke. The M5 writer census remains open and was not rerun.

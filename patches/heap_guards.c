@@ -136,7 +136,12 @@ RECOMP_PATCH Block* func_80007D74(void) {
         return NULL;
     }
 
-    if (*heap_other_listhead != NULL) {
+    Block* queue_head = *heap_other_listhead;
+    if (queue_head != NULL && !block_ok(queue_head)) {
+        return NULL;
+    }
+
+    if (queue_head != NULL) {
         // Queue non-empty — append after current node.
         if (!block_ok(tail->next)) {
             return NULL;

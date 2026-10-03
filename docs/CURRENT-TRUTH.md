@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3858 (2026-10-03).
+Updated for session 3859 (2026-10-03).
 
 ## Current state
 
@@ -45,7 +45,7 @@ Work only the first applicable item. This is one monotonic backlog.
    add a writeback guard or infer a destination from the port address. The
    remaining M5 work is to identify a legitimate nonzero retail producer or
    prove the task/output edge is absent at this scope.
-2. **M3 heap guard validation — blocked dependency.** Sessions 3852–3858
+2. **M3 heap guard validation — blocked dependency.** Sessions 3852–3859
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
    linker-published addresses before queue-link stores. ORIGIN: those globals are
@@ -60,8 +60,12 @@ Work only the first applicable item. This is one monotonic backlog.
    smoke. Session 3858 repeated the direct prerequisite checks: neither MIPS
    tool was on PATH, `build/Debug/N64Recomp.exe` was absent, and CMake still
    had no `PatchesLib` target (`No rule to make target PatchesLib`). This
-   selects the environment block again; do not claim allocator behavior from
-   the guard until the patch pipeline is restored.
+   selects the environment block again. Session 3859 added an active-queue-head
+   integrity guard: a non-null head is now required to be a complete aligned
+   KSEG0 block before queue-link stores. ORIGIN: the allocator's active-queue
+   head slot at `0x801163FC` is written by the queue insertion path; a malformed
+   head is not legitimate. This is a code change, not runtime validation; do
+   not claim allocator behavior until the patch pipeline is restored.
 3. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
    supplied independent retail and validated port target coverage and exact
    hangar zero-payload parity. Do not repeat standalone qualification or the
@@ -193,6 +197,13 @@ Work only the first applicable item. This is one monotonic backlog.
   `cmake --build build --config Debug --target PatchesLib` returned
   `No rule to make target PatchesLib`. This is direct environment evidence,
   not allocator behavior, so the metadata-slot guard remains unvalidated.
+
+- **3859:** Audited the active-queue link idiom in `patches/heap_guards.c` and
+  added a complete-block check for the non-null queue-head value before any
+  queue-link store. ORIGIN: the queue head is the allocator's fixed metadata
+  slot at `0x801163FC`; a malformed KSEG0 value is not legitimate. The patch
+  compiler, linker, generated recompiler, and `PatchesLib` target were not
+  available, so this change has no runtime validation result.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.
