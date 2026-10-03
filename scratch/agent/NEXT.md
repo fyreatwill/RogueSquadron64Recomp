@@ -1,4 +1,4 @@
-# Next work unit: bounded generated-symbol lead after the main-overlay start
+# Next work unit: bounded generated-symbol lead after the main-overlay DMA/allocator range
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -17,7 +17,7 @@ Competing hypotheses and discriminator for the lead:
   tree; select no rename and move to the next ranked lead.
 
 The discriminating measurement is a bounded table of every selected placeholder
-in `0x8000040C..0x800027B8`, joined against companion symbol names and the
+in `0x8000527C..0x800078E0`, joined against companion symbol names and the
 existing mapping source. A rename is accepted only for an exact one-to-one
 mapping; the result must either change the mapping source or produce a new
 bounded census. H1 predicts one or more changed references with selected
@@ -25,9 +25,9 @@ companion rows; H2 predicts candidate rows but no safe rename; H3 predicts no
 placeholder references in the region. The prior audio lead selected H3 after
 its positive-control rows showed 19 already-synchronized candidates.
 
-The completed lead selected `func_8000040C` -> `clearMemory16ByteBlocks` and
-preserved `fake_func_800027B8` as a data gap. The next unit is the contiguous
-range `0x800027B8..0x8000527C` (end exclusive), using the same tool and the
+The completed lead found no stale callable symbol and propagated the exact
+fake/data-gap mapping at `0x800027B8`. The next unit is the contiguous
+range `0x8000527C..0x800078E0` (end exclusive), using the same tool and the
 same positive-control requirement. H1 predicts one or more exact semantic
 renames; H2 predicts only ambiguous/fake candidates and no safe rename; H3
 predicts no remaining placeholder references. Do not build unless the mapping

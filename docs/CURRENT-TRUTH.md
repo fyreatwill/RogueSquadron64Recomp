@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3792 (2026-10-03).
+Updated for session 3793 (2026-10-03).
 
 ## Current state
 
@@ -51,8 +51,9 @@ Work only the first applicable item. This is one monotonic backlog.
    if an independent runtime allocator witness identifies a concrete bad
    value; otherwise continue with the next systematic M3 class.
 3. **Generated-symbol renaming sweep.** M5 is parked and M3 has no new
-   discriminator. Keep slug `generated-symbol-renaming-sweep`; s3792 selected
-   one exact main-overlay rename. Continue with the next contiguous lead.
+   discriminator. Keep slug `generated-symbol-renaming-sweep`; s3793 found no
+   stale callable symbol in the next main-overlay lead and propagated one
+   already-approved data-gap mapping. Continue with the next contiguous lead.
 
 ## Live hypothesis table
 
@@ -118,6 +119,13 @@ Work only the first applicable item. This is one monotonic backlog.
   companion entries as already synchronized. The adjacent
   `fake_func_800027B8` is explicitly a fake/data-gap entry and was preserved.
   The rename tool updated five generated references; no build was needed.
+- **3793 — bounded main-overlay continuation:** the exact range
+  `0x800027B8..0x8000527C` found 47 companion rows, with positive-control
+  rows reporting `already-synchronized`. The only stale generated reference
+  was the companion-declared fake/data-gap `0x800027B8`; the regeneration-safe
+  mapping propagated it to `data_gap_800027B8` in three generated artifacts.
+  No callable rename was selected and no build was needed. The next contiguous
+  lead remains open.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

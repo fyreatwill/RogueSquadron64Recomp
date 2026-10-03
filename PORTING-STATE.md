@@ -140073,3 +140073,21 @@ This closes the bounded lead and leaves the remaining main-overlay range open.
 
 ORIGIN: regeneration-safe symbol mapping only; no runtime mitigation, ROM, or
 game-state change.
+
+## Session 3793 (2026-10-03) — bounded main-overlay continuation was synchronized
+
+Ran the regeneration-safe rename tool over the contiguous generated range
+`0x800027B8..0x8000527C`, joined to every companion `symbol_files/*.txt`
+entry. The bounded census reported 47 companion rows as positive controls;
+all semantic rows were `already-synchronized`. The only stale generated
+reference was `fake_func_800027B8`, explicitly declared by the companion map
+as a fake/data-gap entry, so the existing exact mapping propagated it to
+`data_gap_800027B8` in `funcs_0.c`, `funcs.h`, and `recomp_overlays.inl`.
+No callable rename was selected and no build or runtime experiment was needed.
+
+This closes the bounded lead and leaves `0x8000527C..0x800078E0` as the next
+contiguous main-overlay range.
+
+ORIGIN: regeneration-safe symbol mapping only; the `0x800027B8` value is a
+companion-declared non-callable data gap, not a runtime mitigation or game
+state change.
