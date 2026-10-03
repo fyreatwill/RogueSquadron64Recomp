@@ -140693,3 +140693,20 @@ post-value instrumentation; the fixed driver added it, and the 35-second
 coverage attempt was correctly rejected because retail had not reached hangar.
 
 Evidence: `scratch/agent/s3823_m5_paired_route_parity/`.
+
+## Session 3824 (2026-10-03) — joined family stores to clear-object witness
+
+Built `RogueSquadron64Recomp` Debug and ran the planned M5 image-only family
+route/object join. The first launch recipe stayed at VI 640 and was recorded
+as coverage-invalid; the fixed launch used the validated repository-root
+recipe, reached title VI 1024 and hangar VI 512, and had no crash or abort.
+All six family edge/store controls, the clear-witness, active route snapshot,
+and source-DMA controls were positive. It recorded 1,280 target-phase family
+stores (title 768, hangar 512; S 512, I 256, L 512), all with `target=0`,
+`clear_exact=0`, and `clear_span=0`. The 257 family-entry rows likewise all
+had `target_arg=0`. The clear witness was `0x801797B0`, length `0x298`; source
+DMA remained zero-valued with `FNV=0x762B22A5`. This selects legitimate
+alternate-object writes and refutes an aliasing join at this scope. It rules
+out H1, but not whether the alternate objects are intended route state or a
+disconnected output family. Evidence: `docs/M5-S3824-FAMILY-ROUTE-OBJECT-JOIN.md`
+and `scratch/agent/s3824_m5_family_route_object_join_fixed/run.log`.

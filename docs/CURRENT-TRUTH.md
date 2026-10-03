@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3823 (2026-10-03).
+Updated for session 3824 (2026-10-03).
 
 ## Current state
 
@@ -44,11 +44,13 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 family route/object identity join.** The source payload boundary is
-   paired at target phase; join the clear-associated route to the S/L/I family
-   objects and determine whether alternate-object stores can reach the image
-   source. Use the existing family-edge and clear-witness controls in one
-   bounded image run.
+1. **M5 alternate family-object route join.** Session 3824 selected that the
+   phase-qualified S/L/I family writes legitimate alternate objects: 1,280
+   stores had no target or clear-span join while the clear witness identified
+   `0x801797B0`. Join those alternate object addresses to the active route
+   snapshot and source-DMA handoff to determine whether they are intended
+   route state or a disconnected output family. Use one bounded image run with
+   the existing family, route, clear, and source-DMA controls.
 2. **M5 port target-phase qualification, closed at this scope.** s3821's pair
    was coverage-invalid because the port arm stopped at VI 640; s3822's
    standalone arm reached both target phases. Do not repeat standalone
@@ -119,6 +121,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-PortTargetPhase` | Selected at s3822 for the standalone image route: title 1024 and hangar 512 were reached with all requested controls and no crash/abort. |
 | `H-M5-PairedTargetCoverage` | Selected at s3823: the same-build port image and independent retail oracle both fired positive controls and reached title/hangar target phases without crash/abort. |
 | `H-M5-RetailPortRouteParity` | Selected at s3823 scope: port hangar source DMA was zero (`FNV=0x762B22A5`, `nz=0`), matching the independent s3820 retail hangar snapshot; the s3823 oracle shutdown snapshot was phase-mixed and is not used as exact-span evidence. |
+| `H-M5-FamilyAlternateObject` | Selected at s3824 scope: 1,280 target-phase family stores and 257 family entries were positive, but none joined the clear object `0x801797B0` or its span; the active route snapshot was present. |
 
 ## Evidence ledger — live boundary
 
@@ -477,6 +480,17 @@ line naming the writer and stating whether its value is legitimate.
   target coverage and parity at the measured scope; family route/object
   identity remains open. Evidence:
   `scratch/agent/s3823_m5_paired_route_parity/`.
+- **3824 — family route/object identity join:** the Debug build passed. The
+  first image-only launch was coverage-invalid because it stayed at VI 640;
+  the fixed validated launch reached title 1024 and hangar 512 with all six
+  family controls, clear-witness, route, and source-DMA controls positive and
+  no crash/abort. It recorded 1,280 target-phase family stores (S=512,
+  I=256, L=512), all with `target=0`, `clear_exact=0`, and `clear_span=0`,
+  plus 257 family-entry rows with `target_arg=0`. The clear witness was
+  `0x801797B0`, length `0x298`, and the route snapshot was active. This
+  selects legitimate alternate-object writes at the measured scope and
+  refutes an aliasing join; alternate-object route identity remains open.
+  Evidence: `docs/M5-S3824-FAMILY-ROUTE-OBJECT-JOIN.md`.
 
 ## Superseded conclusions
 
