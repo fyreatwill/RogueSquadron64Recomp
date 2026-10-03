@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3771 (2026-10-02).
+Updated for session 3772 (2026-10-02).
 
 ## Current state
 
@@ -173,11 +173,20 @@ also exposed and fixed a missing generated-host `rdram` argument in the new
 witness ABI. No alternate-object or route-identity hypothesis is selected or
 refuted. See [M5-S3771-ALTERNATE-OBJECT-JOIN.md](M5-S3771-ALTERNATE-OBJECT-JOIN.md).
 
+Session 3772 attempted the same qualification twice. The retail whole-RDRAM
+control and target VIs passed both times; the silent arm reached title and
+hangar and passed all family-store controls, while the image arm crashed
+before target at `spTaskSchedulerThread+9556` (`last-guest-pc=0x8000834c`),
+with simultaneous and two-second-staggered startup. This is an unevaluable
+paired image-arm qualification, not evidence about clear/object legitimacy.
+See [M5-S3772-ALTERNATE-OBJECT-QUALIFICATION.md](M5-S3772-ALTERNATE-OBJECT-QUALIFICATION.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 alternate-object legitimacy versus route identity.** Join the S/L
+1. **M5 alternate-object legitimacy versus route identity.** Requalify the
+   paired capture with the image arm launched first, then join the S/L
    alternate store destinations and I's title-only setup object to the
    `0x8008F2CC` clear-associated object, allocator result, and active route
    ordinal in one phase-gated capture. Require the retail whole-RDRAM control

@@ -139673,3 +139673,24 @@ ORIGIN: existing family stores and the clear allocation are legitimate game
 operations; the added fields are diagnostic-only. Evidence:
 docs/M5-S3771-ALTERNATE-OBJECT-JOIN.md and
 scratch/agent/s3770_m5_family_store/.
+
+## Session 3772 (2026-10-02) — requalified alternate-object join attempt
+
+The s3772 work unit ran the existing clear/object join twice with the retail
+oracle and concurrent silent/image arms. The first run launched both arms
+together; the repaired second run staggered them by two seconds. The oracle
+whole-RDRAM positive control fired and reached title and hangar target VIs in
+both runs. Silent passed all six family-store controls and reached title
+`0x00790400` and hangar `0x006AB400`. Image passed its controls but crashed
+before target at `spTaskSchedulerThread+9556`, with `last-guest-pc=0x8000834c`,
+in both runs.
+
+No target-phase clear/object join rows were available, so alternate-object
+legitimacy, route/object mismatch, and the I hangar-edge hypotheses remain
+unevaluable. Launch staggering was a recipe repair, not a game mitigation;
+no value, clear, allocation, or audio gate changed.
+
+ORIGIN: existing family stores and the clear allocation are legitimate game
+operations; the launcher change is diagnostic scheduling only. Evidence:
+docs/M5-S3772-ALTERNATE-OBJECT-QUALIFICATION.md and
+scratch/agent/s3770_m5_family_store/.
