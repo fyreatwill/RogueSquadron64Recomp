@@ -7,21 +7,33 @@ ORACLE=$ROOT/tools/oracle/build/rs64_oracle
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 ROM=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
 VIDEO=/opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib
-if [[ ! -x "$ORACLE" || ! -f "$CORE" || ! -f "$ROM" || ! -f "$VIDEO" ]]; then print -r -- setup_missing > "$OUT/driver.log"; exit 2; fi
+if [[ ! -x "$ORACLE" || ! -f "$CORE" || ! -f "$ROM" || ! -f "$VIDEO" ]]; then
+  print -r -- setup_missing > "$OUT/driver.log"
+  exit 2
+fi
 PRESS='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start'
 cd "$ROOT" || exit 2
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
-  --watch-write 0x0:0x800000 --watch-write 0x167000:0x169B00 --watch-write 0x173CB0:0x173DB0 --watch-write 0x1798B0:0x179A48 \
-  --watch-pc 0x80033FCC,0x80019DEC,0x80019D68 --pc-task-dump 0x80033FCC --pc-task-type 2 \
-  --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
-  --pc-hist-watch 1 --vi-trace --hit-cap 20 --press "$PRESS" --hold-ms 150 > "$OUT/retail.log" 2>&1 &
+  --watch-write 0x0:0x800000 --watch-write 0x167000:0x169B00 \
+  --watch-write 0x173CB0:0x173DB0 --watch-write 0x1798B0:0x179A48 \
+  --watch-pc 0x80033FCC,0x80019DEC,0x80019D68 \
+  --pc-task-dump 0x80033FCC --pc-task-type 2 \
+  --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 \
+  --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
+  --pc-hist-watch 1 --vi-trace --hit-cap 20 --press "$PRESS" --hold-ms 150 \
+  > "$OUT/retail.log" 2>&1 &
 retail=$!
 cd "$ROOT/build" || exit 2
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_DRAIN_INLOOP_TICK=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
-  ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a' PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_PHASE=1 \
-  ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_TASK_LIFETIME=1 ROGUESQ_LOG_M5_STAGE_CALLS=1 ROGUESQ_LOG_M5_STAGE_BYTES=1 \
-  ROGUESQ_LOG_M5_RSP_SOURCE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_M5_EXACT_ROUTE=1 ROGUESQ_LOG_M5_SOURCE_RANGE=1 \
-  ROGUESQ_LOG_M5_ROUTE_PREPARE=1 ROGUESQ_LOG_M5_ROUTE_HANDOFF=1 ROGUESQ_AUDIO_UCODE=1 ./RogueSquadron64Recomp > "$OUT/port.log" 2>&1 &
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_DRAIN_INLOOP_TICK=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+  ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a' \
+  PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_PHASE=1 \
+  ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_TASK_LIFETIME=1 \
+  ROGUESQ_LOG_M5_STAGE_CALLS=1 ROGUESQ_LOG_M5_STAGE_BYTES=1 \
+  ROGUESQ_LOG_M5_RSP_SOURCE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 \
+  ROGUESQ_LOG_M5_EXACT_ROUTE=1 ROGUESQ_LOG_M5_SOURCE_RANGE=1 \
+  ROGUESQ_LOG_M5_ROUTE_PREPARE=1 ROGUESQ_LOG_M5_ROUTE_HANDOFF=1 \
+  ROGUESQ_AUDIO_UCODE=1 ./RogueSquadron64Recomp > "$OUT/port.log" 2>&1 &
 port=$!
 print -r -- "retail=$retail port=$port" > "$OUT/driver.log"
 for tick in {1..360}; do

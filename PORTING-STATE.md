@@ -141134,3 +141134,21 @@ was rewritten, skipped, or guarded.
 Evidence: `scratch/agent/s3849_m5_task_output_callsites/driver.log`,
 `retail.log`, `port.log`, and
 `scratch/agent/run_s3849_m5_task_output_callsites.sh`.
+## Session 3850 (2026-10-03) — qualified retail task-submission caller split
+
+Ran `scratch/agent/run_s3850_m5_task_submit_callers.sh`, a paired 75-second
+retail/oracle and port capture. The retail arm passed the whole-RDRAM positive
+control and both title/hangar VI controls; the port arm reached its phase
+controls with no crash or abort. Retail reached 631 title and 691 hangar VI
+observations, produced 1,313 type-2 task rows, and the watched callers executed
+3,449 times at `0x80019DEC` and 1,706 times at `0x80019D68`.
+
+`0x80019DEC` directly preceded task callee `0x80033FCC` and carried stable
+`a0=0x80149470`, matching the task descriptor in every sampled row. Its task
+rows retained `data_ptr=0x80171CE0`, `data_size=0x1/0x2`, and zero output
+fields. `0x80019D68` carried stable `a0=0x800377C8`, `v1=0x400`, and was a
+separate route. This single-source oracle result selects the direct submission
+route for `0x80019DEC` and rules out treating `0x80019D68` as the same task
+pointer route, but it does not establish a unique stage destination because the
+descriptor is reused and its output fields stay zero. The next discriminator is
+descriptor-field write activity at physical `0x149470..0x1494B0`.

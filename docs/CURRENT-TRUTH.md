@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3849 (2026-10-03).
+Updated for session 3850 (2026-10-03).
 
 ## Current state
 
@@ -45,13 +45,17 @@ Work only the first applicable item. This is one monotonic backlog.
    configured MIPS compiler is absent, and `build/Debug/N64Recomp.exe` is
    absent. Restore/reconfigure those tools, build the patch ELF and library,
    then run the allocator-route smoke. Do not claim H1/H2 before that.
-2. **M5 retail task-to-stage join — follow task-submission callers.** Session
-   3849 passed whole-RDRAM and both VI controls and watched the writer
-   callsites `0x80015BC4` and `0x8000F39C`. They executed heavily but carried
-   object/array arguments, selecting H2 for that route. The task callee's
-   `PREVIOUS_PC` histogram identifies `0x80019DEC` and `0x80019D68` as its
-   submission callers; watch those callers in one paired capture for a task
-   pointer or exact stage join.
+2. **M5 retail task-to-stage join — resolve descriptor-field ownership.** Session
+   3850 passed whole-RDRAM and both VI controls. `0x80019DEC` is a direct task
+   submission route: it precedes `0x80033FCC` with `a0=0x80149470`, the exact
+   descriptor dumped by the task probe, in 3,449 phase-qualified executions.
+   `0x80019D68` is a separate stable route with `a0=0x800377C8` and 1,706
+   executions. The descriptor is reused and its output fields remain zero, so
+   the caller result does not yet join a unique stage destination. In the next
+   paired capture, watch writes to physical `0x149470..0x1494B0` while retaining
+   the task dump and target controls. A descriptor-field write that changes with
+   task generation can join the route; no writes or constant-only fields leave
+   exact ownership unresolved.
 3. **M5 image task/output edge — qualified port result.** Session 3839 joined
    the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
    found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
@@ -81,6 +85,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-TaskOutputFieldsEmptySeparateWriteback` | Selected at s3840 port scope. |
 | `H-M5-RetailTaskOutputFieldParity` | Selected at s3844 for empty fields; s3846 selects shared destination role at bounded scope, exact task join remains open. |
 | `H-M5-RetailTaskStageRole` | Selected at s3846: retail task and candidate image-stage region are both active in hangar with independent phase/whole-RDRAM controls. |
+| `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 
 ## Evidence ledger — recent durable boundary
@@ -127,6 +132,14 @@ Work only the first applicable item. This is one monotonic backlog.
   object/array values, not a task pointer or the port stage tuple. This is a
   single-source oracle selection of H2 for the callsite-argument route; the
   task-submission caller join remains open.
+- **3850:** Paired capture passed whole-RDRAM and both target-VI controls with
+  no crash/abort. Retail reached 631 title and 691 hangar VI observations; the
+  caller PCs executed 3,449 (`0x80019DEC`) and 1,706 (`0x80019D68`) times.
+  The first caller preceded 1,313 task rows with `a0=0x80149470`, matching the
+  dumped task descriptor; the second carried stable `a0=0x800377C8`. The
+  descriptor's output fields stayed zero. This is a single-source oracle
+  result: it selects the direct submission route but does not establish a
+  unique stage destination.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

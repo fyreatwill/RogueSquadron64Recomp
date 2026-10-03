@@ -1,32 +1,35 @@
-# Next work unit: join retail task-submission callers to task rows
+# Next work unit: qualify retail task-descriptor field writes
 
 HYPOTHESIS-ID: m5-task-output-contract-retail-submit-callers
 
-Session 3849 was capture-valid. Whole-RDRAM and both target-VI controls fired;
-retail had 1,138 type-2 task rows. The writer callsites were bulk/object
-operations, so the next bounded join uses the task callee's observed
-`PREVIOUS_PC` callers `0x80019DEC` and `0x80019D68`.
+Session 3850 was capture-valid. Whole-RDRAM and both target-VI controls fired;
+retail had 1,313 task rows. `0x80019DEC` directly preceded the task callee with
+`a0=0x80149470`, while `0x80019D68` carried stable `a0=0x800377C8`. The task
+descriptor is reused and its output fields stayed zero, so the exact stage
+destination is still unresolved.
 
 Before building anything, preserve these competing hypotheses and discriminator:
 
-- H1: one submission caller carries a task pointer or destination/length that
-  joins a retail task generation to the port role.
-- H2: both callers are wrappers/loop machinery and carry no task join key.
-- H3: caller GPR rows are unstable or insufficient, so exact ownership needs
-  a different task-boundary instrument.
+- H1: writes into the task descriptor carry a changing destination/length or
+  generation-specific join key.
+- H2: descriptor writes are constant initialization or absent; the task boundary
+  exposes no stage ownership.
+- H3: descriptor fields change but are not sufficient, so ownership needs a
+  different task-boundary instrument.
 
 Discriminating measurement: run one paired capture with the same whole-RDRAM,
-title/hangar VI, type-2 task, and no-crash controls. Replace the two writer
-callsite watches with `--watch-pc 0x80019DEC,0x80019D68`, retaining the task
-dump, exact target watch, and port stage logs. H1 requires a stable caller
-tuple or pointer that joins task rows to the port role; H2 requires controls
-but no tuple; H3 requires unstable or uninterpretable caller rows.
+title/hangar VI, type-2 task, and no-crash controls. Add the physical descriptor
+watch `--watch-write 0x149470:0x1494B0`, retaining both caller watches, task
+dump, exact target watch, and port stage logs. H1 requires a descriptor field
+write whose value/ordinal changes with task rows and joins the port role; H2
+requires no writes or constant-only initialization; H3 requires changing but
+uninterpretable fields.
 
 Starting command:
 
-    zsh scratch/agent/run_s3850_m5_task_submit_callers.sh
+    zsh scratch/agent/run_s3851_m5_task_descriptor_writes.sh
 
 Create that self-contained paired recipe from
-`scratch/agent/run_s3849_m5_task_output_callsites.sh`, changing only the
-oracle watch PCs, output directory, and bounded summary labels. Do not add a
+`scratch/agent/run_s3850_m5_task_submit_callers.sh`, adding only the descriptor
+write watch, output directory, and bounded summary label. Do not add a
 writeback guard or infer a destination from the port address.
