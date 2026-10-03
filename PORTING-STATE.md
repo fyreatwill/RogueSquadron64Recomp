@@ -139717,3 +139717,20 @@ ORIGIN: existing family stores and the clear allocation are legitimate game
 operations; this iteration changed no game value, clear, allocation, or audio
 gate. Evidence: docs/M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md and
 scratch/agent/s3770_m5_family_store/.
+## Session 3774 (2026-10-02) — image-only alternate-object boundary
+
+Rebuilt Debug and ran `scratch/agent/run_s3773_m5_image_only.sh`, launching
+the image arm beside the retail oracle. The oracle whole-RDRAM positive
+control fired; the image arm passed all six family-store controls and reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. S/L each emitted 256
+store rows in both target phases, all at alternate destinations with
+`clear_obj=0` and `clear_span=0`. I emitted 256 title rows and no hangar
+rows. The clear setup did not provide a nonzero allocation identity, and the
+recipe emitted no family-edge rows.
+
+This selects image-only I hangar-edge absence for this capture. It does not
+distinguish legitimate alternate-object provenance from route/object
+mismatch: the clear-object join and I call-edge arm were unevaluable. The
+missing silent arm prevents any image-versus-silent claim. No mitigation or
+value injection was added. See
+`docs/M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md`.

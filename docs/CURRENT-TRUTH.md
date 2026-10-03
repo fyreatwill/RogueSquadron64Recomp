@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3773 (2026-10-02).
+Updated for session 3774 (2026-10-02).
 
 ## Current state
 
@@ -191,17 +191,26 @@ clear/object and I-edge hypotheses remain unevaluable, and the paired
 qualification is parked after three attempts. See
 [M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md](M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md).
 
+Session 3774 ran the existing alternate-object join in an image-only arm
+beside the retail oracle. Oracle, family controls, title, and hangar all
+passed. S/L each produced 256 title and 256 hangar rows, all alternate
+destinations with `clear_obj=0` and `clear_span=0`; I produced 256 title rows
+and no hangar rows. The clear-object join and I call-edge arm were not
+qualified, so this selects only image-arm I hangar-edge absence and leaves
+legitimate alternate-object provenance versus route mismatch unevaluable.
+See [M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md](M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 alternate-object image-arm boundary.** Run the existing clear/object
-   and family-edge join in an image-only port arm beside the retail oracle.
-   This pivots after three unevaluable paired qualifications; use it only to
-   measure whether S/L rows join the `0x8008F2CC` clear object and whether I
-   has a hangar edge. Require the oracle whole-RDRAM control, image controls,
-   and both target VIs. Do not infer arm differences, suppress or replace
-   the clear, inject values, or change an audio gate.
+1. **M5 clear-object/call-edge qualification.** Design one new image-only
+   capture that makes the clear allocation identity and I call-edge coverage
+   independently positive before interpreting the existing S/L rows. Require
+   the oracle whole-RDRAM control, image family controls, both target VIs, a
+   nonzero clear object/length, and a positive I edge control. Do not infer
+   arm differences, suppress or replace the clear, inject values, or change
+   an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
@@ -292,6 +301,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyStoresExpectedTargetViaHiddenPointer` | Refuted at s3770 for the measured store sites: no internal store destination fell in either target buffer range in either arm. |
 | `H-M5-FamilyRouteIdentityMismatch` | Open at s3770: alternate destinations are proven, but their allocator/route identity is not yet joined to the clear object. |
 | `H-M5-FamilyAbsentTargetEdge` | Selected at s3770 for I: title setup stores were observed, but no hangar-phase I store bucket appeared in either arm. |
+| `H-M5-ImageOnly-IHangarEdgeAbsent` | Selected at s3774 for the image-only capture: I had 256 title stores and no hangar stores, with controls and both target VIs positive. |
+| `H-M5-ClearObjectJoin` | Unevaluable at s3774: S/L rows reported `clear_obj=0`/`clear_span=0`, and target-phase clear setup had no allocation identity. |
+| `H-M5-FamilyEdgeCoverage` | Unevaluable at s3774: the recipe emitted no family-edge rows despite positive family-store controls. |
 
 ## Evidence ledger — live boundary only
 
@@ -616,6 +628,7 @@ silent control.
 - [M5-S3769-RETAIL-PORT-FAMILY-EDGE.md](M5-S3769-RETAIL-PORT-FAMILY-EDGE.md)
 - [M5-S3770-FAMILY-STORE-PROVENANCE.md](M5-S3770-FAMILY-STORE-PROVENANCE.md)
 - [M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md](M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md)
+- [M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md](M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)
