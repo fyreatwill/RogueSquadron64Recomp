@@ -139166,3 +139166,36 @@ zero-fill writer was not modified.
 
 Evidence: `docs/M5-S3750-ROUTE-STATE-HOOK-INVALID.md` and
 `scratch/agent/s3750_m5_route_state_source_join/{real,silent}.log`.
+
+## Session 3751 (2026-10-02) — censused exact route-field load candidates
+
+Ground truth ran first under retail mupen64plus. Its whole-RDRAM positive
+control produced 10,012 writes, both target VI phases were reached, and the
+live candidate execution set was `0x800B4B08` once plus
+`0x8008F548/0x8008F5F0/0x8008F640`; exact-field watches at `0x128C92` and
+`0x128CD0..D3` each fired four times. This independently established that the
+candidate family and route-field activity are live, without assuming they use
+the same object.
+
+I added one regeneration-safe s3751 hook family at all nine bounded candidate
+loads. The first clean regeneration exposed the stale s3556 fixup anchor gate;
+the fixup was made tolerant of the absent frequency-caller anchor, then the
+fresh tree regenerated and applied all nine hooks. The build passed. The
+qualified real-audio arm reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, with 1,024 target source-reader and 512 source-range
+writer rows. The silent arm reached both target phases and emitted no target
+source rows. The exact-hook positive control fired in both arms, but there
+were zero target-phase rows with effective base `0x80128C70`; the control row
+used base `0x80130B40`.
+
+This selects `H-RouteStateNotSource` for the complete nine-site candidate set
+and refutes `H-RouteStateSourceKey`. `H-RouteStateStale` is unelected because
+no candidate read the exact object. It rules out the candidate load class as
+the source route, not the upstream producer/read boundary. ORIGIN:
+diagnostic-only hooks and joins; no guest value, branch, DMA, or rendering
+behavior changed. The initial unqualified runs (missing explicit autopilot)
+were discarded; only the corrected explicit-schedule pair above is evidence.
+
+Evidence: `docs/M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md`,
+`scratch/agent/oracle_s3751.log`, `scratch/agent/s3751_realb/run.log`, and
+`scratch/s3751_silentb/run.log`.

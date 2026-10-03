@@ -51,6 +51,7 @@ extern "C" void rs64_m5_audio_dma_identity(
 
 extern "C" uint32_t rs64_phase_ord(void);
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
+extern "C" uint64_t rs64_m5_clear_branch_source_sequence(void);
 extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller, uint32_t requested_width,
                                             uint32_t mode_ptr);
 
@@ -1213,6 +1214,51 @@ extern "C" void rs64_m5_route_candidate(uint8_t* rdram, uint32_t pc,
         rs64_m5_route_state_guest_byte(rdram, 0x80141AD1u), exit_reason);
     std::fflush(stderr);
     ++rows;
+}
+
+extern "C" void rs64_m5_route_exact_load(uint8_t* rdram, uint32_t pc,
+                                           uint32_t base, uint32_t offset,
+                                           uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_EXACT_LOAD");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || rdram == nullptr) return;
+    static bool control_seen = false;
+    if (!control_seen) {
+        control_seen = true;
+        std::fprintf(stderr,
+            "[m5-route-exact-control] pc=0x%08X base=0x%08X offset=0x%X value=0x%08X\n",
+            pc, base, offset, value);
+        std::fflush(stderr);
+    }
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
+                              (width == 512u && origin == 0x006AB400u);
+    if (!target_phase || base != 0x80128C70u) return;
+    static std::mutex mutex;
+    static uint32_t rows[2] = {};
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] >= 512u) return;
+    uint32_t route_ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &route_ordinal, &route_row, &exit_reason,
+        &arm);
+    std::fprintf(stderr,
+        "[m5-route-exact-load] row=%u phase=%u width=%u origin=0x%06X arm=%s "
+        "pc=0x%08X base=0x%08X offset=0x%X value=0x%08X source_event=%llu "
+        "route_ordinal=%u route_row=%u active=%u exit=%d\n",
+        rows[slot]++, rs64_phase_ord(), width, origin, arm ? arm : "n/a", pc,
+        base, offset, value,
+        static_cast<unsigned long long>(rs64_m5_clear_branch_source_sequence()),
+        route_ordinal, route_row, active ? 1u : 0u, exit_reason);
+    std::fflush(stderr);
 }
 
 extern "C" void rs64_m5_route_value_writer(char width, uint32_t pc,

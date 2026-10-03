@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3750 (2026-10-02).
+Updated for session 3751 (2026-10-02).
 
 ## Current state
 
@@ -25,18 +25,20 @@ byte positions are now exported, but layout parity is still not testable at a
 zero-valued port payload. See
 [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md).
 
+The nine bounded exact-offset load candidates are now closed: neither the
+qualified real nor silent port arm read the exact object at `0x80128C70` at
+any target-phase candidate site. The next boundary is a new port-side
+producer/read class upstream of the source DMA.
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 route-state interpretation.** s3750 showed the existing route hook is
-   mis-targeted: `0x80019CD8` is queue-message dispatch, and its sampled `s0`
-   is zero even when `a0` names `0x80128C70`. Do not treat its
-   `source_word/source_byte` fields as exact-field reads. Instrument only the
-   bounded static candidates listed in
-   [M5-S3750-ROUTE-STATE-HOOK-INVALID.md](M5-S3750-ROUTE-STATE-HOOK-INVALID.md),
-   filter on runtime base `0x80128C70`, then join each read to the next source
-   DMA. Do not alter `0x800078EC`.
+1. **M5 source-route producer boundary.** The s3751 candidate-load census
+   selected `H-RouteStateNotSource` with target-phase controls and source-DMA
+   joins. Census the next bounded producer/read class upstream of the real
+   source DMA; compare its value and route/task identity with retail. Do not
+   repeat the closed candidate list or alter `0x800078EC`.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -64,6 +66,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-EarlierWriterAbsent` | Selected at s3742 for the measured scalar-store class: 512 target-phase rows per arm were all zero-valued neighboring writes, with no nonzero exact-field writer. |
 | `H-EarlierWriterClears` | Refuted at s3742 for the measured scalar-store class: no earlier nonzero writer was observed before the zero route state. |
 | `H-RouteStateNotSource` | Open after s3742: exact route fields had no scalar writer, so an uninstrumented/non-scalar producer versus control metadata remains unresolved. |
+| `H-RouteStateNotSource` | Selected at s3751 for all nine bounded exact-offset loads: neither qualified port arm read the exact object `0x80128C70` in either target phase. |
+| `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
 | `H-HostExactWriter` | Selected only for transient/unattributed activity after s3745: the 1 ms poll saw no persistent exact-field change, but has no writer-PC attribution. |
@@ -186,6 +190,15 @@ Work only the first applicable item. This is one monotonic backlog.
   arbitrary native host-writer class for the qualified port capture while
   leaving route-state-versus-source interpretation open. See
   [M5-S3748-HOST-WRITER-FAULT-WATCH.md](M5-S3748-HOST-WRITER-FAULT-WATCH.md).
+- **3751 — exact candidate load census:** retail passed its whole-RDRAM
+  control and reached both target phases. The port hooked all nine sites and
+  passed its hook control in both real/silent arms; real reached both phases
+  with 1,024 source-reader and 512 source-writer rows, while silent reached
+  both phases with no target source rows. Neither arm had a target-phase load
+  whose effective base was `0x80128C70`. This selects
+  `H-RouteStateNotSource` for the candidate set and refutes a candidate
+  source-key read. See
+  [M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md](M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.
@@ -222,8 +235,9 @@ read/use question as unevaluable, with no runtime conclusion.
 
 Session 3750 did not produce route-state evidence either, but static and
 runtime evidence invalidated the existing read/use hook itself: it samples
-queue-dispatch registers rather than the exact route fields. The next
-candidate list is bounded; no route-state hypothesis is selected.
+queue-dispatch registers rather than the exact route fields. Session 3751
+then closed all nine bounded exact-offset candidates; the next route boundary
+is upstream of those consumers.
 
 ## Durable operating rules
 
@@ -275,6 +289,7 @@ unreconciled.
 - [M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md](M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md)
 - [M5-S3745-HOST-EXACT-ROUTE-POLL.md](M5-S3745-HOST-EXACT-ROUTE-POLL.md)
 - [M5-S3746-HOST-WRITE-API-CENSUS.md](M5-S3746-HOST-WRITE-API-CENSUS.md)
+- [M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md](M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md)
 - [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md)
 - [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md)
