@@ -1,4 +1,4 @@
-# Next work unit: bounded generated-symbol lead at the main-overlay start
+# Next work unit: bounded generated-symbol lead after the main-overlay start
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -24,6 +24,14 @@ bounded census. H1 predicts one or more changed references with selected
 companion rows; H2 predicts candidate rows but no safe rename; H3 predicts no
 placeholder references in the region. The prior audio lead selected H3 after
 its positive-control rows showed 19 already-synchronized candidates.
+
+The completed lead selected `func_8000040C` -> `clearMemory16ByteBlocks` and
+preserved `fake_func_800027B8` as a data gap. The next unit is the contiguous
+range `0x800027B8..0x8000527C` (end exclusive), using the same tool and the
+same positive-control requirement. H1 predicts one or more exact semantic
+renames; H2 predicts only ambiguous/fake candidates and no safe rename; H3
+predicts no remaining placeholder references. Do not build unless the mapping
+pipeline requires it; do not start a second region.
 
 Exact preflight commands:
 

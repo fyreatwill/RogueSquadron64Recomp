@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3791 (2026-10-03).
+Updated for session 3792 (2026-10-03).
 
 ## Current state
 
@@ -50,8 +50,9 @@ Work only the first applicable item. This is one monotonic backlog.
    No generated invalid writer or guard is justified. Only resume this class
    if an independent runtime allocator witness identifies a concrete bad
    value; otherwise continue with the next systematic M3 class.
-3. **Generated-symbol renaming sweep.** Only after M5 is closed and M3 has no
-   new discriminator. Keep slug `generated-symbol-renaming-sweep`.
+3. **Generated-symbol renaming sweep.** M5 is parked and M3 has no new
+   discriminator. Keep slug `generated-symbol-renaming-sweep`; s3792 selected
+   one exact main-overlay rename. Continue with the next contiguous lead.
 
 ## Live hypothesis table
 
@@ -111,6 +112,12 @@ Work only the first applicable item. This is one monotonic backlog.
   generated C; the positive-control rows explicitly reported
   `already-synchronized`. The tool changed zero references, so this audio
   range is closed for the rename sweep and no build was needed.
+- **3792 — bounded main-overlay symbol lead:** the exact range
+  `0x8000040C..0x800027B8` selected `func_8000040C` ->
+  `clearMemory16ByteBlocks`; same-run positive controls reported named
+  companion entries as already synchronized. The adjacent
+  `fake_func_800027B8` is explicitly a fake/data-gap entry and was preserved.
+  The rename tool updated five generated references; no build was needed.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

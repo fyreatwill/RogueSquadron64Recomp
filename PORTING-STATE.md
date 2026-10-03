@@ -140057,3 +140057,19 @@ generated-file edit was needed.
 
 ORIGIN: bounded static symbol census only; no runtime mitigation, ROM, or game
 state change.
+
+## Session 3792 (2026-10-03) — selected exact main-overlay symbol rename
+
+Ran the regeneration-safe rename tool over the contiguous generated range
+`0x8000040C..0x800027B8`, joined to every companion `symbol_files/*.txt`
+entry. The measurement selected the unambiguous callable mapping
+`func_8000040C` -> `clearMemory16ByteBlocks` and updated five references in the
+generated snapshot. Companion rows in the same range reported named entries as
+`already-synchronized`, providing the positive control. The adjacent
+`fake_func_800027B8` was listed only as a fake/data-gap symbol and was preserved.
+No build or runtime experiment was needed.
+
+This closes the bounded lead and leaves the remaining main-overlay range open.
+
+ORIGIN: regeneration-safe symbol mapping only; no runtime mitigation, ROM, or
+game-state change.
