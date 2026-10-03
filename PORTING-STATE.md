@@ -139438,3 +139438,25 @@ repeatability rate and leaves downstream silent audio-contract nulls
 unevaluable. No audio gate or task-data instrumentation was changed. Evidence:
 `docs/M5-S3761-STEP1-SILENT-QUALIFICATION.md` and the run logs under
 `scratch/agent/s3761_m5_step1_silent_qualification/`.
+
+## Session 3762 (2026-10-02) — refuted deterministic silent pre-target crash
+
+Built the Debug target and reran the same-build concurrent M5 Step 1 image/
+silent contract recipe with the retail oracle. The oracle whole-RDRAM positive
+control passed at 10,000 callbacks and reached title/hangar. Both image and
+silent reached title VI 1024 and hangar VI 512 in the same run. Silent did not
+reproduce the s3761 `spTaskSchedulerThread+9556` crash: it emitted 50 dispatch,
+659 ABI/DMA-return, 278 audio-return, 870 route, 70 PCM-source, and 285
+PCM-consumer rows, with no crash marker. Image emitted 50 dispatch, 665
+ABI/DMA-return, 2,693 image-stage, 283 audio-return, 885 route, 70 PCM-source,
+and 285 PCM-consumer rows, also with no crash marker.
+
+This refutes `H-M5-SilentPreTargetCrash` as a deterministic failure and
+reopens the same-run Step 1 contract comparison. The measured image-stage
+difference is expected from the selected audio arms; shared route/PCM/target
+progress means the first downstream contract edge is not yet selected. No
+audio gate, task-data value field, or mitigation changed. Evidence:
+`scratch/agent/s3762_m5_step1_silent_repeat/driver.log` and its arm logs.
+
+ORIGIN: no mitigation or value change was made; this iteration only reran the
+existing qualified diagnostic recipe.

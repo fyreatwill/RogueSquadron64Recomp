@@ -1,36 +1,35 @@
-# Next work unit: M5 silent-route crash repeatability
+# Next work unit: M5 Step 1 same-run contract comparison
 
-HYPOTHESIS-ID: m5-step1-silent-qualification
+HYPOTHESIS-ID: m5-step1-contract-gap
 
-Repeat the existing same-build paired Step 1 capture once to distinguish a
-stable silent-route failure from run instability. s3761 had valid oracle and
-image coverage, while silent crashed before title at
-`spTaskSchedulerThread+9556`; do not add task-data fields or change an audio
-gate.
+Use the completed s3762 same-build capture to identify the first downstream
+contract edge that differs between the qualified image and silent arms. Do not
+add instrumentation, add another task-data value field, or change an audio
+gate until this comparison selects a missing edge.
 
 Competing hypotheses:
 
-- `H-M5-SilentRouteStable`: silent again crashes before title at the same
-  scheduler boundary with valid oracle/image controls; repeated boundary
-  supports a stable silent-route defect.
-- `H-M5-SilentCanReachTarget`: silent reaches title and hangar in a valid
-  paired run; this refutes a deterministic pre-target crash and reopens the
-  Step 1 contract comparison.
-- `H-M5-SilentRunInstability`: silent fails at a different boundary or the
-  oracle/image controls fail; this leaves the crash explanation unresolved and
-  requires a new discriminator.
+- `H-M5-ImageStageOnly`: the only meaningful arm difference is the expected
+  nonzero image-stage/DMA work; shared task completion, route, PCM, and target
+  phase prove no downstream contract gap in the measured Step 1 rows.
+- `H-M5-SilentContractEdge`: silent and image diverge at a measured task,
+  return, slot, voice, or PCM edge despite both reaching target phases; that
+  edge is the next de-stubbing boundary.
+- `H-M5-RunAccounting`: the apparent difference is caused by row budgets,
+  phase gating, or arm-specific sampling rather than behavior; control counts
+  or ordinal alignment will fail before an edge can be selected.
 
-Discriminator: oracle whole-RDRAM positive control (`10000` callbacks) plus
-same-build image/silent target phases. Require oracle title/hangar and image
-title/hangar before interpreting silent nulls. Compare silent phase markers,
-crash PC, `si_addr`, and task/DMA/service/slot/voice/MORT/PCM controls.
+Discriminator: compare `scratch/agent/s3762_m5_step1_silent_repeat/driver.log`
+and both arm logs by phase and ordinal for dispatch, ABI/DMA, image-stage,
+audio-return/route, slot/voice, and PCM source/consumer rows. Positive controls
+are oracle whole-RDRAM=10000 plus title/hangar for oracle, image, and silent.
+An image-stage-only difference selects `H-M5-ImageStageOnly`; a first shared
+ordinal/phase edge selects `H-M5-SilentContractEdge`; missing controls or
+budget truncation selects `H-M5-RunAccounting` and requires a redesigned
+capture.
 
 Exact commands:
 
-`cmake --build build --config Debug --target RogueSquadron64Recomp`
+`grep -a -E '^(oracle_gate|silent_hangar|image_hangar|.*=([0-9]+)|--- )' scratch/agent/s3762_m5_step1_silent_repeat/driver.log`
 
-`zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s3762_m5_step1_silent_repeat`
-
-Use the existing LLE-solo, spin-yield, autopilot, phase-gated, oracle-control,
-and SIGKILL cleanup recipe. Report both arms and the oracle positive-control
-status before interpreting any silent absence.
+`grep -a -E '^\\[(audtask-|audio-|pcm-|slot-|filter-voice|phase)' scratch/agent/s3762_m5_step1_silent_repeat/{silent,image}.log | sed -n '1,240p'`
