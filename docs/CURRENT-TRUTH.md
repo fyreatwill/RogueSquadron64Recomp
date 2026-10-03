@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3810 (2026-10-03).
+Updated for session 3811 (2026-10-03).
 
 ## Current state
 
@@ -39,17 +39,15 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 re-qualify the DMEM task-data boundary with a minimal concurrent pair, next.**
-   s3809 corrected `run_task` from a `0xF7F`-byte DMA to the complete `0xF80`-byte
-   DMEM task window. The Debug build passed, but the existing contract
-   driver was not a valid boundary result: retail passed its whole-RDRAM,
-   title, and hangar controls; silent reached hangar; corrected image crashed
-   before target at guest PC `0x8000834C`. Strip the legacy diagnostic bundle
-   while retaining only phase, task-contract, audio-return, route, and
-   no-crash controls, and run image/silent concurrently. Select boundary
-   consumption only if image reaches both target VIs and differs in a joined
-   task/DMA/service/PCM row; select padding/unused if both arms are
-   route-equivalent; select startup instability if image fails before target.
+1. **M5 split minimal-image startup failure by launch order, next.**
+   s3811 removed the legacy diagnostic bundle but still reproduced 36 image
+   crashes at guest PC `0x8000834C` before any task-contract, audio-return,
+   route, or target-VI row; the concurrently launched silent arm reached title
+   and hangar. Run the same minimal controls with image launched first and
+   silent second. Select launch-order interaction if image becomes target-valid
+   or the failing arm swaps; select deterministic image startup failure if
+   image still fails before target in both orderings; select boundary-byte
+   consumption only after image reaches target and differs in a joined row.
 2. **M5 upstream zero-DMEM producer, parked behind diagnostic-load qualification.** s3802
    qualified the port-side immediate chain: the hangar image input reads
    all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
@@ -102,7 +100,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-MinimalRouteTargetValid` | Selected at s3807: minimal image arm reached title `0x00790400` and hangar `0x006AB400` with no crash or abort. |
 | `H-M5-DiagnosticLaunchOrderInteraction` | Open and selected at s3808 scope: sequential arms were mixed while all-five succeeded; concurrent arms are required to split order interaction from nondeterminism. |
 | `H-M5-DMEMTaskBoundaryConsumed` | Unevaluable at s3810: the corrected image arm crashed before target while the silent arm reached hangar; the boundary byte was not observed by a qualified image task. |
-| `H-M5-DMEMTaskBoundaryStartup` | Selected at s3810 scope: the legacy contract driver reproduced the pre-target image crash at guest PC `0x8000834C`; a minimal concurrent pair is required to separate diagnostic load from the boundary change. |
+| `H-M5-DMEMTaskBoundaryStartup` | Selected at s3810 scope: the legacy contract driver reproduced the pre-target image crash at guest PC `0x8000834C`; s3811 reproduced it after removing the legacy diagnostic bundle, so that bundle is not sufficient as the explanation. |
+| `H-M5-MinimalImageStartup` | Selected at s3811 scope: the reduced image arm crashed 36 times at `0x8000834C` before target while silent reached title/hangar; launch order remains the next discriminator. |
 
 ## Evidence ledger — live boundary
 
@@ -289,6 +288,16 @@ Work only the first applicable item. This is one monotonic backlog.
   startup instability for the legacy diagnostic bundle and leaves boundary-byte
   consumption unevaluable; it does not identify a writer or justify a guard.
   Evidence: `scratch/agent/s3810_m5_dmem_task_boundary_validation/`.
+- **3811 — minimal DMEM-boundary pair:** the Debug build passed. The same-build
+  reduced concurrent pair retained phase, task-contract, audio-return, route,
+  and no-crash controls. Silent reached title `0x00790400` and hangar
+  `0x006AB400` with 514 task-handoff, 523 audio-return, and 20 route rows;
+  image remained at 320-wide startup and produced 36 crashes at guest PC
+  `0x8000834C` in `spTaskSchedulerThread+9556`, with zero target or diagnostic
+  rows. This refutes the legacy diagnostic bundle as the sole startup cause,
+  leaves DMEM-byte consumption unevaluable, and selects launch order as the
+  next discriminator. Evidence:
+  `scratch/agent/s3811_m5_minimal_boundary_pair/`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

@@ -140457,3 +140457,17 @@ an oracle/ROM/target-phase failure and does not identify a source writer,
 downstream consumer, or mitigation. The next discriminator is a minimal
 concurrent image/silent pair retaining only phase, task-contract,
 audio-return, route, and no-crash controls.
+## Session 3811 (2026-10-03) — minimal DMEM boundary pair selected startup failure beyond diagnostics
+
+The Debug target built successfully. The same-build concurrent pair used only
+phase, task-contract, audio-return, route, and no-crash controls. The silent
+arm reached title `0x00790400` at 13.4 seconds and hangar `0x006AB400` at
+24.6 seconds, with 514 task-handoff rows, 523 audio-return rows, and 20 route
+rows. The corrected image arm remained at 320-wide startup and reproduced 36
+crashes at guest PC `0x8000834C`, native `spTaskSchedulerThread+9556`, with no
+task-contract, audio-return, route, or target-VI rows.
+
+This refutes the legacy diagnostic bundle as the sole explanation for the
+image startup failure and leaves consumption of the final DMEM task-data byte
+unevaluable. It does not identify a writer, consumer, or mitigation. The next
+discriminator starts image before silent to test launch-order interaction.
