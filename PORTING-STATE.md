@@ -140755,3 +140755,18 @@ unevaluable: H1/H2 are not split. This rules out only the claim that the
 target-valid run lacked route preparation; it does not establish a route/source
 identity join. The next capture must enable the actual route-transition gate
 and report the corrected marker names.
+
+## Session 3828 (2026-10-03) — corrected route witness still lacked target DMA overlap
+
+The Debug build passed after correcting the s3826 harness to enable route-order,
+route-transition, and source-range gates and to count the current marker names.
+The single image capture was target-valid: title 1024 and hangar 512 phases,
+1,280 family stores, 7,279 accepted route-prep rows, 15,963 route-order rows,
+141 route-transition rows, and 4,066 route-handoff rows all fired; there was no
+crash or abort. The DMA hook positive control fired, but exact-route DMA rows
+and source-range reader/writer rows remained zero. This selects H3 for the
+ownership discriminator: route preparation is real, but no input-DMA overlap
+witness was captured, so H1/H2 remain unevaluable. The next probe must census
+all target-phase RSP audio-DMA descriptors to determine whether the expected
+descriptor uses an uninstrumented DMEM/RDRAM range or is absent. Evidence:
+`scratch/agent/s3826_m5_family_object_join/summary.txt` and `run.log`.

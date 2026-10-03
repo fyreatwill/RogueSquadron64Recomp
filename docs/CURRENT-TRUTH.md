@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3827 (2026-10-03).
+Updated for session 3828 (2026-10-03).
 
 ## Current state
 
@@ -52,8 +52,12 @@ Work only the first applicable item. This is one monotonic backlog.
    do not repeat the completed aliasing join. Session 3827's target-valid rerun
    recorded accepted `[route-prep]` and route-handoff rows, correcting the
    stale summary marker, but emitted no exact-route DMA or source-range-reader/
-   writer rows. Ownership remains unevaluable; the next run must enable the
-   actual route-transition gate and use corrected marker names.
+   writer rows. Session 3828 corrected those gates and marker counts: target
+   phases and route controls were positive, but exact-route DMA and
+   source-range reader/writer rows were still zero. Before interpreting
+   ownership, census every target-phase RSP audio-DMA descriptor to determine
+   whether the expected descriptor is outside the current overlap windows or
+   absent.
 2. **M5 port target-phase qualification, closed at this scope.** s3821's pair
    was coverage-invalid because the port arm stopped at VI 640; s3822's
    standalone arm reached both target phases. Do not repeat standalone
@@ -126,7 +130,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailPortRouteParity` | Selected at s3823 scope: port hangar source DMA was zero (`FNV=0x762B22A5`, `nz=0`), matching the independent s3820 retail hangar snapshot; the s3823 oracle shutdown snapshot was phase-mixed and is not used as exact-span evidence. |
 | `H-M5-FamilyAlternateObject` | Selected at s3824 scope: 1,280 target-phase family stores and 257 family entries were positive, but none joined the clear object `0x801797B0` or its span; the active route snapshot was present. |
 | `H-M5-FamilyDisconnectedOutput` | Selected at s3825 scope: the fixed image route reached both target VIs with active route/source controls, while every sampled family entry/store remained outside the clear object and span. |
-| `H-M5-FamilyOwnershipRouteWitness` | Unevaluable at s3826: target phases and family/source controls fired, but route-preparation/order and input-DMA witnesses were absent. |
+| `H-M5-FamilyOwnershipRouteWitness` | Unevaluable at s3828: target phases and route-preparation/order/transition/handoff controls fired, but exact-route DMA and source-range reader/writer rows remained absent. |
 
 ## Evidence ledger — live boundary
 
@@ -514,6 +518,12 @@ line naming the writer and stating whether its value is legitimate.
   marker names. The one-time DMA hook controls fired, but exact-route DMA and
   source-range reader/writer rows were zero. No H1/H2 ownership conclusion is
   drawn. Evidence: `scratch/agent/s3826_m5_family_object_join/`.
+- **3828 — corrected route witness:** the Debug build passed and the target-valid
+  image capture emitted 7,279 accepted route-prep, 15,963 route-order, 141
+  route-transition, and 4,066 route-handoff rows, plus both target phases and
+  family controls. The DMA hook control fired, but exact-route DMA and both
+  source-range reader/writer witnesses were zero, so ownership remains
+  unevaluable (H3). Evidence: `scratch/agent/s3826_m5_family_object_join/`.
 
 ## Superseded conclusions
 

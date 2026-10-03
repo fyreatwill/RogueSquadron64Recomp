@@ -1,41 +1,34 @@
-# Next work unit: M5 corrected route/source witness qualification
+# Next work unit: M5 target-phase RSP audio-DMA descriptor census
 
 HYPOTHESIS-ID: m5-alternate-family-object-route-join
 
-Session 3825 selected H2 at a qualified scope, but s3827 did not split H1/H2.
-The run was target-valid and did record accepted `[route-prep]` plus handoff
-rows; the old summary searched stale names. Exact-route DMA and source-range
-reader/writer rows were absent. First collect the real input-DMA witness before
-interpreting alternate-object ownership.
+The corrected s3828 route witness was target-valid and all route controls were
+positive, but exact-route DMA and source-range reader/writer rows were zero.
+Do not interpret alternate-object ownership until the missing DMA witness is
+explained.
 
 Competing hypotheses and discriminator:
 
-- H1: route preparation and input DMA fire, and alternate objects match a
-  route-state/handoff identity.
-- H2: route preparation and input DMA fire, but no route/source identity joins
-  the alternate objects.
-- H3: target phases or the actual input-DMA positive control remain absent, so
-  ownership is unevaluable.
+- H1: target-phase RSP audio DMA occurs, but its RDRAM/DMEM span misses the
+  current `0x1797B0..0x179A48`, `0x6F0..0x9F0`, and `0xCB0..0xE48` windows.
+- H2: target-phase RSP audio DMA does not occur after route preparation; the
+  route handoff is disconnected from the audio task.
+- H3: the DMA callback census is itself not live or is phase-gated incorrectly.
 
-The discriminator is one bounded image run using the validated autopilot and
-phase transitions, with `ROGUESQ_LOG_M5_ROUTE_PREPARE`,
-`ROGUESQ_LOG_M5_ROUTE_ORDER`, `ROGUESQ_LOG_M5_ROUTE_TRANSITION`,
-`ROGUESQ_LOG_M5_RSP_SOURCE`, `ROGUESQ_LOG_M5_EXACT_ROUTE`, and
-`ROGUESQ_LOG_M5_SOURCE_TRANSITION` enabled. Require target phases, accepted
-route-preparation/order, and an exact-route or source-range input-DMA row;
-then correlate each alternate object with the active route ordinal/row and
-source-DMA descriptor. H1 requires a stable identity join; H2 requires all
-positive controls plus no identity join; H3 is any missing input-DMA control.
+The discriminator is one target-valid image run with a bounded, phase-scoped
+census of every `rs64_m5_audio_source_dma` call (dram, len, dmem, route
+ordinal/row, phase, and target key), plus the existing whole-RDRAM/phase,
+route-prep/order/transition/handoff, and DMA-hook positive controls. H1 is a
+target-phase DMA row outside the current windows; H2 is route controls plus no
+target-phase DMA rows; H3 is a missing callback positive control or missing
+target phases.
 
-Before running:
+Before running, add the census to the existing callback and build:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
 
-Run `cmake --build build --config Debug --target RogueSquadron64Recomp`, then
-run the existing script after adding only the missing
-`ROGUESQ_LOG_M5_ROUTE_TRANSITION=1` gate and correcting its summary patterns to
-`m5-route-prepare`, `route-prep`, `m5-route-order`, `m5-exact-route`,
-`m5-exact-route-dma`, `m5-source-range-reader`, and
-`m5-source-range-writer`. Use SIGKILL and keep all existing positive controls.
-Do not add a mitigation or repeat an ownership conclusion without the input-DMA
-witness.
+Run the corrected harness from `build/` with SIGKILL cleanup. Keep
+`PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`, the validated autopilot,
+`ROGUESQ_LOG_M5_RSP_SOURCE=1`, `ROGUESQ_LOG_M5_ROUTE_PREPARE=1`,
+`ROGUESQ_LOG_M5_ROUTE_ORDER=1`, `ROGUESQ_LOG_M5_ROUTE_TRANSITION=1`,
+`ROGUESQ_LOG_M5_ROUTE_HANDOFF=1`, and `ROGUESQ_LOG_M5_EXACT_ROUTE=1` enabled.
