@@ -140395,3 +140395,28 @@ oracle; keep only phase/crash controls and do not add M5 source census fields.
 
 ORIGIN: no mitigation or value guard was added. The `0x8000834C` failure
 remains a startup diagnostic-load defect with its writer/cause unresolved.
+
+## Session 3808 (2026-10-03) — diagnostic isolation selected launch-order interaction
+
+Built `RogueSquadron64Recomp` successfully and ran the prescribed same-build
+matrix at `scratch/agent/s3808_m5_diagnostic_isolation_matrix/` with the
+independent retail oracle concurrently. The oracle's whole-RDRAM positive
+control fired 10,000 times and retail reached title `0x00790400` and hangar
+`0x006ab400`.
+
+The port arms did not produce the planned single-variable split: minimal,
+`LOG_PHASE`, PCM-boundary, and B40 arms crashed or failed before target;
+audio-return and route-state arms reached only the 640 phase without a target;
+the all-five arm reached title at 48.3s and hangar at 58.3s with no crash or
+abort. Thus the previous common-base explanation was not reproduced, and the
+all-five arm is not sufficient to cause the failure in this run. The result
+selects startup nondeterminism or a sequential launch-order interaction at
+this scope; it does not identify an individual diagnostic variable or qualify
+an M5 source join.
+
+Next: run the same six port configurations concurrently in one wrapper, with
+the retail oracle, so arm start order and elapsed startup overlap are no
+longer confounded by sequential execution.
+
+ORIGIN: no mitigation or value guard was added. The `0x8000834C` failure
+remains a startup diagnostic-load defect with its writer/cause unresolved.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3807 (2026-10-03).
+Updated for session 3808 (2026-10-03).
 
 ## Current state
 
@@ -39,15 +39,14 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 isolate the startup diagnostic variable, next.** s3807 ran the planned
-   same-build minimal-route versus current-base matrix. The independent retail
-   oracle passed its whole-RDRAM control and reached title/hangar; minimal
-   reached title/hangar with no crash, while current-base crashed 36 times at
-   guest PC `0x8000834C` before title. This selects the common base diagnostic
-   bundle as the startup destabilizer at this scope. Run one same-build matrix
-   with minimal, each current-base diagnostic variable alone, and all-base, plus
-   the independent retail oracle. Keep phase/crash controls; do not add M5
-   source census fields until the failing variable is isolated.
+1. **M5 isolate the startup diagnostic variable, next.** s3808 ran the planned
+   matrix, but minimal and most single-variable arms failed before target while
+   all-five reached title/hangar; the independent retail oracle passed its
+   whole-RDRAM control and reached title/hangar. This refutes the all-five
+   bundle as sufficient at this scope and selects launch-order/nondeterministic
+   interaction. Run the same six port configurations concurrently in one
+   wrapper, plus the independent retail oracle, with phase/crash controls only.
+   Do not add M5 source census fields until a stable arm reaches target.
 2. **M5 upstream zero-DMEM producer, parked behind diagnostic-load qualification.** s3802
    qualified the port-side immediate chain: the hangar image input reads
    all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
@@ -96,8 +95,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-SourceInputWriter` | Open: the legitimate writer or fill responsible for the zero source span remains unidentified. |
 | `H-M5-PairedArmStartup` | Refuted at s3804 as the primary explanation: `tools/probe.sh` did not make the full-census silent arm stable, while the no-census silent control reached title/hangar. |
 | `H-M5-DiagnosticLoadStartup` | Selected at s3804: the full M5 census silent arm crashed before title at guest PC `0x8000B650`; the same-build no-census silent control reached title and hangar with no crash. |
-| `H-M5-CommonBaseDiagnosticStartup` | Selected at s3807: minimal route reached title/hangar, while current-base crashed 36 times at `0x8000834C`; retail controls passed. |
+| `H-M5-CommonBaseDiagnosticStartup` | Not reproduced at s3808: minimal and most single-variable arms failed, but all-five reached both targets; s3807's sequential split remains single-run evidence. |
 | `H-M5-MinimalRouteTargetValid` | Selected at s3807: minimal image arm reached title `0x00790400` and hangar `0x006AB400` with no crash or abort. |
+| `H-M5-DiagnosticLaunchOrderInteraction` | Open and selected at s3808 scope: sequential arms were mixed while all-five succeeded; concurrent arms are required to split order interaction from nondeterminism. |
 
 ## Evidence ledger — live boundary
 
@@ -267,6 +267,15 @@ Work only the first applicable item. This is one monotonic backlog.
   with no target VI. This selects the common base diagnostic bundle as the
   startup destabilizer at this scope and does not identify the individual
   variable. Evidence: `scratch/agent/s3807_m5_minimal_route_matrix/`.
+- **3808 — diagnostic-variable isolation matrix:** the Debug build passed. The
+  independent retail oracle fired its 10,000-hit whole-RDRAM control and
+  reached title/hangar. In the same-build sequential port matrix, minimal,
+  `LOG_PHASE`, PCM-boundary, and B40 arms failed before target; audio-return
+  and route-state reached only 640; all-five reached title at 48.3s and
+  hangar at 58.3s with no crash. This refutes the all-five bundle as
+  sufficient at this scope and selects launch-order/nondeterministic
+  interaction; no individual variable or source join was isolated. Evidence:
+  `scratch/agent/s3808_m5_diagnostic_isolation_matrix/`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
