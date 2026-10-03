@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3784 (2026-10-03).
+Updated for session 3785 (2026-10-03).
 
 ## Current state
 
@@ -289,9 +289,10 @@ change was made. See
 Work only the first applicable item. This is one monotonic backlog.
 
 1. **M5 qualify independent retail family reachability.** The s3782 return/Z,
-   s3783 repeated-Start, and s3784 repeated-A recipes all stayed in the 320-wide
-   attract phase despite positive whole-RDRAM controls. Run one genuinely new
-   combined Start+A recipe with `--hold-ms 150`, retaining the whole-RDRAM,
+   s3783 repeated-Start, s3784 repeated-A, and s3785 combined Start+A recipes
+   all stayed in the 320-wide attract phase despite positive whole-RDRAM
+   controls. The next discriminator must be a genuinely new, independently
+   justified retail input or navigation recipe; preserve the whole-RDRAM,
    route-byte, S/I/L, and target-VI controls. A family hit plus a target VI
    selects retail reachability and enables the H1/H2 route comparison; target VI
    without a family hit is a route-PC mismatch; no target VI is an input/recipe
@@ -400,8 +401,17 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailRecipePreTarget` | Selected at s3782 for the return/Z recipe: the whole-RDRAM control fired, but retail stayed in 320-wide attract for 120 seconds with no target VI or S/I/L family hit. |
 | `H-M5-RetailStartRecipePreTarget` | Selected at s3783 for the repeated-Start recipe: the whole-RDRAM control fired, but retail stayed in 320-wide attract for 120 seconds with no target VI or S/I/L family hit. |
 | `H-M5-RetailARecipePreTarget` | Selected at s3784 for the repeated-A recipe: the whole-RDRAM control fired, but retail stayed in 320-wide attract for 120 seconds with no target VI or S/I/L family hit. |
+| `H-M5-RetailStartARecipePreTarget` | Selected at s3785 for the combined Start+A recipe: the whole-RDRAM control fired 10,003 times, but retail stayed in 320-wide attract for 120 seconds with no target VI or S/I/L family hit; route-byte writes were 2/1/0. |
 
 ## Evidence ledger — live boundary only
+
+- **3785 — combined Start+A retail qualification:** the independent oracle's
+  whole-RDRAM control fired 10,003 times. Twelve paired 150-ms Start/A pulses
+  still left the VI trace in the early 320-wide attract phase; target VIs and
+  S/I/L execution watches were all zero, with route-byte writes 2/1/0. This
+  selects an input/recipe failure for this arm, not a retail route-state
+  conclusion. The next discriminator must use a new, justified navigation
+  recipe. See `scratch/agent/s3785_oracle_family_start_a/oracle.log`.
 
 - **3782 — retail family-reachability recipe qualification:** the independent
   oracle's whole-RDRAM control fired 10,003 times. Candidate route-byte writes
