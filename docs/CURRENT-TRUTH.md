@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3766 (2026-10-02).
+Updated for session 3767 (2026-10-02).
 
 ## Current state
 
@@ -120,18 +120,28 @@ source-span rows and the input DMA. This selects `H-M5-ClearIsExpected` for
 caller/order, without explaining the missing post-clear producer or changing
 the clear. See [M5-S3766-CLEAR-CALLER-ORDER.md](M5-S3766-CLEAR-CALLER-ORDER.md).
 
+Session 3767 ran the batched post-clear writer/order capture with the retail
+oracle. The oracle whole-RDRAM control fired and reached title/hangar,
+recording 705 and 1,125 writes in the two target source ranges. The port
+image arm reached both target VIs; its phase-5 clear was followed by 244
+target-span stores, all zero-valued from `0x800078EC`, with no nonzero
+post-clear writer. Its input-DMA join was absent in this capture. The silent
+arm failed to reach a target VI and is unevaluable, not a null result. See
+[M5-S3767-POSTCLEAR-PRODUCER-ORDER.md](M5-S3767-POSTCLEAR-PRODUCER-ORDER.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 post-clear producer and retail timing.** s3766 selected
-   `H-M5-ClearIsExpected`: callsite `0x8008F2CC` allocates and immediately
-   clears the `0x298`-byte source buffer, and the port clear precedes the
-   zero-valued `0x800078EC` source-span rows and input DMA. Join the first
-   nonzero retail producer after its corresponding initialization to the
-   port's post-clear route/producer window. Do not suppress or replace the
-   clear, add another task-data value field, or change an audio gate. Require
-   the oracle positive control and both title/hangar phases.
+1. **M5 retail writer-family to port edge join.** s3767 selected
+   `H-M5-PostClearProducerAbsent` for the measured port target span: after
+   the legitimate `0x8008F2CC` clear, only zero stores from `0x800078EC` were
+   observed in the image arm. Map the independent retail writer families
+   (`0x80007670`, `0x8001E2C0`, and the `0x8001F...` family) to their port
+   generated callers/entries and compare phase/order around the clear. Do not
+   suppress or replace the clear, add another task-data value field, or change
+   an audio gate. Require the oracle positive control and both title/hangar
+   phases; discard an arm that misses a target VI.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -182,6 +192,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-InputProducerGap` | Selected at s3764 for the measured image chain: aligned input DMA was already zero with no previous writer, and stage/PCM rows preserved zero. Single-capture boundary; producer identity remains open. |
 | `H-M5-ProducerAbsent` | Selected at s3765 for the measured pre-input producer classes: 33 aligned image input-DMA rows were zero with empty previous-writer attribution; the separate source-span census records only the known zero-fill writer `0x800078EC`. Clear caller/order remains open. |
 | `H-M5-ClearIsExpected` | Selected at s3766: `0x8008F2CC` allocates and immediately clears the `0x298`-byte source buffer; the runtime clear precedes the observed source-span rows and input DMA in both port arms. |
+| `H-M5-PostClearProducerAbsent` | Selected at s3767 for the measured image-arm target span: 244 phase-5 stores followed the clear, all zero-valued from `0x800078EC`; no nonzero port producer appeared. Retail independently reached both target phases and wrote both source ranges. |
+| `H-M5-PostClearProducerClears` | Refuted for the measured image-arm target span at s3767: no nonzero post-clear writer preceded a later zero writer. |
+| `H-M5-PostClearJoinMismatch` | Open for the downstream input-DMA join at s3767: the image arm reached both target VIs, but emitted no input-DMA row in this capture; prior s3766 coverage remains the join evidence. |
 | `H-M5-ClearIsWrongOrder` | Refuted for the measured port caller/order: no legitimate producer was observed before the `0x8008F2CC` clear, and the static caller performs allocation, clear, then writeback. |
 | `H-M5-JoinMismatch` | Refuted for the measured target row: static callsite, destination, fill, length, phase-5 route, and source-DMA range joined in both arms. |
 | `H-M5-OutputConsumerGap` | Refuted at s3764 for the measured chain: the first observed zero preceded image-stage output and PCM consumption. |

@@ -139551,3 +139551,25 @@ the second evidence line. See `docs/M5-S3766-CLEAR-CALLER-ORDER.md` and
 
 ORIGIN: the observed writer is a legitimate initialization clear from the
 allocation caller; no mitigation was added.
+
+## Session 3767 (2026-10-02) — selected the post-clear producer boundary
+
+The rebuilt batched capture paired the existing phase-gated port writer/clear
+probes with the independent retail oracle. The oracle whole-RDRAM positive
+control fired with 11,830 writes, reached title VI 1024 and hangar VI 512,
+and recorded 705 writes in `0x1797B0..0x1798B0` plus 1,125 writes in
+`0x1798B0..0x179A48`. The port image arm reached both target VIs. Its phase-5
+clear was `0x8008F2CC -> 0x801797B0`, followed by 244 target-span stores, all
+zero-valued from `0x800078EC`; no nonzero target-span producer appeared. The
+input-DMA probe emitted no row in this capture. A fixed silent-only rerun also
+missed both target VIs, so its nulls are unevaluable and not evidence.
+
+This selects `H-M5-PostClearProducerAbsent` for the measured port target-span
+producer class and refutes a port-side nonzero-then-clear sequence. It rules
+out neither the retail writer-to-port edge nor the missing downstream DMA
+join. The next experiment maps the retail writer families to generated port
+callers/entries. See `docs/M5-S3767-POSTCLEAR-PRODUCER-ORDER.md` and
+`scratch/agent/s3767_m5_postclear_order/`.
+
+ORIGIN: the observed port writer is the legitimate zero-fill at `0x800078EC`;
+no mitigation was added.
