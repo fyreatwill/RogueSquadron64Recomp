@@ -140736,3 +140736,22 @@ route-preparation, route-order, and input-DMA rows. The target-phase family
 stores therefore cannot be joined to a route/source descriptor in this run;
 H1 and H2 are unevaluable here. This does not overturn the qualified s3825
 H2 result. Evidence: `scratch/agent/s3826_m5_family_object_join/`.
+## Session 3827 (2026-10-03) — separated route preparation from missing input-DMA witness
+
+The Debug build passed and the existing s3826 image capture was run once with
+the validated LLE/spin-yield/autopilot route. Same-run positive controls fired:
+167 phase rows, both title `0x00790400` and hangar `0x006AB400` target phases,
+six family-edge controls, 1,280 family stores, one writer-setup control, and
+1,036 source-transition rows; no crash or abort occurred. The raw log also
+contains accepted hangar route-preparation rows (`[route-prep]`, accepted=1)
+and route-handoff rows. The script summary used stale marker names, so its
+zeroes for route preparation were not evidence of absence.
+
+The actual input-DMA witnesses remained absent: the one-time
+`m5-exact-route-dma-control` and `m5-rsp-source-hook-control` fired, but there
+were zero `m5-exact-route-dma`, `m5-source-range-reader`, or
+`m5-source-range-writer` rows. Therefore alternate-object ownership remains
+unevaluable: H1/H2 are not split. This rules out only the claim that the
+target-valid run lacked route preparation; it does not establish a route/source
+identity join. The next capture must enable the actual route-transition gate
+and report the corrected marker names.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3826 (2026-10-03).
+Updated for session 3827 (2026-10-03).
 
 ## Current state
 
@@ -49,10 +49,11 @@ Work only the first applicable item. This is one monotonic backlog.
    the clear-associated `0x801797B0..0x80179A47` object while route-order and
    source-range/source-transition controls were live. Determine whether these
    alternate objects are intended route state or a disconnected output family;
-   do not repeat the completed aliasing join. Session 3826's rerun reached
-   both target VIs and fired family/store and source-transition controls, but
-   emitted no route-preparation, route-order, or source-DMA rows; that run is
-   coverage-invalid and does not overturn s3825.
+   do not repeat the completed aliasing join. Session 3827's target-valid rerun
+   recorded accepted `[route-prep]` and route-handoff rows, correcting the
+   stale summary marker, but emitted no exact-route DMA or source-range-reader/
+   writer rows. Ownership remains unevaluable; the next run must enable the
+   actual route-transition gate and use corrected marker names.
 2. **M5 port target-phase qualification, closed at this scope.** s3821's pair
    was coverage-invalid because the port arm stopped at VI 640; s3822's
    standalone arm reached both target phases. Do not repeat standalone
@@ -506,13 +507,13 @@ line naming the writer and stating whether its value is legitimate.
   (alternate family objects are disconnected from the active source object) at
   the measured scope and leaves their semantic ownership open. Evidence:
   `scratch/agent/s3825_m5_family_route_object_join_fixed/`.
-- **3826 — alternate family-object ownership rerun was coverage-invalid:** the
-  Debug build passed. The initial launcher omitted the exact-route and
-  source-transition gates; the corrected launcher reached title 1024 and
-  hangar 512 with family/store controls and 1,036 source-transition rows, but
-  still produced zero route-preparation, route-order, and input-DMA rows.
-  No H1/H2 ownership conclusion is drawn; this is a route-witness recipe
-  failure. Evidence: `scratch/agent/s3826_m5_family_object_join/`.
+- **3826/3827 — alternate family-object route witness:** the Debug build passed
+  and the target-valid capture reached title 1024/hangar 512 with family,
+  store, and source-transition controls. Raw logs contain accepted
+  `[route-prep]` and route-handoff rows; the prior summary searched stale
+  marker names. The one-time DMA hook controls fired, but exact-route DMA and
+  source-range reader/writer rows were zero. No H1/H2 ownership conclusion is
+  drawn. Evidence: `scratch/agent/s3826_m5_family_object_join/`.
 
 ## Superseded conclusions
 
