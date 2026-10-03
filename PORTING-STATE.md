@@ -140289,3 +140289,28 @@ ORIGIN: the writer is the Factor 5 RSP route's zero-valued DMEM/vector/DMA
 chain followed by source DMA to RDRAM. The zero is legitimate for the observed
 port route but not yet explained as the intended payload; no mitigation was
 added.
+
+## Session 3803 (2026-10-03) — paired source census blocked by arm startup stability
+
+The Debug target rebuilt successfully. The retail oracle was independently
+valid: its whole-RDRAM positive control fired, it reached title
+`0x00790400` and hangar `0x006AB400`, and it exited naturally after 45 seconds.
+The first direct-executable paired recipe was coverage-invalid because retail
+was killed at the port target; the wrapper was repaired to wait for retail
+hangar and natural oracle shutdown. Three same-build port launch variants then
+tested startup ordering. When image launched first and silent second, image
+reached both target VIs and emitted 256 source-range rows while silent crashed
+36 times at guest PC `0x8000834C`. Reversing launch order made image crash 36
+times while silent survived. A title-gated second launch still crashed image
+36 times before title in the tested ordering. Thus the failing arm followed
+launch order in one pair and was nondeterministic across the title-gated run;
+no paired image/silent census was valid.
+
+This rules out neither the upstream zero-DMEM producer nor retail/port parity.
+It selects a new paired-arm stability discriminator: replace direct executable
+launches with the established `tools/probe.sh` window/launch path before
+repeating the census. The only writer-shaped observation remains the prior
+s3802 port-side zero RSP/vector/DMA chain; no mitigation was added.
+
+ORIGIN: no corruption mitigation or value guard was added. The observed
+`0x8000834C` crash is a coverage failure whose writer/cause is unresolved.

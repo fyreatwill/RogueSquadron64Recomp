@@ -24,11 +24,12 @@ COMMON=(ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
   PROBE_LEAVE_OK=1 PROBE_KEYS="$PRESS")
 
 cd "$ROOT" || exit 2
-env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 120 \
+env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 45 \
   --watch-write 0x0:0x800000 \
   --watch-write 0x1797B0:0x1798B0 \
   --watch-write 0x1798B0:0x179A48 \
   --watch-pc 0x800078EC \
+  --hit-cap 20 --pc-phase-quiet \
   --pc-phase-log-width 0x00790400:1024 \
   --pc-phase-log-width 0x006AB400:512 \
   --vi-trace --press "$PRESS" --hold-ms 150 > "$OUT/oracle.log" 2>&1 &
@@ -41,6 +42,10 @@ launch() {
   print $! > "$OUT/$name.pid"
 }
 launch image 1
+for tick in {1..60}; do
+  grep -a -q '\[phase\].*width=1024\|vi_width=1024' "$OUT/image.log" 2>/dev/null && break
+  sleep 1
+done
 launch silent 0
 trap 'kill -KILL "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true' EXIT INT TERM
 image_pid=$(<"$OUT/image.pid")
@@ -54,7 +59,12 @@ for tick in {1..150}; do
       ready=$((ready + 1))
     fi
   done
-  (( ready == 2 )) && break
+  if grep -a -q '\[vi\].*origin=0x006ab400' "$OUT/oracle.log" 2>/dev/null || ! kill -0 "$oracle_pid" 2>/dev/null; then
+    oracle_ready=1
+  else
+    oracle_ready=0
+  fi
+  (( ready == 2 && oracle_ready == 1 )) && break
   sleep 1
 done
 

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3802 (2026-10-03).
+Updated for session 3803 (2026-10-03).
 
 ## Current state
 
@@ -39,17 +39,20 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 upstream zero-DMEM producer, next.** s3802 qualified the port-side
-   immediate chain: the hangar image input reads all-zero DMEM `0xCB0..0xE48`,
-   zero-valued vector/DMA coverage precedes it, and the source DMA writes the
-   same all-zero payload to `0x1798B0..0x179A48`; no guest CPU store overlaps
-   the source span. Retail whole-RDRAM and `0x800078EC` controls were live, but
-   retail hangar payload parity was not reached before the bounded run stopped.
-   The next work unit must trace the upstream source of the zero DMEM payload
-   with one batched, phase-gated RSP source-DMA and DMEM-producer census,
-   retaining the same positive controls. Do not repeat launch-order, SP-yield,
-   or source-versus-consumer comparisons.
-2. **M3 runtime allocator qualification.** The complete generated
+1. **M5 paired-arm stability qualification, next.** s3803 could not qualify
+   the required paired source census: retail ground truth was complete, but
+   concurrent port startup was launch-order-sensitive and one arm crashed at
+   `0x8000834C` before title. Replace the direct-executable driver with the
+   established `tools/probe.sh` launch path and preserve the same M5 census
+   and retail controls. Do not promote a source-writer conclusion until both
+   arms reach title/hangar.
+2. **M5 upstream zero-DMEM producer, parked behind stability.** s3802
+   qualified the port-side immediate chain: the hangar image input reads
+   all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
+   and the source DMA writes the same all-zero payload to
+   `0x1798B0..0x179A48`; no guest CPU store overlaps the source span. Resume
+   only after a valid paired capture.
+3. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
    times in the captured log. Do not repeat launch-order variants. Resume only
@@ -59,7 +62,7 @@ Work only the first applicable item. This is one monotonic backlog.
    No generated invalid writer or guard is justified. Only resume this class
    if an independent runtime allocator witness identifies a concrete bad
    value; otherwise continue with the next systematic M3 class.
-3. **Generated-symbol renaming sweep.** Resume only after the M5 change is
+4. **Generated-symbol renaming sweep.** Resume only after the M5 change is
    validated and M3 has no new discriminator. Keep slug
    `generated-symbol-renaming-sweep`; s3796 found no stale callable symbol in
    `0x80009000..0x8000A000` with valid companion positive controls.
@@ -89,6 +92,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-ImageStageOnly` | Selected at s3800: image emitted 5,570 stage rows while silent emitted zero; shared PCM/return controls remained active. |
 | `H-M5-ImageStageBoundary` | Selected at s3801: image's zero source/stage payload reaches a live image consumer; silent has no image-stage rows but retains PCM controls. |
 | `H-M5-SourceInputWriter` | Open: the legitimate writer or fill responsible for the zero source span remains unidentified. |
+| `H-M5-PairedArmStartup` | Open at s3803: one concurrently launched port arm crashes at `0x8000834C`; the failing arm follows launch order, so driver/startup contention versus a true paired scheduler defect is unresolved. |
 
 ## Evidence ledger — live boundary
 
@@ -213,6 +217,15 @@ Work only the first applicable item. This is one monotonic backlog.
   Retail whole-RDRAM and `0x800078EC` controls were live, but retail hangar
   payload parity was not reached. See
   [M5-S3802-SOURCE-WRITER-CENSUS.md](M5-S3802-SOURCE-WRITER-CENSUS.md).
+- **3803 — paired source census coverage failure:** the Debug build passed and
+  the retail oracle independently reached title `0x00790400` and hangar
+  `0x006AB400`, with the whole-RDRAM positive control firing and a natural
+  45-second shutdown. Three same-build port launch variants were invalid: the
+  second-launched arm crashed 36 times at guest PC `0x8000834C`, while the
+  first arm could reach the target in one ordering; another run crashed the
+  first arm before title. The image arm produced 256 source-range rows only
+  when it survived; no paired image/silent census was valid. This selects an
+  arm-startup coverage discriminator and leaves the zero-DMEM writer open.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

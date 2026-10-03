@@ -1,39 +1,41 @@
-# Next work unit: identify the upstream source of the zero DMEM payload
+# Next work unit: qualify paired-arm startup stability with the probe driver
 
-HYPOTHESIS-ID: m5-upstream-zero-dmem-producer
+HYPOTHESIS-ID: m5-paired-arm-stability
 
-s3802 selected the immediate port-side RSP/vector/DMA chain. Both port arms
-reached title and hangar with positive controls. The image arm repeatedly read
-all-zero `0x1798B0..0x179A48` from DMEM `0xCB0`; source-transition and DMEM
-coverage rows independently show zero-valued vector/DMA production before the
-RDRAM write, and no guest CPU store overlaps the source span. Retail controls
-were live, but retail hangar payload parity was not reached before the bounded
-run stopped.
+s3803 validated the independent retail control but could not validate the
+paired port census. The oracle whole-RDRAM control fired, retail reached title
+`0x00790400` and hangar `0x006AB400`, and shut down naturally after 45 seconds.
+Across same-build port variants, the second-launched arm crashed 36 times at
+guest PC `0x8000834C`; another run crashed the first arm before title. The
+image arm produced 256 source-range rows only when it survived. No source
+writer conclusion is allowed from these runs.
 
 Competing hypotheses and discriminator:
 
-- H1: the zero DMEM payload comes from a legitimate upstream RSP source DMA or
-  task-data fill; a complete source-DMA/DMEM census joins its descriptor and
-  value to the later `0xCB0` input DMA.
-- H2: the observed vector/DMA chain is only a downstream clear/copy; the
-  upstream source descriptor is absent, stale, or unrelated to the image task.
-- H3: the port is using the wrong source descriptor/range; a same-run retail
-  hangar watch disagrees with the port's source span or producer ordering.
+- H1: the direct executable wrapper is causing startup/window contention;
+  launching each arm through `tools/probe.sh` produces both target VIs with
+  zero crash markers and preserves the M5 positive controls.
+- H2: two port instances genuinely contend in the scheduler; the probe-driver
+  launch still has one arm die at `0x8000834C` before target phase.
+- H3: the M5 diagnostic load itself destabilizes the arm; the probe-driver
+  pair reaches target only when the source-census variables are removed, while
+  the full census arm fails.
 
-The discriminating measurement is one batched, phase-gated census of every
-source DMA into the task's DMEM input/output windows plus every DMEM writer
-overlapping `0xCB0..0xE48`, joined by task generation and the later image input
-DMA. The retail oracle must remain alive through hangar while watching the
-same physical source span and producer PC `0x800078EC`. H1 predicts a complete
-zero source-DMA join; H2 predicts an incomplete or unrelated upstream chain;
-H3 predicts retail/source-span or producer-order disagreement. Whole-RDRAM and
-both target-VI controls must fire in the same run.
+The discriminating measurement is one same-build pair using the established
+`tools/probe.sh` launch/window path, with the full M5 census variables and the
+retail oracle kept in the same recipe. H1 predicts two valid port arms and a
+complete paired census; H2 predicts a repeatable one-arm `0x8000834C` crash;
+H3 predicts stability only in a no-census control, which must be run in the
+same batch if needed. Whole-RDRAM and both retail target-VI controls must fire.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
     zsh scratch/agent/run_m5_source_input_writer.sh
 
-Do not add a mitigation or alter the SP-yield/audio contract. If the census
-is incomplete or the retail arm misses title/hangar, classify the run invalid
-and repair coverage before drawing a writer conclusion.
+Before running, replace only the direct port launches in that recipe with
+`tools/probe.sh` invocations, keeping the same environment, oracle watches,
+phase gate, and SIGKILL cleanup. If both arms qualify, resume the upstream
+zero-DMEM producer census. If either arm still crashes, stop repeating launch
+order and record the paired arm as unevaluable; choose a new single-arm
+ground-truth discriminator or ask for a human decision.
