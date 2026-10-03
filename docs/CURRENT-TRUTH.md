@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3765 (2026-10-02).
+Updated for session 3766 (2026-10-02).
 
 ## Current state
 
@@ -111,17 +111,27 @@ classes and moves the next question to the clear's caller/ordering; it does
 not authorize suppressing the clear. See
 [M5-S3765-PRE-INPUT-PRODUCER-BOUNDARY.md](M5-S3765-PRE-INPUT-PRODUCER-BOUNDARY.md).
 
+Session 3766 rebuilt the existing static `rs_memset` caller probes and ran
+same-build image/silent arms. Both arms passed the probe controls and reached
+title VI 1024 and hangar VI 512. The target clear was called from
+`0x8008F2CC`, immediately after allocation of the `0x298`-byte buffer and
+before cache writeback; runtime rows placed it before the `0x800078EC`
+source-span rows and the input DMA. This selects `H-M5-ClearIsExpected` for
+caller/order, without explaining the missing post-clear producer or changing
+the clear. See [M5-S3766-CLEAR-CALLER-ORDER.md](M5-S3766-CLEAR-CALLER-ORDER.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 clear ordering and caller.** s3765 selected
-   `H-M5-ProducerAbsent` for the measured pre-input producer classes and
-   identified the known zero-fill writer `0x800078EC` across the source span.
-   Join that clear's caller and ordering to the phase-5 route and retail
-   writer timing. Do not add another task-data value field, change an audio
-   gate, or suppress/replace the clear. Require the oracle positive control and
-   both title/hangar phases.
+1. **M5 post-clear producer and retail timing.** s3766 selected
+   `H-M5-ClearIsExpected`: callsite `0x8008F2CC` allocates and immediately
+   clears the `0x298`-byte source buffer, and the port clear precedes the
+   zero-valued `0x800078EC` source-span rows and input DMA. Join the first
+   nonzero retail producer after its corresponding initialization to the
+   port's post-clear route/producer window. Do not suppress or replace the
+   clear, add another task-data value field, or change an audio gate. Require
+   the oracle positive control and both title/hangar phases.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -171,6 +181,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-ImageStageOnly` | Selected at s3763: same-build image/silent arms shared task return, SP delivery, PCM counts, slot/voice nulls, and both target phases; image-only work was image-stage/DMA activity. |
 | `H-M5-InputProducerGap` | Selected at s3764 for the measured image chain: aligned input DMA was already zero with no previous writer, and stage/PCM rows preserved zero. Single-capture boundary; producer identity remains open. |
 | `H-M5-ProducerAbsent` | Selected at s3765 for the measured pre-input producer classes: 33 aligned image input-DMA rows were zero with empty previous-writer attribution; the separate source-span census records only the known zero-fill writer `0x800078EC`. Clear caller/order remains open. |
+| `H-M5-ClearIsExpected` | Selected at s3766: `0x8008F2CC` allocates and immediately clears the `0x298`-byte source buffer; the runtime clear precedes the observed source-span rows and input DMA in both port arms. |
+| `H-M5-ClearIsWrongOrder` | Refuted for the measured port caller/order: no legitimate producer was observed before the `0x8008F2CC` clear, and the static caller performs allocation, clear, then writeback. |
+| `H-M5-JoinMismatch` | Refuted for the measured target row: static callsite, destination, fill, length, phase-5 route, and source-DMA range joined in both arms. |
 | `H-M5-OutputConsumerGap` | Refuted at s3764 for the measured chain: the first observed zero preceded image-stage output and PCM consumption. |
 | `H-M5-Accounting` | Refuted at s3764 for the measured rows: oracle/title/hangar controls and phase/ordinal joins were present. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |

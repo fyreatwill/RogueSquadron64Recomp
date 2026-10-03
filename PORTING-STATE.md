@@ -139526,3 +139526,28 @@ ORIGIN: no mitigation or value change was made; `0x800078EC` is a legitimate
 zero-valued writer observed by diagnostics, and its intended ordering remains
 unresolved. Evidence: `docs/M5-S3765-PRE-INPUT-PRODUCER-BOUNDARY.md` and
 `scratch/agent/s3762_m5_step1_silent_repeat/`.
+## Session 3766 (2026-10-02) — joined the M5 clear caller and ordering
+
+The first same-build capture was invalid for the caller discriminator: both
+arms reached title/hangar, but the host logging functions had no corresponding
+generated probes. I applied the existing s2447 static `rs_memset` entry probe
+and s2448 caller-site probes, rebuilt once, and reran the paired image/silent
+capture. Both arms passed the probe controls and reached title VI 1024 and
+hangar VI 512; the image arm also emitted image-stage rows.
+
+The target clear joined to callsite `0x8008F2CC`, destination `0x801797B0`,
+fill `0`, and length `0x298` in both arms. Static generated code shows the
+caller allocates the buffer at `0x8008F2B4`/`0x8008F2B8`, stores the pointer,
+then calls `rs_memset` at `0x8008F2CC`; cache writeback follows at
+`0x8008F2DC`. Runtime ordering placed this clear before the phase-5
+`0x800078EC` source-span rows and before input DMA `0x1798B0 -> DMEM 0xCB0`.
+
+This selects `H-M5-ClearIsExpected` for caller/order and refutes a wrong-order
+clear or target join mismatch at this boundary. It does not identify the
+missing legitimate post-clear producer, and no clear or guest state was
+changed. The independent s3762 retail oracle control and target phases remain
+the second evidence line. See `docs/M5-S3766-CLEAR-CALLER-ORDER.md` and
+`scratch/agent/s3416_m5_entry_input/`.
+
+ORIGIN: the observed writer is a legitimate initialization clear from the
+allocation caller; no mitigation was added.
