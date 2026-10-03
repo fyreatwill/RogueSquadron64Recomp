@@ -141331,3 +141331,18 @@ The run was diagnostic-only and made no runtime or guest-state change. The
 next M5 discriminator must watch the candidate stage span itself while
 sampling the known stage writers' scalar payloads; do not treat this result as
 proof that the image task/output edge is absent.
+
+## Session 3861 (2026-10-03) — bounded candidate-span scalar attribution
+
+Ran `scratch/agent/run_s3861_m5_candidate_span_scalar.sh`, watching physical
+`0x165000..0x16C000` and requesting scalar attribution for `0x80015BC8` and
+`0x8000F3A0` in paired retail-oracle/port arms. The first attempt was invalid:
+the port crashed before title or hangar. Repeating the same arm without an
+instrumentation change passed the oracle whole-RDRAM positive control, title
+VI 1024, hangar VI 512, and no-crash/no-abort controls.
+
+Retail had 287 phase-gated candidate-span writer-PC rows, but neither known
+stage PC appeared and neither had a post-store scalar row. The port arm
+independently reached 3,031 image-DMA joins. This selects the bounded result
+that these two known stage PCs are not candidate-span writers; it rules out
+neither the other candidate-span writer PCs nor the image edge.
