@@ -141009,3 +141009,19 @@ but not a project-wide stop. Re-scoped the next unit to independent retail/
 port M5 task/output-contract parity, recorded the dependency in
 `docs/CURRENT-TRUTH.md`, and left the guard unclassified. Evidence:
 `scratch/agent/UNBLOCK.md`.
+
+## Session 3844 (2026-10-03) — paired retail/port task-output contract
+
+Ran the planned paired task/output contract capture. The first arm was
+coverage-invalid: retail fired the whole-RDRAM and both target-VI controls,
+but the port crashed at guest `0x8000834C` before VI 320. The fixed rerun kept
+the validated controls and added `ROGUESQ_DRAIN_INLOOP_TICK=1`; both arms then
+reached title 1024 and hangar 512 without crash or abort. Retail produced 516
+hangar task dumps and the port produced 3,342 named task-contract rows, 11,582
+image-stage rows, and 2,870 image-DMA joins. All qualified output fields were
+zero on both arms, selecting empty ABI output-field parity. Retail's task
+source descriptor was `0x80173CB0`, distinct from port's `0x80171E70`, and the
+retail physical watch of `0x1798B0..0x179A48` had no hits. This rules out a
+port-only nonempty ABI output field, but does not establish that retail's
+distinct descriptor has the same separate image-stage/writeback destination.
+Evidence: `scratch/agent/s3844_m5_task_output_contract_retail_fixed/`.

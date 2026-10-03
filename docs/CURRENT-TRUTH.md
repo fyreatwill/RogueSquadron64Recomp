@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3842 (2026-10-03).
+Updated for session 3844 (2026-10-03).
 
 ## Current state
 
@@ -62,7 +62,16 @@ Work only the first applicable item. This is one monotonic backlog.
    not a project-wide stop: a local `build/N64Recomp` exists, but Apple Clang
    has no MIPS target and no `mips64-elf-*` compiler/linker exists in the
    workspace.
-2. **M5 image task/output contract edge.** Session 3839's target-valid join
+2. **M5 image task/output destination role — OPEN.** Session 3844's paired,
+   target-valid capture selected parity for empty ABI output fields: retail
+   hangar task rows and port named `0x80171E70`/size-1 rows all had zero
+   `output_buff` and `output_buff_size`. Retail nevertheless used the distinct
+   source descriptor `0x80173CB0`, and its physical `0x1798B0..0x179A48`
+   watch had no hits. The next bounded probe must join retail's
+   `0x80173CB0` task generations to its actual stage/writeback destination
+   before declaring the separate-edge contract equivalent. Do not infer a
+   retail output destination from the port address.
+3. **M5 image task/output contract edge.** Session 3839's target-valid join
    selected H1 at the named input edge: hangar contract rows with
    `data_ptr=0x80171E70`/size `1` joined the exact `0x1798B0 -> DMEM 0xCB0`
    input DMA at the same task generations; its payload was
@@ -140,29 +149,29 @@ Work only the first applicable item. This is one monotonic backlog.
    phases and route controls were positive, but exact-route DMA and
    source-range reader/writer rows were still zero. These are historical
    boundaries beneath the now-closed retail object-access discriminator.
-2. **M5 port target-phase qualification, closed at this scope.** s3821's pair
+5. **M5 port target-phase qualification, closed at this scope.** s3821's pair
    was coverage-invalid because the port arm stopped at VI 640; s3822's
    standalone arm reached both target phases. Do not repeat standalone
    qualification unless the route or build changes.
-3. **M5 target-phase retail/port route parity.** s3820's independent oracle
+6. **M5 target-phase retail/port route parity.** s3820's independent oracle
    phase snapshot is zero at hangar (`FNV=0x762B22A5`, 408 bytes), matching the
    qualified port input-DMA payload. The next bounded probe must join the
    retail hangar source snapshot to the port image-stage/source-DMA route in
    one paired capture, including the existing positive controls. Do not repeat
    the retail nonzero-writer census: its shutdown-only 12-byte residue is
    pre-target/transient evidence, not a hangar producer.
-4. **M5 image-arm stability discriminator, closed at this scope.** The
+7. **M5 image-arm stability discriminator, closed at this scope.** The
    isolated image arm reached both target phases with independent phase and
    M5 controls; s3811/s3812 launch-order failures no longer block producer
    work. Keep the stability breadcrumb passive and do not repeat ordering A/B.
-5. **M3 runtime allocator qualification.** The complete generated
+8. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
    times in the captured log. Do not repeat launch-order variants. Resume only
    with a new discriminator for arm stability that preserves both controls.
    `rs_zcfree` idiom is closed at s3790; no generated invalid writer or guard
    is justified.
-6. **Generated-symbol renaming sweep.** Resume only after the M5 change is
+9. **Generated-symbol renaming sweep.** Resume only after the M5 change is
    validated and M3 has no new discriminator. Keep slug
    `generated-symbol-renaming-sweep`; s3796 found no stale callable symbol in
    `0x80009000..0x8000A000` with valid companion positive controls.
@@ -225,6 +234,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-TaskContractInputDmaJoin` | Selected H1 at s3839 target scope: the named `0x80171E70`/size-1 contract joined the exact `0x1798B0 -> 0xCB0` input DMA at matching task generations, with zero payload; output image-DMA joins were also present. |
 | `H-M5-TaskOutputEdgeAbsent` | Refuted at s3839 target scope: matching `audtask-image-dma-join` rows prove a downstream image-stage/writeback edge exists; its semantic destination contract remains open. |
 | `H-M5-TaskOutputFieldsEmptySeparateWriteback` | Selected at s3840 port scope: all 458 named task rows had zero ABI output fields, while 452/458 stage generations joined the `0x1798B0`/`0x198` writeback DMA. |
+| `H-M5-RetailTaskOutputFieldParity` | Selected at s3844 target scope: 516 retail hangar task rows and 3,342 port named rows had zero nonzero ABI output fields; retail destination-role equivalence remains open. |
 
 ## Evidence ledger — live boundary
 
@@ -236,6 +246,17 @@ Work only the first applicable item. This is one monotonic backlog.
   runtime or generated-symbol claim was made. A toolchain restore/reconfigure
   that makes `PatchesLib` appear is the single experiment that refutes this
   blocker.
+- **3844 — paired retail/port task-output contract:** the first pair was
+  coverage-invalid because the port crashed at `0x8000834C` before VI 320.
+  The fixed rerun added the validated in-loop drain control and reached both
+  target phases on both arms. Retail fired whole-RDRAM and both target-VI
+  controls and produced 516 hangar task rows; port produced 3,342 named
+  contract rows, 11,582 stage rows, and 2,870 image-DMA joins with no crash.
+  All qualified output fields were zero on both arms. Retail's task source was
+  `0x80173CB0`, not port's `0x80171E70`; the retail watch of
+  `0x1798B0..0x179A48` had no hits. This selects empty ABI fields as parity,
+  but leaves retail destination-role equivalence open. Evidence:
+  `scratch/agent/s3844_m5_task_output_contract_retail_fixed/`.
 
 - **3785 — combined Start+A retail qualification:** whole-RDRAM control fired
   10,003 times; retail stayed in 320-wide attract for 120 seconds, with no
