@@ -140787,3 +140787,25 @@ gate/callback not live) is refuted at the corrected scope and H2 (no
 This does not yet explain the alternate family objects. Evidence:
 `scratch/agent/s3829_m5_dma_census/` and
 `scratch/agent/s3829_m5_dma_census_fixed/`.
+
+## Session 3830 (2026-10-03) — joined alternate family rows with task context
+
+The Debug build passed after extending the existing target-phase family-entry
+and family-store rows with queued-audio and PCM-consumer snapshots. The first
+run crashed before target phases at guest PC `0x8000834C`, so it was rejected.
+The fixed retry reached title 1024 and hangar 512 with no crash or abort. All
+positive controls fired; the capture contained 257 family-entry rows and 1,280
+family-store rows. Every sampled family store remained outside the
+clear-associated object/span, while hangar family rows carried an active route
+ordinal/row and queued-audio snapshots of 3045 or 3813 bytes. Target-phase
+RSP task joins independently reported `source_matches=0` and
+`consumer_matches=0`; PCM consumer count in the family rows was zero.
+
+This selects H3 at the measured scope: family activity is concurrent with
+target-phase task/service activity, but no RSP-source-DMA join exists. It does
+not prove that queued-audio backlog owns the alternate objects. H1 and H2 are
+not fully split because the family row still lacks direct task-generation
+identity. The next probe must add that generation/route join. ORIGIN: the
+queued-audio and PCM fields were added as a bounded discriminator, not as a
+mitigation or runtime behavior change. Evidence:
+`scratch/agent/s3830_m5_family_ownership/run_retry.log`.
