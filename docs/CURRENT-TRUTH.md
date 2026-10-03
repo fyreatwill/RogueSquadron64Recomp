@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3818 (2026-10-03).
+Updated for session 3819 (2026-10-03).
 
 ## Current state
 
@@ -42,12 +42,12 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 retail/port source-writer parity.** s3818 attributed the qualified
-   port zero source span to the legitimate CPU fill at `0x800078EC` (sequence
-   664, physical `0x179A44`, value zero), joined to repeated target input DMAs.
-   The next bounded probe must use the independent retail oracle at the same
-   hangar phase to identify the byte-store writer/value and compare it with the
-   port writer. Do not repeat the port writer or DMEM ordering census.
+1. **M5 retail nonzero source-span writers.** s3819 qualified the independent
+   retail oracle at hangar: `0x800078EC` made 816 phase-gated scalar stores,
+   all zero with `mismatch=0`, but other retail PCs also wrote the span and the
+   final 408-byte snapshot had 12 nonzero bytes. The next bounded probe must
+   classify those nonzero bytes by writer PC and scalar value. Do not repeat
+   the qualified port writer or retail whole-span parity run.
 2. **M5 image-arm stability discriminator, closed at this scope.** The
    isolated image arm reached both target phases with independent phase and
    M5 controls; s3811/s3812 launch-order failures no longer block producer
@@ -101,6 +101,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-ZeroDMEMProducer` | Refined at s3817: target-valid `SQV`/`SSV` writes are independent of DMA bookkeeping but follow the zero input DMA; they are not its producer. |
 | `H-M5-VectorStoreOrdering` | Selected H2 at s3817: 512/512 `0xCB0` rows and 4,096/4,096 broader vector rows have vector sequence after the input DMA. |
 | `H-M5-SourceRdramWriter` | Selected on the qualified port route at s3818: final writer is `0x800078EC`, physical `0x179A44`, zero byte; independent retail writer/value parity remains open. |
+| `H-M5-RetailSourceWriterParity` | Refuted at s3819 for complete-span parity: retail's `0x800078EC` scalar stores are all zero, but 12 bytes in the final source snapshot are nonzero and other retail writer PCs are active. |
+| `H-M5-RetailZeroWriterLegitimate` | Selected at s3819: hangar-phase retail `0x800078EC` post-store scalar samples are 816 zero, 0 nonzero, 0 mismatch, 0 unsupported. |
+| `H-M5-RetailNonzeroWriterIdentity` | Open: the qualified retail run identifies nonzero span bytes and competing PCs, but does not yet map each nonzero byte to its final scalar writer/value. |
 
 ## Evidence ledger — live boundary
 
@@ -355,6 +358,17 @@ Work only the first applicable item. This is one monotonic backlog.
   the legitimate port clear/fill writer at the measured scope and closes the
   port-side writer-attribution gap; retail writer/value parity remains open.
   Evidence: `scratch/agent/s3818_m5_source_rdram_writer/image/run.log`.
+- **3819 — independent retail source-writer/value parity:** the oracle run
+  completed normally with the whole-RDRAM positive control (11,125 writes),
+  reached hangar origin `0x006AB400` at width 512, and recorded 1,125 writes
+  to `0x1798B0..0x179A48`. In that phase, retail PC `0x800078EC` made 816
+  scalar stores into the span; every captured stored value was zero, with
+  `mismatch=0` and `unsupported=0`. The same run's final 408-byte snapshot
+  contained 12 nonzero bytes (`FNV=0x0726A645`), and the writer histogram
+  included `0x8001E2C0`, `0x80007670`, the `0x8001FAxx` family, and
+  `0x800078EC`. Thus the port zero writer is a legitimate retail writer, but
+  complete source-span parity is refuted; the nonzero writer identity remains
+  open. Evidence: `scratch/agent/s3819_m5_retail_source_writer/oracle.log`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

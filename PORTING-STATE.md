@@ -140595,3 +140595,24 @@ the image input DMA. H2/H3 for the port-side writer attribution are refuted;
 retail writer/value parity remains open. No mitigation was added.
 
 Evidence: `scratch/agent/s3818_m5_source_rdram_writer/image/run.log`.
+## Session 3819 (2026-10-03) — independent retail source-writer/value parity
+
+Ran one independent retail-oracle experiment using Rice, the hangar-driving
+Start schedule, a whole-RDRAM positive control, the exact source span
+`0x1798B0..0x179A48`, hangar-phase writer histograms, and scalar post-store
+sampling. The oracle exited normally after 75.2 seconds; whole-RDRAM control
+recorded 11,125 writes, retail reached hangar origin `0x006AB400` at width 512,
+and the target span recorded 1,125 writes.
+
+The port candidate PC `0x800078EC` was a legitimate retail writer in the same
+phase: 816 scalar samples were all zero, with zero mismatches and zero
+unsupported samples. This agrees with the qualified port writer's zero byte.
+It does not explain the complete retail source state: the final 408-byte
+snapshot contained 12 nonzero bytes (`FNV=0x0726A645`), and the phase histogram
+also recorded `0x8001E2C0`, `0x80007670`, and the `0x8001FAcc`–`0x8001FD2C`
+family. H1 (complete retail/port zero-span parity) is refuted; H2 (retail has
+additional nonzero source writers or later stores) is selected. H3 is refuted
+by the positive control, target writes, and hangar phase. The exact nonzero
+writer/value join remains open; no mitigation was added.
+
+Evidence: `scratch/agent/s3819_m5_retail_source_writer/oracle.log`.
