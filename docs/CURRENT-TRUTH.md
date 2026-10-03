@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3820 (2026-10-03).
+Updated for session 3821 (2026-10-03).
 
 ## Current state
 
@@ -44,25 +44,30 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 target-phase retail/port route parity.** s3820's independent oracle
+1. **M5 port target-phase qualification before route parity.** s3821's retail
+   arm reached the qualified hangar snapshot, but the paired port arm remained
+   at VI 640 despite the validated route settings. First qualify a single port
+   image arm with target-phase controls; do not infer route parity from this
+   incomplete pair.
+2. **M5 target-phase retail/port route parity.** s3820's independent oracle
    phase snapshot is zero at hangar (`FNV=0x762B22A5`, 408 bytes), matching the
    qualified port input-DMA payload. The next bounded probe must join the
    retail hangar source snapshot to the port image-stage/source-DMA route in
    one paired capture, including the existing positive controls. Do not repeat
    the retail nonzero-writer census: its shutdown-only 12-byte residue is
    pre-target/transient evidence, not a hangar producer.
-2. **M5 image-arm stability discriminator, closed at this scope.** The
+3. **M5 image-arm stability discriminator, closed at this scope.** The
    isolated image arm reached both target phases with independent phase and
    M5 controls; s3811/s3812 launch-order failures no longer block producer
    work. Keep the stability breadcrumb passive and do not repeat ordering A/B.
-3. **M3 runtime allocator qualification.** The complete generated
+4. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
    times in the captured log. Do not repeat launch-order variants. Resume only
    with a new discriminator for arm stability that preserves both controls.
    `rs_zcfree` idiom is closed at s3790; no generated invalid writer or guard
    is justified.
-4. **Generated-symbol renaming sweep.** Resume only after the M5 change is
+5. **Generated-symbol renaming sweep.** Resume only after the M5 change is
    validated and M3 has no new discriminator. Keep slug
    `generated-symbol-renaming-sweep`; s3796 found no stale callable symbol in
    `0x80009000..0x8000A000` with valid companion positive controls.
@@ -107,6 +112,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailSourceWriterParity` | Selected at s3820 for the hangar phase: retail phase snapshot is zero with `FNV=0x762B22A5`, matching the qualified port payload; shutdown-only 12-byte residue is pre-target/transient. |
 | `H-M5-RetailZeroWriterLegitimate` | Selected at s3819: hangar-phase retail `0x800078EC` post-store scalar samples are 816 zero, 0 nonzero, 0 mismatch, 0 unsupported. |
 | `H-M5-RetailNonzeroWriterIdentity` | Closed at s3820 for hangar: exact phase snapshot has zero nonzero bytes; earlier 1024-wide nonzero bytes are erased before target. |
+| `H-M5-PortTargetPhase` | Open at s3821: corrected paired port arm was stable with route/source controls but stopped at VI 640, so target-phase parity remains unevaluable. |
 
 ## Evidence ledger — live boundary
 
@@ -433,6 +439,17 @@ run `./submodule-patches/export.sh` and commit refreshed patches. Never run
 submodule update, checkout, clean, or hard reset commands. Kill runs with
 SIGKILL and run from `build/`. A mitigation-shaped change needs an `ORIGIN:`
 line naming the writer and stating whether its value is legitimate.
+
+- **3821 — paired retail/port route capture remained coverage-invalid:** the
+  initial probe arm omitted the validated route settings and crashed at
+  `0x8000834C` before target. A corrected arm enabled LLE, spin-yield, in-loop
+  drain, the validated autopilot schedule, and existing route/source controls;
+  it was stable with 4,277 route-order and 466 producer rows but remained at
+  VI 640, with no title-1024 or hangar-512 rows. The independent retail arm
+  fired its whole-RDRAM control, reached hangar, and recorded the exact zero
+  snapshot `FNV=0x762B22A5`. H3 is selected: route parity is unevaluable until
+  the port target phase is qualified. No mitigation or code change is
+  justified. Evidence: `scratch/agent/s3821_m5_retail_port_route_fixed/`.
 
 ## Superseded conclusions
 

@@ -1,39 +1,40 @@
-# Next work unit: target-phase retail/port source-route parity
+# Next work unit: qualify the port target phase before route parity
 
-HYPOTHESIS-ID: m5-audio-retail-port-route-parity
+HYPOTHESIS-ID: m5-port-target-phase-qualification
 
-s3820 qualified retail hangar source parity: the exact 408-byte phase snapshot
-at VI `0x006AB400`/512 was zero with `FNV=0x762B22A5`, matching the qualified
-port input-DMA payload. The next unit must join that retail target snapshot to
-the native image-stage/source-DMA route; do not repeat the retail nonzero-writer
-census or rely on a shutdown snapshot.
+The s3821 retail/port pair was coverage-invalid: retail reached the qualified
+hangar snapshot, while the corrected port arm was stable but remained at VI
+640. Do one single-port image-arm qualification using the exact validated
+autopilot route and the existing phase/task/source controls. Do not run the
+retail oracle in this unit.
 
 Competing hypotheses and discriminator:
 
-- H1: retail and port consume the same zero source payload and the remaining
-  M5 difference is downstream route/consumer behavior.
-- H2: retail reaches the zero source span through a different route or timing
-  edge, so equal bytes do not establish route parity.
-- H3: the paired capture is coverage-invalid (missing target phase or a control
-  failure), so no route conclusion is allowed.
+- H1: the port image route reaches title 1024 and hangar 512 when run alone;
+  the paired failure was launch interaction or timing.
+- H2: the port route itself stalls at 640 under the current build/config;
+  target-phase parity cannot yet be measured.
+- H3: the run is coverage-invalid because a phase/task/source positive control
+  is absent even if a target-width line appears.
 
-The discriminator is one paired, phase-gated capture with independent whole-
-RDRAM/target/source-DMA/task/audio-return controls: retail must emit a
-hangar-phase `phase-snapshot` row for watch 1, and the port image arm must emit
-the existing source-DMA FNV/zero row and route/image-stage controls in the same
-target phase. H1 requires both target payloads to be zero with
-`FNV=0x762B22A5` and the route controls to agree; H2 requires valid controls
-but a route/source-stage mismatch; H3 is any missing positive control or target
-phase in either arm.
+The discriminator is one 90-second single-port run. H1 requires phase 1024 and
+512, task/route/source controls, and no crash/abort. H2 is stable 640-only
+execution with controls but no target phase. H3 is any missing positive control
+or contradictory phase evidence.
 
-Commands:
+Command:
 
-    env PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
-      PROBE_KEYS_FROM_PHASE=1 PROBE_KEYS='12:start' \
-      zsh tools/probe.sh scratch/agent/s3821_m5_retail_port_route/port 75
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
+      ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+      ROGUESQ_DRAIN_INLOOP_TICK=1 ROGUESQ_LOG_PHASE=1 \
+      ROGUESQ_LOG_M5_FREQUENCY_CALLERS=1 ROGUESQ_LOG_M5_ROUTE_ORDER=1 \
+      ROGUESQ_LOG_M5_RSP_SOURCE=1 ROGUESQ_LOG_M5_SOURCE_WRITER=1 \
+      ROGUESQ_LOG_M5_SOURCE_PRODUCER=1 ROGUESQ_LOG_M5_SOURCE_TRANSITION=1 \
+      ROGUESQ_LOG_M5_TASK_CONTRACT=1 \
+      ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
+      ROGUESQ_AUTOPILOT_STOP_WIDTH=512 ROGUESQ_AUDIO_UCODE=1 \
+      ./build/RogueSquadron64Recomp > scratch/agent/s3822_port_target.log 2>&1
 
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 75 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0x1798B0:0x179A48 --hit-cap 20 --detail-watch 1 --pc-hist-phase 0x6AB400:512 --phase-snapshot-watch 1 --vi-trace > scratch/agent/s3821_m5_retail_port_route/retail.log 2>&1
-
-Inspect only bounded `[phase]`, `phase-snapshot`, source-DMA, route, task,
-audio-return, and positive-control lines. Kill the native process with SIGKILL
-if the wrapper does not exit; do not infer parity from a shutdown-only summary.
+Inspect bounded `[phase]`, route, RSP-source, source-producer, task-contract,
+`[CRASH]`, and `[ABORT]` lines only. Kill with SIGKILL after 90 seconds if the
+process remains alive.

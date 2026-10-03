@@ -140638,3 +140638,22 @@ scope. The result moves the open boundary back to retail/port route parity and
 does not justify a mitigation or code change.
 
 Evidence: `scratch/agent/s3820_m5_retail_nonzero_writer/oracle-fixed.log`.
+
+## Session 3821 (2026-10-03) — paired retail-port route capture remained coverage-invalid
+
+Ran the required paired M5 route-parity capture with the independent retail
+oracle and positive controls. The first port launch omitted the validated
+autopilot route and crashed at guest PC `0x8000834C` before target. A corrected
+same-iteration arm enabled LLE, spin-yield, in-loop drain, the validated
+autopilot schedule, and the existing route/source controls. It was stable with
+4,277 route-order rows and 466 producer rows, but remained at VI 640 and never
+emitted title-1024 or hangar-512 controls; no crash or abort occurred.
+
+The independent retail arm fired the whole-RDRAM positive control, reached the
+hangar phase, and recorded 408 bytes, nonzero=0, `FNV=0x762B22A5` for the
+exact source snapshot. This does not establish route parity because the port
+arm lacked the target phase. It rules out only a retail-control failure and a
+qualified paired comparison. Next work is single-port target-phase
+qualification; no mitigation or code change was made.
+
+Evidence: `scratch/agent/s3821_m5_retail_port_route_fixed/`.
