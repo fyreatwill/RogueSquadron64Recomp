@@ -140003,3 +140003,23 @@ ORIGIN: this iteration observed independent retail memory writes, guest PC
 execution, and VI transitions; it did not modify the ROM, guest state, or port.
 
 Evidence: `scratch/agent/s3788_oracle_family_start_z_rice/oracle.log`.
+
+## Session 3789 (2026-10-03) — paired route-state capture remained unevaluable
+
+Ran the paired retail/port route-state capture with the independent Rice
+oracle, whole-RDRAM positive control, Start+Z input, target VI gates, and
+silent/image audio arms. The recipe was repaired during the iteration to wait
+for retail hangar, wait for oracle completion, and stagger image before silent.
+The final retail arm completed with 11,830 positive-control writes, title and
+hangar VIs, 705 writes in `0x1797B0..0x1798AF`, 1,125 writes in
+`0x1798B0..0x179A47`, and 10,995 executions at `0x800078EC`. The image port arm
+produced 258 family rows and both target VIs without a crash. The silent port
+arm crashed 36 times and produced no paired family rows. This selects the
+arm-stability/recipe H3 and leaves route parity versus mismatch unevaluable;
+it rules out neither route hypothesis.
+
+ORIGIN: this iteration changed only the diagnostic capture recipe; no ROM,
+guest state, audio gate, or mitigation was changed.
+
+Evidence: `scratch/agent/s3769_m5_family_entry/summary.txt`,
+`scratch/agent/s3769_m5_family_entry/oracle.log`.

@@ -1,33 +1,35 @@
-# Next work unit: compare qualified retail and port route state
+# Next work unit: audit the complete `rs_zcfree` incoming `$a0` idiom
 
-HYPOTHESIS-ID: m5-route-state-parity
+HYPOTHESIS-ID: m3-zcfree-a0-idiom-audit
 
-s3788 qualified the Start+Z recipe with Rice: whole-RDRAM fired 10,018 times,
-target VIs appeared, and all three family PCs executed. Use the existing paired
-route-state capture to compare retail's independently watched route bytes with
-the port's phase-gated family-entry rows.
+The M5 route comparison is parked: s3789 had a valid retail control and a
+valid image arm, but the silent arm crashed before paired family rows. Do not
+repeat that recipe without a new arm-stability discriminator.
 
 Competing hypotheses and discriminator:
 
-- H1: retail route bytes and port family-entry bytes show the same route state,
-  supporting route parity and moving the boundary downstream.
-- H2: retail family PCs execute but route bytes differ from the port's zero
-  rows, proving a route-state mismatch rather than a source-payload absence.
-- H3: the paired capture lacks a positive control, target phase, or port family
-  rows, so the comparison is unevaluable and the capture recipe is at fault.
+- H1: every `rs_zcfree` call at `0x80005268` receives a legitimate heap
+  pointer from a known allocator/object lifetime; no guard is justified.
+- H2: one or more incoming writers produce a concrete invalid value; the
+  complete idiom census identifies the writer and a narrowly scoped guard is
+  justified only if the writer is proven non-legitimate.
+- H3: the apparent invalid input is a register/ABI interpretation artifact or
+  a dead path; callsites and value provenance cannot establish a real invalid
+  writer, so land no mitigation and document the boundary.
 
-The discriminating measurement is one paired capture with a whole-RDRAM oracle
-control, retail route-byte watches, and port family-entry route rows in the
-same target VI phases. H1/H2 are decided only after both arms have positive
-controls and target-family rows; a missing control invalidates that arm.
+The discriminating measurement is one complete source census of all calls and
+all incoming `$a0` setup idioms for `rs_zcfree` at `0x80005268`, joined to the
+existing generated symbols and allocator/object lifetime evidence. H1/H2/H3
+are decided only after every callsite in the idiom class is classified; a
+single crash or a single suspicious value is insufficient.
 
-Exact command:
+Exact commands:
 
-    zsh scratch/agent/run_s3769_m5_family_entry.sh
-    grep -a -E 'positive-control|watch write|watch pc|origin=0x00790400|origin=0x006ab400|m5-family-guest-route' \
-      scratch/agent/s3769_m5_family_entry/oracle.log \
-      scratch/agent/s3769_m5_family_entry/image.log
+    rg -n "80005268|rs_zcfree|zcfree" RecompiledFuncs docs src lib
+    rg -n "func_80005268|0x80005268" RecompiledFuncs docs PORTING-STATE.md | tail -40
 
-Require the oracle positive control, title/hangar VIs, and all three port
-family-entry controls before comparing values. Do not infer route identity from
-route-byte writes alone.
+Before any build, enumerate the complete callsite table in a new bounded note
+under `docs/`, including caller, `$a0` writer, object/lifetime proof, and
+legitimacy. If H2 is proven, implement one guarded override through the
+patches pipeline and build/validate it; otherwise land the census note with
+no mitigation.
