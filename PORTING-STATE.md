@@ -139392,3 +139392,30 @@ a universal early-route failure, but does not establish a missing image
 contract edge. No mitigation or audio behavior change was made. Evidence:
 `docs/M5-S3759-STEP1-CONTRACT-RETRY.md` and
 `scratch/agent/s3759_m5_step1_contract_pair/`.
+
+## Session 3760 (2026-10-02) — qualified image arm and isolated silent pre-target crash
+
+Built the Debug target once and ran the retail oracle plus concurrent image and
+silent port arms with the complete Step 1 phase-gated contract recipe. The
+oracle whole-RDRAM positive control passed at 10,000 callbacks and reached
+retail title and hangar. The image arm reached both port target VIs and emitted
+6,604 task/DMA rows, 26,461 image-stage rows, 560 audio-return rows, and 559
+PCM-consumer rows. The silent arm crashed before target at
+`spTaskSchedulerThread+9556` (`si_addr=0x400128d47`), so the pair gate failed
+and children were stopped with SIGKILL.
+
+Because the pair gate failed, ran the image-only arm with the same build and
+controls. It reached title at 13.3 seconds and hangar at 24.5 seconds without
+a crash, emitting 665 task/DMA rows, 2,696 image-stage rows, 283 audio-return
+rows, 72 PCM-source rows, and 287 PCM-consumer rows.
+
+This selects `H-M5-ImageReachesTarget` and refutes pair-only interference as
+the explanation for image-arm pre-target loss. It moves the unresolved paired
+stability boundary to the silent control; the complete image-versus-silent
+contract comparison remains unevaluable until silent reaches target.
+
+ORIGIN: no mitigation or value change was made; the legitimate image task
+writer and zero-valued source payload remain diagnostic observations only.
+Evidence: `docs/M5-S3760-STEP1-IMAGE-QUALIFICATION.md`,
+`scratch/agent/s3760_m5_step1_contract_pair/`, and
+`scratch/agent/s3760_m5_step1_image_only/`.

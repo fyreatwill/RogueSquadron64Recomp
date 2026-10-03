@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3759 (2026-10-02).
+Updated for session 3760 (2026-10-02).
 
 ## Current state
 
@@ -55,16 +55,26 @@ control rows, but the real image arm crashed before any target phase at
 than a downstream contract gap; no audio or task-data mitigation is selected.
 See [M5-S3759-STEP1-CONTRACT-RETRY.md](M5-S3759-STEP1-CONTRACT-RETRY.md).
 
+Session 3760 qualified the image arm: in a same-build oracle/image/silent
+capture, retail controls passed, image reached title and hangar with task,
+DMA, image-stage, audio-return, and PCM rows, while silent crashed pre-target
+at the same scheduler boundary. An image-only follow-up reached both target
+VIs with the same build and full image rows, so pair interference is not the
+image-arm explanation. The silent control remains unstable and the same-run
+image-versus-silent contract comparison is still open. See
+[M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image-arm pre-target stability qualification.** Step 1 remains open:
-   the s3759 oracle and silent controls passed, but the real image arm crashed
-   before the target phase. Run one same-build concurrent real/silent capture
-   retaining the full Step 1 joins and positive controls, while classifying
-   the image crash's first guest/native boundary. A real target row is required
-   before interpreting any downstream null; do not add another native
+1. **M5 silent-control pre-target stability qualification.** Step 1 remains
+   open as a paired contract comparison: s3760 qualified the image arm in
+   both concurrent and image-only runs, but the silent control crashed before
+   target at `spTaskSchedulerThread+9556`. Run one same-build concurrent
+   image/silent capture retaining the oracle positive control and full Step 1
+   joins; classify the silent crash and require both arms to reach title and
+   hangar before interpreting any contract divergence. Do not add another
    task-data value field or change an audio gate.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
@@ -107,6 +117,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-TaskDataNativeValueDecoded` | Unevaluable at s3757: target-only decoding and post-store sampling were installed, but both arms had zero target faults before their crash paths. |
 | `H-TaskDataNativeValueDecoded` | Parked at s3758: silent had positive-control and target-window coverage with no target fault; real crashed before target. Paired value attribution remains unevaluable. |
 | `H-M5-RouteInstability` | Selected at s3759 for the Step 1 capture: oracle and silent controls reached target, but the real image arm crashed before target; downstream contract nulls remain unevaluable. |
+| `H-M5-ImageReachesTarget` | Selected at s3760: the image arm reached title and hangar in the paired run and independently in an image-only run with full task/DMA/PCM rows. |
+| `H-M5-ImageOnlyInterference` | Refuted at s3760: image-only reached both target VIs on the same build with the same controls. |
+| `H-M5-SilentPreTargetCrash` | Selected at s3760 for this paired capture: silent crashed at `spTaskSchedulerThread+9556` before target while image and retail controls passed. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
@@ -383,6 +396,12 @@ superseded by the MusyX voice-table measurement. The claim that `0x8002BEEC`
 is the retail JAL dispatch to `0x800078EC` remains route-dependent and
 unreconciled.
 
+The s3759 claim that the real image arm was pre-target unstable is superseded
+as a general image-arm explanation by s3760: the same build reached both
+target VIs in the paired run and again image-only. It remains valid only for
+the s3759 capture; s3760 moves the unresolved paired-stability boundary to the
+silent control.
+
 ## Evidence index
 
 - [M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md](M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md)
@@ -394,6 +413,7 @@ unreconciled.
 - [M5-S3753-TASK-PRODUCER-CENSUS.md](M5-S3753-TASK-PRODUCER-CENSUS.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
+- [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)
 - [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md)
 - [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md)
