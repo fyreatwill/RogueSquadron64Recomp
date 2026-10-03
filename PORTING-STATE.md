@@ -139046,3 +139046,30 @@ rewrite changed.
 
 Evidence: `docs/M5-S3745-HOST-EXACT-ROUTE-POLL.md`,
 `scratch/agent/s3744_port_exact_route/real.log`, and `silent.log`.
+
+## Session 3746 (2026-10-02) — censused central host-to-RDRAM write APIs
+
+Before building, the independent retail oracle passed its whole-RDRAM positive
+control with 10,010 writes and reached title and hangar. Exact physical watches
+found five retail writes to `0x128CD0..D3` from PC `0x8001BB14`, all before
+the target phase buckets, and zero writes to `0x128C92`.
+
+Added one phase-gated host-write census at PI ROM-to-RDRAM, PI SRAM-to-RDRAM,
+zmemcpy, and RSP DMEM-to-RDRAM surfaces, with a separate control for every API
+that executes. The Debug target rebuilt successfully and the runtime patch
+export was refreshed. The initial paired port run reached qualified hangar in
+the real arm and emitted zero host exact rows; the silent arm also emitted
+zero. The fixed silent rerun passed all four API controls, reached hangar, and
+still emitted zero exact rows. A fixed real retry crashed before target phases
+in the scheduler and is excluded from the result.
+
+This selects `H-ExactFieldUnwritten` for the censused central host APIs and
+refutes `H-HostTransient` for that class. It leaves arbitrary direct host
+pointer writes and `H-RouteStateNotSource` open. No mitigation or value rewrite
+changed. The observed retail writer and zero-valued port route writes are
+legitimate observations, not mitigation targets.
+
+Evidence: `docs/M5-S3746-HOST-WRITE-API-CENSUS.md`,
+`scratch/agent/s3746_oracle_exact_route/oracle.log`,
+`scratch/agent/s3746_port_host_exact_route/real.log`, `silent.log`, and
+`scratch/agent/s3746_port_host_exact_route_fixed/silent.log`.

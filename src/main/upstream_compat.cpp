@@ -33,6 +33,11 @@
 #include <atomic>
 
 #include "recomp.h"
+
+extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
+                                             uint32_t phys,
+                                             uint32_t len,
+                                             const char* api);
 #include "librecomp/helpers.hpp"
 #include "ultramodern/ultramodern.hpp"
 
@@ -1532,6 +1537,8 @@ extern "C" void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
         ctx->r2 = MEM_BU(i, src_reg);
         MEM_B(i, dest_reg) = ctx->r2;
     }
+    rs64_m5_host_write_census(rdram, (uint32_t)dest_reg & 0x007FFFFFu,
+                              len, "zmemcpy");
     ctx->r2 = ctx->r4;  // zlib's zmemcpy returns nothing meaningful
 }
 

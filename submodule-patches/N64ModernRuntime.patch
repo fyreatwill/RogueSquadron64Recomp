@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..6eaa326 100644
+index b0d6bef..8b5771d 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -53,7 +53,7 @@ index b0d6bef..6eaa326 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,6 +105,64 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,6 +105,68 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -84,9 +84,13 @@ index b0d6bef..6eaa326 100644
 +                                                   uint32_t len,
 +                                                   uint32_t dmem_addr);
 +extern "C" void rs64_m5_exact_route_dma_write(uint8_t* rdram,
-+                                                  uint32_t dram_addr,
-+                                                  uint32_t len,
-+                                                  uint32_t dmem_addr);
++                                                 uint32_t dram_addr,
++                                                 uint32_t len,
++                                                 uint32_t dmem_addr);
++extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
++                                             uint32_t phys,
++                                             uint32_t len,
++                                             const char* api);
 +extern "C" void rs64_audio_join_image_stage(const char* arm,
 +                                               uint32_t ordinal, uint32_t row,
 +                                               uint32_t phase, uint32_t width,
@@ -118,7 +122,7 @@ index b0d6bef..6eaa326 100644
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,14 +170,106 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,14 +174,106 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -226,7 +230,7 @@ index b0d6bef..6eaa326 100644
  }
  
  static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t wr_len) {
-@@ -121,9 +282,13 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -121,9 +286,14 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
@@ -234,6 +238,7 @@ index b0d6bef..6eaa326 100644
      for (uint32_t i = 0; i < wr_len; i++) {
          MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000)) = RSP_MEM_B(i, dmem_addr);
      }
++    rs64_m5_host_write_census(rdram, dram_addr, wr_len, "rsp_dmem_to_rdram");
 +    rs64_m5_exact_route_dma_write(rdram, dram_addr, wr_len, dmem_addr);
 +    rs64_m5_source_range_dma_write(rdram, dram_addr, wr_len, dmem_addr);
 +    rs64_probe_audio_dma_write(rdram, dram_addr, wr_len, dmem_addr);
@@ -761,10 +766,10 @@ index 8c8e5d1..0907c36 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..908dae1 100644
+index 43509ba..81e0a5f 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
-@@ -8,6 +8,7 @@
+@@ -8,9 +8,15 @@
  #include "librecomp/addresses.hpp"
  #include "librecomp/game.hpp"
  #include "librecomp/files.hpp"
@@ -772,7 +777,15 @@ index 43509ba..908dae1 100644
  #include <ultramodern/ultra64.h>
  #include <ultramodern/ultramodern.hpp>
  
-@@ -64,6 +65,23 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
++extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
++                                             uint32_t phys,
++                                             uint32_t len,
++                                             const char* api);
++
+ static std::vector<uint8_t> rom;
+ 
+ bool recomp::is_rom_loaded() {
+@@ -64,6 +70,23 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
  void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr, size_t num_bytes) {
      // TODO use word copies when possible
  
@@ -796,7 +809,26 @@ index 43509ba..908dae1 100644
      // TODO handle misaligned DMA
      assert((physical_addr & 0x1) == 0 && "Only PI DMA from aligned ROM addresses is currently supported");
      assert((ram_address & 0x7) == 0 && "Only PI DMA to aligned RDRAM addresses is currently supported");
-@@ -274,6 +292,23 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -72,6 +95,9 @@ void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr
+         MEM_B(i, ram_address) = *rom_addr;
+         rom_addr++;
+     }
++    rs64_m5_host_write_census(rdram,
++                              static_cast<uint32_t>(ram_address) & 0x007FFFFFu,
++                              static_cast<uint32_t>(num_bytes), "pi_rom_to_rdram");
+ }
+ 
+ void recomp::do_rom_pio(uint8_t* rdram, gpr ram_address, uint32_t physical_addr) {
+@@ -193,6 +219,8 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
+     for (gpr i = 0; i < count; i++) {
+         MEM_B(i, rdram_address) = save_context.save_buffer[offset + i];
+     }
++    rs64_m5_host_write_census(rdram, static_cast<uint32_t>(rdram_address) & 0x007FFFFFu,
++                              count, "pi_sram_to_rdram");
+ }
+ 
+ void save_clear(uint32_t start, uint32_t size, char value) {
+@@ -274,6 +302,23 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              // read cart rom
              recomp::do_rom_read(rdram, rdram_address, physical_addr, size);
  
@@ -820,7 +852,7 @@ index 43509ba..908dae1 100644
              // Send a message to the mq to indicate that the transfer completed
              ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
          } else if (physical_addr >= recomp::sram_base) {
-@@ -313,12 +348,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,12 +358,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;

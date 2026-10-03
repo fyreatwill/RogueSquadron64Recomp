@@ -1337,6 +1337,53 @@ extern "C" void rs64_m5_exact_route_dma_write(uint8_t* rdram,
     }
 }
 
+extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
+                                            uint32_t phys,
+                                            uint32_t len,
+                                            const char* api) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_HOST_WRITE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || !rdram || len == 0u) return;
+    static std::atomic<uint32_t> api_mask{0};
+    uint32_t bit = 8u;
+    if (api && std::strcmp(api, "pi_rom_to_rdram") == 0) bit = 1u;
+    else if (api && std::strcmp(api, "pi_sram_to_rdram") == 0) bit = 2u;
+    else if (api && std::strcmp(api, "zmemcpy") == 0) bit = 4u;
+    const uint32_t prior = api_mask.fetch_or(bit, std::memory_order_relaxed);
+    if ((prior & bit) == 0u) {
+        std::fprintf(stderr, "[m5-host-write-api-control] api=%s phys=0x%06X len=0x%X\n",
+                     api ? api : "unknown", phys & 0x007FFFFFu, len);
+        std::fflush(stderr);
+    }
+    const uint32_t start = phys & 0x007FFFFFu;
+    const uint32_t end = start + len;
+    const uint32_t fields[][2] = {{0x128C92u, 1u}, {0x128CD0u, 4u}};
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    static uint32_t rows = 0;
+    for (const auto& field : fields) {
+        if (start >= field[0] + field[1] || end <= field[0]) continue;
+        if (rows++ >= 512u) return;
+        uint32_t post = 0u;
+        for (uint32_t i = 0; i < field[1]; ++i) {
+            post = (post << 8) | rdram[(field[0] + i) & 0x007FFFFFu];
+        }
+        std::fprintf(stderr,
+            "[m5-host-write] n=%u api=%s phase=%u width=%u origin=0x%06X "
+            "phys=0x%06X len=0x%X field=0x%06X field_len=%u post=0x%08X\n",
+            rows - 1u, api ? api : "unknown", rs64_phase_ord(), width, origin,
+            start, len, field[0], field[1], post);
+        std::fflush(stderr);
+    }
+}
+
 extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
                                            uint32_t len, uint32_t dmem_addr) {
     static const bool enabled = [] {
