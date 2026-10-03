@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3796 (2026-10-03).
+Updated for session 3797 (2026-10-03).
 
 ## Current state
 
@@ -39,21 +39,26 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 paired qualification, parked.** s3789 completed the independent retail
+1. **M5 SP-yield lifecycle change, validation next.** s3797 made the explicit
+   request-only rollback consume a pending yield request once; completion-wins
+   remains the default. Build validation is required before interpreting any
+   route change. Then resume paired M5 qualification with a discriminator that
+   preserves both controls.
+2. **M5 paired qualification, parked.** s3789 completed the independent retail
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
    times in the captured log. Do not repeat launch-order variants. Resume only
    with a new discriminator for arm stability that preserves both controls.
-2. **M3 runtime allocator qualification.** The complete generated
+3. **M3 runtime allocator qualification.** The complete generated
    `rs_zcfree` idiom is closed at s3790: `zcfree` forwards its callback `$a1`
    to the wrapper's `$a0`, and the callback is paired with `rs_zcalloc`.
    No generated invalid writer or guard is justified. Only resume this class
    if an independent runtime allocator witness identifies a concrete bad
    value; otherwise continue with the next systematic M3 class.
-3. **Generated-symbol renaming sweep.** M5 is parked and M3 has no new
-   discriminator. Keep slug `generated-symbol-renaming-sweep`; s3796 found no
-   stale callable symbol in `0x80009000..0x8000A000` with valid companion
-   positive controls. Continue with the next bounded main-overlay lead.
+4. **Generated-symbol renaming sweep.** Resume only after the M5 change is
+   validated and M3 has no new discriminator. Keep slug
+   `generated-symbol-renaming-sweep`; s3796 found no stale callable symbol in
+   `0x80009000..0x8000A000` with valid companion positive controls.
 
 ## Live hypothesis table
 
@@ -149,6 +154,12 @@ Work only the first applicable item. This is one monotonic backlog.
   `already-synchronized`, and the tool changed zero generated references.
   H1 and H2 were not selected; H3 selected. The next bounded lead is
   `0x8000A000..0x8000B000`.
+- **3797 — M5 request-only SP-yield lifecycle:** the runtime now evaluates
+  `ROGUESQ_SP_YIELDED_REQUEST_ONLY` per poll and consumes the pending request
+  when that control arm reports yielded. Completion-wins remains the default.
+  This prevents one request from being reported forever in the scheduler retry
+  path. Build validation is required before drawing a route or audio
+  conclusion.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

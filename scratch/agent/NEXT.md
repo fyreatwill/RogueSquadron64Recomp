@@ -1,31 +1,30 @@
-# Next work unit: bounded generated-symbol lead after the synchronized render-list range
+# Next work unit: validate one-shot SP-yield control against default audio arm
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-sp-yield-one-shot-control
 
-M5 remains parked pending a new arm-stability discriminator, and the measured
-M3 `rs_zcfree` idiom remains closed at static scope. The next unit is one
-bounded, regeneration-safe symbol-renaming lead, not a runtime experiment.
+The runtime change in session 3797 is landed and built. Do one phase-gated
+validation run; do not add another instrument or alter the audio contract.
 
 Competing hypotheses and discriminator:
 
-- H1: `0x8000A000..0x8000B000` contains an exact companion semantic mapping
-  for one or more generated placeholders; rename only one-to-one mappings.
-- H2: the range contains candidates but they are ambiguous, fake fragments, or
-  lack semantic source; preserve placeholders and record them.
-- H3: the range has no stale placeholder references; select no rename.
+- H1: repeated request-only polling caused the scheduler retry loop. The
+  request-only arm reports `returned=1` once, then `pending_after=0`, and the
+  default arm remains completion-wins (`returned=0`).
+- H2: the scheduler hang is elsewhere. The request-only arm still reaches
+  `pending_after=0`, but route progress is unchanged from the default arm.
+- H3: the change is not exercised. No `[sp-yielded-ab]` rows or no positive
+  `[sp-yield-reset]` rows means the run is invalid, not evidence for H1/H2.
 
-The discriminating measurement is the rename tool's bounded table joined to
-the verified sibling `rogue_squadron64/symbol_files` directory. A valid run
-must show named companion rows such as `rs_zcalloc` as `already-synchronized`
-in the same output. H1 predicts selected mappings and changed generated
-references; H2 predicts candidate rows with no safe change; H3 predicts only
-positive-control/already-synchronized rows or no remaining placeholders.
+The discriminating measurement is one same-build, phase-gated A/B run with
+the default arm and `ROGUESQ_SP_YIELDED_REQUEST_ONLY=1`, collecting the
+request/return/pending fields plus E60/E70/E80F and title/hangar transitions.
 
-Exact commands:
+Commands:
 
-    grep -n '^## Session ' PORTING-STATE.md | tail -15
-    env RSR_FUNCS_DIR=/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8000A000 --end-address 0x8000B000 --limit 32
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    env ROGUESQ_LOG_SP_YIELDED_AB=1 ROGUESQ_LOG_ALL=1 zsh tools/run_m5_yield_ab.sh
 
-Do not build unless the mapping pipeline requires it. Do not start a second
-range. If the companion positive control is absent, treat the run as invalid
-and fix the path before drawing a conclusion.
+If the helper is absent, create one self-contained capture script before
+running; it must launch from `build/`, use SIGKILL, and capture both arms in
+one run. Do not resume the rename sweep until this validation selects or
+refutes H1 with both controls positive.

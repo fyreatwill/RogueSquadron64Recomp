@@ -140145,3 +140145,25 @@ experiment was needed.
 
 ORIGIN: regeneration-safe symbol census only; no runtime mitigation, ROM, or
 game-state change.
+
+## Session 3797 (2026-10-03) — made the SP-yield rollback one-shot
+
+The M5 pivot landed a runtime contract change in
+`librecomp/src/sp.cpp`. Completion-wins remains the default for the
+non-interrupting host. When `ROGUESQ_SP_YIELDED_REQUEST_ONLY=1` is selected as
+the rollback/control arm, `osSpTaskYielded_recomp` now consumes the pending
+request with an atomic exchange, so one request produces one yielded result
+instead of keeping the scheduler in its retry path forever. The environment
+flag is evaluated per poll rather than cached at process startup, preserving
+its use for paired control runs.
+
+The full Debug target built successfully, including `librecomp` and the final
+`RogueSquadron64Recomp` executable. No runtime soak was run in this iteration,
+so this selects neither the scheduler-cause hypothesis nor any downstream
+audio/route conclusion. The next unit is a phase-gated same-build comparison
+of the default and request-only arms with the positive reset/request controls.
+
+ORIGIN: the writer is `osSpTaskYield_recomp`, which sets the process-local
+request latch; the value is a legitimate host-side yield request, but repeated
+reporting of the same request is not a legitimate completion state. This is a
+contract correction, not a corruption mitigation.
