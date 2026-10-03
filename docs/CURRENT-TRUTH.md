@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3811 (2026-10-03).
+Updated for session 3812 (2026-10-03).
 
 ## Current state
 
@@ -39,31 +39,24 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 split minimal-image startup failure by launch order, next.**
-   s3811 removed the legacy diagnostic bundle but still reproduced 36 image
-   crashes at guest PC `0x8000834C` before any task-contract, audio-return,
-   route, or target-VI row; the concurrently launched silent arm reached title
-   and hangar. Run the same minimal controls with image launched first and
-   silent second. Select launch-order interaction if image becomes target-valid
-   or the failing arm swaps; select deterministic image startup failure if
-   image still fails before target in both orderings; select boundary-byte
-   consumption only after image reaches target and differs in a joined row.
-2. **M5 upstream zero-DMEM producer, parked behind diagnostic-load qualification.** s3802
-   qualified the port-side immediate chain: the hangar image input reads
-   all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
-   and the source DMA writes the same all-zero payload to
-   `0x1798B0..0x179A48`; no guest CPU store overlaps the source span. Resume
-   only after a valid paired capture.
+1. **M5 upstream zero-DMEM producer, next qualified route.** s3812 completed
+   both launch orderings: the explicit image arm still crashed at guest PC
+   `0x8000834C` before target while the explicit silent arm reached title and
+   hangar. The startup failure is arm-specific at this scope, not a launch
+   order interaction. Resume source-producer work only with a target-valid
+   image arm; do not infer the boundary byte from the failed pair. s3802's
+   qualified chain reads all-zero DMEM `0xCB0..0xE48` into
+   `0x1798B0..0x179A48`, with no guest CPU store overlapping the source span.
+2. **M5 image-arm stability discriminator, parked.** A new probe must make the
+   image arm target-valid while retaining an independent positive control;
+   repeating launch-order pairs is closed.
 3. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
    times in the captured log. Do not repeat launch-order variants. Resume only
    with a new discriminator for arm stability that preserves both controls.
-   `rs_zcfree` idiom is closed at s3790: `zcfree` forwards its callback `$a1`
-   to the wrapper's `$a0`, and the callback is paired with `rs_zcalloc`.
-   No generated invalid writer or guard is justified. Only resume this class
-   if an independent runtime allocator witness identifies a concrete bad
-   value; otherwise continue with the next systematic M3 class.
+   `rs_zcfree` idiom is closed at s3790; no generated invalid writer or guard
+   is justified.
 4. **Generated-symbol renaming sweep.** Resume only after the M5 change is
    validated and M3 has no new discriminator. Keep slug
    `generated-symbol-renaming-sweep`; s3796 found no stale callable symbol in
@@ -98,10 +91,10 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-DiagnosticLoadStartup` | Selected at s3804: the full M5 census silent arm crashed before title at guest PC `0x8000B650`; the same-build no-census silent control reached title and hangar with no crash. |
 | `H-M5-CommonBaseDiagnosticStartup` | Not reproduced at s3808: minimal and most single-variable arms failed, but all-five reached both targets; s3807's sequential split remains single-run evidence. |
 | `H-M5-MinimalRouteTargetValid` | Selected at s3807: minimal image arm reached title `0x00790400` and hangar `0x006AB400` with no crash or abort. |
-| `H-M5-DiagnosticLaunchOrderInteraction` | Open and selected at s3808 scope: sequential arms were mixed while all-five succeeded; concurrent arms are required to split order interaction from nondeterminism. |
+| `H-M5-DiagnosticLaunchOrderInteraction` | Refuted at s3812: image failed before target in both tested launch orderings while silent reached title/hangar. |
 | `H-M5-DMEMTaskBoundaryConsumed` | Unevaluable at s3810: the corrected image arm crashed before target while the silent arm reached hangar; the boundary byte was not observed by a qualified image task. |
 | `H-M5-DMEMTaskBoundaryStartup` | Selected at s3810 scope: the legacy contract driver reproduced the pre-target image crash at guest PC `0x8000834C`; s3811 reproduced it after removing the legacy diagnostic bundle, so that bundle is not sufficient as the explanation. |
-| `H-M5-MinimalImageStartup` | Selected at s3811 scope: the reduced image arm crashed 36 times at `0x8000834C` before target while silent reached title/hangar; launch order remains the next discriminator. |
+| `H-M5-MinimalImageStartup` | Selected at s3812 scope: explicit image crashed at `0x8000834C` before target in both launch orderings; explicit silent reached title/hangar. |
 
 ## Evidence ledger — live boundary
 
@@ -298,6 +291,17 @@ Work only the first applicable item. This is one monotonic backlog.
   leaves DMEM-byte consumption unevaluable, and selects launch order as the
   next discriminator. Evidence:
   `scratch/agent/s3811_m5_minimal_boundary_pair/`.
+- **3812 — corrected image-first minimal pair:** the Debug build passed. The
+  corrected same-build pair explicitly set `ROGUESQ_AUDIO_UCODE=0` on silent.
+  Image launched first, remained at 320-wide startup, and crashed at guest PC
+  `0x8000834C` in `spTaskSchedulerThread+9556` before task-contract,
+  audio-return, route, or target-VI rows. Silent reached title and captured
+  159 frames at hangar with `musyx_stub` controls. The preceding nominal pair
+  was invalid because both arms used image audio and both reached target.
+  Combined with s3811's reverse ordering, this refutes launch-order interaction
+  and selects deterministic image-arm startup failure at this scope; DMEM-byte
+  consumption remains unevaluable. Evidence:
+  `scratch/agent/s3812_m5_image_first_boundary_pair_fixed/`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

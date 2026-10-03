@@ -140471,3 +140471,20 @@ This refutes the legacy diagnostic bundle as the sole explanation for the
 image startup failure and leaves consumption of the final DMEM task-data byte
 unevaluable. It does not identify a writer, consumer, or mitigation. The next
 discriminator starts image before silent to test launch-order interaction.
+
+## Session 3812 (2026-10-03) — corrected image-first pair refuted launch-order interaction
+
+The Debug target built successfully. The first nominal pair was invalid because
+both arms used image audio; both reached target. The corrected same-build pair
+explicitly set `ROGUESQ_AUDIO_UCODE=0` on silent and launched image first. The
+image arm remained at 320-wide startup and crashed at guest PC `0x8000834C`,
+native `spTaskSchedulerThread+9556`, before task-contract, audio-return, route,
+or target-VI rows. The silent arm reached title and captured 159 frames at
+hangar with `musyx_stub` task/route controls.
+
+Combined with s3811's reverse launch ordering and the same image-before-target
+failure, this refutes launch-order interaction at this scope and selects
+deterministic image-arm startup failure. It does not qualify DMEM-byte
+consumption, identify a writer or consumer, or authorize a mitigation. The
+next work unit is an isolated image-arm qualification with the independent
+whole-RDRAM positive control.
