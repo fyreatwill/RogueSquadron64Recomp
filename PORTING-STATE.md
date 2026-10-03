@@ -140314,3 +140314,22 @@ s3802 port-side zero RSP/vector/DMA chain; no mitigation was added.
 
 ORIGIN: no corruption mitigation or value guard was added. The observed
 `0x8000834C` crash is a coverage failure whose writer/cause is unresolved.
+
+## Session 3804 (2026-10-03) — diagnostic census load selected as paired-arm destabilizer
+
+The Debug target rebuilt successfully. The paired recipe was changed to launch
+both arms through `tools/probe.sh`, preserving the full M5 census, phase gate,
+retail oracle, and SIGKILL cleanup. The independent retail whole-RDRAM positive
+control fired. The full-census image arm reached title `0x00790400` and hangar
+`0x006AB400`, produced 512 source-range rows, and did not crash. The full-census
+silent arm crashed 36 times before title at guest PC `0x8000B650`.
+
+The same-build no-census silent control removed only the M5 census environment
+variables and used the same probe phase/key route. It reached title at 13.3s and
+hangar at 44.5s, captured 29 frames, and had no crash or abort. Therefore the
+probe-driver/launch-order explanation is refuted at this scope; the M5
+diagnostic load is selected as the startup destabilizer. This does not identify
+the upstream zero-DMEM writer, and no paired source-writer conclusion is drawn.
+
+ORIGIN: no mitigation or value guard was added. The observed `0x8000B650`
+failure is a diagnostic-coverage defect whose writer/cause remains unresolved.

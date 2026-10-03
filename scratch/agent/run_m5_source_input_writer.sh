@@ -2,7 +2,10 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT="$ROOT/scratch/agent/s3802_m5_source_input_writer"
+IMAGE_ONLY=${ROGUESQ_M5_IMAGE_ONLY:-0}
+OUT_TAG=s3804_m5_source_input_writer
+[[ "$IMAGE_ONLY" == 1 ]] && OUT_TAG=s3805_m5_image_source_ground_truth
+OUT="$ROOT/scratch/agent/$OUT_TAG"
 BUILD="$ROOT/build"
 ORACLE="$ROOT/tools/oracle/build/rs64_oracle"
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
@@ -37,25 +40,34 @@ oracle_pid=$!
 
 launch() {
   local name=$1 audio=$2
-  (cd "$BUILD" && exec env "${COMMON[@]}" ROGUESQ_AUDIO_UCODE="$audio" \
-    ./RogueSquadron64Recomp > "$OUT/$name.log" 2>&1) &
+  (cd "$ROOT" && exec env "${COMMON[@]}" ROGUESQ_AUDIO_UCODE="$audio" \
+    zsh "$ROOT/tools/probe.sh" "$OUT/$name" 180 2 > "$OUT/$name-driver.log" 2>&1) &
   print $! > "$OUT/$name.pid"
 }
 launch image 1
 for tick in {1..60}; do
-  grep -a -q '\[phase\].*width=1024\|vi_width=1024' "$OUT/image.log" 2>/dev/null && break
+  grep -a -q '\[phase\].*width=1024\|vi_width=1024' "$OUT/image/run.log" 2>/dev/null && break
   sleep 1
 done
-launch silent 0
-trap 'kill -KILL "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true' EXIT INT TERM
+[[ "$IMAGE_ONLY" == 1 ]] || launch silent 0
+cleanup() {
+  if [[ "$IMAGE_ONLY" == 1 ]]; then
+    kill -KILL "$oracle_pid" "$image_pid" 2>/dev/null || true
+  else
+    kill -KILL "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
 image_pid=$(<"$OUT/image.pid")
-silent_pid=$(<"$OUT/silent.pid")
+[[ "$IMAGE_ONLY" == 1 ]] || silent_pid=$(<"$OUT/silent.pid")
 
 for tick in {1..150}; do
   ready=0
-  for name in image silent; do
+  arms=(image)
+  [[ "$IMAGE_ONLY" == 1 ]] || arms+=(silent)
+  for name in $arms; do
     pid=$(<"$OUT/$name.pid")
-    if grep -a -q '\[phase\].*width=512\|vi_width=512' "$OUT/$name.log" 2>/dev/null || ! kill -0 "$pid" 2>/dev/null; then
+    if grep -a -q '\[phase\].*width=512\|vi_width=512' "$OUT/$name/run.log" 2>/dev/null || ! kill -0 "$pid" 2>/dev/null; then
       ready=$((ready + 1))
     fi
   done
@@ -64,16 +76,23 @@ for tick in {1..150}; do
   else
     oracle_ready=0
   fi
-  (( ready == 2 && oracle_ready == 1 )) && break
+  (( ready == ${#arms} && oracle_ready == 1 )) && break
   sleep 1
 done
 
-kill -KILL "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true
+if [[ "$IMAGE_ONLY" == 1 ]]; then
+  kill -KILL "$oracle_pid" "$image_pid" 2>/dev/null || true
+else
+  kill -KILL "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true
+fi
 wait "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true
 
 : > "$OUT/summary.txt"
-for name in oracle image silent; do
+names=(oracle image)
+[[ "$IMAGE_ONLY" == 1 ]] || names+=(silent)
+for name in $names; do
   log="$OUT/$name.log"
+  [[ "$name" != oracle ]] && log="$OUT/$name/run.log"
   print -r -- "--- $name ---" >> "$OUT/summary.txt"
   for marker in 'positive-control threshold' '[oracle] done' '[phase]' \
       '[m5-input-writer-control]' '[m5-input-writer]' '[m5-source-producer]' \
@@ -83,6 +102,6 @@ for name in oracle image silent; do
   done
 done
 grep -a -E 'positive-control threshold|\[oracle\] (phase|done)|\[hit\].*pc=0x800078EC' "$OUT/oracle.log" | tail -80 >> "$OUT/summary.txt" || true
-for name in image silent; do
-  grep -a -E '^\[(phase|m5-input-writer|m5-source-producer|m5-source-transition|m5-input-dma|m5-dmem-coverage|m5-source-range-writer|CRASH|ABORT)\]' "$OUT/$name.log" | tail -160 >> "$OUT/summary.txt" || true
+for name in $arms; do
+  grep -a -E '^\[(phase|m5-input-writer|m5-source-producer|m5-source-transition|m5-input-dma|m5-dmem-coverage|m5-source-range-writer|CRASH|ABORT)\]' "$OUT/$name/run.log" | tail -160 >> "$OUT/summary.txt" || true
 done

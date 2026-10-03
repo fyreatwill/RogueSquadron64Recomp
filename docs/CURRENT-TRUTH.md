@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3803 (2026-10-03).
+Updated for session 3804 (2026-10-03).
 
 ## Current state
 
@@ -39,14 +39,15 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 paired-arm stability qualification, next.** s3803 could not qualify
-   the required paired source census: retail ground truth was complete, but
-   concurrent port startup was launch-order-sensitive and one arm crashed at
-   `0x8000834C` before title. Replace the direct-executable driver with the
-   established `tools/probe.sh` launch path and preserve the same M5 census
-   and retail controls. Do not promote a source-writer conclusion until both
-   arms reach title/hangar.
-2. **M5 upstream zero-DMEM producer, parked behind stability.** s3802
+1. **M5 single-arm source ground truth, next.** s3804 separated the
+   diagnostic-load failure from launch contention: the full-census image arm
+   reached title/hangar, while the full-census silent arm crashed before title;
+   a same-build silent arm with the M5 census variables removed reached both.
+   Run the full image census through `tools/probe.sh` alongside the independent
+   retail oracle, with no silent arm. Keep the whole-RDRAM and retail target-VI
+   controls; use the result to join the port zero-DMEM chain to retail source
+   bytes without destabilizing the control arm.
+2. **M5 upstream zero-DMEM producer, parked behind single-arm ground truth.** s3802
    qualified the port-side immediate chain: the hangar image input reads
    all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
    and the source DMA writes the same all-zero payload to
@@ -92,7 +93,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-ImageStageOnly` | Selected at s3800: image emitted 5,570 stage rows while silent emitted zero; shared PCM/return controls remained active. |
 | `H-M5-ImageStageBoundary` | Selected at s3801: image's zero source/stage payload reaches a live image consumer; silent has no image-stage rows but retains PCM controls. |
 | `H-M5-SourceInputWriter` | Open: the legitimate writer or fill responsible for the zero source span remains unidentified. |
-| `H-M5-PairedArmStartup` | Open at s3803: one concurrently launched port arm crashes at `0x8000834C`; the failing arm follows launch order, so driver/startup contention versus a true paired scheduler defect is unresolved. |
+| `H-M5-PairedArmStartup` | Refuted at s3804 as the primary explanation: `tools/probe.sh` did not make the full-census silent arm stable, while the no-census silent control reached title/hangar. |
+| `H-M5-DiagnosticLoadStartup` | Selected at s3804: the full M5 census silent arm crashed before title at guest PC `0x8000B650`; the same-build no-census silent control reached title and hangar with no crash. |
 
 ## Evidence ledger — live boundary
 
@@ -226,6 +228,17 @@ Work only the first applicable item. This is one monotonic backlog.
   first arm before title. The image arm produced 256 source-range rows only
   when it survived; no paired image/silent census was valid. This selects an
   arm-startup coverage discriminator and leaves the zero-DMEM writer open.
+- **3804 — probe-driver and no-census stability qualification:** the Debug
+  build passed. The independent retail oracle fired its whole-RDRAM positive
+  control. The full-census image arm, launched through `tools/probe.sh`,
+  reached title `0x00790400` and hangar `0x006AB400` with 512 source-range
+  rows and no crash. The full-census silent arm crashed 36 times before title
+  at guest PC `0x8000B650`. A same-build silent control with the M5 census
+  variables removed reached title at 13.3s and hangar at 44.5s, with no crash
+  or abort. This selects diagnostic-load startup instability and refutes the
+  probe-driver/launch-order explanation; it does not identify the source
+  writer. See scratch captures `s3802_m5_source_input_writer` and
+  `s3804_m5_nocensus_silent`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
