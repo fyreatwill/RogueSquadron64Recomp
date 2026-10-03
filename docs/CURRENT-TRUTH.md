@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3855 (2026-10-03).
+Updated for session 3856 (2026-10-03).
 
 ## Current state
 
@@ -36,7 +36,12 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap guard validation — open dependency.** Sessions 3852–3853 tightened
+1. **M5 image task/output edge — qualified port result.** Session 3839 joined
+   the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
+   found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
+   `0x198`, despite empty ABI output fields. Do not add a writeback guard or
+   infer a destination from the port address; qualify retail first.
+2. **M3 heap guard validation — blocked dependency.** Sessions 3852–3856
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
    linker-published addresses before queue-link stores. ORIGIN: those globals are
@@ -48,12 +53,7 @@ Work only the first applicable item. This is one monotonic backlog.
    The configured generator has no `PatchesLib` target, the MIPS compiler/LD
    are absent, and `build/Debug/N64Recomp.exe` is absent. Restore/reconfigure
    those tools, build the patch ELF and library, then run the allocator-route
-   smoke. Do not claim H1/H2 before that.
-2. **M5 image task/output edge — qualified port result.** Session 3839 joined
-   the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
-   found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
-   `0x198`, despite empty ABI output fields. Do not add a writeback guard or
-   infer a destination from the port address; qualify retail first.
+   smoke. Do not claim allocator behavior from the guard until then.
 3. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
    supplied independent retail and validated port target coverage and exact
    hangar zero-payload parity. Do not repeat standalone qualification or the
@@ -164,6 +164,12 @@ Work only the first applicable item. This is one monotonic backlog.
   `0x1798B0`, length `0x198`, with zero crashes/aborts. This selects
   `H-M5-RetailDestinationAbsentTargetPhase` and closes the destination-role
   discriminator at the qualified target scope.
+- **3856:** The prescribed M3 validation prerequisites were checked directly.
+  `mips64-elf-gcc` and `mips64-elf-ld` were absent, `build/Debug/N64Recomp.exe`
+  was absent, CMake exposed no `PatchesLib` target, and the requested build
+  failed with `No rule to make target PatchesLib`. This selects the environment
+  block only; it provides no allocator behavior evidence and leaves the guard
+  unvalidated.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

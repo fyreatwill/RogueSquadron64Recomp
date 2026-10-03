@@ -1,30 +1,26 @@
-# Next work unit: validate the M3 heap metadata-slot guard
+# Next work unit: qualify the retail side of the M5 image task/output edge
 
-HYPOTHESIS-ID: m3-heap-metadata-slot-validation
+HYPOTHESIS-ID: m5-retail-image-task-output-edge
 
-Build and smoke-test the existing `patches/heap_guards.c` metadata-slot guard.
-First verify the required tools and targets, then use the configured patch
-pipeline if available:
+Run the paired capture from the repository root:
 
-    sed -n '1,260p' patches/README.md
-    command -v mips64-elf-gcc mips64-elf-ld
-    test -x build/Debug/N64Recomp.exe
-    cmake --build build --config Debug --target PatchesLib
+    zsh scratch/agent/run_s3855_m5_retail_destination_role.sh
 
-If that succeeds, run the allocator-route smoke described in
-`patches/README.md`; capture both the guarded fixed-slot path and a deliberately
-mispointed metadata-slot path in one run.
+Retain the whole-RDRAM positive control, title/hangar VI controls, and
+no-crash/no-abort markers. Extend the oracle arm only if needed to join one
+task generation to one candidate output destination; do not add a mitigation
+or infer ownership from the port address.
 
 Competing hypotheses and discriminator:
 
-- H1: the guard's fixed linker-published metadata-slot checks are reached and
-  preserve valid allocator queue-link stores.
-- H2: the configured build cannot compile/link the patch, so no validation is
-  possible in this environment.
-- H3: the smoke reaches a mismatched metadata slot, proving the invalid arm is
-  rejected while the valid arm remains live.
+- H1: a retail task generation directly owns the candidate image-stage/output
+  span and joins to a unique destination/length tuple.
+- H2: retail reaches the stage writers but the task descriptor is generic; a
+  separate writer owns publication, as in the qualified port edge.
+- H3: the retail arm fails its positive control or target VI, making a null
+  destination result unevaluable.
 
-The discriminator is tool availability followed by one build and one paired
-allocator smoke. H1 requires successful patch build plus valid-route activity;
-H2 is selected only by this iteration's direct tool/target checks; H3 requires
-both valid and mismatched-slot outcomes in the same smoke.
+The discriminator is one paired capture with both target-VI controls and a
+phase-gated task-generation-to-destination join. H1 requires a stable unique
+tuple; H2 requires live task and writer rows without a unique tuple; H3 is
+selected only when the controls fail.

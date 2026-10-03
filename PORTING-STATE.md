@@ -141251,3 +141251,16 @@ was rewritten, skipped, or guarded.
 Evidence: `scratch/agent/s3855_m5_retail_destination_role/driver.log`,
 `retail.log`, `retail_destination_join.txt`, `port.log`, and
 `scratch/agent/run_s3855_m5_retail_destination_role.sh`.
+
+## Session 3856 (2026-10-03) — confirmed heap-guard validation environment block
+
+Ran the prescribed M3 prerequisite and build checks. `mips64-elf-gcc` and
+`mips64-elf-ld` were absent, `build/Debug/N64Recomp.exe` was absent, and the
+configured CMake target list had no `PatchesLib` target. The requested
+`cmake --build build --config Debug --target PatchesLib` failed immediately
+with `No rule to make target PatchesLib`.
+
+This selects the environment-block hypothesis for this iteration only. It
+does not validate allocator behavior, prove the guard fires, or justify a
+claim about valid or invalid metadata-slot routes. The next applicable unit
+returns to the M5 retail image task/output edge.
