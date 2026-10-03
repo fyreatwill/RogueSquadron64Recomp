@@ -1,33 +1,38 @@
-# Next work unit: validate the active-queue head guard when the patch pipeline is available
+# Next work unit: phase-gated scalar attribution in the candidate image span
 
-HYPOTHESIS-ID: m3-active-queue-head-integrity
+HYPOTHESIS-ID: m5-retail-candidate-span-payload
 
-Session 3859 added a guard to the allocator queue-link class: a non-null
-active-queue head must be a complete aligned KSEG0 block before queue stores.
-The change is intentionally unvalidated until the patch pipeline exists.
+Session 3860 established that the unresolved writer probe was aimed at
+`0x141AD0..0x141AF0`, not the candidate image span, and therefore selected no
+image-writer hypothesis. The next unit must watch the candidate span itself.
+Create one self-contained script by copying the 3857 paired harness, retain
+its whole-RDRAM/title/hangar controls, and change the retail arm to watch
+`0x165000:0x16C000` with phase-gated post-store samples forced at
+`0x80015BC8,0x8000F3A0`. Run both retail and port arms in that one script.
 
 Competing hypotheses and discriminator:
 
-- H1: the active-queue head is legitimate and the new guard is transparent on
-  the allocator-route smoke.
-- H2: the head is malformed or outside the complete block span, and the guard
-  prevents a queue-link dereference.
-- H3: the patch pipeline remains unavailable, so no runtime conclusion is
-  permitted.
+- H1: a legitimate retail stage writer emits nonzero scalar payloads into the
+  candidate span during hangar; its writer PC and source/value samples are
+  the missing retail producer evidence.
+- H2: the candidate-span writes are only zero/metadata construction, so both
+  known writer PCs have zero scalar payloads or no hangar-phase stores; the
+  image/output edge remains absent at this scope.
+- H3: whole-RDRAM, title, hangar, or post-store controls fail; the run is
+  invalid and no writer conclusion is allowed.
 
-The discriminator is one configured `PatchesLib` build followed by the
-existing allocator-route smoke. H1 requires a successful patch build and
-unchanged valid queue progress; H2 requires a guard return before the invalid
-link store without an access violation; H3 is selected if the compiler,
-linker, generated recompiler, or target is still absent. The writer origin is
-the allocator's active-queue head slot at `0x801163FC`; a malformed pointer is
-not legitimate.
+The discriminator is one same-run table containing positive-control counts,
+VI phase counts, candidate-span writer-PC histograms, and scalar
+`zero/nonzero/mismatch/unsupported` rows for both PCs. H1 requires nonzero
+scalar stores with zero mismatches; H2 requires valid controls and no such
+stores; H3 is selected if any control is absent. Do not add a writeback guard:
+the observed writer is legitimate only if the payload and destination are
+qualified together.
 
-Exact preparation and run shape:
+Preparation and run commands:
 
-    command -v mips64-elf-gcc mips64-elf-ld
-    test -x build/Debug/N64Recomp.exe
-    cmake --build build --config Debug --target PatchesLib
-    # If the target builds, run the existing allocator-route smoke from build/
-    # with its normal watchdog and SIGKILL teardown; do not add a new probe.
-    git status --short
+    cp scratch/agent/run_s3857_m5_retail_writer_provenance.sh scratch/agent/run_s3861_m5_candidate_span_scalar.sh
+    # edit only the retail watch range and requested writer-PC list as above
+    zsh scratch/agent/run_s3861_m5_candidate_span_scalar.sh
+
+Use the script's SIGKILL watchdog; inspect bounded summaries, not full logs.

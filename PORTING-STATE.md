@@ -141311,3 +141311,23 @@ This is a real patch-source change, but runtime validation did not run because
 `PatchesLib` target remain absent. The change rules out no allocator behavior;
 the next discriminator is a successful patch build followed by the existing
 allocator-route smoke. The M5 writer census remains open and was not rerun.
+
+## Session 3860 (2026-10-03) — bounded retail output-writer probe
+
+Ran `scratch/agent/run_s2297_m5_target_only_writer_sequence.sh`, which
+phase-gated post-store attribution at `0x8008EB8C`, `0x8008EBBC`, and
+`0x80094648`. The independent whole-RDRAM control reached 10,000 callbacks;
+title VI 1024 and hangar VI 512 were both observed; and the oracle completed
+4,104,942 watch hits. The probe range was physical `0x141AD0..0x141AF0`.
+
+During hangar, `0x80094648` produced 24 writes in that range, all sentinel
+`0x7F7F7F7F`; `0x8008EB8C` and `0x8008EBBC` produced no phase-gated rows.
+The instrument's post-target table therefore returned zero non-sentinel rows.
+This is not the candidate image span, so it does not distinguish a retail
+construction writer from an image-output writer. It rules out only
+`0x80094648` as a non-sentinel writer of this probe range during hangar.
+
+The run was diagnostic-only and made no runtime or guest-state change. The
+next M5 discriminator must watch the candidate stage span itself while
+sampling the known stage writers' scalar payloads; do not treat this result as
+proof that the image task/output edge is absent.
