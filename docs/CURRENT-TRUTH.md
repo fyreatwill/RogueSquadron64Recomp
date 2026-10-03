@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3779 (2026-10-03).
+Updated for session 3780 (2026-10-03).
 
 ## Current state
 
@@ -237,17 +237,27 @@ family-edge row/control appeared. This rules out the stale-register witness
 explanation, but leaves clear-object versus family-route identity open. See
 [M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md](M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md).
 
+Session 3780 reran the existing batched family-edge/store join after the
+repaired witness. The oracle positive control, all six family-store controls,
+title, and hangar passed. S/I/L entry controls produced 257 target-phase rows
+(S=128, I=1, L=128); every row had `target_arg=0`. Stores stayed outside the
+clear object and target ranges. The route snapshot was inactive on every row,
+so H3 is refuted for this capture but H1 versus H2 remains unevaluable. See
+[M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md](M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 identify the route/object decision after the qualified family edge.**
-   The s3779 entry witness fired for S/I/L in title and hangar, but all 257
-   target-phase rows had `target_arg=0` while family stores remained on
-   alternate objects. Build one batched, regeneration-safe join that captures
-   the family entry arguments, clear object, route key, and first destination
-   stores in the same phase-gated image/oracle run. Do not suppress or replace
-   the clear, inject values, or change an audio gate.
+1. **M5 obtain independent route identity at the qualified family edge.**
+   The s3780 join refuted target-argument transformation, but the host audio
+   route snapshot was inactive (`active=0`) on all 257 rows. Add one
+   regeneration-safe, phase-gated witness that samples the guest route/overlay
+   state directly at S/I/L entry and joins it to the existing clear object,
+   entry arguments, and first destination stores. Active matching state selects
+   H1; mismatched or inactive state with a stable alternate object selects H2.
+   Missing controls or target phases are unevaluable. Do not suppress or
+   replace the clear, inject values, or change an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
@@ -685,6 +695,7 @@ silent control.
 - [M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md](M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md)
 - [M5-S3775-CLEAR-EDGE-QUALIFICATION.md](M5-S3775-CLEAR-EDGE-QUALIFICATION.md)
 - [M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md](M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md)
+- [M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md](M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)

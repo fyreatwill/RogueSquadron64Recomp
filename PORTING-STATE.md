@@ -139837,3 +139837,25 @@ not alter game values, destinations, or control flow.
 
 Evidence: `docs/M5-S3779-FAMILY-EDGE-QUALIFICATION.md` and
 `scratch/agent/s3778_m5_family_edge/image.log`.
+
+## Session 3780 (2026-10-03) — joined family arguments to clear object and route
+
+The Debug target rebuilt successfully. The image-only/oracle capture passed the
+oracle whole-RDRAM positive control, all six family-store controls, title VI
+1024 (`0x00790400`), and hangar VI 512. S/I/L entry controls produced 257
+target-phase rows (S=128, I=1, L=128), all with `target_arg=0`. Family stores
+remained outside the clear object and target ranges: 768 title rows had
+`clear_obj=0x80178C80`, and 512 hangar rows had `clear_obj=0x801797B0`.
+
+The host route snapshot was inactive on every row (`active=0`, ordinal and row
+`0xFFFFFFFF`, arm `n/a`). This refutes H3 (target-relevant entry arguments
+transformed into alternate destinations) for this capture, but does not
+distinguish a legitimate alternate object from wrong route/overlay state. The
+next unit must sample guest route identity independently. No mitigation or
+audio change was made.
+
+ORIGIN: the entry/store witnesses observe existing values and do not modify
+game state or control flow.
+
+Evidence: `docs/M5-S3780-FAMILY-ROUTE-OBJECT-JOIN.md` and
+`scratch/agent/s3773_m5_image_only/summary.txt`.
