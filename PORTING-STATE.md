@@ -140128,3 +140128,20 @@ experiment was needed.
 
 ORIGIN: regeneration-safe symbol census only; no runtime mitigation, ROM, or
 game-state change.
+
+## Session 3796 (2026-10-03) — bounded main-overlay render-list range was synchronized
+
+Ran the regeneration-safe rename tool over the contiguous generated range
+`0x80009000..0x8000A000` with the verified sibling
+`rogue_squadron64/symbol_files` directory. The valid bounded census reported
+the named positive controls `setActiveRenderListPtr` and
+`emitColorFillRect`; both were `already-synchronized`, and the tool changed
+zero generated references. H1 and H2 were not selected; H3 selected. The next
+bounded lead is `0x8000A000..0x8000B000`.
+
+This rules out a stale callable placeholder in the measured range, but does not
+make any claim about the next range or runtime behavior. No build or runtime
+experiment was needed.
+
+ORIGIN: regeneration-safe symbol census only; no runtime mitigation, ROM, or
+game-state change.

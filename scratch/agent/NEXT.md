@@ -1,4 +1,4 @@
-# Next work unit: bounded generated-symbol lead after the synchronized display-list range
+# Next work unit: bounded generated-symbol lead after the synchronized render-list range
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -8,7 +8,7 @@ bounded, regeneration-safe symbol-renaming lead, not a runtime experiment.
 
 Competing hypotheses and discriminator:
 
-- H1: `0x80009000..0x8000A000` contains an exact companion semantic mapping
+- H1: `0x8000A000..0x8000B000` contains an exact companion semantic mapping
   for one or more generated placeholders; rename only one-to-one mappings.
 - H2: the range contains candidates but they are ambiguous, fake fragments, or
   lack semantic source; preserve placeholders and record them.
@@ -24,7 +24,7 @@ positive-control/already-synchronized rows or no remaining placeholders.
 Exact commands:
 
     grep -n '^## Session ' PORTING-STATE.md | tail -15
-    env RSR_FUNCS_DIR=/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80009000 --end-address 0x8000A000 --limit 32
+    env RSR_FUNCS_DIR=/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8000A000 --end-address 0x8000B000 --limit 32
 
 Do not build unless the mapping pipeline requires it. Do not start a second
 range. If the companion positive control is absent, treat the run as invalid

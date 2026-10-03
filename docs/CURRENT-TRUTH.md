@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3795 (2026-10-03).
+Updated for session 3796 (2026-10-03).
 
 ## Current state
 
@@ -51,8 +51,8 @@ Work only the first applicable item. This is one monotonic backlog.
    if an independent runtime allocator witness identifies a concrete bad
    value; otherwise continue with the next systematic M3 class.
 3. **Generated-symbol renaming sweep.** M5 is parked and M3 has no new
-   discriminator. Keep slug `generated-symbol-renaming-sweep`; s3795 found no
-   stale callable symbol in `0x800078E0..0x80009000` with valid companion
+   discriminator. Keep slug `generated-symbol-renaming-sweep`; s3796 found no
+   stale callable symbol in `0x80009000..0x8000A000` with valid companion
    positive controls. Continue with the next bounded main-overlay lead.
 
 ## Live hypothesis table
@@ -142,6 +142,13 @@ Work only the first applicable item. This is one monotonic backlog.
   every row was `already-synchronized`, and the tool changed zero generated
   references. H1 and H2 were not selected; H3 selected. The next bounded lead
   is `0x80009000..0x8000A000`.
+- **3796 — bounded main-overlay render-list range:** the exact range
+  `0x80009000..0x8000A000` was run with the verified companion repository
+  path. The census reported named positive controls
+  `setActiveRenderListPtr` and `emitColorFillRect`; both were
+  `already-synchronized`, and the tool changed zero generated references.
+  H1 and H2 were not selected; H3 selected. The next bounded lead is
+  `0x8000A000..0x8000B000`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
