@@ -138885,3 +138885,27 @@ Evidence: `docs/M5-S3739-PORT-ENTRY-SETUP-CENSUS.md` and
 
 ORIGIN: the only changed artifacts are phase/entry diagnostics and evidence
 notes; `0x800078EC` remains an observed legitimate zero fill, not a mitigation target.
+
+## Session 3740 (2026-10-02) — joined M5 family value and call-edge provenance
+
+Ran the corrected batched M5 family-provenance capture after discarding an
+initial run whose shared phase budget hid the second family. The independent
+retail oracle passed its whole-RDRAM positive control and reached both title
+and hangar. The real and silent port arms both fired the new instrument; both
+recorded matching nonzero `rs_strncpy` caller/entry arguments in setup buffers
+outside the qualified source span. `initTextureLUTAndAllocBuffers` also had a
+matching caller/entry pair (`a0=a1=0x200`, `a2=0x400`) in title setup only.
+
+The qualified real-audio route still emitted 512 zero-payload source writes
+(`FNV=0x762B22A5`, `payload_nz=0`), while silent emitted no source-DMA rows.
+This refutes a value drop at the measured family call edges and shows those
+families are shared setup, not the missing qualified-route producer. It rules
+out the candidate-family versions of absent setup and call-edge loss, but does
+not explain the zero payload. No behavior or writer was changed.
+
+Evidence: `docs/M5-S3740-FAMILY-VALUE-PROVENANCE.md` and
+`scratch/agent/s3740_m5_family_provenance_fixed/`.
+
+ORIGIN: the changed runtime code is diagnostic-only family call/entry logging;
+the writer at `0x800078EC` remains a legitimate observed zero fill and was not
+suppressed or altered.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3739 (2026-09-22).
+Updated for session 3740 (2026-10-02).
 
 ## Current state
 
@@ -29,13 +29,13 @@ zero-valued port payload. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 family-value/setup provenance census.** s3739 found both retail
-   earlier-writer families executing in the port and touching the source span,
-   but their observed entries were shared pre-route setup; the qualified real
-   hangar writer still emitted only zero payload. Join each family’s call
-   arguments, source/value setup, and route phase to identify the first missing
-   value edge. Do not suppress or alter the legitimate `0x800078EC` fill. See
-   [M5-S3739-PORT-ENTRY-SETUP-CENSUS.md](M5-S3739-PORT-ENTRY-SETUP-CENSUS.md).
+1. **M5 qualified-route predecessor/handoff census.** s3740 showed the
+   candidate `0x80007640` and `0x8001E230` call/entry arguments match and are
+   shared setup activity in real and silent arms; neither is the missing
+   qualified-route producer. Join the first real-audio route edge after this
+   setup to its task/RSP handoff and source-DMA row. Keep the legitimate
+   `0x800078EC` fill unchanged. See
+   [M5-S3740-FAMILY-VALUE-PROVENANCE.md](M5-S3740-FAMILY-VALUE-PROVENANCE.md).
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -55,6 +55,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-PortWriterLegitimateClear` | Refuted at s3738 for the measured port span: no nonzero port store preceded the zero DMA payload. |
 | `H-PortFamilyNeverEntered` | Refuted at s3739 for the measured family-entry hook: both families execute in the port. |
 | `H-PortFamilyEnteredWrongArgs` | Refined at s3739: families touch the target span, but value/setup provenance remains open. |
+| `H-FamilyCallEdgeDropsValue` | Refuted at s3740 for the measured call/entry edges: caller and entry arguments matched in both arms. |
+| `H-FamilyValueSetupAbsent` | Refuted for the measured candidate setup families; the missing qualified-route edge is elsewhere or parallel. |
 | `H-PortFamilyWritesThenClear` | Refuted at s3739 for the qualified hangar source path: all real source-range writer payloads remained zero. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
@@ -99,6 +101,14 @@ Work only the first applicable item. This is one monotonic backlog.
   512 zero-payload rows. This refutes missing family entry and a nonzero
   family-write-then-clear path; value/setup provenance remains the boundary.
   See [M5-S3739-PORT-ENTRY-SETUP-CENSUS.md](M5-S3739-PORT-ENTRY-SETUP-CENSUS.md).
+- **3740 — family value/call-edge provenance:** the fixed phase-scoped capture
+  passed the oracle control and both phases. Real and silent arms had matching
+  nonzero `rs_strncpy` caller/entry arguments in setup buffers; the texture-LUT
+  family also matched at title setup. Neither candidate reached the qualified
+  source span. Real still had 512 zero-payload source writes; silent had none.
+  This refutes a call-edge value drop for the measured families and moves the
+  boundary to the qualified-route predecessor/handoff. See
+  [M5-S3740-FAMILY-VALUE-PROVENANCE.md](M5-S3740-FAMILY-VALUE-PROVENANCE.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.

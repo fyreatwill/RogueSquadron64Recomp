@@ -2662,6 +2662,57 @@ extern "C" void rs64_m5_pointer_span_store(char width, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_family_provenance(const char* edge,
+                                             const char* family,
+                                             uint32_t pc,
+                                             uint32_t ra,
+                                             uint32_t a0,
+                                             uint32_t a1,
+                                             uint32_t a2,
+                                             uint32_t a3,
+                                             uint32_t v0) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FAMILY_PROVENANCE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows[2][2] = {};
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const uint32_t key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (phase_key == 0xFFFFFFFFu) {
+        std::fprintf(stderr,
+            "[m5-family-provenance-control] edge=%s family=%s pc=0x%08X phase=%u\n",
+            edge ? edge : "?", family ? family : "?", pc, phase);
+        std::fflush(stderr);
+    }
+    if (key != phase_key) {
+        phase_key = key;
+        std::memset(rows, 0, sizeof(rows));
+    }
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    const unsigned family_index =
+        (family && std::strcmp(family, "initTextureLUTAndAllocBuffers") == 0) ? 1u : 0u;
+    const unsigned edge_index =
+        (edge && std::strcmp(edge, "entry") == 0) ? 1u : 0u;
+    if (rows[family_index][edge_index] >= 128u) return;
+    std::fprintf(stderr,
+        "[m5-family-provenance] edge=%s family=%s row=%u phase=%u width=%u "
+        "origin=0x%06X pc=0x%08X ra=0x%08X callsite=0x%08X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X v0=0x%08X\n",
+        edge ? edge : "?", family ? family : "?", rows[family_index][edge_index]++, phase, width,
+        origin, pc, ra, ra >= 8u ? ra - 8u : 0u, a0, a1, a2, a3, v0);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_mix_entry(uint8_t* rdram, recomp_context* ctx, uint32_t pc) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
