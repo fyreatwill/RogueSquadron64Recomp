@@ -141185,3 +141185,16 @@ blocked in this checkout: the configured generator has no `PatchesLib` target,
 recomp targets. This rules out claiming allocator-route behavior from the
 change; the next work unit is to restore/reconfigure those tools and run the
 allocator smoke.
+
+## Session 3853 (2026-10-03) — confirmed patch validation environment block
+
+Ran the mandated `cmake --build build --config Debug --target PatchesLib`.
+The configured generator failed immediately with `No rule to make target
+PatchesLib`. Target help listed the main recomp targets but no patch library.
+An independent prerequisite check also found no
+`E:/mips-toolchain/bin/mips64-elf-gcc.exe`, no
+`E:/mips-toolchain/bin/mips64-elf-ld.exe`, and no `build/Debug/N64Recomp.exe`.
+
+This confirms H3 for the validation environment, not H1 or H2 for allocator
+behavior. The metadata-slot guard remains unvalidated; the next work unit
+returns to the applicable M5 retail task-data-pointer to image-stage join.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3852 (2026-10-03).
+Updated for session 3853 (2026-10-03).
 
 ## Current state
 
@@ -36,29 +36,25 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap guard validation — open dependency.** Session 3852 tightened the
-   existing patch's metadata-slot class: `heap_other_listhead` and
-   `heap_tail_loc` must equal their fixed linker-published addresses before
-   queue-link stores. ORIGIN: those globals are fixed metadata slots; an
-   arbitrary aligned KSEG0 value is not legitimate. Session 3841
-   changed full-block checks in `patches/heap_guards.c` from base-only
-   `kseg0_ok` to `block_ok`, requiring a complete `0x100`-byte object below
-   `0x80800000`. ORIGIN: `func_8002221C` and free-list link stores publish
-   block bases; the guard rejects only an impossible boundary-crossing object.
-   Session 3842 could not validate it: CMake has no `PatchesLib` target, the
-   configured MIPS compiler is absent, and `build/Debug/N64Recomp.exe` is
-   absent. Restore/reconfigure those tools, build the patch ELF and library,
-   then run the allocator-route smoke. Do not claim H1/H2 before that.
-2. **M5 retail task-to-stage join — resolve the remaining data-pointer edge.**
+1. **M5 retail task-to-stage join — resolve the remaining data-pointer edge.**
    Session 3851 passed whole-RDRAM, both target-VI controls, and no-crash
    validation. The descriptor range had 44,270 writes, but all were the same ten
-   PCs (`0x80091718..0x80091784`) repeating a fixed 13-value schema. The only
-   changing pointer values were task input pointers (`0x80171E70`,
-   `0x80173CB0`, and related stage inputs); output and yield fields remained
-   zero. This single-source oracle result selects H3: the descriptor changes,
-   but it does not identify a unique image-stage destination. The next paired
-   capture must join these task data-pointer values to the stage/DMA event, not
-   watch descriptor fields again.
+   PCs (`0x80091718..0x80091784`) repeating a fixed 13-value schema. The next
+   paired capture must join the changing task input pointers to the stage/DMA
+   event, not watch descriptor fields again.
+2. **M3 heap guard validation — open dependency.** Sessions 3852–3853 tightened
+   and attempted to validate the existing patch's metadata-slot class. The
+   `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
+   linker-published addresses before queue-link stores. ORIGIN: those globals are
+   fixed metadata slots; an arbitrary aligned KSEG0 value is not legitimate.
+   Session 3841 changed full-block checks in `patches/heap_guards.c` from
+   base-only `kseg0_ok` to `block_ok`, requiring a complete `0x100`-byte object
+   below `0x80800000`. ORIGIN: `func_8002221C` and free-list link stores publish
+   block bases; the guard rejects only an impossible boundary-crossing object.
+   The configured generator has no `PatchesLib` target, the MIPS compiler/LD
+   are absent, and `build/Debug/N64Recomp.exe` is absent. Restore/reconfigure
+   those tools, build the patch ELF and library, then run the allocator-route
+   smoke. Do not claim H1/H2 before that.
 3. **M5 image task/output edge — qualified port result.** Session 3839 joined
    the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
    found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length

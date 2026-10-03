@@ -1,30 +1,34 @@
-# Next work unit: validate the heap metadata-slot guard override
+# Next work unit: join retail task data pointers to the image-stage event
 
-HYPOTHESIS-ID: m3-heap-metadata-slot-guard
+HYPOTHESIS-ID: m5-retail-task-stage-data-pointer-join
 
-The work unit is the bounded M3 guard change in `patches/heap_guards.c`:
-metadata slot pointers must equal their linker-published addresses before any
-queue-link store. This is a code change, not another diagnostic field.
+Run one paired retail/port oracle capture extending the existing task-submission
+probe. Join each retail task input pointer written into `0x80149470`
+(`0x80171E70`, `0x80173CB0`, and related stage pointers) to the nearest
+qualified image-stage/DMA event and its destination/length. Do not watch the
+descriptor fields alone again.
 
 Competing hypotheses and discriminator:
 
-- H1: the free-list metadata slots are fixed game globals; exact-address checks
-  preserve normal allocator behavior and reject only corrupted slot pointers.
-- H2: one or both slots are legitimately relocated; exact checks reject normal
-  allocation and the original KSEG0 checks are required.
-- H3: the patch cannot be built in this checkout; validation remains blocked
-  by the missing configured patch toolchain/target.
+- H1: a task data pointer identifies the image-stage source/route and joins to a
+  unique destination/length event.
+- H2: task data pointers are reused generic inputs; no unique stage event joins.
+- H3: the retail route reaches stage activity, but the event window is too
+  coarse and needs a different independent boundary.
 
-Discriminating measurement: build `PatchesLib` and run the allocator-route
-smoke. H1 requires a successful patch build and unchanged allocator smoke;
-H2 requires an allocator failure attributable to a relocated slot; H3 is
-selected only if the build command proves the required compiler, N64Recomp,
-or CMake target is absent.
+The discriminator is one same-run paired capture passing whole-RDRAM, title/
+hangar VI, and no-crash positive controls. H1 requires the same task-pointer
+generation to join one destination/length tuple; H2 requires qualified task
+rows with no unique join; H3 requires stage activity with ambiguity after the
+combined capture.
 
-Starting command:
+Starting commands:
 
-    cmake --build build --config Debug --target PatchesLib
+    sed -n '1,240p' scratch/agent/run_s3851_m5_task_descriptor_writes.sh
+    cp scratch/agent/run_s3851_m5_task_descriptor_writes.sh scratch/agent/run_s3854_m5_task_stage_data_join.sh
+    # Edit the copy with apply_patch: retain all controls and add the task-pointer-to-stage/DMA join.
+    env zsh scratch/agent/run_s3854_m5_task_stage_data_join.sh
 
-If the target exists, run the repository's allocator-route smoke from the
-configured build directory and capture its exit/log. Do not repeat the retail
-task-pointer oracle join.
+Run both arms in that one script/build, phase-gated on VI transitions. Fold the
+paired counts and join result into the ledger; do not repeat the descriptor-only
+watch or claim a destination from a broad range alone.
