@@ -139923,3 +139923,22 @@ PC execution, and VI transitions; it did not modify the ROM, guest state, or
 port.
 
 Evidence: `scratch/agent/s3783_oracle_family_start/oracle.log`.
+
+## Session 3784 (2026-10-03) — repeated-A retail recipe stayed pre-target
+
+The independent retail oracle ran the prescribed 120-second qualification with
+eleven 150-ms A pulses, the whole-RDRAM positive control, candidate route-byte
+watches, S/I/L execution watches, and target-VI width watches. The positive
+control fired 10,003 writes, validating the oracle/watch path. Retail
+nevertheless stayed in the early 320-wide attract phase: no target VI and no
+family PC fired. Candidate route-byte writes were 2, 1, and 0.
+
+This selects `H-M5-RetailARecipePreTarget` for this input and rules out using
+its zero family/target counts as retail route-parity evidence. A combined
+Start+A recipe is required; no port instrumentation, mitigation, or audio
+change was made.
+
+ORIGIN: this iteration only observed independent retail memory writes, guest PC
+execution, and VI transitions; it did not modify the ROM, guest state, or port.
+
+Evidence: `scratch/agent/s3784_oracle_family_a/oracle.log`.
