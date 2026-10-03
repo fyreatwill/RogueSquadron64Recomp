@@ -140352,3 +140352,20 @@ Evidence: `scratch/agent/s3805_m5_image_source_ground_truth/summary.txt`,
 
 ORIGIN: no mitigation or value guard was added. The observed `0x8000834C`
 failure is a coverage defect whose writer/cause remains unresolved.
+
+## Session 3806 (2026-10-03) — common launch environment selected in census matrix
+
+Built `RogueSquadron64Recomp` successfully. Repaired and ran the planned
+same-build image startup matrix at
+`scratch/agent/s3806_m5_census_startup_matrix/`: no-census, source/input
+census, and full-census bundles, with phase-gated `tools/probe.sh` and an
+independent Rice retail oracle. The oracle whole-RDRAM positive control fired
+and retail reached title `0x00790400` and hangar `0x006AB400`. All three
+same-build port bundles crashed before title at guest PC `0x8000834C`, with
+zero target VI and zero M5 rows. This selects a common launch/diagnostic
+environment failure at this scope; it does not select a census category,
+identify the zero-DMEM writer, or qualify retail payload parity. The first
+wrapper invocation was invalid because the phase-relative key-list assignment
+was split by `env`; the fixed wrapper was rerun and is the result reported here.
+Next: compare a minimal validated route arm against the current base
+environment in one same-build matrix.

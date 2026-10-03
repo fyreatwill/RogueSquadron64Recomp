@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3805 (2026-10-03).
+Updated for session 3806 (2026-10-03).
 
 ## Current state
 
@@ -39,14 +39,15 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 diagnostic-load startup discriminator, next.** s3805 ran the prescribed
-   image-only full census, but the image arm crashed at guest PC `0x8000834C`
-   after only the 320-wide phase; every M5 target/source counter stayed zero.
-   The independent retail oracle passed its whole-RDRAM control and completed,
-   so this is a valid H3 coverage failure, not a failed oracle run. Build one
-   same-build diagnostic matrix that keeps the positive phase controls and
-   distinguishes the M5 census load itself from the common launch path before
-   attempting another retail payload join.
+1. **M5 minimal-route startup discriminator, next.** s3806 ran one same-build
+   matrix with no census, source/input census, and full census bundles. The
+   independent retail oracle passed its whole-RDRAM control and reached title
+   and hangar, while all three port bundles crashed before title at guest PC
+   `0x8000834C` with zero target-phase/M5 rows. This selects the common
+   launch/diagnostic environment at this scope; it does not identify a census
+   category or qualify a payload join. Run one same-build minimal-route versus
+   current-base matrix, retaining only phase/crash controls in the minimal arm,
+   before adding another M5 census.
 2. **M5 upstream zero-DMEM producer, parked behind diagnostic-load qualification.** s3802
    qualified the port-side immediate chain: the hangar image input reads
    all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
@@ -248,6 +249,14 @@ Work only the first applicable item. This is one monotonic backlog.
   unevaluable. The recipe's image-only wait path was repaired to avoid
   expanding the absent silent PID under `set -u`. Evidence:
   `scratch/agent/s3805_m5_image_source_ground_truth/`.
+- **3806 — census startup matrix:** the Debug build passed. The independent
+  retail oracle fired the whole-RDRAM positive control and reached title and
+  hangar. In one same-build matrix, no-census, source/input-census, and
+  full-census image bundles all crashed before title at guest PC `0x8000834C`;
+  each had zero target VI and zero M5 census rows. This selects a common
+  launch/diagnostic-path failure at this scope and leaves census-category
+  isolation unevaluable. Evidence:
+  `scratch/agent/s3806_m5_census_startup_matrix/`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
