@@ -139096,3 +139096,31 @@ existing guest clear/source path; this iteration did not alter either.
 Evidence: `tools/audit-host-rdram-writes.sh`,
 `docs/M5-S3747-HOST-RDRAM-WRITE-CENSUS.md`, and the captured output in
 `/tmp/rs64-host-rdram-writes-s3747.txt`.
+
+## Session 3748 (2026-10-02) — attributed native host exact-field writes
+
+The active M5 unit was the remaining computed-pointer/external-host-write gap
+for physical fields `0x128C92` and `0x128CD0..0x128CD3`. After checking the
+Darwin ARM64 platform and the oracle capability, one build added a macOS
+`mprotect` page-fault watch. It recorded the ARM64 host PC and fault address,
+briefly restored write access, and re-armed the page. The first native fault in
+each arm was explicitly retained as the same-run positive control.
+
+The real-audio and silent port arms both reached title and hangar. The native
+watch control fired on non-exact page writes (`0x128D2F` real and `0x128004`
+silent), while neither arm produced an exact-field fault row in the target
+phases. There were no crash or abort markers. The independent retail oracle
+passed its whole-RDRAM control, reached title `0x00790400`/1024 and hangar
+`0x006AB400`/512, and observed the known retail `0x128CD0` write from guest PC
+`0x8001BB14` plus a neighboring `0x128C90` write.
+
+This selects `H-ExactFieldUnwritten` for the remaining arbitrary native
+host-writer class in the qualified port capture and refutes `H-HostExactWriter`
+at that scope. It does not resolve `H-RouteStateNotSource`: exact route fields
+may still be control metadata rather than the image source. The watcher is
+diagnostic only; no mitigation was added and `0x800078EC` was unchanged.
+ORIGIN: native page-fault attribution; the writer values were not suppressed.
+
+Evidence: `docs/M5-S3748-HOST-WRITER-FAULT-WATCH.md`,
+`scratch/agent/s3748_m5_host_writer_fault/{real,silent,oracle}.log`, and
+`summary.txt`.

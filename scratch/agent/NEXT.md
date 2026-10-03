@@ -1,39 +1,34 @@
-# Next work unit: M5 platform-native writer-PC watch
+# Next work unit: M5 route-state/source-use join
 
-HYPOTHESIS-ID: m5-host-exact-route-field-ownership
+HYPOTHESIS-ID: m5-route-state-not-source
 
-Resolve the remaining computed-pointer/external-host-write gap for exact
-physical fields `0x128C92` and `0x128CD0..0x128CD4` with a platform-native
-writer-PC watch, then run one qualified real/silent pair. Do not alter
-`0x800078EC`. The generated scalar/non-literal, RSP-DMA, persistent-poll,
-central-host-API, and literal-direct-host-writer classes are closed at s3747.
+Resolve whether exact fields `0x128C92` and `0x128CD0..0x128CD3` are image
+source state or only route/control metadata. The s3748 native host writer-PC
+watch closed the remaining arbitrary host-writer class; do not repeat it and
+do not alter `0x800078EC`.
 
 Competing hypotheses:
 
-- `H-HostExactWriter`: a runtime/host-side writer supplies the exact fields in the port but is outside guest stores, literal direct writes, and the censused host APIs.
-- `H-ExactFieldUnwritten`: no remaining host writer exists before source DMA, so the port route state is an absent producer.
-- `H-RouteStateNotSource`: the exact fields are control metadata and the image source is produced by a separate unjoined object.
-- `H-HostTransient`: an arbitrary direct host write changes and clears an exact
-  field between samples, so only a writer-PC-capable watch can see it.
+- `H-RouteStateNotSource`: target phases read/use the fields as control
+  metadata, but no read/use is joined to the source-DMA payload; the image
+  producer is a separate object.
+- `H-RouteStateSourceKey`: a phase-gated read/use of an exact field selects or
+  keys the source object, and its value can be joined to the subsequent source
+  DMA despite no host write.
+- `H-RouteStateStale`: the fields are read/use state, but remain stale/zero and
+  do not control the source route; a different handoff carries the producer.
 
-Discriminator: a host-side exact-field write with a nonzero payload and a
-writer PC before a zero source-DMA row selects `H-HostTransient`; no host exact
-write in a qualified target phase selects `H-ExactFieldUnwritten`; matching
-route metadata with no exact-field/source join selects `H-RouteStateNotSource`.
-Missing oracle control, positive port control, or either port target phase is
-unevaluable.
+Discriminator: one build must capture the complete phase-scoped table of exact
+field reads/uses, their host/guest PCs and values, route identity, and the next
+source-DMA row, with a positive control for the read-fault/instrument path and
+the independent retail exact-field write watches retained. A read/use joined
+to source-DMA selects `H-RouteStateSourceKey`; target-phase reads with no
+source join select `H-RouteStateNotSource`; reads that remain zero/stale and
+do not affect source-DMA select `H-RouteStateStale`. Missing oracle control,
+port positive control, or either target phase is unevaluable.
 
-Ground truth must be checked before building: retain the oracle whole-RDRAM
-control, exact physical watches, title/hangar phase buckets, and writer-PC
-histogram. The direct-source census is now complete; do not repeat it. Batch
-all remaining host-write hooks in one build and one qualified pair. If the
-current platform cannot support a writer-PC watch, record that concrete
-capability failure and stop rather than adding another field-only diagnostic.
-
-Exact preflight/build/run shape: `uname -a`; inspect the platform-native
-write-watch capability, then build one instrumented executable and run the
-oracle control plus real/silent port arms concurrently from `build/`, killing
-all arms with SIGKILL. Expected outcomes are a nonzero exact-field write with
-writer PC (selects `H-HostTransient`), no exact-field write after live controls
-(selects `H-ExactFieldUnwritten` for the remaining class), or matching route
-metadata without an exact-field/source join (selects `H-RouteStateNotSource`).
+Ground truth before building: inspect the oracle exact-field hit PCs and the
+existing port route/source-DMA call edges; do not infer a read from a field
+snapshot. Then batch the read/use and source-DMA joins in one real/silent
+qualified run plus the oracle control. Kill every arm with SIGKILL from
+`build/`.

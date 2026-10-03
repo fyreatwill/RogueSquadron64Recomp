@@ -6222,6 +6222,106 @@ static FlzFaultRingRec g_flz_fault_ring[kFlzFaultRing];
 static std::atomic<uint64_t> g_flz_fault_ring_w{0};
 static size_t fl_zero_page_size();
 
+// Phase-scoped host write attribution for the remaining exact route fields.
+// The page is read-protected so a native store exposes its host PC through
+// the ARM64 signal context; the handler briefly restores write access so the
+// faulting instruction can retry.
+static std::atomic<uint8_t*> g_m5_host_fault_rdram{nullptr};
+static std::atomic<int> g_m5_host_fault_enabled{0};
+static std::atomic<int> g_m5_host_fault_armed{0};
+static uintptr_t g_m5_host_fault_page = 0;
+static size_t g_m5_host_fault_page_size = 0;
+static std::atomic<uint64_t> g_m5_host_fault_n{0};
+static std::atomic<uint64_t> g_m5_host_fault_control_n{0};
+static std::atomic<uint64_t> g_m5_host_fault_exact_n{0};
+
+static bool m5_host_fault_try_handle(siginfo_t* info, void* ucontext_raw) {
+    if (!g_m5_host_fault_enabled.load(std::memory_order_acquire) ||
+        !info || !info->si_addr) return false;
+    const uintptr_t fa = (uintptr_t)info->si_addr;
+    const uintptr_t page = g_m5_host_fault_page;
+    const size_t page_size = g_m5_host_fault_page_size;
+    if (!page || !page_size || fa < page || fa >= page + page_size) return false;
+
+    mprotect((void*)page, page_size, PROT_READ | PROT_WRITE);
+    g_m5_host_fault_armed.store(0, std::memory_order_release);
+    const uint32_t phys = (uint32_t)(fa - (uintptr_t)g_m5_host_fault_rdram.load(
+        std::memory_order_relaxed));
+    const bool exact = (phys >= 0x128C92u && phys < 0x128C93u) ||
+                       (phys >= 0x128CD0u && phys < 0x128CD4u);
+    const uint64_t n = g_m5_host_fault_n.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (exact) g_m5_host_fault_exact_n.fetch_add(1, std::memory_order_relaxed);
+    else g_m5_host_fault_control_n.fetch_add(1, std::memory_order_relaxed);
+
+    uint64_t pc = 0, lr = 0;
+#if defined(__APPLE__) && defined(__aarch64__)
+    if (ucontext_raw) {
+        ucontext_t* uc = static_cast<ucontext_t*>(ucontext_raw);
+        if (uc->uc_mcontext) {
+            pc = (uint64_t)uc->uc_mcontext->__ss.__pc;
+            lr = (uint64_t)uc->uc_mcontext->__ss.__lr;
+        }
+    }
+#else
+    (void)ucontext_raw;
+#endif
+    uint32_t phase = 0, width = 0, origin = 0, ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool route_active = rs64_audio_current_route_snapshot(
+        &phase, &width, &origin, &ordinal, &row, &exit_reason, &arm);
+    const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
+                             (width == 512u && origin == 0x006AB400u);
+    if (n == 1) {
+        fprintf(stderr, "[m5-host-write-fault-control] first=1 phys=0x%06X pc=0x%llX\n",
+            phys, (unsigned long long)pc);
+    }
+    if (exact && route_active && target_phase && n <= 256) {
+        fprintf(stderr,
+            "[m5-host-write-fault] n=%llu phys=0x%06X phase=%u width=%u "
+            "origin=0x%06X arm=%s route_ordinal=%u route_row=%u pc=0x%llX lr=0x%llX\n",
+            (unsigned long long)n, phys, phase, width, origin, arm ? arm : "n/a",
+            ordinal, row, (unsigned long long)pc, (unsigned long long)lr);
+    }
+    fflush(stderr);
+    return true;
+}
+
+static void start_m5_host_write_fault_watch() {
+    static std::thread t{[]{
+        uint8_t* rdram = nullptr;
+        while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        g_m5_host_fault_rdram.store(rdram, std::memory_order_release);
+        g_m5_host_fault_page_size = fl_zero_page_size();
+        g_m5_host_fault_page = ((uintptr_t)rdram + 0x128C92u) &
+            ~(uintptr_t)(g_m5_host_fault_page_size - 1);
+        if (mprotect((void*)g_m5_host_fault_page, g_m5_host_fault_page_size,
+                     PROT_READ) != 0) {
+            fprintf(stderr, "[m5-host-write-fault-control] arm_failed errno=%d\n", errno);
+            fflush(stderr);
+            return;
+        }
+        g_m5_host_fault_armed.store(1, std::memory_order_release);
+        g_m5_host_fault_enabled.store(1, std::memory_order_release);
+        fprintf(stderr,
+            "[m5-host-write-fault-control] armed page=0x%llX page_size=%zu "
+            "ranges=0x128C92..0x128C93,0x128CD0..0x128CD4\n",
+            (unsigned long long)g_m5_host_fault_page, g_m5_host_fault_page_size);
+        fflush(stderr);
+        for (;;) {
+            std::this_thread::sleep_for(std::chrono::microseconds(250));
+            if (g_m5_host_fault_enabled.load(std::memory_order_relaxed) &&
+                mprotect((void*)g_m5_host_fault_page, g_m5_host_fault_page_size,
+                         PROT_READ) == 0) {
+                g_m5_host_fault_armed.store(1, std::memory_order_release);
+            }
+        }
+    }};
+    t.detach();
+}
+
 // Phase-gated write-fault census for the F5 VTXCOLOR payload pages. This is
 // diagnostic only: the handler makes the faulting store retry after briefly
 // restoring page write access, then the watcher re-arms the page.
@@ -7569,6 +7669,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_HOST_WRITE_FAULT");
+        if (e && *e && *e != '0') {
+            fprintf(stderr, "[m5-host-write-fault] watcher enabled\n");
+            fflush(stderr);
+            start_m5_host_write_fault_watch();
+        }
+    }
+
 #if defined(__APPLE__) && defined(__aarch64__)
     // Must run before the sigaction() install below and outside any signal
     // context -- see rs64_build_local_symbol_table's own comment.
@@ -7645,6 +7754,11 @@ int main(int argc, char* argv[]) {
         sa.sa_flags = SA_SIGINFO;
         sigemptyset(&sa.sa_mask);
         sa.sa_sigaction = [](int sig, siginfo_t* info, void* ucontext_raw) {
+            if (sig == SIGSEGV || sig == SIGBUS) {
+                if (m5_host_fault_try_handle(info, ucontext_raw)) {
+                    return;
+                }
+            }
             if (sig == SIGSEGV || sig == SIGBUS) {
                 if (vtx_fault_try_handle_fault(info, ucontext_raw)) {
                     return;
