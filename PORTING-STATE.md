@@ -141110,3 +141110,27 @@ was rewritten, skipped, or guarded.
 Evidence: `scratch/agent/s3848_m5_task_output_writer_args/driver.log`,
 `retail.log`, `port.log`, and
 `scratch/agent/run_s3848_m5_task_output_writer_args.sh`.
+
+## Session 3849 (2026-10-03) — tested retail task-submission callsites
+
+Ran the paired retail/port capture with whole-RDRAM, title/hangar VI, type-2
+task, exact `0x167000..0x169B00` target, and watches at the two writer
+callsites `0x80015BC4` and `0x8000F39C`. The capture was valid: the positive
+control fired, retail reached 631 title VIs and 516 hangar VIs, produced 1,138
+type-2 task rows, and the port arm reported 0 crashes and 0 aborts.
+
+The watched callers executed 241,789 and 87,086 times. Their live arguments
+were object/array values (`0x80165xxx`, `0x80114xxx`, and `0x800edxxx` ranges),
+not a task pointer or the port stage-2 destination/length tuple
+(`0x8016xxxx`, `0x300`). The task callee's execution histogram independently
+identified `0x80019DEC` and `0x80019D68` as its high-volume previous PCs. This
+selects H2 for the writer-callsite argument hypothesis and leaves the
+submission-caller join open; it rules out neither the retail destination edge
+nor its producer.
+
+ORIGIN: diagnostic-only oracle watches and port logging; no guest or host state
+was rewritten, skipped, or guarded.
+
+Evidence: `scratch/agent/s3849_m5_task_output_callsites/driver.log`,
+`retail.log`, `port.log`, and
+`scratch/agent/run_s3849_m5_task_output_callsites.sh`.

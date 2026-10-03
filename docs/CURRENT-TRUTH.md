@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3848 (2026-10-03).
+Updated for session 3849 (2026-10-03).
 
 ## Current state
 
@@ -45,14 +45,13 @@ Work only the first applicable item. This is one monotonic backlog.
    configured MIPS compiler is absent, and `build/Debug/N64Recomp.exe` is
    absent. Restore/reconfigure those tools, build the patch ELF and library,
    then run the allocator-route smoke. Do not claim H1/H2 before that.
-2. **M5 retail task-to-stage join — writer arguments are not the edge.**
-   Session 3848 passed whole-RDRAM and both VI controls and watched live
-   arguments at `0x80015BC8` and `0x8000F3A0`. They are real target-range
-   writers, but their phase rows expose object/array values rather than the
-   port stage-2 destination/length tuple (`0x8016xxxx`, `0x300`), selecting H2
-   for this route. Follow their callsites (`0x80015BC4` and `0x8000F39C`) for
-   a bounded task-pointer or destination join; do not infer ownership from
-   writer-PC activity alone.
+2. **M5 retail task-to-stage join — follow task-submission callers.** Session
+   3849 passed whole-RDRAM and both VI controls and watched the writer
+   callsites `0x80015BC4` and `0x8000F39C`. They executed heavily but carried
+   object/array arguments, selecting H2 for that route. The task callee's
+   `PREVIOUS_PC` histogram identifies `0x80019DEC` and `0x80019D68` as its
+   submission callers; watch those callers in one paired capture for a task
+   pointer or exact stage join.
 3. **M5 image task/output edge — qualified port result.** Session 3839 joined
    the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
    found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
@@ -121,6 +120,13 @@ Work only the first applicable item. This is one monotonic backlog.
   structures. Neither exposed the port stage-2 destination/length tuple, so
   H2 is selected for this argument route and the callsite/task join remains
   open.
+- **3849:** Paired capture passed whole-RDRAM and both target-VI controls with
+  no crash/abort. Retail reached 631 title and 516 hangar VIs and produced
+  1,138 type-2 task rows. The watched callsites executed 241,789 times at
+  `0x80015BC4` and 87,086 times at `0x8000F39C`; their live arguments were
+  object/array values, not a task pointer or the port stage tuple. This is a
+  single-source oracle selection of H2 for the callsite-argument route; the
+  task-submission caller join remains open.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.
