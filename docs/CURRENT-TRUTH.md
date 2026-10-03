@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3838 (2026-10-03).
+Updated for session 3839 (2026-10-03).
 
 ## Current state
 
@@ -46,7 +46,18 @@ zero in the qualified family rows.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image task/output contract edge.** Session 3838's same-build logger
+1. **M5 image task/output contract edge.** Session 3839's target-valid join
+   selected H1 at the named input edge: hangar contract rows with
+   `data_ptr=0x80171E70`/size `1` joined the exact `0x1798B0 -> DMEM 0xCB0`
+   input DMA at the same task generations; its payload was
+   `FNV=0x762B22A5`, nonzero `0`. The same generations also emitted
+   `audtask-image-dma-join` output rows, so H2 (missing downstream output
+   edge) is refuted at this scope. The next bounded probe must classify that
+   output contract by joining `output_buff`/`output_buff_size` from the named
+   task contract to the image-stage/writeback destination and task generation;
+   do not infer that a zero input payload is itself an output-contract defect.
+   Evidence: `scratch/agent/s3839_m5_task_contract_input_dma_join/`.
+   Session 3838's same-build logger
    stability A/B reached title 1024 and hangar 512 in both image arms with no
    crash/abort; logger-off had 0 task-contract rows and logger-on had 1,962.
    This selects the logger-harmless hypothesis at the full target scope. The
@@ -184,6 +195,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyRetailObjectAccess` | Selected H2 at s3835: retail reached title/hangar and the S/L family PCs, but had zero reads/writes in physical `0x165000..0x16C000`; the port emitted 1,280 target-phase family stores. |
 | `H-M5-TaskContractCaptureCoverage` | Unevaluable at s3836: retail task rows and both target phases were positive, but both port attempts crashed at guest `0x8000834C` before VI 320, leaving all port task/output rows absent. |
 | `H-M5-TaskContractLoggerStartup` | Refuted at s3838's full target scope: logger-on and logger-off both reached title 1024 and hangar 512 with no crash/abort; only logger-on emitted task-contract rows. |
+| `H-M5-TaskContractInputDmaJoin` | Selected H1 at s3839 target scope: the named `0x80171E70`/size-1 contract joined the exact `0x1798B0 -> 0xCB0` input DMA at matching task generations, with zero payload; output image-DMA joins were also present. |
+| `H-M5-TaskOutputEdgeAbsent` | Refuted at s3839 target scope: matching `audtask-image-dma-join` rows prove a downstream image-stage/writeback edge exists; its semantic destination contract remains open. |
 
 ## Evidence ledger — live boundary
 
@@ -694,6 +707,18 @@ line naming the writer and stating whether its value is legitimate.
   This selects logger harmlessness at the full target scope and does not yet
   select a task/output mismatch. Evidence:
   `scratch/agent/s3838_m5_task_contract_target_stability/`.
+- **3839 — target task contract to input-DMA join:** the Debug build passed and
+  the target-valid logger-on run reached title 1024 and hangar 512 with no
+  crash or abort. It emitted 1,655 `[audtask-abi]` rows, 1,024 task-lifetime
+  rows, 1,655 task-DMA rows, 5,027 DMA-range rows, and 1,024 source-range
+  reader rows. In the hangar, the named contract `data_ptr=0x80171E70`, size
+  `1`, joined `[m5-input-dma]` rows for `dram=0x1798B0`, `len=0x198`,
+  `dmem=0xCB0`, at matching task generations; every sampled payload was
+  `FNV=0x762B22A5`, nonzero `0`. Matching `[audtask-image-dma-join]` rows
+  existed for the same generations and destination writeback, so the
+  downstream edge is present even though the payload is zero. This selects H1
+  (descriptor/input-DMA property) and refutes H2 (missing output edge) at this
+  scope. Evidence: `scratch/agent/s3839_m5_task_contract_input_dma_join/`.
 
 ## Superseded conclusions
 

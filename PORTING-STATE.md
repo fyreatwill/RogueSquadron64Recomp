@@ -140939,3 +140939,23 @@ scope and rules out logger-induced hangar loss. It does not yet explain the
 zero source payload or establish an output-contract mismatch. The next probe
 must join one named contract to task lifetime and exact input DMA in one
 target-valid run.
+## Session 3839 (2026-10-03) — joined task contract to exact input DMA
+
+Added `scratch/agent/run_s3839_m5_task_contract_input_dma_join.sh` after the
+planned runner was found missing, built the Debug target successfully, and ran
+one target-valid logger-on capture with the existing phase, route, task,
+source, and image-stage controls. Title 1024 and hangar 512 both fired; the
+run emitted 1,655 `[audtask-abi]` rows, 1,024 task-lifetime rows, 1,655
+task-DMA rows, 5,027 DMA-range rows, and 1,024 source-range reader rows, with
+zero `[CRASH]` and `[ABORT]` markers.
+
+The named hangar contract `data_ptr=0x80171E70`, size `1`, joined
+`[m5-input-dma]` rows at matching task generations for
+`dram=0x1798B0`, `len=0x198`, `dmem=0xCB0`. Every sampled input payload was
+`FNV=0x762B22A5`, nonzero `0`; the input rows also carried the same task-data
+pointer. Matching `[audtask-image-dma-join]` rows existed for the same
+generations and destination writeback, so a downstream image-DMA edge is
+present. H1 (descriptor/input-DMA property) is selected at this scope and H2
+(missing downstream output edge) is refuted. The output-field-to-destination
+contract remains open for the next probe. Evidence:
+`scratch/agent/s3839_m5_task_contract_input_dma_join/`.

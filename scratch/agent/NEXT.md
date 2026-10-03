@@ -1,36 +1,41 @@
-# Next work unit: join one target-phase task contract to its input DMA
+# Next work unit: classify the named task's output contract
 
-HYPOTHESIS-ID: m5-task-contract-input-dma-join
+HYPOTHESIS-ID: m5-task-output-contract-edge
 
-s3838 qualified the same-build target phases: logger-off and logger-on both
-reached title VI `0x00790400`/1024 and hangar VI `0x006AB400`/512 with no
-crash/abort. Logger-on emitted 1,962 `[audtask-abi]` rows and 1,024
-task-lifetime rows; logger-off emitted none by design.
+s3839 selected the descriptor/input-DMA edge: the hangar contract
+`data_ptr=0x80171E70`, size `1`, joined the exact zero-valued
+`0x1798B0 -> DMEM 0xCB0` input DMA at matching task generations. Matching
+image-DMA/writeback rows exist, so the next question is the output contract,
+not whether a task ran.
 
 Competing hypotheses and discriminator:
 
-- H1: The zero source payload is a task-descriptor/input-DMA property. The
-  same task generation and named `data_ptr=0x80171E70`, `data_size=1` contract
-  join the exact `0x1798B0 -> 0xCB0` input DMA, whose payload is zero.
-- H2: The task contract is valid but the output edge is missing downstream.
-  The task/DMA join is valid, while output-buffer or post-task rows show no
-  corresponding destination contract.
-- H3: The apparent rows cannot be joined at this scope. Positive target,
-  task-lifetime, contract, and exact-DMA controls remain live, but no stable
-  generation/ordinal/row key connects them.
+- H1: The task's ABI output fields are intentionally empty/zero, and the
+  image-stage destination is a separate legitimate service writeback. The
+  named task generation joins `output_buff=0`, `output_size=0` to a matching
+  image-stage/writeback row whose destination is `0x1798B0`.
+- H2: The ABI output contract is malformed or disconnected. The task's
+  output fields are nonzero but do not match the image-stage/writeback
+  destination or task generation.
+- H3: The existing rows cannot be joined at the task-generation/route key.
+  Positive target, task, input-DMA, and image-DMA controls remain live but
+  no stable output join exists.
 
-Discriminator: one build and one target-valid logger-on run, with the existing
-task-contract, task-lifetime, route, source-range, and exact-DMA controls. Add
-one bounded join table keyed by task generation plus route ordinal/row, and
-report counts for contract -> lifetime -> exact input-DMA -> post-task output
-in that order. A complete join selects H1 or H2; positive controls with no
-stable join select H3. Do not add another logger stability A/B.
+Discriminator: one target-valid logger-on run with the existing phase,
+task-contract, task-lifetime, route, exact input-DMA, and image-stage controls.
+Add one bounded table keyed by task generation and route ordinal/row, carrying
+`data_ptr`, `data_size`, `output_buff`, `output_buff_size`, image-stage
+destination/length, and output-DMA payload. Report contract -> input-DMA ->
+image-stage -> output-DMA counts and exact destination matches. H1 is selected
+by stable joins with zero ABI output fields and a matching separate
+writeback; H2 by stable joins with a nonzero mismatch; H3 by live controls but
+no stable join. Do not revive the alternate-family or retail object watch.
 
 Exact commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3839_m5_task_contract_input_dma_join.sh
+    zsh scratch/agent/run_s3840_m5_task_output_contract_edge.sh
 
-Positive controls: the logger-on arm must show `[phase]`, title origin
-`0x00790400`/1024, hangar origin `0x006AB400`/512, task-contract rows, and
-exact input-DMA rows, with no `[CRASH]` or `[ABORT]`. Use SIGKILL cleanup.
+Positive controls: title VI `0x00790400`/1024, hangar VI `0x006AB400`/512,
+task-contract rows, exact input-DMA rows, image-stage rows, and no `[CRASH]` or
+`[ABORT]`. Use SIGKILL cleanup.
