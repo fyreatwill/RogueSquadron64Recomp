@@ -140824,3 +140824,21 @@ reported 1,058–1,059 zero stage-only rows per target scope with zero source an
 consumer matches. This selects H3 at the measured scope: same-generation
 task/service correlation without an RSP PCM join; it does not establish event
 order or semantic ownership. Evidence: `scratch/agent/s3831_m5_family_task_join/run.log`.
+
+## Session 3832 (2026-10-03) — ordered alternate-family activity against image stage
+
+The Debug build passed after adding the existing monotonic audio-join event
+stamp to target-phase family entry/store rows. The target-valid run reached
+title VI 1024 and hangar VI 512. Positive controls were live: 257 family-entry
+rows, 1,280 family-store rows, 8,192 image-stage rows, six family controls,
+route/source controls, and no crash or abort. Of 882 active family rows with a
+nonzero matched image-stage event, all 882 had `family_event > stage_event`;
+none preceded or tied its matched stage. Source and consumer PCM match IDs
+remained zero. This selects H3 at the measured scope: the family is post-stage
+work in the same task/service epoch but is not the RSP PCM path. It does not
+establish semantic ownership or whether the family output is intended.
+
+The independent retail oracle arm was attempted before the instrument change,
+but the available Homebrew core failed `DebugSetCallbacks` because it lacks
+the required DEBUGGER=1 symbols. That is setup-invalid ground truth, not a
+null result. Evidence: `scratch/agent/s3832_m5_family_event_order/`.

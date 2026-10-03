@@ -532,6 +532,9 @@ extern "C" void rs64_m5_family_entry(uint8_t* rdram, const char* family, uint32_
         arm, ordinal, route_row, rs64_phase_ord(), width, origin,
         &task_generation, &source_match_event, &consumer_match_event,
         &stage_event);
+    const uint64_t family_event = rs64_audio_join_m5_event(
+        "family-entry", pc, active ? 1u : 0u, arm, rs64_phase_ord(), width,
+        origin, ordinal, route_row, 0u, a0, a1, a2, a3, ra);
     const uint32_t task_queue = rs64_m5_audio_queue_snapshot();
     const uint32_t pcm_consumers = rs64_m5_pcm_consumer_count();
     const bool target_arg =
@@ -546,13 +549,14 @@ extern "C" void rs64_m5_family_entry(uint8_t* rdram, const char* family, uint32_
     std::fprintf(stderr,
         "[m5-family-guest-route] family=%s n=%u pc=0x%08X phase=%u width=%u origin=0x%06X "
         "arm=%s active=%u ordinal=%u row=%u exit=%d task_generation=%llu "
-        "stage_event=%llu source_match_event=%llu consumer_match_event=%llu "
+        "event=%llu stage_event=%llu source_match_event=%llu consumer_match_event=%llu "
         "task_queue=%u pcm_consumers=%u target_arg=%u "
         "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X ra=0x%08X "
         "state_1ad0=0x%02X state_3b038=0x%02X state_1ad1=0x%02X\n",
         family, rows[which], pc, rs64_phase_ord(), width, origin,
         arm ? arm : "n/a", active ? 1u : 0u, ordinal, route_row,
         exit_reason, static_cast<unsigned long long>(task_generation),
+        static_cast<unsigned long long>(family_event),
         static_cast<unsigned long long>(stage_event),
         static_cast<unsigned long long>(source_match_event),
         static_cast<unsigned long long>(consumer_match_event), task_queue,
@@ -607,6 +611,9 @@ extern "C" void rs64_m5_family_store(const char* family, uint32_t pc,
         arm, ordinal, route_row, rs64_phase_ord(), vi_width, origin,
         &task_generation, &source_match_event, &consumer_match_event,
         &stage_event);
+    const uint64_t family_event = rs64_audio_join_m5_event(
+        "family-store", pc, active ? 1u : 0u, arm, rs64_phase_ord(),
+        vi_width, origin, ordinal, route_row, addr, value, 0u, 0u, 0u, 0u);
     const uint32_t task_queue = rs64_m5_audio_queue_snapshot();
     const uint32_t pcm_consumers = rs64_m5_pcm_consumer_count();
     const uint32_t lo = title ? 0x80178C80u : 0x801797B0u;
@@ -621,13 +628,14 @@ extern "C" void rs64_m5_family_store(const char* family, uint32_t pc,
     std::fprintf(stderr,
         "[m5-family-store] family=%s n=%u pc=0x%08X width=%c phase=%u vi_width=%u origin=0x%06X "
         "arm=%s active=%u ordinal=%u row=%u exit=%d task_generation=%llu "
-        "stage_event=%llu source_match_event=%llu consumer_match_event=%llu "
+        "event=%llu stage_event=%llu source_match_event=%llu consumer_match_event=%llu "
         "task_queue=%u pcm_consumers=%u "
         "addr=0x%08X value=0x%08X target=%u "
         "clear_obj=0x%08X clear_exact=%u clear_span=%u\n",
         family, rows[which], pc, width, rs64_phase_ord(), vi_width, origin,
         arm ? arm : "n/a", active ? 1u : 0u, ordinal, route_row,
         exit_reason, static_cast<unsigned long long>(task_generation),
+        static_cast<unsigned long long>(family_event),
         static_cast<unsigned long long>(stage_event),
         static_cast<unsigned long long>(source_match_event),
         static_cast<unsigned long long>(consumer_match_event), task_queue,

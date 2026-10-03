@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3831 (2026-10-03).
+Updated for session 3832 (2026-10-03).
 
 ## Current state
 
@@ -38,22 +38,23 @@ The qualified port family bodies execute, but S/L stores go to alternate
 objects and I has no hangar edge. The repaired clear witness identifies
 `0x8008F2CC`, object `0x801797B0`, length `0x298`; family-edge and clear-object
 identity remain unresolved. Port guest route bytes are zero in the qualified
-family rows, but retail family reachability has not yet been achieved.
+family rows; independent retail family reachability is established, but its
+route-value parity remains unmeasured.
 
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 alternate family-object ownership.** Session 3831's complete,
-   target-valid generation join selected H3 at this scope: 127 family-entry
-   rows and 755 family-store rows joined a same-route image-stage task
-   generation, while source and consumer PCM match event IDs stayed zero; the
-   independent image summaries reported 0 source/consumer matches and
-   stage-only rows. The alternate objects correlate with a CPU-side task/service
-   epoch but not an RSP PCM source or consumer. The next probe must add one
-   shared event sequence to family callbacks and image-stage records, then
-   classify whether family activity precedes, follows, or interleaves the image
-   stage; do not infer causality from route identity alone.
+1. **M5 alternate family-object ownership.** Session 3832's complete,
+   target-valid shared-event join selected H3 at this scope: 882 active
+   family rows with a matched image-stage event followed that stage event
+   (882/882; none preceded or tied), while source and consumer PCM match event
+   IDs remained zero. The alternate family is coupled to the same task/service
+   epoch but is not the RSP PCM path at this scope; semantic ownership remains
+   open. The next probe must join family events to the route handoff/CPU
+   service callback with the same generation and route row, to distinguish
+   intended post-stage route work from stale/disconnected output. Do not infer
+   causality from route identity alone.
    Session 3829's complete,
    direct-VI-gated target-phase DMA census selected H2: no
    `rs64_m5_audio_source_dma` invocation occurred at title 1024 or hangar 512,
@@ -151,7 +152,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyOwnershipRouteWitness` | Unevaluable at s3828: target phases and route-preparation/order/transition/handoff controls fired, but exact-route DMA and source-range reader/writer rows remained absent. |
 | `H-M5-TargetPhaseAudioDmaAbsent` | Selected at s3829: direct-VI-gated census control and rows were zero at both target phases, while lifetime DMA, target-VI, route, and exact-DMA-hook controls were positive. |
 | `H-M5-TargetPhaseDmaCensusGate` | Refuted at s3829: the initial route-snapshot gate was too strict, but the corrected direct-VI gate reached both target phases without producing a callback row. |
-| `H-M5-FamilyTaskCorrelation` | Selected at s3831 scope: 127 family-entry rows and 755 family-store rows joined a same-route image-stage task generation, while source/consumer PCM match event IDs remained zero and image summaries were stage-only. Shared-event ordering is still needed for causality. |
+| `H-M5-FamilyTaskCorrelation` | Selected at s3831 scope: 127 family-entry rows and 755 family-store rows joined a same-route image-stage task generation, while source/consumer PCM match event IDs remained zero and image summaries were stage-only. |
+| `H-M5-FamilyAfterImageStage` | Selected at s3832 scope: 882 active family rows with matched stage events all followed the stage event; none preceded or tied. This supports same-epoch post-stage CPU/service work, but not semantic ownership. |
 
 ## Evidence ledger — live boundary
 
@@ -581,6 +583,19 @@ line naming the writer and stating whether its value is legitimate.
   correlation without an RSP PCM join. This does not establish event order or
   semantic ownership. Evidence:
   `scratch/agent/s3831_m5_family_task_join/run.log`.
+- **3832 — ordered alternate-family/image-stage join:** the Debug build passed
+  after adding the existing monotonic audio-join event stamp to target-phase
+  family entry/store rows. The target-valid run reached title 1024 and hangar
+  512 with 257 family-entry rows, 1,280 family-store rows, 8,192 image-stage
+  rows, six family controls, and no crash/abort. Of 882 active family rows
+  with a nonzero matched stage event, all 882 had `family_event > stage_event`;
+  no row preceded or tied its matched image stage. Source and consumer PCM
+  match IDs remained zero. This selects H3: the family is post-stage work in
+  the same task/service epoch but not the RSP PCM path at this scope. The
+  independent retail oracle could not run because the available Homebrew core
+  lacks the required DEBUGGER=1 symbols (`DebugSetCallbacks failed`); that
+  arm is setup-invalid, not a null result. Evidence:
+  `scratch/agent/s3832_m5_family_event_order/run.log` and `retail.log`.
   positive. This refutes the census-gate H3 and selects H2: no
   `rs64_m5_audio_source_dma` invocation was observed during either target phase
   at this scope. Evidence: `scratch/agent/s3829_m5_dma_census/` and
