@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3808 (2026-10-03).
+Updated for session 3809 (2026-10-03).
 
 ## Current state
 
@@ -39,14 +39,15 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 isolate the startup diagnostic variable, next.** s3808 ran the planned
-   matrix, but minimal and most single-variable arms failed before target while
-   all-five reached title/hangar; the independent retail oracle passed its
-   whole-RDRAM control and reached title/hangar. This refutes the all-five
-   bundle as sufficient at this scope and selects launch-order/nondeterministic
-   interaction. Run the same six port configurations concurrently in one
-   wrapper, plus the independent retail oracle, with phase/crash controls only.
-   Do not add M5 source census fields until a stable arm reaches target.
+1. **M5 validate the DMEM task-data boundary fix, next.** s3809 corrected
+   `run_task` from a `0xF7F`-byte DMA to the complete `0xF80`-byte DMEM task
+   window, including the final byte before the OSTask staging area. The Debug
+   build passed. Run the existing same-build image/silent Step 1 validation
+   with phase, task, SP-completion, route, and no-crash controls. Select a
+   downstream contract effect only if the corrected image reaches both target
+   VIs and changes a task/DMA/service/PCM join; route-equivalent output means
+   the byte is padding/unused at this scope. Do not run the stale concurrent
+   diagnostic matrix or add source-census fields.
 2. **M5 upstream zero-DMEM producer, parked behind diagnostic-load qualification.** s3802
    qualified the port-side immediate chain: the hangar image input reads
    all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,

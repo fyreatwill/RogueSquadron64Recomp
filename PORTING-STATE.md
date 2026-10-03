@@ -140396,6 +140396,26 @@ oracle; keep only phase/crash controls and do not add M5 source census fields.
 ORIGIN: no mitigation or value guard was added. The `0x8000834C` failure
 remains a startup diagnostic-load defect with its writer/cause unresolved.
 
+## Session 3809 (2026-10-03) — completed DMEM task-data boundary fix
+
+The stale concurrent diagnostic matrix was not rerun: the mandatory pivot
+required a build/runtime change. The M5 runtime contract was advanced in
+`lib/N64ModernRuntime/librecomp/src/rsp.cpp`: `run_task` previously DMA-copied
+`0xF7F` bytes into DMEM, omitting the final byte of the reserved
+`[0x0000,0x0F80)` task-data window before the OSTask staging area at `0x0FC0`.
+It now copies the complete `0xF80` bytes. The submodule diff was exported to
+`submodule-patches/N64ModernRuntime.patch` and the full Debug target built and
+linked successfully.
+
+This is a runtime contract change, not a diagnostic result. The corrected
+image arm still requires the existing same-build image/silent target-phase
+validation to determine whether the final byte is consumed. No source-writer,
+PCM, route, or crash conclusion is drawn from the build alone.
+
+ORIGIN: the writer is the RSP task-data DMA staging operation in
+`run_task`; the omitted byte is legitimate task-data space, not a wild-value
+or corruption mitigation.
+
 ## Session 3808 (2026-10-03) — diagnostic isolation selected launch-order interaction
 
 Built `RogueSquadron64Recomp` successfully and ran the prescribed same-build
