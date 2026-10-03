@@ -6330,6 +6330,113 @@ static void start_m5_host_write_fault_watch() {
     t.detach();
 }
 
+// Phase-scoped native-write census for the task-data object. This is separate
+// from the route-field watch because the two objects are on different pages.
+static std::atomic<uint8_t*> g_m5_task_fault_rdram{nullptr};
+static std::atomic<int> g_m5_task_fault_enabled{0};
+static uintptr_t g_m5_task_fault_page = 0;
+static size_t g_m5_task_fault_page_size = 0;
+static std::atomic<uint64_t> g_m5_task_fault_n{0};
+static std::atomic<uint64_t> g_m5_task_fault_control_n{0};
+static std::atomic<uint64_t> g_m5_task_fault_exact_n{0};
+
+static bool m5_task_fault_try_handle(siginfo_t* info, void* ucontext_raw) {
+    if (!g_m5_task_fault_enabled.load(std::memory_order_acquire) ||
+        !info || !info->si_addr) return false;
+    const uintptr_t fa = (uintptr_t)info->si_addr;
+    const uintptr_t page = g_m5_task_fault_page;
+    const size_t page_size = g_m5_task_fault_page_size;
+    if (!page || !page_size || fa < page || fa >= page + page_size) return false;
+
+    mprotect((void*)page, page_size, PROT_READ | PROT_WRITE);
+    const uint32_t phys = (uint32_t)(fa - (uintptr_t)g_m5_task_fault_rdram.load(
+        std::memory_order_relaxed));
+    const bool exact = phys >= 0x171E70u && phys < 0x171F70u;
+    const uint64_t n = g_m5_task_fault_n.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (exact) g_m5_task_fault_exact_n.fetch_add(1, std::memory_order_relaxed);
+    else g_m5_task_fault_control_n.fetch_add(1, std::memory_order_relaxed);
+
+    uint64_t pc = 0, lr = 0;
+#if defined(__APPLE__) && defined(__aarch64__)
+    if (ucontext_raw) {
+        ucontext_t* uc = static_cast<ucontext_t*>(ucontext_raw);
+        if (uc->uc_mcontext) {
+            pc = (uint64_t)uc->uc_mcontext->__ss.__pc;
+            lr = (uint64_t)uc->uc_mcontext->__ss.__lr;
+        }
+    }
+#else
+    (void)ucontext_raw;
+#endif
+    uint32_t phase = 0, width = 0, origin = 0, ordinal = 0xFFFFFFFFu,
+             row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool route_active = rs64_audio_current_route_snapshot(
+        &phase, &width, &origin, &ordinal, &row, &exit_reason, &arm);
+    const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
+                             (width == 512u && origin == 0x006AB400u);
+    if (n == 1) {
+        fprintf(stderr, "[m5-task-write-fault-control] first=1 phys=0x%06X pc=0x%llX\n",
+            phys, (unsigned long long)pc);
+    }
+    if (exact && route_active && target_phase && n <= 512) {
+        fprintf(stderr,
+            "[m5-task-write-fault] n=%llu phys=0x%06X phase=%u width=%u "
+            "origin=0x%06X arm=%s route_ordinal=%u route_row=%u pc=0x%llX lr=0x%llX\n",
+            (unsigned long long)n, phys, phase, width, origin, arm ? arm : "n/a",
+            ordinal, row, (unsigned long long)pc, (unsigned long long)lr);
+    }
+    fflush(stderr);
+    return true;
+}
+
+static void start_m5_task_write_fault_watch() {
+    static std::thread t{[]{
+        uint8_t* rdram = nullptr;
+        while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        g_m5_task_fault_rdram.store(rdram, std::memory_order_release);
+        g_m5_task_fault_page_size = fl_zero_page_size();
+        g_m5_task_fault_page = ((uintptr_t)rdram + 0x171E70u) &
+            ~(uintptr_t)(g_m5_task_fault_page_size - 1);
+        bool armed = false;
+        for (;;) {
+            std::this_thread::sleep_for(std::chrono::microseconds(250));
+            const uint32_t width = rs64_vi_committed_width();
+            const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+            const bool target = (width == 1024u && origin == 0x00790400u) ||
+                                (width == 512u && origin == 0x006AB400u);
+            if (target && !armed) {
+                if (mprotect((void*)g_m5_task_fault_page, g_m5_task_fault_page_size,
+                             PROT_READ) != 0) {
+                    fprintf(stderr, "[m5-task-write-fault-control] arm_failed errno=%d\n", errno);
+                    fflush(stderr);
+                    return;
+                }
+                armed = true;
+                g_m5_task_fault_enabled.store(1, std::memory_order_release);
+                fprintf(stderr,
+                    "[m5-task-write-fault-control] armed page=0x%llX page_size=%zu "
+                    "range=0x171E70..0x171F70 width=%u origin=0x%06X\n",
+                    (unsigned long long)g_m5_task_fault_page, g_m5_task_fault_page_size,
+                    width, origin);
+                fflush(stderr);
+            } else if (!target && armed) {
+                mprotect((void*)g_m5_task_fault_page, g_m5_task_fault_page_size,
+                         PROT_READ | PROT_WRITE);
+                armed = false;
+                g_m5_task_fault_enabled.store(0, std::memory_order_release);
+            } else if (armed) {
+                mprotect((void*)g_m5_task_fault_page, g_m5_task_fault_page_size,
+                         PROT_READ);
+            }
+        }
+    }};
+    t.detach();
+}
+
 // Phase-gated write-fault census for the F5 VTXCOLOR payload pages. This is
 // diagnostic only: the handler makes the faulting store retry after briefly
 // restoring page write access, then the watcher re-arms the page.
@@ -7686,6 +7793,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_TASK_WRITE_FAULT");
+        if (e && *e && *e != '0') {
+            fprintf(stderr, "[m5-task-write-fault] watcher enabled\n");
+            fflush(stderr);
+            start_m5_task_write_fault_watch();
+        }
+    }
+
 #if defined(__APPLE__) && defined(__aarch64__)
     // Must run before the sigaction() install below and outside any signal
     // context -- see rs64_build_local_symbol_table's own comment.
@@ -7764,6 +7880,11 @@ int main(int argc, char* argv[]) {
         sa.sa_sigaction = [](int sig, siginfo_t* info, void* ucontext_raw) {
             if (sig == SIGSEGV || sig == SIGBUS) {
                 if (m5_host_fault_try_handle(info, ucontext_raw)) {
+                    return;
+                }
+            }
+            if (sig == SIGSEGV || sig == SIGBUS) {
+                if (m5_task_fault_try_handle(info, ucontext_raw)) {
                     return;
                 }
             }

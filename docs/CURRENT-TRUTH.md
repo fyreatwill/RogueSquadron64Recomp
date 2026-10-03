@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3754 (2026-10-02).
+Updated for session 3755 (2026-10-02).
 
 ## Current state
 
@@ -28,21 +28,25 @@ zero-valued port payload. See
 The nine bounded exact-offset load candidates are closed. The complete
 generated scalar-store census for the task-data object is also closed: both
 qualified port arms executed target-phase zero-valued stores, with no nonzero
-producer at `0x80171E70`. The next boundary is non-scalar/host/RSP production
-of that task-data object.
+producer at `0x80171E70`. A new native page-fault census now proves generated
+game code also writes the task-data page in both arms, but it does not capture
+the stored value; the next boundary is value attribution for those native
+writers. See [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md).
 
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 residual task-data producer boundary.** Session 3754 selected
-   `H-TaskDataNonScalarAbsent` for the central host/RSP classes: all four API
-   controls fired in both arms, neither produced a target-span row, and the
-   real arm still had only zero-valued generated scalar rows. Audit the
-   remaining arbitrary direct/native and other non-central writers of
-   `0x80171E70..0x80171F70`, with a same-run positive control and retail
-   attribution. Do not repeat the scalar census, central API census, closed
-   route-load list, or alter `0x800078EC`.
+1. **M5 native task-data value attribution.** Session 3755 found 39/33
+   target-range native page faults in real/silent arms after both reached title
+   and hangar; symbolized PCs are generated game functions, while the native
+   witness does not expose the store value. Capture the faulting instruction's
+   store width/source register and post-store bytes in one phase-gated run,
+   retaining the page positive control, scalar census, source join, and retail
+   writer attribution. A nonzero value selects a concrete native producer;
+   zero-only rows classify these as legitimate clears/stores and move the
+   boundary onward. Do not repeat the scalar census, central API census,
+   closed route-load list, or alter `0x800078EC`.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -79,6 +83,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-TaskDataHostProducer` | Refuted at s3754 for PI ROM, PI SRAM, zmemcpy, and the central host-write hook: controls fired but no target-span row appeared. |
 | `H-TaskDataRspProducer` | Refuted at s3754 for central RSP DMEM-to-RDRAM transfers: the RSP API control fired in both arms but no target-span row appeared. |
 | `H-TaskDataNonScalarAbsent` | Selected at s3754 for the censused central host/RSP classes; arbitrary direct/native and other non-central writers remain open. |
+| `H-TaskDataNativeWriteObserved` | Selected at s3755: phase-armed native page faults touched the target span in both real/silent arms; stored value remains unevaluated. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
@@ -111,6 +116,15 @@ Work only the first applicable item. This is one monotonic backlog.
   closes the central host/RSP producer classes and moves the boundary to
   arbitrary direct/native or other non-central ownership. See
   [M5-S3754-TASK-DATA-NONSCALAR-CENSUS.md](M5-S3754-TASK-DATA-NONSCALAR-CENSUS.md).
+
+- **3755 — native task-data write census:** the retail control again fired and
+  named the `0x80090A..0x800911` writer family. A phase-armed native page-fault
+  watch in paired real/silent ports passed both target phases and recorded
+  39/33 target-range faults; the PCs symbolized into generated game functions.
+  The source join remained real-only (1,024 rows versus 0), but the fault
+  witness did not capture store values. This selects native writer activity,
+  not yet a nonzero producer. See
+  [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md).
 
 - **3736 — exact retail byte join:** the oracle exported exact phase-gated
   byte positions and FNV for both source subranges. Retail title was
@@ -332,6 +346,7 @@ unreconciled.
 - [M5-S3746-HOST-WRITE-API-CENSUS.md](M5-S3746-HOST-WRITE-API-CENSUS.md)
 - [M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md](M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md)
 - [M5-S3753-TASK-PRODUCER-CENSUS.md](M5-S3753-TASK-PRODUCER-CENSUS.md)
+- [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md)
 - [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md)

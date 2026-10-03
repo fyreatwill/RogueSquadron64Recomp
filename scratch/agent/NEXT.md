@@ -1,35 +1,33 @@
-# Next work unit: M5 residual task-data producer boundary
+# Next work unit: M5 native task-data value attribution
 
-HYPOTHESIS-ID: m5-task-data-producer-boundary
+HYPOTHESIS-ID: m5-task-data-native-value
 
-Session 3754 closed the central host/RSP producer classes. Both qualified arms
-passed PI ROM, PI SRAM, zmemcpy, and RSP-DMA controls; neither produced a
-phase-gated row overlapping `0x171E70..0x171F70`. The real arm still had 4,096
-zero-valued generated scalar rows and reached hangar; retail independently
-recorded 50,387 task-data-span writes, including target-phase
-`0x80090A..0x800911` writers. Audit remaining arbitrary direct/native and
-other non-central writers. Do not repeat the scalar or central API census, the
-nine closed route loads, or alter `0x800078EC`.
+Session 3755 added a phase-armed native page-fault watch for
+`0x171E70..0x171F70`. The paired real/silent run reached title and hangar;
+the page positive control fired, and target-range faults were 39/33. PCs
+symbolized into generated game functions. The witness does not yet identify
+the value stored by the faulting instruction.
 
 Competing hypotheses:
 
-- `H-TaskDataDirectNativeProducer`: an arbitrary direct/native writer populates
-  the span outside the central host-write APIs and RSP DMA hook.
-- `H-TaskDataOtherRuntimeProducer`: another runtime-owned or non-central
-  transfer writes the span, with the source/task identity joined to the route.
-- `H-TaskDataProducerAbsent`: no remaining port-side producer writes a
-  nonzero target value before the zero source DMA.
+- `H-TaskDataNativeNonzero`: a generated native store writes a nonzero task-data value.
+- `H-TaskDataNativeZero`: the observed native stores are legitimate zero-valued stores.
+- `H-TaskDataNativeUnrelated`: the fault address overlaps the page, but the
+  faulting instruction/value cannot be joined to the task-data field.
 
-Discriminator: one build/run must cover the remaining direct/native and other
-non-central writers overlapping `0x171E70..0x171F70`, with a positive control
-for the new hook/class, plus the existing real/silent source join. A nonzero
-direct/native row selects `H-TaskDataDirectNativeProducer`; a nonzero other
-runtime row selects `H-TaskDataOtherRuntimeProducer`; controls and both phases
-with no nonzero row selects `H-TaskDataProducerAbsent`. Missing controls or
-either target phase is unevaluable.
+Discriminator: one build/run must extend the existing page-fault handler to
+decode the faulting store width/source register from the ARM64 context, then
+sample the target bytes after the instruction retries. Keep the first-fault
+page control, generated scalar census, source-DMA join, and retail oracle
+writer attribution in the same measurement. A phase-gated nonzero post-store
+sample selects `H-TaskDataNativeNonzero`; zero-only post-store samples select
+`H-TaskDataNativeZero`; an undecodable instruction or unmatched post-store
+selects `H-TaskDataNativeUnrelated`. Missing controls or either target phase is
+unevaluable.
 
-Ground truth before building: use the existing retail oracle recipe with the
-whole-RDRAM control, task-data/source watches, and the known writer-PC family;
-do not infer ownership from the port. Add the port diagnostics through a
-regeneration-safe hook, build once, and run real/silent arms together from
-`build/` for 75 seconds. Kill every arm with SIGKILL.
+Ground truth already passed this iteration: the retail oracle whole-RDRAM
+control and task-data watch fired in title/hangar, with the known
+`0x80090A..0x800911` writer family. Do not repeat the retail preflight,
+generated scalar census, central host/RSP API census, or closed route-load
+list. Build once with the existing macOS arm64 target and run real/silent
+arms concurrently from `build/` for 75 seconds, killing both with SIGKILL.

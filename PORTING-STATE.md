@@ -139287,3 +139287,30 @@ Evidence: `docs/M5-S3754-TASK-DATA-NONSCALAR-CENSUS.md`,
 `scratch/agent/s3754_oracle_taskdata/oracle-attribution.log`,
 `scratch/agent/s3754_m5_taskdata/real/run.log`, and
 `scratch/agent/s3754_m5_taskdata/silent/run.log`.
+## Session 3755 (2026-10-02) — censused native task-data writers
+
+Ground truth first: the retail oracle's whole-RDRAM control and physical
+`0x171E70..0x171F70` task-data watch fired in the title and hangar phases;
+phase attribution again included the `0x80090A..0x800911` writer family.
+
+Added `ROGUESQ_LOG_M5_TASK_WRITE_FAULT`, a phase-armed macOS ARM64 native
+page-fault witness for the task-data page. The first page fault is a positive
+control; the page remains writable before the target VI transition so the
+instrument does not perturb boot. The fixed paired real/silent run reached
+title and hangar. Target-range faults were 39 real / 33 silent, and the PCs
+symbolized into generated game functions such as `submitSceneNodeRender` and
+`lvhBindObjectiveVoiceLinesAndStart`, rather than PI/RSP/zmemcpy callbacks.
+The real arm retained 1,024 source-reader rows; silent retained zero, as
+expected for the no-source control. The native witness does not capture the
+stored value, so it selects native writer activity but not a nonzero producer.
+
+The first page-armed attempt was invalid: it protected the page from boot and
+both arms stalled at VI width 640 with no target phase. The watcher was fixed
+to arm only after the target VI transition and the paired run was repeated.
+This rules out `H-TaskDataNonScalarAbsent` for all host-side activity, but does
+not rule out legitimate zero-valued native stores. No mitigation was added;
+the writer is generated game code and its value remains unevaluated.
+
+Evidence: `docs/M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md`,
+`scratch/agent/s3755_oracle_groundtruth/oracle.log`, and
+`scratch/agent/s3755_m5_taskdata_native_pair/{real,silent}.log`.
