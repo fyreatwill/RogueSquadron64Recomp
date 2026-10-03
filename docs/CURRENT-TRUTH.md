@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3787 (2026-10-03).
+Updated for session 3788 (2026-10-03).
 
 ## Current state
 
@@ -39,16 +39,14 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 qualify independent retail family reachability.** s3782 return/Z,
-   s3783 repeated-Start, s3784 repeated-A, s3785 combined Start+A, and s3787
-   Start+Z all failed to qualify; s3787 additionally proved that the command
-   attached no video plugin and remained at width 320. Run a genuinely new,
-   independently justified recipe with the documented Rice plugin explicitly
-   attached; preserve whole-RDRAM, route-byte, S/I/L, and target-VI controls.
-   A family hit plus target VI enables the route comparison; target VI without a
-   family hit indicates a route-PC mismatch; no target VI with Rice is a recipe
-   failure. Do not suppress or replace the clear, inject values, or change an
-   audio gate.
+1. **M5 compare independently qualified retail route state with the port.**
+   s3788 fixed the missing-video recipe: Rice attached, whole-RDRAM control
+   fired 10,018 times, title VI 1024 appeared at 18.7s, hangar VI 512 at
+   39.4s, and S/I/L family PCs executed 3191/2/1367 times. Run the existing
+   paired route-state capture with the same phase controls. Retail bytes at
+   `0x141AD0`, `0x13B038`, and `0x141AD1` versus port family-entry rows split
+   legitimate route parity from a port-only zero route. Do not suppress or
+   replace the clear, inject values, or change an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a new discriminator
    for the silent pre-target crash; do not repeat launch-order variants.
 3. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Audit the
@@ -71,6 +69,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-PortGuestRouteZero` | Single-source selected at s3781: qualified port family rows sampled zero route bytes. |
 | `H-M5-RetailGuestRouteParity` | Unevaluable: retail has not reached family PCs or target VI in the recipes tried. |
 | `H-M5-RetailRecipePreTarget` | Selected for s3782–s3785 recipes; each stayed in 320-wide attract with whole-RDRAM control positive. |
+| `H-M5-RetailFamilyReachability` | Selected at s3788: Rice-attached retail reached target VI and all three watched family PCs with positive control. |
 | `H-M5-SilentPreTargetCrash` | Not deterministic: s3762 reached targets, but paired stability remains parked. |
 | `H-M5-Step1ContractGap` | Open downstream of shared task/route/PCM progress; image-stage activity is the first arm difference. |
 | `H-M5-OutputConsumerGap` | Refuted at the measured chain: zero exists before image-stage output and PCM consumption. |
@@ -88,6 +87,12 @@ Work only the first applicable item. This is one monotonic backlog.
   oracle log reported no video plugin attached and remained at width 320 for
   120 seconds. Route-byte writes were 2/1/0; target VIs and all three family
   PCs were zero. This is a recipe/configuration failure, not retail evidence.
+- **3788 — Rice-attached Start+Z qualification:** whole-RDRAM control fired
+  10,018 times; retail reached title VI `0x00790400` at 18.7s and hangar VI
+  `0x006AB400` at 39.4s. The family PCs `0x80007640`, `0x8001E230`, and
+  `0x8001F954` executed 3191, 2, and 1367 times respectively. Route-byte
+  writes were 12, 6, and 0. This qualifies the independent retail route
+  comparison; it does not establish route-byte values or parity by itself.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

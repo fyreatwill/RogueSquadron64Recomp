@@ -139985,3 +139985,21 @@ width 320 for the full run. Route-byte writes were 2 at `0x141AD0`, 1 at
 This rules out nothing about retail family reachability: it is a recipe/config
 failure. The next run repeats the input with the documented Rice video plugin
 explicitly attached.
+
+## Session 3788 (2026-10-03) — Rice-attached Start+Z qualified retail family reachability
+
+Ran the fixed Start+Z retail oracle recipe with the documented Rice video
+plugin, whole-RDRAM positive control, route-byte watches, S/I/L family-PC
+watches, and target-VI trace. The positive control fired 10,018 times. Retail
+reached title VI `0x00790400` at 18.7s and hangar VI `0x006AB400` at 39.4s;
+family PCs `0x80007640`, `0x8001E230`, and `0x8001F954` executed 3191, 2, and
+1367 times. Route-byte writes were 12, 6, and 0. This selects the qualified
+retail-reachability hypothesis and enables the independent route-state
+comparison; it does not establish route parity or explain the port's zero
+route rows. The previous no-video recipe is ruled out only as a configuration
+failure, not as a route result.
+
+ORIGIN: this iteration observed independent retail memory writes, guest PC
+execution, and VI transitions; it did not modify the ROM, guest state, or port.
+
+Evidence: `scratch/agent/s3788_oracle_family_start_z_rice/oracle.log`.
