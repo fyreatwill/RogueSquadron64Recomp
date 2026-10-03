@@ -140959,3 +140959,8 @@ present. H1 (descriptor/input-DMA property) is selected at this scope and H2
 (missing downstream output edge) is refuted. The output-field-to-destination
 contract remains open for the next probe. Evidence:
 `scratch/agent/s3839_m5_task_contract_input_dma_join/`.
+## Session 3840 (2026-10-03) — classified empty task output fields
+
+Added the missing bounded runner `scratch/agent/run_s3840_m5_task_output_contract_edge.sh`, built the Debug target, and ran the planned logger-on image recipe. The first attempt was coverage-invalid: it produced 36 crash markers at guest `0x8000834C` before VI 320 and no target rows. The retry reached title VI `0x00790400`/1024 and hangar VI `0x006AB400`/512 with all phase/task/image controls live and zero crash or abort markers.
+
+The retry produced 458 named hangar task-contract rows for `data_ptr=0x80171E70`, `data_size=1`; every row had `output_buff=0` and `output_buff_size=0`. It produced 458 stage-3 rows targeting guest `0x801798B0` with length `0x198`; 452 stage generations joined the exact `audtask-image-dma-join` output row at physical `0x1798B0`, length `0x198`, with payload `FNV=0x762B22A5`, nonzero `0`. This selects H1: the ABI output fields are intentionally empty and the image-stage writeback is a separate service edge. It rules out a missing downstream output edge at this scope and does not authorize a writeback mitigation. The next probe is independent retail/port task-field parity for this selected contract. Evidence: `scratch/agent/s3840_m5_task_output_contract_edge_retry/`.

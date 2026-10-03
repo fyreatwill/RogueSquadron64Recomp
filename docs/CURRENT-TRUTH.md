@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3839 (2026-10-03).
+Updated for session 3840 (2026-10-03).
 
 ## Current state
 
@@ -56,6 +56,17 @@ Work only the first applicable item. This is one monotonic backlog.
    output contract by joining `output_buff`/`output_buff_size` from the named
    task contract to the image-stage/writeback destination and task generation;
    do not infer that a zero input payload is itself an output-contract defect.
+   Session 3840 closes this edge at the port scope: 458 named task-contract
+   rows all had `output_buff=0` and `output_buff_size=0`; 458 stage-3 rows
+   used guest destination `0x801798B0`, and 452 of 458 stage generations had
+   the matching `0x1798B0`/`0x198` output-DMA join. This selects H1: the ABI
+   output fields are intentionally empty and the image-stage writeback is a
+   separate service edge. The first attempt was coverage-invalid (36 crashes
+   at guest `0x8000834C` before VI 320); the retry reached title/hangar with
+   all controls and no crash/abort. Evidence:
+   `scratch/agent/s3840_m5_task_output_contract_edge_retry/`.
+   The next bounded M5 unit should qualify this selected contract against the
+   independent retail task-field route, not add a writeback or output guard.
    Evidence: `scratch/agent/s3839_m5_task_contract_input_dma_join/`.
    Session 3838's same-build logger
    stability A/B reached title 1024 and hangar 512 in both image arms with no
@@ -197,6 +208,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-TaskContractLoggerStartup` | Refuted at s3838's full target scope: logger-on and logger-off both reached title 1024 and hangar 512 with no crash/abort; only logger-on emitted task-contract rows. |
 | `H-M5-TaskContractInputDmaJoin` | Selected H1 at s3839 target scope: the named `0x80171E70`/size-1 contract joined the exact `0x1798B0 -> 0xCB0` input DMA at matching task generations, with zero payload; output image-DMA joins were also present. |
 | `H-M5-TaskOutputEdgeAbsent` | Refuted at s3839 target scope: matching `audtask-image-dma-join` rows prove a downstream image-stage/writeback edge exists; its semantic destination contract remains open. |
+| `H-M5-TaskOutputFieldsEmptySeparateWriteback` | Selected at s3840 port scope: all 458 named task rows had zero ABI output fields, while 452/458 stage generations joined the `0x1798B0`/`0x198` writeback DMA. |
 
 ## Evidence ledger — live boundary
 
@@ -719,6 +731,14 @@ line naming the writer and stating whether its value is legitimate.
   downstream edge is present even though the payload is zero. This selects H1
   (descriptor/input-DMA property) and refutes H2 (missing output edge) at this
   scope. Evidence: `scratch/agent/s3839_m5_task_contract_input_dma_join/`.
+- **3840 — classified task output contract:** the first image run was
+  coverage-invalid, crashing 36 times at guest `0x8000834C` before VI 320. A
+  retry reached title 1024 and hangar 512 with no crash/abort. It captured 458
+  named task rows, all with `output_buff=0` and `output_buff_size=0`; 458 stage-3
+  rows targeted guest `0x801798B0`, and 452 stage generations joined the exact
+  `0x1798B0`/`0x198` output-DMA row. This selects the empty-ABI/separate-
+  writeback hypothesis at the qualified port scope and does not authorize a
+  mitigation. Evidence: `scratch/agent/s3840_m5_task_output_contract_edge_retry/`.
 
 ## Superseded conclusions
 
