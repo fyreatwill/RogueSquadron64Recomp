@@ -18,9 +18,9 @@ typeset -a BASE=(ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_AUDIO_RETURN=1
     ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_M5_B40_ROUTE=1
     ROGUESQ_LOG_M5_ROUTE_STATE=1)
 
-( "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 60
-    --hit-cap 10000 --watch-write 0x0:0x800000 --vi-trace
-    --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+( "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 60 \
+    --hit-cap 10000 --watch-write 0x0:0x800000 --vi-trace \
+    --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
     > "$OUT/oracle.log" 2>&1 ) &
 ORACLE_PID=$!
 

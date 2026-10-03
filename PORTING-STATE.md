@@ -140369,3 +140369,29 @@ wrapper invocation was invalid because the phase-relative key-list assignment
 was split by `env`; the fixed wrapper was rerun and is the result reported here.
 Next: compare a minimal validated route arm against the current base
 environment in one same-build matrix.
+
+## Session 3807 (2026-10-03) — minimal route isolated from common diagnostic startup failure
+
+Built `RogueSquadron64Recomp` successfully. The first matrix invocation was
+invalid because the multiline oracle command lacked shell continuations; the
+oracle consequently ran without its watch/input controls. The runner was
+repaired and the identical matrix was rerun.
+
+In the valid run at
+`scratch/agent/s3807_m5_minimal_route_matrix/`, the independent retail oracle
+fired the whole-RDRAM positive control 10,000 times and reached title
+`0x00790400` and hangar `0x006ab400`. The same-build minimal port route reached
+title at 49.8s and hangar at 59.7s with no crash or abort. The current-base
+route, which added the five passive diagnostic variables, crashed 36 times
+before title at guest PC `0x8000834C`, with no target VI. This selects the
+common base diagnostic bundle as the startup destabilizer at this scope and
+qualifies the minimal route for target-phase work. It does not identify which
+diagnostic variable is responsible and does not qualify any M5 source payload
+join.
+
+Next: run one same-build matrix with minimal, each of the five current-base
+diagnostic variables alone, and all five together, plus the independent retail
+oracle; keep only phase/crash controls and do not add M5 source census fields.
+
+ORIGIN: no mitigation or value guard was added. The `0x8000834C` failure
+remains a startup diagnostic-load defect with its writer/cause unresolved.

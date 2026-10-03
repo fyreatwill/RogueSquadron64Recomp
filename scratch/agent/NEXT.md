@@ -1,30 +1,32 @@
-# Next work unit: isolate the common M5 launch environment
+# Next work unit: isolate the startup diagnostic variable
 
 HYPOTHESIS-ID: m5-diagnostic-load-startup
 
-s3806 ran a fixed same-build image matrix: no census, source/input census, and
-full census. The oracle passed its whole-RDRAM control and reached title/hangar;
-all three port bundles crashed before title at guest PC `0x8000834C`, with zero
-target VI and zero M5 rows. This selects a common launch/diagnostic environment
-at this scope; the census category remains unevaluable.
+s3807 qualified the common boundary: the independent retail oracle fired its
+whole-RDRAM control 10,000 times and reached title/hangar. In the same-build
+port matrix, minimal reached title at 49.8s and hangar at 59.7s with no crash;
+current-base crashed 36 times before title at guest PC `0x8000834C`. The
+minimal route is therefore target-valid, while the current-base diagnostic
+bundle is not.
 
 Competing hypotheses and discriminator:
 
-- H1: the census category is the cause; both minimal and current-base arms
-  remain unstable because the category is not isolated.
-- H2: a common base diagnostic/launch environment destabilizes startup; a
-  minimal route arm reaches target while the current-base arm crashes.
-- H3: the crash is nondeterministic or unrelated; minimal and current-base arms
-  have mixed outcomes without a stable split.
+- H1: one specific diagnostic variable destabilizes startup; its single-variable
+  arm crashes while the other single-variable arms reach target.
+- H2: only the combined diagnostic load destabilizes startup; every
+  single-variable arm reaches target but all-base crashes.
+- H3: startup remains nondeterministic or unrelated; minimal, single-variable,
+  and all-base arms have mixed outcomes without a stable split.
 
-The discriminating measurement is one same-build image-only matrix with two
-bundles under the same recipe: a minimal route arm containing only the
-validated LLE/audio/phase-driving environment and a current-base arm retaining
-the route and passive diagnostics, plus the independent retail oracle. Require
-the oracle whole-RDRAM control and target-VI controls. Do not infer a writer or
-payload parity from a missing target phase.
+The discriminating measurement is one same-build image matrix containing these
+six arms under the same route and input recipe: minimal, `ROGUESQ_LOG_PHASE`,
+`ROGUESQ_LOG_AUDIO_RETURN`, `ROGUESQ_LOG_PCM_BOUNDARY`,
+`ROGUESQ_LOG_M5_B40_ROUTE`, `ROGUESQ_LOG_M5_ROUTE_STATE`, and all five
+together. Run the independent retail oracle concurrently. Require the oracle
+whole-RDRAM control and title/hangar VIs; for each port arm record target VIs,
+crash/abort counts, and last guest PC. Do not add M5 source census fields.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_m5_minimal_route_matrix.sh
+    zsh scratch/agent/run_m5_diagnostic_isolation_matrix.sh

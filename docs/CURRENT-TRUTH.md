@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3806 (2026-10-03).
+Updated for session 3807 (2026-10-03).
 
 ## Current state
 
@@ -39,15 +39,15 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 minimal-route startup discriminator, next.** s3806 ran one same-build
-   matrix with no census, source/input census, and full census bundles. The
-   independent retail oracle passed its whole-RDRAM control and reached title
-   and hangar, while all three port bundles crashed before title at guest PC
-   `0x8000834C` with zero target-phase/M5 rows. This selects the common
-   launch/diagnostic environment at this scope; it does not identify a census
-   category or qualify a payload join. Run one same-build minimal-route versus
-   current-base matrix, retaining only phase/crash controls in the minimal arm,
-   before adding another M5 census.
+1. **M5 isolate the startup diagnostic variable, next.** s3807 ran the planned
+   same-build minimal-route versus current-base matrix. The independent retail
+   oracle passed its whole-RDRAM control and reached title/hangar; minimal
+   reached title/hangar with no crash, while current-base crashed 36 times at
+   guest PC `0x8000834C` before title. This selects the common base diagnostic
+   bundle as the startup destabilizer at this scope. Run one same-build matrix
+   with minimal, each current-base diagnostic variable alone, and all-base, plus
+   the independent retail oracle. Keep phase/crash controls; do not add M5
+   source census fields until the failing variable is isolated.
 2. **M5 upstream zero-DMEM producer, parked behind diagnostic-load qualification.** s3802
    qualified the port-side immediate chain: the hangar image input reads
    all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
@@ -96,6 +96,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-SourceInputWriter` | Open: the legitimate writer or fill responsible for the zero source span remains unidentified. |
 | `H-M5-PairedArmStartup` | Refuted at s3804 as the primary explanation: `tools/probe.sh` did not make the full-census silent arm stable, while the no-census silent control reached title/hangar. |
 | `H-M5-DiagnosticLoadStartup` | Selected at s3804: the full M5 census silent arm crashed before title at guest PC `0x8000B650`; the same-build no-census silent control reached title and hangar with no crash. |
+| `H-M5-CommonBaseDiagnosticStartup` | Selected at s3807: minimal route reached title/hangar, while current-base crashed 36 times at `0x8000834C`; retail controls passed. |
+| `H-M5-MinimalRouteTargetValid` | Selected at s3807: minimal image arm reached title `0x00790400` and hangar `0x006AB400` with no crash or abort. |
 
 ## Evidence ledger — live boundary
 
@@ -257,6 +259,14 @@ Work only the first applicable item. This is one monotonic backlog.
   launch/diagnostic-path failure at this scope and leaves census-category
   isolation unevaluable. Evidence:
   `scratch/agent/s3806_m5_census_startup_matrix/`.
+- **3807 — minimal-route startup discriminator:** the Debug build passed. The
+  independent retail oracle fired the whole-RDRAM positive control 10,000
+  times and reached title/hangar. In the same-build port matrix, the minimal
+  route reached title at 49.8s and hangar at 59.7s with no crash or abort; the
+  current-base route crashed 36 times before title at guest PC `0x8000834C`,
+  with no target VI. This selects the common base diagnostic bundle as the
+  startup destabilizer at this scope and does not identify the individual
+  variable. Evidence: `scratch/agent/s3807_m5_minimal_route_matrix/`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
