@@ -140333,3 +140333,22 @@ the upstream zero-DMEM writer, and no paired source-writer conclusion is drawn.
 
 ORIGIN: no mitigation or value guard was added. The observed `0x8000B650`
 failure is a diagnostic-coverage defect whose writer/cause remains unresolved.
+
+## Session 3805 (2026-10-03) — image-only source ground truth blocked by census startup crash
+
+The Debug target rebuilt successfully. The image-only full-census recipe was
+run alongside the independent retail oracle, with the whole-RDRAM positive
+control, target-VI watches, phase gating, and SIGKILL cleanup. The oracle
+control fired and the oracle completed its 45-second run, but the image arm
+crashed at guest PC `0x8000834C` after only the 320-wide phase. The image arm
+produced no title or hangar VI, no M5 source/input rows, and no source payload
+sample. H3 is selected: this arm cannot qualify the retail-versus-port payload
+join. H1 and H2 remain unevaluable; the next discriminator is a same-build
+image diagnostic-load matrix. The image-only recipe was repaired so its
+conditional arm does not expand an unset silent PID under `set -u`.
+
+Evidence: `scratch/agent/s3805_m5_image_source_ground_truth/summary.txt`,
+`oracle.log`, and `image/run.log`.
+
+ORIGIN: no mitigation or value guard was added. The observed `0x8000834C`
+failure is a coverage defect whose writer/cause remains unresolved.

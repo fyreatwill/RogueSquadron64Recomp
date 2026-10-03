@@ -85,7 +85,11 @@ if [[ "$IMAGE_ONLY" == 1 ]]; then
 else
   kill -KILL "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true
 fi
-wait "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true
+if [[ "$IMAGE_ONLY" == 1 ]]; then
+  wait "$oracle_pid" "$image_pid" 2>/dev/null || true
+else
+  wait "$oracle_pid" "$image_pid" "$silent_pid" 2>/dev/null || true
+fi
 
 : > "$OUT/summary.txt"
 names=(oracle image)

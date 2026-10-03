@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3804 (2026-10-03).
+Updated for session 3805 (2026-10-03).
 
 ## Current state
 
@@ -39,15 +39,15 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 single-arm source ground truth, next.** s3804 separated the
-   diagnostic-load failure from launch contention: the full-census image arm
-   reached title/hangar, while the full-census silent arm crashed before title;
-   a same-build silent arm with the M5 census variables removed reached both.
-   Run the full image census through `tools/probe.sh` alongside the independent
-   retail oracle, with no silent arm. Keep the whole-RDRAM and retail target-VI
-   controls; use the result to join the port zero-DMEM chain to retail source
-   bytes without destabilizing the control arm.
-2. **M5 upstream zero-DMEM producer, parked behind single-arm ground truth.** s3802
+1. **M5 diagnostic-load startup discriminator, next.** s3805 ran the prescribed
+   image-only full census, but the image arm crashed at guest PC `0x8000834C`
+   after only the 320-wide phase; every M5 target/source counter stayed zero.
+   The independent retail oracle passed its whole-RDRAM control and completed,
+   so this is a valid H3 coverage failure, not a failed oracle run. Build one
+   same-build diagnostic matrix that keeps the positive phase controls and
+   distinguishes the M5 census load itself from the common launch path before
+   attempting another retail payload join.
+2. **M5 upstream zero-DMEM producer, parked behind diagnostic-load qualification.** s3802
    qualified the port-side immediate chain: the hangar image input reads
    all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
    and the source DMA writes the same all-zero payload to
@@ -239,6 +239,15 @@ Work only the first applicable item. This is one monotonic backlog.
   probe-driver/launch-order explanation; it does not identify the source
   writer. See scratch captures `s3802_m5_source_input_writer` and
   `s3804_m5_nocensus_silent`.
+- **3805 — image-only retail ground-truth attempt:** the Debug build passed. The
+  independent retail oracle fired its whole-RDRAM positive control and ran to
+  completion, but the image-only full-census arm crashed at guest PC
+  `0x8000834C` after the 320-wide phase. It produced no title/hangar target VI,
+  no M5 source/input rows, and no source payload sample. H3 is selected: the
+  image census cannot yet qualify the route alone, so H1/H2 remain
+  unevaluable. The recipe's image-only wait path was repaired to avoid
+  expanding the absent silent PID under `set -u`. Evidence:
+  `scratch/agent/s3805_m5_image_source_ground_truth/`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port
