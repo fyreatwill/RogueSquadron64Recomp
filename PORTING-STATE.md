@@ -140983,3 +140983,15 @@ build claim, not the guard-class change. The next session must restore the
 MIPS patch toolchain, build the patch ELF through PatchesLib, and run the
 normal allocator-route smoke before classifying the guard as behavior-
 preserving or catching a live boundary-crossing pointer.
+
+## Session 3842 (2026-10-03) — confirmed heap guard build blocker
+
+Ran the prescribed `cmake --build build --config Debug --target PatchesLib`;
+it returned `No rule to make target PatchesLib`. Inspection showed the CMake
+patch conditional is disabled because the configured
+`E:/mips-toolchain/bin/mips64-elf-gcc.exe` and `build/Debug/N64Recomp.exe` are
+both absent, while `/usr/bin/make` is present. No generated-patch or runtime
+claim was made. This confirms the validation environment is blocked, not that
+the span guard is behavior-preserving or that a boundary-crossing pointer
+exists. Restore/reconfigure those two inputs, then build and run the allocator
+smoke; that is the single experiment that can refute this blocker.
