@@ -141025,3 +141025,12 @@ retail physical watch of `0x1798B0..0x179A48` had no hits. This rules out a
 port-only nonempty ABI output field, but does not establish that retail's
 distinct descriptor has the same separate image-stage/writeback destination.
 Evidence: `scratch/agent/s3844_m5_task_output_contract_retail_fixed/`.
+
+## Session 3845 (2026-10-03) — compacted current truth state
+
+Maintenance was required because `docs/CURRENT-TRUTH.md` measured 61,648 bytes,
+above the 60,000-byte gate. Compacted it from 816 to 154 lines and 9,332 bytes,
+retaining the active M3/M5 boundaries, recent evidence, operating rules, and
+links to durable notes while leaving the append-only ledger unchanged. No
+experiment or runtime conclusion was made. The next unit remains the paired
+retail task-descriptor to image-destination join from s3844.

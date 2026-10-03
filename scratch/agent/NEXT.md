@@ -31,3 +31,5 @@ task-generation evidence. Keep the drain-in-loop control that made s3844
 target-valid. Do not add a writeback guard or infer a destination from the
 port address. The M3 heap-span validation remains blocked on the absent MIPS
 toolchain and is not this unit.
+
+Maintenance session 3845 compacted CURRENT-TRUTH; no experiment was run.
