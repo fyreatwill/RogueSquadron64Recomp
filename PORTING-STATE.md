@@ -138967,3 +138967,32 @@ Evidence: `docs/M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md`,
 ORIGIN: the changed runtime and generated-helper code is diagnostic-only. The
 observed neighboring zero writers are legitimate state writes, and
 `0x800078EC` was not suppressed or altered.
+
+## Session 3743 (2026-10-02) — closed generated exact-field scalar census
+
+Ran the independent retail oracle before building with a whole-RDRAM positive
+control, exact physical watches at `0x128C92` and `0x128CD0..0x128CD4`, route-PC
+watches, and phase-gated writer histograms. The control fired 21,643 times;
+retail reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Neither
+exact watch had a target-phase write. The route-PC watches fired, so this was
+an instrumented null rather than a phase miss.
+
+Added `tools/apply_s3743_m5_exact_route_store.py`, which inserted a focused,
+regeneration-friendly witness at 379 generated scalar stores using literal
+`+0x22` or `+0x60` offsets. The Debug target built successfully. A paired run
+was invalid because the real-audio arm crashed before target phase while two
+instances ran concurrently; the silent arm did reach target activity. The
+fixed real-alone rerun passed the positive control, reached title and hangar,
+had no crash/abort, recorded 512 neighboring zero-valued route rows, and had
+zero exact-field rows. The silent arm also had zero exact-field rows.
+
+This selects `H-ExactFieldUnwritten` for the generated scalar offset class and
+adds independent retail evidence against an exact-field scalar writer. It
+rules out neither DMA, host-side, nor non-literal-address ownership, so
+`H-ExactFieldNonScalar` and `H-RouteStateNotSource` remain open. No behavior
+or mitigation changed.
+
+Evidence: `docs/M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md`,
+`scratch/agent/s3743_oracle_groundtruth/oracle.log`, and
+`scratch/agent/s3743_m5_exact_route_ownership/real-alone.log` plus
+`silent.log`.

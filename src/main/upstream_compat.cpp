@@ -1247,6 +1247,45 @@ extern "C" void rs64_m5_route_value_writer(char width, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_exact_route_store(char width, unsigned pc,
+                                             unsigned addr, unsigned value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_EXACT_ROUTE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    static std::atomic<bool> control{false};
+    if (!control.exchange(true, std::memory_order_relaxed)) {
+        std::fprintf(stderr, "[m5-exact-route-control] offset-class witness is live\n");
+        std::fflush(stderr);
+    }
+    if (!enabled) return;
+    const uint32_t phys = (addr - 0x80000000u) & 0x1FFFFFFFu;
+    if (phys != 0x128C92u && phys != 0x128CD0u) return;
+    const uint32_t width_n = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (width_n == 1024u && origin == 0x00790400u) ||
+                        (width_n == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width_n << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+        std::fprintf(stderr,
+            "[m5-exact-route-phase-control] width=%u origin=0x%06X\n",
+            width_n, origin);
+    }
+    if (rows++ >= 512u) return;
+    std::fprintf(stderr,
+        "[m5-exact-route] n=%u phase=%u width=%u origin=0x%06X pc=0x%08X "
+        "width=%c phys=0x%06X value=0x%08X\n",
+        rows - 1u, rs64_phase_ord(), width_n, origin, pc, width, phys, value);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_route_prepare_inputs(
     uint8_t* rdram, uint32_t pc, uint32_t caller, uint32_t sp,
     uint32_t s0, uint32_t s1, uint32_t s2, uint32_t s3, uint32_t s4,

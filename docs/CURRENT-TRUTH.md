@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3742 (2026-10-02).
+Updated for session 3743 (2026-10-02).
 
 ## Current state
 
@@ -29,15 +29,13 @@ zero-valued port payload. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 exact route-field ownership.** s3742's all-generated-store census
-   passed controls and reached title/hangar in both arms. It saw only
-   zero-valued neighboring writes at `0x80128C80/84` and `0x80128CE0/E4`,
-   with no nonzero writer to the exact route-value fields around
-   `0x80128CD0`/`0x80128C92`. Join those exact fields against non-scalar
-   stores and route-object setup to distinguish an uninstrumented producer
-   from route metadata unrelated to the image source. Do not alter
-   `0x800078EC`. See
-   [M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md](M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md).
+1. **M5 non-scalar/host exact route-field ownership.** s3743's oracle exact
+   watches and port generated-store witness both passed controls and reached
+   title/hangar, with zero exact-field rows. This closes the generated scalar
+   `+0x22/+0x60` writer class, but not DMA, host-side, or non-literal-address
+   writes. Join those remaining classes against route preparation and source
+   DMA. Do not alter `0x800078EC`. See
+   [M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md](M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md).
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -65,6 +63,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-EarlierWriterAbsent` | Selected at s3742 for the measured scalar-store class: 512 target-phase rows per arm were all zero-valued neighboring writes, with no nonzero exact-field writer. |
 | `H-EarlierWriterClears` | Refuted at s3742 for the measured scalar-store class: no earlier nonzero writer was observed before the zero route state. |
 | `H-RouteStateNotSource` | Open after s3742: exact route fields had no scalar writer, so an uninstrumented/non-scalar producer versus control metadata remains unresolved. |
+| `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
+| `H-ExactFieldNonScalar` | Open: s3743 did not cover DMA, host-side, or non-literal-address writes. |
 | `H-PortFamilyWritesThenClear` | Refuted at s3739 for the qualified hangar source path: all real source-range writer payloads remained zero. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
@@ -132,6 +132,13 @@ Work only the first applicable item. This is one monotonic backlog.
   exact-field writer appeared. This selects absent earlier writer for the
   measured scalar-store class, while leaving non-scalar ownership versus
   metadata open. See [M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md](M5-S3742-ROUTE-VALUE-WRITER-CENSUS.md).
+- **3743 — exact route-field ownership:** the oracle control and both target
+  phases fired; exact physical watches had no target-phase writes. A 379-site
+  generated `+0x22/+0x60` witness passed controls in both arms; the qualified
+  real-alone run reached title/hangar and had zero exact rows beside 512
+  neighboring zero rows. This selects absent writer for that scalar class and
+  leaves non-scalar/host ownership open. See
+  [M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md](M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.
@@ -207,6 +214,7 @@ unreconciled.
 
 - [M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md](M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md)
 - [M5-S3741-ROUTE-HANDOFF-CENSUS.md](M5-S3741-ROUTE-HANDOFF-CENSUS.md)
+- [M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md](M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md)
 - [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md)
 - [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md)
