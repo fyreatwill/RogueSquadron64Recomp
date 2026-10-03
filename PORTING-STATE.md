@@ -139199,3 +139199,34 @@ were discarded; only the corrected explicit-schedule pair above is evidence.
 Evidence: `docs/M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md`,
 `scratch/agent/oracle_s3751.log`, `scratch/agent/s3751_realb/run.log`, and
 `scratch/s3751_silentb/run.log`.
+
+## Session 3752 (2026-10-02) — censused the source producer boundary
+
+Ground truth ran first under retail mupen64plus. Its whole-RDRAM positive
+control reached 10,000 callbacks, both target VI phases were reached, and the
+source span `0x1797B0..0x179A48` had 1,830 writes. The exact route-field watch
+`0x128C70..0x128CD4` had 11,109 writes. Retail execution attribution included
+`0x80007670` (300 executions), `0x8001E2C0` (19), and the observed
+`0x8001F...` family (18–19 per site).
+
+The first paired port run was invalid: the real arm crashed at 1.1 seconds
+before either target phase. I reran the real arm alone with the same build,
+hooks, explicit autopilot, and 75-second SIGKILL watchdog. The fixed run passed
+the source-hook positive control, reached title and hangar, and emitted 1,024
+source-reader, 512 source-writer, and 4,096 source-transition rows. Hangar
+source reads used the expected `0x1798B0`, length `0x198`, DMEM `0xCB0`
+descriptor, but were already zero (`FNV=0x762B22A5`, `nz=0`) at task data
+pointer `0x80171E70`. The silent arm passed its hook control, reached hangar,
+and emitted no source rows.
+
+This selects `H-PortSourceProducerAbsent` for the measured producer/read class
+and refutes `H-PortSourceJoinMismatch` at the source-DMA edge. It rules out a
+nonzero task-data payload at the joined reader, not the upstream task-data
+producer. The paired crash is documented as invalid evidence. ORIGIN:
+diagnostic source-reader/writer/transition joins and independent retail
+watches; no guest value, branch, DMA, or rendering behavior changed.
+
+Evidence: `docs/M5-S3752-SOURCE-PRODUCER-BOUNDARY.md`,
+`scratch/agent/s3752_oracle_producer_boundary/oracle.log`,
+`scratch/agent/s3752_m5_source_producer_boundary/real-alone/run.log`, and
+`scratch/agent/s3752_m5_source_producer_boundary/silent-summary.txt`.

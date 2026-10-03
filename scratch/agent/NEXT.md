@@ -1,34 +1,33 @@
-# Next work unit: M5 source-route producer boundary after exact-load closure
+# Next work unit: M5 task-data producer boundary
 
-HYPOTHESIS-ID: m5-source-route-producer-boundary
+HYPOTHESIS-ID: m5-task-data-producer-boundary
 
-The nine exact candidate loads are closed as non-owners of the `0x80128C70`
-route object. Move one boundary upstream: identify the next port-side
-producer/read class that can explain why qualified real-audio source DMAs
-carry zero payload while retail writes the source span. Do not repeat the
-closed candidate list, the invalid `0x80019CD8` hook, or alter `0x800078EC`.
+Session 3752 closed the source-DMA producer/read class: the qualified real
+arm joined the expected `0x1798B0 -> DMEM 0xCB0` descriptor, but the task-data
+object at `0x80171E70` was already zero. Move one boundary upstream and census
+the bounded producer/read class that populates that task-data object. Do not
+repeat the nine closed route loads, the invalid route-preparation hook, or
+alter `0x800078EC`.
 
 Competing hypotheses:
 
-- `H-PortSourceProducerAbsent`: the next bounded census has no nonzero value
-  or source-object handoff before the real source DMA.
-- `H-PortSourceProducerPresent`: a bounded producer supplies a nonzero value
-  or object that is then consumed by the source DMA.
-- `H-PortSourceJoinMismatch`: the producer is present, but its route/task
-  identity does not join to the qualified source-DMA rows.
+- `H-TaskDataProducerAbsent`: no nonzero task-data producer or task identity
+  appears before the qualified source DMA after controls and both phases.
+- `H-TaskDataProducerPresent`: a nonzero producer populates the joined task
+  data, but a later task handoff clears or selects another object.
+- `H-TaskDataJoinMismatch`: a producer is present, but its task generation,
+  pointer, or route identity does not match the qualified source-DMA rows.
 
-Discriminator: before building, census the existing bounded port-side source
-producer/read candidates documented by the latest M5 source-boundary note,
-including real/silent arms and independent retail whole-RDRAM/source-span
-watches. One build must carry every candidate and its source-DMA join, with a
-same-run positive control for every hook family. A nonzero producer joined to
-real source DMA selects `H-PortSourceProducerPresent`; producer rows with no
-matching route/task identity select `H-PortSourceJoinMismatch`; no producer
-rows after controls and both phases selects `H-PortSourceProducerAbsent`.
-Missing controls or either target phase is unevaluable.
+Discriminator: one phase-gated census must log every bounded task-data producer
+and reader candidate, task pointer/generation, route ordinal/row, payload FNV
+and nonzero count, plus the existing source-DMA join. A nonzero producer joined
+to `0x80171E70` selects `H-TaskDataProducerPresent`; a producer with a distinct
+task identity selects `H-TaskDataJoinMismatch`; no producer rows after live
+controls and both phases selects `H-TaskDataProducerAbsent`. Missing controls
+or either target phase is unevaluable.
 
-Ground truth before building: ask the retail oracle for the same producer
-class and arm a whole-RDRAM positive control first. Add only bounded hooks
-through the regeneration-safe fixup script. Run real and silent arms from
-`build/` with the validated explicit AUTOPILOT schedule, then kill every arm
-with SIGKILL.
+Ground truth before building: run the retail oracle with the whole-RDRAM
+positive control first, then source-span and task-data watches plus the known
+retail writer-PC attribution. Add only bounded hooks through regeneration-safe
+fixup scripts. Run qualified real and silent arms from `build/` with the
+explicit autopilot schedule; kill every arm with SIGKILL.

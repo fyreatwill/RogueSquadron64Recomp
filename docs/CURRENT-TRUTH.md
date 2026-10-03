@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3751 (2026-10-02).
+Updated for session 3752 (2026-10-02).
 
 ## Current state
 
@@ -25,20 +25,23 @@ byte positions are now exported, but layout parity is still not testable at a
 zero-valued port payload. See
 [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md).
 
-The nine bounded exact-offset load candidates are now closed: neither the
-qualified real nor silent port arm read the exact object at `0x80128C70` at
-any target-phase candidate site. The next boundary is a new port-side
-producer/read class upstream of the source DMA.
+The nine bounded exact-offset load candidates are closed, and the next
+port-side source producer/read census is also closed at the DMA edge: the
+qualified real arm reads the expected source descriptor from task data at
+`0x80171E70`, but the hangar payload is already zero. The next boundary is the
+producer of that task-data object.
 
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 source-route producer boundary.** The s3751 candidate-load census
-   selected `H-RouteStateNotSource` with target-phase controls and source-DMA
-   joins. Census the next bounded producer/read class upstream of the real
-   source DMA; compare its value and route/task identity with retail. Do not
-   repeat the closed candidate list or alter `0x800078EC`.
+1. **M5 task-data producer boundary.** Session 3752 selected
+   `H-PortSourceProducerAbsent`: the real arm's qualified source reads at
+   `0x80171E70` were zero before DMA, while retail independently wrote the
+   source span from the known writer families. Census the bounded producer and
+   task-data identity upstream of `0x80171E70`, with real/silent controls and
+   retail writer attribution. Do not repeat the closed route-load list or
+   alter `0x800078EC`.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -67,6 +70,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-EarlierWriterClears` | Refuted at s3742 for the measured scalar-store class: no earlier nonzero writer was observed before the zero route state. |
 | `H-RouteStateNotSource` | Open after s3742: exact route fields had no scalar writer, so an uninstrumented/non-scalar producer versus control metadata remains unresolved. |
 | `H-RouteStateNotSource` | Selected at s3751 for all nine bounded exact-offset loads: neither qualified port arm read the exact object `0x80128C70` in either target phase. |
+| `H-PortSourceProducerAbsent` | Selected at s3752: the qualified real arm read zero task data at `0x80171E70` before the expected source DMA; the next boundary is its producer. |
+| `H-PortSourceProducerPresent` | Refuted at s3752 for the measured source-DMA class: no nonzero hangar source payload was present at the joined reader. |
+| `H-PortSourceJoinMismatch` | Refuted at s3752 at the source-DMA edge: the reader used `0x1798B0 -> DMEM 0xCB0` and joined the active route/task. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
@@ -199,6 +205,15 @@ Work only the first applicable item. This is one monotonic backlog.
   `H-RouteStateNotSource` for the candidate set and refutes a candidate
   source-key read. See
   [M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md](M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md).
+- **3752 — source producer boundary:** the retail oracle passed its control,
+  reached both target phases, and attributed source-span writes to the known
+  producer families. The fixed qualified real port arm passed its hook control,
+  reached both phases, and joined 1,024 readers/512 writers/4,096 transitions;
+  hangar reads at `0x80171E70` were already zero before the expected
+  `0x1798B0 -> DMEM 0xCB0` DMA. The silent control emitted no source rows.
+  This selects `H-PortSourceProducerAbsent` and moves the boundary upstream to
+  task-data production. See
+  [M5-S3752-SOURCE-PRODUCER-BOUNDARY.md](M5-S3752-SOURCE-PRODUCER-BOUNDARY.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.
