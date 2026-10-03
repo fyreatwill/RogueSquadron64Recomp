@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3809 (2026-10-03).
+Updated for session 3810 (2026-10-03).
 
 ## Current state
 
@@ -39,15 +39,17 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 validate the DMEM task-data boundary fix, next.** s3809 corrected
-   `run_task` from a `0xF7F`-byte DMA to the complete `0xF80`-byte DMEM task
-   window, including the final byte before the OSTask staging area. The Debug
-   build passed. Run the existing same-build image/silent Step 1 validation
-   with phase, task, SP-completion, route, and no-crash controls. Select a
-   downstream contract effect only if the corrected image reaches both target
-   VIs and changes a task/DMA/service/PCM join; route-equivalent output means
-   the byte is padding/unused at this scope. Do not run the stale concurrent
-   diagnostic matrix or add source-census fields.
+1. **M5 re-qualify the DMEM task-data boundary with a minimal concurrent pair, next.**
+   s3809 corrected `run_task` from a `0xF7F`-byte DMA to the complete `0xF80`-byte
+   DMEM task window. The Debug build passed, but the existing contract
+   driver was not a valid boundary result: retail passed its whole-RDRAM,
+   title, and hangar controls; silent reached hangar; corrected image crashed
+   before target at guest PC `0x8000834C`. Strip the legacy diagnostic bundle
+   while retaining only phase, task-contract, audio-return, route, and
+   no-crash controls, and run image/silent concurrently. Select boundary
+   consumption only if image reaches both target VIs and differs in a joined
+   task/DMA/service/PCM row; select padding/unused if both arms are
+   route-equivalent; select startup instability if image fails before target.
 2. **M5 upstream zero-DMEM producer, parked behind diagnostic-load qualification.** s3802
    qualified the port-side immediate chain: the hangar image input reads
    all-zero DMEM `0xCB0..0xE48`, zero-valued vector/DMA coverage precedes it,
@@ -99,6 +101,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-CommonBaseDiagnosticStartup` | Not reproduced at s3808: minimal and most single-variable arms failed, but all-five reached both targets; s3807's sequential split remains single-run evidence. |
 | `H-M5-MinimalRouteTargetValid` | Selected at s3807: minimal image arm reached title `0x00790400` and hangar `0x006AB400` with no crash or abort. |
 | `H-M5-DiagnosticLaunchOrderInteraction` | Open and selected at s3808 scope: sequential arms were mixed while all-five succeeded; concurrent arms are required to split order interaction from nondeterminism. |
+| `H-M5-DMEMTaskBoundaryConsumed` | Unevaluable at s3810: the corrected image arm crashed before target while the silent arm reached hangar; the boundary byte was not observed by a qualified image task. |
+| `H-M5-DMEMTaskBoundaryStartup` | Selected at s3810 scope: the legacy contract driver reproduced the pre-target image crash at guest PC `0x8000834C`; a minimal concurrent pair is required to separate diagnostic load from the boundary change. |
 
 ## Evidence ledger — live boundary
 
@@ -277,6 +281,14 @@ Work only the first applicable item. This is one monotonic backlog.
   sufficient at this scope and selects launch-order/nondeterministic
   interaction; no individual variable or source join was isolated. Evidence:
   `scratch/agent/s3808_m5_diagnostic_isolation_matrix/`.
+- **3810 — DMEM task-data boundary validation:** the Debug build passed. The
+  independent retail oracle fired the 10,000-hit whole-RDRAM control and
+  reached title/hangar. In the concurrent port arms, silent reached hangar and
+  produced task/ABI/SP controls, while corrected image crashed before any target
+  VI at guest PC `0x8000834C` in `spTaskSchedulerThread+9556`. This selects
+  startup instability for the legacy diagnostic bundle and leaves boundary-byte
+  consumption unevaluable; it does not identify a writer or justify a guard.
+  Evidence: `scratch/agent/s3810_m5_dmem_task_boundary_validation/`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

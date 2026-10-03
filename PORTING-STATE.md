@@ -140440,3 +140440,20 @@ longer confounded by sequential execution.
 
 ORIGIN: no mitigation or value guard was added. The `0x8000834C` failure
 remains a startup diagnostic-load defect with its writer/cause unresolved.
+## Session 3810 (2026-10-03) — qualified DMEM boundary failure scope
+
+The Debug target built successfully after the s3809 `run_task` fix that copies
+the complete `0xF80`-byte DMEM task-data window. The existing concurrent Step 1
+driver was run with the independent retail oracle, a real image arm, and the
+explicit silent arm. The oracle whole-RDRAM positive control reached 10,000
+writes and retail reached title `0x00790400` and hangar `0x006AB400`. The silent
+port arm reached hangar and emitted task/ABI/SP controls. The corrected image
+arm crashed before any target VI at guest PC `0x8000834C`, native
+`spTaskSchedulerThread+9556`; no image task-contract comparison was valid.
+
+This selects startup instability for the legacy diagnostic bundle at this
+scope and leaves consumption of the final DMEM byte unevaluable. It rules out
+an oracle/ROM/target-phase failure and does not identify a source writer,
+downstream consumer, or mitigation. The next discriminator is a minimal
+concurrent image/silent pair retaining only phase, task-contract,
+audio-return, route, and no-crash controls.
