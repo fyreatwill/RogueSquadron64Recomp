@@ -1,31 +1,32 @@
-# Next work unit: M5 qualified-route predecessor/handoff census
+# Next work unit: M5 route-value producer census
 
-HYPOTHESIS-ID: m5-qualified-route-predecessor-handoff
+HYPOTHESIS-ID: m5-route-value-producer-census
 
-Run one batched, phase-gated capture joining the first real-audio route edge
-after the shared `rs_strncpy`/texture-LUT setup to its task/RSP handoff and
-qualified source-DMA row. Retain the oracle whole-RDRAM control, both source
-watches, both VI snapshots, exact source-span stores, and real/silent controls.
-Do not change port behavior or suppress the legitimate `0x800078EC` zero fill.
-Reuse `scratch/agent/run_s3737_m5_retail_writer_join.sh`; batch all route-edge
-fields into one build/run.
+Run one batched, phase-gated capture tracing the earlier writer/state
+transition that supplies the zero `source_word/source_byte/branch_state` seen
+at `0x80019CD8` and the zero value fields at the `0x8000C628` handoff. Retain
+the oracle whole-RDRAM control, both source watches, both VI snapshots, exact
+source-span stores, route candidate/prepare/handoff logs, and real/silent
+controls. Do not change port behavior or suppress the legitimate
+`0x800078EC` zero fill. Extend the existing script/instrument in one build
+and one run; use the oracle before building.
 
 Competing hypotheses:
 
-- `H-RouteHandoffValueAbsent`: the real-audio route enters the handoff with
-  zero/uninitialized source/value state.
-- `H-RouteHandoffDropsValue`: a nonzero setup/DMEM value becomes zero between
-  the route predecessor and the task/RSP handoff.
-- `H-RouteHandoffAfterClear`: the qualified route receives a nonzero value and
-  a later legitimate clear precedes the zero source DMA.
+- `H-EarlierWriterAbsent`: the earlier route-state writer never publishes a
+  nonzero source/value state before the qualified route.
+- `H-EarlierWriterClears`: an earlier legitimate writer clears a previously
+  nonzero route value before the qualified route.
+- `H-RouteStateNotSource`: the observed route fields are control metadata and
+  the missing source payload is produced by a separate unjoined state/object.
 
-Discriminator: compare the first route predecessor value, handoff value, and
-qualified source-DMA payload in the same title/hangar phase. Zero at both
-predecessor and handoff selects `H-RouteHandoffValueAbsent`; nonzero
-predecessor becoming zero at handoff selects `H-RouteHandoffDropsValue`; a
-nonzero handoff followed by the known legitimate clear selects
-`H-RouteHandoffAfterClear`. Missing oracle control or either target phase is
-unevaluable.
+Discriminator: join the first earlier writer and its value to the first
+route-preparation row, handoff row, and qualified source-DMA row in each
+target phase. No earlier nonzero writer plus zero route state selects
+`H-EarlierWriterAbsent`; a nonzero earlier writer followed by zero route state
+selects `H-EarlierWriterClears`; matching route metadata with no source join
+selects `H-RouteStateNotSource`. Missing oracle control or either target phase
+is unevaluable.
 
 Ground truth must be checked before building: retain the existing oracle
 whole-RDRAM watch, both phase watches, and retail writer-PC options. A

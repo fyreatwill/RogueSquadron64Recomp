@@ -138909,3 +138909,30 @@ Evidence: `docs/M5-S3740-FAMILY-VALUE-PROVENANCE.md` and
 ORIGIN: the changed runtime code is diagnostic-only family call/entry logging;
 the writer at `0x800078EC` remains a legitimate observed zero fill and was not
 suppressed or altered.
+
+## Session 3741 (2026-10-02) — joined qualified-route predecessor and handoff
+
+Ran the fixed batched M5 capture after the independent retail oracle passed
+its whole-RDRAM positive control and reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`. The real port arm reached both target phases and
+the silent control reached title; neither port arm crashed or aborted.
+
+The phase-scoped route-preparation rows at `0x80019CD8` had
+`source_word=0`, `source_byte=0`, and `branch_state=0`. The actual handoff
+edge from `0x8000C628` likewise carried zero value fields (`s0=0`, `a0=0`,
+`a1=0`, `a2=1`, `v0=0`) in title and hangar. The real arm then produced 512
+qualified source-DMA rows from `0x1798B0` to DMEM `0xCB0`, all with
+`FNV=0x762B22A5` and zero payload bytes; silent produced no source rows.
+
+This selects `H-RouteHandoffValueAbsent` for the measured edge, and rules out
+a nonzero predecessor being dropped at handoff and a later clear preceding
+the zero DMA. The shared earlier setup edge (`s0=0x80790000`, `a0=0x1C0`)
+is not the qualified source producer. No behavior or mitigation changed.
+
+Evidence: `docs/M5-S3741-ROUTE-HANDOFF-CENSUS.md`,
+`scratch/agent/s3737_m5_retail_writer_join_fixed/`, and
+`scratch/agent/s3741_oracle_groundtruth/oracle_fixed.log`.
+
+ORIGIN: the changed script only enables diagnostic route candidate/prepare/
+handoff logs; `0x800078EC` remains an observed legitimate zero fill and was
+not suppressed or altered.
