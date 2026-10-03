@@ -139481,3 +139481,26 @@ fill, gate, or task-data mitigation. Evidence:
 
 ORIGIN: no mitigation or value change was made; the result is a comparison of
 the existing qualified diagnostic capture.
+
+## Session 3764 (2026-10-02) — selected pre-input image payload gap
+
+Re-read the existing s3762 same-build oracle/image/silent capture as the
+prescribed no-build source/output join. The oracle whole-RDRAM positive control
+passed at 10,000 callbacks, and all three arms reached title and hangar. In
+the image arm, phase-5 rows aligned by `origin=0x6AB400`, width 512, and route
+ordinal. The input DMA at `0x1798B0 -> DMEM 0xCB0` was already zero
+(`FNV=0x762B22A5`, `nz=0`) with no previous writer. Image-stage stage-2 and
+stage-3 rows preserved the zero payload, and PCM source/consumer rows also
+remained zero.
+
+This selects `H-M5-InputProducerGap` for the measured chain and refutes an
+output-consumer-first loss and an accounting/join failure for these rows. It
+does not identify the missing producer and does not authorize a writeback,
+fill, audio-gate, or task-data mitigation. This is single-capture evidence;
+the next unit must identify the pre-input producer boundary using existing
+joins and the retail oracle.
+
+ORIGIN: no mitigation or value change was made; the iteration only analyzed
+the existing qualified capture. Evidence:
+`docs/M5-S3764-IMAGE-SOURCE-OUTPUT-BOUNDARY.md` and
+`scratch/agent/s3762_m5_step1_silent_repeat/`.
