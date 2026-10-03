@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3813 (2026-10-03).
+Updated for session 3814 (2026-10-03).
 
 ## Current state
 
@@ -39,8 +39,15 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 upstream zero-DMEM producer, next qualified route.** s3813 isolated
-   the real image arm and reached title `0x00790400` at 13.4s and hangar
+1. **M5 upstream zero-DMEM producer, next qualified route.** s3814 reached
+   both target phases, but the requested producer census was not armed: the
+   run had zero source-writer, DMEM-coverage, and producer-control rows. Treat
+   this attempt as coverage-invalid H3; the next run must arm the existing
+   `ROGUESQ_LOG_M5_SOURCE_WRITER`, `ROGUESQ_LOG_M5_RSP_SOURCE`, and
+   `ROGUESQ_LOG_M5_SOURCE_TRANSITION` gates in the same qualified image route.
+   Do not interpret the zero `m5-input-dma` payload from this run as a new
+   producer conclusion. s3813 isolated the real image arm and reached title
+   `0x00790400` at 13.4s and hangar
    `0x006AB400` at 24.6s with no crash/abort and live controls. In hangar,
    repeated image-stage rows show the live consumer reading all-zero DMEM
    `0xCB0..0xE48` into `0x1798B0..0x179A48` (`FNV=0x762B22A5`, `nz=0`).
@@ -312,6 +319,14 @@ Work only the first applicable item. This is one monotonic backlog.
   `FNV=0x762B22A5` and `nz=0`; the stage consumer was live. This selects the
   qualified zero-DMEM producer boundary and closes the isolated-startup
   blocker. Evidence: `scratch/agent/s3813_m5_image_isolated_qualification/`.
+- **3814 — producer census coverage invalid:** the Debug build passed and the
+  same isolated image route reached title and hangar, captured 159 frames, and
+  produced 22,850 target input-DMA rows with zero crashes/aborts. However, the
+  prescribed source-writer/DMEM census gates were omitted from the command:
+  source-writer, DMEM-coverage, and producer-control rows were all zero. The
+  run therefore selects H3 coverage-invalid and adds no producer conclusion;
+  its zero input payload is not independent evidence. Evidence:
+  `scratch/agent/s3814_m5_zero_dmem_producer/image/run.log`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

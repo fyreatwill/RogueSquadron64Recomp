@@ -140504,3 +140504,18 @@ refutes isolated image startup failure as the current blocker. It does not
 identify the upstream writer or authorize a mitigation.
 
 Evidence: `scratch/agent/s3813_m5_image_isolated_qualification/image/run.log`.
+## Session 3814 (2026-10-03) — producer census was coverage-invalid
+
+Built `RogueSquadron64Recomp` Debug successfully and ran the prescribed
+isolated real-image route. The run reached title VI `0x00790400` and hangar VI
+`0x006AB400`, captured 159 frames, and had 22,850 target `m5-input-dma` rows
+with `FNV=0x762B22A5`, `input_nz=0`, and no `[CRASH]` or `[ABORT]`.
+
+The discriminating producer census was not actually enabled by the prescribed
+environment: source-writer, DMEM-coverage, and producer-control markers were
+all absent. Therefore this is H3 coverage-invalid, not evidence for H1 or H2;
+the zero input payload cannot be used as an independent producer conclusion.
+The next run must arm the existing source-writer, RSP-source, and
+source-transition gates in the same qualified route. No mitigation was added.
+
+Evidence: `scratch/agent/s3814_m5_zero_dmem_producer/image/run.log`.
