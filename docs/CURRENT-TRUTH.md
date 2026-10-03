@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3774 (2026-10-02).
+Updated for session 3775 (2026-10-02).
 
 ## Current state
 
@@ -200,17 +200,27 @@ qualified, so this selects only image-arm I hangar-edge absence and leaves
 legitimate alternate-object provenance versus route mismatch unevaluable.
 See [M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md](M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md).
 
+Session 3775 repaired the stale clear-edge harness by adding the missing
+writer-setup witness and ran one image-only capture beside the retail oracle.
+The oracle positive control and six family-store controls fired, but the image
+arm crashed before either target VI at `spTaskSchedulerThread+9556`
+(`last-guest-pc=0x8000834c`). Clear writer-setup and family-edge controls were
+absent, so H1/H2/H3 remain unevaluable; this is not a null result. See
+[M5-S3775-CLEAR-EDGE-QUALIFICATION.md](M5-S3775-CLEAR-EDGE-QUALIFICATION.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 clear-object/call-edge qualification.** Design one new image-only
-   capture that makes the clear allocation identity and I call-edge coverage
-   independently positive before interpreting the existing S/L rows. Require
-   the oracle whole-RDRAM control, image family controls, both target VIs, a
-   nonzero clear object/length, and a positive I edge control. Do not infer
-   arm differences, suppress or replace the clear, inject values, or change
-   an audio gate.
+1. **M5 probe-induced pre-target crash split.** Run same-build concurrent
+   image arms with the new writer-setup witness disabled in one arm and
+   enabled in the other, beside the retail oracle. Require the oracle control,
+   family-store controls, both target VIs, and a crash/last-guest-PC result
+   for each arm. If only the enabled arm dies before target, the witness is
+   perturbing qualification and must be redesigned; if both arms behave the
+   same, the crash is route-related and the clear-edge join remains pending.
+   Do not infer clear/object legitimacy from either arm, suppress or replace
+   the clear, inject values, or change an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
@@ -304,6 +314,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-ImageOnly-IHangarEdgeAbsent` | Selected at s3774 for the image-only capture: I had 256 title stores and no hangar stores, with controls and both target VIs positive. |
 | `H-M5-ClearObjectJoin` | Unevaluable at s3774: S/L rows reported `clear_obj=0`/`clear_span=0`, and target-phase clear setup had no allocation identity. |
 | `H-M5-FamilyEdgeCoverage` | Unevaluable at s3774: the recipe emitted no family-edge rows despite positive family-store controls. |
+| `H-M5-ClearEdgeQualification` | Unevaluable at s3775: oracle and family-store controls fired, but the image arm crashed pre-target before clear-setup or family-edge controls. |
 
 ## Evidence ledger — live boundary only
 
@@ -629,6 +640,7 @@ silent control.
 - [M5-S3770-FAMILY-STORE-PROVENANCE.md](M5-S3770-FAMILY-STORE-PROVENANCE.md)
 - [M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md](M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md)
 - [M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md](M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md)
+- [M5-S3775-CLEAR-EDGE-QUALIFICATION.md](M5-S3775-CLEAR-EDGE-QUALIFICATION.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)

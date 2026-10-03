@@ -139734,3 +139734,19 @@ mismatch: the clear-object join and I call-edge arm were unevaluable. The
 missing silent arm prevents any image-versus-silent claim. No mitigation or
 value injection was added. See
 `docs/M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md`.
+
+## Session 3775 (2026-10-02) — clear-edge qualification remained unevaluable
+
+Repaired the stale clear-edge harness by adding the missing writer-setup
+witness to the prior image-only recipe, rebuilt Debug, and ran one image-only
+capture beside the retail oracle. The oracle whole-RDRAM positive control and
+all six image family-store controls fired. The image arm crashed before either
+target VI in `spTaskSchedulerThread+9556` with `last-guest-pc=0x8000834c`;
+clear writer-setup and family-edge controls did not fire.
+
+This does not select H1, H2, or H3: the clear-object and I call-edge joins
+were unevaluable, not null. The next discriminator is a same-build paired
+image capture with writer-setup logging disabled versus enabled, to determine
+whether the new witness perturbs the pre-target route. No mitigation, value
+injection, or audio-gate change was made. See
+`docs/M5-S3775-CLEAR-EDGE-QUALIFICATION.md`.
