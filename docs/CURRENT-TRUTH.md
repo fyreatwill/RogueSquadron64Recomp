@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3764 (2026-10-02).
+Updated for session 3765 (2026-10-02).
 
 ## Current state
 
@@ -102,18 +102,26 @@ output-consumer-first loss. It is single-capture evidence and does not name the
 missing producer or authorize a writeback/fill mitigation. See
 [M5-S3764-IMAGE-SOURCE-OUTPUT-BOUNDARY.md](M5-S3764-IMAGE-SOURCE-OUTPUT-BOUNDARY.md).
 
+Session 3765 re-read the same capture at the pre-input boundary. Across 33
+aligned phase-5 image input DMAs, `0x1798B0 -> DMEM 0xCB0` was all-zero with no
+previous writer attribution. The separate source-span writer census records
+the known legitimate zero-fill PC `0x800078EC` across the range, but no
+nonzero producer. This selects `H-M5-ProducerAbsent` for the measured producer
+classes and moves the next question to the clear's caller/ordering; it does
+not authorize suppressing the clear. See
+[M5-S3765-PRE-INPUT-PRODUCER-BOUNDARY.md](M5-S3765-PRE-INPUT-PRODUCER-BOUNDARY.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 pre-input producer boundary.** s3764 selected
-   `H-M5-InputProducerGap`: the aligned image-task input DMA is already zero,
-   while stage output and PCM source/consumer rows preserve zero. Use the
-   existing source-DMA/task-data joins and the retail oracle to identify the
-   first legitimate producer or clear before `0x1798B0 -> DMEM 0xCB0`.
-   Do not add another task-data value field, change an audio gate, or add a
-   writeback/fill mitigation. Require the oracle positive control and both
-   title/hangar phases.
+1. **M5 clear ordering and caller.** s3765 selected
+   `H-M5-ProducerAbsent` for the measured pre-input producer classes and
+   identified the known zero-fill writer `0x800078EC` across the source span.
+   Join that clear's caller and ordering to the phase-5 route and retail
+   writer timing. Do not add another task-data value field, change an audio
+   gate, or suppress/replace the clear. Require the oracle positive control and
+   both title/hangar phases.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -162,6 +170,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-Step1ContractGap` | Open at s3762: silent and image shared task/route/PCM progress, while image alone emitted image-stage rows; the first meaningful downstream contract difference is not yet identified. |
 | `H-M5-ImageStageOnly` | Selected at s3763: same-build image/silent arms shared task return, SP delivery, PCM counts, slot/voice nulls, and both target phases; image-only work was image-stage/DMA activity. |
 | `H-M5-InputProducerGap` | Selected at s3764 for the measured image chain: aligned input DMA was already zero with no previous writer, and stage/PCM rows preserved zero. Single-capture boundary; producer identity remains open. |
+| `H-M5-ProducerAbsent` | Selected at s3765 for the measured pre-input producer classes: 33 aligned image input-DMA rows were zero with empty previous-writer attribution; the separate source-span census records only the known zero-fill writer `0x800078EC`. Clear caller/order remains open. |
 | `H-M5-OutputConsumerGap` | Refuted at s3764 for the measured chain: the first observed zero preceded image-stage output and PCM consumption. |
 | `H-M5-Accounting` | Refuted at s3764 for the measured rows: oracle/title/hangar controls and phase/ordinal joins were present. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |

@@ -139504,3 +139504,25 @@ ORIGIN: no mitigation or value change was made; the iteration only analyzed
 the existing qualified capture. Evidence:
 `docs/M5-S3764-IMAGE-SOURCE-OUTPUT-BOUNDARY.md` and
 `scratch/agent/s3762_m5_step1_silent_repeat/`.
+## Session 3765 (2026-10-02) — identified pre-input zero-fill boundary
+
+Re-read the existing s3762 same-build oracle/image/silent capture as the
+prescribed M5 pre-input producer work unit; no build or new instrumentation
+was needed. The oracle whole-RDRAM positive control passed (`10000`), and both
+port arms reached title and hangar. In the image arm, 33 aligned phase-5,
+width-512 input-DMA rows for `0x1798B0 -> DMEM 0xCB0` all had
+`FNV=0x762B22A5`, `nz=0`, and empty `prev_writer_*` attribution. Stage-2 and
+stage-3 image rows preserved the same zero payload. The independent source-span
+writer census recorded the known zero-valued writer `0x800078EC` across
+`0x1797B0..0x179A48`, with no nonzero producer.
+
+This selects `H-M5-ProducerAbsent` for the measured pre-input producer
+classes and identifies the known clear as the last observed writer. It rules
+out an output-consumer-first loss and a missing source-DMA payload in this
+capture, but does not explain the clear's caller/order or authorize suppressing
+it. The next work unit joins that caller/order to the route and retail timing.
+
+ORIGIN: no mitigation or value change was made; `0x800078EC` is a legitimate
+zero-valued writer observed by diagnostics, and its intended ordering remains
+unresolved. Evidence: `docs/M5-S3765-PRE-INPUT-PRODUCER-BOUNDARY.md` and
+`scratch/agent/s3762_m5_step1_silent_repeat/`.
