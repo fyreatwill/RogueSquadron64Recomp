@@ -1,37 +1,32 @@
-# Next work unit: M5 task-data native watch coverage and value retry
+# Next work unit: M5 Step 1 audio-contract qualification
 
-HYPOTHESIS-ID: m5-task-data-native-value
+HYPOTHESIS-ID: m5-step1-contract-qualification
 
-Session 3757 passed the page positive control and title phase in both arms,
-and hangar in real, but neither arm generated a target-range fault before the
-known MusyX/VI-retrace crash paths. The target-only decoder was therefore not
-exercised. This is run instability/no-target-fault, not evidence of a zero
-producer.
+The native task-data value thread is parked after three consecutive paired
+captures without a real-arm target fault. Do not add another page-watch field.
 
 Competing hypotheses:
 
-- `H-TaskDataNativeFaultWindow`: target stores occur, but the page is not
-  protected at the relevant target-window times.
-- `H-TaskDataNativeNoStore`: this run reaches the target phase without native
-  stores to the watched range.
-- `H-TaskDataNativeRunUnstable`: a crash or page-watch interaction prevents a
-  complete target capture.
+- `H-M5-ContractComplete`: the current image arm reaches the full task-to-PCM
+  contract at title/hangar; the remaining defects are downstream rendering.
+- `H-M5-ContractGap`: image DMEM/DMA and completion occur, but one named guest
+  service, slot/status, voice/reap, MORT, or PCM edge is absent.
+- `H-M5-RouteInstability`: the real image arm fails before the target phase, so
+  downstream nulls remain unevaluable.
 
-Discriminator: add phase-scoped arm/rearm counters and a bounded first/last
-target-window heartbeat to the existing watcher, retaining the positive
-control, target-only ARM64 decode, and post-store sample. A target-window
-with continuous arm coverage plus no target faults selects `H-TaskDataNativeNoStore`
-for that run; a target-window gap selects `H-TaskDataNativeFaultWindow`;
-another pre-hangar crash or missing target window selects
-`H-TaskDataNativeRunUnstable`. Do not interpret post-store values unless a
-target fault is captured. Do not repeat the retail preflight, scalar census,
-central API census, route-load list, or alter `0x800078EC`.
+Discriminator: one same-build concurrent real/silent run with phase-gated
+title/hangar rows containing dispatch, task fields/source, DMEM/DMA, image
+exit, SP completion, service, slot/status, voice/reap, MORT, PCM source and
+consumer joins, plus whole-RDRAM and route positive controls. A complete row
+selects `H-M5-ContractComplete`; a complete target row with exactly one missing
+edge selects `H-M5-ContractGap`; no real target row selects
+`H-M5-RouteInstability` and keeps downstream nulls unevaluable.
 
 Build once:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run once from `build/`, with both arms concurrently, 75 seconds, SIGKILL
-cleanup, using `scratch/agent/run_s3757_m5_task_value_retry.sh` as the base
-recipe and retaining `ROGUESQ_AUDIO_UCODE=1/0`, LLE-solo, spin-yield,
-autopilot, `PROBE_PHASE_WIDTH=1024`, and `PROBE_KEYS_FROM_PHASE=1`.
+Run the existing validated real/silent phase-gated recipe from `build/` with
+`ROGUESQ_AUDIO_UCODE=1/0`, LLE-solo, spin-yield, autopilot,
+`PROBE_PHASE_WIDTH=1024`, and `PROBE_KEYS_FROM_PHASE=1`. Retain the existing
+M5 dispatch/task/DMA/service/slot/voice/MORT/PCM logs and SIGKILL cleanup.

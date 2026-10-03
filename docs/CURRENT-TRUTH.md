@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3757 (2026-10-02).
+Updated for session 3758 (2026-10-02).
 
 ## Current state
 
@@ -40,28 +40,25 @@ sampling; both controls and title passed, real reached hangar, but neither
 arm produced a target-range fault before the known real MusyX/silent VI
 retrace crashes. See
 [M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md](M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md).
+Session 3758 added target-window arm/re-arm coverage. The silent control passed
+the page positive control and held the page armed across title and hangar target
+ticks, but produced no target fault; the real arm crashed before its target
+window in `spTaskSchedulerThread+9556`. This is incomplete paired coverage,
+not a zero-value result. See
+[M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md).
 
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 native task-data value attribution.** Session 3755 found 39/33
-   target-range native page faults in real/silent arms after both reached title
-   and hangar; symbolized PCs are generated game functions, while the native
-   witness does not expose the store value. Capture the faulting instruction's
-   store width/source register and post-store bytes in one phase-gated run,
-   retaining the page positive control, scalar census, source join, and retail
-   writer attribution. A nonzero value selects a concrete native producer;
-   zero-only rows classify these as legitimate clears/stores and move the
-   boundary onward. Session 3756's first value-decoding attempt was
-   unevaluable because its paired run crashed before target attribution. Retry
-   with a bounded stability improvement that keeps target-only instruction
-   decoding, the same-run page positive control, and post-store sampling, and
-   records page arm/rearm coverage through the target window. Session 3757's
-   retry had zero target faults in both arms before their known crash paths;
-   treat this as run instability/no-target-fault, not a zero result. Do not
-   repeat the scalar census,
-   central API census, closed route-load list, or alter `0x800078EC`.
+1. **M5 audio contract qualification.** The native task-data value thread is
+   parked after three consecutive attempts without a paired real-arm target
+   fault. Run M5 plan Step 1: one build, real and silent arms concurrently,
+   phase-gated title/hangar, and the existing dispatch, task-field/source,
+   DMEM/DMA, image-exit, SP-completion, service, slot/status, voice/reap, MORT,
+   and PCM joins. Require whole-RDRAM/route controls and a target phase; select
+   the next missing contract edge only if a complete row reaches it. Do not add
+   another native page-watch field.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -101,6 +98,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-TaskDataNativeWriteObserved` | Selected at s3755: phase-armed native page faults touched the target span in both real/silent arms; stored value remains unevaluated. |
 | `H-TaskDataNativeValueDecoded` | Unevaluable at s3756: ARM64 decoding was added, but the paired run had no target-phase attribution rows; real/silent crashed in separate paths. |
 | `H-TaskDataNativeValueDecoded` | Unevaluable at s3757: target-only decoding and post-store sampling were installed, but both arms had zero target faults before their crash paths. |
+| `H-TaskDataNativeValueDecoded` | Parked at s3758: silent had positive-control and target-window coverage with no target fault; real crashed before target. Paired value attribution remains unevaluable. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
@@ -130,6 +128,13 @@ Work only the first applicable item. This is one monotonic backlog.
   crashed in the VI retrace path before hangar. This is run-instability/no
   target-fault evidence, not a zero-value result. See
   [M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md](M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md).
+
+- **3758 — native target-window coverage retry:** the silent arm passed the
+  page positive control and sustained title/hangar target ticks with repeated
+  re-arms, but had no target-range fault. The real arm crashed before target in
+  `spTaskSchedulerThread+9556`. This parks native-value attribution rather than
+  selecting a zero producer. See
+  [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md).
 
 - **3754 — non-scalar task-data producer census:** the retail oracle passed its
   whole-RDRAM control and recorded 50,387 task-data-span writes plus 717
@@ -372,6 +377,7 @@ unreconciled.
 - [M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md](M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md)
 - [M5-S3753-TASK-PRODUCER-CENSUS.md](M5-S3753-TASK-PRODUCER-CENSUS.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
+- [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md)
 - [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md)

@@ -6442,6 +6442,11 @@ static void start_m5_task_write_fault_watch() {
         g_m5_task_fault_page = ((uintptr_t)rdram + 0x171E70u) &
             ~(uintptr_t)(g_m5_task_fault_page_size - 1);
         bool armed = false;
+        uint64_t target_ticks = 0;
+        uint64_t target_gaps = 0;
+        uint64_t arm_count = 0;
+        uint64_t rearm_count = 0;
+        bool target_seen = false;
         for (;;) {
             std::this_thread::sleep_for(std::chrono::microseconds(250));
             const uint64_t pending = g_m5_task_fault_pending_n.exchange(
@@ -6478,6 +6483,18 @@ static void start_m5_task_write_fault_watch() {
                     return;
                 }
                 armed = true;
+                ++arm_count;
+                ++target_gaps;
+                if (!target_seen) {
+                    target_seen = true;
+                    fprintf(stderr,
+                        "[m5-task-write-window] event=enter width=%u origin=0x%06X "
+                        "target_ticks=%llu target_gaps=%llu arm_count=%llu rearm_count=%llu\n",
+                        width, origin, (unsigned long long)target_ticks,
+                        (unsigned long long)target_gaps,
+                        (unsigned long long)arm_count,
+                        (unsigned long long)rearm_count);
+                }
                 g_m5_task_fault_enabled.store(1, std::memory_order_release);
                 fprintf(stderr,
                     "[m5-task-write-fault-control] armed page=0x%llX page_size=%zu "
@@ -6490,9 +6507,33 @@ static void start_m5_task_write_fault_watch() {
                          PROT_READ | PROT_WRITE);
                 armed = false;
                 g_m5_task_fault_enabled.store(0, std::memory_order_release);
+                fprintf(stderr,
+                    "[m5-task-write-window] event=exit width=%u origin=0x%06X "
+                    "target_ticks=%llu target_gaps=%llu arm_count=%llu rearm_count=%llu\n",
+                    width, origin, (unsigned long long)target_ticks,
+                    (unsigned long long)target_gaps,
+                    (unsigned long long)arm_count,
+                    (unsigned long long)rearm_count);
             } else if (armed) {
-                mprotect((void*)g_m5_task_fault_page, g_m5_task_fault_page_size,
-                         PROT_READ);
+                ++rearm_count;
+                if (mprotect((void*)g_m5_task_fault_page, g_m5_task_fault_page_size,
+                             PROT_READ) != 0) {
+                    ++target_gaps;
+                }
+            }
+            if (target) {
+                ++target_ticks;
+                if (!armed) ++target_gaps;
+                if (target_ticks == 1 || (target_ticks % 2000u) == 0) {
+                    fprintf(stderr,
+                        "[m5-task-write-window] event=heartbeat width=%u origin=0x%06X "
+                        "target_ticks=%llu target_gaps=%llu arm_count=%llu rearm_count=%llu\n",
+                        width, origin, (unsigned long long)target_ticks,
+                        (unsigned long long)target_gaps,
+                        (unsigned long long)arm_count,
+                        (unsigned long long)rearm_count);
+                    fflush(stderr);
+                }
             }
         }
     }};

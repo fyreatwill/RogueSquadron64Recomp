@@ -139353,3 +139353,23 @@ either native-value hypothesis. The next probe must retain the positive
 control while measuring page arm/rearm coverage through the target window.
 Evidence: `docs/M5-S3757-TASK-DATA-NATIVE-VALUE-RETRY.md` and
 `scratch/agent/s3757_m5_task_value_retry/`.
+
+## Session 3758 (2026-10-02) — added native task-data target-window coverage
+
+Built the Debug target once after extending the task-data native page watcher
+with bounded target-window entry/heartbeat/exit and arm/re-arm coverage. Ran
+the real and silent audio arms concurrently for 75 seconds from `build/` with
+the validated LLE/autopilot/phase-gated recipe and SIGKILL cleanup.
+
+The silent arm passed the page positive control and held the page armed across
+24,125 title target ticks, then reached the 512-width hangar target and
+accumulated 14,487 later target ticks/re-arms. It emitted no target-range
+fault, decoded store, or post-store sample. The real arm crashed before a
+target phase in `spTaskSchedulerThread+9556` (`SIGSEGV`, `si_addr=0x400128d47`).
+
+This rules out a page-watch coverage gap for the silent control in this run, but
+does not establish a global no-store result: the silent arm is the no-audio
+control and the real arm did not reach target. The native-value hypothesis is
+parked after three consecutive unevaluable paired attempts; the next M5 unit
+is the complete Step 1 audio-contract qualification. It does not authorize a
+mitigation or a change to `0x800078EC`.
