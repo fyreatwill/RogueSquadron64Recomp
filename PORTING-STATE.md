@@ -139974,3 +139974,14 @@ was refreshed from s3735 to s3786. This rules out no technical hypothesis; it
 reduces duplicated historical ledger material. The next work unit remains a
 new independently justified retail navigation recipe with whole-RDRAM and
 family/VI positive controls.
+## Session 3787 (2026-10-03) — Start+Z retail recipe lacked video attachment
+
+Ran the exact new Start+Z retail oracle recipe for 120 seconds with the
+whole-RDRAM positive control, route-byte watches, three family-PC watches, and
+VI trace. The positive control fired 10,003 times, so the watch machinery was
+live. The oracle log also reported `No video plugin attached`; retail stayed at
+width 320 for the full run. Route-byte writes were 2 at `0x141AD0`, 1 at
+`0x13B038`, and 0 at `0x141AD1`; target VIs and all three family PCs were zero.
+This rules out nothing about retail family reachability: it is a recipe/config
+failure. The next run repeats the input with the documented Rice video plugin
+explicitly attached.
