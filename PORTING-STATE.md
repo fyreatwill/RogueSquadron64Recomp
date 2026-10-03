@@ -139419,3 +139419,22 @@ writer and zero-valued source payload remain diagnostic observations only.
 Evidence: `docs/M5-S3760-STEP1-IMAGE-QUALIFICATION.md`,
 `scratch/agent/s3760_m5_step1_contract_pair/`, and
 `scratch/agent/s3760_m5_step1_image_only/`.
+## Session 3761 (2026-10-02) — selected silent pre-target crash in Step 1 pair
+
+Ran the prescribed same-build concurrent M5 Step 1 image/silent contract
+recipe with the retail oracle positive control. The oracle whole-RDRAM control
+passed (`10000` callbacks) and reached title and hangar. The image arm reached
+both target VIs and produced the expected task/DMA, image-stage, audio-return,
+audio-route, and PCM rows (6,560 ABI/DMA rows; 26,248 image-stage rows). The
+silent arm emitted no target-phase rows and crashed before title at
+`spTaskSchedulerThread+9556`, `si_addr=0x400128d47`, last guest PC
+`0x8000834c`. The driver classified `silent_hangar=0`, `image_hangar=1` and
+SIGKILLed the remaining processes.
+
+This selects the silent pre-target crash for this qualified capture and does
+not support concurrent pair perturbation as the explanation, because the image
+arm reached hangar in the same run. It does not establish a production-wide
+repeatability rate and leaves downstream silent audio-contract nulls
+unevaluable. No audio gate or task-data instrumentation was changed. Evidence:
+`docs/M5-S3761-STEP1-SILENT-QUALIFICATION.md` and the run logs under
+`scratch/agent/s3761_m5_step1_silent_qualification/`.

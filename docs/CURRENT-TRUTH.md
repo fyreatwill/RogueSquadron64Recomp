@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3760 (2026-10-02).
+Updated for session 3761 (2026-10-02).
 
 ## Current state
 
@@ -64,18 +64,27 @@ image-arm explanation. The silent control remains unstable and the same-run
 image-versus-silent contract comparison is still open. See
 [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md).
 
+Session 3761 repeated the same-build concurrent contract capture. The oracle
+positive control passed and reached both target VIs; image again reached title
+and hangar with 6,560 task/DMA rows, 26,248 image-stage rows, and audio/PCM
+rows. Silent emitted no target rows and crashed before title at
+`spTaskSchedulerThread+9556` (`si_addr=0x400128d47`), while cleanup classified
+the pair as `silent_hangar=0`, `image_hangar=1`. This selects the silent
+pre-target crash for this capture and leaves production repeatability and the
+downstream Step 1 contract open. See
+[M5-S3761-STEP1-SILENT-QUALIFICATION.md](M5-S3761-STEP1-SILENT-QUALIFICATION.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 silent-control pre-target stability qualification.** Step 1 remains
-   open as a paired contract comparison: s3760 qualified the image arm in
-   both concurrent and image-only runs, but the silent control crashed before
-   target at `spTaskSchedulerThread+9556`. Run one same-build concurrent
-   image/silent capture retaining the oracle positive control and full Step 1
-   joins; classify the silent crash and require both arms to reach title and
-   hangar before interpreting any contract divergence. Do not add another
-   task-data value field or change an audio gate.
+1. **M5 silent-route stability discriminator.** Step 1 remains open: s3760
+   qualified the image arm and s3761 again had valid oracle/image coverage,
+   but silent crashed before title at `spTaskSchedulerThread+9556` with no
+   target rows. Run one more same-build paired capture using the existing
+   phase/task/scheduler breadcrumbs to test repeatability; do not add another
+   task-data value field or change an audio gate. Require oracle and image
+   target coverage before interpreting silent nulls.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -141,6 +150,15 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-ClearTooEarly` | Selected at s3706 for the measured source object; this is an explanation of the observed zero payload, not permission for a mitigation. |
 
 ## Evidence ledger — live boundary only
+
+- **3761 — silent-control qualification retry:** the retail oracle passed its
+  whole-RDRAM control and reached title/hangar. The image arm reached both
+  target VIs with 6,560 task/DMA rows, 26,248 image-stage rows, and audio/PCM
+  rows. The silent arm emitted no target rows and crashed before title at
+  `spTaskSchedulerThread+9556` (`si_addr=0x400128d47`); the pair gate was
+  `silent_hangar=0`, `image_hangar=1`. This selects the silent pre-target crash
+  for this capture, without establishing a production-wide repeatability rate.
+  See [M5-S3761-STEP1-SILENT-QUALIFICATION.md](M5-S3761-STEP1-SILENT-QUALIFICATION.md).
 
 - **3759 — Step 1 contract retry:** the retail oracle passed its whole-RDRAM
   control and reached title/hangar. The silent port arm reached title and
