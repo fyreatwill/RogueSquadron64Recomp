@@ -140710,3 +140710,17 @@ alternate-object writes and refutes an aliasing join at this scope. It rules
 out H1, but not whether the alternate objects are intended route state or a
 disconnected output family. Evidence: `docs/M5-S3824-FAMILY-ROUTE-OBJECT-JOIN.md`
 and `scratch/agent/s3824_m5_family_route_object_join_fixed/run.log`.
+## Session 3825 (2026-10-03) — selected disconnected alternate family objects
+
+Built `RogueSquadron64Recomp` Debug and ran the planned M5 alternate
+family-object route join. The first direct image launch stayed at VI 640 and
+was coverage-invalid; the fixed validated route reached title VI 1024 at
+13.3s and hangar VI 512 at 24.6s, with no crash or abort. Family edge/store,
+clear-witness, route-order, and source-range/source-transition controls were
+positive. It recorded 1,280 target-phase family stores and 257 family-entry
+rows; all stores were outside the clear-associated `0x801797B0..0x80179A47`
+object and span, and all family entries had `target_arg=0`. This selects H2 at
+the measured scope: the alternate family objects are disconnected from the
+active clear/source object. It does not establish whether they are intended
+route state or a disconnected output family. Evidence:
+`scratch/agent/s3825_m5_family_route_object_join_fixed/`.

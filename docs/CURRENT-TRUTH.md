@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3824 (2026-10-03).
+Updated for session 3825 (2026-10-03).
 
 ## Current state
 
@@ -44,13 +44,12 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 alternate family-object route join.** Session 3824 selected that the
-   phase-qualified S/L/I family writes legitimate alternate objects: 1,280
-   stores had no target or clear-span join while the clear witness identified
-   `0x801797B0`. Join those alternate object addresses to the active route
-   snapshot and source-DMA handoff to determine whether they are intended
-   route state or a disconnected output family. Use one bounded image run with
-   the existing family, route, clear, and source-DMA controls.
+1. **M5 alternate family-object ownership.** Session 3825 selected H2 at the
+   qualified scope: 1,280 S/L/I stores and 257 family-entry rows stayed outside
+   the clear-associated `0x801797B0..0x80179A47` object while route-order and
+   source-range/source-transition controls were live. Determine whether these
+   alternate objects are intended route state or a disconnected output family;
+   do not repeat the completed aliasing join.
 2. **M5 port target-phase qualification, closed at this scope.** s3821's pair
    was coverage-invalid because the port arm stopped at VI 640; s3822's
    standalone arm reached both target phases. Do not repeat standalone
@@ -87,7 +86,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailWriterPortEdgeAbsent` | Selected for measured target phases; retail writer families have port bodies but no target-buffer edge. |
 | `H-M5-RetailWriterFamilyOtherObject` | Selected for S/L; their stores target alternate objects. |
 | `H-M5-RetailWriterFamilyAbsentTargetEdge` | Selected for I; no hangar-phase family edge. |
-| `H-M5-FamilyRouteIdentityMismatch` | Open: alternate-object identity has not joined to the clear-associated route. |
+| `H-M5-FamilyRouteIdentityMismatch` | Selected at s3825 scope: alternate family objects do not join the clear-associated route/source object; semantic ownership remains open. |
 | `H-M5-PortGuestRouteZero` | Single-source selected at s3781: qualified port family rows sampled zero route bytes. |
 | `H-M5-RetailGuestRouteParity` | Unevaluable: retail has not reached family PCs or target VI in the recipes tried. |
 | `H-M5-RetailRecipePreTarget` | Selected for s3782–s3785 recipes; each stayed in 320-wide attract with whole-RDRAM control positive. |
@@ -122,6 +121,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-PairedTargetCoverage` | Selected at s3823: the same-build port image and independent retail oracle both fired positive controls and reached title/hangar target phases without crash/abort. |
 | `H-M5-RetailPortRouteParity` | Selected at s3823 scope: port hangar source DMA was zero (`FNV=0x762B22A5`, `nz=0`), matching the independent s3820 retail hangar snapshot; the s3823 oracle shutdown snapshot was phase-mixed and is not used as exact-span evidence. |
 | `H-M5-FamilyAlternateObject` | Selected at s3824 scope: 1,280 target-phase family stores and 257 family entries were positive, but none joined the clear object `0x801797B0` or its span; the active route snapshot was present. |
+| `H-M5-FamilyDisconnectedOutput` | Selected at s3825 scope: the fixed image route reached both target VIs with active route/source controls, while every sampled family entry/store remained outside the clear object and span. |
 
 ## Evidence ledger — live boundary
 
@@ -491,6 +491,17 @@ line naming the writer and stating whether its value is legitimate.
   selects legitimate alternate-object writes at the measured scope and
   refutes an aliasing join; alternate-object route identity remains open.
   Evidence: `docs/M5-S3824-FAMILY-ROUTE-OBJECT-JOIN.md`.
+- **3825 — fixed alternate family-object route join:** the Debug build passed.
+  An initial direct launch stayed at VI 640 and was coverage-invalid. The fixed
+  validated image route reached title `0x00790400`/1024 at 13.3s and hangar
+  `0x006AB400`/512 at 24.6s, with no crash or abort. Family, clear-witness,
+  route-order, and source-range/source-transition controls were positive. The
+  1,280 phase-qualified family stores and 257 family-entry rows remained
+  outside `0x801797B0..0x80179A47`; no store had `target=1`, `clear_exact=1`,
+  or `clear_span=1`, and family entries had `target_arg=0`. This selects H2
+  (alternate family objects are disconnected from the active source object) at
+  the measured scope and leaves their semantic ownership open. Evidence:
+  `scratch/agent/s3825_m5_family_route_object_join_fixed/`.
 
 ## Superseded conclusions
 
