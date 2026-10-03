@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3768 (2026-10-02).
+Updated for session 3769 (2026-10-02).
 
 ## Current state
 
@@ -139,18 +139,30 @@ legitimate zero-valued `0x800078EC` padding followed the clear. This selects
 buffer/route identity mismatch open. See
 [M5-S3768-RETAIL-PORT-EDGE-AUDIT.md](M5-S3768-RETAIL-PORT-EDGE-AUDIT.md).
 
+Session 3769 ran the phase-gated family-entry census in concurrent image and
+silent arms, beside the retail oracle. The oracle whole-RDRAM control passed
+and reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; both port
+arms reached both phases and passed all family controls. In each port arm,
+`rs_strncpy` and `loadTextureToMemory` each executed 64 rows in title and 64
+in hangar, but none carried an argument in the title/hangar target ranges.
+`initTextureLUTAndAllocBuffers` had no target-phase entry. Retail independently
+executed the corresponding PCs in target phases. This selects other-object
+execution for S/L and absent target edge for I, while leaving the legitimacy
+of the other-object route unresolved. See
+[M5-S3769-RETAIL-PORT-FAMILY-EDGE.md](M5-S3769-RETAIL-PORT-FAMILY-EDGE.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 target-buffer identity versus missing family execution edge.** The
-   static family audit selected `H-M5-RetailWriterPortEdgeAbsent` for the
-   measured title/hangar target buffers, but cannot distinguish absent
-   execution from a route/object identity mismatch. Batch one phase-gated port
-   execution census for `rs_strncpy`, `initTextureLUTAndAllocBuffers`, and
-   `loadTextureToMemory`, joined to destination ranges and the clear's route
-   ordinal; retain the existing positive controls and require both target VIs.
-   Do not suppress or replace the clear, inject values, or change an audio gate.
+1. **M5 family destination provenance versus route identity.** S/L execute in
+   both target phases on non-target object arguments, while I has no target
+   entry. Batch one regeneration-safe internal-store destination census for
+   the three family bodies, joined to phase, route ordinal, and the
+   `0x8008F2CC` clear; retain the whole-RDRAM control and require both target
+   VIs in image and silent arms. Distinguish legitimate alternate objects from
+   a route/object identity mismatch. Do not suppress or replace the clear,
+   inject values, or change an audio gate.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -207,6 +219,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailWriterPortEdgeAbsent` | Selected at s3768 for the measured title/hangar target buffers: retail writer families have generated port bodies, but no family write joined either target buffer in the qualified port capture. |
 | `H-M5-RetailWriterHasPortEdge` | Refuted at s3768 for the measured target-buffer phases; no family write appeared in the target-span rows. |
 | `H-M5-RetailWriterJoinMismatch` | Open at s3768: static family bodies exist, but the capture does not distinguish absent execution from a buffer/route identity mismatch. |
+| `H-M5-RetailWriterFamilyOtherObject` | Selected at s3769 for S/L: both port arms executed each family in title and hangar, but zero entry arguments fell in either target buffer range. |
+| `H-M5-RetailWriterFamilyAbsentTargetEdge` | Selected at s3769 for I: both port arms passed the family control, but no target-phase entry occurred; retail independently reached the PC. |
+| `H-M5-RetailWriterFamilySameTarget` | Refuted at s3769: no S/L entry argument matched the title or hangar target ranges, and I had no target-phase entry. |
 | `H-M5-ClearIsWrongOrder` | Refuted for the measured port caller/order: no legitimate producer was observed before the `0x8008F2CC` clear, and the static caller performs allocation, clear, then writeback. |
 | `H-M5-JoinMismatch` | Refuted for the measured target row: static callsite, destination, fill, length, phase-5 route, and source-DMA range joined in both arms. |
 | `H-M5-OutputConsumerGap` | Refuted at s3764 for the measured chain: the first observed zero preceded image-stage output and PCM consumption. |
@@ -242,6 +257,15 @@ Work only the first applicable item. This is one monotonic backlog.
   selects target-buffer edge absence, while leaving route/object identity
   mismatch open. No mitigation was added. See
   `docs/M5-S3768-RETAIL-PORT-EDGE-AUDIT.md`.
+
+- **3769 — family-entry destination census:** the oracle positive control and
+  both target VIs passed. Image and silent port arms matched: S/L each had
+  64 title and 64 hangar entries, all outside the target ranges; I had zero
+  target-phase entries. Retail independently executed S/L/I in the target
+  phases. This selects alternate-object execution for S/L and absent target
+  edge for I; internal store destinations and route identity remain open. No
+  mitigation was added. See
+  [M5-S3769-RETAIL-PORT-FAMILY-EDGE.md](M5-S3769-RETAIL-PORT-FAMILY-EDGE.md).
 
 - **3762 — silent-route stability repeat:** the retail oracle passed its
   whole-RDRAM control and reached title/hangar; both image and silent arms
@@ -533,6 +557,7 @@ silent control.
 - [M5-S3746-HOST-WRITE-API-CENSUS.md](M5-S3746-HOST-WRITE-API-CENSUS.md)
 - [M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md](M5-S3751-EXACT-CANDIDATE-LOAD-CENSUS.md)
 - [M5-S3753-TASK-PRODUCER-CENSUS.md](M5-S3753-TASK-PRODUCER-CENSUS.md)
+- [M5-S3769-RETAIL-PORT-FAMILY-EDGE.md](M5-S3769-RETAIL-PORT-FAMILY-EDGE.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)

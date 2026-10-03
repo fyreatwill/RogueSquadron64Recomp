@@ -139595,3 +139595,29 @@ made. See `docs/M5-S3768-RETAIL-PORT-EDGE-AUDIT.md`.
 
 ORIGIN: the observed `0x800078EC` writer is legitimate zero padding; the
 missing nonzero writer remains unexplained.
+## Session 3769 (2026-10-02) — separated family alternate-object and absent-edge cases
+
+The first s3769 run exposed an invalid title gate in the new family-entry
+instrument (`0x006AB800` instead of the validated port title VI
+`0x00790400`); it was corrected and the same-build oracle/image/silent run
+was repeated. The oracle whole-RDRAM positive control passed, and the retail
+arm reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Both port
+arms reached both target VIs, passed all three family controls, and had no
+crash or abort marker.
+
+The phase-gated port table matched across arms: `rs_strncpy` and
+`loadTextureToMemory` each produced 64 title and 64 hangar entry rows, but no
+row carried an argument in the title (`0x80178C80..0x80178F80`) or hangar
+(`0x801797B0..0x80179A48`) target range. `initTextureLUTAndAllocBuffers`
+produced no target-phase entry. The retail oracle independently executed the
+corresponding PCs in target phases. This selects alternate-object execution
+for S/L and an absent target edge for I; it refutes a shared same-target entry
+edge, but does not establish whether S/L's alternate object is legitimate or
+an object/route identity mismatch. The next work unit instruments internal
+store destinations. No mitigation, clear suppression, payload injection, or
+audio-gate change was made.
+
+ORIGIN: diagnostic entry hooks only; the existing `0x800078EC` zero padding
+remains a legitimate observed writer. Evidence:
+`docs/M5-S3769-RETAIL-PORT-FAMILY-EDGE.md` and
+`scratch/agent/s3769_m5_family_edge/`.

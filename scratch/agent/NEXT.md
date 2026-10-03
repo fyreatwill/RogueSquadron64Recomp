@@ -1,39 +1,37 @@
-# Next work unit: M5 target-buffer identity versus family execution edge
+# Next work unit: M5 family destination provenance versus route identity
 
 HYPOTHESIS-ID: m5-retail-writer-port-edge
 
-Use s3768's fixed boundary: the generated port contains the retail writer
-bodies, but no family write joined either target buffer in the qualified s3767
-capture. Determine whether those bodies execute with a different
-destination/route or do not execute in the target phases. Do not suppress or
-replace the clear.
+Use s3769's boundary: in both port arms, `rs_strncpy` and
+`loadTextureToMemory` entered in title and hangar but no argument was in the
+target ranges; `initTextureLUTAndAllocBuffers` had no target-phase entry. The
+next census must observe internal store destinations, not only entry
+arguments, and must retain the independent controls.
 
 Competing hypotheses:
 
-- `H-M5-RetailWriterFamilyExecutesSameTarget`: all three family classes
-  execute in a target phase and write the clear-associated buffer.
-- `H-M5-RetailWriterFamilyExecutesOtherObject`: family execution is present,
-  but its destination or route identity differs from the clear-associated
-  target buffer.
-- `H-M5-RetailWriterFamilyAbsentTargetEdge`: positive controls and both target
-  phases pass, but one or more family classes produce no target-phase edge.
+- `H-M5-FamilyStoresAlternateLegitimateObject`: S/L internal stores land in
+  a legitimate alternate texture/source object, while I is setup-only or
+  legitimately pre-target.
+- `H-M5-FamilyStoresExpectedTargetViaHiddenPointer`: one or more family bodies
+  derive the target buffer internally despite non-target entry arguments.
+- `H-M5-FamilyRouteIdentityMismatch`: family-derived destinations disagree
+  with the clear-associated route object, identifying an object/route join
+  mismatch rather than absent execution.
 
-Discriminator: one phase-scoped table keyed by the three family classes
-(`rs_strncpy`, texture-LUT zeroing, texture-record population), recording
-execution count, destination range, phase, route ordinal, and relation to the
-`0x8008F2CC` clear. Same-target, other-object, and no-target rows split the
-hypotheses. The run must retain the oracle whole-RDRAM positive control and
-both title/hangar phases.
+Discriminator: one phase-gated, regeneration-safe store census for every
+internal store site in the three family bodies, recording family, store PC,
+effective destination, value/width, phase, route ordinal, and relation to the
+title (`0x178C80..0x178F80`) or hangar (`0x1797B0..0x179A48`) target ranges.
+The oracle must retain whole-RDRAM, title, and hangar controls. Both image and
+silent port arms must reach both target VIs; otherwise that arm is invalid.
 
-Before building, verify the current fixup anchors and existing positive
-controls:
+Before building, locate all family-body stores and the existing fixup anchors:
 
-`rg -n '80007670|8001E2C0|8001F|800078EC|8008F2CC' RecompiledFuncs src docs | head -200`
+`rg -n -C 2 'rs_strncpy|initTextureLUTAndAllocBuffers|loadTextureToMemory|MEM_[BHW]|80007670|8001E2C0|8001FA|8001FB|8001FD' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_{2,6}.c`
 
-`rg -n 'rs_strncpy|initTextureLUTAndAllocBuffers|loadTextureToMemory|m5_writer_parity' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_{2,6}.c tools`
+`rg -n 's3769 M5 family entry edges|rs64_m5_family_entry|rs64_m5_writer_parity' /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
 
-`grep -a -E '\[oracle\] (watch write|done:)|\[vi\].*origin=0x00(790400|6ab400)' scratch/agent/s3767_m5_postclear_order/oracle.log | tail -80`
-
-The implementation must be one regeneration-safe batch instrument, one build,
-and one concurrent oracle/image/silent run. Positive-control failure or a
-missing target VI invalidates that arm rather than producing a null result.
+Use one fixup-script batch, one Debug build, and one concurrent oracle/image/
+silent run. Do not suppress the clear, inject payloads, or change an audio
+gate.

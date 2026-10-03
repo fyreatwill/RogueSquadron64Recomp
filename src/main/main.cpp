@@ -465,6 +465,65 @@ extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, ui
     ++rows;
 }
 
+extern "C" void rs64_m5_family_entry(const char* family, uint32_t pc,
+                                       uint32_t a0, uint32_t a1, uint32_t a2,
+                                       uint32_t a3, uint32_t ra) {
+    static int enabled = -1;
+    static unsigned control[3] = {};
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static unsigned rows[3] = {};
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_FAMILY_EDGE");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled || !family) return;
+    unsigned which = family[0] == 'S' ? 0u : (family[0] == 'L' ? 2u : 1u);
+    if (control[which] < 2u) {
+        std::fprintf(stderr,
+            "[m5-family-edge-control] family=%s pc=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X ra=0x%08X\n",
+            family, pc, a0, a1, a2, a3, ra);
+        std::fflush(stderr);
+        ++control[which];
+    }
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target_phase =
+        (width == 1024u && origin == 0x00790400u) ||
+        (width == 512u && origin == 0x006AB400u);
+    if (!target_phase) return;
+    const uint32_t next_bucket = (width << 24) ^ origin;
+    if (next_bucket != bucket) {
+        bucket = next_bucket;
+        rows[0] = rows[1] = rows[2] = 0;
+    }
+    if (rows[which] >= 64u) return;
+    uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &route_row, &exit_reason, &arm);
+    const bool target_arg =
+        (a0 >= 0x80178C80u && a0 < 0x80178F80u) ||
+        (a1 >= 0x80178C80u && a1 < 0x80178F80u) ||
+        (a2 >= 0x80178C80u && a2 < 0x80178F80u) ||
+        (a3 >= 0x80178C80u && a3 < 0x80178F80u) ||
+        (a0 >= 0x801797B0u && a0 < 0x80179A48u) ||
+        (a1 >= 0x801797B0u && a1 < 0x80179A48u) ||
+        (a2 >= 0x801797B0u && a2 < 0x80179A48u) ||
+        (a3 >= 0x801797B0u && a3 < 0x80179A48u);
+    std::fprintf(stderr,
+        "[m5-family-edge] family=%s n=%u pc=0x%08X phase=%u width=%u origin=0x%06X "
+        "arm=%s active=%u ordinal=%u row=%u exit=%d target_arg=%u "
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X ra=0x%08X\n",
+        family, rows[which], pc, rs64_phase_ord(), width, origin,
+        arm ? arm : "n/a", active ? 1u : 0u, ordinal, route_row,
+        exit_reason, target_arg ? 1u : 0u, a0, a1, a2, a3, ra);
+    std::fflush(stderr);
+    ++rows[which];
+}
+
 extern "C" void rs64_m5_clear_branch(uint32_t pc, uint32_t branch_taken,
                                        uint32_t v0, uint32_t v1,
                                        uint32_t a0, uint32_t a1, uint32_t a2,
