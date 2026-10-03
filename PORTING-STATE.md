@@ -141198,3 +141198,27 @@ An independent prerequisite check also found no
 This confirms H3 for the validation environment, not H1 or H2 for allocator
 behavior. The metadata-slot guard remains unvalidated; the next work unit
 returns to the applicable M5 retail task-data-pointer to image-stage join.
+
+## Session 3854 (2026-10-03) — joined retail task pointers to stage writers
+
+Ran `scratch/agent/run_s3854_m5_task_stage_data_join.sh`, a paired 75-second
+retail/oracle and port capture. The retail arm passed the whole-RDRAM positive
+control, reached 631 title VIs and 691 hangar VIs, and produced 1,313 type-2
+task rows. The oracle's phase-gated `pc-task-join` produced 21 rows: task data
+pointers `0x80171E70` and `0x80173CB0` appeared at both known stage PCs,
+`0x80015BC8` and `0x8000F3A0`, and each pointer joined multiple `s1`
+structures. No unique destination/length tuple was present. The port arm
+produced 3,006 image-DMA joins and had zero crash/abort markers.
+
+This selects H2 for the task-pointer hypothesis: the pointers are reused
+generic inputs rather than unique stage owners. It rules out H1 at this scope
+and leaves the retail destination/writeback role open; H3 is not selected
+because the exact task/stage join was active and the ambiguity was structural,
+not a missing phase window.
+
+ORIGIN: diagnostic-only oracle watches and port logging; no guest or host state
+was rewritten, skipped, or guarded.
+
+Evidence: `scratch/agent/s3854_m5_task_stage_data_join/driver.log`,
+`retail.log`, `retail_join.txt`, `port.log`, and
+`scratch/agent/run_s3854_m5_task_stage_data_join.sh`.
