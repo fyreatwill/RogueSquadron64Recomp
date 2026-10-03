@@ -1085,6 +1085,7 @@ static thread_local uint32_t g_rs64_m5_last_dmem_writer_nonzero = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_kind = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_vector_op = 0;
 static thread_local uint32_t g_rs64_m5_last_dmem_writer_route_ordinal = 0xFFFFFFFFu;
+static thread_local uint64_t g_rs64_m5_last_input_dmem_writer_seq = 0;
 
 extern "C" uint64_t rs64_m5_clear_branch_dmem_sequence() {
     return g_rs64_m5_last_dmem_writer_seq;
@@ -1796,7 +1797,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
                 "source_fnv=%08X source_nz=%u post_fnv=%08X post_nz=%u "
                 "dmem_subrange=0x%03X..0x%03X seq=%llu writer_addr=0x%03X "
                 "writer_len=0x%X kind=%s vector_op=0x%08X value=0x%08X writer_fnv=%08X "
-                "writer_nz=%u writer_route=%u\n",
+                "writer_nz=%u writer_route=%u input_dma_seq=%llu\n",
                 rows[slot], phase, width, origin, route_ordinal, dram_addr, len,
                 payload_fnv, payload_nz, post_fnv, post_nz, segment_first,
                 segment_last, static_cast<unsigned long long>(segment_sequence),
@@ -1805,7 +1806,8 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
                     (first_coverage.kind ? "vector" : "scalar"),
                 first_coverage.vector_op, first_coverage.value,
                 first_coverage.fnv, first_coverage.nonzero,
-                first_coverage.route_ordinal);
+                first_coverage.route_ordinal,
+                static_cast<unsigned long long>(g_rs64_m5_last_input_dmem_writer_seq));
             segment_first = segment_last;
         }
         std::fflush(stderr);
@@ -3503,6 +3505,16 @@ extern "C" void rs64_m5_audio_dmem_dma_write(uint32_t dmem_addr,
     g_rs64_m5_last_dmem_writer_fnv = fnv;
     g_rs64_m5_last_dmem_writer_nonzero = nonzero;
     g_rs64_m5_last_dmem_writer_route_ordinal = route.ordinal;
+    const bool input_window = first < 0xE48u && first + count > 0xCB0u;
+    if (input_window) {
+        g_rs64_m5_last_input_dmem_writer_seq = sequence;
+        std::fprintf(stderr,
+            "[m5-vector-order] phase=%u width=%u origin=0x%06X "
+            "input_dma_seq=%llu dmem=0x%03X len=0x%X\n",
+            rs64_phase_ord(), route.width, route.origin,
+            static_cast<unsigned long long>(sequence), first, len);
+        std::fflush(stderr);
+    }
 
     std::lock_guard<std::mutex> lock(g_rs64_m5_dmem_coverage_mutex);
     for (uint32_t i = 0; i < count; ++i) {

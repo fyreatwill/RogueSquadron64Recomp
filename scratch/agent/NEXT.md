@@ -1,32 +1,34 @@
-# Next work unit: order vector stores against the zero input DMA
+# Next work unit: attribute the zero source-RDRAM span
 
-HYPOTHESIS-ID: m5-audio-vector-store-ordering
+HYPOTHESIS-ID: m5-audio-source-rdram-writer
 
-s3816 added vector instruction-class provenance and selected an independent RSP
-vector writer, but the target source span is still zero at the input DMA.
+s3817 qualified the DMEM ordering join. The target-valid image route reached
+title and hangar; 512/512 sampled `0xCB0`-window vector rows and 4,096/4,096
+broader `0xDxx` vector rows occurred after the `0xCB0 -> 0xE48` input DMA.
+Do not repeat the DMEM census.
 
 Competing hypotheses and discriminator:
 
-- H1: independent vector stores precede the `0xCB0 -> 0xE48` input DMA and are
-  overwritten by its zero payload.
-- H2: vector stores follow the input DMA, so they cannot explain the zero
-  payload consumed by that DMA; the zero producer remains a DMA/initialization
-  write.
-- H3: sequence relation remains unobservable despite target-valid provenance.
+- H1: the zero source span is written by a legitimate CPU clear/fill before
+  the input DMA.
+- H2: the source span is zero because of a distinct DMA/RDRAM writer or stale
+  source object, not the known clear path.
+- H3: the target-phase source-RDRAM writer cannot be joined to the input DMA.
 
-The discriminator is one target-valid, phase-scoped sequence join covering
-every writer of DMEM `0xCB0..0xE48`: vector sequence before the input-DMA
-sequence selects H1, vector sequence after it selects H2, and absent/unjoinable
-sequence rows selects H3. Do not repeat the existing census unchanged.
+The discriminator is one target-valid, phase-scoped RDRAM writer join covering
+`0x1798B0..0x179A48`, with the whole-RDRAM/phase/task controls preserved.
+Identify the final writer PC and store width/value immediately before the
+input DMA. A legitimate zero-valued clear/fill selects H1; a distinct writer
+or object selects H2; absent or unjoinable writer evidence selects H3.
 
-Commands:
+Before building, enumerate the existing `m5-input-writer` and RDRAM-store
+hooks and add only the sequence join needed to relate their last writer to the
+input-DMA event. Build once, then run one isolated image arm:
 
-    rg -n "m5-dmem-coverage|m5-source-range-writer|audio_dmem_dma_write" src lib/N64ModernRuntime
+    rg -n "m5-input-writer|pre_dma_writer|source_range_dma_write|1798B0" src/main/main.cpp lib/N64ModernRuntime
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    mkdir -p scratch/agent/s3817_m5_vector_store_ordering
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_M5_SOURCE_WRITER=1 ROGUESQ_LOG_M5_RSP_SOURCE=1 ROGUESQ_LOG_M5_SOURCE_TRANSITION=1 ROGUESQ_AUTOPILOT='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' ROGUESQ_AUTOPILOT_STOP_WIDTH=512 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/s3817_m5_vector_store_ordering/image 180 1
+    mkdir -p scratch/agent/s3818_m5_source_rdram_writer
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_M5_SOURCE_WRITER=1 ROGUESQ_LOG_M5_RSP_SOURCE=1 ROGUESQ_LOG_M5_SOURCE_TRANSITION=1 ROGUESQ_LOG_M5_INPUT_WRITER=1 ROGUESQ_AUTOPILOT='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' ROGUESQ_AUTOPILOT_STOP_WIDTH=512 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/s3818_m5_source_rdram_writer/image 180 1
 
-Before building, add the single writer-sequence join at the existing DMEM
-writer hook and preserve the positive controls. Inspect only bounded markers
-in `run.log`; classify H1/H2/H3 from the complete target join. Do not run a
-second arm. Kill any surviving game process with SIGKILL.
+Inspect bounded phase/control/input-writer markers only. Kill any surviving
+game process with SIGKILL.

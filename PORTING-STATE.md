@@ -140559,3 +140559,20 @@ precede or follow the zero input DMA, so the writer-origin explanation remains
 open at ordering scope.
 
 Evidence: `scratch/agent/s3816_m5_zero_dmem_vector_origin/image/run.log`.
+
+## Session 3817 (2026-10-03) — ordered RSP vector stores against zero input DMA
+
+Added the target-phase input-DMA sequence marker and joined it to the existing
+shared DMEM-writer sequence. The Debug build passed. The isolated real-image
+arm reached title VI `0x00790400` and hangar VI `0x006AB400`; phase, source,
+task, route, and audio-return controls were live, with no crash or abort.
+
+The run recorded 1,319 target input-DMA markers. In the source-range join,
+all 512 sampled vector rows covering `0xCB0` had `vector_seq > input_dma_seq`.
+The broader `0xDxx` vector sample independently showed the same ordering for
+4,096/4,096 rows. This refutes H1: the observed zero-valued `SQV`/`SSV`
+stores follow the zero input DMA and cannot be the writer overwritten by it.
+H2 is selected at this scope; the legitimate source-RDRAM writer or clear/fill
+chain remains open. No mitigation was added.
+
+Evidence: `scratch/agent/s3817_m5_vector_store_ordering/image/run.log`.
