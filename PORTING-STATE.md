@@ -139073,3 +139073,26 @@ Evidence: `docs/M5-S3746-HOST-WRITE-API-CENSUS.md`,
 `scratch/agent/s3746_oracle_exact_route/oracle.log`,
 `scratch/agent/s3746_port_host_exact_route/real.log`, `silent.log`, and
 `scratch/agent/s3746_port_host_exact_route_fixed/silent.log`.
+
+## Session 3747 (2026-10-02) — censused remaining host RDRAM writers
+
+The active M5 unit was the remaining arbitrary host-side ownership gap for
+physical fields `0x128C92` and `0x128CD0..0x128CD4`. Before any build, the
+repeatable source census `tools/audit-host-rdram-writes.sh` scanned 61 files
+under `src/`, host-side librecomp, and ultramodern. It found 11 target-literal
+occurrences, all in existing diagnostics, and no production host writer with a
+literal target address. Direct `rdram[...] =` writes were the existing
+diagnostic fill markers; generic `MEM_*` writes were the already-censused API
+surfaces or unrelated runtime setup paths.
+
+This refutes `H-HostLiteralDirectWriter` for the scanned source tree. It does
+not refute a computed-pointer write through a generic macro or an external
+library, and it supplies no writer-PC attribution, so `H-HostExactWriter` and
+`H-RouteStateNotSource` remain open. No runtime build or mitigation was run;
+the observed zero route state was not changed. ORIGIN: the only direct writes
+found are diagnostic markers, while the route-state zero remains owned by the
+existing guest clear/source path; this iteration did not alter either.
+
+Evidence: `tools/audit-host-rdram-writes.sh`,
+`docs/M5-S3747-HOST-RDRAM-WRITE-CENSUS.md`, and the captured output in
+`/tmp/rs64-host-rdram-writes-s3747.txt`.

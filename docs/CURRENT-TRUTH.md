@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3746 (2026-10-02).
+Updated for session 3747 (2026-10-02).
 
 ## Current state
 
@@ -30,14 +30,13 @@ zero-valued port payload. See
 Work only the first applicable item. This is one monotonic backlog.
 
 1. **M5 remaining arbitrary host ownership / route-state interpretation.**
-   s3746's central host-write API census fired per-API controls for PI ROM,
-   RSP DMA, PI SRAM, and zmemcpy in the qualified control arm, but found no
-   target-phase exact-field rows; the qualified real arm also found none.
-   The remaining discriminator is a platform-native writer-PC watch or a
-   census of direct host pointer writes outside those APIs. In parallel,
-   `H-RouteStateNotSource` remains open: the exact fields may be control
-   metadata rather than the image source. Do not alter `0x800078EC`. See
-   [M5-S3746-HOST-WRITE-API-CENSUS.md](M5-S3746-HOST-WRITE-API-CENSUS.md).
+   s3746 closed the central host-write API class, and s3747's source census
+   found no literal-target direct host writer; only diagnostic direct writes
+   remain. The computed-pointer/generic-macro possibility is still unresolved,
+   so the next discriminator is a platform-native writer-PC watch. In
+   parallel, `H-RouteStateNotSource` remains open: the exact fields may be
+   control metadata rather than the image source. Do not alter `0x800078EC`.
+   See [M5-S3747-HOST-RDRAM-WRITE-CENSUS.md](M5-S3747-HOST-RDRAM-WRITE-CENSUS.md).
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -70,6 +69,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-HostExactWriter` | Selected only for transient/unattributed activity after s3745: the 1 ms poll saw no persistent exact-field change, but has no writer-PC attribution. |
 | `H-ExactFieldUnwritten` | Selected at s3746 for the censused central host-write APIs; no target-phase exact rows appeared after every invoked API passed its control. |
 | `H-HostTransient` | Refuted at s3746 for PI ROM, PI SRAM, zmemcpy, and RSP DMEM-to-RDRAM host writes; arbitrary direct host pointer writes remain open. |
+| `H-HostLiteralDirectWriter` | Refuted at s3747 by a 61-file source census: target literals occur only in diagnostics, not production host writers. Computed-pointer/generic-macro ownership remains open. |
 | `H-PortFamilyWritesThenClear` | Refuted at s3739 for the qualified hangar source path: all real source-range writer payloads remained zero. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
@@ -167,6 +167,14 @@ Work only the first applicable item. This is one monotonic backlog.
   host API class while leaving arbitrary direct host writes and
   `H-RouteStateNotSource` open. See
   [M5-S3746-HOST-WRITE-API-CENSUS.md](M5-S3746-HOST-WRITE-API-CENSUS.md).
+- **3747 — remaining host RDRAM source census:** a repeatable 61-file scan
+  found 11 target-literal occurrences, all in existing diagnostics, and no
+  literal-target production host writer. Direct `rdram[...] =` sites were
+  diagnostic fill markers; generic `MEM_*` writers are the already-censused
+  APIs or runtime setup paths. This refutes only the literal-direct-writer
+  class; it does not provide writer-PC attribution for computed pointers or
+  external libraries. See
+  [M5-S3747-HOST-RDRAM-WRITE-CENSUS.md](M5-S3747-HOST-RDRAM-WRITE-CENSUS.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.
