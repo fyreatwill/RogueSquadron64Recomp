@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3775 (2026-10-02).
+Updated for session 3776 (2026-10-02).
 
 ## Current state
 
@@ -208,19 +208,30 @@ arm crashed before either target VI at `spTaskSchedulerThread+9556`
 absent, so H1/H2/H3 remain unevaluable; this is not a null result. See
 [M5-S3775-CLEAR-EDGE-QUALIFICATION.md](M5-S3775-CLEAR-EDGE-QUALIFICATION.md).
 
+Session 3776 ran the prescribed same-build probe split: image control with
+writer-setup logging disabled and image probe with it enabled, beside the
+retail oracle. The oracle positive control fired; both image arms fired all
+six family-store controls and the writer-setup input control, and both reached
+title `0x00790400` and hangar `0x006AB400` without a crash marker. Neither
+emitted the family-edge control. This selects H3: the writer-setup witness did
+not cause the s3775 pre-target crash and is qualified for the next
+clear-object/I-edge join. It does not establish alternate-object legitimacy or
+explain the absent edge row. See
+[M5-S3776-PROBE-SPLIT.md](M5-S3776-PROBE-SPLIT.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 probe-induced pre-target crash split.** Run same-build concurrent
-   image arms with the new writer-setup witness disabled in one arm and
-   enabled in the other, beside the retail oracle. Require the oracle control,
-   family-store controls, both target VIs, and a crash/last-guest-PC result
-   for each arm. If only the enabled arm dies before target, the witness is
-   perturbing qualification and must be redesigned; if both arms behave the
-   same, the crash is route-related and the clear-edge join remains pending.
-   Do not infer clear/object legitimacy from either arm, suppress or replace
-   the clear, inject values, or change an audio gate.
+1. **M5 clear-object/I-edge join on qualified image arm.** Run one image-only
+   capture beside the retail oracle with writer-setup logging enabled and the
+   repaired clear-edge witness. Require the oracle positive control, six
+   family-store controls, writer-setup control, both target VIs, and either
+   clear-object plus family-edge rows or an explicitly recorded missing-row
+   outcome. If the clear object joins the family stores, classify the
+   alternate destination against that object; if it does not, keep route/object
+   identity unevaluable. Do not suppress or replace the clear, inject values,
+   or change an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
@@ -561,7 +572,9 @@ Work only the first applicable item. This is one monotonic backlog.
   earlier/equal, input/source/DMEM payloads matched, the expected source range
   was used, and the same `0x801797B0`/`0x298` object was legitimately cleared
   before later zero DMAs. These results move the boundary upstream; they do
-  not authorize a clear suppression.
+not authorize a clear suppression.
+
+| `H-M5-WriterSetupPerturbation` | Refuted at s3776 for this qualification recipe: writer-setup logging enabled and disabled arms both reached title/hangar with all positive controls; the prior pre-target crash did not reproduce. |
 
 Detailed notes remain in the linked `M5-S37xx-*.md` files and the append-only
 ledger. Do not repeat a boundary whose discriminator is already closed.
