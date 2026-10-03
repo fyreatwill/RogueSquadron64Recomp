@@ -140616,3 +140616,25 @@ by the positive control, target writes, and hangar phase. The exact nonzero
 writer/value join remains open; no mitigation was added.
 
 Evidence: `scratch/agent/s3819_m5_retail_source_writer/oracle.log`.
+
+## Session 3820 (2026-10-03) — qualified retail target-phase source parity
+
+Ran the queued independent retail oracle discriminator with Rice, the
+hangar-driving Start schedule, whole-RDRAM and exact-span positive controls,
+hangar-phase writer histograms, scalar post-store sampling, and a corrected
+phase snapshot. The first capture exited normally with 11,125 whole-RDRAM
+writes, 1,125 exact-span writes, and the hangar phase, but its shutdown-only
+summary did not expose the 12 nonzero byte addresses. The fixed same-recipe
+capture added `--phase-snapshot-watch 1` and also exited normally with the
+same positive controls.
+
+The exact title/1024 phase contained the nonzero source bytes, but the exact
+hangar/512 phase snapshot was 408 bytes, nonzero=0, `FNV=0x762B22A5`. Its only
+phase-512 writer was `0x800078EC`, with 408 bytes; the scalar samples for that
+writer remained zero with no mismatch or unsupported samples. This selects H1:
+the shutdown-only 12-byte residue is transient/pre-target and is erased before
+the qualified hangar phase. H2, a nonzero hangar producer, is refuted at this
+scope. The result moves the open boundary back to retail/port route parity and
+does not justify a mitigation or code change.
+
+Evidence: `scratch/agent/s3820_m5_retail_nonzero_writer/oracle-fixed.log`.

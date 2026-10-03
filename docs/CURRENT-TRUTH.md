@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3819 (2026-10-03).
+Updated for session 3820 (2026-10-03).
 
 ## Current state
 
@@ -14,16 +14,18 @@ Hangar geometry and color artifacts remain. The real Factor 5 image task is
 the qualified audio arm; `ROGUESQ_AUDIO_UCODE=0` selects the silent `Broke`
 control. Audio is not production-complete.
 
-The current M5 boundary is source payload, not rendering. Retail title
-snapshots contain nonzero bytes in both source subranges, while qualified port
-source-DMA joins are zero (`FNV=0x762B22A5`). The expected port descriptor is
-`0x1798B0 -> DMEM 0xCB0`; its final observed writer is the legitimate
-zero-valued `0x800078EC` fill before the image DMA. Session 3818 joined that
-writer through the active generated scalar-store census: sequence 664 at
-physical `0x179A44` is the final writer, and every target `0x1798B0 -> DMEM
-0xCB0` input DMA observed it with zero value. Exact retail byte positions are
-exported, but writer/value parity is not testable against a zero-valued port
-payload. See [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md).
+The current M5 boundary is source payload, not rendering. Qualified retail and
+port hangar-phase source spans are both zero (`FNV=0x762B22A5`). Retail's
+shutdown snapshot can retain 12 nonzero bytes, but the phase-gated snapshot at
+hangar VI `0x006AB400`/512 is 408 bytes, nonzero=0; the nonzero bytes are
+present in the earlier 1024-wide phase and disappear before hangar. The
+expected port descriptor is `0x1798B0 -> DMEM 0xCB0`; its final observed writer
+is the legitimate zero-valued `0x800078EC` fill before the image DMA. Session
+3818 joined that writer through the active generated scalar-store census:
+sequence 664 at physical `0x179A44` is the final writer, and every target
+`0x1798B0 -> DMEM 0xCB0` input DMA observed it with zero value. Retail/port
+parity is now selected at the qualified target phase; no nonzero hangar
+producer is established.
 
 The complete generated scalar-store census, central host/RSP writer census,
 native page-fault census, and nine bounded exact-offset load candidates are
@@ -42,12 +44,13 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 retail nonzero source-span writers.** s3819 qualified the independent
-   retail oracle at hangar: `0x800078EC` made 816 phase-gated scalar stores,
-   all zero with `mismatch=0`, but other retail PCs also wrote the span and the
-   final 408-byte snapshot had 12 nonzero bytes. The next bounded probe must
-   classify those nonzero bytes by writer PC and scalar value. Do not repeat
-   the qualified port writer or retail whole-span parity run.
+1. **M5 target-phase retail/port route parity.** s3820's independent oracle
+   phase snapshot is zero at hangar (`FNV=0x762B22A5`, 408 bytes), matching the
+   qualified port input-DMA payload. The next bounded probe must join the
+   retail hangar source snapshot to the port image-stage/source-DMA route in
+   one paired capture, including the existing positive controls. Do not repeat
+   the retail nonzero-writer census: its shutdown-only 12-byte residue is
+   pre-target/transient evidence, not a hangar producer.
 2. **M5 image-arm stability discriminator, closed at this scope.** The
    isolated image arm reached both target phases with independent phase and
    M5 controls; s3811/s3812 launch-order failures no longer block producer
@@ -101,9 +104,9 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-ZeroDMEMProducer` | Refined at s3817: target-valid `SQV`/`SSV` writes are independent of DMA bookkeeping but follow the zero input DMA; they are not its producer. |
 | `H-M5-VectorStoreOrdering` | Selected H2 at s3817: 512/512 `0xCB0` rows and 4,096/4,096 broader vector rows have vector sequence after the input DMA. |
 | `H-M5-SourceRdramWriter` | Selected on the qualified port route at s3818: final writer is `0x800078EC`, physical `0x179A44`, zero byte; independent retail writer/value parity remains open. |
-| `H-M5-RetailSourceWriterParity` | Refuted at s3819 for complete-span parity: retail's `0x800078EC` scalar stores are all zero, but 12 bytes in the final source snapshot are nonzero and other retail writer PCs are active. |
+| `H-M5-RetailSourceWriterParity` | Selected at s3820 for the hangar phase: retail phase snapshot is zero with `FNV=0x762B22A5`, matching the qualified port payload; shutdown-only 12-byte residue is pre-target/transient. |
 | `H-M5-RetailZeroWriterLegitimate` | Selected at s3819: hangar-phase retail `0x800078EC` post-store scalar samples are 816 zero, 0 nonzero, 0 mismatch, 0 unsupported. |
-| `H-M5-RetailNonzeroWriterIdentity` | Open: the qualified retail run identifies nonzero span bytes and competing PCs, but does not yet map each nonzero byte to its final scalar writer/value. |
+| `H-M5-RetailNonzeroWriterIdentity` | Closed at s3820 for hangar: exact phase snapshot has zero nonzero bytes; earlier 1024-wide nonzero bytes are erased before target. |
 
 ## Evidence ledger — live boundary
 
@@ -369,6 +372,16 @@ Work only the first applicable item. This is one monotonic backlog.
   `0x800078EC`. Thus the port zero writer is a legitimate retail writer, but
   complete source-span parity is refuted; the nonzero writer identity remains
   open. Evidence: `scratch/agent/s3819_m5_retail_source_writer/oracle.log`.
+- **3820 — retail nonzero-writer discriminator:** the first oracle capture
+  retained the whole-RDRAM positive control (11,125 writes), exact-span control
+  (1,125 writes), and hangar phase. Its shutdown summary had 12 nonzero bytes,
+  but the command did not print their phase address set. The fixed same-recipe
+  capture added `--phase-snapshot-watch 1`: the title/1024 phase contained the
+  nonzero bytes, while the hangar/512 phase was exactly 408 bytes,
+  nonzero=0, `FNV=0x762B22A5`; its only phase writer was `0x800078EC` (408
+  bytes). This selects transient/intermediate H1 at the measured scope and
+  refutes a nonzero hangar writer (H2). Evidence:
+  `scratch/agent/s3820_m5_retail_nonzero_writer/oracle-fixed.log`.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

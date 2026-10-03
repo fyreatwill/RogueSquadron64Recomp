@@ -1,34 +1,39 @@
-# Next work unit: classify retail nonzero source-span writers
+# Next work unit: target-phase retail/port source-route parity
 
-HYPOTHESIS-ID: m5-audio-retail-nonzero-writer-identity
+HYPOTHESIS-ID: m5-audio-retail-port-route-parity
 
-s3819 qualified retail at hangar and showed that `0x800078EC` is a legitimate
-zero-valued scalar writer, but the final `0x1798B0..0x179A48` snapshot still
-has 12 nonzero bytes. The next unit is one independent oracle run that maps
-those bytes to their scalar writer PCs and values.
+s3820 qualified retail hangar source parity: the exact 408-byte phase snapshot
+at VI `0x006AB400`/512 was zero with `FNV=0x762B22A5`, matching the qualified
+port input-DMA payload. The next unit must join that retail target snapshot to
+the native image-stage/source-DMA route; do not repeat the retail nonzero-writer
+census or rely on a shutdown snapshot.
 
 Competing hypotheses and discriminator:
 
-- H1: the 12 nonzero bytes are transient/intermediate stores later erased by
-  zero stores, so the final source state is still retail-zero-compatible.
-- H2: one or more non-`0x800078EC` PCs make the final nonzero stores, so the
-  port clear/fill is missing a retail producer or later writer.
-- H3: the nonzero bytes cannot be joined to a qualified hangar-phase scalar
-  writer, leaving the boundary unevaluable.
+- H1: retail and port consume the same zero source payload and the remaining
+  M5 difference is downstream route/consumer behavior.
+- H2: retail reaches the zero source span through a different route or timing
+  edge, so equal bytes do not establish route parity.
+- H3: the paired capture is coverage-invalid (missing target phase or a control
+  failure), so no route conclusion is allowed.
 
-The discriminator is one same recipe with whole-RDRAM control first, exact
-source-span watch second, hangar phase `0x006AB400`/512, `--post-value-watch 1`,
-`--post-value-pc` for every phase histogram PC (`0x8001E2C0`, `0x80007670`,
-`0x8001FACC`, `0x8001FADC`, `0x8001FAE4`, `0x8001FAEC`, `0x8001FAF0`,
-`0x8001FAF8`, `0x8001FB10`, `0x8001FB14`, `0x8001FBE4`, `0x8001FD2C`,
-`0x800078EC`), plus `--post-value-pc-detail`. H1 requires final snapshot
-zero/nonzero bytes to be explained only by intermediate stores; H2 requires a
-nonzero scalar sample from another PC at a final-source address; H3 requires
-positive controls and hangar phase but no qualified scalar attribution.
+The discriminator is one paired, phase-gated capture with independent whole-
+RDRAM/target/source-DMA/task/audio-return controls: retail must emit a
+hangar-phase `phase-snapshot` row for watch 1, and the port image arm must emit
+the existing source-DMA FNV/zero row and route/image-stage controls in the same
+target phase. H1 requires both target payloads to be zero with
+`FNV=0x762B22A5` and the route controls to agree; H2 requires valid controls
+but a route/source-stage mismatch; H3 is any missing positive control or target
+phase in either arm.
 
-Exact command shape:
+Commands:
 
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 75 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0x1798B0:0x179A48 --hit-cap 20 --detail-watch 1 --pc-hist-watch 1 --pc-hist-phase 0x6AB400:512 --post-value-watch 1 --post-value-pc 0x8001E2C0,0x80007670,0x8001FACC,0x8001FADC,0x8001FAE4,0x8001FAEC,0x8001FAF0,0x8001FAF8,0x8001FB10,0x8001FB14,0x8001FBE4,0x8001FD2C,0x800078EC --post-value-pc-detail --vi-trace
+    env PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
+      PROBE_KEYS_FROM_PHASE=1 PROBE_KEYS='12:start' \
+      zsh tools/probe.sh scratch/agent/s3821_m5_retail_port_route/port 75
 
-Capture at `scratch/agent/s3820_m5_retail_nonzero_writer/`; inspect only bounded
-summary lines and retain the whole-RDRAM positive-control count.
+    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 75 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0x1798B0:0x179A48 --hit-cap 20 --detail-watch 1 --pc-hist-phase 0x6AB400:512 --phase-snapshot-watch 1 --vi-trace > scratch/agent/s3821_m5_retail_port_route/retail.log 2>&1
+
+Inspect only bounded `[phase]`, `phase-snapshot`, source-DMA, route, task,
+audio-return, and positive-control lines. Kill the native process with SIGKILL
+if the wrapper does not exit; do not infer parity from a shutdown-only summary.
