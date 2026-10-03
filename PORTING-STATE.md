@@ -140995,3 +140995,17 @@ claim was made. This confirms the validation environment is blocked, not that
 the span guard is behavior-preserving or that a boundary-crossing pointer
 exists. Restore/reconfigure those two inputs, then build and run the allocator
 smoke; that is the single experiment that can refute this blocker.
+
+## Session 3843 (2026-10-03) — re-scoped the heap guard build block
+
+Audited the M3 build dependency through the four unblock routes. Route 1
+found one stale assumption: a local `build/N64Recomp` exists, and invoking it
+with `--help` shows that this CLI expects a TOML config path rather than a help
+flag. Route 2 still could not satisfy the dependency: `cmake --build build
+--config Debug --target PatchesLib` has no such target, Apple Clang reports no
+registered MIPS target, and a workspace search found no `mips64-elf-gcc` or
+`mips64-elf-ld`. The MIPS cross-toolchain is therefore a real M3 dependency,
+but not a project-wide stop. Re-scoped the next unit to independent retail/
+port M5 task/output-contract parity, recorded the dependency in
+`docs/CURRENT-TRUTH.md`, and left the guard unclassified. Evidence:
+`scratch/agent/UNBLOCK.md`.

@@ -46,8 +46,8 @@ zero in the qualified family rows.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap block-span guard validation — BLOCKED on this checkout's build
-   environment.** Session 3841 audited the complete
+1. **M3 heap block-span guard validation — OPEN DEPENDENCY, not a project
+   stop.** Session 3841 audited the complete
    block-pointer dereference class in `patches/heap_guards.c` and changed all
    full-block checks from base-only `kseg0_ok` to `block_ok`, which requires a
    complete `0x100`-byte object to fit below `0x80800000`. ORIGIN:
@@ -58,7 +58,10 @@ Work only the first applicable item. This is one monotonic backlog.
    `E:/mips-toolchain/bin/mips64-elf-gcc.exe` is absent, and the expected
    `build/Debug/N64Recomp.exe` is also absent. Restore those tools or
    reconfigure with valid paths, then build the patch ELF/RecompiledPatches/lib
-   and run the normal allocator-route smoke before claiming H1 or H2.
+   and run the normal allocator-route smoke before claiming H1 or H2. This is
+   not a project-wide stop: a local `build/N64Recomp` exists, but Apple Clang
+   has no MIPS target and no `mips64-elf-*` compiler/linker exists in the
+   workspace.
 2. **M5 image task/output contract edge.** Session 3839's target-valid join
    selected H1 at the named input edge: hangar contract rows with
    `data_ptr=0x80171E70`/size `1` joined the exact `0x1798B0 -> DMEM 0xCB0`
