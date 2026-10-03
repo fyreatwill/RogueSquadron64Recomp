@@ -26,7 +26,13 @@ def main() -> None:
     )
     if caller_text.count(caller_anchor) != 1:
         raise SystemExit("s3423: target caller anchor is not unique")
-    caller_text = caller_text.replace(caller_anchor, caller_anchor + caller_insert, 1)
+    caller_delay = (
+        "    // 0x8008F2D0: addiu       $a2, $zero, 0x298\n"
+        "    ctx->r6 = ADD32(0, 0X298);\n"
+    )
+    if caller_text.count(caller_delay) != 1:
+        raise SystemExit("s3423: target caller delay-slot anchor is not unique")
+    caller_text = caller_text.replace(caller_delay, caller_delay + caller_insert, 1)
     entry_anchor = "    rs64_m5_writer_entry_args(ctx); /* PATCH: s3421 M5 writer entry args */\n"
     entry_insert = (
         "    { extern void rs64_m5_writer_setup_state(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned); "

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3776 (2026-10-02).
+Updated for session 3778 (2026-10-02).
 
 ## Current state
 
@@ -228,20 +228,27 @@ H3: the run was qualified but the clear-object/I-edge join remained
 unevaluable, so alternate-object legitimacy is not selected. See
 [M5-S3777-CLEAR-EDGE-WITNESS.md](M5-S3777-CLEAR-EDGE-WITNESS.md).
 
+Session 3778 repaired the caller-side witness placement: the call at
+`0x8008F2CC` observes `$a2` only after its `0x8008F2D0` delay-slot assignment.
+The oracle positive control, six family-store controls, title, and hangar all
+passed. The target row recorded `a0=0x801797B0`, `a2=0x298`, and
+`clear_obj=0x801797B0`; family stores still targeted alternate objects and no
+family-edge row/control appeared. This rules out the stale-register witness
+explanation, but leaves clear-object versus family-route identity open. See
+[M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md](M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 repair the clear-object/I-edge witness.** Audit the generated callsite
-   at `0x8008F2CC` and its allocator/clear predecessor, then add one
-   regeneration-safe witness at the actual clear/allocator boundary that
-   records the destination and length in the same target phases. Keep the
-   family-edge control in the same build. Run one image-only capture beside the
-   retail oracle; require the oracle positive control, six family-store
-   controls, writer-setup control, both target VIs, and either a nonzero
-   clear-object join plus family-edge rows or an explicitly recorded missing
-   row. Do not suppress or replace the clear, inject values, or change an audio
-   gate.
+1. **M5 install/qualify the missing family-edge witness.** Add a
+   regeneration-safe entry hook to the actual S/L/I generated family bodies;
+   preserve the six family-store controls and repaired clear-object row. Run
+   one image-only capture beside the retail oracle with both target VIs and
+   family-edge controls. A qualified edge row selects route identity mismatch;
+   a qualified run with no edge rows selects absent target edge. Missing
+   controls remain unevaluable. Do not suppress or replace the clear, inject
+   values, or change an audio gate.
 2. **M5 paired qualification, parked.** Resume only with a genuinely new
    discriminator for the silent pre-target crash; do not repeat launch-order
    variants of the existing recipe.
@@ -336,8 +343,20 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-ClearObjectJoin` | Unevaluable at s3774: S/L rows reported `clear_obj=0`/`clear_span=0`, and target-phase clear setup had no allocation identity. |
 | `H-M5-FamilyEdgeCoverage` | Unevaluable at s3774: the recipe emitted no family-edge rows despite positive family-store controls. |
 | `H-M5-ClearEdgeQualification` | Unevaluable at s3775: oracle and family-store controls fired, but the image arm crashed pre-target before clear-setup or family-edge controls. |
+| `H-M5-ClearEdgeWitnessStaleArgs` | Refuted at s3778: the repaired witness recorded `a0=0x801797B0`, `a2=0x298`, and a matching clear object. |
+| `H-M5-FamilyEdgeHookAbsent` | Selected as the immediate instrumentation gap at s3778: six family-store controls and target phases fired, but no family-edge hook/control/row was present. |
 
 ## Evidence ledger — live boundary only
+
+- **3778 — repaired clear-object witness:** the Debug build and image-only
+  capture passed the oracle whole-RDRAM control, six family-store controls, and
+  both target VIs. Moving the caller witness after the MIPS delay-slot
+  assignment produced `a0=0x801797B0`, `a2=0x298`, and the same clear object.
+  Family stores remained on alternate objects and no family-edge control or
+  row appeared. Generated callsite semantics plus the runtime row establish
+  that the stale-register witness was the instrumentation defect; route
+  identity remains open. No mitigation was added. See
+  `docs/M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md`.
 
 - **3768 — retail writer-family edge audit:** static generated code maps
   `0x80007670` to `rs_strncpy`, `0x8001E2C0` to
@@ -664,6 +683,7 @@ silent control.
 - [M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md](M5-S3773-ALTERNATE-OBJECT-QUALIFICATION.md)
 - [M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md](M5-S3774-IMAGE-ONLY-ALTERNATE-OBJECT.md)
 - [M5-S3775-CLEAR-EDGE-QUALIFICATION.md](M5-S3775-CLEAR-EDGE-QUALIFICATION.md)
+- [M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md](M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md)
 - [M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md](M5-S3755-TASK-DATA-NATIVE-WRITE-CENSUS.md)
 - [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md)
 - [M5-S3760-STEP1-IMAGE-QUALIFICATION.md](M5-S3760-STEP1-IMAGE-QUALIFICATION.md)

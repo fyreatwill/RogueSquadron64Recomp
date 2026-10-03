@@ -139793,3 +139793,25 @@ missing family edge. No mitigation or audio change was made. Evidence:
 
 ORIGIN: the witness observes existing game state only; no game value or route
 was changed.
+
+## Session 3778 (2026-10-02) — repaired clear-edge witness placement
+
+The regeneration-safe writer witness was moved after the `0x8008F2D0` MIPS
+delay-slot assignment, so the caller-side row observes the actual `$a2=0x298`
+rather than the stale pre-delay value. The Debug target built successfully.
+The prescribed image-only capture beside the retail oracle passed the oracle
+whole-RDRAM positive control, all six family-store controls, title
+`0x00790400` / 1024, and hangar `0x006AB400` / 512 without a crash marker.
+The corrected row recorded `a0=0x801797B0`, `a2=0x298`,
+`clear_obj=0x801797B0`, and `alloc_len=0x298`; family stores remained on
+alternate destinations and family-edge controls/rows remained absent.
+
+This refutes the stale-register explanation for the unevaluable witness and
+qualifies the clear object, but does not establish alternate-object legitimacy
+or route identity. The immediate next probe is a regeneration-safe family-entry
+hook audit. No mitigation, injected value, or audio-gate change was made.
+Evidence: `docs/M5-S3778-CLEAR-EDGE-WITNESS-REPAIRED.md` and
+`scratch/agent/s3773_m5_image_only/summary.txt`.
+
+ORIGIN: the change corrected diagnostic placement after a game delay slot; it
+did not alter game state or route behavior.
