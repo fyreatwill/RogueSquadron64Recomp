@@ -1,38 +1,35 @@
-# Next work unit: qualify retail/port task-field parity
+# Next work unit: validate the heap block-span guard in the normal allocator route
 
-HYPOTHESIS-ID: m5-task-output-contract-parity
+HYPOTHESIS-ID: m3-heap-block-span-audit
 
-s3840 selected the port-side empty-ABI/separate-writeback result: 458 named
-port task rows had `output_buff=0` and `output_buff_size=0`; 452/458 stage
-generations joined the `0x1798B0`/`0x198` output DMA. The next bounded unit is
-one paired target-valid retail-oracle/port capture using the existing positive
-controls, comparing the same named task fields and task-generation/output-DMA
-destination class.
+This iteration landed the guard-class change in `patches/heap_guards.c`.
+The writer under audit is `func_8002221C` plus the free-list link stores; the
+new predicate rejects only a KSEG0 block base whose complete `0x100`-byte
+object would cross `0x80800000`. It does not alter any valid in-range block.
 
 Competing hypotheses and discriminator:
 
-- H1: Retail also leaves ABI output fields zero and uses the separate
-  `0x1798B0` writeback edge. Select if retail target-phase task rows have zero
-  output fields and the named output-DMA/writeback class matches port.
-- H2: Retail populates a nonzero ABI output field that the port loses. Select
-  if retail target-phase rows have a stable nonzero output field while port
-  rows remain zero, with positive whole-RDRAM and target-VI controls.
-- H3: The retail task rows cannot be joined to the named target phase or the
-  existing oracle capture is pre-target. Select only if controls are live but
-  no stable target-phase task-field join exists.
+- H1: All allocator blocks are wholly inside the 8 MiB KSEG0 RDRAM window;
+  the new predicate is behavior-preserving. Select if the patch builds and
+  the normal route remains clean with no new allocator guard return.
+- H2: A published block can be in KSEG0 but too near the upper boundary;
+  the old predicate admitted an unsafe full-object dereference. Select only
+  if a bounded allocator audit or runtime evidence identifies such a pointer.
+- H3: The patch changes the MIPS ABI or patch-link output rather than only
+  the guard class. Select if the patch build or generated symbol/link check
+  fails, or if the override is not present in the produced library.
 
-Discriminator: one table keyed by target VI phase and task data pointer/size,
-containing retail task pointer, output fields, data fields, and output-DMA or
-writeback destination; compare it with the s3840 port table. A null is invalid
-unless whole-RDRAM, retail target-VI, port target-VI, and port task controls all
-fire.
+Discriminator: build `PatchesLib`, then inspect the generated patch symbol and
+link output for `func_80007D74`; no runtime claim is valid without a normal
+allocator-route smoke run. A build failure selects H3. A successful build
+with the override present selects H1 provisionally; H2 remains unevaluable
+until a target-phase allocator pointer sample exists.
 
 Exact commands:
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3841_m5_task_output_contract_parity.sh
+    cmake --build build --config Debug --target PatchesLib
+    rg -n "func_80007D74" RecompiledPatches/patches.c
 
-Use `PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`, keep the existing
-task/image/route controls, run from `build/`, and SIGKILL the game/process
-group after title 1024 and hangar 512 are captured. Do not add a writeback
-guard or change task dispatch based on the s3840 result.
+Do not repeat the s3841 retail/port task-field observation until this guard
+change has been validated. If the target is unavailable on this host, record
+that as a build-environment blocker rather than inventing runtime evidence.

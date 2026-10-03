@@ -38,6 +38,15 @@ static int kseg0_ok(const void* p) {
 }
 
 #define MAX_FREE_BLOCKS (0x800000 / 0x100)
+#define BLOCK_SIZE 0x100
+
+// ORIGIN: func_8002221C and the free-list link stores publish block bases;
+// every block dereference below reads the fixed 0x100-byte allocator object.
+// A KSEG0 base in the final 0xFF bytes is not a legitimate complete block.
+static int block_ok(const void* p) {
+    uintptr_t addr = (uintptr_t)p;
+    return kseg0_ok(p) && addr <= (0x80800000U - BLOCK_SIZE);
+}
 
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
@@ -47,7 +56,7 @@ RECOMP_PATCH Block* func_80007D74(void) {
     if (head == NULL) {
         Block* fresh = func_8002221C();
         if (fresh != NULL) {
-            if (!kseg0_ok(fresh)) {
+            if (!block_ok(fresh)) {
                 return NULL;
             }
             // Walk fresh's chain to find its tail
@@ -57,7 +66,7 @@ RECOMP_PATCH Block* func_80007D74(void) {
                 if (++chain_len >= MAX_FREE_BLOCKS) {
                     return NULL;
                 }
-                if (!kseg0_ok(tail->next)) {
+                if (!block_ok(tail->next)) {
                     return NULL;
                 }
                 tail = tail->next;
@@ -67,7 +76,7 @@ RECOMP_PATCH Block* func_80007D74(void) {
             if (old_head == NULL) {
                 tail->next = NULL;
             } else {
-                if (!kseg0_ok(old_head)) {
+                if (!block_ok(old_head)) {
                     return NULL;
                 }
                 tail->next = old_head;
@@ -84,13 +93,13 @@ RECOMP_PATCH Block* func_80007D74(void) {
     // If head isn't a valid KSEG0 pointer, treat the list as empty rather
     // than dereferencing into garbage.
     Block* new_head;
-    if (!kseg0_ok(head)) {
+    if (!block_ok(head)) {
         new_head = NULL;
     } else {
         new_head = head->next;
     }
     heap_free_head = new_head;
-    if (kseg0_ok(new_head)) {
+    if (block_ok(new_head)) {
         new_head->prev = NULL;
     } else {
         // Keep an invalid published successor from surviving into the next
@@ -104,7 +113,7 @@ RECOMP_PATCH Block* func_80007D74(void) {
     // before we advanced the list above.
     Block* popped = head;
 
-    if (!kseg0_ok(popped)) {
+    if (!block_ok(popped)) {
         return NULL;
     }
 
@@ -114,13 +123,13 @@ RECOMP_PATCH Block* func_80007D74(void) {
         return NULL;
     }
     Block* tail = *heap_tail_loc;
-    if (!kseg0_ok(tail)) {
+    if (!block_ok(tail)) {
         return NULL;
     }
 
     if (*heap_other_listhead != NULL) {
         // Queue non-empty — append after current node.
-        if (!kseg0_ok(tail->next)) {
+        if (!block_ok(tail->next)) {
             return NULL;
         }
         Block* q = tail->next;            // current node at tail

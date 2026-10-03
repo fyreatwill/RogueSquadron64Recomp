@@ -140964,3 +140964,22 @@ contract remains open for the next probe. Evidence:
 Added the missing bounded runner `scratch/agent/run_s3840_m5_task_output_contract_edge.sh`, built the Debug target, and ran the planned logger-on image recipe. The first attempt was coverage-invalid: it produced 36 crash markers at guest `0x8000834C` before VI 320 and no target rows. The retry reached title VI `0x00790400`/1024 and hangar VI `0x006AB400`/512 with all phase/task/image controls live and zero crash or abort markers.
 
 The retry produced 458 named hangar task-contract rows for `data_ptr=0x80171E70`, `data_size=1`; every row had `output_buff=0` and `output_buff_size=0`. It produced 458 stage-3 rows targeting guest `0x801798B0` with length `0x198`; 452 stage generations joined the exact `audtask-image-dma-join` output row at physical `0x1798B0`, length `0x198`, with payload `FNV=0x762B22A5`, nonzero `0`. This selects H1: the ABI output fields are intentionally empty and the image-stage writeback is a separate service edge. It rules out a missing downstream output edge at this scope and does not authorize a writeback mitigation. The next probe is independent retail/port task-field parity for this selected contract. Evidence: `scratch/agent/s3840_m5_task_output_contract_edge_retry/`.
+## Session 3841 (2026-10-03) — audited heap block-span guards
+
+Landed the next M3 guard-class change in `patches/heap_guards.c`. Audited
+every free-list/active-queue block dereference and replaced the base-only
+KSEG0 test with a span-aware `block_ok` predicate requiring the complete
+0x100-byte block to remain below 0x80800000. ORIGIN: `func_8002221C` and the
+free-list link stores publish block bases; those values are legitimate only
+when the full allocator object fits in RDRAM. The source guard is real code,
+not a diagnostic-only field.
+
+The configured build has no `PatchesLib` target, and `mips64-elf-gcc` is not
+installed on this host, so generated-patch and runtime validation did not
+run. `cmake --build build --config Debug --target PatchesLib` failed with
+"No rule to make target `PatchesLib'"; the target list confirms the patches
+pipeline was skipped at configure time. This rules out only a successful
+build claim, not the guard-class change. The next session must restore the
+MIPS patch toolchain, build the patch ELF through PatchesLib, and run the
+normal allocator-route smoke before classifying the guard as behavior-
+preserving or catching a live boundary-crossing pointer.

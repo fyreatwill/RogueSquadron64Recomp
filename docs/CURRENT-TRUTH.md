@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3840 (2026-10-03).
+Updated for session 3841 (2026-10-03).
 
 ## Current state
 
@@ -46,7 +46,17 @@ zero in the qualified family rows.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image task/output contract edge.** Session 3839's target-valid join
+1. **M3 heap block-span guard validation.** Session 3841 audited the complete
+   block-pointer dereference class in `patches/heap_guards.c` and changed all
+   full-block checks from base-only `kseg0_ok` to `block_ok`, which requires a
+   complete `0x100`-byte object to fit below `0x80800000`. ORIGIN:
+   `func_8002221C` and the free-list link stores publish the block bases; the
+   guard rejects only an impossible boundary-crossing object. The source
+   change is landed, but validation is pending because this checkout's CMake
+   build has no `PatchesLib` target and the host lacks `mips64-elf-gcc`.
+   Restore the patches toolchain, build the patch ELF/RecompiledPatches/lib,
+   and run the normal allocator-route smoke before claiming H1 or H2.
+2. **M5 image task/output contract edge.** Session 3839's target-valid join
    selected H1 at the named input edge: hangar contract rows with
    `data_ptr=0x80171E70`/size `1` joined the exact `0x1798B0 -> DMEM 0xCB0`
    input DMA at the same task generations; its payload was
