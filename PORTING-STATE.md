@@ -139373,3 +139373,22 @@ control and the real arm did not reach target. The native-value hypothesis is
 parked after three consecutive unevaluable paired attempts; the next M5 unit
 is the complete Step 1 audio-contract qualification. It does not authorize a
 mitigation or a change to `0x800078EC`.
+## Session 3759 (2026-10-02) — M5 Step 1 image arm remained pre-target unstable
+
+Built the Debug target once and ran the existing M5 Step 1 contract driver
+with the retail oracle plus concurrent real-image and silent port arms. The
+oracle whole-RDRAM positive control passed at 10,000 callbacks and reached
+title VI 1024 and hangar VI 512. The silent arm reached title and produced
+phase-qualified task/route/PCM control rows (261 task ABI/DMA rows, 257 audio
+returns, 771 route rows, and 257 PCM-consumer rows); its unchanged DMEM was
+consistent with the silent stub. The real image arm crashed before any target
+phase with SIGSEGV at `si_addr=0x400128d47`, producing no phase-qualified M5
+rows. The pair gate therefore failed and the children were stopped with
+SIGKILL.
+
+This selects route instability for this capture and leaves all downstream
+audio-contract nulls unevaluable. It rules out an oracle/control failure and
+a universal early-route failure, but does not establish a missing image
+contract edge. No mitigation or audio behavior change was made. Evidence:
+`docs/M5-S3759-STEP1-CONTRACT-RETRY.md` and
+`scratch/agent/s3759_m5_step1_contract_pair/`.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3758 (2026-10-02).
+Updated for session 3759 (2026-10-02).
 
 ## Current state
 
@@ -47,18 +47,25 @@ window in `spTaskSchedulerThread+9556`. This is incomplete paired coverage,
 not a zero-value result. See
 [M5-S3758-TASK-DATA-NATIVE-COVERAGE.md](M5-S3758-TASK-DATA-NATIVE-COVERAGE.md).
 
+Session 3759 ran the complete Step 1 contract row with the retail oracle and
+both port arms. The oracle whole-RDRAM control and title/hangar phases passed;
+the silent arm reached title and produced phase-qualified task/route/PCM
+control rows, but the real image arm crashed before any target phase at
+`si_addr=0x400128d47`. This selects route instability for this capture rather
+than a downstream contract gap; no audio or task-data mitigation is selected.
+See [M5-S3759-STEP1-CONTRACT-RETRY.md](M5-S3759-STEP1-CONTRACT-RETRY.md).
+
 ## Next steps
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 audio contract qualification.** The native task-data value thread is
-   parked after three consecutive attempts without a paired real-arm target
-   fault. Run M5 plan Step 1: one build, real and silent arms concurrently,
-   phase-gated title/hangar, and the existing dispatch, task-field/source,
-   DMEM/DMA, image-exit, SP-completion, service, slot/status, voice/reap, MORT,
-   and PCM joins. Require whole-RDRAM/route controls and a target phase; select
-   the next missing contract edge only if a complete row reaches it. Do not add
-   another native page-watch field.
+1. **M5 image-arm pre-target stability qualification.** Step 1 remains open:
+   the s3759 oracle and silent controls passed, but the real image arm crashed
+   before the target phase. Run one same-build concurrent real/silent capture
+   retaining the full Step 1 joins and positive controls, while classifying
+   the image crash's first guest/native boundary. A real target row is required
+   before interpreting any downstream null; do not add another native
+   task-data value field or change an audio gate.
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -99,6 +106,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-TaskDataNativeValueDecoded` | Unevaluable at s3756: ARM64 decoding was added, but the paired run had no target-phase attribution rows; real/silent crashed in separate paths. |
 | `H-TaskDataNativeValueDecoded` | Unevaluable at s3757: target-only decoding and post-store sampling were installed, but both arms had zero target faults before their crash paths. |
 | `H-TaskDataNativeValueDecoded` | Parked at s3758: silent had positive-control and target-window coverage with no target fault; real crashed before target. Paired value attribution remains unevaluable. |
+| `H-M5-RouteInstability` | Selected at s3759 for the Step 1 capture: oracle and silent controls reached target, but the real image arm crashed before target; downstream contract nulls remain unevaluable. |
 | `H-RouteStateSourceKey` | Refuted at s3751: the same-run hook control fired, but there were zero target-phase exact-object rows. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
@@ -120,6 +128,14 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-ClearTooEarly` | Selected at s3706 for the measured source object; this is an explanation of the observed zero payload, not permission for a mitigation. |
 
 ## Evidence ledger — live boundary only
+
+- **3759 — Step 1 contract retry:** the retail oracle passed its whole-RDRAM
+  control and reached title/hangar. The silent port arm reached title and
+  emitted phase-qualified task/route/PCM control rows; the real image arm
+  crashed before target at `si_addr=0x400128d47` and emitted no target rows.
+  This selects pre-target route instability for this capture and does not
+  qualify a downstream audio-contract gap. See
+  [M5-S3759-STEP1-CONTRACT-RETRY.md](M5-S3759-STEP1-CONTRACT-RETRY.md).
 
 - **3757 — target-only native value retry:** the same-build real/silent pair
   passed the task-page positive control and reached title VI 1024; real also
