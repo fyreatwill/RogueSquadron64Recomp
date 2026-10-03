@@ -48,6 +48,11 @@ extern "C" void rs64_m5_audio_dma_identity(
     uint64_t* source_event, uint64_t* task_generation,
     uint32_t* latest_route_seq, uint32_t* latest_route_ordinal,
     uint32_t* latest_route_row);
+extern "C" uint64_t rs64_m5_route_handoff_event(
+    const char* edge, uint32_t site, uint32_t active, const char* arm,
+    uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
+    uint32_t row, uint32_t value0, uint32_t value1, uint32_t value2);
+extern "C" uint64_t rs64_m5_latest_audio_generation();
 
 extern "C" uint32_t rs64_phase_ord(void);
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
@@ -596,16 +601,23 @@ extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
     const uint32_t key = (width << 24) ^ (origin & 0x00FFFFFFu);
     const uint32_t commit_key = (g_m5_vi_commit.width.load(std::memory_order_acquire) << 24) ^
                                 g_m5_vi_commit.origin.load(std::memory_order_relaxed);
+    const uint64_t event = rs64_m5_route_handoff_event(
+        "route-prepare", prepare_seq, accepted, "n/a", phase, width,
+        origin & 0x00FFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu, accepted,
+        g_m5_vi_commit.latest_sequence.load(std::memory_order_acquire),
+        g_m5_vi_commit.phase.load(std::memory_order_relaxed));
     std::fprintf(stderr,
         "[m5-route-transition] edge=route-prepare seq=%u phase=%u width=%u "
         "origin=0x%06X accepted=%u commit_seq=%u commit_caller=0x%08X "
-        "commit_width=%u commit_origin=0x%06X commit_phase=%u key_match=%u\n",
+        "commit_width=%u commit_origin=0x%06X commit_phase=%u key_match=%u "
+        "event=%llu\n",
         prepare_seq, phase, width, origin & 0x00FFFFFFu, accepted,
         g_m5_vi_commit.latest_sequence.load(std::memory_order_acquire),
         g_m5_vi_commit.caller.load(std::memory_order_relaxed),
         g_m5_vi_commit.width.load(std::memory_order_relaxed),
         g_m5_vi_commit.origin.load(std::memory_order_relaxed),
-        g_m5_vi_commit.phase.load(std::memory_order_relaxed), key == commit_key ? 1u : 0u);
+        g_m5_vi_commit.phase.load(std::memory_order_relaxed), key == commit_key ? 1u : 0u,
+        static_cast<unsigned long long>(event));
     std::fflush(stderr);
 }
 
@@ -1031,7 +1043,6 @@ extern "C" void rs64_m5_caller_route(const char* edge, uint32_t pc,
     rs64_m5_audio_dma_identity(&source_event, &task_generation,
                                &latest_route_seq, &latest_route_ordinal,
                                &latest_route_row);
-
     static uint32_t phase_key = 0xFFFFFFFFu;
     static uint32_t rows = 0;
     const uint32_t key = (width << 24) ^ origin;
@@ -1419,18 +1430,44 @@ extern "C" void rs64_m5_producer_mark_handoff(uint8_t* rdram, uint32_t edge,
     };
     const uint32_t target = ((width == 1024u && origin == 0x00790400u) ||
                              (width == 512u && origin == 0x006AB400u)) ? 1u : 0u;
+    uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &route_row, &exit_reason, &arm);
+    uint64_t task_generation = 0;
+    uint64_t source_event = 0;
+    uint32_t latest_route_seq = 0xFFFFFFFFu;
+    uint32_t latest_route_ordinal = 0xFFFFFFFFu;
+    uint32_t latest_route_row = 0xFFFFFFFFu;
+    rs64_m5_audio_dma_identity(&source_event, &task_generation,
+                               &latest_route_seq, &latest_route_ordinal,
+                               &latest_route_row);
+    if (task_generation == 0) {
+        task_generation = rs64_m5_latest_audio_generation();
+    }
+    const uint64_t event = target ? rs64_m5_route_handoff_event(
+        edge == 0u ? "handoff-entry" : (edge == 1u ? "handoff-exit" : "handoff-call"),
+        caller, active ? 1u : 0u, arm, phase, width, origin, ordinal, route_row,
+        edge, a0, a2) : 0u;
     std::fprintf(stderr,
         "[m5-route-handoff] edge=%s n=%u phase=%u width=%u origin=0x%06X "
         "target=%u caller=0x%08X s0=0x%08X s1=0x%08X a0=0x%08X a1=0x%08X "
         "a2=0x%08X v0=0x%08X count=%u states=%u,%u,%u,%u,%u,%u "
-        "pending=0x%08X/0x%08X sel=%02X/%02X/%02X\n",
+        "pending=0x%08X/0x%08X sel=%02X/%02X/%02X event=%llu "
+        "route_ordinal=%u route_row=%u active=%u exit=%d "
+        "task_generation=%llu source_event=%llu\n",
         edge == 0u ? "entry" : (edge == 1u ? "exit" : "call"), rows - 1u,
         phase, width, origin, target,
         caller, s0, s1, a0, a1, a2, v0, byte(0x80128EADu),
         byte(0x80128EAAu), byte(0x80128EABu), byte(0x80128EACu),
         byte(0x80128EADu), byte(0x80128EAEu), byte(0x80128EAFu),
         word(0x80128E94u), word(0x80128E90u), byte(0x8012A865u),
-        byte(0x8012A864u), byte(0x8012A862u));
+        byte(0x8012A864u), byte(0x8012A862u),
+        static_cast<unsigned long long>(event), ordinal, route_row,
+        active ? 1u : 0u, exit_reason,
+        static_cast<unsigned long long>(task_generation),
+        static_cast<unsigned long long>(source_event));
     std::fflush(stderr);
 }
 

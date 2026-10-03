@@ -128,7 +128,21 @@ extern "C" uint64_t rs64_audio_join_m5_event(
     uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
     uint32_t row, uint32_t idx, uint32_t dest, uint32_t value0,
     uint32_t value1, uint32_t value2, uint32_t value3);
+extern "C" uint64_t rs64_m5_route_handoff_event(
+    const char* edge, uint32_t site, uint32_t active, const char* arm,
+    uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
+    uint32_t row, uint32_t value0, uint32_t value1, uint32_t value2);
+extern "C" uint64_t rs64_m5_latest_audio_generation();
 static uint32_t rs64_m5_identity_thread_id();
+
+extern "C" uint64_t rs64_m5_route_handoff_event(
+    const char* edge, uint32_t site, uint32_t active, const char* arm,
+    uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
+    uint32_t row, uint32_t value0, uint32_t value1, uint32_t value2) {
+    return rs64_audio_join_m5_event(
+        edge, site, active, arm, phase, width, origin, ordinal, row,
+        0u, value0, value1, value2, 0u, 0u);
+}
 
 static thread_local const OSTask* s_pending_audio_task = nullptr;
 static thread_local uint64_t s_pending_audio_generation = 0;
@@ -138,6 +152,10 @@ static std::atomic<uint64_t> g_m5_latest_audio_generation{0};
 static std::atomic<uint32_t> g_m5_latest_audio_route_seq{0};
 static std::atomic<uint32_t> g_m5_latest_audio_route_ordinal{0xFFFFFFFFu};
 static std::atomic<uint32_t> g_m5_latest_audio_route_row{0xFFFFFFFFu};
+
+extern "C" uint64_t rs64_m5_latest_audio_generation() {
+    return g_m5_latest_audio_generation.load(std::memory_order_acquire);
+}
 
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
 

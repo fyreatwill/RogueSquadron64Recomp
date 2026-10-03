@@ -140842,3 +140842,24 @@ The independent retail oracle arm was attempted before the instrument change,
 but the available Homebrew core failed `DebugSetCallbacks` because it lacks
 the required DEBUGGER=1 symbols. That is setup-invalid ground truth, not a
 null result. Evidence: `scratch/agent/s3832_m5_family_event_order/`.
+
+## Session 3833 (2026-10-03) — route-handoff stamp lacked the family join key
+
+Added a shared monotonic event stamp to the existing route-prepare and route-
+handoff host callbacks, then built the Debug target successfully. The first
+target-valid capture was rejected because handoff rows did not carry task
+generation. The fixed rerun reached title VI 1024 and hangar VI 512 with no
+crash or abort; phase, family-entry/store, image-stage, route, source-range,
+task, PCM, input-DMA, and exact-route controls were all positive.
+
+The corrected retry contained 2,084 target route-handoff rows with nonzero
+generations in the sampled rows (682–689), while active family rows carried
+different generations (1,865–1,867); no exact route-ordinal/row/generation
+join was present. Event IDs were live, but the proposed callback is not an
+authoritative service-epoch witness, so H1/H2/H3 remain unevaluable. This
+rules out only interpreting the existing handoff callback as a family join;
+it does not establish disconnected output. The next probe must stamp
+`rs64_audio_route_set`/audio-return, where the route identity and audio
+generation coexist. The retail oracle remained setup-invalid because the
+available Homebrew core lacks DEBUGGER=1 symbols. Evidence:
+`scratch/agent/s3833_m5_family_handoff_order_corrected_retry/run.log`.
