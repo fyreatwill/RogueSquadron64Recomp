@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3851 (2026-10-03).
+Updated for session 3852 (2026-10-03).
 
 ## Current state
 
@@ -36,7 +36,11 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap block-span guard validation — open dependency.** Session 3841
+1. **M3 heap guard validation — open dependency.** Session 3852 tightened the
+   existing patch's metadata-slot class: `heap_other_listhead` and
+   `heap_tail_loc` must equal their fixed linker-published addresses before
+   queue-link stores. ORIGIN: those globals are fixed metadata slots; an
+   arbitrary aligned KSEG0 value is not legitimate. Session 3841
    changed full-block checks in `patches/heap_guards.c` from base-only
    `kseg0_ok` to `block_ok`, requiring a complete `0x100`-byte object below
    `0x80800000`. ORIGIN: `func_8002221C` and free-list link stores publish
@@ -145,6 +149,12 @@ Work only the first applicable item. This is one monotonic backlog.
   pointers varied between title/hangar routes, while the output/yield fields
   stayed zero. This single-source oracle result selects H3 for the descriptor
   boundary and rules out descriptor output fields as the unique stage owner.
+- **3852:** Landed an M3 guard-class change in `patches/heap_guards.c`: the two
+  free-list metadata slot pointers are now checked against their fixed linker
+  addresses before queue-link stores. The prescribed `PatchesLib` build could
+  not run because the configured build has no such target; the configured MIPS
+  compiler and `build/Debug/N64Recomp.exe` are also absent. No allocator result
+  is claimed.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

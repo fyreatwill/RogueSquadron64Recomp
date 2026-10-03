@@ -1,32 +1,30 @@
-# Next work unit: join retail task data pointers to image-stage events
+# Next work unit: validate the heap metadata-slot guard override
 
-HYPOTHESIS-ID: m5-task-output-contract-retail-submit-callers
+HYPOTHESIS-ID: m3-heap-metadata-slot-guard
 
-Session 3851 was capture-valid. Whole-RDRAM and both target-VI controls fired;
-retail had 1,143 task rows. The descriptor had 44,270 writes from the same ten
-PCs and a fixed 13-value schema. Input task pointers varied between
-`0x80171E70`/`0x80173CB0`, but output and yield fields stayed zero. The
-descriptor changes but does not expose a unique stage destination.
+The work unit is the bounded M3 guard change in `patches/heap_guards.c`:
+metadata slot pointers must equal their linker-published addresses before any
+queue-link store. This is a code change, not another diagnostic field.
 
-Before building anything, preserve these competing hypotheses and discriminator:
+Competing hypotheses and discriminator:
 
-- H1: the task data pointer joins a unique image-stage/DMA event.
-- H2: the task data pointer is reused or unrelated to image-stage ownership.
-- H3: the pointer joins only a broad stage family; an event/generation key is
-  still required.
+- H1: the free-list metadata slots are fixed game globals; exact-address checks
+  preserve normal allocator behavior and reject only corrupted slot pointers.
+- H2: one or both slots are legitimately relocated; exact checks reject normal
+  allocation and the original KSEG0 checks are required.
+- H3: the patch cannot be built in this checkout; validation remains blocked
+  by the missing configured patch toolchain/target.
 
-Discriminating measurement: run one paired capture with the same whole-RDRAM,
-title/hangar VI, type-2 task, and no-crash controls. Retain the task dump and
-port stage logs, and phase-gated watch the task data-pointer destinations and
-the exact image-stage DMA rows. H1 requires one pointer value to join a unique
-stage event/generation; H2 requires no stable join; H3 permits a broad family
-join but no unique event.
+Discriminating measurement: build `PatchesLib` and run the allocator-route
+smoke. H1 requires a successful patch build and unchanged allocator smoke;
+H2 requires an allocator failure attributable to a relocated slot; H3 is
+selected only if the build command proves the required compiler, N64Recomp,
+or CMake target is absent.
 
 Starting command:
 
-    zsh scratch/agent/run_s3852_m5_task_data_pointer_join.sh
+    cmake --build build --config Debug --target PatchesLib
 
-Create that self-contained paired recipe from
-`scratch/agent/run_s3851_m5_task_descriptor_writes.sh`, replacing the
-descriptor-write-only discriminator with the task data-pointer/stage-event
-join. Do not add a writeback guard or infer a destination from the port address.
+If the target exists, run the repository's allocator-route smoke from the
+configured build directory and capture its exit/log. Do not repeat the retail
+task-pointer oracle join.

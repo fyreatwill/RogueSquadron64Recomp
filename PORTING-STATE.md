@@ -141168,3 +141168,20 @@ The task descriptor therefore changes, but this single-source oracle result
 does not expose a unique image-stage destination. It selects H3 (the task
 boundary needs a data-pointer/event join), rules out descriptor output fields
 as that owner, and rules out treating the ten stores as absent initialization.
+
+## Session 3852 (2026-10-03) — tightened heap metadata-slot guard
+
+The mandated no-artifact streak forced a pivot from the queued M5 retail
+task-pointer join to a bounded M3 guard-class change. Updated
+`patches/heap_guards.c` so `heap_other_listhead` and `heap_tail_loc` must equal
+their fixed linker-published addresses before any queue-link store. ORIGIN:
+these globals are fixed metadata slots; an arbitrary aligned KSEG0 value is not
+legitimate and could redirect the stores into unrelated RDRAM.
+
+Ran `cmake --build build --config Debug --target PatchesLib`. Validation is
+blocked in this checkout: the configured generator has no `PatchesLib` target,
+`E:/mips-toolchain/bin/mips64-elf-gcc.exe` is absent, and
+`build/Debug/N64Recomp.exe` is absent. The target list does contain the main
+recomp targets. This rules out claiming allocator-route behavior from the
+change; the next work unit is to restore/reconfigure those tools and run the
+allocator smoke.

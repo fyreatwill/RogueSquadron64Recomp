@@ -48,6 +48,14 @@ static int block_ok(const void* p) {
     return kseg0_ok(p) && addr <= (0x80800000U - BLOCK_SIZE);
 }
 
+// ORIGIN: heap_other_listhead and heap_tail_loc are fixed linker-published
+// metadata slots, not heap objects. Accepting any aligned KSEG0 address here
+// would let a corrupted slot pointer redirect the queue-link stores into a
+// legitimate but unrelated RDRAM object.
+static int metadata_slot_ok(const void* p, const void* expected) {
+    return p == expected;
+}
+
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
 
@@ -119,7 +127,8 @@ RECOMP_PATCH Block* func_80007D74(void) {
 
     // Insert popped into the active queue only after validating the value
     // published by the free-list head.
-    if (!kseg0_ok(heap_other_listhead) || !kseg0_ok(heap_tail_loc)) {
+    if (!metadata_slot_ok(heap_other_listhead, (void*)0x801163FC) ||
+        !metadata_slot_ok(heap_tail_loc, (void*)0x8011A7DC)) {
         return NULL;
     }
     Block* tail = *heap_tail_loc;
