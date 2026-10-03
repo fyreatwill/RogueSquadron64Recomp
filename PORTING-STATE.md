@@ -139124,3 +139124,21 @@ ORIGIN: native page-fault attribution; the writer values were not suppressed.
 Evidence: `docs/M5-S3748-HOST-WRITER-FAULT-WATCH.md`,
 `scratch/agent/s3748_m5_host_writer_fault/{real,silent,oracle}.log`, and
 `summary.txt`.
+## Session 3749 (2026-10-02) — abandoned broad route-field read transformer after compile failure
+
+The planned M5 route-state/source-use join did not run. Ground truth first
+confirmed the independent retail exact-field writer at `0x8001BB14` and the
+existing port source-DMA join. I then attempted one regeneration-safe batch
+census by wrapping generated `MEM_B/H/W` reads and logging exact-field reads
+with the existing source-event sequence. The transformer was not safe for
+nested generated expressions: its first build failed at `funcs_3.c:28796`
+with an unterminated macro invocation. Recovery moved the generated tree to a
+recoverable `RecompiledFuncs.s3749-failed` directory and ran the documented
+N64Recomp/fixup pipeline, but the existing fixup stopped at
+`s3556 entry anchor count=0`; a build of the partial regeneration then failed
+on missing `stdio.h` declarations in `funcs_0.c`.
+
+This iteration selects no route-state hypothesis and rules out only the broad
+whole-generated-load transformer as a viable instrument. The planned question
+remains unevaluable. Next attempt must identify and hook only exact disassembled
+load sites, with a clean regeneration/fixup check before the runtime run.

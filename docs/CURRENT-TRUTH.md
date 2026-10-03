@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3748 (2026-10-02).
+Updated for session 3749 (2026-10-02).
 
 ## Current state
 
@@ -213,6 +213,12 @@ Work only the first applicable item. This is one monotonic backlog.
 
 Detailed notes remain in the linked `M5-S37xx-*.md` files and the append-only
 ledger. Do not repeat a boundary whose discriminator is already closed.
+
+Session 3749 did not produce route-state evidence. A broad generated-load
+transformer was abandoned after nested `S32(...)` expressions caused an
+unterminated macro invocation; the regeneration recovery pass also stopped at
+the existing `s3556 entry anchor count=0` fixup gate. Treat the route-state
+read/use question as unevaluable, with no runtime conclusion.
 
 ## Durable operating rules
 

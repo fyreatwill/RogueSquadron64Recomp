@@ -862,7 +862,6 @@ extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
 static thread_local uint32_t g_rs64_m5_route_state_call_ordinal = 0xFFFFFFFFu;
 static thread_local uint32_t g_rs64_m5_route_state_entry_a1 = 0xFFFFFFFFu;
 static thread_local uint32_t g_rs64_m5_route_state_audio_nonzero = 2u;
-
 static uint32_t rs64_m5_route_state_guest_byte(uint8_t* rdram, uint32_t guest) {
     if (rdram == nullptr || guest < 0x80000000u || guest >= 0x80800000u) {
         return 0xFFFFFFFFu;

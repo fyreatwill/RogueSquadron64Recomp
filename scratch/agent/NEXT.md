@@ -1,4 +1,4 @@
-# Next work unit: M5 route-state/source-use join
+# Next work unit: M5 route-state/source-use join (safe targeted census)
 
 HYPOTHESIS-ID: m5-route-state-not-source
 
@@ -29,6 +29,8 @@ port positive control, or either target phase is unevaluable.
 
 Ground truth before building: inspect the oracle exact-field hit PCs and the
 existing port route/source-DMA call edges; do not infer a read from a field
-snapshot. Then batch the read/use and source-DMA joins in one real/silent
-qualified run plus the oracle control. Kill every arm with SIGKILL from
-`build/`.
+snapshot. Do not use a whole-generated-load rewrite. First identify the exact
+guest load sites from the existing disassembly/ROM evidence, then add only
+those bounded hooks through the regeneration-safe fixup script. Batch the
+read/use and source-DMA joins in one real/silent qualified run plus the oracle
+control. Kill every arm with SIGKILL from `build/`.
