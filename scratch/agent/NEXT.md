@@ -1,35 +1,35 @@
-# Next work unit: M5 alternate family-object semantic ownership
+# Next work unit: M5 route-witness qualification for alternate-object ownership
 
 HYPOTHESIS-ID: m5-alternate-family-object-route-join
 
-Session 3825 selected H2 at the qualified scope: the active route/source-DMA
-handoff was present, but every sampled S/L/I family entry and store remained
-outside the clear-associated `0x801797B0..0x80179A47` object. The remaining
-question is whether those alternate objects are intended route state or a
-disconnected output family.
+Session 3825 selected H2 at a qualified scope, but the s3826 reproduction was
+coverage-invalid: target phases and family/source-transition controls fired,
+while route-preparation/order and input-DMA witnesses were absent. First
+restore that witness before interpreting alternate-object ownership.
 
 Competing hypotheses and discriminator:
 
-- H1: alternate objects are route-owned state and match a route-state table or
-  handoff identity.
-- H2: alternate objects are a disconnected output family; no route-state or
-  source-DMA identity joins them.
-- H3: the current route/object instrumentation lacks the ownership field, so
-  the result is unevaluable.
+- H1: route preparation and input DMA fire, and alternate objects match a
+  route-state/handoff identity.
+- H2: route preparation and input DMA fire, but no route/source identity joins
+  the alternate objects.
+- H3: target phases or any route-preparation/order/input-DMA positive control
+  remain absent, so ownership is unevaluable.
 
 The discriminator is one bounded image run using the validated autopilot and
-phase transitions, extending the existing family/store and route controls with
-the already available route-state/route-order rows. Correlate each distinct
-alternate family object with the active route ordinal/row and source-DMA
-descriptor in the same target-phase rows. H1 requires a stable identity join;
-H2 requires positive controls plus no identity join; H3 is any missing target
-phase, route/source control, or ownership field.
+phase transitions, with explicit `ROGUESQ_LOG_M5_ROUTE_PREPARE`,
+`ROGUESQ_LOG_M5_ROUTE_ORDER`, `ROGUESQ_LOG_M5_RSP_SOURCE`,
+`ROGUESQ_LOG_M5_EXACT_ROUTE`, and `ROGUESQ_LOG_M5_SOURCE_TRANSITION` gates.
+Require target phases plus route-preparation/order and input-DMA positives;
+then correlate each alternate object with the active route ordinal/row and
+source-DMA descriptor. H1 requires a stable identity join; H2 requires the
+positive controls plus no identity join; H3 is any missing positive control.
 
 Before running:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
 
-Run from the repository root with the validated image environment from
-`scratch/agent/s3825_m5_family_route_object_join_fixed/`; use SIGKILL and keep
-all existing positive controls. Do not repeat the completed aliasing census or
-add a mitigation.
+Run `cmake --build build --config Debug --target RogueSquadron64Recomp`, then
+run `zsh scratch/agent/run_s3826_m5_family_object_join.sh` from the repository
+root. Use SIGKILL and keep all existing positive controls. Do not add a
+mitigation or repeat an ownership conclusion without the route witnesses.

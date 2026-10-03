@@ -140724,3 +140724,15 @@ the measured scope: the alternate family objects are disconnected from the
 active clear/source object. It does not establish whether they are intended
 route state or a disconnected output family. Evidence:
 `scratch/agent/s3825_m5_family_route_object_join_fixed/`.
+
+## Session 3826 (2026-10-03) — alternate-object ownership rerun lacked route witnesses
+
+Built `RogueSquadron64Recomp` Debug and ran the bounded M5 alternate-object
+ownership capture. The initial launcher omitted the exact-route and
+source-transition gates; the corrected launcher reached title VI 1024 and
+hangar VI 512 with no crash or abort, six family/store controls, one writer
+setup control, and 1,036 source-transition rows. It still emitted zero
+route-preparation, route-order, and input-DMA rows. The target-phase family
+stores therefore cannot be joined to a route/source descriptor in this run;
+H1 and H2 are unevaluable here. This does not overturn the qualified s3825
+H2 result. Evidence: `scratch/agent/s3826_m5_family_object_join/`.
