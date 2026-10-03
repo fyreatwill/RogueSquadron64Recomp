@@ -139022,3 +139022,27 @@ port stores are legitimate observations; no mitigation changed behavior.
 Evidence: `docs/M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md`,
 `scratch/agent/s3744_oracle_groundtruth/clean/oracle.log`, and
 `scratch/agent/s3744_port_exact_route/qualified-real-allstores/real.log`.
+
+## Session 3745 (2026-10-02) — polled transient host-side exact-route ownership
+
+Before building, the independent oracle ground truth and the s3744 generated
+scalar/non-literal and RSP-DMA controls were retained. Added a portable,
+phase-gated 1 ms poll of physical RDRAM fields `0x128C92` and
+`0x128CD0..0x128CD3`; the B50 live-RDRAM mutation control was included in the
+same instrument.
+
+The Debug target rebuilt successfully. A concurrent real/silent qualified pair
+both reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Each arm
+produced one initial exact-field snapshot (`0x92=0x00`, `0xD0=0x00000400`),
+five B50 poll-control changes, and no later exact-field poll transition.
+Existing generated scalar/non-literal and RSP-DMA witnesses also emitted zero
+exact rows in both arms.
+
+This selects the no-persistent-host-write hypothesis for the poll's coverage,
+but does not rule out a transient write-and-clear because polling has no writer
+PC and can miss a sub-millisecond event. It rules out neither transient host
+ownership nor the separate-route-state interpretation. No mitigation or value
+rewrite changed.
+
+Evidence: `docs/M5-S3745-HOST-EXACT-ROUTE-POLL.md`,
+`scratch/agent/s3744_port_exact_route/real.log`, and `silent.log`.

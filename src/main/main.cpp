@@ -5454,6 +5454,53 @@ static void start_state_poller() {
     t.detach();
 }
 
+static void start_m5_exact_route_poller() {
+    const char* all = std::getenv("ROGUESQ_LOG_ALL");
+    const char* own = std::getenv("ROGUESQ_LOG_M5_EXACT_ROUTE");
+    if (!((all && all[0] && all[0] != '0') ||
+          (own && own[0] && own[0] != '0'))) return;
+    static std::thread t{[]{
+        uint8_t* rdram = nullptr;
+        while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        uint8_t prev_92 = 0xFF;
+        uint32_t prev_d0 = 0xFFFFFFFFu;
+        uint32_t prev_b50 = 0xFFFFFFFFu;
+        uint32_t rows = 0;
+        for (;;) {
+            const uint32_t width = rs64_vi_committed_width();
+            const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+            const bool target = (width == 1024u && origin == 0x00790400u) ||
+                                (width == 512u && origin == 0x006AB400u);
+            const uint8_t v92 = rdram[0x128C92u ^ 3u];
+            const uint32_t vd0 = (uint32_t(rdram[0x128CD0u ^ 3u]) << 24) |
+                                 (uint32_t(rdram[0x128CD1u ^ 3u]) << 16) |
+                                 (uint32_t(rdram[0x128CD2u ^ 3u]) << 8) |
+                                 uint32_t(rdram[0x128CD3u ^ 3u]);
+            const uint32_t b50 = rdram_be32(rdram, 0x130B50u);
+            if (b50 != prev_b50 && prev_b50 != 0xFFFFFFFFu) {
+                std::fprintf(stderr,
+                    "[m5-exact-route-poll-control] B50=0x%08X phase=%u\n",
+                    b50, rs64_phase_ord());
+                std::fflush(stderr);
+            }
+            if (target && (v92 != prev_92 || vd0 != prev_d0) && rows < 512u) {
+                std::fprintf(stderr,
+                    "[m5-exact-route-poll] n=%u phase=%u width=%u origin=0x%06X "
+                    "field92=0x%02X fieldD0=0x%08X\n",
+                    rows++, rs64_phase_ord(), width, origin, v92, vd0);
+                std::fflush(stderr);
+            }
+            prev_92 = v92;
+            prev_d0 = vd0;
+            prev_b50 = b50;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }};
+    t.detach();
+}
+
 // Periodic poll of MEM[0x80130B50] (the inner-loop transition gate). Reports
 // changes so we can see WHO writes it and what bits flip. Gated by
 // ROGUESQ_LOG_B50=1.
@@ -7441,6 +7488,7 @@ int main(int argc, char* argv[]) {
 
     start_b50_poller();
     start_state_poller();
+    start_m5_exact_route_poller();
     start_phase_poller();
     start_m5_voice_slot_poller();
     {

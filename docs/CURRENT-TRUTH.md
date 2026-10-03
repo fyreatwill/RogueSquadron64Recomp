@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3744 (2026-10-02).
+Updated for session 3745 (2026-10-02).
 
 ## Current state
 
@@ -29,13 +29,13 @@ zero-valued port payload. See
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 arbitrary host-side exact route-field ownership.** s3744's oracle
-   exact watches and qualified port census passed controls and reached
-   title/hangar. Port generated scalar/non-literal stores and RSP DMA had zero
-   exact rows; retail writes `0x128CD0..D3` at `0x8001BB14`. Join remaining
-   host-side/runtime RDRAM writes against route preparation and source DMA.
-   Do not alter `0x800078EC`. See
-   [M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md](M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md).
+1. **M5 transient host-side exact route-field ownership.** s3745's portable
+   1 ms exact-field poll saw no later changes in either qualified arm, while
+   generated scalar/non-literal stores and RSP DMA remained zero exact rows.
+   The remaining discriminator is a writer-PC-capable host watch or a complete
+   central host-write API census, because polling can miss write-and-clear
+   activity. Do not alter `0x800078EC`. See
+   [M5-S3745-HOST-EXACT-ROUTE-POLL.md](M5-S3745-HOST-EXACT-ROUTE-POLL.md).
 2. **M3 parked audit — `rs_zcfree` incoming `$a0` at `0x80005268`.** Only
    start if M5 is unavailable or closed. Audit the complete idiom class,
    identify the writer and legitimacy, and land a guard only for a concrete
@@ -65,6 +65,8 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-RouteStateNotSource` | Open after s3742: exact route fields had no scalar writer, so an uninstrumented/non-scalar producer versus control metadata remains unresolved. |
 | `H-ExactFieldUnwritten` | Selected at s3743 for generated scalar stores using literal `+0x22/+0x60`: oracle and qualified real/silent port arms had zero exact-field rows in title/hangar. |
 | `H-ExactFieldNonScalar` | Refined at s3744: generated non-literal stores and RSP DMA had no exact rows; arbitrary host-side writes remain open. |
+| `H-HostExactWriter` | Selected only for transient/unattributed activity after s3745: the 1 ms poll saw no persistent exact-field change, but has no writer-PC attribution. |
+| `H-ExactFieldUnwritten` | Selected at s3745 for persistent host-side changes visible to the poll; transient write-and-clear remains unevaluable. |
 | `H-PortFamilyWritesThenClear` | Refuted at s3739 for the qualified hangar source path: all real source-range writer payloads remained zero. |
 | `H-PortSourceClearOrdering` | Selected at s3731 across `0x1797B0..0x179A48`; target-phase stores and later payloads were zero under the known fill. |
 | `H-UninstrumentedPortProducer` | Refuted at s3731 for the full measured span. |
@@ -146,6 +148,13 @@ Work only the first applicable item. This is one monotonic backlog.
   and RSP DMA had zero exact rows, while 512 neighboring rows were legitimate
   zero stores. Arbitrary host-side writes remain open. See
   [M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md](M5-S3744-NONSCALAR-HOST-EXACT-ROUTE.md).
+- **3745 — host-side exact-route poll:** both qualified port arms passed
+  controls and reached title/hangar. The portable 1 ms poll saw one initial
+  exact snapshot and no later field transition in either arm; its B50 live
+  RDRAM control fired five times per arm. Generated scalar/non-literal and
+  RSP-DMA exact rows stayed zero. This selects the persistent-write null but
+  leaves transient write-and-clear and writer-PC attribution open. See
+  [M5-S3745-HOST-EXACT-ROUTE-POLL.md](M5-S3745-HOST-EXACT-ROUTE-POLL.md).
 - **3733 — retail source payload:** both retail target halves were nonzero;
   the full writer census named `0x80007670`, `0x8001E2C0`, and `0x8001F...`.
   The candidate port output watch had no target samples.
@@ -222,6 +231,7 @@ unreconciled.
 - [M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md](M5-S3734-RETAIL-PORT-BYTE-LAYOUT-JOIN.md)
 - [M5-S3741-ROUTE-HANDOFF-CENSUS.md](M5-S3741-ROUTE-HANDOFF-CENSUS.md)
 - [M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md](M5-S3743-EXACT-ROUTE-FIELD-OWNERSHIP.md)
+- [M5-S3745-HOST-EXACT-ROUTE-POLL.md](M5-S3745-HOST-EXACT-ROUTE-POLL.md)
 - [M5-S3736-EXACT-RETAIL-BYTE-JOIN.md](M5-S3736-EXACT-RETAIL-BYTE-JOIN.md)
 - [M5-S3733-RETAIL-SOURCE-PAYLOAD.md](M5-S3733-RETAIL-SOURCE-PAYLOAD.md)
 - [M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md](M5-S3732-IMAGE-PAYLOAD-BOUNDARY.md)
@@ -233,5 +243,5 @@ unreconciled.
 - [M5-S3706-WRITER-SETUP-REQUALIFICATION.md](M5-S3706-WRITER-SETUP-REQUALIFICATION.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3737 remain in the append-only ledger. Use bounded `grep`/`sed`
+Sessions 1–3745 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.
