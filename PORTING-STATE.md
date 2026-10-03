@@ -140657,3 +140657,17 @@ qualified paired comparison. Next work is single-port target-phase
 qualification; no mitigation or code change was made.
 
 Evidence: `scratch/agent/s3821_m5_retail_port_route_fixed/`.
+
+## Session 3822 (2026-10-03) — qualified standalone port target phase
+
+Built the Debug target and ran the exact validated standalone image route for
+90 seconds with LLE, spin-yield, in-loop drain, autopilot, real audio, and the
+phase/task/route/source controls. The run reached title VI `0x00790400` at
+14.3s and hangar VI `0x006AB400` at 23.6s, then was SIGKILLed by the watchdog.
+Phase, task-contract, route-order, RSP-source, source-producer, source-writer,
+and source-transition positive controls all fired. No `[CRASH]` or `[ABORT]`
+marker appeared. This selects standalone target reachability and refutes the
+paired-run-only port stall at this scope. It does not select retail/port route
+parity; the next probe is a complete paired target-phase capture.
+
+Evidence: `scratch/agent/s3822_port_target.log`.

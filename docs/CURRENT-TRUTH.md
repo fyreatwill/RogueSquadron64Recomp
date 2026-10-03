@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3821 (2026-10-03).
+Updated for session 3822 (2026-10-03).
 
 ## Current state
 
@@ -24,8 +24,8 @@ is the legitimate zero-valued `0x800078EC` fill before the image DMA. Session
 3818 joined that writer through the active generated scalar-store census:
 sequence 664 at physical `0x179A44` is the final writer, and every target
 `0x1798B0 -> DMEM 0xCB0` input DMA observed it with zero value. Retail/port
-parity is now selected at the qualified target phase; no nonzero hangar
-producer is established.
+target-phase parity is ready for a paired capture; no nonzero hangar producer
+is established.
 
 The complete generated scalar-store census, central host/RSP writer census,
 native page-fault census, and nine bounded exact-offset load candidates are
@@ -44,30 +44,34 @@ family rows, but retail family reachability has not yet been achieved.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 port target-phase qualification before route parity.** s3821's retail
-   arm reached the qualified hangar snapshot, but the paired port arm remained
-   at VI 640 despite the validated route settings. First qualify a single port
-   image arm with target-phase controls; do not infer route parity from this
-   incomplete pair.
-2. **M5 target-phase retail/port route parity.** s3820's independent oracle
+1. **M5 target-phase retail/port route parity.** s3822 qualified the standalone
+   port image arm: title VI `0x00790400` at 14.3s and hangar VI `0x006AB400`
+   at 23.6s, with phase/task/route/source controls and no crash or abort. The
+   next bounded probe is the paired retail/port capture at the same target
+   phase, including the existing positive controls.
+2. **M5 port target-phase qualification, closed at this scope.** s3821's pair
+   was coverage-invalid because the port arm stopped at VI 640; s3822's
+   standalone arm reached both target phases. Do not repeat standalone
+   qualification unless the route or build changes.
+3. **M5 target-phase retail/port route parity.** s3820's independent oracle
    phase snapshot is zero at hangar (`FNV=0x762B22A5`, 408 bytes), matching the
    qualified port input-DMA payload. The next bounded probe must join the
    retail hangar source snapshot to the port image-stage/source-DMA route in
    one paired capture, including the existing positive controls. Do not repeat
    the retail nonzero-writer census: its shutdown-only 12-byte residue is
    pre-target/transient evidence, not a hangar producer.
-3. **M5 image-arm stability discriminator, closed at this scope.** The
+4. **M5 image-arm stability discriminator, closed at this scope.** The
    isolated image arm reached both target phases with independent phase and
    M5 controls; s3811/s3812 launch-order failures no longer block producer
    work. Keep the stability breadcrumb passive and do not repeat ordering A/B.
-4. **M3 runtime allocator qualification.** The complete generated
+5. **M3 runtime allocator qualification.** The complete generated
    control but could not produce a valid silent/image pair: the image-first
    arm produced 258 family rows and both target VIs, while silent crashed 36
    times in the captured log. Do not repeat launch-order variants. Resume only
    with a new discriminator for arm stability that preserves both controls.
    `rs_zcfree` idiom is closed at s3790; no generated invalid writer or guard
    is justified.
-5. **Generated-symbol renaming sweep.** Resume only after the M5 change is
+6. **Generated-symbol renaming sweep.** Resume only after the M5 change is
    validated and M3 has no new discriminator. Keep slug
    `generated-symbol-renaming-sweep`; s3796 found no stale callable symbol in
    `0x80009000..0x8000A000` with valid companion positive controls.
@@ -112,7 +116,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailSourceWriterParity` | Selected at s3820 for the hangar phase: retail phase snapshot is zero with `FNV=0x762B22A5`, matching the qualified port payload; shutdown-only 12-byte residue is pre-target/transient. |
 | `H-M5-RetailZeroWriterLegitimate` | Selected at s3819: hangar-phase retail `0x800078EC` post-store scalar samples are 816 zero, 0 nonzero, 0 mismatch, 0 unsupported. |
 | `H-M5-RetailNonzeroWriterIdentity` | Closed at s3820 for hangar: exact phase snapshot has zero nonzero bytes; earlier 1024-wide nonzero bytes are erased before target. |
-| `H-M5-PortTargetPhase` | Open at s3821: corrected paired port arm was stable with route/source controls but stopped at VI 640, so target-phase parity remains unevaluable. |
+| `H-M5-PortTargetPhase` | Selected at s3822 for the standalone image route: title 1024 and hangar 512 were reached with all requested controls and no crash/abort. |
 
 ## Evidence ledger — live boundary
 
@@ -450,6 +454,15 @@ line naming the writer and stating whether its value is legitimate.
   snapshot `FNV=0x762B22A5`. H3 is selected: route parity is unevaluable until
   the port target phase is qualified. No mitigation or code change is
   justified. Evidence: `scratch/agent/s3821_m5_retail_port_route_fixed/`.
+- **3822 — standalone port target-phase qualification:** the Debug build passed.
+  The exact validated image route reached title VI `0x00790400` at 14.3s and
+  hangar VI `0x006AB400` at 23.6s, then remained alive through the 90-second
+  SIGKILL watchdog. Phase, task-contract, route-order, RSP-source,
+  source-producer, source-writer, and source-transition controls all fired;
+  no `[CRASH]` or `[ABORT]` marker appeared. This selects standalone target
+  reachability and refutes the paired-run-only port stall at this scope. The
+  route-parity result remains open until the paired retail/port capture.
+  Evidence: `scratch/agent/s3822_port_target.log`.
 
 ## Superseded conclusions
 
