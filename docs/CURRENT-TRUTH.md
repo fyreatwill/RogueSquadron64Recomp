@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3790 (2026-10-03).
+Updated for session 3791 (2026-10-03).
 
 ## Current state
 
@@ -106,6 +106,11 @@ Work only the first applicable item. This is one monotonic backlog.
   `rs_malloc` result. No alternate generated writer or invalid-value source
   was found. H1 is selected at static scope; runtime allocator legitimacy is
   still unqualified and no guard was added.
+- **3791 — bounded generated-symbol lead `0x8008ED6C..0x80091C80`:** the
+  companion census found 19 semantic candidates, all already synchronized in
+  generated C; the positive-control rows explicitly reported
+  `already-synchronized`. The tool changed zero references, so this audio
+  range is closed for the rename sweep and no build was needed.
 - **3781 — guest route sample:** image-only port reached both target VIs and
   produced 257 family rows; all three sampled guest route bytes were zero.
   Retail controls passed but did not reach a family PC. Single-source port

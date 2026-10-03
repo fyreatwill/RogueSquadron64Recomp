@@ -140042,3 +140042,18 @@ INCOMING-A0-IDIOM-AUDIT.md`.
 
 ORIGIN: static generated-source audit only; no runtime mitigation or game-state
 change.
+
+## Session 3791 (2026-10-03) — bounded symbol-renaming lead was already synchronized
+
+Ran the regeneration-safe rename tool over the contiguous generated range
+`0x8008ED6C..0x80091C80`, joined to every companion `symbol_files/*.txt`
+entry. It found 19 semantic candidates; every candidate was reported as
+`already-synchronized`, and the tool changed zero generated references. The
+positive-control rows therefore fired in the same measurement, validating that
+the census was seeing the companion region. H1 (new exact rename in this
+range) and H2 (ambiguous candidate requiring preservation) were not selected;
+H3 selected and this audio range is closed for the rename sweep. No build or
+generated-file edit was needed.
+
+ORIGIN: bounded static symbol census only; no runtime mitigation, ROM, or game
+state change.
