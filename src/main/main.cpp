@@ -1361,7 +1361,15 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
     }
     const uint32_t start = phys & 0x007FFFFFu;
     const uint32_t end = start + len;
-    const uint32_t fields[][2] = {{0x128C92u, 1u}, {0x128CD0u, 4u}};
+    const struct {
+        uint32_t start;
+        uint32_t len;
+        const char* name;
+    } fields[] = {
+        {0x128C92u, 1u, "route_byte"},
+        {0x128CD0u, 4u, "route_word"},
+        {0x171E70u, 0x100u, "task_data"},
+    };
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     const bool target = (width == 1024u && origin == 0x00790400u) ||
@@ -1369,17 +1377,17 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
     if (!target) return;
     static uint32_t rows = 0;
     for (const auto& field : fields) {
-        if (start >= field[0] + field[1] || end <= field[0]) continue;
+        if (start >= field.start + field.len || end <= field.start) continue;
         if (rows++ >= 512u) return;
         uint32_t post = 0u;
-        for (uint32_t i = 0; i < field[1]; ++i) {
-            post = (post << 8) | rdram[(field[0] + i) & 0x007FFFFFu];
+        for (uint32_t i = 0; i < field.len; ++i) {
+            post = (post << 8) | rdram[(field.start + i) & 0x007FFFFFu];
         }
         std::fprintf(stderr,
             "[m5-host-write] n=%u api=%s phase=%u width=%u origin=0x%06X "
-            "phys=0x%06X len=0x%X field=0x%06X field_len=%u post=0x%08X\n",
+            "phys=0x%06X len=0x%X field=%s@0x%06X field_len=%u post=0x%08X\n",
             rows - 1u, api ? api : "unknown", rs64_phase_ord(), width, origin,
-            start, len, field[0], field[1], post);
+            start, len, field.name, field.start, field.len, post);
         std::fflush(stderr);
     }
 }

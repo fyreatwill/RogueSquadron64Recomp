@@ -139256,3 +139256,34 @@ observed zero writer remains legitimate zero-fill/setup activity.
 
 Evidence: `docs/M5-S3753-TASK-PRODUCER-CENSUS.md` and
 `scratch/agent/s3753_m5_task_producer/`.
+
+## Session 3754 (2026-10-02) — censused central host and RSP task-data producers
+
+The first retail preflight used a noisy execution-watch range and was
+phase-unevaluable, although its whole-RDRAM control fired. A corrected
+watch-only retail capture then passed the control with 61,104 callbacks,
+recorded 50,387 writes in task-data span `0x171E70..0x171F70` and 717 writes
+in the source span, and attributed target-phase task-data writes to the
+`0x80090A..0x800911` family. This independently confirms the retail producer
+path and documents the failed first capture.
+
+I extended the existing central host-write census to include the task-data
+span; its RSP DMEM-to-RDRAM caller already passed through the same hook. The
+qualified real and silent arms ran concurrently with the validated autopilot.
+All four API controls (PI ROM, PI SRAM, zmemcpy, and RSP DMA) fired in both
+arms. The real arm reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`; silent passed its controls and remained the expected
+no-source control. Neither arm emitted a phase-gated host/RSP row overlapping
+the task-data span. The real arm still emitted 4,096 generated scalar rows,
+all zero-valued, and retained the zero source-DMA join.
+
+This selects `H-TaskDataNonScalarAbsent` for the central host/RSP classes and
+refutes `H-TaskDataHostProducer` and `H-TaskDataRspProducer` for those classes.
+It moves the boundary to arbitrary direct/native or other non-central writers,
+not to a mitigation. ORIGIN: diagnostic-only host/RSP overlap census and
+retail watches; no guest value, branch, DMA, or rendering behavior changed.
+
+Evidence: `docs/M5-S3754-TASK-DATA-NONSCALAR-CENSUS.md`,
+`scratch/agent/s3754_oracle_taskdata/oracle-attribution.log`,
+`scratch/agent/s3754_m5_taskdata/real/run.log`, and
+`scratch/agent/s3754_m5_taskdata/silent/run.log`.
