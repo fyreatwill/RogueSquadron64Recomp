@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3836 (2026-10-03).
+Updated for session 3837 (2026-10-03).
 
 ## Current state
 
@@ -46,7 +46,14 @@ zero in the qualified family rows.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image task/output contract edge.** Session 3835 closes alternate-family
+1. **M5 image task/output contract edge.** Session 3837's same-build logger
+   stability A/B reached title 1024 in both image arms with no crash/abort;
+   logger-off had 0 task-contract rows and logger-on had 2,406. Neither arm
+   reached hangar 512 before the watchdog, so this refutes the logger as the
+   cause of the s3836 pre-title crash at the measured scope but does not yet
+   qualify a hangar contract comparison. Preserve this control set while
+   obtaining both target phases before interpreting task fields. Session 3835
+   closes alternate-family
    ownership at the measured scope: retail reached title 1024 and hangar 512,
    executed the S/L family PCs, and had zero reads/writes in physical
    `0x165000..0x16C000`, while the port emitted 1,280 target-phase family
@@ -175,6 +182,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-FamilyRouteContextOrder` | Selected H3 at s3834 scope: 130 entry and 1,011 store rows exactly joined the authoritative route context, all after it; PCM source/consumer matches remained zero. |
 | `H-M5-FamilyRetailObjectAccess` | Selected H2 at s3835: retail reached title/hangar and the S/L family PCs, but had zero reads/writes in physical `0x165000..0x16C000`; the port emitted 1,280 target-phase family stores. |
 | `H-M5-TaskContractCaptureCoverage` | Unevaluable at s3836: retail task rows and both target phases were positive, but both port attempts crashed at guest `0x8000834C` before VI 320, leaving all port task/output rows absent. |
+| `H-M5-TaskContractLoggerStartup` | Refuted at s3837's pre-title scope: logger-on and logger-off both reached title 1024 with no crash/abort; only logger-on emitted task-contract rows. Full hangar-phase stability remains unqualified. |
 
 ## Evidence ledger — live boundary
 
@@ -667,6 +675,15 @@ line naming the writer and stating whether its value is legitimate.
   DMA, completion, service, or PCM rows. H3 is selected for this capture; no
   image contract mismatch follows. Evidence:
   `scratch/agent/s3836_m5_task_contract_edge/`.
+- **3837 — task-contract logger startup A/B:** the Debug build passed. Two
+  concurrent image arms used identical validated controls, with only
+  `ROGUESQ_LOG_M5_TASK_CONTRACT=1` differing. Both fired the phase control and
+  reached title `0x00790400`/1024 without crash or abort; neither reached
+  hangar `0x006AB400`/512 before the 75-second watchdog. Logger-off emitted
+  zero task-contract rows, while logger-on emitted 2,406. This refutes the
+  logger as the cause of the s3836 pre-title crash at this scope, but leaves
+  full target-phase contract comparison unevaluable. Evidence:
+  `scratch/agent/s3837_m5_task_contract_stability/`.
 
 ## Superseded conclusions
 
@@ -694,5 +711,5 @@ See the session-specific notes linked above and:
 - [M5-S3781-GUEST-ROUTE-SAMPLE.md](M5-S3781-GUEST-ROUTE-SAMPLE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3836 remain in the append-only ledger. Use bounded `grep`/`sed`
+Sessions 1–3837 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`, never read it whole.

@@ -140913,3 +140913,16 @@ completion, service, or PCM rows. This selects H3 measurement-boundary
 failure, not an image contract mismatch, and rules out using this pair for
 retail/port field parity. Evidence:
 `scratch/agent/s3836_m5_task_contract_edge/`.
+## Session 3837 (2026-10-03) — refuted task-contract logger startup instability
+
+Ran the required same-build M5 task-contract logger A/B after the s3836 port
+arm was coverage-invalid. The build passed. Two concurrent image arms used
+identical controls; only `ROGUESQ_LOG_M5_TASK_CONTRACT=1` differed. Logger-off
+and logger-on both fired the phase control and reached title VI
+`0x00790400`/1024, with no `[CRASH]` or `[ABORT]` marker. Neither reached
+hangar VI `0x006AB400`/512 before the 75-second SIGKILL watchdog. Logger-off
+produced 0 task-contract rows; logger-on produced 2,406 `[audtask-abi]` rows.
+This refutes the logger as the cause of the s3836 pre-title crash at this
+scope, but does not qualify a target-phase task-contract comparison. The next
+probe extends the same paired recipe to a 180-second target-phase stability
+run. Evidence: `scratch/agent/s3837_m5_task_contract_stability/`.
