@@ -141264,3 +141264,22 @@ This selects the environment-block hypothesis for this iteration only. It
 does not validate allocator behavior, prove the guard fires, or justify a
 claim about valid or invalid metadata-slot routes. The next applicable unit
 returns to the M5 retail image task/output edge.
+
+## Session 3857 (2026-10-03) — qualified retail image-span writer provenance
+
+Ran `scratch/agent/run_s3857_m5_retail_writer_provenance.sh`, a paired
+retail/port capture with whole-RDRAM, title, and hangar controls. The retail
+oracle reached its 10,000-callback positive control, title VI 1024, and hangar
+VI 512, then completed 8,046,202 watch hits. The new watch found 816 writes
+from `0x800078EC` into `0x1798B0..0x179A48`, including 408 hangar-phase hits;
+scalar post-store sampling classified all 816 as zero, with zero mismatches.
+The port arm independently reached target-phase image-DMA joins and emitted
+no crash or abort markers.
+
+This selects `H-M5-800078ECZeroFill`: the writer is active in hangar but is
+not the nonzero image producer at this scope. It rules out promoting that
+writer into a writeback explanation or mitigation. The remaining M5 contract
+edge has no qualified nonzero retail producer yet.
+
+ORIGIN: diagnostic-only oracle writer execution and scalar-store sampling; no
+guest or host state was rewritten, skipped, or guarded.

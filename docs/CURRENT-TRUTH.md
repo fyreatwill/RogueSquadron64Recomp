@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3856 (2026-10-03).
+Updated for session 3857 (2026-10-03).
 
 ## Current state
 
@@ -36,11 +36,15 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image task/output edge — qualified port result.** Session 3839 joined
-   the named port input contract to `0x1798B0 -> DMEM 0xCB0`; session 3840
-   found 452/458 matching separate writeback-DMA joins to `0x1798B0`, length
-   `0x198`, despite empty ABI output fields. Do not add a writeback guard or
-   infer a destination from the port address; qualify retail first.
+1. **M5 image task/output edge — retail writer provenance narrowed.** Sessions
+   3839–3840 qualified the port input and separate writeback-DMA edge despite
+   empty ABI output fields. Session 3857 qualified the dominant retail
+   `0x800078EC` writer: it had 408 hangar-phase hits into
+   `0x1798B0..0x179A48`, but all 816 sampled scalar stores were zero with no
+   mismatches. Treat it as zero-fill activity, not the image producer. Do not
+   add a writeback guard or infer a destination from the port address. The
+   remaining M5 work is to identify a legitimate nonzero retail producer or
+   prove the task/output edge is absent at this scope.
 2. **M3 heap guard validation — blocked dependency.** Sessions 3852–3856
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
@@ -80,6 +84,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailTaskStageRole` | Selected at s3846: retail task and candidate image-stage region are both active in hangar with independent phase/whole-RDRAM controls. |
 | `H-M5-RetailTaskPointerGeneric` | Selected at s3854: `0x80171E70` and `0x80173CB0` join both known stage PCs and multiple `s1` structures without a unique destination/length tuple. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855: retail writes the candidate stage span in hangar, but has zero phase-gated writes to `0x1798B0..0x179A48`; lifetime output writers are outside title/hangar buckets. |
+| `H-M5-800078ECZeroFill` | Selected at s3857: the dominant lifetime writer executes in hangar but all sampled writes to `0x1798B0..0x179A48` are zero; it is not a nonzero image producer. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 
@@ -170,6 +175,14 @@ Work only the first applicable item. This is one monotonic backlog.
   failed with `No rule to make target PatchesLib`. This selects the environment
   block only; it provides no allocator behavior evidence and leaves the guard
   unvalidated.
+- **3857:** A paired retail/port capture added scalar post-store provenance for
+  the dominant retail writer. The oracle whole-RDRAM control reached 10,000
+  callbacks, title 1024, and hangar 512; the run completed with 8,046,202
+  watch hits. `0x800078EC` wrote the candidate output span 816 times, including
+  408 hangar-phase hits, but scalar sampling reported zero=816, nonzero=0,
+  mismatch=0. The port independently emitted target-phase image-DMA joins and
+  no crash/abort markers. This selects `H-M5-800078ECZeroFill` and rules out
+  that writer as the nonzero image producer at the qualified scope.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

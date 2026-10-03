@@ -1,26 +1,31 @@
-# Next work unit: qualify the retail side of the M5 image task/output edge
+# Next work unit: validate the landed M3 heap metadata-slot guard
 
-HYPOTHESIS-ID: m5-retail-image-task-output-edge
+HYPOTHESIS-ID: m3-heap-guard-validation
 
-Run the paired capture from the repository root:
-
-    zsh scratch/agent/run_s3855_m5_retail_destination_role.sh
-
-Retain the whole-RDRAM positive control, title/hangar VI controls, and
-no-crash/no-abort markers. Extend the oracle arm only if needed to join one
-task generation to one candidate output destination; do not add a mitigation
-or infer ownership from the port address.
+M5 session 3857 ruled out the dominant `0x800078EC` writer as a nonzero
+image producer. No legitimate retail producer is currently identified, so do
+not add an M5 writeback guard or repeat the closed destination census.
 
 Competing hypotheses and discriminator:
 
-- H1: a retail task generation directly owns the candidate image-stage/output
-  span and joins to a unique destination/length tuple.
-- H2: retail reaches the stage writers but the task descriptor is generic; a
-  separate writer owns publication, as in the qualified port edge.
-- H3: the retail arm fails its positive control or target VI, making a null
-  destination result unevaluable.
+- H1: the configured patch pipeline builds and the guard-linked allocator
+  smoke reaches the guarded metadata-slot stores without rejecting legitimate
+  fixed-slot pointers.
+- H2: the pipeline/toolchain is still unavailable, so allocator behavior is
+  unevaluable and no guard conclusion is allowed.
+- H3: the build succeeds but the smoke shows an unexpected metadata-slot
+  value; classify the writer and stop before changing the guard.
 
-The discriminator is one paired capture with both target-VI controls and a
-phase-gated task-generation-to-destination join. H1 requires a stable unique
-tuple; H2 requires live task and writer rows without a unique tuple; H3 is
-selected only when the controls fail.
+The discriminator is a successful `PatchesLib` build followed by the existing
+allocator-route smoke, with the fixed linker addresses and guard diagnostics
+captured. H1 requires the build and smoke; H2 is selected only by direct
+tool/target failure; H3 requires a completed smoke with a value mismatch.
+
+Exact checks:
+
+    command -v mips64-elf-gcc mips64-elf-ld
+    test -x build/Debug/N64Recomp.exe
+    cmake --build build --config Debug --target PatchesLib
+
+If the prerequisites are restored, run the allocator-route smoke documented
+in `patches/README.md`; do not claim allocator behavior from a failed build.
