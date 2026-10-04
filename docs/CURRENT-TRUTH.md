@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3893 (2026-10-03).
+Updated for session 3894 (2026-10-03).
 
 ## Current state
 
@@ -197,7 +197,6 @@ Work only the first applicable item. This is one monotonic backlog.
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
    skipped, or guarded.
-
    Session 3892 reran the stale `run_s3890_m5_remaining_candidate_writers.sh`
    recipe, which selected `0x80092020`, `0x8009206C`, and `0x80007670` again
    instead of a new class. Retail whole-RDRAM, title-1024, hangar-512, and
@@ -211,7 +210,6 @@ Work only the first applicable item. This is one monotonic backlog.
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
    skipped, or guarded.
-
    Session 3893 ran the next bounded arm for `0x80004AB8`, `0x80004AC0`, and
    `0x80004AC8`. Retail whole-RDRAM, title-1024, hangar-512, and shutdown
    controls passed. Each PC had qualified title/hangar candidate-span writer
@@ -220,6 +218,17 @@ Work only the first applicable item. This is one monotonic backlog.
    with 3,013 image-DMA joins and 3,018 ABI events, with no crash or abort.
    Continue with `0x80004AD4`, `0x80004AE0`, and `0x80004AE4`; do not infer a
    global producer absence or add a mitigation from this bounded result.
+
+   ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+   paired with port image-DMA joins; no guest or host state was rewritten,
+   skipped, or guarded.
+   Session 3894 ran the next bounded arm for `0x80004AD4`, `0x80004AE0`, and
+   `0x80004AE4`. The same retail controls passed; each PC had 166 qualified
+   writer-PC rows but zero post-target scalar samples and rows, selecting H2
+   for these PCs only. The port independently reached 3,025 image-DMA joins
+   and 3,040 ABI events with no crash or abort. Continue with `0x80004AE8`,
+   `0x80004AF0`, and `0x80004BE8`; do not infer a global producer absence or
+   add a mitigation from this bounded result.
 
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
