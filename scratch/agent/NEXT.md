@@ -1,31 +1,28 @@
-# Next work unit: qualify M5 candidate writers 0x8000521C–0x80005224
+# Next work unit: explain declared-size M5 audio task-contract failure
 
-HYPOTHESIS-ID: m5-candidate-writer-census
+HYPOTHESIS-ID: m5-audio-task-contract
 
-Run the existing same-build retail/port candidate-writer census for
-`0x8000521C`, `0x80005220`, and `0x80005224`. Use the validated legacy audio
-DMA rollback (`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`) on the port arm so the
-declared-size task-contract crash cannot contaminate this writer qualification.
-The existing instrument's whole-RDRAM, title-1024, hangar-512, oracle-done,
-and paired port payload/task controls must all be reported.
+Run the existing same-build two-arm task-staging capture to compare declared
+`ucode_data_size=0x800` against legacy `0xF80` staging. Preserve task-contract,
+DMEM-canary, DMA-range, phase, crash-PC, and payload controls. Identify the
+first declared-arm consumer/read past the staged boundary before changing the
+qualified route.
 
 Competing hypotheses:
 
-- H1: at least one candidate executes in a qualified retail target phase and
-  has a post-store/scalar sample, identifying a live writer candidate.
-- H2: retail reaches all controls but all three candidates remain absent from
-  target-phase, post-target, and scalar evidence; this bounded class is not a
-  writer.
-- H3: the port arm cannot qualify because the legacy rollback still fails or
-  its source/task controls do not close, so this class is unevaluable.
+- H1: declared-size reaches the same task boundary as legacy and its first
+  failing consumer is identified, proving the crash is downstream of staging.
+- H2: declared-size fails before any consumer/read beyond `0x800` is observed,
+  identifying a producer/setup defect rather than an over-copy requirement.
+- H3: controls are incomplete or the failure signature is not reproducible, so
+  the contract remains unevaluable.
 
-Discriminator: compare the single-run retail candidate rows/post-store
-samples with the independent whole-RDRAM and phase controls, then require the
-paired port to reach title/hangar without crash/abort and with its existing
-source/task joins. A candidate hit selects H1; clean retail absence with
-qualified port selects H2; missing controls or a legacy-arm crash selects H3.
+Discriminator: in one capture, require both arms to emit task ABI rows and
+DMEM-canary controls. H1 is a declared-arm crash after a traceable read/use of
+bytes beyond `0x800`; H2 is a reproducible earlier crash with no such read/use;
+H3 is any missing positive control or non-reproducible arm.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env zsh scratch/agent/run_s3989_m5_candidate_writers.sh
+    env zsh scratch/agent/run_s3977_m5_task_staging.sh

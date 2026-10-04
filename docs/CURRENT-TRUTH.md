@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3989 (2026-10-04). This maintenance pass condensed the
+Updated for session 3990 (2026-10-04). This maintenance pass condensed the
 operational ledger below; the append-only ledger retains the deleted detail.
 
 ## Current state
@@ -41,30 +41,21 @@ their measured scopes. A null attribution is not global writer absence.
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 candidate-writer qualification — `0x8000521C`, `0x80005220`,
-   `0x80005224`.** Run the existing same-build retail/port census with
-   `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` on the port. Require whole-RDRAM,
-   title-1024, hangar-512, oracle-completion, image-DMA, task-contract, and
-   paired payload controls. H1 is a qualified candidate execution plus a
-   post-store/scalar sample; H2 is clean retail absence with qualified port;
-   H3 is any missing control or legacy-arm failure. Do not infer a global
-   producer result.
-
-2. **M5 audio task-contract redesign.** Explain why declared-size staging
+1. **M5 audio task-contract redesign.** Explain why declared-size staging
    crashes at `0x8000834c`; name the writer/consumer requiring bytes beyond
    `0x800` before changing the qualified route. Do not treat legacy success as
    proof that the over-copy is legitimate.
 
-3. **M3 heap guard validation.** The accumulated guards in
+2. **M3 heap guard validation.** The accumulated guards in
    `patches/heap_guards.c` are not runtime-qualified because the configured
    build has no `PatchesLib` target and the MIPS toolchain is unavailable.
    Do not add another guard before the patch pipeline is supplied and built.
 
-4. **M5 candidate-writer census continuation.** Resume the next unclassified
+3. **M5 candidate-writer census continuation.** Resume the next unclassified
    adjacent set only after item 1 closes. All prior sets through
    `0x80005218` selected bounded H2; this is not global writer absence.
 
-5. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
+4. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
    `generated-symbol-renaming-sweep`; mapping edits do not reset the
    engineering-change stall gate.
@@ -83,6 +74,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
 | `H-M5-800078ECZeroFill` | Selected at s3857; sampled writes are zero-valued. |
 | `H-M5-CandidateWriterClass` | Bounded classes through `0x80005218` selected H2 or H3 as recorded in the append-only ledger; never global absence. |
+| `H-M5-CandidateWriterClass-0521C` | Selected H2 at s3990: all three PCs absent from qualified retail target/post-target/scalar evidence while the paired legacy port qualified. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
@@ -104,6 +96,10 @@ candidate results are summarized by address range rather than copied here.
 - Session 3973's route comparison reached VI 512 only with image/LLE-on;
   image/LLE-off stopped at VI 1024 and silent/LLE-on crashed at
   `last-guest-pc=0x8000834c`.
+- Session 3990's bounded candidate census selected H2 for `0x8000521C`,
+  `0x80005220`, and `0x80005224`: retail controls passed, each candidate had
+  zero target/post-target/scalar evidence, and the legacy port reached both
+  phases with 3,000 image-DMA joins and 3,004 task rows without crash/abort.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.

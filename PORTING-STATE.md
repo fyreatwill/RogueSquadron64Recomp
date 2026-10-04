@@ -143436,3 +143436,20 @@ blocker; it does not add runtime evidence or change any investigation
 hypothesis. The next work unit remains the bounded `0x8000521C` / `0x80005220`
 / `0x80005224` candidate-writer qualification using the legacy audio-DMA
 rollback and its same-run positive controls.
+
+## Session 3990 (2026-10-04) — classified the next M5 candidate-writer class
+
+Built the ordinary Debug target successfully and ran the bounded M5 census for
+`0x8000521C`, `0x80005220`, and `0x80005224` using the validated legacy
+audio-DMA rollback. The independent whole-RDRAM positive control fired 10,000
+times; retail reached title VI 1024, hangar VI 512, and oracle completion.
+All three candidates had zero target-phase executions, zero post-target rows or
+samples, and zero scalar samples, selecting H2 for this bounded class. The
+paired port reached both qualified phases with 3,000 image-DMA joins and 3,004
+task-contract rows, zero crash/abort markers, and qualified source/destination
+payload `FNV=0x762B22A5`, nonzero=0. This rules out these three PCs as the
+qualified retail writer at the measured scope; it does not establish global
+writer absence. The next work unit is the declared-size versus legacy task-
+staging contract investigation.
+
+**Outcome: ADVANCED** (the planned discriminator ran and selected H2).
