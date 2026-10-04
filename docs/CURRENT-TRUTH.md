@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3996 (2026-10-04).
+Updated for session 3997 (2026-10-04).
 
 ## Current state
 
@@ -65,13 +65,22 @@ rule to make target PatchesLib`), so MIPS/runtime qualification is still
 blocked; this is a source-level guard change, not an explanation of the
 underlying corruption.
 
+Session 3997 extended the qualified legacy/real M5 census to candidate PCs
+`0x80005234`, `0x80005238`, and `0x8000523C`. The retail oracle's whole-RDRAM
+positive control fired, title VI 1024 fired 154 times, hangar VI 512 fired 188
+times, and the oracle completed. Each candidate had `seen=0`, zero post-target
+samples/rows, and zero sequence hits. The paired port reached phase 5 with
+2,853 audio ABI rows and 2,844 image-DMA joins, with no crash or abort. This
+selects H2 for the measured candidate class; it does not establish global
+writer absence.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
 1. **M5 candidate-writer census continuation.** Resume the next unclassified
-   adjacent set after `0x80005230`, using one phase-scoped table and the
+   adjacent set after `0x8000523C`, using one phase-scoped table and the
    qualified legacy/real route. The discriminator is whether any candidate
    writes nonzero target/post-target payload at a matching task ordinal; a
    same-run positive control must show the table firing.
@@ -111,6 +120,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-Step1-TaskContract-3992` | Superseded by s3994: s3993 again failed to qualify declared/real, but s3994's same-build three-arm capture qualified it. |
 | `H-M5-Step1-TaskContract-3994` | H2 selected at the measured scope: declared/real and legacy/real reached the ABI and target phases with matching zero-payload phase-5 consumer signatures; no declared-only post-`0x800` marker appeared. |
 | `H-M5-CandidateWriterClass-0528` | H2 selected at s3995: retail controls and oracle completion passed, while `0x80005228`, `0x8000522C`, and `0x80005230` had no candidate or post-target evidence; paired port reached phase 5. |
+| `H-M5-CandidateWriterClass-0534` | H2 selected at s3997: retail controls and oracle completion passed, while `0x80005234`, `0x80005238`, and `0x8000523C` had no candidate, post-target, or sequence evidence; paired port reached phase 5. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 
 ## Durable evidence boundary

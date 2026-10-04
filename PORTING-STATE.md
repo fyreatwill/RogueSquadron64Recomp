@@ -143555,3 +143555,15 @@ requested `PatchesLib` target still fails immediately with `No rule to make
 target 'PatchesLib'`, so MIPS/runtime qualification remains blocked by the
 configured build/toolchain. This source change advances the patch artifact but
 does not explain the underlying corruption. No M5 census or soak was rerun.
+
+## Session 3997 (2026-10-04) — extended M5 candidate-writer census
+
+Ran the qualified legacy/real paired census for candidate PCs `0x80005234`,
+`0x80005238`, and `0x8000523C`. The retail oracle's whole-RDRAM positive
+control fired, title VI 1024 fired 154 times, hangar VI 512 fired 188 times,
+and the oracle completed. Each candidate reported `seen=0`, zero post-target
+samples/rows, and zero sequence hits. The paired port reached phase 5 with
+2,853 audio ABI rows and 2,844 image-DMA joins, with no crash or abort. This
+selects H2 for the measured candidate class and rules out a qualified retail
+writer at these three PCs in the measured target scope; it does not prove
+global writer absence.
