@@ -142053,6 +142053,23 @@ ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
 
+## Session 3905 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3905_m5_remaining_candidate_writers.sh` for
+`0x80004F30`, `0x80004F34`, and `0x80004F38`. Retail passed its whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and oracle completion. Each
+candidate executed during the qualified target phase, but all three produced
+zero post-target rows and zero post-target scalar samples, selecting H2 for
+this bounded class only. The paired port reached hangar, recorded 2,800
+image-DMA joins, and emitted no crash or abort marker; its qualified image
+payload remained `FNV=0x762B22A5`, nonzero=0. This does not establish global
+retail writer absence or identify the missing output edge. The next
+representatives are `0x80004F3C`, `0x80004F44`, and `0x80004F48`.
+
+ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.
+
 ## Session 3902 (2026-10-03) — classified the next M5 candidate-writer classes
 
 Ran `zsh scratch/agent/run_s3901_m5_remaining_candidate_writers.sh` for

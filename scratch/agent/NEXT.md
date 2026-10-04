@@ -8,7 +8,7 @@ independent M5 writer census with the next bounded adjacent representatives.
 
 Competing hypotheses:
 
-- H1: one of `0x80004F30`, `0x80004F34`, or `0x80004F38` writes a qualified
+- H1: one of `0x80004F3C`, `0x80004F44`, or `0x80004F48` writes a qualified
   nonzero target-phase payload in retail.
 - H2: the PCs execute or touch unrelated spans, but none writes the qualified
   target buffer during title/hangar phases.
@@ -24,7 +24,7 @@ fails.
 
 Exact command:
 
-    zsh scratch/agent/run_s3905_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3906_m5_remaining_candidate_writers.sh
 
 Do not infer retail corruption from a null row and do not add a mitigation
 without naming its writer and establishing value legitimacy.

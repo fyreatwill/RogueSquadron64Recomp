@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3904 (2026-10-03).
+Updated for session 3905 (2026-10-03).
 
 ## Current state
 
@@ -62,7 +62,12 @@ Work only the first applicable item. This is one monotonic backlog.
    controls passed; the paired port reached hangar with 2,831 image-DMA joins,
    no crash/abort, and zero-valued qualified image payload. This closes that
    bounded class as H2 only. Continue with the next adjacent unclassified
-   candidates; do not infer global writer absence.
+   candidates; do not infer global writer absence. Session 3905 tested
+   `0x80004F30`, `0x80004F34`, and `0x80004F38`: each executed during the
+   qualified target phase, but all had zero post-target rows and scalar
+   samples. Retail controls passed; the paired port reached hangar with
+   2,800 image-DMA joins, no crash/abort, and zero-valued qualified image
+   payload. This closes that bounded class as H2 only.
    Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
