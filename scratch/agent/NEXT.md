@@ -1,29 +1,29 @@
-# Next work unit: classify the next M5 candidate-writer classes
+# Next work unit: validate the accumulated M3 heap guards
 
-HYPOTHESIS-ID: m5-candidate-writer-census
+HYPOTHESIS-ID: m3-heap-guard-validation
 
-Test retail PCs `0x80004F94`, `0x80004F98`, and `0x80004F9C` with the existing
-phase-gated oracle and paired port route. Keep any port pre-target failure or
-zero image-DMA count separate from the retail writer result.
+Build the MIPS patch pipeline for `patches/heap_guards.c`, then run the
+validated allocator route and determine whether the new active-queue
+reachability guard preserves legitimate allocations and rejects only malformed
+chains. Do not add another guard or run the queued M5 writer census first.
 
 Competing hypotheses:
 
-- H1: at least one candidate is a qualified retail writer for the target span;
-  it produces a post-target scalar sample.
-- H2: candidates execute in the qualified phase but produce no post-target
-  scalar sample; this closes only this bounded class.
-- H3: candidates do not execute in the qualified phase; this closes only this
-  bounded class as unreachable.
+- H1: the patch toolchain and target are available; compile, link, recompile,
+  and host-link the guard successfully.
+- H2: the toolchain is available but the guard changes valid allocator behavior
+  or rejects a legitimate active queue.
+- H3: the toolchain/target remains unavailable; record the exact missing
+  command or target and stop the M3 validation loop pending human setup.
 
-Discriminator: retail whole-RDRAM, title-1024, and hangar-512 controls must
-pass, then compare each candidate's qualified-phase execution, post-target
-rows, and post-target scalar samples. Record the paired port outcome, but do
-not infer image-DMA behavior from a run that lacks target-phase joins.
+Discriminator: successful MIPS compile/link plus a valid allocator route with
+the active-queue guard enabled. A host-only build is not MIPS validation.
 
-Exact command:
+Exact commands:
 
-    zsh scratch/agent/run_s3914_m5_remaining_candidate_writers.sh
+    cmake --build build --config Debug --target PatchesLib
+    cmake --build build --config Debug --target RogueSquadron64Recomp
 
-ORIGIN: no mitigation or guard is planned. Candidate PCs are independent
-retail writer hypotheses; their legitimacy remains unresolved until the oracle
-attributes a qualified post-target value.
+ORIGIN: `func_8002221C` and the active-queue link stores publish the node
+successors and predecessors. The new guard treats a detached/cyclic terminal
+as illegitimate; valid queue nodes must be reachable from the published head.

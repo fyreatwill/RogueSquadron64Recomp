@@ -142259,3 +142259,26 @@ candidate set is `0x80004F94`, `0x80004F98`, and `0x80004F9C`.
 ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+## Session 3914 (2026-10-03) — added active-queue reachability guard
+
+- Work unit: M3 guard-class audit of the active-queue append idiom in
+  `patches/heap_guards.c`, pivoted from the queued M5 candidate census because
+  that census would have been observation-only under the engineering-change
+  streak rule.
+- Origin: `heap_other_listhead` publishes the queue head and the append path
+  publishes successor/predecessor links through the terminal node. The prior
+  code checked the terminal node locally but did not prove it was reachable
+  from the published head; a detached terminal or cycle was therefore not
+  rejected before link stores. Those values are legitimate only when the
+  bounded reciprocal queue is intact.
+- Change: added `active_queue_chain_ok`, a bounded walk that checks each
+  predecessor reciprocal and requires the selected terminal `q` to be reached
+  with `q->next == NULL`, before the append writes.
+- Build evidence: `cmake --build build --config Debug --target PatchesLib`
+  failed immediately because this checkout has no `PatchesLib` target. The
+  full `RogueSquadron64Recomp` target then completed successfully. This is a
+  source/host-build result, not MIPS validation; no runtime claim is made.
+- Rules out: this iteration does not establish that the allocator guard fires
+  or preserves a valid retail queue. It does establish that the next missing
+  active-queue link class is now represented in the regeneration-safe patch
+  source. Next validation requires the MIPS toolchain and configured target.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3913 (2026-10-03).
+Updated for session 3914 (2026-10-03).
 
 ## Current state
 
@@ -39,9 +39,13 @@ Work only the first applicable item. This is one monotonic backlog.
    flags. Session 3899 confirmed CMake skips the patch pipeline because this checkout
    lacks `mips64-elf-gcc`/`mips64-elf-ld`; session 3900 also found no local
    alternate MIPS backend or toolchain. A local N64Recomp binary exists, but it
-   cannot produce `patches.elf`. The active-queue guard remains source-only;
-   validate it when a human provides the toolchain, without adding another
-   guard meanwhile.
+   cannot produce `patches.elf`. Session 3914 added the next complete
+   active-queue idiom guard: a bounded walk now proves the terminal node is
+   reachable from the published queue head and has reciprocal predecessors
+   before the append stores. The full host target still builds, but this
+   checkout has no `PatchesLib` target and the MIPS guard remains unvalidated;
+   validate the accumulated patch when a human provides the toolchain. Do not
+   add another guard meanwhile.
 
 2. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3900's phase-gated run passed the retail whole-RDRAM,
@@ -173,6 +177,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-CandidateWriterClass` | Selected H2 for the bounded s3900–s3904 and s3908 sets through `0x80004F54`, and H3 for `0x80004F58`/`0x80004F5C`/`0x80004F60`/`0x80004F64`/`0x80004F68`/`0x80004F6C`/`0x80004F70`/`0x80004F74`/`0x80004F78`/`0x80004F7C`/`0x80004F80`/`0x80004F84`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
+| `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
 
 The many bounded candidate-PC results are intentionally summarized here:
 each selected H2/H3 only for its named PC set, never as a global producer

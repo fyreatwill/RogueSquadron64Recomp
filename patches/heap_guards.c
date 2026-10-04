@@ -110,6 +110,30 @@ static int active_queue_link_ok(const Block* queue_head, const Block* q) {
            (block_ok(q->prev) && q->prev->next == q);
 }
 
+// ORIGIN: the active-queue insertion consumes the chain rooted at
+// heap_other_listhead and appends through its terminal node. The existing
+// tail check validates only that terminal node; it does not prove that the
+// terminal is reachable from the published head. A bounded walk rejects
+// cycles or detached tails before the link stores run.
+static int active_queue_chain_ok(const Block* queue_head,
+                                 const Block* q) {
+    const Block* node = queue_head;
+    const Block* prev = NULL;
+    uint32_t count = 0;
+
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (!block_ok(node) || node->prev != prev) {
+            return 0;
+        }
+        if (node == q) {
+            return node->next == NULL;
+        }
+        prev = node;
+        node = node->next;
+    }
+    return 0;
+}
+
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
 
@@ -208,6 +232,9 @@ RECOMP_PATCH Block* func_80007D74(void) {
         Block* q = tail->next;            // current node at tail
 
         if (!active_queue_link_ok(queue_head, q)) {
+            return NULL;
+        }
+        if (!active_queue_chain_ok(queue_head, q) || tail->next != q) {
             return NULL;
         }
 
