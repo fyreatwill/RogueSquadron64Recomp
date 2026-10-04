@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3936 (2026-10-03).
+Updated for session 3937 (2026-10-03).
 
 ## Current state
 
@@ -31,14 +31,14 @@ target fault attribution was absent or an arm crashed before target.
 Work only the first applicable item. This is one monotonic backlog.
 
 1. **M5 candidate-writer qualification — continue the bounded retail census.**
-   Session 3936 tested `0x80005048`, `0x8000504C`, and `0x80005050`. Retail
+   Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail
    whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls
    all passed. None of the three candidates executed in the qualified target
    phase or produced post-target rows/scalar samples, selecting H3 for this
-   bounded class only. The paired port reached hangar with 3,013 image-DMA
+   bounded class only. The paired port reached hangar with 3,015 image-DMA
    joins and no crash/abort; qualified payload remained
-   `FNV=0x762B22A5`, nonzero=0. Continue with `0x80005054`, `0x80005058`,
-   and `0x8000505C`; this is not global writer absence.
+   `FNV=0x762B22A5`, nonzero=0. Continue with `0x80005060`, `0x80005064`,
+   and `0x80005068`; this is not global writer absence.
 
 4. **M3 heap guard validation — open external dependency, not a loop stop.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
@@ -339,6 +339,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x80005024`/`0x80005028`/`0x8000502C`; this is not global writer absence. |
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x8000503C`/`0x80005040`/`0x80005044`; this is not global writer absence. |
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x80005048`/`0x8000504C`/`0x80005050`; this is not global writer absence. |
+| `H-M5-CandidateWriterClass` | Selected H3 for `0x80005054`/`0x80005058`/`0x8000505C`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |

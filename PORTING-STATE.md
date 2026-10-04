@@ -142578,3 +142578,14 @@ only; this does not establish global writer absence. The paired port reached
 hangar with 3,013 image-DMA joins and no crash or abort; qualified payload
 remained `FNV=0x762B22A5`, nonzero=0. The next adjacent set is
 `0x80005054`, `0x80005058`, and `0x8000505C`.
+## Session 3937 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran the same-build paired qualification for `0x80005054`, `0x80005058`, and
+`0x8000505C` after the Debug target build completed successfully. Retail
+whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls all
+passed. All three candidates had zero qualified target-phase execution, zero
+post-target rows, and zero scalar samples, selecting H3 for this bounded class
+only; this does not establish global writer absence. The paired port reached
+hangar with 3,015 image-DMA joins and no crash or abort; qualified payload
+remained `FNV=0x762B22A5`, nonzero=0. The next adjacent set is
+`0x80005060`, `0x80005064`, and `0x80005068`.
