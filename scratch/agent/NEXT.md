@@ -2,12 +2,12 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-sweep
 
-The M3 validation unit is externally unavailable in this checkout: the
-configured build has no `PatchesLib` target and the MIPS toolchain is absent.
-Resume the already instrumented, ground-truth-qualified M5 census at the next
-three unclassified retail PCs: `0x80005168`, `0x8000516C`, and `0x80005170`.
-Build all controls and candidates together, then run the paired retail oracle
-and port route in the existing phase-gated recipe.
+The M3 validation unit remains externally unavailable: the configured build
+has no `PatchesLib` target and the MIPS toolchain is absent. Resume the
+ground-truth-qualified M5 census at the next three unclassified retail PCs:
+`0x80005174`, `0x80005178`, and `0x8000517C`. Build all controls and
+candidates together, then run the paired retail oracle and port route in the
+phase-gated recipe.
 
 Competing hypotheses:
 
@@ -28,7 +28,7 @@ samples for all three candidates.
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
+    zsh scratch/agent/run_s3968_m5_candidate_writers.sh
 
-Run the existing phase-gated retail/port census recipe from `build/` with
-SIGKILL watchdog termination. Preserve the independent whole-RDRAM positive
-control and `ROGUESQ_AUDIO_UCODE=1` M5 arm.
+The harness must preserve the independent whole-RDRAM positive control and
+`ROGUESQ_AUDIO_UCODE=1`, and terminate both processes with SIGKILL.
