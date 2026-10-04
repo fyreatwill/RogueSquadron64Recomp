@@ -1,26 +1,26 @@
-# Next work unit: re-qualify the M5 legacy/real route
+# Next work unit: extend the qualified M5 candidate-writer census
 
-HYPOTHESIS-ID: m5-candidate-writer-route-qualification
+HYPOTHESIS-ID: m5-candidate-writer-census
 
 Competing hypotheses:
 
-- H1: the s4002 port crash was transient; a repeat reaches title and hangar,
-  making the existing candidate table interpretable.
-- H2: the same pre-title `0x8000834c` crash recurs; the route remains
-  unevaluable and the candidate sweep stays parked.
-- H3: the port reaches title/hangar and a candidate has a qualified nonzero
-  post-target row; the prior null was only an arm failure.
+- H1: at least one of `0x8000527C`, `0x80005280`, or `0x80005284` writes
+  nonzero target/post-target payload at a matching task ordinal.
+- H2: the route and controls qualify, but all three adjacent candidates remain
+  absent from post-target samples/rows/sequence hits.
+- H3: the port fails before both target phases, making this candidate class
+  unevaluable and requiring route re-qualification before another sweep.
 
-Discriminator: the port must emit title VI 1024 and hangar VI 512 with no
-crash/abort before candidate rows are considered. A repeat crash selects H2;
-full route qualification selects H1; a qualified candidate nonzero row selects
-H3 and identifies a producer edge.
+Discriminator: one same-run retail positive control plus title VI 1024 and
+hangar VI 512 on the paired port, followed by a nonzero candidate row at a
+matching task ordinal. A qualified nonzero row selects H1 and identifies a
+producer edge; qualified zero rows select H2; a pre-target crash or missing
+phase control selects H3.
 
 Exact command:
 
-    zsh scratch/agent/run_s4003_m5_candidate_writers.sh
+    zsh scratch/agent/run_s4004_m5_candidate_writers.sh
 
-Create the wrapper by changing the output tag in
-`run_s4002_m5_candidate_writers.sh`; it launches the retail oracle and
-legacy/real port arm concurrently, captures both logs, and SIGKILLs both after
-the bounded window. Do not add another field or run a second soak.
+The wrapper launches the retail oracle and legacy/real port arm concurrently,
+captures both logs, and SIGKILLs both after the bounded window. Do not add
+another field or run a second soak.

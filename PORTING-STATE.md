@@ -143650,3 +143650,19 @@ compilation with `No rule to make target 'PatchesLib'`. The ordinary
 environment-blocked H3 at the patch/runtime discriminator: the guard is landed
 and host-link-compatible, but no MIPS or runtime qualification is claimed. It
 rules out only a host build regression, not the underlying corruption.
+
+## Session 4004 (2026-10-04) — re-qualified M5 legacy/real candidate route
+
+Ran `zsh scratch/agent/run_s4003_m5_candidate_writers.sh` as the prescribed
+bounded re-qualification. The retail oracle whole-RDRAM positive control,
+title VI 1024, and hangar VI 512 controls fired and the oracle completed. The
+paired legacy/real port reached title and hangar, emitted 3,024 audio-ABI rows
+and 3,007 image-DMA joins, and reported `CRASH=0` and `ABORT=0`. The oracle
+reported zero post-target samples, rows, and sequence hits for
+`0x80005270`, `0x80005274`, and `0x80005278`.
+
+This resolves the s4002 arm failure as a non-reproduced route failure and
+selects the qualified-null hypothesis for that candidate class. It rules out
+those three PCs as qualified nonzero target/post-target writers at this scope;
+it does not establish global writer absence. The next bounded unit is the
+adjacent set `0x8000527C`, `0x80005280`, and `0x80005284`.
