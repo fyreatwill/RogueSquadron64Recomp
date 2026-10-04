@@ -143984,3 +143984,22 @@ termination. H3 is selected, so the class is unevaluable rather than a
 qualified null and the candidate sweep is parked pending route
 requalification. ORIGIN: retail oracle PC watches and port phase/task hooks
 are diagnostic only; no mitigation landed.
+
+## Session 4026 (2026-10-04) — guarded expansion-chain reciprocal ownership
+
+Before building, the work unit was one bounded M3 idiom class: validate the
+link shape of the expansion chain returned by `func_8002221C` before checking
+active-queue ownership or splicing the chain into the free list. Added
+`expansion_chain_links_ok` in `patches/heap_guards.c`; it requires a null head
+predecessor and reciprocal `next`/`prev` links for every bounded node. ORIGIN:
+`func_8002221C` and its expansion-chain link stores; a foreign predecessor is
+not legitimate free-list ownership.
+
+`git diff --check` passed and the ordinary
+`cmake --build build --config Debug --target RogueSquadron64Recomp` build
+passed. The requested `PatchesLib` check failed before compilation with
+`No rule to make target 'PatchesLib'`, so runtime qualification remains
+blocked. This rules out a source/host-build failure, not the occurrence of a
+malformed expansion chain or an active-queue alias. The next work unit is M5
+route requalification; do not infer runtime guard behavior from this source
+check.

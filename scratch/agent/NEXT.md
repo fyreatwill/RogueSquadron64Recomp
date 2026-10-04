@@ -1,33 +1,32 @@
-# Next work unit: requalify the M5 route before resuming the parked writer census
+# Next work unit: qualify the expansion-chain ownership guard when the patch toolchain is available
 
-HYPOTHESIS-ID: m5-route-qualification-4025
+HYPOTHESIS-ID: m3-expansion-chain-links-4026
 
 Competing hypotheses:
 
-- H1: the route failure is schedule-sensitive; a same-build four-arm capture
-  again reaches both target phases in declared/real, declared/silent, and
-  legacy/real.
-- H2: one audio mode or staging path is sufficient to reproduce the scheduler
-  failure, splitting the arms before target phase.
-- H3: the route remains intermittently unevaluable, with a missing target
-  phase or crash/abort in at least one arm despite the controls.
+- H1: `func_8002221C` returns a well-formed expansion chain; the new
+  reciprocal-link guard is behavior-preserving and the ordinary host build
+  remains clean.
+- H2: the source-level guard is malformed or introduces an ABI/build defect;
+  the host build or patch compilation fails before runtime.
+- H3: the chain can be malformed at runtime, but this checkout cannot qualify
+  that because the configured MIPS toolchain/PatchesLib target is unavailable.
 
-Discriminator: one same-build capture of retail, declared/real,
-declared/silent, and legacy/real using the existing route qualification
-recipe. H1 requires retail whole-RDRAM/title/hangar/completion controls plus
-both target phases and RSP/audio controls in all three port arms, with no
-crash/abort. H2 requires a reproducible arm-dependent split tied to audio mode
-or staging. H3 is any missing positive control, pre-target stall, or crash
-without a stable arm-dependent split. Do not change audio behavior or add
-candidate watches.
+Discriminator: build the changed patch and ordinary Debug target in one
+bounded check. H1 requires `git diff --check` and a successful
+`RogueSquadron64Recomp` Debug build. H2 is a reproducible compiler/linker
+failure attributable to this guard. H3 is the specific configured-toolchain
+failure after the source/host checks pass; it is not evidence that the alias
+occurs.
 
 Commands:
 
 ```sh
+git diff --check
 cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s4019_m5_route_qualification.sh
+cmake --build build --config Debug --target PatchesLib
 ```
 
-Require the retail positive-control threshold, title VI 1024, hangar VI 512,
-RSP/audio controls, and no `[CRASH]` or `[ABORT]` before resuming the parked
-`0x800052AC` candidate class.
+If `PatchesLib` remains unavailable, record the exact CMake target failure and
+leave runtime qualification blocked. Do not run the parked M5 census or add
+another diagnostic field in this unit.

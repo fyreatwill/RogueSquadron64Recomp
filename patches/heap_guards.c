@@ -221,6 +221,28 @@ static int expansion_chain_disjoint_from_active(const Block* expansion,
     return node == NULL;
 }
 
+// ORIGIN: func_8002221C publishes the expansion head with no predecessor and
+// links each successor back to its owning block. A foreign predecessor would
+// let the free-list splice overwrite an unrelated owner through next/prev.
+static int expansion_chain_links_ok(const Block* expansion) {
+    const Block* node = expansion;
+    const Block* prev = NULL;
+    uint32_t count = 0;
+
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (!block_ok(node) || node->prev != prev) {
+            return 0;
+        }
+        if (node->next != NULL &&
+            (!block_ok(node->next) || node->next->prev != node)) {
+            return 0;
+        }
+        prev = node;
+        node = node->next;
+    }
+    return node == NULL;
+}
+
 // ORIGIN: the free-list link stores own the chain rooted at heap_free_head,
 // while the active-queue link stores own the chain ending at q. For two
 // valid acyclic singly-linked chains, any shared node implies a shared tail;
@@ -248,6 +270,9 @@ RECOMP_PATCH Block* func_80007D74(void) {
         Block* fresh = func_8002221C();
         if (fresh != NULL) {
             if (!block_ok(fresh)) {
+                return NULL;
+            }
+            if (!expansion_chain_links_ok(fresh)) {
                 return NULL;
             }
             if (metadata_slot_ok(heap_other_listhead, (void*)0x801163FC)) {
