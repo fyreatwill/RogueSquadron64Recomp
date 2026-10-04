@@ -142420,3 +142420,16 @@ image-DMA joins, no crash/abort, and payload `FNV=0x762B22A5`, nonzero=0.
 This selects H3 for this bounded candidate class only: it is disconnected from
 the measured retail writer path, not evidence of global writer absence. This
 also rules out H1 and H2 at the measured target phase.
+## Session 3924 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `scratch/agent/run_s3923_m5_remaining_candidate_writers.sh` for
+`0x80004FDC`, `0x80004FE0`, and `0x80004FE4`. The retail arm passed the
+whole-RDRAM positive control (33,156,716 writes), reached the title-1024 and
+hangar-512 phase gates, and completed the 75-second oracle run. None of the
+three candidates appeared in the target-phase execution/writer census, and
+the post-value candidate rows/scalar samples were all zero. The port arm
+reached phase 5/hangar, recorded 2,845 image-DMA joins, and had no crash or
+abort; its qualified input remained `FNV=0x762B22A5`, nonzero=0. This selects
+H3 for this bounded candidate set only: these PCs are not the qualified
+retail writer. It does not establish global writer absence. The next adjacent
+set is `0x80004FE8`, `0x80004FEC`, `0x80004FF0`.
