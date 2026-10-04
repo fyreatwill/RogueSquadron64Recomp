@@ -142737,3 +142737,21 @@ control for the changed runtime path; no new runtime soak was run, so this
 does not establish that the Factor 5 image produces legitimate nonzero PCM or
 close the task/source/consumer contract. It rules out the prior implementation
 having a native-endian conversion at the SDL boundary.
+## Session 3950 (2026-10-04) — classified the next M5 candidate-writer class
+
+The required ground-truth positive control ran before the build: the retail
+oracle produced 10,000 whole-RDRAM write callbacks and completed 701 VI in 12
+seconds. The Debug target then rebuilt successfully. The paired 75-second
+retail/port harness measured `0x800050CC`, `0x800050D0`, and `0x800050D4` in
+one run with whole-RDRAM, title-1024, hangar-512, oracle-completion, and
+passive M5 controls enabled.
+
+Retail reached both target VI phases (`0x00790400` at width 1024 and
+`0x006AB400` at width 512), completed, and emitted 36 post-store scalar
+records with `mismatch=0`. None of the three candidates executed in the
+qualified target phase and none produced a post-target row or scalar sample,
+so this bounded class selects H3: it is not the qualified payload writer.
+The paired port reached hangar with 2,784 image-DMA joins, zero crash/abort
+markers, and `FNV=0x762B22A5`, `nonzero=0` for the source and destination
+payloads. This rules out these three candidate PCs as the writer in the
+measured retail phase; it does not establish global writer absence.
