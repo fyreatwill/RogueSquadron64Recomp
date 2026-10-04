@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3970 (2026-10-04).
+Updated for session 3971 (2026-10-04).
 
 ## Current state
 
@@ -82,6 +82,15 @@ Work only the first applicable item. This is one monotonic backlog.
    `PatchesLib` is absent from the configured build (`No rule to make target
    'PatchesLib'`). Do not add another guard before validating this patch
    pipeline.
+
+   Session 3971 ran the validation checkpoint. `cmake --build build
+   --config Debug --target PatchesLib` failed immediately with `No rule to
+   make target 'PatchesLib'` (rc 2), while the ordinary
+   `RogueSquadron64Recomp` Debug target completed (rc 0). This selects H2 for
+   the configured patch pipeline: no MIPS/runtime qualification is possible
+   until a build exposing `PatchesLib` and the MIPS toolchain is supplied.
+   The host target remains independently healthy; do not add another M3 guard
+   or claim runtime validation from this build.
 
 2. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail

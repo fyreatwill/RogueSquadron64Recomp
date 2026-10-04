@@ -143095,3 +143095,16 @@ from the new guard, but leaves the patch pipeline unvalidated.
 
 **Outcome: ADVANCED** (bounded M3 guard code landed and the ordinary target
 built; patch qualification remains blocked by the configured target).
+
+## Session 3971 (2026-10-04) — validated the configured M3 patch boundary
+
+Ran both arms of the planned patch checkpoint in one iteration. The
+`PatchesLib` target failed immediately with `No rule to make target
+'PatchesLib'` (rc 2); the ordinary `RogueSquadron64Recomp` Debug target
+completed successfully (rc 0). This selects H2 for the configured patch
+pipeline: the accumulated MIPS guards have no MIPS or runtime qualification
+until a build exposing `PatchesLib` and the MIPS toolchain is supplied. The
+successful ordinary target rules out a host-build regression from the
+accumulated patch. No new guard was added.
+
+**Outcome: ADVANCED** (the planned validation ran and selected H2).
