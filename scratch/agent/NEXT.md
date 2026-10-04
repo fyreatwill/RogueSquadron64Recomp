@@ -2,36 +2,32 @@
 
 HYPOTHESIS-ID: m5-retail-candidate-span-payload
 
-Session 3862 selected the bounded retail result that `0x80022BB0`,
-`0x80022BC8`, and `0x80022A04` had no phase-gated candidate-span writes or
-scalar rows. Session 3861 selected the earlier result that `0x80015BC8` and
-`0x8000F3A0`
-are not phase-gated writers of physical `0x165000..0x16C000`: controls passed,
-but neither PC appeared in the candidate-span writer table or scalar rows.
-Other candidate-span writer PCs remain open; do not infer that the image edge
-is absent. The port arm crashed before its target controls in s3862, so the
-new result is retail-only and single-source.
+Session 3863 completed the fixed paired arm. Retail controls passed and the
+candidate PCs `0x80092020`, `0x8009206C`, and `0x80007670` had target-phase
+writer rows but no post-value scalar rows. This selects H2 only for those PCs;
+the paired port reached hangar with 3,049 image-DMA joins and no crash/abort.
 
 Competing hypotheses and discriminator:
 
-- H1: the remaining dominant candidate-span PCs emit legitimate nonzero
+- H1: the next dominant candidate-span PCs emit legitimate nonzero
   construction payloads in hangar; scalar rows identify the writer and value.
-- H2: the remaining candidate-span writes are zero/metadata construction and
-  no nonzero scalar writer exists in the qualified phase.
-- H3: whole-RDRAM, title/hangar VI, or post-store controls fail; the run is
-  invalid and no writer conclusion is allowed.
+- H2: the next candidate-span writes are zero/metadata construction and no
+  nonzero scalar writer exists in the qualified phase.
+- H3: whole-RDRAM, title/hangar VI, or oracle shutdown controls fail; the run
+  is invalid and no writer conclusion is allowed.
 
 The discriminator is one same-run table using the existing positive controls,
-phase-gated candidate-span writer-PC histogram, and scalar rows for the top
-phase writer PCs from s3862 (`0x80092020`, `0x8009206C`, `0x80007670`). H1
-requires nonzero scalar stores with zero mismatches; H2 requires valid controls
-and no such rows; H3 is selected if any control is absent. Keep the port arm in
-the same script and do not add a writeback guard.
+phase-gated candidate-span writer-PC histogram, and scalar rows for the next
+dominant PCs from s3863: `0x800076A0`, `0x80085890`, and `0x800852D8`.
+H1 requires nonzero scalar stores with zero mismatches; H2 requires valid
+controls and no such rows; H3 is selected if any control is absent. Keep the
+port arm in the same script and do not add a writeback guard.
 
 Preparation and run:
 
-    # edit the existing s3862 copy: set OUT to s3863 and
-    # --post-value-pc to 0x80092020,0x8009206C,0x80007670
-    zsh scratch/agent/run_s3862_m5_remaining_candidate_writers.sh
+    # copy the s3863 runner to s3864, set OUT to s3864, and replace --post-value-pc
+    # with 0x800076A0,0x80085890,0x800852D8
+    zsh scratch/agent/run_s3864_m5_remaining_candidate_writers.sh
 
-Use the script's SIGKILL watchdog and inspect bounded summaries, not full logs.
+The s3863 runner is a reusable baseline; retain its removal of the high-volume
+`--watch-pc` stream so the oracle can complete and write its bounded summary.

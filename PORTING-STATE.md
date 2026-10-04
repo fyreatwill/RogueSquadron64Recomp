@@ -141368,3 +141368,24 @@ stage PC appeared and neither had a post-store scalar row. The port arm
 independently reached 3,031 image-DMA joins. This selects the bounded result
 that these two known stage PCs are not candidate-span writers; it rules out
 neither the other candidate-span writer PCs nor the image edge.
+
+## Session 3863 (2026-10-03) — classified three remaining candidate writers
+
+Ran the fixed `scratch/agent/run_s3863_m5_remaining_candidate_writers.sh`.
+The first attempt was invalid because its high-volume watch stream left the
+wrapper incomplete; it was SIGKILLed and supplied no discriminator. The fixed
+runner removed only that stream, retaining the phase writer histograms and
+post-value scalar probes.
+
+The completed retail oracle passed the whole-RDRAM positive control, title VI
+1024, hangar VI 512, and `[oracle] done`. In the hangar candidate span,
+`0x80092020` had 6,097 writer rows, `0x8009206C` had 6,098, and
+`0x80007670` had 1,437, but none had a post-value scalar row. This selects H2
+for those three PCs only: they are not established as legitimate nonzero image
+producers. The paired port independently reached hangar and produced 3,049
+image-DMA joins with zero crash/abort markers. The remaining candidate writer
+population is open; the next bounded PCs are `0x800076A0`, `0x80085890`, and
+`0x800852D8`.
+
+ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+guest or host state was rewritten, skipped, or guarded.
