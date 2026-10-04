@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4016 (2026-10-04).
+Updated for session 4017 (2026-10-04).
 
 ## Current state
 
@@ -243,37 +243,44 @@ values of the 17 retail gate writes, so H1 versus H2 is not selected; H3 is
 refuted because every required control fired. ORIGIN: diagnostic boundary
 hooks only; no mitigation landed.
 
+Session 4017 fixed that capture with oracle detail and store-field sampling.
+Retail again passed the whole-RDRAM positive control, title VI 1024, hangar VI
+512, and completion. All 17 writes to `0x800A0F50` were attributed to the five
+observed writer PCs; every captured `source_byte` was `0x00`, and all writes
+occurred before the target 512-width hangar phase (the last was at transient
+1024-width origin `0x006AB800`). Both declared/real and legacy/real reached
+the target phase with gate, writer, and RSP-source controls, and neither
+crashed or aborted. H2 is selected at this measured gate scope: the retail
+gate activity is initialization/transitional zero-byte traffic, not a
+target-phase value transition. This does not explain the upstream zero PCM
+payload. ORIGIN: the oracle store-field rows and port hooks observe legitimate
+guest/runtime writers; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 gate-value capture redesign.** Re-run the qualified gate/source table
-   with the retail watch order or capture budget changed so the 17 writes to
-   `0x800A0F50` retain their values and phase attribution, while the whole-RDRAM
-   positive control, title/hangar VI controls, and the port gate/source/PCM joins
-   remain in the same work unit. Do not select H1/H2 or change a gate based on
-   the current count-only result. The current port evidence is a positive
-   control, not an explanation.
+1. **M5 next source-payload discriminator.** The gate-value redesign is now
+   qualified at its measured scope: retail's 17 gate writes are zero-byte
+   initialization/transitional traffic before the target phase. The candidate
+   census is qualified through `0x8000529C`, the legitimate `0xF80` writer is
+   established, and s4015 rules out spin-yield as the sufficient explanation
+   for the old crash. Select a new retail-grounded source-writer class before
+   changing audio behavior; do not repeat the scheduler split. Keep scheduler
+   `a0` as a message object and treat ABI rows as authoritative.
 
-2. **M5 next source-payload discriminator.** The candidate census is qualified
-   through `0x8000529C`, the legitimate `0xF80` writer is established, and
-   s4015 rules out spin-yield as the sufficient explanation for the old crash.
-   Select a new retail-grounded source-writer class before changing audio
-   behavior; do not repeat the scheduler split. Keep scheduler `a0` as a
-   message object and treat ABI rows as authoritative.
-
-3. **M5 candidate-writer census continuation.** Closed for the measured
+2. **M5 candidate-writer census continuation.** Closed for the measured
    adjacent range through `0x8000529C`; resume only with a new writer class or
    a new ground-truth source.
 
-4. **M3 heap guard validation.** The accumulated guards, including the new
+3. **M3 heap guard validation.** The accumulated guards, including the new
    free-list/active-queue ownership-alias guard, in
    `patches/heap_guards.c` are not runtime-qualified because the configured
    build has no `PatchesLib` target and the MIPS toolchain is unavailable.
    Do not add another guard before the patch pipeline is supplied and built.
 
-5. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
+4. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
    `generated-symbol-renaming-sweep`; mapping edits do not reset the
    engineering-change stall gate.
@@ -287,6 +294,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-RetailWriterPortEdgeAbsent` | Selected at measured target phases; no qualified retail target-buffer edge. |
 | `H-M5-FamilyDisconnectedOutput` | Selected at the s3835 scope; retail lacks access to the watched alternate-object span while port emits family stores. |
 | `H-M5-TargetPhaseAudioDmaAbsent` | Selected at s3829; no target-phase `rs64_m5_audio_source_dma`. |
+| `H-M5-GateValue` | H2 selected at s4017: all 17 retail `0x800A0F50` writes were zero-byte activity before the target 512-width phase; no target-phase transition. |
 | `H-M5-TaskOutputFieldsEmptySeparateWriteback` | Selected at s3840 port scope. |
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |

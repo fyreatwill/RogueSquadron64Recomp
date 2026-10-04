@@ -143837,3 +143837,25 @@ the retail gate values were zero or nonzero. The next probe must retain the
 whole-RDRAM positive control but order or isolate the gate watch so its values
 are captured. ORIGIN: all observed port hooks are diagnostic observations of
 legitimate guest/runtime writers; no mitigation landed.
+
+## Session 4017 (2026-10-04) — retail gate writes are pre-target zero-byte traffic
+
+Built the Debug target and ran the corrected independent retail oracle plus
+declared/real and legacy/real port arms. The first capture retained only the
+17-write count; the fixed capture added `--detail-watch 0` and
+`--store-field-dump` for all five observed retail writer PCs. Retail's
+whole-RDRAM positive control, title VI 1024, hangar VI 512, and completion all
+passed. All 17 writes to physical `0xA0F50` were retained and attributed; the
+five writer PCs produced 12 unique store rows, every captured `source_byte`
+was `0x00`, and no row occurred at target 512-width origin `0x006AB400`.
+The final writes were at transient width 1024/origin `0x006AB800`, before the
+target hangar phase. Both port arms reached title and hangar, fired gate,
+writer, and RSP-source controls, and emitted no crash or abort marker.
+
+This selects H2 for the gate hypothesis at the measured scope: the retail
+gate activity is initialization/transitional zero-byte traffic, not a
+target-phase value transition. It does not explain the upstream zero PCM
+payload and does not justify a gate mitigation. The initial run's `rg -E`
+summary failure was corrected and its captured logs were not used for the
+value conclusion. ORIGIN: oracle store-field rows and port hooks observe
+legitimate guest/runtime writers; no mitigation landed.

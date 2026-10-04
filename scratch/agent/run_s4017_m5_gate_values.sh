@@ -13,6 +13,9 @@ trap cleanup EXIT INT TERM
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
   --watch-write 0xA0F50:0xA0F54 --watch-write 0x0:0x800000 \
   --watch-write 0x1798B0:0x179A48 --watch-pc 0x80094648 \
+  --detail-watch 0 \
+  --store-field-dump 0:0x8008EA34,0x8008EB40,0x8008ED48,0x8008EB7C,0x8008EC88 \
+  --store-field-dump-any-phase \
   --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 \
   --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
   > "$OUT/retail.log" 2>&1 & oracle_pid=$!
@@ -32,5 +35,5 @@ for pid in "$oracle_pid" "$declared_pid" "$legacy_pid"; do kill -KILL "$pid" 2>/
 for pid in "$oracle_pid" "$declared_pid" "$legacy_pid"; do wait "$pid" 2>/dev/null || true; done
 for name in retail declared-real legacy-real; do
   print -r -- "--- $name ---" >> "$OUT/driver.log"
-  rg -a -E 'positive-control threshold|origin=0x00790400 width=1024|origin=0x006ab400 width=512|m5-gate|m5-writer|m5-rsp-source-hook-control|\[CRASH\]|\[ABORT\]|\[phase\]' "$OUT/$name.log" | tail -240 >> "$OUT/driver.log" || true
+  rg -a -e 'positive-control threshold' -e 'origin=0x00790400 width=1024' -e 'origin=0x006ab400 width=512' -e 'm5-gate' -e 'm5-writer' -e 'm5-rsp-source-hook-control' -e '\[CRASH\]' -e '\[ABORT\]' -e '\[phase\]' "$OUT/$name.log" | tail -240 >> "$OUT/driver.log" || true
 done
