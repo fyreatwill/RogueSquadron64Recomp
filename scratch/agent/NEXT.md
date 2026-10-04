@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
 
 Run the paired retail/port candidate-span driver for writer PCs
-`0x80003A48`, `0x80003A50`, and `0x80003AFC`.
+`0x80003B98`, `0x800044C8`, and `0x80004AB0`.
 
 Competing hypotheses and discriminator:
 
@@ -18,11 +18,13 @@ Competing hypotheses and discriminator:
 The discriminator is one paired run containing the whole-RDRAM, title-1024,
 hangar-512, oracle-shutdown, port image-DMA, writer-histogram, and post-store
 scalar controls. Classify each PC independently; do not promote a per-PC H2 or
-H3 result to the remaining candidate set.
+H3 result to the remaining candidate set. The same-run positive controls must
+show title/hangar phase transitions, oracle completion, and port image-DMA
+joins before any zero result is interpreted.
 
 Exact command:
 
-    env PCS=0x80003A48,0x80003A50,0x80003AFC zsh scratch/agent/run_s3876_m5_remaining_candidate_writers.sh
+    env PCS=0x80003B98,0x800044C8,0x80004AB0 OUT_NAME=s3878_m5_remaining_candidate_writers zsh scratch/agent/run_s3876_m5_remaining_candidate_writers.sh
 
 The driver must SIGKILL both arms after its watchdog. Captures are written
-under `scratch/agent/s3877_m5_remaining_candidate_writers/`.
+under `scratch/agent/s3878_m5_remaining_candidate_writers/`.

@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -u
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-OUT=$ROOT/scratch/agent/s3877_m5_remaining_candidate_writers
+OUT=$ROOT/scratch/agent/${OUT_NAME:-s3877_m5_remaining_candidate_writers}
 PCS=${PCS:-0x80003A3C,0x80003A40,0x80003A44}
 mkdir -p "$OUT"
 ORACLE=$ROOT/tools/oracle/build/rs64_oracle

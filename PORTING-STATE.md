@@ -141608,3 +141608,22 @@ same controls while trying the next three measured writer PCs.
 ORIGIN: diagnostic-only independent retail writer-PC/post-target attribution;
 no guest or host state was rewritten, skipped, or guarded. The port crash is
 an observed startup failure, not a mitigation.
+
+## Session 3878 (2026-10-03) — classified the next candidate-span writer classes
+
+Ran the paired retail/port candidate-span driver for `0x80003A48`,
+`0x80003A50`, and `0x80003AFC`. The retail oracle passed the whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and clean shutdown. Each
+selected PC produced qualified title/hangar candidate-span writer rows, but
+the post-target scalar census recorded zero samples for all three. This
+selects H2 for these PCs only and rules out H1 at this scope; it does not
+claim that the PCs are absent from the candidate span.
+
+The port arm reached 2,857 image-DMA joins and recorded no crash or abort
+marker. The paired controls therefore passed, but the port result is only
+coverage evidence: it does not identify a retail producer. The next measured
+representatives are `0x80003B98`, `0x800044C8`, and `0x80004AB0`.
+
+ORIGIN: diagnostic-only independent retail writer-PC/post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.
