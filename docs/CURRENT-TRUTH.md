@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4002 (2026-10-04).
+Updated for session 4003 (2026-10-04).
 
 ## Current state
 
@@ -109,6 +109,15 @@ reached phase 5 with 3,056 audio-task rows and 3,047 image-DMA joins, with no
 crash or abort. This selects H2 for the measured candidate class; it does not
 establish global writer absence.
 
+Session 4003 added the next regeneration-safe M3 guard in
+`patches/heap_guards.c`: when the published active-queue head is empty, the
+tail used by the append must have both `prev` and `next` null before link
+publication. ORIGIN is the active-queue append writer; a predecessor on this
+empty path is not legitimate ownership state. The ordinary Debug target built
+successfully, but `PatchesLib` remains unavailable (`No rule to make target
+PatchesLib`), so this is source/host-build evidence only and not runtime
+qualification.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
@@ -170,6 +179,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-0564` | H2 selected at s4001: retail positive, title, and hangar controls passed with oracle completion; no candidate/post-target/scalar/sequence evidence appeared for `0x80005264`, `0x80005268`, or `0x8000526C`; paired port reached phase 5 with 3,056 audio-task rows and 3,047 image-DMA joins. |
 | `H-M5-CandidateWriterClass-0570` | H3 at s4002: retail positive, title, and hangar controls passed and all three candidates were absent, but the paired legacy/real port crashed at `0x8000834c` before target-phase controls or census rows. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
+| `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 
 ## Durable evidence boundary
 

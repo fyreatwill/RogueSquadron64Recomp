@@ -143633,3 +143633,20 @@ port arm emitted its RSP source-hook control but crashed 36 times in
 any audio ABI, image-stage, or image-DMA join rows. The candidate null is
 therefore unevaluable, not H2-selected; the next unit must re-qualify the
 legacy/real route before advancing the census.
+
+## Session 4003 (2026-10-04) — added empty active-queue tail guard
+
+The mandatory no-churn pivot selected the next bounded M3 ownership guard
+instead of rerunning the unevaluable M5 candidate route. In
+`patches/heap_guards.c`, the empty active-queue append path now requires the
+tail used for publication to have both `prev == NULL` and `next == NULL`.
+ORIGIN: `func_80007D74` is the active-queue append writer; when the published
+head and tail successor are empty, a predecessor would be an unowned link and
+is not legitimate allocator state.
+
+`cmake --build build --config Debug --target PatchesLib` still fails before
+compilation with `No rule to make target 'PatchesLib'`. The ordinary
+`RogueSquadron64Recomp` Debug target builds successfully. This selects the
+environment-blocked H3 at the patch/runtime discriminator: the guard is landed
+and host-link-compatible, but no MIPS or runtime qualification is claimed. It
+rules out only a host build regression, not the underlying corruption.

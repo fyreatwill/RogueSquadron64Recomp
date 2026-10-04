@@ -145,6 +145,15 @@ static int active_queue_tail_anchor_ok(const Block* queue_head,
     return q->prev == tail;
 }
 
+// ORIGIN: the empty active-queue append publishes the first node through
+// heap_other_listhead and tail->next. With both publications empty, the
+// sentinel tail has no active-queue predecessor; a predecessor here would
+// leave an unowned link behind the published empty head.
+static int active_queue_empty_tail_ok(const Block* tail) {
+    return tail != NULL && block_ok(tail) && tail->prev == NULL &&
+           tail->next == NULL;
+}
+
 // ORIGIN: the active-queue insertion consumes the chain rooted at
 // heap_other_listhead and appends through its terminal node. The existing
 // tail check validates only that terminal node; it does not prove that the
@@ -320,6 +329,10 @@ RECOMP_PATCH Block* func_80007D74(void) {
     // as one chain. A null published head with an existing successor is a
     // detached queue, not a legitimate empty-list state.
     if (queue_head == NULL && tail->next != NULL) {
+        return NULL;
+    }
+
+    if (queue_head == NULL && !active_queue_empty_tail_ok(tail)) {
         return NULL;
     }
 
