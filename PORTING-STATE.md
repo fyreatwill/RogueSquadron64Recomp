@@ -141718,3 +141718,21 @@ and `0x8009752C`.
 
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution;
 no guest or host state was rewritten, skipped, or guarded.
+
+## Session 3884 (2026-10-03) — classified the next candidate-span writer classes
+
+Ran the corrected paired retail/port candidate-span scalar capture for
+`0x80066474`, `0x80097524`, and `0x8009752C`. Retail passed the whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and oracle shutdown. Each PC
+produced one qualified hangar candidate-span writer row and zero post-target
+scalar samples. This selects H2 for these PCs only and rules out H1 at this
+scope.
+
+The port arm reached 2,085 image-DMA joins and recorded zero crash or abort
+markers. The paired controls passed; the port result is coverage evidence only
+and does not identify a retail producer. The next measured representatives are
+`0x80097534`, `0x8009753C`, and `0x80097540`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.

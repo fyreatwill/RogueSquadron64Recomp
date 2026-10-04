@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
 
 Run one corrected paired retail/port candidate-span scalar capture for
-`0x80066474`, `0x80097524`, and `0x8009752C`, using
+`0x80097534`, `0x8009753C`, and `0x80097540`, using
 `zsh scratch/agent/run_s3883_m5_remaining_candidate_writers.sh` after changing
 its output directory, target PCs, and session label to the next unit. The
 retail arm must watch `0x165000..0x16C000`, phase-gate title VI 1024 and
