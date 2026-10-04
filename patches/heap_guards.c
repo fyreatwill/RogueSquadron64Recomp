@@ -163,6 +163,14 @@ RECOMP_PATCH Block* func_80007D74(void) {
             return NULL;
         }
         Block* q = tail->next;            // current node at tail
+
+        // ORIGIN: free-list dequeue removes `popped` from allocator ownership
+        // before the active-queue link stores; aliasing an active node is not
+        // legitimate state and would create a self/cyclic queue.
+        if (popped == tail || popped == queue_head || popped == q) {
+            return NULL;
+        }
+
         q->next = popped;                 // q now points to popped
         popped->prev = tail->next;        // re-read of p->next; unchanged by
                                           // the q->next write above (different

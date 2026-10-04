@@ -1,30 +1,32 @@
-# Next work unit: classify the next retail candidate-span writer classes
+# Next work unit: add the next M3 free-list/active-queue alias guard
 
-HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
+HYPOTHESIS-ID: m3-free-list-active-queue-alias
 
-Run the paired retail/port candidate-span driver for writer PCs
-`0x80004BE8`, `0x80004E74`, and `0x80004E8C`.
+Audit and patch `patches/heap_guards.c` so a free-list block cannot be
+inserted into the active queue when it aliases the queue sentinel, active
+head, or current queue node. Build `PatchesLib` if the configured target is
+available; otherwise record the exact prerequisite failure. Do not claim
+runtime validation without the MIPS patch pipeline.
 
 Competing hypotheses and discriminator:
 
-- H1: at least one selected PC is a legitimate nonzero producer for the
-  candidate image span; its phase-gated post-store scalar sample is nonzero
-  with zero mismatch/unsupported evidence.
-- H2: selected PCs write the candidate span but are not nonzero producers;
-  qualified writer rows exist while all post-target scalar samples are zero.
-- H3: selected PCs do not own the candidate edge at this scope; no qualified
-  phase-gated writer rows or post-target scalar samples occur.
+- H1: the popped free-list block is distinct from every active-queue node;
+  the new guard is never selected in a valid allocator-route smoke.
+- H2: malformed state can alias the popped block with `tail`, the active
+  queue head, or `tail->next`; the new guard returns before queue-link stores.
+- H3: the presumed queue topology is wrong and one of the alias checks rejects
+  legitimate allocations; the allocator-route smoke regresses or stops.
 
-The discriminator is one paired run containing the whole-RDRAM, title-1024,
-hangar-512, oracle-shutdown, port image-DMA, writer-histogram, and post-store
-scalar controls. Classify each PC independently; do not promote a per-PC H2 or
-H3 result to the remaining candidate set. The same-run positive controls must
-show title/hangar phase transitions, oracle completion, and port image-DMA
-joins before any zero result is interpreted.
+The discriminator is the patch build plus, if the toolchain exists, one
+allocator-route smoke with guard-hit/route controls: H1 is a successful build
+and unchanged smoke, H2 is a guard hit before queue writes, and H3 is a
+legitimate allocation rejection/regression. The code-level ORIGIN is the
+allocator's free-list and active-queue link stores: one block cannot be both
+free and active in legitimate state.
 
-Exact command:
+Exact build command:
 
-    env PCS=0x80004BE8,0x80004E74,0x80004E8C OUT_NAME=s3880_m5_remaining_candidate_writers zsh scratch/agent/run_s3876_m5_remaining_candidate_writers.sh
+    cmake --build build --config Debug --target PatchesLib
 
-The driver must SIGKILL both arms after its watchdog. Captures are written
-under `scratch/agent/s3880_m5_remaining_candidate_writers/`.
+If the target is available, run the existing allocator-route smoke from the
+patch documentation and capture its output under `scratch/agent/`.

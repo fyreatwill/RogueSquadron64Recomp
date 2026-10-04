@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3879 (2026-10-03).
+Updated for session 3880 (2026-10-03).
 
 ## Current state
 
@@ -139,7 +139,12 @@ Work only the first applicable item. This is one monotonic backlog.
    `mips64-elf-gcc`, `mips64-elf-ld`, `build/Debug/N64Recomp.exe`, and the
    configured `PatchesLib` target are absent. The prescribed build returned
    `No rule to make target PatchesLib`. No runtime allocator result is claimed;
-   restore the patch pipeline before validation.
+   restore the patch pipeline before validation. Session 3880 added an alias
+   guard before active-queue link stores: the popped free-list block must not
+   equal the queue sentinel, active head, or current queue node. ORIGIN:
+   free-list dequeue transfers ownership before queue insertion, so any such
+   alias is malformed. The prescribed build still returns `No rule to make
+   target PatchesLib`; no runtime validation is claimed.
 3. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
@@ -518,6 +523,16 @@ Work only the first applicable item. This is one monotonic backlog.
   ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
   paired with the port's image-DMA joins; no guest or host state was rewritten,
   skipped, or guarded.
+
+- **3880:** Added an M3 guard in `patches/heap_guards.c` before active-queue
+  link stores. It rejects a popped free-list block that aliases the queue
+  sentinel, active head, or current queue node; this is a code-level ownership
+  invariant, not runtime evidence. The prescribed `PatchesLib` build failed
+  immediately with `No rule to make target PatchesLib`, so the guard was not
+  runtime-validated.
+
+  ORIGIN: free-list dequeue and active-queue link stores publish ownership;
+  a block cannot legitimately remain free while already active.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

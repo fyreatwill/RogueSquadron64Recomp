@@ -141628,6 +141628,27 @@ ORIGIN: diagnostic-only independent retail writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
 
+## Session 3880 (2026-10-03) — added the free-list/active-queue alias guard
+
+Pivoted from the next M5 candidate-writer rerun to the active M3 guard class.
+Added a guard in `patches/heap_guards.c` before active-queue link stores. The
+popped free-list block is rejected when it aliases the queue sentinel, active
+queue head, or current queue node. This changes the runtime patch artifact but
+does not claim runtime behavior: the prescribed build command
+`cmake --build build --config Debug --target PatchesLib` failed immediately
+with `No rule to make target PatchesLib`.
+
+This rules out no allocator crash family and does not validate the guard. It
+does establish the next falsifiable split: a restored patch pipeline should
+either build and leave valid allocator routing unchanged, hit the guard only on
+malformed alias state, or expose a legitimate topology alias and require
+reversal. The next work unit is that build/smoke, not another diagnostic
+rerun.
+
+ORIGIN: free-list dequeue and active-queue link stores publish ownership; a
+block cannot legitimately be both free and active. No guest or host state was
+rewritten, skipped, or guarded during this iteration's attempted build.
+
 ## Session 3879 (2026-10-03) — classified the next candidate-span writer classes
 
 Ran the paired retail/port candidate-span driver for `0x80003B98`,
