@@ -142315,6 +142315,7 @@ runnable work unit is the phase-gated M5 candidate set
 
 ORIGIN: this iteration changed no runtime behavior; the missing CMake target is
 the direct build-system cause of the validation stop.
+
 ## Session 3916 (2026-10-03) — classified the next M5 candidate-writer class
 
 Ran `zsh scratch/agent/run_s3914_m5_remaining_candidate_writers.sh` for
@@ -142389,3 +142390,20 @@ The ordinary `RogueSquadron64Recomp` Debug target built successfully. The
 requested `PatchesLib` target is not configured in this checkout, and neither
 `mips64-elf-gcc` nor `mips64-elf-ld` is available, so MIPS patch generation and
 runtime validation remain blocked on toolchain/configuration ground truth.
+
+## Session 3922 (2026-10-03) — confirmed the M3 validation boundary
+
+Attempted the mandated validation of the accumulated active-queue guard. The
+checkout has no `mips64-elf-gcc` or `mips64-elf-ld`, and
+`cmake --build build --config Debug --target PatchesLib` fails immediately with
+`No rule to make target 'PatchesLib'`. The ordinary
+`RogueSquadron64Recomp` Debug target completes successfully, so the host build
+is healthy but cannot validate MIPS patch generation or runtime behavior.
+
+This confirms an external toolchain/configuration blocker, not a guard result;
+it rules out treating the host build as evidence for H1/H2/H3. The next
+runnable unit is the phase-gated M5 candidate set `0x80004FD0`,
+`0x80004FD4`, and `0x80004FD8`.
+
+ORIGIN: this iteration changed no runtime behavior. The validation stop is
+caused by the absent MIPS compiler/linker and unconfigured `PatchesLib` target.

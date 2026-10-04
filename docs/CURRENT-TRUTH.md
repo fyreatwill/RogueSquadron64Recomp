@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3921 (2026-10-03).
+Updated for session 3922 (2026-10-03).
 
 ## Current state
 
@@ -195,9 +195,9 @@ Work only the first applicable item. This is one monotonic backlog.
    writer rows but no post-value scalar attribution) or H3 (no candidate-span
    rows), always with positive controls and no global absence claim. The next
    bounded representatives are
-   `0x80004FB8`, `0x80004FBC`, and `0x80004FC0`. Continue only after the M3
-   validation checkpoint, unless M3 remains unavailable and this is the
-   selected runnable discriminator.
+   `0x80004FD0`, `0x80004FD4`, and `0x80004FD8`. The M3 validation checkpoint
+   remains unavailable in this checkout, so continue with this runnable
+   discriminator while treating the M3 result as environment evidence only.
 
 4. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
    and the expanded reciprocal-link guards are landed in
@@ -235,6 +235,10 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
+
+The s3922 M3 validation attempt confirmed the same build-system/toolchain
+boundary without runtime evidence; do not treat a successful host build as
+validation of MIPS patch behavior.
 
 The many bounded candidate-PC results are intentionally summarized here:
 each selected H2/H3 only for its named PC set, never as a global producer
