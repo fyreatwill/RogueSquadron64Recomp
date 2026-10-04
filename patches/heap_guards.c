@@ -75,6 +75,13 @@ static int active_queue_link_ok(const Block* queue_head, const Block* q) {
         !block_ok(q) || queue_head->prev != NULL) {
         return 0;
     }
+    // ORIGIN: the active-queue insertion path publishes q->next only after
+    // q is the current terminal node (the predecessor held by
+    // heap_tail_loc). A non-null successor means the tail metadata and the
+    // queue contents disagree, so appending would orphan an existing chain.
+    if (q->next != NULL) {
+        return 0;
+    }
     return q->prev == NULL ||
            (block_ok(q->prev) && q->prev->next == q);
 }

@@ -141963,3 +141963,24 @@ the next bounded representatives are `0x80004C74`, `0x80004C88`, and
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3897 (2026-10-03) — extended the active-queue guard-class audit
+
+The prescribed M5 candidate-writer arm was not rerun because it was
+observation-only after the no-engineering-change pivot. The existing
+regeneration-safe M3 patch was extended in `patches/heap_guards.c`: before
+publishing `q->next` and `popped->prev`, the node selected through
+`heap_tail_loc` must be terminal (`q->next == NULL`) in addition to passing
+the existing reciprocal-link checks. This is a source-level guard change, not
+runtime validation. The allocator's active-queue insertion path writes the
+terminal successor; a live successor means the tail metadata and queue
+contents disagree and is not legitimate allocator state.
+
+The validation command still fails because CMake has no `PatchesLib` target;
+`mips64-elf-gcc`, `mips64-elf-ld`, and the generated `N64Recomp` executable
+are unavailable in this checkout. No allocator fire, retail corruption, or
+runtime improvement is claimed. The next unit is to restore/validate the
+patch pipeline before adding another guard or resuming the M5 census.
+
+ORIGIN: `heap_tail_loc` and the active-queue link stores are the named
+writers; the new guard rejects only an impossible terminal-tail invariant.

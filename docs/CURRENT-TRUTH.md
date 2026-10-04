@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3896 (2026-10-03).
+Updated for session 3897 (2026-10-03).
 
 ## Current state
 
@@ -36,7 +36,18 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 audio contract qualification — image arm reaches the target but does
+1. **M3 heap guard validation — active-queue tail invariant.** Session 3897
+   extended `patches/heap_guards.c`'s active-queue audit: before publishing
+   `q->next`/`popped->prev`, the node selected through `heap_tail_loc` must be
+   terminal (`q->next == NULL`) as well as having a valid reciprocal
+   predecessor. ORIGIN: the allocator's active-queue insertion path is the
+   writer of this terminal link; a live successor would mean the tail
+   metadata and queue contents disagree and is not legitimate state. This is
+   source-level guard evidence only. `cmake --build build --config Debug
+   --target PatchesLib` still has no target, and the MIPS compiler/linker and
+   generated recompiler are unavailable. Restore the patch pipeline and run
+   the allocator smoke before adding another guard.
+2. **M5 audio contract qualification — image arm reaches the target but does
    not produce nonzero audio data.** Session 3891 ran the phase-gated,
    same-build silent/image pair with the independent retail oracle. Whole-RDRAM,
    title-1024, and hangar-512 controls all passed; both arms reached hangar
@@ -47,12 +58,6 @@ Work only the first applicable item. This is one monotonic backlog.
    bounded arm is the remaining retail candidate-writer class in
    `scratch/agent/run_s3890_m5_remaining_candidate_writers.sh`; do not add a
    writeback guard from this result.
-2. **M3 heap guard validation — active-queue reciprocal-link guard.** Session
-   3890 landed the guard in `patches/heap_guards.c`, but the configured
-   `PatchesLib` target and MIPS/N64Recomp tools are unavailable. Restore the
-   patch pipeline and run the allocator smoke; do not add another guard until
-   this validation is possible. A guard fire must identify the malformed
-   reciprocal link and is not, by itself, proof of a retail corruption source.
 3. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
    3839–3840 qualified the port input and separate writeback-DMA edge despite
    empty ABI output fields. Session 3857 qualified the dominant retail
@@ -256,10 +261,16 @@ Work only the first applicable item. This is one monotonic backlog.
    `0x80004C74`, `0x80004C88`, and `0x80004C8C`; do not infer a global producer
    absence or add a mitigation from this bounded result.
 
+   Session 3896 qualified those three PCs on the retail side: each had 12
+   title and 29 hangar writer-PC rows but zero post-target scalar attribution.
+   The paired port crashed before ABI/image-DMA controls at guest PC
+   `0x8000834C`, so this remains single-source H2 evidence only. Continue the
+   bounded census only after the M3 validation checkpoint.
+
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
    skipped, or guarded.
-4. **M3 heap guard validation — active guard class, validation blocked.** Session
+4. **M3 heap guard validation — prior active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
    session 3873 extended the guard to validate the head's `next->prev` back-link
    before the dequeue dereference. ORIGIN: `func_8002221C` and allocator link

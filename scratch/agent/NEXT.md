@@ -1,35 +1,35 @@
-# Next work unit: classify the next retail candidate-span writer class
+# Next work unit: validate the active-queue guard class
 
-HYPOTHESIS-ID: m5-image-task-output-edge
+HYPOTHESIS-ID: m3-active-queue-guard-validation
 
-Session 3896 qualified the retail side of the candidate arm. Retail whole-RDRAM,
-title-1024, hangar-512, and shutdown controls passed. `0x80004C74`,
-`0x80004C88`, and `0x80004C8C` each had 12 title and 29 hangar qualified
-writer-PC rows but no post-store scalar attribution or post-target rows. The
-paired port crashed before ABI/image-DMA controls at
-`spTaskSchedulerThread+9556`, guest PC `0x8000834C`. This selects H2 for these
-PCs as single-source retail evidence only.
-
-The current arm to run is `0x80004C90`, `0x80004D00`, and `0x80004D60`.
+The current source-level guard requires the node selected through
+`heap_tail_loc` to be terminal before the active-queue publication stores.
+This iteration did not claim runtime behavior because the patch target is not
+configured.
 
 Competing hypotheses and the discriminating measurement:
 
-- H1: one of `0x80004C90`, `0x80004D00`, or `0x80004D60` writes legitimate
-  nonzero data into the candidate span. A qualified writer row plus a
-  nonzero post-value scalar sample from the same PC selects H1.
-- H2: a tested PC writes only zero/unchanged data. A qualified writer row with
-  zero post-value scalar samples selects H2 for that PC.
-- H3: a tested PC is not a candidate-span producer in title/hangar. No
-  qualified writer row or post-value sample, with controls passed, selects H3
-  for that PC only.
+- H1: the patch pipeline is present but CMake omitted `PatchesLib`. A fresh
+  configure exposes the target and the target build reaches the MIPS compile.
+- H2: the CMake target is correct but the external MIPS/N64Recomp tools are
+  absent. Configure still omits the target or the first build reports the
+  missing executable paths.
+- H3: the pipeline builds but the guard source/link configuration is invalid.
+  The target exists, tools run, and the build fails at source, linker, or
+  N64Recomp generation.
 
-Discriminator: one paired run with independent retail whole-RDRAM, title-1024,
-hangar-512, and shutdown controls, plus phase-gated writer and post-value
-attribution for all three PCs. Do not infer a global producer absence from one
-arm. Do not add a writeback guard or other mitigation from a zero result.
+Discriminator: run the prerequisite checks and one configured target build;
+the first failing stage distinguishes H1/H2/H3. If it builds, run the
+allocator smoke and require either a named guard fire or a clean route with
+the guard class exercised. A guard fire is not retail corruption proof.
 
-Exact command:
+Commands:
 
-    zsh scratch/agent/run_s3896_m5_remaining_candidate_writers.sh
+    command -v mips64-elf-gcc
+    command -v mips64-elf-ld
+    test -x build/Debug/N64Recomp.exe
+    cmake -S . -B build
+    cmake --build build --config Debug --target PatchesLib
 
-Expected outcomes: H1/H2/H3 as defined above.
+Do not add another guard or run the stale M5 candidate-writer arm until this
+validation checkpoint is resolved.
