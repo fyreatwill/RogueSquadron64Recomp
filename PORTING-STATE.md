@@ -141736,3 +141736,22 @@ and does not identify a retail producer. The next measured representatives are
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3885 (2026-10-03) — classified the next candidate-span writer classes
+
+Ran the corrected paired retail/port candidate-span scalar capture for
+`0x80097534`, `0x8009753C`, and `0x80097540`. Retail passed the whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and oracle shutdown. None of
+the three PCs produced a qualified candidate-span writer row or post-target
+scalar sample. This selects H3 for these PCs only and rules out H1/H2 at this
+scope; the absence is meaningful because the phase and whole-RDRAM controls
+fired in the same run.
+
+The port arm reached 2,854 image-DMA joins and recorded zero crash or abort
+markers. The paired controls passed; the port result is coverage evidence only
+and does not identify a retail producer. The next measured representatives are
+`0x80097544`, `0x80097548`, and `0x8009754C`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten, skipped,
+or guarded.
