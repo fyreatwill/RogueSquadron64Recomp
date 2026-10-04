@@ -142538,3 +142538,14 @@ writer absence. The paired port reached phase 5 with 2,067 qualified
 image-DMA joins and no crash or abort; qualified payload remained
 `FNV=0x762B22A5`, nonzero=0. The next adjacent set is `0x8000503C`,
 `0x80005040`, and `0x80005044`.
+## Session 3934 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3934_m5_candidate_writers.sh` after rebuilding
+the Debug target for `0x8000503C`, `0x80005040`, and `0x80005044`. Retail
+whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion positive
+controls all passed. All three candidates had zero qualified target-phase
+execution, post-target rows, and scalar samples, selecting H3 for this
+bounded class only; this does not establish global writer absence. The paired
+port reached hangar with 2,866 qualified image-DMA joins and no crash or
+abort; qualified payload remained `FNV=0x762B22A5`, nonzero=0. The next
+adjacent set is `0x80005048`, `0x8000504C`, and `0x80005050`.
