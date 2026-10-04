@@ -142301,3 +142301,17 @@ runnable work unit is the phase-gated M5 candidate set
 
 ORIGIN: this iteration changed no runtime behavior; the missing CMake target is
 the direct build-system cause of the validation stop.
+## Session 3916 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3914_m5_remaining_candidate_writers.sh` for
+`0x80004F94`, `0x80004F98`, and `0x80004F9C`. The retail arm passed the
+same-run positive controls: the whole-RDRAM watch crossed 10,000 callbacks,
+title VI 1024 and hangar VI 512 were observed, and the oracle completed.
+Independent oracle summaries reported zero target-phase execution, candidate
+rows, post-target rows, and scalar samples for all three PCs. This selects H3
+for this bounded class only and rules out these three PCs as qualified retail
+writers at the measured target phase; it does not establish global writer
+absence. The paired port reached hangar with 2,869 image-DMA joins and no
+crash/abort, while the qualified image payload remained `FNV=0x762B22A5`,
+nonzero=0. The port result confirms the separate edge still runs but does not
+identify a missing upstream writer.
