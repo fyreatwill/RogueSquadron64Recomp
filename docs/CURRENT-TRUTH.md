@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3901 (2026-10-03).
+Updated for session 3902 (2026-10-03).
 
 ## Current state
 
@@ -47,7 +47,13 @@ Work only the first applicable item. This is one monotonic backlog.
    title-1024, and hangar-512 controls; all three PCs executed in phase but had
    zero post-target rows/samples. The paired port reached hangar with 2,836
    image-DMA joins and no crash/abort. This closes that bounded class as H2 only;
-   continue with adjacent PCs `0x80004D68`, `0x80004D74`, and `0x80004D78`.
+   session 3902 repeated the same discriminator for `0x80004D68`,
+   `0x80004D74`, and `0x80004D78`: each executed in the qualified title phase,
+   but each had zero post-target rows/samples. Retail whole-RDRAM reached
+   33,193,803 writes, both target VI gates and oracle completion; the paired port
+   reached hangar with 2,835 image-DMA joins and no crash/abort. This closes
+   that bounded class as H2 only. Continue with `0x80004D7C`, `0x80004D84`,
+   and the next census representative.
    Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
@@ -93,7 +99,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
 | `H-M5-800078ECZeroFill` | Selected at s3857; sampled writes are zero-valued. |
-| `H-M5-CandidateWriterClass` | Selected H2 for the s3900 PCs `0x80004C90`, `0x80004D00`, and `0x80004D60`; this is not global writer absence. |
+| `H-M5-CandidateWriterClass` | Selected H2 for the s3900 PCs `0x80004C90`, `0x80004D00`, `0x80004D60` and s3901 PCs `0x80004D68`, `0x80004D74`, `0x80004D78`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 
