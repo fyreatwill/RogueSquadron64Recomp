@@ -1,9 +1,9 @@
-# Next work unit: qualify M5 candidate writers 0x800051EC–0x800051F4
+# Next work unit: qualify M5 candidate writers 0x80005204–0x8000520C
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
 Run the existing same-build retail/port candidate-writer census for
-`0x800051EC`, `0x800051F0`, and `0x800051F4`. Use the validated legacy audio
+`0x80005204`, `0x80005208`, and `0x8000520C`. Use the validated legacy audio
 DMA rollback (`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`) on the port arm so the
 declared-size task-contract crash cannot contaminate this writer qualification.
 The existing instrument's whole-RDRAM, title-1024, hangar-512, oracle-done,
@@ -28,4 +28,4 @@ qualified port selects H2; missing controls or a legacy-arm crash selects H3.
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env zsh scratch/agent/run_s3984_m5_candidate_writers.sh
+    env zsh scratch/agent/run_s3987_m5_candidate_writers.sh

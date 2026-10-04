@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3985 (2026-10-04).
+Updated for session 3986 (2026-10-04).
 
 ## Current state
 
@@ -50,8 +50,8 @@ target fault attribution was absent or an arm crashed before target.
 Work only the first applicable item. This is one monotonic backlog.
 
 1. **M5 candidate-writer qualification — continue the bounded retail census.**
-   Run the existing same-build retail/port census for `0x800051F8`,
-   `0x800051FC`, and `0x80005200`, retaining whole-RDRAM, title-1024,
+   Run the existing same-build retail/port census for `0x80005204`,
+   `0x80005208`, and `0x8000520C`, retaining whole-RDRAM, title-1024,
    hangar-512, oracle-completion, and paired port payload controls. The
    declared-size staging arm is not qualified: use the legacy rollback for
    any route that needs to reach the target phases.
@@ -125,6 +125,19 @@ Work only the first applicable item. This is one monotonic backlog.
    rows, zero crash/abort markers, and qualified source/destination payload
    `FNV=0x762B22A5`, nonzero=0. This is not global writer absence. Continue
    with `0x800051F8`, `0x800051FC`, and `0x80005200`.
+
+   Session 3986 tested `0x800051F8`, `0x800051FC`, and `0x80005200` with the
+   legacy audio-DMA rollback. The independent whole-RDRAM control fired
+   10,000 times; retail reached title VI 1024, hangar VI 512, and oracle
+   completion, with 36 post-store scalar records and zero mismatches. None
+   of the three candidates had a target-phase execution row, post-target row,
+   or scalar sample, selecting H2 for this bounded class. The paired port
+   reached both qualified phases with 3,043 image-DMA joins and 3,049
+   task-contract rows, zero crash/abort markers, and qualified
+   source/destination payload `FNV=0x762B22A5`, nonzero=0. This rules out
+   these three PCs as the qualified retail writer at the measured scope; it
+   does not establish global writer absence. Continue with `0x80005204`,
+   `0x80005208`, and `0x8000520C`.
 
 2. **M5 audio task-contract redesign — explain the declared-size crash.**
    The declared-size arm is parked at H3 until a new task-contract probe names

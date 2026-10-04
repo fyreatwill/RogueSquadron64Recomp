@@ -143373,3 +143373,20 @@ scope; it does not establish global writer absence. No mitigation or runtime
 behavior was changed.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H2).
+
+## Session 3986 (2026-10-04) — classified the next M5 candidate-writer class
+
+Built the ordinary Debug target successfully and ran the bounded M5 census for
+`0x800051F8`, `0x800051FC`, and `0x80005200` using the legacy audio-DMA
+rollback. The independent whole-RDRAM positive control fired 10,000 times;
+retail reached title VI 1024, hangar VI 512, and oracle completion, with 36
+post-store scalar records and zero mismatches. None of the three candidates
+had a target-phase execution row, post-target row, or scalar sample, selecting
+H2 for this bounded class. The paired port reached both qualified phases with
+3,043 image-DMA joins and 3,049 task-contract rows, zero crash/abort markers,
+and qualified source/destination payload `FNV=0x762B22A5`, nonzero=0. This
+rules out these three PCs as the qualified retail writer at the measured
+scope; it does not establish global writer absence. No mitigation or runtime
+behavior was changed.
+
+**Outcome: ADVANCED** (the planned discriminator ran and selected H2).
