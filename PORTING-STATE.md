@@ -141478,3 +141478,17 @@ nonzero image producers. The next representatives are `0x80029E8C`,
 
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
+
+## Session 3870 (2026-10-03) — classified three remaining candidate writers
+
+Ran the paired `scratch/agent/run_s3870_m5_remaining_candidate_writers.sh`
+arm. The retail oracle passed the whole-RDRAM positive control, title VI 1024,
+hangar VI 512, and clean shutdown. The three requested PCs each had qualified
+title/hangar candidate-span writer rows, but zero post-target scalar samples.
+The port independently reached 3,057 image-DMA joins with zero crash/abort
+markers. This selects H2 for these PCs only: they write the watched span but
+are not established as legitimate nonzero image producers. The next bounded
+representatives are `0x80084C0C`, `0x80084D58`, and `0x80084FAC`.
+
+ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+guest or host state was rewritten, skipped, or guarded.
