@@ -143186,3 +143186,23 @@ zero scalar samples, selecting H3 for this PC class only. The paired port arm
 had no crash/abort but recorded zero image-DMA joins, so it contributes no
 port payload evidence. This rules out these three PCs as the qualified retail
 writer in the measured phases; it does not establish global writer absence.
+
+## Session 3976 (2026-10-04) — classified the next M5 candidate-writer class
+
+Ran the planned bounded M5 census for `0x800051A4`, `0x800051A8`, and
+`0x800051AC` with one clean Debug build and the existing batched retail/port
+driver. Retail's independent whole-RDRAM positive control fired 10,000 times;
+title VI 1024 and hangar VI 512 both arrived, and the oracle completed. All
+three candidates had zero target-phase execution, zero post-target rows, and
+zero scalar samples, selecting H3 for this PC class only. The paired port arm
+reached both qualified phases with 2,871 image-DMA joins and zero crash/abort
+markers; its qualified source/destination payload remained
+`FNV=0x762B22A5`, nonzero=0. This rules out these three PCs as the qualified
+retail writer in the measured phases; it does not establish global writer
+absence. The next adjacent set is `0x800051B0`, `0x800051B4`, and
+`0x800051B8`.
+
+The host Debug target completed successfully. No mitigation or runtime
+behavior was changed.
+
+**Outcome: ADVANCED** (the planned discriminator ran and selected H3).
