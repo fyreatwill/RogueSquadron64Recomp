@@ -143922,3 +143922,19 @@ H3 is selected: this capture does not support staging size or real-audio mode
 as the sufficient explanation for the earlier route failure; that failure
 remains schedule-sensitive or otherwise unevaluated. ORIGIN: route hooks
 observe legitimate runtime arm choices; no mitigation landed.
+
+## Session 4022 (2026-10-04) — candidate class blocked by legacy route
+
+Before building, the work unit was a phase-gated retail-grounded census for
+`0x800052A0`, `0x800052A4`, and `0x800052A8`. The first generated recipe was
+invalid: nested substitutions armed the prior candidate class, so its result
+was discarded. After the Debug target build passed, the fixed standalone
+recipe ran the retail, declared/real, and legacy/real arms concurrently.
+Retail's whole-RDRAM positive control fired, title VI 1024 fired 154 times,
+hangar VI 512 fired 181 times, and the oracle completed. No candidate-PC rows
+were emitted. Declared/real reached target phases and produced audio/image
+rows; legacy/real remained at a 640-wide route and produced no target-phase
+rows. H3 is selected: this candidate class is unevaluable, not a qualified
+null. The failed recipe was a tooling dead end; the fixed run rules out a
+candidate conclusion but not the writer class. ORIGIN: oracle PC watches and
+port phase/task hooks are diagnostic only; no mitigation landed.

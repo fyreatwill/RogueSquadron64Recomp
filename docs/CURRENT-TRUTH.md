@@ -295,17 +295,30 @@ schedule-sensitive or otherwise unevaluated, not explained by staging size or
 real-audio execution in this capture. ORIGIN: the route hooks observe
 legitimate runtime arm choices; no mitigation landed.
 
+Session 4022 attempted the next retail-grounded candidate census for
+`0x800052A0`, `0x800052A4`, and `0x800052A8`. The first generated recipe was
+invalid: its nested substitutions armed the prior candidate class, so that
+capture is discarded. The fixed standalone recipe was then run after the
+existing Debug target build. Retail's whole-RDRAM positive control, title VI
+1024 (154), hangar VI 512 (181), and oracle completion passed; no candidate-PC
+rows were emitted. Declared/real reached the target phases with audio/image
+rows, but legacy/real remained in a 640-wide route and emitted no target-phase
+census rows. H3 is selected: the candidate class is unevaluable until the
+legacy route is qualified again. ORIGIN: retail oracle PC watches and port
+phase/task hooks are diagnostic only; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 next source-payload discriminator.** Session 4021 qualified all three
-   port arms, so the route blocker is cleared at this scope. Select the next
-   retail-grounded source-writer class and run one phase-gated census with the
-   existing retail positive controls and both port route controls. Do not
-   repeat the scheduler split or change audio behavior until a new writer
-   class is selected.
+1. **M5 route requalification.** Session 4022's fixed candidate capture lost
+   the legacy arm to a 640-wide route before target phase. Re-run one
+   same-build retail/declared/legacy route table using the established
+   qualified-capture controls, without candidate watches or audio changes.
+   Require retail positive/title/hangar/completion controls and both port target
+   phases; classify any arm failure before selecting another source-writer
+   class.
 
 2. **M3 patch qualification.** Session 4019 added an expansion-chain versus
    active-queue ownership guard. Runtime qualification remains blocked until
@@ -374,6 +387,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M5-RouteQualification-4021` | H3 selected: declared/real, declared/silent, and legacy/real all reached both target VIs with route controls and no crash/abort in the same-build capture. |
+| `H-M5-CandidateWriterClass-052A` | H3 selected at s4022: retail controls and candidate-null evidence passed, but declared/real reached target phase while legacy/real remained at 640 width before target phase; no writer conclusion is allowed. |
 
 ## Durable evidence boundary
 
