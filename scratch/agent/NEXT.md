@@ -2,17 +2,19 @@
 
 HYPOTHESIS-ID: m5-image-task-output-edge
 
-Session 3895 qualified the new candidate arm. Retail whole-RDRAM, title-1024,
-hangar-512, and shutdown controls passed. `0x80004AE8`, `0x80004AF0`, and
-`0x80004BE8` each had 166 qualified writer-PC rows but no post-store scalar
-attribution or post-target rows. Port reached 2,254 image-DMA joins and 2,259
-ABI events with zero crash/abort markers. This selects H2 for these PCs only.
+Session 3896 qualified the retail side of the candidate arm. Retail whole-RDRAM,
+title-1024, hangar-512, and shutdown controls passed. `0x80004C74`,
+`0x80004C88`, and `0x80004C8C` each had 12 title and 29 hangar qualified
+writer-PC rows but no post-store scalar attribution or post-target rows. The
+paired port crashed before ABI/image-DMA controls at
+`spTaskSchedulerThread+9556`, guest PC `0x8000834C`. This selects H2 for these
+PCs as single-source retail evidence only.
 
-The current arm to run is `0x80004C74`, `0x80004C88`, and `0x80004C8C`.
+The current arm to run is `0x80004C90`, `0x80004D00`, and `0x80004D60`.
 
 Competing hypotheses and the discriminating measurement:
 
-- H1: one of `0x80004C74`, `0x80004C88`, or `0x80004C8C` writes legitimate
+- H1: one of `0x80004C90`, `0x80004D00`, or `0x80004D60` writes legitimate
   nonzero data into the candidate span. A qualified writer row plus a
   nonzero post-value scalar sample from the same PC selects H1.
 - H2: a tested PC writes only zero/unchanged data. A qualified writer row with
@@ -28,6 +30,6 @@ arm. Do not add a writeback guard or other mitigation from a zero result.
 
 Exact command:
 
-    zsh scratch/agent/run_s3895_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3896_m5_remaining_candidate_writers.sh
 
 Expected outcomes: H1/H2/H3 as defined above.

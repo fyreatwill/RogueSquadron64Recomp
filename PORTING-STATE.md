@@ -141737,6 +141737,22 @@ ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
 
+## Session 3896 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3895_m5_remaining_candidate_writers.sh` for
+`0x80004C74`, `0x80004C88`, and `0x80004C8C`. Retail whole-RDRAM, title VI
+1024, hangar VI 512, and oracle shutdown controls passed. Each PC had 12
+qualified title and 29 qualified hangar candidate-span writer-PC rows, but
+zero post-target scalar samples and zero post-target rows, selecting H2 for
+these PCs only as single-source retail evidence. The paired port crashed before
+its ABI/image-DMA controls at `spTaskSchedulerThread+9556`, guest PC
+`0x8000834C`; no paired port conclusion is claimed. The next bounded
+representatives are `0x80004C90`, `0x80004D00`, and `0x80004D60`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution;
+the port arm only supplied a startup-crash boundary. No guest or host state was
+rewritten, skipped, or guarded.
+
 ## Session 3894 (2026-10-03) — classified the next M5 candidate-writer classes
 
 Ran `zsh scratch/agent/run_s3893_m5_remaining_candidate_writers.sh` for
