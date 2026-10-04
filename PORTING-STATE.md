@@ -141998,3 +141998,19 @@ single M3 validation unit and its H1/H2/H3 discriminator.
 
 This rules out only documentation bloat as a maintenance issue; it says
 nothing about the patch pipeline, allocator behavior, or the M5 producer.
+
+## Session 3899 (2026-10-03) — confirmed the M3 patch-toolchain blocker
+
+The prescribed M3 validation unit reconfigured the checkout and attempted the
+`PatchesLib` target. `command -v` found neither `mips64-elf-gcc` nor
+`mips64-elf-ld`, and `build/Debug/N64Recomp.exe` was absent. CMake therefore
+printed that the patches build was skipped; the subsequent target build failed
+with `No rule to make target 'PatchesLib'` before any source or linker work.
+This selects H2 (external tools absent) over the CMake-omission and source/link
+hypotheses. No allocator smoke, guard fire, retail corruption, or runtime
+improvement is claimed. The next unit is blocked pending a toolchain/recompiler
+environment; do not add another guard or resume the stale M5 arm.
+
+ORIGIN: this iteration added no mitigation. The guard's named writers remain
+the `heap_tail_loc` selection and active-queue link stores; runtime legitimacy
+is still unmeasured.

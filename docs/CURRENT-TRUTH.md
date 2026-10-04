@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for maintenance session 3898 (2026-10-03).
+Updated for session 3899 (2026-10-03).
 
 ## Current state
 
@@ -30,15 +30,13 @@ target fault attribution was absent or an arm crashed before target.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap guard validation — active-queue tail invariant.** Session 3897
-   extended `patches/heap_guards.c`: the node selected through `heap_tail_loc`
-   must be terminal (`q->next == NULL`) and have a valid reciprocal
-   predecessor before `q->next`/`popped->prev` publication. ORIGIN: the
-   allocator active-queue insertion path writes this terminal link; a live
-   successor means the tail metadata and queue disagree and is not legitimate
-   state. This is source-level evidence only. Restore the patch pipeline and
-   run the allocator smoke; the configured build currently has no `PatchesLib`
-   target and the MIPS compiler/linker and generated recompiler are absent.
+1. **M3 heap guard validation — blocked on the patch toolchain.** Session 3899
+   reconfigured from this checkout and confirmed CMake skips the patch pipeline:
+   `mips64-elf-gcc` and `build/Debug/N64Recomp.exe` are absent, so no
+   `PatchesLib` target is generated and its build cannot start. The active-queue
+   guard remains source-only. Resume on a machine with the MIPS toolchain and
+   generated recompiler, or provide those tools/paths; then run the allocator
+   smoke before adding another guard.
 
 2. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3891's same-build silent/image pair passed independent
