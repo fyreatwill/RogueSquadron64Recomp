@@ -142649,3 +142649,13 @@ absence. The ordinary `RogueSquadron64Recomp` Debug target built successfully.
 The requested `PatchesLib` target is not configured (`No rule to make target
 'PatchesLib'`), so the MIPS patch and runtime remain unvalidated. The missing
 toolchain is an environment blocker, not evidence that the guard fires.
+
+## Session 3943 (2026-10-03) — revalidated the M3 patch build boundary
+
+Reran the mandated validation for the accumulated `patches/heap_guards.c`
+change. The Debug `RogueSquadron64Recomp` target completed successfully.
+`PatchesLib` failed immediately with `No rule to make target 'PatchesLib'`, and
+`mips64-elf-gcc` plus `mips64-elf-ld` were absent from PATH. This confirms the
+guard is host-tree integrated but still lacks MIPS compilation and runtime
+qualification; it does not show that the guard fires. The next bounded unit is
+the adjacent M5 candidate-writer set `0x80005090/0x80005094/0x80005098`.

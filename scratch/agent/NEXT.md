@@ -1,29 +1,28 @@
-# Next work unit: audit empty active-queue tail alias
+# Next work unit: classify the next M5 candidate-writer class
 
-HYPOTHESIS-ID: m3-active-queue-tail-alias
+HYPOTHESIS-ID: m5-candidate-writer-census
 
-Land one bounded guard in `patches/heap_guards.c` for the empty active-queue
-append path, then build the ordinary host target. The guard rejects the case
-where the free-list block selected by `func_80007D74` is the same object as
-the published active-queue tail before any queue-link stores. The writer is
-the free-list dequeue publishing `popped`; that alias is not legitimate
-allocator ownership. MIPS patch compilation is expected to remain unavailable
-in this checkout, so do not claim runtime qualification.
+Run the paired retail/port candidate-writer harness after changing its three
+candidate PCs to `0x80005090`, `0x80005094`, and `0x80005098`. Build the Debug
+target first; retain whole-RDRAM, title-1024, hangar-512, oracle-completion,
+and passive M5 controls.
 
 Competing hypotheses:
 
-- H1: the free-list dequeue can alias the active tail in a corrupt state; the
-  new pre-store guard rejects it and preserves all valid queue paths.
-- H2: the alias is a legitimate empty-queue representation; the guard would
-  reject valid allocation and is not safe to land.
-- H3: the existing non-empty-only check already covers this state; the new
-  branch is redundant and should be removed.
-- H4: the patch source cannot be compiled in this checkout; code review and
-  host-target build are insufficient for MIPS/runtime qualification.
+- H1: at least one candidate writes the qualified retail hangar payload.
+- H2: candidates execute in the target phase but produce no post-target row or
+  scalar sample; this bounded class is not the payload writer.
+- H3: candidates do not execute in the qualified target phase; this bounded
+  class is not the payload writer.
+- H4: a positive control or paired port arm fails, so the census is unevaluable.
 
-Discriminator: inspect the original append invariant and compile the changed
-host tree. A valid empty queue has no published queue head and therefore no
-queue-owned tail; the tail-alias case is only a corrupt ownership collision.
-The host build must pass, while the `PatchesLib`/MIPS build result is recorded
-as either successful or unavailable. H1/H2/H3 are bounded to this exact
-empty-queue alias class; H4 is an environment result, not a runtime claim.
+Discriminator: all three candidate PCs must be measured in one retail run with
+the positive controls passing. Target-phase execution, post-target rows, and
+scalar samples split H1/H2/H3; any missing control or port hangar phase selects
+H4 and invalidates the census.
+
+Exact preparation and run:
+
+    sed -i '' 's/0x80005084,0x80005088,0x8000508C/0x80005090,0x80005094,0x80005098/' scratch/agent/run_s3941_m5_candidate_writers.sh
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    env zsh scratch/agent/run_s3941_m5_candidate_writers.sh

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3942 (2026-10-03).
+Updated for session 3943 (2026-10-03).
 
 ## Current state
 
@@ -37,9 +37,11 @@ Work only the first applicable item. This is one monotonic backlog.
    is an ownership collision, not legitimate allocator state, so the guard
    returns before queue-link stores. The ordinary host target built
    successfully, but `PatchesLib` is not configured (`No rule to make target
-   'PatchesLib'`), so MIPS/runtime qualification remains unavailable. Do not
-   claim this guard is runtime-validated; validate the accumulated patch when
-   a human supplies the toolchain.
+   'PatchesLib'`), so MIPS/runtime qualification remains unavailable. Session
+   3943 reran both checks: the ordinary Debug target completed, while
+   `PatchesLib` again failed immediately and neither `mips64-elf-gcc` nor
+   `mips64-elf-ld` was on PATH. Do not claim this guard is runtime-validated;
+   validate the accumulated patch when a human supplies the toolchain.
 
 2. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail
