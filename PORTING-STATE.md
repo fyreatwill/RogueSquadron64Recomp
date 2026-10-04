@@ -144132,3 +144132,16 @@ not established as the cause. This keeps the `0x800052AC` census parked until
 a phase-qualified route is available for that measurement. ORIGIN: launch
 timing and task/audio hooks observe legitimate runtime arm choices; no
 mitigation landed.
+
+## Session 4035 (2026-10-04) — qualified null for 0x800052A0 candidate class
+
+Ran the retail-grounded census for `0x800052A0`, `0x800052A4`, and
+`0x800052A8` after the route qualification. Retail's whole-RDRAM positive
+control, title VI 1024 (154), hangar VI 512 (181), and oracle completion
+passed. All three candidates had zero post-target samples, rows, and sequence
+hits. The paired port reached both target phases with 3,052 audio-ABI rows and
+3,047 image-DMA joins, with no crash or abort. H2 is selected for this
+candidate class; the next census begins at `0x800052AC`. This rules out these
+three PCs as the measured retail target-phase writer class, not global writer
+absence. ORIGIN: retail PC watches and port phase/task hooks are diagnostic
+only; no mitigation landed.

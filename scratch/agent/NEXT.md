@@ -1,4 +1,4 @@
-# Next work unit: retail-grounded source census at 0x800052A0
+# Next work unit: retail-grounded source census at 0x800052AC
 
 HYPOTHESIS-ID: m5-source-writer-census
 
@@ -12,7 +12,7 @@ Competing hypotheses:
   qualify, so this class is unevaluable and must not be called absent.
 
 Discriminator: one same-build retail oracle and paired legacy/real capture for
-the next three candidate PCs beginning at `0x800052A0`. The retail
+the next three candidate PCs beginning at `0x800052AC`. The retail
 whole-RDRAM/title/hangar controls and the port title/hangar controls must fire.
 Candidate hits, post-target rows, and scalar/sequence evidence select H1 or H2;
 any missing phase control selects H3.

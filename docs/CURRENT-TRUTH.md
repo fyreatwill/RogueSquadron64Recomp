@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4034 (2026-10-04).
+Updated for session 4035 (2026-10-04).
 
 ## Current state
 
@@ -285,6 +285,16 @@ all-arm qualification exists and audio staging is not established as cause.
 ORIGIN: launch timing and task/audio hooks observe legitimate runtime arm
 choices; no mitigation landed.
 
+Session 4035 ran the retail-grounded census for `0x800052A0`,
+`0x800052A4`, and `0x800052A8` after the route was qualified. Retail's
+whole-RDRAM positive control, title VI 1024 (154), hangar VI 512 (181), and
+oracle completion all passed. Each candidate had zero post-target samples,
+rows, and sequence hits. The paired port reached both target phases with
+3,052 audio-ABI rows and 3,047 image-DMA joins, with no crash or abort.
+H2 is selected for this candidate class; the next census starts at
+`0x800052AC`. ORIGIN: retail PC watches and port phase/task hooks are
+diagnostic only; no mitigation landed.
+
 Session 4016 qualified a new gate/source boundary capture. Retail's whole-RDRAM
 positive control, title VI 1024, and hangar VI 512 controls passed and the
 oracle completed; it reported 17 writes to `0x800A0F50`, 192 executions of
@@ -437,12 +447,10 @@ only; no mitigation landed.
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 next source-payload discriminator.** The ten-second route capture
-   again split the port arms, so do not spend another iteration repeating the
-   scheduler-gap table. Select the next retail-grounded writer class beginning
-   at `0x800052A0`, and qualify it with the retail positive/title/hangar
-   controls plus a phase-qualified port arm. Do not infer writer absence from
-   a port arm that fails before its target phase.
+1. **M5 next source-payload discriminator.** Run the next retail-grounded
+   writer class beginning at `0x800052AC`, with the retail
+   positive/title/hangar controls plus a phase-qualified port arm. Do not
+   infer writer absence from a port arm that fails before its target phase.
 
 2. **M3 patch integration.** Restore or supply the `PatchesLib` target before
    runtime-qualifying the active-queue sentinel guard from session 4033. The
@@ -463,7 +471,7 @@ candidate results are summarized by address range rather than copied here.
    changing audio behavior; do not repeat the scheduler split. Keep scheduler
    `a0` as a message object and treat ABI rows as authoritative.
 
-5. **M5 new source-payload discriminator.** After the `0x800052A0` class is
+5. **M5 new source-payload discriminator.** After the `0x800052AC` class is
    qualified, select the next retail-grounded writer class; do not repeat the
    scheduler split or change audio behavior.
 
@@ -487,7 +495,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
 | `H-M5-800078ECZeroFill` | Selected at s3857; sampled writes are zero-valued. |
-| `H-M5-CandidateWriterClass` | Bounded classes through `0x80005218` selected H2 or H3 as recorded in the append-only ledger; never global absence. |
+| `H-M5-CandidateWriterClass` | Bounded classes through `0x800052A8` selected H2 or H3 as recorded in the append-only ledger; never global absence. |
 | `H-M5-CandidateWriterClass-0521C` | Selected H2 at s3990: all three PCs absent from qualified retail target/post-target/scalar evidence while the paired legacy port qualified. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
