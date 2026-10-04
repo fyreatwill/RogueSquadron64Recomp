@@ -142788,6 +142788,20 @@ zero crash/abort markers; source and destination payloads were
 `FNV=0x762B22A5`, `nonzero=0`. This rules out these three candidate PCs at the
 measured scope, not global writer absence.
 
+## Session 3962 (2026-10-04) — classified the next M5 candidate-writer class
+
+Ran the existing same-build retail-oracle/port census for candidate PCs
+`0x80005144`, `0x80005148`, and `0x8000514C`. The independent whole-RDRAM
+positive control fired 10,000 times; retail reached title VI 1024, hangar VI
+512, and oracle completion. None of the candidates had target-phase execution,
+post-target rows, or scalar samples, selecting H3 for this bounded retail
+class. The paired port reached both target phases with 2,987 image-DMA joins,
+zero crash/abort markers, and qualified source/destination payload
+`FNV=0x762B22A5`, nonzero=0. This rules out these three PCs as qualified
+retail writers in the measured phases only; it does not establish global writer
+absence. The next bounded class is `0x80005150`, `0x80005154`, and
+`0x80005158`.
+
 ## Session 3961 (2026-10-04) — classified the next M5 candidate-writer class
 
 The required independent whole-RDRAM oracle control fired. The Debug target
