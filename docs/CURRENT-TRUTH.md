@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3935 (2026-10-03).
+Updated for session 3936 (2026-10-03).
 
 ## Current state
 
@@ -30,7 +30,17 @@ target fault attribution was absent or an arm crashed before target.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap guard validation — open external dependency, not a loop stop.**
+1. **M5 candidate-writer qualification — continue the bounded retail census.**
+   Session 3936 tested `0x80005048`, `0x8000504C`, and `0x80005050`. Retail
+   whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls
+   all passed. None of the three candidates executed in the qualified target
+   phase or produced post-target rows/scalar samples, selecting H3 for this
+   bounded class only. The paired port reached hangar with 3,013 image-DMA
+   joins and no crash/abort; qualified payload remained
+   `FNV=0x762B22A5`, nonzero=0. Continue with `0x80005054`, `0x80005058`,
+   and `0x8000505C`; this is not global writer absence.
+
+4. **M3 heap guard validation — open external dependency, not a loop stop.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
    the free-list head pair to the complete bounded chain, rejecting cycles and
    foreign successor/predecessor links before dequeue. The change preserves
@@ -289,17 +299,17 @@ Work only the first applicable item. This is one monotonic backlog.
    Continue with `0x80005048`, `0x8000504C`, and `0x80005050`; this is not
    global writer absence.
 
-4. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
+5. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
    and the expanded reciprocal-link guards are landed in
    `patches/heap_guards.c` but have no runtime result. The same
    missing-toolchain/build-target blocker applies; the tail-anchor audit is
    now also accumulated and must not be extended before validation.
 
-5. **M5 target-phase parity is closed at current scope.** Do not repeat
+6. **M5 target-phase parity is closed at current scope.** Do not repeat
    standalone qualification, paired target-VI controls, or the retail
    zero-writer census unless the route or build changes.
 
-6. **Generated-symbol renaming sweep is parked.** Resume only after M5 has no
+7. **Generated-symbol renaming sweep is parked.** Resume only after M5 has no
    applicable discriminator and M3 has a toolchain or a new discriminator.
    Keep HYPOTHESIS-ID `generated-symbol-renaming-sweep`; mapping edits do not
    evade the engineering-change stall gate.
@@ -328,6 +338,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x80005000`/`0x80005004`/`0x80005008`; this is not global writer absence. |
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x80005024`/`0x80005028`/`0x8000502C`; this is not global writer absence. |
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x8000503C`/`0x80005040`/`0x80005044`; this is not global writer absence. |
+| `H-M5-CandidateWriterClass` | Selected H3 for `0x80005048`/`0x8000504C`/`0x80005050`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |

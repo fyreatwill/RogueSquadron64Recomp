@@ -142567,3 +142567,14 @@ selected for this iteration: the patch source changed, but MIPS/runtime
 validation is unavailable in this checkout. The host build does not validate
 the patch, and no allocator-runtime claim is made. Do not add another M3 guard
 until a human supplies/configures the MIPS patch pipeline.
+## Session 3936 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran the same-build paired qualification for `0x80005048`, `0x8000504C`, and
+`0x80005050` after the Debug target build completed successfully. Retail
+whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls all
+passed. All three candidates had zero qualified target-phase execution, zero
+post-target rows, and zero scalar samples, selecting H3 for this bounded class
+only; this does not establish global writer absence. The paired port reached
+hangar with 3,013 image-DMA joins and no crash or abort; qualified payload
+remained `FNV=0x762B22A5`, nonzero=0. The next adjacent set is
+`0x80005054`, `0x80005058`, and `0x8000505C`.

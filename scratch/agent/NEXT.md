@@ -1,26 +1,27 @@
-# Next work unit: audit the active-queue tail-anchor guard
+# Next work unit: classify the next M5 candidate-writer class
 
-HYPOTHESIS-ID: m3-active-queue-tail-anchor
+HYPOTHESIS-ID: m5-candidate-writer-class
 
-Before building, retain this hypothesis table and discriminator as the audit
-contract. Add one guard in `patches/heap_guards.c` for the active-queue append
-anchor: when the published queue is non-empty, the node reached via
-`heap_tail_loc->next` must either be the queue head with no predecessor, or
-have `q->prev == *heap_tail_loc`. Then run
-`cmake --build build --config Debug --target RogueSquadron64Recomp` once and
-attempt `cmake --build build --config Debug --target PatchesLib` once. No
-runtime soak is valid without a built MIPS patch.
+Run one same-build, phase-gated retail/port qualification for candidate PCs
+`0x80005054`, `0x80005058`, and `0x8000505C`, using the existing oracle and
+port controls. Build `RogueSquadron64Recomp` once before the paired run. Do
+not add instrumentation: the existing whole-RDRAM, title-1024, hangar-512,
+oracle-completion, and port image-DMA controls are the ground-truth contract.
 
 Competing hypotheses:
 
-- H1: the tail metadata is a legitimate predecessor of the terminal queue
-  node, so the new relation check passes for valid allocator state.
-- H2: the queue head is the terminal node, so the valid empty-predecessor
-  special case passes.
-- H3: a foreign or detached tail is possible, so the new guard rejects it.
-- H4: the patch pipeline is unavailable, so source-level correctness cannot
-  be runtime-qualified in this checkout.
+- H1: at least one candidate is a legitimate retail target-phase writer; it
+  will execute in the qualified phase and produce a post-target scalar row.
+- H2: candidates execute in the target phase but do not produce a qualified
+  post-target scalar; they are wrappers, unrelated stores, or non-writers.
+- H3: candidates do not execute in the qualified target phase; this bounded
+  class is not the missing writer.
+- H4: controls fail (missing positive control, route phase, or crash), so the
+  candidate result is unevaluable and must not be promoted.
 
-Discriminator: the guard must accept both valid queue-anchor shapes and reject
-the detached/foreign shape in a MIPS/runtime test. If `PatchesLib` is absent,
-the result is H4 only; the ordinary host build is not patch validation.
+Discriminator: the retail oracle must pass all positive controls, including
+whole-RDRAM writes, title VI 1024, hangar VI 512, and completion. Then classify
+each PC by target-phase execution, candidate-span rows, post-target rows, and
+scalar samples. The paired port must reach hangar with image-DMA joins and no
+crash/abort; otherwise port payload is unevaluable. H1/H2/H3 are bounded to
+this exact candidate set.
