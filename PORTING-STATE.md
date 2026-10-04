@@ -59713,7 +59713,7 @@ entry `+4`) and dispatches it through `LOOKUP_FUNC(ctx->r2)`. Static target
 enumeration cannot identify the runtime contents or the callback writers, so
 this work unit selects H-slotdispatcheriter-stacksp-unclassified rather than
 indirect-balanced. No target is known to be a stub, and no mitigation was
-landed.
+ landed.
 
 ORIGIN: generated target-body/frame-write inventory, `funcs.h` declarations,
 companion symbol cross-check, and direct inspection of the runtime callback
@@ -143782,3 +143782,18 @@ can compare target-phase outcomes. The writer and phase controls are positive,
 but the route result is unevaluable for the intended crash split. ORIGIN: the
 writer hook observes the legitimate runtime-selected DMA length; no mitigation
 landed.
+
+## Session 4014 (2026-10-04) — re-qualified M5 scheduler with spin-yield enabled
+
+Built the Debug target and ran the concurrent retail-oracle, declared/real,
+and legacy/real capture with the established default `ROGUESQ_SPIN_YIELD=1` in
+both port arms. Retail's whole-RDRAM positive control and title/hangar VI
+controls passed. Declared/real reached title at 14.3s and hangar at 23.5s with
+the legitimate `0x800` audio-ucode-data DMA; legacy/real reached title at 11.3s
+and hangar at 19.6s with the legacy `0xF80` DMA. Both port arms fired the RSP
+source-hook and scheduler controls, neither emitted `[CRASH]` or `[ABORT]`, and
+all observed opaque scheduler successor values were zero. This selects H2 for
+the run: the prior legacy-only crash remains schedule-sensitive or otherwise
+unevaluated, rather than being explained by the staging size. It rules out a
+repeatable default-spin legacy crash at this capture scope. ORIGIN: the writer
+hook observes the legitimate runtime-selected DMA length; no mitigation landed.

@@ -1,31 +1,31 @@
-# Next work unit: re-qualify the scheduler boundary with spin-yield enabled
+# Next work unit: split legacy scheduler behavior by spin-yield arm
 
-HYPOTHESIS-ID: m5-legacy-staging-schedule-4012
+HYPOTHESIS-ID: m5-legacy-staging-schedule-sensitivity
 
 Competing hypotheses:
 
-- H1: with the established default spin-yield route restored, declared/real
-  reaches both target phases while legacy/real again crashes after the
-  legitimate `0xF80` writer; this supports the legacy staging path as the
-  differentiator.
-- H2: both arms reach both target phases with matching writer/successor rows;
-  the prior crash remains schedule-sensitive or externally nondeterministic.
-- H3: declared/real stalls again before target while legacy/real reaches title;
-  the arm-dependent route failure is reproducible and the staging crash split
-  remains unevaluable.
+- H1: only the legacy arm with spin-yield disabled stalls or crashes; spin-yield
+  is the route discriminator.
+- H2: both legacy spin arms reach both target phases with the same writer and
+  successor values; spin-yield is not sufficient and the old crash remains
+  nondeterministic.
+- H3: declared/real diverges again while both legacy arms match; the failure is
+  not attributable to legacy staging or spin-yield.
 
-Discriminator: one Debug build and one concurrent retail-oracle plus
-declared/real and legacy/real capture. Retail whole-RDRAM, title VI 1024, and
-hangar VI 512 controls must fire. Both port arms must fire the RSP source-hook
-and writer controls. Compare phase progress, `[CRASH]`/`[ABORT]`, writer rows,
-and opaque scheduler successor rows; do not decode scheduler `a0` as an
-OSTask. A positive arm control is not sufficient without the phase controls.
+Discriminator: one Debug build and one concurrent retail-oracle plus three port
+arms: declared/real with spin-yield 1, legacy/real with spin-yield 1, and
+legacy/real with spin-yield 0. Retail whole-RDRAM, title VI 1024, and hangar VI
+512 controls must fire. Every port arm must fire the RSP source-hook and writer
+controls. Compare phase progress, `[CRASH]`/`[ABORT]`, writer rows, and opaque
+scheduler successor rows; do not decode scheduler `a0` as an OSTask. A positive
+arm control is not sufficient without the phase controls.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4014_m5_scheduler_spin1 ROGUESQ_SPIN_YIELD=1 zsh scratch/agent/run_s4012_m5_scheduler_boundary.sh
+    env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4015_m5_scheduler_spin_split zsh scratch/agent/run_s4015_m5_scheduler_spin_split.sh
 
-The output directory must be new. Preserve the writer/scheduler instrumentation
-and the concurrent three-arm schedule. If H3 repeats, stop treating the crash
-split as qualified and pivot to a new M5 discriminator.
+The output directory and recipe must be new. Preserve the writer/scheduler
+instrumentation and kill every arm with SIGKILL after the watchdog. If H2
+repeats, park the old crash split and move to the next M5 discriminator rather
+than repeating this table.
