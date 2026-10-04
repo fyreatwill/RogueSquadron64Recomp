@@ -1,30 +1,31 @@
-# Next work unit: qualify the regeneration-safe M3 patch target
+# Next work unit: requalify the four-arm M5 route with a new schedule discriminator
 
-HYPOTHESIS-ID: m3-patcheslib-qualification-4029
+HYPOTHESIS-ID: m5-route-schedule-discriminator-4030
 
 Competing hypotheses:
 
-- H1: the configured `PatchesLib` target exists and builds with the supplied
-  MIPS toolchain, so the heap-guard patch can be runtime-qualified.
-- H2: the target is absent from the current build graph, so the blocker is
-  CMake/configuration rather than a compile or link defect.
-- H3: the target exists, but the configured MIPS compiler/linker or patch
-  inputs are unavailable, so qualification is toolchain-blocked.
+- H1: rotating the launch order changes the pre-target crash outcome, so the
+  old failure is schedule-sensitive.
+- H2: the same arm-specific route failure recurs despite the schedule change,
+  supporting an arm/path-specific defect.
+- H3: all four arms qualify again, leaving the old crash unevaluated rather
+  than causal.
 
-Discriminator: first enumerate the configured target, then invoke the target
-once. H1 is a successful `PatchesLib` build; H2 is `No rule to make target
-PatchesLib` and no target in `cmake --build build --target help`; H3 is a
-target-recognized build that fails while locating or invoking MIPS tools or
-patch inputs. Do not infer runtime guard behavior from a source-only build.
+Discriminator: run the same four arms concurrently but rotate launch order so
+declared/real is not the first port arm, while keeping the retail oracle and
+all phase/RSP/audio controls. H1 is a changed crash/phase outcome tied to
+order; H2 is recurrence in the same arm/path independent of order; H3 is
+qualification of every arm with no crash/abort. A single arm failure is not
+enough to claim audio causality.
 
-Exact commands:
+Exact commands: after adding the launch-order parameter to the existing
+four-arm driver as the bounded part of this work unit:
 
 ```sh
-cmake --build build --target help | rg -n 'PatchesLib|RogueSquadron64Recomp'
-cmake --build build --config Debug --target PatchesLib
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env RS64_LAUNCH_ORDER=legacy-real,declared-silent,declared-real zsh scratch/agent/run_s4030_m5_route_requal.sh
 ```
 
-If H1, run the smallest available patch/runtime qualification and record its
-positive control. If H2 or H3, record the exact blocker and keep the M5
-writer census parked; do not repeat the route capture without a new schedule
-discriminator.
+Record the retail positive control, both target VIs, RSP/audio controls, each
+arm's staging size, crash marker, and last guest PC in one comparison table.
+Only resume the `0x800052AC` writer census if all required controls qualify.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4028 (2026-10-04).
+Updated for session 4029 (2026-10-04).
 
 ## Current state
 
@@ -369,22 +369,29 @@ not establish a causal arm-specific audio failure. The `0x800052AC` writer
 census remains parked. ORIGIN: diagnostic route controls and crash marker;
 no mitigation landed.
 
+Session 4029 ran the bounded M3 patch-target qualification. The configured
+build graph listed `RogueSquadron64Recomp` but no `PatchesLib`, and invoking
+`cmake --build build --config Debug --target PatchesLib` failed immediately
+with `No rule to make target 'PatchesLib'`, before compiler, linker, or patch
+input discovery. H2 is selected: the current blocker is absent build-graph
+integration, not a MIPS toolchain failure. Runtime qualification of the
+heap-guard patch remains blocked. ORIGIN: build-graph/toolchain diagnostic
+only; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M3 patch qualification.** Session 4027 rechecked reciprocal-link
-   validation: `git diff --check` and the ordinary Debug target passed, while
-   `PatchesLib` remains unavailable before compilation. Runtime qualification
-   remains blocked until the configured target and MIPS toolchain are supplied;
-   do not infer that a malformed chain occurs from the source guard alone.
+1. **M5 route requalification.** Select one new schedule discriminator, then
+   repeat the four-arm route qualification. Require the retail positive,
+   title/hangar phases, RSP/audio controls, and no crash/abort in all port arms
+   before resuming `0x800052AC`. Do not repeat the same arm ordering alone.
 
-2. **M5 route requalification.** Repeat the four-arm route qualification
-   only after a new schedule discriminator is selected; s4028's
-   declared/real-only pre-target crash is not causal evidence. Require the
-   retail positive, title/hangar phases, RSP/audio controls, and no
-   crash/abort in all port arms before resuming `0x800052AC`.
+2. **M3 patch integration.** Session 4029 confirmed that `PatchesLib` is
+   absent from the configured build graph; the target fails before compiler or
+   toolchain discovery. Restore or supply the CMake target before attempting
+   runtime qualification. Do not repeat the same target invocation.
 
 3. **M5 next source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte

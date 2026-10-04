@@ -144033,3 +144033,15 @@ source/host-build discriminator; H2 is ruled out. H3 remains the runtime
 qualification state: the configured patch target/toolchain is unavailable, so
 this result does not show that a malformed expansion chain occurs. ORIGIN:
 `func_8002221C` and its expansion-chain link stores; no mitigation was added.
+
+## Session 4029 (2026-10-04) — PatchesLib target absent from build graph
+
+Ran the prescribed bounded M3 patch-target qualification. `cmake --build
+build --target help | rg -n 'PatchesLib|RogueSquadron64Recomp'` listed only
+`RogueSquadron64Recomp`; `PatchesLib` was absent. The requested
+`cmake --build build --config Debug --target PatchesLib` then failed before
+compiler, linker, or patch-input discovery with `No rule to make target
+'PatchesLib'`. H2 is selected: the current blocker is build-graph integration,
+not a MIPS toolchain failure. This does not qualify runtime behavior or prove
+that the guarded malformed-chain condition occurs. ORIGIN: build-graph and
+toolchain diagnostic only; no mitigation landed.
