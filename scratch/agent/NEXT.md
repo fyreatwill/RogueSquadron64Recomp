@@ -2,8 +2,8 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
-Run one bounded census for candidate PCs `0x80005228`, `0x8000522C`, and
-`0x80005230`, continuing the existing writer-class sweep with the qualified
+Run one bounded census for candidate PCs `0x80005234`, `0x80005238`, and
+`0x8000523C`, continuing the existing writer-class sweep with the qualified
 legacy/real audio-DMA route. Keep the whole-RDRAM positive control and the
 phase-gated target/post-target/scalar tables in the same build and run.
 
@@ -25,8 +25,8 @@ phases; H3 is any missing positive control or incomplete qualified route.
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    perl -pe 's/s3989_m5_candidate_writers/s3994_m5_candidate_writers/g; s/0x8000521C,0x80005220,0x80005224/0x80005228,0x8000522C,0x80005230/g; s/0x8000521C\\|0x80005220\\|0x80005224/0x80005228|0x8000522C|0x80005230/g' scratch/agent/run_s3989_m5_candidate_writers.sh > /tmp/rs64-s3994-candidates.sh
-    env zsh /tmp/rs64-s3994-candidates.sh
+    perl -pe 's/s3989_m5_candidate_writers/s3996_m5_candidate_writers/g; s/0x8000521C,0x80005220,0x80005224/0x80005234,0x80005238,0x8000523C/g; s/0x8000521C\\|0x80005220\\|0x80005224/0x80005234|0x80005238|0x8000523C/g' scratch/agent/run_s3989_m5_candidate_writers.sh > /tmp/rs64-s3996-candidates.sh
+    env zsh /tmp/rs64-s3996-candidates.sh
 
 Inspect only counts and tails from the generated logs; do not read a full
 run log. If the source script name differs, make the equivalent bounded

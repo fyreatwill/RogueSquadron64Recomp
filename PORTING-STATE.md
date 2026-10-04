@@ -143524,3 +143524,15 @@ the upstream writer of the zero payload.
 The prior s3993 declared/real pre-ABI crash was not reproduced. The run rules
 out a persistent declared-size inability to reach the first audio ABI, and it
 rules out a declared-only post-`0x800` consumer in this instrumented scope.
+
+## Session 3995 (2026-10-04) — extended M5 candidate-writer census
+
+Built the Debug target and ran the prescribed single legacy/real candidate
+census for `0x80005228`, `0x8000522C`, and `0x80005230`. The retail oracle's
+whole-RDRAM positive control fired, title VI 1024 fired 182 times, hangar VI
+512 fired 187 times, and the oracle completed. Each candidate reported
+`seen=0`, zero post-target samples, and zero post-target rows. The paired port
+reached phase 5 with 2,904 image-DMA joins and 2,913 audio ABI rows, with zero
+crash/abort markers. This selects H2 for the measured candidate class and
+rules out a qualified retail writer at these three PCs in the measured target
+scope; it does not prove global writer absence.

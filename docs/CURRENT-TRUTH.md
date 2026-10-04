@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3994 (2026-10-04).
+Updated for session 3995 (2026-10-04).
 
 ## Current state
 
@@ -48,13 +48,21 @@ complete source/consumer joins), and no declared-only post-`0x800` marker.
 The task-contract consumer boundary is closed at this measured scope; the
 remaining zero payload is upstream of this consumer.
 
+Session 3995 extended the qualified legacy/real writer census to candidate PCs
+`0x80005228`, `0x8000522C`, and `0x80005230`. The retail oracle positive
+control fired and both title VI 1024 and hangar VI 512 controls fired; the
+oracle completed. All three candidates had `seen=0`, zero post-target samples,
+and zero post-target rows. The paired port reached phase 5 with 2,904 image-DMA
+joins and 2,913 audio ABI rows, with no crash or abort. H2 is selected for this
+class; the result does not establish global writer absence.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
 1. **M5 candidate-writer census continuation.** Resume the next unclassified
-   adjacent set after `0x80005224`, using one phase-scoped table and the
+   adjacent set after `0x80005230`, using one phase-scoped table and the
    qualified legacy/real route. The discriminator is whether any candidate
    writes nonzero target/post-target payload at a matching task ordinal; a
    same-run positive control must show the table firing.
@@ -92,6 +100,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-Step1-TaskContract` | H3 at s3991: declared arm crashed in the first graphics-task scheduler path at `0x8000834c` before any audio ABI row; legacy arm passed controls and reached both target phases. |
 | `H-M5-Step1-TaskContract-3992` | Superseded by s3994: s3993 again failed to qualify declared/real, but s3994's same-build three-arm capture qualified it. |
 | `H-M5-Step1-TaskContract-3994` | H2 selected at the measured scope: declared/real and legacy/real reached the ABI and target phases with matching zero-payload phase-5 consumer signatures; no declared-only post-`0x800` marker appeared. |
+| `H-M5-CandidateWriterClass-0528` | H2 selected at s3995: retail controls and oracle completion passed, while `0x80005228`, `0x8000522C`, and `0x80005230` had no candidate or post-target evidence; paired port reached phase 5. |
 
 ## Durable evidence boundary
 
