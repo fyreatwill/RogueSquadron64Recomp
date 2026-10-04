@@ -141899,3 +141899,19 @@ and H1/H2/H3 discriminator.
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3893 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3893_m5_remaining_candidate_writers.sh` for
+`0x80004AB8`, `0x80004AC0`, and `0x80004AC8`. Retail whole-RDRAM, title VI
+1024, hangar VI 512, and oracle shutdown controls all passed. Each PC had 36
+qualified hangar candidate-span writer rows, but zero post-target scalar
+samples and zero post-target rows, selecting H2 for these PCs only. The port
+independently reached hangar with 3,013 image-DMA joins and 3,018 ABI events,
+with zero crash or abort markers. This does not identify the missing producer
+or justify a writeback mitigation; the next bounded representatives are
+`0x80004AD4`, `0x80004AE0`, and `0x80004AE4`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.

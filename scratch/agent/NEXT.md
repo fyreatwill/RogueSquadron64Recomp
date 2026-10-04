@@ -2,16 +2,16 @@
 
 HYPOTHESIS-ID: m5-image-task-output-edge
 
-Session 3892 reran the stale candidate recipe. Retail whole-RDRAM, title-1024,
-hangar-512, and shutdown controls passed. The rerun again selected
-`0x80092020`, `0x8009206C`, and `0x80007670`: each had qualified title/hangar
-candidate-span writer rows but no post-store scalar attribution. Port reached
-3,026 image-DMA joins and 3,037 ABI events with zero crash/abort markers. This
-is repeatability for those PCs only and adds no new producer conclusion.
+Session 3893 qualified the new candidate arm. Retail whole-RDRAM, title-1024,
+hangar-512, and shutdown controls passed. `0x80004AB8`, `0x80004AC0`, and
+`0x80004AC8` each had 36 qualified hangar candidate-span writer rows but no
+post-store scalar attribution or post-target rows. Port reached 3,013
+image-DMA joins and 3,018 ABI events with zero crash/abort markers. This
+selects H2 for these PCs only.
 
 Competing hypotheses and the discriminating measurement:
 
-- H1: one of `0x80004AB8`, `0x80004AC0`, or `0x80004AC8` writes legitimate
+- H1: one of `0x80004AD4`, `0x80004AE0`, or `0x80004AE4` writes legitimate
   nonzero data into the candidate span. A qualified writer row plus a
   nonzero post-value scalar sample from the same PC selects H1.
 - H2: a tested PC writes only zero/unchanged data. A qualified writer row with
@@ -27,6 +27,6 @@ arm. Do not add a writeback guard or other mitigation from a zero result.
 
 Exact command:
 
-    zsh scratch/agent/run_s3892_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3893_m5_remaining_candidate_writers.sh
 
 Expected outcomes: H1/H2/H3 as defined above.
