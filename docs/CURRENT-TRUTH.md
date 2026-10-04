@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3938 (2026-10-03).
+Updated for session 3939 (2026-10-03).
 
 ## Current state
 
@@ -44,7 +44,14 @@ Work only the first applicable item. This is one monotonic backlog.
    selecting H3 for this bounded class only. The paired port reached hangar
    with 2,866 image-DMA joins and no crash/abort; qualified payload remained
    `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
+   candidates; this is not global writer absence. Session 3939 tested
+   `0x8000506C`, `0x80005070`, and `0x80005074`: retail whole-RDRAM,
+   title-1024, hangar-512, and oracle-completion controls passed; all three
+   candidates had zero target-phase execution, post-target rows, and scalar
+   samples, selecting H3 for this bounded class only. The paired port reached
+   hangar with 3,022 image-DMA joins and no crash/abort; qualified payload
+   remained `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent
+   unclassified candidates; this is not global writer absence.
 
 4. **M3 heap guard validation — open external dependency, not a loop stop.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
