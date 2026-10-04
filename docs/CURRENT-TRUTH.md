@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3861 (2026-10-03).
+Updated for session 3862 (2026-10-03).
 
 ## Current state
 
@@ -56,6 +56,14 @@ Work only the first applicable item. This is one monotonic backlog.
    payload row. Port independently reached 3,031 image-DMA joins with no
    crash/abort. This selects the bounded H2 result for those known writers;
    remaining candidate-span writer PCs still need classification.
+   Session 3862 ran the fresh candidate-PC arm with positive controls and a
+   completed retail oracle shutdown. `0x80022BB0`, `0x80022BC8`, and
+   `0x80022A04` each had zero hangar-phase writer rows and zero scalar samples,
+   selecting H2 for those three PCs only. The port arm crashed before its
+   `[audtask-abi]` and image-DMA controls, so it supplies no paired evidence.
+   The next bounded candidates are `0x80092020`, `0x8009206C`, and
+   `0x80007670`; do not promote the three zero-hit PCs into a global absence
+   claim.
 2. **M3 heap guard validation — blocked dependency.** Sessions 3852–3859
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
@@ -106,6 +114,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-800078ECZeroFill` | Selected at s3857: the dominant lifetime writer executes in hangar but all sampled writes to `0x1798B0..0x179A48` are zero; it is not a nonzero image producer. |
 | `H-M5-WriterProbe141AD0NotOutputSpan` | Selected at s3860 only for the probe scope: `0x80094648` writes sentinel values to `0x141AD0..0x141AF0` in hangar; this range is not the image span, so no image-producer conclusion follows. |
 | `H-M5-KnownStagePCsNotCandidateWriter` | Selected at s3861: valid retail controls passed, but `0x80015BC8` and `0x8000F3A0` had no phase-gated writes or scalar payload rows in `0x165000..0x16C000`; other candidate-span writer PCs remain open. |
+| `H-M5-RemainingCandidates-22xxAbsent` | Single-source retail result at s3862: `0x80022BB0`, `0x80022BC8`, and `0x80022A04` had no qualified candidate-span rows or scalar samples; other writer PCs remain open. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 
@@ -237,6 +246,13 @@ Work only the first applicable item. This is one monotonic backlog.
   3,031 target image-DMA joins with zero crash/abort markers. This selects
   `H-M5-KnownStagePCsNotCandidate` only for those two PCs and leaves the
   remaining candidate-span writer classes open.
+
+- **3862:** The fixed retry passed the retail whole-RDRAM positive control,
+  title 1024, hangar 512, and oracle shutdown (`38,218,741` hits; 4,220 VI).
+  The three selected remaining PCs `0x80022BB0`, `0x80022BC8`, and
+  `0x80022A04` produced zero phase-gated candidate-span writer rows and zero
+  scalar samples. The port arm crashed before audio/image controls, so this
+  is single-source retail evidence selecting H2 only for those PCs.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

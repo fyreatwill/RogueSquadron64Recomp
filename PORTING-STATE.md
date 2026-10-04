@@ -141332,6 +141332,28 @@ next M5 discriminator must watch the candidate stage span itself while
 sampling the known stage writers' scalar payloads; do not treat this result as
 proof that the image task/output edge is absent.
 
+## Session 3862 (2026-10-03) — bounded remaining candidate-writer classification
+
+Ran `scratch/agent/run_s3862_m5_remaining_candidate_writers.sh` after the
+first wrapper attempt failed to collect shutdown summaries; the fixed retry
+completed the retail oracle arm for 75 seconds. The oracle positive control
+reached 10,000 callbacks, title VI 1024 and hangar VI 512 were observed, and
+`[oracle] done` reported 38,218,741 watch hits over 4,220 VI. The selected
+candidate PCs `0x80022BB0`, `0x80022BC8`, and `0x80022A04` each had zero
+phase-gated writer rows and zero post-store scalar samples in physical
+`0x165000..0x16C000`. This is a single-source retail result selecting H2 for
+these three PCs only; it does not classify the remaining writer population.
+
+The paired port arm crashed before `[audtask-abi]` or image-DMA controls, so
+it supplies no independent paired result. The first attempt was also
+invalid because SIGKILL preceded oracle shutdown summaries; it was not used
+as evidence. The retry still rules out no global image producer and leaves
+the remaining candidate-span PCs open. The next discriminator should sample
+the fresh dominant PCs `0x80092020`, `0x8009206C`, and `0x80007670`.
+
+ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+guest or host state was rewritten, skipped, or guarded.
+
 ## Session 3861 (2026-10-03) — bounded candidate-span scalar attribution
 
 Ran `scratch/agent/run_s3861_m5_candidate_span_scalar.sh`, watching physical
