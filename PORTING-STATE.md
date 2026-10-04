@@ -142635,3 +142635,17 @@ only; this does not establish global writer absence. The paired port reached
 hangar with 3,060 image-DMA joins and no crash or abort; qualified payload
 remained `FNV=0x762B22A5`, nonzero=0. The next adjacent set is
 `0x80005090`, `0x80005094`, and `0x80005098`.
+
+## Session 3942 (2026-10-03) — audited empty active-queue tail alias
+
+Pivoted from the mandated candidate-writer rerun because the no-engineering
+streak required a real artifact change. Audited the empty active-queue append
+case in `patches/heap_guards.c` and added a pre-store guard rejecting
+`popped == tail`. ORIGIN is the free-list dequeue publishing `popped`; with a
+null published queue head, the same object cannot simultaneously be the
+active-queue tail, so the alias is not legitimate allocator ownership. This
+closes only that bounded corruption class; it does not explain the M5 payload
+absence. The ordinary `RogueSquadron64Recomp` Debug target built successfully.
+The requested `PatchesLib` target is not configured (`No rule to make target
+'PatchesLib'`), so the MIPS patch and runtime remain unvalidated. The missing
+toolchain is an environment blocker, not evidence that the guard fires.

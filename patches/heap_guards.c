@@ -257,6 +257,13 @@ RECOMP_PATCH Block* func_80007D74(void) {
         return NULL;
     }
 
+    // ORIGIN: the free-list dequeue publishes `popped`; the active-queue
+    // append consumes `tail`. In an empty published queue, they cannot be
+    // the same allocator object without claiming one block in two owners.
+    if (popped == tail) {
+        return NULL;
+    }
+
     Block* queue_head = *heap_other_listhead;
     if (queue_head != NULL && !block_ok(queue_head)) {
         return NULL;

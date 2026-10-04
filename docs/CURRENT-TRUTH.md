@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3941 (2026-10-03).
+Updated for session 3942 (2026-10-03).
 
 ## Current state
 
@@ -30,7 +30,18 @@ target fault attribution was absent or an arm crashed before target.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 candidate-writer qualification — continue the bounded retail census.**
+1. **M3 heap guard validation — open external dependency, not a loop stop.**
+   Session 3942 added the empty-queue tail-alias guard to
+   `patches/heap_guards.c`. ORIGIN is the free-list dequeue publishing
+   `popped`; when the published active-queue head is null, `popped == tail`
+   is an ownership collision, not legitimate allocator state, so the guard
+   returns before queue-link stores. The ordinary host target built
+   successfully, but `PatchesLib` is not configured (`No rule to make target
+   'PatchesLib'`), so MIPS/runtime qualification remains unavailable. Do not
+   claim this guard is runtime-validated; validate the accumulated patch when
+   a human supplies the toolchain.
+
+2. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail
    whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls
    all passed. None of the three candidates executed in the qualified target
@@ -67,7 +78,7 @@ Work only the first applicable item. This is one monotonic backlog.
    payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the next
    adjacent unclassified candidates; this is not global writer absence.
 
-4. **M3 heap guard validation — open external dependency, not a loop stop.**
+3. **M3 prior guard classes — validate the accumulated patch before extending.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
    the free-list head pair to the complete bounded chain, rejecting cycles and
    foreign successor/predecessor links before dequeue. The change preserves
@@ -109,7 +120,7 @@ Work only the first applicable item. This is one monotonic backlog.
    add another M3 guard until the accumulated patch can be built and runtime-
    qualified.
 
-2. **M5 audio contract qualification — remaining retail candidate-writer
+4. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3900's phase-gated run passed the retail whole-RDRAM,
    title-1024, and hangar-512 controls; candidate PCs `0x80003B98`,
    `0x800044C8`, and `0x80004AB0` produced no retail rows. The paired port
@@ -240,7 +251,7 @@ Work only the first applicable item. This is one monotonic backlog.
    zero. This selects H-ContractGap over H-AudioDegeneracy at this scope.
    Do not add a writeback guard from this result.
 
-3. **M5 image task/output edge — classify remaining retail writers.** The
+5. **M5 image task/output edge — classify remaining retail writers.** The
    qualified port input and separate writeback-DMA edge are real, while the
    dominant retail `0x800078EC` activity is zero-fill, not an image producer.
    Sessions 3861–3896 classified many measured PCs as H2 (candidate-span
@@ -326,17 +337,17 @@ Work only the first applicable item. This is one monotonic backlog.
    Continue with `0x80005048`, `0x8000504C`, and `0x80005050`; this is not
    global writer absence.
 
-5. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
+6. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
    and the expanded reciprocal-link guards are landed in
    `patches/heap_guards.c` but have no runtime result. The same
    missing-toolchain/build-target blocker applies; the tail-anchor audit is
    now also accumulated and must not be extended before validation.
 
-6. **M5 target-phase parity is closed at current scope.** Do not repeat
+7. **M5 target-phase parity is closed at current scope.** Do not repeat
    standalone qualification, paired target-VI controls, or the retail
    zero-writer census unless the route or build changes.
 
-7. **Generated-symbol renaming sweep is parked.** Resume only after M5 has no
+8. **Generated-symbol renaming sweep is parked.** Resume only after M5 has no
    applicable discriminator and M3 has a toolchain or a new discriminator.
    Keep HYPOTHESIS-ID `generated-symbol-renaming-sweep`; mapping edits do not
    evade the engineering-change stall gate.
