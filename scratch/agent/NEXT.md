@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-route-requalification
 
 Run exactly one new same-build capture with launch order
-`declared-real,legacy-real,declared-silent` and a four-second gap, plus the
+`legacy-real,declared-silent,declared-real` and a three-second gap, plus the
 independent retail oracle. Do not run the `0x800052C4` writer census until the
 route result qualifies it.
 
@@ -26,7 +26,7 @@ Exact commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4045_m5_route_requal_$(date +%Y%m%d-%H%M%S) RS64_LAUNCH_ORDER=declared-real,legacy-real,declared-silent RS64_LAUNCH_GAP_SEC=4 zsh scratch/agent/run_s4028_m5_route_requal.sh
+env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4046_m5_route_requal_$(date +%Y%m%d-%H%M%S) RS64_LAUNCH_ORDER=legacy-real,declared-silent,declared-real RS64_LAUNCH_GAP_SEC=3 zsh scratch/agent/run_s4028_m5_route_requal.sh
 ```
 
 The wrapper must write captures under a non-hidden final path and kill all
