@@ -142281,4 +142281,23 @@ skipped, or guarded.
 - Rules out: this iteration does not establish that the allocator guard fires
   or preserves a valid retail queue. It does establish that the next missing
   active-queue link class is now represented in the regeneration-safe patch
-  source. Next validation requires the MIPS toolchain and configured target.
+ source. Next validation requires the MIPS toolchain and configured target.
+
+## Session 3915 (2026-10-03) — confirmed M3 patch target remains unavailable
+
+Ran the prescribed M3 validation commands. `cmake --build build --config
+Debug --target PatchesLib` failed immediately with `make: *** No rule to make
+target 'PatchesLib'. Stop.` The ordinary host target
+`cmake --build build --config Debug --target RogueSquadron64Recomp` completed
+successfully, including the existing `RecompiledFuncs`, runtime, and final
+executable targets.
+
+This selects H3: the checkout is host-buildable but has neither a configured
+`PatchesLib` target nor a MIPS patch validation route. It does not establish
+that the accumulated heap guards compile for MIPS, preserve valid allocator
+behavior, or reject malformed queues. No new guard was added. The next
+runnable work unit is the phase-gated M5 candidate set
+`0x80004F94`, `0x80004F98`, and `0x80004F9C`.
+
+ORIGIN: this iteration changed no runtime behavior; the missing CMake target is
+the direct build-system cause of the validation stop.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3914 (2026-10-03).
+Updated for session 3915 (2026-10-03).
 
 ## Current state
 
@@ -44,8 +44,11 @@ Work only the first applicable item. This is one monotonic backlog.
    reachable from the published queue head and has reciprocal predecessors
    before the append stores. The full host target still builds, but this
    checkout has no `PatchesLib` target and the MIPS guard remains unvalidated;
-   validate the accumulated patch when a human provides the toolchain. Do not
-   add another guard meanwhile.
+   validate the accumulated patch when a human provides the toolchain. Session
+   3915 reran the required validation: `PatchesLib` is still not a configured
+   target (`No rule to make target 'PatchesLib'`), while the ordinary host
+   target completes successfully. This is H3 environment evidence only; no
+   allocator or MIPS-runtime claim is made. Do not add another guard meanwhile.
 
 2. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3900's phase-gated run passed the retail whole-RDRAM,
@@ -127,7 +130,9 @@ Work only the first applicable item. This is one monotonic backlog.
    image-DMA joins and no crash/abort; qualified image payload remained
    `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
    candidates; this is not global writer absence.
-   Continue with `0x80004F94`, `0x80004F98`, and `0x80004F9C`.
+   Session 3915 leaves `0x80004F94`, `0x80004F98`, and `0x80004F9C` as the next
+   runnable candidate set after the M3 validation checkpoint remained
+   unavailable.
    Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
