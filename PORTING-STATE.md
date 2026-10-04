@@ -141931,3 +141931,19 @@ or justify a writeback mitigation; the next bounded representatives are
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3895 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3894_m5_remaining_candidate_writers.sh` for
+`0x80004AE8`, `0x80004AF0`, and `0x80004BE8`. Retail whole-RDRAM, title VI
+1024, hangar VI 512, and oracle shutdown controls passed. Each PC had 166
+qualified candidate-span writer-PC rows, but zero post-target scalar samples
+and zero post-target rows, selecting H2 for these PCs only. The port reached
+2,254 image-DMA joins and 2,259 ABI events with no crash or abort markers.
+This does not identify the missing producer or justify a writeback mitigation;
+the next bounded representatives are `0x80004C74`, `0x80004C88`, and
+`0x80004C8C`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.

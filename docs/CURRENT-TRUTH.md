@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3894 (2026-10-03).
+Updated for session 3895 (2026-10-03).
 
 ## Current state
 
@@ -229,6 +229,18 @@ Work only the first applicable item. This is one monotonic backlog.
    and 3,040 ABI events with no crash or abort. Continue with `0x80004AE8`,
    `0x80004AF0`, and `0x80004BE8`; do not infer a global producer absence or
    add a mitigation from this bounded result.
+
+   ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+   paired with port image-DMA joins; no guest or host state was rewritten,
+   skipped, or guarded.
+   Session 3895 ran the next bounded arm for `0x80004AE8`, `0x80004AF0`, and
+   `0x80004BE8`. Retail whole-RDRAM, title-1024, hangar-512, and shutdown
+   controls passed. Each PC had 166 qualified candidate-span writer-PC rows,
+   but zero post-target scalar samples and rows, selecting H2 for these PCs
+   only. The port reached 2,254 image-DMA joins and 2,259 ABI events with no
+   crash or abort. Continue with the next measured representatives
+   `0x80004C74`, `0x80004C88`, and `0x80004C8C`; do not infer a global producer
+   absence or add a mitigation from this bounded result.
 
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
