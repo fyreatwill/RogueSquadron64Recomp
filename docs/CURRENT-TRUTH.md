@@ -102,6 +102,14 @@ Work only the first applicable item. This is one monotonic backlog.
    payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the next
    adjacent unclassified candidates; this is not global writer absence.
 
+   Session 3947 tested `0x800050B4`, `0x800050B8`, and `0x800050BC`: retail
+   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
+   the candidate PCs had zero target-phase execution, zero post-target rows,
+   and zero scalar samples, selecting H3 for this bounded class only. The
+   paired port reached hangar with 2,838 image-DMA joins and no crash or abort;
+   qualified payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the
+   next adjacent unclassified candidates; this is not global writer absence.
+
 3. **M3 prior guard classes — validate the accumulated patch before extending.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
    the free-list head pair to the complete bounded chain, rejecting cycles and
