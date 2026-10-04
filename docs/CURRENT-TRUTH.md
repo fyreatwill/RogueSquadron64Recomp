@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4069 (2026-10-04).
+Updated for session 4070 (2026-10-04).
 
 ## Current state
 
@@ -206,6 +206,14 @@ boundary; playback/drain timing remains open.
   `0x8000834c`. This selects Htopology/resource interaction over a deterministic
   shared guest-state defect, but leaves a dummy-specific startup failure open;
   no sink conclusion was drawn from the dummy arm.
+- Session 4070 audited the active-queue ownership guard class and found that
+  `heap_other_listhead` was checked for KSEG0 validity but not for aliasing the
+  `heap_tail_loc` allocator sentinel. Added a regeneration-safe guard in
+  `patches/heap_guards.c`; its ORIGIN is the active-head/sentinel publication
+  pair, and the sentinel is metadata rather than legitimate queue ownership.
+  The ordinary Debug target built successfully. `PatchesLib` remains
+  unavailable because this host has no configured MIPS patch target/toolchain;
+  runtime qualification is not inferred.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.

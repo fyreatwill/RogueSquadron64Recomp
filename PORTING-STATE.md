@@ -144715,3 +144715,22 @@ state change was made.
 
 The fixed capture is `scratch/agent/run_s4069_m5_sequential_silent.sh`; logs
 are under `scratch/agent/s4069_m5_sequential_silent_fixed/`.
+
+## Session 4070 (2026-10-04) — guarded active-head sentinel alias
+
+The mandated no-churn pivot selected the next M3 ownership idiom rather than
+rerunning the dummy-route capture. The audit found that `func_80007D74` checked
+the published active head for KSEG0 validity but did not reject the head being
+the allocator sentinel published through `heap_tail_loc`. That alias is not
+legitimate: the sentinel is metadata ownership, while `heap_other_listhead`
+publishes an active allocation node. Added
+`active_queue_head_disjoint_from_sentinel` in `patches/heap_guards.c` and
+applied it before the active/free-chain checks. The change is regeneration-safe
+and includes an ORIGIN naming both guest metadata writers.
+
+`cmake --build build --config Debug --target RogueSquadron64Recomp` completed
+successfully. `cmake --build build --config Debug --target PatchesLib` failed
+with `No rule to make target 'PatchesLib'`, so this is source/ordinary-host
+qualification only; no MIPS runtime behavior is claimed. This rules out only
+the unguarded sentinel-alias case at source scope and leaves runtime
+qualification blocked on the external MIPS toolchain.

@@ -206,6 +206,17 @@ static int active_queue_sentinel_disjoint(const Block* queue_head,
     return node == NULL;
 }
 
+// ORIGIN: heap_other_listhead publishes the first active node, while
+// heap_tail_loc publishes the allocator sentinel. The active head is a real
+// queue owner and must not be the sentinel metadata node; accepting that
+// alias would make the append path treat sentinel storage as guest-owned
+// allocation state.
+static int active_queue_head_disjoint_from_sentinel(const Block* queue_head,
+                                                    const Block* sentinel) {
+    return queue_head == NULL || (queue_head != sentinel &&
+                                   block_ok(queue_head));
+}
+
 // ORIGIN: the free-list dequeue publishes popped as an active-queue node;
 // a node already reachable from the published queue still belongs to that
 // queue, so accepting the alias would create a cycle or duplicate ownership.
@@ -455,7 +466,7 @@ RECOMP_PATCH Block* func_80007D74(void) {
     }
 
     Block* queue_head = *heap_other_listhead;
-    if (queue_head != NULL && !block_ok(queue_head)) {
+    if (!active_queue_head_disjoint_from_sentinel(queue_head, tail)) {
         return NULL;
     }
 

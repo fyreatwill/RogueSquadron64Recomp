@@ -2,7 +2,10 @@
 
 HYPOTHESIS-ID: m5-dummy-startup-ordering
 
-Session 4069 used one retail-gated sequential capture. Native silent reached
+Session 4070 landed the M3 active-head/sentinel ownership guard and built the
+ordinary target. Runtime qualification is unavailable on this host because
+`PatchesLib` has no generated target/toolchain. The next applicable M5 unit
+remains the route discriminator below. Session 4069 used one retail-gated sequential capture. Native silent reached
 title 1024 and hangar 512; dummy silent reproduced the pre-target
 `spTaskSchedulerThread+9632` crash with fault `0x400128d47` and guest PC
 `0x8000834c`. The next unit keeps the successful native-first ordering but
