@@ -142259,6 +142259,3 @@ candidate set is `0x80004F94`, `0x80004F98`, and `0x80004F9C`.
 ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
-ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
-paired with port image-DMA joins; no guest or host state was rewritten,
-skipped, or guarded.
