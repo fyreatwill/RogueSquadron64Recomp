@@ -144473,3 +144473,20 @@ same retail capture independently recorded 816 scalar source-span stores at
 zero-writer observation but does not identify the upstream producer of the
 missing nonzero payload. The next unit classifies that immediate writer with
 phase/argument evidence.
+
+## Session 4058 (2026-10-04) — closed the free/active ownership overlap gap
+
+Audited the regeneration-safe M3 heap guard class before any new M5
+instrumentation. The existing `free_chain_disjoint_from_active_tail` check
+compared the free list only with the active queue's current terminal node; it
+did not reject a shared node earlier in the published active chain. Added
+`free_chain_disjoint_from_active_queue` in `patches/heap_guards.c`, bounded by
+the allocator's `MAX_FREE_BLOCKS` limit, and invoked it before the append stores.
+The ORIGIN is the guest ownership split between `heap_free_head` and
+`heap_other_listhead`; an overlap is not legitimate allocator state.
+
+`git diff --check` passed and the ordinary Debug
+`RogueSquadron64Recomp` target built successfully. The MIPS GCC/LD toolchain is
+still absent, so `PatchesLib` and runtime qualification were not inferred from
+this host build. This closes the previously unguarded earlier-node overlap
+case, but does not establish that the corruption occurs at runtime.

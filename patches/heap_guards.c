@@ -289,6 +289,38 @@ static int free_chain_disjoint_from_active_tail(const Block* free_head,
     return node == NULL;
 }
 
+// ORIGIN: the free-list link stores own the chain rooted at heap_free_head,
+// while the active queue publishes every node from heap_other_listhead. A
+// tail-only comparison misses an alias at an earlier active node, which can
+// make the next queue append mutate a block still owned by the free list.
+static int free_chain_disjoint_from_active_queue(const Block* free_head,
+                                                 const Block* queue_head) {
+    const Block* active = queue_head;
+    uint32_t active_count = 0;
+
+    while (active != NULL && active_count++ < MAX_FREE_BLOCKS) {
+        const Block* free_node = free_head;
+        uint32_t free_count = 0;
+        while (free_node != NULL && free_count++ < MAX_FREE_BLOCKS) {
+            if (free_node == active) {
+                return 0;
+            }
+            if (!block_ok(free_node)) {
+                return 0;
+            }
+            free_node = free_node->next;
+        }
+        if (free_node != NULL) {
+            return 0;
+        }
+        if (!block_ok(active)) {
+            return 0;
+        }
+        active = active->next;
+    }
+    return active == NULL;
+}
+
 // ORIGIN: the free-list link stores own every node reachable from
 // heap_free_head; heap_tail_loc owns the active-queue sentinel. Sharing that
 // sentinel between the two ownership domains would let a later dequeue
@@ -432,6 +464,15 @@ RECOMP_PATCH Block* func_80007D74(void) {
     // domains; aliasing the head would make the append read a free-list node
     // as an active-queue predecessor before the later disjointness check.
     if (queue_head == popped) {
+        return NULL;
+    }
+
+    // ORIGIN: heap_free_head and heap_other_listhead publish separate owner
+    // chains. The existing tail comparison does not reject an overlap at an
+    // earlier active node, so audit the complete bounded active chain before
+    // publishing another link.
+    if (queue_head != NULL &&
+        !free_chain_disjoint_from_active_queue(head, queue_head)) {
         return NULL;
     }
 
