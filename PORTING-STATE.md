@@ -144146,6 +144146,20 @@ three PCs as the measured retail target-phase writer class, not global writer
 absence. ORIGIN: retail PC watches and port phase/task hooks are diagnostic
 only; no mitigation landed.
 
+## Session 4042 (2026-10-04) — three-second stagger leaves one audio route arm qualified
+
+Built the ordinary Debug target, then ran the retail oracle plus declared/real,
+declared/silent, and legacy/real port arms concurrently with a new three-second
+declared-first launch stagger. The retail whole-RDRAM positive control fired and
+the oracle reached title VI 1024 and hangar VI 512. Declared/real reached both
+target phases, emitted 7,144 phase-5 audio-stage rows, and had no crash or
+abort. Declared/silent and legacy/real both crashed before target phases at
+guest PC `0x8000834C`, with zero target-phase audio-stage rows. H2 is selected:
+the route remains schedule-sensitive, and no source-writer absence conclusion
+is qualified. This rules out treating the declared/real arm as universally
+broken under this schedule. ORIGIN: route, scheduler, and audio-stage hooks
+observe legitimate arm choices; no mitigation landed.
+
 ## Session 4036 (2026-10-04) — qualified null for 0x800052AC candidate class
 
 Ran the retail-grounded census for `0x800052AC`, `0x800052B0`, and

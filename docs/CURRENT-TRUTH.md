@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4041 (2026-10-04).
+Updated for session 4042 (2026-10-04).
 
 ## Current state
 
@@ -491,29 +491,34 @@ missing target is caused by the configured prerequisite/toolchain gate rather
 than a source or host-link error; runtime qualification remains blocked.
 ORIGIN: build-graph/toolchain diagnostic only; no mitigation landed.
 
+Session 4042 ran the M5 route table with a new three-second stagger in one
+same-build capture. The independent retail oracle fired its whole-RDRAM
+positive control and reached title VI 1024 and hangar VI 512. Declared/real
+also reached both target phases, emitted 7,144 phase-5 audio-stage rows, and
+had no crash or abort. Declared/silent and legacy/real both crashed before
+either target phase at guest PC `0x8000834C`, with zero target-phase audio rows.
+This selects H2: at least one arm qualifies, but launch schedule still splits
+the route; no source-writer null is qualified. ORIGIN: route, scheduler, and
+audio-stage hooks observe legitimate arm choices; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M3 patch integration.** On a host with the MIPS toolchain, configure with
-   `-DMIPS_TOOLCHAIN_DIR=<toolchain-root>` and restore the `PatchesLib` target
-   before runtime-qualifying the active-queue sentinel guard from session 4040.
-   The source and ordinary host target pass; do not infer runtime behavior from
-   that build alone. The current macOS host has no configured MIPS compiler.
-
-2. **M5 route requalification.** Run a genuinely new launch-order/gap
+1. **M5 route requalification.** Run a genuinely new launch-order/gap
    schedule table before another source-writer census. The retail
    positive/title/hangar controls and all three port-arm phase controls must
    qualify; classify any pre-target arm failure as H3 rather than inferring
-   writer absence. Session 4039 again selected H1: legacy qualified while
-   both declared arms failed pre-target.
+   writer absence. Session 4042 selected H2: declared/real qualified while
+   declared/silent and legacy/real failed pre-target under a three-second
+   declared-first launch.
 
-3. **M5 next source-payload discriminator.** After route qualification,
+2. **M5 next source-payload discriminator.** After route qualification,
    rerun the retail-grounded writer class beginning at `0x800052C4`; do not
    infer writer absence from a port arm that fails before its target phase.
 
-4. **M5 new source-payload discriminator.** The gate-value redesign is now
+3. **M5 new source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
    initialization/transitional traffic before the target phase. The candidate
    census is qualified through `0x8000529C`, the legitimate `0xF80` writer is
@@ -522,9 +527,15 @@ candidate results are summarized by address range rather than copied here.
    changing audio behavior; do not repeat the scheduler split. Keep scheduler
    `a0` as a message object and treat ABI rows as authoritative.
 
-5. **M5 new source-payload discriminator.** After the `0x800052C4` class is
+4. **M5 new source-payload discriminator.** After the `0x800052C4` class is
    qualified, select the next retail-grounded writer class; do not repeat the
    scheduler split or change audio behavior.
+
+5. **M3 patch integration.** On a host with the MIPS toolchain, configure with
+   `-DMIPS_TOOLCHAIN_DIR=<toolchain-root>` and restore the `PatchesLib` target
+   before runtime-qualifying the active-queue sentinel guard from session 4040.
+   The source and ordinary host target pass; do not infer runtime behavior from
+   that build alone. The current macOS host has no configured MIPS compiler.
 
 6. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
