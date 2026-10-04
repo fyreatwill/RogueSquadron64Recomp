@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3992 (2026-10-04).
+Updated for session 3993 (2026-10-04).
 
 ## Current state
 
@@ -34,6 +34,16 @@ route for census work.
 The generated scalar-store census, central host/RSP writer census, native
 page-fault census, and nine bounded exact-offset load candidates are closed at
 their measured scopes. A null attribution is not global writer absence.
+
+Session 3993 reran the prescribed three-arm capture from the checked-in
+recipe. This attempt did not qualify the consumer discriminator: declared/real
+crashed in `spTaskSchedulerThread` before any audio ABI row, declared/silent
+reached the silent `musyx_stub` path and title VI 1024, and legacy/real reached
+title and hangar with audio rows. The RSP canary and phase controls fired, so
+the missing declared/real ABI row is an arm failure, not evidence of consumer
+absence. This is single-source repeat evidence that the next capture needs a
+declared/real positive-control isolation before post-`0x800` reads can be
+interpreted.
 
 ## Next steps
 
@@ -118,6 +128,11 @@ candidate results are summarized by address range rather than copied here.
   `ucode_data_size=0x800`, `break_pc=0x1328`, and `canary_ok=0`. No
   declared-only post-`0x800` read/consumer marker appeared, so the task
   contract is still unresolved.
+- Session 3993's rerun passed the RSP canary and phase controls, but
+  declared/real crashed in `spTaskSchedulerThread` before an audio ABI row;
+  declared/silent reached the silent ABI and title VI 1024, while legacy/real
+  reached title VI 1024 and hangar VI 512 with audio rows. This run is not a
+  consumer discriminator and must not be read as declared-only read absence.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.

@@ -143492,3 +143492,18 @@ read/consumer table built into the same three-arm capture. Logs:
 
 **Outcome: ADVANCED** (the planned three-arm discriminator ran and refuted the
 pre-audio failure hypothesis).
+
+## Session 3993 (2026-10-04) — reran first-audio contract capture
+
+Built the ordinary Debug target successfully and ran the prescribed batched
+declared-size/real, declared-size/silent, and legacy-size/real recipe. The RSP
+canary and phase controls fired. Declared/real crashed in `spTaskSchedulerThread`
+before any real-audio ABI row; declared/silent reached the `musyx_stub` ABI and
+title VI 1024; legacy/real reached title VI 1024 and hangar VI 512 with audio
+rows. Therefore this attempt does not discriminate a declared-only consumer
+read from a matching legacy read. It establishes only a bounded H3 result for
+this run: the declared/real arm lacked the required positive control. The
+missing ABI row is not evidence that post-`0x800` reads are absent.
+
+**Outcome: ADVANCED** (the planned capture ran and exposed an unqualified arm;
+the next work unit restores the positive-control requirement).

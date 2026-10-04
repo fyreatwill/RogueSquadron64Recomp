@@ -1,29 +1,33 @@
-# Next work unit: census first-audio consumers beyond the declared staging span
+# Next work unit: qualify the declared-real first-audio control, then census consumers
 
 HYPOTHESIS-ID: m5-audio-task-contract
 
-Add one phase-scoped read/consumer table at the first real `M_AUDTASK`, then
-run the existing three-arm capture unchanged: declared-size + real audio,
-declared-size + silent audio, and legacy-size + real audio. Preserve the
-task-contract, DMEM-canary, DMA-range, phase, and positive-control markers.
-Do not change the qualified route.
+The s3993 rerun did not qualify the planned discriminator: declared/real
+crashed in `spTaskSchedulerThread` before an audio ABI row, while the silent
+and legacy controls progressed. Re-run the same-build three-arm capture after
+making the declared/real arm emit a bounded first-audio control, and retain
+the post-`0x800` read/consumer table only as interpretation data. Do not claim
+consumer absence from an arm with no real-audio ABI row.
 
 Competing hypotheses:
 
-- H1: a declared-only read/consumer beyond the `0x800` staging span appears at
-  a matching first-audio task ordinal.
-- H2: declared and legacy have identical consumer reads; the `0xF80` copy is
-  not required by the observed audio path.
-- H3: the table is empty or only the silent control differs; the contract
-  remains unevaluable and needs a different boundary.
+- H1: declared/real can reach the first audio ABI and exposes a declared-only
+  read or consumer beyond `0x800` at a matching task ordinal.
+- H2: declared/real reaches the ABI and its consumer reads match legacy/real;
+  the `0xF80` copy is not required by the observed path.
+- H3: declared/real remains unable to reach the ABI, so the task-contract
+  boundary—not the consumer table—is the active blocker.
 
-Discriminator: in one capture, require all three arms to emit the RSP-source
-positive control and the first real-audio ABI row. H1 is a declared-only
-post-`0x800` read/consumer; H2 is matching declared/legacy reads; H3 is no
-qualified read or a missing control. The silent arm is a control for the
-stubbed no-DMEM-change path, not evidence about the real consumer.
+Discriminator: one capture must have all three arms emit the RSP-source canary,
+the first real-audio ABI control, and target-phase controls. H1/H2 require a
+declared/real ABI row; H1 is a declared-only post-`0x800` read, H2 is matching
+declared/legacy reads, and H3 is a missing declared/real ABI control. The
+silent arm is only a control for the stubbed no-DMEM-change path.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
     env zsh scratch/agent/run_s3991_m5_task_contract_isolation.sh
+
+Expected evidence: summarize per-arm canary, ABI, phase, crash, and consumer
+counts with `rg`/`tail`; do not read a full log.
