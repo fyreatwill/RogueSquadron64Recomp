@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3983 (2026-10-04).
+Updated for session 3984 (2026-10-04).
 
 ## Current state
 
@@ -127,6 +127,15 @@ Work only the first applicable item. This is one monotonic backlog.
    for that route discriminator; it is not the current candidate-PC unit.
 
 3. **M3 heap guard validation — open external dependency, not a loop stop.**
+   Session 3984 added the next bounded active-queue ownership guard in
+   `patches/heap_guards.c`: reject `queue_head == popped` before reading the
+   active queue's successor. ORIGIN is the free-list dequeue writer publishing
+   `popped` and the active-queue head writer publishing `queue_head`; these
+   are distinct ownership domains, so aliasing is not legitimate queue state.
+   The ordinary Debug target built successfully. `PatchesLib` still is not
+   configured (`No rule to make target 'PatchesLib'`), so MIPS/runtime
+   qualification remains unavailable; do not add another guard before the
+   accumulated patch builds.
    Session 3956 added the next bounded active-queue idiom guard: reject the
    impossible alias `tail == q` before the append reads `tail->next` as the
    predecessor of `q`. ORIGIN is `heap_tail_loc` plus the append writer;

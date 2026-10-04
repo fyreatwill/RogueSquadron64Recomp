@@ -290,6 +290,14 @@ RECOMP_PATCH Block* func_80007D74(void) {
         return NULL;
     }
 
+    // ORIGIN: the free-list dequeue publishes `popped`, while the active
+    // queue head owns its reachable nodes. These are distinct ownership
+    // domains; aliasing the head would make the append read a free-list node
+    // as an active-queue predecessor before the later disjointness check.
+    if (queue_head == popped) {
+        return NULL;
+    }
+
     // ORIGIN: the active-queue append publishes tail->next and the head slot
     // as one chain. A null published head with an existing successor is a
     // detached queue, not a legitimate empty-list state.

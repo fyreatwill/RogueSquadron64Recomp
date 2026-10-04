@@ -143287,6 +143287,21 @@ No mitigation or runtime behavior was changed.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H2).
 
+## Session 3984 (2026-10-04) — added the next active-queue ownership guard
+
+Performed the mandated M3 guard-class pivot. The patch now rejects the
+impossible alias `queue_head == popped` before dereferencing the active
+queue's successor. ORIGIN is the free-list dequeue writer publishing
+`popped` and the active-queue head writer publishing `queue_head`; they are
+distinct ownership domains, so the alias is not legitimate allocator state.
+The ordinary Debug target built successfully. The configured tree still has
+no `PatchesLib` target (`No rule to make target 'PatchesLib'`), so no MIPS or
+runtime qualification is claimed. This closes the current guard change and
+rules out only the new source/build regression; it does not validate the
+guard at runtime.
+
+**Outcome: ADVANCED** (a real guard/code change landed and the host build passed).
+
 ## Session 3983 (2026-10-04) — split-qualified the next M5 candidate-writer class
 
 Built the ordinary Debug target successfully and ran the bounded M5 census for

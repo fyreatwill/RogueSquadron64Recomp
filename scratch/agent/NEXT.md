@@ -1,33 +1,30 @@
-# Next work unit: M5 bounded retail candidate-writer census
+# Next work unit: validate the accumulated M3 heap patch
 
-HYPOTHESIS-ID: m5-candidate-writer-census
+HYPOTHESIS-ID: m3-heap-patch-pipeline
 
-Run the next adjacent retail candidate set `0x800051EC`, `0x800051F0`, and
-`0x800051F4`. Use the existing same-build retail/port driver; keep the
-qualified port route on the legacy audio-DMA rollback because s3977's declared
-size arm crashed before title.
+The last work unit added the early active-queue ownership guard in
+`patches/heap_guards.c`. First determine whether the configured tree can build
+the accumulated patch; do not add another guard if it cannot.
 
 Competing hypotheses:
 
-- H1: one of the three PCs executes in a qualified target phase and joins the
-  image-stage scalar payload.
-- H2: none executes, but controls and independent post-store rows pass.
-- H3: a control or target phase fails, so this PC class is unevaluable.
+- H1: the patch pipeline is configured and can compile/link the accumulated
+  MIPS guard for runtime qualification.
+- H2: the patch target is absent or the MIPS toolchain is unavailable, so no
+  runtime claim is possible.
+- H3: the patch build fails for a new source/link reason that needs repair.
 
-Discriminator: the independent whole-RDRAM control, retail title/hangar phases,
-oracle completion, and paired port controls must all pass in one run. H1 is
-selected only by a candidate execution plus matching post-store/payload join;
-H2 by zero candidate rows with all controls intact; H3 by any lost control or
-target phase.
+Discriminator: `cmake --build build --config Debug --target PatchesLib` must
+either produce the target and its generated patch artifact (H1), report the
+known missing target/toolchain boundary (H2), or show a new actionable build
+failure (H3). The ordinary host build is a secondary control only.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    perl -pe 's/s3967_m5_candidate_writers/s3983_m5_candidate_writers/g; s/0x80005168,0x8000516C,0x80005170/0x800051EC,0x800051F0,0x800051F4/g; s/0x80005168\|0x8000516C\|0x80005170/0x800051EC|0x800051F0|0x800051F4/g' scratch/agent/run_s3967_m5_candidate_writers.sh > /tmp/rs64-s3983.sh
-    zsh /tmp/rs64-s3983.sh
+    cmake --build build --config Debug --target PatchesLib
 
-The wrapper transforms the direct s3967 recipe (not another wrapper) for this
-adjacent set. Record the independent controls and candidate rows before
-deciding H1/H2/H3. The prior retail arm passed controls but the paired port
-crashed before title, so do not promote a retail-only H2 result to a qualified
-class unless both arms pass.
+If H1 is selected, inspect the generated patch artifact and run the existing
+patch-qualified route. If H2 repeats, stop the M3 campaign and return to the
+M5 candidate census only after recording that external dependency; do not add
+another unqualified guard.
