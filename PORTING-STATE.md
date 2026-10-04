@@ -143589,3 +143589,18 @@ port reached both target phases with 643 phase-5 audio-task rows and 647
 image-DMA joins, with no crash or abort. This selects H2 for the measured
 candidate class and rules out a qualified retail writer at these three PCs in
 the measured target scope; it does not prove global writer absence.
+## Session 4000 (2026-10-04) — extended M5 candidate-writer census
+
+Ran the prescribed qualified legacy/real paired census for candidate PCs
+`0x80005258`, `0x8000525C`, and `0x80005260` with
+`zsh scratch/agent/run_s4000_m5_candidate_writers.sh`. The independent retail
+oracle whole-RDRAM positive control fired; title VI 1024 fired 154 times,
+hangar VI 512 fired 187 times, and the oracle completed. Each candidate had
+`seen=0`, zero post-target samples, rows, and sequence hits, and no scalar
+evidence. The paired port reached phase 5 with 2,853 audio-task rows and 2,846
+image-DMA joins; its driver reported zero crash and abort markers.
+
+H2 is selected for this measured class: these candidate PCs are not the missing
+nonzero writer at the qualified retail target/post-target scope. This does not
+establish global writer absence. The next bounded class is
+`0x80005264`, `0x80005268`, and `0x8000526C`.

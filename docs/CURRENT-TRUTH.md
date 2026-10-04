@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3999 (2026-10-04).
+Updated for session 4000 (2026-10-04).
 
 ## Current state
 
@@ -91,13 +91,22 @@ paired port reached both target phases with 643 phase-5 audio-task rows and
 647 image-DMA joins, with no crash or abort. This selects H2 for the measured
 candidate class; it does not establish global writer absence.
 
+Session 4000 extended the qualified legacy/real M5 census to candidate PCs
+`0x80005258`, `0x8000525C`, and `0x80005260`. The retail oracle's whole-RDRAM
+positive control fired, title VI 1024 fired 154 times, hangar VI 512 fired 187
+times, and the oracle completed. Each candidate had `seen=0`, zero post-target
+samples/rows/sequences, and no scalar evidence. The paired port reached phase 5
+with 2,853 audio-task rows and 2,846 image-DMA joins, with no crash or abort.
+This selects H2 for the measured candidate class; it does not establish global
+writer absence.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
 1. **M5 candidate-writer census continuation.** Resume the next unclassified
-   adjacent set after `0x80005254`, using one phase-scoped table and the
+   adjacent set after `0x80005260`, using one phase-scoped table and the
    qualified legacy/real route. The discriminator is whether any candidate
    writes nonzero target/post-target payload at a matching task ordinal; a
    same-run positive control must show the table firing.
@@ -140,6 +149,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-0534` | H2 selected at s3997: retail controls and oracle completion passed, while `0x80005234`, `0x80005238`, and `0x8000523C` had no candidate, post-target, or sequence evidence; paired port reached phase 5. |
 | `H-M5-CandidateWriterClass-0540` | H2 selected at s3998: retail controls and oracle completion passed, while `0x80005240`, `0x80005244`, and `0x80005248` had no candidate, post-target, scalar-store, or sequence evidence; paired port reached phase 5. |
 | `H-M5-CandidateWriterClass-054C` | H2 selected at s3999: retail positive, title, and hangar controls passed with oracle completion; no candidate PC hit appeared for `0x8000524C`, `0x80005250`, or `0x80005254`; paired port reached phase 5 with 643 audio-task rows and 647 image-DMA joins. |
+| `H-M5-CandidateWriterClass-0558` | H2 selected at s4000: retail positive, title, and hangar controls passed with oracle completion; no candidate PC hit appeared for `0x80005258`, `0x8000525C`, or `0x80005260`; paired port reached phase 5 with 2,853 audio-task rows and 2,846 image-DMA joins. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 
 ## Durable evidence boundary
@@ -171,6 +181,11 @@ candidate results are summarized by address range rather than copied here.
   controls passed with oracle completion; no candidate PC hit appeared; and
   the paired legacy port reached phase 5 with 643 audio-task rows and 647
   image-DMA joins without crash/abort.
+- Session 4000's bounded candidate census selected H2 for `0x80005258`,
+  `0x8000525C`, and `0x80005260`: retail positive, title, and hangar controls
+  passed with oracle completion; no candidate/post-target/scalar/sequence
+  evidence appeared; and the paired legacy port reached phase 5 with 2,853
+  audio-task rows and 2,846 image-DMA joins without crash/abort.
 - Session 3991's declared-size task-staging arm emitted the RSP boot canary
   control, then crashed in `spTaskSchedulerThread` at guest PC `0x8000834c`
   before any audio-task ABI/consumer row. In the same script, the legacy arm
