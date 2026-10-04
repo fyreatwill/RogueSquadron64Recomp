@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3980 (2026-10-04).
+Updated for session 3981 (2026-10-04).
 
 ## Current state
 
@@ -79,6 +79,17 @@ Work only the first applicable item. This is one monotonic backlog.
    source/destination payload remained `FNV=0x762B22A5`, nonzero=0. This is
    not global writer absence. Continue with `0x800051C8`, `0x800051CC`, and
    `0x800051D0`.
+
+   Session 3981 tested `0x800051C8`, `0x800051CC`, and `0x800051D0`. The
+   independent whole-RDRAM control fired 10,000 times; retail reached title
+   VI 1024, hangar VI 512, and oracle completion, with 36 post-store scalar
+   records and zero mismatches. None of the three candidates had a
+   target-phase execution row, post-target row, or scalar sample, selecting
+   H2 for this bounded class. The paired port reached both qualified phases
+   with 2,863 image-DMA joins and zero crash/abort markers; its qualified
+   source/destination payload remained `FNV=0x762B22A5`, nonzero=0. This is
+   not global writer absence. Continue with `0x800051D4`, `0x800051D8`, and
+   `0x800051DC`.
 
 2. **M5 audio task-contract redesign — explain the declared-size crash.**
    The declared-size arm is parked at H3 until a new task-contract probe names
