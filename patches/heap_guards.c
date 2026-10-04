@@ -281,6 +281,26 @@ static int free_chain_disjoint_from_active_tail(const Block* free_head,
     return node == NULL;
 }
 
+// ORIGIN: the free-list link stores own every node reachable from
+// heap_free_head; heap_tail_loc owns the active-queue sentinel. Sharing that
+// sentinel between the two ownership domains would let a later dequeue
+// rewrite active-queue metadata through the free-list path.
+static int free_chain_disjoint_from_active_sentinel(const Block* free_head,
+                                                    const Block* sentinel) {
+    const Block* node = free_head;
+    uint32_t count = 0;
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (node == sentinel) {
+            return 0;
+        }
+        if (!block_ok(node)) {
+            return 0;
+        }
+        node = node->next;
+    }
+    return node == NULL;
+}
+
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
 
@@ -377,6 +397,10 @@ RECOMP_PATCH Block* func_80007D74(void) {
     }
     Block* tail = *heap_tail_loc;
     if (!block_ok(tail)) {
+        return NULL;
+    }
+
+    if (!free_chain_disjoint_from_active_sentinel(head, tail)) {
         return NULL;
     }
 

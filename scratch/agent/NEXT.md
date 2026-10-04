@@ -1,27 +1,28 @@
-# Next work unit: fresh M5 route qualification under order/gap permutation
+# Next work unit: restore runtime qualification for the audited M3 patch
 
-HYPOTHESIS-ID: m5-route-schedule-discriminator
+HYPOTHESIS-ID: m3-active-queue-ownership-guard
 
 Competing hypotheses:
 
-- H1: launch order/gap controls scheduler interleaving; a new permutation lets a different port arm reach both target phases.
-- H2: one or more declared/real or declared/silent arms fail before target independently of schedule; the split persists with the new permutation.
-- H3: the recipe is invalid or the route is nondeterministic; retail controls or required port controls fail, so no causal route conclusion is allowed.
+- H1: the checked-in `PatchesLib` target is available after the normal CMake
+  configure/build path; the new sentinel-disjoint guard can be compiled and
+  linked into the runtime.
+- H2: the source guard is valid, but this checkout still lacks the toolchain
+  or generated patch target, so only ordinary host-build evidence is possible.
+- H3: the guard exposes a compile/link or ABI error, requiring correction
+  before any runtime qualification is meaningful.
 
-Discriminator: one same-build retail run plus all three port arms from
-`run_s4028_m5_route_requal.sh`, launched in the new order
-`declared-silent,legacy-real,declared-real` with a 20-second gap. Retail
-whole-RDRAM, title VI 1024, and hangar VI 512 controls must fire; each port
-arm's RSP-source control and target-phase controls must be recorded. A new
-arm reaching both phases selects H1. A repeatable pre-target failure with
-other arms qualified selects H2. Missing controls selects H3.
+Discriminator: configure/build `PatchesLib` and then the ordinary Debug target.
+H1 is selected by a successful generated patch library plus final link. H2 is
+selected by a specific missing-tool/target diagnostic after the source-level
+guard is accepted. H3 is selected by a compiler, linker, or generated-patch
+error attributable to this change.
 
 Exact commands:
 
 ```sh
+cmake --build build --config Debug --target PatchesLib
 cmake --build build --config Debug --target RogueSquadron64Recomp
-env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4040_m5_route_requal RS64_LAUNCH_ORDER=declared-silent,legacy-real,declared-real RS64_LAUNCH_GAP_SEC=20 zsh scratch/agent/run_s4028_m5_route_requal.sh
 ```
 
-Capture all four logs and SIGKILL every arm through the recipe cleanup. Do not
-run another candidate census until this route table qualifies.
+Do not run a route or writer census until the patch target result is recorded.

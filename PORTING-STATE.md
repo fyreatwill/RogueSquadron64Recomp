@@ -144199,3 +144199,16 @@ target phase and crashed in `spTaskSchedulerThread+9632` at guest PC
 `0x8000834C`, with no audio/image census rows. H3 is selected for this class:
 the retail null is not a qualified writer-absence result. ORIGIN: retail PC
 watches and port phase/task hooks are diagnostic only; no mitigation landed.
+## Session 4040 (2026-10-04) — audited free-list ownership against the active sentinel
+
+The M3 pivot landed a regeneration-safe guard in `patches/heap_guards.c`.
+Before the dequeue/link stores, the guard walks the bounded free-list chain
+and rejects the active-queue sentinel supplied by `heap_tail_loc` if it is
+reachable from `heap_free_head`. ORIGIN: `func_8002221C` and the free-list
+successor stores own the free chain; `heap_tail_loc` owns the active sentinel,
+so sharing that node is not legitimate. The ordinary Debug target built
+successfully. The configured `PatchesLib` target still fails immediately with
+`No rule to make target 'PatchesLib'`, before compilation or patch generation.
+This rules out a host-tree build defect but leaves runtime qualification
+blocked on the missing build-graph target. No runtime or route conclusion was
+drawn.

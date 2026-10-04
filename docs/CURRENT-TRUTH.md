@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4039 (2026-10-04).
+Updated for session 4040 (2026-10-04).
 
 ## Current state
 
@@ -473,22 +473,32 @@ timing/order changes which arm qualifies, while this capture does not establish
 audio staging as the cause. ORIGIN: launch timing and task/audio hooks observe
 legitimate process scheduling and runtime arm choices; no mitigation landed.
 
+Session 4040 added the next regeneration-safe M3 ownership guard in
+`patches/heap_guards.c`: the active-queue sentinel supplied by `heap_tail_loc`
+must not appear anywhere in the free-list chain before dequeue/link stores.
+The ORIGIN is the free-list link writer (`func_8002221C` and its successor
+stores) versus the active-queue sentinel owner; sharing that node is not
+legitimate ownership. The ordinary Debug target built successfully. The
+configured `PatchesLib` target still fails immediately with `No rule to make
+target 'PatchesLib'`, so this is source/host-build evidence only and runtime
+qualification remains blocked on build-graph integration.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 route requalification.** Run a genuinely new launch-order/gap
+1. **M3 patch integration.** Restore or supply the `PatchesLib` target before
+   runtime-qualifying the active-queue sentinel guard from session 4040. The
+   source and ordinary host target pass; do not infer runtime behavior from
+   that build alone.
+
+2. **M5 route requalification.** Run a genuinely new launch-order/gap
    schedule table before another source-writer census. The retail
    positive/title/hangar controls and all three port-arm phase controls must
    qualify; classify any pre-target arm failure as H3 rather than inferring
    writer absence. Session 4039 again selected H1: legacy qualified while
    both declared arms failed pre-target.
-
-2. **M3 patch integration.** Restore or supply the `PatchesLib` target before
-   runtime-qualifying the active-queue sentinel guard from session 4033. The
-   source and ordinary host target pass; do not infer runtime behavior from
-   that build alone.
 
 3. **M5 next source-payload discriminator.** After route qualification,
    rerun the retail-grounded writer class beginning at `0x800052C4`; do not
