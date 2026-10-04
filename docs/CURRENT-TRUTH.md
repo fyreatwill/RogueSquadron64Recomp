@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3908 (2026-10-03).
+Updated for session 3909 (2026-10-03).
 
 ## Current state
 
@@ -86,6 +86,14 @@ Work only the first applicable item. This is one monotonic backlog.
    image-DMA joins and no crash/abort, with qualified image payload
    `FNV=0x762B22A5`, nonzero=0. This closes that bounded class as H2 only;
    continue with the next adjacent unclassified candidates.
+   Session 3909 tested `0x80004F58`, `0x80004F5C`, and `0x80004F60`: retail
+   whole-RDRAM, title-1024, and hangar-512 controls passed, but none of the
+   three candidates executed in the qualified target phase and each had zero
+   post-target rows and scalar samples. This closes that bounded class as H3
+   only. The paired port arm crashed at about 55 ms in `spTaskSchedulerThread`
+   before target phase, so it supplies no image-DMA evidence for this run.
+   Continue with the next adjacent unclassified candidates only if the port
+   pre-target crash is treated as a separate parked defect.
    Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
@@ -132,7 +140,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
 | `H-M5-800078ECZeroFill` | Selected at s3857; sampled writes are zero-valued. |
-| `H-M5-CandidateWriterClass` | Selected H2 for the bounded s3900–s3904 and s3908 candidate sets through `0x80004F54`; this is not global writer absence. |
+| `H-M5-CandidateWriterClass` | Selected H2 for the bounded s3900–s3904 and s3908 sets through `0x80004F54`, and H3 for `0x80004F58`/`0x80004F5C`/`0x80004F60`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 

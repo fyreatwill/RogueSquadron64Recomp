@@ -142169,3 +142169,20 @@ absence or identify the missing output edge. The next representatives are
 ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+## Session 3909 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3908_m5_remaining_candidate_writers.sh` as the
+phase-gated retail/port discriminator for PCs `0x80004F58`, `0x80004F5C`, and
+`0x80004F60`. The retail oracle positive controls passed: whole-RDRAM reached
+33,411,398 writes, title width 1024 and hangar width 512 both appeared, and
+the oracle completed after 75.2 seconds. None of the three candidate PCs had
+a qualified target-phase execution, post-target row, or scalar sample
+(`seen=0`, `n=0/16` for each), selecting H3 only for this bounded class.
+
+The paired port arm did not reach target phase. It crashed after about 55 ms
+in `spTaskSchedulerThread` with last guest PC `0x8000834C`; its phase log was
+still at width 320 and it produced zero image-DMA joins. This is not evidence
+about the retail writer class. It does rule out using this run for a paired
+port payload conclusion. The next candidate set is `0x80004F64`,
+`0x80004F68`, and `0x80004F6C`; the pre-target port crash remains a separate
+parked caveat.
