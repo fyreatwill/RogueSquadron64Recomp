@@ -144456,3 +144456,20 @@ Compared with session 4054's sequential isolation, declared-silent is newly
 qualified; compared with session 4055, this is a route discriminator rather
 than a source-writer null. It rules out the claim that declared-silent is
 universally pre-target, but does not qualify any legacy-real writer absence.
+
+## Session 4057 (2026-10-04) — M5 predecessor class is unevaluable; zero writer observed
+
+Built the ordinary Debug target, then ran one same-build retail/port matrix
+with the retail whole-RDRAM, title, and hangar positive controls and the
+declared-real port arm. Retail fired its positive control and reached title VI
+1024 and hangar VI 512. The port reached both target phases and retained the
+zero-payload source signature (`FNV=0x762B22A5`, nonzero=0).
+
+The bounded predecessor class `0x800C825C` produced zero target-phase rows.
+The paired `0x800078E0` and `0x800078EC` target summaries were also zero, so
+the predecessor is H3/unevaluable rather than a source-writer absence. The
+same retail capture independently recorded 816 scalar source-span stores at
+`0x800078EC`; all were zero with `mismatch=0`. This provides a legitimate
+zero-writer observation but does not identify the upstream producer of the
+missing nonzero payload. The next unit classifies that immediate writer with
+phase/argument evidence.

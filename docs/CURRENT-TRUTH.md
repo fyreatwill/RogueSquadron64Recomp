@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4056 (2026-10-04).
+Updated for session 4057 (2026-10-04).
 
 ## Current state
 
@@ -93,6 +93,14 @@ sentinel path is not legitimate ownership state.
   again crashed in `spTaskSchedulerThread` before them. This selects H1 for
   the startup-dependency hypothesis: process topology changes which arms
   qualify. It does not qualify a source-writer null for legacy-real.
+- Session 4057 ran the next retail-grounded predecessor batch with the
+  whole-RDRAM/title/hangar controls and declared-real port arm. Retail passed
+  all controls and both target phases; the port reached both target phases and
+  retained `FNV=0x762B22A5`, nonzero=0. `0x800C825C` had zero target-phase
+  rows, selecting H3/unevaluable for that predecessor. The paired
+  `0x800078E0/EC` target summaries were also zero, while `0x800078EC`
+  independently had 816 scalar source-span stores, all zero with mismatch=0.
+  This does not identify the upstream zero producer.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -107,10 +115,11 @@ Work only the first applicable item. This backlog is one monotonic sequence.
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-2. **Resume the retail-grounded source-writer census.** The concurrent matrix
-   qualifies both declared arms, so use the declared-real arm with the next
-   bounded candidate class. Retain retail whole-RDRAM/title/hangar controls
-   and phase-scoped budgets in the same run.
+2. **Classify the immediate zero writer.** Use the qualified declared-real arm
+   with `0x800078EC` as the primary class, retaining `0x800C825C/0x800078E0`
+   as predecessor context. Confirm whether its zero scalar stores are
+   target-phase source writes or a phase/argument mismatch. Retain retail
+   whole-RDRAM/title/hangar controls and phase-scoped budgets in the same run.
 3. **Requalify the M5 route.** Legacy-real remains pre-target under both
    sequential isolation and concurrent topology; revisit only with a new
    startup dependency that can explain the legacy arm.
