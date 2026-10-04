@@ -142407,3 +142407,16 @@ runnable unit is the phase-gated M5 candidate set `0x80004FD0`,
 
 ORIGIN: this iteration changed no runtime behavior. The validation stop is
 caused by the absent MIPS compiler/linker and unconfigured `PatchesLib` target.
+## Session 3923 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3922_m5_remaining_candidate_writers.sh` for
+`0x80004FD0`, `0x80004FD4`, and `0x80004FD8`. The retail oracle passed the
+same-run positive controls: whole-RDRAM watch reached 33,288,534 writes,
+title VI 1024 and hangar VI 512 were both observed, and oracle completion was
+recorded. Its phase writer census had no execution for any candidate and all
+three had zero target-phase post-target rows, scalar samples, and sequence
+observations. The independent port arm reached phase 5 with 3,008 qualified
+image-DMA joins, no crash/abort, and payload `FNV=0x762B22A5`, nonzero=0.
+This selects H3 for this bounded candidate class only: it is disconnected from
+the measured retail writer path, not evidence of global writer absence. This
+also rules out H1 and H2 at the measured target phase.
