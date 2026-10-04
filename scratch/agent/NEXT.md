@@ -3,8 +3,8 @@
 HYPOTHESIS-ID: m5-candidate-writer-class
 
 Run the corrected phase-gated retail/port discriminator for the next adjacent
-unclassified candidate set, exactly `0x80004FC4`, `0x80004FC8`, and
-`0x80004FCC`:
+unclassified candidate set, exactly `0x80004FD0`, `0x80004FD4`, and
+`0x80004FD8`:
 
     zsh scratch/agent/run_s3918_m5_remaining_candidate_writers.sh
 
@@ -18,7 +18,7 @@ Competing hypotheses:
 - H3: none executes in the qualified retail target phase, selecting absence for
   this bounded class only.
 
-Session 3919 selected H3 for `0x80004FB8`/`0x80004FBC`/`0x80004FC0`: controls
+Session 3920 selected H3 for `0x80004FC4`/`0x80004FC8`/`0x80004FCC`: controls
 passed, all three had zero target-phase execution, candidate-span rows,
 post-target rows, and scalar samples; the paired port had 2,845 image-DMA
 joins and no crash/abort with zero-valued qualified payload.

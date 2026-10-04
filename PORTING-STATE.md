@@ -142360,3 +142360,16 @@ global writer absence. The paired port reached hangar with 2,845 image-DMA
 joins and no crash/abort; its qualified image payload remained
 `FNV=0x762B22A5`, nonzero=0. The port result confirms the separate edge still
 runs but does not identify a missing upstream writer.
+
+## Session 3920 (2026-10-03) — classified the next M5 candidate-writer class
+
+The first invocation exposed a stale wrapper that repeated the prior candidate
+set, so it was discarded. After correcting the wrapper, ran the phase-gated
+retail/port discriminator for `0x80004FC4`, `0x80004FC8`, and `0x80004FCC`.
+Retail whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion
+controls passed. All three PCs had zero target-phase execution, candidate-span
+rows, post-target rows, and scalar samples, selecting H3 for this bounded
+class only and ruling them out as qualified retail writers at the measured
+target phase. The paired port reached hangar with 3,025 image-DMA joins and
+no crash/abort; qualified payload remained `FNV=0x762B22A5`, nonzero=0. This
+does not establish global writer absence.
