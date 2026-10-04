@@ -143267,3 +143267,22 @@ establish global writer absence. The next adjacent set is `0x800051BC`,
 
 **Outcome: ADVANCED** (the corrected same-build discriminator ran and selected
 H2; the census wrapper was also fixed).
+
+## Session 3980 (2026-10-04) — classified the next M5 candidate-writer class
+
+Built the ordinary Debug target successfully and ran the bounded M5 census for
+`0x800051BC`, `0x800051C0`, and `0x800051C4`. The independent whole-RDRAM
+positive control fired 10,000 times; retail reached title VI 1024, hangar VI
+512, and oracle completion, with 36 post-store scalar records and zero
+mismatches. None of the three candidates had a target-phase execution row,
+post-target row, or scalar sample, selecting H2 for this bounded class. The
+paired port reached both qualified phases with 2,863 image-DMA joins and zero
+crash/abort markers; its qualified source/destination payload remained
+`FNV=0x762B22A5`, nonzero=0. This rules out these three PCs as the qualified
+retail writer at the measured scope; it does not establish global writer
+absence. The next adjacent set is `0x800051C8`, `0x800051CC`, and
+`0x800051D0`.
+
+No mitigation or runtime behavior was changed.
+
+**Outcome: ADVANCED** (the planned discriminator ran and selected H2).
