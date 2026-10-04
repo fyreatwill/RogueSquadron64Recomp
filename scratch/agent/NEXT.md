@@ -1,35 +1,32 @@
-# Next work unit: qualify the active-queue sentinel guard at source/build scope
+# Next work unit: restore the M3 patch target and qualify the sentinel guard
 
 HYPOTHESIS-ID: m3-active-queue-sentinel-predecessor
 
-Run one ordinary Debug build after the new regeneration-safe guard in
-`patches/heap_guards.c`; attempt `PatchesLib` once to record whether the host
-can compile the patch pipeline. Do not run another route permutation or writer
-census in this unit.
+The maintenance pass compacted CURRENT-TRUTH; the next iteration returns to
+the highest applicable engineering item. Do not run an M5 route permutation or
+writer census in that unit.
 
 Competing hypotheses:
 
-- H1: the active-queue sentinel is a dedicated anchor whose `prev` must remain
-  null; the new guard is structurally valid and the ordinary host target still
-  builds.
+- H1: the configured build graph can be repaired or is already repairable, and
+  the sentinel predecessor guard can reach a MIPS/runtime qualification path.
 - H2: the sentinel may legitimately carry a predecessor during a non-empty
-  queue; the guard would be over-restrictive and must be reverted or redesigned.
-- H3: the source is valid but the configured host cannot build `PatchesLib`,
-  leaving runtime qualification blocked on the MIPS toolchain.
+  queue, so source inspection will require redesign before qualification.
+- H3: the host still lacks the patch target/toolchain, leaving runtime
+  qualification blocked despite a valid source guard.
 
-Discriminator: the code-level ownership contract and build result. Select H1 if
-the sentinel contract is consistent with the existing append code and the
-ordinary Debug target builds; select H2 only if source inspection shows the
-sentinel is intentionally linked from an active node; select H3 if `PatchesLib`
-is absent despite the source change.
+Discriminator: inspect the active-queue append contract and build the patch
+target in the same iteration. H1 requires a valid target plus a qualified
+patch build; H2 requires a concrete legitimate predecessor path; H3 is the
+exact build-graph/toolchain failure after the repair attempt.
 
-Exact commands:
+Commands:
 
 ```sh
+rg -n "PatchesLib|heap_guards|active_queue|heap_tail_loc" CMakeLists.txt patches build
 cmake --build build --config Debug --target RogueSquadron64Recomp
 cmake --build build --config Debug --target PatchesLib
 ```
 
-Record ordinary-build success and the exact patch-target result. If the patch
-target is unavailable, runtime qualification remains blocked; do not infer
-guard behavior from the ordinary host build.
+If the target is absent, record the exact build-graph blocker and do not infer
+runtime behavior from the ordinary host build.

@@ -144311,3 +144311,13 @@ the MIPS patch pipeline and runtime qualification remain blocked. H1 is
 selected at source/host-build scope; H2 is not supported by the existing
 sentinel/append contract, and H3 remains the host limitation. No runtime
 behavior was inferred.
+
+## Session 4048 (2026-10-04) — compacted current truth after maintenance threshold
+
+The required maintenance check found `docs/CURRENT-TRUTH.md` at 60,263 bytes.
+No experiment or build was run. The file was compacted from 835 lines into a
+short operational state, merging repeated candidate/session evidence, keeping
+the latest route and M3 conclusions, preserving the one monotonic backlog, and
+pointing durable background to `docs/PROJECT-OVERVIEW.md`. The next unit is
+restoring or qualifying the absent `PatchesLib` target; no technical conclusion
+was changed by this documentation maintenance.
