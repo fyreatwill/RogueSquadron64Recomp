@@ -189,6 +189,24 @@ static int active_queue_disjoint(const Block* queue_head,
     return node == NULL;
 }
 
+// ORIGIN: the free-list link stores own the chain rooted at heap_free_head,
+// while the active-queue link stores own the chain ending at q. For two
+// valid acyclic singly-linked chains, any shared node implies a shared tail;
+// rejecting that tail alias closes the cross-owner case without a quadratic
+// walk of both chains.
+static int free_chain_disjoint_from_active_tail(const Block* free_head,
+                                                const Block* active_tail) {
+    const Block* node = free_head;
+    uint32_t count = 0;
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (node == active_tail) {
+            return 0;
+        }
+        node = node->next;
+    }
+    return node == NULL;
+}
+
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
 
@@ -322,7 +340,8 @@ RECOMP_PATCH Block* func_80007D74(void) {
             return NULL;
         }
 
-        if (popped == tail || !active_queue_disjoint(queue_head, popped)) {
+        if (popped == tail || !active_queue_disjoint(queue_head, popped) ||
+            !free_chain_disjoint_from_active_tail(head, q)) {
             return NULL;
         }
 

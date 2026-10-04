@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3995 (2026-10-04).
+Updated for session 3996 (2026-10-04).
 
 ## Current state
 
@@ -56,6 +56,15 @@ and zero post-target rows. The paired port reached phase 5 with 2,904 image-DMA
 joins and 2,913 audio ABI rows, with no crash or abort. H2 is selected for this
 class; the result does not establish global writer absence.
 
+Session 3996 landed the next bounded M3 ownership guard in
+`patches/heap_guards.c`: after validating the active queue, the patch now
+rejects an alias between the remaining free-list chain and the active queue's
+terminal node before link mutation. The ordinary Debug target built
+successfully. The configured `PatchesLib` target remains unavailable (`No
+rule to make target PatchesLib`), so MIPS/runtime qualification is still
+blocked; this is a source-level guard change, not an explanation of the
+underlying corruption.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
@@ -67,7 +76,8 @@ candidate results are summarized by address range rather than copied here.
    writes nonzero target/post-target payload at a matching task ordinal; a
    same-run positive control must show the table firing.
 
-2. **M3 heap guard validation.** The accumulated guards in
+2. **M3 heap guard validation.** The accumulated guards, including the new
+   free-list/active-queue ownership-alias guard, in
    `patches/heap_guards.c` are not runtime-qualified because the configured
    build has no `PatchesLib` target and the MIPS toolchain is unavailable.
    Do not add another guard before the patch pipeline is supplied and built.
@@ -101,6 +111,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-Step1-TaskContract-3992` | Superseded by s3994: s3993 again failed to qualify declared/real, but s3994's same-build three-arm capture qualified it. |
 | `H-M5-Step1-TaskContract-3994` | H2 selected at the measured scope: declared/real and legacy/real reached the ABI and target phases with matching zero-payload phase-5 consumer signatures; no declared-only post-`0x800` marker appeared. |
 | `H-M5-CandidateWriterClass-0528` | H2 selected at s3995: retail controls and oracle completion passed, while `0x80005228`, `0x8000522C`, and `0x80005230` had no candidate or post-target evidence; paired port reached phase 5. |
+| `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 
 ## Durable evidence boundary
 

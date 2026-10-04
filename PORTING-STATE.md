@@ -143536,3 +143536,22 @@ reached phase 5 with 2,904 image-DMA joins and 2,913 audio ABI rows, with zero
 crash/abort markers. This selects H2 for the measured candidate class and
 rules out a qualified retail writer at these three PCs in the measured target
 scope; it does not prove global writer absence.
+
+## Session 3996 (2026-10-04) — added free-list/active-queue ownership guard
+
+The mandated no-churn pivot selected an M3 guard-class change instead of
+rerunning the queued M5 candidate census. Audited the patch-owned
+`func_80007D74` ownership idiom: the existing code rejected the popped node
+when it was already reachable from the active queue, but did not reject a
+remaining free-list node aliasing the active queue's terminal node. Added a
+bounded `free_chain_disjoint_from_active_tail` check before any active-queue
+link stores. ORIGIN: `func_80007D74`'s free-list link stores publish the free
+chain and its active-queue link stores publish a separate ownership chain; for
+valid acyclic singly-linked chains, a shared node necessarily shares the
+terminal node. Such an alias is not legitimate allocator state.
+
+The ordinary Debug `RogueSquadron64Recomp` target built successfully. The
+requested `PatchesLib` target still fails immediately with `No rule to make
+target 'PatchesLib'`, so MIPS/runtime qualification remains blocked by the
+configured build/toolchain. This source change advances the patch artifact but
+does not explain the underlying corruption. No M5 census or soak was rerun.

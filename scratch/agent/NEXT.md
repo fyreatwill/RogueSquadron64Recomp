@@ -1,33 +1,31 @@
-# Next work unit: classify the next adjacent M5 candidate-writer class
+# Next work unit: audit free-list/active-queue ownership aliasing
 
-HYPOTHESIS-ID: m5-candidate-writer-census
+HYPOTHESIS-ID: m3-free-active-ownership-alias
 
-Run one bounded census for candidate PCs `0x80005234`, `0x80005238`, and
-`0x8000523C`, continuing the existing writer-class sweep with the qualified
-legacy/real audio-DMA route. Keep the whole-RDRAM positive control and the
-phase-gated target/post-target/scalar tables in the same build and run.
+The mandated no-churn pivot selects the next M3 guard-class change instead of
+the queued M5 census. Audit `func_80007D74`'s ownership boundary: the current
+patch checks that the popped node is absent from the active queue, but does not
+check whether any remaining free-list node aliases that queue. Add one bounded
+cross-chain disjointness check and return before link mutation on overlap.
 
 Competing hypotheses:
 
-- H1: at least one candidate is a qualified retail writer and produces a
-  nonzero target/post-target payload at a matching task ordinal.
-- H2: candidates execute or are observed, but none produces qualified
-  nonzero target/post-target payload in the retail target phases.
-- H3: the candidate table or route controls fail, so the result is
-  unevaluable rather than writer absence.
+- H1: free-list and active-queue ownership are intended to be disjoint, so a
+  cross-chain alias is invalid and should be rejected before append stores.
+- H2: the two chains may legitimately share nodes, so the new check would
+  reject valid allocator state and must not be landed.
+- H3: the patch pipeline is unavailable, so source-level guard work can land
+  but runtime qualification remains blocked.
 
-Discriminator: the same run must show the whole-RDRAM positive control and
-both title VI 1024 and hangar VI 512 controls. H1 is a candidate-linked
-nonzero payload with matching ordinal; H2 is zero candidate-linked target,
-post-target, and scalar payload while the paired legacy port reaches both
-phases; H3 is any missing positive control or incomplete qualified route.
+Discriminator: compile the patch source and attempt the configured
+`PatchesLib` target. A successful patch build with the new guard selects H1
+only if the source preserves the existing valid-link path; an unavailable
+target selects H3. H2 would require independent evidence of intentional
+cross-ownership, which is not present in the allocator contract.
 
 Commands:
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    perl -pe 's/s3989_m5_candidate_writers/s3996_m5_candidate_writers/g; s/0x8000521C,0x80005220,0x80005224/0x80005234,0x80005238,0x8000523C/g; s/0x8000521C\\|0x80005220\\|0x80005224/0x80005234|0x80005238|0x8000523C/g' scratch/agent/run_s3989_m5_candidate_writers.sh > /tmp/rs64-s3996-candidates.sh
-    env zsh /tmp/rs64-s3996-candidates.sh
+    cmake --build build --config Debug --target PatchesLib
 
-Inspect only counts and tails from the generated logs; do not read a full
-run log. If the source script name differs, make the equivalent bounded
-substitution before building and preserve the same positive controls.
+Then inspect the target result and source diff. Do not run an M5 census or
+repeat a soak in this iteration.
