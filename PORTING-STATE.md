@@ -143287,6 +143287,23 @@ No mitigation or runtime behavior was changed.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H2).
 
+## Session 3983 (2026-10-04) — split-qualified the next M5 candidate-writer class
+
+Built the ordinary Debug target successfully and ran the bounded M5 census for
+`0x800051E0`, `0x800051E4`, and `0x800051E8`. The independent whole-RDRAM
+positive control fired 10,000 times; retail reached title VI 1024, hangar VI
+512, and oracle completion, with 36 post-store scalar records and zero
+mismatches. None of the three candidates had a target-phase execution row,
+post-target row, or scalar sample, so retail alone selects H2 for this class.
+The paired port arm crashed in `spTaskSchedulerThread` at
+`last-guest-pc=0x8000834c` before title, with 36 crash markers and no
+qualified audio/image-stage rows. The overall discriminator therefore
+selects H3: this candidate class is not qualified, and the crash is evidence
+for the parked declared-size/task-contract family rather than for these
+candidate PCs. No mitigation or runtime behavior was changed.
+
+**Outcome: ADVANCED** (the planned discriminator ran and selected H3).
+
 ## Session 3981 (2026-10-04) — classified the next M5 candidate-writer class
 
 Built the ordinary Debug target successfully and ran the bounded M5 census for
