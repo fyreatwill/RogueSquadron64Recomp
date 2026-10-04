@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3899 (2026-10-03).
+Updated for session 3900 (2026-10-03).
 
 ## Current state
 
@@ -30,16 +30,21 @@ target fault attribution was absent or an arm crashed before target.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap guard validation — blocked on the patch toolchain.** Session 3899
-   reconfigured from this checkout and confirmed CMake skips the patch pipeline:
-   `mips64-elf-gcc` and `build/Debug/N64Recomp.exe` are absent, so no
-   `PatchesLib` target is generated and its build cannot start. The active-queue
-   guard remains source-only. Resume on a machine with the MIPS toolchain and
-   generated recompiler, or provide those tools/paths; then run the allocator
-   smoke before adding another guard.
+1. **M3 heap guard validation — open external dependency, not a loop stop.**
+   Session 3899 confirmed CMake skips the patch pipeline because this checkout
+   lacks `mips64-elf-gcc`/`mips64-elf-ld`; session 3900 also found no local
+   alternate MIPS backend or toolchain. A local N64Recomp binary exists, but it
+   cannot produce `patches.elf`. The active-queue guard remains source-only;
+   validate it when a human provides the toolchain, without adding another
+   guard meanwhile.
 
 2. **M5 audio contract qualification — remaining retail candidate-writer
-   class.** Session 3891's same-build silent/image pair passed independent
+   class.** Session 3900's phase-gated run passed the retail whole-RDRAM,
+   title-1024, and hangar-512 controls; candidate PCs `0x80003B98`,
+   `0x800044C8`, and `0x80004AB0` produced no retail rows. The paired port
+   reached hangar with 3,026 image-DMA joins and no crash/abort. This closes
+   that bounded class as H2 only; continue with `0x80004C90`, `0x80004D00`,
+   and `0x80004D60`. Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
    DMEM-to-RDRAM DMAs, but both payloads and PCM source/consumer joins were

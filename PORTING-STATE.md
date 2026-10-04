@@ -142014,3 +142014,25 @@ environment; do not add another guard or resume the stale M5 arm.
 ORIGIN: this iteration added no mitigation. The guard's named writers remain
 the `heap_tail_loc` selection and active-queue link stores; runtime legitimacy
 is still unmeasured.
+
+## Session 3900 (2026-10-03) — re-scoped the M3 block and classified the next M5 candidates
+
+The M3 validation block was tested through all four routes. The patch README,
+Makefile, and CMake gate require a MIPS ELF producer; local Clang has no MIPS
+target, and no `mips64-elf-gcc` or `mips64-elf-ld` was found in this checkout
+or the maintained local tool trees. A local N64Recomp binary exists, but it
+cannot replace the missing compiler/linker, so the external toolchain
+dependency is real and remains open.
+
+Route 3 ran the highest-information available M5 unit. The retail oracle
+passed its whole-RDRAM positive control, reached title VI 1024 and hangar VI
+512, and completed. Candidate PCs `0x80003B98`, `0x800044C8`, and
+`0x80004AB0` produced no retail rows. The paired port independently reached
+hangar, recorded 3,026 image-DMA joins, and emitted no crash or abort marker.
+This selects H2 for that bounded candidate set only; it does not establish
+global retail writer absence or corruption. The next set is
+`0x80004C90`, `0x80004D00`, and `0x80004D60`.
+
+ORIGIN: no mitigation or guard was added. The measured writer candidates were
+retail PCs selected by the existing M5 census; their legitimacy remains
+unresolved because they produced no qualified target-span rows.

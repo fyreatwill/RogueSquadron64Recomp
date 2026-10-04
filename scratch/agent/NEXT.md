@@ -1,35 +1,30 @@
-# Next work unit: unblock and validate the active-queue guard class
+# Next work unit: classify the next retail candidate-writer class
 
-HYPOTHESIS-ID: m3-active-queue-guard-validation
+HYPOTHESIS-ID: m5-retail-candidate-writer-class
 
-The current source-level guard requires the node selected through
-`heap_tail_loc` to be terminal before active-queue publication stores. Session
-3899 confirmed that this checkout cannot validate it: CMake skipped the patch
-pipeline because the MIPS compiler and generated N64Recomp executable are
-absent, and `PatchesLib` therefore does not exist.
+The M3 active-queue guard remains source-only because this checkout lacks
+`mips64-elf-gcc`/`mips64-elf-ld`; do not add another guard. Continue the
+independent M5 writer census at the next bounded candidate set.
 
-Competing hypotheses and discriminator:
+Competing hypotheses:
 
-- H1: the patch pipeline is present but CMake omitted `PatchesLib`. A fresh
-  configure exposes the target and the target build reaches MIPS compilation.
-- H2: the configured checkout lacks the external MIPS/N64Recomp tools. CMake
-  skips the target, as it did this iteration.
-- H3: the pipeline builds but the guard source/link configuration is invalid.
-  The target exists, tools run, and the build fails at source, linker, or
-  N64Recomp generation.
+- H1: one of `0x80004C90`, `0x80004D00`, or `0x80004D60` writes a qualified
+  nonzero target-phase payload in retail.
+- H2: the PCs execute or touch unrelated spans, but none writes the qualified
+  target buffer during title/hangar phases.
+- H3: the port image-DMA route is not phase-equivalent to the retail target
+  span, so a retail null is not comparable.
 
-Discriminator: configure with the required tools present and build
-`PatchesLib`. If it builds, run the allocator smoke and require either a named
-guard fire or a clean route with the guard class exercised. A guard fire is
-not retail corruption proof.
+Discriminator: run the new candidate recipe below. Require the retail
+whole-RDRAM positive control, title-1024 and hangar-512 VI gates, oracle
+completion, and the port hangar gate. H1 requires a named candidate row with
+nonzero post-value evidence; H2 is selected by zero candidate rows alongside
+the positive controls; H3 is selected only if the port fails its phase gate or
+its image-DMA join disappears.
 
-Required human unblock and commands:
+Exact command:
 
-    provide a Windows checkout/environment with E:/mips-toolchain, or set
-    MIPS_TOOLCHAIN_DIR to an installed mips64-elf toolchain and provide a
-    built N64Recomp executable at N64RECOMP_EXE
-    cmake -S . -B build -DMIPS_TOOLCHAIN_DIR=<toolchain> -DN64RECOMP_EXE=<exe>
-    cmake --build build --config Debug --target PatchesLib
+    zsh scratch/agent/run_s3900_m5_remaining_candidate_writers.sh
 
-Do not add another guard or run the stale M5 candidate-writer arm until this
-validation checkpoint is resolved.
+Do not infer retail corruption from a null row and do not add a mitigation
+without naming its writer and establishing value legitimacy.
