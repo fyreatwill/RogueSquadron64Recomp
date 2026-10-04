@@ -143797,3 +143797,21 @@ the run: the prior legacy-only crash remains schedule-sensitive or otherwise
 unevaluated, rather than being explained by the staging size. It rules out a
 repeatable default-spin legacy crash at this capture scope. ORIGIN: the writer
 hook observes the legitimate runtime-selected DMA length; no mitigation landed.
+
+## Session 4015 (2026-10-04) — spin-yield does not split legacy scheduler behavior
+
+Built the Debug target and ran the full four-arm capture: retail, declared/real
+with `ROGUESQ_SPIN_YIELD=1`, legacy/real with spin-yield 1, and legacy/real
+with spin-yield 0. Retail's whole-RDRAM positive control and title VI 1024 and
+hangar VI 512 controls fired. All three port arms fired the RSP source-hook and
+audio writer controls, reached title at about 14.4s and hangar at 23.6–23.7s,
+and emitted no `[CRASH]` or `[ABORT]`. Declared/real used `dma_size=0x800`;
+both legacy arms used `dma_size=0xF80` for the same declared `0x800` task.
+All observed opaque scheduler successor values remained zero.
+
+This selects H2 for the planned split: spin-yield is not sufficient to explain
+the old legacy crash, which remains schedule-sensitive or otherwise unevaluated.
+It rules out a repeatable spin-0 legacy failure and a repeatable default-spin
+legacy failure at this capture scope. The run does not justify a staging guard,
+skip, or restore. ORIGIN: the writer and scheduler hooks observe legitimate
+runtime choices; no mitigation landed.

@@ -218,22 +218,30 @@ the old legacy-only crash remains schedule-sensitive or otherwise unevaluated,
 not established as staging causality. ORIGIN: the hook observes the legitimate
 runtime DMA-size choice; no mitigation landed.
 
+## Session 4015 (2026-10-04) — spin-yield does not split legacy scheduler behavior
+
+Session 4015 ran the full four-arm scheduler split: retail, declared/real with
+spin-yield 1, legacy/real with spin-yield 1, and legacy/real with spin-yield 0.
+Retail's whole-RDRAM positive control and title/hangar VI controls fired. All
+three port arms fired the RSP source-hook and audio writer controls, reached
+title at about 14.4s and hangar at 23.6–23.7s, and emitted no `[CRASH]` or
+`[ABORT]`. Declared/real used `0x800`; both legacy arms used `0xF80`; all
+observed opaque scheduler successor values remained zero. H2 is selected:
+spin-yield does not explain the old legacy crash, which remains
+schedule-sensitive or otherwise unevaluated. ORIGIN: the writer and scheduler
+hooks observe legitimate runtime choices; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 scheduler schedule-sensitivity split.** The candidate census is now
-   qualified through `0x8000529C`, and s4012 established the actual `0xF80`
-   writer. s4013 with spin-yield disabled made declared/real stall in the
-   640-wide pre-target route while legacy/real reached title, so the intended
-   crash split was unevaluable. s4014 reached both target phases in both
-   default-spin arms without a crash. Build one four-arm capture: retail,
-   declared/real with spin-yield 1, legacy/real with spin-yield 1, and
-   legacy/real with spin-yield 0. If only the spin-0 legacy arm fails or
-   stalls, spin-yield is the route discriminator; if both legacy arms match,
-   spin-yield is not sufficient and the old crash remains nondeterministic.
-   Keep scheduler `a0` as a message object; ABI rows remain authoritative.
+1. **M5 next source-payload discriminator.** The candidate census is qualified
+   through `0x8000529C`, the legitimate `0xF80` writer is established, and
+   s4015 rules out spin-yield as the sufficient explanation for the old crash.
+   Select a new retail-grounded source-writer class before changing audio
+   behavior; do not repeat the scheduler split. Keep scheduler `a0` as a
+   message object and treat ABI rows as authoritative.
 
 2. **M5 candidate-writer census continuation.** Closed for the measured
    adjacent range through `0x8000529C`; resume only with a new writer class or
