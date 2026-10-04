@@ -142458,3 +142458,16 @@ This selects H3 for this bounded class; it does not establish global writer
 absence. The paired port arm crashed pre-target in `spTaskSchedulerThread` at
 last guest PC `0x8000834c`, so it provides no image-DMA or payload conclusion.
 The next bounded class is `0x80005000`, `0x80005004`, and `0x80005008`.
+
+## Session 3927 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3926_m5_remaining_candidate_writers.sh` for
+`0x80005000`, `0x80005004`, and `0x80005008`. The retail oracle passed the
+same-run positive controls: whole-RDRAM watch reached 33,349,947 writes,
+title VI 1024, hangar VI 512, and oracle completion. Each candidate had zero
+target-phase execution, zero candidate-span rows, zero post-target rows, and
+zero scalar samples. This selects H3 for this bounded candidate set only;
+it does not establish global writer absence. The paired port arm reached
+hangar with 3,047 qualified image-DMA joins, no crash or abort, and qualified
+payload `FNV=0x762B22A5`, nonzero=0. The next adjacent set is
+`0x8000500C`, `0x80005010`, and `0x80005014`.

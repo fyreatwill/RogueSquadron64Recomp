@@ -3,8 +3,8 @@
 HYPOTHESIS-ID: m5-candidate-writer-class
 
 Run the phase-gated retail/port discriminator for candidate PCs
-`0x80005000`, `0x80005004`, and `0x80005008`, using the established corrected
-wrapper pattern from `run_s3925_m5_remaining_candidate_writers.sh`.
+`0x8000500C`, `0x80005010`, and `0x80005014`, using
+`zsh scratch/agent/run_s3927_m5_remaining_candidate_writers.sh`.
 
 Competing hypotheses:
 
@@ -21,5 +21,3 @@ and oracle-completion positive controls, then classify each PC by target-phase
 execution, candidate-span rows, post-target rows, and scalar samples. The port
 arm must also report hangar reachability, crash/abort status, image-DMA joins,
 and qualified payload FNV/nonzero count. Do not infer global writer absence.
-
-Exact command: `zsh scratch/agent/run_s3926_m5_remaining_candidate_writers.sh`.
