@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3900 (2026-10-03).
+Updated for session 3901 (2026-10-03).
 
 ## Current state
 
@@ -43,15 +43,17 @@ Work only the first applicable item. This is one monotonic backlog.
    title-1024, and hangar-512 controls; candidate PCs `0x80003B98`,
    `0x800044C8`, and `0x80004AB0` produced no retail rows. The paired port
    reached hangar with 3,026 image-DMA joins and no crash/abort. This closes
-   that bounded class as H2 only; continue with `0x80004C90`, `0x80004D00`,
-   and `0x80004D60`. Session 3891's same-build silent/image pair passed independent
+   that bounded class as H2 only. Session 3901's phase-gated run passed the retail whole-RDRAM,
+   title-1024, and hangar-512 controls; all three PCs executed in phase but had
+   zero post-target rows/samples. The paired port reached hangar with 2,836
+   image-DMA joins and no crash/abort. This closes that bounded class as H2 only;
+   continue with adjacent PCs `0x80004D68`, `0x80004D74`, and `0x80004D78`.
+   Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
    DMEM-to-RDRAM DMAs, but both payloads and PCM source/consumer joins were
    zero. This selects H-ContractGap over H-AudioDegeneracy at this scope.
-   The next bounded arm is the remaining candidate list in
-   `scratch/agent/run_s3890_m5_remaining_candidate_writers.sh`; do not add a
-   writeback guard from this result.
+   Do not add a writeback guard from this result.
 
 3. **M5 image task/output edge — classify remaining retail writers.** The
    qualified port input and separate writeback-DMA edge are real, while the
@@ -59,8 +61,8 @@ Work only the first applicable item. This is one monotonic backlog.
    Sessions 3861–3896 classified many measured PCs as H2 (candidate-span
    writer rows but no post-value scalar attribution) or H3 (no candidate-span
    rows), always with positive controls and no global absence claim. The next
-   bounded representatives after the current stale recipe are
-   `0x80004C90`, `0x80004D00`, and `0x80004D60`. Continue only after the M3
+   bounded representatives are
+   `0x80004D68`, `0x80004D74`, and `0x80004D78`. Continue only after the M3
    validation checkpoint, unless M3 remains unavailable and this is the
    selected runnable discriminator.
 
@@ -91,6 +93,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
 | `H-M5-800078ECZeroFill` | Selected at s3857; sampled writes are zero-valued. |
+| `H-M5-CandidateWriterClass` | Selected H2 for the s3900 PCs `0x80004C90`, `0x80004D00`, and `0x80004D60`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 

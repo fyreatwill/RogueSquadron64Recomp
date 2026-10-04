@@ -142036,3 +142036,19 @@ global retail writer absence or corruption. The next set is
 ORIGIN: no mitigation or guard was added. The measured writer candidates were
 retail PCs selected by the existing M5 census; their legitimacy remains
 unresolved because they produced no qualified target-span rows.
+
+## Session 3901 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3900_m5_remaining_candidate_writers.sh` for
+`0x80004C90`, `0x80004D00`, and `0x80004D60`. The retail oracle passed its
+whole-RDRAM positive control, title VI 1024, hangar VI 512, and completion.
+All three PCs executed during qualified target phases, but each had zero
+post-target rows and zero post-target scalar samples, selecting H2 for this
+bounded set only. The paired port reached hangar, recorded 2,836 image-DMA
+joins, and emitted no crash or abort marker. This does not establish global
+retail writer absence or identify the missing output edge. The next adjacent
+representatives are `0x80004D68`, `0x80004D74`, and `0x80004D78`.
+
+ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.

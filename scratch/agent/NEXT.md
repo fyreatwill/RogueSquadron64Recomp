@@ -1,14 +1,14 @@
-# Next work unit: classify the next retail candidate-writer class
+# Next work unit: classify the next adjacent retail candidate-writer class
 
 HYPOTHESIS-ID: m5-retail-candidate-writer-class
 
 The M3 active-queue guard remains source-only because this checkout lacks
 `mips64-elf-gcc`/`mips64-elf-ld`; do not add another guard. Continue the
-independent M5 writer census at the next bounded candidate set.
+independent M5 writer census at the next bounded adjacent set.
 
 Competing hypotheses:
 
-- H1: one of `0x80004C90`, `0x80004D00`, or `0x80004D60` writes a qualified
+- H1: one of `0x80004D68`, `0x80004D74`, or `0x80004D78` writes a qualified
   nonzero target-phase payload in retail.
 - H2: the PCs execute or touch unrelated spans, but none writes the qualified
   target buffer during title/hangar phases.
@@ -24,7 +24,7 @@ its image-DMA join disappears.
 
 Exact command:
 
-    zsh scratch/agent/run_s3900_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3901_m5_remaining_candidate_writers.sh
 
 Do not infer retail corruption from a null row and do not add a mitigation
 without naming its writer and establishing value legitimacy.
