@@ -143969,3 +143969,18 @@ staging and legacy/real used `0xF80`. H2 is selected: the earlier legacy
 640-wide stop did not recur, so it remains schedule-sensitive or otherwise
 unevaluated and the route is qualified for the next candidate census. ORIGIN:
 route hooks observe legitimate runtime arm choices; no mitigation landed.
+
+## Session 4025 (2026-10-04) — candidate class blocked by scheduler route
+
+Before building, the work unit was the fixed retail-grounded census for
+`0x800052AC`, `0x800052B0`, and `0x800052B4`, with retail, declared/real,
+and legacy/real in one capture. `cmake --build build --config Debug --target
+RogueSquadron64Recomp` passed. Retail's whole-RDRAM positive control, title VI
+1024, hangar VI 512, and oracle completion controls fired; all three candidate
+PCs had zero post-target samples and rows. The port discriminator was not
+qualified: declared/real crashed in `spTaskSchedulerThread` at guest PC
+`0x8000834C`, while legacy/real emitted no target-phase census before
+termination. H3 is selected, so the class is unevaluable rather than a
+qualified null and the candidate sweep is parked pending route
+requalification. ORIGIN: retail oracle PC watches and port phase/task hooks
+are diagnostic only; no mitigation landed.

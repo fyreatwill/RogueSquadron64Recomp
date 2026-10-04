@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4024 (2026-10-04).
+Updated for session 4025 (2026-10-04).
 
 ## Current state
 
@@ -329,16 +329,25 @@ or abort marker. H2 is selected for this candidate class; the next census
 starts at `0x800052AC`. ORIGIN: retail PC watches and port phase/task hooks
 are diagnostic only; no mitigation landed.
 
+Session 4025 ran the fixed retail-grounded census for `0x800052AC`,
+`0x800052B0`, and `0x800052B4`. Retail's whole-RDRAM positive control,
+title VI 1024, hangar VI 512, and oracle completion controls all fired; each
+candidate had zero post-target samples and rows. The port discriminator did
+not qualify: declared/real crashed at guest `0x8000834C` in the scheduler,
+while legacy/real emitted no target-phase census before termination. H3 is
+selected, so this class is unevaluable rather than a qualified null. The
+candidate sweep is parked pending a route requalification.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 candidate-writer census continuation.** The s4024 census selected H2
-   for `0x800052A0`, `0x800052A4`, and `0x800052A8`. Run the next bounded
-   retail-grounded class at `0x800052AC`, `0x800052B0`, and `0x800052B4` with
-   the same phase-gated positive controls; accept a writer conclusion only if
-   retail and both port real-audio arms reach their target phases.
+1. **M5 route requalification.** Re-run the existing four-arm route
+   qualification (`retail`, `declared/real`, `declared/silent`, and
+   `legacy/real`) in one same-build capture. Require the retail positive,
+   title/hangar phases, RSP/audio controls, and no crash/abort in all port
+   arms before resuming the parked `0x800052AC` candidate class.
 
 2. **M3 patch qualification.** Session 4019 added an expansion-chain versus
    active-queue ownership guard. Runtime qualification remains blocked until
@@ -409,6 +418,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-RouteQualification-4021` | H3 selected: declared/real, declared/silent, and legacy/real all reached both target VIs with route controls and no crash/abort in the same-build capture. |
 | `H-M5-CandidateWriterClass-052A` | H3 selected at s4022: retail controls and candidate-null evidence passed, but declared/real reached target phase while legacy/real remained at 640 width before target phase; no writer conclusion is allowed. |
 | `H-M5-RouteQualification-4023` | H2 selected: retail and all three port arms reached both target phases with positive controls; the earlier legacy 640 stop did not recur. |
+| `H-M5-CandidateWriterClass-052C` | H3 selected at s4025: retail controls and candidate-null evidence passed, but declared/real crashed at `0x8000834C` and legacy/real produced no target-phase rows; no writer conclusion is allowed. |
 
 ## Durable evidence boundary
 

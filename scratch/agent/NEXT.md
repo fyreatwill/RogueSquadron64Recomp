@@ -1,33 +1,33 @@
-# Next work unit: qualify the 0x800052AC candidate class
+# Next work unit: requalify the M5 route before resuming the parked writer census
 
-HYPOTHESIS-ID: m5-candidate-writer-class-052c
+HYPOTHESIS-ID: m5-route-qualification-4025
 
 Competing hypotheses:
 
-- H1: one or more candidate PCs `0x800052AC`, `0x800052B0`, or
-  `0x800052B4` writes the retail target span during the qualified target
-  phase.
-- H2: all three candidates remain absent in qualified retail target/post-
-  target evidence while the port reaches both target phases, selecting the
-  next writer class.
-- H3: retail controls or either real-audio port arm fails before the target
-  comparison, so the class is unevaluable and the route discriminator must
-  be repaired before interpreting candidate absence.
+- H1: the route failure is schedule-sensitive; a same-build four-arm capture
+  again reaches both target phases in declared/real, declared/silent, and
+  legacy/real.
+- H2: one audio mode or staging path is sufficient to reproduce the scheduler
+  failure, splitting the arms before target phase.
+- H3: the route remains intermittently unevaluable, with a missing target
+  phase or crash/abort in at least one arm despite the controls.
 
-Discriminator: one same-build capture using the fixed candidate recipe, with
-retail whole-RDRAM/title/hangar/completion controls, candidate PC watches, and
-declared/real plus legacy/real port phase/audio/image controls. H1 requires a
-candidate hit or post-target writer row in retail. H2 requires no candidate
-or post-target writer evidence, all retail controls, and both real-audio port
-arms at target phase. H3 is any missing positive control or pre-target arm
-failure. Do not change audio behavior or add a second build/run arm.
+Discriminator: one same-build capture of retail, declared/real,
+declared/silent, and legacy/real using the existing route qualification
+recipe. H1 requires retail whole-RDRAM/title/hangar/completion controls plus
+both target phases and RSP/audio controls in all three port arms, with no
+crash/abort. H2 requires a reproducible arm-dependent split tied to audio mode
+or staging. H3 is any missing positive control, pre-target stall, or crash
+without a stable arm-dependent split. Do not change audio behavior or add
+candidate watches.
 
 Commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s4024_m5_candidate_writers.sh
+zsh scratch/agent/run_s4019_m5_route_qualification.sh
 ```
 
-Require the positive-control threshold, retail title and hangar VI markers,
-oracle completion, and both port target phases before accepting a null.
+Require the retail positive-control threshold, title VI 1024, hangar VI 512,
+RSP/audio controls, and no `[CRASH]` or `[ABORT]` before resuming the parked
+`0x800052AC` candidate class.
