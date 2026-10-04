@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3885 (2026-10-03).
+Updated for session 3886 (2026-10-03).
 
 ## Current state
 
@@ -154,6 +154,13 @@ Work only the first applicable item. This is one monotonic backlog.
    H3 for these PCs only. The port reached 2,854 image-DMA joins with no
    crash/abort markers. Continue with `0x80097544`, `0x80097548`, and
    `0x8009754C`.
+   Session 3886 passed the same retail controls. Each of
+   `0x80097544`, `0x80097548`, and `0x8009754C` produced one qualified
+   hangar candidate-span writer row but zero post-target scalar samples or
+   rows, selecting H2 for these PCs only. The port reached 2,996 image-DMA
+   joins and 3,000 ABI events with no crash or abort markers. Continue with
+   the next unclassified candidate representatives `0x80097554`,
+   `0x80055780`, and `0x8005578C`.
 
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
@@ -242,6 +249,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RemainingCandidates-4e90-4f2cAbsent` | Retail result at s3883: `0x80004E90`, `0x80004E94`, and `0x80004F2C` had qualified title/hangar candidate-span writer rows (14/38 each) but zero post-target scalar samples; H2 is selected for these PCs only. The port crashed before ABI/image-DMA controls, so no paired port conclusion is claimed. |
 | `H-M5-RemainingCandidates-6647-9752Absent` | Paired result at s3884: `0x80066474`, `0x80097524`, and `0x8009752C` each had one qualified hangar candidate-span writer row but zero post-target scalar samples; H2 is selected for these PCs only. The port reached 2,085 image-DMA joins with zero crash/abort markers. |
 | `H-M5-RemainingCandidates-9753Absent` | Paired result at s3885: `0x80097534`, `0x8009753C`, and `0x80097540` had no qualified candidate-span writer rows or post-target scalar samples after positive controls; H3 is selected for these PCs only. The port reached 2,854 image-DMA joins with no crash/abort markers. |
+| `H-M5-RemainingCandidates-9754Absent` | Paired result at s3886: `0x80097544`, `0x80097548`, and `0x8009754C` each had one qualified hangar candidate-span writer row but zero post-target scalar samples or rows after positive controls; H2 is selected for these PCs only. The port reached 2,996 image-DMA joins and 3,000 ABI events with no crash/abort markers. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 | `H-M3-FreeListReciprocalLinks` | Code landed in s3866; validation blocked by absent MIPS toolchain/configured targets. |
@@ -605,6 +613,18 @@ Work only the first applicable item. This is one monotonic backlog.
   scalar samples, selecting H3 for these PCs only. The port reached 2,854
   image-DMA joins with no crash or abort markers. The next representatives are
   `0x80097544`, `0x80097548`, and `0x8009754C`.
+
+  ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+  paired with port image-DMA joins; no guest or host state was rewritten,
+  skipped, or guarded.
+
+- **3886:** The paired candidate-span arm passed whole-RDRAM, title 1024,
+  hangar 512, and shutdown controls. `0x80097544`, `0x80097548`, and
+  `0x8009754C` each produced one qualified hangar candidate-span writer row
+  but zero post-target scalar samples or rows, selecting H2 for these PCs
+  only. The port reached 2,996 image-DMA joins and 3,000 ABI events with no
+  crash or abort markers. The next representatives are `0x80097554`,
+  `0x80055780`, and `0x8005578C`.
 
   ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
   paired with port image-DMA joins; no guest or host state was rewritten,
