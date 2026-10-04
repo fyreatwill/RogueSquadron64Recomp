@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4043 (2026-10-04).
+Updated for session 4044 (2026-10-04).
 
 ## Current state
 
@@ -511,6 +511,17 @@ is selected and the `0x800052C4` census remains unevaluable. ORIGIN: route,
 scheduler, and audio-stage hooks observe legitimate arm choices; no mitigation
 landed.
 
+Session 4044 ran a new same-build route permutation with order
+`declared-silent,legacy-real,declared-real` and a two-second gap. Retail again
+passed the whole-RDRAM positive control and title VI 1024/hangar VI 512
+controls. Declared/silent fired the RSP-source and audio-stage controls and
+reached title VI 1024, but not hangar VI 512. Declared/real and legacy/real
+fired their RSP-source controls and crashed pre-target in
+`spTaskSchedulerThread+9632` at guest PC `0x8000834C`, with no target-phase
+audio rows. H3 remains selected: no port arm reached both target phases, so the
+`0x800052C4` census remains unevaluable. ORIGIN: route, scheduler, and
+audio-stage hooks observe legitimate arm choices; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
@@ -520,8 +531,9 @@ candidate results are summarized by address range rather than copied here.
    schedule table before another source-writer census. The retail
    positive/title/hangar controls and all three port-arm phase controls must
    qualify; classify any pre-target arm failure as H3 rather than inferring
-   writer absence. Session 4043 selected H3: no arm reached both target phases
-   under a one-second legacy-first permutation.
+ writer absence. Session 4044 selected H3: no arm reached both target phases
+ under the `declared-silent,legacy-real,declared-real` permutation with a
+ two-second gap.
 
 2. **M5 next source-payload discriminator.** After route qualification,
    rerun the retail-grounded writer class beginning at `0x800052C4`; do not
@@ -596,6 +608,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-0594-qualified` | H2 selected at s4011: retail controls and oracle completion passed; all three candidate PCs were absent from qualified post-target evidence; both declared/real and legacy/real reached title/hangar with audio/image joins and no crash/abort. |
 | `H-M5-RouteQualification-4028` | H3 selected: retail controls passed; declared/silent and legacy/real reached both target phases, but declared/real crashed pre-target after the RSP-source control. The single capture does not establish causal arm-specific audio failure. |
 | `H-M5-RouteQualification-4043` | H3 selected: retail controls passed, but declared/real and declared/silent crashed pre-target at `0x8000834C` and legacy/real reached only title; no port arm reached both target phases, so the `0x800052C4` census remains unevaluable. |
+| `H-M5-RouteQualification-4044` | H3 selected: retail controls passed; declared/silent reached title but not hangar, while declared/real and legacy/real crashed pre-target at `0x8000834C`; no port arm reached both target phases, so the `0x800052C4` census remains unevaluable. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M5-RouteQualification-4021` | H3 selected: declared/real, declared/silent, and legacy/real all reached both target VIs with route controls and no crash/abort in the same-build capture. |

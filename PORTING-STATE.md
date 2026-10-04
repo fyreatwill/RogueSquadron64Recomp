@@ -144251,3 +144251,18 @@ both target phases, and the `0x800052C4` writer census remains unevaluable.
 This does not establish audio staging or writer absence as causal. ORIGIN:
 route, scheduler, and audio-stage hooks observe legitimate arm choices; no
 mitigation landed.
+
+## Session 4044 (2026-10-04) — two-second declared-silent-first route permutation leaves no arm qualified
+
+Built the ordinary Debug target, then ran the retail oracle plus declared/silent,
+legacy/real, and declared/real port arms in one capture with launch order
+`declared-silent,legacy-real,declared-real` and a two-second gap. Retail's
+whole-RDRAM positive control, title VI 1024, and hangar VI 512 controls all
+passed. Declared/silent fired the RSP-source and audio-stage controls and
+reached title VI 1024, but not hangar VI 512. Declared/real and legacy/real
+fired their RSP-source controls and crashed pre-target in
+`spTaskSchedulerThread+9632` at guest PC `0x8000834C`, with no target-phase
+audio rows. H3 is selected: no port arm reached both target phases, and the
+`0x800052C4` writer census remains unevaluable. This does not establish audio
+staging or writer absence as causal. ORIGIN: route, scheduler, and audio-stage
+hooks observe legitimate arm choices; no mitigation landed.
