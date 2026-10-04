@@ -143579,3 +143579,13 @@ with 3,046 audio ABI rows and 3,033 image-DMA joins, with no crash or abort.
 This selects H2 for the measured candidate class and rules out a qualified
 retail writer at these three PCs in the measured target scope; it does not prove
 global writer absence.
+## Session 3999 (2026-10-04) — extended M5 candidate-writer census
+
+Ran the qualified legacy/real paired census for candidate PCs `0x8000524C`,
+`0x80005250`, and `0x80005254`. The retail oracle's whole-RDRAM positive
+control fired, title VI 1024 and hangar VI 512 both fired, and the oracle
+completed. No candidate PC hit was emitted in the target phases. The paired
+port reached both target phases with 643 phase-5 audio-task rows and 647
+image-DMA joins, with no crash or abort. This selects H2 for the measured
+candidate class and rules out a qualified retail writer at these three PCs in
+the measured target scope; it does not prove global writer absence.

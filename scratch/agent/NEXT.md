@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-candidate-writer-class
 
 Run one qualified legacy/real paired census for the next adjacent candidate
-set after `0x80005248`: `0x8000524C`, `0x80005250`, and `0x80005254`.
+set after `0x80005254`: `0x80005258`, `0x8000525C`, and `0x80005260`.
 The independent retail oracle and the paired port must both reach their
 positive phase controls before a null is interpreted.
 
@@ -26,9 +26,9 @@ missing control or crash/abort before qualification.
 
 Exact command:
 
-    zsh scratch/agent/run_s3999_m5_candidate_writers.sh
+    zsh scratch/agent/run_s4000_m5_candidate_writers.sh
 
 The script launches the retail oracle and legacy/real port arm concurrently,
-captures logs under `scratch/agent/s3999_m5_candidate_writers/`, and SIGKILLs
+captures logs under `scratch/agent/s4000_m5_candidate_writers/`, and SIGKILLs
 both after its bounded window. Do not add another field or run a second soak
 in this iteration.
