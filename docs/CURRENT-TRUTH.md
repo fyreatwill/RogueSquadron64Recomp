@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3867 (2026-10-03).
+Updated for session 3868 (2026-10-03).
 
 ## Current state
 
@@ -80,7 +80,13 @@ Work only the first applicable item. This is one monotonic backlog.
    no crash/abort. Continue with `0x800331D4`, `0x80033414`, and
    `0x8003326C` as the next representative writer classes. Session 3867
    confirmed the M3 validation prerequisites are still unavailable, so this
-   M5 discriminator is the next runnable unit.
+   M5 discriminator is the next runnable unit. Session 3868 passed the
+   whole-RDRAM, title, hangar, and oracle-shutdown controls. All three PCs had
+   qualified title/hangar candidate-span writer rows but zero post-target
+   scalar rows: `0x8003326C` 1210/1027, `0x800331D4` 8244/3537, and
+   `0x80033414` 5291/2384. The port independently reached 3,009 image-DMA
+   joins with zero crash/abort markers. This selects H2 for these three PCs
+   only; continue with `0x80029E8C`, `0x80035124`, and `0x80004520`.
 2. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`:
    traversed `next` links must point back through `prev`, and the published

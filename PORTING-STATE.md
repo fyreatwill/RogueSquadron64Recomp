@@ -141448,3 +141448,19 @@ guard result. The next runnable unit is the ranked M5 candidate-writer arm.
 
 ORIGIN: prerequisite/build validation only; no guest or host state was
 rewritten, skipped, or guarded.
+
+## Session 3868 (2026-10-03) — classified three remaining candidate writers
+
+Ran the paired `scratch/agent/run_s3867_m5_remaining_candidate_writers.sh`
+arm. The retail oracle passed the whole-RDRAM positive control, title VI 1024,
+hangar VI 512, and clean shutdown. In the candidate span, the three requested
+PCs had qualified title/hangar phase writer rows: `0x8003326C` 1210/1027,
+`0x800331D4` 8244/3537, and `0x80033414` 5291/2384. Each had zero
+post-target rows and zero scalar samples. The port independently reached 3,009
+image-DMA joins with zero crash/abort markers. This selects H2 for these three
+PCs only: they write the watched span but are not established as legitimate
+nonzero image producers. The next representatives are `0x80029E8C`,
+`0x80035124`, and `0x80004520`.
+
+ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+guest or host state was rewritten, skipped, or guarded.
