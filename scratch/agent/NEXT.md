@@ -2,8 +2,8 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
-Run the next adjacent retail candidate set `0x800051D4`, `0x800051D8`, and
-`0x800051DC`. Use the existing same-build retail/port driver; keep the
+Run the next adjacent retail candidate set `0x800051E0`, `0x800051E4`, and
+`0x800051E8`. Use the existing same-build retail/port driver; keep the
 qualified port route on the legacy audio-DMA rollback because s3977's declared
 size arm crashed before title.
 
@@ -23,8 +23,8 @@ target phase.
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    perl -pe 's/s3967_m5_candidate_writers/s3981_m5_candidate_writers/g; s/0x80005168,0x8000516C,0x80005170/0x800051D4,0x800051D8,0x800051DC/g; s/0x80005168\|0x8000516C\|0x80005170/0x800051D4|0x800051D8|0x800051DC/g' scratch/agent/run_s3967_m5_candidate_writers.sh > /tmp/rs64-s3981.sh
-    zsh /tmp/rs64-s3981.sh
+    perl -pe 's/s3967_m5_candidate_writers/s3982_m5_candidate_writers/g; s/0x80005168,0x8000516C,0x80005170/0x800051E0,0x800051E4,0x800051E8/g; s/0x80005168\|0x8000516C\|0x80005170/0x800051E0|0x800051E4|0x800051E8/g' scratch/agent/run_s3967_m5_candidate_writers.sh > /tmp/rs64-s3982.sh
+    zsh /tmp/rs64-s3982.sh
 
 The wrapper transforms the direct s3967 recipe (not another wrapper) for this
 adjacent set. Record the independent controls and candidate rows before

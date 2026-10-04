@@ -143305,3 +143305,22 @@ absence. The next adjacent set is `0x800051D4`, `0x800051D8`, and
 No mitigation or runtime behavior was changed.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H2).
+
+## Session 3982 (2026-10-04) — classified the next M5 candidate-writer class
+
+Built the ordinary Debug target successfully and ran the bounded M5 census for
+`0x800051D4`, `0x800051D8`, and `0x800051DC`. The independent whole-RDRAM
+positive control fired 10,000 times; retail reached title VI 1024, hangar VI
+512, and oracle completion, with 36 post-store scalar records and zero
+mismatches. None of the three candidates had a target-phase execution row,
+post-target row, or scalar sample, selecting H2 for this PC class. The paired
+port reached both qualified phases with 2,864 image-DMA joins, zero
+crash/abort markers, and qualified source/destination payload
+`FNV=0x762B22A5`, nonzero=0. This rules out these three PCs as the qualified
+retail writer at the measured scope; it does not establish global writer
+absence. The next adjacent set is `0x800051E0`, `0x800051E4`, and
+`0x800051E8`.
+
+No mitigation or runtime behavior was changed.
+
+**Outcome: ADVANCED** (the planned discriminator ran and selected H2).
