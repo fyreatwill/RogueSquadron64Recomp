@@ -141879,3 +141879,23 @@ The prescribed M3 validation command was also checked before the pivot:
 ORIGIN: the generated Factor 5 image is the writer of the observed DMEM/DMA
 payloads; zero-valued output is legitimate observed data, not a value this
 run skipped or guarded. No guest or host state was rewritten.
+
+## Session 3892 (2026-10-03) — repeated the M5 candidate-writer discriminator
+
+Ran `zsh scratch/agent/run_s3890_m5_remaining_candidate_writers.sh` as the
+prescribed next M5 unit. The recipe was stale and selected the already-tested
+PCs `0x80092020`, `0x8009206C`, and `0x80007670` instead of a new class. The
+retail whole-RDRAM positive control, title VI 1024, hangar VI 512, and oracle
+shutdown controls all passed. Each PC again had qualified title/hangar
+candidate-span writer rows but no post-store scalar attribution. This repeats
+the H2 result for these PCs only; it does not establish a global producer
+absence or identify the missing output edge. The port independently reached
+3,026 image-DMA joins and 3,037 ABI events with zero crash or abort markers.
+
+The next work unit is the newly scripted bounded arm for
+`0x80004AB8`, `0x80004AC0`, and `0x80004AC8`, with the same positive controls
+and H1/H2/H3 discriminator.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.

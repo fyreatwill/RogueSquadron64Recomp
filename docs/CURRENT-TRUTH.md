@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3891 (2026-10-03).
+Updated for session 3892 (2026-10-03).
 
 ## Current state
 
@@ -78,8 +78,8 @@ Work only the first applicable item. This is one monotonic backlog.
    `0x80022A04` each had zero hangar-phase writer rows and zero scalar samples,
    selecting H2 for those three PCs only. The port arm crashed before its
    `[audtask-abi]` and image-DMA controls, so it supplies no paired evidence.
-   The next bounded candidates are `0x80092020`, `0x8009206C`, and
-   `0x80007670`; do not promote the three zero-hit PCs into a global absence
+   The next bounded candidates are `0x80004AB8`, `0x80004AC0`, and
+   `0x80004AC8`; do not promote the three zero-hit PCs into a global absence
    claim. Session 3863 fixed the prior runner's high-volume watch stream and
    completed the paired arm. Retail whole-RDRAM, title 1024, hangar 512, and
    oracle shutdown controls passed. Those three PCs had target-phase writer
@@ -197,6 +197,20 @@ Work only the first applicable item. This is one monotonic backlog.
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
    skipped, or guarded.
+
+   Session 3892 reran the stale `run_s3890_m5_remaining_candidate_writers.sh`
+   recipe, which selected `0x80092020`, `0x8009206C`, and `0x80007670` again
+   instead of a new class. Retail whole-RDRAM, title-1024, hangar-512, and
+   shutdown controls passed. All three PCs again had qualified title/hangar
+   candidate-span writer rows but no post-store scalar attribution, so H2 is
+   repeatable for these PCs only; this adds no new producer conclusion. The
+   port reached 3,026 image-DMA joins and 3,037 ABI events with zero
+   crash/abort markers. The next unclassified census representatives are
+   `0x80004AB8`, `0x80004AC0`, and `0x80004AC8`.
+
+   ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+   paired with port image-DMA joins; no guest or host state was rewritten,
+   skipped, or guarded.
 4. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
    session 3873 extended the guard to validate the head's `next->prev` back-link
@@ -275,6 +289,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-KnownStagePCsNotCandidateWriter` | Selected at s3861: valid retail controls passed, but `0x80015BC8` and `0x8000F3A0` had no phase-gated writes or scalar payload rows in `0x165000..0x16C000`; other candidate-span writer PCs remain open. |
 | `H-M5-RemainingCandidates-22xxAbsent` | Single-source retail result at s3862: `0x80022BB0`, `0x80022BC8`, and `0x80022A04` had no qualified candidate-span rows or scalar samples; other writer PCs remain open. |
 | `H-M5-RemainingCandidates-9200Absent` | Single-source retail result at s3863: `0x80092020`, `0x8009206C`, and `0x80007670` had qualified hangar candidate-span writer rows but no post-value scalar rows; they are not established as nonzero image producers. |
+| `H-M5-RemainingCandidates-9200Repeat` | Paired rerun at s3892 repeated the qualified title/hangar writer rows and absent post-store scalar attribution for `0x80092020`, `0x8009206C`, and `0x80007670`; controls passed and port reached 3,026 image-DMA joins. This adds repeatability only, not a new producer conclusion. |
 | `H-M5-RemainingCandidates-076AAbsent` | Single-source retail result at s3864: `0x800076A0`, `0x80085890`, and `0x800852D8` had qualified hangar candidate-span writer rows but zero post-target samples; they are not established as nonzero image producers. |
 | `H-M5-RemainingCandidates-8556Absent` | Single-source retail result at s3865: `0x80085564`, `0x8009785C`, and `0x8008556C` had qualified hangar candidate-span writer rows but zero post-target samples; they are not established as nonzero image producers. |
 | `H-M5-RemainingCandidates-29e8Absent` | Single-source retail result at s3869: `0x80029E8C`, `0x80035124`, and `0x80004520` had no qualified candidate-span writer rows or post-value samples after positive controls; they do not own the measured target edge. |
