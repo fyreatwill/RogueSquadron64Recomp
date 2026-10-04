@@ -5,7 +5,7 @@ HYPOTHESIS-ID: m5-candidate-writer-sweep
 The M3 validation unit is externally unavailable in this checkout: the
 configured build has no `PatchesLib` target and the MIPS toolchain is absent.
 Resume the already instrumented, ground-truth-qualified M5 census at the next
-three unclassified retail PCs: `0x8000515C`, `0x80005160`, and `0x80005164`.
+three unclassified retail PCs: `0x80005168`, `0x8000516C`, and `0x80005170`.
 Build all controls and candidates together, then run the paired retail oracle
 and port route in the existing phase-gated recipe.
 

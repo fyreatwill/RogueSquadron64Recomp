@@ -143001,3 +143001,21 @@ image-DMA joins, zero crash/abort markers, and qualified source/destination
 payload `FNV=0x762B22A5`, `nonzero=0`. This does not establish global writer
 absence. The next adjacent set is `0x8000515C`, `0x80005160`, and
 `0x80005164`.
+
+## Session 3966 (2026-10-04) — classified the next M5 candidate-writer class
+
+Ran the required independent whole-RDRAM oracle control before the build; it
+fired 10,000 callbacks. The Debug target then rebuilt successfully. The
+batched 75-second retail/port census measured `0x8000515C`, `0x80005160`, and
+`0x80005164` with the whole-RDRAM, title-1024, hangar-512, oracle-completion,
+scalar-mismatch, and passive M5 controls enabled.
+
+Retail reached both target VI phases and completed. It produced 36
+post-store scalar records with zero mismatches. None of the three candidates
+had a target-phase execution row, post-target row, or scalar sample, selecting
+H3 for this bounded class; these PCs are not the qualified retail writer at
+this measured scope. The paired port reached both qualified phases with 2,889
+image-DMA joins, zero crash/abort markers, and qualified source/destination
+payload `FNV=0x762B22A5`, nonzero=0. This does not establish global writer
+absence. The next adjacent set is `0x80005168`, `0x8000516C`, and
+`0x80005170`.
