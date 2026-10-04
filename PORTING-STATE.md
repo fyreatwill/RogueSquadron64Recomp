@@ -55113,6 +55113,28 @@ aligned-walker E9 total. The pre-gate first attempt remains a separate
 transient and is not evidence against the parser. No mitigation or source
 change was made.
 
+## Session 4065 (2026-10-04) — qualified title audio playback and drain timing
+
+The first invocation reused the default output directory because the wrapper
+was called with the wrong output-variable name; its three-second capture was
+discarded as a recipe failure. The fixed wrapper was also found to omit
+`ROGUESQ_LOG_M5_AUDIO_DRAIN=1`, so it was patched and rerun in a fresh output
+directory.
+
+The corrected same-run capture kept the retail oracle whole-RDRAM positive
+control and title/hangar AI witnesses. Retail passed the control and produced
+nonzero title and hangar output. The schedule-gated declared-real port reached
+both target phases and produced phase-scoped consumer rows. With the drain
+logger enabled, 1,024 raw drain rows covered phases 4 and 5. Queue depth stayed
+positive and advanced while host queue calls remained positive: title samples
+included 741–3813 queued bytes and hangar samples repeatedly tracked 767–1537
+bytes; no zero-drain starvation pattern occurred.
+
+This selects Hplay and rules out immediate queue-drain starvation at the
+measured SDL queue boundary. It does not establish that the device callback
+delivers samples to an audible output; callback/output behavior remains open.
+The drain-wrapper correction is committed in `scratch/agent/run_s4064_m5_arm_sink.sh`.
+
 Logs:
 `scratch/agent/soak_results/s790_postsec2_reachability_20260812-233115/run.log`
 and

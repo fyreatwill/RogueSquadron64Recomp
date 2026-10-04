@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4064 (2026-10-04).
+Updated for session 4065 (2026-10-04).
 
 ## Current state
 
@@ -165,6 +165,15 @@ boundary; playback/drain timing remains open.
   both phases, with no `[CRASH]` or `[ABORT]`. Hqueue is selected: the SDL
   enqueue/device boundary is live, so the next discriminator is playback/drain
   timing.
+- Session 4065 reran the same schedule-gated retail/declared-real capture with
+  the drain logger actually enabled. Retail passed the whole-RDRAM positive
+  control and produced nonzero title/hangar AI output; the port reached both
+  target phases and produced phase-scoped consumer rows. Drain rows were
+  present in both phases and stayed positive while host queue calls remained
+  positive: title values ranged through 741–3813 bytes and hangar repeatedly
+  tracked 767–1537 bytes, with no zero-drain starvation pattern. Hplay is
+  selected, ruling out immediate queue-drain starvation; the remaining sink
+  question is device callback/output behavior.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -173,29 +182,19 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Qualify title playback/drain timing.** Session 4064 selected Hqueue:
-   the schedule-gated declared-real route reaches both phases, and the
-   existing host rows show live device 2 with positive queue deltas. Run the
-   same retail-control/declared-real recipe with
-   `ROGUESQ_LOG_M5_AUDIO_HOST=1`, `ROGUESQ_LOG_M5_AUDIO_DRAIN=1`, and
-   `ROGUESQ_LOG_PCM_BOUNDARY=1`. Hdrain = queue depth repeatedly falls to
-   zero or fails to track the positive host enqueue calls while consumer PCM
-   is nonzero; Hplay = drain rows show queued bytes/frames advancing and host
-   queue calls remain positive through title. Missing target phases is
-   unevaluable. Slug `m5-title-audio-playback-drain`.
-2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
+1. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-3. **Requalify the M5 route.** Legacy-real remains pre-target under both
+2. **Requalify the M5 route.** Legacy-real remains pre-target under both
    sequential isolation and concurrent topology; revisit only with a new
    startup dependency that can explain the legacy arm.
-4. **M5 de-stubbing.** After the current route/source discriminator is closed,
+3. **M5 de-stubbing.** After the current route/source discriminator is closed,
    follow the incremental validation sequence in `M5-AUDIO-PLAN.md`; do not
    treat the silent control as real-audio evidence.
-5. **Generated-symbol renaming sweep.** Parked while M5 has applicable route,
+4. **Generated-symbol renaming sweep.** Parked while M5 has applicable route,
    writer, or audio work. Keep slug `generated-symbol-renaming-sweep` if it
    resumes; mapping-only edits do not reset the engineering-change gate.
 
@@ -204,7 +203,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | Hypothesis | Status |
 |---|---|
 | M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063). |
-| M5 title host sink | Hqueue selected (s4064): device 2 opens and title/hangar queue calls have positive deltas; playback/drain timing remains open. |
+| M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 route failure | Active H1: process topology changes which audio arms reach target phases; legacy-real remains pre-target. |
@@ -226,6 +225,13 @@ declared/silent, and legacy/real arms. It found no declared-only post-`0x800`
 marker and matching phase-5 zero-payload signatures. The candidate census is
 qualified only through the latest completed class; route failure invalidates a
 null, rather than proving absence.
+
+The title playback/drain capture is independently controlled by the retail
+whole-RDRAM and title/hangar AI-output witnesses. On the paired port, the
+declared-real route reached both phase gates; host enqueue rows and raw drain
+rows were positive in both phases. This closes immediate queue-drain
+starvation at the measured SDL queue boundary, but does not prove that the
+device callback delivers samples to an audible output.
 
 ## Superseded conclusions
 
