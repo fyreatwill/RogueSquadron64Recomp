@@ -142346,3 +142346,17 @@ paired port reached hangar with 2,851 image-DMA joins and no crash/abort; its
 qualified image payload remained `FNV=0x762B22A5`, nonzero=0. The port result
 confirms the separate edge still runs but does not identify a missing upstream
 writer.
+
+## Session 3919 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3918_m5_remaining_candidate_writers.sh` for
+`0x80004FB8`, `0x80004FBC`, and `0x80004FC0`. The retail arm passed its
+positive controls: whole-RDRAM threshold, title VI 1024, hangar VI 512, and
+oracle completion. Independent oracle summaries reported zero target-phase
+execution, candidate-span rows, post-target rows, and scalar samples for all
+three PCs. This selects H3 for this bounded class only and rules out these PCs
+as qualified retail writers at the measured target phase; it does not establish
+global writer absence. The paired port reached hangar with 2,845 image-DMA
+joins and no crash/abort; its qualified image payload remained
+`FNV=0x762B22A5`, nonzero=0. The port result confirms the separate edge still
+runs but does not identify a missing upstream writer.
