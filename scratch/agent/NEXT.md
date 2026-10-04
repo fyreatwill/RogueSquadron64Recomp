@@ -1,34 +1,30 @@
-# Next work unit: requalify the four-arm M5 route before resuming source census
+# Next work unit: qualify the regeneration-safe M3 patch target
 
-HYPOTHESIS-ID: m5-route-requalification-4028
+HYPOTHESIS-ID: m3-patcheslib-qualification-4029
 
 Competing hypotheses:
 
-- H1: the current route is qualified; retail and declared/real,
-  declared/silent, and legacy/real all reach title VI 1024 and hangar VI 512
-  in one same-build capture with their RSP/audio controls and no crash/abort.
-- H2: one audio arm is causally route-breaking; its phase/control pattern or
-  crash differs from the other arms.
-- H3: the route result is schedule-sensitive or otherwise unevaluable; at
-  least one port arm fails before the target phases without a reproducible
-  arm-specific discriminator.
+- H1: the configured `PatchesLib` target exists and builds with the supplied
+  MIPS toolchain, so the heap-guard patch can be runtime-qualified.
+- H2: the target is absent from the current build graph, so the blocker is
+  CMake/configuration rather than a compile or link defect.
+- H3: the target exists, but the configured MIPS compiler/linker or patch
+  inputs are unavailable, so qualification is toolchain-blocked.
 
-Discriminator: run all four arms concurrently in one capture. Retail's
-whole-RDRAM positive control, title/hangar VI controls, each port arm's
-`m5-rsp-source-hook-control` and audio-stage control, target phases, and
-crash/abort markers must be summarized per arm. H1 requires all arms to reach
-both target phases without crash/abort; H2 requires a repeatable arm-specific
-failure; H3 is the result when a port arm fails without that separation.
+Discriminator: first enumerate the configured target, then invoke the target
+once. H1 is a successful `PatchesLib` build; H2 is `No rule to make target
+PatchesLib` and no target in `cmake --build build --target help`; H3 is a
+target-recognized build that fails while locating or invoking MIPS tools or
+patch inputs. Do not infer runtime guard behavior from a source-only build.
 
 Exact commands:
 
 ```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s4028_m5_route_requal.sh
+cmake --build build --target help | rg -n 'PatchesLib|RogueSquadron64Recomp'
+cmake --build build --config Debug --target PatchesLib
 ```
 
-The new script must be self-contained and launch retail plus declared/real,
-declared/silent, and legacy/real concurrently, use the established
-phase-gated controls from `scratch/agent/run_s4015_m5_scheduler_spin_split.sh`,
-and SIGKILL all children in cleanup. Do not resume the `0x800052AC` census or
-change audio behavior until this four-arm discriminator is reported.
+If H1, run the smallest available patch/runtime qualification and record its
+positive control. If H2 or H3, record the exact blocker and keep the M5
+writer census parked; do not repeat the route capture without a new schedule
+discriminator.

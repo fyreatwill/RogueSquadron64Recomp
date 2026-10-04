@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4027 (2026-10-04).
+Updated for session 4028 (2026-10-04).
 
 ## Current state
 
@@ -357,22 +357,34 @@ qualification blocked; it does not establish that a malformed chain occurs.
 ORIGIN: `func_8002221C` and its expansion-chain link stores; no mitigation was
 added in this session.
 
+Session 4028 re-ran the four-arm M5 route qualification in one concurrent
+capture. Retail passed the whole-RDRAM positive control and produced both
+title VI 1024 and hangar VI 512 controls. Declared/silent and legacy/real each
+reached both target phases, fired the RSP-source and audio-stage controls, and
+emitted no crash or abort. Declared/real fired the RSP-source control but
+crashed pre-target in `spTaskSchedulerThread` with last guest PC
+`0x8000B650`, before its audio-stage or target-phase rows. This is H3 at the
+route level: the single capture is schedule-sensitive/unevaluable and does
+not establish a causal arm-specific audio failure. The `0x800052AC` writer
+census remains parked. ORIGIN: diagnostic route controls and crash marker;
+no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 route requalification.** Re-run the existing four-arm route
-   qualification (`retail`, `declared/real`, `declared/silent`, and
-   `legacy/real`) in one same-build capture. Require the retail positive,
-   title/hangar phases, RSP/audio controls, and no crash/abort in all port
-   arms before resuming the parked `0x800052AC` candidate class.
-
-2. **M3 patch qualification.** Session 4027 rechecked reciprocal-link
+1. **M3 patch qualification.** Session 4027 rechecked reciprocal-link
    validation: `git diff --check` and the ordinary Debug target passed, while
    `PatchesLib` remains unavailable before compilation. Runtime qualification
    remains blocked until the configured target and MIPS toolchain are supplied;
    do not infer that a malformed chain occurs from the source guard alone.
+
+2. **M5 route requalification.** Repeat the four-arm route qualification
+   only after a new schedule discriminator is selected; s4028's
+   declared/real-only pre-target crash is not causal evidence. Require the
+   retail positive, title/hangar phases, RSP/audio controls, and no
+   crash/abort in all port arms before resuming `0x800052AC`.
 
 3. **M5 next source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
@@ -433,6 +445,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-LegacyRealRoute-4009` | Superseded by s4010: the first capture established only a legacy-only route split and was overinterpreted as H2 before the corrected staging-specific table result. |
 | `H-M5-LegacyRealRoute-4010` | H1 selected at route level: declared/real reached both target phases, while legacy/real emitted two pre-target task-load rows with `staging=0xF80` and crashed at `0x8000834C` before any audio-ABI row; no successor variation appeared. |
 | `H-M5-CandidateWriterClass-0594-qualified` | H2 selected at s4011: retail controls and oracle completion passed; all three candidate PCs were absent from qualified post-target evidence; both declared/real and legacy/real reached title/hangar with audio/image joins and no crash/abort. |
+| `H-M5-RouteQualification-4028` | H3 selected: retail controls passed; declared/silent and legacy/real reached both target phases, but declared/real crashed pre-target after the RSP-source control. The single capture does not establish causal arm-specific audio failure. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M5-RouteQualification-4021` | H3 selected: declared/real, declared/silent, and legacy/real all reached both target VIs with route controls and no crash/abort in the same-build capture. |

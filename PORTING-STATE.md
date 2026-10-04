@@ -143907,6 +143907,24 @@ unevaluable. This confirms source/host-build cleanliness only and does not
 establish that an expansion node aliases the active queue. ORIGIN:
 `func_8002221C` and its expansion-chain link stores; no mitigation was added.
 
+## Session 4028 (2026-10-04) — four-arm M5 route requalification is unevaluable
+
+Ran the prescribed same-build concurrent capture with retail, declared/real,
+declared/silent, and legacy/real. The retail oracle positive control reached
+10,000 whole-RDRAM callbacks and its title VI 1024 and hangar VI 512 controls
+fired. Declared/silent and legacy/real each fired the RSP-source and
+audio-stage controls, reached both target phases, and emitted no crash or
+abort. Declared/real fired the RSP-source control but crashed before its first
+audio-stage or target-phase row in `spTaskSchedulerThread`; the last guest PC
+was `0x8000B650`.
+
+H3 is selected for this route qualification: the single concurrent capture
+does not provide a repeatable causal arm-specific discriminator, so the
+`0x800052AC` writer census remains parked. This rules out treating the
+declared/real failure as established staging or real-audio causality. ORIGIN:
+diagnostic route controls and crash marker; no mitigation landed. The new
+recipe is `scratch/agent/run_s4028_m5_route_requal.sh`.
+
 ## Session 4021 (2026-10-04) — four-arm M5 route qualification passes
 
 Before building, the work unit was the checked-in four-arm M5 route
