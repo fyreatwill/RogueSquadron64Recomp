@@ -504,6 +504,11 @@ superseded by s4010: it showed the route split but had not separated staging
 from successor state. The corrected table found the legacy `0xF80` staging row
 before the crash and no successor change.
 
+The s4010 H1 route split is superseded at the broader four-arm scope by s4021:
+declared/real, declared/silent, and legacy/real all reached both target VIs in
+one qualified capture. It remains a valid description of that earlier
+schedule, not evidence that staging determines route success.
+
 The s3579–s3584 `0x800078EC` stored-value inference is unsupported because
 retail executed a byte store while the oracle read an aligned word containing
 neighboring bytes. Request-only SP-yield conclusions are limited to the old
