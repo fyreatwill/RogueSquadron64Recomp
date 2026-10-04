@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3934 (2026-10-03).
+Updated for session 3935 (2026-10-03).
 
 ## Current state
 
@@ -62,6 +62,15 @@ Work only the first applicable item. This is one monotonic backlog.
    writer publishing `popped`; an existing queue-owned node is not legitimate
    allocator ownership. `PatchesLib` remains unconfigured, so this is code
    landed with H3 environment evidence only; the ordinary host target builds.
+   Session 3935 added the tail-anchor audit: for a non-empty published queue,
+   the node reached through `heap_tail_loc->next` must be the head with a null
+   predecessor or point back to `heap_tail_loc`; otherwise the append returns
+   before link stores. ORIGIN is `heap_tail_loc` and the append writer; a
+   detached predecessor is not legitimate queue state. The ordinary host
+   target still builds, while `PatchesLib` remains unavailable (`No rule to
+   make target 'PatchesLib'`), so this is H4 environment evidence only. Do not
+   add another M3 guard until the accumulated patch can be built and runtime-
+   qualified.
 
 2. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3900's phase-gated run passed the retail whole-RDRAM,
@@ -283,8 +292,8 @@ Work only the first applicable item. This is one monotonic backlog.
 4. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
    and the expanded reciprocal-link guards are landed in
    `patches/heap_guards.c` but have no runtime result. The same
-   missing-toolchain/build-target blocker applies; do not add another guard
-   before validation.
+   missing-toolchain/build-target blocker applies; the tail-anchor audit is
+   now also accumulated and must not be extended before validation.
 
 5. **M5 target-phase parity is closed at current scope.** Do not repeat
    standalone qualification, paired target-VI controls, or the retail

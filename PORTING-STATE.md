@@ -142549,3 +142549,21 @@ bounded class only; this does not establish global writer absence. The paired
 port reached hangar with 2,866 qualified image-DMA joins and no crash or
 abort; qualified payload remained `FNV=0x762B22A5`, nonzero=0. The next
 adjacent set is `0x80005048`, `0x8000504C`, and `0x80005050`.
+## Session 3935 (2026-10-03) — added active-queue tail-anchor guard
+
+The mandated no-churn pivot selected a bounded M3 guard-class change. Added
+`active_queue_tail_anchor_ok` to `patches/heap_guards.c` and called it before
+the active-queue append stores. ORIGIN: `heap_tail_loc` supplies the
+predecessor used by the append writer; a terminal node that is detached from
+that predecessor is not legitimate allocator state, even if each pointer is
+individually aligned and in RDRAM. The guard accepts the queue-head/null-
+predecessor shape and the ordinary predecessor-link shape, and rejects a
+foreign or detached tail.
+
+`cmake --build build --config Debug --target RogueSquadron64Recomp` completed
+successfully. `cmake --build build --config Debug --target PatchesLib` failed
+immediately with `No rule to make target 'PatchesLib'`. Therefore H4 is
+selected for this iteration: the patch source changed, but MIPS/runtime
+validation is unavailable in this checkout. The host build does not validate
+the patch, and no allocator-runtime claim is made. Do not add another M3 guard
+until a human supplies/configures the MIPS patch pipeline.

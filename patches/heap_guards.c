@@ -110,6 +110,24 @@ static int active_queue_link_ok(const Block* queue_head, const Block* q) {
            (block_ok(q->prev) && q->prev->next == q);
 }
 
+// ORIGIN: heap_tail_loc supplies the predecessor used by the append stores;
+// the terminal node reached through it must point back to that same metadata
+// node. A detached tail would otherwise let the append splice two unrelated
+// queue chains together while every individual pointer still looks valid.
+static int active_queue_tail_anchor_ok(const Block* queue_head,
+                                       const Block* tail,
+                                       const Block* q) {
+    if (queue_head == NULL || tail == NULL || q == NULL ||
+        !block_ok(queue_head) || !block_ok(tail) || !block_ok(q) ||
+        tail->next != q) {
+        return 0;
+    }
+    if (q == queue_head) {
+        return q->prev == NULL;
+    }
+    return q->prev == tail;
+}
+
 // ORIGIN: the active-queue insertion consumes the chain rooted at
 // heap_other_listhead and appends through its terminal node. The existing
 // tail check validates only that terminal node; it does not prove that the
@@ -259,6 +277,9 @@ RECOMP_PATCH Block* func_80007D74(void) {
         Block* q = tail->next;            // current node at tail
 
         if (!active_queue_link_ok(queue_head, q)) {
+            return NULL;
+        }
+        if (!active_queue_tail_anchor_ok(queue_head, tail, q)) {
             return NULL;
         }
         if (!active_queue_chain_ok(queue_head, q) || tail->next != q) {

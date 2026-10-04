@@ -1,31 +1,26 @@
-# Next work unit: qualify the next M5 retail candidate-writer class
+# Next work unit: audit the active-queue tail-anchor guard
 
-HYPOTHESIS-ID: m5-candidate-writer-class
+HYPOTHESIS-ID: m3-active-queue-tail-anchor
 
-Before building, retain this hypothesis table and discriminator as the
-instrument contract. First make an address-only copy of
-`scratch/agent/run_s3934_m5_candidate_writers.sh` as
-`run_s3935_m5_candidate_writers.sh`, changing every candidate reference to
-`0x80005048`, `0x8000504C`, and `0x80005050`. Then run
+Before building, retain this hypothesis table and discriminator as the audit
+contract. Add one guard in `patches/heap_guards.c` for the active-queue append
+anchor: when the published queue is non-empty, the node reached via
+`heap_tail_loc->next` must either be the queue head with no predecessor, or
+have `q->prev == *heap_tail_loc`. Then run
 `cmake --build build --config Debug --target RogueSquadron64Recomp` once and
-`zsh scratch/agent/run_s3935_m5_candidate_writers.sh`; the script launches
-the phase-gated retail/port candidate-writer harness for
-`0x80005048`, `0x8000504C`, and `0x80005050`, with all passive breadcrumb
-instruments enabled. Build once, then run the retail oracle and paired port
-arm concurrently from `build/`; use SIGKILL for watchdog cleanup. The wrapper
-must record whole-RDRAM, title-1024, hangar-512, and oracle-completion
-positive controls before interpreting candidate rows.
+attempt `cmake --build build --config Debug --target PatchesLib` once. No
+runtime soak is valid without a built MIPS patch.
 
 Competing hypotheses:
 
-- H1/H2: a candidate writes a legitimate nonzero target payload; it executes
-  in the qualified target phase and produces a post-target scalar/value row.
-- H3: these candidates are disconnected from the target writer; controls pass
-  but candidate execution or post-target rows remain absent.
-- H4: the retail arm is unevaluable; a control or target phase fails, so no
-  writer conclusion is allowed.
+- H1: the tail metadata is a legitimate predecessor of the terminal queue
+  node, so the new relation check passes for valid allocator state.
+- H2: the queue head is the terminal node, so the valid empty-predecessor
+  special case passes.
+- H3: a foreign or detached tail is possible, so the new guard rejects it.
+- H4: the patch pipeline is unavailable, so source-level correctness cannot
+  be runtime-qualified in this checkout.
 
-Discriminator: candidate execution plus a post-target scalar/value row during
-the qualified target phase, with all four positive controls passing. The paired
-port arm must reach hangar and report its image-DMA payload separately; it is
-not a substitute for retail attribution.
+Discriminator: the guard must accept both valid queue-anchor shapes and reject
+the detached/foreign shape in a MIPS/runtime test. If `PatchesLib` is absent,
+the result is H4 only; the ordinary host build is not patch validation.
