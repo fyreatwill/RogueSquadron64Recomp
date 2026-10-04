@@ -143175,6 +143175,21 @@ runtime behavior was changed.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H3).
 
+## Session 3977 (2026-10-04) — honored the declared audio ucode-data span
+
+The six-iteration no-engineering-change guard forced an M5 runtime pivot. The
+existing qualified audio task rows declare `ucode_data_size=0x800`, while
+`librecomp::rsp::run_task` copied `0xF80` bytes into DMEM for every audio task.
+Changed the audio path to stage exactly the declared size, capped at the DMEM
+task boundary; `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` preserves the old span for a
+same-build rollback comparison. Refreshed the M5 plan, current truth, next
+work unit, and paired SIGKILL validation recipe. The Debug target built and
+linked successfully. This rules out only the prior unconditional over-copy as
+the intended contract; it does not yet select a PCM producer or claim audio
+success. The paired title/hangar validation remains the next work unit.
+
+**Outcome: ADVANCED** (a runtime artifact changed and the Debug build passed).
+
 ## Session 3975 (2026-10-04) — classified the next M5 candidate-writer class
 
 Ran the planned bounded M5 census for `0x80005198`, `0x8000519C`, and

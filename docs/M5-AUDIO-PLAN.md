@@ -1,6 +1,6 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 3949 (2026-10-04). This is the design gate for M5.
+Refreshed in session 3977 (2026-10-04). This is the design gate for M5.
 Session 3303 supersedes the linked-runtime part of Session 2791's SP-yield
 conclusion. The weak task-start implementation clears stale request state, but
 the linked strong override shadows that function without clearing it. More
@@ -47,6 +47,15 @@ network-order bytes in each N64 sample before calling `SDL_QueueAudio`. The
 sample count, guest address, and queued byte length remain unchanged. This
 does not select a Factor 5 task writer or prove nonzero PCM; it is the concrete
 host-boundary behavior change required before that qualification can be used.
+
+Session 3977 implemented the next task-contract edge: audio RSP staging now
+uses the OSTask-declared `ucode_data_size` instead of unconditionally copying
+`0xF80` bytes. The qualified task rows declare `0x800`; the old span therefore
+read beyond the image into the reserved DMEM gap. `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`
+retains the previous span as a same-build rollback arm. This is a runtime
+behavior change, not proof that the image produces valid PCM; the next soak
+must compare both arms with the existing dispatch, SP-completion, DMA, slot,
+PCM, and VI controls.
 
 The source-level inventory was checked directly in `main.cpp`,
 `librecomp/rsp.cpp`, `librecomp/ai.cpp`, `ultramodern/audio.cpp`,
@@ -179,7 +188,7 @@ SIGKILL.
 | 0 | No behavior change: reconcile the retail contract and current generated/fixup anchors. | Oracle whole-RDRAM watch fires; retail reaches the target route and names writers for `0xA0F50`, task fields, voice/status words, and AI calls. Port has `audtask-dispatch`, SP completion, and route controls. | Oracle plus the existing port driver, with `PROBE_PHASE_WIDTH`/`PROBE_KEYS_FROM_PHASE=1`. Rollback: none. Do not add an instrument before this control. |
 | 1 | Re-baseline the current default image against the same-build silent control before changing any further contract edge. This is a qualification checkpoint, not a behavior change. | Stub: `M_AUDTASK` returns with no DMEM/DMA. Image: nonzero DMEM changes, image completion at `0x1328`, `Broke`, SP completion, and matching task fields. The image must also report the predicted service/slot/PCM rows or explicitly show the missing edge. | Phase-keyed title/hangar run using `ROGUESQ_AUDIO_UCODE=0` and the default image arm from one build; retain `ROGUESQ_LOG_ALL` and PCM/task joins. Rollback: set `ROGUESQ_AUDIO_UCODE=0`. The run is invalid if both port arms remain before the target phase. |
 | 2 | Promotion to the default image arm is complete in the current source; do not repeat it as an experiment. The SP yield rollback is now one-shot. | The Step 1 row must still show the default image reaches the same title/hangar route as the stub control, completes tasks, preserves the gfx DMEM control, and identifies any downstream divergence. A request-only control must report one yielded result per request, then clear. | Treat this as a completed policy transition, not a new behavior change. `ROGUESQ_AUDIO_UCODE=0` remains the audio rollback; `ROGUESQ_SP_YIELDED_REQUEST_ONLY=1` is the SP-yield control. |
-| 3 | Implement exactly one missing image task/output contract edge identified by Step 1/2, such as a proven `data_ptr+0x100` writeback or output consumer relation. | Retail and port rows agree on the writer PC, destination span, payload polarity, and completion ordering; PCM source/consumer join closes after the change. | One build with old/new contract arms toggled within the same run and both target origins. Rollback the one contract edge; do not add a broad writeback guard. |
+| 3 | **In progress from s3977:** use the declared audio `ucode_data_size` for the DMEM staging DMA; the current qualified task declares `0x800`, while the legacy path copied `0xF80`. | Both arms must retain task dispatch, image `Broke`, SP completion, and route controls; the contract arm must show the declared `0x800` staging span without a new failure, while any downstream PCM/slot change requires its own join evidence. | One build with `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` and unset in phase-gated runs at title and hangar. Rollback is the env arm; do not infer a writer or add a writeback guard from this change. |
 | 4 | Change one `0x800A0F50` writer or one gate consumer, only after independent retail writer/value evidence selects it. **C88 default store is done (s2608):** unset writes guest `$v0` at `0x8008EC88`; `ROGUESQ_M5_C88_VALUE=0` is the rollback. Title PCM joins; hangar PCM does not. | Same-run retail writer and value transition, matching port writer, nonzero gate branch, completed task, and slot/voice downstream transition. Remaining: hangar `0x80094648` value/dest vs sampled PCM. | Title and hangar VI phases using AUTOPILOT. Rollback that exact store/consumer. Any mitigation-shaped diff needs `ORIGIN:` naming the writer and legitimacy. |
 | 5 | Remove or replace the eight key-on early returns as one audited idiom class, only after valid descriptors/divisors are proven. | Normal key-on tail, slot `02` then `00`, no new status-03 hang, and descriptor fields match the retail class. | Hangar `512 @ 0x006AB400`; keep an invalid-input fallback in the same arm. Rollback the generated/fixup class. |
 | 6 | **Implemented in s2692; validation pending:** remove the in-loop drain tick from the default path; retain the explicit tick-on arm for rollback/control. | Same-run tick-on control and default-off arm must report task/SP completion, named slot/status transition, nonzero PCM joins, and the same route; a timeout or clean route alone is not success. | Same hangar phase, tick A/B in one build. Rollback with `ROGUESQ_DRAIN_INLOOP_TICK=1`. |

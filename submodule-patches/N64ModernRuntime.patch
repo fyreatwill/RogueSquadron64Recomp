@@ -932,7 +932,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..506f017 100644
+index 1cb3f6a..8f9cc7f 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -946,7 +946,7 @@ index 1cb3f6a..506f017 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1661 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1675 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2313,11 +2313,26 @@ index 1cb3f6a..506f017 100644
      // Load the OSTask into DMEM
      memcpy(&dmem[0xFC0], task, sizeof(OSTask));
  
-     // Load the ucode data into DMEM
+-    // Load the ucode data into DMEM
 -    dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, 0xF80 - 1);
-+    // SP task data occupies DMEM [0x0000, 0x0F80); include the final byte
-+    // before the OSTask staging area at 0x0FC0.
-+    dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, 0xF80);
++    // Load the ucode data into DMEM. Audio tasks declare a 0x800-byte image;
++    // copying 0xF80 bytes reads past that image and overwrites the task's
++    // reserved DMEM gap with unrelated RDRAM. Keep the old span as an
++    // explicit rollback arm while qualifying the task-contract fix.
++    uint32_t ucode_data_dma_size = 0xF80;
++    if (task->t.type == M_AUDTASK) {
++        const char* legacy = std::getenv("ROGUESQ_AUDIO_LEGACY_UCODE_DMA");
++        const bool use_legacy = legacy && legacy[0] && legacy[0] != '0';
++        ucode_data_dma_size = use_legacy ? 0xF80u :
++            static_cast<uint32_t>(task->t.ucode_data_size);
++        if (ucode_data_dma_size > 0xFC0u) {
++            ucode_data_dma_size = 0xFC0u;
++        }
++    }
++    if (ucode_data_dma_size != 0) {
++        dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data,
++                          ucode_data_dma_size);
++    }
 +
 +    if (first_task_probe) {
 +        fprintf(stderr,

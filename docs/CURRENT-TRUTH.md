@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3976 (2026-10-04).
+Updated for session 3977 (2026-10-04).
 
 ## Current state
 
@@ -28,6 +28,13 @@ by legitimate zero-valued `0x800078EC` fill activity. Session 3818 found that
 sequence 664 at physical `0x179A44` is the final observed writer and every
 matching input DMA had zero payload. No nonzero hangar producer is established.
 
+Session 3977 landed the next M5 task-contract behavior change: audio RSP DMEM
+staging now uses each OSTask's declared `ucode_data_size` (`0x800` on the
+qualified route) instead of the prior unconditional `0xF80` span. The old
+behavior remains available with `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`. This is a
+real runtime change, not evidence of valid PCM or a selected source writer;
+the paired phase-gated validation remains next.
+
 The generated scalar-store census, central host/RSP writer census, native
 page-fault census, and nine bounded exact-offset load candidates are closed at
 their measured scopes. Do not infer a zero producer from null attribution;
@@ -37,7 +44,16 @@ target fault attribution was absent or an arm crashed before target.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 candidate-writer qualification — continue the bounded retail census.**
+1. **M5 audio task-contract qualification — validate the s3977 staging change.**
+   Build one binary and run the declared-size arm alongside the legacy arm,
+   phase-gated at title VI 1024 and hangar VI 512. Require whole-RDRAM and
+   route controls, task dispatch/fields, image exit, SP completion, DMA span,
+   slot/voice, PCM joins, and both VI transitions. The declared-size arm must
+   show the `0x800` task image staging without losing the existing route; any
+   downstream audio claim needs a matching join. Roll back with
+   `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`.
+
+2. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3973's same-build three-arm route comparison passed the VI-320
    positive control. Silent/LLE-on crashed in `spTaskSchedulerThread` at
    `last-guest-pc=0x8000834c`; image/LLE-on reached VI 512, while image/LLE-off
@@ -48,7 +64,7 @@ Work only the first applicable item. This is one monotonic backlog.
    census at `0x80005198`, `0x8000519C`, and `0x800051A0`; retain whole-RDRAM,
    title-1024, hangar-512, and oracle-completion controls.
 
-2. **M3 heap guard validation — open external dependency, not a loop stop.**
+3. **M3 heap guard validation — open external dependency, not a loop stop.**
    Session 3956 added the next bounded active-queue idiom guard: reject the
    impossible alias `tail == q` before the append reads `tail->next` as the
    predecessor of `q`. ORIGIN is `heap_tail_loc` plus the append writer;
@@ -103,7 +119,7 @@ Work only the first applicable item. This is one monotonic backlog.
    The host target remains independently healthy; do not add another M3 guard
    or claim runtime validation from this build.
 
-3. **M5 candidate-writer qualification — continue the bounded retail census.**
+4. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail
    whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls
    all passed. None of the three candidates executed in the qualified target
