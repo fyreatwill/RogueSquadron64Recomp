@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3971 (2026-10-04).
+Updated for session 3972 (2026-10-04).
 
 ## Current state
 
@@ -37,7 +37,20 @@ target fault attribution was absent or an arm crashed before target.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap guard validation — open external dependency, not a loop stop.**
+1. **M5 pre-title route qualification — resolve the Step 1 phase prerequisite.**
+   Session 3972's concurrent same-build silent/image pair passed the build
+   check but both arms stalled at VI 640 after 66 audio-task dispatches;
+   neither reached title or hangar, so all downstream audio nulls were
+   unevaluable. The fixed sequential recipe also failed before VI 512: its
+   silent arm crashed in `spTaskSchedulerThread` during the Factor 5 boot
+   task, with `last-guest-pc=0x8000834c`. This rules out concurrent audio arms
+   as the sole explanation, but does not identify the pre-title route cause.
+   Next discriminator: same-build phase-gated image-route arms with LLE on
+   and off, plus the silent control, must report VI 640/1024/512 transitions,
+   task dispatch/exit, and crash/abort attribution in one run. Do not infer
+   an audio contract gap until a target phase is reached.
+
+2. **M3 heap guard validation — open external dependency, not a loop stop.**
    Session 3956 added the next bounded active-queue idiom guard: reject the
    impossible alias `tail == q` before the append reads `tail->next` as the
    predecessor of `q`. ORIGIN is `heap_tail_loc` plus the append writer;
@@ -92,7 +105,7 @@ Work only the first applicable item. This is one monotonic backlog.
    The host target remains independently healthy; do not add another M3 guard
    or claim runtime validation from this build.
 
-2. **M5 candidate-writer qualification — continue the bounded retail census.**
+3. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail
    whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls
    all passed. None of the three candidates executed in the qualified target
@@ -335,7 +348,7 @@ Work only the first applicable item. This is one monotonic backlog.
    `0x8000518C`, `0x80005190`, and `0x80005194`; this is not global writer
    absence.
 
-3. **M3 prior guard classes — validate the accumulated patch before extending.**
+4. **M3 prior guard classes — validate the accumulated patch before extending.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
    the free-list head pair to the complete bounded chain, rejecting cycles and
    foreign successor/predecessor links before dequeue. The change preserves
@@ -378,7 +391,7 @@ Work only the first applicable item. This is one monotonic backlog.
    build and runtime qualification; add no further M3 guard class before that
    validation.
 
-4. **M5 audio contract qualification — remaining retail candidate-writer
+5. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3900's phase-gated run passed the retail whole-RDRAM,
    title-1024, and hangar-512 controls; candidate PCs `0x80003B98`,
    `0x800044C8`, and `0x80004AB0` produced no retail rows. The paired port
@@ -509,7 +522,7 @@ Work only the first applicable item. This is one monotonic backlog.
    zero. This selects H-ContractGap over H-AudioDegeneracy at this scope.
    Do not add a writeback guard from this result.
 
-5. **M5 image task/output edge — classify remaining retail writers.** The
+6. **M5 image task/output edge — classify remaining retail writers.** The
    qualified port input and separate writeback-DMA edge are real, while the
    dominant retail `0x800078EC` activity is zero-fill, not an image producer.
    Sessions 3861–3896 classified many measured PCs as H2 (candidate-span
@@ -595,17 +608,17 @@ Work only the first applicable item. This is one monotonic backlog.
    Continue with `0x80005048`, `0x8000504C`, and `0x80005050`; this is not
    global writer absence.
 
-6. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
+7. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
    and the expanded reciprocal-link guards are landed in
    `patches/heap_guards.c` but have no runtime result. The same
    missing-toolchain/build-target blocker applies; the tail-anchor audit is
    now also accumulated and must not be extended before validation.
 
-7. **M5 target-phase parity is closed at current scope.** Do not repeat
+8. **M5 target-phase parity is closed at current scope.** Do not repeat
    standalone qualification, paired target-VI controls, or the retail
    zero-writer census unless the route or build changes.
 
-8. **Generated-symbol renaming sweep is parked.** Resume only after M5 has no
+9. **Generated-symbol renaming sweep is parked.** Resume only after M5 has no
    applicable discriminator and M3 has a toolchain or a new discriminator.
    Keep HYPOTHESIS-ID `generated-symbol-renaming-sweep`; mapping edits do not
    evade the engineering-change stall gate.
@@ -644,6 +657,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
 | `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; s3929 reproduced the absent configured patch target, while the ordinary host target passed. Validation remains blocked by the MIPS toolchain/configuration. |
+| `H-M5-Step1-PreTitleRoute` | Selected H3 at s3972: concurrent silent/image arms both stopped at VI 640 with 66 audio-task dispatches and no target-phase rows; the sequential silent control crashed at VI 320 in `spTaskSchedulerThread`. The audio contract remains unevaluable. |
 
 The s3922 M3 validation attempt confirmed the same build-system/toolchain
 boundary without runtime evidence; do not treat a successful host build as
@@ -665,6 +679,9 @@ absence. The full evidence and exact counts remain in the append-only ledger.
   `0x298`.
 - The s3891 image arm proves the RSP task and two output-DMA edges execute;
   their zero payload does not identify the missing upstream writer.
+- Session 3972's Step 1 pair did not reach a qualified audio phase. The
+  concurrent arms each dispatched 66 tasks and stopped at VI 640; the
+  sequential retry crashed during the Factor 5 boot task before VI 512.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.

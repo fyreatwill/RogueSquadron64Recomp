@@ -143108,3 +143108,24 @@ successful ordinary target rules out a host-build regression from the
 accumulated patch. No new guard was added.
 
 **Outcome: ADVANCED** (the planned validation ran and selected H2).
+
+## Session 3972 (2026-10-04) — qualified the M5 Step 1 pre-title route failure
+
+Rebuilt the ordinary Debug target successfully and ran the planned same-build
+silent (`ROGUESQ_AUDIO_UCODE=0`) versus Factor 5 image
+(`ROGUESQ_AUDIO_UCODE=1`) phase-gated pair. The independent retail oracle in
+the run passed its whole-RDRAM control and reached title VI 1024 and hangar VI
+512. Both port arms dispatched 66 audio tasks but stopped at VI 640; neither
+produced task-contract/image-stage, audio-return, service/slot, or PCM rows,
+and neither emitted a crash or abort marker. This selects H3: the downstream
+audio discriminator was unevaluable, not an image-contract gap.
+
+Ran the fixed sequential recipe as the same-unit retry, requiring silent to
+reach hangar before launching the image arm. The silent arm died before VI 512
+at VI 320 with a segmentation fault in `spTaskSchedulerThread` during the
+Factor 5 boot task (`last-guest-pc=0x8000834c`). This rules out concurrent
+audio-arm contention as the sole explanation, but does not identify the
+pre-title route cause. No audio behavior or mitigation was changed.
+
+**Outcome: ADVANCED** (the planned A/B ran, and its fixed route retry produced
+a concrete pre-title crash discriminator).

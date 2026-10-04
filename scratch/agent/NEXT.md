@@ -1,37 +1,34 @@
-# Next work unit: M5 Step 1 same-build audio baseline
+# Next work unit: M5 pre-title route A/B
 
-HYPOTHESIS-ID: m5-audio-step1-baseline
+HYPOTHESIS-ID: m5-step1-pretitle-route
 
-The M3 patch checkpoint is blocked by configuration, not by the ordinary
-host build: `PatchesLib` is absent and the Debug game target builds. Do not
-add another M3 guard until a human supplies a configured patch target and MIPS
-toolchain. The strategic next unit is the M5 design's Step 1 qualification:
-compare the explicit silent audio arm with the default Factor 5 image arm in
-one build and phase-gated run.
+The Step 1 audio-chain comparison is unevaluable until the port reaches a
+qualified phase. The concurrent pair stopped at VI 640 in both arms; the
+sequential retry crashed in the silent arm at VI 320 during the Factor 5 boot
+task. Do not change audio behavior or add a mitigation in the next unit.
 
 Competing hypotheses:
 
-- H1: both audio arms reach the qualified title/hangar phases and the image
-  arm closes the expected task/SP/service/slot/PCM chain.
-- H2: both arms reach the route, but the image arm has a specific downstream
-  contract gap after its positive DMEM/DMA and completion controls.
-- H3: the route or positive controls fail before the target phase, making the
-  comparison unevaluable rather than selecting an audio contract gap.
+- H1: LLE scheduling is the pre-title discriminator; the LLE-off image arm
+  reaches VI 1024/512 while LLE-on and/or silent reproduces the failure.
+- H2: the failure is audio-arm independent; all image/silent arms show the
+  same VI-640 stall or boot-task crash regardless of LLE mode.
+- H3: the result is an environment/build or stale-process failure; the
+  positive port route control or executable/ROM check fails before comparable
+  phase evidence.
 
-Discriminator: one phase-keyed row must contain, for each arm, M_AUDTASK
-dispatch/exit, task fields, DMEM change and DMA ranges, image completion,
-SP completion, service return, slot/status transitions, PCM source/consumer
-joins, and title/hangar phase. The whole-RDRAM oracle control and port route
-control must fire in the same run. H1 is selected only by the complete image
-chain; H2 by a qualified route with a named missing downstream edge; H3 by
-missing controls or pre-target termination.
+Discriminator: one build and one driver must launch all arms (silent and image
+with LLE on, image with LLE off), phase-gated on VI transitions, and record
+for each arm VI 320/640/1024/512, Factor 5 boot/task dispatch and exit,
+`last-guest-pc`, crash/abort markers, and process/ROM validation. H1 is
+selected only if LLE-off changes the qualified phase outcome; H2 if all arms
+share the same pre-title outcome; H3 if controls are not comparable.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/s2968_m5_step1/run_fixed.sh
+    zsh scratch/agent/s3973_m5_route_ab/run_fixed.sh
 
-The driver launches silent and image arms concurrently with the same
-phase-gated controls, positive M5 markers, and SIGKILL cleanup. Do not change
-audio behavior or add another M3 guard in this unit; if the driver cannot
-launch from the current build/ROM, record that concrete blocker and stop.
+The driver must use SIGKILL cleanup, run from `build/`, and carry the passive
+M5 markers and phase controls. Do not interpret any task/PCM null before a
+title or hangar phase.
