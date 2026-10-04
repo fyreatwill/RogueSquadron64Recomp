@@ -141667,6 +141667,7 @@ representatives are `0x80004BE8`, `0x80004E74`, and `0x80004E8C`.
 ORIGIN: diagnostic-only independent retail writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
 ## Session 3881 (2026-10-03) — confirmed the M3 patch-pipeline block
 
 Ran the prescribed M3 validation command:
@@ -141699,3 +141700,21 @@ representatives are `0x80004E90`, `0x80004E94`, and `0x80004F2C`.
 ORIGIN: diagnostic-only independent retail writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3883 (2026-10-03) — classified the next candidate-span writer classes
+
+The first invocation exposed a stale driver that watched `0x1797B0..0x179A48`
+instead of the candidate span, so it was not used as evidence. The corrected
+paired candidate-span arm passed retail whole-RDRAM, title VI 1024, hangar VI
+512, and oracle shutdown controls. `0x80004E90`, `0x80004E94`, and
+`0x80004F2C` each produced qualified candidate-span writer rows at 14/38
+title/hangar, while post-target scalar attribution recorded zero samples for
+each. This selects H2 for these PCs only and rules out H1 at this scope.
+
+The port arm crashed before ABI/image-DMA controls at
+`spTaskSchedulerThread+9556` / guest PC `0x8000834C`; no paired port conclusion
+is claimed. The next measured representatives are `0x80066474`, `0x80097524`,
+and `0x8009752C`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution;
+no guest or host state was rewritten, skipped, or guarded.
