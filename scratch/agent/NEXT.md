@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
 
 The M3 validation prerequisites remain unavailable, so the next runnable
-bounded M5 arm is `0x80085898`, `0x8008589C`, and `0x80066450`. Keep the retail
+bounded M5 arm is `0x80001AD0`, `0x80001AD8`, and `0x80001AE0`. Keep the retail
 oracle and port arms in one run, with title/hangar phase controls and all
 passive breadcrumbs. Do not infer an image producer from a writer-PC hit alone.
 
@@ -26,14 +26,14 @@ is accepted.
 
 Preparation and run:
 
-    cp scratch/agent/run_s3869_m5_remaining_candidate_writers.sh \
-      scratch/agent/run_s3872_m5_remaining_candidate_writers.sh
+    cp scratch/agent/run_s3872_m5_remaining_candidate_writers.sh \
+      scratch/agent/run_s3873_m5_remaining_candidate_writers.sh
     sed -i '' \
-      -e 's#s3869_m5_remaining_candidate_writers#s3872_m5_remaining_candidate_writers#g' \
-      -e 's#0x80084E48,0x8008509C,0x800852E0#0x80085898,0x8008589C,0x80066450#g' \
-      -e 's#0x80084e48|0x8008509c|0x800852e0#0x80085898|0x8008589c|0x80066450#g' \
-      scratch/agent/run_s3872_m5_remaining_candidate_writers.sh
-    zsh scratch/agent/run_s3872_m5_remaining_candidate_writers.sh
+      -e 's#s3872_m5_remaining_candidate_writers#s3873_m5_remaining_candidate_writers#g' \
+      -e 's#0x80085898,0x8008589C,0x80066450#0x80001AD0,0x80001AD8,0x80001AE0#g' \
+      -e 's#0x80085898|0x8008589c|0x80066450#0x80001ad0|0x80001ad8|0x80001ae0#g' \
+      scratch/agent/run_s3873_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3873_m5_remaining_candidate_writers.sh
 
 Record the arm outcome in PORTING-STATE.md and update the candidate list from
 the measured result. Kill both processes with SIGKILL as the runner requires.

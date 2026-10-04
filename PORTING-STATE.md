@@ -141505,3 +141505,20 @@ crash/abort markers. The next bounded representatives are `0x80085898`,
 
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
+
+## Session 3872 (2026-10-03) — classified three remaining candidate writers
+
+The first prepared invocation was invalid: the copied template still targeted
+the prior `0x80029E8C`/`0x80035124`/`0x80004520` arm. It was not used as
+evidence. The corrected paired retail/port arm targeted `0x80085898`,
+`0x8008589C`, and `0x80066450`. Retail whole-RDRAM, title VI 1024, hangar VI
+512, and clean shutdown controls passed. The first two PCs had qualified
+title/hangar candidate-span writer rows at 105/233 each and the third had one
+hangar row; all three had zero post-target scalar samples. The port reached
+3,024 image-DMA joins with zero crash/abort markers. This selects H2 for these
+three PCs only and rules out their being established nonzero image producers
+at this scope. The next bounded representatives are `0x80001AD0`,
+`0x80001AD8`, and `0x80001AE0`.
+
+ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+guest or host state was rewritten, skipped, or guarded.
