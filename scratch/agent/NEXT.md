@@ -1,30 +1,31 @@
-# Next work unit: validate the accumulated M3 heap patch
+# Next work unit: qualify M5 candidate writers 0x800051EC–0x800051F4
 
-HYPOTHESIS-ID: m3-heap-patch-pipeline
+HYPOTHESIS-ID: m5-candidate-writer-census
 
-The last work unit added the early active-queue ownership guard in
-`patches/heap_guards.c`. First determine whether the configured tree can build
-the accumulated patch; do not add another guard if it cannot.
+Run the existing same-build retail/port candidate-writer census for
+`0x800051EC`, `0x800051F0`, and `0x800051F4`. Use the validated legacy audio
+DMA rollback (`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`) on the port arm so the
+declared-size task-contract crash cannot contaminate this writer qualification.
+The existing instrument's whole-RDRAM, title-1024, hangar-512, oracle-done,
+and paired port payload/task controls must all be reported.
 
 Competing hypotheses:
 
-- H1: the patch pipeline is configured and can compile/link the accumulated
-  MIPS guard for runtime qualification.
-- H2: the patch target is absent or the MIPS toolchain is unavailable, so no
-  runtime claim is possible.
-- H3: the patch build fails for a new source/link reason that needs repair.
+- H1: at least one candidate executes in a qualified retail target phase and
+  has a post-store/scalar sample, identifying a live writer candidate.
+- H2: retail reaches all controls but all three candidates remain absent from
+  target-phase, post-target, and scalar evidence; this bounded class is not a
+  writer.
+- H3: the port arm cannot qualify because the legacy rollback still fails or
+  its source/task controls do not close, so this class is unevaluable.
 
-Discriminator: `cmake --build build --config Debug --target PatchesLib` must
-either produce the target and its generated patch artifact (H1), report the
-known missing target/toolchain boundary (H2), or show a new actionable build
-failure (H3). The ordinary host build is a secondary control only.
+Discriminator: compare the single-run retail candidate rows/post-store
+samples with the independent whole-RDRAM and phase controls, then require the
+paired port to reach title/hangar without crash/abort and with its existing
+source/task joins. A candidate hit selects H1; clean retail absence with
+qualified port selects H2; missing controls or a legacy-arm crash selects H3.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    cmake --build build --config Debug --target PatchesLib
-
-If H1 is selected, inspect the generated patch artifact and run the existing
-patch-qualified route. If H2 repeats, stop the M3 campaign and return to the
-M5 candidate census only after recording that external dependency; do not add
-another unqualified guard.
+    env zsh scratch/agent/run_s3984_m5_candidate_writers.sh
