@@ -3223,6 +3223,63 @@ extern "C" void rs64_m5_scheduler_handoff(uint8_t* rdram,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_scheduler_boundary(uint8_t* rdram, const char* edge,
+                                             uint32_t pc, uint32_t a0,
+                                             uint32_t a1, uint32_t a2,
+                                             uint32_t successor) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SCHEDULER_BOUNDARY");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || !rdram) return;
+
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t phase_rows = 0;
+    static uint32_t control_key = 0xFFFFFFFFu;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        phase_rows = 0;
+    }
+    if (key != control_key) {
+        control_key = key;
+        std::fprintf(stderr,
+            "[m5-scheduler-boundary-control] phase=%u width=%u origin=0x%06X\n",
+            rs64_phase_ord(), width, origin);
+    }
+    if (phase_rows >= 128u) return;
+    const OSTask* task = nullptr;
+    if (a0 >= 0x80000000u && a0 < 0x80800000u) {
+        const uint32_t offset = (a0 - 0x80000000u) ^ 3u;
+        task = reinterpret_cast<const OSTask*>(rdram + offset);
+    }
+    const uint32_t task_type = task ? static_cast<uint32_t>(task->t.type) : 0u;
+    const uint32_t ucode = task ? static_cast<uint32_t>(task->t.ucode) : 0u;
+    const uint32_t ucode_size = task ? static_cast<uint32_t>(task->t.ucode_size) : 0u;
+    const uint32_t ucode_data = task ? static_cast<uint32_t>(task->t.ucode_data) : 0u;
+    const uint32_t declared_size = task ? static_cast<uint32_t>(task->t.ucode_data_size) : 0u;
+    const uint32_t data_ptr = task ? static_cast<uint32_t>(task->t.data_ptr) : 0u;
+    const uint32_t data_size = task ? static_cast<uint32_t>(task->t.data_size) : 0u;
+    const char* legacy = std::getenv("ROGUESQ_AUDIO_LEGACY_UCODE_DMA");
+    const uint32_t staging = (legacy && legacy[0] && legacy[0] != '0') ? 0xF80u : declared_size;
+    std::fprintf(stderr,
+        "[m5-scheduler-boundary] row=%u edge=%s pc=0x%08X phase=%u width=%u "
+        "origin=0x%06X a0=0x%08X a1=0x%08X a2=0x%08X successor=0x%08X "
+        "type=0x%08X ucode=0x%08X ucode_size=0x%X ucode_data=0x%08X "
+        "declared=0x%X staging=0x%X data=0x%08X data_size=0x%X arm=%s\n",
+        phase_rows++, edge ? edge : "?", pc, rs64_phase_ord(), width, origin,
+        a0, a1, a2, successor, task_type, ucode, ucode_size, ucode_data,
+        declared_size, staging, data_ptr, data_size,
+        (legacy && legacy[0] && legacy[0] != '0') ? "legacy" : "declared");
+    std::fflush(stderr);
+}
+
 static bool rs64_m5_descriptor_phase(uint32_t* phase, uint32_t* width,
                                      uint32_t* origin, const char** arm) {
     uint32_t ordinal = 0, row = 0;

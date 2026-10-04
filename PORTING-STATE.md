@@ -143682,3 +143682,22 @@ Ran the single planned work unit with `zsh scratch/agent/run_s4006_m5_candidate_
 Ran the single planned work unit with `zsh scratch/agent/run_s4005_m5_candidate_writers.sh` to re-qualify the legacy/real route after s4007. The concurrent retail oracle passed its whole-RDRAM positive control, title VI 1024 control (154 hits), hangar VI 512 control (188 hits), and completion. The paired port reached the RSP source-hook control, then crashed in `spTaskSchedulerThread` at guest PC `0x8000834c` before either target phase; it emitted zero `audtask-abi` and `audtask-image-dma-join` rows.
 
 This is the second consecutive pre-target route failure, so the candidate set remains unevaluable and the candidate census is parked. It rules out treating the missing candidate hits as a qualified retail null, but does not distinguish malformed task staging from scheduler/state corruption. The next unit is a batched legacy-versus-declared task-scheduler discriminator around the failing boundary.
+
+## Session 4009 (2026-10-04) — selected legacy-only scheduler failure
+
+Built the Debug target after adding the regeneration-safe `s4009` scheduler
+boundary table and ran `zsh scratch/agent/run_s4009_m5_scheduler_boundary.sh`.
+The first capture exposed a diagnostic defect: a run-lifetime cap filled during
+boot and hid target rows; the table was changed to reset per VI phase, the
+wrapper summary was fixed, and the target was rebuilt before the result below.
+The concurrent retail oracle passed its whole-RDRAM positive control and
+reached title VI 1024 and hangar VI 512. The declared/real port fired the RSP
+source-hook control, reached both target phases, and emitted 26,829
+phase-scoped scheduler-boundary rows. The legacy/real port fired the same
+source-hook control, then crashed in `spTaskSchedulerThread+9632` at guest PC
+`0x8000834C` before target phases and before any `audtask-abi` row. This selects
+H2 at route level: the legacy-only path is the differentiator in this capture;
+H1 and H3 are not supported. The table's scheduler `a0` is a message object,
+not the OSTask pointer, so its decoded task fields are not ground truth; the
+existing ABI rows remain authoritative for task fields. ORIGIN: diagnostic
+boundary only; no skip, guard, restore, or other mitigation landed.
