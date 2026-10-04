@@ -141552,3 +141552,21 @@ at this scope. The next bounded representatives are `0x80001AD0`,
 
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
+## Session 3875 (2026-10-03) — paired the next candidate-span writer classes
+
+Ran `scratch/agent/run_s3875_m5_remaining_candidate_writers.sh`, with retail
+and port arms in one phase-gated capture. The retail oracle passed the
+whole-RDRAM positive control, title VI 1024, hangar VI 512, and shutdown. The
+port reached 174 phase observations, 2,076 audio-task ABI rows, and 2,071
+image-DMA joins, with zero crash or abort markers.
+
+Candidate-span writer PCs `0x80001AE8`, `0x80001AF4`, and `0x80001B78` each
+had qualified title/hangar writer rows: 1680/358, 1680/358, and 1677/338.
+The post-target summary recorded zero samples for each PC. This selects H2
+for these three PCs only: they write the watched candidate span in the retail
+oracle but are not established as nonzero image producers. It rules out H1
+for these three PCs and does not classify the remaining writer classes.
+
+ORIGIN: independent retail oracle writer-PC/post-target attribution paired
+with port image-DMA joins; no guest or host state was rewritten, skipped, or
+guarded.

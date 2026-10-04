@@ -2,10 +2,8 @@
 
 HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
 
-Run the existing paired retail/port candidate-span driver with writer PCs
-`0x80001AE8`, `0x80001AF4`, and `0x80001B78`. The prior s3874 port arm did
-not reach target controls, so preserve that as a single-source retail result
-unless the next paired arm independently reaches its controls.
+Run the paired retail/port candidate-span driver with writer PCs
+`0x80001B7C`, `0x80003A10`, and `0x80003A18`.
 
 Competing hypotheses and discriminator:
 
@@ -27,4 +25,4 @@ Exact command:
     zsh scratch/agent/run_s3875_m5_remaining_candidate_writers.sh
 
 The driver must kill both arms with SIGKILL after its watchdog and write
-captures under `scratch/agent/s3875_m5_remaining_candidate_writers/`.
+captures under `scratch/agent/s3876_m5_remaining_candidate_writers/`.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3874 (2026-10-03).
+Updated for session 3875 (2026-10-03).
 
 ## Current state
 
@@ -110,7 +110,13 @@ Work only the first applicable item. This is one monotonic backlog.
    scalar samples, selecting H2 for these PCs only. The paired port arm
    stalled before its target-VI/image-DMA controls in this run, so this is
    single-source retail evidence; do not promote it to a global producer
-   absence. Continue with `0x80001AE8`, `0x80001AF4`, and `0x80001B78`.
+   absence. Session 3875 completed the paired arm: retail controls passed,
+   and the port reached target phases and 2,071 image-DMA joins with no
+   crash/abort. All three PCs had qualified title/hangar candidate-span
+   writer rows (`0x80001AE8` 1680/358, `0x80001AF4` 1680/358,
+   `0x80001B78` 1677/338) but zero post-target samples, selecting H2 for
+   these PCs only. Continue with `0x80001B7C`, `0x80003A10`, and
+   `0x80003A18`.
 2. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
    session 3873 extended the guard to validate the head's `next->prev` back-link
@@ -180,6 +186,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RemainingCandidates-84cAbsent` | Single-source retail result at s3871: `0x80084C0C`, `0x80084D58`, and `0x80084FAC` had no qualified candidate-span writer rows or post-target samples after positive controls; they do not own the measured target edge. |
 | `H-M5-RemainingCandidates-8589Absent` | Single-source retail result at s3872: `0x80085898` and `0x8008589C` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples; `0x80066450` had one hangar writer row and zero post-target samples. They are not established as nonzero image producers. |
 | `H-M5-RemainingCandidates-01adAbsent` | Single-source retail result at s3874: `0x80001AD0`, `0x80001AD8`, and `0x80001AE0` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples. They are not established as nonzero image producers; the paired port arm did not reach target controls. |
+| `H-M5-RemainingCandidates-01aeAbsent` | Paired result at s3875: `0x80001AE8`, `0x80001AF4`, and `0x80001B78` had qualified title/hangar candidate-span writer rows but zero post-target samples; port target/image-DMA controls passed with no crash/abort. They are not established as nonzero image producers. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 | `H-M3-FreeListReciprocalLinks` | Code landed in s3866; validation blocked by absent MIPS toolchain/configured targets. |
@@ -435,6 +442,19 @@ Work only the first applicable item. This is one monotonic backlog.
   ORIGIN: `func_8002221C` and the free-list link stores publish the successor
   and reciprocal predecessor; a mismatched pair is malformed allocator state,
   not a legitimate value.
+
+- **3875:** The paired retail/port arm passed its positive controls. Retail
+  reached title 1024, hangar 512, and clean shutdown; port reached 174 phase
+  observations, 2,076 ABI rows, and 2,071 image-DMA joins with zero
+  crash/abort markers. PCs `0x80001AE8`, `0x80001AF4`, and `0x80001B78`
+  each wrote the candidate span in title/hangar, at 1680/358, 1680/358,
+  and 1677/338 rows respectively, while each had zero post-target samples.
+  H2 is selected for these three PCs only; the remaining writer classes stay
+  open.
+
+  ORIGIN: independent retail phase-gated writer-PC and post-target
+  attribution, paired with the port's image-DMA joins; no guest or host state
+  was rewritten, skipped, or guarded.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.
