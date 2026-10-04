@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -u
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-OUT=$ROOT/scratch/agent/s3960_m5_candidate_writers
+OUT=$ROOT/scratch/agent/s3961_m5_candidate_writers
 mkdir -p "$OUT"
 ORACLE=$ROOT/tools/oracle/build/rs64_oracle
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
@@ -19,7 +19,7 @@ env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
   --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
   --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 --pc-hist-watch 4 \
   --post-value-watch 2 --post-value-watch 3 \
-  --post-value-pc 0x80005138,0x8000513C,0x80005140 --post-value-pc-detail \
+  --post-value-pc 0x80005144,0x80005148,0x8000514C --post-value-pc-detail \
   --vi-trace --hit-cap 20 --press "$PRESS" --hold-ms 150 > "$OUT/retail.log" 2>&1 & retail=$!
 cd "$ROOT/build" || exit 2
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
@@ -47,4 +47,4 @@ done > "$OUT/driver.log"
 for marker in '[phase]' '[audtask-abi]' '[audtask-image-stage]' '[audtask-image-dma-join]' 'CRASH' 'ABORT'; do
   print -r -- "port_${marker// /_}=$(grep -a -F -c "$marker" "$OUT/port.log" || true)" >> "$OUT/driver.log"
 done
-grep -a -E '0x8000513[8Cc]|0x80005140|post-store-scalar|post-value|oracle] done|positive-control|origin=0x00(790400|6ab400)' "$OUT/retail.log" | tail -120 > "$OUT/retail_provenance_tail.txt" || true
+grep -a -E '0x8000514[48Cc]|post-store-scalar|post-value|oracle] done|positive-control|origin=0x00(790400|6ab400)' "$OUT/retail.log" | tail -120 > "$OUT/retail_provenance_tail.txt" || true

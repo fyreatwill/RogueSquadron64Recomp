@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-candidate-writer-census
 
 Run the existing same-build retail-oracle/port census for candidate PCs
-`0x80005138`, `0x8000513C`, and `0x80005140`. Preserve the whole-RDRAM
+`0x80005144`, `0x80005148`, and `0x8000514C`. Preserve the whole-RDRAM
 positive control, title VI 1024, hangar VI 512, oracle completion, and the
 phase-gated image-DMA payload controls. Build first:
 
