@@ -141354,6 +141354,20 @@ the fresh dominant PCs `0x80092020`, `0x8009206C`, and `0x80007670`.
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
 
+## Session 3864 (2026-10-03) — classified next candidate writer classes
+
+Ran the paired `scratch/agent/run_s3864_m5_remaining_candidate_writers.sh`
+arm. The retail oracle passed the whole-RDRAM positive control, title VI 1024,
+hangar VI 512, and clean shutdown. In the hangar candidate span,
+`0x800076A0`, `0x80085890`, and `0x800852D8` had 1,665, 252, and 154
+phase-gated writer rows respectively, but each had zero post-target samples.
+The port independently reached 2,892 image-DMA joins with zero crash/abort
+markers. This selects H2 only for these three PCs and rules out no remaining
+candidate writer class.
+
+ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+guest or host state was rewritten, skipped, or guarded.
+
 ## Session 3861 (2026-10-03) — bounded candidate-span scalar attribution
 
 Ran `scratch/agent/run_s3861_m5_candidate_span_scalar.sh`, watching physical
