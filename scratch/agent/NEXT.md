@@ -1,32 +1,34 @@
-# Next work unit: qualify the expansion-chain ownership guard when the patch toolchain is available
+# Next work unit: requalify the four-arm M5 route before resuming source census
 
-HYPOTHESIS-ID: m3-expansion-chain-links-4026
+HYPOTHESIS-ID: m5-route-requalification-4028
 
 Competing hypotheses:
 
-- H1: `func_8002221C` returns a well-formed expansion chain; the new
-  reciprocal-link guard is behavior-preserving and the ordinary host build
-  remains clean.
-- H2: the source-level guard is malformed or introduces an ABI/build defect;
-  the host build or patch compilation fails before runtime.
-- H3: the chain can be malformed at runtime, but this checkout cannot qualify
-  that because the configured MIPS toolchain/PatchesLib target is unavailable.
+- H1: the current route is qualified; retail and declared/real,
+  declared/silent, and legacy/real all reach title VI 1024 and hangar VI 512
+  in one same-build capture with their RSP/audio controls and no crash/abort.
+- H2: one audio arm is causally route-breaking; its phase/control pattern or
+  crash differs from the other arms.
+- H3: the route result is schedule-sensitive or otherwise unevaluable; at
+  least one port arm fails before the target phases without a reproducible
+  arm-specific discriminator.
 
-Discriminator: build the changed patch and ordinary Debug target in one
-bounded check. H1 requires `git diff --check` and a successful
-`RogueSquadron64Recomp` Debug build. H2 is a reproducible compiler/linker
-failure attributable to this guard. H3 is the specific configured-toolchain
-failure after the source/host checks pass; it is not evidence that the alias
-occurs.
+Discriminator: run all four arms concurrently in one capture. Retail's
+whole-RDRAM positive control, title/hangar VI controls, each port arm's
+`m5-rsp-source-hook-control` and audio-stage control, target phases, and
+crash/abort markers must be summarized per arm. H1 requires all arms to reach
+both target phases without crash/abort; H2 requires a repeatable arm-specific
+failure; H3 is the result when a port arm fails without that separation.
 
-Commands:
+Exact commands:
 
 ```sh
-git diff --check
 cmake --build build --config Debug --target RogueSquadron64Recomp
-cmake --build build --config Debug --target PatchesLib
+zsh scratch/agent/run_s4028_m5_route_requal.sh
 ```
 
-If `PatchesLib` remains unavailable, record the exact CMake target failure and
-leave runtime qualification blocked. Do not run the parked M5 census or add
-another diagnostic field in this unit.
+The new script must be self-contained and launch retail plus declared/real,
+declared/silent, and legacy/real concurrently, use the established
+phase-gated controls from `scratch/agent/run_s4015_m5_scheduler_spin_split.sh`,
+and SIGKILL all children in cleanup. Do not resume the `0x800052AC` census or
+change audio behavior until this four-arm discriminator is reported.

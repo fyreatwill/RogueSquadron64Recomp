@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4026 (2026-10-04).
+Updated for session 4027 (2026-10-04).
 
 ## Current state
 
@@ -349,6 +349,14 @@ host-build cleanliness, not that a malformed chain occurs. ORIGIN:
 `func_8002221C` and its expansion-chain link stores; a foreign predecessor is
 not legitimate free-list ownership.
 
+Session 4027 qualified the expansion-chain guard at source and host-build scope:
+`git diff --check` and the ordinary Debug target passed, while the configured
+`PatchesLib` target failed before compilation with `No rule to make target
+'PatchesLib'`. This rules out a source/host-build defect but leaves runtime
+qualification blocked; it does not establish that a malformed chain occurs.
+ORIGIN: `func_8002221C` and its expansion-chain link stores; no mitigation was
+added in this session.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
@@ -360,11 +368,11 @@ candidate results are summarized by address range rather than copied here.
    title/hangar phases, RSP/audio controls, and no crash/abort in all port
    arms before resuming the parked `0x800052AC` candidate class.
 
-2. **M3 patch qualification.** Session 4026 added reciprocal-link validation
-   to the expansion-chain ownership guard. Runtime qualification remains
-   blocked until the configured `PatchesLib` target and MIPS toolchain are
-   supplied; do not infer that a malformed chain occurs from the source guard
-   alone.
+2. **M3 patch qualification.** Session 4027 rechecked reciprocal-link
+   validation: `git diff --check` and the ordinary Debug target passed, while
+   `PatchesLib` remains unavailable before compilation. Runtime qualification
+   remains blocked until the configured target and MIPS toolchain are supplied;
+   do not infer that a malformed chain occurs from the source guard alone.
 
 3. **M5 next source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte

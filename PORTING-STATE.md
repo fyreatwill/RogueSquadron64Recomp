@@ -144003,3 +144003,15 @@ blocked. This rules out a source/host-build failure, not the occurrence of a
 malformed expansion chain or an active-queue alias. The next work unit is M5
 route requalification; do not infer runtime guard behavior from this source
 check.
+
+## Session 4027 (2026-10-04) — qualified expansion-chain guard host build
+
+Ran the single prescribed M3 work unit for the reciprocal-link guard in
+`patches/heap_guards.c`. `git diff --check` passed and
+`cmake --build build --config Debug --target RogueSquadron64Recomp` completed
+successfully. The requested `PatchesLib` target failed before compilation with
+`make: *** No rule to make target 'PatchesLib'. Stop.` H1 is selected for the
+source/host-build discriminator; H2 is ruled out. H3 remains the runtime
+qualification state: the configured patch target/toolchain is unavailable, so
+this result does not show that a malformed expansion chain occurs. ORIGIN:
+`func_8002221C` and its expansion-chain link stores; no mitigation was added.
