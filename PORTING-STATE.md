@@ -142525,3 +142525,16 @@ candidate set only; it does not establish global writer absence. The paired
 port reached hangar with 2,846 qualified image-DMA joins and no crash or abort;
 qualified payload remained `FNV=0x762B22A5`, nonzero=0. The next adjacent set
 is `0x80005030`, `0x80005034`, and `0x80005038`.
+## Session 3933 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3933_m5_candidate_writers.sh` after rebuilding
+the Debug target for `0x80005030`, `0x80005034`, and `0x80005038`. The first
+attempt used the wrong local binary path and was unevaluable; the corrected
+run passed retail whole-RDRAM, title VI 1024, hangar VI 512, and
+oracle-completion positive controls. All three candidates had zero
+target-phase execution, zero post-target rows, and zero scalar samples. This
+selects H3 for this bounded candidate set only; it does not establish global
+writer absence. The paired port reached phase 5 with 2,067 qualified
+image-DMA joins and no crash or abort; qualified payload remained
+`FNV=0x762B22A5`, nonzero=0. The next adjacent set is `0x8000503C`,
+`0x80005040`, and `0x80005044`.

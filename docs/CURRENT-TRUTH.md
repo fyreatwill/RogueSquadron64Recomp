@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3932 (2026-10-03).
+Updated for session 3933 (2026-10-03).
 
 ## Current state
 
@@ -260,6 +260,16 @@ Work only the first applicable item. This is one monotonic backlog.
    qualified image payload remained `FNV=0x762B22A5`, nonzero=0. Continue
    with `0x80005030`, `0x80005034`, and `0x80005038`; this is not global
    writer absence.
+
+   Session 3933 tested `0x80005030`, `0x80005034`, and `0x80005038` after
+   correcting the local binary path in the paired harness. Retail
+   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls all
+   passed; all three candidates had zero target-phase execution, post-target
+   rows, and scalar samples. This selects H3 for this bounded class only.
+   The paired port reached phase 5 with 2,067 image-DMA joins and no
+   crash/abort; qualified payload remained `FNV=0x762B22A5`, nonzero=0.
+   Continue with `0x8000503C`, `0x80005040`, and `0x80005044`; this is not
+   global writer absence.
 
 4. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
    and the expanded reciprocal-link guards are landed in
