@@ -5,7 +5,8 @@ HYPOTHESIS-ID: m5-candidate-writer-census
 Run the paired retail/port candidate-writer harness with its three candidate
 PCs set to `0x800050CC`, `0x800050D0`, and `0x800050D4`. Build the Debug
 target first; retain whole-RDRAM, title-1024, hangar-512, oracle-completion,
-and passive M5 controls.
+and passive M5 controls. The new PCM host-boundary conversion is part of this
+build and must not be disabled.
 
 Competing hypotheses:
 

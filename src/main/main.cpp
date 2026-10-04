@@ -5327,9 +5327,22 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
     // this host bridge as "already fully implemented and functional,
     // confirmed by the runtime survey, not assumed" -- that claim is
     // overturned (docs/CURRENT-TRUTH.md superseded section, this session).
+    // RDRAM stores N64 PCM in network byte order; SDL_AUDIO_S16SYS expects
+    // native-endian samples. Convert at this host boundary so the guest's
+    // sample count and address remain unchanged while the device gets values
+    // in its configured format.
+    std::vector<int16_t> native_samples(num_samples);
+    const uint8_t* n64_bytes = reinterpret_cast<const uint8_t*>(samples);
+    for (size_t i = 0; i < num_samples; ++i) {
+        const uint16_t value = (static_cast<uint16_t>(n64_bytes[i * 2]) << 8) |
+                               static_cast<uint16_t>(n64_bytes[i * 2 + 1]);
+        native_samples[i] = static_cast<int16_t>(value);
+    }
+
     const uint32_t queued_before = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
     if (audio_device) {
-        SDL_QueueAudio(audio_device, samples, (Uint32)(num_samples * sizeof(int16_t)));
+        SDL_QueueAudio(audio_device, native_samples.data(),
+                       (Uint32)(num_samples * sizeof(int16_t)));
     }
     const uint32_t queued_after = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
     rs64_m5_audio_host_row("queue", queued_before, queued_after,

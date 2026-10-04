@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3948 (2026-10-04).
+Updated for session 3949 (2026-10-04).
 
 ## Current state
 
@@ -12,6 +12,13 @@ cinematic, star flare, Factor 5 logo, title VI 1024 (`0x00790400`), and hangar
 VI 512 (`0x006AB400`) with real-audio/LLE/spin-yield/autopilot controls.
 Hangar geometry and color artifacts remain. `ROGUESQ_AUDIO_UCODE=0` selects
 the silent `Broke` control; real audio is not production-complete.
+
+Session 3949 landed the next M5 host-boundary behavior change: the SDL audio
+callback now converts 16-bit PCM bytes from N64 big-endian RDRAM into native
+`int16_t` samples before queueing, while preserving the guest address, sample
+count, and SDL byte length. The Debug target links successfully. This is a
+runtime change, not proof that the Factor 5 image produces valid nonzero PCM;
+the remaining M5 task/source/consumer joins still require phase qualification.
 
 The active M5 boundary is source payload, not rendering. Qualified retail and
 port hangar-phase source spans are zero (`FNV=0x762B22A5`). Retail's shutdown

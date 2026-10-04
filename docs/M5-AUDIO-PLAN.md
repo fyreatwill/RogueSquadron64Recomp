@@ -1,6 +1,6 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 3303 (2026-08-30). This is the design gate for M5.
+Refreshed in session 3949 (2026-10-04). This is the design gate for M5.
 Session 3303 supersedes the linked-runtime part of Session 2791's SP-yield
 conclusion. The weak task-start implementation clears stale request state, but
 the linked strong override shadows that function without clearing it. More
@@ -40,6 +40,13 @@ without allowing the first dispatched task to pin later tasks to that arm.
 The image and silent smoke controls retained their expected dispatch and
 SP-completion rows, but stopped before the target title phase; this is a
 runtime qualification fix, not evidence of downstream audio output.
+
+Session 3949 implemented the host-side PCM representation edge from Step 10:
+`queue_samples` now constructs native-endian `int16_t` values from the two
+network-order bytes in each N64 sample before calling `SDL_QueueAudio`. The
+sample count, guest address, and queued byte length remain unchanged. This
+does not select a Factor 5 task writer or prove nonzero PCM; it is the concrete
+host-boundary behavior change required before that qualification can be used.
 
 The source-level inventory was checked directly in `main.cpp`,
 `librecomp/rsp.cpp`, `librecomp/ai.cpp`, `ultramodern/audio.cpp`,

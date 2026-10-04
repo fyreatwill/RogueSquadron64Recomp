@@ -142722,3 +142722,18 @@ only; this does not establish global writer absence. The paired port reached
 hangar with 2,869 image-DMA joins and no crash or abort; qualified payload
 remained `FNV=0x762B22A5`, nonzero=0. The next adjacent set is
 `0x800050CC`, `0x800050D0`, and `0x800050D4`.
+
+## Session 3949 (2026-10-04) — landed native-endian PCM host-boundary conversion
+
+The M5 work unit implemented the concrete Step-10 host audio boundary change
+in `src/main/main.cpp`. `queue_samples` now reads each 16-bit sample as two
+N64 big-endian RDRAM bytes and constructs a native `int16_t` before passing the
+buffer to SDL; `num_samples`, the guest RDRAM address used for joins, and the
+SDL byte count are unchanged. This removes the host-format stub at the device
+boundary without changing RSP dispatch or guest task behavior.
+
+The Debug target completed and linked successfully. The build is the positive
+control for the changed runtime path; no new runtime soak was run, so this
+does not establish that the Factor 5 image produces legitimate nonzero PCM or
+close the task/source/consumer contract. It rules out the prior implementation
+having a native-endian conversion at the SDL boundary.
