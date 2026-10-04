@@ -144321,3 +144321,23 @@ the latest route and M3 conclusions, preserving the one monotonic backlog, and
 pointing durable background to `docs/PROJECT-OVERVIEW.md`. The next unit is
 restoring or qualifying the absent `PatchesLib` target; no technical conclusion
 was changed by this documentation maintenance.
+## Session 4049 (2026-10-04) — repaired cross-platform M3 patch discovery but host lacks MIPS toolchain
+
+Ran the mandated M3 patch-target work unit. The source guard contract was
+already established: its ORIGIN is `heap_tail_loc` plus the active-queue append
+stores, and a predecessor on the sentinel path is not legitimate ownership
+state. The configured graph hard-coded Windows `.exe` tool names and retained
+a stale Windows `N64RECOMP_EXE` cache path on this macOS host. Updated
+`CMakeLists.txt` to choose platform-native names, discover `mips64-elf-gcc` and
+`mips64-elf-ld` from PATH when needed, and repair an invalid cached N64Recomp
+path while preserving a valid explicit path.
+
+After reconfiguration, CMake recognized `build/N64Recomp` but still skipped
+the patches graph because neither MIPS compiler nor linker exists on PATH or at
+the configured Windows path. `cmake --build ... --target PatchesLib` therefore
+still reported `No rule to make target 'PatchesLib'`; the ordinary
+`RogueSquadron64Recomp` target had already built successfully. This advances
+the build-graph repair but does not qualify the patch or infer runtime behavior.
+The next discriminator is a host/toolchain with both MIPS tools: it must produce
+`patches.elf`, generated `RecompiledPatches/patches.c`, and `PatchesLib` before
+the sentinel guard can be runtime-qualified.

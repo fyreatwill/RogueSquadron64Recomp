@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4048 (2026-10-04).
+Updated for session 4049 (2026-10-04).
 
 ## Current state
 
@@ -30,9 +30,9 @@ M3 has landed regeneration-safe ownership guards in `patches/heap_guards.c`
 for free-list span/reciprocal links, active-queue reachability and aliasing,
 empty-queue tail state, expansion ownership, and the active sentinel's
 predecessor. The ordinary Debug target builds. Runtime qualification is
-blocked because the configured build graph has no `PatchesLib` target; the
-last attempt failed before compilation with `No rule to make target
-'PatchesLib'`. The sentinel guard's ORIGIN is `heap_tail_loc` and the
+blocked because this host has neither `mips64-elf-gcc` nor `mips64-elf-ld`, so
+CMake still omits `PatchesLib` after the cross-platform discovery repair. The
+sentinel guard's ORIGIN is `heap_tail_loc` and the
 active-queue append stores; a predecessor on the sentinel path is not
 legitimate ownership state.
 
@@ -48,9 +48,9 @@ legitimate ownership state.
 - Route permutations through sessions 4030–4032 and 4034, 4039, 4042–4046
   changed which port arm failed or qualified. This confirms a schedule/route
   discriminator is needed; it does not identify the missing source writer.
-- Session 4047 qualified the sentinel guard only at source/host-build scope:
-  ordinary Debug succeeded, `PatchesLib` was absent, and no runtime behavior
-  was inferred.
+- Session 4047 qualified the sentinel guard only at source/host-build scope;
+  session 4049 repaired cross-platform discovery but still found no MIPS
+  toolchain. `PatchesLib` was absent and no runtime behavior was inferred.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -59,10 +59,11 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Restore M3 patch integration.** On a host with the MIPS toolchain,
-   restore the `PatchesLib` target and runtime-qualify the active-sentinel
-   predecessor guard. The source and ordinary host target already pass; do
-   not infer runtime behavior from that build alone.
+1. **Qualify M3 patch integration.** On a host with the MIPS toolchain, use
+   the repaired discovery path to build `PatchesLib` and runtime-qualify the
+   active-sentinel predecessor guard. The source and ordinary host target
+   already pass; do not infer runtime behavior from that build alone. This
+   host is blocked only on installing/providing the MIPS compiler and linker.
 2. **Requalify the M5 route.** Run one genuinely new same-build launch-order
    or gap table. Retail controls and all three port-arm target-phase controls
    must qualify; classify any pre-target failure as H3, never as writer
