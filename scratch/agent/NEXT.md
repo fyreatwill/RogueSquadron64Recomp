@@ -2,10 +2,9 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
-Test retail PCs `0x80004F7C`, `0x80004F80`, and `0x80004F84` with the existing
-phase-gated oracle and paired port route. Retain any port pre-target failure
-as a separate route caveat and do not treat it as evidence about the retail
-writers.
+Test retail PCs `0x80004F88`, `0x80004F8C`, and `0x80004F90` with the existing
+phase-gated oracle and paired port route. Keep any port pre-target failure or
+zero image-DMA count separate from the retail writer result.
 
 Competing hypotheses:
 
@@ -19,12 +18,12 @@ Competing hypotheses:
 Discriminator: retail whole-RDRAM, title-1024, and hangar-512 controls must
 pass, then compare each candidate's qualified-phase execution, post-target
 rows, and post-target scalar samples. Record the paired port outcome, but do
-not infer image-DMA behavior if it crashes before target phase.
+not infer image-DMA behavior from a run that lacks target-phase joins.
 
 Exact command:
 
-    zsh scratch/agent/run_s3912_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3913_m5_remaining_candidate_writers.sh
 
 ORIGIN: no mitigation or guard is planned. Candidate PCs are independent
-retail writer hypotheses; their legitimacy remains unresolved until the
-oracle attributes a qualified post-target value.
+retail writer hypotheses; their legitimacy remains unresolved until the oracle
+attributes a qualified post-target value.

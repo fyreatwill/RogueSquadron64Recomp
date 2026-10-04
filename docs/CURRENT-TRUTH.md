@@ -110,6 +110,12 @@ Work only the first applicable item. This is one monotonic backlog.
    qualified image payload remained `FNV=0x762B22A5`, nonzero=0. Continue
    with the next adjacent unclassified candidates; the port caveat remains
    separate from the retail writer result.
+   Session 3912 tested `0x80004F7C`, `0x80004F80`, and `0x80004F84`: retail
+   controls passed, but none executed in the qualified target phase and each
+   had zero post-target rows/scalar samples. This selects H3 only for this
+   bounded class. The paired port reached phase 3 without crash/abort but
+   recorded zero image-DMA joins, so it supplies no port payload conclusion.
+   Continue with `0x80004F88`, `0x80004F8C`, and `0x80004F90`.
    Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
@@ -124,7 +130,7 @@ Work only the first applicable item. This is one monotonic backlog.
    writer rows but no post-value scalar attribution) or H3 (no candidate-span
    rows), always with positive controls and no global absence claim. The next
    bounded representatives are
-   `0x80004D68`, `0x80004D74`, and `0x80004D78`. Continue only after the M3
+   `0x80004F88`, `0x80004F8C`, and `0x80004F90`. Continue only after the M3
    validation checkpoint, unless M3 remains unavailable and this is the
    selected runnable discriminator.
 
@@ -156,7 +162,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
 | `H-M5-800078ECZeroFill` | Selected at s3857; sampled writes are zero-valued. |
-| `H-M5-CandidateWriterClass` | Selected H2 for the bounded s3900–s3904 and s3908 sets through `0x80004F54`, and H3 for `0x80004F58`/`0x80004F5C`/`0x80004F60`/`0x80004F64`/`0x80004F68`/`0x80004F6C`/`0x80004F70`/`0x80004F74`/`0x80004F78`; this is not global writer absence. |
+| `H-M5-CandidateWriterClass` | Selected H2 for the bounded s3900–s3904 and s3908 sets through `0x80004F54`, and H3 for `0x80004F58`/`0x80004F5C`/`0x80004F60`/`0x80004F64`/`0x80004F68`/`0x80004F6C`/`0x80004F70`/`0x80004F74`/`0x80004F78`/`0x80004F7C`/`0x80004F80`/`0x80004F84`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 

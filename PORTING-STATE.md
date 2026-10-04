@@ -142052,6 +142052,25 @@ representatives are `0x80004D68`, `0x80004D74`, and `0x80004D78`.
 ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+## Session 3912 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3912_m5_remaining_candidate_writers.sh` as the
+phase-gated retail/port discriminator for PCs `0x80004F7C`, `0x80004F80`, and
+`0x80004F84`. The retail positive controls passed: the whole-RDRAM watch
+crossed its threshold, title width 1024 and hangar width 512 appeared, and
+the oracle completed. None of the three candidates executed during the
+qualified target phase; each had zero post-target rows and zero post-target
+scalar samples (`seen=0`, `n=0/16`), selecting H3 only for this bounded class.
+
+The paired port reached phase 3 without crash or abort, but recorded zero
+image-DMA joins in this run, so it supplies no port payload conclusion. This
+does not establish global retail writer absence or identify the missing output
+edge. The next adjacent candidate set is `0x80004F88`, `0x80004F8C`, and
+`0x80004F90`.
+
+ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
+paired with the port route as a separate caveat; no guest or host state was
+rewritten, skipped, or guarded.
 
 
 
