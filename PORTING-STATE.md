@@ -144421,3 +144421,20 @@ declared-real. It rules out a universal isolated-arm startup failure, but does
 not explain why the other two arms crash. The new harness is
 `scratch/agent/run_s4054_m5_arm_isolation.sh`; its captured output is under
 `scratch/agent/s4054_m5_arm_isolation/`.
+## Session 4055 (2026-10-04) — M5 candidate class absent in qualified retail phases
+
+Built the ordinary Debug target, then ran the prescribed retail-grounded
+source-writer matrix with all three candidate callsites
+`0x800052C4/0x800052C8/0x800052CC` armed together. The retail oracle's
+whole-RDRAM positive control fired and retail reached title VI 1024 and hangar
+VI 512. Each candidate reported `seen=0`, `n=0`, and no phase-gated store row;
+there is no evidence that this class executed as a writer in either target
+phase. The declared-real port arm reached both target phases and reproduced
+the zero-payload signature (`FNV=0x762B22A5`, nonzero=0).
+
+This selects H3/unevaluable for the proposed candidate class: the retail and
+port class is not target-phase-equivalent as instrumented. It rules out both
+the class-as-nonzero-producer and class-as-zero/metadata-writer explanations,
+but does not identify the missing producer. The next unit is a new
+same-build startup-dependency matrix; launch-order and fixed-gap permutations
+are not to be repeated.

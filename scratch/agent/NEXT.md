@@ -1,37 +1,42 @@
-# Next work unit: measure the qualified M5 `0x800052C4` source-writer class
+# Next work unit: requalify the M5 route with a new startup-dependency matrix
 
-HYPOTHESIS-ID: m5-source-writer-052c4
+HYPOTHESIS-ID: m5-route-startup-dependency
 
 The M3 runtime qualification remains externally blocked: this host has no MIPS
 GCC/LD and Clang has no MIPS backend. Do not repeat that target build. Session
-4054 qualified only the isolated declared-real arm; declared-silent and
-legacy-real crashed before target phases and cannot support a writer null.
+4055 qualified declared-real again, but the retail-grounded
+`0x800052C4/0x800052C8/0x800052CC` rows were all absent (`seen=0`, `n=0`),
+so that class is not a usable producer discriminator.
 
 Competing hypotheses:
 
-- H1: retail's `0x800052C4` execution class writes the nonzero source payload
-  that the qualified port route lacks.
-- H2: retail executes the class but its stores are zero/metadata-only, so the
-  missing nonzero source is produced elsewhere.
-- H3: the class is not target-phase equivalent between retail and port, so the
-  comparison is invalid until a different qualified callsite is identified.
+- H1: a startup dependency or arm interaction prevents the real route from
+  reaching the same target-phase producer path; isolating that dependency will
+  make a new arm qualify without changing the zero-payload source signature.
+- H2: the declared-real route is target-phase-equivalent but its source is
+  legitimately zero; a new arm matrix will preserve both target phases and
+  the same zero signature while independent controls remain healthy.
+- H3: the route is not target-phase-equivalent under this process topology;
+  every new arm will fail or stop before one target phase, leaving the source
+  census unevaluable.
 
-Discriminator: the retail oracle must pass whole-RDRAM, title, and hangar
-controls and report phase-gated execution/store rows for `0x800052C4`,
-`0x800052C8`, and `0x800052CC`; the declared-real port arm must reach both
-target phases and retain its zero-payload signature. Nonzero scalar stores from
-the retail class select H1; only zero/metadata stores with valid target-phase
-execution select H2; a missing target-phase retail class or failed port route
-leaves H3/unevaluable. The same run must include all three callsites and both
-phase buckets; do not infer a null from a pre-target crash.
+Discriminator: build one same-build matrix with declared-real, declared-silent,
+and legacy-real arms under one newly varied startup dependency (the matrix
+must alter process topology or dependency readiness, not launch order or a
+fixed inter-arm gap), while the retail oracle runs concurrently. The positive
+control must fire and retail must reach both target VIs. H1 is selected if a
+previously failing arm reaches both target phases and changes the declared vs
+legacy route outcome; H2 if all qualifying arms reach both phases and retain
+the zero signature; H3 if no arm reaches both target phases. Record the exact
+dependency variation and do not infer a source null from a pre-target crash.
 
 Commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s4037_m5_candidate_writers.sh
-grep -nE 'positive-control|post-store-scalar|052c4|origin=0x00790400|origin=0x006ab400|audtask-image-dma-join|CRASH|ABORT' \
-  scratch/agent/s4037_m5_candidate_writers/driver.log | tail -240
+zsh scratch/agent/run_s4055_m5_route_startup_matrix.sh
+grep -nE 'positive-control|origin=0x00790400|origin=0x006ab400|FNV=|nonzero=|CRASH|ABORT|startup-dependency' \
+  scratch/agent/s4055_m5_route_startup_matrix/driver.log | tail -240
 ```
 
 The M3 toolchain dependency remains open until a MIPS host produces
