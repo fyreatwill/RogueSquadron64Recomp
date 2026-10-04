@@ -1,11 +1,11 @@
-# Next work unit: qualify the 0x800052A0 candidate class
+# Next work unit: qualify the 0x800052AC candidate class
 
-HYPOTHESIS-ID: m5-candidate-writer-class-052a-qualified
+HYPOTHESIS-ID: m5-candidate-writer-class-052c
 
 Competing hypotheses:
 
-- H1: one or more candidate PCs `0x800052A0`, `0x800052A4`, or
-  `0x800052A8` writes the retail target span during the qualified target
+- H1: one or more candidate PCs `0x800052AC`, `0x800052B0`, or
+  `0x800052B4` writes the retail target span during the qualified target
   phase.
 - H2: all three candidates remain absent in qualified retail target/post-
   target evidence while the port reaches both target phases, selecting the
@@ -26,7 +26,7 @@ Commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s4022_m5_candidate_writers.sh
+zsh scratch/agent/run_s4024_m5_candidate_writers.sh
 ```
 
 Require the positive-control threshold, retail title and hangar VI markers,

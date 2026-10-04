@@ -143923,6 +143923,22 @@ as the sufficient explanation for the earlier route failure; that failure
 remains schedule-sensitive or otherwise unevaluated. ORIGIN: route hooks
 observe legitimate runtime arm choices; no mitigation landed.
 
+## Session 4024 (2026-10-04) — qualified 0x800052A0 candidate class
+
+Before building, the work unit was the fixed retail-grounded census for
+`0x800052A0`, `0x800052A4`, and `0x800052A8`, with retail, declared/real,
+and legacy/real in one capture. `cmake --build build --config Debug --target
+RogueSquadron64Recomp` passed. Retail's whole-RDRAM positive control, title VI
+1024, hangar VI 512, and oracle completion controls fired. No candidate PC
+rows, post-target samples, or sequence hits appeared for any of the three
+PCs. Declared/real and legacy/real both reached phase 5 with 4,020/4,010
+audio-ABI rows and 4,003/4,001 image-DMA joins, respectively; neither emitted
+`[CRASH]` or `[ABORT]`. H2 is selected for this class, and the next census
+starts at `0x800052AC`. This rules out these three PCs as qualified retail
+target-phase writers at this scope, not the entire writer class. ORIGIN:
+retail PC watches and port phase/task hooks are diagnostic only; no mitigation
+landed.
+
 ## Session 4022 (2026-10-04) — candidate class blocked by legacy route
 
 Before building, the work unit was a phase-gated retail-grounded census for

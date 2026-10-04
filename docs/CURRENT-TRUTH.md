@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4023 (2026-10-04).
+Updated for session 4024 (2026-10-04).
 
 ## Current state
 
@@ -318,16 +318,27 @@ stop is schedule-sensitive or otherwise unevaluated, and the route is
 qualified for another retail-grounded source-writer census. ORIGIN: route
 hooks observe legitimate runtime arm choices; no mitigation landed.
 
+Session 4024 ran the fixed retail-grounded census for `0x800052A0`,
+`0x800052A4`, and `0x800052A8` after the route requalification. The Debug
+target built successfully. Retail's whole-RDRAM positive control fired,
+title VI 1024 and hangar VI 512 controls fired, and the oracle completed.
+All three candidate PCs had zero post-target samples, rows, and sequence
+hits. Declared/real and legacy/real both reached phase 5 with 4,020/4,010
+audio-ABI rows and 4,003/4,001 image-DMA joins respectively, with no crash
+or abort marker. H2 is selected for this candidate class; the next census
+starts at `0x800052AC`. ORIGIN: retail PC watches and port phase/task hooks
+are diagnostic only; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 candidate-writer census continuation.** The s4023 route
-   requalification passed. Re-run the fixed retail-grounded candidate census
-   for `0x800052A0`, `0x800052A4`, and `0x800052A8` with its phase-gated
-   positive controls; accept a writer conclusion only if retail and both port
-   real-audio arms reach their target phases.
+1. **M5 candidate-writer census continuation.** The s4024 census selected H2
+   for `0x800052A0`, `0x800052A4`, and `0x800052A8`. Run the next bounded
+   retail-grounded class at `0x800052AC`, `0x800052B0`, and `0x800052B4` with
+   the same phase-gated positive controls; accept a writer conclusion only if
+   retail and both port real-audio arms reach their target phases.
 
 2. **M3 patch qualification.** Session 4019 added an expansion-chain versus
    active-queue ownership guard. Runtime qualification remains blocked until
