@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3906 (2026-10-03).
+Updated for session 3907 (2026-10-03).
 
 ## Current state
 
@@ -31,7 +31,12 @@ target fault attribution was absent or an arm crashed before target.
 Work only the first applicable item. This is one monotonic backlog.
 
 1. **M3 heap guard validation — open external dependency, not a loop stop.**
-   Session 3899 confirmed CMake skips the patch pipeline because this checkout
+   Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
+   the free-list head pair to the complete bounded chain, rejecting cycles and
+   foreign successor/predecessor links before dequeue. The change preserves
+   valid chains but remains unvalidated because this checkout lacks
+   `mips64-elf-gcc`/`mips64-elf-ld`; the local Apple clang rejects the MIPS
+   flags. Session 3899 confirmed CMake skips the patch pipeline because this checkout
    lacks `mips64-elf-gcc`/`mips64-elf-ld`; session 3900 also found no local
    alternate MIPS backend or toolchain. A local N64Recomp binary exists, but it
    cannot produce `patches.elf`. The active-queue guard remains source-only;
@@ -92,10 +97,11 @@ Work only the first applicable item. This is one monotonic backlog.
    validation checkpoint, unless M3 remains unavailable and this is the
    selected runnable discriminator.
 
-4. **M3 prior guard classes.** Reciprocal-link, metadata-slot, block-span,
-   alias, and active-head guards are landed in `patches/heap_guards.c` but
-   have no runtime result. The same missing-toolchain/build-target blocker
-   applies; do not add another guard before validation.
+4. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
+   and the expanded reciprocal-link guards are landed in
+   `patches/heap_guards.c` but have no runtime result. The same
+   missing-toolchain/build-target blocker applies; do not add another guard
+   before validation.
 
 5. **M5 target-phase parity is closed at current scope.** Do not repeat
    standalone qualification, paired target-VI controls, or the retail

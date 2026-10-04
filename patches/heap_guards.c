@@ -67,6 +67,30 @@ static int free_head_link_ok(const Block* head) {
            (block_ok(head->next) && head->next->prev == head);
 }
 
+// ORIGIN: func_8002221C and the allocator's free-list link stores publish
+// every successor and predecessor. A valid list must remain reciprocal for
+// its whole bounded chain; checking only the head leaves a later cycle or
+// foreign link available to the next dequeue.
+static int free_chain_links_ok(const Block* head) {
+    const Block* node = head;
+    uint32_t count = 0;
+    while (node != NULL) {
+        if (!block_ok(node) || node->prev != NULL &&
+            (!block_ok(node->prev) || node->prev->next != node)) {
+            return 0;
+        }
+        if (node->next == NULL) {
+            return 1;
+        }
+        if (++count >= MAX_FREE_BLOCKS || !block_ok(node->next) ||
+            node->next->prev != node) {
+            return 0;
+        }
+        node = node->next;
+    }
+    return 1;
+}
+
 // ORIGIN: the active-queue insertion stores q->next and popped->prev as a
 // linked pair. A non-head predecessor must already point back to q; otherwise
 // the next insertion would publish a queue with a broken ownership chain.
@@ -136,7 +160,7 @@ RECOMP_PATCH Block* func_80007D74(void) {
     Block* new_head;
     if (!block_ok(head)) {
         new_head = NULL;
-    } else if (!free_head_link_ok(head)) {
+    } else if (!free_head_link_ok(head) || !free_chain_links_ok(head)) {
         return NULL;
     } else {
         new_head = head->next;

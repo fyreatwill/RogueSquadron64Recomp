@@ -142053,6 +142053,8 @@ ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
 
+
+
 ## Session 3905 (2026-10-03) — classified the next M5 candidate-writer classes
 
 Ran `zsh scratch/agent/run_s3905_m5_remaining_candidate_writers.sh` for
@@ -142134,3 +142136,20 @@ absence or identify the missing output edge. The next representatives are
 ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3907 (2026-10-03) — extended the free-list reciprocal-link guard audit
+
+Landed a bounded M3 guard-class change in `patches/heap_guards.c`: before
+dequeue, `func_80007D74` now validates reciprocal successor/predecessor links
+through the entire bounded free-list chain, rejecting cycles and foreign links
+that a head-only check could leave for a later dequeue. The source passes
+`git diff --check`; the configured `make -C patches` could not compile because
+this checkout has Apple clang rather than the required MIPS backend, and it
+rejects `-mips2`, `-G0`, and `-mno-abicalls`. Therefore no runtime result is
+claimed; valid-chain behavior and malformed-chain rejection remain pending
+toolchain-backed validation. This rules out only the idea that the new guard
+was runtime-tested here, not any heap corruption cause.
+
+ORIGIN: `func_8002221C` and allocator free-list successor/predecessor stores;
+reciprocal links are legitimate allocator state, while cycles and foreign
+links are not. No guest value was rewritten or force-cleared.

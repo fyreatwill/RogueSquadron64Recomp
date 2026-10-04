@@ -1,30 +1,29 @@
-# Next work unit: classify the next adjacent retail candidate-writer class
+# Next work unit: validate the landed free-list guard or obtain the MIPS toolchain
 
-HYPOTHESIS-ID: m5-retail-candidate-writer-class
+HYPOTHESIS-ID: m3-free-list-reciprocal-chain
 
-The M3 active-queue guard remains source-only because this checkout lacks
-`mips64-elf-gcc`/`mips64-elf-ld`; do not add another guard. Continue the
-independent M5 writer census with the next bounded adjacent representatives.
+The bounded M3 guard change is landed in `patches/heap_guards.c`, but runtime
+validation is blocked by the absent MIPS cross-toolchain. Do not add another
+guard or repeat the M5 writer census until this validation dependency changes.
 
 Competing hypotheses:
 
-- H1: one of `0x80004F4C`, `0x80004F50`, or `0x80004F54` writes a qualified
-  nonzero target-phase payload in retail.
-- H2: the PCs execute or touch unrelated spans, but none writes the qualified
-  target buffer during title/hangar phases.
-- H3: the port image-DMA route is not phase-equivalent to the retail target
-  span, so a retail null is not comparable.
+- H1: valid allocator chains pass the whole-chain audit and the patch builds.
+- H2: a chain with a cycle or foreign reciprocal link is rejected before any
+  later dequeue dereference.
+- H3: the patch cannot be validated in this checkout because the required MIPS
+  compiler/linker is unavailable.
 
-Discriminator: run the same-build retail/port recipe. Require the retail
-whole-RDRAM positive control, title-1024 and hangar-512 VI gates, oracle
-completion, and the port hangar gate. H1 requires a named candidate row with
-nonzero post-value evidence; H2 is selected by zero candidate rows alongside
-the positive controls; H3 is selected only if the port phase/image-DMA gate
-fails.
+Discriminator: run `make -C patches` after the toolchain is supplied, then
+exercise a valid long free list and malformed cycle/foreign-link fixtures.
+H1 requires a successful MIPS build and unchanged valid-chain behavior; H2
+requires the malformed fixtures to return before dequeue mutation; H3 is the
+only valid result while the compiler/linker remains absent.
 
 Exact command:
 
-    zsh scratch/agent/run_s3907_m5_remaining_candidate_writers.sh
+    make -C patches
 
-Do not infer retail corruption from a null row and do not add a mitigation
-without naming its writer and establishing value legitimacy.
+Do not infer runtime safety from source review alone. The guard's ORIGIN is
+the allocator's successor/predecessor link stores; valid reciprocal links are
+legitimate, while cycles/foreign links are not.
