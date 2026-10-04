@@ -1,34 +1,33 @@
-# Next work unit: classify the next M5 candidate-writer class
+# Next work unit: re-qualify the M5 legacy/real route
 
-HYPOTHESIS-ID: m5-candidate-writer-class
+HYPOTHESIS-ID: m5-candidate-writer-route-qualification
 
-Run one qualified legacy/real paired census for the next adjacent candidate
-set after `0x8000526C`: `0x80005270`, `0x80005274`, and `0x80005278`.
-The independent retail oracle and the paired port must both reach their
-positive phase controls before a null is interpreted.
+Run one repeat of the same bounded legacy/real paired recipe for
+`0x80005270`, `0x80005274`, and `0x80005278`. The s4002 retail arm qualified,
+but the port crashed at `0x8000834c` before title/hangar, so the candidate
+result cannot be interpreted. Do not add fields or advance the sweep unless
+the port reaches both phase controls.
 
 Competing hypotheses:
 
-- H1: at least one candidate writes nonzero target/post-target payload at a
-  matching task ordinal; this identifies a qualified producer edge.
-- H2: all three candidates remain absent or zero in retail target/post-target
-  evidence while the paired legacy port reaches phase 5; this class is not the
-  missing nonzero writer at the measured scope.
-- H3: an arm fails its whole-RDRAM, title, hangar, or port phase control, so
-  the candidate result is unevaluable and the census must not advance.
+- H1: the s4002 port crash was transient; a repeat reaches title and hangar,
+  making the existing candidate table interpretable.
+- H2: the same pre-title `0x8000834c` crash recurs; the route remains
+  unevaluable and the candidate sweep must stay parked.
+- H3: the port reaches title/hangar and a candidate has a qualified nonzero
+  post-target row; the previous null was only an arm failure, not H2.
 
-Discriminator: in one run, compare the oracle's positive-control and phase
-counts with each candidate's `seen`, post-target, scalar-store, and task-join
-rows, alongside the port's phase-5/task controls. H1 requires a candidate
-post-target nonzero/scalar row joined to a matching task ordinal; H2 requires
-all three candidates to have no such row with both arms qualified; H3 is any
-missing control or crash/abort before qualification.
+Discriminator: the port must emit title VI 1024 and hangar VI 512, with no
+crash/abort, before candidate rows are considered. A repeat crash selects H2;
+full route qualification selects H1, while a qualified candidate nonzero row
+selects H3 and identifies a producer edge.
 
 Exact command:
 
-    zsh scratch/agent/run_s4002_m5_candidate_writers.sh
+    zsh scratch/agent/run_s4003_m5_candidate_writers.sh
 
-The script launches the retail oracle and legacy/real port arm concurrently,
-captures logs under `scratch/agent/s4002_m5_candidate_writers/`, and SIGKILLs
-both after its bounded window. Do not add another field or run a second soak
-in this iteration.
+Create the s4003 wrapper by changing the output tag in
+`run_s4002_m5_candidate_writers.sh`; it launches the retail oracle and
+legacy/real port arm concurrently, captures both logs, and SIGKILLs both after
+the bounded window. Do not add another field or run a second soak in that
+iteration.

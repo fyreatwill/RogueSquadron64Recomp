@@ -143621,3 +143621,15 @@ missing nonzero writer at the qualified target/post-target scope. It rules out
 only this candidate class, not global writer absence. The positive control and
 the paired port phase controls make the null interpretable. The next bounded
 class is `0x80005270`, `0x80005274`, and `0x80005278`.
+## Session 4002 (2026-10-04) — classified M5 candidate-writer arm failure
+
+Ran `zsh scratch/agent/run_s4002_m5_candidate_writers.sh` with the retail
+oracle and legacy/real port arm concurrently. The retail positive control
+fired; title VI 1024 and hangar VI 512 each fired 154 times; and the oracle
+completed. Candidates `0x80005270`, `0x80005274`, and `0x80005278` each had
+`seen=0`, zero post-target samples/rows, and zero sequence hits. The paired
+port arm emitted its RSP source-hook control but crashed 36 times in
+`spTaskSchedulerThread` at guest PC `0x8000834c` before title/hangar and before
+any audio ABI, image-stage, or image-DMA join rows. The candidate null is
+therefore unevaluable, not H2-selected; the next unit must re-qualify the
+legacy/real route before advancing the census.

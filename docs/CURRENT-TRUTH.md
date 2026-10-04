@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4001 (2026-10-04).
+Updated for session 4002 (2026-10-04).
 
 ## Current state
 
@@ -114,19 +114,27 @@ establish global writer absence.
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 candidate-writer census continuation.** Resume the next unclassified
-   adjacent set after `0x8000526C`, using one phase-scoped table and the
-   qualified legacy/real route. The discriminator is whether any candidate
-   writes nonzero target/post-target payload at a matching task ordinal; a
-   same-run positive control must show the table firing.
+1. **M5 legacy/real route re-qualification.** The s4002 retail arm qualified,
+   but the paired legacy/real port arm crashed in `spTaskSchedulerThread` at
+   guest PC `0x8000834c` before title/hangar and before any audio/image census
+   row. Re-run the same bounded route/candidate recipe once; advance the
+   candidate sweep only if the port reaches both phase controls. The
+   discriminator is route qualification versus the same pre-target crash.
 
-2. **M3 heap guard validation.** The accumulated guards, including the new
+2. **M5 candidate-writer census continuation.** After the route qualifies,
+   resume the next unclassified adjacent set after `0x8000526C`, using one
+   phase-scoped table and the qualified legacy/real route. The discriminator
+   is whether any candidate writes nonzero target/post-target payload at a
+   matching task ordinal; a same-run positive control must show the table
+   firing.
+
+3. **M3 heap guard validation.** The accumulated guards, including the new
    free-list/active-queue ownership-alias guard, in
    `patches/heap_guards.c` are not runtime-qualified because the configured
    build has no `PatchesLib` target and the MIPS toolchain is unavailable.
    Do not add another guard before the patch pipeline is supplied and built.
 
-3. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
+4. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
    `generated-symbol-renaming-sweep`; mapping edits do not reset the
    engineering-change stall gate.
@@ -160,6 +168,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-054C` | H2 selected at s3999: retail positive, title, and hangar controls passed with oracle completion; no candidate PC hit appeared for `0x8000524C`, `0x80005250`, or `0x80005254`; paired port reached phase 5 with 643 audio-task rows and 647 image-DMA joins. |
 | `H-M5-CandidateWriterClass-0558` | H2 selected at s4000: retail positive, title, and hangar controls passed with oracle completion; no candidate PC hit appeared for `0x80005258`, `0x8000525C`, or `0x80005260`; paired port reached phase 5 with 2,853 audio-task rows and 2,846 image-DMA joins. |
 | `H-M5-CandidateWriterClass-0564` | H2 selected at s4001: retail positive, title, and hangar controls passed with oracle completion; no candidate/post-target/scalar/sequence evidence appeared for `0x80005264`, `0x80005268`, or `0x8000526C`; paired port reached phase 5 with 3,056 audio-task rows and 3,047 image-DMA joins. |
+| `H-M5-CandidateWriterClass-0570` | H3 at s4002: retail positive, title, and hangar controls passed and all three candidates were absent, but the paired legacy/real port crashed at `0x8000834c` before target-phase controls or census rows. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 
 ## Durable evidence boundary
@@ -201,6 +210,12 @@ candidate results are summarized by address range rather than copied here.
   controls passed with oracle completion; no candidate/post-target/scalar/
   sequence evidence appeared; and the paired legacy port reached phase 5 with
   3,056 audio-task rows and 3,047 image-DMA joins without crash/abort.
+- Session 4002's retail arm passed the whole-RDRAM positive control and title/
+  hangar controls (154 each); candidates `0x80005270`, `0x80005274`, and
+  `0x80005278` had no hits or post-target rows. The paired legacy/real port
+  crashed in `spTaskSchedulerThread` at guest PC `0x8000834c` before its title
+  or hangar controls and emitted zero audio/image census rows, so this class is
+  unevaluable rather than H2-selected.
 - Session 3991's declared-size task-staging arm emitted the RSP boot canary
   control, then crashed in `spTaskSchedulerThread` at guest PC `0x8000834c`
   before any audio-task ABI/consumer row. In the same script, the legacy arm
