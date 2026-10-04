@@ -143567,3 +143567,15 @@ samples/rows, and zero sequence hits. The paired port reached phase 5 with
 selects H2 for the measured candidate class and rules out a qualified retail
 writer at these three PCs in the measured target scope; it does not prove
 global writer absence.
+
+## Session 3998 (2026-10-04) — extended M5 candidate-writer census
+
+Ran the qualified legacy/real paired census for candidate PCs `0x80005240`,
+`0x80005244`, and `0x80005248`. The retail oracle's positive-control
+threshold fired, title VI 1024 fired 154 times, hangar VI 512 fired 158 times,
+and the oracle completed. No candidate, post-target, scalar-store, or sequence
+evidence was emitted for any of the three PCs. The paired port reached phase 5
+with 3,046 audio ABI rows and 3,033 image-DMA joins, with no crash or abort.
+This selects H2 for the measured candidate class and rules out a qualified
+retail writer at these three PCs in the measured target scope; it does not prove
+global writer absence.
