@@ -141435,3 +141435,16 @@ population is open; the next bounded PCs are `0x800076A0`, `0x80085890`, and
 
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
+## Session 3867 (2026-10-03) — rechecked M3 patch validation prerequisites
+
+Attempted the prescribed validation discriminator for the free-list reciprocal-
+link guard. The direct prerequisite check found no `mips64-elf-gcc`, no
+`mips64-elf-ld`, and no `build/Debug/N64Recomp.exe`. The configured target
+inventory exposed `RogueSquadron64Recomp` but no `PatchesLib`; consequently
+`cmake --build build --config Debug --target PatchesLib` exited 2 with `No rule
+to make target PatchesLib`. This selects H3 for the environment-validation
+hypothesis only. It rules out no allocator behavior and supplies no runtime
+guard result. The next runnable unit is the ranked M5 candidate-writer arm.
+
+ORIGIN: prerequisite/build validation only; no guest or host state was
+rewritten, skipped, or guarded.

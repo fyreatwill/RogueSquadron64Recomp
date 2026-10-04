@@ -1,38 +1,40 @@
-# Next work unit: validate the free-list reciprocal-link guard class
+# Next work unit: classify the next three M5 candidate-span writer classes
 
-HYPOTHESIS-ID: m3-free-list-reciprocal-link-guard
+HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
 
-The mandatory no-churn pivot selects a bounded M3 guard-class change instead
-of the diagnostic-only M5 writer arm. The patch now audits reciprocal `prev`
-links for every traversed free-list edge and requires the published free-list
-head to have the null sentinel predecessor. ORIGIN: `func_8002221C` and the
-allocator link stores publish these fields; malformed reciprocal links are not
-legitimate allocator state. The configured patch toolchain is still absent, so
-runtime validation is blocked and no allocator behavior is claimed.
+The M3 validation prerequisites remain unavailable, so the next runnable
+bounded M5 arm is the ranked candidate list from CURRENT-TRUTH:
+`0x800331D4`, `0x80033414`, and `0x8003326C`. Keep the retail oracle and port
+arms in one run, with title/hangar phase controls and all passive breadcrumbs.
+Do not infer an image producer from a writer-PC hit alone.
 
 Competing hypotheses and discriminator:
 
-- H1: all valid free-list chains satisfy reciprocal `next`/`prev` links and
-  the guard is observationally inert in an allocator smoke.
-- H2: a malformed chain or non-null head predecessor reaches the patched
-  entry; the guard returns before unsafe queue-link stores.
-- H3: the patch cannot be built or loaded because the MIPS compiler, linker,
-  N64Recomp executable, or `PatchesLib` target remains unavailable; no runtime
-  conclusion is allowed.
+- H1: at least one candidate is a nonzero producer; its phase-gated writer
+  rows have post-store scalar values in `0x165000..0x16C000`.
+- H2: candidates write the span but never produce a qualified nonzero scalar;
+  they are not the image producer at this scope.
+- H3: the candidate rows are absent despite positive controls, so these PCs do
+  not own the retail target edge; this does not classify other writers.
 
-The discriminator is one patch build plus allocator-route smoke: build the
-patch ELF, generate the host patch, and run valid-list and malformed-link
-arms in one executable. H1 requires the valid arm to preserve allocation and
-queue-link stores with zero guard returns; H2 requires the malformed arm to
-return before those stores; H3 is selected if any prerequisite tool or target
-is absent. The positive control is a valid allocator allocation with the
-expected head sentinel and reciprocal chain links.
+The discriminator is one paired run using the existing runner pattern:
+whole-RDRAM oracle control, title VI 1024, hangar VI 512, oracle shutdown,
+phase-gated candidate-span writer rows, and post-value scalar samples for all
+three PCs. H1 requires a candidate with a qualified nonzero post-value sample;
+H2 requires writer rows with zero post-value samples; H3 requires zero writer
+rows after all controls pass. The positive controls must visibly fire before a
+null result is accepted.
 
-Preparation and run when the environment is restored:
+Preparation and run:
 
-    cmake --build build --config Debug --target PatchesLib
-    cmake --build build --config Debug --target RogueSquadron64Recomp
+    cp scratch/agent/run_s3865_m5_remaining_candidate_writers.sh \
+      scratch/agent/run_s3867_m5_remaining_candidate_writers.sh
+    sed -i '' \
+      -e 's#s3865_m5_remaining_candidate_writers#s3867_m5_remaining_candidate_writers#g' \
+      -e 's#0x80085564,0x8009785C,0x8008556C#0x800331D4,0x80033414,0x8003326C#g' \
+      -e 's#0x80085564|0x8009785c|0x8008556c#0x800331d4|0x80033414|0x8003326c#g' \
+      scratch/agent/run_s3867_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3867_m5_remaining_candidate_writers.sh
 
-Then run the allocator smoke with both valid and malformed-link fixtures and
-record whether the guard fires before any queue-link store. Do not proceed to
-the M5 candidate-writer arm until this M3 validation dependency is resolved.
+Record the arm outcome in PORTING-STATE.md and update the candidate list from
+the measured result. Kill both processes with SIGKILL as the runner does.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3866 (2026-10-03).
+Updated for session 3867 (2026-10-03).
 
 ## Current state
 
@@ -36,16 +36,7 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap guard validation — active guard class, validation blocked.** Session
-   3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`:
-   traversed `next` links must point back through `prev`, and the published
-   free-list head must have a null predecessor. ORIGIN: `func_8002221C` and
-   allocator link stores publish these fields; malformed reciprocal links are
-   not legitimate allocator state. The patch build remains blocked because
-   `mips64-elf-gcc`, `mips64-elf-ld`, `build/Debug/N64Recomp.exe`, and the
-   configured `PatchesLib` target are absent. No runtime allocator result is
-   claimed; restore the patch pipeline before the M5 writer arm.
-2. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
+1. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
    3839–3840 qualified the port input and separate writeback-DMA edge despite
    empty ABI output fields. Session 3857 qualified the dominant retail
    `0x800078EC` writer: it had 408 hangar-phase hits into
@@ -87,7 +78,19 @@ Work only the first applicable item. This is one monotonic backlog.
    `0x8008556C` each had qualified hangar candidate-span writer rows but zero
    post-target scalar samples. The port reached 2,858 image-DMA joins with
    no crash/abort. Continue with `0x800331D4`, `0x80033414`, and
-   `0x8003326C` as the next representative writer classes.
+   `0x8003326C` as the next representative writer classes. Session 3867
+   confirmed the M3 validation prerequisites are still unavailable, so this
+   M5 discriminator is the next runnable unit.
+2. **M3 heap guard validation — active guard class, validation blocked.** Session
+   3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`:
+   traversed `next` links must point back through `prev`, and the published
+   free-list head must have a null predecessor. ORIGIN: `func_8002221C` and
+   allocator link stores publish these fields; malformed reciprocal links are
+   not legitimate allocator state. Session 3867 rechecked the prerequisites:
+   `mips64-elf-gcc`, `mips64-elf-ld`, `build/Debug/N64Recomp.exe`, and the
+   configured `PatchesLib` target remain absent; the requested build returned
+   `No rule to make target PatchesLib`. No runtime allocator result is claimed;
+   restore the patch pipeline before validation.
 3. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
@@ -319,6 +322,15 @@ Work only the first applicable item. This is one monotonic backlog.
   `PatchesLib` target; the requested build returned `No rule to make target
   PatchesLib`. This is a code change with validation blocked, not allocator
   behavior evidence.
+
+- **3867:** Rechecked the prescribed M3 validation prerequisites before any
+  build or smoke. `mips64-elf-gcc`, `mips64-elf-ld`, and
+  `build/Debug/N64Recomp.exe` were absent; the configured target inventory
+  contained `RogueSquadron64Recomp` but no `PatchesLib`; and
+  `cmake --build build --config Debug --target PatchesLib` exited 2 with
+  `No rule to make target PatchesLib`. This selects H3 for the validation
+  discriminator only. It provides no allocator behavior evidence, so the next
+  runnable unit returns to the ranked M5 candidate-writer arm.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.
