@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4006 (2026-10-04).
+Updated for session 4007 (2026-10-04).
 
 ## Current state
 
@@ -140,21 +140,26 @@ The paired port reached both target phases with 2,895 audio-ABI rows and 2,882
 image-DMA joins without crash or abort. Each candidate had zero post-target
 samples, rows, and sequence hits, selecting H2 for this class.
 
+Session 4007 attempted `0x80005294`, `0x80005298`, and `0x8000529C`. Retail
+controls and oracle completion passed, but the paired port emitted no title or
+hangar phase control and no audio/image census rows before watchdog
+termination. With no crash or abort marker, this is a route failure and the
+candidate class is unevaluable, not a qualified null.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 candidate-writer census continuation.** The s4006 route is qualified.
-   Run the next unclassified adjacent set after `0x80005290`:
-   `0x80005294`, `0x80005298`, and `0x8000529C`, using one phase-scoped table
-   and the legacy/real route. The discriminator is whether any candidate writes
-   nonzero target/post-target payload at a matching task ordinal; the same run
-   must retain the retail positive control and both port phase controls.
+1. **M5 legacy/real route re-qualification.** Repeat the last qualified
+   legacy/real candidate route once with its retail positive control and both
+   port phase controls. A qualified rerun restores the route; another
+   pre-target failure parks the census for route investigation.
 
-2. **M5 legacy/real route re-qualification.** If a later candidate arm fails
-   before both target phases, repeat the route once before interpreting its
-   candidate nulls.
+2. **M5 candidate-writer census continuation.** After route qualification,
+   rerun `0x80005294`, `0x80005298`, and `0x8000529C` with one phase-scoped
+   table. A matching nonzero row selects a producer edge; qualified zero rows
+   select H2; missing phase controls select H3 again.
 
 3. **M3 heap guard validation.** The accumulated guards, including the new
    free-list/active-queue ownership-alias guard, in
@@ -200,6 +205,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-0570-qualified` | H2 selected at s4004: the paired legacy/real port reached both target phases with positive controls, while `0x80005270`, `0x80005274`, and `0x80005278` had no post-target samples, rows, or sequence hits. |
 | `H-M5-CandidateWriterClass-057C` | H2 selected at s4005: retail and paired-port controls passed, while `0x8000527C`, `0x80005280`, and `0x80005284` had no post-target samples, rows, or sequence hits. |
 | `H-M5-CandidateWriterClass-0588` | H2 selected at s4006: retail and paired-port controls passed, while `0x80005288`, `0x8000528C`, and `0x80005290` had no post-target samples, rows, or sequence hits. |
+| `H-M5-CandidateWriterClass-0594` | H3 selected at s4007: retail controls passed, but the paired port emitted no target phases or census rows, so `0x80005294`, `0x80005298`, and `0x8000529C` are unevaluable. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 
@@ -265,6 +271,9 @@ candidate results are summarized by address range rather than copied here.
   sequence hits appeared; and the paired legacy port reached both target
   phases with 2,895 audio-ABI rows and 2,882 image-DMA joins without
   crash/abort.
+- Session 4007's bounded candidate census was not qualified: retail controls
+  passed, but the paired port produced no target phases or census rows before
+  watchdog termination. The three candidates are unevaluable.
 - Session 3991's declared-size task-staging arm emitted the RSP boot canary
   control, then crashed in `spTaskSchedulerThread` at guest PC `0x8000834c`
   before any audio-task ABI/consumer row. In the same script, the legacy arm

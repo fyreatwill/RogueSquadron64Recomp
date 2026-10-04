@@ -1,26 +1,25 @@
-# Next work unit: extend the qualified M5 candidate-writer census
+# Next work unit: re-qualify the legacy/real M5 route
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
 Competing hypotheses:
 
-- H1: at least one of `0x80005294`, `0x80005298`, or `0x8000529C` writes
-  nonzero target/post-target payload at a matching task ordinal.
-- H2: the route and controls qualify, but all three adjacent candidates remain
-  absent from post-target samples/rows/sequence hits.
-- H3: the port fails before both target phases, making this candidate class
-  unevaluable and requiring route re-qualification before another sweep.
+- H1: the prior failure was transient and the legacy/real route again reaches
+  title VI 1024 and hangar VI 512 with audio/image census rows.
+- H2: the route is intermittently unstable; this repeat may fail before the
+  target phases despite the same controls.
+- H3: the route failure is persistent, so the candidate census must be parked
+  for a route-level investigation.
 
 Discriminator: one same-run retail positive control plus title VI 1024 and
-hangar VI 512 on the paired port, followed by a nonzero candidate row at a
-matching task ordinal. A qualified nonzero row selects H1 and identifies a
-producer edge; qualified zero rows select H2; a pre-target crash or missing
-phase control selects H3.
+hangar VI 512 on the paired legacy/real port. Both target phases with nonzero
+audio/image row counts select H1; missing either phase or all port census rows
+select H2 for one repeat and require a route-level pivot; a second pre-target
+failure selects H3 and parks the candidate sweep.
 
 Exact command:
 
-    zsh scratch/agent/run_s4006_m5_candidate_writers.sh
+    zsh scratch/agent/run_s4005_m5_candidate_writers.sh
 
-The wrapper launches the retail oracle and legacy/real port arm concurrently,
-captures both logs, and SIGKILLs both after the bounded window. Do not add
-another field or run a second soak.
+This repeats the last qualified legacy/real candidate route once. Do not add
+candidate fields or interpret candidate nulls in this unit.
