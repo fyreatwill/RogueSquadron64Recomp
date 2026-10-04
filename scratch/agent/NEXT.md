@@ -1,32 +1,25 @@
-# Next work unit: classify the next M5 candidate-writer class
+# Next work unit: validate the active-queue empty-head invariant
 
-HYPOTHESIS-ID: m5-candidate-writer-class
+HYPOTHESIS-ID: m3-active-queue-empty-head
 
-Run the corrected phase-gated retail/port discriminator for the next adjacent
-unclassified candidate set, exactly `0x80004FD0`, `0x80004FD4`, and
-`0x80004FD8`:
-
-    zsh scratch/agent/run_s3918_m5_remaining_candidate_writers.sh
+The current M3 patch validates non-empty active-queue reachability but leaves
+the empty-head branch unchecked. Audit the complete insertion idiom in
+`patches/heap_guards.c`: when `*heap_other_listhead == NULL`, the published
+tail node must have `next == NULL` before the append stores run. Add one guard
+for that exact state, preserving the existing valid empty-queue path.
 
 Competing hypotheses:
 
-- H1: one or more PCs execute in the qualified retail target phase and produce
-  a post-target scalar value, identifying a candidate writer at this scope.
-- H2: PCs execute or have candidate-span rows, but produce no qualified
-  post-target scalar value; the class remains unresolved/indirect at this
-  scope.
-- H3: none executes in the qualified retail target phase, selecting absence for
-  this bounded class only.
+- H1: the empty-head/tail-successor combination is impossible in legitimate
+  allocator state; the new guard is dormant and the patch is behavior-neutral.
+- H2: the combination is a corrupt detached queue; the guard prevents the
+  append from publishing a second chain and returns before the link stores.
+- H3: the tail is a legitimate sentinel with a successor while the published
+  head is null; the guard would reject valid state and must be reverted.
 
-Session 3920 selected H3 for `0x80004FC4`/`0x80004FC8`/`0x80004FCC`: controls
-passed, all three had zero target-phase execution, candidate-span rows,
-post-target rows, and scalar samples; the paired port had 2,845 image-DMA
-joins and no crash/abort with zero-valued qualified payload.
-
-Discriminator: the same-run retail whole-RDRAM, title-1024, and hangar-512
-positive controls must pass; then compare target-phase execution, post-target
-rows, and scalar samples for all three PCs. The paired port arm must be
-reported separately and does not establish retail writer absence.
-
-Keep the M3 heap-guard validation parked until a configured `PatchesLib` target
-and MIPS toolchain are available. Do not add another guard.
+Discriminator: inspect the original insertion ordering and, when the MIPS
+toolchain is available, run the patch with the valid empty-queue control plus
+the malformed empty-head/tail-successor state. This checkout currently lacks
+`mips64-elf-gcc`/`mips64-elf-ld`, so this iteration must at least compile the
+host target and record that MIPS validation remains unavailable; no runtime
+claim is allowed from the host build.

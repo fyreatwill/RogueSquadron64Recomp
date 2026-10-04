@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3920 (2026-10-03).
+Updated for session 3921 (2026-10-03).
 
 ## Current state
 
@@ -48,7 +48,14 @@ Work only the first applicable item. This is one monotonic backlog.
    3915 reran the required validation: `PatchesLib` is still not a configured
    target (`No rule to make target 'PatchesLib'`), while the ordinary host
    target completes successfully. This is H3 environment evidence only; no
-   allocator or MIPS-runtime claim is made. Do not add another guard meanwhile.
+   allocator or MIPS-runtime claim is made. Session 3921 added the bounded
+   empty-head insertion guard: if the published active-queue head is null but
+   the tail successor is non-null, the append returns before publishing links.
+   ORIGIN is the active-queue append writer; a successor contradicts the
+   legitimate empty-queue state. The ordinary host target still builds, but
+   `PatchesLib` remains unconfigured and MIPS validation is unavailable, so
+   this is code landed with no runtime result. Validate the accumulated patch
+   when a human provides the toolchain.
 
 2. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3900's phase-gated run passed the retail whole-RDRAM,

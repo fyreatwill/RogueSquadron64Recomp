@@ -224,6 +224,13 @@ RECOMP_PATCH Block* func_80007D74(void) {
         return NULL;
     }
 
+    // ORIGIN: the active-queue append publishes tail->next and the head slot
+    // as one chain. A null published head with an existing successor is a
+    // detached queue, not a legitimate empty-list state.
+    if (queue_head == NULL && tail->next != NULL) {
+        return NULL;
+    }
+
     if (queue_head != NULL) {
         // Queue non-empty — append after current node.
         if (!block_ok(tail->next)) {

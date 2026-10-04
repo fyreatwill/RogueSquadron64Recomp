@@ -142373,3 +142373,19 @@ class only and ruling them out as qualified retail writers at the measured
 target phase. The paired port reached hangar with 3,025 image-DMA joins and
 no crash/abort; qualified payload remained `FNV=0x762B22A5`, nonzero=0. This
 does not establish global writer absence.
+
+## Session 3921 (2026-10-03) — added active-queue empty-head guard
+
+The mandatory no-churn pivot selected the next M3 guard-class unit rather than
+rerunning the observation-only M5 candidate census. Audited the complete
+active-queue insertion path in `patches/heap_guards.c` and added an
+`ORIGIN:`-documented guard for the inconsistent state where the published
+queue head is null but the published tail already has a successor. The
+active-queue append is the named writer; a successor is not legitimate empty
+queue state, so the guard returns before link publication. This is a bounded
+M3 code change, not an explanation of the corruption and not a runtime claim.
+
+The ordinary `RogueSquadron64Recomp` Debug target built successfully. The
+requested `PatchesLib` target is not configured in this checkout, and neither
+`mips64-elf-gcc` nor `mips64-elf-ld` is available, so MIPS patch generation and
+runtime validation remain blocked on toolchain/configuration ground truth.
