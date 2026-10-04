@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4067 (2026-10-04).
+Updated for session 4068 (2026-10-04).
 
 ## Current state
 
@@ -191,6 +191,14 @@ boundary; playback/drain timing remains open.
   open. The prior real-arm run was not used as silent evidence because the
   recipe defaulted to `ROGUESQ_AUDIO_UCODE=1` until the explicit override was
   supplied.
+- Session 4068 ran native-SDL silent and `SDL_AUDIODRIVER=dummy` silent arms
+  concurrently in one same-build capture, with the retail whole-RDRAM control.
+  The control fired; both port arms independently crashed before title 1024 or
+  hangar 512 at `spTaskSchedulerThread+9632`, with identical fault address
+  `0x400128d47` and last guest PC `0x8000834c`. This selects Hshared-scheduler
+  over Hdevice-init for the silent pre-target failure. It does not identify
+  whether the shared defect is guest queue/state corruption or process-topology
+  interaction; no sink conclusion is available.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -199,13 +207,13 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Localize the native-backend startup defect.** Session 4067 selected
-   Hnative-backend: native SDL crashes in `spTaskSchedulerThread+9632` before
-   any target phase for both real and silent audio, while the dummy real arm
-   reaches both phases. Use one same-build native-vs-dummy silent run with
-   scheduler/task-route breadcrumbs and the retail positive control; classify
-   whether the crash follows native device initialization or a shared
-   scheduler route before reopening sink qualification.
+1. **Localize the shared silent scheduler defect.** Session 4068 selected
+   Hshared-scheduler: native and dummy silent arms crashed at the same
+   `spTaskSchedulerThread+9632` fault before either phase. Next isolate process
+   topology by running native-silent and dummy-silent sequentially, in one
+   same-build capture, with the retail positive control and the same scheduler
+   breadcrumbs. Do not reopen sink qualification unless an arm reaches both
+   phase gates.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -227,7 +235,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
-| M5 route failure | Hnative-backend selected at pre-target scope: native SDL fails for both real and silent arms in `spTaskSchedulerThread+9632`, while dummy real reaches both target phases. The scheduler/device-init origin remains open. |
+| M5 route failure | Hshared-scheduler selected at silent pre-target scope (s4068): native and dummy silent arms fail at the same `spTaskSchedulerThread+9632` fault, so native SDL initialization is not necessary. Process-topology and guest-state origins remain open. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |

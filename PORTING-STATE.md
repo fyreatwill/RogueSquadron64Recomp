@@ -144672,3 +144672,23 @@ startup edge is the writer/origin of the corruption. The initial invocation
 was discarded as evidence for the silent arm because the recipe defaulted to
 real audio; the explicit `RS64_AUDIO_UCODE=0` rerun is the qualified result.
 No mitigation or guest/RDRAM state change was made.
+
+## Session 4068 (2026-10-04) — separated native and dummy silent scheduler routes
+
+The same-build retail-gated capture launched native-SDL silent and
+`SDL_AUDIODRIVER=dummy` silent arms concurrently, both with
+`ROGUESQ_AUDIO_UCODE=0` and scheduler/task-route breadcrumbs. The retail oracle
+whole-RDRAM positive control fired (`callbacks=10000`). Both port arms crashed
+before title VI 1024 or hangar VI 512 at `spTaskSchedulerThread+9632`; both
+reported fault address `0x400128d47` and last guest PC `0x8000834c`.
+
+This selects Hshared-scheduler over Hdevice-init for the silent pre-target
+failure: native SDL initialization is not necessary for the observed crash.
+The matching native and dummy traces are two independent arm lines of evidence
+within the qualified run; the retail control is the independent ground-truth
+line. It does not distinguish guest queue/state corruption from process
+topology interaction. No target-phase sink rows exist, so no sink conclusion
+was drawn. No mitigation or guest/RDRAM state change was made.
+
+The experiment is `scratch/agent/run_s4068_m5_native_dummy_silent.sh`; logs are
+under `scratch/agent/s4068_m5_native_dummy_silent/`.

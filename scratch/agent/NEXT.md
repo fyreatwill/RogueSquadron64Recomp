@@ -1,44 +1,47 @@
-# Next work unit: localize the native-backend startup defect
+# Next work unit: isolate process topology from the shared silent scheduler defect
 
-HYPOTHESIS-ID: m5-native-backend-origin
+HYPOTHESIS-ID: m5-shared-scheduler-topology
 
-Session 4067 selected Hnative-backend: native SDL crashed in
-`spTaskSchedulerThread+9632` with `ROGUESQ_AUDIO_UCODE=0`, before title or
-hangar, while the dummy real arm reached both phases. The next unit must keep
-the retail whole-RDRAM positive control and run native-SDL silent and
-`SDL_AUDIODRIVER=dummy` silent arms in one same-build capture. Do not compare
-sink output unless both arms reach the phase gates.
+Session 4068 selected Hshared-scheduler: native-SDL silent and
+`SDL_AUDIODRIVER=dummy` silent arms both crashed at the same
+`spTaskSchedulerThread+9632` fault before either target phase. The next unit
+must use the same build and retail positive control, but launch the two silent
+arms sequentially so concurrent process topology is no longer shared.
 
 Competing hypotheses:
 
-- Hdevice-init: native SDL device initialization perturbs startup; native
-  silent crashes pre-target while dummy silent reaches title 1024 and hangar
-  512 with the normal scheduler markers.
-- Hshared-scheduler: the crash is independent of audio backend; both silent
-  arms fail at the same scheduler/guest boundary before target phases.
-- Hroute-topology: backend selection changes timing but neither arm is
-  deterministically phase-qualified; the run must be repeated with a new
-  scheduler breadcrumb rather than interpreted as sink evidence.
+- Htopology: the matching concurrent crashes are caused by two port processes
+  contending for a shared host/runtime resource; sequential arms will change
+  the result, with at least one reaching title 1024 and hangar 512.
+- Hguest-state: the defect is deterministic inside each process's common guest
+  scheduler/state path; both sequential arms will reproduce the same
+  pre-target `spTaskSchedulerThread+9632` crash and fault signature.
+- Hnative-residual: native SDL has an independent startup effect hidden by the
+  concurrent crash; sequential native will fail while sequential dummy reaches
+  both target phases.
+- Hroute-schedule: termination is schedule-sensitive even sequentially; mixed
+  or non-repeatable outcomes are unevaluable and require a new breadcrumb.
 
-Discriminating measurement: build once, launch the retail oracle, then launch
-both port arms from `build/` with `ROGUESQ_AUDIO_UCODE=0`,
-`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, the
-existing phase gates, and scheduler/task-route breadcrumbs. Use SIGKILL for
-both port processes and retain separate logs. Native-only pre-target failure
-with dummy reaching both phases selects Hdevice-init; matching pre-target
-`spTaskSchedulerThread` failure selects Hshared-scheduler; mixed or unstable
-termination is Hroute-topology and is unevaluable. The retail positive-control
-threshold must fire in the same run.
+Discriminating measurement: one build, one retail-gated capture, then launch
+the silent native arm, SIGKILL it after its terminal phase/crash/timeout, and
+launch the silent dummy arm under the same phase gates and scheduler/task-route
+breadcrumbs. The retail whole-RDRAM positive-control threshold must fire. Both
+arms reproducing the same fault selects Hguest-state; one or both arms reaching
+both target phases only when sequential selects Htopology; native-only failure
+selects Hnative-residual; mixed/unstable termination selects Hroute-schedule.
+Do not interpret host queue, drain, or sink output unless an arm reaches both
+target phases.
 
-Exact command sequence:
+Exact commands:
 
-1. Add the two-arm recipe as
-   `scratch/agent/run_s4068_m5_native_dummy_silent.sh`, based on
-   `scratch/agent/run_s4066_m5_native_isolated.sh`; set
-   `ROGUESQ_AUDIO_UCODE=0` explicitly for both arms and set
-   `SDL_AUDIODRIVER=dummy` only for the dummy arm.
-2. Run `zsh scratch/agent/run_s4068_m5_native_dummy_silent.sh` from the repo
-   root after confirming the Debug binary and ROM exist.
-3. Summarize phase markers, crash PC/guest PC, scheduler breadcrumbs, and the
-   retail positive-control marker; do not infer native sink behavior from a
-   pre-target arm.
+1. Create `scratch/agent/run_s4069_m5_sequential_silent.sh` from
+   `run_s4068_m5_native_dummy_silent.sh`, changing the concurrent `run_port`
+   launch into a sequential `run_one` call. Keep
+   `ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`,
+   `ROGUESQ_LLE_SOLO=1`, all phase gates, and the scheduler/task-route logs.
+2. Run `zsh scratch/agent/run_s4069_m5_sequential_silent.sh` from the repo
+   root. Use SIGKILL for each port process and retain separate native/dummy
+   logs plus a driver summary.
+3. Record the retail positive-control marker, each arm's phase markers, crash
+   PC/fault/guest PC, and scheduler breadcrumbs. Update the ledger and truth
+   only from the discriminating outcome.
