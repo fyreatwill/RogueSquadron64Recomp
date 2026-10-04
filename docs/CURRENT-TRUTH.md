@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4053 (2026-10-04).
+Updated for session 4054 (2026-10-04).
 
 ## Current state
 
@@ -71,6 +71,14 @@ sentinel path is not legitimate ownership state.
   legacy-real crashed in the scheduler path, while declared-silent reached
   only a 640-width phase. This selects H3 for this schedule; its source-writer
   nulls are unevaluable and do not advance the writer census.
+- Session 4054 ran one same-build sequential arm-isolation matrix while the
+  retail oracle remained active. Retail passed the whole-RDRAM control and
+  reached title 1024 and hangar 512. Isolated declared-real reached both
+  targets and reproduced the zero-payload image signature
+  (`FNV=0x762B22A5`, nonzero=0); isolated declared-silent and legacy-real both
+  crashed in `spTaskSchedulerThread` before target phases. This qualifies the
+  declared-real route for the `0x800052C4` census, while the other two arms
+  remain unevaluable.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -85,14 +93,14 @@ Work only the first applicable item. This backlog is one monotonic sequence.
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-2. **Requalify the M5 route.** Run one genuinely new same-build arm-isolation
-   table using the route harness, with retail controls and all three port-arm
-   target-phase controls. Classify any pre-target failure as H3, never as
-   writer absence. Do not repeat launch-order/gap permutations already tested;
-   isolate each arm's startup dependency in one batch.
-3. **Resume the retail-grounded source-writer census.** Only after step 2
-   qualifies, measure the `0x800052C4` class and then choose the next bounded
-   class. Keep the positive controls and phase-scoped budgets in the same run.
+2. **Resume the retail-grounded source-writer census.** The isolated
+   declared-real arm is qualified at both targets with the established zero
+   payload signature. Measure the `0x800052C4` class next, retaining retail
+   whole-RDRAM/title/hangar controls and phase-scoped budgets in the same run.
+   Treat declared-silent and legacy-real pre-target crashes as unevaluable.
+3. **Requalify the M5 route.** Only after the `0x800052C4` class is measured,
+   use a genuinely new same-build arm-isolation or startup-dependency matrix;
+   do not repeat launch-order/gap permutations already tested.
 4. **M5 de-stubbing.** After the current route/source discriminator is closed,
    follow the incremental validation sequence in `M5-AUDIO-PLAN.md`; do not
    treat the silent control as real-audio evidence.

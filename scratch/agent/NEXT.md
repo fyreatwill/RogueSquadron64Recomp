@@ -1,39 +1,38 @@
-# Next work unit: isolate M5 arm startup dependencies in one same-build matrix
+# Next work unit: measure the qualified M5 `0x800052C4` source-writer class
 
-HYPOTHESIS-ID: m5-route-arm-isolation
+HYPOTHESIS-ID: m5-source-writer-052c4
 
-M3 runtime qualification is externally blocked: this host has no MIPS GCC/LD,
-Clang has no MIPS backend, and no local toolchain/source tree was found. Do
-not repeat the M3 target build here. The prior reversed 7-second stagger left
-all port arms pre-target, so isolate arm startup dependencies rather than
-trying another launch permutation.
+The M3 runtime qualification remains externally blocked: this host has no MIPS
+GCC/LD and Clang has no MIPS backend. Do not repeat that target build. Session
+4054 qualified only the isolated declared-real arm; declared-silent and
+legacy-real crashed before target phases and cannot support a writer null.
 
 Competing hypotheses:
 
-- H1: a shared startup dependency fails regardless of arm, so isolated arms
-  reproduce the pre-target failure.
-- H2: one or more arms reach title/hangar when launched alone, proving the
-  prior multi-arm schedule caused the route failure.
-- H3: an isolated arm reaches a target phase with the established zero-payload
-  signature, reopening the consumer/source discriminator for that arm.
+- H1: retail's `0x800052C4` execution class writes the nonzero source payload
+  that the qualified port route lacks.
+- H2: retail executes the class but its stores are zero/metadata-only, so the
+  missing nonzero source is produced elsewhere.
+- H3: the class is not target-phase equivalent between retail and port, so the
+  comparison is invalid until a different qualified callsite is identified.
 
-Discriminator: run the existing harness in one build with each arm isolated
-and the retail control retained; collect title/hangar phase markers, task/SP/
-image positive controls, and M5 payload signatures. A target-qualified arm
-reopens H3 only if it also shows the zero-payload signature; any pre-target
-arm remains unevaluable. Use the existing declared-real, declared-silent,
-and legacy-real configurations; do not infer runtime behavior from M3.
+Discriminator: the retail oracle must pass whole-RDRAM, title, and hangar
+controls and report phase-gated execution/store rows for `0x800052C4`,
+`0x800052C8`, and `0x800052CC`; the declared-real port arm must reach both
+target phases and retain its zero-payload signature. Nonzero scalar stores from
+the retail class select H1; only zero/metadata stores with valid target-phase
+execution select H2; a missing target-phase retail class or failed port route
+leaves H3/unevaluable. The same run must include all three callsites and both
+phase buckets; do not infer a null from a pre-target crash.
 
 Commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-# Extend the harness with an isolation mode: launch one port arm per batch,
-# retaining the retail process and the same positive controls.
-zsh scratch/agent/run_s4019_m5_route_qualification.sh
-grep -nE '\[phase\]|positive-control|m5-|CRASH|ABORT' scratch/agent/<new-run>/*.log | head -240
+zsh scratch/agent/run_s4037_m5_candidate_writers.sh
+grep -nE 'positive-control|post-store-scalar|052c4|origin=0x00790400|origin=0x006ab400|audtask-image-dma-join|CRASH|ABORT' \
+  scratch/agent/s4037_m5_candidate_writers/driver.log | tail -240
 ```
 
-The isolation batches must record the exact arm/phase table and retain the M3
-toolchain dependency as open until a MIPS host produces `patches.elf`,
-`RecompiledPatches/patches.c`, and `PatchesLib`.
+The M3 toolchain dependency remains open until a MIPS host produces
+`patches.elf`, `RecompiledPatches/patches.c`, and `PatchesLib`.

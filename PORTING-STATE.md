@@ -144403,3 +144403,21 @@ unevaluable, so the run does not advance the producer or consumer conclusions.
 It rules out neither a shared startup dependency nor the possibility that an
 isolated arm can qualify. The route harness now supports explicit launch order
 and gap parameters; the next unit is an arm-isolation matrix.
+
+## Session 4054 (2026-10-04) — isolated declared-real arm qualifies M5 target route
+
+Built the ordinary Debug target, then ran one same-build sequential arm-isolation
+matrix with the retail oracle active throughout. The oracle whole-RDRAM positive
+control fired and retail reached title VI 1024 and hangar VI 512. The isolated
+declared-real arm reached both target phases and reproduced the established
+zero-payload image signature: input `0x1798B0`, `FNV=0x762B22A5`, nonzero=0.
+The declared-silent and legacy-real arms both crashed in
+`spTaskSchedulerThread` before title 1024, so their source-writer nulls remain
+unevaluable.
+
+This selects the route-qualified branch of the M5 discriminator: the
+`0x800052C4` retail-grounded source-writer census is now the next work unit for
+declared-real. It rules out a universal isolated-arm startup failure, but does
+not explain why the other two arms crash. The new harness is
+`scratch/agent/run_s4054_m5_arm_isolation.sh`; its captured output is under
+`scratch/agent/s4054_m5_arm_isolation/`.
