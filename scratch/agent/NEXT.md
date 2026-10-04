@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
 
 Run the paired retail/port candidate-span driver with writer PCs
-`0x80001B7C`, `0x80003A10`, and `0x80003A18`.
+`0x80003A3C`, `0x80003A40`, and `0x80003A44`.
 
 Competing hypotheses and discriminator:
 
@@ -22,7 +22,7 @@ H3 result to the remaining candidate set.
 
 Exact command:
 
-    zsh scratch/agent/run_s3875_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3876_m5_remaining_candidate_writers.sh
 
 The driver must kill both arms with SIGKILL after its watchdog and write
-captures under `scratch/agent/s3876_m5_remaining_candidate_writers/`.
+captures under `scratch/agent/s3877_m5_remaining_candidate_writers/`.

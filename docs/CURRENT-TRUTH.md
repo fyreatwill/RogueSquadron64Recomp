@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3875 (2026-10-03).
+Updated for session 3876 (2026-10-03).
 
 ## Current state
 
@@ -115,8 +115,8 @@ Work only the first applicable item. This is one monotonic backlog.
    crash/abort. All three PCs had qualified title/hangar candidate-span
    writer rows (`0x80001AE8` 1680/358, `0x80001AF4` 1680/358,
    `0x80001B78` 1677/338) but zero post-target samples, selecting H2 for
-   these PCs only. Continue with `0x80001B7C`, `0x80003A10`, and
-   `0x80003A18`.
+   these PCs only. Continue with `0x80003A3C`, `0x80003A40`, and
+   `0x80003A44`.
 2. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
    session 3873 extended the guard to validate the head's `next->prev` back-link
@@ -187,6 +187,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RemainingCandidates-8589Absent` | Single-source retail result at s3872: `0x80085898` and `0x8008589C` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples; `0x80066450` had one hangar writer row and zero post-target samples. They are not established as nonzero image producers. |
 | `H-M5-RemainingCandidates-01adAbsent` | Single-source retail result at s3874: `0x80001AD0`, `0x80001AD8`, and `0x80001AE0` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples. They are not established as nonzero image producers; the paired port arm did not reach target controls. |
 | `H-M5-RemainingCandidates-01aeAbsent` | Paired result at s3875: `0x80001AE8`, `0x80001AF4`, and `0x80001B78` had qualified title/hangar candidate-span writer rows but zero post-target samples; port target/image-DMA controls passed with no crash/abort. They are not established as nonzero image producers. |
+| `H-M5-RemainingCandidates-01b7-3a18Absent` | Paired result at s3876: `0x80003A10` and `0x80003A18` had qualified title/hangar candidate-span rows (31/77 each), while `0x80001B7C` had qualified title rows (1660) but no hangar row; all three had zero post-target samples. H2 is selected for these PCs only; they are not established as nonzero image producers. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 | `H-M3-FreeListReciprocalLinks` | Code landed in s3866; validation blocked by absent MIPS toolchain/configured targets. |
@@ -451,6 +452,18 @@ Work only the first applicable item. This is one monotonic backlog.
   and 1677/338 rows respectively, while each had zero post-target samples.
   H2 is selected for these three PCs only; the remaining writer classes stay
   open.
+
+  ORIGIN: independent retail phase-gated writer-PC and post-target
+  attribution, paired with the port's image-DMA joins; no guest or host state
+  was rewritten, skipped, or guarded.
+
+- **3876:** The paired retail/port arm passed whole-RDRAM, title 1024, hangar
+  512, and oracle-shutdown controls; port reached 2,864 image-DMA joins with
+  zero crash/abort markers. `0x80003A10` and `0x80003A18` had qualified
+  candidate-span writer rows in title/hangar (31/77 each). `0x80001B7C` had
+  qualified title rows (1660) but no hangar row. All three had zero post-target
+  scalar samples, selecting H2 for these PCs only. The next representatives
+  are `0x80003A3C`, `0x80003A40`, and `0x80003A44`.
 
   ORIGIN: independent retail phase-gated writer-PC and post-target
   attribution, paired with the port's image-DMA joins; no guest or host state

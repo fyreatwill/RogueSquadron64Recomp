@@ -141570,3 +141570,21 @@ for these three PCs and does not classify the remaining writer classes.
 ORIGIN: independent retail oracle writer-PC/post-target attribution paired
 with port image-DMA joins; no guest or host state was rewritten, skipped, or
 guarded.
+
+## Session 3876 (2026-10-03) — classified the next candidate-span writer classes
+
+Ran `scratch/agent/run_s3875_m5_remaining_candidate_writers.sh`, with retail
+and port arms in one phase-gated capture. Retail passed the whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and clean shutdown. The port
+reached 2,864 image-DMA joins with zero crash or abort markers.
+
+`0x80003A10` and `0x80003A18` had qualified candidate-span writer rows in
+title/hangar, 31/77 each. `0x80001B7C` had qualified title rows (1660) but no
+hangar row. The post-target summary recorded zero samples for all three PCs.
+This selects H2 for these three PCs only: they are not established as
+legitimate nonzero image producers. It rules out H1 for these PCs and does
+not classify the remaining writer classes.
+
+ORIGIN: independent retail oracle writer-PC/post-target attribution paired
+with port image-DMA joins; no guest or host state was rewritten, skipped, or
+guarded.
