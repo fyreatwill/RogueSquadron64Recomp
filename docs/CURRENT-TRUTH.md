@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3991 (2026-10-04).
+Updated for session 3992 (2026-10-04).
 
 ## Current state
 
@@ -40,12 +40,13 @@ their measured scopes. A null attribution is not global writer absence.
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 audio task-contract isolation.** The s3991 declared arm crashed in
-   the first graphics-task scheduler path at guest PC `0x8000834c`, before an
-   audio ABI row, so the contract comparison was unevaluable. Run the next
-   three-arm first-audio-entry table (declared/real, declared/silent,
-   legacy/real) with the existing positive controls; only then name the
-   writer/consumer requiring bytes beyond `0x800`.
+1. **M5 first-audio post-`0x800` consumer census.** Session 3992's same-build
+   three-arm capture reached the first audio ABI in declared/real,
+   declared/silent, and legacy/real. It did not identify a declared-only
+   post-`0x800` read or consumer. Add one phase-scoped read/consumer table at
+   the first audio entry, retaining the DMEM canary and task/DMA controls; the
+   discriminator is a declared-only read or divergent consumer outcome at the
+   same task ordinal.
 
 2. **M3 heap guard validation.** The accumulated guards in
    `patches/heap_guards.c` are not runtime-qualified because the configured
@@ -82,6 +83,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; host target passed, patch/runtime validation remains blocked. |
 | `H-M5-Step1-PreTitleRoute` | Selected H1 at s3973: image/LLE-on reached VI 512, image/LLE-off stopped at VI 1024, silent/LLE-on crashed at `0x8000834c`. |
 | `H-M5-Step1-TaskContract` | H3 at s3991: declared arm crashed in the first graphics-task scheduler path at `0x8000834c` before any audio ABI row; legacy arm passed controls and reached both target phases. |
+| `H-M5-Step1-TaskContract-3992` | H2 refuted in the s3992 same-build capture: declared/real and declared/silent both reached audio ABI and both target phases. No declared-only post-`0x800` consumer was observed, so the boundary remains unevaluable. |
 
 ## Durable evidence boundary
 
@@ -108,6 +110,14 @@ candidate results are summarized by address range rather than copied here.
   emitted the task controls, reached title VI 1024 and hangar VI 512, and
   produced 4,741 audio ABI rows; therefore the declared-size audio contract
   remains unevaluable, not selected.
+- Session 3992's single-build three-arm capture passed positive controls in all
+  arms. Declared/real produced 3,447 audio ABI rows, declared/silent 3,460,
+  and legacy/real 3,428; each reached title VI 1024 and hangar VI 512. The
+  silent arm's first ABI row was `musyx_stub` with `dmem_changed=0` and
+  `canary_ok=1`; both real arms entered the real audio path with
+  `ucode_data_size=0x800`, `break_pc=0x1328`, and `canary_ok=0`. No
+  declared-only post-`0x800` read/consumer marker appeared, so the task
+  contract is still unresolved.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.

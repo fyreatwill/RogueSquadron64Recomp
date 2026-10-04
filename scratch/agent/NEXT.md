@@ -1,32 +1,27 @@
-# Next work unit: isolate first M5 audio-task entry across staging arms
+# Next work unit: census first-audio consumers beyond the declared staging span
 
 HYPOTHESIS-ID: m5-audio-task-contract
 
-Run one same-build three-arm capture that reaches or identifies the first
-`M_AUDTASK`: declared-size + real audio, declared-size + silent audio, and
-legacy-size + real audio. Preserve task-contract, DMEM-canary, DMA-range,
-phase, crash-PC, and positive-control markers. Do not change the qualified
-route or infer anything about the `0x800` boundary until the declared arm has
-an audio-task row or a reproducible pre-audio failure separated from the
-audio-arm choice.
+Add one phase-scoped read/consumer table at the first real `M_AUDTASK`, then
+run the existing three-arm capture unchanged: declared-size + real audio,
+declared-size + silent audio, and legacy-size + real audio. Preserve the
+task-contract, DMEM-canary, DMA-range, phase, and positive-control markers.
+Do not change the qualified route.
 
 Competing hypotheses:
 
-- H1: declared-size + real and declared-size + silent both reach the first
-  audio task, while legacy reaches it too; a declared-only post-`0x800` read
-  or consumer identifies the contract failure.
-- H2: declared-size fails before audio dispatch in both audio-arm settings,
-  while legacy reaches audio; the defect is pre-audio setup/scheduling, not a
-  proven need for over-copy.
-- H3: the three arms do not provide matching positive controls or split the
-  failure boundary, so the contract remains unevaluable and needs a different
-  discriminator.
+- H1: a declared-only read/consumer beyond the `0x800` staging span appears at
+  a matching first-audio task ordinal.
+- H2: declared and legacy have identical consumer reads; the `0xF80` copy is
+  not required by the observed audio path.
+- H3: the table is empty or only the silent control differs; the contract
+  remains unevaluable and needs a different boundary.
 
 Discriminator: in one capture, require all three arms to emit the RSP-source
-positive control and either an `audtask-first-boundary`/`audtask-abi` row or a
-crash-PC row. H1 is a declared-only post-`0x800` consumer/read; H2 is the same
-pre-audio failure for both declared arms with legacy audio entry; H3 is any
-missing control or unresolved arm split.
+positive control and the first real-audio ABI row. H1 is a declared-only
+post-`0x800` read/consumer; H2 is matching declared/legacy reads; H3 is no
+qualified read or a missing control. The silent arm is a control for the
+stubbed no-DMEM-change path, not evidence about the real consumer.
 
 Commands:
 

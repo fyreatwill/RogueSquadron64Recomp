@@ -143471,3 +143471,24 @@ table: declared/real, declared/silent, and legacy/real, with the same positive
 controls.
 
 **Outcome: ADVANCED** (the planned capture produced a bounded H3 boundary).
+
+## Session 3992 (2026-10-04) — completed three-arm first-audio contract capture
+
+Ran one clean build and the batched declared-size/real, declared-size/silent,
+and legacy-size/real capture. All three arms passed the RSP-source and DMEM
+positive controls and reached title VI 1024 and hangar VI 512. The first real
+audio ABI appeared in declared/real and legacy/real; the silent arm reached
+the `musyx_stub` ABI with `dmem_changed=0` and `canary_ok=1`. Counts were
+3,447, 3,460, and 3,428 ABI rows respectively. The declared/real and
+legacy/real rows both reported `ucode_data_size=0x800`, real-path
+`break_pc=0x1328`, and `canary_ok=0`. No declared-only post-`0x800`
+consumer/read marker was present.
+
+This refutes the s3991 same-claim boundary that declared staging dies before
+audio dispatch, but it does not prove that the legacy over-copy is unnecessary
+or necessary. The next discriminator is a phase-scoped first-audio
+read/consumer table built into the same three-arm capture. Logs:
+`scratch/agent/soak_results/s3991_m5_task_contract_isolation/{declared-real,declared-silent,legacy-real}.log`.
+
+**Outcome: ADVANCED** (the planned three-arm discriminator ran and refuted the
+pre-audio failure hypothesis).
