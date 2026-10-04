@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3873 (2026-10-03).
+Updated for session 3874 (2026-10-03).
 
 ## Current state
 
@@ -104,7 +104,13 @@ Work only the first applicable item. This is one monotonic backlog.
    samples. The port reached 3,024 image-DMA joins with zero crash/abort
    markers. This selects H2 for these three PCs only. Continue with the next
    measured candidate-span writer class, `0x80001AD0`, `0x80001AD8`, and
-   `0x80001AE0`.
+   `0x80001AE0`. Session 3874 passed the retail whole-RDRAM, title-1024,
+   hangar-512, and shutdown controls. All three PCs had qualified title and
+   hangar candidate-span writer rows (1680/358 each) but zero post-target
+   scalar samples, selecting H2 for these PCs only. The paired port arm
+   stalled before its target-VI/image-DMA controls in this run, so this is
+   single-source retail evidence; do not promote it to a global producer
+   absence. Continue with `0x80001AE8`, `0x80001AF4`, and `0x80001B78`.
 2. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
    session 3873 extended the guard to validate the head's `next->prev` back-link
@@ -173,6 +179,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RemainingCandidates-84e8Absent` | Single-source retail result at s3870: `0x80084E48`, `0x8008509C`, and `0x800852E0` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples; they are not established as nonzero image producers. |
 | `H-M5-RemainingCandidates-84cAbsent` | Single-source retail result at s3871: `0x80084C0C`, `0x80084D58`, and `0x80084FAC` had no qualified candidate-span writer rows or post-target samples after positive controls; they do not own the measured target edge. |
 | `H-M5-RemainingCandidates-8589Absent` | Single-source retail result at s3872: `0x80085898` and `0x8008589C` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples; `0x80066450` had one hangar writer row and zero post-target samples. They are not established as nonzero image producers. |
+| `H-M5-RemainingCandidates-01adAbsent` | Single-source retail result at s3874: `0x80001AD0`, `0x80001AD8`, and `0x80001AE0` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples. They are not established as nonzero image producers; the paired port arm did not reach target controls. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 | `H-M3-FreeListReciprocalLinks` | Code landed in s3866; validation blocked by absent MIPS toolchain/configured targets. |
@@ -406,6 +413,17 @@ Work only the first applicable item. This is one monotonic backlog.
 
   ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
   guest or host state was rewritten, skipped, or guarded.
+
+- **3874:** The retail oracle passed the whole-RDRAM positive control, title
+  1024, hangar 512, and clean shutdown. PCs `0x80001AD0`, `0x80001AD8`, and
+  `0x80001AE0` each had qualified candidate-span writer rows in title/hangar
+  (1680/358) but zero post-target scalar samples, selecting H2 for these PCs
+  only. The port arm reached neither target-VI nor image-DMA controls before
+  the watchdog, so no paired port conclusion is claimed. The next measured
+  representatives are `0x80001AE8`, `0x80001AF4`, and `0x80001B78`.
+
+  ORIGIN: independent retail phase-gated writer-PC and post-store scalar
+  attribution; no guest or host state was rewritten, skipped, or guarded.
 
 - **3873:** Landed the next M3 reciprocal-link guard in `patches/heap_guards.c`.
   Before dequeueing a valid free-list head, the patch now requires either a

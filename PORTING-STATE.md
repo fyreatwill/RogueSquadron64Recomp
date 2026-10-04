@@ -141354,6 +141354,20 @@ the fresh dominant PCs `0x80092020`, `0x8009206C`, and `0x80007670`.
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
 
+## Session 3874 (2026-10-03) — classified three remaining candidate writers
+
+Ran the paired candidate-span arm for `0x80001AD0`, `0x80001AD8`, and
+`0x80001AE0`. The retail oracle passed the whole-RDRAM positive control, title
+VI 1024, hangar VI 512, and clean shutdown. Each selected PC had qualified
+title/hangar candidate-span writer rows (1680/358) but zero post-target scalar
+samples, selecting H2 for these PCs only: they are not established as
+nonzero image producers at this scope. The port arm did not reach its target
+VI or image-DMA controls before the watchdog, so this result is single-source
+retail evidence and supplies no paired port conclusion. The next measured
+representatives are `0x80001AE8`, `0x80001AF4`, and `0x80001B78`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-store scalar attribution; no guest or host state was rewritten, skipped, or guarded.
+
 ## Session 3873 (2026-10-03) — extended free-list reciprocal-link guard
 
 The planned M5 candidate-writer arm was observation-only, so this iteration
