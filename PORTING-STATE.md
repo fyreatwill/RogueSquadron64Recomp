@@ -141792,3 +141792,21 @@ and `0x80006C34`.
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3888 (2026-10-03) — classified the next candidate-span writer classes
+
+Ran the corrected paired retail/port candidate-span scalar capture for
+`0x8006EFAC`, `0x80006C2C`, and `0x80006C34`. Retail passed the whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and oracle shutdown. None of
+the three PCs had a qualified candidate-span writer row or post-target scalar
+sample, selecting H3 for these PCs only. The same-run controls make these
+nulls meaningful.
+
+The port arm reached 2,999 ABI events and 2,992 image-DMA joins with zero
+crash or abort markers. This is coverage evidence only and does not identify
+a retail producer. The next representatives are `0x80003A48`, `0x80003A50`,
+and `0x80003AFC`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.

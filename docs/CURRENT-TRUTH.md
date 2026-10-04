@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3887 (2026-10-03).
+Updated for session 3888 (2026-10-03).
 
 ## Current state
 
@@ -610,6 +610,17 @@ Work only the first applicable item. This is one monotonic backlog.
   zero post-target scalar samples, selecting H2 for these PCs only. The port
   reached 2,085 image-DMA joins with zero crash or abort markers. The next
   representatives are `0x80097534`, `0x8009753C`, and `0x80097540`.
+
+  ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
+  paired with port image-DMA joins; no guest or host state was rewritten,
+  skipped, or guarded.
+
+- **3888:** The paired candidate-span arm passed whole-RDRAM, title 1024,
+  hangar 512, and oracle-shutdown controls. `0x8006EFAC`, `0x80006C2C`, and
+  `0x80006C34` had no qualified candidate-span writer rows or post-target
+  scalar samples, selecting H3 for these PCs only. The port reached 2,999 ABI
+  events and 2,992 image-DMA joins with zero crash or abort markers. The next
+  representatives are `0x80003A48`, `0x80003A50`, and `0x80003AFC`.
 
   ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
   paired with port image-DMA joins; no guest or host state was rewritten,
