@@ -1,23 +1,22 @@
-# Next work unit: qualify the title host audio sink
+# Next work unit: qualify title audio playback/drain timing
 
-HYPOTHESIS-ID: m5-title-audio-host-sink
+HYPOTHESIS-ID: m5-title-audio-playback-drain
 
-Session 4063 selected H2 for the prior endpoint discriminator: retail title
-AI output was nonzero, and the qualified declared-real port produced nonzero
-PCM at `osAiSetNextBuffer` and at `queue_samples`. The next bounded unit is to
-qualify whether the host SDL queue accepts that PCM.
+Session 4064 selected Hqueue for the host endpoint discriminator. Retail passed
+the whole-RDRAM/title/hangar controls, and the schedule-gated declared-real port
+reached both target phases. Device 2 opened; host rows had positive queue
+deltas in title and hangar, and consumer PCM was nonzero.
 
 Competing hypotheses:
 
-- Hsink: `SDL_OpenAudioDevice` failed (`device=0`) or title queue calls report
-  zero `call_delta`/no queue growth despite nonzero consumer PCM. This selects
-  a host sink defect and the next step is the device/backend setup.
-- Hqueue: title queue calls report positive `call_delta` and a live device,
-  with nonzero consumer PCM. This rules out the sink enqueue boundary and moves
-  the investigation to playback/drain timing.
-- Hroute: the declared-real arm fails before title or lacks the phase-scoped
-  consumer rows. This makes the run unevaluable; do not interpret it as a sink
-  null.
+- Hdrain: `[m5-audio-drain-raw]` shows queue depth repeatedly reaching zero or
+  failing to track the positive host enqueue calls while consumer PCM is
+  nonzero. This selects a playback/drain timing defect.
+- Hplay: drain rows show queued bytes/frames advancing through title while host
+  calls remain positive. This rules out an immediate drain starvation defect
+  and moves the question to the device callback/output path.
+- Hroute: the declared-real arm fails before both target phases or lacks
+  nonzero consumer rows. This makes the run unevaluable.
 
 Discriminating measurement:
 
@@ -25,22 +24,21 @@ Discriminating measurement:
   title `0x00790400:1024`, and hangar `0x006AB400:512` controls. Keep its
   `osAiSetNextBuffer` witness enabled so retail title nonzero PCM remains an
   independent control.
-- Run the previously qualified declared-real arm from
-  `scratch/agent/run_s4054_m5_arm_isolation.sh`, with
-  `ROGUESQ_LOG_M5_AUDIO_HOST=1` and `ROGUESQ_LOG_PCM_BOUNDARY=1`. Do not use
-  the incomplete manual launch recipe. Require the port's title phase and
-  nonzero `[pcm-boundary-consumer]` rows before reading `[m5-audio-host]`.
-- Record title rows' `device`, `queued_before`, `queued_after`, `call_delta`,
-  `pcm_bytes`, and `samples`. Positive retail control + qualified port title
-  phase + Hsink fields selects Hsink; positive queue deltas selects Hqueue;
-  missing controls is unevaluable.
+- Run `env RS64_S4064_OUT=... zsh scratch/agent/run_s4064_m5_arm_sink.sh`;
+  its schedule gate waits for the retail positive-control marker before
+  launching the declared-real arm. Add `ROGUESQ_LOG_M5_AUDIO_DRAIN=1` to the
+  port environment. Require retail controls, both port phases, and nonzero
+  consumer rows before interpreting drain data.
+- Compare phase-scoped `[m5-audio-drain-raw]` `queued_bytes`/`frames` against
+  `[m5-audio-host]` `queued_before`/`queued_after`/`call_delta`. Hdrain requires
+  the drain-zero pattern; Hplay requires advancing queue depth with positive
+  enqueue calls. Missing controls is unevaluable.
 
 Exact checks after the run:
 
 ```sh
-grep -E '\[oracle\] (positive-control|done|ai-output-summary)|\[ai-output\]' scratch/agent/s4064_arm_sink/retail.log
-grep -E '\[phase\].*(1024|512)|\[pcm-boundary-consumer\]|\[m5-audio-host\]|\[CRASH\]|\[ABORT\]' scratch/agent/s4064_arm_sink/declared-real.log
+grep -E '\[oracle\] (positive-control|done|ai-output-summary)|\[ai-output\]' scratch/agent/s4065_arm_drain/retail.log
+grep -E '\[phase\].*(1024|512)|\[pcm-boundary-consumer\]|\[m5-audio-host\]|\[m5-audio-drain-raw\]|\[CRASH\]|\[ABORT\]' scratch/agent/s4065_arm_drain/declared-real.log
 ```
 
-The existing runtime host logger is the instrument; no new counter is needed
-unless its title rows are absent despite a qualified consumer witness.
+The existing drain logger is the instrument; no new counter is needed.

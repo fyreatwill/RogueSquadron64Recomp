@@ -144586,3 +144586,26 @@ that run is unevaluable and was not used as evidence.
 The next discriminator is the existing `[m5-audio-host]` queue/device witness
 under the same qualified route. No mitigation or guest/RDRAM state change was
 made.
+
+## Session 4064 (2026-10-04) — qualified the title host audio enqueue boundary
+
+The planned work unit was the title host-sink discriminator. The ordinary
+target was rebuilt successfully. A same-build retail-oracle/declared-real
+capture was first launched concurrently; retail passed the whole-RDRAM
+positive control, but the port crashed in `spTaskSchedulerThread` before title,
+so that arm was correctly treated as Hroute/unevaluable. The fixed capture
+waited for the retail positive-control marker before launching the port.
+
+In the fixed capture, retail passed the whole-RDRAM control and reached title
+VI 1024 and hangar VI 512 with nonzero AI output. The declared-real port reached
+both target phases with nonzero `[pcm-boundary-consumer]` rows and no crash or
+abort. `[m5-audio-host]` recorded device 2; its 1,024 title rows included 512
+positive `call_delta` rows, and its 1,024 hangar rows included 513 positive
+calls. The queue therefore accepted PCM at the measured host boundary.
+
+This selects Hqueue and rules out SDL device-open failure and zero enqueue for
+the qualified route. It does not establish audible playback: queue drain and
+device callback timing remain open. The schedule-sensitive first attempt is a
+documented dead end, not a sink null. The reusable capture is
+`scratch/agent/run_s4064_m5_arm_sink.sh`; no mitigation or guest/RDRAM state
+change was made.
