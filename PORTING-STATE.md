@@ -144079,3 +144079,21 @@ two-second timing change altered the route outcome relative to s4030, but this
 does not establish audio staging as the cause. ORIGIN: launch timing and
 task/audio hooks observe legitimate process scheduling and runtime arm choices;
 no mitigation landed.
+
+## Session 4032 (2026-10-04) — five-second launch gap changes qualifying arm
+
+Before building, the work unit was the four-arm M5 route requalification with
+the port launch order `legacy-real,declared-silent,declared-real` and a
+five-second gap between port launches. The Debug target build passed. Retail's
+whole-RDRAM positive control and title/hangar VI controls fired. Declared/silent
+reached both target phases and emitted 2,196 audio-stage rows using declared
+`0x800` staging with no crash or abort. Declared/real and legacy/real both fired
+the RSP-source control, emitted no audio-stage rows, and crashed before target
+phases at guest PC `0x8000834C`; their pre-target scheduler rows showed
+declared `0x800` and legacy `0xF80` staging. H1 remains selected: changing the
+gap from two to five seconds changed the qualifying arm from legacy/real to
+declared/silent, so launch timing is a route discriminator; this does not
+establish audio staging as the cause. This rules out a stable five-second
+all-arm qualification and keeps the `0x800052AC` writer census parked. ORIGIN:
+launch timing and task/audio hooks observe legitimate runtime arm choices; no
+mitigation landed.

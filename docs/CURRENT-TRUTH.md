@@ -252,6 +252,19 @@ route outcome relative to s4030, but this does not establish audio staging as
 the cause. ORIGIN: launch timing and task/audio hooks observe legitimate
 process scheduling and runtime arm choices; no mitigation landed.
 
+Session 4032 re-ran the same arm order with a five-second launch gap. Retail's
+whole-RDRAM positive control and title/hangar VI controls fired. Declared/silent
+reached both target phases and emitted 2,196 audio-stage rows using declared
+`0x800` staging with no crash or abort. Declared/real and legacy/real both fired
+the RSP-source control, emitted no audio-stage rows, and crashed before target
+phases at guest PC `0x8000834C`; legacy showed `0xF80` staging and declared
+showed `0x800` in their pre-target scheduler rows. H1 remains selected: changing
+the gap from two to five seconds changed the qualifying arm from legacy/real to
+declared/silent, so launch timing is a route discriminator; this still does not
+establish audio staging as the cause. ORIGIN: launch timing and task/audio hooks
+observe legitimate process scheduling and runtime arm choices; no mitigation
+landed.
+
 Session 4016 qualified a new gate/source boundary capture. Retail's whole-RDRAM
 positive control, title VI 1024, and hangar VI 512 controls passed and the
 oracle completed; it reported 17 writes to `0x800A0F50`, 192 executions of
@@ -406,8 +419,8 @@ candidate results are summarized by address range rather than copied here.
 
 1. **M5 route requalification.** Select one new schedule discriminator, then
    repeat the four-arm route qualification. Session 4031 selected timing as a
-   route discriminator: a two-second stagger let legacy/real qualify while
-   both declared arms crashed pre-target. Test a five-second stagger in the
+   route discriminator: a five-second stagger let declared/silent qualify while
+   the real arms crashed pre-target. Test a ten-second stagger in the
    same launch order before resuming `0x800052AC`; require the retail positive,
    title/hangar phases, RSP/audio controls, and no crash/abort in all port arms.
 
@@ -484,6 +497,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-RouteQualification-4030` | H2 selected: with legacy/real launched first, declared/real reached both target phases, declared/silent stopped after title, and legacy/real crashed pre-target at guest PC `0x80001C94`; launch-order permutation did not qualify the route. |
 | `H-M5-RouteQualification-4031` | H1 selected: a two-second launch gap let legacy/real reach both target phases while declared/real and declared/silent crashed pre-target at `0x8000834C`; timing changes route outcome, but audio staging is not established as cause. |
 | `H-M5-CandidateWriterClass-052C` | H3 selected at s4025: retail controls and candidate-null evidence passed, but declared/real crashed at `0x8000834C` and legacy/real produced no target-phase rows; no writer conclusion is allowed. |
+| `H-M5-RouteQualification-4032` | H1 remains selected: with a five-second launch gap, declared/silent qualified while declared/real and legacy/real crashed pre-target; the qualifying arm changed from s4031's legacy/real result. |
 
 ## Durable evidence boundary
 
