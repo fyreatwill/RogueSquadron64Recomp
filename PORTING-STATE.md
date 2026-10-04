@@ -144212,3 +144212,14 @@ successfully. The configured `PatchesLib` target still fails immediately with
 This rules out a host-tree build defect but leaves runtime qualification
 blocked on the missing build-graph target. No runtime or route conclusion was
 drawn.
+## Session 4041 (2026-10-04) — patch target remains absent on host
+
+Ran the bounded M3 patch-target qualification. `cmake --build build --config
+Debug --target PatchesLib` failed immediately with `No rule to make target
+'PatchesLib'`, while `cmake --build build --config Debug --target
+RogueSquadron64Recomp` completed successfully. The configured CMake gate omits
+the patch target when its MIPS compiler prerequisite is absent; this is not a
+source, compiler, linker, or ABI failure in the guard. H2 is selected at the
+current host scope. Runtime qualification remains blocked until a host with a
+valid MIPS toolchain is configured. ORIGIN: build-graph/toolchain diagnostic
+only; no mitigation landed.

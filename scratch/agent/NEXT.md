@@ -1,26 +1,26 @@
-# Next work unit: restore runtime qualification for the audited M3 patch
+# Next work unit: configure the MIPS patch pipeline on a toolchain host
 
 HYPOTHESIS-ID: m3-active-queue-ownership-guard
 
 Competing hypotheses:
 
-- H1: the checked-in `PatchesLib` target is available after the normal CMake
-  configure/build path; the new sentinel-disjoint guard can be compiled and
-  linked into the runtime.
-- H2: the source guard is valid, but this checkout still lacks the toolchain
-  or generated patch target, so only ordinary host-build evidence is possible.
-- H3: the guard exposes a compile/link or ABI error, requiring correction
-  before any runtime qualification is meaningful.
+- H1: configuring with a valid MIPS toolchain root exposes `PatchesLib`, and
+  the sentinel-disjoint guard compiles, regenerates, and links.
+- H2: the toolchain host still omits `PatchesLib`, so only ordinary host-build
+  evidence is possible.
+- H3: the guard exposes a compile/link or ABI error once the target exists.
 
-Discriminator: configure/build `PatchesLib` and then the ordinary Debug target.
+Discriminator: configure/build `PatchesLib` after supplying
+`-DMIPS_TOOLCHAIN_DIR=<toolchain-root>`, then build the ordinary Debug target.
 H1 is selected by a successful generated patch library plus final link. H2 is
-selected by a specific missing-tool/target diagnostic after the source-level
-guard is accepted. H3 is selected by a compiler, linker, or generated-patch
-error attributable to this change.
+selected by a specific missing-tool/target diagnostic after configuration. H3
+is selected by a compiler, linker, or generated-patch error attributable to
+this change.
 
 Exact commands:
 
 ```sh
+cmake -S . -B build -DMIPS_TOOLCHAIN_DIR=<toolchain-root>
 cmake --build build --config Debug --target PatchesLib
 cmake --build build --config Debug --target RogueSquadron64Recomp
 ```

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4040 (2026-10-04).
+Updated for session 4041 (2026-10-04).
 
 ## Current state
 
@@ -483,15 +483,24 @@ configured `PatchesLib` target still fails immediately with `No rule to make
 target 'PatchesLib'`, so this is source/host-build evidence only and runtime
 qualification remains blocked on build-graph integration.
 
+Session 4041 repeated the M3 patch-target qualification on the current host.
+`cmake --build build --config Debug --target PatchesLib` failed before
+compilation with `No rule to make target 'PatchesLib'`, while the ordinary
+`RogueSquadron64Recomp` Debug target completed successfully. This confirms the
+missing target is caused by the configured prerequisite/toolchain gate rather
+than a source or host-link error; runtime qualification remains blocked.
+ORIGIN: build-graph/toolchain diagnostic only; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M3 patch integration.** Restore or supply the `PatchesLib` target before
-   runtime-qualifying the active-queue sentinel guard from session 4040. The
-   source and ordinary host target pass; do not infer runtime behavior from
-   that build alone.
+1. **M3 patch integration.** On a host with the MIPS toolchain, configure with
+   `-DMIPS_TOOLCHAIN_DIR=<toolchain-root>` and restore the `PatchesLib` target
+   before runtime-qualifying the active-queue sentinel guard from session 4040.
+   The source and ordinary host target pass; do not infer runtime behavior from
+   that build alone. The current macOS host has no configured MIPS compiler.
 
 2. **M5 route requalification.** Run a genuinely new launch-order/gap
    schedule table before another source-writer census. The retail
