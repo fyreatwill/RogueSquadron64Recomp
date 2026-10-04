@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-candidate-writer-class
 
 Run one same-build, phase-gated retail/port qualification for candidate PCs
-`0x80005078`, `0x8000507C`, and `0x80005080`, using the existing oracle and
+`0x80005084`, `0x80005088`, and `0x8000508C`, using the existing oracle and
 port controls. Build `RogueSquadron64Recomp` once before the paired run. Do
 not add instrumentation: the existing whole-RDRAM, title-1024, hangar-512,
 oracle-completion, and port image-DMA controls are the ground-truth contract.
