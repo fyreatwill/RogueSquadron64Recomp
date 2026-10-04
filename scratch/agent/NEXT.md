@@ -2,8 +2,8 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
-Run one paired retail/port candidate-writer census for `0x800050D8`,
-`0x800050DC`, and `0x800050E0`. Patch
+Run one paired retail/port candidate-writer census for `0x800050E4`,
+`0x800050E8`, and `0x800050EC`. Patch
 `scratch/agent/run_s3941_m5_candidate_writers.sh` by changing its output
 directory and all three `--post-value-pc`/grep addresses, then build and run:
 
@@ -25,4 +25,6 @@ Competing hypotheses:
 
 Discriminator: with all controls passing in one run, target-phase execution,
 post-target rows, and scalar samples split H1/H2/H3; any missing control or
-port hangar phase selects H4.
+port hangar phase selects H4. The preceding `0x800050D8/0xDC/0xE0` class
+selected H3: all three were absent from the qualified retail phase, while
+the port produced 2,997 image-DMA joins with zero-valued payload.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3950 (2026-10-04).
+Updated for session 3951 (2026-10-04).
 
 ## Current state
 
@@ -135,6 +135,16 @@ Work only the first applicable item. This is one monotonic backlog.
    abort, and qualified source/destination payload `FNV=0x762B22A5`,
    nonzero=0. Continue with the next adjacent unclassified candidates; this
    is not global writer absence.
+
+   Session 3951 tested `0x800050D8`, `0x800050DC`, and `0x800050E0`. The
+   independent whole-RDRAM oracle control fired 10,000 times; retail reached
+   title 1024 and hangar 512 and completed, with 36 post-store scalar records
+   and zero mismatches. None of the three candidates had a target-phase
+   execution row, post-target row, or scalar sample, selecting H3 for this
+   bounded class. The paired port reached hangar with 2,997 image-DMA joins,
+   no crash or abort, and qualified source/destination payload
+   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
+   candidates; this is not global writer absence.
 
 3. **M3 prior guard classes — validate the accumulated patch before extending.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from

@@ -142755,3 +142755,17 @@ The paired port reached hangar with 2,784 image-DMA joins, zero crash/abort
 markers, and `FNV=0x762B22A5`, `nonzero=0` for the source and destination
 payloads. This rules out these three candidate PCs as the writer in the
 measured retail phase; it does not establish global writer absence.
+
+## Session 3951 (2026-10-04) — classified the next M5 candidate-writer class
+
+The paired 75-second census measured `0x800050D8`, `0x800050DC`, and
+`0x800050E0` with the whole-RDRAM, title-1024, hangar-512,
+oracle-completion, scalar-mismatch, and passive M5 controls enabled. The
+independent oracle positive control fired 10,000 times. Retail reached both
+target VI phases and completed; its 36 post-store scalar records had zero
+mismatches. None of the candidates executed in the qualified target phase,
+and none produced a post-target row or scalar sample, selecting H3 for this
+bounded class. The paired port reached hangar with 2,997 image-DMA joins,
+zero crash/abort markers, and `FNV=0x762B22A5`, `nonzero=0` for source and
+destination payloads. This rules out these three candidate PCs as the
+qualified retail writer; it does not establish global writer absence.
