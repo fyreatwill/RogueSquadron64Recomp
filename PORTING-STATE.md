@@ -64603,6 +64603,20 @@ audio hit follows an explicit return; the second is in the malformed
 generated audio tail. None has a target-path consumer or a frame-overlapping
 writer.
 
+## Session 3918 (2026-10-03) — classified the next M5 candidate-writer class
+
+The corrected phase-gated discriminator tested retail PCs `0x80004FAC`,
+`0x80004FB0`, and `0x80004FB4`. Retail positive controls passed: the
+whole-RDRAM watch crossed its threshold, title VI 1024 and hangar VI 512 were
+observed, and the oracle completed. Each candidate had zero target-phase
+execution, zero candidate-span rows, zero post-target rows, and zero scalar
+samples. This selects H3 for this bounded class only; it rules out these PCs as
+qualified retail writers at the measured target phase, not all possible
+writers. The paired port reached title and hangar, produced 2,264 image-DMA
+joins, and had no crash/abort; qualified image payload remained
+`FNV=0x762B22A5`, nonzero=0. The port result confirms the separate edge still
+runs but does not identify the missing upstream writer.
+
 `include/rsp_dpc_macros.h` defines `MEM_WU` with the same address calculation
 as `MEM_W` and an exact unsigned four-byte load. This selects H3 and rules out
 the unsigned-load/accessor class as the current origin. No build, runtime
