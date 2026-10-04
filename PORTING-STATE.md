@@ -144341,3 +144341,19 @@ the build-graph repair but does not qualify the patch or infer runtime behavior.
 The next discriminator is a host/toolchain with both MIPS tools: it must produce
 `patches.elf`, generated `RecompiledPatches/patches.c`, and `PatchesLib` before
 the sentinel guard can be runtime-qualified.
+
+## Session 4050 (2026-10-04) — M3 qualification confirms missing MIPS toolchain
+
+Ran the prescribed M3 qualification unit after the maintenance check. `command
+-v` found neither `mips64-elf-gcc` nor `mips64-elf-ld`. Reconfiguration then
+reported the expected patches-build skip, and
+`cmake --build build --config Debug --target PatchesLib` failed with `No rule
+to make target 'PatchesLib'`. The ordinary `RogueSquadron64Recomp` target
+completed successfully.
+
+This selects H3, not H1: the patch ELF, generated host patch source, and
+`PatchesLib` were not produced, so the active-sentinel predecessor guard was
+not runtime-qualified. It rules out a remaining CMake/native-name failure as
+the immediate blocker, but does not provide runtime evidence about the guard.
+The next unit requires a usable MIPS toolchain or another host that provides
+one.

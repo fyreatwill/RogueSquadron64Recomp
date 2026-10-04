@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4049 (2026-10-04).
+Updated for session 4050 (2026-10-04).
 
 ## Current state
 
@@ -51,6 +51,10 @@ legitimate ownership state.
 - Session 4047 qualified the sentinel guard only at source/host-build scope;
   session 4049 repaired cross-platform discovery but still found no MIPS
   toolchain. `PatchesLib` was absent and no runtime behavior was inferred.
+- Session 4050 reconfigured on macOS, confirmed no `mips64-elf-gcc` or
+  `mips64-elf-ld` on PATH, observed the expected CMake skip and missing
+  `PatchesLib` target, and rebuilt the ordinary target successfully. Runtime
+  qualification remains unevaluable on this host.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -63,7 +67,8 @@ Work only the first applicable item. This backlog is one monotonic sequence.
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
    already pass; do not infer runtime behavior from that build alone. This
-   host is blocked only on installing/providing the MIPS compiler and linker.
+   macOS host is blocked on installing/providing `mips64-elf-gcc` and
+   `mips64-elf-ld` or using another host with them.
 2. **Requalify the M5 route.** Run one genuinely new same-build launch-order
    or gap table. Retail controls and all three port-arm target-phase controls
    must qualify; classify any pre-target failure as H3, never as writer

@@ -4,7 +4,8 @@ HYPOTHESIS-ID: m3-active-queue-sentinel-predecessor
 
 The CMake graph now discovers native tool names and repairs stale Windows
 `N64RECOMP_EXE` cache values. This host still lacks the MIPS compiler/linker;
-do not run an M5 route permutation or writer census in that unit.
+the next run requires a supplied/installable toolchain or a host that has one.
+Do not run an M5 route permutation or writer census in that unit.
 
 Competing hypotheses:
 
@@ -20,6 +21,9 @@ toolchain on PATH or passing `-DMIPS_TOOLCHAIN_DIR`. H1 requires a generated
 patch ELF, generated `RecompiledPatches/patches.c`, and a successful patch
 library build before runtime qualification; H2 requires a concrete legitimate
 predecessor path; H3 is the exact remaining configure or toolchain failure.
+This iteration observed H3: both MIPS tools were absent and CMake omitted the
+target. A repeated run on this host is not informative until that prerequisite
+changes.
 
 Commands:
 
