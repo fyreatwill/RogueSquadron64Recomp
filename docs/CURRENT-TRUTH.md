@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4060 (2026-10-04).
+Updated for session 4061 (2026-10-04).
 
 ## Current state
 
@@ -121,6 +121,16 @@ sentinel path is not legitimate ownership state.
   to transition state `origin=0x006AB800`, width 1024, not the exact hangar
   bucket; mismatch=0. This rules out treating `0x800078EC` as the exact
   hangar-phase writer, but does not identify a replacement producer.
+- Session 4061 repeated the immediate-writer capture with explicit transition
+  and hangar buckets in one run. Retail passed the whole-RDRAM positive control
+  and reached title `0x00790400/1024` and hangar `0x006AB400/512`; the port
+  reached both phases with no crash/abort and retained `FNV=0x762B22A5`,
+  nonzero=0. Retail recorded 816 mismatch-free zero scalar stores from
+  `0x800078EC`, but its detailed rows were in the `0x006AB800` transition
+  (live width 512) or a width-1024 `0x006AB400` phase; the exact
+  `0x006AB400:512` bucket had no candidate rows. H2 is selected: this
+  zero-fill is not the exact hangar writer, so a different producer or an
+  absent producer remains open.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -129,14 +139,14 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Close the immediate-writer phase boundary.** Repeat the qualified
-   declared-real/retail capture with the exact hangar bucket as the primary
-   discriminator: source-range writer histograms and requested-PC rows must be
-   reported separately for `origin=0x006AB400,width=512` and the preceding
-   `origin=0x006AB800,width=1024` transition. Retain all three candidate PCs,
-   tuple fields, scalar-store mismatch counts, and retail whole-RDRAM/title/
-   hangar controls. Do not infer a replacement producer until a nonzero
-   target-bucket writer is independently attributed.
+1. **Census the next source-span writer class.** Run one retail-grounded,
+   declared-real capture retaining the whole-RDRAM/title/hangar controls and
+   the exact `0x006AB400:512` bucket, with the ranked pre-existing source-span
+   writer `0x80007670` and its known caller/neighbor class watched together.
+   Separate exact-hangar rows from transition/title rows and require
+   mismatch-free scalar samples before attributing values. A target-bucket
+   nonzero row selects this class as the producer; a qualified null advances
+   the census without claiming global absence.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target

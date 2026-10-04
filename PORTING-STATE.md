@@ -144523,3 +144523,24 @@ exact hangar bucket. Thus the run rules out treating `0x800078EC` as the exact
 hangar-phase writer, but does not identify a replacement target producer or
 select a nonzero source. The next unit splits those two phase buckets in one
 capture before making a producer claim.
+
+## Session 4061 (2026-10-04) — separated the immediate writer's transition and hangar buckets
+
+Ran the same-build retail-oracle and declared-real capture with explicit
+`0x006AB800` transition and `0x006AB400:512` hangar instrumentation. Retail's
+whole-RDRAM positive control fired, and retail reached title VI 1024 and hangar
+VI 512. The port reached both target phases with no crash or abort and retained
+`FNV=0x762B22A5`, nonzero=0.
+
+The oracle recorded 816 scalar stores from `0x800078EC`; every sample was zero
+with `mismatch=0`. However, the detailed rows were attributed to the
+`0x006AB800` transition (live width 512) or to a width-1024 `0x006AB400`
+phase. The exact `0x006AB400:512` bucket had no rows for `0x800C825C`,
+`0x800078E0`, or `0x800078EC`. H2 is selected: the observed zero-fill is not
+the exact hangar-phase writer. This rules out treating `0x800078EC` as the
+target-bucket writer, but does not identify a replacement producer or prove
+that one exists.
+
+ORIGIN: the `0x800078EC` zero stores are legitimate memset-style activity in
+the observed transition/width buckets; no mitigation or guest/RDRAM state was
+changed.
