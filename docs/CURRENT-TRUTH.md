@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4010 (2026-10-04).
+Updated for session 4011 (2026-10-04).
 
 ## Current state
 
@@ -169,23 +169,34 @@ nondeterministic-arm prediction are unsupported in this capture. Scheduler
 for task fields. ORIGIN: the table observes scheduler context only; it adds no
 skip, guard, restore, or other mitigation.
 
+Session 4011 corrected the parked candidate recipe to run retail, declared/real,
+and legacy/real concurrently. Retail's whole-RDRAM positive control, title VI
+1024 (154), hangar VI 512 (188), and oracle completion all passed. Candidate PCs
+`0x80005294`, `0x80005298`, and `0x8000529C` each had zero post-target samples,
+rows, and sequence hits. Declared/real reached both target phases with 3,966
+audio-ABI rows and 3,944 image-DMA joins; legacy/real reached both with 3,775
+audio-ABI rows and 3,758 joins, with no crash or abort. This selects H2 for the
+class and closes the adjacent candidate census; the prior single-arm capture
+was recipe-invalid for discrimination because it never included the declared
+control. ORIGIN: diagnostic census only; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 candidate-writer census continuation.** The route-level discriminator
-   is complete: declared/real qualifies, while legacy/real is selected H1 and
-   remains pre-target. Rerun `0x80005294`, `0x80005298`, and `0x8000529C` with
-   the existing phase-scoped writer table, retail positive control, and a
-   declared/real control. Treat the legacy arm as a route qualification
-   failure if it repeats the pre-target crash; do not call candidate absence a
-   retail null unless retail controls and the table qualify.
+1. **M5 legacy-only scheduler follow-up.** The candidate census is now
+   qualified through `0x8000529C`. Reuse the three-arm route harness, but add
+   one phase-scoped discriminator for the actual legacy `0xF80` staging writer
+   and its immediate task-load successor. Keep scheduler `a0` as a message
+   object; do not decode it as an OSTask. A writer hit paired with the
+   legacy-only pre-target crash selects staging ownership; a successor change
+   without a writer hit selects successor corruption; matching writer and
+   successor rows across arms selects nondeterministic route failure.
 
-2. **M5 legacy-only scheduler follow-up.** Parked after the staging-specific
-   split; only revisit with a new discriminator that observes the actual
-   staging writer or scheduler message successor without decoding `a0` as an
-   OSTask.
+2. **M5 candidate-writer census continuation.** Closed for the measured
+   adjacent range through `0x8000529C`; resume only with a new writer class or
+   a new ground-truth source.
 
 3. **M3 heap guard validation.** The accumulated guards, including the new
    free-list/active-queue ownership-alias guard, in
@@ -235,6 +246,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-LegacyRealRoute-4008` | H3 selected: after s4007's pre-target failure, the legacy/real rerun again failed before title/hangar, this time crashing at guest PC `0x8000834C` with zero census rows; route-level task-scheduler discrimination is required. |
 | `H-M5-LegacyRealRoute-4009` | Superseded by s4010: the first capture established only a legacy-only route split and was overinterpreted as H2 before the corrected staging-specific table result. |
 | `H-M5-LegacyRealRoute-4010` | H1 selected at route level: declared/real reached both target phases, while legacy/real emitted two pre-target task-load rows with `staging=0xF80` and crashed at `0x8000834C` before any audio-ABI row; no successor variation appeared. |
+| `H-M5-CandidateWriterClass-0594-qualified` | H2 selected at s4011: retail controls and oracle completion passed; all three candidate PCs were absent from qualified post-target evidence; both declared/real and legacy/real reached title/hangar with audio/image joins and no crash/abort. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 

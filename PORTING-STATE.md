@@ -143720,3 +143720,25 @@ not support H3 nondeterminism in this capture. The scheduler boundary's `a0`
 is a message object, not an OSTask pointer, so its decoded task fields are not
 ground truth; existing `audtask-abi` rows remain authoritative. ORIGIN:
 diagnostic boundary only; no skip, guard, restore, or other mitigation landed.
+
+## Session 4011 (2026-10-04) — qualified adjacent M5 candidate class
+
+The first candidate rerun used the inherited single-port recipe and was not a
+discriminator: retail passed, but that port never reached either target phase
+and emitted no audio/image census rows. The recipe was corrected before
+stopping to run retail, declared/real, and legacy/real concurrently with the
+same candidate table.
+
+The corrected capture passed the retail whole-RDRAM positive control, title VI
+1024 (154), hangar VI 512 (188), and oracle completion. Candidate PCs
+`0x80005294`, `0x80005298`, and `0x8000529C` each had `seen=0`, zero
+post-target rows, and zero sequence hits. Declared/real reached both target
+phases with 3,966 audio-ABI rows and 3,944 image-DMA joins; legacy/real did so
+with 3,775 ABI rows and 3,758 joins. Neither arm emitted a crash or abort.
+
+This selects H2 for the candidate class and closes the adjacent census through
+`0x8000529C`. It rules out H1 for these PCs in the measured retail target
+phases and rules out H3 route unevaluability for this corrected capture. The
+next discriminator must return to the legacy-only `0xF80` staging boundary.
+ORIGIN: diagnostic census only; no skip, guard, restore, or other mitigation
+landed.
