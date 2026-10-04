@@ -142433,3 +142433,17 @@ abort; its qualified input remained `FNV=0x762B22A5`, nonzero=0. This selects
 H3 for this bounded candidate set only: these PCs are not the qualified
 retail writer. It does not establish global writer absence. The next adjacent
 set is `0x80004FE8`, `0x80004FEC`, `0x80004FF0`.
+
+## Session 3925 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3924_m5_remaining_candidate_writers.sh` for
+`0x80004FE8`, `0x80004FEC`, and `0x80004FF0`. The retail oracle passed the
+same-run positive controls: whole-RDRAM watch threshold, title VI 1024,
+hangar VI 512, and the 75-second oracle completion. None of the three
+candidates appeared in the target-phase writer census; each had zero
+post-target rows and zero scalar samples. The paired port arm reached phase 5
+with 2,850 qualified image-DMA joins, no crash or abort, and qualified payload
+`FNV=0x762B22A5`, nonzero=0. This selects H3 for this bounded candidate set
+only: these PCs are disconnected from the measured retail writer path. It
+rules out H1 and H2 at the measured target phase, not global writer absence.
+The next adjacent set is `0x80004FF4`, `0x80004FF8`, `0x80004FFC`.
