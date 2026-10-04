@@ -3,7 +3,7 @@
 HYPOTHESIS-ID: m5-candidate-writer-census
 
 Run the paired retail/port candidate-writer harness after changing its three
-candidate PCs to `0x80005090`, `0x80005094`, and `0x80005098`. Build the Debug
+candidate PCs to `0x8000509C`, `0x800050A0`, and `0x800050A4`. Build the Debug
 target first; retain whole-RDRAM, title-1024, hangar-512, oracle-completion,
 and passive M5 controls.
 
@@ -23,6 +23,6 @@ H4 and invalidates the census.
 
 Exact preparation and run:
 
-    sed -i '' 's/0x80005084,0x80005088,0x8000508C/0x80005090,0x80005094,0x80005098/' scratch/agent/run_s3941_m5_candidate_writers.sh
+    sed -i '' 's/0x80005090,0x80005094,0x80005098/0x8000509C,0x800050A0,0x800050A4/' scratch/agent/run_s3941_m5_candidate_writers.sh
     cmake --build build --config Debug --target RogueSquadron64Recomp
     env zsh scratch/agent/run_s3941_m5_candidate_writers.sh

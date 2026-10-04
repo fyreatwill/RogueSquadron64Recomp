@@ -142659,3 +142659,15 @@ change. The Debug `RogueSquadron64Recomp` target completed successfully.
 guard is host-tree integrated but still lacks MIPS compilation and runtime
 qualification; it does not show that the guard fires. The next bounded unit is
 the adjacent M5 candidate-writer set `0x80005090/0x80005094/0x80005098`.
+
+## Session 3944 (2026-10-04) — classified the next M5 candidate-writer class
+
+Ran the same-build paired qualification for `0x80005090`, `0x80005094`, and
+`0x80005098` after the Debug target build completed successfully. Retail
+whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls all
+passed. All three candidates had zero qualified target-phase execution, zero
+post-target rows, and zero scalar samples, selecting H3 for this bounded class
+only; this does not establish global writer absence. The paired port reached
+hangar with 2,969 image-DMA joins and no crash or abort; qualified payload
+remained `FNV=0x762B22A5`, nonzero=0. The next adjacent set is
+`0x8000509C`, `0x800050A0`, and `0x800050A4`.
