@@ -137436,23 +137436,6 @@ Evidence: `docs/M5-S3671-DMA-ORDER.md`,
 diagnostic-only oracle and port tracing; no guest or host state was rewritten,
 skipped, or guarded.
 
-## Session 3903 (2026-10-03) — classified the next M5 candidate-writer classes
-
-Ran `zsh scratch/agent/run_s3902_m5_remaining_candidate_writers.sh` for
-`0x80004D7C`, `0x80004D84`, and `0x80004E74`. The retail oracle passed its
-whole-RDRAM positive control, title VI 1024, hangar VI 512, and completion.
-All three PCs executed, but only `0x80004E74` produced a qualified target-span
-phase row; all three had zero post-target rows and zero post-target scalar
-samples, selecting H2 for this bounded set only. The paired port produced
-phase-5 image-DMA joins with `FNV=0x762B22A5`, nonzero=0, and no crash or abort
-marker. This does not establish global retail writer absence or identify the
-missing output edge. The next representatives are `0x80004E8C`, `0x80004E90`,
-and `0x80004E94`.
-
-ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
-paired with port image-DMA joins; no guest or host state was rewritten,
-skipped, or guarded.
-
 ## Session 3672 (2026-09-21) — exposed source-span input DMA ordering
 
 The new phase-gated port witness ran in the same concurrent 55-second recipe.
@@ -142065,6 +142048,23 @@ bounded set only. The paired port reached hangar, recorded 2,836 image-DMA
 joins, and emitted no crash or abort marker. This does not establish global
 retail writer absence or identify the missing output edge. The next adjacent
 representatives are `0x80004D68`, `0x80004D74`, and `0x80004D78`.
+
+ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.
+
+## Session 3903 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3902_m5_remaining_candidate_writers.sh` for
+`0x80004D7C`, `0x80004D84`, and `0x80004E74`. The retail oracle passed its
+whole-RDRAM positive control, title VI 1024, hangar VI 512, and completion.
+All three PCs executed, but only `0x80004E74` produced a qualified target-span
+phase row; all three had zero post-target rows and zero post-target scalar
+samples, selecting H2 for this bounded set only. The paired port produced
+phase-5 image-DMA joins with `FNV=0x762B22A5`, nonzero=0, and no crash or abort
+marker. This does not establish global retail writer absence or identify the
+missing output edge. The next representatives are `0x80004E8C`, `0x80004E90`,
+and `0x80004E94`.
 
 ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
