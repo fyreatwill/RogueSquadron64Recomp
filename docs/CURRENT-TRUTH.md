@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4061 (2026-10-04).
+Updated for session 4062 (2026-10-04).
 
 ## Current state
 
@@ -131,6 +131,12 @@ sentinel path is not legitimate ownership state.
   `0x006AB400:512` bucket had no candidate rows. H2 is selected: this
   zero-fill is not the exact hangar writer, so a different producer or an
   absent producer remains open.
+- Session 4062 qualified the next source-span class with the same retail and
+  port controls. `0x80007670` executed 1,563 times while the retail exact-
+  hangar source-range watch was active, but its exact `0x006AB400:512` target
+  rows were zero; no mismatch-free scalar sample attributed a target write to
+  this PC. H2 is selected for this class, so the ranked census advances to its
+  adjacent `0x800076A0` class.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -142,8 +148,8 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 1. **Census the next source-span writer class.** Run one retail-grounded,
    declared-real capture retaining the whole-RDRAM/title/hangar controls and
    the exact `0x006AB400:512` bucket, with the ranked pre-existing source-span
-   writer `0x80007670` and its known caller/neighbor class watched together.
-   Separate exact-hangar rows from transition/title rows and require
+   adjacent writer `0x800076A0` and its known caller/neighbor class watched
+   together. Separate exact-hangar rows from transition/title rows and require
    mismatch-free scalar samples before attributing values. A target-bucket
    nonzero row selects this class as the producer; a qualified null advances
    the census without claiming global absence.

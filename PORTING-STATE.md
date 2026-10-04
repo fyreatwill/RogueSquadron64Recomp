@@ -144544,3 +144544,23 @@ that one exists.
 ORIGIN: the `0x800078EC` zero stores are legitimate memset-style activity in
 the observed transition/width buckets; no mitigation or guest/RDRAM state was
 changed.
+
+## Session 4062 (2026-10-04) — qualified the 0x80007670 source-span null
+
+Ran one same-build retail-oracle and declared-real port capture with the
+whole-RDRAM positive control, title `0x00790400:1024`, exact hangar
+`0x006AB400:512`, source-range watches, and mismatch-free scalar attribution
+for `0x80007670` plus the established neighboring classes. The positive
+control fired; retail reached both target phases, the port reached both target
+phases, and neither process produced a crash or abort marker. The port retained
+`FNV=0x762B22A5`, nonzero=0.
+
+The candidate PC executed 1,563 times while the exact hangar source-range
+watch was phase-active, but its exact-hangar post-target rows were zero. The
+requested-PC scalar rows likewise attributed no mismatch-free target write to
+`0x80007670`; the zero result is therefore H2 for this ranked class, not a
+global absence claim. The run rules out `0x80007670` as the measured exact
+hangar producer and advances the census to adjacent `0x800076A0`.
+
+ORIGIN: no mitigation was added; the candidate was only observed, and no guest
+or RDRAM state was changed.
