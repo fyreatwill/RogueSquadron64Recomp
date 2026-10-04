@@ -143815,3 +143815,25 @@ It rules out a repeatable spin-0 legacy failure and a repeatable default-spin
 legacy failure at this capture scope. The run does not justify a staging guard,
 skip, or restore. ORIGIN: the writer and scheduler hooks observe legitimate
 runtime choices; no mitigation landed.
+
+## Session 4016 (2026-10-04) — qualified gate/source boundary but oracle values were capped
+
+Built the Debug target and ran the independent retail oracle plus declared/real
+and legacy/real port arms with phase-gated gate, writer, channel, RSP-source,
+and task-contract diagnostics. Retail's whole-RDRAM positive control fired,
+title VI 1024 and hangar VI 512 both fired, and the oracle completed. Retail
+reported 17 writes to `0x800A0F50`, 192 executions of `0x80094648`, and 1,125
+writes in `0x1798B0..0x179A48`. Both port arms reached the target phase without
+`[CRASH]` or `[ABORT]`, fired the RSP-source control, and produced phase-5
+gate rows, audio ABI rows, and image-DMA joins. The port gate began with a
+phase-5 `gate=0x00` row and subsequently produced `gate=0x01` rows in both
+arms; declared/real and legacy/real produced 3,574 and 3,662 image-DMA joins.
+
+The run did not select H1 versus H2 because the oracle's global 200-line hit
+print cap was consumed by the positive-control watch before the 17 gate-write
+values were printed. H3 is refuted at this scope: all positive and target
+phase controls passed. This is a measurement-design result, not evidence that
+the retail gate values were zero or nonzero. The next probe must retain the
+whole-RDRAM positive control but order or isolate the gate watch so its values
+are captured. ORIGIN: all observed port hooks are diagnostic observations of
+legitimate guest/runtime writers; no mitigation landed.

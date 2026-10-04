@@ -231,29 +231,49 @@ spin-yield does not explain the old legacy crash, which remains
 schedule-sensitive or otherwise unevaluated. ORIGIN: the writer and scheduler
 hooks observe legitimate runtime choices; no mitigation landed.
 
+Session 4016 qualified a new gate/source boundary capture. Retail's whole-RDRAM
+positive control, title VI 1024, and hangar VI 512 controls passed and the
+oracle completed; it reported 17 writes to `0x800A0F50`, 192 executions of
+`0x80094648`, and 1,125 writes in `0x1798B0..0x179A48`. Declared/real and
+legacy/real both reached phase 5 without crash or abort, fired the RSP-source
+control, and produced gate, audio-ABI, and image-DMA rows. Each port arm showed
+an initial phase-5 gate `0x00` row followed by gate `0x01` rows; image-DMA joins
+were 3,574 and 3,662. The oracle's global 200-line hit cap suppressed the
+values of the 17 retail gate writes, so H1 versus H2 is not selected; H3 is
+refuted because every required control fired. ORIGIN: diagnostic boundary
+hooks only; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 next source-payload discriminator.** The candidate census is qualified
+1. **M5 gate-value capture redesign.** Re-run the qualified gate/source table
+   with the retail watch order or capture budget changed so the 17 writes to
+   `0x800A0F50` retain their values and phase attribution, while the whole-RDRAM
+   positive control, title/hangar VI controls, and the port gate/source/PCM joins
+   remain in the same work unit. Do not select H1/H2 or change a gate based on
+   the current count-only result. The current port evidence is a positive
+   control, not an explanation.
+
+2. **M5 next source-payload discriminator.** The candidate census is qualified
    through `0x8000529C`, the legitimate `0xF80` writer is established, and
    s4015 rules out spin-yield as the sufficient explanation for the old crash.
    Select a new retail-grounded source-writer class before changing audio
    behavior; do not repeat the scheduler split. Keep scheduler `a0` as a
    message object and treat ABI rows as authoritative.
 
-2. **M5 candidate-writer census continuation.** Closed for the measured
+3. **M5 candidate-writer census continuation.** Closed for the measured
    adjacent range through `0x8000529C`; resume only with a new writer class or
    a new ground-truth source.
 
-3. **M3 heap guard validation.** The accumulated guards, including the new
+4. **M3 heap guard validation.** The accumulated guards, including the new
    free-list/active-queue ownership-alias guard, in
    `patches/heap_guards.c` are not runtime-qualified because the configured
    build has no `PatchesLib` target and the MIPS toolchain is unavailable.
    Do not add another guard before the patch pipeline is supplied and built.
 
-4. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
+5. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
    `generated-symbol-renaming-sweep`; mapping edits do not reset the
    engineering-change stall gate.
