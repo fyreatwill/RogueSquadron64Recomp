@@ -143762,3 +143762,23 @@ concurrent schedule. It rules out “no legacy writer exists” at this measured
 scope and leaves schedule sensitivity or external nondeterminism open. The
 writer hook is diagnostic only; no skip, guard, restore, or other mitigation
 landed. ORIGIN: the observed writer is the runtime's actual DMA-size decision.
+
+## Session 4013 (2026-10-04) — spin-disabled staging boundary was arm-dependent
+
+Built the Debug target and ran the concurrent retail-oracle, declared/real, and
+legacy/real capture with `ROGUESQ_SPIN_YIELD=0` in both port arms. Retail's
+whole-RDRAM positive control and title/hangar VI controls passed. Both port arms
+fired the RSP source-hook control and the audio staging writer: declared/real
+used `dma_size=0x800` for `ucode_data=0x800A4E00`, while legacy/real used
+`dma_size=0xF80` for the same declared `0x800` task field.
+
+The declared arm stalled in the 640-wide pre-target route and never reached the
+title or hangar target phases; the legacy arm reached title VI 1024 and emitted
+phase-4 writer/scheduler rows. Neither arm emitted `[CRASH]` or `[ABORT]`.
+Scheduler successor values remained zero in the observed boundary rows. This
+does not select the original H1 crash prediction or prove staging is harmless:
+it shows that disabling spin-yield changes arm progress before the discriminator
+can compare target-phase outcomes. The writer and phase controls are positive,
+but the route result is unevaluable for the intended crash split. ORIGIN: the
+writer hook observes the legitimate runtime-selected DMA length; no mitigation
+landed.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4012 (2026-10-04).
+Updated for session 4013 (2026-10-04).
 
 ## Current state
 
@@ -194,6 +194,19 @@ the failure remains schedule-sensitive or otherwise unevaluated. ORIGIN: the
 hook observes the legitimate runtime-selected DMA writer; it adds no skip,
 guard, restore, or other mitigation.
 
+Session 4013 repeated the concurrent retail/declared/legacy table with
+`ROGUESQ_SPIN_YIELD=0` in both port arms. Retail's whole-RDRAM positive control
+and title/hangar VI controls passed. Both arms fired the RSP source-hook and
+writer controls; declared/real used `dma_size=0x800`, while legacy/real used
+`dma_size=0xF80` for `ucode_data=0x800A4E00` with declared size `0x800`.
+Declared/real stalled in the 640-wide pre-target route, while legacy/real
+reached title VI 1024 and emitted phase-4 rows. Neither arm emitted a crash or
+abort, and observed scheduler successor values remained zero. This is an
+arm-dependent route result, not a clean selection of the legacy-staging crash
+hypothesis: the declared arm never reached the target-phase comparison. The
+writer remains established; no mitigation was added. ORIGIN: diagnostic writer
+and scheduler boundary only.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
@@ -201,14 +214,16 @@ candidate results are summarized by address range rather than copied here.
 
 1. **M5 legacy-only scheduler follow-up.** The candidate census is now
    qualified through `0x8000529C`, and s4012 established the actual `0xF80`
-   writer but did not reproduce the crash under the concurrent schedule.
-   Re-run the same retail/declared/legacy table with `ROGUESQ_SPIN_YIELD=0`
-   in all port arms, preserving the writer hook and opaque successor rows.
-   A legacy-only pre-target crash after an `0xF80` writer selects the staging
-   path; a crash-free three-arm run selects schedule sensitivity; matching
-   writer/successor rows with divergent outcomes select external
-   nondeterminism. Keep scheduler `a0` as a message object; ABI rows remain
-   authoritative.
+   writer. s4013 with spin-yield disabled made declared/real stall in the
+   640-wide pre-target route while legacy/real reached title, so the intended
+   crash split was unevaluable. Re-run the same concurrent table with the
+   established default `ROGUESQ_SPIN_YIELD=1` in both port arms, preserving the
+   writer and opaque successor rows. Declared reaching both target phases again
+   while legacy crashes after an `0xF80` writer selects the staging path;
+   matching writer/successor rows with both arms reaching target phases leaves
+   schedule sensitivity open; a declared pre-target stall repeats the
+   arm-dependent route failure. Keep scheduler `a0` as a message object; ABI
+   rows remain authoritative.
 
 2. **M5 candidate-writer census continuation.** Closed for the measured
    adjacent range through `0x8000529C`; resume only with a new writer class or
