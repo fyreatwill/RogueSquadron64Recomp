@@ -1,10 +1,9 @@
-# Next work unit: re-qualify the M5 candidate-writer class after port gate failure
+# Next work unit: qualify the next M5 candidate-writer class
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
-Re-run the existing same-build retail-oracle/port census for the same candidate
-PCs `0x8000512C`, `0x80005130`, and `0x80005134`; the retail arm selected H3,
-but the paired port did not reach its required phase gate. Preserve the whole-RDRAM
+Run the existing same-build retail-oracle/port census for candidate PCs
+`0x80005138`, `0x8000513C`, and `0x80005140`. Preserve the whole-RDRAM
 positive control, title VI 1024, hangar VI 512, oracle completion, and the
 phase-gated image-DMA payload controls. Build first:
 
@@ -23,8 +22,8 @@ Competing hypotheses:
   of the target payload; they have no post-target row or scalar sample.
 - H3: the candidates are outside the qualified retail path; they have no
   target-phase execution, post-target row, or scalar sample.
-- H4: the retail result remains H3, but the port route is still unevaluable;
-  the phase-gated port arm stays pre-title or crashes before target entry.
+- H4: the retail result is H3, but the port route is unevaluable; the
+  phase-gated port arm stays pre-title or crashes before target entry.
 
 Discriminator: the same-run oracle whole-RDRAM control must fire and both VI
 phase controls must be present. Only then does candidate execution versus

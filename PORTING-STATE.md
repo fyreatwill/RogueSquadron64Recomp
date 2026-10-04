@@ -142804,6 +142804,23 @@ qualified retail writers at the measured scope, but does not advance the
 cross-implementation candidate census. The next iteration must retry this same
 class until the port phase gate is present before advancing the address range.
 
+## Session 3960 (2026-10-04) — re-qualified the next M5 candidate-writer class
+
+The required independent whole-RDRAM oracle control fired. The Debug target
+rebuilt successfully. The 75-second census re-ran `0x8000512C`, `0x80005130`,
+and `0x80005134` with whole-RDRAM, title-1024, hangar-512,
+oracle-completion, scalar-mismatch, and passive M5 controls.
+
+Retail reached both target VI phases (`0x00790400`/1024 and
+`0x006AB400`/512) and completed. It produced 36 post-store scalar records
+with zero mismatches; none of the three candidates produced a target-phase
+execution row, post-target row, or scalar sample. The bounded class therefore
+selects H3: these PCs do not execute as the qualified retail writer in the
+measured phase. The paired port reached both target phases with 2,850
+image-DMA joins and zero crash/abort markers; qualified source and destination
+payloads were `FNV=0x762B22A5`, `nonzero=0`. This rules out these three
+candidate PCs at the measured scope, not global writer absence.
+
 ## Session 3956 (2026-10-04) — added the active-queue tail-alias guard
 
 The mandated no-churn pivot selected the next bounded M3 active-queue idiom,
