@@ -144734,3 +144734,19 @@ with `No rule to make target 'PatchesLib'`, so this is source/ordinary-host
 qualification only; no MIPS runtime behavior is claimed. This rules out only
 the unguarded sentinel-alias case at source scope and leaves runtime
 qualification blocked on the external MIPS toolchain.
+
+## Session 4071 (2026-10-04) — isolated sequential dummy startup variability
+
+The mandated M5 route discriminator ran with the portable macOS driver after
+the retail oracle's whole-RDRAM positive control. Retail reached title 1024 and
+hangar 512. Native silent reached both phase gates with no crash or abort;
+dummy silent, launched after native had been SIGKILLed, also reached both gates
+with no crash or abort. This differs from session 4069, where the same
+sequential topology crashed in the dummy arm at
+`spTaskSchedulerThread+9632` (`0x400128d47`, guest PC `0x8000834c`).
+
+The result selects Hschedule/resource sensitivity over a deterministic
+dummy-state defect. It does not qualify native-vs-dummy sink behavior because
+both arms were silent controls. The driver portability fix only selects the
+existing macOS build/ROM paths and adds `RS64_SKIP_NATIVE=1` for the next
+dummy-only discriminator; it does not change game behavior.

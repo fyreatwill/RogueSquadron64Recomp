@@ -2,8 +2,9 @@
 set -u
 
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-OUT=${RS64_S4069_OUT:-$ROOT/scratch/agent/s4069_m5_sequential_silent}
+OUT=${RS64_S4071_OUT:-${RS64_S4070_OUT:-${RS64_S4069_OUT:-$ROOT/scratch/agent/s4069_m5_sequential_silent}}}
 BUILD=$ROOT/build
+EXE=$BUILD/RogueSquadron64Recomp
 ORACLE=$ROOT/tools/oracle/build/rs64_oracle
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 ROM=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
@@ -45,7 +46,7 @@ run_one() {
     ROGUESQ_LOG_SP_TASKS=1 ROGUESQ_LOG_PCM_BOUNDARY=1 \
     ROGUESQ_LOG_M5_AUDIO_HOST=1 ROGUESQ_LOG_M5_AUDIO_DRAIN=1 \
     ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_RSP_SOURCE=1 \
-    ROGUESQ_AUDIO_UCODE=0 ./RogueSquadron64Recomp ) > "$OUT/$name.log" 2>&1 &
+    ROGUESQ_AUDIO_UCODE=0 "$EXE" ) > "$OUT/$name.log" 2>&1 &
   port_pid=$!
   for _ in {1..480}; do
     if ! kill -0 "$port_pid" 2>/dev/null; then
@@ -64,7 +65,9 @@ run_one() {
   port_pid=""
 }
 
-run_one native ''
+if [[ ${RS64_SKIP_NATIVE:-0} != 1 ]]; then
+  run_one native ''
+fi
 run_one dummy 'SDL_AUDIODRIVER=dummy'
 
 kill -KILL "$oracle_pid" 2>/dev/null || true
