@@ -143676,3 +143676,9 @@ Ran the single planned work unit with `zsh scratch/agent/run_s4005_m5_candidate_
 ## Session 4007 (2026-10-04) — classified M5 candidate-arm route failure
 
 Ran the single planned work unit with `zsh scratch/agent/run_s4006_m5_candidate_writers.sh`. The concurrent retail oracle passed its whole-RDRAM positive control, title VI 1024 control (154 hits), hangar VI 512 control (188 hits), and completion. The paired port produced no title or hangar phase control, no `audtask-abi` rows, and no `audtask-image-dma-join` rows before watchdog termination; it reported no `CRASH` or `ABORT` marker. Therefore `0x80005294`, `0x80005298`, and `0x8000529C` are unevaluable, not qualified nulls. This selects H3 and rules out interpreting the run as evidence of retail writer absence. The next unit is one legacy/real route re-qualification.
+
+## Session 4008 (2026-10-04) — parked M5 candidate census after route re-qualification failure
+
+Ran the single planned work unit with `zsh scratch/agent/run_s4005_m5_candidate_writers.sh` to re-qualify the legacy/real route after s4007. The concurrent retail oracle passed its whole-RDRAM positive control, title VI 1024 control (154 hits), hangar VI 512 control (188 hits), and completion. The paired port reached the RSP source-hook control, then crashed in `spTaskSchedulerThread` at guest PC `0x8000834c` before either target phase; it emitted zero `audtask-abi` and `audtask-image-dma-join` rows.
+
+This is the second consecutive pre-target route failure, so the candidate set remains unevaluable and the candidate census is parked. It rules out treating the missing candidate hits as a qualified retail null, but does not distinguish malformed task staging from scheduler/state corruption. The next unit is a batched legacy-versus-declared task-scheduler discriminator around the failing boundary.

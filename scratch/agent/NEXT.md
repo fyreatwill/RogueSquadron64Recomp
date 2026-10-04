@@ -1,25 +1,30 @@
-# Next work unit: re-qualify the legacy/real M5 route
+# Next work unit: discriminate the M5 legacy/real task-scheduler failure
 
-HYPOTHESIS-ID: m5-candidate-writer-census
+HYPOTHESIS-ID: m5-legacy-real-route
 
 Competing hypotheses:
 
-- H1: the prior failure was transient and the legacy/real route again reaches
-  title VI 1024 and hangar VI 512 with audio/image census rows.
-- H2: the route is intermittently unstable; this repeat may fail before the
-  target phases despite the same controls.
-- H3: the route failure is persistent, so the candidate census must be parked
-  for a route-level investigation.
+- H1: declared-size DMEM staging creates a malformed task; the legacy arm's
+  task fields remain valid and reaches both target phases.
+- H2: scheduler/state corruption is shared or legacy-specific; both arms show
+  the same malformed successor/task state or legacy fails while declared does
+  not.
+- H3: the failure is outside the audio task contract; both arms reach the
+  failing scheduler boundary with equivalent fields and fail before phases.
 
-Discriminator: one same-run retail positive control plus title VI 1024 and
-hangar VI 512 on the paired legacy/real port. Both target phases with nonzero
-audio/image row counts select H1; missing either phase or all port census rows
-select H2 for one repeat and require a route-level pivot; a second pre-target
-failure selects H3 and parks the candidate sweep.
+Discriminator: one build and one concurrent capture with declared/real and
+legacy/real arms, retaining the retail positive control and both port phase
+controls. At the first task-scheduler failure, log task type, ucode/data
+addresses and sizes, DMEM staging mode, and scheduler successor state. A
+declared-only malformed row selects H1; identical fields with legacy-only
+failure selects H2; equivalent rows and pre-target failure in both arms select
+H3. Any arm reaching both phases reopens the candidate census.
 
-Exact command:
+Before building, inspect the existing task staging and scheduler trace sites:
 
-    zsh scratch/agent/run_s4005_m5_candidate_writers.sh
+    rg -n "spTaskSchedulerThread|ucode_data_size|ROGUESQ_AUDIO_LEGACY_UCODE_DMA|m5-rsp-source-hook" src lib tools
 
-This repeats the last qualified legacy/real candidate route once. Do not add
-candidate fields or interpret candidate nulls in this unit.
+Then add one phase-scoped table at those existing sites, build both arms once,
+and run the checked-in three-arm recipe with the legacy/real and declared/real
+captures concurrently. Do not add candidate PCs or interpret candidate nulls
+in this unit.

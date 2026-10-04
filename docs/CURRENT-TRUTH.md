@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4007 (2026-10-04).
+Updated for session 4008 (2026-10-04).
 
 ## Current state
 
@@ -146,20 +146,32 @@ hangar phase control and no audio/image census rows before watchdog
 termination. With no crash or abort marker, this is a route failure and the
 candidate class is unevaluable, not a qualified null.
 
+Session 4008 re-qualified the legacy/real route once as required. Retail again
+passed its whole-RDRAM, title VI 1024, hangar VI 512, and completion controls,
+but the paired port crashed in `spTaskSchedulerThread` at guest PC
+`0x8000834C` after the RSP source-hook control and before either target phase;
+it emitted zero audio/image census rows. This is the second consecutive
+pre-target route failure after s4007, so the candidate census is parked and
+the route requires a discriminator before another candidate sweep.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 legacy/real route re-qualification.** Repeat the last qualified
-   legacy/real candidate route once with its retail positive control and both
-   port phase controls. A qualified rerun restores the route; another
-   pre-target failure parks the census for route investigation.
+1. **M5 route-level task-scheduler discriminator.** Instrument the first
+   legacy/real task-scheduler failure boundary around guest PC `0x8000834C`
+   and the preceding RSP source hook, capturing task type, OSTask ucode/data
+   addresses and sizes, DMEM staging mode, and scheduler successor state.
+   Build both legacy and declared-size arms together and run them with the
+   retail positive control plus port phase controls. A declared-only malformed
+   task selects the staging-contract arm; identical task fields with a
+   legacy-only crash selects scheduler/state corruption; both arms reaching
+   the phases reopens the census.
 
-2. **M5 candidate-writer census continuation.** After route qualification,
-   rerun `0x80005294`, `0x80005298`, and `0x8000529C` with one phase-scoped
-   table. A matching nonzero row selects a producer edge; qualified zero rows
-   select H2; missing phase controls select H3 again.
+2. **M5 candidate-writer census continuation.** Parked until the route-level
+   discriminator qualifies legacy/real through both target phases; then rerun
+   `0x80005294`, `0x80005298`, and `0x8000529C` with one phase-scoped table.
 
 3. **M3 heap guard validation.** The accumulated guards, including the new
    free-list/active-queue ownership-alias guard, in
@@ -206,6 +218,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-057C` | H2 selected at s4005: retail and paired-port controls passed, while `0x8000527C`, `0x80005280`, and `0x80005284` had no post-target samples, rows, or sequence hits. |
 | `H-M5-CandidateWriterClass-0588` | H2 selected at s4006: retail and paired-port controls passed, while `0x80005288`, `0x8000528C`, and `0x80005290` had no post-target samples, rows, or sequence hits. |
 | `H-M5-CandidateWriterClass-0594` | H3 selected at s4007: retail controls passed, but the paired port emitted no target phases or census rows, so `0x80005294`, `0x80005298`, and `0x8000529C` are unevaluable. |
+| `H-M5-LegacyRealRoute-4008` | H3 selected: after s4007's pre-target failure, the legacy/real rerun again failed before title/hangar, this time crashing at guest PC `0x8000834C` with zero census rows; route-level task-scheduler discrimination is required. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 
@@ -301,6 +314,12 @@ candidate results are summarized by address range rather than copied here.
   were 2,205 and 2,246 respectively. No declared-only post-`0x800` marker was
   emitted. This closes the task-contract consumer discriminator at this
   scope, while leaving the upstream zero-payload writer unresolved.
+
+Session 4008's retail arm passed all positive controls and completed, while
+the legacy/real port hit the RSP source-hook control then crashed in
+`spTaskSchedulerThread` at guest PC `0x8000834C` before title/hangar and
+emitted zero census rows. This confirms the route is not qualified for
+another candidate null; the candidate sweep is parked.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.
