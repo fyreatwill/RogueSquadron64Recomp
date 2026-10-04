@@ -144237,3 +144237,17 @@ source, compiler, linker, or ABI failure in the guard. H2 is selected at the
 current host scope. Runtime qualification remains blocked until a host with a
 valid MIPS toolchain is configured. ORIGIN: build-graph/toolchain diagnostic
 only; no mitigation landed.
+## Session 4043 (2026-10-04) — one-second legacy-first route permutation leaves no arm qualified
+
+Built the ordinary Debug target, then ran the retail oracle plus declared/real,
+declared/silent, and legacy/real port arms in one capture with launch order
+`legacy-real,declared-real,declared-silent` and a one-second gap. Retail's
+whole-RDRAM positive control, title VI 1024, and hangar VI 512 controls all
+passed. Declared/real and declared/silent fired their RSP-source controls but
+crashed pre-target at guest PC `0x8000834C`, with zero target-phase audio rows.
+Legacy/real reached title VI 1024 but not hangar VI 512 before the wrapper
+SIGKILL, so it was not target-qualified. H3 is selected: no port arm reached
+both target phases, and the `0x800052C4` writer census remains unevaluable.
+This does not establish audio staging or writer absence as causal. ORIGIN:
+route, scheduler, and audio-stage hooks observe legitimate arm choices; no
+mitigation landed.

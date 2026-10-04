@@ -2,33 +2,32 @@
 
 HYPOTHESIS-ID: m5-route-requalification
 
+Run exactly one new same-build capture with launch order
+`declared-silent,legacy-real,declared-real` and a two-second gap, plus the
+independent retail oracle. Do not run the `0x800052C4` writer census until the
+route result qualifies it.
+
 Competing hypotheses:
 
-- H1: changing the arm permutation to legacy-real, declared-real,
-  declared-silent with a one-second gap qualifies all three arms; the route is
-  ready for the `0x800052C4` retail-grounded writer census.
-- H2: the permutation still leaves only one or two arms target-qualified;
-  launch order/timing remains the discriminator and writer nulls stay blocked.
-- H3: no port arm reaches both target phases despite retail controls; the route
-  is unevaluable and requires a new route-level idea.
+- H1: this permutation qualifies all three port arms through title VI 1024 and
+  hangar VI 512; the route is ready for the parked writer census.
+- H2: at least one arm reaches both target phases but another fails pre-target;
+  launch schedule remains the discriminator and writer nulls stay blocked.
+- H3: no port arm reaches both target phases despite retail controls; route
+  qualification needs a new idea rather than another source census.
 
-Discriminator: one build and one concurrent capture containing the independent
-retail oracle plus all three port arms. Require the retail whole-RDRAM positive
-control, title VI 1024, hangar VI 512, and per-arm RSP/audio-stage controls.
-H1 is selected only if every port arm reaches both target phases without
-crash/abort. H2 is selected if at least one arm reaches both phases but another
-fails pre-target. H3 is selected if no arm reaches both phases or a required
+Discriminator: retail whole-RDRAM positive control, retail title/hangar VI
+controls, and per-arm RSP/audio-stage controls in one capture. Select H1 only
+if all three port arms reach both target phases without crash/abort; H2 if at
+least one qualifies and another fails; H3 if none qualifies or a required
 positive control is absent.
 
 Exact commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_m5_route_requal_next.sh
+RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4044_m5_route_requal_$(date +%Y%m%d-%H%M%S) RS64_LAUNCH_ORDER=declared-silent,legacy-real,declared-real RS64_LAUNCH_GAP_SEC=2 zsh scratch/agent/run_s4028_m5_route_requal.sh
 ```
 
-The wrapper must use `run_s4028_m5_route_requal.sh` with
-`RS64_LAUNCH_ORDER=legacy-real,declared-real,declared-silent` and
-`RS64_LAUNCH_GAP_SEC=1`, and write captures under a non-hidden final path.
-Do not run the `0x800052C4` writer census or M3 runtime qualification until
-this route result is recorded.
+The wrapper must write captures under a non-hidden final path and kill all
+children with SIGKILL. Record controls and phase outcomes per arm.
