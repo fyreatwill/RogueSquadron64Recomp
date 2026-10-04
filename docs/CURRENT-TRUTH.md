@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4072 (2026-10-04).
+Updated for session 4073 (2026-10-04).
 
 ## Current state
 
@@ -226,6 +226,12 @@ boundary; playback/drain timing remains open.
   512; dummy-only also reached both gates with no crash/abort. This supports
   Hnative-residue over a deterministic dummy-start dependency, but remains a
   route/schedule result rather than sink evidence.
+- Session 4073 ran the clean dummy-silent launch-timing A/B after the retail
+  whole-RDRAM positive control. Both the immediate and fixed-7-second-delayed
+  dummy arms reached title 1024 and hangar 512 with no crash/abort. This
+  strengthens Hnative-residue and rejects an immediate-versus-delayed dummy
+  phase-gate split for this recipe; it does not qualify the sink because both
+  arms were silent controls.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -234,17 +240,12 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Separate launch residue from timing sensitivity.**
-   Session 4072's clean dummy-only success supports Hnative-residue, while
-   session 4069's native-first dummy crash and session 4071's native-first
-   success leave timing/resource sensitivity open. Run one same-build capture
-   with two clean dummy-silent arms after the retail positive control: one
-   immediate and one with a fixed 7-second delay. Both must reach title 1024
-   and hangar 512 to be interpretable. Immediate-only failure selects a
-   launch-timing dependency; delayed-only failure selects delayed resource
-   interaction; two successes strengthen the residue interpretation; any
-   missing retail control or phase gate is unevaluable. Do not reopen sink
-   qualification unless an arm reaches both phase gates.
+1. **M5 de-stubbing Step 1 re-baseline.** Run one same-build default-image
+   versus silent-control capture with the retail whole-RDRAM positive control
+   and title/hangar VI gates. Require dispatch, task fields/source, DMEM/DMA,
+   image exit, SP completion, service/slot, PCM source/consumer, and route
+   rows before interpreting any divergence. Keep `ROGUESQ_AUDIO_UCODE=0` as
+   rollback; do not change a gate or wait path from a route-only result.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target

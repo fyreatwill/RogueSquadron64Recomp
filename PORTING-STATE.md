@@ -144769,3 +144769,17 @@ native predecessor; launch timing/resource sensitivity remains open. It rules
 out treating the dummy backend as deterministically unable to boot, and no
 sink comparison was attempted because the arm was a silent control. Logs are
 under `scratch/agent/s4071_m5_dummy_only/`.
+
+## Session 4073 (2026-10-04) — separated clean dummy launch timing
+
+The prescribed M5 launch-timing A/B ran after the retail oracle whole-RDRAM
+positive control fired. Retail reached title VI 1024 and hangar VI 512. The
+clean dummy-silent immediate arm reached title 1024 at about 11.2 seconds and
+hangar 512 at about 19.4 seconds; the fixed-7-second-delayed arm reached title
+1024 at about 11.1 seconds and hangar 512 at about 19.3 seconds. Neither arm
+reported `[CRASH]` or `[ABORT]`.
+
+Both arms therefore succeeded, strengthening Hnative-residue and rejecting an
+immediate-versus-delayed dummy phase-gate split for this recipe. This does not
+qualify the sink because both arms were silent controls. The next work unit is
+the M5 plan's Step 1 default-image versus silent-control contract re-baseline.

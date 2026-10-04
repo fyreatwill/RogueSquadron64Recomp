@@ -2,7 +2,7 @@
 set -u
 
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-OUT=${RS64_S4071_OUT:-${RS64_S4070_OUT:-${RS64_S4069_OUT:-$ROOT/scratch/agent/s4069_m5_sequential_silent}}}
+OUT=${RS64_S4072_OUT:-${RS64_S4071_OUT:-${RS64_S4070_OUT:-${RS64_S4069_OUT:-$ROOT/scratch/agent/s4069_m5_sequential_silent}}}}
 BUILD=$ROOT/build
 EXE=$BUILD/RogueSquadron64Recomp
 ORACLE=$ROOT/tools/oracle/build/rs64_oracle
@@ -68,7 +68,9 @@ run_one() {
 if [[ ${RS64_SKIP_NATIVE:-0} != 1 ]]; then
   run_one native ''
 fi
-run_one dummy 'SDL_AUDIODRIVER=dummy'
+run_one dummy_immediate 'SDL_AUDIODRIVER=dummy'
+sleep 7
+run_one dummy_delayed 'SDL_AUDIODRIVER=dummy'
 
 kill -KILL "$oracle_pid" 2>/dev/null || true
 wait "$oracle_pid" 2>/dev/null || true
@@ -76,7 +78,7 @@ oracle_pid=""
 
 print -r -- '--- retail controls ---' > "$OUT/driver.log"
 grep -a -E '\[oracle\] (positive-control|done)|origin=0x00790400 width=1024|origin=0x006ab400 width=512' "$OUT/retail.log" | tail -120 >> "$OUT/driver.log" || true
-for name in native dummy; do
+for name in native dummy_immediate dummy_delayed; do
   print -r -- "--- $name ---" >> "$OUT/driver.log"
   grep -a -E '\[Audio\]|\[phase\].*(1024|512)|\[m5-audio-host\]|\[m5-audio-drain-raw\]|\[sp-task\]|\[threads\]|\[CRASH\]|\[ABORT\]' "$OUT/$name.log" | tail -320 >> "$OUT/driver.log" || true
 done
