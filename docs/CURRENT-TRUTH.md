@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3993 (2026-10-04).
+Updated for session 3994 (2026-10-04).
 
 ## Current state
 
@@ -28,46 +28,43 @@ Session 3977 changed audio DMEM staging to the OSTask-declared
 `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`. Session 3978 selected H3: the declared-size
 arm crashed in `spTaskSchedulerThread` at `last-guest-pc=0x8000834c` before
 title, while the legacy arm reached title and hangar with 5,263 task rows.
-The declared-size arm remains parked; the legacy rollback is the qualified
-route for census work.
+The declared-size arm was parked for diagnosis until s3994 qualified its
+real-audio ABI and target phases; legacy remains the steadier census route.
 
 The generated scalar-store census, central host/RSP writer census, native
 page-fault census, and nine bounded exact-offset load candidates are closed at
 their measured scopes. A null attribution is not global writer absence.
 
 Session 3993 reran the prescribed three-arm capture from the checked-in
-recipe. This attempt did not qualify the consumer discriminator: declared/real
-crashed in `spTaskSchedulerThread` before any audio ABI row, declared/silent
-reached the silent `musyx_stub` path and title VI 1024, and legacy/real reached
-title and hangar with audio rows. The RSP canary and phase controls fired, so
-the missing declared/real ABI row is an arm failure, not evidence of consumer
-absence. This is single-source repeat evidence that the next capture needs a
-declared/real positive-control isolation before post-`0x800` reads can be
-interpreted.
+recipe. That attempt did not qualify the consumer discriminator because
+declared/real crashed before its audio ABI row; the RSP canary and phase
+controls fired, so the missing ABI row was an arm failure, not consumer
+absence. Session 3994's rerun qualified all three arms: declared/real reached
+3,421 real-audio ABI rows and both target phases, declared/silent reached 3,444
+stub ABI rows and both phases, and legacy/real reached 3,419 real-audio ABI
+rows and both phases. Declared/real and legacy/real had matching phase-5
+consumer signatures (zero payload, `FNV=0xF59C39C5`; 2,205 versus 2,246
+complete source/consumer joins), and no declared-only post-`0x800` marker.
+The task-contract consumer boundary is closed at this measured scope; the
+remaining zero payload is upstream of this consumer.
 
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 first-audio post-`0x800` consumer census.** Session 3992's same-build
-   three-arm capture reached the first audio ABI in declared/real,
-   declared/silent, and legacy/real. It did not identify a declared-only
-   post-`0x800` read or consumer. Add one phase-scoped read/consumer table at
-   the first audio entry, retaining the DMEM canary and task/DMA controls; the
-   discriminator is a declared-only read or divergent consumer outcome at the
-   same task ordinal.
+1. **M5 candidate-writer census continuation.** Resume the next unclassified
+   adjacent set after `0x80005224`, using one phase-scoped table and the
+   qualified legacy/real route. The discriminator is whether any candidate
+   writes nonzero target/post-target payload at a matching task ordinal; a
+   same-run positive control must show the table firing.
 
 2. **M3 heap guard validation.** The accumulated guards in
    `patches/heap_guards.c` are not runtime-qualified because the configured
    build has no `PatchesLib` target and the MIPS toolchain is unavailable.
    Do not add another guard before the patch pipeline is supplied and built.
 
-3. **M5 candidate-writer census continuation.** Resume the next unclassified
-   adjacent set only after item 1 closes. All prior sets through
-   `0x80005218` selected bounded H2; this is not global writer absence.
-
-4. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
+3. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
    `generated-symbol-renaming-sweep`; mapping edits do not reset the
    engineering-change stall gate.
@@ -93,7 +90,8 @@ candidate results are summarized by address range rather than copied here.
 | `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; host target passed, patch/runtime validation remains blocked. |
 | `H-M5-Step1-PreTitleRoute` | Selected H1 at s3973: image/LLE-on reached VI 512, image/LLE-off stopped at VI 1024, silent/LLE-on crashed at `0x8000834c`. |
 | `H-M5-Step1-TaskContract` | H3 at s3991: declared arm crashed in the first graphics-task scheduler path at `0x8000834c` before any audio ABI row; legacy arm passed controls and reached both target phases. |
-| `H-M5-Step1-TaskContract-3992` | H2 refuted in the s3992 same-build capture: declared/real and declared/silent both reached audio ABI and both target phases. No declared-only post-`0x800` consumer was observed, so the boundary remains unevaluable. |
+| `H-M5-Step1-TaskContract-3992` | Superseded by s3994: s3993 again failed to qualify declared/real, but s3994's same-build three-arm capture qualified it. |
+| `H-M5-Step1-TaskContract-3994` | H2 selected at the measured scope: declared/real and legacy/real reached the ABI and target phases with matching zero-payload phase-5 consumer signatures; no declared-only post-`0x800` marker appeared. |
 
 ## Durable evidence boundary
 
@@ -133,6 +131,14 @@ candidate results are summarized by address range rather than copied here.
   declared/silent reached the silent ABI and title VI 1024, while legacy/real
   reached title VI 1024 and hangar VI 512 with audio rows. This run is not a
   consumer discriminator and must not be read as declared-only read absence.
+- Session 3994's rerun passed the RSP canary and both phase controls in all
+  three arms. Declared/real produced 3,421 real-audio ABI rows, declared/silent
+  3,444 stub rows with unchanged DMEM, and legacy/real 3,419 real-audio rows.
+  In phase 5, declared/real and legacy/real both observed the zero-payload
+  consumer signature `FNV=0xF59C39C5`, `nz=0`; complete source/consumer joins
+  were 2,205 and 2,246 respectively. No declared-only post-`0x800` marker was
+  emitted. This closes the task-contract consumer discriminator at this
+  scope, while leaving the upstream zero-payload writer unresolved.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.

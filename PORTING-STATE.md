@@ -143507,3 +143507,20 @@ missing ABI row is not evidence that post-`0x800` reads are absent.
 
 **Outcome: ADVANCED** (the planned capture ran and exposed an unqualified arm;
 the next work unit restores the positive-control requirement).
+## Session 3994 (2026-10-04) — qualified declared-real audio consumer route
+
+Built `RogueSquadron64Recomp` and reran the checked-in three-arm capture
+`scratch/agent/run_s3991_m5_task_contract_isolation.sh`. This time all arms
+passed the positive controls: declared/real reached title VI 1024 and hangar
+VI 512 with 3,421 real-audio ABI rows, declared/silent reached both phases
+with 3,444 `musyx_stub` rows and unchanged DMEM, and legacy/real reached both
+phases with 3,419 real-audio ABI rows. In the phase-5 consumer table,
+declared/real and legacy/real both observed zero payload with
+`FNV=0xF59C39C5`; complete source/consumer joins were 2,205 and 2,246. No
+declared-only post-`0x800` marker appeared. This selects H2 at the measured
+scope and closes the task-contract consumer discriminator; it does not locate
+the upstream writer of the zero payload.
+
+The prior s3993 declared/real pre-ABI crash was not reproduced. The run rules
+out a persistent declared-size inability to reach the first audio ABI, and it
+rules out a declared-only post-`0x800` consumer in this instrumented scope.

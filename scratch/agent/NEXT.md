@@ -1,33 +1,33 @@
-# Next work unit: qualify the declared-real first-audio control, then census consumers
+# Next work unit: classify the next adjacent M5 candidate-writer class
 
-HYPOTHESIS-ID: m5-audio-task-contract
+HYPOTHESIS-ID: m5-candidate-writer-census
 
-The s3993 rerun did not qualify the planned discriminator: declared/real
-crashed in `spTaskSchedulerThread` before an audio ABI row, while the silent
-and legacy controls progressed. Re-run the same-build three-arm capture after
-making the declared/real arm emit a bounded first-audio control, and retain
-the post-`0x800` read/consumer table only as interpretation data. Do not claim
-consumer absence from an arm with no real-audio ABI row.
+Run one bounded census for candidate PCs `0x80005228`, `0x8000522C`, and
+`0x80005230`, continuing the existing writer-class sweep with the qualified
+legacy/real audio-DMA route. Keep the whole-RDRAM positive control and the
+phase-gated target/post-target/scalar tables in the same build and run.
 
 Competing hypotheses:
 
-- H1: declared/real can reach the first audio ABI and exposes a declared-only
-  read or consumer beyond `0x800` at a matching task ordinal.
-- H2: declared/real reaches the ABI and its consumer reads match legacy/real;
-  the `0xF80` copy is not required by the observed path.
-- H3: declared/real remains unable to reach the ABI, so the task-contract
-  boundary—not the consumer table—is the active blocker.
+- H1: at least one candidate is a qualified retail writer and produces a
+  nonzero target/post-target payload at a matching task ordinal.
+- H2: candidates execute or are observed, but none produces qualified
+  nonzero target/post-target payload in the retail target phases.
+- H3: the candidate table or route controls fail, so the result is
+  unevaluable rather than writer absence.
 
-Discriminator: one capture must have all three arms emit the RSP-source canary,
-the first real-audio ABI control, and target-phase controls. H1/H2 require a
-declared/real ABI row; H1 is a declared-only post-`0x800` read, H2 is matching
-declared/legacy reads, and H3 is a missing declared/real ABI control. The
-silent arm is only a control for the stubbed no-DMEM-change path.
+Discriminator: the same run must show the whole-RDRAM positive control and
+both title VI 1024 and hangar VI 512 controls. H1 is a candidate-linked
+nonzero payload with matching ordinal; H2 is zero candidate-linked target,
+post-target, and scalar payload while the paired legacy port reaches both
+phases; H3 is any missing positive control or incomplete qualified route.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env zsh scratch/agent/run_s3991_m5_task_contract_isolation.sh
+    perl -pe 's/s3989_m5_candidate_writers/s3994_m5_candidate_writers/g; s/0x8000521C,0x80005220,0x80005224/0x80005228,0x8000522C,0x80005230/g; s/0x8000521C\\|0x80005220\\|0x80005224/0x80005228|0x8000522C|0x80005230/g' scratch/agent/run_s3989_m5_candidate_writers.sh > /tmp/rs64-s3994-candidates.sh
+    env zsh /tmp/rs64-s3994-candidates.sh
 
-Expected evidence: summarize per-arm canary, ABI, phase, crash, and consumer
-counts with `rg`/`tail`; do not read a full log.
+Inspect only counts and tails from the generated logs; do not read a full
+run log. If the source script name differs, make the equivalent bounded
+substitution before building and preserve the same positive controls.
