@@ -36,9 +36,29 @@ run_port() {
     > "$OUT/$name.log" 2>&1 & print $!
 }
 
-declared_pid=$(run_port declared-real ROGUESQ_AUDIO_UCODE=1)
-silent_pid=$(run_port declared-silent ROGUESQ_AUDIO_UCODE=0)
-legacy_pid=$(run_port legacy-real ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1)
+run_named_arm() {
+  case "$1" in
+    declared-real) run_port declared-real ROGUESQ_AUDIO_UCODE=1 ;;
+    declared-silent) run_port declared-silent ROGUESQ_AUDIO_UCODE=0 ;;
+    legacy-real) run_port legacy-real ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1 ;;
+    *) print -u2 "unknown RS64_LAUNCH_ORDER arm: $1"; return 2 ;;
+  esac
+}
+
+launch_order=${RS64_LAUNCH_ORDER:-declared-real,declared-silent,legacy-real}
+IFS=',' read -r -A arms <<< "$launch_order"
+if (( ${#arms[@]} != 3 )); then
+  print -u2 "RS64_LAUNCH_ORDER must contain exactly three port arms"
+  exit 2
+fi
+for arm in $arms; do
+  case "$arm" in
+    declared-real) declared_pid=$(run_named_arm "$arm") ;;
+    declared-silent) silent_pid=$(run_named_arm "$arm") ;;
+    legacy-real) legacy_pid=$(run_named_arm "$arm") ;;
+    *) print -u2 "unknown RS64_LAUNCH_ORDER arm: $arm"; exit 2 ;;
+  esac
+done
 print "oracle=$oracle_pid declared=$declared_pid silent=$silent_pid legacy=$legacy_pid" > "$OUT/driver.log"
 
 for _ in {1..480}; do

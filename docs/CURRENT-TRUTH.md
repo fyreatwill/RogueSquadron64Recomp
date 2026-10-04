@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4029 (2026-10-04).
+Updated for session 4030 (2026-10-04).
 
 ## Current state
 
@@ -231,6 +231,16 @@ spin-yield does not explain the old legacy crash, which remains
 schedule-sensitive or otherwise unevaluated. ORIGIN: the writer and scheduler
 hooks observe legitimate runtime choices; no mitigation landed.
 
+Session 4030 rotated the four-arm launch order so legacy/real started first.
+The retail whole-RDRAM positive control and title/hangar VI controls fired.
+Declared/real reached both target phases with 6,785 audio-stage rows and no
+crash/abort; declared/silent reached title but not hangar; legacy/real still
+failed before either target phase with 750 audio-stage rows and crashed at
+guest PC `0x80001C94`. H2 is selected for arm/path recurrence despite the
+changed crash PC; launch order did not qualify the legacy route. ORIGIN: the
+route and phase hooks observe legitimate runtime arm choices; no mitigation
+landed.
+
 Session 4016 qualified a new gate/source boundary capture. Retail's whole-RDRAM
 positive control, title VI 1024, and hangar VI 512 controls passed and the
 oracle completed; it reported 17 writes to `0x800A0F50`, 192 executions of
@@ -384,9 +394,11 @@ Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
 1. **M5 route requalification.** Select one new schedule discriminator, then
-   repeat the four-arm route qualification. Require the retail positive,
-   title/hangar phases, RSP/audio controls, and no crash/abort in all port arms
-   before resuming `0x800052AC`. Do not repeat the same arm ordering alone.
+   repeat the four-arm route qualification. The rotated launch-order capture
+   selected arm/path recurrence, so the next discriminator must change timing
+   or scheduling rather than just permute the arm list. Require the retail
+   positive, title/hangar phases, RSP/audio controls, and no crash/abort in all
+   port arms before resuming `0x800052AC`.
 
 2. **M3 patch integration.** Session 4029 confirmed that `PatchesLib` is
    absent from the configured build graph; the target fails before compiler or
@@ -458,6 +470,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-RouteQualification-4021` | H3 selected: declared/real, declared/silent, and legacy/real all reached both target VIs with route controls and no crash/abort in the same-build capture. |
 | `H-M5-CandidateWriterClass-052A` | H3 selected at s4022: retail controls and candidate-null evidence passed, but declared/real reached target phase while legacy/real remained at 640 width before target phase; no writer conclusion is allowed. |
 | `H-M5-RouteQualification-4023` | H2 selected: retail and all three port arms reached both target phases with positive controls; the earlier legacy 640 stop did not recur. |
+| `H-M5-RouteQualification-4030` | H2 selected: with legacy/real launched first, declared/real reached both target phases, declared/silent stopped after title, and legacy/real crashed pre-target at guest PC `0x80001C94`; launch-order permutation did not qualify the route. |
 | `H-M5-CandidateWriterClass-052C` | H3 selected at s4025: retail controls and candidate-null evidence passed, but declared/real crashed at `0x8000834C` and legacy/real produced no target-phase rows; no writer conclusion is allowed. |
 
 ## Durable evidence boundary

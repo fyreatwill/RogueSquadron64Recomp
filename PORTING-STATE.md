@@ -144045,3 +144045,21 @@ compiler, linker, or patch-input discovery with `No rule to make target
 not a MIPS toolchain failure. This does not qualify runtime behavior or prove
 that the guarded malformed-chain condition occurs. ORIGIN: build-graph and
 toolchain diagnostic only; no mitigation landed.
+
+## Session 4030 (2026-10-04) — launch-order rotation does not qualify the legacy route
+
+Before building, the work unit was the four-arm M5 route requalification with
+the port launch order rotated to `legacy-real,declared-silent,declared-real`.
+The driver was extended with `RS64_LAUNCH_ORDER`; the Debug target build
+passed. Retail's whole-RDRAM positive control and title/hangar VI controls
+fired. Declared/real reached title and hangar, emitted 6,785 audio-stage rows,
+and had no crash or abort. Declared/silent reached title but not hangar.
+Legacy/real, launched first, reached neither target phase, emitted 750
+audio-stage rows, and crashed at guest PC `0x80001C94` with no abort marker.
+H2 is selected: launch-order permutation did not qualify the legacy route,
+although the changed crash PC means this is arm/path recurrence rather than
+proof of one invariant fault site. This rules out launch order as the
+sufficient explanation for the route failure; it does not establish audio
+causality or qualify the route for `0x800052AC`. ORIGIN: route, phase, and
+audio-stage hooks observe legitimate runtime arm choices; no mitigation was
+added.
