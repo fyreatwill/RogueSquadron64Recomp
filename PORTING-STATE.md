@@ -144654,3 +144654,21 @@ dependency. No mitigation or guest/RDRAM state change was made.
 The experiment and fixed reproduction are
 `scratch/agent/run_s4066_m5_sdl_backend_ab.sh` and
 `scratch/agent/run_s4066_m5_native_isolated.sh`.
+
+## Session 4067 (2026-10-04) — qualified native SDL failure with silent audio
+
+The prescribed native-SDL silent-control run used the existing same-build
+retail-gated recipe with `ROGUESQ_AUDIO_UCODE=0`. The retail oracle whole-RDRAM
+positive control fired (`callbacks=10000`) and independently reached the
+hangar-width observation. The port arm crashed before title VI 1024 or hangar
+VI 512, at `spTaskSchedulerThread+9632` with guest PC `0x8000B650`; it emitted
+no target-phase host queue or drain rows.
+
+This selects Hnative-backend over Hreal-route for the native pre-target
+failure: the native route fails with both real and silent audio, while the
+same-session dummy real arm from s4066 reached both target phases. It does not
+explain whether SDL device initialization, scheduler state, or another shared
+startup edge is the writer/origin of the corruption. The initial invocation
+was discarded as evidence for the silent arm because the recipe defaulted to
+real audio; the explicit `RS64_AUDIO_UCODE=0` rerun is the qualified result.
+No mitigation or guest/RDRAM state change was made.

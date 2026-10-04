@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4066 (2026-10-04).
+Updated for session 4067 (2026-10-04).
 
 ## Current state
 
@@ -182,6 +182,15 @@ boundary; playback/drain timing remains open.
   again passed its positive control. The native-versus-dummy sink comparison
   is unevaluable; this is additional Hroute evidence, not an SDL backend
   conclusion.
+- Session 4067 ran the prescribed native-SDL silent control with
+  `ROGUESQ_AUDIO_UCODE=0` after the retail whole-RDRAM control fired. The
+  silent native arm reproduced the same `spTaskSchedulerThread+9632` crash
+  before title 1024 or hangar 512; no phase-scoped host queue/drain result
+  exists. This selects Hnative-backend over Hreal-route for the native
+  pre-target failure, while leaving the actual scheduler corruption origin
+  open. The prior real-arm run was not used as silent evidence because the
+  recipe defaulted to `ROGUESQ_AUDIO_UCODE=1` until the explicit override was
+  supplied.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -190,11 +199,13 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Requalify the M5 native audio route.** The 4066 native-SDL arm crashed
-   before target phases even in isolation, while the dummy arm qualified. Use
-   one same-build native-SDL silent-control run with the retail positive
-   control to distinguish a native-backend startup defect from a real-image
-   route defect. Do not infer sink behavior from a pre-target arm.
+1. **Localize the native-backend startup defect.** Session 4067 selected
+   Hnative-backend: native SDL crashes in `spTaskSchedulerThread+9632` before
+   any target phase for both real and silent audio, while the dummy real arm
+   reaches both phases. Use one same-build native-vs-dummy silent run with
+   scheduler/task-route breadcrumbs and the retail positive control; classify
+   whether the crash follows native device initialization or a shared
+   scheduler route before reopening sink qualification.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -216,7 +227,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
-| M5 route failure | Active H1: process topology and audio backend selection change which arms reach target phases; s4066 native-SDL also failed in isolation, while dummy qualified. |
+| M5 route failure | Hnative-backend selected at pre-target scope: native SDL fails for both real and silent arms in `spTaskSchedulerThread+9632`, while dummy real reaches both target phases. The scheduler/device-init origin remains open. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
