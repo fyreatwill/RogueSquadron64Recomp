@@ -141588,3 +141588,23 @@ not classify the remaining writer classes.
 ORIGIN: independent retail oracle writer-PC/post-target attribution paired
 with port image-DMA joins; no guest or host state was rewritten, skipped, or
 guarded.
+
+## Session 3877 (2026-10-03) — classified the next candidate-span writer classes
+
+Ran the paired candidate-span driver twice for `0x80003A3C`, `0x80003A40`,
+and `0x80003A44`. Both retail runs passed the whole-RDRAM positive control,
+title VI 1024, hangar VI 512, and clean oracle shutdown. Each selected PC had
+qualified candidate-span writer rows in title and hangar (23/74 on the first
+run, 31/72 on the retry), but neither run had any post-target scalar samples.
+This is repeatable single-source retail evidence selecting H2 for these PCs
+only and ruling out H1 at this scope.
+
+The port arm crashed before its audio-task ABI and image-DMA controls on both
+attempts, at `spTaskSchedulerThread+9556` with guest PC `0x8000834C`; it
+produced zero image-DMA joins. Therefore the paired discriminator did not
+complete and no port-side conclusion is claimed. The next run must retain the
+same controls while trying the next three measured writer PCs.
+
+ORIGIN: diagnostic-only independent retail writer-PC/post-target attribution;
+no guest or host state was rewritten, skipped, or guarded. The port crash is
+an observed startup failure, not a mitigation.
