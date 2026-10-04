@@ -143175,6 +143175,31 @@ runtime behavior was changed.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H3).
 
+## Session 3978 (2026-10-04) — rejected declared-size audio staging on the qualified route
+
+Built one Debug binary and ran the prescribed two-arm M5 task-contract
+qualification. The first recipe omitted the qualified LLE/solo/spin-yield
+environment and stopped at VI 640, so it was discarded as a setup failure. The
+corrected recipe added the established route controls and reran both arms with
+SIGKILL cleanup.
+
+The declared-size arm (`ucode_data_size=0x800`) crashed before title in
+`spTaskSchedulerThread`, with `last-guest-pc=0x8000834c`; it had no qualified
+VI transition or audio task-contract row. The legacy arm
+(`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`, `0xF80` staging) passed the controls,
+reached title VI 1024 at origin `0x00790400`, reached hangar VI 512 at origin
+`0x006AB400`, and emitted 5,263 `audtask-abi`/`audtask-dma-row` joins. It had
+122 dispatch markers and no crash/abort marker.
+
+This selects H3 for the staging change: the declared-size arm loses the route,
+while the legacy rollback remains qualified. It rules out claiming that the
+`0x800` change preserves the existing audio route or that the legacy arm's
+downstream rows prove the old over-copy legitimate. The next work unit returns
+to the bounded retail candidate census at `0x800051B0`, `0x800051B4`, and
+`0x800051B8`.
+
+**Outcome: ADVANCED** (the corrected discriminator ran and selected H3).
+
 ## Session 3977 (2026-10-04) — honored the declared audio ucode-data span
 
 The six-iteration no-engineering-change guard forced an M5 runtime pivot. The

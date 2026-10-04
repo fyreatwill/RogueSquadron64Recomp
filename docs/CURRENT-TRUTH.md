@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3977 (2026-10-04).
+Updated for session 3978 (2026-10-04).
 
 ## Current state
 
@@ -32,8 +32,13 @@ Session 3977 landed the next M5 task-contract behavior change: audio RSP DMEM
 staging now uses each OSTask's declared `ucode_data_size` (`0x800` on the
 qualified route) instead of the prior unconditional `0xF80` span. The old
 behavior remains available with `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`. This is a
-real runtime change, not evidence of valid PCM or a selected source writer;
-the paired phase-gated validation remains next.
+real runtime change, not evidence of valid PCM or a selected source writer.
+Session 3978's same-build phase-gated qualification selected H3: the declared
+size arm crashed in `spTaskSchedulerThread` at `last-guest-pc=0x8000834c`
+before title, while the legacy arm passed controls, reached title 1024 and
+hangar 512, and emitted 5,263 task-contract rows. Keep the declared-size
+change out of the qualified route pending a corrected task-contract design;
+`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` is the validated rollback arm.
 
 The generated scalar-store census, central host/RSP writer census, native
 page-fault census, and nine bounded exact-offset load candidates are closed at
@@ -44,25 +49,23 @@ target fault attribution was absent or an arm crashed before target.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 audio task-contract qualification — validate the s3977 staging change.**
-   Build one binary and run the declared-size arm alongside the legacy arm,
-   phase-gated at title VI 1024 and hangar VI 512. Require whole-RDRAM and
-   route controls, task dispatch/fields, image exit, SP completion, DMA span,
-   slot/voice, PCM joins, and both VI transitions. The declared-size arm must
-   show the `0x800` task image staging without losing the existing route; any
-   downstream audio claim needs a matching join. Roll back with
-   `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`.
+1. **M5 candidate-writer qualification — continue the bounded retail census.**
+   Run the existing same-build retail/port census for `0x800051B0`,
+   `0x800051B4`, and `0x800051B8`, retaining whole-RDRAM, title-1024,
+   hangar-512, oracle-completion, and paired port payload controls. The
+   declared-size staging arm is not qualified: use the legacy rollback for
+   any route that needs to reach the target phases.
 
-2. **M5 candidate-writer qualification — continue the bounded retail census.**
-   Session 3973's same-build three-arm route comparison passed the VI-320
-   positive control. Silent/LLE-on crashed in `spTaskSchedulerThread` at
-   `last-guest-pc=0x8000834c`; image/LLE-on reached VI 512, while image/LLE-off
-   reached VI 1024 but not VI 512. This selects H1 for the route discriminator:
-   LLE routing changes the pre-title outcome. The silent crash is not a
-   generic phase-gate or stale-build failure, but the audio contract remains
-   unevaluable in that arm. Continue the already-qualified retail candidate
-   census at `0x80005198`, `0x8000519C`, and `0x800051A0`; retain whole-RDRAM,
-   title-1024, hangar-512, and oracle-completion controls.
+2. **M5 audio task-contract redesign — explain the declared-size crash.**
+   The declared-size arm is parked at H3 until a new task-contract probe names
+   the writer/consumer that requires bytes beyond `0x800`; do not treat the
+   legacy route's 5,263 rows as proof that the old over-copy is legitimate.
+
+   Historical route evidence: session 3973's same-build three-arm comparison
+   passed the VI-320 positive control. Silent/LLE-on crashed in
+   `spTaskSchedulerThread` at `last-guest-pc=0x8000834c`; image/LLE-on reached
+   VI 512, while image/LLE-off reached VI 1024 but not VI 512. This selects H1
+   for that route discriminator; it is not the current candidate-PC unit.
 
 3. **M3 heap guard validation — open external dependency, not a loop stop.**
    Session 3956 added the next bounded active-queue idiom guard: reject the

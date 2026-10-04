@@ -1,33 +1,29 @@
-# Next work unit: M5 declared audio ucode-data staging qualification
+# Next work unit: M5 bounded retail candidate-writer census
 
-HYPOTHESIS-ID: m5-audio-task-contract-staging
+HYPOTHESIS-ID: m5-candidate-writer-census
 
-The route prerequisite is qualified only for image/LLE-on. Validate the s3977
-runtime change that replaces the audio task's unconditional `0xF80` DMEM DMA
-with its declared `ucode_data_size` (`0x800` on the qualified task). Run both
-arms from one build; keep the legacy arm as rollback, not as a new binary.
+Run the next adjacent retail candidate set `0x800051B0`, `0x800051B4`, and
+`0x800051B8`. Use the existing same-build retail/port driver; keep the
+qualified port route on the legacy audio-DMA rollback because s3977's declared
+size arm crashed before title.
 
 Competing hypotheses:
 
-- H1: declared-size staging preserves the image task and route, then changes a
-  downstream contract join (DMA/slot/PCM) relative to legacy staging.
-- H2: declared-size staging preserves route and task completion but changes no
-  downstream join; the over-copy was real but not the missing audio edge.
-- H3: declared-size staging loses a positive control or route; the task relies
-  on bytes beyond its declared image and the change must be rolled back.
+- H1: one of the three PCs executes in a qualified target phase and joins the
+  image-stage scalar payload.
+- H2: none executes, but controls and independent post-store rows pass.
+- H3: a control or target phase fails, so this PC class is unevaluable.
 
-Discriminator: one build and one batched driver must pass the independent
-whole-RDRAM positive control, reach VI 1024 and VI 512, and report for both
-arms the task fields, exact staging span, image exit/SP completion, DMA ranges,
-slot/voice activity, PCM source/consumer joins, and route controls. H1 is
-selected only by a downstream join difference with controls intact; H2 by
-identical downstream rows with controls intact; H3 by any lost control/route.
+Discriminator: the independent whole-RDRAM control, retail title/hangar phases,
+oracle completion, and paired port controls must all pass in one run. H1 is
+selected only by a candidate execution plus matching post-store/payload join;
+H2 by zero candidate rows with all controls intact; H3 by any lost control or
+target phase.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3977_m5_task_staging.sh
+    zsh scratch/agent/run_s3976_m5_candidate_writers.sh
 
-The recipe must be self-contained, use SIGKILL cleanup, phase-gated
-title/hangar controls, and passive M5 markers. It must run the declared-size
-arm and `env ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` arm from the same binary.
+The wrapper rewrites the prior bounded census for this adjacent set. Record
+the independent controls and candidate rows before deciding H1/H2/H3.
