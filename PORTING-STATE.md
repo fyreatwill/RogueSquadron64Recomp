@@ -144692,3 +144692,26 @@ was drawn. No mitigation or guest/RDRAM state change was made.
 
 The experiment is `scratch/agent/run_s4068_m5_native_dummy_silent.sh`; logs are
 under `scratch/agent/s4068_m5_native_dummy_silent/`.
+
+## Session 4069 (2026-10-04) — separated sequential silent scheduler routes
+
+The planned work unit was a same-build, retail-gated sequential topology
+capture for the native-SDL and `SDL_AUDIODRIVER=dummy` silent arms. The first
+driver attempt was a documented harness failure: `PROBE_LEAVE_OK=1` left the
+native process alive after the phase gates, so dummy did not launch. The driver
+was fixed to stop each arm at hangar VI 512, on a crash marker, or after its
+watchdog, and the experiment was rerun.
+
+The retail oracle whole-RDRAM positive control fired. In the fixed sequential
+capture, native silent reached title VI 1024 and hangar VI 512. Dummy silent
+then crashed before either target phase at `spTaskSchedulerThread+9632`, with
+fault address `0x400128d47` and last guest PC `0x8000834c`. This selects
+Htopology/resource interaction over a deterministic shared guest-state defect:
+the concurrent failure is not reproduced by the native arm when it runs first
+and alone. It does not establish that dummy's remaining crash is caused by
+native residue, because dummy still fails after native is killed. It rules out
+using either arm as a sink comparison in this run. No mitigation or guest/RDRAM
+state change was made.
+
+The fixed capture is `scratch/agent/run_s4069_m5_sequential_silent.sh`; logs
+are under `scratch/agent/s4069_m5_sequential_silent_fixed/`.
