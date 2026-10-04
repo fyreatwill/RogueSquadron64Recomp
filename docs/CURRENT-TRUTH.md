@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4031 (2026-10-04).
+Updated for session 4033 (2026-10-04).
 
 ## Current state
 
@@ -265,6 +265,15 @@ establish audio staging as the cause. ORIGIN: launch timing and task/audio hooks
 observe legitimate process scheduling and runtime arm choices; no mitigation
 landed.
 
+Session 4033 added a regeneration-safe M3 ownership guard in
+`patches/heap_guards.c`: the active-queue sentinel published through
+`heap_tail_loc` must not also be reachable from the published active chain.
+The ordinary Debug target built successfully. The configured `PatchesLib`
+target is still absent and fails before compilation with `No rule to make
+target 'PatchesLib'`, so runtime qualification remains blocked. ORIGIN:
+`heap_tail_loc` owns the active-queue sentinel and the append link stores;
+the sentinel is metadata, not a legitimate active block.
+
 Session 4016 qualified a new gate/source boundary capture. Retail's whole-RDRAM
 positive control, title VI 1024, and hangar VI 512 controls passed and the
 oracle completed; it reported 17 writes to `0x800A0F50`, 192 executions of
@@ -417,17 +426,17 @@ only; no mitigation landed.
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 route requalification.** Select one new schedule discriminator, then
-   repeat the four-arm route qualification. Session 4031 selected timing as a
-   route discriminator: a five-second stagger let declared/silent qualify while
-   the real arms crashed pre-target. Test a ten-second stagger in the
-   same launch order before resuming `0x800052AC`; require the retail positive,
-   title/hangar phases, RSP/audio controls, and no crash/abort in all port arms.
+1. **M3 patch integration.** Restore or supply the `PatchesLib` target before
+   runtime-qualifying the active-queue sentinel guard from session 4033. The
+   source and ordinary host target now pass; do not infer runtime behavior
+   from that build alone.
 
-2. **M3 patch integration.** Session 4029 confirmed that `PatchesLib` is
-   absent from the configured build graph; the target fails before compiler or
-   toolchain discovery. Restore or supply the CMake target before attempting
-   runtime qualification. Do not repeat the same target invocation.
+2. **M5 route requalification.** Select one new schedule discriminator, then
+   repeat the four-arm route qualification. Session 4031 selected timing as a
+   route discriminator; session 4032 changed the qualifying arm again at five
+   seconds. Test a ten-second stagger in the same launch order before resuming
+   `0x800052AC`; require the retail positive, title/hangar phases, RSP/audio
+   controls, and no crash/abort in all port arms.
 
 3. **M5 next source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
@@ -469,6 +478,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
 | `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; host target passed, patch/runtime validation remains blocked. |
 | `H-M3-ExpansionActiveOwnership` | Code landed at s4019; ordinary Debug build passed, while runtime qualification is blocked by the absent patch target/toolchain. |
+| `H-M3-ActiveQueueSentinelOwnership` | Code landed at s4033; ordinary Debug build passed, while runtime qualification is blocked by the absent `PatchesLib` target. |
 | `H-M5-Step1-PreTitleRoute` | Selected H1 at s3973: image/LLE-on reached VI 512, image/LLE-off stopped at VI 1024, silent/LLE-on crashed at `0x8000834c`. |
 | `H-M5-Step1-TaskContract` | H3 at s3991: declared arm crashed in the first graphics-task scheduler path at `0x8000834c` before any audio ABI row; legacy arm passed controls and reached both target phases. |
 | `H-M5-Step1-TaskContract-3992` | Superseded by s3994: s3993 again failed to qualify declared/real, but s3994's same-build three-arm capture qualified it. |

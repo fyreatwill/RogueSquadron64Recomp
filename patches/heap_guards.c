@@ -178,6 +178,26 @@ static int active_queue_chain_ok(const Block* queue_head,
     return 0;
 }
 
+// ORIGIN: heap_tail_loc publishes the active-queue sentinel used by the
+// append stores. The sentinel is metadata ownership, not an active block;
+// accepting it in the published chain would let a later append mutate the
+// sentinel through the node-link path.
+static int active_queue_sentinel_disjoint(const Block* queue_head,
+                                          const Block* sentinel) {
+    const Block* node = queue_head;
+    uint32_t count = 0;
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (!block_ok(node)) {
+            return 0;
+        }
+        if (node == sentinel) {
+            return 0;
+        }
+        node = node->next;
+    }
+    return node == NULL;
+}
+
 // ORIGIN: the free-list dequeue publishes popped as an active-queue node;
 // a node already reachable from the published queue still belongs to that
 // queue, so accepting the alias would create a cycle or duplicate ownership.
@@ -405,6 +425,9 @@ RECOMP_PATCH Block* func_80007D74(void) {
             return NULL;
         }
         if (!active_queue_chain_ok(queue_head, q) || tail->next != q) {
+            return NULL;
+        }
+        if (!active_queue_sentinel_disjoint(queue_head, tail)) {
             return NULL;
         }
 

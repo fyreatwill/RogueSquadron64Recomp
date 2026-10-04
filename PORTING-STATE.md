@@ -144097,3 +144097,22 @@ establish audio staging as the cause. This rules out a stable five-second
 all-arm qualification and keeps the `0x800052AC` writer census parked. ORIGIN:
 launch timing and task/audio hooks observe legitimate runtime arm choices; no
 mitigation landed.
+
+## Session 4033 (2026-10-04) — guarded active-queue sentinel ownership
+
+The queued M5 route requalification was deliberately pivoted because it would
+have been another diagnostic-only iteration. Before building, the work unit
+was a bounded M3 audit of the active-queue ownership idiom. Added
+`active_queue_sentinel_disjoint` to `patches/heap_guards.c`; it walks the
+published active chain and rejects `heap_tail_loc`'s sentinel if the metadata
+node is also reachable as an active block. ORIGIN: `heap_tail_loc` publishes
+the sentinel used by the append stores; that node is metadata ownership, not a
+legitimate active block.
+
+The ordinary Debug target `RogueSquadron64Recomp` built successfully. The
+configured `PatchesLib` target still fails immediately with `No rule to make
+target 'PatchesLib'`, so the new guard is source/host-build evidence only and
+runtime qualification remains blocked. H1 is selected for the source/build
+discriminator; H2 is selected for the patch integration blocker. This rules
+out a compiler or ordinary-host-link failure, but does not establish that the
+malformed sentinel alias occurs at runtime.
