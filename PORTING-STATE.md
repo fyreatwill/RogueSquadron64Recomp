@@ -143938,3 +143938,18 @@ rows. H3 is selected: this candidate class is unevaluable, not a qualified
 null. The failed recipe was a tooling dead end; the fixed run rules out a
 candidate conclusion but not the writer class. ORIGIN: oracle PC watches and
 port phase/task hooks are diagnostic only; no mitigation landed.
+
+## Session 4023 (2026-10-04) — requalified M5 route for candidate census
+
+Before building, the work unit was the route-level discriminator in
+`scratch/agent/NEXT.md`: retail, declared/real, declared/silent, and
+legacy/real in one same-build capture, with no candidate watches or audio
+behavior changes. `cmake --build build --config Debug --target
+RogueSquadron64Recomp` passed. Retail's whole-RDRAM positive control, title VI
+1024, hangar VI 512, and completion controls fired. All three port arms
+reached both target VIs, fired the RSP-source and audio-stage controls, and
+emitted no `[CRASH]` or `[ABORT]` marker. Declared/real used `0x800` audio
+staging and legacy/real used `0xF80`. H2 is selected: the earlier legacy
+640-wide stop did not recur, so it remains schedule-sensitive or otherwise
+unevaluated and the route is qualified for the next candidate census. ORIGIN:
+route hooks observe legitimate runtime arm choices; no mitigation landed.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4021 (2026-10-04).
+Updated for session 4023 (2026-10-04).
 
 ## Current state
 
@@ -307,18 +307,27 @@ census rows. H3 is selected: the candidate class is unevaluable until the
 legacy route is qualified again. ORIGIN: retail oracle PC watches and port
 phase/task hooks are diagnostic only; no mitigation landed.
 
+Session 4023 requalified the M5 route with the prescribed same-build
+four-arm capture. Retail's whole-RDRAM positive control, title VI 1024,
+hangar VI 512, and completion controls fired. Declared/real,
+declared/silent, and legacy/real all reached both target phases, fired the
+RSP-source and audio-stage controls, and emitted no crash or abort marker.
+Declared/real used `0x800` audio staging and legacy/real used `0xF80`.
+H2 is selected for this route-level discriminator: the earlier legacy 640
+stop is schedule-sensitive or otherwise unevaluated, and the route is
+qualified for another retail-grounded source-writer census. ORIGIN: route
+hooks observe legitimate runtime arm choices; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 route requalification.** Session 4022's fixed candidate capture lost
-   the legacy arm to a 640-wide route before target phase. Re-run one
-   same-build retail/declared/legacy route table using the established
-   qualified-capture controls, without candidate watches or audio changes.
-   Require retail positive/title/hangar/completion controls and both port target
-   phases; classify any arm failure before selecting another source-writer
-   class.
+1. **M5 candidate-writer census continuation.** The s4023 route
+   requalification passed. Re-run the fixed retail-grounded candidate census
+   for `0x800052A0`, `0x800052A4`, and `0x800052A8` with its phase-gated
+   positive controls; accept a writer conclusion only if retail and both port
+   real-audio arms reach their target phases.
 
 2. **M3 patch qualification.** Session 4019 added an expansion-chain versus
    active-queue ownership guard. Runtime qualification remains blocked until
@@ -334,9 +343,9 @@ candidate results are summarized by address range rather than copied here.
    changing audio behavior; do not repeat the scheduler split. Keep scheduler
    `a0` as a message object and treat ABI rows as authoritative.
 
-4. **M5 candidate-writer census continuation.** Closed for the measured
-   adjacent range through `0x8000529C`; resume only with a new writer class or
-   a new ground-truth source.
+4. **M5 new source-payload discriminator.** After the `0x800052A0` class is
+   qualified, select the next retail-grounded writer class; do not repeat the
+   scheduler split or change audio behavior.
 
 5. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
@@ -388,6 +397,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M5-RouteQualification-4021` | H3 selected: declared/real, declared/silent, and legacy/real all reached both target VIs with route controls and no crash/abort in the same-build capture. |
 | `H-M5-CandidateWriterClass-052A` | H3 selected at s4022: retail controls and candidate-null evidence passed, but declared/real reached target phase while legacy/real remained at 640 width before target phase; no writer conclusion is allowed. |
+| `H-M5-RouteQualification-4023` | H2 selected: retail and all three port arms reached both target phases with positive controls; the earlier legacy 640 stop did not recur. |
 
 ## Durable evidence boundary
 
