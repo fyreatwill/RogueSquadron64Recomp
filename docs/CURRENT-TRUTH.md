@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4020 (2026-10-04).
+Updated for session 4021 (2026-10-04).
 
 ## Current state
 
@@ -284,17 +284,28 @@ unevaluable and H3 remains the qualification result. This confirms source and
 host-build cleanliness only, not that the alias occurs. ORIGIN:
 `func_8002221C` and its expansion-chain link stores; no mitigation was added.
 
+Session 4021 re-qualified the M5 route with one same-build concurrent capture
+of retail, declared/real, declared/silent, and legacy/real. Retail's whole-
+RDRAM positive control and both title VI 1024 and hangar VI 512 controls fired.
+All three port arms reached both target VIs, fired the RSP-source and
+audio-stage controls, and emitted no crash or abort marker. Declared/real and
+legacy/real used their respective `0x800` and `0xF80` staging paths; the silent
+arm also reached hangar. H3 is selected: the earlier route failure remains
+schedule-sensitive or otherwise unevaluated, not explained by staging size or
+real-audio execution in this capture. ORIGIN: the route hooks observe
+legitimate runtime arm choices; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 route qualification before another writer census.** Session 4018's
-   retail histogram was qualified but its paired port arms failed before the
-   target phases. Run one same-build schedule/arm table that includes
-   declared/real, declared/silent, and legacy/real with the existing source,
-   audio-stage, and phase controls. Do not interpret another retail-null or
-   add a mitigation until at least one real-audio arm reaches both target VIs.
+1. **M5 next source-payload discriminator.** Session 4021 qualified all three
+   port arms, so the route blocker is cleared at this scope. Select the next
+   retail-grounded source-writer class and run one phase-gated census with the
+   existing retail positive controls and both port route controls. Do not
+   repeat the scheduler split or change audio behavior until a new writer
+   class is selected.
 
 2. **M3 patch qualification.** Session 4019 added an expansion-chain versus
    active-queue ownership guard. Runtime qualification remains blocked until
@@ -362,6 +373,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-0594-qualified` | H2 selected at s4011: retail controls and oracle completion passed; all three candidate PCs were absent from qualified post-target evidence; both declared/real and legacy/real reached title/hangar with audio/image joins and no crash/abort. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
+| `H-M5-RouteQualification-4021` | H3 selected: declared/real, declared/silent, and legacy/real all reached both target VIs with route controls and no crash/abort in the same-build capture. |
 
 ## Durable evidence boundary
 
@@ -468,6 +480,13 @@ with `staging=0xF80` and crashed at `0x8000834C` before any audio-ABI row. No
 successor variation appeared. This selects H1 for the measured legacy route
 split and permits the candidate census to resume only with route qualification
 reported separately.
+
+Session 4021's same-build four-arm capture passed the retail whole-RDRAM,
+title, and hangar controls. Declared/real, declared/silent, and legacy/real
+all reached both target phases, fired their RSP-source/audio-stage controls,
+and emitted no crash or abort marker. This qualifies the route for a new
+source-writer discriminator and rules out staging size or real-audio mode as
+the sufficient explanation for the earlier route failure in this capture.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.

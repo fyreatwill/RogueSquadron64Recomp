@@ -1,28 +1,29 @@
-# Next work unit: qualify the M5 route before another writer census
+# Next work unit: new retail-grounded source-writer census
 
-HYPOTHESIS-ID: m5-route-qualification-4020
+HYPOTHESIS-ID: m5-source-writer-class-052a
 
 Competing hypotheses:
 
-- H1: declared/real is the stable real-audio route; it reaches both target VIs
-  while legacy/real fails or diverges before them.
-- H2: legacy/real is the stable real-audio route; it reaches both target VIs
-  while declared/real fails or diverges before them.
-- H3: both real-audio arms qualify, so the prior route failure was schedule or
-  run-sensitive and cannot select a writer class.
-- H4: declared/silent is the only arm that qualifies, showing the failure is
-  tied to real-audio execution rather than staging size.
+- H1: at least one of `0x800052A0`, `0x800052A4`, or `0x800052A8` writes a
+  nonzero value in a qualified retail target phase and is the missing source
+  writer.
+- H2: all three candidates remain absent or zero in qualified retail target
+  phases, while the lifetime histogram identifies a different writer family.
+- H3: the route is not qualified again, so this candidate class is
+  unevaluable and no writer conclusion is allowed.
 
-Discriminator: one same-build, concurrent four-arm capture with retail,
-declared/real, declared/silent, and legacy/real; require the retail whole-RDRAM
-positive control plus title VI 1024 and hangar VI 512 controls, and compare
-phase-scoped source/audio/task rows and crash markers for all three port arms.
-H1/H2 require exactly one real arm to reach both target VIs while the other
-fails before them; H3 requires both real arms to reach both; H4 requires the
-silent arm alone to reach both. A retail null or a port arm without both phase
-controls is not a writer-class result.
+Discriminator: one same-build concurrent retail/declared-real/legacy-real
+capture using the existing oracle positive controls, title/hangar VI controls,
+phase-scoped post-value PC watches, and port audio/RSP/phase controls. H1
+requires a target-phase retail candidate hit with a nonzero value; H2 requires
+qualified retail controls plus candidate-null evidence and a usable alternate
+writer histogram; H3 is any missing retail positive control or either port arm
+missing a target phase. A port-only null is not evidence about the writer.
 
-Commands: use the existing checked-in route recipe, run all four arms
-concurrently from `build/` with the existing source, audio-stage, RSP-source,
-and phase controls, then record the phase-gated comparison. Do not add a
-writer census or mitigation in this iteration.
+Commands: copy `scratch/agent/run_s4005_m5_candidate_writers.sh` to
+`scratch/agent/run_s4022_m5_candidate_writers.sh`, replace its candidate PCs
+with `0x800052A0,0x800052A4,0x800052A8` and output tag with `s4022`, then run
+`zsh scratch/agent/run_s4022_m5_candidate_writers.sh` from the repository root.
+Build once with `cmake --build build --config Debug --target
+RogueSquadron64Recomp`; run all arms concurrently and kill them with SIGKILL
+through the recipe. Do not change audio behavior or add a mitigation.

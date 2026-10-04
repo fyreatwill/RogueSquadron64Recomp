@@ -143906,3 +143906,19 @@ therefore no runtime alias test was possible and H1 versus H2 remains
 unevaluable. This confirms source/host-build cleanliness only and does not
 establish that an expansion node aliases the active queue. ORIGIN:
 `func_8002221C` and its expansion-chain link stores; no mitigation was added.
+
+## Session 4021 (2026-10-04) — four-arm M5 route qualification passes
+
+Before building, the work unit was the checked-in four-arm M5 route
+qualification from `scratch/agent/run_s4019_m5_route_qualification.sh`.
+`cmake --build build --config Debug --target RogueSquadron64Recomp` passed.
+The same-build capture ran retail, declared/real, declared/silent, and
+legacy/real concurrently. Retail's whole-RDRAM positive control fired, and
+retail reached title VI 1024 and hangar VI 512. Each of the three port arms
+reached both target VIs, fired the RSP-source and audio-stage controls, and
+emitted no `[CRASH]` or `[ABORT]` marker. Declared/real used `0x800` audio
+staging, legacy/real used `0xF80`, and the silent arm reached hangar as well.
+H3 is selected: this capture does not support staging size or real-audio mode
+as the sufficient explanation for the earlier route failure; that failure
+remains schedule-sensitive or otherwise unevaluated. ORIGIN: route hooks
+observe legitimate runtime arm choices; no mitigation landed.
