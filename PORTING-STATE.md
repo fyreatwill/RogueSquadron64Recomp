@@ -142501,3 +142501,15 @@ for this bounded candidate set only; it does not establish global writer
 absence. The paired port arm crashed pre-target in `spTaskSchedulerThread` at
 last guest PC `0x8000834c`, so it supplies no image-DMA or payload conclusion.
 The next adjacent set is `0x80005018`, `0x8000501C`, and `0x80005020`.
+
+## Session 3931 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran the same-build paired qualification for `0x80005018`, `0x8000501C`, and
+`0x80005020`. The retail oracle passed the whole-RDRAM positive control, title
+VI 1024, hangar VI 512, and oracle completion. All three candidates had zero
+target-phase execution, zero post-target rows, and zero scalar samples. This
+selects H3 for this bounded candidate set only; it does not establish global
+writer absence. The paired port reached hangar with 2,880 qualified
+image-DMA joins and no crash or abort; qualified payload remained
+`FNV=0x762B22A5`, nonzero=0. The next adjacent set is `0x80005024`,
+`0x80005028`, and `0x8000502C`.

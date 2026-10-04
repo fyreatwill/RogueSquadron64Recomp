@@ -243,6 +243,15 @@ Work only the first applicable item. This is one monotonic backlog.
    remains unavailable in this checkout, so continue with this runnable
    discriminator while treating the M3 result as environment evidence only.
 
+   Session 3931 tested `0x80005018`, `0x8000501C`, and `0x80005020`: retail
+   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
+   all three candidates had zero target-phase execution, post-target rows, and
+   scalar samples. This selects H3 for this bounded class only. The paired
+   port reached hangar with 2,880 image-DMA joins and no crash/abort;
+   qualified image payload remained `FNV=0x762B22A5`, nonzero=0. Continue
+   with the next adjacent unclassified candidates; this is not global writer
+   absence.
+
 4. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
    and the expanded reciprocal-link guards are landed in
    `patches/heap_guards.c` but have no runtime result. The same
