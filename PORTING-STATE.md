@@ -143666,3 +143666,6 @@ selects the qualified-null hypothesis for that candidate class. It rules out
 those three PCs as qualified nonzero target/post-target writers at this scope;
 it does not establish global writer absence. The next bounded unit is the
 adjacent set `0x8000527C`, `0x80005280`, and `0x80005284`.
+## Session 4005 (2026-10-04) — extended M5 candidate-writer census
+
+Ran the single planned work unit with `zsh scratch/agent/run_s4004_m5_candidate_writers.sh`; its concurrent retail oracle and legacy/real port capture completed without crash or abort. The retail whole-RDRAM positive control fired, title VI 1024 fired 154 times, hangar VI 512 fired 187 times, and the oracle completed. The paired port emitted 3,014 `audtask-abi` rows and 3,009 `audtask-image-dma-join` rows and reached both target phases. Candidates `0x8000527C`, `0x80005280`, and `0x80005284` each had `seen=0`, zero post-target samples, zero post-target rows, and zero post-target sequence hits. This selects H2 for the measured candidate class and rules out those three PCs as qualified target/post-target writers at this scope; it does not establish global writer absence.

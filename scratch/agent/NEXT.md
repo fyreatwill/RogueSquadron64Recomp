@@ -4,7 +4,7 @@ HYPOTHESIS-ID: m5-candidate-writer-census
 
 Competing hypotheses:
 
-- H1: at least one of `0x8000527C`, `0x80005280`, or `0x80005284` writes
+- H1: at least one of `0x80005288`, `0x8000528C`, or `0x80005290` writes
   nonzero target/post-target payload at a matching task ordinal.
 - H2: the route and controls qualify, but all three adjacent candidates remain
   absent from post-target samples/rows/sequence hits.
@@ -19,7 +19,7 @@ phase control selects H3.
 
 Exact command:
 
-    zsh scratch/agent/run_s4004_m5_candidate_writers.sh
+    zsh scratch/agent/run_s4005_m5_candidate_writers.sh
 
 The wrapper launches the retail oracle and legacy/real port arm concurrently,
 captures both logs, and SIGKILLs both after the bounded window. Do not add

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4004 (2026-10-04).
+Updated for session 4005 (2026-10-04).
 
 ## Current state
 
@@ -126,14 +126,21 @@ abort. Candidates `0x80005270`, `0x80005274`, and `0x80005278` had zero
 post-target samples, rows, and sequence hits. This is a qualified H2/null for
 that candidate class, so the adjacent census can continue.
 
+Session 4005 extended the qualified legacy/real M5 census to
+`0x8000527C`, `0x80005280`, and `0x80005284`. The retail whole-RDRAM positive
+control, title VI 1024, and hangar VI 512 controls fired; the oracle completed.
+The paired port reached both target phases with 3,014 audio-ABI rows and 3,009
+image-DMA joins without crash or abort. Each candidate had zero post-target
+samples, rows, and sequence hits, selecting H2 for this class.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 candidate-writer census continuation.** The s4004 route is qualified.
-   Run the next unclassified adjacent set after `0x80005278`:
-   `0x8000527C`, `0x80005280`, and `0x80005284`, using one phase-scoped table
+1. **M5 candidate-writer census continuation.** The s4005 route is qualified.
+   Run the next unclassified adjacent set after `0x80005284`:
+   `0x80005288`, `0x8000528C`, and `0x80005290`, using one phase-scoped table
    and the legacy/real route. The discriminator is whether any candidate writes
    nonzero target/post-target payload at a matching task ordinal; the same run
    must retain the retail positive control and both port phase controls.
@@ -184,6 +191,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-0564` | H2 selected at s4001: retail positive, title, and hangar controls passed with oracle completion; no candidate/post-target/scalar/sequence evidence appeared for `0x80005264`, `0x80005268`, or `0x8000526C`; paired port reached phase 5 with 3,056 audio-task rows and 3,047 image-DMA joins. |
 | `H-M5-CandidateWriterClass-0570` | H3 at s4002: retail positive, title, and hangar controls passed and all three candidates were absent, but the paired legacy/real port crashed at `0x8000834c` before target-phase controls or census rows. |
 | `H-M5-CandidateWriterClass-0570-qualified` | H2 selected at s4004: the paired legacy/real port reached both target phases with positive controls, while `0x80005270`, `0x80005274`, and `0x80005278` had no post-target samples, rows, or sequence hits. |
+| `H-M5-CandidateWriterClass-057C` | H2 selected at s4005: retail and paired-port controls passed, while `0x8000527C`, `0x80005280`, and `0x80005284` had no post-target samples, rows, or sequence hits. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 
@@ -237,6 +245,12 @@ candidate results are summarized by address range rather than copied here.
   image-DMA joins without crash/abort; and `0x80005270`, `0x80005274`, and
   `0x80005278` had zero post-target samples, rows, and sequence hits. This
   selects H2 for the class and permits the next adjacent set.
+- Session 4005's bounded candidate census selected H2 for `0x8000527C`,
+  `0x80005280`, and `0x80005284`: retail positive, title, and hangar controls
+  passed with oracle completion; no candidate post-target samples, rows, or
+  sequence hits appeared; and the paired legacy port reached both target
+  phases with 3,014 audio-ABI rows and 3,009 image-DMA joins without
+  crash/abort.
 - Session 3991's declared-size task-staging arm emitted the RSP boot canary
   control, then crashed in `spTaskSchedulerThread` at guest PC `0x8000834c`
   before any audio-task ABI/consumer row. In the same script, the legacy arm
