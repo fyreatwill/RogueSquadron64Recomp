@@ -198,6 +198,29 @@ static int active_queue_disjoint(const Block* queue_head,
     return node == NULL;
 }
 
+// ORIGIN: func_8002221C publishes every node in an expansion chain before the
+// dequeue splices that chain into heap_free_head. A node already owned by the
+// active queue is not a legitimate expansion result; linking through it would
+// mutate the active queue while validating the new free-list chain.
+static int expansion_chain_disjoint_from_active(const Block* expansion,
+                                                const Block* queue_head) {
+    const Block* node = expansion;
+    uint32_t count = 0;
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (!block_ok(node)) {
+            return 0;
+        }
+        if (active_queue_disjoint(queue_head, node) == 0) {
+            return 0;
+        }
+        if (node->next != NULL && !block_ok(node->next)) {
+            return 0;
+        }
+        node = node->next;
+    }
+    return node == NULL;
+}
+
 // ORIGIN: the free-list link stores own the chain rooted at heap_free_head,
 // while the active-queue link stores own the chain ending at q. For two
 // valid acyclic singly-linked chains, any shared node implies a shared tail;
@@ -226,6 +249,13 @@ RECOMP_PATCH Block* func_80007D74(void) {
         if (fresh != NULL) {
             if (!block_ok(fresh)) {
                 return NULL;
+            }
+            if (metadata_slot_ok(heap_other_listhead, (void*)0x801163FC)) {
+                Block* active_head = *heap_other_listhead;
+                if (active_head != NULL &&
+                    !expansion_chain_disjoint_from_active(fresh, active_head)) {
+                    return NULL;
+                }
             }
             // Walk fresh's chain to find its tail
             Block* tail = fresh;

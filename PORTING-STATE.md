@@ -143879,3 +143879,19 @@ audio-stage or target-phase row. H3 is selected for the paired experiment:
 the retail phase-null is valid at its measured scope, but this run cannot use
 it to select a new writer class against the port. ORIGIN: the oracle histogram
 and port hooks observe legitimate runtime/guest writers; no mitigation landed.
+
+## Session 4019 (2026-10-04) — guarded allocator expansion ownership
+
+Before building, the work unit was reduced to one M3 idiom class: an
+allocator expansion chain returned by `func_8002221C` must not contain a node
+already reachable from the active queue. Added a regeneration-safe guard in
+`patches/heap_guards.c` that walks the bounded expansion chain and rejects an
+active-queue alias before the chain is spliced into the free list. ORIGIN:
+`func_8002221C` and its expansion-chain link stores; an active-queue-owned node
+is not legitimate free-list ownership.
+
+The ordinary `RogueSquadron64Recomp` Debug target built successfully and
+`git diff --check` passed. The patch source was not runtime-qualified: this
+checkout still has no configured `PatchesLib` target or MIPS patch toolchain,
+so H1 versus H2 remains unevaluable and H3 is selected for qualification
+status. This run rules out a source/build failure, not the underlying alias.

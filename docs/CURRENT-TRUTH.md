@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4018 (2026-10-04).
+Updated for session 4019 (2026-10-04).
 
 ## Current state
 
@@ -268,6 +268,14 @@ H3 is selected for the paired discriminator. The retail phase-null is valid
 only at the measured oracle scope and is not a qualified port writer-class
 selection. ORIGIN: diagnostic histogram and route hooks only; no mitigation.
 
+Session 4019 added the next regeneration-safe M3 ownership guard in
+`patches/heap_guards.c`: an expansion chain returned by `func_8002221C` is
+rejected before free-list splice if any node is already reachable from the
+active queue. The ordinary Debug target built and `git diff --check` passed,
+but the patch pipeline remains unavailable, so runtime qualification is not
+claimed. ORIGIN: `func_8002221C` and its expansion-chain link stores; an
+active-queue-owned node is not legitimate free-list ownership.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
@@ -280,7 +288,12 @@ candidate results are summarized by address range rather than copied here.
    audio-stage, and phase controls. Do not interpret another retail-null or
    add a mitigation until at least one real-audio arm reaches both target VIs.
 
-2. **M5 next source-payload discriminator.** The gate-value redesign is now
+2. **M3 patch qualification.** Session 4019 added an expansion-chain versus
+   active-queue ownership guard. Runtime qualification remains blocked until
+   the configured `PatchesLib` target and MIPS toolchain are supplied; do not
+   infer that the alias occurs from the source guard alone.
+
+3. **M5 next source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
    initialization/transitional traffic before the target phase. The candidate
    census is qualified through `0x8000529C`, the legitimate `0xF80` writer is
@@ -289,15 +302,9 @@ candidate results are summarized by address range rather than copied here.
    changing audio behavior; do not repeat the scheduler split. Keep scheduler
    `a0` as a message object and treat ABI rows as authoritative.
 
-3. **M5 candidate-writer census continuation.** Closed for the measured
+4. **M5 candidate-writer census continuation.** Closed for the measured
    adjacent range through `0x8000529C`; resume only with a new writer class or
    a new ground-truth source.
-
-4. **M3 heap guard validation.** The accumulated guards, including the new
-   free-list/active-queue ownership-alias guard, in
-   `patches/heap_guards.c` are not runtime-qualified because the configured
-   build has no `PatchesLib` target and the MIPS toolchain is unavailable.
-   Do not add another guard before the patch pipeline is supplied and built.
 
 5. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
@@ -325,6 +332,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
 | `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; host target passed, patch/runtime validation remains blocked. |
+| `H-M3-ExpansionActiveOwnership` | Code landed at s4019; ordinary Debug build passed, while runtime qualification is blocked by the absent patch target/toolchain. |
 | `H-M5-Step1-PreTitleRoute` | Selected H1 at s3973: image/LLE-on reached VI 512, image/LLE-off stopped at VI 1024, silent/LLE-on crashed at `0x8000834c`. |
 | `H-M5-Step1-TaskContract` | H3 at s3991: declared arm crashed in the first graphics-task scheduler path at `0x8000834c` before any audio ABI row; legacy arm passed controls and reached both target phases. |
 | `H-M5-Step1-TaskContract-3992` | Superseded by s3994: s3993 again failed to qualify declared/real, but s3994's same-build three-arm capture qualified it. |

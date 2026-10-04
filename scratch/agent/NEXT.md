@@ -1,32 +1,29 @@
-# Next work unit: qualify the audio-arm route before another writer census
+# Next work unit: validate the allocator expansion ownership guard
 
-HYPOTHESIS-ID: m5-route-qualification-4018
+HYPOTHESIS-ID: m3-expansion-active-ownership-4019
 
 Competing hypotheses:
 
-- H1: the declared/real pre-target stop is schedule-sensitive; adding a
-  declared/silent control in the same run will reach both target VIs while
-  declared/real remains the only real-audio failure.
-- H2: the legacy `0xF80` staging path is causal; declared/real and
-  declared/silent will reach both target VIs while legacy/real alone crashes
-  at `0x8000834C`.
-- H3: the arm failures are shared contention or nondeterministic scheduling;
-  all three arms will fail or different arms will fail without a stable split.
+- H1: an allocator expansion chain can be returned with a node already owned
+  by the active queue; the new guard must reject that chain before free-list
+  splice stores.
+- H2: expansion chains are disjoint from the active queue on the qualified
+  path; the guard is inert and the ordinary target still builds.
+- H3: the patch source cannot be compiled or linked in this checkout; the
+  change is source-level only and runtime qualification remains blocked.
 
-Discriminator: one build/run with retail, declared/real, declared/silent, and
-legacy/real concurrently. Preserve the whole-RDRAM oracle positive control,
-title/hangar VI controls, and port RSP-source/audio-stage/phase controls. H1,
-H2, and H3 are distinguished by which arm reaches both target VIs and whether
-the crash remains uniquely tied to legacy staging. Do not use a retail-only
-null or add a mitigation if no real-audio arm reaches both target phases.
+Discriminator: build the ordinary Debug target after the guard change and
+inspect the generated patch input/target result. A successful target build
+selects H1/H2 only as a source/build result; a missing PatchesLib target or
+MIPS compiler selects H3. Runtime rejection versus acceptance of a synthetic
+alias cannot be claimed without the unavailable patch pipeline, so do not
+call this runtime-qualified.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4019_m5_route_qualification zsh scratch/agent/run_s4019_m5_route_qualification.sh
+    git diff --check
 
-The new recipe must launch the four arms concurrently, use a fresh output
-directory, phase-gate every budget, and SIGKILL every arm after its watchdog.
-Use the established autopilot and `ROGUESQ_SPIN_YIELD=1`; retain
-`ROGUESQ_AUDIO_UCODE=1`, with `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` only on the
-legacy arm and the silent arm's explicit `ROGUESQ_AUDIO_UCODE=0`.
+The guard's ORIGIN is `func_8002221C` and the expansion-chain link stores. A
+node already reachable from the active queue is not legitimate allocator
+ownership. Do not run another route or writer census in this iteration.
