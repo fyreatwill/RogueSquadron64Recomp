@@ -144387,3 +144387,19 @@ iteration took route 3: `CURRENT-TRUTH.md` records the open prerequisite and
 The MIPS guard remains unqualified; no runtime inference was made from the
 ordinary host build. `scratch/agent/UNBLOCK.md` records the evidence and the
 specific re-scope.
+
+## Session 4053 (2026-10-04) — M5 route matrix fails all port arms before target phases
+
+Built the ordinary Debug target, then ran one new same-build route matrix with
+reversed port launch order (`legacy-real`, `declared-silent`,
+`declared-real`) and 7-second gaps. The retail oracle positive control reached
+title VI 1024 and hangar VI 512, and its whole-RDRAM watch exceeded the control
+threshold. The port task/source controls fired, but declared-real and
+legacy-real crashed in `spTaskSchedulerThread`; declared-silent reached only
+640 width. None reached title 1024 or hangar 512.
+
+This selects H3 for this schedule: all port source-writer nulls are
+unevaluable, so the run does not advance the producer or consumer conclusions.
+It rules out neither a shared startup dependency nor the possibility that an
+isolated arm can qualify. The route harness now supports explicit launch order
+and gap parameters; the next unit is an arm-isolation matrix.

@@ -2,6 +2,7 @@
 set -u
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 OUT=${RS64_BOUNDARY_OUT:-$ROOT/scratch/agent/s4019_m5_route_qualification}
+LAUNCH_GAP=${RS64_LAUNCH_GAP:-0}
 BUILD=$ROOT/build
 ORACLE=$ROOT/tools/oracle/build/rs64_oracle
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
@@ -25,9 +26,18 @@ run_port() {
     ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_RSP_SOURCE=1 \
     ROGUESQ_LOG_M5_SCHEDULER_BOUNDARY=1 "$@" ./RogueSquadron64Recomp ) > "$OUT/$name.log" 2>&1 & print $!
 }
-declared_pid=$(run_port declared-real ROGUESQ_AUDIO_UCODE=1)
-silent_pid=$(run_port declared-silent ROGUESQ_AUDIO_UCODE=0)
-legacy_pid=$(run_port legacy-real ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1)
+launch_port() {
+  local name="$1"; shift
+  case "$name" in
+    declared-real) declared_pid=$(run_port declared-real ROGUESQ_AUDIO_UCODE=1) ;;
+    declared-silent) silent_pid=$(run_port declared-silent ROGUESQ_AUDIO_UCODE=0) ;;
+    legacy-real) legacy_pid=$(run_port legacy-real ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1) ;;
+  esac
+  (( LAUNCH_GAP > 0 )) && sleep "$LAUNCH_GAP"
+}
+launch_port "${RS64_LAUNCH_1:-declared-real}"
+launch_port "${RS64_LAUNCH_2:-declared-silent}"
+launch_port "${RS64_LAUNCH_3:-legacy-real}"
 print "oracle=$oracle_pid declared=$declared_pid silent=$silent_pid legacy=$legacy_pid" > "$OUT/driver.log"
 for _ in {1..480}; do
   alive=0

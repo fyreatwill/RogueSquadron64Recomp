@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4052 (2026-10-04).
+Updated for session 4053 (2026-10-04).
 
 ## Current state
 
@@ -65,6 +65,12 @@ sentinel path is not legitimate ownership state.
   MIPS GCC/LD, MIPS Linux cross tools, or generated patch artifacts were found
   locally. The M3 dependency remains external; work is re-scoped to the M5
   route discriminator until a qualified MIPS host is supplied.
+- Session 4053 ran a new reversed launch order with 7-second inter-arm gaps.
+  The retail oracle positive control fired and reached title 1024 and hangar
+  512. All three port arms failed before title 1024: declared-real and
+  legacy-real crashed in the scheduler path, while declared-silent reached
+  only a 640-width phase. This selects H3 for this schedule; its source-writer
+  nulls are unevaluable and do not advance the writer census.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -79,11 +85,11 @@ Work only the first applicable item. This backlog is one monotonic sequence.
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-2. **Requalify the M5 route.** Run one genuinely new same-build launch-order
-   or gap table using the existing route harness, with retail controls and all
-   three port-arm target-phase controls. Classify any pre-target failure as H3,
-   never as writer absence. Do not repeat the already-tested one-, two-,
-   three-, or four-second permutations without a new discriminator.
+2. **Requalify the M5 route.** Run one genuinely new same-build arm-isolation
+   table using the route harness, with retail controls and all three port-arm
+   target-phase controls. Classify any pre-target failure as H3, never as
+   writer absence. Do not repeat launch-order/gap permutations already tested;
+   isolate each arm's startup dependency in one batch.
 3. **Resume the retail-grounded source-writer census.** Only after step 2
    qualifies, measure the `0x800052C4` class and then choose the next bounded
    class. Keep the positive controls and phase-scoped budgets in the same run.
