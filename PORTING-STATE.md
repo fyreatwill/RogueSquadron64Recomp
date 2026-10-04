@@ -144171,3 +144171,16 @@ for this candidate class and the next census begins at `0x800052C4`. This
 rules out these PCs as the measured retail target-phase writer class, not
 global writer absence. ORIGIN: retail PC watches and port phase/task hooks
 are diagnostic only; no mitigation landed.
+
+## Session 4038 (2026-10-04) — route failure makes 0x800052C4 census unevaluable
+
+Ran the retail-grounded census for `0x800052C4`, `0x800052C8`, and
+`0x800052CC` with one build and the declared/real plus legacy/real port arms.
+Retail's whole-RDRAM positive control and oracle completion passed; all three
+candidate PCs had zero post-target samples, rows, and sequence hits. The
+declared/real port reached title VI 1024 and hangar VI 512 with 3,804
+audio-ABI rows and 3,787 image-DMA joins. Legacy/real failed before either
+target phase and crashed in `spTaskSchedulerThread+9632` at guest PC
+`0x8000834C`, with no audio/image census rows. H3 is selected for this class:
+the retail null is not a qualified writer-absence result. ORIGIN: retail PC
+watches and port phase/task hooks are diagnostic only; no mitigation landed.

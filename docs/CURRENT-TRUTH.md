@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4037 (2026-10-04).
+Updated for session 4038 (2026-10-04).
 
 ## Current state
 
@@ -466,19 +466,20 @@ only; no mitigation landed.
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 next source-payload discriminator.** Run the next retail-grounded
-   writer class beginning at `0x800052C4`, with the retail
-   positive/title/hangar controls plus a phase-qualified port arm. Do not
-   infer writer absence from a port arm that fails before its target phase.
+1. **M5 route requalification.** Run a genuinely new launch-order/gap
+   schedule table before another source-writer census. The retail
+   positive/title/hangar controls and all three port-arm phase controls must
+   qualify; classify any pre-target arm failure as H3 rather than inferring
+   writer absence.
 
 2. **M3 patch integration.** Restore or supply the `PatchesLib` target before
    runtime-qualifying the active-queue sentinel guard from session 4033. The
    source and ordinary host target pass; do not infer runtime behavior from
    that build alone.
 
-3. **M5 route requalification.** Return only with a genuinely new schedule
-   discriminator after the `0x800052C4` source-payload step. Do not repeat the
-   scheduler split; require a phase-qualified arm before another census.
+3. **M5 next source-payload discriminator.** After route qualification,
+   rerun the retail-grounded writer class beginning at `0x800052C4`; do not
+   infer writer absence from a port arm that fails before its target phase.
 
 4. **M5 new source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
@@ -607,6 +608,13 @@ candidate results are summarized by address range rather than copied here.
   sequence hits appeared; and the paired legacy port reached both target
   phases with 3,014 audio-ABI rows and 3,009 image-DMA joins without
   crash/abort.
+- Session 4038's bounded census for `0x800052C4`, `0x800052C8`, and
+  `0x800052CC` was unevaluable: the retail whole-RDRAM positive control and
+  oracle completion passed, and all three candidate PCs had zero post-target
+  samples/rows, but legacy/real crashed at `0x8000834C` before title/hangar.
+  Declared/real independently reached title VI 1024 and hangar VI 512 with
+  3,804 audio-ABI rows and 3,787 image-DMA joins. This selects H3 for the
+  candidate class, not writer absence.
 - Session 4006's bounded candidate census selected H2 for `0x80005288`,
   `0x8000528C`, and `0x80005290`: retail positive, title, and hangar controls
   passed with oracle completion; no candidate post-target samples, rows, or
