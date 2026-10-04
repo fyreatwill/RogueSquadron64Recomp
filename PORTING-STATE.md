@@ -143390,3 +143390,17 @@ scope; it does not establish global writer absence. No mitigation or runtime
 behavior was changed.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H2).
+## Session 3987 (2026-10-04) — classified the next M5 candidate-writer class
+
+Ran the existing same-build retail/port candidate-writer census for
+`0x80005204`, `0x80005208`, and `0x8000520C`, using the validated
+`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` rollback on the port arm. The retail
+whole-RDRAM positive control fired 10,000 times, and retail reached title VI
+1024, hangar VI 512, and oracle completion. All three candidates had zero
+target-phase executions, zero post-target rows/samples, and zero scalar
+samples, selecting H2 for this bounded class. The paired port reached both
+qualified phases with 2,855 image-DMA joins and 2,864 task-contract rows,
+zero crash/abort markers, and qualified source/destination payload
+`FNV=0x762B22A5`, nonzero=0. This rules out these three PCs as the qualified
+retail writer at the measured scope; it does not establish global writer
+absence. The next class is `0x80005210`, `0x80005214`, and `0x80005218`.
