@@ -144438,3 +144438,21 @@ the class-as-nonzero-producer and class-as-zero/metadata-writer explanations,
 but does not identify the missing producer. The next unit is a new
 same-build startup-dependency matrix; launch-order and fixed-gap permutations
 are not to be repeated.
+
+## Session 4056 (2026-10-04) — concurrent topology selects M5 startup dependency
+
+The prescribed s4055 startup matrix script was absent, so I created the
+self-contained `scratch/agent/run_s4056_m5_concurrent_topology_matrix.sh` from
+the last qualified arm-isolation recipe, changing only the process topology:
+retail plus declared-real, declared-silent, and legacy-real all ran
+concurrently. The ordinary Debug target built successfully before the run.
+
+The retail oracle positive control fired (`callbacks=10000`) and retail reached
+title VI 1024 and hangar VI 512. Both declared-real and declared-silent reached
+title 1024 and hangar 512 in the same run. Legacy-real crashed 36 times in
+`spTaskSchedulerThread` at guest PC `0x8000834C` before either target phase.
+This selects H1: process topology/startup dependency changes which arms qualify.
+Compared with session 4054's sequential isolation, declared-silent is newly
+qualified; compared with session 4055, this is a route discriminator rather
+than a source-writer null. It rules out the claim that declared-silent is
+universally pre-target, but does not qualify any legacy-real writer absence.

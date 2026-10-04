@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4055 (2026-10-04).
+Updated for session 4056 (2026-10-04).
 
 ## Current state
 
@@ -86,6 +86,13 @@ sentinel path is not legitimate ownership state.
   Declared-real reached both target phases and again produced
   `FNV=0x762B22A5`, nonzero=0. The candidate class is therefore H3/
   unevaluable as a source-writer class, not H1 or H2.
+- Session 4056 ran a new same-build concurrent process-topology matrix with
+  the retail oracle and declared-real, declared-silent, and legacy-real arms
+  active together. Retail passed the whole-RDRAM control and reached title 1024
+  and hangar 512. Both declared arms reached both target phases; legacy-real
+  again crashed in `spTaskSchedulerThread` before them. This selects H1 for
+  the startup-dependency hypothesis: process topology changes which arms
+  qualify. It does not qualify a source-writer null for legacy-real.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -100,15 +107,13 @@ Work only the first applicable item. This backlog is one monotonic sequence.
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-2. **Requalify the M5 route.** The three-callsite `0x800052C4/8/CC` census
-   found no phase-gated retail execution/store rows, so it cannot identify the
-   missing producer. Use a genuinely new same-build arm-isolation or
-   startup-dependency matrix; do not repeat launch-order/gap permutations
-   already tested.
-3. **Resume the retail-grounded source-writer census.** Only after the new
-   route discriminator identifies a qualified, target-phase-equivalent
-   callsite or arm; retain retail whole-RDRAM/title/hangar controls and
-   phase-scoped budgets in the same run.
+2. **Resume the retail-grounded source-writer census.** The concurrent matrix
+   qualifies both declared arms, so use the declared-real arm with the next
+   bounded candidate class. Retain retail whole-RDRAM/title/hangar controls
+   and phase-scoped budgets in the same run.
+3. **Requalify the M5 route.** Legacy-real remains pre-target under both
+   sequential isolation and concurrent topology; revisit only with a new
+   startup dependency that can explain the legacy arm.
 4. **M5 de-stubbing.** After the current route/source discriminator is closed,
    follow the incremental validation sequence in `M5-AUDIO-PLAN.md`; do not
    treat the silent control as real-audio evidence.
@@ -123,7 +128,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 producer absent | Selected only for measured pre-input/source classes; not global. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
-| M5 route failure | Active H3: recent port arms fail before target phases under some schedules. |
+| M5 route failure | Active H1: process topology changes which audio arms reach target phases; legacy-real remains pre-target. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |

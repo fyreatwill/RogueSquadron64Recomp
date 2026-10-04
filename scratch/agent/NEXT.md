@@ -1,43 +1,41 @@
-# Next work unit: requalify the M5 route with a new startup-dependency matrix
+# Next work unit: retail-grounded source-writer census, next candidate class
 
-HYPOTHESIS-ID: m5-route-startup-dependency
+HYPOTHESIS-ID: m5-source-writer-census
 
-The M3 runtime qualification remains externally blocked: this host has no MIPS
-GCC/LD and Clang has no MIPS backend. Do not repeat that target build. Session
-4055 qualified declared-real again, but the retail-grounded
-`0x800052C4/0x800052C8/0x800052CC` rows were all absent (`seen=0`, `n=0`),
-so that class is not a usable producer discriminator.
+The concurrent process-topology matrix selected H1 for the M5 route: both
+declared-real and declared-silent reached title VI 1024 and hangar VI 512,
+while legacy-real still crashed before target phases. Use the newly qualified
+declared-real arm for the next bounded retail-grounded candidate class. Do not
+infer anything from the legacy arm's pre-target crash.
 
 Competing hypotheses:
 
-- H1: a startup dependency or arm interaction prevents the real route from
-  reaching the same target-phase producer path; isolating that dependency will
-  make a new arm qualify without changing the zero-payload source signature.
-- H2: the declared-real route is target-phase-equivalent but its source is
-  legitimately zero; a new arm matrix will preserve both target phases and
-  the same zero signature while independent controls remain healthy.
-- H3: the route is not target-phase-equivalent under this process topology;
-  every new arm will fail or stop before one target phase, leaving the source
-  census unevaluable.
+- H1: the next candidate class is a legitimate nonzero source writer and will
+  be attributed by the retail oracle in a target phase, with a corresponding
+  port-side marker.
+- H2: the class executes in the target phase but writes zero/metadata only;
+  retail attribution will show target-phase stores whose values remain zero or
+  whose destination is not the image source span.
+- H3: the class is not target-phase-equivalent; retail and/or port will show no
+  paired target-phase rows, making the class unevaluable rather than absent.
 
-Discriminator: build one same-build matrix with declared-real, declared-silent,
-and legacy-real arms under one newly varied startup dependency (the matrix
-must alter process topology or dependency readiness, not launch order or a
-fixed inter-arm gap), while the retail oracle runs concurrently. The positive
-control must fire and retail must reach both target VIs. H1 is selected if a
-previously failing arm reaches both target phases and changes the declared vs
-legacy route outcome; H2 if all qualifying arms reach both phases and retain
-the zero signature; H3 if no arm reaches both target phases. Record the exact
-dependency variation and do not infer a source null from a pre-target crash.
+Discriminator: one same-build run with the retail oracle whole-RDRAM positive
+control, title/hangar VI controls, and declared-real port arm. Arm one bounded
+candidate class from the next unqualified writer batch using the oracle's
+physical watch plus PC attribution and the port's phase-scoped source marker.
+H1 requires a retail target-phase writer and matching port-side activity; H2
+requires a retail target-phase store with zero/metadata semantics and matching
+route phase; H3 is selected if either side lacks target-phase equivalence.
 
 Commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s4055_m5_route_startup_matrix.sh
-grep -nE 'positive-control|origin=0x00790400|origin=0x006ab400|FNV=|nonzero=|CRASH|ABORT|startup-dependency' \
-  scratch/agent/s4055_m5_route_startup_matrix/driver.log | tail -240
+zsh scratch/agent/run_s3941_m5_candidate_writers.sh
+grep -nE 'positive-control|origin=0x00790400|origin=0x006ab400|writer-pc-phase|post-store-scalar|pc-task-join|CRASH|ABORT' \
+  scratch/agent/s3955_m5_candidate_writers/{driver.log,retail_provenance_tail.txt} | tail -240
 ```
 
-The M3 toolchain dependency remains open until a MIPS host produces
-`patches.elf`, `RecompiledPatches/patches.c`, and `PatchesLib`.
+Retain phase-gated budgets and the retail controls. If the selected class is
+not target-phase-equivalent, record it as unevaluable and choose the next
+bounded class; do not turn a pre-target failure into a source-writer null.
