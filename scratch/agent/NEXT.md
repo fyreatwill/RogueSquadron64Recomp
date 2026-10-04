@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
-Test retail PCs `0x80004F88`, `0x80004F8C`, and `0x80004F90` with the existing
+Test retail PCs `0x80004F94`, `0x80004F98`, and `0x80004F9C` with the existing
 phase-gated oracle and paired port route. Keep any port pre-target failure or
 zero image-DMA count separate from the retail writer result.
 
@@ -22,7 +22,7 @@ not infer image-DMA behavior from a run that lacks target-phase joins.
 
 Exact command:
 
-    zsh scratch/agent/run_s3913_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3914_m5_remaining_candidate_writers.sh
 
 ORIGIN: no mitigation or guard is planned. Candidate PCs are independent
 retail writer hypotheses; their legitimacy remains unresolved until the oracle

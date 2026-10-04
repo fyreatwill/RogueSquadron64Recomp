@@ -115,7 +115,15 @@ Work only the first applicable item. This is one monotonic backlog.
    had zero post-target rows/scalar samples. This selects H3 only for this
    bounded class. The paired port reached phase 3 without crash/abort but
    recorded zero image-DMA joins, so it supplies no port payload conclusion.
-   Continue with `0x80004F88`, `0x80004F8C`, and `0x80004F90`.
+   Session 3913 tested `0x80004F88`, `0x80004F8C`, and `0x80004F90`: retail
+   positive controls passed (whole-RDRAM threshold, title 1024, hangar 512,
+   and oracle completion), but none executed in the qualified target phase
+   and each had zero post-target rows and scalar samples. This selects H3 only
+   for this bounded class. The paired port reached hangar with 2,849
+   image-DMA joins and no crash/abort; qualified image payload remained
+   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
+   candidates; this is not global writer absence.
+   Continue with `0x80004F94`, `0x80004F98`, and `0x80004F9C`.
    Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
