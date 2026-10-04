@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3870 (2026-10-03).
+Updated for session 3871 (2026-10-03).
 
 ## Current state
 
@@ -91,8 +91,13 @@ Work only the first applicable item. This is one monotonic backlog.
    controls. None of those three PCs produced a qualified candidate-span
    writer row or post-value scalar sample. The port independently reached
    2,720 image-DMA joins with zero crash/abort markers. This selects H3 for
-   these PCs only; the next representative writer classes are `0x80084C0C`,
-   `0x80084D58`, and `0x80084FAC`.
+   these PCs only. Session 3870 selected H2 for `0x80084E48`, `0x8008509C`,
+   and `0x800852E0` after qualified writer rows but zero post-target scalar
+   samples; port reached 3,057 image-DMA joins. Session 3871 found no
+   candidate-span writer rows or post-target samples for `0x80084C0C`,
+   `0x80084D58`, and `0x80084FAC`; the port reached 2,611 image-DMA joins.
+   The next representative writer classes are `0x80085898`, `0x8008589C`,
+   and `0x80066450`.
 2. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`:
    traversed `next` links must point back through `prev`, and the published
@@ -159,6 +164,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RemainingCandidates-8556Absent` | Single-source retail result at s3865: `0x80085564`, `0x8009785C`, and `0x8008556C` had qualified hangar candidate-span writer rows but zero post-target samples; they are not established as nonzero image producers. |
 | `H-M5-RemainingCandidates-29e8Absent` | Single-source retail result at s3869: `0x80029E8C`, `0x80035124`, and `0x80004520` had no qualified candidate-span writer rows or post-value samples after positive controls; they do not own the measured target edge. |
 | `H-M5-RemainingCandidates-84e8Absent` | Single-source retail result at s3870: `0x80084E48`, `0x8008509C`, and `0x800852E0` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples; they are not established as nonzero image producers. |
+| `H-M5-RemainingCandidates-84cAbsent` | Single-source retail result at s3871: `0x80084C0C`, `0x80084D58`, and `0x80084FAC` had no qualified candidate-span writer rows or post-target samples after positive controls; they do not own the measured target edge. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 | `H-M3-FreeListReciprocalLinks` | Code landed in s3866; validation blocked by absent MIPS toolchain/configured targets. |
@@ -366,6 +372,17 @@ Work only the first applicable item. This is one monotonic backlog.
   watched span but are not established as legitimate nonzero image producers.
   The next bounded representatives are `0x80084C0C`, `0x80084D58`, and
   `0x80084FAC`.
+
+  ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+  guest or host state was rewritten, skipped, or guarded.
+
+- **3871:** Paired the retail oracle and port arm for candidate PCs
+  `0x80084C0C`, `0x80084D58`, and `0x80084FAC`. Retail whole-RDRAM, title
+  1024, hangar 512, and shutdown controls all passed. None of the three PCs
+  produced a phase-gated candidate-span writer row or post-target scalar
+  sample, selecting H3 for these PCs only. The port reached 2,611 image-DMA
+  joins with zero crash/abort markers. The next bounded representatives are
+  `0x80085898`, `0x8008589C`, and `0x80066450`.
 
   ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
   guest or host state was rewritten, skipped, or guarded.

@@ -141492,3 +141492,16 @@ representatives are `0x80084C0C`, `0x80084D58`, and `0x80084FAC`.
 
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
+
+## Session 3871 (2026-10-03) — classified three remaining candidate writers
+
+Ran the paired retail/port arm for `0x80084C0C`, `0x80084D58`, and
+`0x80084FAC`. Retail whole-RDRAM, title VI 1024, hangar VI 512, and clean
+shutdown controls all passed. None of the three PCs had a phase-gated
+candidate-span writer row or post-target scalar sample, selecting H3 for these
+PCs only. The port independently reached 2,611 image-DMA joins with zero
+crash/abort markers. The next bounded representatives are `0x80085898`,
+`0x8008589C`, and `0x80066450`.
+
+ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+guest or host state was rewritten, skipped, or guarded.
