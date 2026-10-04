@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4011 (2026-10-04).
+Updated for session 4012 (2026-10-04).
 
 ## Current state
 
@@ -180,19 +180,35 @@ class and closes the adjacent candidate census; the prior single-arm capture
 was recipe-invalid for discrimination because it never included the declared
 control. ORIGIN: diagnostic census only; no mitigation landed.
 
+Session 4012 added a regeneration-safe hook immediately before the audio
+ucode-data DMA and ran it with the existing scheduler successor table. Retail's
+whole-RDRAM positive control and title/hangar VI controls passed. Both port arms
+reached both target phases without crash or abort; the writer control fired in
+each arm and showed the same task (`ucode_data=0x800A4E00`, declared `0x800`)
+using `dma_size=0x800` in declared/real and `dma_size=0xF80` in legacy/real.
+The scheduler table also showed arm-dependent task-field ordering, but its
+opaque `successor` field remained zero in this capture. Since the legacy crash
+did not recur under this concurrent schedule, H1/H2/H3 are not selected by the
+crash discriminator. The writer mechanism is established in the port, while
+the failure remains schedule-sensitive or otherwise unevaluated. ORIGIN: the
+hook observes the legitimate runtime-selected DMA writer; it adds no skip,
+guard, restore, or other mitigation.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
 1. **M5 legacy-only scheduler follow-up.** The candidate census is now
-   qualified through `0x8000529C`. Reuse the three-arm route harness, but add
-   one phase-scoped discriminator for the actual legacy `0xF80` staging writer
-   and its immediate task-load successor. Keep scheduler `a0` as a message
-   object; do not decode it as an OSTask. A writer hit paired with the
-   legacy-only pre-target crash selects staging ownership; a successor change
-   without a writer hit selects successor corruption; matching writer and
-   successor rows across arms selects nondeterministic route failure.
+   qualified through `0x8000529C`, and s4012 established the actual `0xF80`
+   writer but did not reproduce the crash under the concurrent schedule.
+   Re-run the same retail/declared/legacy table with `ROGUESQ_SPIN_YIELD=0`
+   in all port arms, preserving the writer hook and opaque successor rows.
+   A legacy-only pre-target crash after an `0xF80` writer selects the staging
+   path; a crash-free three-arm run selects schedule sensitivity; matching
+   writer/successor rows with divergent outcomes select external
+   nondeterminism. Keep scheduler `a0` as a message object; ABI rows remain
+   authoritative.
 
 2. **M5 candidate-writer census continuation.** Closed for the measured
    adjacent range through `0x8000529C`; resume only with a new writer class or

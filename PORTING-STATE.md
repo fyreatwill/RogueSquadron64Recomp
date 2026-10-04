@@ -143742,3 +143742,23 @@ phases and rules out H3 route unevaluability for this corrected capture. The
 next discriminator must return to the legacy-only `0xF80` staging boundary.
 ORIGIN: diagnostic census only; no skip, guard, restore, or other mitigation
 landed.
+
+## Session 4012 (2026-10-04) — observed legacy audio staging writer
+
+Added a regeneration-safe host hook immediately before the audio ucode-data
+DMA and ran one concurrent retail-oracle plus declared/real and legacy/real
+capture with the existing scheduler boundary table. Retail's whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and oracle completion passed.
+Both port arms reached both target phases without a crash or abort, and both
+fired the RSP source-hook control. The new writer control fired in each arm for
+the same task (`ucode_data=0x800A4E00`, declared `0x800`): declared/real used
+`dma_size=0x800`, while legacy/real used `dma_size=0xF80`. Scheduler task rows
+showed arm-dependent task-field ordering, but the opaque `successor` value was
+zero in this capture.
+
+This establishes the legitimate port writer selected by the legacy flag, but
+does not select H1/H2/H3 because the legacy crash did not recur under the
+concurrent schedule. It rules out “no legacy writer exists” at this measured
+scope and leaves schedule sensitivity or external nondeterminism open. The
+writer hook is diagnostic only; no skip, guard, restore, or other mitigation
+landed. ORIGIN: the observed writer is the runtime's actual DMA-size decision.

@@ -3280,6 +3280,50 @@ extern "C" void rs64_m5_scheduler_boundary(uint8_t* rdram, const char* edge,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_audio_stage_boundary(const OSTask* task,
+                                               uint32_t dma_size) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SCHEDULER_BOUNDARY");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || !task) return;
+
+    static std::mutex mutex;
+    static uint32_t key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    static uint32_t controls = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const uint32_t phase_key = (width << 24) ^ origin;
+    if (phase_key != key) {
+        key = phase_key;
+        rows = 0;
+        if (controls++ < 16u) {
+            std::fprintf(stderr,
+                "[m5-audio-stage-control] phase=%u width=%u origin=0x%06X\n",
+                rs64_phase_ord(), width, origin);
+        }
+    }
+    if (rows >= 64u) return;
+    const char* legacy = std::getenv("ROGUESQ_AUDIO_LEGACY_UCODE_DMA");
+    const char* arm = (legacy && legacy[0] && legacy[0] != '0') ? "legacy" : "declared";
+    static std::atomic<uint64_t> sequence{0};
+    const uint64_t seq = sequence.fetch_add(1u, std::memory_order_relaxed) + 1u;
+    std::fprintf(stderr,
+        "[m5-audio-stage] row=%u seq=%llu phase=%u width=%u origin=0x%06X arm=%s "
+        "writer=audio-ucode-data-dma dma_size=0x%X declared=0x%X "
+        "ucode_data=0x%08X data_ptr=0x%08X data_size=0x%X\n",
+        rows++, static_cast<unsigned long long>(seq), rs64_phase_ord(), width,
+        origin, arm, dma_size, static_cast<uint32_t>(task->t.ucode_data_size),
+        static_cast<uint32_t>(task->t.ucode_data),
+        static_cast<uint32_t>(task->t.data_ptr),
+        static_cast<uint32_t>(task->t.data_size));
+    std::fflush(stderr);
+}
+
 static bool rs64_m5_descriptor_phase(uint32_t* phase, uint32_t* width,
                                      uint32_t* origin, const char** arm) {
     uint32_t ordinal = 0, row = 0;
