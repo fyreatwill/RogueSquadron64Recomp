@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3958 (2026-10-04).
+Updated for session 3959 (2026-10-04).
 
 ## Current state
 
@@ -153,6 +153,17 @@ Work only the first applicable item. This is one monotonic backlog.
    no crash or abort, and qualified source/destination payload
    `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
    candidates; this is not global writer absence.
+
+   Session 3959 tested `0x8000512C`, `0x80005130`, and `0x80005134`. The
+   independent whole-RDRAM control fired; retail reached title VI 1024,
+   hangar VI 512, and oracle completion, with 36 post-store scalar records and
+   zero mismatches. None of the three candidates produced a target-phase
+   execution row, post-target row, or scalar sample, selecting H3 for this
+   bounded retail class. The paired port arm did not reach either qualified
+   target phase in this run (it remained at the pre-title VI-640 route), so it
+   is unevaluable for cross-implementation qualification; do not treat that
+   arm as evidence about these retail candidates. Retry this same class before
+   advancing the candidate range.
 
    Session 3952 tested `0x800050E4`, `0x800050E8`, and `0x800050EC`. The
    independent whole-RDRAM oracle control fired 10,000 times; retail reached

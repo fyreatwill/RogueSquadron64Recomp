@@ -142788,6 +142788,22 @@ zero crash/abort markers; source and destination payloads were
 `FNV=0x762B22A5`, `nonzero=0`. This rules out these three candidate PCs at the
 measured scope, not global writer absence.
 
+## Session 3959 (2026-10-04) — requalified the next M5 candidate-writer class
+
+Built `RogueSquadron64Recomp` Debug successfully and ran the same-build
+retail-oracle/port census for `0x8000512C`, `0x80005130`, and `0x80005134`.
+The independent whole-RDRAM positive control fired; retail reached title VI
+1024 and hangar VI 512 and completed with 36 post-store scalar records and
+zero mismatches. None of the candidates produced a target-phase execution row,
+post-target row, or scalar sample, selecting H3 for this bounded retail class.
+
+The paired port arm stayed on the pre-title VI-640 route and reached neither
+qualified target phase; it had no crash/abort marker, but its phase-gated audio
+payload result was therefore unevaluable. This run rules out these PCs as
+qualified retail writers at the measured scope, but does not advance the
+cross-implementation candidate census. The next iteration must retry this same
+class until the port phase gate is present before advancing the address range.
+
 ## Session 3956 (2026-10-04) — added the active-queue tail-alias guard
 
 The mandated no-churn pivot selected the next bounded M3 active-queue idiom,
