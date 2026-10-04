@@ -141736,6 +141736,7 @@ and does not identify a retail producer. The next measured representatives are
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
 ## Session 3885 (2026-10-03) — classified the next candidate-span writer classes
 
 Ran the corrected paired retail/port candidate-span scalar capture for
@@ -141773,6 +141774,7 @@ ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
 
+
 ## Session 3887 (2026-10-03) — classified the next candidate-span writer classes
 
 Ran the corrected paired retail/port candidate-span scalar capture for
@@ -141793,6 +141795,7 @@ ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
 
+
 ## Session 3888 (2026-10-03) — classified the next candidate-span writer classes
 
 Ran the corrected paired retail/port candidate-span scalar capture for
@@ -141810,3 +141813,21 @@ and `0x80003AFC`.
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3889 (2026-10-03) — classified the next candidate-span writer classes
+
+Ran the corrected paired retail/port candidate-span scalar capture for
+`0x80003A48`, `0x80003A50`, and `0x80003AFC`. Retail passed the whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and oracle shutdown. Each PC
+had qualified title/hangar candidate-span writer rows, but none had a
+post-target scalar sample or row. This selects H2 for these PCs only and rules
+out H1 at this scope; the same-run controls make the result meaningful.
+
+The port arm crashed at `spTaskSchedulerThread+9556` with guest PC
+`0x8000834C` before its ABI and image-DMA controls. No paired port conclusion
+is claimed. The next representatives are `0x80003B98`, `0x800044C8`, and
+`0x80004AB0`.
+
+ORIGIN: independent retail phase-gated writer-PC and post-target attribution;
+the port arm supplied no coverage evidence because it crashed before controls;
+no guest or host state was rewritten, skipped, or guarded.
