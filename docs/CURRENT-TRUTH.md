@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3972 (2026-10-04).
+Updated for session 3973 (2026-10-04).
 
 ## Current state
 
@@ -37,18 +37,16 @@ target fault attribution was absent or an arm crashed before target.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 pre-title route qualification — resolve the Step 1 phase prerequisite.**
-   Session 3972's concurrent same-build silent/image pair passed the build
-   check but both arms stalled at VI 640 after 66 audio-task dispatches;
-   neither reached title or hangar, so all downstream audio nulls were
-   unevaluable. The fixed sequential recipe also failed before VI 512: its
-   silent arm crashed in `spTaskSchedulerThread` during the Factor 5 boot
-   task, with `last-guest-pc=0x8000834c`. This rules out concurrent audio arms
-   as the sole explanation, but does not identify the pre-title route cause.
-   Next discriminator: same-build phase-gated image-route arms with LLE on
-   and off, plus the silent control, must report VI 640/1024/512 transitions,
-   task dispatch/exit, and crash/abort attribution in one run. Do not infer
-   an audio contract gap until a target phase is reached.
+1. **M5 candidate-writer qualification — continue the bounded retail census.**
+   Session 3973's same-build three-arm route comparison passed the VI-320
+   positive control. Silent/LLE-on crashed in `spTaskSchedulerThread` at
+   `last-guest-pc=0x8000834c`; image/LLE-on reached VI 512, while image/LLE-off
+   reached VI 1024 but not VI 512. This selects H1 for the route discriminator:
+   LLE routing changes the pre-title outcome. The silent crash is not a
+   generic phase-gate or stale-build failure, but the audio contract remains
+   unevaluable in that arm. Continue the already-qualified retail candidate
+   census at `0x8000518C`, `0x80005190`, and `0x80005194`; retain whole-RDRAM,
+   title-1024, hangar-512, and oracle-completion controls.
 
 2. **M3 heap guard validation — open external dependency, not a loop stop.**
    Session 3956 added the next bounded active-queue idiom guard: reject the
@@ -657,7 +655,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
 | `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; s3929 reproduced the absent configured patch target, while the ordinary host target passed. Validation remains blocked by the MIPS toolchain/configuration. |
-| `H-M5-Step1-PreTitleRoute` | Selected H3 at s3972: concurrent silent/image arms both stopped at VI 640 with 66 audio-task dispatches and no target-phase rows; the sequential silent control crashed at VI 320 in `spTaskSchedulerThread`. The audio contract remains unevaluable. |
+| `H-M5-Step1-PreTitleRoute` | Selected H1 at s3973: all three arms passed VI 320; silent/LLE-on crashed at `spTaskSchedulerThread`, image/LLE-on reached VI 512, and image/LLE-off stopped at VI 1024. LLE routing changes the pre-title outcome; silent-arm audio remains unevaluable. |
 
 The s3922 M3 validation attempt confirmed the same build-system/toolchain
 boundary without runtime evidence; do not treat a successful host build as
@@ -679,9 +677,9 @@ absence. The full evidence and exact counts remain in the append-only ledger.
   `0x298`.
 - The s3891 image arm proves the RSP task and two output-DMA edges execute;
   their zero payload does not identify the missing upstream writer.
-- Session 3972's Step 1 pair did not reach a qualified audio phase. The
-  concurrent arms each dispatched 66 tasks and stopped at VI 640; the
-  sequential retry crashed during the Factor 5 boot task before VI 512.
+- Session 3973's route comparison reached VI 512 only with image/LLE-on;
+  image/LLE-off stopped at VI 1024 and silent/LLE-on crashed in the Factor 5
+  boot task at `last-guest-pc=0x8000834c`.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.

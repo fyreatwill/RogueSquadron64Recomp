@@ -143129,3 +143129,27 @@ pre-title route cause. No audio behavior or mitigation was changed.
 
 **Outcome: ADVANCED** (the planned A/B ran, and its fixed route retry produced
 a concrete pre-title crash discriminator).
+
+## Session 3973 (2026-10-04) — separated the M5 pre-title LLE route effect
+
+Built the ordinary Debug target successfully and ran one concurrent, same-build
+three-arm phase-gated comparison: silent/LLE-on, image/LLE-on, and
+image/LLE-off. All arms passed the VI-320 positive phase control and carried
+the same phase/task/crash instrumentation. The silent/LLE-on arm crashed in
+`spTaskSchedulerThread` during the Factor 5 boot task with
+`last-guest-pc=0x8000834c`; it never reached VI 640. The image/LLE-on arm
+reached VI 320, 640, 1024, and 512 with 2705 audio-task ABI rows and no
+crash/abort. The image/LLE-off arm reached VI 320, 640, and 1024 but not 512,
+with 4795 audio-task ABI rows and no crash/abort. The capture positive control
+was 78 frames in each surviving arm.
+
+This selects H1 for the bounded route hypothesis: LLE routing changes the
+pre-title phase outcome, with LLE-on reaching hangar and LLE-off stopping at
+title. It rules out a generic phase-gate, stale executable, or universal
+audio-arm failure as the explanation for the route split. It does not qualify
+the audio contract for the silent crash arm, and it does not identify why the
+LLE-off arm stops at VI 1024. The next unit returns to the adjacent retail
+candidate-writer census.
+
+**Outcome: ADVANCED** (the planned three-arm discriminator ran, passed its
+positive phase control, and selected H1).
