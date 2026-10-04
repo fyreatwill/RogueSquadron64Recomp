@@ -143174,3 +143174,15 @@ the host build passed and all independent controls completed. No mitigation or
 runtime behavior was changed.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H3).
+
+## Session 3975 (2026-10-04) — classified the next M5 candidate-writer class
+
+Ran the planned bounded M5 census for `0x80005198`, `0x8000519C`, and
+`0x800051A0` with one clean Debug build and the existing batched retail/port
+driver. Retail's independent whole-RDRAM positive control fired 10,000 times;
+title VI 1024 and hangar VI 512 both arrived, and the oracle completed. All
+three candidates had zero target-phase execution, zero post-target rows, and
+zero scalar samples, selecting H3 for this PC class only. The paired port arm
+had no crash/abort but recorded zero image-DMA joins, so it contributes no
+port payload evidence. This rules out these three PCs as the qualified retail
+writer in the measured phases; it does not establish global writer absence.

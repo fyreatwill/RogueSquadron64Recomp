@@ -3,8 +3,8 @@
 HYPOTHESIS-ID: m5-candidate-writer-census
 
 The route prerequisite is now qualified only for image/LLE-on. Resume the
-already-batched retail/port census for `0x80005198`, `0x8000519C`, and
-`0x800051A0`; do not add a mitigation or infer global writer absence.
+already-batched retail/port census for `0x800051A4`, `0x800051A8`, and
+`0x800051AC`; do not add a mitigation or infer global writer absence.
 
 Competing hypotheses:
 
@@ -25,7 +25,7 @@ H3 by zero candidate execution with positive controls intact.
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3974_m5_candidate_writers.sh
+    zsh scratch/agent/run_s3975_m5_candidate_writers.sh
 
 The existing recipe is self-contained and uses SIGKILL cleanup, phase-gated
 title/hangar controls, and the passive M5 markers. Keep the route result from
