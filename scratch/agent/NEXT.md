@@ -1,20 +1,28 @@
-# Next work unit: qualify the active-queue sentinel guard in the patch pipeline
+# Next work unit: retail-grounded source census at 0x800052A0
 
-HYPOTHESIS-ID: m3-active-queue-sentinel-ownership
+HYPOTHESIS-ID: m5-source-writer-census
 
 Competing hypotheses:
 
-- H1: the new sentinel-disjointness guard is accepted by the patch toolchain and the ordinary Debug target, so this M3 ownership class has a regeneration-safe code change ready for runtime qualification.
-- H2: the guard source is valid but the configured patch pipeline is unavailable; the ordinary target can still establish host-tree compatibility, while runtime qualification remains blocked by the missing target.
-- H3: the new walk rejects a legitimate queue shape or fails compilation, disproving the assumed sentinel ownership invariant and requiring rollback before further M3 work.
+- H1: one or more candidate PCs in the next retail-grounded class write the
+  missing source payload during the target phase.
+- H2: the candidate class is absent from qualified retail target/post-target
+  evidence while the paired legacy port reaches both target phases.
+- H3: the paired port route fails before target or the retail controls do not
+  qualify, so this class is unevaluable and must not be called absent.
 
-Discriminator: build the ordinary Debug target after the guard change. H1 is a successful build with the patch source included; H2 is a successful ordinary build plus an explicit `PatchesLib`-target absence; H3 is a compiler/link failure attributable to the guard. Do not run a route soak: this unit tests one bounded ownership guard and its build integration, not runtime behavior.
+Discriminator: one same-build retail oracle and paired legacy/real capture for
+the next three candidate PCs beginning at `0x800052A0`. The retail
+whole-RDRAM/title/hangar controls and the port title/hangar controls must fire.
+Candidate hits, post-target rows, and scalar/sequence evidence select H1 or H2;
+any missing phase control selects H3.
 
 Exact commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-cmake --build build --config Debug --target PatchesLib
+zsh scratch/agent/run_s4022_m5_candidate_writers.sh
 ```
 
-Record whether the active-queue sentinel walk compiles, whether the ordinary target links, and whether `PatchesLib` is present. The guard must remain out of the generated-function tree and retain its `ORIGIN:` statement.
+Record the independent retail controls, candidate-PC evidence, and paired-port
+phase qualification. Do not infer writer absence from a pre-target port route.

@@ -144116,3 +144116,19 @@ runtime qualification remains blocked. H1 is selected for the source/build
 discriminator; H2 is selected for the patch integration blocker. This rules
 out a compiler or ordinary-host-link failure, but does not establish that the
 malformed sentinel alias occurs at runtime.
+
+## Session 4034 (2026-10-04) — ten-second stagger still splits the audio route
+
+Before building, the work unit was the M5 route requalification with launch
+order `legacy-real,declared-silent,declared-real` and a ten-second gap between
+port launches. The Debug target built successfully. Retail's whole-RDRAM
+positive control and title/hangar VI controls fired. Legacy/real reached both
+target phases with 7,990 audio-stage rows and no crash or abort. Declared/real
+and declared/silent both fired the RSP-source control, then crashed before
+either target phase at guest PC `0x8000834C` and emitted no audio-stage rows.
+H1 remains selected at the measured route scope: timing continues to change
+which arm qualifies, but no all-arm qualification exists and audio staging is
+not established as the cause. This keeps the `0x800052AC` census parked until
+a phase-qualified route is available for that measurement. ORIGIN: launch
+timing and task/audio hooks observe legitimate runtime arm choices; no
+mitigation landed.

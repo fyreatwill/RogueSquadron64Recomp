@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4033 (2026-10-04).
+Updated for session 4034 (2026-10-04).
 
 ## Current state
 
@@ -274,6 +274,17 @@ target 'PatchesLib'`, so runtime qualification remains blocked. ORIGIN:
 `heap_tail_loc` owns the active-queue sentinel and the append link stores;
 the sentinel is metadata, not a legitimate active block.
 
+Session 4034 ran the prescribed ten-second stagger with launch order
+`legacy-real,declared-silent,declared-real`. Retail's whole-RDRAM positive
+control and title/hangar VI controls fired. Legacy/real reached both target
+phases with 7,990 audio-stage rows and no crash or abort; declared/real and
+declared/silent both fired the RSP-source control but crashed pre-target at
+guest PC `0x8000834C` with no audio-stage rows. H1 remains selected at the
+measured route scope: timing continues to change which arm qualifies, but no
+all-arm qualification exists and audio staging is not established as cause.
+ORIGIN: launch timing and task/audio hooks observe legitimate runtime arm
+choices; no mitigation landed.
+
 Session 4016 qualified a new gate/source boundary capture. Retail's whole-RDRAM
 positive control, title VI 1024, and hangar VI 512 controls passed and the
 oracle completed; it reported 17 writes to `0x800A0F50`, 192 executions of
@@ -426,19 +437,24 @@ only; no mitigation landed.
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M3 patch integration.** Restore or supply the `PatchesLib` target before
+1. **M5 next source-payload discriminator.** The ten-second route capture
+   again split the port arms, so do not spend another iteration repeating the
+   scheduler-gap table. Select the next retail-grounded writer class beginning
+   at `0x800052A0`, and qualify it with the retail positive/title/hangar
+   controls plus a phase-qualified port arm. Do not infer writer absence from
+   a port arm that fails before its target phase.
+
+2. **M3 patch integration.** Restore or supply the `PatchesLib` target before
    runtime-qualifying the active-queue sentinel guard from session 4033. The
-   source and ordinary host target now pass; do not infer runtime behavior
-   from that build alone.
+   source and ordinary host target pass; do not infer runtime behavior from
+   that build alone.
 
-2. **M5 route requalification.** Select one new schedule discriminator, then
-   repeat the four-arm route qualification. Session 4031 selected timing as a
-   route discriminator; session 4032 changed the qualifying arm again at five
-   seconds. Test a ten-second stagger in the same launch order before resuming
-   `0x800052AC`; require the retail positive, title/hangar phases, RSP/audio
-   controls, and no crash/abort in all port arms.
+3. **M5 route requalification.** Return only with a genuinely new schedule
+   discriminator after the source-payload step. The ten-second run still had
+   only legacy/real reach hangar; keep the `0x800052AC` census parked until a
+   route arm is phase-qualified for that measurement.
 
-3. **M5 next source-payload discriminator.** The gate-value redesign is now
+4. **M5 new source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
    initialization/transitional traffic before the target phase. The candidate
    census is qualified through `0x8000529C`, the legitimate `0xF80` writer is
@@ -447,11 +463,11 @@ candidate results are summarized by address range rather than copied here.
    changing audio behavior; do not repeat the scheduler split. Keep scheduler
    `a0` as a message object and treat ABI rows as authoritative.
 
-4. **M5 new source-payload discriminator.** After the `0x800052A0` class is
+5. **M5 new source-payload discriminator.** After the `0x800052A0` class is
    qualified, select the next retail-grounded writer class; do not repeat the
    scheduler split or change audio behavior.
 
-5. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
+6. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
    `generated-symbol-renaming-sweep`; mapping edits do not reset the
    engineering-change stall gate.
