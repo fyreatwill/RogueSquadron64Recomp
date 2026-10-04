@@ -1,39 +1,34 @@
-# Next work unit: classify the next three M5 candidate-span writer classes
+# Next work unit: validate the free-list reciprocal-link guard
 
-HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
+HYPOTHESIS-ID: m3-free-list-reciprocal-links
 
-The M3 validation prerequisites remain unavailable, so the next runnable
-bounded M5 arm is `0x80001AD0`, `0x80001AD8`, and `0x80001AE0`. Keep the retail
-oracle and port arms in one run, with title/hangar phase controls and all
-passive breadcrumbs. Do not infer an image producer from a writer-PC hit alone.
+The source guard landed in session 3873. Restore the patch pipeline before
+running the allocator-route smoke; do not resume the M5 writer sweep until
+this guard class is either validated or the environment is explicitly
+blocked.
 
 Competing hypotheses and discriminator:
 
-- H1: at least one candidate is a nonzero producer; its phase-gated writer
-  rows have post-store scalar values in `0x165000..0x16C000`.
-- H2: candidates write the span but never produce a qualified nonzero scalar;
-  they are not the image producer at this scope.
-- H3: candidate rows are absent despite positive controls, so these PCs do not
-  own the retail target edge; this does not classify other writers.
+- H1: malformed free-list successor links occur on the failing route; the
+  corrupted-link control fires while the valid-link control continues.
+- H2: the route only publishes reciprocal links; valid and corrupted controls
+  show no runtime guard fire because the bad-link arm is not reached.
+- H3: the new complete-block predicate rejects a legitimate boundary case;
+  the valid allocator control fires the guard or fails to return normally.
 
-The discriminator is one paired run using the existing runner pattern:
-whole-RDRAM oracle control, title VI 1024, hangar VI 512, oracle shutdown,
-phase-gated candidate-span writer rows, and post-value scalar samples for all
-three PCs. H1 requires a qualified nonzero post-value sample; H2 requires
-writer rows with zero post-value samples; H3 requires zero writer rows after
-all controls pass. The positive controls must visibly fire before a null result
-is accepted.
+The discriminator is one patch build plus one allocator smoke containing both
+valid-link and deliberately corrupted-link controls. H1 requires a guard hit
+only in the corrupted arm; H2 requires a clean valid arm and no natural-route
+guard hit; H3 requires a guard hit or failure in the valid arm. Record both
+the guard counter and allocator return/queue state.
 
-Preparation and run:
+Exact prerequisite and build commands:
 
-    cp scratch/agent/run_s3872_m5_remaining_candidate_writers.sh \
-      scratch/agent/run_s3873_m5_remaining_candidate_writers.sh
-    sed -i '' \
-      -e 's#s3872_m5_remaining_candidate_writers#s3873_m5_remaining_candidate_writers#g' \
-      -e 's#0x80085898,0x8008589C,0x80066450#0x80001AD0,0x80001AD8,0x80001AE0#g' \
-      -e 's#0x80085898|0x8008589c|0x80066450#0x80001ad0|0x80001ad8|0x80001ae0#g' \
-      scratch/agent/run_s3873_m5_remaining_candidate_writers.sh
-    zsh scratch/agent/run_s3873_m5_remaining_candidate_writers.sh
+    command -v mips64-elf-gcc
+    command -v mips64-elf-ld
+    test -x build/Debug/N64Recomp.exe
+    cmake --build build --config Debug --target PatchesLib
 
-Record the arm outcome in PORTING-STATE.md and update the candidate list from
-the measured result. Kill both processes with SIGKILL as the runner requires.
+Then run the existing allocator-route smoke from `patches/README.md`, using
+SIGKILL for watchdog termination. If any prerequisite is still absent, record
+the direct output and do not claim runtime validation.

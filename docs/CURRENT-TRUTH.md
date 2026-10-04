@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3872 (2026-10-03).
+Updated for session 3873 (2026-10-03).
 
 ## Current state
 
@@ -106,13 +106,13 @@ Work only the first applicable item. This is one monotonic backlog.
    measured candidate-span writer class, `0x80001AD0`, `0x80001AD8`, and
    `0x80001AE0`.
 2. **M3 heap guard validation — active guard class, validation blocked.** Session
-   3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`:
-   traversed `next` links must point back through `prev`, and the published
-   free-list head must have a null predecessor. ORIGIN: `func_8002221C` and
-   allocator link stores publish these fields; malformed reciprocal links are
-   not legitimate allocator state. Session 3867 rechecked the prerequisites:
+   3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
+   session 3873 extended the guard to validate the head's `next->prev` back-link
+   before the dequeue dereference. ORIGIN: `func_8002221C` and allocator link
+   stores publish both directions; a mismatched reciprocal link is not
+   legitimate allocator state. Validation remains blocked because
    `mips64-elf-gcc`, `mips64-elf-ld`, `build/Debug/N64Recomp.exe`, and the
-   configured `PatchesLib` target remain absent; the requested build returned
+   configured `PatchesLib` target are absent. The prescribed build returned
    `No rule to make target PatchesLib`. No runtime allocator result is claimed;
    restore the patch pipeline before validation.
 3. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
@@ -406,6 +406,17 @@ Work only the first applicable item. This is one monotonic backlog.
 
   ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
   guest or host state was rewritten, skipped, or guarded.
+
+- **3873:** Landed the next M3 reciprocal-link guard in `patches/heap_guards.c`.
+  Before dequeueing a valid free-list head, the patch now requires either a
+  null successor or a complete valid successor whose `prev` points back to the
+  head. The source-level discriminator is the reciprocal-link predicate; the
+  MIPS patch build and allocator smoke remain unrun because the toolchain and
+  `PatchesLib` target are absent. No runtime allocator result is claimed.
+
+  ORIGIN: `func_8002221C` and the free-list link stores publish the successor
+  and reciprocal predecessor; a mismatched pair is malformed allocator state,
+  not a legitimate value.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

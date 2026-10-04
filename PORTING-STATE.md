@@ -141354,6 +141354,22 @@ the fresh dominant PCs `0x80092020`, `0x8009206C`, and `0x80007670`.
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
 
+## Session 3873 (2026-10-03) — extended free-list reciprocal-link guard
+
+The planned M5 candidate-writer arm was observation-only, so this iteration
+landed the next bounded M3 guard-class change in `patches/heap_guards.c`.
+`free_head_link_ok` now validates the free-list head's successor before the
+dequeue dereference: a non-null successor must be a complete KSEG0 block and
+its `prev` link must point back to the head. The guard's ORIGIN is
+`func_8002221C` and the allocator link stores, which publish both directions;
+a mismatched reciprocal pair is malformed allocator state, not a legitimate
+value. The MIPS patch build and allocator smoke were not run: the direct
+checks found no `mips64-elf-gcc`, no `mips64-elf-ld`, no
+`build/Debug/N64Recomp.exe`, and CMake returned `No rule to make target
+PatchesLib`. This lands a source/build artifact but claims no runtime guard
+result. The next work unit is to restore those prerequisites and run the
+allocator-route smoke with valid and corrupted-link controls.
+
 ## Session 3869 (2026-10-03) — classified three absent candidate writers
 
 Ran the paired retail-oracle and port arm for `0x80029E8C`, `0x80035124`, and
