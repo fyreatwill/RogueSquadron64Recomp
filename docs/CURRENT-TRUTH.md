@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4058 (2026-10-04).
+Updated for session 4059 (2026-10-04).
 
 ## Current state
 
@@ -108,6 +108,10 @@ sentinel path is not legitimate ownership state.
   `patches/heap_guards.c`, with ORIGIN comments naming `heap_free_head` and
   `heap_other_listhead` as the separate guest owners. The ordinary Debug target
   built successfully; MIPS runtime qualification remains unavailable.
+- Session 4059 rebuilt the ordinary Debug target after the overlap-guard commit,
+  passed `git diff --check`, and confirmed that `PatchesLib` has no generated
+  build target on this host. This is a host-build qualification only; it adds
+  no runtime evidence and does not reopen the M3 toolchain prerequisite.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -116,17 +120,17 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
+1. **Classify the immediate zero writer.** Use the qualified declared-real arm
+   with `0x800078EC` as the primary class, retaining `0x800C825C/0x800078E0`
+   as predecessor context. Confirm whether its zero scalar stores are
+   target-phase source writes or a phase/argument mismatch. Retain retail
+   whole-RDRAM/title/hangar controls and phase-scoped budgets in the same run.
+2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-2. **Classify the immediate zero writer.** Use the qualified declared-real arm
-   with `0x800078EC` as the primary class, retaining `0x800C825C/0x800078E0`
-   as predecessor context. Confirm whether its zero scalar stores are
-   target-phase source writes or a phase/argument mismatch. Retain retail
-   whole-RDRAM/title/hangar controls and phase-scoped budgets in the same run.
 3. **Requalify the M5 route.** Legacy-real remains pre-target under both
    sequential isolation and concurrent topology; revisit only with a new
    startup dependency that can explain the legacy arm.

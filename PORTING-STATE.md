@@ -144490,3 +144490,19 @@ The ORIGIN is the guest ownership split between `heap_free_head` and
 still absent, so `PatchesLib` and runtime qualification were not inferred from
 this host build. This closes the previously unguarded earlier-node overlap
 case, but does not establish that the corruption occurs at runtime.
+
+## Session 4059 (2026-10-04) — qualified the overlap guard host build
+
+Re-ran the bounded M3 free/active ownership work unit from the prior next-step
+contract. The ordinary Debug `RogueSquadron64Recomp` target built successfully,
+and `git diff --check` passed. The new whole-active-chain comparison in
+`patches/heap_guards.c` is therefore syntactically and host-build qualified.
+An attempted `PatchesLib` build returned `No rule to make target 'PatchesLib'`;
+the MIPS cross compiler/linker are still unavailable, so runtime behavior and
+the truth of the guarded guest invariant remain unqualified.
+
+This rules out a host build/configuration failure for the ordinary target. It
+does not prove that an active/free overlap occurs at runtime, and it does not
+change the external M3 dependency. The next highest-information unit is the
+already-qualified declared-real M5 route's immediate zero-writer class, with
+retail whole-RDRAM/title/hangar controls in the same run.
