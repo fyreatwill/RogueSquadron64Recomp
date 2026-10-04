@@ -1,23 +1,22 @@
-# Next work unit: classify the next M5 candidate-writer class
+# Next work unit: validate the landed M3 ownership-alias guard
 
-HYPOTHESIS-ID: m5-candidate-writer-class
+HYPOTHESIS-ID: m3-active-queue-ownership
 
-Run the phase-gated retail/port discriminator for candidate PCs
-`0x8000500C`, `0x80005010`, and `0x80005014`, using
-`zsh scratch/agent/run_s3927_m5_remaining_candidate_writers.sh`.
+Build the patch pipeline when a MIPS toolchain is available. First run
+`cmake --build build --config Debug --target PatchesLib`; then run the normal
+Debug target. If the patch target is still absent, record that exact build
+failure and do not claim runtime validation.
 
 Competing hypotheses:
 
-- H1: one or more candidates is the qualified retail writer; its target-phase
-  execution and post-target scalar attribution should coincide with a retail
-  target-buffer value.
-- H2: candidates execute and touch the candidate span, but none is the
-  qualified writer; candidate-span rows occur without post-target attribution.
-- H3: candidates do not execute in the qualified target phase; the class is
-  disconnected from the measured retail writer path.
+- H1: the popped free-list block can alias an existing active-queue node;
+  the new disjointness walk must reject it before queue-link stores.
+- H2: the allocator's ownership invariant already prevents that alias; the
+  new guard remains cold while valid allocations continue.
+- H3: the patch cannot be built in this checkout; no MIPS/runtime conclusion
+  is permitted.
 
-Discriminator: in one run, require retail whole-RDRAM, title-1024, hangar-512,
-and oracle-completion positive controls, then classify each PC by target-phase
-execution, candidate-span rows, post-target rows, and scalar samples. The port
-arm must also report hangar reachability, crash/abort status, image-DMA joins,
-and qualified payload FNV/nonzero count. Do not infer global writer absence.
+Discriminator: one build must exercise the guard in the MIPS patch pipeline;
+the positive control is a successful ordinary host build plus a valid queue
+path. A guard hit without a named corrupted input is not proof of a retail
+defect.

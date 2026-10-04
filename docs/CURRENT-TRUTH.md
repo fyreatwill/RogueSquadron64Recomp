@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3927 (2026-10-03).
+Updated for session 3928 (2026-10-03).
 
 ## Current state
 
@@ -56,6 +56,12 @@ Work only the first applicable item. This is one monotonic backlog.
    `PatchesLib` remains unconfigured and MIPS validation is unavailable, so
    this is code landed with no runtime result. Validate the accumulated patch
    when a human provides the toolchain.
+   Session 3928 added the bounded active-queue ownership-alias audit: the
+   popped free-list block must not already be reachable from the published
+   active-queue head before queue-link stores. ORIGIN is the free-list dequeue
+   writer publishing `popped`; an existing queue-owned node is not legitimate
+   allocator ownership. `PatchesLib` remains unconfigured, so this is code
+   landed with H3 environment evidence only; the ordinary host target builds.
 
 2. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3900's phase-gated run passed the retail whole-RDRAM,
@@ -271,6 +277,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
+| `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; validation blocked by absent MIPS toolchain and configured patch target. |
 
 The s3922 M3 validation attempt confirmed the same build-system/toolchain
 boundary without runtime evidence; do not treat a successful host build as

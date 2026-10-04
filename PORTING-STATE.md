@@ -142471,3 +142471,17 @@ it does not establish global writer absence. The paired port arm reached
 hangar with 3,047 qualified image-DMA joins, no crash or abort, and qualified
 payload `FNV=0x762B22A5`, nonzero=0. The next adjacent set is
 `0x8000500C`, `0x80005010`, and `0x80005014`.
+## Session 3928 (2026-10-03) — added active-queue ownership-alias guard
+
+The mandated no-churn pivot selected a bounded M3 guard-class audit instead
+of repeating the next observation-only M5 candidate probe. `patches/heap_guards.c`
+now walks the published active queue, with the existing bounded block budget,
+and rejects a popped free-list block already reachable from that queue before
+the append link stores. ORIGIN: `func_80007D74` is the writer that publishes
+the popped free-list block into the active queue; a node already owned by the
+queue is not legitimate allocator state and would create duplicate ownership
+or a cycle. The configured build has no `PatchesLib` target (`No rule to make
+target 'PatchesLib'`), so the patch has no MIPS/runtime validation this
+session. The ordinary `RogueSquadron64Recomp` Debug target completed
+successfully. This rules out only a successful local validation claim; it does
+not establish that the alias occurs in retail or port execution.

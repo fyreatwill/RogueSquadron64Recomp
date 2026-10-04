@@ -134,6 +134,26 @@ static int active_queue_chain_ok(const Block* queue_head,
     return 0;
 }
 
+// ORIGIN: the free-list dequeue publishes popped as an active-queue node;
+// a node already reachable from the published queue still belongs to that
+// queue, so accepting the alias would create a cycle or duplicate ownership.
+static int active_queue_disjoint(const Block* queue_head,
+                                 const Block* popped) {
+    const Block* node = queue_head;
+    uint32_t count = 0;
+
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (!block_ok(node)) {
+            return 0;
+        }
+        if (node == popped) {
+            return 0;
+        }
+        node = node->next;
+    }
+    return node == NULL;
+}
+
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
 
@@ -245,10 +265,7 @@ RECOMP_PATCH Block* func_80007D74(void) {
             return NULL;
         }
 
-        // ORIGIN: free-list dequeue removes `popped` from allocator ownership
-        // before the active-queue link stores; aliasing an active node is not
-        // legitimate state and would create a self/cyclic queue.
-        if (popped == tail || popped == queue_head || popped == q) {
+        if (popped == tail || !active_queue_disjoint(queue_head, popped)) {
             return NULL;
         }
 
