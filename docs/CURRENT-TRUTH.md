@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4019 (2026-10-04).
+Updated for session 4020 (2026-10-04).
 
 ## Current state
 
@@ -275,6 +275,14 @@ active queue. The ordinary Debug target built and `git diff --check` passed,
 but the patch pipeline remains unavailable, so runtime qualification is not
 claimed. ORIGIN: `func_8002221C` and its expansion-chain link stores; an
 active-queue-owned node is not legitimate free-list ownership.
+
+Session 4020 re-ran the bounded M3 qualification check for that guard. The
+ordinary `RogueSquadron64Recomp` Debug target built successfully and
+`git diff --check` passed. No runtime alias test was run: the configured
+`PatchesLib`/MIPS patch path remains unavailable, so H1 versus H2 is still
+unevaluable and H3 remains the qualification result. This confirms source and
+host-build cleanliness only, not that the alias occurs. ORIGIN:
+`func_8002221C` and its expansion-chain link stores; no mitigation was added.
 
 ## Next steps
 

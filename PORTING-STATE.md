@@ -143895,3 +143895,14 @@ The ordinary `RogueSquadron64Recomp` Debug target built successfully and
 checkout still has no configured `PatchesLib` target or MIPS patch toolchain,
 so H1 versus H2 remains unevaluable and H3 is selected for qualification
 status. This run rules out a source/build failure, not the underlying alias.
+
+## Session 4020 (2026-10-04) — requalified allocator expansion guard build
+
+Before building, the work unit was limited to the existing M3 allocator
+ownership guard from session 4019. The ordinary `RogueSquadron64Recomp` Debug
+target built successfully (`BUILD_RC=0`) and `git diff --check` passed
+(`DIFF_CHECK_RC=0`). The configured patch target/toolchain was not exercised;
+therefore no runtime alias test was possible and H1 versus H2 remains
+unevaluable. This confirms source/host-build cleanliness only and does not
+establish that an expansion node aliases the active queue. ORIGIN:
+`func_8002221C` and its expansion-chain link stores; no mitigation was added.
