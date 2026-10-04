@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3865 (2026-10-03).
+Updated for session 3866 (2026-10-03).
 
 ## Current state
 
@@ -36,7 +36,16 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
+1. **M3 heap guard validation — active guard class, validation blocked.** Session
+   3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`:
+   traversed `next` links must point back through `prev`, and the published
+   free-list head must have a null predecessor. ORIGIN: `func_8002221C` and
+   allocator link stores publish these fields; malformed reciprocal links are
+   not legitimate allocator state. The patch build remains blocked because
+   `mips64-elf-gcc`, `mips64-elf-ld`, `build/Debug/N64Recomp.exe`, and the
+   configured `PatchesLib` target are absent. No runtime allocator result is
+   claimed; restore the patch pipeline before the M5 writer arm.
+2. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
    3839–3840 qualified the port input and separate writeback-DMA edge despite
    empty ABI output fields. Session 3857 qualified the dominant retail
    `0x800078EC` writer: it had 408 hangar-phase hits into
@@ -79,7 +88,7 @@ Work only the first applicable item. This is one monotonic backlog.
    post-target scalar samples. The port reached 2,858 image-DMA joins with
    no crash/abort. Continue with `0x800331D4`, `0x80033414`, and
    `0x8003326C` as the next representative writer classes.
-2. **M3 heap guard validation — blocked dependency.** Sessions 3852–3859
+3. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
    linker-published addresses before queue-link stores. ORIGIN: those globals are
@@ -100,11 +109,11 @@ Work only the first applicable item. This is one monotonic backlog.
    head slot at `0x801163FC` is written by the queue insertion path; a malformed
    head is not legitimate. This is a code change, not runtime validation; do
    not claim allocator behavior until the patch pipeline is restored.
-3. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
+4. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
    supplied independent retail and validated port target coverage and exact
    hangar zero-payload parity. Do not repeat standalone qualification or the
    retail zero-writer census unless the route/build changes.
-4. **Generated-symbol renaming sweep — parked.** Resume only after M5 has no
+5. **Generated-symbol renaming sweep — parked.** Resume only after M5 has no
    applicable discriminator and M3 has a toolchain or a new discriminator.
    Keep HYPOTHESIS-ID `generated-symbol-renaming-sweep`; do not use mapping
    edits to evade the engineering-change stall gate.
@@ -135,6 +144,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RemainingCandidates-8556Absent` | Single-source retail result at s3865: `0x80085564`, `0x8009785C`, and `0x8008556C` had qualified hangar candidate-span writer rows but zero post-target samples; they are not established as nonzero image producers. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
+| `H-M3-FreeListReciprocalLinks` | Code landed in s3866; validation blocked by absent MIPS toolchain/configured targets. |
 
 ## Evidence ledger — recent durable boundary
 
@@ -298,6 +308,17 @@ Work only the first applicable item. This is one monotonic backlog.
   independently reached 2,858 image-DMA joins with zero crash/abort markers.
   This selects H2 for these three PCs only and leaves the remaining writer
   classes open.
+
+- **3866:** Audited the free-list reciprocal-link idiom in
+  `patches/heap_guards.c`. Traversed `next` links now require
+  `next->prev == current`, and the published free-list head now requires a
+  null predecessor before dereference. ORIGIN: `func_8002221C` and allocator
+  link stores publish these fields; malformed reciprocal links are not
+  legitimate allocator state. The direct prerequisite check found no MIPS
+  compiler or linker, no `build/Debug/N64Recomp.exe`, and no configured
+  `PatchesLib` target; the requested build returned `No rule to make target
+  PatchesLib`. This is a code change with validation blocked, not allocator
+  behavior evidence.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

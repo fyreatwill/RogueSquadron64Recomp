@@ -56,6 +56,13 @@ static int metadata_slot_ok(const void* p, const void* expected) {
     return p == expected;
 }
 
+// ORIGIN: the allocator publishes each free-list node's prev link when it
+// links a block. The head is the list sentinel and must have no predecessor;
+// a non-null or foreign predecessor is not legitimate list state.
+static int free_head_link_ok(const Block* head) {
+    return head == NULL || head->prev == NULL;
+}
+
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
 
@@ -75,6 +82,9 @@ RECOMP_PATCH Block* func_80007D74(void) {
                     return NULL;
                 }
                 if (!block_ok(tail->next)) {
+                    return NULL;
+                }
+                if (tail->next->prev != tail) {
                     return NULL;
                 }
                 tail = tail->next;
@@ -103,6 +113,8 @@ RECOMP_PATCH Block* func_80007D74(void) {
     Block* new_head;
     if (!block_ok(head)) {
         new_head = NULL;
+    } else if (!free_head_link_ok(head)) {
+        return NULL;
     } else {
         new_head = head->next;
     }

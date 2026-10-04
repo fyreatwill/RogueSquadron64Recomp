@@ -141354,6 +141354,21 @@ the fresh dominant PCs `0x80092020`, `0x8009206C`, and `0x80007670`.
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
 
+## Session 3866 (2026-10-03) — audited free-list reciprocal-link guard class
+
+Pivoted from the diagnostic-only M5 candidate-writer probe to a bounded M3
+guard-class change. In `patches/heap_guards.c`, traversed free-list edges now
+require reciprocal `next->prev == current` ownership, and the published
+free-list head must have a null predecessor before it is dereferenced.
+ORIGIN: `func_8002221C` and the allocator link stores publish these fields;
+malformed reciprocal links are not legitimate allocator state. The direct
+prerequisite check found no `mips64-elf-gcc`, no `mips64-elf-ld`, no
+`build/Debug/N64Recomp.exe`, and no configured `PatchesLib` target; the build
+returned `No rule to make target PatchesLib`. The code change is landed, but
+the patch ELF/host generation and allocator smoke remain unvalidated. This
+rules out no runtime allocator behavior and leaves M5 writer classification
+deferred until the patch pipeline is restored.
+
 ## Session 3865 (2026-10-03) — classified the next candidate writer classes
 
 Ran the paired `scratch/agent/run_s3865_m5_remaining_candidate_writers.sh`

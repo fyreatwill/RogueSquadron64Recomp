@@ -1,35 +1,38 @@
-# Next work unit: classify the next retail candidate-span writer class
+# Next work unit: validate the free-list reciprocal-link guard class
 
-HYPOTHESIS-ID: m5-retail-candidate-span-payload
+HYPOTHESIS-ID: m3-free-list-reciprocal-link-guard
 
-Session 3865 completed the fixed paired arm after an invalid startup-crash
-attempt. Retail controls passed and the candidate PCs `0x80085564`,
-`0x8009785C`, and `0x8008556C` had hangar candidate-span writer rows but no
-post-target samples. This selects H2 only for those PCs; the paired port
-reached hangar with 2,858 image-DMA joins and no crash/abort.
+The mandatory no-churn pivot selects a bounded M3 guard-class change instead
+of the diagnostic-only M5 writer arm. The patch now audits reciprocal `prev`
+links for every traversed free-list edge and requires the published free-list
+head to have the null sentinel predecessor. ORIGIN: `func_8002221C` and the
+allocator link stores publish these fields; malformed reciprocal links are not
+legitimate allocator state. The configured patch toolchain is still absent, so
+runtime validation is blocked and no allocator behavior is claimed.
 
 Competing hypotheses and discriminator:
 
-- H1: the next dominant candidate-span PCs emit legitimate nonzero
-  construction payloads in hangar; scalar rows identify the writer and value.
-- H2: the next candidate-span writes are zero/metadata construction and no
-  nonzero scalar writer exists in the qualified phase.
-- H3: whole-RDRAM, title/hangar VI, or oracle shutdown controls fail; the run
-  is invalid and no writer conclusion is allowed.
+- H1: all valid free-list chains satisfy reciprocal `next`/`prev` links and
+  the guard is observationally inert in an allocator smoke.
+- H2: a malformed chain or non-null head predecessor reaches the patched
+  entry; the guard returns before unsafe queue-link stores.
+- H3: the patch cannot be built or loaded because the MIPS compiler, linker,
+  N64Recomp executable, or `PatchesLib` target remains unavailable; no runtime
+  conclusion is allowed.
 
-The discriminator is one same-run table using the existing positive controls,
-phase-gated candidate-span writer-PC histogram, and scalar rows for the next
-dominant PCs from s3865: `0x800331D4`, `0x80033414`, and `0x8003326C`.
-H1 requires nonzero scalar stores with zero mismatches; H2 requires valid
-controls and no such rows; H3 is selected if any control is absent. Keep the
-port arm in the same script and do not add a writeback guard.
+The discriminator is one patch build plus allocator-route smoke: build the
+patch ELF, generate the host patch, and run valid-list and malformed-link
+arms in one executable. H1 requires the valid arm to preserve allocation and
+queue-link stores with zero guard returns; H2 requires the malformed arm to
+return before those stores; H3 is selected if any prerequisite tool or target
+is absent. The positive control is a valid allocator allocation with the
+expected head sentinel and reciprocal chain links.
 
-Preparation and run:
+Preparation and run when the environment is restored:
 
-    # Add run_s3865_m5_remaining_candidate_writers.sh by applying the same
-    # bounded runner template as s3865, set OUT to s3866, and replace
-    # --post-value-pc with 0x800331D4,0x80033414,0x8003326C.
-    zsh scratch/agent/run_s3866_m5_remaining_candidate_writers.sh
+    cmake --build build --config Debug --target PatchesLib
+    cmake --build build --config Debug --target RogueSquadron64Recomp
 
-The s3863 runner is a reusable baseline; retain its removal of the high-volume
-`--watch-pc` stream so the oracle can complete and write its bounded summary.
+Then run the allocator smoke with both valid and malformed-link fixtures and
+record whether the guard fires before any queue-link store. Do not proceed to
+the M5 candidate-writer arm until this M3 validation dependency is resolved.
