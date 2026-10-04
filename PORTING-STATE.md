@@ -144158,6 +144158,21 @@ census begins at `0x800052B8`. This rules out these three PCs as the measured
 retail target-phase writer class, not global writer absence. ORIGIN: retail PC
 watches and port phase/task hooks are diagnostic only; no mitigation landed.
 
+## Session 4039 (2026-10-04) — 15-second launch gap still splits route arms
+
+Ran the same-build M5 route table with a 15-second gap and launch order
+`legacy-real,declared-real,declared-silent`. Retail's whole-RDRAM positive
+control, title VI 1024, hangar VI 512, and oracle completion all passed.
+Legacy/real reached both target phases, fired the RSP-source and audio-stage
+controls, and produced 8,587 audio-stage rows with `dma_size=0xF80`; it did
+not emit a crash or abort. Declared/real and declared/silent each fired the
+RSP-source control, stayed at the 320-wide pre-target route, and crashed at
+`spTaskSchedulerThread+9632` with last guest PC `0x8000834C` before any
+audio-stage or target-phase row. H1 is selected at route scope: launch
+timing/order changes which arm qualifies, but this does not establish audio
+staging as the cause. ORIGIN: launch timing and task/audio hooks observe
+legitimate process scheduling and runtime arm choices; no mitigation landed.
+
 ## Session 4037 (2026-10-04) — qualified null for 0x800052B8 candidate class
 
 Ran the retail-grounded census for `0x800052B8`, `0x800052BC`, and

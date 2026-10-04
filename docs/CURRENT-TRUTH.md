@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4038 (2026-10-04).
+Updated for session 4039 (2026-10-04).
 
 ## Current state
 
@@ -461,6 +461,18 @@ integration, not a MIPS toolchain failure. Runtime qualification of the
 heap-guard patch remains blocked. ORIGIN: build-graph/toolchain diagnostic
 only; no mitigation landed.
 
+Session 4039 re-ran the route table with a 15-second launch gap and order
+`legacy-real,declared-real,declared-silent`. Retail passed the whole-RDRAM
+positive control and both title VI 1024 and hangar VI 512 controls. Legacy/real
+reached both target phases, fired the RSP-source and audio-stage controls, and
+produced 8,587 audio-stage rows using `0xF80` staging without crash or abort.
+Declared/real and declared/silent each fired the RSP-source control but stayed
+at the 320-wide pre-target route and crashed at guest PC `0x8000834C` before
+any audio-stage or target-phase row. H1 is selected at route scope: launch
+timing/order changes which arm qualifies, while this capture does not establish
+audio staging as the cause. ORIGIN: launch timing and task/audio hooks observe
+legitimate process scheduling and runtime arm choices; no mitigation landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
@@ -470,7 +482,8 @@ candidate results are summarized by address range rather than copied here.
    schedule table before another source-writer census. The retail
    positive/title/hangar controls and all three port-arm phase controls must
    qualify; classify any pre-target arm failure as H3 rather than inferring
-   writer absence.
+   writer absence. Session 4039 again selected H1: legacy qualified while
+   both declared arms failed pre-target.
 
 2. **M3 patch integration.** Restore or supply the `PatchesLib` target before
    runtime-qualifying the active-queue sentinel guard from session 4033. The
@@ -510,6 +523,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-TargetPhaseAudioDmaAbsent` | Selected at s3829; no target-phase `rs64_m5_audio_source_dma`. |
 | `H-M5-GateValue` | H2 selected at s4017: all 17 retail `0x800A0F50` writes were zero-byte activity before the target 512-width phase; no target-phase transition. |
 | `H-M5-SourceWriterHistogram-4018` | H3 selected for the paired experiment: retail controls and completion passed with no target-bucket writer rows, but declared/real stopped pre-target and legacy/real crashed at `0x8000834C`; the retail phase-null is not a port writer-class selection. |
+| `H-M5-RouteQualification-4039` | H1 selected: with a 15-second gap and legacy launched first, legacy/real reached both target phases while declared/real and declared/silent crashed pre-target at `0x8000834C`; timing/order remains a route discriminator, not an audio-staging explanation. |
 | `H-M5-TaskOutputFieldsEmptySeparateWriteback` | Selected at s3840 port scope. |
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
