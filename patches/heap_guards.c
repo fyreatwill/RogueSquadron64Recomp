@@ -119,7 +119,7 @@ static int active_queue_tail_anchor_ok(const Block* queue_head,
                                        const Block* q) {
     if (queue_head == NULL || tail == NULL || q == NULL ||
         !block_ok(queue_head) || !block_ok(tail) || !block_ok(q) ||
-        tail->next != q) {
+        tail == q || tail->next != q) {
         return 0;
     }
     if (q == queue_head) {

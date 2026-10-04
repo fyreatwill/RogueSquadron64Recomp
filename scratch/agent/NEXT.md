@@ -1,31 +1,27 @@
-# Next work unit: classify the next M5 candidate-writer class
+# Next work unit: qualify the active-queue tail-alias guard
 
-HYPOTHESIS-ID: m5-candidate-writer-census
+HYPOTHESIS-ID: m3-active-queue-tail-alias
 
-Run one paired retail/port candidate-writer census for `0x80005114`,
-`0x80005118`, and `0x8000511C`. Patch
-`scratch/agent/run_s3941_m5_candidate_writers.sh` by changing its output
-directory and all three `--post-value-pc`/grep addresses, then build and run:
+The bounded M3 audit adds one guard in `patches/heap_guards.c`: reject an
+active-queue tail anchor when `tail == q`, where `q` is the node reached by
+`tail->next`. This is a code change, not a diagnostic-only run. Build:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env zsh scratch/agent/run_s3941_m5_candidate_writers.sh
+    cmake --build build --config Debug --target PatchesLib
 
-Keep the whole-RDRAM, title-1024, hangar-512, oracle-completion, scalar
-mismatch, and passive M5 controls. The independent oracle positive control
-must fire before trusting any null.
+The ordinary target must compile. `PatchesLib` either compiles the accumulated
+MIPS patch pipeline or fails with the missing-toolchain/configuration evidence;
+that result does not count as runtime qualification.
 
 Competing hypotheses:
 
-- H1: at least one candidate writes the qualified retail hangar payload.
-- H2: candidates execute in the target phase but produce no post-target row
-  or scalar sample.
-- H3: candidates do not execute in the qualified target phase.
-- H4: a positive control or paired port arm fails, making the census
-  unevaluable.
+- H1: the tail alias is an invalid active-queue state and the new guard is
+  sufficient for this idiom class.
+- H2: the alias is legitimate in the game allocator, so the guard would reject
+  valid work.
+- H3: the source compiles but the MIPS/PatchesLib qualification path is absent.
 
-Discriminator: with all controls passing in one run, target-phase execution,
-post-target rows, and scalar samples split H1/H2/H3; any missing control or
-port hangar phase selects H4. Session 3955 selected H3 for
-`0x80005108/0x8000510C/0x80005110`: all controls passed, but all three were
-absent from the qualified retail phase and the paired port produced 2,856
-zero-valued image-DMA joins. Continue with the next adjacent class above.
+Discriminator: Debug compilation selects source/build validity; `PatchesLib`
+success selects toolchain availability, while a missing target selects H3.
+Runtime legitimacy remains unproven until the accumulated MIPS patch is
+built and exercised with allocator-chain controls.

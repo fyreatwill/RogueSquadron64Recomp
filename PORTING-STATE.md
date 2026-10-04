@@ -142788,6 +142788,23 @@ zero crash/abort markers; source and destination payloads were
 `FNV=0x762B22A5`, `nonzero=0`. This rules out these three candidate PCs at the
 measured scope, not global writer absence.
 
+## Session 3956 (2026-10-04) — added the active-queue tail-alias guard
+
+The mandated no-churn pivot selected the next bounded M3 active-queue idiom,
+not another M5 candidate census. `patches/heap_guards.c` now rejects
+`tail == q` in `active_queue_tail_anchor_ok` before the append treats
+`tail->next` as the successor of `q`. ORIGIN is the `heap_tail_loc` metadata
+writer and the active-queue append writer: the metadata tail and its successor
+cannot be the same allocator block, because that would make the node its own
+predecessor. The value is not legitimate queue state.
+
+The ordinary Debug `RogueSquadron64Recomp` target built successfully. The
+requested `PatchesLib` target remains unconfigured and fails immediately with
+`No rule to make target 'PatchesLib'`; therefore this change is not MIPS- or
+runtime-qualified. The missing patch target/toolchain remains the specific
+external dependency before another M3 guard is added. The failed patch-target
+check rules out only local qualification, not the guard's source validity.
+
 ## Session 3953 (2026-10-04) — classified the next M5 candidate-writer class
 
 The required independent whole-RDRAM oracle control fired 10,000 times. The
