@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3962 (2026-10-04).
+Updated for session 3963 (2026-10-04).
 
 ## Current state
 
@@ -57,6 +57,14 @@ Work only the first applicable item. This is one monotonic backlog.
    `PatchesLib` again failed immediately and neither `mips64-elf-gcc` nor
    `mips64-elf-ld` was on PATH. Do not claim this guard is runtime-validated;
    validate the accumulated patch when a human supplies the toolchain.
+
+   Session 3963 added the next bounded guard class: `block_ok` now requires
+   allocator block bases to be `0x100`-aligned before any block dereference or
+   queue-link store. ORIGIN is `func_8002221C` and the free-list link stores;
+   they publish fixed-size `0x100`-byte blocks, so another base alignment is
+   not legitimate block identity. The ordinary Debug target built successfully,
+   while `PatchesLib` remains unavailable (`No rule to make target
+   'PatchesLib'`); no MIPS or runtime qualification is claimed.
 
 2. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail
@@ -284,9 +292,10 @@ Work only the first applicable item. This is one monotonic backlog.
    before link stores. ORIGIN is `heap_tail_loc` and the append writer; a
    detached predecessor is not legitimate queue state. The ordinary host
    target still builds, while `PatchesLib` remains unavailable (`No rule to
-   make target 'PatchesLib'`), so this is H4 environment evidence only. Do not
-   add another M3 guard until the accumulated patch can be built and runtime-
-   qualified.
+   make target 'PatchesLib'`), so this is H4 environment evidence only. The
+   alignment guard added in session 3963 is likewise pending accumulated-patch
+   build and runtime qualification; add no further M3 guard class before that
+   validation.
 
 4. **M5 audio contract qualification — remaining retail candidate-writer
    class.** Session 3900's phase-gated run passed the retail whole-RDRAM,

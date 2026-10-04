@@ -45,7 +45,11 @@ static int kseg0_ok(const void* p) {
 // A KSEG0 base in the final 0xFF bytes is not a legitimate complete block.
 static int block_ok(const void* p) {
     uintptr_t addr = (uintptr_t)p;
-    return kseg0_ok(p) && addr <= (0x80800000U - BLOCK_SIZE);
+    // ORIGIN: func_8002221C and the free-list link stores publish fixed-size
+    // 0x100-byte allocator blocks. A KSEG0 pointer with another base
+    // alignment cannot identify one of those blocks.
+    return kseg0_ok(p) && (addr & (BLOCK_SIZE - 1U)) == 0 &&
+           addr <= (0x80800000U - BLOCK_SIZE);
 }
 
 // ORIGIN: heap_other_listhead and heap_tail_loc are fixed linker-published

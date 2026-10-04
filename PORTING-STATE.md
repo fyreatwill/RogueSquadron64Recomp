@@ -142788,6 +142788,24 @@ zero crash/abort markers; source and destination payloads were
 `FNV=0x762B22A5`, `nonzero=0`. This rules out these three candidate PCs at the
 measured scope, not global writer absence.
 
+## Session 3963 (2026-10-04) — added allocator block-base alignment guard
+
+The mandated no-churn pivot selected a bounded M3 code change rather than
+repeating the queued M5 candidate census. `patches/heap_guards.c` now requires
+`block_ok` pointers to be `0x100`-aligned before block dereferences or
+active-queue link publication. ORIGIN is `func_8002221C` and the free-list
+link stores: they publish fixed-size `0x100`-byte allocator blocks, so a
+different base alignment is not legitimate block identity. The change is
+guard-only and returns before mutation when the class is malformed.
+
+The ordinary Debug target rebuilt successfully. The required `PatchesLib`
+target is not configured in this checkout (`No rule to make target
+'PatchesLib'`), so MIPS compilation, runtime guard behavior, and the normal
+aligned positive control remain unevaluable. This rules out no allocator
+runtime hypothesis; it establishes only the code change and the current
+toolchain/build-target blocker. The next unit is accumulated patch validation,
+not another guard or another candidate-writer rerun.
+
 ## Session 3962 (2026-10-04) — classified the next M5 candidate-writer class
 
 Ran the existing same-build retail-oracle/port census for candidate PCs

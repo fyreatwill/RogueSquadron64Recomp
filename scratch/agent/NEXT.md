@@ -1,33 +1,34 @@
-# Next work unit: qualify the next M5 candidate-writer class
+# Next work unit: validate the accumulated M3 heap patch when toolchain exists
 
-HYPOTHESIS-ID: m5-candidate-writer-census
+HYPOTHESIS-ID: m3-heap-guard-validation
 
-Run the existing same-build retail-oracle/port census for candidate PCs
-`0x80005150`, `0x80005154`, and `0x80005158`. Preserve the whole-RDRAM
-positive control, title VI 1024, hangar VI 512, oracle completion, and the
-phase-gated image-DMA payload controls. Build first:
-
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-
-Then run `zsh scratch/agent/run_s3957_m5_candidate_writers.sh` from the
-repository root. The runner launches retail and port concurrently, watchdogs
-both, and kills them with SIGKILL. Do not advance the candidate range unless
-the port reaches title VI 1024 and hangar VI 512 in the same run.
+The alignment guard landed this iteration in `patches/heap_guards.c`. Do not
+add another guard or repeat the M5 candidate census until the patch pipeline
+can compile and link the accumulated override.
 
 Competing hypotheses:
 
-- H1: at least one candidate is a qualified retail writer; it executes in the
-  target phase and produces a post-store row or scalar sample.
-- H2: the candidates execute in qualified retail phases but are not writers
-  of the target payload; they have no post-target row or scalar sample.
-- H3: the candidates are outside the qualified retail path; they have no
-  target-phase execution, post-target row, or scalar sample.
-- H4: the retail result is H3, but the port route is unevaluable; the
-  phase-gated port arm stays pre-title or crashes before target entry.
+- H1: allocator/free-list block bases are always `0x100`-aligned; the new
+  `block_ok` predicate preserves every legitimate block and rejects only an
+  invalid base.
+- H2: the allocator can legitimately publish a non-`0x100`-aligned KSEG0
+  block; the new predicate would reject valid queue work and must be reverted.
+- H3: the patch pipeline is unavailable in this checkout, so neither runtime
+  hypothesis is evaluable yet.
 
-Discriminator: the same-run oracle whole-RDRAM control must fire and both VI
-phase controls must be present. Only then does candidate execution versus
-post-store/scalar evidence select H1, H2, or H3. The paired port must reach
-title and hangar without crash/abort and retain its qualified payload result;
-otherwise the port arm is unevaluable rather than evidence about the retail
-candidates.
+Discriminator: build `PatchesLib` and run the patched binary with the normal
+heap positive control. H1 requires successful patch compilation plus normal
+heap/route progress with zero alignment-guard failures; H2 requires a
+legitimate non-`0x100`-aligned block observed in the same run or a route
+regression attributable to the predicate; H3 is selected only by a fresh
+`PatchesLib`/toolchain failure.
+
+Commands:
+
+    cmake --build build --config Debug --target PatchesLib
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+
+If `PatchesLib` becomes available, run the normal phase-gated heap/route
+recipe from `build/` with SIGKILL watchdog termination and inspect the guard,
+heap progress, title VI 1024, and hangar VI 512 controls. Preserve the
+`ROGUESQ_AUDIO_UCODE=1` M5 arm; it is not the active work unit.
