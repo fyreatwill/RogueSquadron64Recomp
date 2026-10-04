@@ -21,6 +21,7 @@ trap cleanup EXIT INT TERM
 
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 240 \
   --watch-write 0x0:0x800000 --hit-cap 10000 \
+  --watch-pc 0x80029E80 \
   --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 \
   --pc-task-dump 0x80019CD8 --pc-task-type 2 --vi-trace \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
@@ -33,6 +34,7 @@ run_port() {
     ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
     ROGUESQ_AUTOPILOT_STOP_WIDTH=512 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=110 \
     PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 ROGUESQ_LOG_PHASE=1 \
+    ROGUESQ_LOG_PCM_BOUNDARY=1 \
     ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_RSP_SOURCE=1 \
     ROGUESQ_LOG_M5_SCHEDULER_BOUNDARY=1 ROGUESQ_AUDIO_UCODE="$audio" \
     ./RogueSquadron64Recomp ) > "$OUT/$name.log" 2>&1 &

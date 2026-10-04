@@ -144564,3 +144564,25 @@ hangar producer and advances the census to adjacent `0x800076A0`.
 
 ORIGIN: no mitigation was added; the candidate was only observed, and no guest
 or RDRAM state was changed.
+
+## Session 4063 (2026-10-04) — qualified title AI output parity
+
+Implemented one phase-bucketed AI-output witness in the retail oracle and the
+matching `osAiSetNextBuffer` witness in the port, both hashing the exact
+address/length buffer and reporting FNV/nonzero counts. Exported the runtime
+submodule patch and rebuilt the ordinary target successfully. The oracle run
+passed its whole-RDRAM positive control and reached title 1024 and hangar 512;
+its title bucket had 1,204 AI writes with 1,015 nonzero buffers, and its hangar
+bucket had 242 writes with 229 nonzero buffers.
+
+The qualified declared-real arm, using the established arm-isolation recipe,
+reached title 1024 and hangar 512. Its title source and `queue_samples`
+consumer witnesses each produced 44 phase-scoped rows, with nonzero PCM in the
+sampled rows. This selects H2: the title AI producer and port consumer are
+active, so the missing-audio question moves to the SDL/device sink. The first
+manual port launch omitted the qualified route controls and crashed pre-title;
+that run is unevaluable and was not used as evidence.
+
+The next discriminator is the existing `[m5-audio-host]` queue/device witness
+under the same qualified route. No mitigation or guest/RDRAM state change was
+made.

@@ -69,6 +69,7 @@
 #define VI_NEXT_PTR_ADDR 0x80039214u
 #define RDRAM_SIZE 0x00800000u
 #define VI_SWAP_PC 0x80035500u
+#define AI_SET_NEXT_PC 0x80029E80u
 
 static void *g_core;
 static double g_t0;
@@ -244,6 +245,50 @@ static int g_watches_armed;
 static int g_defer_exec_watches;
 static int g_exec_watches_phase_armed;
 static int g_positive_watch_removed;
+static uint32_t gpr32(int idx);
+static uint32_t debug_mem_u8(uint32_t guest);
+struct ai_output_bucket {
+    const char *name;
+    uint32_t width;
+    uint32_t origin;
+    long calls;
+    long rows;
+    long nonzero_rows;
+};
+static struct ai_output_bucket g_ai_output[] = {
+    { "pre-title", 0, 0, 0, 0, 0 },
+    { "title", 1024, 0x00790400u, 0, 0, 0 },
+    { "hangar", 512, 0x006AB400u, 0, 0, 0 },
+};
+
+static void dump_ai_output(void)
+{
+    uint32_t width = pDebugMemRead32(VI_WIDTH_ADDR);
+    uint32_t origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    uint32_t addr = gpr32(4);
+    uint32_t len = gpr32(5);
+    int bucket = 0;
+    uint32_t fnv = 2166136261u;
+    uint32_t nonzero = 0;
+    uint32_t i;
+    if (width == 1024u && origin == 0x00790400u) bucket = 1;
+    else if (width == 512u && origin == 0x006AB400u) bucket = 2;
+    g_ai_output[bucket].calls++;
+    if (bucket == 0 || len == 0 || len > 0x40000u) return;
+    for (i = 0; i < len; i++) {
+        uint32_t byte = debug_mem_u8(addr + i);
+        fnv = (fnv * 16777619u) ^ byte;
+        nonzero += byte != 0;
+    }
+    g_ai_output[bucket].rows++;
+    g_ai_output[bucket].nonzero_rows += nonzero != 0;
+    if (g_ai_output[bucket].rows <= 20 || (g_ai_output[bucket].rows % 128) == 0) {
+        printf("[ai-output] bucket=%s width=%u origin=0x%06x addr=0x%08x len=%u fnv=0x%08x nz=%u n=%ld\n",
+               g_ai_output[bucket].name, width, origin, addr, len, fnv, nonzero,
+               g_ai_output[bucket].rows);
+        fflush(stdout);
+    }
+}
 static long g_pc_hits;
 static int g_gpr_ctl_printed;
 static long g_exec_logged;
@@ -1676,6 +1721,9 @@ static void dbg_update(unsigned int pc)
                             gpr32(4) & 0x1FFFFFFFu);
     }
 
+    if ((flags & M64P_BKP_FLAG_EXEC) && pc == AI_SET_NEXT_PC)
+        dump_ai_output();
+
     if (flags & M64P_BKP_FLAG_EXEC)
         dump_pc_field(pc);
 
@@ -2591,6 +2639,10 @@ int main(int argc, char **argv)
 
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",
            g_hits, now_s() - g_t0, g_vis, g_vis / 60.0);
+    for (int i = 0; i < 3; i++)
+        printf("[oracle] ai-output-summary bucket=%s calls=%ld rows=%ld nonzero_rows=%ld\n",
+               g_ai_output[i].name, g_ai_output[i].calls, g_ai_output[i].rows,
+               g_ai_output[i].nonzero_rows);
     if (g_post_value_watch_mask) {
         for (int watch = 0; watch < g_nwatch; watch++) {
             struct post_value_stats *stats;

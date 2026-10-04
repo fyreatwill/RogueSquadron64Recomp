@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4062 (2026-10-04).
+Updated for session 4063 (2026-10-04).
 
 ## Current state
 
@@ -137,6 +137,17 @@ sentinel path is not legitimate ownership state.
   rows were zero; no mismatch-free scalar sample attributed a target write to
   this PC. H2 is selected for this class, so the ranked census advances to its
   adjacent `0x800076A0` class.
+- Session 4063 redirected the M5 measurement to the title AI endpoint. The
+  retail oracle passed the whole-RDRAM positive control and reached title 1024
+  and hangar 512; its `osAiSetNextBuffer` witness recorded nonzero title PCM
+  on 1,015 of 1,204 title writes and nonzero hangar PCM on 229 of 242 writes.
+  The qualified declared-real port arm reached both target phases and its
+  matching source and host-consumer witnesses were nonzero in title (44
+  phase-scoped rows each). H2 is selected: title PCM is produced and queued by
+  the port, so the missing-audio question moves to the SDL/device sink rather
+  than the AI producer. The silent control was not used to override this
+  endpoint result; the first incomplete recipe crashed pre-title and is
+  unevaluable.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -145,15 +156,17 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Title-music AI parity (operator redirect 2026-10-04).** The hangar
-   source-writer census is CLOSED, not paused: retail's own hangar source span
-   is zero (s3820, 408 bytes, `FNV=0x762B22A5`), so the port's zero span is
-   parity, not a missing writer. Do not arm further candidate PCs against it.
-   Instead compare retail vs declared-real port AI output (`osAiSetNextBuffer`
-   address/length plus PCM FNV/nonzero count) per VI phase, starting at title
-   VI 1024 where music is audible, and walk back one hop at a time from the
-   first phase where retail PCM is nonzero. Slug `m5-title-music-ai-parity`;
-   full discriminator in `scratch/agent/NEXT.md`.
+1. **Qualify the title host sink.** Session 4063 selected H2 for
+   `m5-title-music-ai-parity`: retail and the qualified declared-real port both
+   produce nonzero title PCM, and the port's `queue_samples` consumer receives
+   it. Use the existing `[m5-audio-host]` rows with
+   `ROGUESQ_LOG_M5_AUDIO_HOST=1` to compare title `queued_before`,
+   `queued_after`, `call_delta`, `pcm_bytes`, and `device` in the same
+   qualified route. Hsink = device 0/open failure or zero queue deltas despite
+   nonzero consumer PCM; Hqueue = positive queue deltas, which moves the
+   investigation to playback/drain timing. Keep the retail whole-RDRAM/title/
+   hangar controls and the declared-real port arm. Slug
+   `m5-title-audio-host-sink`.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -174,7 +187,8 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 
 | Hypothesis | Status |
 |---|---|
-| M5 producer absent | Hangar span closed as retail parity (s3820). Title-phase AI output open: Next steps 1. |
+| M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063). |
+| M5 title host sink | Open: title PCM reaches the port consumer; SDL/device queue behavior is the next discriminator (s4063). |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 route failure | Active H1: process topology changes which audio arms reach target phases; legacy-real remains pre-target. |
