@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4051 (2026-10-04).
+Updated for session 4052 (2026-10-04).
 
 ## Current state
 
@@ -32,9 +32,10 @@ empty-queue tail state, expansion ownership, and the active sentinel's
 predecessor. The ordinary Debug target builds. Runtime qualification is
 blocked because this host has neither `mips64-elf-gcc` nor `mips64-elf-ld`, so
 CMake still omits `PatchesLib` after the cross-platform discovery repair. The
-sentinel guard's ORIGIN is `heap_tail_loc` and the
-active-queue append stores; a predecessor on the sentinel path is not
-legitimate ownership state.
+installed Clang also has no MIPS backend, and local filesystem checks found no
+toolchain or rebuildable source tree. The sentinel guard's ORIGIN is
+`heap_tail_loc` and the active-queue append stores; a predecessor on the
+sentinel path is not legitimate ownership state.
 
 ## Recent qualified evidence
 
@@ -59,6 +60,11 @@ legitimate ownership state.
   `PatchesLib` remains absent, and the ordinary target builds. This is a
   prerequisite block, not runtime evidence; do not repeat until a toolchain or
   another qualified host is available.
+- Session 4052 tested the block's alternate routes. `clang --target=mips`
+  failed with no compatible target; its assembler also rejected MIPS. No
+  MIPS GCC/LD, MIPS Linux cross tools, or generated patch artifacts were found
+  locally. The M3 dependency remains external; work is re-scoped to the M5
+  route discriminator until a qualified MIPS host is supplied.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -67,17 +73,17 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Qualify M3 patch integration.** On a host with the MIPS toolchain, use
+1. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
 2. **Requalify the M5 route.** Run one genuinely new same-build launch-order
-   or gap table. Retail controls and all three port-arm target-phase controls
-   must qualify; classify any pre-target failure as H3, never as writer
-   absence. Do not repeat the already-tested one-, two-, three-, or
-   four-second permutations without a new discriminator.
+   or gap table using the existing route harness, with retail controls and all
+   three port-arm target-phase controls. Classify any pre-target failure as H3,
+   never as writer absence. Do not repeat the already-tested one-, two-,
+   three-, or four-second permutations without a new discriminator.
 3. **Resume the retail-grounded source-writer census.** Only after step 2
    qualifies, measure the `0x800052C4` class and then choose the next bounded
    class. Keep the positive controls and phase-scoped budgets in the same run.

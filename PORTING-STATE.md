@@ -144370,3 +144370,20 @@ ELF, generated patch source, or patch library exists to qualify the sentinel
 guard. It rules out neither H1 nor H2. The M3 unit cannot proceed until a
 usable MIPS GCC/LD pair is installed or supplied to this host, or the work is
 moved to a host that has them.
+
+## Session 4052 (2026-10-04) — re-scoped M3 block to M5 route work
+
+Worked the blocked M3 claim through the required routes in order. Route 1
+failed as a refutation: the installed Clang reported `No available targets are
+compatible with triple "mips"` for both C compilation and assembly, so
+`ld.lld` cannot replace the missing MIPS object producer. Route 2 also failed:
+no `mips64-elf-gcc`, `mips64-elf-ld`, MIPS Linux cross tools, or generated
+patch artifacts were found in the local workspace/user/tool locations, and no
+maintained local source tree can rebuild them.
+
+The M3 dependency is therefore real and external, not a runtime result. This
+iteration took route 3: `CURRENT-TRUTH.md` records the open prerequisite and
+`NEXT.md` now selects a new phase-gated M5 launch-order/inter-arm-gap matrix.
+The MIPS guard remains unqualified; no runtime inference was made from the
+ordinary host build. `scratch/agent/UNBLOCK.md` records the evidence and the
+specific re-scope.

@@ -1,39 +1,39 @@
-# Next work unit: qualify the M3 patch target and sentinel guard on a MIPS host
+# Next work unit: requalify the M5 route with a new same-build arm matrix
 
-HYPOTHESIS-ID: m3-active-queue-sentinel-predecessor
+HYPOTHESIS-ID: m5-route-launch-order-gap
 
-The CMake graph now discovers native tool names and repairs stale Windows
-`N64RECOMP_EXE` cache values. This host still lacks the MIPS compiler/linker;
-the next run requires a supplied/installable toolchain or a host that has one.
-Do not run an M5 route permutation or writer census in that unit.
+M3 runtime qualification is externally blocked: this host has no MIPS GCC/LD,
+Clang has no MIPS backend, and no local toolchain/source tree was found. Do
+not repeat the M3 target build here. Use the existing M5 route harness, keeping
+all arms in one build/run and phase-gating on VI transitions.
 
 Competing hypotheses:
 
-- H1: with `mips64-elf-gcc` and `mips64-elf-ld` available, the repaired graph
-  creates and builds `PatchesLib`, enabling runtime qualification.
-- H2: the sentinel may legitimately carry a predecessor during a non-empty
-  queue, so source inspection will require redesign before qualification.
-- H3: the host still lacks a usable MIPS toolchain or another build dependency,
-  leaving runtime qualification blocked despite the repaired graph.
+- H1: launch order/gap changes which port arm reaches title `1024` and hangar
+  `512`, selecting a schedule discriminator.
+- H2: all qualifying arms retain matching zero source/consumer payloads, so
+  route reachability is independent of the unresolved producer.
+- H3: a port arm fails before either target phase; its source-writer nulls are
+  unevaluable and must not advance the writer census.
 
-Discriminator: configure and build `PatchesLib` after placing a usable MIPS
-toolchain on PATH or passing `-DMIPS_TOOLCHAIN_DIR`. H1 requires a generated
-patch ELF, generated `RecompiledPatches/patches.c`, and a successful patch
-library build before runtime qualification; H2 requires a concrete legitimate
-predecessor path; H3 is the exact remaining configure or toolchain failure.
-This iteration observed H3 again: both MIPS tools were absent and CMake omitted
-the target. Do not repeat this unit on this host until the prerequisite changes.
-The next action is to provide/install both tools or run the same commands on a
-host that has them.
+Discriminator: run a genuinely new launch-order or inter-arm gap matrix based
+on `scratch/agent/run_s4019_m5_route_qualification.sh`, with positive controls
+for task dispatch, SP completion, image completion, title VI, and hangar VI.
+H1 is selected only if arm reachability changes with the schedule; H2 requires
+all target-qualified arms to show the same zero payload signature; H3 applies
+to any arm missing a target phase. Use `ROGUESQ_AUDIO_UCODE=1` for real-image
+arms, `=0` for the silent control, and retain the declared-size/legacy-size
+pair. Do not infer runtime behavior from the unavailable M3 patch target.
 
 Commands:
 
 ```sh
-rg -n "PatchesLib|heap_guards|active_queue|heap_tail_loc" CMakeLists.txt patches build
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --config Debug --target RogueSquadron64Recomp
-cmake --build build --config Debug --target PatchesLib
+zsh scratch/agent/run_s4019_m5_route_qualification.sh
+grep -nE '\[phase\]|audtask|SP|image|hangar|CRASH' scratch/agent/<new-run>/run.log | head -200
 ```
 
-If the target is absent, record the exact toolchain/configure blocker and do
-not infer runtime behavior from the ordinary host build.
+The new matrix must not be one of the already-tested one-, two-, three-, or
+four-second permutations. Record the exact arm/phase table and retain the M3
+toolchain dependency as open until a MIPS host produces `patches.elf`,
+`RecompiledPatches/patches.c`, and `PatchesLib`.
