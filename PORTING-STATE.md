@@ -143604,3 +143604,20 @@ H2 is selected for this measured class: these candidate PCs are not the missing
 nonzero writer at the qualified retail target/post-target scope. This does not
 establish global writer absence. The next bounded class is
 `0x80005264`, `0x80005268`, and `0x8000526C`.
+
+## Session 4001 (2026-10-04) — extended M5 candidate-writer census
+
+Ran `zsh scratch/agent/run_s4001_m5_candidate_writers.sh`, a single qualified
+legacy/real paired census for candidate PCs `0x80005264`, `0x80005268`, and
+`0x8000526C`. The retail oracle's whole-RDRAM positive control fired; title VI
+1024 fired 154 times, hangar VI 512 fired 152 times, and the oracle completed.
+The independent retail result recorded `seen=0` and zero post-target
+samples/rows/sequences and scalar evidence for all three candidates. The port
+reached phase 5 with 3,056 audio-task ABI rows and 3,047 image-DMA joins, with
+zero crash/abort markers.
+
+This selects H2 for the measured class: these candidate PCs are not the
+missing nonzero writer at the qualified target/post-target scope. It rules out
+only this candidate class, not global writer absence. The positive control and
+the paired port phase controls make the null interpretable. The next bounded
+class is `0x80005270`, `0x80005274`, and `0x80005278`.

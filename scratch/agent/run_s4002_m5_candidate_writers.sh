@@ -1,0 +1,7 @@
+#!/bin/zsh
+set -u
+ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
+TMP=$(mktemp /tmp/rs64-s4002.XXXXXX)
+trap 'rm -f "$TMP"' EXIT INT TERM
+perl -pe 's/s4001_m5_candidate_writers/s4002_m5_candidate_writers/g; s/0x80005264,0x80005268,0x8000526C/0x80005270,0x80005274,0x80005278/g; s/0x80005264\\|0x80005268\\|0x8000526C/0x80005270|0x80005274|0x80005278/g' "$ROOT/scratch/agent/run_s4001_m5_candidate_writers.sh" > "$TMP"
+exec zsh "$TMP"
