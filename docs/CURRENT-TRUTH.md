@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4059 (2026-10-04).
+Updated for session 4060 (2026-10-04).
 
 ## Current state
 
@@ -112,6 +112,15 @@ sentinel path is not legitimate ownership state.
   passed `git diff --check`, and confirmed that `PatchesLib` has no generated
   build target on this host. This is a host-build qualification only; it adds
   no runtime evidence and does not reopen the M3 toolchain prerequisite.
+- Session 4060 ran the prescribed same-build retail-oracle/declared-real capture.
+  Retail passed the whole-RDRAM positive control and both title/hangar phase
+  controls; the port also reached both phases with `FNV=0x762B22A5` and
+  nonzero=0. Exact hangar-phase post-target attribution produced zero rows for
+  `0x800C825C`, `0x800078E0`, and `0x800078EC`. The oracle did record 816
+  scalar-zero stores from `0x800078EC`, but those requested-PC rows were tagged
+  to transition state `origin=0x006AB800`, width 1024, not the exact hangar
+  bucket; mismatch=0. This rules out treating `0x800078EC` as the exact
+  hangar-phase writer, but does not identify a replacement producer.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -120,11 +129,14 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Classify the immediate zero writer.** Use the qualified declared-real arm
-   with `0x800078EC` as the primary class, retaining `0x800C825C/0x800078E0`
-   as predecessor context. Confirm whether its zero scalar stores are
-   target-phase source writes or a phase/argument mismatch. Retain retail
-   whole-RDRAM/title/hangar controls and phase-scoped budgets in the same run.
+1. **Close the immediate-writer phase boundary.** Repeat the qualified
+   declared-real/retail capture with the exact hangar bucket as the primary
+   discriminator: source-range writer histograms and requested-PC rows must be
+   reported separately for `origin=0x006AB400,width=512` and the preceding
+   `origin=0x006AB800,width=1024` transition. Retain all three candidate PCs,
+   tuple fields, scalar-store mismatch counts, and retail whole-RDRAM/title/
+   hangar controls. Do not infer a replacement producer until a nonzero
+   target-bucket writer is independently attributed.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target

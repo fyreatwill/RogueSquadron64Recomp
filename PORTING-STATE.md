@@ -144506,3 +144506,20 @@ does not prove that an active/free overlap occurs at runtime, and it does not
 change the external M3 dependency. The next highest-information unit is the
 already-qualified declared-real M5 route's immediate zero-writer class, with
 retail whole-RDRAM/title/hangar controls in the same run.
+
+## Session 4060 (2026-10-04) — separated M5 transition and hangar writer phases
+
+Ran the prescribed same-build retail-oracle and declared-real port capture for
+the immediate zero-writer class. The oracle whole-RDRAM positive control reached
+10,000 callbacks and the retail route reached title `0x00790400/1024` and
+hangar `0x006AB400/512`; the port reached both target phases and retained
+`FNV=0x762B22A5`, nonzero=0. No crash or abort marker occurred.
+
+The exact hangar-phase post-target rows were zero for `0x800C825C`,
+`0x800078E0`, and `0x800078EC`. The requested-PC scalar instrument did record
+816 mismatch-free zero stores from `0x800078EC`, but its detailed rows were
+tagged to transition state `origin=0x006AB800`, width 1024, rather than the
+exact hangar bucket. Thus the run rules out treating `0x800078EC` as the exact
+hangar-phase writer, but does not identify a replacement target producer or
+select a nonzero source. The next unit splits those two phase buckets in one
+capture before making a producer claim.
