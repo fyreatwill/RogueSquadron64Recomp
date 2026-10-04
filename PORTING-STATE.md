@@ -144281,3 +144281,19 @@ port arm reached both target phases, and the `0x800052C4` writer census remains
 unevaluable. This does not establish audio staging or writer absence as
 causal. ORIGIN: route, scheduler, and audio-stage hooks observe legitimate
 arm choices; no mitigation landed.
+
+## Session 4046 (2026-10-04) — three-second legacy-first route permutation leaves no arm qualified
+
+Built the ordinary Debug target, then ran the retail oracle plus declared/real,
+declared/silent, and legacy/real port arms in one capture with launch order
+`legacy-real,declared-silent,declared-real` and a three-second gap. Retail's
+whole-RDRAM positive control, title VI 1024, and hangar VI 512 controls all
+passed. Declared/real and declared/silent fired their RSP-source controls and
+crashed pre-target in `spTaskSchedulerThread+9632` at guest PC `0x8000834C`.
+Legacy/real fired its RSP-source and audio-stage controls and produced 736
+audio-stage rows using `0xF80` staging, but stayed at the 640-wide pre-target
+route until the wrapper SIGKILL; it emitted no target-phase marker. H3 is
+selected: no port arm reached a target phase, and the `0x800052C4` writer
+census remains unevaluable. This does not establish audio staging or writer
+absence as causal. ORIGIN: route, scheduler, and audio-stage hooks observe
+legitimate arm choices; no mitigation landed.

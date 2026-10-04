@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4045 (2026-10-04).
+Updated for session 4046 (2026-10-04).
 
 ## Current state
 
@@ -533,6 +533,18 @@ audio rows. H3 remains selected: no port arm reached both target phases, so
 the `0x800052C4` census remains unevaluable. ORIGIN: route, scheduler, and
 audio-stage hooks observe legitimate arm choices; no mitigation landed.
 
+Session 4046 ran a new same-build route permutation with order
+`legacy-real,declared-silent,declared-real` and a three-second gap. Retail
+again passed the whole-RDRAM positive control and title VI 1024/hangar VI 512
+controls. Declared/real and declared/silent fired their RSP-source controls
+then crashed pre-target in `spTaskSchedulerThread+9632` at guest PC
+`0x8000834C`. Legacy/real fired its RSP-source and audio-stage controls and
+produced 736 audio-stage rows, but remained at the 640-wide pre-target route
+until the wrapper kill; no port arm reached either target phase. H3 remains
+selected and the `0x800052C4` census remains unevaluable. ORIGIN: route,
+scheduler, and audio-stage hooks observe legitimate arm choices; no mitigation
+landed.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
@@ -542,9 +554,10 @@ candidate results are summarized by address range rather than copied here.
    schedule table before another source-writer census. The retail
    positive/title/hangar controls and all three port-arm phase controls must
    qualify; classify any pre-target arm failure as H3 rather than inferring
- writer absence. Session 4045 selected H3: no arm reached both target phases
- under the `declared-real,legacy-real,declared-silent` permutation with a
- four-second gap.
+   writer absence. Sessions 4045–4046 selected H3: no arm reached both target
+   phases under either the four-second
+   `declared-real,legacy-real,declared-silent` or the three-second
+   `legacy-real,declared-silent,declared-real` permutation.
 
 2. **M5 next source-payload discriminator.** After route qualification,
    rerun the retail-grounded writer class beginning at `0x800052C4`; do not
@@ -621,6 +634,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-RouteQualification-4043` | H3 selected: retail controls passed, but declared/real and declared/silent crashed pre-target at `0x8000834C` and legacy/real reached only title; no port arm reached both target phases, so the `0x800052C4` census remains unevaluable. |
 | `H-M5-RouteQualification-4044` | H3 selected: retail controls passed; declared/silent reached title but not hangar, while declared/real and legacy/real crashed pre-target at `0x8000834C`; no port arm reached both target phases, so the `0x800052C4` census remains unevaluable. |
 | `H-M5-RouteQualification-4045` | H3 selected: retail controls passed; declared/real reached title but not hangar, while legacy/real and declared/silent crashed pre-target at `0x8000834C`; no port arm reached both target phases, so the `0x800052C4` census remains unevaluable. |
+| `H-M5-RouteQualification-4046` | H3 selected: retail controls passed; declared/real and declared/silent crashed pre-target at `0x8000834C`, while legacy/real reached only the 640-wide route with 736 audio-stage rows; no port arm reached a target phase. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M5-RouteQualification-4021` | H3 selected: declared/real, declared/silent, and legacy/real all reached both target VIs with route controls and no crash/abort in the same-build capture. |
