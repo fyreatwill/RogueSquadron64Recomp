@@ -142204,3 +142204,22 @@ zero image-DMA joins. This is not evidence about the retail writer class and
 does not support a port payload conclusion. The next candidate set is
 `0x80004F70`, `0x80004F74`, and `0x80004F78`; the pre-target port crash remains
 a separate parked caveat.
+## Session 3911 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3911_m5_remaining_candidate_writers.sh` as the
+phase-gated retail/port discriminator for PCs `0x80004F70`, `0x80004F74`, and
+`0x80004F78`. The retail oracle positive controls passed: the whole-RDRAM
+watch crossed its threshold, title width 1024 and hangar width 512 appeared,
+and the oracle completed. None of the three candidate PCs executed in the
+qualified target phase; each had zero post-target rows and zero post-target
+scalar samples (`seen=0`, `n=0/16`), selecting H3 only for this bounded class.
+
+The paired port reached hangar, recorded 2,815 image-DMA joins, and emitted no
+crash or abort marker. Its qualified image payload was
+`FNV=0x762B22A5`, nonzero=0. This is independent port-edge evidence, not
+evidence about retail writer absence or the missing output edge. The next
+candidate set is `0x80004F7C`, `0x80004F80`, and `0x80004F84`.
+
+ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.
