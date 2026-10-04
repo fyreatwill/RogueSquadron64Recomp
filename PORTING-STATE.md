@@ -142315,3 +142315,20 @@ absence. The paired port reached hangar with 2,869 image-DMA joins and no
 crash/abort, while the qualified image payload remained `FNV=0x762B22A5`,
 nonzero=0. The port result confirms the separate edge still runs but does not
 identify a missing upstream writer.
+
+## Session 3917 (2026-10-03) — classified the corrected M5 candidate-writer class
+
+The first invocation of the prescribed wrapper was non-discriminating: its
+one-level substitution chain executed the prior fixed oracle PCs rather than
+`0x80004FA0`, `0x80004FA4`, and `0x80004FA8`. The corrected runner now derives
+directly from the concrete base recipe and was rerun in this session. Retail
+positive controls passed: whole-RDRAM callbacks crossed 10,000, title VI 1024
+and hangar VI 512 were observed, and the oracle completed. Independent oracle
+summaries reported zero target-phase execution, candidate-span rows,
+post-target rows, and scalar samples for all three PCs. This selects H3 for
+this bounded class only and rules out these PCs as qualified retail writers at
+the measured target phase; it does not establish global writer absence. The
+paired port reached hangar with 2,851 image-DMA joins and no crash/abort; its
+qualified image payload remained `FNV=0x762B22A5`, nonzero=0. The port result
+confirms the separate edge still runs but does not identify a missing upstream
+writer.

@@ -2,11 +2,11 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-class
 
-Run the existing phase-gated retail/port discriminator for the next adjacent
-unclassified candidate set, exactly `0x80004FA0`, `0x80004FA4`, and
-`0x80004FA8`:
+Run the corrected phase-gated retail/port discriminator for the next adjacent
+unclassified candidate set, exactly `0x80004FAC`, `0x80004FB0`, and
+`0x80004FB4`:
 
-    zsh scratch/agent/run_s3916_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3917_m5_remaining_candidate_writers.sh
 
 Competing hypotheses:
 
