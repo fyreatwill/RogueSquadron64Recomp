@@ -1,34 +1,34 @@
-# Next work unit: validate the accumulated M3 heap patch when toolchain exists
+# Next work unit: classify the next bounded M5 candidate-writer class
 
-HYPOTHESIS-ID: m3-heap-guard-validation
+HYPOTHESIS-ID: m5-candidate-writer-sweep
 
-The alignment guard landed this iteration in `patches/heap_guards.c`. Do not
-add another guard or repeat the M5 candidate census until the patch pipeline
-can compile and link the accumulated override.
+The M3 validation unit is externally unavailable in this checkout: the
+configured build has no `PatchesLib` target and the MIPS toolchain is absent.
+Resume the already instrumented, ground-truth-qualified M5 census at the next
+three unclassified retail PCs: `0x80005150`, `0x80005154`, and `0x80005158`.
+Build all controls and candidates together, then run the paired retail oracle
+and port route in the existing phase-gated recipe.
 
 Competing hypotheses:
 
-- H1: allocator/free-list block bases are always `0x100`-aligned; the new
-  `block_ok` predicate preserves every legitimate block and rejects only an
-  invalid base.
-- H2: the allocator can legitimately publish a non-`0x100`-aligned KSEG0
-  block; the new predicate would reject valid queue work and must be reverted.
-- H3: the patch pipeline is unavailable in this checkout, so neither runtime
-  hypothesis is evaluable yet.
+- H1: at least one candidate executes in a qualified retail target phase and
+  is a writer for the target image-stage value.
+- H2: a candidate executes, but its stores are unrelated to the qualified
+  target image-stage payload.
+- H3: none of these candidate PCs executes in the qualified target phase; the
+  class is not the retail writer at this measured scope.
 
-Discriminator: build `PatchesLib` and run the patched binary with the normal
-heap positive control. H1 requires successful patch compilation plus normal
-heap/route progress with zero alignment-guard failures; H2 requires a
-legitimate non-`0x100`-aligned block observed in the same run or a route
-regression attributable to the predicate; H3 is selected only by a fresh
-`PatchesLib`/toolchain failure.
+Discriminator: the same run must show the independent whole-RDRAM oracle
+positive control, title VI 1024, hangar VI 512, post-store scalar controls,
+and candidate execution/post-target rows. H1 requires a candidate row joined
+to the target phase and payload; H2 requires candidate execution without that
+join; H3 requires zero target-phase execution, post-target rows, and scalar
+samples for all three candidates.
 
 Commands:
 
-    cmake --build build --config Debug --target PatchesLib
     cmake --build build --config Debug --target RogueSquadron64Recomp
 
-If `PatchesLib` becomes available, run the normal phase-gated heap/route
-recipe from `build/` with SIGKILL watchdog termination and inspect the guard,
-heap progress, title VI 1024, and hangar VI 512 controls. Preserve the
-`ROGUESQ_AUDIO_UCODE=1` M5 arm; it is not the active work unit.
+Run the existing phase-gated retail/port census recipe from `build/` with
+SIGKILL watchdog termination. Preserve the independent whole-RDRAM positive
+control and `ROGUESQ_AUDIO_UCODE=1` M5 arm.

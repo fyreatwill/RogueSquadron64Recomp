@@ -142904,6 +142904,20 @@ zero crash/abort markers; source and destination payloads were
 `FNV=0x762B22A5`, `nonzero=0`. This rules out these three candidate PCs at the
 measured scope, not global writer absence.
 
+## Session 3964 (2026-10-04) — checked M3 patch pipeline availability
+
+The prescribed M3 validation command, `cmake --build build --config Debug
+--target PatchesLib`, failed immediately with `No rule to make target
+PatchesLib`. The configured target list contains the ordinary
+`RogueSquadron64Recomp` target but no patch library, and fresh tool checks found
+neither `mips64-elf-gcc` nor `mips64-elf-ld` on `PATH`.
+
+This selects H3 for the build-availability hypothesis only. No MIPS compile,
+patched link, runtime guard count, or allocator behavior was measured; the
+`block_ok` alignment guard remains unvalidated. The next work unit returns to
+the already-qualified M5 candidate census at `0x80005150`, `0x80005154`, and
+`0x80005158`.
+
 ## Session 3954 (2026-10-04) — classified the next M5 candidate-writer class
 
 The required independent whole-RDRAM oracle control fired 10,000 times. The

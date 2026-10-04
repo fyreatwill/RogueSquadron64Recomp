@@ -66,6 +66,13 @@ Work only the first applicable item. This is one monotonic backlog.
    while `PatchesLib` remains unavailable (`No rule to make target
    'PatchesLib'`); no MIPS or runtime qualification is claimed.
 
+   The next validation attempt again selected H3: `cmake --build build
+   --config Debug --target PatchesLib` failed immediately because the
+   configured build has no `PatchesLib` target, and neither
+   `mips64-elf-gcc` nor `mips64-elf-ld` is available on `PATH`. No runtime
+   claim about `block_ok` is possible until the patch target and toolchain are
+   supplied.
+
 2. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail
    whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls
