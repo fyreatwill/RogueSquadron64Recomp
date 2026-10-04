@@ -142447,3 +142447,14 @@ with 2,850 qualified image-DMA joins, no crash or abort, and qualified payload
 only: these PCs are disconnected from the measured retail writer path. It
 rules out H1 and H2 at the measured target phase, not global writer absence.
 The next adjacent set is `0x80004FF4`, `0x80004FF8`, `0x80004FFC`.
+## Session 3926 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3925_m5_remaining_candidate_writers.sh` for
+`0x80004FF4`, `0x80004FF8`, and `0x80004FFC`. The retail arm passed the
+positive controls: whole-RDRAM watch reached 33,371,634 writes, title VI 1024
+and hangar VI 512 both occurred, and the oracle completed. Each candidate had
+zero target-phase execution, zero post-target rows, and zero scalar samples.
+This selects H3 for this bounded class; it does not establish global writer
+absence. The paired port arm crashed pre-target in `spTaskSchedulerThread` at
+last guest PC `0x8000834c`, so it provides no image-DMA or payload conclusion.
+The next bounded class is `0x80005000`, `0x80005004`, and `0x80005008`.

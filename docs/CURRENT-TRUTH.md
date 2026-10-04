@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3925 (2026-10-03).
+Updated for session 3926 (2026-10-03).
 
 ## Current state
 
@@ -203,6 +203,14 @@ Work only the first applicable item. This is one monotonic backlog.
    crash/abort; qualified image payload remained `FNV=0x762B22A5`, nonzero=0.
    This selects H3 for this bounded class only. Continue with
    `0x80004FF4`, `0x80004FF8`, and `0x80004FFC`; this is not global writer
+   absence. Session 3926 tested `0x80004FF4`, `0x80004FF8`, and
+   `0x80004FFC`: retail whole-RDRAM, title-1024, hangar-512, and
+   oracle-completion controls passed; all three candidates had zero
+   target-phase execution, post-target rows, and scalar samples. This
+   selects H3 for this bounded class only. The paired port arm crashed
+   pre-target in `spTaskSchedulerThread` at last guest PC `0x8000834c`, so it
+   supplies no image-DMA or payload conclusion. Continue with
+   `0x80005000`, `0x80005004`, and `0x80005008`; this is not global writer
    absence. Session 3923 tested
    `0x80004FD0`, `0x80004FD4`, and `0x80004FD8`: retail whole-RDRAM,
    title-1024, hangar-512, and oracle-completion controls passed; all three
@@ -250,6 +258,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FC4`/`0x80004FC8`/`0x80004FCC`; this is not global writer absence. |
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FD0`/`0x80004FD4`/`0x80004FD8`; this is not global writer absence. |
 | `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FDC`/`0x80004FE0`/`0x80004FE4`; this is not global writer absence. |
+| `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FF4`/`0x80004FF8`/`0x80004FFC`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
