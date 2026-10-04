@@ -142186,3 +142186,21 @@ about the retail writer class. It does rule out using this run for a paired
 port payload conclusion. The next candidate set is `0x80004F64`,
 `0x80004F68`, and `0x80004F6C`; the pre-target port crash remains a separate
 parked caveat.
+## Session 3910 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3909_m5_remaining_candidate_writers.sh` as the
+phase-gated retail/port discriminator for PCs `0x80004F64`, `0x80004F68`, and
+`0x80004F6C`. The retail oracle positive controls passed: the whole-RDRAM
+watch crossed its threshold, title width 1024 and hangar width 512 each
+appeared 154 times, and the oracle completed. None of the three candidate PCs
+executed in the qualified target phase; each had zero post-target rows and zero
+post-target scalar samples (`seen=0`, `n=0/16`), selecting H3 only for this
+bounded class. The run's shutdown snapshot retained 12 nonzero bytes, but that
+is not qualified target-phase evidence.
+
+The paired port arm again crashed pre-target in `spTaskSchedulerThread`, with
+last guest PC `0x8000834C`; its phase log stopped at width 320 and it produced
+zero image-DMA joins. This is not evidence about the retail writer class and
+does not support a port payload conclusion. The next candidate set is
+`0x80004F70`, `0x80004F74`, and `0x80004F78`; the pre-target port crash remains
+a separate parked caveat.

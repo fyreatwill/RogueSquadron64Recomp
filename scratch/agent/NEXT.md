@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-census
 
-Test retail PCs `0x80004F64`, `0x80004F68`, and `0x80004F6C` with the existing
+Test retail PCs `0x80004F70`, `0x80004F74`, and `0x80004F78` with the existing
 phase-gated oracle and paired port route. The prior paired port arm crashed
 pre-target in `spTaskSchedulerThread`; retain that failure as a separate
 port-route caveat and do not treat it as evidence about the retail writers.
@@ -23,7 +23,7 @@ not infer image-DMA behavior if it crashes before target phase.
 
 Exact command:
 
-    zsh scratch/agent/run_s3909_m5_remaining_candidate_writers.sh
+    zsh scratch/agent/run_s3911_m5_remaining_candidate_writers.sh
 
 ORIGIN: no mitigation or guard is planned. Candidate PCs are independent
 retail writer hypotheses; their legitimacy remains unresolved until the
