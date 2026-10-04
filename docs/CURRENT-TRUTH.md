@@ -145,14 +145,15 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Census the next source-span writer class.** Run one retail-grounded,
-   declared-real capture retaining the whole-RDRAM/title/hangar controls and
-   the exact `0x006AB400:512` bucket, with the ranked pre-existing source-span
-   adjacent writer `0x800076A0` and its known caller/neighbor class watched
-   together. Separate exact-hangar rows from transition/title rows and require
-   mismatch-free scalar samples before attributing values. A target-bucket
-   nonzero row selects this class as the producer; a qualified null advances
-   the census without claiming global absence.
+1. **Title-music AI parity (operator redirect 2026-10-04).** The hangar
+   source-writer census is CLOSED, not paused: retail's own hangar source span
+   is zero (s3820, 408 bytes, `FNV=0x762B22A5`), so the port's zero span is
+   parity, not a missing writer. Do not arm further candidate PCs against it.
+   Instead compare retail vs declared-real port AI output (`osAiSetNextBuffer`
+   address/length plus PCM FNV/nonzero count) per VI phase, starting at title
+   VI 1024 where music is audible, and walk back one hop at a time from the
+   first phase where retail PCM is nonzero. Slug `m5-title-music-ai-parity`;
+   full discriminator in `scratch/agent/NEXT.md`.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -173,7 +174,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 
 | Hypothesis | Status |
 |---|---|
-| M5 producer absent | Selected only for measured pre-input/source classes; not global. |
+| M5 producer absent | Hangar span closed as retail parity (s3820). Title-phase AI output open: Next steps 1. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 route failure | Active H1: process topology changes which audio arms reach target phases; legacy-real remains pre-target. |
