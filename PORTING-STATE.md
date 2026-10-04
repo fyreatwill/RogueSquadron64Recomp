@@ -143153,3 +143153,24 @@ candidate-writer census.
 
 **Outcome: ADVANCED** (the planned three-arm discriminator ran, passed its
 positive phase control, and selected H1).
+
+## Session 3974 (2026-10-04) — classified the next M5 candidate-writer class
+
+Built the ordinary Debug target successfully and ran the existing batched
+retail/port candidate-writer recipe for `0x8000518C`, `0x80005190`, and
+`0x80005194`. The independent whole-RDRAM positive control fired; retail
+reached title VI 1024 and hangar VI 512 and completed. It produced 36
+post-store scalar records with zero mismatches. None of the three candidates
+had a target-phase execution row, post-target row, or scalar sample, selecting
+H3 for this bounded retail class: these PCs are not the qualified retail
+writer at this measured scope. The paired port reached both qualified phases
+with 2,837 image-DMA joins, zero crash/abort markers, and qualified
+source/destination payload `FNV=0x762B22A5`, nonzero=0. This does not establish
+global writer absence. The next adjacent set is `0x80005198`, `0x8000519C`,
+and `0x800051A0`.
+
+The run also rules out a stale build or missing phase gate for this result;
+the host build passed and all independent controls completed. No mitigation or
+runtime behavior was changed.
+
+**Outcome: ADVANCED** (the planned discriminator ran and selected H3).

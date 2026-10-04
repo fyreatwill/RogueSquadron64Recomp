@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3973 (2026-10-04).
+Updated for session 3974 (2026-10-04).
 
 ## Current state
 
@@ -45,7 +45,7 @@ Work only the first applicable item. This is one monotonic backlog.
    LLE routing changes the pre-title outcome. The silent crash is not a
    generic phase-gate or stale-build failure, but the audio contract remains
    unevaluable in that arm. Continue the already-qualified retail candidate
-   census at `0x8000518C`, `0x80005190`, and `0x80005194`; retain whole-RDRAM,
+   census at `0x80005198`, `0x8000519C`, and `0x800051A0`; retain whole-RDRAM,
    title-1024, hangar-512, and oracle-completion controls.
 
 2. **M3 heap guard validation — open external dependency, not a loop stop.**
@@ -345,6 +345,16 @@ Work only the first applicable item. This is one monotonic backlog.
    source/destination payload `FNV=0x762B22A5`, nonzero=0. Continue with
    `0x8000518C`, `0x80005190`, and `0x80005194`; this is not global writer
    absence.
+
+   Session 3974 tested `0x8000518C`, `0x80005190`, and `0x80005194`. The
+   independent whole-RDRAM control fired; retail reached title VI 1024,
+   hangar VI 512, and oracle completion, with 36 post-store scalar records and
+   zero mismatches. None of the three candidates had a target-phase execution
+   row, post-target row, or scalar sample, selecting H3 for this bounded retail
+   class. The paired port reached both qualified phases with 2,837 image-DMA
+   joins, zero crash/abort markers, and qualified source/destination payload
+   `FNV=0x762B22A5`, nonzero=0. Continue with `0x80005198`, `0x8000519C`,
+   and `0x800051A0`; this is not global writer absence.
 
 4. **M3 prior guard classes — validate the accumulated patch before extending.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
