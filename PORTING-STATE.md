@@ -142489,3 +142489,15 @@ not establish that the alias occurs in retail or port execution.
 ## Session 3929 (2026-10-03) — revalidated the unavailable M3 patch pipeline
 
 The prescribed M3 validation was run without changing the patch. `cmake --build build --config Debug --target PatchesLib` failed immediately with `No rule to make target 'PatchesLib'`. The ordinary positive-control target, `cmake --build build --config Debug --target RogueSquadron64Recomp`, completed successfully. This is H3 environment evidence only: the active-queue ownership-alias guard still has no MIPS object, patch ELF, or runtime result in this checkout. It rules out neither the alias defect nor the guard's effectiveness; it rules out only a local validation claim. The next runnable unit returns to the highest-priority M5 candidate-writer discriminator.
+
+## Session 3930 (2026-10-03) — classified the next M5 candidate-writer class
+
+Ran `zsh scratch/agent/run_s3927_m5_remaining_candidate_writers.sh` for
+`0x8000500C`, `0x80005010`, and `0x80005014`. The retail oracle passed the
+same-run positive controls: whole-RDRAM threshold, title VI 1024, hangar VI
+512, and oracle completion. All three candidates had zero target-phase
+execution, zero post-target rows, and zero scalar samples. This selects H3
+for this bounded candidate set only; it does not establish global writer
+absence. The paired port arm crashed pre-target in `spTaskSchedulerThread` at
+last guest PC `0x8000834c`, so it supplies no image-DMA or payload conclusion.
+The next adjacent set is `0x80005018`, `0x8000501C`, and `0x80005020`.

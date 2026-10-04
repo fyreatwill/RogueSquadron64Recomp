@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3929 (2026-10-03).
+Updated for session 3930 (2026-10-03).
 
 ## Current state
 
@@ -225,7 +225,13 @@ Work only the first applicable item. This is one monotonic backlog.
    reached hangar with 3,047 image-DMA joins and no crash/abort; qualified
    image payload remained `FNV=0x762B22A5`, nonzero=0. Continue with
    `0x8000500C`, `0x80005010`, and `0x80005014`; this is not global writer
-   absence. Session 3923 tested
+   absence. Session 3930 tested `0x8000500C`, `0x80005010`, and
+   `0x80005014`: retail positive controls passed; all three candidates had
+   zero target-phase execution, post-target rows, and scalar samples. This
+   selects H3 for this bounded class only. The paired port arm crashed
+   pre-target in `spTaskSchedulerThread` at last guest PC `0x8000834c`, so it
+   supplies no image-DMA or payload conclusion. Continue with
+   `0x80005018`, `0x8000501C`, and `0x80005020`. Session 3923 tested
    `0x80004FD0`, `0x80004FD4`, and `0x80004FD8`: retail whole-RDRAM,
    title-1024, hangar-512, and oracle-completion controls passed; all three
    candidates had zero target-phase post-target rows and scalar samples, and

@@ -2,8 +2,9 @@
 
 HYPOTHESIS-ID: m5-candidate-writer-class
 
-Run the existing phase-gated retail/port candidate-writer harness for
-`0x8000500C`, `0x80005010`, and `0x80005014`, with all passive breadcrumb
+Before building, retain this hypothesis table and discriminator as the
+instrument contract. Run the existing phase-gated retail/port candidate-writer harness for
+`0x80005018`, `0x8000501C`, and `0x80005020`, with all passive breadcrumb
 instruments enabled. Build once, then run the retail oracle and paired port
 arm concurrently from `build/`; use SIGKILL for watchdog cleanup. The wrapper
 must record whole-RDRAM, title-1024, hangar-512, and oracle-completion
