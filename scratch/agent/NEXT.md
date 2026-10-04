@@ -1,28 +1,34 @@
-# Next work unit: explain declared-size M5 audio task-contract failure
+# Next work unit: isolate first M5 audio-task entry across staging arms
 
 HYPOTHESIS-ID: m5-audio-task-contract
 
-Run the existing same-build two-arm task-staging capture to compare declared
-`ucode_data_size=0x800` against legacy `0xF80` staging. Preserve task-contract,
-DMEM-canary, DMA-range, phase, crash-PC, and payload controls. Identify the
-first declared-arm consumer/read past the staged boundary before changing the
-qualified route.
+Run one same-build three-arm capture that reaches or identifies the first
+`M_AUDTASK`: declared-size + real audio, declared-size + silent audio, and
+legacy-size + real audio. Preserve task-contract, DMEM-canary, DMA-range,
+phase, crash-PC, and positive-control markers. Do not change the qualified
+route or infer anything about the `0x800` boundary until the declared arm has
+an audio-task row or a reproducible pre-audio failure separated from the
+audio-arm choice.
 
 Competing hypotheses:
 
-- H1: declared-size reaches the same task boundary as legacy and its first
-  failing consumer is identified, proving the crash is downstream of staging.
-- H2: declared-size fails before any consumer/read beyond `0x800` is observed,
-  identifying a producer/setup defect rather than an over-copy requirement.
-- H3: controls are incomplete or the failure signature is not reproducible, so
-  the contract remains unevaluable.
+- H1: declared-size + real and declared-size + silent both reach the first
+  audio task, while legacy reaches it too; a declared-only post-`0x800` read
+  or consumer identifies the contract failure.
+- H2: declared-size fails before audio dispatch in both audio-arm settings,
+  while legacy reaches audio; the defect is pre-audio setup/scheduling, not a
+  proven need for over-copy.
+- H3: the three arms do not provide matching positive controls or split the
+  failure boundary, so the contract remains unevaluable and needs a different
+  discriminator.
 
-Discriminator: in one capture, require both arms to emit task ABI rows and
-DMEM-canary controls. H1 is a declared-arm crash after a traceable read/use of
-bytes beyond `0x800`; H2 is a reproducible earlier crash with no such read/use;
-H3 is any missing positive control or non-reproducible arm.
+Discriminator: in one capture, require all three arms to emit the RSP-source
+positive control and either an `audtask-first-boundary`/`audtask-abi` row or a
+crash-PC row. H1 is a declared-only post-`0x800` consumer/read; H2 is the same
+pre-audio failure for both declared arms with legacy audio entry; H3 is any
+missing control or unresolved arm split.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env zsh scratch/agent/run_s3977_m5_task_staging.sh
+    env zsh scratch/agent/run_s3991_m5_task_contract_isolation.sh

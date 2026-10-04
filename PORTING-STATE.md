@@ -143453,3 +143453,21 @@ writer absence. The next work unit is the declared-size versus legacy task-
 staging contract investigation.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H2).
+
+## Session 3991 (2026-10-04) — isolated the declared-size audio contract boundary
+
+Built the ordinary Debug target and ran the existing same-build declared-size
+versus legacy task-staging capture. The declared arm emitted the RSP boot
+canary control, then crashed in `spTaskSchedulerThread` at guest PC
+`0x8000834c` during the first graphics-task scheduler path, before any
+`audtask-abi`, audio consumer, or post-`0x800` read/use row. The legacy arm
+passed the task/DMA controls, reached title VI 1024 and hangar VI 512, and
+produced 4,741 audio ABI rows. The paired result is H3 for this work unit:
+the declared-size audio contract is unevaluable because the arm fails before
+audio dispatch. This does not prove that the declared size is valid or that
+the legacy over-copy is legitimate; it rules out using this run as evidence
+about an audio consumer beyond `0x800`. The next unit is a three-arm isolation
+table: declared/real, declared/silent, and legacy/real, with the same positive
+controls.
+
+**Outcome: ADVANCED** (the planned capture produced a bounded H3 boundary).

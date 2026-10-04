@@ -3,8 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3990 (2026-10-04). This maintenance pass condensed the
-operational ledger below; the append-only ledger retains the deleted detail.
+Updated for session 3991 (2026-10-04).
 
 ## Current state
 
@@ -41,10 +40,12 @@ their measured scopes. A null attribution is not global writer absence.
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 audio task-contract redesign.** Explain why declared-size staging
-   crashes at `0x8000834c`; name the writer/consumer requiring bytes beyond
-   `0x800` before changing the qualified route. Do not treat legacy success as
-   proof that the over-copy is legitimate.
+1. **M5 audio task-contract isolation.** The s3991 declared arm crashed in
+   the first graphics-task scheduler path at guest PC `0x8000834c`, before an
+   audio ABI row, so the contract comparison was unevaluable. Run the next
+   three-arm first-audio-entry table (declared/real, declared/silent,
+   legacy/real) with the existing positive controls; only then name the
+   writer/consumer requiring bytes beyond `0x800`.
 
 2. **M3 heap guard validation.** The accumulated guards in
    `patches/heap_guards.c` are not runtime-qualified because the configured
@@ -80,6 +81,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
 | `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; host target passed, patch/runtime validation remains blocked. |
 | `H-M5-Step1-PreTitleRoute` | Selected H1 at s3973: image/LLE-on reached VI 512, image/LLE-off stopped at VI 1024, silent/LLE-on crashed at `0x8000834c`. |
+| `H-M5-Step1-TaskContract` | H3 at s3991: declared arm crashed in the first graphics-task scheduler path at `0x8000834c` before any audio ABI row; legacy arm passed controls and reached both target phases. |
 
 ## Durable evidence boundary
 
@@ -100,6 +102,12 @@ candidate results are summarized by address range rather than copied here.
   `0x80005220`, and `0x80005224`: retail controls passed, each candidate had
   zero target/post-target/scalar evidence, and the legacy port reached both
   phases with 3,000 image-DMA joins and 3,004 task rows without crash/abort.
+- Session 3991's declared-size task-staging arm emitted the RSP boot canary
+  control, then crashed in `spTaskSchedulerThread` at guest PC `0x8000834c`
+  before any audio-task ABI/consumer row. In the same script, the legacy arm
+  emitted the task controls, reached title VI 1024 and hangar VI 512, and
+  produced 4,741 audio ABI rows; therefore the declared-size audio contract
+  remains unevaluable, not selected.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.
