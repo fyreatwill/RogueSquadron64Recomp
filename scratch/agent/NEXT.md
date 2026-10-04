@@ -3,14 +3,14 @@
 HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
 
 Run one paired retail/port candidate-span scalar capture for
-`0x80004BE8`, `0x80004E74`, and `0x80004E8C`. The retail arm must phase-gate
+`0x80004E90`, `0x80004E94`, and `0x80004F2C`. The retail arm must phase-gate
 the candidate span `0x165000..0x16C000` on title VI 1024 and hangar VI 512,
 sample post-store scalar values, and pass the whole-RDRAM/title/hangar/
 shutdown controls. The port arm must reach hangar and report image-DMA joins
 with crash/abort markers. Use the existing paired candidate-span harness; if
 its path is not obvious, locate it first with:
 
-    rg -l 'candidate-span|04BE8|04E74|04E8C' scratch tools
+    rg -l 'candidate-span|04E90|04E94|04F2C' scratch tools
 
 Then run the matching harness once, with both arms and all passive breadcrumb
 variables enabled, capturing logs under `scratch/agent/soak_results/`.

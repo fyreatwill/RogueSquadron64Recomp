@@ -130,6 +130,12 @@ Work only the first applicable item. This is one monotonic backlog.
    `0x80003B98`, `0x800044C8`, and `0x80004AB0`.
    Session 3879 passed the paired controls and selected H2 for those three PCs;
    continue with `0x80004BE8`, `0x80004E74`, and `0x80004E8C`.
+   Session 3882 passed the retail whole-RDRAM positive control, title VI 1024,
+   hangar VI 512, and oracle shutdown. Each of `0x80004BE8`, `0x80004E74`,
+   and `0x80004E8C` produced qualified title/hangar candidate-span writer rows
+   but zero post-target scalar samples, selecting H2 for these PCs only. The
+   paired port reached 3,073 image-DMA joins with zero crash/abort markers.
+   Continue with `0x80004E90`, `0x80004E94`, and `0x80004F2C`.
 2. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
    session 3873 extended the guard to validate the head's `next->prev` back-link
@@ -210,6 +216,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RemainingCandidates-3a3cAbsent` | Repeatable single-source retail result at s3877: `0x80003A3C`, `0x80003A40`, and `0x80003A44` had qualified title/hangar candidate-span rows but zero post-target scalar samples. H2 is selected for these PCs only; the paired port arm crashed before controls, so no port conclusion is claimed. |
 | `H-M5-RemainingCandidates-3a48Absent` | Paired result at s3878: `0x80003A48`, `0x80003A50`, and `0x80003AFC` had qualified title/hangar candidate-span rows but zero post-target scalar samples; port reached 2,857 image-DMA joins with no crash/abort. H2 is selected for these PCs only. |
 | `H-M5-RemainingCandidates-3b98-4ab0Absent` | Paired result at s3879: `0x80003B98`, `0x800044C8`, and `0x80004AB0` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples; port reached 2,986 image-DMA joins with no crash/abort. H2 is selected for these PCs only. |
+| `H-M5-RemainingCandidates-4be8-4e8cAbsent` | Paired result at s3882: `0x80004BE8`, `0x80004E74`, and `0x80004E8C` had qualified title/hangar candidate-span writer rows but zero post-target scalar samples; port reached 3,073 image-DMA joins with zero crash/abort markers. H2 is selected for these PCs only. |
 | `H-M5-TaskSubmitCallerSplit` | Single-source oracle result at s3850: `0x80019DEC` directly passes the reused task descriptor `0x80149470` to `0x80033FCC`; `0x80019D68` passes stable `0x800377C8` and is not the same route. Unique stage ownership remains open. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent MIPS toolchain/configured targets. |
 | `H-M3-FreeListReciprocalLinks` | Code landed in s3866; validation blocked by absent MIPS toolchain/configured targets. |

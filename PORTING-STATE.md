@@ -141680,3 +141680,22 @@ prove the guard fires or preserves legitimate routing.
 
 ORIGIN: build-system/toolchain prerequisite check. No guest or host state was
 rewritten, skipped, or guarded during this iteration.
+
+## Session 3882 (2026-10-03) — classified the next candidate-span writer classes
+
+Ran one paired retail/port candidate-span scalar capture for
+`0x80004BE8`, `0x80004E74`, and `0x80004E8C`. Retail passed the whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and oracle shutdown. Each PC
+had qualified title/hangar candidate-span writer rows (`11/38`, `13/37`, and
+`13/37`) but zero post-target scalar samples. This selects H2 for these PCs
+only and rules out H1 at this scope; it does not claim that the PCs are absent
+from the candidate span.
+
+The port arm reached 3,073 image-DMA joins and recorded zero crash or abort
+markers. The paired controls therefore passed, but the port result is coverage
+evidence only and does not identify a retail producer. The next measured
+representatives are `0x80004E90`, `0x80004E94`, and `0x80004F2C`.
+
+ORIGIN: diagnostic-only independent retail writer-PC/post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.
