@@ -144063,3 +144063,19 @@ sufficient explanation for the route failure; it does not establish audio
 causality or qualify the route for `0x800052AC`. ORIGIN: route, phase, and
 audio-stage hooks observe legitimate runtime arm choices; no mitigation was
 added.
+
+## Session 4031 (2026-10-04) — two-second launch gap changes route outcome
+
+Before building, the work unit was the four-arm M5 route requalification with
+the port launch order `legacy-real,declared-silent,declared-real` and a
+two-second gap between port launches. Added the requested gap handling to
+`scratch/agent/run_s4028_m5_route_requal.sh`; the Debug target build passed.
+Retail's whole-RDRAM positive control and title/hangar VI controls fired.
+Legacy/real reached both target phases, emitted 7,024 audio-stage rows using
+`dma_size=0xF80`, and had no crash or abort. Declared/real and declared/silent
+both crashed at guest PC `0x8000834C` before either target phase and emitted no
+audio-stage rows. H1 is selected for the measured schedule split: the
+two-second timing change altered the route outcome relative to s4030, but this
+does not establish audio staging as the cause. ORIGIN: launch timing and
+task/audio hooks observe legitimate process scheduling and runtime arm choices;
+no mitigation landed.
