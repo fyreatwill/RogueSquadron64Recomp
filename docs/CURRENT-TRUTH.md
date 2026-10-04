@@ -293,6 +293,17 @@ Work only the first applicable item. This is one monotonic backlog.
    `FNV=0x762B22A5`, nonzero=0. Continue with `0x80005174`, `0x80005178`,
    and `0x8000517C`; this is not global writer absence.
 
+   Session 3968 tested `0x80005174`, `0x80005178`, and `0x8000517C`. The
+   independent whole-RDRAM control passed; retail reached title VI 1024,
+   hangar VI 512, and oracle completion, with 36 post-store scalar records
+   and zero mismatches. None of the three candidates had a target-phase
+   execution row, post-target row, or scalar sample, selecting H3 for this
+   bounded retail class. The paired port reached both qualified phases with
+   2,854 image-DMA joins, zero crash/abort markers, and qualified
+   source/destination payload `FNV=0x762B22A5`, nonzero=0. Continue with
+   `0x80005180`, `0x80005184`, and `0x80005188`; this is not global writer
+   absence.
+
 3. **M3 prior guard classes — validate the accumulated patch before extending.**
    Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
    the free-list head pair to the complete bounded chain, rejecting cycles and
