@@ -1,29 +1,30 @@
-# Next work unit: validate the landed free-list guard or obtain the MIPS toolchain
+# Next work unit: classify the next M5 candidate-writer classes
 
-HYPOTHESIS-ID: m3-free-list-reciprocal-chain
+HYPOTHESIS-ID: m5-candidate-writer-census
 
-The bounded M3 guard change is landed in `patches/heap_guards.c`, but runtime
-validation is blocked by the absent MIPS cross-toolchain. Do not add another
-guard or repeat the M5 writer census until this validation dependency changes.
+Test retail PCs `0x80004F58`, `0x80004F5C`, and `0x80004F60` with the
+existing phase-gated oracle and paired port route.
 
 Competing hypotheses:
 
-- H1: valid allocator chains pass the whole-chain audit and the patch builds.
-- H2: a chain with a cycle or foreign reciprocal link is rejected before any
-  later dequeue dereference.
-- H3: the patch cannot be validated in this checkout because the required MIPS
-  compiler/linker is unavailable.
+- H1: at least one candidate is a qualified retail writer for the target span;
+  it produces a post-target scalar sample, with a corresponding qualified
+  port image/output relation.
+- H2: candidates execute in the qualified phase but produce no post-target
+  scalar sample; this closes only this bounded class.
+- H3: candidates do not execute in the qualified phase; this closes only this
+  bounded class as unreachable.
 
-Discriminator: run `make -C patches` after the toolchain is supplied, then
-exercise a valid long free list and malformed cycle/foreign-link fixtures.
-H1 requires a successful MIPS build and unchanged valid-chain behavior; H2
-requires the malformed fixtures to return before dequeue mutation; H3 is the
-only valid result while the compiler/linker remains absent.
+Discriminator: the retail whole-RDRAM, title-1024, and hangar-512 controls
+must pass, then compare each candidate's qualified-phase execution,
+post-target rows, and post-target scalar samples. The paired port must reach
+hangar without crash/abort and report its qualified image-DMA payload. A
+candidate execution count alone is not a positive control.
 
 Exact command:
 
-    make -C patches
+    zsh scratch/agent/run_s3908_m5_remaining_candidate_writers.sh
 
-Do not infer runtime safety from source review alone. The guard's ORIGIN is
-the allocator's successor/predecessor link stores; valid reciprocal links are
-legitimate, while cycles/foreign links are not.
+ORIGIN: no mitigation or guard is planned. Candidate PCs are independent
+retail writer hypotheses; their legitimacy remains unresolved until the
+oracle attributes a qualified post-target value.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3907 (2026-10-03).
+Updated for session 3908 (2026-10-03).
 
 ## Current state
 
@@ -79,6 +79,13 @@ Work only the first applicable item. This is one monotonic backlog.
    hangar with 2,850 image-DMA joins and no crash/abort, with qualified image
    payload `FNV=0x762B22A5`, nonzero=0. This closes that bounded class as H2
    only. Continue with the next adjacent unclassified candidates.
+   Session 3908 tested `0x80004F4C`, `0x80004F50`, and `0x80004F54`: all
+   three executed during the qualified target phase, but each had zero
+   post-target rows and scalar samples. Retail whole-RDRAM, title-1024, and
+   hangar-512 controls passed; the paired port reached hangar with 2,856
+   image-DMA joins and no crash/abort, with qualified image payload
+   `FNV=0x762B22A5`, nonzero=0. This closes that bounded class as H2 only;
+   continue with the next adjacent unclassified candidates.
    Session 3891's same-build silent/image pair passed independent
    retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
    hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
@@ -125,7 +132,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
 | `H-M5-800078ECZeroFill` | Selected at s3857; sampled writes are zero-valued. |
-| `H-M5-CandidateWriterClass` | Selected H2 for the bounded s3900–s3904 candidate sets through `0x80004E94`; this is not global writer absence. |
+| `H-M5-CandidateWriterClass` | Selected H2 for the bounded s3900–s3904 and s3908 candidate sets through `0x80004F54`; this is not global writer absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 

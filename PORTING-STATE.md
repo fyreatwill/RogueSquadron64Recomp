@@ -142153,3 +142153,19 @@ was runtime-tested here, not any heap corruption cause.
 ORIGIN: `func_8002221C` and allocator free-list successor/predecessor stores;
 reciprocal links are legitimate allocator state, while cycles and foreign
 links are not. No guest value was rewritten or force-cleared.
+## Session 3908 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3907_m5_remaining_candidate_writers.sh` for
+`0x80004F4C`, `0x80004F50`, and `0x80004F54`. The retail oracle passed its
+whole-RDRAM positive control, title VI 1024, hangar VI 512, and completion.
+All three PCs executed during the qualified target phase, but each had zero
+post-target rows and zero post-target scalar samples, selecting H2 for this
+bounded set only. The paired port reached hangar, recorded 2,856 image-DMA
+joins, and emitted no crash or abort marker; its qualified image payload was
+`FNV=0x762B22A5`, nonzero=0. This does not establish global retail writer
+absence or identify the missing output edge. The next representatives are
+`0x80004F58`, `0x80004F5C`, and `0x80004F60`.
+
+ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.
