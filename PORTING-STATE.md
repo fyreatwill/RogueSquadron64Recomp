@@ -141831,3 +141831,24 @@ is claimed. The next representatives are `0x80003B98`, `0x800044C8`, and
 ORIGIN: independent retail phase-gated writer-PC and post-target attribution;
 the port arm supplied no coverage evidence because it crashed before controls;
 no guest or host state was rewritten, skipped, or guarded.
+
+## Session 3890 (2026-10-03) — landed active-queue reciprocal-link guard
+
+Pivoted from the observation-only M5 candidate sweep and added a
+regeneration-safe guard in `patches/heap_guards.c`. Before the active-queue
+link stores, it requires a null predecessor on the queue head and requires a
+non-head current queue node to be pointed to by its predecessor. This guards
+the allocator's reciprocal `next`/`prev` ownership invariant; it does not
+claim that retail has exhibited corruption.
+
+The prescribed build was attempted with
+`cmake --build build --config Debug --target PatchesLib` and returned
+`No rule to make target PatchesLib`. Direct checks found no
+`build/Debug/N64Recomp.exe`, `mips64-elf-gcc`, or `mips64-elf-ld`, so no
+allocator runtime validation was possible. The result rules out only the
+availability of the configured patch pipeline for this iteration; it does not
+select a runtime guard hit or explain any game crash.
+
+ORIGIN: the active-queue insertion path publishes paired `next` and `prev`
+links; a mismatched predecessor is not legitimate allocator state. No guest
+or host state was rewritten, skipped, or guarded by the run itself.

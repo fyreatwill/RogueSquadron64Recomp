@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3889 (2026-10-03).
+Updated for session 3890 (2026-10-03).
 
 ## Current state
 
@@ -36,7 +36,13 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
+1. **M3 heap guard validation — active-queue reciprocal-link guard.** Session
+   3890 landed the guard in `patches/heap_guards.c`, but the configured
+   `PatchesLib` target and MIPS/N64Recomp tools are unavailable. Restore the
+   patch pipeline and run the allocator smoke; do not add another guard until
+   this validation is possible. A guard fire must identify the malformed
+   reciprocal link and is not, by itself, proof of a retail corruption source.
+2. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
    3839–3840 qualified the port input and separate writeback-DMA edge despite
    empty ABI output fields. Session 3857 qualified the dominant retail
    `0x800078EC` writer: it had 408 hangar-phase hits into
@@ -180,7 +186,7 @@ Work only the first applicable item. This is one monotonic backlog.
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
    skipped, or guarded.
-2. **M3 heap guard validation — active guard class, validation blocked.** Session
+3. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
    session 3873 extended the guard to validate the head's `next->prev` back-link
    before the dequeue dereference. ORIGIN: `func_8002221C` and allocator link
@@ -195,8 +201,18 @@ Work only the first applicable item. This is one monotonic backlog.
    repeated the prescribed build and directly checked all required tools; the
    target still returns `No rule to make target PatchesLib`, while the MIPS
    compiler, linker, and generated recompiler executable are absent. No
-   runtime validation is claimed.
-3. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
+   runtime validation is claimed. Session 3890 added an active-queue
+   reciprocal-link guard before the `q->next`/`popped->prev` publication: the
+   queue head must have a null predecessor, and a non-head current node must
+   be pointed to by its predecessor. The prescribed build still fails with
+   `No rule to make target PatchesLib`; `build/Debug/N64Recomp.exe` is absent.
+   This is a source-level ownership invariant only; no allocator runtime
+   result is claimed. Restore the patch pipeline and run the allocator smoke
+   before adding another guard.
+
+   ORIGIN: the active-queue insertion path publishes reciprocal `next` and
+   `prev` links; a mismatched predecessor is not legitimate queue state.
+4. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
    linker-published addresses before queue-link stores. ORIGIN: those globals are
@@ -217,11 +233,11 @@ Work only the first applicable item. This is one monotonic backlog.
    head slot at `0x801163FC` is written by the queue insertion path; a malformed
    head is not legitimate. This is a code change, not runtime validation; do
    not claim allocator behavior until the patch pipeline is restored.
-4. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
+5. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
    supplied independent retail and validated port target coverage and exact
    hangar zero-payload parity. Do not repeat standalone qualification or the
    retail zero-writer census unless the route/build changes.
-5. **Generated-symbol renaming sweep — parked.** Resume only after M5 has no
+6. **Generated-symbol renaming sweep — parked.** Resume only after M5 has no
    applicable discriminator and M3 has a toolchain or a new discriminator.
    Keep HYPOTHESIS-ID `generated-symbol-renaming-sweep`; do not use mapping
    edits to evade the engineering-change stall gate.
@@ -669,6 +685,19 @@ Work only the first applicable item. This is one monotonic backlog.
   ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
   paired with port image-DMA joins; no guest or host state was rewritten,
   skipped, or guarded.
+
+- **3890:** Landed the next regeneration-safe M3 guard-class change in
+  `patches/heap_guards.c`. Before active-queue link stores, the guard checks
+  the queue-head predecessor and the current-node reciprocal predecessor link.
+  The prescribed `PatchesLib` build returned `No rule to make target
+  PatchesLib`; `mips64-elf-gcc`, `mips64-elf-ld`, and
+  `build/Debug/N64Recomp.exe` were not available. No allocator runtime
+  behavior is claimed. The next work unit is restoring the patch pipeline and
+  running its allocator smoke.
+
+  ORIGIN: the active-queue insertion stores a linked `next`/`prev` pair;
+  malformed reciprocal ownership is not legitimate allocator state. No guest
+  or host state was rewritten, skipped, or guarded by the run itself.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

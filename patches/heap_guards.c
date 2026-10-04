@@ -67,6 +67,18 @@ static int free_head_link_ok(const Block* head) {
            (block_ok(head->next) && head->next->prev == head);
 }
 
+// ORIGIN: the active-queue insertion stores q->next and popped->prev as a
+// linked pair. A non-head predecessor must already point back to q; otherwise
+// the next insertion would publish a queue with a broken ownership chain.
+static int active_queue_link_ok(const Block* queue_head, const Block* q) {
+    if (queue_head == NULL || q == NULL || !block_ok(queue_head) ||
+        !block_ok(q) || queue_head->prev != NULL) {
+        return 0;
+    }
+    return q->prev == NULL ||
+           (block_ok(q->prev) && q->prev->next == q);
+}
+
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
 
@@ -163,6 +175,10 @@ RECOMP_PATCH Block* func_80007D74(void) {
             return NULL;
         }
         Block* q = tail->next;            // current node at tail
+
+        if (!active_queue_link_ok(queue_head, q)) {
+            return NULL;
+        }
 
         // ORIGIN: free-list dequeue removes `popped` from allocator ownership
         // before the active-queue link stores; aliasing an active node is not

@@ -1,32 +1,37 @@
-# Next work unit: classify the next M5 candidate-span writer classes
+# Next work unit: validate the active-queue reciprocal-link guard
 
-HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
+HYPOTHESIS-ID: m3-active-queue-reciprocal-guard
 
-Create the next corrected paired retail/port candidate-span scalar-capture
-runner by copying the completed `run_s3889_m5_remaining_candidate_writers.sh`
-recipe and replacing its three target PCs with
-`0x80003B98`, `0x800044C8`, and `0x80004AB0`; then run it once:
-
-    zsh scratch/agent/run_s3890_m5_remaining_candidate_writers.sh
-
-The runner must write only to `scratch/agent/s3890_m5_remaining_candidate_writers/`
-and watch those three PCs. Retail must pass whole-RDRAM, title VI 1024,
-hangar VI 512, and shutdown controls before classifying the target PCs. The
-port arm must report ABI/image-DMA coverage or its crash marker. Use SIGKILL
-through the runner and keep all logs under the session-specific scratch
-directory.
+The current iteration landed one regeneration-safe M3 guard in
+`patches/heap_guards.c`. Before the next behavioral experiment, restore the
+patch build prerequisites and run the allocator smoke if they become
+available.
 
 Competing hypotheses and the discriminating measurement:
 
-- H1: one PC writes the candidate image payload. Qualified writer rows plus
-  nonzero post-target samples select H1.
-- H2: a PC writes zero/metadata or an unrelated value. Qualified writer rows
-  with zero post-target samples select H2.
-- H3: none owns the candidate edge. No qualified writer rows after the
-  positive controls select H3.
+- H1: the patch pipeline is available and the guard can be built and run. A
+  successful `PatchesLib` build plus allocator smoke reaching the guarded
+  insertion path selects H1; a guard fire must be attributed to the named
+  malformed reciprocal link, not treated as proof of a runtime corruption
+  source.
+- H2: the source change is valid but the configured patch pipeline remains
+  unavailable. `cmake --build build --config Debug --target PatchesLib` and
+  direct checks for `mips64-elf-gcc`, `mips64-elf-ld`, and
+  `build/Debug/N64Recomp.exe` select H2; no runtime allocator conclusion is
+  allowed.
+- H3: the reciprocal-link invariant is too strong for the retail queue shape.
+  Only a built allocator smoke with a legitimate queue transition that hits
+  the guard and then fails selects H3; source inspection alone cannot select
+  it.
 
-The same-run retail table is the discriminator. The port arm is coverage
-evidence only and must not identify a retail producer if it misses its
-controls. The completed s3889 arm passed controls; all three PCs had
-qualified candidate-span writer rows but zero post-target samples, and the
-port crashed before ABI/image-DMA controls.
+Discriminator: the first successful patch build followed by the allocator
+smoke's guard-path result. Do not spend the next iteration on another guard
+until this build/runtime result is available.
+
+Exact commands:
+
+    cmake --build build --config Debug --target PatchesLib
+    zsh scratch/agent/soak_queue/<allocator-smoke>.sh
+
+If the build is still blocked, record the exact missing target/tool output and
+ask for the toolchain or CMake configuration needed to run the smoke.
