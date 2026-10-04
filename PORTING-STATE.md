@@ -141852,3 +141852,30 @@ select a runtime guard hit or explain any game crash.
 ORIGIN: the active-queue insertion path publishes paired `next` and `prev`
 links; a mismatched predecessor is not legitimate allocator state. No guest
 or host state was rewritten, skipped, or guarded by the run itself.
+
+## Session 3891 (2026-10-03) — qualified the M5 image contract boundary
+
+Pivoted to the higher-priority M5 audio Step 1 qualification. Ran
+`scratch/agent/run_s2285_m5_step1_contract_pair.sh` with the silent
+`ROGUESQ_AUDIO_UCODE=0` and default Factor 5 image arms concurrently, plus the
+independent retail oracle. The oracle whole-RDRAM positive control reached its
+threshold and both title VI `1024 @ 0x00790400` and hangar VI
+`512 @ 0x006AB400` controls passed. Both port arms reached hangar with zero
+`[CRASH]` and `[ABORT]` markers.
+
+The silent arm recorded zero image-stage DMEM/DMA activity. The image arm
+recorded 1,597 changed DMEM bytes, `break_pc=0x1328`, two DMEM-to-RDRAM DMAs,
+and SP completion. Its `0x167350` and `0x1798B0` payloads were both zero
+(`FNV=0xF59C39C5` and `0x762B22A5`), and its PCM source/consumer joins were
+also zero. The image and silent arms nevertheless had the same route and
+reached hangar. This rejects H-AudioDegeneracy at this scope and selects
+H-ContractGap; it does not identify the missing writer/output edge.
+
+The prescribed M3 validation command was also checked before the pivot:
+`cmake --build build --config Debug --target PatchesLib` still returns
+`No rule to make target PatchesLib`, with no MIPS compiler/linker or
+`build/Debug/N64Recomp.exe`. No allocator runtime conclusion is claimed.
+
+ORIGIN: the generated Factor 5 image is the writer of the observed DMEM/DMA
+payloads; zero-valued output is legitimate observed data, not a value this
+run skipped or guarded. No guest or host state was rewritten.

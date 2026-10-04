@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3890 (2026-10-03).
+Updated for session 3891 (2026-10-03).
 
 ## Current state
 
@@ -36,13 +36,24 @@ clear witness identifies `0x8008F2CC`, object `0x801797B0`, length `0x298`.
 
 Work only the first applicable item. This is one monotonic backlog.
 
-1. **M3 heap guard validation — active-queue reciprocal-link guard.** Session
+1. **M5 audio contract qualification — image arm reaches the target but does
+   not produce nonzero audio data.** Session 3891 ran the phase-gated,
+   same-build silent/image pair with the independent retail oracle. Whole-RDRAM,
+   title-1024, and hangar-512 controls all passed; both arms reached hangar
+   without crash/abort. The silent arm had no DMEM/DMA image activity; the
+   image arm changed DMEM, reached break `0x1328`, and issued two DMEM-to-RDRAM
+   DMAs, but both payloads and both PCM source/consumer joins were zero. This
+   rejects H-AudioDegeneracy at this scope and selects H-ContractGap. The next
+   bounded arm is the remaining retail candidate-writer class in
+   `scratch/agent/run_s3890_m5_remaining_candidate_writers.sh`; do not add a
+   writeback guard from this result.
+2. **M3 heap guard validation — active-queue reciprocal-link guard.** Session
    3890 landed the guard in `patches/heap_guards.c`, but the configured
    `PatchesLib` target and MIPS/N64Recomp tools are unavailable. Restore the
    patch pipeline and run the allocator smoke; do not add another guard until
    this validation is possible. A guard fire must identify the malformed
    reciprocal link and is not, by itself, proof of a retail corruption source.
-2. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
+3. **M5 image task/output edge — retail candidate-span writer class remains.** Sessions
    3839–3840 qualified the port input and separate writeback-DMA edge despite
    empty ABI output fields. Session 3857 qualified the dominant retail
    `0x800078EC` writer: it had 408 hangar-phase hits into
@@ -186,7 +197,7 @@ Work only the first applicable item. This is one monotonic backlog.
    ORIGIN: independent retail phase-gated writer-PC and post-target attribution,
    paired with port image-DMA joins; no guest or host state was rewritten,
    skipped, or guarded.
-3. **M3 heap guard validation — active guard class, validation blocked.** Session
+4. **M3 heap guard validation — active guard class, validation blocked.** Session
    3866 audited the free-list reciprocal-link idiom in `patches/heap_guards.c`;
    session 3873 extended the guard to validate the head's `next->prev` back-link
    before the dequeue dereference. ORIGIN: `func_8002221C` and allocator link
@@ -212,7 +223,7 @@ Work only the first applicable item. This is one monotonic backlog.
 
    ORIGIN: the active-queue insertion path publishes reciprocal `next` and
    `prev` links; a mismatched predecessor is not legitimate queue state.
-4. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
+5. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
    linker-published addresses before queue-link stores. ORIGIN: those globals are
@@ -233,11 +244,11 @@ Work only the first applicable item. This is one monotonic backlog.
    head slot at `0x801163FC` is written by the queue insertion path; a malformed
    head is not legitimate. This is a code change, not runtime validation; do
    not claim allocator behavior until the patch pipeline is restored.
-5. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
+6. **M5 target-phase parity — closed at current scope.** s3820/s3823/s3844
    supplied independent retail and validated port target coverage and exact
    hangar zero-payload parity. Do not repeat standalone qualification or the
    retail zero-writer census unless the route/build changes.
-6. **Generated-symbol renaming sweep — parked.** Resume only after M5 has no
+7. **Generated-symbol renaming sweep — parked.** Resume only after M5 has no
    applicable discriminator and M3 has a toolchain or a new discriminator.
    Keep HYPOTHESIS-ID `generated-symbol-renaming-sweep`; do not use mapping
    edits to evade the engineering-change stall gate.
@@ -701,6 +712,19 @@ Work only the first applicable item. This is one monotonic backlog.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.
+
+- **3891:** The phase-gated same-build M5 Step 1 pair passed the independent
+  retail whole-RDRAM, title-1024, and hangar-512 controls. Silent and image
+  arms both reached hangar without crash/abort. The silent arm had zero image
+  DMEM/DMA activity; the image arm changed DMEM, reached break `0x1328`, and
+  issued two DMEM-to-RDRAM writes, but all image payloads and both PCM
+  source/consumer joins were zero. This selects H-ContractGap over
+  H-AudioDegeneracy at the measured scope; it does not identify the missing
+  writer/output edge.
+
+  ORIGIN: the image arm's generated RSP task is the writer of the two observed
+  DMA payloads; those payloads are legitimately present but zero-valued. The
+  run did not rewrite, skip, or guard guest/host state.
 
 ## Superseded conclusions
 
