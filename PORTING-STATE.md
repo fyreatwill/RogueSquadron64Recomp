@@ -144297,3 +144297,17 @@ selected: no port arm reached a target phase, and the `0x800052C4` writer
 census remains unevaluable. This does not establish audio staging or writer
 absence as causal. ORIGIN: route, scheduler, and audio-stage hooks observe
 legitimate arm choices; no mitigation landed.
+
+## Session 4047 (2026-10-04) — guarded active-queue sentinel predecessor ownership
+
+The M3 pivot landed a regeneration-safe guard in `patches/heap_guards.c`.
+Before either active-queue append path, the node published through
+`heap_tail_loc` must have `prev == NULL`; the sentinel is the predecessor
+anchor and a predecessor link is not legitimate ownership. ORIGIN:
+`heap_tail_loc` and the active-queue append stores are the named writers.
+The ordinary Debug target built successfully. The configured `PatchesLib`
+target still fails immediately with `No rule to make target 'PatchesLib'`, so
+the MIPS patch pipeline and runtime qualification remain blocked. H1 is
+selected at source/host-build scope; H2 is not supported by the existing
+sentinel/append contract, and H3 remains the host limitation. No runtime
+behavior was inferred.

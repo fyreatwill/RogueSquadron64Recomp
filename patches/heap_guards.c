@@ -154,6 +154,14 @@ static int active_queue_empty_tail_ok(const Block* tail) {
            tail->next == NULL;
 }
 
+// ORIGIN: heap_tail_loc publishes the active-queue sentinel used by both
+// append paths. The sentinel is the predecessor anchor, not an active node;
+// a predecessor link would give it an owner in the queue chain and make the
+// next append mutate through two ownership domains.
+static int active_queue_sentinel_link_ok(const Block* tail) {
+    return tail != NULL && block_ok(tail) && tail->prev == NULL;
+}
+
 // ORIGIN: the active-queue insertion consumes the chain rooted at
 // heap_other_listhead and appends through its terminal node. The existing
 // tail check validates only that terminal node; it does not prove that the
@@ -397,6 +405,9 @@ RECOMP_PATCH Block* func_80007D74(void) {
     }
     Block* tail = *heap_tail_loc;
     if (!block_ok(tail)) {
+        return NULL;
+    }
+    if (!active_queue_sentinel_link_ok(tail)) {
         return NULL;
     }
 

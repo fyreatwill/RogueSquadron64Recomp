@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4046 (2026-10-04).
+Updated for session 4047 (2026-10-04).
 
 ## Current state
 
@@ -545,12 +545,29 @@ selected and the `0x800052C4` census remains unevaluable. ORIGIN: route,
 scheduler, and audio-stage hooks observe legitimate arm choices; no mitigation
 landed.
 
+Session 4047 landed the next regeneration-safe M3 ownership guard in
+`patches/heap_guards.c`: the node published through `heap_tail_loc` must have
+`prev == NULL` before either active-queue append path runs. ORIGIN:
+`heap_tail_loc` publishes the dedicated active-queue sentinel; the append
+stores use it as the predecessor anchor, so a predecessor link is not
+legitimate sentinel ownership. The ordinary Debug target built successfully.
+The configured `PatchesLib` target still fails before compilation with `No rule
+to make target 'PatchesLib'`, so runtime qualification remains blocked on the
+absent MIPS toolchain/configuration. This is source/host-build evidence only;
+it does not establish that the guard fires in a retail or port run.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 route requalification.** Run a genuinely new launch-order/gap
+1. **M3 patch integration.** On a host with the MIPS toolchain, configure with
+   `-DMIPS_TOOLCHAIN_DIR=<toolchain-root>` and restore the `PatchesLib` target
+   before runtime-qualifying the active-queue sentinel predecessor guard from
+   session 4047. The source and ordinary host target pass; do not infer
+   runtime behavior from that build alone.
+
+2. **M5 route requalification.** Run a genuinely new launch-order/gap
    schedule table before another source-writer census. The retail
    positive/title/hangar controls and all three port-arm phase controls must
    qualify; classify any pre-target arm failure as H3 rather than inferring
@@ -559,11 +576,11 @@ candidate results are summarized by address range rather than copied here.
    `declared-real,legacy-real,declared-silent` or the three-second
    `legacy-real,declared-silent,declared-real` permutation.
 
-2. **M5 next source-payload discriminator.** After route qualification,
+3. **M5 next source-payload discriminator.** After route qualification,
    rerun the retail-grounded writer class beginning at `0x800052C4`; do not
    infer writer absence from a port arm that fails before its target phase.
 
-3. **M5 new source-payload discriminator.** The gate-value redesign is now
+4. **M5 new source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
    initialization/transitional traffic before the target phase. The candidate
    census is qualified through `0x8000529C`, the legitimate `0xF80` writer is
@@ -572,15 +589,9 @@ candidate results are summarized by address range rather than copied here.
    changing audio behavior; do not repeat the scheduler split. Keep scheduler
    `a0` as a message object and treat ABI rows as authoritative.
 
-4. **M5 new source-payload discriminator.** After the `0x800052C4` class is
+5. **M5 new source-payload discriminator.** After the `0x800052C4` class is
    qualified, select the next retail-grounded writer class; do not repeat the
    scheduler split or change audio behavior.
-
-5. **M3 patch integration.** On a host with the MIPS toolchain, configure with
-   `-DMIPS_TOOLCHAIN_DIR=<toolchain-root>` and restore the `PatchesLib` target
-   before runtime-qualifying the active-queue sentinel guard from session 4040.
-   The source and ordinary host target pass; do not infer runtime behavior from
-   that build alone. The current macOS host has no configured MIPS compiler.
 
 6. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug

@@ -1,33 +1,35 @@
-# Next work unit: requalify the M5 audio route with a fifth launch permutation
+# Next work unit: qualify the active-queue sentinel guard at source/build scope
 
-HYPOTHESIS-ID: m5-route-requalification
+HYPOTHESIS-ID: m3-active-queue-sentinel-predecessor
 
-Run exactly one new same-build capture with launch order
-`declared-silent,declared-real,legacy-real` and a five-second gap, plus the
-independent retail oracle. Do not run the `0x800052C4` writer census until the
-route result qualifies it.
+Run one ordinary Debug build after the new regeneration-safe guard in
+`patches/heap_guards.c`; attempt `PatchesLib` once to record whether the host
+can compile the patch pipeline. Do not run another route permutation or writer
+census in this unit.
 
 Competing hypotheses:
 
-- H1: this permutation qualifies all three port arms through title VI 1024 and
-  hangar VI 512; the route is ready for the parked writer census.
-- H2: at least one arm reaches a target phase but another fails pre-target;
-  launch schedule remains the discriminator and writer nulls stay blocked.
-- H3: no port arm reaches either target phase despite retail controls; route
-  qualification needs a new idea rather than another source census.
+- H1: the active-queue sentinel is a dedicated anchor whose `prev` must remain
+  null; the new guard is structurally valid and the ordinary host target still
+  builds.
+- H2: the sentinel may legitimately carry a predecessor during a non-empty
+  queue; the guard would be over-restrictive and must be reverted or redesigned.
+- H3: the source is valid but the configured host cannot build `PatchesLib`,
+  leaving runtime qualification blocked on the MIPS toolchain.
 
-Discriminator: retail whole-RDRAM positive control, retail title/hangar VI
-controls, and per-arm RSP/audio-stage controls in one capture. Select H1 only
-if all three port arms reach both target phases without crash/abort; H2 if any
-arm reaches a target phase but the route is not fully qualified; H3 if no arm
-reaches a target phase or a required positive control is absent.
+Discriminator: the code-level ownership contract and build result. Select H1 if
+the sentinel contract is consistent with the existing append code and the
+ordinary Debug target builds; select H2 only if source inspection shows the
+sentinel is intentionally linked from an active node; select H3 if `PatchesLib`
+is absent despite the source change.
 
 Exact commands:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4047_m5_route_requal_$(date +%Y%m%d-%H%M%S) RS64_LAUNCH_ORDER=declared-silent,declared-real,legacy-real RS64_LAUNCH_GAP_SEC=5 zsh scratch/agent/run_s4028_m5_route_requal.sh
+cmake --build build --config Debug --target PatchesLib
 ```
 
-The wrapper must write captures under a non-hidden final path and kill all
-children with SIGKILL. Record controls and phase outcomes per arm.
+Record ordinary-build success and the exact patch-target result. If the patch
+target is unavailable, runtime qualification remains blocked; do not infer
+guard behavior from the ordinary host build.
