@@ -52,6 +52,19 @@ static int block_ok(const void* p) {
            addr <= (0x80800000U - BLOCK_SIZE);
 }
 
+// ORIGIN: the allocator publishes heap_bump as the byte immediately after
+// the block returned by this function. A non-null value outside the RDRAM
+// KSEG0 range or on a non-block boundary is not a legitimate bump cursor;
+// reject it before the active-queue stores can publish another allocation.
+static int bump_cursor_ok(const void* p) {
+    if (p == NULL) {
+        return 1;
+    }
+    uintptr_t addr = (uintptr_t)p;
+    return kseg0_ok(p) && (addr & (BLOCK_SIZE - 1U)) == 0 &&
+           addr <= 0x80800000U;
+}
+
 // ORIGIN: heap_other_listhead and heap_tail_loc are fixed linker-published
 // metadata slots, not heap objects. Accepting any aligned KSEG0 address here
 // would let a corrupted slot pointer redirect the queue-link stores into a
@@ -247,6 +260,10 @@ RECOMP_PATCH Block* func_80007D74(void) {
     Block* popped = head;
 
     if (!block_ok(popped)) {
+        return NULL;
+    }
+
+    if (!bump_cursor_ok(heap_bump)) {
         return NULL;
     }
 

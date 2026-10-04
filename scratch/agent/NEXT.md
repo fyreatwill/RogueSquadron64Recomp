@@ -1,34 +1,31 @@
-# Next work unit: classify the next bounded M5 candidate-writer class
+# Next work unit: validate the accumulated M3 patch pipeline
 
-HYPOTHESIS-ID: m5-candidate-writer-sweep
+HYPOTHESIS-ID: m3-patch-pipeline-validation
 
-The M3 validation unit remains externally unavailable: the configured build
-has no `PatchesLib` target and the MIPS toolchain is absent. Resume the
-ground-truth-qualified M5 census at the next three unclassified retail PCs:
-`0x8000518C`, `0x80005190`, and `0x80005194`. Build all controls and
-candidates together, then run the paired retail oracle and port route in the
-phase-gated recipe.
+The current unit landed one bounded guard in `patches/heap_guards.c`:
+`bump_cursor_ok` rejects an existing non-null `heap_bump` that is not a
+KSEG0, 0x100-aligned allocator cursor before queue-link stores. The writer is
+the allocator's `heap_bump = popped + 0x100` publication; that value is
+legitimate only at the next block boundary, so this is a guard rather than a
+mitigation for a known legitimate value.
 
 Competing hypotheses:
 
-- H1: at least one candidate executes in a qualified retail target phase and
-  is a writer for the target image-stage value.
-- H2: a candidate executes, but its stores are unrelated to the qualified
-  target image-stage payload.
-- H3: none of these candidate PCs executes in the qualified target phase; the
-  class is not the retail writer at this measured scope.
+- H1: the configured build now exposes `PatchesLib` and the accumulated MIPS
+  patch can be compiled, linked, regenerated, and host-built.
+- H2: the patch target remains absent or the MIPS toolchain remains missing,
+  so no MIPS/runtime qualification is possible.
+- H3: the ordinary Debug target is independently broken by this change.
 
-Discriminator: the same run must show the independent whole-RDRAM oracle
-positive control, title VI 1024, hangar VI 512, post-store scalar controls,
-and candidate execution/post-target rows. H1 requires a candidate row joined
-to the target phase and payload; H2 requires candidate execution without that
-join; H3 requires zero target-phase execution, post-target rows, and scalar
-samples for all three candidates.
+Discriminator: run both build commands in one iteration and record target
+discovery, MIPS compiler/linker availability, and each build result. H1 is
+selected only if the patch pipeline completes; H2 if the patch target or
+toolchain is absent; H3 if the ordinary target fails while the patch
+preconditions are present.
 
 Commands:
 
+    cmake --build build --config Debug --target PatchesLib
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3970_m5_candidate_writers.sh
 
-The harness must preserve the independent whole-RDRAM positive control and
-`ROGUESQ_AUDIO_UCODE=1`, and terminate both processes with SIGKILL.
+Do not add another guard until this validation checkpoint is resolved.

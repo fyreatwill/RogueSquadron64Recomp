@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3969 (2026-10-04).
+Updated for session 3970 (2026-10-04).
 
 ## Current state
 
@@ -72,6 +72,16 @@ Work only the first applicable item. This is one monotonic backlog.
    `mips64-elf-gcc` nor `mips64-elf-ld` is available on `PATH`. No runtime
    claim about `block_ok` is possible until the patch target and toolchain are
    supplied.
+
+   Session 3970 added the bounded bump-cursor guard to
+   `patches/heap_guards.c`. ORIGIN is the allocator's `heap_bump = popped +
+   0x100` writer; a non-null cursor is legitimate only at the next aligned
+   block boundary in KSEG0. The guard returns before active-queue stores when
+   that published cursor is outside the allocator range. The ordinary Debug
+   target built successfully. The accumulated patch remains unqualified:
+   `PatchesLib` is absent from the configured build (`No rule to make target
+   'PatchesLib'`). Do not add another guard before validating this patch
+   pipeline.
 
 2. **M5 candidate-writer qualification — continue the bounded retail census.**
    Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail

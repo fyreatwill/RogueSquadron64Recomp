@@ -143076,3 +143076,22 @@ zero crash/abort markers, and qualified source/destination payload
 `FNV=0x762B22A5`, nonzero=0. The result does not establish global writer
 absence. The next adjacent set is `0x8000518C`, `0x80005190`, and
 `0x80005194`.
+
+## Session 3970 (2026-10-04) — landed bounded heap bump-cursor guard
+
+The mandated pivot selected a real M3 code change instead of repeating the
+next M5 candidate-writer census. Added `bump_cursor_ok` to
+`patches/heap_guards.c`, rejecting a non-null `heap_bump` outside KSEG0 or
+off the allocator's 0x100-byte block boundary before active-queue stores.
+ORIGIN is the allocator writer `heap_bump = popped + 0x100`; that published
+value is legitimate only at the next aligned block boundary. This is a guard
+change, not a claim that the writer is corrupt.
+
+The ordinary Debug target built successfully. The planned patch validation
+still fails before compilation because the configured build has no
+`PatchesLib` target (`No rule to make target 'PatchesLib'`). No MIPS or runtime
+qualification is claimed. This rules out an ordinary host-build regression
+from the new guard, but leaves the patch pipeline unvalidated.
+
+**Outcome: ADVANCED** (bounded M3 guard code landed and the ordinary target
+built; patch qualification remains blocked by the configured target).
