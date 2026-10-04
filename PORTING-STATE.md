@@ -141667,3 +141667,16 @@ representatives are `0x80004BE8`, `0x80004E74`, and `0x80004E8C`.
 ORIGIN: diagnostic-only independent retail writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+## Session 3881 (2026-10-03) — confirmed the M3 patch-pipeline block
+
+Ran the prescribed M3 validation command:
+`cmake --build build --config Debug --target PatchesLib`. CMake failed
+immediately with `No rule to make target PatchesLib`. Direct prerequisite
+checks also found no `mips64-elf-gcc`, no `mips64-elf-ld`, and no
+`build/Debug/N64Recomp.exe`. The alias guard added in session 3880 therefore
+received no allocator-route smoke or runtime validation. This confirms only
+the environment block; it rules out no allocator crash family and does not
+prove the guard fires or preserves legitimate routing.
+
+ORIGIN: build-system/toolchain prerequisite check. No guest or host state was
+rewritten, skipped, or guarded during this iteration.

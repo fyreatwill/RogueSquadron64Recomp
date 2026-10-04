@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory
 and the incremental de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3880 (2026-10-03).
+Updated for session 3881 (2026-10-03).
 
 ## Current state
 
@@ -141,10 +141,11 @@ Work only the first applicable item. This is one monotonic backlog.
    `No rule to make target PatchesLib`. No runtime allocator result is claimed;
    restore the patch pipeline before validation. Session 3880 added an alias
    guard before active-queue link stores: the popped free-list block must not
-   equal the queue sentinel, active head, or current queue node. ORIGIN:
-   free-list dequeue transfers ownership before queue insertion, so any such
-   alias is malformed. The prescribed build still returns `No rule to make
-   target PatchesLib`; no runtime validation is claimed.
+   equal the queue sentinel, active head, or current queue node. Session 3881
+   repeated the prescribed build and directly checked all required tools; the
+   target still returns `No rule to make target PatchesLib`, while the MIPS
+   compiler, linker, and generated recompiler executable are absent. No
+   runtime validation is claimed.
 3. **M3 heap guard validation — prior metadata/queue guards.** Sessions 3852–3859
    and attempted to validate the existing patch's metadata-slot class. The
    `heap_other_listhead` and `heap_tail_loc` pointers must equal their fixed
@@ -533,6 +534,15 @@ Work only the first applicable item. This is one monotonic backlog.
 
   ORIGIN: free-list dequeue and active-queue link stores publish ownership;
   a block cannot legitimately remain free while already active.
+
+- **3881:** Repeated the configured M3 validation build. CMake failed
+  immediately with `No rule to make target PatchesLib`; direct checks also
+  found no `mips64-elf-gcc`, `mips64-elf-ld`, or `build/Debug/N64Recomp.exe`.
+  This confirms the environment block only. The alias guard has no allocator
+  smoke or runtime validation result.
+
+  ORIGIN: build-system/toolchain prerequisite check; no guest or host state
+  was rewritten, skipped, or guarded.
 
 Earlier s3730–s3838 evidence is preserved in the append-only ledger and linked
 session notes. Do not repeat a boundary whose discriminator is closed.

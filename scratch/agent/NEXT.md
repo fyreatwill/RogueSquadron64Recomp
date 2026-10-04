@@ -1,32 +1,33 @@
-# Next work unit: add the next M3 free-list/active-queue alias guard
+# Next work unit: classify the next M5 candidate-span writer classes
 
-HYPOTHESIS-ID: m3-free-list-active-queue-alias
+HYPOTHESIS-ID: m5-retail-candidate-writer-sweep
 
-Audit and patch `patches/heap_guards.c` so a free-list block cannot be
-inserted into the active queue when it aliases the queue sentinel, active
-head, or current queue node. Build `PatchesLib` if the configured target is
-available; otherwise record the exact prerequisite failure. Do not claim
-runtime validation without the MIPS patch pipeline.
+Run one paired retail/port candidate-span scalar capture for
+`0x80004BE8`, `0x80004E74`, and `0x80004E8C`. The retail arm must phase-gate
+the candidate span `0x165000..0x16C000` on title VI 1024 and hangar VI 512,
+sample post-store scalar values, and pass the whole-RDRAM/title/hangar/
+shutdown controls. The port arm must reach hangar and report image-DMA joins
+with crash/abort markers. Use the existing paired candidate-span harness; if
+its path is not obvious, locate it first with:
+
+    rg -l 'candidate-span|04BE8|04E74|04E8C' scratch tools
+
+Then run the matching harness once, with both arms and all passive breadcrumb
+variables enabled, capturing logs under `scratch/agent/soak_results/`.
 
 Competing hypotheses and discriminator:
 
-- H1: the popped free-list block is distinct from every active-queue node;
-  the new guard is never selected in a valid allocator-route smoke.
-- H2: malformed state can alias the popped block with `tail`, the active
-  queue head, or `tail->next`; the new guard returns before queue-link stores.
-- H3: the presumed queue topology is wrong and one of the alias checks rejects
-  legitimate allocations; the allocator-route smoke regresses or stops.
+- H1: one of these PCs writes the candidate image payload; it will produce
+  qualified nonzero post-target samples.
+- H2: these PCs only write zero/metadata or an unrelated value; they will
+  produce qualified writer rows but no nonzero candidate payload.
+- H3: none of these PCs owns the candidate edge; they will produce no
+  qualified candidate-span writer rows after the controls pass.
 
-The discriminator is the patch build plus, if the toolchain exists, one
-allocator-route smoke with guard-hit/route controls: H1 is a successful build
-and unchanged smoke, H2 is a guard hit before queue writes, and H3 is a
-legitimate allocation rejection/regression. The code-level ORIGIN is the
-allocator's free-list and active-queue link stores: one block cannot be both
-free and active in legitimate state.
+The discriminator is one same-run result table: qualified writer rows plus
+nonzero post-store samples select H1; qualified rows with zero post-store
+samples select H2; no qualified rows with positive controls selects H3. The
+port arm is a paired coverage control, not proof of retail producer identity.
 
-Exact build command:
-
-    cmake --build build --config Debug --target PatchesLib
-
-If the target is available, run the existing allocator-route smoke from the
-patch documentation and capture its output under `scratch/agent/`.
+Do not run a standalone soak or a second counter build. Record the exact
+controls and both arms in the next ledger entry.
