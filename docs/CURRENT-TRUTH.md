@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3928 (2026-10-03).
+Updated for session 3929 (2026-10-03).
 
 ## Current state
 
@@ -277,7 +277,7 @@ Work only the first applicable item. This is one monotonic backlog.
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
-| `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; validation blocked by absent MIPS toolchain and configured patch target. |
+| `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; s3929 reproduced the absent configured patch target, while the ordinary host target passed. Validation remains blocked by the MIPS toolchain/configuration. |
 
 The s3922 M3 validation attempt confirmed the same build-system/toolchain
 boundary without runtime evidence; do not treat a successful host build as

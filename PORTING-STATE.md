@@ -142485,3 +142485,7 @@ target 'PatchesLib'`), so the patch has no MIPS/runtime validation this
 session. The ordinary `RogueSquadron64Recomp` Debug target completed
 successfully. This rules out only a successful local validation claim; it does
 not establish that the alias occurs in retail or port execution.
+
+## Session 3929 (2026-10-03) — revalidated the unavailable M3 patch pipeline
+
+The prescribed M3 validation was run without changing the patch. `cmake --build build --config Debug --target PatchesLib` failed immediately with `No rule to make target 'PatchesLib'`. The ordinary positive-control target, `cmake --build build --config Debug --target RogueSquadron64Recomp`, completed successfully. This is H3 environment evidence only: the active-queue ownership-alias guard still has no MIPS object, patch ELF, or runtime result in this checkout. It rules out neither the alias defect nor the guard's effectiveness; it rules out only a local validation claim. The next runnable unit returns to the highest-priority M5 candidate-writer discriminator.

@@ -1,22 +1,24 @@
-# Next work unit: validate the landed M3 ownership-alias guard
+# Next work unit: qualify the next M5 retail candidate-writer class
 
-HYPOTHESIS-ID: m3-active-queue-ownership
+HYPOTHESIS-ID: m5-candidate-writer-class
 
-Build the patch pipeline when a MIPS toolchain is available. First run
-`cmake --build build --config Debug --target PatchesLib`; then run the normal
-Debug target. If the patch target is still absent, record that exact build
-failure and do not claim runtime validation.
+Run the existing phase-gated retail/port candidate-writer harness for
+`0x8000500C`, `0x80005010`, and `0x80005014`, with all passive breadcrumb
+instruments enabled. Build once, then run the retail oracle and paired port
+arm concurrently from `build/`; use SIGKILL for watchdog cleanup. The wrapper
+must record whole-RDRAM, title-1024, hangar-512, and oracle-completion
+positive controls before interpreting candidate rows.
 
 Competing hypotheses:
 
-- H1: the popped free-list block can alias an existing active-queue node;
-  the new disjointness walk must reject it before queue-link stores.
-- H2: the allocator's ownership invariant already prevents that alias; the
-  new guard remains cold while valid allocations continue.
-- H3: the patch cannot be built in this checkout; no MIPS/runtime conclusion
-  is permitted.
+- H1/H2: a candidate writes a legitimate nonzero target payload; it executes
+  in the qualified target phase and produces a post-target scalar/value row.
+- H3: these candidates are disconnected from the target writer; controls pass
+  but candidate execution or post-target rows remain absent.
+- H4: the retail arm is unevaluable; a control or target phase fails, so no
+  writer conclusion is allowed.
 
-Discriminator: one build must exercise the guard in the MIPS patch pipeline;
-the positive control is a successful ordinary host build plus a valid queue
-path. A guard hit without a named corrupted input is not proof of a retail
-defect.
+Discriminator: candidate execution plus a post-target scalar/value row during
+the qualified target phase, with all four positive controls passing. The paired
+port arm must reach hangar and report its image-DMA payload separately; it is
+not a substitute for retail attribution.
