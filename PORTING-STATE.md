@@ -144157,3 +144157,17 @@ without crash or abort. H2 is selected for this candidate class; the next
 census begins at `0x800052B8`. This rules out these three PCs as the measured
 retail target-phase writer class, not global writer absence. ORIGIN: retail PC
 watches and port phase/task hooks are diagnostic only; no mitigation landed.
+
+## Session 4037 (2026-10-04) — qualified null for 0x800052B8 candidate class
+
+Ran the retail-grounded census for `0x800052B8`, `0x800052BC`, and
+`0x800052C0`. Retail's whole-RDRAM positive control fired, the oracle
+completed, and it recorded 1,125 writes in the watched target span. All three
+candidate PCs had zero post-target samples, rows, and sequence hits. Declared/
+real reached title VI 1024 and hangar VI 512 with 3,855 audio-ABI rows and
+3,849 image-DMA joins; legacy/real reached both with 3,805 audio-ABI rows and
+3,797 image-DMA joins. Neither arm emitted a crash or abort. H2 is selected
+for this candidate class and the next census begins at `0x800052C4`. This
+rules out these PCs as the measured retail target-phase writer class, not
+global writer absence. ORIGIN: retail PC watches and port phase/task hooks
+are diagnostic only; no mitigation landed.
