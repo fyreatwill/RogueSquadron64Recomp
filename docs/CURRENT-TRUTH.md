@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3956 (2026-10-04).
+Updated for session 3957 (2026-10-04).
 
 ## Current state
 
@@ -192,6 +192,16 @@ Work only the first applicable item. This is one monotonic backlog.
    The paired port reached hangar with 2,856 image-DMA joins, zero
    crash/abort markers, and qualified source/destination payload
    `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
+   candidates; this is not global writer absence.
+
+   Session 3957 tested `0x80005114`, `0x80005118`, and `0x8000511C`. The
+   independent whole-RDRAM control fired; retail reached title VI 1024,
+   hangar VI 512, and oracle completion, with 36 post-store scalar records and
+   zero mismatches. None of the three candidates produced a target-phase
+   execution row, post-target row, or scalar sample, selecting H3 for this
+   bounded class only. The paired port reached hangar with 2,860 image-DMA
+   joins, zero crash/abort markers, and source/destination payload
+   `FNV=0x762B22A5`, `nonzero=0`. Continue with the next adjacent unclassified
    candidates; this is not global writer absence.
 
 3. **M3 prior guard classes — validate the accumulated patch before extending.**
