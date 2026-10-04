@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4065 (2026-10-04).
+Updated for session 4066 (2026-10-04).
 
 ## Current state
 
@@ -174,6 +174,14 @@ boundary; playback/drain timing remains open.
   tracked 767–1537 bytes, with no zero-drain starvation pattern. Hplay is
   selected, ruling out immediate queue-drain starvation; the remaining sink
   question is device callback/output behavior.
+- Session 4066 attempted one same-build native-SDL versus
+  `SDL_AUDIODRIVER=dummy` A/B after the retail whole-RDRAM control. The dummy
+  arm reached title 1024 and hangar 512 with positive queue and drain rows;
+  the native arm crashed in `spTaskSchedulerThread` before both targets. A
+  fixed native-only isolation repeated the pre-target crash while retail
+  again passed its positive control. The native-versus-dummy sink comparison
+  is unevaluable; this is additional Hroute evidence, not an SDL backend
+  conclusion.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -182,15 +190,17 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
+1. **Requalify the M5 native audio route.** The 4066 native-SDL arm crashed
+   before target phases even in isolation, while the dummy arm qualified. Use
+   one same-build native-SDL silent-control run with the retail positive
+   control to distinguish a native-backend startup defect from a real-image
+   route defect. Do not infer sink behavior from a pre-target arm.
+2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-2. **Requalify the M5 route.** Legacy-real remains pre-target under both
-   sequential isolation and concurrent topology; revisit only with a new
-   startup dependency that can explain the legacy arm.
 3. **M5 de-stubbing.** After the current route/source discriminator is closed,
    follow the incremental validation sequence in `M5-AUDIO-PLAN.md`; do not
    treat the silent control as real-audio evidence.
@@ -203,10 +213,10 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | Hypothesis | Status |
 |---|---|
 | M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063). |
-| M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; device callback/output behavior remains open. |
+| M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
-| M5 route failure | Active H1: process topology changes which audio arms reach target phases; legacy-real remains pre-target. |
+| M5 route failure | Active H1: process topology and audio backend selection change which arms reach target phases; s4066 native-SDL also failed in isolation, while dummy qualified. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |

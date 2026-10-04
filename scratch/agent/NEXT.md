@@ -1,24 +1,28 @@
-# Next work unit: qualify M3 patch integration on a MIPS-capable host
+# Next work unit: native SDL silent-control route qualification
 
-HYPOTHESIS-ID: m3-patch-integration
+HYPOTHESIS-ID: m5-sdl-backend-boundary
 
-The active-sentinel predecessor guard is source- and ordinary-host-build
-qualified, but runtime qualification is blocked on this macOS host because
-`mips64-elf-gcc` and `mips64-elf-ld` are absent. This is the next applicable
-strategic item after the M5 sink discriminator closed.
+The 4066 native declared-real arm crashed in `spTaskSchedulerThread` before
+title/hangar both in concurrent A/B and native-only isolation. The dummy
+declared-real arm reached both phases and drained positively, but that does
+not qualify native output. M3 remains externally blocked on the missing MIPS
+toolchain.
 
 Competing hypotheses:
 
-- Hguard-runtime: the rebuilt `PatchesLib` loads and the guard remains quiet
-  on a qualified run, showing the ownership proof is compatible with runtime.
-- Hguard-hit: the guard fires with an ORIGIN-tagged ownership violation,
-  identifying a live heap corruption path.
-- Htoolchain-block: the required MIPS compiler/linker remain unavailable, so
-  runtime qualification is unevaluable and no M3 conclusion may be drawn.
+- Hnative-backend: native SDL device startup itself causes the pre-target
+  scheduler failure; the native silent arm will also fail before both phases.
+- Hreal-route: the native failure depends on the Factor 5 image/real-audio
+  route; native silent will reach title 1024 and hangar 512 with the normal
+  host-device rows.
+- Hroute-schedule: the native arm remains pre-target despite silent mode, so
+  no sink conclusion is possible and the route dependency needs a new angle.
 
-Discriminating measurement: on a host that provides both tools, run
-`cmake --build build --config Debug --target PatchesLib`, then the ordinary
-Debug target and the qualified runtime recipe with the active-sentinel guard
-enabled. A successful `PatchesLib` build plus a clean or ORIGIN-tagged guard
-run selects Hguard-runtime or Hguard-hit; absent tools select Htoolchain-block.
-Do not infer runtime behavior from the ordinary target alone.
+Discriminating measurement: run one same-build native-SDL `ROGUESQ_AUDIO_UCODE=0`
+silent arm using `scratch/agent/run_s4066_m5_native_isolated.sh` after the
+retail oracle positive-control marker fires. Keep the whole-RDRAM control,
+`PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, host queue/drain logs,
+and SIGKILL cleanup. Native silent reaching both target phases selects
+Hreal-route; native silent repeating the pre-target crash selects
+Hnative-backend; any other pre-target termination is Hroute-schedule and is
+unevaluable. Do not infer sink behavior from a missing phase.

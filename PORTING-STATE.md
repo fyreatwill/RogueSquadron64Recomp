@@ -144631,3 +144631,26 @@ device callback timing remain open. The schedule-sensitive first attempt is a
 documented dead end, not a sink null. The reusable capture is
 `scratch/agent/run_s4064_m5_arm_sink.sh`; no mitigation or guest/RDRAM state
 change was made.
+
+## Session 4066 (2026-10-04) — isolated native SDL audio route failure
+
+The planned work unit was a same-build native-SDL versus
+`SDL_AUDIODRIVER=dummy` A/B at the remaining M5 host-output boundary. The
+retail oracle whole-RDRAM positive control fired. In the concurrent capture,
+the dummy declared-real arm reached title VI 1024 and hangar VI 512 and
+recorded positive `[m5-audio-host]` queue and `[m5-audio-drain-raw]` rows. The
+native declared-real arm crashed in `spTaskSchedulerThread` before either
+target phase. A fixed native-only isolation reproduced the same pre-target
+crash while the retail positive control fired again.
+
+This selects Hroute-failure/unevaluable for the native arm. It does not select
+an SDL backend sink explanation because the native arm never reached a phase
+where queue/drain rows could be compared. It rules out treating the dummy
+arm's positive drain as evidence about native audible output. The next
+discriminator is a native-SDL silent-control run under the same retail-gated
+recipe, to separate a backend startup dependency from a real-image route
+dependency. No mitigation or guest/RDRAM state change was made.
+
+The experiment and fixed reproduction are
+`scratch/agent/run_s4066_m5_sdl_backend_ab.sh` and
+`scratch/agent/run_s4066_m5_native_isolated.sh`.
