@@ -144145,3 +144145,15 @@ candidate class; the next census begins at `0x800052AC`. This rules out these
 three PCs as the measured retail target-phase writer class, not global writer
 absence. ORIGIN: retail PC watches and port phase/task hooks are diagnostic
 only; no mitigation landed.
+
+## Session 4036 (2026-10-04) — qualified null for 0x800052AC candidate class
+
+Ran the retail-grounded census for `0x800052AC`, `0x800052B0`, and
+`0x800052B4`. Retail's whole-RDRAM positive control, title VI 1024 (154),
+hangar VI 512 (181), and oracle completion all passed. No candidate,
+post-target, scalar, or sequence evidence appeared. The paired port reached
+both target phases with 3,052 audio-ABI rows and 3,047 image-DMA joins,
+without crash or abort. H2 is selected for this candidate class; the next
+census begins at `0x800052B8`. This rules out these three PCs as the measured
+retail target-phase writer class, not global writer absence. ORIGIN: retail PC
+watches and port phase/task hooks are diagnostic only; no mitigation landed.

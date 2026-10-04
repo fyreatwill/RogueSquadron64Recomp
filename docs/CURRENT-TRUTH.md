@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4035 (2026-10-04).
+Updated for session 4036 (2026-10-04).
 
 ## Current state
 
@@ -295,6 +295,16 @@ H2 is selected for this candidate class; the next census starts at
 `0x800052AC`. ORIGIN: retail PC watches and port phase/task hooks are
 diagnostic only; no mitigation landed.
 
+Session 4036 ran the next retail-grounded census for `0x800052AC`,
+`0x800052B0`, and `0x800052B4`. Retail's whole-RDRAM positive control, title
+VI 1024 (154), hangar VI 512 (181), and oracle completion all passed. No
+candidate, post-target, scalar, or sequence evidence appeared. The paired
+port reached both target phases with 3,052 audio-ABI rows and 3,047 image-DMA
+joins, without crash or abort. H2 is selected for this class; this rules out
+these three PCs as the measured retail target-phase writer class, not global
+writer absence. ORIGIN: retail PC watches and port phase/task hooks are
+diagnostic only; no mitigation landed.
+
 Session 4016 qualified a new gate/source boundary capture. Retail's whole-RDRAM
 positive control, title VI 1024, and hangar VI 512 controls passed and the
 oracle completed; it reported 17 writes to `0x800A0F50`, 192 executions of
@@ -448,7 +458,7 @@ Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
 1. **M5 next source-payload discriminator.** Run the next retail-grounded
-   writer class beginning at `0x800052AC`, with the retail
+   writer class beginning at `0x800052B8`, with the retail
    positive/title/hangar controls plus a phase-qualified port arm. Do not
    infer writer absence from a port arm that fails before its target phase.
 
@@ -458,9 +468,8 @@ candidate results are summarized by address range rather than copied here.
    that build alone.
 
 3. **M5 route requalification.** Return only with a genuinely new schedule
-   discriminator after the source-payload step. The ten-second run still had
-   only legacy/real reach hangar; keep the `0x800052AC` census parked until a
-   route arm is phase-qualified for that measurement.
+   discriminator after the `0x800052B8` source-payload step. Do not repeat the
+   scheduler split; require a phase-qualified arm before another census.
 
 4. **M5 new source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
@@ -471,7 +480,7 @@ candidate results are summarized by address range rather than copied here.
    changing audio behavior; do not repeat the scheduler split. Keep scheduler
    `a0` as a message object and treat ABI rows as authoritative.
 
-5. **M5 new source-payload discriminator.** After the `0x800052AC` class is
+5. **M5 new source-payload discriminator.** After the `0x800052B8` class is
    qualified, select the next retail-grounded writer class; do not repeat the
    scheduler split or change audio behavior.
 
