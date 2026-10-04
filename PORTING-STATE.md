@@ -144357,3 +144357,16 @@ not runtime-qualified. It rules out a remaining CMake/native-name failure as
 the immediate blocker, but does not provide runtime evidence about the guard.
 The next unit requires a usable MIPS toolchain or another host that provides
 one.
+
+## Session 4051 (2026-10-04) — M3 qualification remains blocked by absent cross-toolchain
+
+Ran the prescribed M3 qualification discriminator again. `command -v`
+returned no `mips64-elf-gcc` and no `mips64-elf-ld`; configure therefore
+printed the patches-build skip, `PatchesLib` had no generated build rule, and
+the ordinary `RogueSquadron64Recomp` target completed successfully.
+
+This is a repeated H3 prerequisite result, not new runtime evidence: no patch
+ELF, generated patch source, or patch library exists to qualify the sentinel
+guard. It rules out neither H1 nor H2. The M3 unit cannot proceed until a
+usable MIPS GCC/LD pair is installed or supplied to this host, or the work is
+moved to a host that has them.

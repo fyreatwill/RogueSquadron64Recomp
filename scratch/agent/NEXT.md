@@ -21,9 +21,10 @@ toolchain on PATH or passing `-DMIPS_TOOLCHAIN_DIR`. H1 requires a generated
 patch ELF, generated `RecompiledPatches/patches.c`, and a successful patch
 library build before runtime qualification; H2 requires a concrete legitimate
 predecessor path; H3 is the exact remaining configure or toolchain failure.
-This iteration observed H3: both MIPS tools were absent and CMake omitted the
-target. A repeated run on this host is not informative until that prerequisite
-changes.
+This iteration observed H3 again: both MIPS tools were absent and CMake omitted
+the target. Do not repeat this unit on this host until the prerequisite changes.
+The next action is to provide/install both tools or run the same commands on a
+host that has them.
 
 Commands:
 

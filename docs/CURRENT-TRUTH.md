@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4050 (2026-10-04).
+Updated for session 4051 (2026-10-04).
 
 ## Current state
 
@@ -55,6 +55,10 @@ legitimate ownership state.
   `mips64-elf-ld` on PATH, observed the expected CMake skip and missing
   `PatchesLib` target, and rebuilt the ordinary target successfully. Runtime
   qualification remains unevaluable on this host.
+- Session 4051 repeated the M3 discriminator: both MIPS tools remain absent,
+  `PatchesLib` remains absent, and the ordinary target builds. This is a
+  prerequisite block, not runtime evidence; do not repeat until a toolchain or
+  another qualified host is available.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
