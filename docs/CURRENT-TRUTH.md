@@ -3,7 +3,8 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 3988 (2026-10-04).
+Updated for session 3989 (2026-10-04). This maintenance pass condensed the
+operational ledger below; the append-only ledger retains the deleted detail.
 
 ## Current state
 
@@ -13,825 +14,85 @@ VI 512 (`0x006AB400`) with real-audio/LLE/spin-yield/autopilot controls.
 Hangar geometry and color artifacts remain. `ROGUESQ_AUDIO_UCODE=0` selects
 the silent `Broke` control; real audio is not production-complete.
 
-Session 3949 landed the next M5 host-boundary behavior change: the SDL audio
-callback now converts 16-bit PCM bytes from N64 big-endian RDRAM into native
-`int16_t` samples before queueing, while preserving the guest address, sample
-count, and SDL byte length. The Debug target links successfully. This is a
-runtime change, not proof that the Factor 5 image produces valid nonzero PCM;
-the remaining M5 task/source/consumer joins still require phase qualification.
-
-The active M5 boundary is source payload, not rendering. Qualified retail and
+The current M5 boundary is source payload, not rendering. Qualified retail and
 port hangar-phase source spans are zero (`FNV=0x762B22A5`). Retail's shutdown
-snapshot can retain 12 nonzero bytes, but its phase-gated hangar snapshot is
-408 bytes, nonzero=0. The port descriptor `0x1798B0 -> DMEM 0xCB0` is written
-by legitimate zero-valued `0x800078EC` fill activity. Session 3818 found that
-sequence 664 at physical `0x179A44` is the final observed writer and every
-matching input DMA had zero payload. No nonzero hangar producer is established.
+snapshot may retain 12 nonzero bytes, but its phase-gated hangar snapshot is
+408 bytes with nonzero=0. The port descriptor `0x1798B0 -> DMEM 0xCB0` is
+written by legitimate zero-valued `0x800078EC` fill activity. Sequence 664 at
+physical `0x179A44` was the final observed writer; matching input DMAs had
+zero payload. No nonzero hangar producer is established.
 
-Session 3977 landed the next M5 task-contract behavior change: audio RSP DMEM
-staging now uses each OSTask's declared `ucode_data_size` (`0x800` on the
-qualified route) instead of the prior unconditional `0xF80` span. The old
-behavior remains available with `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`. This is a
-real runtime change, not evidence of valid PCM or a selected source writer.
-Session 3978's same-build phase-gated qualification selected H3: the declared
-size arm crashed in `spTaskSchedulerThread` at `last-guest-pc=0x8000834c`
-before title, while the legacy arm passed controls, reached title 1024 and
-hangar 512, and emitted 5,263 task-contract rows. Keep the declared-size
-change out of the qualified route pending a corrected task-contract design;
-`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` is the validated rollback arm.
+Session 3949 converted big-endian N64 PCM bytes to native `int16_t` in the SDL
+callback while preserving guest address, sample count, and SDL byte length.
+Session 3977 changed audio DMEM staging to the OSTask-declared
+`ucode_data_size` (`0x800`) and retained the old `0xF80` copy behind
+`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1`. Session 3978 selected H3: the declared-size
+arm crashed in `spTaskSchedulerThread` at `last-guest-pc=0x8000834c` before
+title, while the legacy arm reached title and hangar with 5,263 task rows.
+The declared-size arm remains parked; the legacy rollback is the qualified
+route for census work.
 
 The generated scalar-store census, central host/RSP writer census, native
 page-fault census, and nine bounded exact-offset load candidates are closed at
-their measured scopes. Do not infer a zero producer from null attribution;
-target fault attribution was absent or an arm crashed before target.
+their measured scopes. A null attribution is not global writer absence.
 
 ## Next steps
 
-Work only the first applicable item. This is one monotonic backlog.
+Work only the first applicable item. The backlog is monotonic; repeated
+candidate results are summarized by address range rather than copied here.
 
-1. **M5 candidate-writer qualification — continue the bounded retail census.**
-   Run the existing same-build retail/port census for `0x80005204`,
-   `0x80005208`, and `0x8000520C`, retaining whole-RDRAM, title-1024,
-   hangar-512, oracle-completion, and paired port payload controls. The
-   declared-size staging arm is not qualified: use the legacy rollback for
-   any route that needs to reach the target phases.
+1. **M5 candidate-writer qualification — `0x8000521C`, `0x80005220`,
+   `0x80005224`.** Run the existing same-build retail/port census with
+   `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` on the port. Require whole-RDRAM,
+   title-1024, hangar-512, oracle-completion, image-DMA, task-contract, and
+   paired payload controls. H1 is a qualified candidate execution plus a
+   post-store/scalar sample; H2 is clean retail absence with qualified port;
+   H3 is any missing control or legacy-arm failure. Do not infer a global
+   producer result.
 
-   Session 3979 tested `0x800051B0`, `0x800051B4`, and `0x800051B8`. The
-   independent whole-RDRAM control fired 10,000 times; retail reached title
-   VI 1024, hangar VI 512, and oracle completion, with 36 post-store scalar
-   records and zero mismatches. None of the three candidates executed in a
-   qualified target phase or produced a post-target row or scalar sample,
-   selecting H2 for this bounded class. The paired port reached both
-   qualified phases with 2,979 image-DMA joins and zero crash/abort markers;
-   its qualified source/destination payload remained `FNV=0x762B22A5`,
-   nonzero=0. The wrapper initially recursed into the prior s3974 recipe;
-   the corrected direct-s3976 transform was rerun successfully. This is not
-   global writer absence. Continue with `0x800051BC`, `0x800051C0`, and
-   `0x800051C4`.
+2. **M5 audio task-contract redesign.** Explain why declared-size staging
+   crashes at `0x8000834c`; name the writer/consumer requiring bytes beyond
+   `0x800` before changing the qualified route. Do not treat legacy success as
+   proof that the over-copy is legitimate.
 
-   Session 3980 tested `0x800051BC`, `0x800051C0`, and `0x800051C4`. The
-   independent whole-RDRAM control fired 10,000 times; retail reached title
-   VI 1024, hangar VI 512, and oracle completion, with 36 post-store scalar
-   records and zero mismatches. None of the three candidates had a
-   target-phase execution row, post-target row, or scalar sample, selecting
-   H2 for this bounded class. The paired port reached both qualified phases
-   with 2,863 image-DMA joins and zero crash/abort markers; its qualified
-   source/destination payload remained `FNV=0x762B22A5`, nonzero=0. This is
-   not global writer absence. Continue with `0x800051C8`, `0x800051CC`, and
-   `0x800051D0`.
+3. **M3 heap guard validation.** The accumulated guards in
+   `patches/heap_guards.c` are not runtime-qualified because the configured
+   build has no `PatchesLib` target and the MIPS toolchain is unavailable.
+   Do not add another guard before the patch pipeline is supplied and built.
 
-   Session 3981 tested `0x800051C8`, `0x800051CC`, and `0x800051D0`. The
-   independent whole-RDRAM control fired 10,000 times; retail reached title
-   VI 1024, hangar VI 512, and oracle completion, with 36 post-store scalar
-   records and zero mismatches. None of the three candidates had a
-   target-phase execution row, post-target row, or scalar sample, selecting
-   H2 for this bounded class. The paired port reached both qualified phases
-   with 2,863 image-DMA joins and zero crash/abort markers; its qualified
-   source/destination payload remained `FNV=0x762B22A5`, nonzero=0. This is
-   not global writer absence. Continue with `0x800051D4`, `0x800051D8`, and
-   `0x800051DC`.
+4. **M5 candidate-writer census continuation.** Resume the next unclassified
+   adjacent set only after item 1 closes. All prior sets through
+   `0x80005218` selected bounded H2; this is not global writer absence.
 
-   Session 3982 tested `0x800051D4`, `0x800051D8`, and `0x800051DC`. The
-   independent whole-RDRAM control fired 10,000 times; retail reached title
-   VI 1024, hangar VI 512, and oracle completion, with 36 post-store scalar
-   records and zero mismatches. None of the three candidates had a
-   target-phase execution row, post-target row, or scalar sample, selecting
-   H2 for this bounded class. The paired port reached both qualified phases
-   with 2,864 image-DMA joins and zero crash/abort markers; its qualified
-   source/destination payload remained `FNV=0x762B22A5`, nonzero=0. This is
-   not global writer absence. Continue with `0x800051E0`, `0x800051E4`, and
-   `0x800051E8`.
+5. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
+   discriminator and M3 lacks a validation path. Keep hypothesis slug
+   `generated-symbol-renaming-sweep`; mapping edits do not reset the
+   engineering-change stall gate.
 
-   Session 3983 tested `0x800051E0`, `0x800051E4`, and `0x800051E8`. The
-   independent whole-RDRAM control fired 10,000 times; retail reached title
-   VI 1024, hangar VI 512, and oracle completion, with 36 post-store scalar
-   records and zero mismatches. None of the three candidates had a
-   target-phase execution row, post-target row, or scalar sample, so retail
-   alone selects H2 for this class. The paired port arm crashed in
-   `spTaskSchedulerThread` at `last-guest-pc=0x8000834c` before title, with
-   36 crash markers and no qualified audio/image-stage rows; the overall
-   discriminator therefore selects H3 and this class is not qualified. The
-   crash is the parked declared-size/task-contract family, not evidence about
-   these candidate PCs. Continue with `0x800051EC`, `0x800051F0`, and
-   `0x800051F4` using the legacy rollback.
-
-   Session 3985 tested `0x800051EC`, `0x800051F0`, and `0x800051F4` with the
-   legacy audio-DMA rollback. The independent whole-RDRAM control fired
-   10,000 times; retail reached title VI 1024, hangar VI 512, and oracle
-   completion, with 36 post-store scalar records and zero mismatches. None of
-   the three candidates had a target-phase execution row, post-target row, or
-   scalar sample, selecting H2 for this bounded class. The paired port reached
-   both qualified phases with 2,843 image-DMA joins and 2,849 task-contract
-   rows, zero crash/abort markers, and qualified source/destination payload
-   `FNV=0x762B22A5`, nonzero=0. This is not global writer absence. Continue
-   with `0x800051F8`, `0x800051FC`, and `0x80005200`.
-
-   Session 3986 tested `0x800051F8`, `0x800051FC`, and `0x80005200` with the
-   legacy audio-DMA rollback. The independent whole-RDRAM control fired
-   10,000 times; retail reached title VI 1024, hangar VI 512, and oracle
-   completion, with 36 post-store scalar records and zero mismatches. None
-   of the three candidates had a target-phase execution row, post-target row,
-   or scalar sample, selecting H2 for this bounded class. The paired port
-   reached both qualified phases with 3,043 image-DMA joins and 3,049
-   task-contract rows, zero crash/abort markers, and qualified
-   source/destination payload `FNV=0x762B22A5`, nonzero=0. This rules out
-   these three PCs as the qualified retail writer at the measured scope; it
-   does not establish global writer absence. Session 3987 tested
-   `0x80005204`, `0x80005208`, and `0x8000520C` with the legacy audio-DMA
-   rollback. The independent whole-RDRAM control fired 10,000 times; retail
-   reached title VI 1024, hangar VI 512, and oracle completion, with zero
-   target-phase executions, post-target rows/samples, or scalar samples for
-   all three candidates, selecting H2 for this bounded class. The paired port
-   reached both qualified phases with 2,855 image-DMA joins and 2,864
-   task-contract rows, zero crash/abort markers, and qualified
-   source/destination payload `FNV=0x762B22A5`, nonzero=0. This rules out
-   these three PCs as the qualified retail writer at the measured scope; it
-   does not establish global writer absence. Session 3988 tested
-   `0x80005210`, `0x80005214`, and `0x80005218` with the legacy audio-DMA
-   rollback. The independent whole-RDRAM control fired 10,000 times; retail
-   reached title VI 1024, hangar VI 512, and oracle completion, with zero
-   target-phase executions, post-target rows/samples, or scalar samples for
-   all three candidates, selecting H2 for this bounded class. The paired port
-   reached both qualified phases with 3,026 image-DMA joins and 3,032
-   task-contract rows, zero crash/abort markers, and qualified
-   source/destination payload `FNV=0x762B22A5`, nonzero=0. This rules out
-   these three PCs as the qualified retail writer at the measured scope; it
-   does not establish global writer absence. Continue with `0x8000521C`,
-   `0x80005220`, and `0x80005224`.
-
-2. **M5 audio task-contract redesign — explain the declared-size crash.**
-   The declared-size arm is parked at H3 until a new task-contract probe names
-   the writer/consumer that requires bytes beyond `0x800`; do not treat the
-   legacy route's 5,263 rows as proof that the old over-copy is legitimate.
-
-   Historical route evidence: session 3973's same-build three-arm comparison
-   passed the VI-320 positive control. Silent/LLE-on crashed in
-   `spTaskSchedulerThread` at `last-guest-pc=0x8000834c`; image/LLE-on reached
-   VI 512, while image/LLE-off reached VI 1024 but not VI 512. This selects H1
-   for that route discriminator; it is not the current candidate-PC unit.
-
-3. **M3 heap guard validation — open external dependency, not a loop stop.**
-   Session 3984 added the next bounded active-queue ownership guard in
-   `patches/heap_guards.c`: reject `queue_head == popped` before reading the
-   active queue's successor. ORIGIN is the free-list dequeue writer publishing
-   `popped` and the active-queue head writer publishing `queue_head`; these
-   are distinct ownership domains, so aliasing is not legitimate queue state.
-   The ordinary Debug target built successfully. `PatchesLib` still is not
-   configured (`No rule to make target 'PatchesLib'`), so MIPS/runtime
-   qualification remains unavailable; do not add another guard before the
-   accumulated patch builds.
-   Session 3956 added the next bounded active-queue idiom guard: reject the
-   impossible alias `tail == q` before the append reads `tail->next` as the
-   predecessor of `q`. ORIGIN is `heap_tail_loc` plus the append writer;
-   `heap_tail_loc` is metadata and `q` is its successor, so aliasing would
-   create a self-predecessor rather than legitimate queue state. The ordinary
-   Debug target built successfully. `PatchesLib` is still not configured
-   (`No rule to make target 'PatchesLib'`), so this guard has no MIPS or runtime
-   qualification; do not add another guard until the accumulated patch builds.
-   Session 3942 added the empty-queue tail-alias guard to
-   `patches/heap_guards.c`. ORIGIN is the free-list dequeue publishing
-   `popped`; when the published active-queue head is null, `popped == tail`
-   is an ownership collision, not legitimate allocator state, so the guard
-   returns before queue-link stores. The ordinary host target built
-   successfully, but `PatchesLib` is not configured (`No rule to make target
-   'PatchesLib'`), so MIPS/runtime qualification remains unavailable. Session
-   3943 reran both checks: the ordinary Debug target completed, while
-   `PatchesLib` again failed immediately and neither `mips64-elf-gcc` nor
-   `mips64-elf-ld` was on PATH. Do not claim this guard is runtime-validated;
-   validate the accumulated patch when a human supplies the toolchain.
-
-   Session 3963 added the next bounded guard class: `block_ok` now requires
-   allocator block bases to be `0x100`-aligned before any block dereference or
-   queue-link store. ORIGIN is `func_8002221C` and the free-list link stores;
-   they publish fixed-size `0x100`-byte blocks, so another base alignment is
-   not legitimate block identity. The ordinary Debug target built successfully,
-   while `PatchesLib` remains unavailable (`No rule to make target
-   'PatchesLib'`); no MIPS or runtime qualification is claimed.
-
-   The next validation attempt again selected H3: `cmake --build build
-   --config Debug --target PatchesLib` failed immediately because the
-   configured build has no `PatchesLib` target, and neither
-   `mips64-elf-gcc` nor `mips64-elf-ld` is available on `PATH`. No runtime
-   claim about `block_ok` is possible until the patch target and toolchain are
-   supplied.
-
-   Session 3970 added the bounded bump-cursor guard to
-   `patches/heap_guards.c`. ORIGIN is the allocator's `heap_bump = popped +
-   0x100` writer; a non-null cursor is legitimate only at the next aligned
-   block boundary in KSEG0. The guard returns before active-queue stores when
-   that published cursor is outside the allocator range. The ordinary Debug
-   target built successfully. The accumulated patch remains unqualified:
-   `PatchesLib` is absent from the configured build (`No rule to make target
-   'PatchesLib'`). Do not add another guard before validating this patch
-   pipeline.
-
-   Session 3971 ran the validation checkpoint. `cmake --build build
-   --config Debug --target PatchesLib` failed immediately with `No rule to
-   make target 'PatchesLib'` (rc 2), while the ordinary
-   `RogueSquadron64Recomp` Debug target completed (rc 0). This selects H2 for
-   the configured patch pipeline: no MIPS/runtime qualification is possible
-   until a build exposing `PatchesLib` and the MIPS toolchain is supplied.
-   The host target remains independently healthy; do not add another M3 guard
-   or claim runtime validation from this build.
-
-4. **M5 candidate-writer qualification — continue the bounded retail census.**
-   Session 3937 tested `0x80005054`, `0x80005058`, and `0x8000505C`. Retail
-   whole-RDRAM, title VI 1024, hangar VI 512, and oracle-completion controls
-   all passed. None of the three candidates executed in the qualified target
-   phase or produced post-target rows/scalar samples, selecting H3 for this
-   bounded class only. The paired port reached hangar with 3,015 image-DMA
-   joins and no crash/abort; qualified payload remained
-   `FNV=0x762B22A5`, nonzero=0. Session 3938 tested `0x80005060`,
-   `0x80005064`, and `0x80005068`: retail whole-RDRAM, title VI 1024,
-   hangar VI 512, and oracle-completion controls passed; all three candidates
-   had zero target-phase execution, post-target rows, and scalar samples,
-   selecting H3 for this bounded class only. The paired port reached hangar
-   with 2,866 image-DMA joins and no crash/abort; qualified payload remained
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence. Session 3939 tested
-   `0x8000506C`, `0x80005070`, and `0x80005074`: retail whole-RDRAM,
-   title-1024, hangar-512, and oracle-completion controls passed; all three
-   candidates had zero target-phase execution, post-target rows, and scalar
-   samples, selecting H3 for this bounded class only. The paired port reached
-   hangar with 3,022 image-DMA joins and no crash/abort; qualified payload
-   remained `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent
-   unclassified candidates; this is not global writer absence.
-   Session 3940 tested `0x80005078`, `0x8000507C`, and `0x80005080`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   all three candidates had zero target-phase execution, post-target rows, and
-   scalar samples, selecting H3 for this bounded class only. The paired port
-   reached hangar with 3,030 image-DMA joins and no crash/abort; qualified
-   payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the next
-   adjacent unclassified candidates; this is not global writer absence.
-   Session 3944 tested `0x80005090`, `0x80005094`, and `0x80005098`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   all three candidates had zero target-phase execution, post-target rows, and
-   scalar samples, selecting H3 for this bounded class only. The paired port
-   reached hangar with 2,969 image-DMA joins and no crash or abort; qualified
-   payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent
-   unclassified candidates; this is not global writer absence.
-   Session 3941 tested `0x80005084`, `0x80005088`, and `0x8000508C`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   all three candidates had zero target-phase execution, post-target rows, and
-   scalar samples, selecting H3 for this bounded class only. The paired port
-   reached hangar with 3,060 image-DMA joins and no crash/abort; qualified
-   payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the next
-   adjacent unclassified candidates; this is not global writer absence.
-   Session 3945 tested `0x8000509C`, `0x800050A0`, and `0x800050A4`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   all three candidates had zero target-phase execution, post-target rows, and
-   scalar samples, selecting H3 for this bounded class only. The paired port
-   reached hangar with 2,999 image-DMA joins and no crash or abort; qualified
-   payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the next
-   adjacent unclassified candidates; this is not global writer absence.
-
-   Session 3946 tested `0x800050A8`, `0x800050AC`, and `0x800050B0`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   all three candidates had zero target-phase execution, post-target rows, and
-   scalar samples, selecting H3 for this bounded class only. The paired port
-   reached hangar with 2,831 image-DMA joins and no crash or abort; qualified
-   payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the next
-   adjacent unclassified candidates; this is not global writer absence.
-
-   Session 3947 tested `0x800050B4`, `0x800050B8`, and `0x800050BC`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   the candidate PCs had zero target-phase execution, zero post-target rows,
-   and zero scalar samples, selecting H3 for this bounded class only. The
-   paired port reached hangar with 2,838 image-DMA joins and no crash or abort;
-   qualified payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the
-   next adjacent unclassified candidates; this is not global writer absence.
-
-   Session 3948 tested `0x800050C0`, `0x800050C4`, and `0x800050C8`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   all three candidate PCs had zero target-phase execution, zero post-target
-   rows, and zero scalar samples, selecting H3 for this bounded class only.
-   The paired port reached hangar with 2,869 image-DMA joins and no crash or
-   abort; qualified payload remained `FNV=0x762B22A5`, nonzero=0. Continue
-   with the next adjacent unclassified candidates; this is not global writer
-   absence.
-
-   Session 3950 tested `0x800050CC`, `0x800050D0`, and `0x800050D4`. The
-   independent whole-RDRAM oracle control fired 10,000 times; retail reached
-   title 1024 and hangar 512 and completed, with post-store scalar mismatch
-   zero. None of the three candidates had a target-phase execution row,
-   post-target row, or scalar sample, selecting H3 for this bounded class.
-   The paired port reached hangar with 2,784 image-DMA joins, no crash or
-   abort, and qualified source/destination payload `FNV=0x762B22A5`,
-   nonzero=0. Continue with the next adjacent unclassified candidates; this
-   is not global writer absence.
-
-   Session 3951 tested `0x800050D8`, `0x800050DC`, and `0x800050E0`. The
-   independent whole-RDRAM oracle control fired 10,000 times; retail reached
-   title 1024 and hangar 512 and completed, with 36 post-store scalar records
-   and zero mismatches. None of the three candidates had a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded class. The paired port reached hangar with 2,997 image-DMA joins,
-   no crash or abort, and qualified source/destination payload
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-
-   Session 3961 tested `0x80005138`, `0x8000513C`, and `0x80005140`. The
-   independent whole-RDRAM control fired; retail reached title VI 1024,
-   hangar VI 512, and oracle completion, with 36 post-store scalar records
-   and zero mismatches. None of the three candidates had a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded retail class. The paired port reached both target phases with
-   3,042 image-DMA joins and zero crash/abort markers; qualified source and
-   destination payload remained `FNV=0x762B22A5`, nonzero=0. Continue with
-   `0x80005144`, `0x80005148`, and `0x8000514C`; this is not global writer
-   absence.
-
-   Session 3962 tested `0x80005144`, `0x80005148`, and `0x8000514C`. The
-   independent whole-RDRAM control fired 10,000 times; retail reached title
-   VI 1024, hangar VI 512, and oracle completion. None of the three candidates
-   executed in either qualified target phase or produced a post-target row or
-   scalar sample, selecting H3 for this bounded retail class. The paired port
-   reached both qualified phases with 2,987 image-DMA joins, zero crash/abort
-   markers, and qualified source/destination payload `FNV=0x762B22A5`,
-   nonzero=0. Continue with `0x80005150`, `0x80005154`, and `0x80005158`;
-   this is not global writer absence.
-
-   Session 3959 re-qualified `0x8000512C`, `0x80005130`, and `0x80005134`.
-   The independent whole-RDRAM control fired; retail reached title VI 1024,
-   hangar VI 512, and oracle completion, with 36 post-store scalar records and
-   zero mismatches. None of the three candidates produced a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded retail class. The paired port reached both qualified phases with
-   2,850 image-DMA joins, zero crash/abort markers, and qualified
-   source/destination payload `FNV=0x762B22A5`, nonzero=0. Continue with
-   `0x80005138`, `0x8000513C`, and `0x80005140`; this is not global writer
-   absence.
-
-   Session 3952 tested `0x800050E4`, `0x800050E8`, and `0x800050EC`. The
-   independent whole-RDRAM oracle control fired 10,000 times; retail reached
-   title 1024 and hangar 512 and completed, with 36 post-store scalar records
-   and zero mismatches. None of the three candidates had a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded class. The paired port reached hangar with 3,038 image-DMA joins,
-   zero crash/abort markers, and qualified source/destination payload
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-
-   Session 3953 tested `0x800050F0`, `0x800050F4`, and `0x800050F8`. The
-   independent whole-RDRAM oracle control fired 10,000 times; retail reached
-   title 1024 and hangar 512 and completed, with 36 post-store scalar records
-   and zero mismatches. None of the three candidates had a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded class. The paired port reached hangar with 2,255 image-DMA joins,
-   zero crash/abort markers, and qualified source/destination payload
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-
-   Session 3954 tested `0x800050FC`, `0x80005100`, and `0x80005104`. The
-   independent whole-RDRAM oracle control fired 10,000 times; retail reached
-   title 1024 and hangar 512 and completed, with 36 post-store scalar records
-   and zero mismatches. None of the three candidates had a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded class. The paired port reached hangar with 2,837 image-DMA joins,
-   zero crash/abort markers, and qualified source/destination payload
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-
-   Session 3955 tested `0x80005108`, `0x8000510C`, and `0x80005110`. The
-   independent whole-RDRAM oracle control fired; retail reached title 1024,
-   hangar 512, and completed, with 36 post-store scalar records and zero
-   mismatches. None of the three candidates had a target-phase execution row,
-   post-target row, or scalar sample, selecting H3 for this bounded class.
-   The paired port reached hangar with 2,856 image-DMA joins, zero
-   crash/abort markers, and qualified source/destination payload
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-
-   Session 3957 tested `0x80005114`, `0x80005118`, and `0x8000511C`. The
-   independent whole-RDRAM control fired; retail reached title VI 1024,
-   hangar VI 512, and oracle completion, with 36 post-store scalar records and
-   zero mismatches. None of the three candidates produced a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded class only. The paired port reached hangar with 2,860 image-DMA
-   joins, zero crash/abort markers, and source/destination payload
-   `FNV=0x762B22A5`, `nonzero=0`. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-
-   Session 3958 tested `0x80005120`, `0x80005124`, and `0x80005128`. The
-   independent whole-RDRAM control fired; retail reached title VI 1024,
-   hangar VI 512, and oracle completion, with 36 post-store scalar records and
-   zero mismatches. None of the three candidates produced a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded class only. The paired port reached hangar with 3,032 image-DMA
-   joins, zero crash/abort markers, and source/destination payload
-   `FNV=0x762B22A5`, `nonzero=0`. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-
-   Session 3965 tested `0x80005150`, `0x80005154`, and `0x80005158`. The
-   independent whole-RDRAM control fired 10,000 callbacks; retail reached
-   title VI 1024, hangar VI 512, and oracle completion. None of the three
-   candidates had a target-phase execution row, post-target row, or scalar
-   sample, selecting H3 for this bounded retail class. The paired port reached
-   both qualified phases with 2,087 image-DMA joins, zero crash/abort markers,
-   and qualified source/destination payload `FNV=0x762B22A5`, nonzero=0.
-   Continue with `0x8000515C`, `0x80005160`, and `0x80005164`; this is not
-   global writer absence.
-
-   Session 3966 tested `0x8000515C`, `0x80005160`, and `0x80005164`. The
-   independent whole-RDRAM control fired 10,000 callbacks; retail reached
-   title VI 1024, hangar VI 512, and oracle completion, with 36 post-store
-   scalar records and zero mismatches. None of the three candidates had a
-   target-phase execution row, post-target row, or scalar sample, selecting
-   H3 for this bounded retail class. The paired port reached both qualified
-   phases with 2,889 image-DMA joins, zero crash/abort markers, and qualified
-   source/destination payload `FNV=0x762B22A5`, nonzero=0. Continue with
-   `0x80005168`, `0x8000516C`, and `0x80005170`; this is not global writer
-   absence.
-
-   Session 3967 tested `0x80005168`, `0x8000516C`, and `0x80005170`. The
-   independent whole-RDRAM oracle control fired 10,000 callbacks; retail
-   reached title VI 1024, hangar VI 512, and oracle completion, with 36
-   post-store scalar records and zero mismatches. None of the three
-   candidates had a target-phase execution row, post-target row, or scalar
-   sample, selecting H3 for this bounded retail class. The paired port
-   reached both qualified phases with 2,862 image-DMA joins, zero crash or
-   abort markers, and qualified source/destination payload
-   `FNV=0x762B22A5`, nonzero=0. Continue with `0x80005174`, `0x80005178`,
-   and `0x8000517C`; this is not global writer absence.
-
-   Session 3968 tested `0x80005174`, `0x80005178`, and `0x8000517C`. The
-   independent whole-RDRAM control passed; retail reached title VI 1024,
-   hangar VI 512, and oracle completion, with 36 post-store scalar records
-   and zero mismatches. None of the three candidates had a target-phase
-   execution row, post-target row, or scalar sample, selecting H3 for this
-   bounded retail class. The paired port reached both qualified phases with
-   2,854 image-DMA joins, zero crash/abort markers, and qualified
-   source/destination payload `FNV=0x762B22A5`, nonzero=0. Continue with
-   `0x80005180`, `0x80005184`, and `0x80005188`; this is not global writer
-   absence.
-
-   Session 3969 tested `0x80005180`, `0x80005184`, and `0x80005188`. The
-   first generated wrapper accidentally nested the prior wrapper and did not
-   arm these PCs; after fixing it, the independent whole-RDRAM control fired,
-   retail reached title VI 1024 and hangar VI 512 and completed, and the 36
-   post-store scalar records had zero mismatches. All three candidates had
-   zero target-phase execution rows, post-target rows, and scalar samples,
-   selecting H3 for this bounded class. The paired port reached both target
-   phases with 2,248 image-DMA joins, zero crash/abort markers, and qualified
-   source/destination payload `FNV=0x762B22A5`, nonzero=0. Continue with
-   `0x8000518C`, `0x80005190`, and `0x80005194`; this is not global writer
-   absence.
-
-   Session 3974 tested `0x8000518C`, `0x80005190`, and `0x80005194`. The
-   independent whole-RDRAM control fired; retail reached title VI 1024,
-   hangar VI 512, and oracle completion, with 36 post-store scalar records and
-   zero mismatches. None of the three candidates had a target-phase execution
-   row, post-target row, or scalar sample, selecting H3 for this bounded retail
-   class. The paired port reached both qualified phases with 2,837 image-DMA
-   joins, zero crash/abort markers, and qualified source/destination payload
-   `FNV=0x762B22A5`, nonzero=0. Continue with `0x80005198`, `0x8000519C`,
-   and `0x800051A0`; this is not global writer absence.
-
-   Session 3975 tested `0x80005198`, `0x8000519C`, and `0x800051A0`. The
-   independent whole-RDRAM control fired 10,000 times; retail reached title
-   VI 1024, hangar VI 512, and oracle completion. All three candidates had
-   zero target-phase execution, zero post-target rows, and zero scalar
-   samples, selecting H3 for this bounded retail class. The paired port arm
-   had no crash/abort but recorded zero image-DMA joins, so it supplies no
-   port payload conclusion. Continue with `0x800051A4`, `0x800051A8`, and
-   `0x800051AC`; this is not global writer absence.
-
-   Session 3976 tested `0x800051A4`, `0x800051A8`, and `0x800051AC`. The
-   independent whole-RDRAM control fired 10,000 times; retail reached title VI
-   1024, hangar VI 512, and oracle completion, with 36 post-store scalar
-   records and zero mismatches. None of the three candidates executed in a
-   qualified target phase or produced a post-target row or scalar sample,
-   selecting H3 for this bounded retail class. The paired port reached both
-   qualified phases with 2,871 image-DMA joins and zero crash/abort markers;
-   its qualified source/destination payload remained `FNV=0x762B22A5`,
-   nonzero=0. Continue with `0x800051B0`, `0x800051B4`, and `0x800051B8`;
-   this is not global writer absence.
-
-4. **M3 prior guard classes — validate the accumulated patch before extending.**
-   Session 3907 extended `patches/heap_guards.c`'s reciprocal-link audit from
-   the free-list head pair to the complete bounded chain, rejecting cycles and
-   foreign successor/predecessor links before dequeue. The change preserves
-   valid chains but remains unvalidated because this checkout lacks
-   `mips64-elf-gcc`/`mips64-elf-ld`; the local Apple clang rejects the MIPS
-   flags. Session 3899 confirmed CMake skips the patch pipeline because this checkout
-   lacks `mips64-elf-gcc`/`mips64-elf-ld`; session 3900 also found no local
-   alternate MIPS backend or toolchain. A local N64Recomp binary exists, but it
-   cannot produce `patches.elf`. Session 3914 added the next complete
-   active-queue idiom guard: a bounded walk now proves the terminal node is
-   reachable from the published queue head and has reciprocal predecessors
-   before the append stores. The full host target still builds, but this
-   checkout has no `PatchesLib` target and the MIPS guard remains unvalidated;
-   validate the accumulated patch when a human provides the toolchain. Session
-   3915 reran the required validation: `PatchesLib` is still not a configured
-   target (`No rule to make target 'PatchesLib'`), while the ordinary host
-   target completes successfully. This is H3 environment evidence only; no
-   allocator or MIPS-runtime claim is made. Session 3921 added the bounded
-   empty-head insertion guard: if the published active-queue head is null but
-   the tail successor is non-null, the append returns before publishing links.
-   ORIGIN is the active-queue append writer; a successor contradicts the
-   legitimate empty-queue state. The ordinary host target still builds, but
-   `PatchesLib` remains unconfigured and MIPS validation is unavailable, so
-   this is code landed with no runtime result. Validate the accumulated patch
-   when a human provides the toolchain.
-   Session 3928 added the bounded active-queue ownership-alias audit: the
-   popped free-list block must not already be reachable from the published
-   active-queue head before queue-link stores. ORIGIN is the free-list dequeue
-   writer publishing `popped`; an existing queue-owned node is not legitimate
-   allocator ownership. `PatchesLib` remains unconfigured, so this is code
-   landed with H3 environment evidence only; the ordinary host target builds.
-   Session 3935 added the tail-anchor audit: for a non-empty published queue,
-   the node reached through `heap_tail_loc->next` must be the head with a null
-   predecessor or point back to `heap_tail_loc`; otherwise the append returns
-   before link stores. ORIGIN is `heap_tail_loc` and the append writer; a
-   detached predecessor is not legitimate queue state. The ordinary host
-   target still builds, while `PatchesLib` remains unavailable (`No rule to
-   make target 'PatchesLib'`), so this is H4 environment evidence only. The
-   alignment guard added in session 3963 is likewise pending accumulated-patch
-   build and runtime qualification; add no further M3 guard class before that
-   validation.
-
-5. **M5 audio contract qualification — remaining retail candidate-writer
-   class.** Session 3900's phase-gated run passed the retail whole-RDRAM,
-   title-1024, and hangar-512 controls; candidate PCs `0x80003B98`,
-   `0x800044C8`, and `0x80004AB0` produced no retail rows. The paired port
-   reached hangar with 3,026 image-DMA joins and no crash/abort. This closes
-   that bounded class as H2 only. Session 3901's phase-gated run passed the retail whole-RDRAM,
-   title-1024, and hangar-512 controls; all three PCs executed in phase but had
-   zero post-target rows/samples. The paired port reached hangar with 2,836
-   image-DMA joins and no crash/abort. This closes that bounded class as H2 only;
-   session 3902 repeated the same discriminator for `0x80004D68`,
-   `0x80004D74`, and `0x80004D78`: each executed in the qualified title phase,
-   but each had zero post-target rows/samples. Retail whole-RDRAM reached
-   33,193,803 writes, both target VI gates and oracle completion; the paired port
-   reached hangar with 2,835 image-DMA joins and no crash/abort. This closes
-   that bounded class as H2 only. Continue with `0x80004D7C`, `0x80004D84`,
-   `0x80004E74`: all executed, only `0x80004E74` had a target-span phase row,
-   and all had zero post-target rows/samples. Retail controls again passed;
-   the paired port produced phase-5 image-DMA joins with zero payload and no
-   crash/abort. This closes that bounded class as H2 only. Continue with
-   `0x80004E8C`, `0x80004E90`, and `0x80004E94` all executed in the
-   qualified target phase but had zero post-target rows/samples. The retail
-   controls passed; the paired port reached hangar with 2,831 image-DMA joins,
-   no crash/abort, and zero-valued qualified image payload. This closes that
-   bounded class as H2 only. Continue with the next adjacent unclassified
-   candidates; do not infer global writer absence. Session 3905 tested
-   `0x80004F30`, `0x80004F34`, and `0x80004F38`: each executed during the
-   qualified target phase, but all had zero post-target rows and scalar
-   samples. Retail controls passed; the paired port reached hangar with
-   2,800 image-DMA joins, no crash/abort, and zero-valued qualified image
-   payload. This closes that bounded class as H2 only.
-   Session 3906 tested `0x80004F3C`, `0x80004F44`, and `0x80004F48`: all
-   executed during the qualified target phase, but each had zero post-target
-   rows and scalar samples. Retail controls passed; the paired port reached
-   hangar with 2,850 image-DMA joins and no crash/abort, with qualified image
-   payload `FNV=0x762B22A5`, nonzero=0. This closes that bounded class as H2
-   only. Continue with the next adjacent unclassified candidates.
-   Session 3908 tested `0x80004F4C`, `0x80004F50`, and `0x80004F54`: all
-   three executed during the qualified target phase, but each had zero
-   post-target rows and scalar samples. Retail whole-RDRAM, title-1024, and
-   hangar-512 controls passed; the paired port reached hangar with 2,856
-   image-DMA joins and no crash/abort, with qualified image payload
-   `FNV=0x762B22A5`, nonzero=0. This closes that bounded class as H2 only;
-   continue with the next adjacent unclassified candidates.
-   Session 3909 tested `0x80004F58`, `0x80004F5C`, and `0x80004F60`: retail
-   whole-RDRAM, title-1024, and hangar-512 controls passed, but none of the
-   three candidates executed in the qualified target phase and each had zero
-   post-target rows and scalar samples. This closes that bounded class as H3
-   only. The paired port arm crashed at about 55 ms in `spTaskSchedulerThread`
-   before target phase, so it supplies no image-DMA evidence for this run.
-   Continue with the next adjacent unclassified candidates only if the port
-   pre-target crash is treated as a separate parked defect.
-   Session 3910 tested `0x80004F64`, `0x80004F68`, and `0x80004F6C`: retail
-   whole-RDRAM, title-1024, and hangar-512 controls passed and the oracle
-   completed, but none of the three candidates executed in the qualified target
-   phase and each had zero post-target rows/scalar samples. This closes that
-   bounded class as H3 only. The paired port arm again crashed pre-target in
-   `spTaskSchedulerThread` at width 320, so it supplies no image-DMA evidence.
-   Continue with the next adjacent unclassified candidates while treating the
-   port pre-target crash as a separate parked defect.
-   Session 3911 tested `0x80004F70`, `0x80004F74`, and `0x80004F78`: retail
-   whole-RDRAM, title-1024, hangar-512, and completion controls passed, but
-   none executed in the qualified target phase and each had zero post-target
-   rows and scalar samples. This selects H3 only for this bounded class. The
-   paired port reached hangar with 2,815 image-DMA joins and no crash/abort;
-   qualified image payload remained `FNV=0x762B22A5`, nonzero=0. Continue
-   with the next adjacent unclassified candidates; the port caveat remains
-   separate from the retail writer result.
-   Session 3912 tested `0x80004F7C`, `0x80004F80`, and `0x80004F84`: retail
-   controls passed, but none executed in the qualified target phase and each
-   had zero post-target rows/scalar samples. This selects H3 only for this
-   bounded class. The paired port reached phase 3 without crash/abort but
-   recorded zero image-DMA joins, so it supplies no port payload conclusion.
-   Session 3913 tested `0x80004F88`, `0x80004F8C`, and `0x80004F90`: retail
-   positive controls passed (whole-RDRAM threshold, title 1024, hangar 512,
-   and oracle completion), but none executed in the qualified target phase
-   and each had zero post-target rows and scalar samples. This selects H3 only
-   for this bounded class. The paired port reached hangar with 2,849
-   image-DMA joins and no crash/abort; qualified image payload remained
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-   Session 3915 left `0x80004F94`, `0x80004F98`, and `0x80004F9C` as the next
-   runnable candidate set after the M3 validation checkpoint remained
-   unavailable. Session 3916 ran that set: retail positive controls passed
-   (whole-RDRAM threshold, title 1024, hangar 512, and oracle completion),
-   but all three PCs had zero target-phase execution, candidate-span rows,
-   post-target rows, and scalar samples. This selects H3 for this bounded
-   class only. The paired port reached hangar with 2,869 image-DMA joins and
-   no crash/abort; qualified image payload remained `FNV=0x762B22A5`,
-   nonzero=0. Continue with the next adjacent unclassified candidates; this
-   is not global writer absence.
-   Session 3917 corrected a one-level wrapper substitution defect before
-   rerunning `0x80004FA0`, `0x80004FA4`, and `0x80004FA8`: the first invocation
-   had executed the prior fixed oracle PCs and was discarded as
-   non-discriminating. The corrected run passed retail whole-RDRAM, title-1024,
-   hangar-512, and completion controls; all three candidates had zero
-   target-phase execution, candidate-span rows, post-target rows, and scalar
-   samples. This selects H3 for this bounded class only. The paired port
-   reached hangar with 2,851 image-DMA joins and no crash/abort; qualified
-   payload remained `FNV=0x762B22A5`, nonzero=0. Continue with the next
-   adjacent unclassified candidates; this is not global writer absence.
-   Session 3918 tested `0x80004FAC`, `0x80004FB0`, and `0x80004FB4`: retail
-   whole-RDRAM, title-1024, hangar-512, and completion controls passed, but all
-   three PCs had zero target-phase execution, candidate-span rows, post-target
-   rows, and scalar samples. This selects H3 for this bounded class only. The
-   paired port reached title and hangar with 2,264 image-DMA joins and no
-   crash/abort; qualified image payload remained `FNV=0x762B22A5`, nonzero=0.
-   Continue with the next adjacent unclassified candidates; this is not global
-   writer absence.
-   Session 3919 tested `0x80004FB8`, `0x80004FBC`, and `0x80004FC0`: retail
-   positive controls passed (whole-RDRAM threshold, title 1024, hangar 512,
-   and oracle completion), but all three PCs had zero target-phase execution,
-   candidate-span rows, post-target rows, and scalar samples. This selects H3
-   for this bounded class only. The paired port reached hangar with 2,845
-   image-DMA joins and no crash/abort; qualified image payload remained
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-   Session 3920 tested `0x80004FC4`, `0x80004FC8`, and `0x80004FCC`: retail
-   positive controls passed (whole-RDRAM threshold, title 1024, hangar 512,
-   and oracle completion), but all three PCs had zero target-phase execution,
-   candidate-span rows, post-target rows, and scalar samples. This selects H3
-   for this bounded class only. The paired port reached hangar with 3,025
-   image-DMA joins and no crash/abort; qualified image payload remained
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence.
-   Session 3891's same-build silent/image pair passed independent
-   retail whole-RDRAM, title-1024, and hangar-512 controls. Both arms reached
-   hangar; the image arm changed DMEM, reached break `0x1328`, and issued two
-   DMEM-to-RDRAM DMAs, but both payloads and PCM source/consumer joins were
-   zero. This selects H-ContractGap over H-AudioDegeneracy at this scope.
-   Do not add a writeback guard from this result.
-
-6. **M5 image task/output edge — classify remaining retail writers.** The
-   qualified port input and separate writeback-DMA edge are real, while the
-   dominant retail `0x800078EC` activity is zero-fill, not an image producer.
-   Sessions 3861–3896 classified many measured PCs as H2 (candidate-span
-   writer rows but no post-value scalar attribution) or H3 (no candidate-span
-   rows), always with positive controls and no global absence claim. The next
-   bounded representatives are
-   `0x80004FE8`, `0x80004FEC`, and `0x80004FF0`. Session 3925 tested
-   `0x80004FE8`, `0x80004FEC`, and `0x80004FF0`: retail whole-RDRAM,
-   title-1024, hangar-512, and oracle-completion controls passed; all three
-   candidates had zero target-phase execution, post-target rows, and scalar
-   samples. The paired port reached phase 5 with 2,850 image-DMA joins and no
-   crash/abort; qualified image payload remained `FNV=0x762B22A5`, nonzero=0.
-   This selects H3 for this bounded class only. Continue with
-   `0x80004FF4`, `0x80004FF8`, and `0x80004FFC`; this is not global writer
-   absence. Session 3926 tested `0x80004FF4`, `0x80004FF8`, and
-   `0x80004FFC`: retail whole-RDRAM, title-1024, hangar-512, and
-   oracle-completion controls passed; all three candidates had zero
-   target-phase execution, post-target rows, and scalar samples. This
-   selects H3 for this bounded class only. The paired port arm crashed
-   pre-target in `spTaskSchedulerThread` at last guest PC `0x8000834c`, so it
-   supplies no image-DMA or payload conclusion. Continue with
-   `0x80005000`, `0x80005004`, and `0x80005008`; this is not global writer
-   absence. Session 3927 tested `0x80005000`, `0x80005004`, and
-   `0x80005008`: retail whole-RDRAM, title-1024, hangar-512, and
-   oracle-completion controls passed; all three candidates had zero
-   target-phase execution, candidate-span rows, post-target rows, and scalar
-   samples. This selects H3 for this bounded class only. The paired port
-   reached hangar with 3,047 image-DMA joins and no crash/abort; qualified
-   image payload remained `FNV=0x762B22A5`, nonzero=0. Continue with
-   `0x8000500C`, `0x80005010`, and `0x80005014`; this is not global writer
-   absence. Session 3930 tested `0x8000500C`, `0x80005010`, and
-   `0x80005014`: retail positive controls passed; all three candidates had
-   zero target-phase execution, post-target rows, and scalar samples. This
-   selects H3 for this bounded class only. The paired port arm crashed
-   pre-target in `spTaskSchedulerThread` at last guest PC `0x8000834c`, so it
-   supplies no image-DMA or payload conclusion. Continue with
-   `0x80005018`, `0x8000501C`, and `0x80005020`. Session 3923 tested
-   `0x80004FD0`, `0x80004FD4`, and `0x80004FD8`: retail whole-RDRAM,
-   title-1024, hangar-512, and oracle-completion controls passed; all three
-   candidates had zero target-phase post-target rows and scalar samples, and
-   the phase writer census showed no candidate execution. This selects H3 for
-   this bounded class only. The paired port reached phase 5 with 3,008
-   image-DMA joins and no crash/abort; qualified payload remained
-   `FNV=0x762B22A5`, nonzero=0. Continue with the next adjacent unclassified
-   candidates; this is not global writer absence. The M3 validation checkpoint
-   remains unavailable in this checkout, so continue with this runnable
-   discriminator while treating the M3 result as environment evidence only.
-
-   Session 3931 tested `0x80005018`, `0x8000501C`, and `0x80005020`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   all three candidates had zero target-phase execution, post-target rows, and
-   scalar samples. This selects H3 for this bounded class only. The paired
-   port reached hangar with 2,880 image-DMA joins and no crash/abort;
-   qualified image payload remained `FNV=0x762B22A5`, nonzero=0. Continue
-   with the next adjacent unclassified candidates; this is not global writer
-   absence.
-
-   Session 3932 tested `0x80005024`, `0x80005028`, and `0x8000502C`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls passed;
-   all three candidates had zero target-phase execution, post-target rows, and
-   scalar samples. This selects H3 for this bounded class only. The paired
-   port reached hangar with 2,846 image-DMA joins and no crash/abort;
-   qualified image payload remained `FNV=0x762B22A5`, nonzero=0. Continue
-   with `0x80005030`, `0x80005034`, and `0x80005038`; this is not global
-   writer absence.
-
-   Session 3933 tested `0x80005030`, `0x80005034`, and `0x80005038` after
-   correcting the local binary path in the paired harness. Retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls all
-   passed; all three candidates had zero target-phase execution, post-target
-   rows, and scalar samples. This selects H3 for this bounded class only.
-   The paired port reached phase 5 with 2,067 image-DMA joins and no
-   crash/abort; qualified payload remained `FNV=0x762B22A5`, nonzero=0.
-   Continue with `0x8000503C`, `0x80005040`, and `0x80005044`; this is not
-   global writer absence.
-
-   Session 3934 tested `0x8000503C`, `0x80005040`, and `0x80005044`: retail
-   whole-RDRAM, title-1024, hangar-512, and oracle-completion controls all
-   passed; all three candidates had zero qualified target-phase execution,
-   post-target rows, and scalar samples. This selects H3 for this bounded
-   class only. The paired port reached hangar with 2,866 image-DMA joins and
-   no crash/abort; qualified payload remained `FNV=0x762B22A5`, nonzero=0.
-   Continue with `0x80005048`, `0x8000504C`, and `0x80005050`; this is not
-   global writer absence.
-
-7. **M3 prior guard classes.** Metadata-slot, block-span, alias, active-head,
-   and the expanded reciprocal-link guards are landed in
-   `patches/heap_guards.c` but have no runtime result. The same
-   missing-toolchain/build-target blocker applies; the tail-anchor audit is
-   now also accumulated and must not be extended before validation.
-
-8. **M5 target-phase parity is closed at current scope.** Do not repeat
-   standalone qualification, paired target-VI controls, or the retail
-   zero-writer census unless the route or build changes.
-
-9. **Generated-symbol renaming sweep is parked.** Resume only after M5 has no
-   applicable discriminator and M3 has a toolchain or a new discriminator.
-   Keep HYPOTHESIS-ID `generated-symbol-renaming-sweep`; mapping edits do not
-   evade the engineering-change stall gate.
-
-## Live hypothesis table
+## Live hypotheses
 
 | Hypothesis | Status |
 |---|---|
 | `H-M5-ProducerAbsent` | Selected for measured pre-input classes; only legitimate zero-fill writer observed. |
 | `H-M5-ClearIsExpected` | Selected: `0x8008F2CC` clears object `0x801797B0`, length `0x298`. |
 | `H-M5-RetailWriterPortEdgeAbsent` | Selected at measured target phases; no qualified retail target-buffer edge. |
-| `H-M5-FamilyDisconnectedOutput` | Selected at s3835 scope; retail lacks access to the watched alternate-object span while port emits family stores. |
+| `H-M5-FamilyDisconnectedOutput` | Selected at the s3835 scope; retail lacks access to the watched alternate-object span while port emits family stores. |
 | `H-M5-TargetPhaseAudioDmaAbsent` | Selected at s3829; no target-phase `rs64_m5_audio_source_dma`. |
 | `H-M5-TaskOutputFieldsEmptySeparateWriteback` | Selected at s3840 port scope. |
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |
 | `H-M5-800078ECZeroFill` | Selected at s3857; sampled writes are zero-valued. |
-| `H-M5-CandidateWriterClass` | Selected H2 for the bounded s3900–s3904 and s3908 sets through `0x80004F54`, and H3 for `0x80004F58`/`0x80004F5C`/`0x80004F60`/`0x80004F64`/`0x80004F68`/`0x80004F6C`/`0x80004F70`/`0x80004F74`/`0x80004F78`/`0x80004F7C`/`0x80004F80`/`0x80004F84`/`0x80004F94`/`0x80004F98`/`0x80004F9C`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FA0`/`0x80004FA4`/`0x80004FA8`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FAC`/`0x80004FB0`/`0x80004FB4`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FB8`/`0x80004FBC`/`0x80004FC0`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FC4`/`0x80004FC8`/`0x80004FCC`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FD0`/`0x80004FD4`/`0x80004FD8`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FDC`/`0x80004FE0`/`0x80004FE4`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80004FF4`/`0x80004FF8`/`0x80004FFC`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80005000`/`0x80005004`/`0x80005008`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80005024`/`0x80005028`/`0x8000502C`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x8000503C`/`0x80005040`/`0x80005044`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80005048`/`0x8000504C`/`0x80005050`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80005054`/`0x80005058`/`0x8000505C`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x800050E4`/`0x800050E8`/`0x800050EC`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x800050F0`/`0x800050F4`/`0x800050F8`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x800050FC`/`0x80005100`/`0x80005104` and `0x80005108`/`0x8000510C`/`0x80005110`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x8000512C`/`0x80005130`/`0x80005134`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H3 for `0x80005198`/`0x8000519C`/`0x800051A0`; this is not global writer absence. |
-| `H-M5-CandidateWriterClass` | Selected H2 for `0x800051B0`/`0x800051B4`/`0x800051B8`; this is not global writer absence. |
+| `H-M5-CandidateWriterClass` | Bounded classes through `0x80005218` selected H2 or H3 as recorded in the append-only ledger; never global absence. |
 | `H-M3-HeapSpanGuard` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-FreeListReciprocalLinks` | Code landed; validation blocked by absent tools/configured target. |
 | `H-M3-ActiveQueueReachability` | Code landed in s3914; validation blocked by absent MIPS toolchain and configured patch target. |
-| `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; s3929 reproduced the absent configured patch target, while the ordinary host target passed. Validation remains blocked by the MIPS toolchain/configuration. |
-| `H-M5-Step1-PreTitleRoute` | Selected H1 at s3973: all three arms passed VI 320; silent/LLE-on crashed at `spTaskSchedulerThread`, image/LLE-on reached VI 512, and image/LLE-off stopped at VI 1024. LLE routing changes the pre-title outcome; silent-arm audio remains unevaluable. |
-
-The s3922 M3 validation attempt confirmed the same build-system/toolchain
-boundary without runtime evidence; do not treat a successful host build as
-validation of MIPS patch behavior.
-
-The many bounded candidate-PC results are intentionally summarized here:
-each selected H2/H3 only for its named PC set, never as a global producer
-absence. The full evidence and exact counts remain in the append-only ledger.
+| `H-M3-ActiveQueueOwnershipAlias` | Code landed in s3928; host target passed, patch/runtime validation remains blocked. |
+| `H-M5-Step1-PreTitleRoute` | Selected H1 at s3973: image/LLE-on reached VI 512, image/LLE-off stopped at VI 1024, silent/LLE-on crashed at `0x8000834c`. |
 
 ## Durable evidence boundary
 
-- Retail reaches title/hangar and relevant writer PCs, while the paired port
-  reaches image-DMA joins without crash/abort when the arm completes.
+- Retail reaches title/hangar and relevant writer PCs; the paired port reaches
+  image-DMA joins without crash/abort when the arm completes.
 - Retail writes the candidate image-stage span during target phases, but the
   measured writer classes produce no qualified post-target scalar payload.
 - Port task `0x80171E70`, size 1, joins the exact input DMA at matching
@@ -839,10 +100,10 @@ absence. The full evidence and exact counts remain in the append-only ledger.
 - The repaired clear witness is `0x8008F2CC`, object `0x801797B0`, length
   `0x298`.
 - The s3891 image arm proves the RSP task and two output-DMA edges execute;
-  their zero payload does not identify the missing upstream writer.
+  zero payload does not identify the missing upstream writer.
 - Session 3973's route comparison reached VI 512 only with image/LLE-on;
-  image/LLE-off stopped at VI 1024 and silent/LLE-on crashed in the Factor 5
-  boot task at `last-guest-pc=0x8000834c`.
+  image/LLE-off stopped at VI 1024 and silent/LLE-on crashed at
+  `last-guest-pc=0x8000834c`.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.

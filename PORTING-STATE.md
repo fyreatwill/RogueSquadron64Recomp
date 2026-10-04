@@ -143421,3 +143421,18 @@ writer absence. The next class is `0x8000521C`, `0x80005220`, and
 `0x80005224`.
 
 **Outcome: ADVANCED** (the planned discriminator ran and selected H2).
+## Session 3989 (2026-10-04) — compacted current truth maintenance state
+
+The required maintenance check found `docs/CURRENT-TRUTH.md` at 60,320 bytes,
+above the 60,000-byte threshold, so no experiment was run. The file was
+compacted from 893 lines to 154 lines, retaining the current validated route,
+M5/M3 boundaries, active hypotheses, durable evidence, superseded conclusions,
+operating rules, and the monotonic next-step order. The detailed candidate
+writer counts and historical explanations remain in this append-only ledger
+and the durable background remains in `docs/PROJECT-OVERVIEW.md`.
+
+This maintenance pass rules out only documentation bloat as an immediate
+blocker; it does not add runtime evidence or change any investigation
+hypothesis. The next work unit remains the bounded `0x8000521C` / `0x80005220`
+/ `0x80005224` candidate-writer qualification using the legacy audio-DMA
+rollback and its same-run positive controls.
