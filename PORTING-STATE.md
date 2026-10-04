@@ -141984,3 +141984,17 @@ patch pipeline before adding another guard or resuming the M5 census.
 
 ORIGIN: `heap_tail_loc` and the active-queue link stores are the named
 writers; the new guard rejects only an impossible terminal-tail invariant.
+
+## Session 3898 (2026-10-03) — compacted current truth during maintenance
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 60,321 bytes, triggering the
+maintenance iteration. No experiment or build was run. The file was reduced
+from 850 lines / 60,321 bytes to 157 lines / 9,078 bytes; its active backlog,
+latest M3/M5 boundaries, operating rules, superseded conclusions, and links
+to durable documents were retained. Repetitive per-PC candidate census rows
+and older evidence detail remain in this append-only ledger rather than in the
+compact state file. `scratch/agent/NEXT.md` was rewritten with the same
+single M3 validation unit and its H1/H2/H3 discriminator.
+
+This rules out only documentation bloat as a maintenance issue; it says
+nothing about the patch pipeline, allocator behavior, or the M5 producer.
