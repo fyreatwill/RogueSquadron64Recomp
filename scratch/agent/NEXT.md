@@ -1,35 +1,32 @@
-# Next work unit: retail-grounded writer-PC histogram for the target source span
+# Next work unit: qualify the audio-arm route before another writer census
 
-HYPOTHESIS-ID: m5-source-writer-class
+HYPOTHESIS-ID: m5-route-qualification-4018
 
 Competing hypotheses:
 
-- H1: a retail writer-PC family is active in the target 512-width phase and
-  identifies a new legitimate source-writer class to audit in the port.
-- H2: retail has target-phase writes to the destination span, but no
-  phase-gated writer family survives the histogram; the missing payload is
-  upstream of this destination edge.
-- H3: the oracle or paired port route fails a positive control or target phase,
-  so the writer histogram is unevaluable.
+- H1: the declared/real pre-target stop is schedule-sensitive; adding a
+  declared/silent control in the same run will reach both target VIs while
+  declared/real remains the only real-audio failure.
+- H2: the legacy `0xF80` staging path is causal; declared/real and
+  declared/silent will reach both target VIs while legacy/real alone crashes
+  at `0x8000834C`.
+- H3: the arm failures are shared contention or nondeterministic scheduling;
+  all three arms will fail or different arms will fail without a stable split.
 
-Discriminator: in one build/run, retain the whole-RDRAM positive control and
-the existing title/hangar controls, then collect the oracle writer-PC
-histogram for physical `0x1798B0..0x179A48` specifically at VI origin
-`0x006AB400`, width 512. Pair it with declared/real and legacy/real using the
-existing gate/source/PCM diagnostics. H1 requires at least one nonzero
-phase-gated retail writer-PC row plus matching qualified port target joins; H2
-requires qualified controls and zero target-phase retail writer-PC rows; H3
-is any missing positive control, target phase, or port arm.
+Discriminator: one build/run with retail, declared/real, declared/silent, and
+legacy/real concurrently. Preserve the whole-RDRAM oracle positive control,
+title/hangar VI controls, and port RSP-source/audio-stage/phase controls. H1,
+H2, and H3 are distinguished by which arm reaches both target VIs and whether
+the crash remains uniquely tied to legacy staging. Do not use a retail-only
+null or add a mitigation if no real-audio arm reaches both target phases.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    # Add to the oracle argument list in the new recipe, after the existing
-    # 0x1798B0 watch: --pc-hist-watch 2 --pc-hist-phase 0x006AB400:512
-    env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4018_m5_source_writer zsh scratch/agent/run_s4018_m5_source_writer.sh
+    env RS64_BOUNDARY_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4019_m5_route_qualification zsh scratch/agent/run_s4019_m5_route_qualification.sh
 
-The new recipe must launch retail, declared/real, and legacy/real concurrently,
-use a fresh output directory, preserve the whole-RDRAM positive control and
-phase controls, and SIGKILL every arm after its watchdog. Do not add a gate or
-payload mitigation from writer counts; any mitigation-shaped change requires
-an `ORIGIN:` naming the writer and stating whether its value is legitimate.
+The new recipe must launch the four arms concurrently, use a fresh output
+directory, phase-gate every budget, and SIGKILL every arm after its watchdog.
+Use the established autopilot and `ROGUESQ_SPIN_YIELD=1`; retain
+`ROGUESQ_AUDIO_UCODE=1`, with `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` only on the
+legacy arm and the silent arm's explicit `ROGUESQ_AUDIO_UCODE=0`.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4017 (2026-10-04).
+Updated for session 4018 (2026-10-04).
 
 ## Current state
 
@@ -256,12 +256,31 @@ target-phase value transition. This does not explain the upstream zero PCM
 payload. ORIGIN: the oracle store-field rows and port hooks observe legitimate
 guest/runtime writers; no mitigation landed.
 
+Session 4018 ran the next retail-grounded source-span writer histogram.
+Retail passed the whole-RDRAM positive control, produced 631 title VI 1024
+rows and 516 hangar VI 512 rows, completed, and recorded 1,125 writes to
+`0x1798B0..0x179A48`. The phase-gated histogram was empty for both target
+buckets; the lifetime histogram was led by `0x800078EC` (816) and
+`0x80007670` (184), with the rest in the `0x8001E2C0`/`0x8001FA*` family.
+The paired declared/real arm stopped before target phases and the legacy/real
+arm reproduced the `spTaskSchedulerThread` crash at guest PC `0x8000834C`, so
+H3 is selected for the paired discriminator. The retail phase-null is valid
+only at the measured oracle scope and is not a qualified port writer-class
+selection. ORIGIN: diagnostic histogram and route hooks only; no mitigation.
+
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 next source-payload discriminator.** The gate-value redesign is now
+1. **M5 route qualification before another writer census.** Session 4018's
+   retail histogram was qualified but its paired port arms failed before the
+   target phases. Run one same-build schedule/arm table that includes
+   declared/real, declared/silent, and legacy/real with the existing source,
+   audio-stage, and phase controls. Do not interpret another retail-null or
+   add a mitigation until at least one real-audio arm reaches both target VIs.
+
+2. **M5 next source-payload discriminator.** The gate-value redesign is now
    qualified at its measured scope: retail's 17 gate writes are zero-byte
    initialization/transitional traffic before the target phase. The candidate
    census is qualified through `0x8000529C`, the legitimate `0xF80` writer is
@@ -270,17 +289,17 @@ candidate results are summarized by address range rather than copied here.
    changing audio behavior; do not repeat the scheduler split. Keep scheduler
    `a0` as a message object and treat ABI rows as authoritative.
 
-2. **M5 candidate-writer census continuation.** Closed for the measured
+3. **M5 candidate-writer census continuation.** Closed for the measured
    adjacent range through `0x8000529C`; resume only with a new writer class or
    a new ground-truth source.
 
-3. **M3 heap guard validation.** The accumulated guards, including the new
+4. **M3 heap guard validation.** The accumulated guards, including the new
    free-list/active-queue ownership-alias guard, in
    `patches/heap_guards.c` are not runtime-qualified because the configured
    build has no `PatchesLib` target and the MIPS toolchain is unavailable.
    Do not add another guard before the patch pipeline is supplied and built.
 
-4. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
+5. **Generated-symbol renaming sweep.** Parked while M5 has an applicable
    discriminator and M3 lacks a validation path. Keep hypothesis slug
    `generated-symbol-renaming-sweep`; mapping edits do not reset the
    engineering-change stall gate.
@@ -295,6 +314,7 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-FamilyDisconnectedOutput` | Selected at the s3835 scope; retail lacks access to the watched alternate-object span while port emits family stores. |
 | `H-M5-TargetPhaseAudioDmaAbsent` | Selected at s3829; no target-phase `rs64_m5_audio_source_dma`. |
 | `H-M5-GateValue` | H2 selected at s4017: all 17 retail `0x800A0F50` writes were zero-byte activity before the target 512-width phase; no target-phase transition. |
+| `H-M5-SourceWriterHistogram-4018` | H3 selected for the paired experiment: retail controls and completion passed with no target-bucket writer rows, but declared/real stopped pre-target and legacy/real crashed at `0x8000834C`; the retail phase-null is not a port writer-class selection. |
 | `H-M5-TaskOutputFieldsEmptySeparateWriteback` | Selected at s3840 port scope. |
 | `H-M5-RetailTaskStageRole` | Selected at s3846; exact task-generation-to-destination join remains open. |
 | `H-M5-RetailDestinationAbsentTargetPhase` | Selected at s3855 for `0x1798B0..0x179A48`; lifetime writers are outside target buckets. |

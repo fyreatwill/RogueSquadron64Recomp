@@ -143859,3 +143859,23 @@ payload and does not justify a gate mitigation. The initial run's `rg -E`
 summary failure was corrected and its captured logs were not used for the
 value conclusion. ORIGIN: oracle store-field rows and port hooks observe
 legitimate guest/runtime writers; no mitigation landed.
+
+## Session 4018 (2026-10-04) — retail target writer histogram is phase-null; port route failed
+
+Built the Debug target and ran one batched retail-oracle, declared/real, and
+legacy/real capture using a whole-RDRAM positive-control watch plus the target
+source-span watch `0x1798B0..0x179A48`. Retail's positive control fired,
+title VI 1024 produced 631 phase rows, hangar VI 512 produced 516 phase rows,
+and the oracle completed with 1,125 target-span writes. The phase-gated writer
+histogram emitted no writer rows for either target bucket. Its lifetime
+histogram attributed 184 writes to `0x80007670`, 816 to `0x800078EC`, and the
+remainder to the `0x8001E2C0`/`0x8001FA*` family.
+
+The paired port discriminator was not qualified: declared/real fired its RSP
+source and audio-stage controls but reached neither target VI; legacy/real
+fired the RSP source control, emitted two pre-target `0xF80` scheduler rows,
+and crashed in `spTaskSchedulerThread` at guest PC `0x8000834C` before any
+audio-stage or target-phase row. H3 is selected for the paired experiment:
+the retail phase-null is valid at its measured scope, but this run cannot use
+it to select a new writer class against the port. ORIGIN: the oracle histogram
+and port hooks observe legitimate runtime/guest writers; no mitigation landed.
