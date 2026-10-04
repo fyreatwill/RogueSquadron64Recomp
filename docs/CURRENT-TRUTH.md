@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4071 (2026-10-04).
+Updated for session 4072 (2026-10-04).
 
 ## Current state
 
@@ -221,6 +221,11 @@ boundary; playback/drain timing remains open.
   with no crash/abort. Since session 4069's dummy arm crashed under the same
   topology, this selects Hschedule/resource sensitivity over a deterministic
   dummy-state defect; it does not qualify native-vs-dummy sink behavior.
+- Session 4072 ran dummy-silent alone after the retail whole-RDRAM positive
+  control, with no native predecessor. Retail reached title 1024 and hangar
+  512; dummy-only also reached both gates with no crash/abort. This supports
+  Hnative-residue over a deterministic dummy-start dependency, but remains a
+  route/schedule result rather than sink evidence.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -229,15 +234,17 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Separate schedule sensitivity from topology interaction.**
-   Session 4071 selected Hschedule/resource sensitivity: the sequential
-   native-first capture reached both phases for both silent arms, while session
-   4069's same topology crashed only in dummy. Run a same-build dummy-silent
-   process without a preceding native arm, with the retail positive control and
-   scheduler breadcrumbs. A dummy-only success supports native-residue or
-   launch-order interaction; a dummy-only crash supports a dummy-startup
-   dependency; a changed result keeps the route schedule-sensitive. Do not
-   reopen sink qualification unless the arm reaches both phase gates.
+1. **Separate launch residue from timing sensitivity.**
+   Session 4072's clean dummy-only success supports Hnative-residue, while
+   session 4069's native-first dummy crash and session 4071's native-first
+   success leave timing/resource sensitivity open. Run one same-build capture
+   with two clean dummy-silent arms after the retail positive control: one
+   immediate and one with a fixed 7-second delay. Both must reach title 1024
+   and hangar 512 to be interpretable. Immediate-only failure selects a
+   launch-timing dependency; delayed-only failure selects delayed resource
+   interaction; two successes strengthen the residue interpretation; any
+   missing retail control or phase gate is unevaluable. Do not reopen sink
+   qualification unless an arm reaches both phase gates.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -259,7 +266,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
-| M5 route failure | Hschedule selected at silent pre-target scope (s4071): the same sequential native-first topology produced both target phases for native and dummy, whereas s4069's dummy arm failed at `spTaskSchedulerThread+9632`; the remaining route defect is schedule/resource-sensitive and not a deterministic dummy-state failure. |
+| M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |

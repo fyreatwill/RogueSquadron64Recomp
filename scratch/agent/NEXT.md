@@ -1,37 +1,38 @@
-# Next work unit: isolate dummy-silent startup without a native predecessor
+# Next work unit: clean dummy launch-timing A/B
 
-HYPOTHESIS-ID: m5-dummy-startup-ordering
+HYPOTHESIS-ID: m5-dummy-launch-timing
 
-Session 4071 repeated the retail-gated sequential capture. Retail passed its
-positive control and both phase gates; native silent and dummy silent both
-reached title 1024 and hangar 512 with no crash/abort. This differs from
-session 4069's dummy crash under the same topology, selecting schedule/resource
-sensitivity. The next unit removes the preceding native arm to test whether
-the dummy process is affected by launch order or native residue.
+Session 4072 ran only the dummy-silent arm after the retail oracle positive
+control. Retail reached title 1024 and hangar 512, and clean dummy-only also
+reached both gates without a crash or abort. This supports Hnative-residue over
+a deterministic dummy-start dependency, but session 4069's native-first dummy
+crash and session 4071's native-first success leave timing/resource sensitivity
+open.
 
 Competing hypotheses:
 
-- Hdummy-state: dummy-only reproduces the fault, proving the dummy route has a
-  deterministic startup dependency independent of a native predecessor.
-- Hnative-residue: dummy-only succeeds, so the native predecessor or its cleanup
-  changes shared host state relevant to dummy startup.
-- Hschedule: dummy-only differs again from the two prior outcomes, leaving the
-  route discriminator schedule-sensitive and unevaluable.
-- Hcontrol: the retail positive control or phase instrumentation fails in the
-  isolation recipe; no port null is interpretable until the control passes.
+- Hlaunch-timing: an immediate clean dummy launch fails while a fixed delayed
+  launch succeeds, proving startup timing is the discriminator.
+- Hdelayed-resource: immediate clean dummy succeeds while the delayed arm
+  fails, proving delayed resource interaction rather than native residue.
+- Hresidue: both clean dummy arms succeed, strengthening the native-predecessor
+  residue explanation.
+- Hcontrol: the retail positive control or either phase gate fails; no route
+  conclusion is valid.
 
-Discriminating measurement: one build and one retail-gated capture. Launch only
-the dummy-silent arm after the retail positive-control marker, with the same
-scheduler/task-route breadcrumbs. Record the retail positive-control marker and
-both phase gates. Dummy crashing before the gates selects Hdummy-state; dummy
-reaching both phases selects Hnative-residue; a changed/unstable result selects
-Hschedule; a missing retail control selects Hcontrol and invalidates the arm.
+Discriminating measurement: one same-build capture with two clean
+dummy-silent processes after the retail positive-control marker, one launched
+immediately and one after exactly 7 seconds. Keep `ROGUESQ_AUDIO_UCODE=0`, the
+LLE/spin-yield settings, scheduler breadcrumbs, both phase gates, and SIGKILL
+cleanup. Immediate-only failure selects Hlaunch-timing; delayed-only failure
+selects Hdelayed-resource; two successes strengthen Hresidue; a missing
+control or phase gate selects Hcontrol.
 
-Exact command:
+Exact implementation for the next iteration: extend
+`scratch/agent/run_s4069_m5_sequential_silent.sh` with a clean dummy-only
+`immediate` arm and a clean dummy-only `delayed` arm, using a 7-second sleep
+only between the two launches, then run:
 
-`env RS64_SKIP_NATIVE=1 RS64_S4071_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4071_m5_dummy_only zsh scratch/agent/run_s4069_m5_sequential_silent.sh`
+`env RS64_SKIP_NATIVE=1 RS64_S4072_OUT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4072_m5_dummy_timing zsh scratch/agent/run_s4069_m5_sequential_silent.sh`
 
-The driver now supports the `RS64_SKIP_NATIVE=1` dummy-only arm; retain
-`ROGUESQ_AUDIO_UCODE=0`,
-`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, all phase
-gates, and the retail oracle controls. Use SIGKILL for every game process.
+Do not reopen sink qualification unless an arm reaches both phase gates.

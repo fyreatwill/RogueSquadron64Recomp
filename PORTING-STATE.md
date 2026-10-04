@@ -144750,3 +144750,22 @@ dummy-state defect. It does not qualify native-vs-dummy sink behavior because
 both arms were silent controls. The driver portability fix only selects the
 existing macOS build/ROM paths and adds `RS64_SKIP_NATIVE=1` for the next
 dummy-only discriminator; it does not change game behavior.
+
+## Session 4072 (2026-10-04) — isolated dummy startup without native predecessor
+
+The prescribed M5 discriminator ran the existing retail-gated driver with
+`RS64_SKIP_NATIVE=1`, so only the dummy-silent port arm launched after the
+retail oracle's whole-RDRAM positive control. Retail reached title VI 1024 and
+hangar VI 512. The clean dummy-only arm also reached both phase gates, with no
+`[CRASH]` or `[ABORT]`; its phase log reached title at about 14 seconds and
+hangar at about 19 seconds. Scheduler and audio host/drain breadcrumbs were
+active, providing positive-control branch evidence.
+
+This supports Hnative-residue over a deterministic dummy-start dependency:
+session 4069's native-first dummy arm crashed at
+`spTaskSchedulerThread+9632`, while the clean arm here succeeded. It does not
+prove native residue as the cause because session 4071 also succeeded after a
+native predecessor; launch timing/resource sensitivity remains open. It rules
+out treating the dummy backend as deterministically unable to boot, and no
+sink comparison was attempted because the arm was a silent control. Logs are
+under `scratch/agent/s4071_m5_dummy_only/`.
