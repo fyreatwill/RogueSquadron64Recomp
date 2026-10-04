@@ -143701,3 +143701,22 @@ H1 and H3 are not supported. The table's scheduler `a0` is a message object,
 not the OSTask pointer, so its decoded task fields are not ground truth; the
 existing ABI rows remain authoritative for task fields. ORIGIN: diagnostic
 boundary only; no skip, guard, restore, or other mitigation landed.
+
+## Session 4010 (2026-10-04) — selected legacy staging split
+
+Built the Debug target and ran the single prescribed concurrent capture with
+retail oracle, declared/real, and legacy/real arms. Retail passed the
+whole-RDRAM positive control and reached title VI 1024 and hangar VI 512.
+Declared/real fired the RSP source-hook control, reached both target phases,
+and produced 3,591 audio-ABI rows plus 26,847 phase-scoped scheduler rows.
+Legacy/real fired the same source-hook control, emitted only two pre-target
+`task-load` rows with `staging=0xF80`, then crashed at
+`spTaskSchedulerThread+9632` / guest `0x8000834C` before either target phase
+and before any audio-ABI row. No scheduler successor variation appeared.
+
+This selects H1 for the measured route split: the legacy-only staging arm is
+the differentiator. It rules out H2's successor-change prediction and does
+not support H3 nondeterminism in this capture. The scheduler boundary's `a0`
+is a message object, not an OSTask pointer, so its decoded task fields are not
+ground truth; existing `audtask-abi` rows remain authoritative. ORIGIN:
+diagnostic boundary only; no skip, guard, restore, or other mitigation landed.

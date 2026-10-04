@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4009 (2026-10-04).
+Updated for session 4010 (2026-10-04).
 
 ## Current state
 
@@ -154,37 +154,38 @@ it emitted zero audio/image census rows. This is the second consecutive
 pre-target route failure after s4007, so the candidate census is parked and
 the route requires a discriminator before another candidate sweep.
 
-Session 4009 built and ran one concurrent retail-oracle plus declared/real and
-legacy/real capture with a phase-scoped scheduler boundary table. Retail
-passed the whole-RDRAM positive control and reached title VI 1024 and hangar VI
-512. The declared arm's source-hook control fired, reached both target phases,
-and emitted 26,829 boundary rows. The legacy arm's source-hook control fired,
-but crashed in `spTaskSchedulerThread` at guest PC `0x8000834C` with no target
-phase or audio-ABI row. This selects H2 at route level: the legacy-only path
-is the differentiator in this capture; H1 and H3 are not supported. The
-boundary table's `task-load` `a0` is a scheduler message object rather than
-the OSTask pointer, so its decoded OSTask fields are not ground truth; use the
-existing `audtask-abi` rows for actual task fields. ORIGIN: the new table
-observes scheduler state and task-contract context only; it adds no skip,
-guard, restore, or other mitigation.
+Session 4009's initial scheduler capture had a run-lifetime budget defect and
+was not used as evidence. The corrected same-build capture in session 4010
+passed retail whole-RDRAM, title VI 1024, and hangar VI 512 controls. The
+declared/real arm reached both target phases with 3,591 audio-ABI rows and
+26,847 phase-scoped scheduler rows. The legacy/real arm fired the same RSP
+source-hook control, emitted only two pre-target scheduler rows with
+`staging=0xF80`, then crashed at `spTaskSchedulerThread+9632` / guest
+`0x8000834C` before any target phase or audio-ABI row. No successor variation
+was observed. This selects H1 for the route-level split: the legacy-only
+staging path is the differentiator; H2's successor-change prediction and H3's
+nondeterministic-arm prediction are unsupported in this capture. Scheduler
+`a0` remains a message object, not an OSTask pointer; ABI rows are authoritative
+for task fields. ORIGIN: the table observes scheduler context only; it adds no
+skip, guard, restore, or other mitigation.
 
 ## Next steps
 
 Work only the first applicable item. The backlog is monotonic; repeated
 candidate results are summarized by address range rather than copied here.
 
-1. **M5 legacy-only scheduler failure.** Use the qualified s4009 split to
-   inspect the first legacy/real failure at `spTaskSchedulerThread+9632` /
-   guest `0x8000834C`: join scheduler message/successor rows to the existing
-   `audtask-abi` task rows and source-hook sequence, with a same-build
-   declared/real control. The discriminator is whether the legacy arm's last
-   scheduler message and successor differ before the crash while declared
-   reaches both phases; do not decode the scheduler message object as an
-   OSTask.
+1. **M5 candidate-writer census continuation.** The route-level discriminator
+   is complete: declared/real qualifies, while legacy/real is selected H1 and
+   remains pre-target. Rerun `0x80005294`, `0x80005298`, and `0x8000529C` with
+   the existing phase-scoped writer table, retail positive control, and a
+   declared/real control. Treat the legacy arm as a route qualification
+   failure if it repeats the pre-target crash; do not call candidate absence a
+   retail null unless retail controls and the table qualify.
 
-2. **M5 candidate-writer census continuation.** Parked until the route-level
-   discriminator qualifies legacy/real through both target phases; then rerun
-   `0x80005294`, `0x80005298`, and `0x8000529C` with one phase-scoped table.
+2. **M5 legacy-only scheduler follow-up.** Parked after the staging-specific
+   split; only revisit with a new discriminator that observes the actual
+   staging writer or scheduler message successor without decoding `a0` as an
+   OSTask.
 
 3. **M3 heap guard validation.** The accumulated guards, including the new
    free-list/active-queue ownership-alias guard, in
@@ -232,7 +233,8 @@ candidate results are summarized by address range rather than copied here.
 | `H-M5-CandidateWriterClass-0588` | H2 selected at s4006: retail and paired-port controls passed, while `0x80005288`, `0x8000528C`, and `0x80005290` had no post-target samples, rows, or sequence hits. |
 | `H-M5-CandidateWriterClass-0594` | H3 selected at s4007: retail controls passed, but the paired port emitted no target phases or census rows, so `0x80005294`, `0x80005298`, and `0x8000529C` are unevaluable. |
 | `H-M5-LegacyRealRoute-4008` | H3 selected: after s4007's pre-target failure, the legacy/real rerun again failed before title/hangar, this time crashing at guest PC `0x8000834C` with zero census rows; route-level task-scheduler discrimination is required. |
-| `H-M5-LegacyRealRoute-4009` | H2 selected at route level: in one concurrent capture, declared/real reached title and hangar while legacy/real crashed at `0x8000834C` after its source-hook control and before any audio-ABI row. The scheduler boundary's decoded OSTask fields are unevaluable because its `a0` is a message object. |
+| `H-M5-LegacyRealRoute-4009` | Superseded by s4010: the first capture established only a legacy-only route split and was overinterpreted as H2 before the corrected staging-specific table result. |
+| `H-M5-LegacyRealRoute-4010` | H1 selected at route level: declared/real reached both target phases, while legacy/real emitted two pre-target task-load rows with `staging=0xF80` and crashed at `0x8000834C` before any audio-ABI row; no successor variation appeared. |
 | `H-M3-FreeActiveOwnershipAlias` | Guard landed at s3996: a valid acyclic free-list and active queue must not share a terminal node; runtime qualification is blocked by the unavailable PatchesLib target. |
 | `H-M3-EmptyActiveQueueTail` | Guard landed at s4003: an empty published active queue must have a null tail predecessor and successor; host build passed, while patch/runtime qualification is blocked by the unavailable PatchesLib target. |
 
@@ -335,12 +337,12 @@ the legacy/real port hit the RSP source-hook control then crashed in
 emitted zero census rows. This confirms the route is not qualified for
 another candidate null; the candidate sweep is parked.
 
-Session 4009 re-qualified retail controls and captured both port arms in one
-build. Declared/real reached both target phases with source-hook and
-scheduler-boundary controls; legacy/real reached the source-hook control but
-crashed at `spTaskSchedulerThread+9632` / guest `0x8000834C` before target
-phases and before any `audtask-abi` row. This is a route-level split, not a
-qualified candidate-writer result.
+Session 4010's corrected phase-scoped table passed retail controls and the
+declared/real control, while legacy/real emitted two pre-target task-load rows
+with `staging=0xF80` and crashed at `0x8000834C` before any audio-ABI row. No
+successor variation appeared. This selects H1 for the measured legacy route
+split and permits the candidate census to resume only with route qualification
+reported separately.
 
 Sessions 1–3927 remain in the append-only ledger. Use bounded `grep`/`sed`
 windows for `PORTING-STATE.md`; never read it whole.
@@ -352,6 +354,11 @@ missing-input and wait-return explanations, global-zero image-DMA theory,
 route-wide PCM-gap theory, and force-zero default policy are superseded at
 their measured scopes. They were believable before qualified routes,
 same-build controls, or independent retail attribution existed.
+
+The initial s4009 interpretation that selected H2 from a legacy-only crash is
+superseded by s4010: it showed the route split but had not separated staging
+from successor state. The corrected table found the legacy `0xF80` staging row
+before the crash and no successor change.
 
 The s3579–s3584 `0x800078EC` stored-value inference is unsupported because
 retail executed a byte store while the oracle read an aligned word containing
