@@ -142085,3 +142085,19 @@ and `0x80004E94`.
 ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
 paired with port image-DMA joins; no guest or host state was rewritten,
 skipped, or guarded.
+
+## Session 3904 (2026-10-03) — classified the next M5 candidate-writer classes
+
+Ran `zsh scratch/agent/run_s3903_m5_remaining_candidate_writers.sh` for
+`0x80004E8C`, `0x80004E90`, and `0x80004E94`. Retail passed its whole-RDRAM
+positive control, title VI 1024, hangar VI 512, and oracle completion. All
+three PCs executed during the qualified target phase with 35 phase rows each,
+but none produced a post-target row or post-target scalar sample. This selects
+H2 for this bounded class only; it does not establish global retail writer
+absence or identify the missing output edge. The paired port reached hangar,
+recorded 2,831 image-DMA joins, and emitted no crash or abort marker; the
+qualified image payload remained `FNV=0x762B22A5`, nonzero=0.
+
+ORIGIN: independent retail phase-gated writer-PC/post-target attribution,
+paired with port image-DMA joins; no guest or host state was rewritten,
+skipped, or guarded.
