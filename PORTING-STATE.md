@@ -141354,6 +141354,20 @@ the fresh dominant PCs `0x80092020`, `0x8009206C`, and `0x80007670`.
 ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
 guest or host state was rewritten, skipped, or guarded.
 
+## Session 3869 (2026-10-03) — classified three absent candidate writers
+
+Ran the paired retail-oracle and port arm for `0x80029E8C`, `0x80035124`, and
+`0x80004520`. Retail passed the whole-RDRAM positive control, title VI 1024,
+hangar VI 512, and clean shutdown. None of the three PCs appeared in the
+phase-gated candidate-span writer census or post-value scalar samples. The
+port independently reached 2,720 image-DMA joins with zero crash/abort
+markers. This selects H3 for these PCs only: they do not own the measured
+retail target edge at this scope. The next representatives are `0x80084E48`,
+`0x8008509C`, and `0x800852E0`.
+
+ORIGIN: diagnostic-only phase-gated writer and scalar-store attribution; no
+guest or host state was rewritten, skipped, or guarded.
+
 ## Session 3866 (2026-10-03) — audited free-list reciprocal-link guard class
 
 Pivoted from the diagnostic-only M5 candidate-writer probe to a bounded M3
