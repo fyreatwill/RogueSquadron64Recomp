@@ -457,7 +457,9 @@ for this measurement: no target-phase key-on site is reachable, so Step 5
 must not remove or replace the returns. This does not prove why the caller
 does not enter the sites or authorize a guard change. The capture wrapper
 also corrected its parser after the run; the raw oracle summary, not the
-initial wrapper counters, is the evidence.
+initial wrapper counters, is the evidence. This is single-source retail
+ground truth; a port-side witness is still required before any behavior
+change.
 
 ## Next steps
 

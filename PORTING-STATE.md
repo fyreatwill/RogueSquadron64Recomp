@@ -145164,5 +145164,6 @@ It does not identify whether the missing boundary is the key-on caller,
 descriptor branch, or an upstream route difference. The first wrapper
 summary parser assumed the wrong field order; it was corrected from the raw
 log without rerunning the experiment. The raw oracle watch summary and phase
-markers are the evidence. ORIGIN: the watched divisor publisher is a
+markers are the evidence. This is single-source retail ground truth; no
+port-side behavior conclusion is drawn. ORIGIN: the watched divisor publisher is a
 legitimate guest `+0x60` store; no mitigation or guest behavior changed.
