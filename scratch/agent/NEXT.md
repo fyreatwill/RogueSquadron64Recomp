@@ -1,8 +1,10 @@
-# Next work unit: locate the executed entry before the divergent object fields
+# Next work unit: witness the executed entry before the divergent object fields
 
 HYPOTHESIS-ID: m5-step4-object-field-producer
 
-Use the qualified s4175 route as the base. The port-side witness at
+Use the qualified s4176 route as the base. Add a regeneration-safe port witness
+at `0x8008F900`, whose retail predecessor is `0x8008F8FC`, then join it to the
+existing port-side witness at
 `0x80090268`, `0x80090278`, and `0x8008FF04/0C/14` fired in title/hangar, but
 its `s0+0x60`, `s0+0x22`, and `s1+0x22` values did not reconcile with the
 independent retail oracle. Do exactly one independent retail predecessor
@@ -14,15 +16,19 @@ real-audio/LLE/ungated/solo port route in the recipe for route comparison.
 
 Before building, compare the new witness against these hypotheses:
 
-- H-static-entry-unexecuted: the range confirms `0x8008F9C8` is not entered;
-  select the first executed predecessor/entry PC from the range histogram.
-- H-earlier-producer-mismatch: an executed earlier PC supplies the object or
-  field inputs; that PC becomes the next port witness boundary.
-- H-route-invalid: the independent positive control or title/hangar phase is
-  absent; the range result is unevaluable.
+- H-entry-context-match: the new port entry snapshot joins retail-like object
+  fields, moving the mismatch downstream.
+- H-earlier-producer-mismatch: the entry context is already divergent, keeping
+  the source boundary at or before `0x8008F900`.
+- H-route-invalid: the build or phase-gated run lacks its positive control or
+  title/hangar phases, so the witness is unevaluable.
 
-The discriminator is the same-run range/predecessor table: a nonzero exact
-entry/range hit identifies the next boundary, zero exact entry hits with live
-target PCs rejects the static candidate, and a missing control/phase rejects
-the run. No audio, gate, writer, payload, or mitigation behavior change is
-authorized.
+The discriminator is the same-run retail/port entry-context join: matching
+context moves the boundary downstream, an already-divergent context keeps it
+at or before `0x8008F900`, and missing controls/phases rejects the run. No
+audio, gate, writer, payload, or mitigation behavior change is authorized.
+
+Build with the normal CMake target, then run the phase-gated paired recipe
+derived from `scratch/agent/run_s4175_m5_object_entry.sh`, replacing its static
+entry witness with `0x8008F900`. Keep all existing positive controls and
+passive breadcrumbs.

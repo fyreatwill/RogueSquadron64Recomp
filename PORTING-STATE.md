@@ -146700,3 +146700,17 @@ but the latched entry produced zero joins. This rejects `0x8008F9C8` as the
 executed entry boundary and leaves the first executed predecessor open. It
 does not reject the broader object-field mismatch, and no behavior change was
 made.
+
+## Session 4176 (2026-10-07) — qualified M5 executed predecessor range
+
+Ran one independent retail oracle capture with the whole-RDRAM positive
+control, title/hangar phase gates, exact target-PC watches, and the range
+`0x8008F900:0x8008FB00` around the rejected static entry candidate. The run
+was qualified: control and both target phases fired. The range executed
+4,480,806 times, while exact `0x8008F9C8` executed zero times. The earliest
+executed range entry was `0x8008F900`, with predecessor `0x8008F8FC` and 142
+executions; the five existing target PCs remained live. This rejects
+route-invalid and the static candidate as the executed boundary, selecting
+`0x8008F900` as the next port witness. It does not yet distinguish whether
+that entry's object context matches, and no audio, gate, writer, payload, or
+mitigation behavior changed.

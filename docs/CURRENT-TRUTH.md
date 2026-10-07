@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4175 (2026-10-07).
+Updated for session 4176 (2026-10-07).
 
 ## Current state
 
@@ -125,17 +125,24 @@ both phases but produced zero entry joins. This rules out `0x8008F9C8` as the
 executed entry boundary; it does not move the object-field mismatch or
 authorize behavior changes.
 
+Session 4176 qualified the next independent retail predecessor range. The
+whole-RDRAM control and both title/hangar phase gates fired; the range
+`0x8008F900:0x8008FB00` executed 4,480,806 times, while exact
+`0x8008F9C8` remained at zero. The earliest executed range entry was
+`0x8008F900`, entered from `0x8008F8FC` (142 executions). This selects
+H-earlier-executed-entry over H-static-entry-unexecuted-at-range and
+H-route-invalid, making `0x8008F900` the next port witness boundary. No
+audio, gate, writer, payload, or mitigation behavior changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** locate the executed entry boundary before the five
-   divergent object-field PCs. Use one independent retail
-   `--watch-pc-range`/predecessor measurement around the static `0x8008F9C8`
-   candidate, retaining whole-RDRAM and title/hangar controls; then add the
-   port witness only at the first range PC that executes. Discriminate an
-   unexecuted static entry from a real earlier producer/caller; do not change
-   audio, gate, writer, or payload behavior.
+1. **M5 audio de-stubbing:** add a regeneration-safe port witness at the first
+   executed predecessor boundary, `0x8008F900` (retail caller
+   `0x8008F8FC`), and join it to the five divergent object-field PCs in the
+   same qualified title/hangar route. Do not change audio, gate, writer, or
+   payload behavior.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -157,7 +164,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 Step 4 producer context | H-writer-counterpart-parity selected at s4171: retail and port both exercised `0x80090268`, `0x80090278`, and `0x8008FF04/0C/14` in hangar; port target-span rows carried matching nonzero values and destinations. The downstream port DMA/PCM remained zero-valued, so caller/object context is the next boundary. |
 | M5 writer object context | H-context-mismatch selected at s4173: retail field dumps fired for all five PCs and showed changing per-object source words/branch fields, while the port matched source-context path retained zero target-span values and did not expose equivalent object-field state. The first divergent object-field input is open; no behavior change is authorized. |
 | M5 object-field witness | H-legitimate-field-mismatch selected at s4174: the corrected port witness fired in both target phases and recorded all five producer PCs. Its runtime-memory field values and object records did not reconcile with the independent retail field table after using `MEM_W/MEM_BU/MEM_HU` semantics. The earlier raw-byte result is superseded as an endian instrumentation defect. |
-| M5 object-entry boundary | H-static-entry-unexecuted selected at s4175: independent retail had zero executions at `0x8008F9C8` while all five target PCs were live; the fixed port latch had zero target-phase joins. The broader first executed predecessor remains open. |
+| M5 object-entry boundary | H-earlier-executed-entry selected at s4176: independent retail range `0x8008F900:0x8008FB00` had 4,480,806 executions and its earliest entry `0x8008F900` came from `0x8008F8FC` 142 times, while exact `0x8008F9C8` had zero hits and all five target PCs were live. The next boundary is now `0x8008F900`; port qualification remains open. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |
