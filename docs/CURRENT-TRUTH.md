@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4167 (2026-10-07).
+Updated for session 4168 (2026-10-07).
 
 ## Current state
 
@@ -39,11 +39,23 @@ while the silent arm had `dma_count=0`. No downstream real-versus-silent
 divergence was measured, so H-upstream-zero-payload remains selected and no
 gate change is authorized.
 
+Session 4168 reproduced the same boundary with a self-cleaning concurrent pair.
+Both arms fired the positive control and reached title VI 1024 and hangar VI
+512. In hangar, real-image and silent PCM source/consumer rows were both zero
+(`384` samples, `FNV=0xF59C39C5`, `nz=0`); the real arm logged 3,846 audio-stage
+rows and 3,890 image-queue rows, while the silent arm logged no image-queue
+rows. The silent arm later bus-crashed after the target phases, so that crash
+does not invalidate the phase result. This independently requalifies
+H-upstream-zero-payload and rules out route invalidity for this clean pair; no
+gate or consumer change is authorized.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** advance to Step 4 in `docs/M5-AUDIO-PLAN.md`.
+1. **M5 audio de-stubbing:** advance Step 4 in `docs/M5-AUDIO-PLAN.md` by
+   qualifying the port-side `0x800A0F50` writer/value rows against the retail
+   writer set, with slot/status and PCM joins kept in the same phase-gated run.
    Retail ground truth is now present: the whole-RDRAM control fired, and the
    gate at `0x800A0F50` has writers `0x8008EA34`, `0x8008EB40`, `0x8008ED48`,
    `0x8008EB7C`, and `0x8008EC88`; the last is the nonzero enable writer.

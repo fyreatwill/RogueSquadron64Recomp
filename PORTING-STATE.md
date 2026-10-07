@@ -146529,3 +146529,24 @@ measured. This selects H-upstream-zero-payload at the port gate/consumer
 scope, rules out route invalidity for the clean pair, and does not authorize a
 gate or consumer change. ORIGIN: no mitigation or game value was changed;
 the real image's DMEM/DMA writes are legitimate task behavior.
+
+## Session 4168 (2026-10-07) — reproduced clean M5 gate/consumer boundary
+
+The first launch of the new self-cleaning pair harness stopped at a zsh parse
+error before either arm started; the harness was fixed and rerun in this same
+iteration. The corrected concurrent real-image/silent pair used the validated
+LLE/route controls, `ROGUESQ_LOG_ALL=1`, and phase-gated probes. Both arms fired
+the same-run positive control and reached title VI 1024 and hangar VI 512.
+
+In hangar, real-image and silent PCM source/consumer rows both had 384 samples,
+768 bytes, `FNV=0xF59C39C5`, and `nz=0`. The real arm recorded 3,846 declared
+audio-stage rows and 3,890 image-queue rows; the silent arm recorded 800
+audio-stage rows and no image-queue rows. Hangar gate rows were `0x01` for the
+majority of real-arm observations and the available silent observations, with
+the same early `0x00` rows. The silent arm later raised the known macOS bus
+error in `viRetraceHandlerThread`, after both target phases; it therefore does
+not make the phase-keyed null unevaluable. This reproduces
+H-upstream-zero-payload and rules out route invalidity for this pair. It does
+not identify the upstream producer or authorize a gate/consumer change.
+ORIGIN: no mitigation or game value was changed; the real image queue and
+audio-stage activity are legitimate task behavior.
