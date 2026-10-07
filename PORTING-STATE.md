@@ -145437,3 +145437,24 @@ the next work unit is the phase-gated declared-versus-legacy downstream task,
 service, slot, and PCM contract comparison. ORIGIN: the host audio-task
 staging writer selected the declared field or compatibility span; both are
 legitimate experiment arms, not mitigation machinery.
+## Session 4109 (2026-10-06) — qualified declared versus legacy image contract
+
+Ran `cmake --build build --target RogueSquadron64Recomp` successfully, then
+ran the existing retail-grounded `run_s4108_m5_image_staging_matrix.sh` as the
+single work unit. The retail oracle fired the whole-RDRAM positive control and
+reached title VI 1024 and hangar VI 512. The silent control crashed before
+either target at `spTaskSchedulerThread+9632` / guest PC `0x8000834c`, so its
+downstream nulls were rejected. Both image arms reached title and hangar with
+no crash or abort: declared-size emitted `dma_size=0x800`, legacy-size emitted
+`dma_size=0xF80` for the same declared `0x800` task.
+
+Both image arms produced positive task/ABI, image-stage and completion,
+slot/status, PCM source/consumer, host queue, and drain rows. Their image and
+PCM payloads remained zero (`FNV=0x762B22A5`, `nz=0`). This rejects staging
+size as the sufficient downstream explanation and rejects using the silent arm
+as image-contract evidence. It rules out a task/SP/service/slot/PCM route gap
+at the measured scope, but does not identify whether the zero begins in the
+image input, transform, or writeback. ORIGIN: the host audio-task staging
+writer is the legitimate source of the `0x800`/`0xF80` diagnostic difference;
+no mitigation or guest behavior changed. Next: locate the first zero boundary
+in the image source/transform/writeback chain.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4108 (2026-10-06).
+Updated for session 4109 (2026-10-06).
 
 ## Current state
 
@@ -636,15 +636,32 @@ service, status, slot, or PCM behavior. ORIGIN: the host audio-task staging
 writer selected the declared field or compatibility span; both are legitimate
 diagnostic arms, not payload guards or skips.
 
+Session 4109 ran the next retail-grounded, same-build image contract matrix.
+Retail passed the whole-RDRAM positive control and both target VIs. The silent
+control crashed before title/hangar, but both declared-size and legacy-size
+image arms reached title and hangar without crash or abort. The image arms
+both emitted thousands of ABI/task and image-stage rows, completed the image
+task, showed slot/status activity, and produced positive PCM source/consumer,
+host-queue, and drain rows. Their image and PCM payload signatures remained
+zero (`FNV=0x762B22A5`, `nz=0`); the declared arm staged `0x800` bytes and the
+legacy arm staged `0xF80` bytes for the same declared `0x800` task. Hdeclared-
+contract/Hlegacy-contract are rejected as sufficient explanations: staging
+size is not the measured downstream divergence. The silent-arm route failure
+keeps its downstream nulls unevaluable. The next search is the legitimate
+zero-payload origin before or during the image source/transform path. ORIGIN:
+the staging writer is the host audio-task DMA setup; both sizes are legitimate
+diagnostic arms, and no mitigation or guest behavior changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 image contract qualification:** compare declared-size and legacy-size
-   image arms now that both reach title/hangar, using phase-gated task exit,
-   SP completion, service, status/slot, and PCM joins. Keep silent only as a
-   route control; do not interpret its missing hangar as image evidence. Do
-   not force-clear status 03 or change the wait.
+1. **M5 image zero-payload origin:** run one retail-grounded, phase-gated
+   source/transform matrix that joins the image input DMEM snapshot, stage-2
+   and stage-3 values, destination writeback, and PCM source/consumer rows for
+   both image arms. Positive controls must include retail whole-RDRAM/title/
+   hangar and both port image target VIs. Attribute the first zero boundary;
+   do not add a guard or force-clear any status.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -668,7 +685,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
 | M5 voice modulation transform | Hlater-transform selected at s4091's first demonstrated boundary: the port `0x80084AB8` return values are the low 16 bits of `s0` after the source `andi`, and every sampled port value (`0`, `0xF00`, `0x1900`, `0x2000`, `0x3F80`) occurs in the qualified retail title/hangar support. The independent rows are not record-synchronized, so a later transform remains open. |
-| M5 route failure | H-image-specific-failure remains selected at s4108's measured scope: silent reached title only, while both declared `0x800` and legacy `0xF80` image arms reached title/hangar. Staging size is not sufficient to explain the image-specific route difference; the image cause remains open. |
+| M5 route failure | H-image-specific-failure remains selected at s4108's measured scope: silent reached title only, while both declared `0x800` and legacy `0xF80` image arms reached title/hangar. Session 4109 rejects staging size as the sufficient downstream explanation; the zero-payload origin remains open. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
