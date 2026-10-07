@@ -415,3 +415,4 @@ Detailed counts and session-specific notes remain in `PORTING-STATE.md`.
 
 - s4208: audio ucode DMA writes into +0x7C buffers are all-zero after early phase 4 (15.0 MB written, nz bytes frozen at 264405; phase-3 control nonzero). H-writes-zeros selected; next is Step 9g in scratch/agent/NEXT.md.
 - s4209: RDRAM->DMEM reads to the audio ucode are nonzero and copied exactly in phases 4/5 (59.2 MB nz of 77.8 MB; nzsrc_but_zero_dmem=0) while output writes stay zero. H-src-dma-zero refuted; H-state-zero vs H-cmd-skip open (Step 9h).
+- s4210: audio ucode processes ONE 0x50-byte record per task in all phases (H-cmd-skip refuted); phase 3 record valid + nonzero writes (control), phase 4/5 record at data_ptr 0x80171CE0/0x80171E70 is ASCII filename text ("expl","mat_11","tie_") and writes are zero => H-cmdbuf-aliased selected (single-run). Next (Step 9i): guest-store watch with PC on that cmd buffer range.

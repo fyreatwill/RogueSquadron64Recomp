@@ -3426,3 +3426,13 @@ if IMAGE_BREAK_MARKER in text and IMAGE_BREAK_MARKER not in original:
     notes.append("image-task guest break witness (M5 task contract)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)
+
+# --- s4210 cmd ring: hook the stage-0 call in factor5_ucode_b (idempotent; see tools/apply_s4210_cmd_ring.py) ---
+_p4210 = Path(path).parent / "factor5_ucode_b_recompiled.c" if "path" in globals() else None
+if _p4210 is not None and _p4210.exists():
+    _s = _p4210.read_text()
+    _old = "    rs64_audio_image_stage(0, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), 0, 0);  /* fixup: image-stage audit */\n"
+    if "rs64_s4210_cmd_rec" not in _s and _s.count(_old) == 1:
+        _s = _s.replace(_old, _old + "    rs64_s4210_cmd_rec(r4);  /* fixup: s4210 cmd ring */\n")
+        _s = _s.replace('extern "C" void rs64_audio_image_break(uint32_t pc);', 'extern "C" void rs64_s4210_cmd_rec(uint32_t src);\nextern "C" void rs64_audio_image_break(uint32_t pc);', 1)
+        _p4210.write_text(_s)
