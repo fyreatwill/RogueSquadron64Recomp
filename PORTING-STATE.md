@@ -145241,3 +145241,17 @@ evidence; it does not claim the new guard has fired in-game.
 The first selector census command was rejected before emulation because this checkout's oracle does not support `--post-store-scalar`; its usage-only log was not used as evidence. I reran the same work unit with the supported `--store-field-dump` form, then corrected the physical range after the field dump showed live `s1` bases beginning at `0x80171E80`, rather than the initially watched tail.
 
 The corrected retail run passed the whole-RDRAM positive control at 10,000 callbacks, reached title `0x00790400`/1024 and hangar `0x006AB400`/512, and watched physical `0x00171E22..0x00172D00`. The range recorded 713,374 writes. Hangar's only high-volume writer PCs were `0x800907A0` (source confirms `sb +0x84`) and `0x8008F64C/0x8008F650` (source confirms `+0x60/+0x5C`); none is an `s1+0x22` selector store. The exact selector-store PCs were not included in the first valid run's store-field list, so this does not yet select selector-live versus selector-absent. It rules out treating the observed high-volume writers as the selector writer. This is single-source retail evidence; the next run arms the seven known exact selector-store PCs. ORIGIN: all observed stores are legitimate retail writes; no port behavior or mitigation changed.
+## Session 4098 (2026-10-06) — selected M5 live descriptor-selector writers
+
+Ran the exact seven-PC retail selector-store census with the whole-RDRAM
+positive control, corrected physical selector range, title/hangar phase gates,
+and `store-field-dump`. The control fired; retail reached title
+`0x00790400`/1024 with 632 phase VIs and hangar `0x006AB400`/512 with 385
+phase VIs. Hangar target-phase writer summaries recorded 5,086 rows from
+`0x80090AAC` and 154 from `0x80090BA4`; the other five candidate PCs had no
+rows. The corresponding store-field records carried selector and source
+values. This selects Hwriter-live at retail scope and rules out
+Hselector-absent for these candidates. It does not yet qualify the paired port
+writer boundary. This is single-source retail ground truth. ORIGIN: these are
+legitimate guest descriptor-field stores; no mitigation or guest behavior
+changed.

@@ -1,31 +1,38 @@
-# Next work unit: M5 exact descriptor-selector store census
+# Next work unit: M5 qualify live descriptor-selector writers on the port
 
-HYPOTHESIS-ID: m5-descriptor-selector-writer
+HYPOTHESIS-ID: m5-port-descriptor-selector-writer
 
-The broad retail selector-range census is complete but did not arm the exact
-candidate store PCs. The next bounded unit must close that attribution gap.
+Retail ground truth identified two live hangar-phase selector writers. The
+next bounded unit compares those exact writers with the qualified declared-real
+port route in one same-build capture.
 
 Competing hypotheses:
 
-- Hwriter-live: one of the known `s1+0x22` store PCs fires in a target phase
-  and its scalar value explains the selector transition.
-- Hselector-absent: the qualified retail route reaches the descriptor call but
-  never writes the dynamic field in title or hangar.
-- Hcoverage: the whole-RDRAM control or one target VI phase is absent, so a
-  selector-field null is not interpretable.
+- Hport-writer-live: port rows at `0x80090AAC`/`0x80090BA4` carry the same
+  selector/source relationship as retail in title or hangar.
+- Hport-writer-gap: retail has phase-qualified rows, but the paired port has
+  no row from either live writer despite reaching both target VIs.
+- Hroute-invalid: either the retail positive control or one port target phase
+  is absent, so a port writer null is unevaluable.
 
-Discriminating measurement: run the retail oracle once with the whole-RDRAM
-positive control, title/hangar phase gates, the corrected physical watch
-`0x171E22:0x172D00`, and `--store-field-dump 1:` for
-`0x800909B4,0x800909FC,0x80090AAC,0x80090BA4,0x80090F3C,0x80090F8C,0x80092170`.
-A phase-qualified exact row with its scalar value selects Hwriter-live;
-qualified zero rows across both buckets select Hselector-absent; missing
-control/phase selects Hcoverage.
+Discriminating measurement: one same-build run must retain the retail
+whole-RDRAM/title/hangar controls and launch the declared-real port with the
+existing phase-gated selector-store witness. Compare rows for exactly
+`0x80090AAC` and `0x80090BA4`, including selector, source, phase, and VI
+origin/width. Paired port rows with the retail-shaped relationship select
+Hport-writer-live; qualified retail rows plus zero port rows select
+Hport-writer-gap; missing control or either target phase selects Hroute-invalid.
 
-Ground truth has been checked in `tools/oracle/README.md`: the watch addresses
-are physical, whole-RDRAM must fire, and phase buckets must use VI origin plus
-width. No port instrumentation or behavior change is authorized by this unit.
+Ground truth is already checked in `tools/oracle/README.md`; the port witness
+is diagnostic-only and no guest behavior change is authorized by this unit.
 
-Command:
+Commands:
 
-`env tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --watch-write 0x0:0x800000 --watch-write 0x171E22:0x172D00 --watch-pc 0x80090A3C,0x80090DE8,0x80090768 --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 --pc-field-dump 0x80090A3C,0x80090DE8 --store-field-dump 1:0x800909B4,0x800909FC,0x80090AAC,0x80090BA4,0x80090F3C,0x80090F8C,0x80092170 --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 --pc-hist-watch 1 --post-value-watch 1 --hit-cap 10000 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150`
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+`env ROGUESQ_LOG_M5_SELECTOR_STORE_CONTEXT=1 build/Debug/RogueSquadron64Recomp.exe > /tmp/rs64-port-selector-writer-20261006.log 2>&1`
+
+Run the existing retail oracle command from the prior unit concurrently, saving
+it to `/tmp/rs64-retail-selector-writer-20261006.log`; retain its whole-RDRAM
+and both phase controls. Inspect only phase-gated rows and the positive-control
+markers.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4097 (2026-10-06).
+Updated for session 4098 (2026-10-06).
 
 ## Current state
 
@@ -522,19 +522,27 @@ known `s1+0x22` selector-store sites. This is single-source retail evidence:
 it narrows the writer census but does not yet prove selector absence because
 the exact candidate PCs were not armed with store-field rows.
 
+Session 4098 repeated that census with exact store-field dumps for all seven
+known `s1+0x22` candidates. The whole-RDRAM control fired; retail reached
+title VI `0x00790400/1024` (632 phase VIs) and hangar VI
+`0x006AB400/512` (385 phase VIs). In the hangar bucket, `0x80090AAC` wrote
+5,086 rows and `0x80090BA4` wrote 154 rows; the other five candidates had no
+rows. Selector values and source fields were present in the matching records.
+Hwriter-live is selected at retail scope. This names two live selector
+writers but does not yet prove which writer/value the port fails to reproduce.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 7 exact selector-store census.** Keep the eight early returns
-   unchanged. Repeat the retail oracle controls and physical selector-range
-   watch, but arm `--store-field-dump` for the known `s1+0x22` writers
-   `0x800909B4`, `0x800909FC`, `0x80090AAC`, `0x80090BA4`, `0x80090F3C`,
-   `0x80090F8C`, and `0x80092170`. Hwriter-live is selected only if a
-   target-phase row names one of these sites and its scalar value; a qualified
-   zero across title/hangar selects Hselector-absent at retail scope; missing
-   controls selects Hcoverage. Do not change port behavior from this
-   single-source census.
+1. **M5 Step 8 qualify the live selector writers on the port.** Keep the
+   eight early returns unchanged. Run one same-build retail-oracle plus
+   declared-real port capture with the whole-RDRAM/title/hangar controls and
+   the existing phase-gated port selector-store witness, keyed to
+   `0x80090AAC` and `0x80090BA4`. Matching selector/source rows select the
+   port boundary; qualified retail hits with no paired port row select a port
+   writer gap; missing either route control is unevaluable. Do not change
+   guest behavior.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -561,6 +569,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
+| M5 descriptor selector writer | Hwriter-live selected at retail scope (s4098): hangar phase rows came from `0x80090AAC` and `0x80090BA4`; paired port attribution remains open. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary
