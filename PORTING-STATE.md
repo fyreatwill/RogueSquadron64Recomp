@@ -146995,3 +146995,17 @@ Caveat: ~200 yields at 1 ms per countdown is a real-time wait (~0.2-0.4 s per ta
 ORIGIN: countdown at 0x8014998A is cleared by the producer that runs when the guest thread yields; the old pump called musyxSynthFrame inline without effect (16 -> 16), so removing it as the default removes a no-op skip. The 5000-yield cap and `=0` rollback remain as hatches.
 
 Note: `fixup_game_funcs.py` and `RecompiledFuncs/` live in the sibling N64Recomp tree; the apply scripts here reproduce the edit.
+
+## Session 4193 (2026-10-07) — M5 A12 second spin (0x8014974C): never stuck in the hangar phase, closed
+
+Ran scratch/agent/s4193_spin2_hangar.sh (s4192 recipe, default yield mode, plus the existing
+ROGUESQ_LOG_WAITMUSYX_SPIN2=1 instrument; no new code needed — s332 already built enter/arm rows).
+Phase gates met: title 1024 rows=2320, hangar 512 rows=7. Results: `[waitmusyx-spin2] label=L_80091F34
+iter=1 flag=0 thr=3` fires exactly once and never again (no spin; the L_80091DC4 twin never fires);
+positive control in the same run: `[waitmusyx-spin2-arm] n=0..8+ val=1` shows the writer sets the flag to 1
+and the real clear path resets it, so the instrument and gate are live; the s4192 countdown wait also
+behaved (`spin-enter countdown0=16` -> `spin-exit countdown=0 yields=206`). Reproduces s332's finding
+(VI=640 phase) in the hangar phase: H-never-entered holds; H-yield-clears / H-needs-other-writer moot.
+Single-run, single-source for the hangar phase (agrees with s332 for a second phase). Rules out the second
+spin as a de-stub target. No code change (ORIGIN not applicable: no mitigation added).
+Pre-wait width-320 segfault si_addr=0x400128d47 not chased (M3 family).

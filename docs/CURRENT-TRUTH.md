@@ -277,7 +277,7 @@ No audio, gate, writer, payload, or mitigation behavior changed.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** A12 countdown wait is de-stubbed (s4192). Next hatch: the second unbounded spin at `0x8014974C` in `waitForMusyXAudioTaskDone` (plan A12 tail; give it the same enter/exit/yield rows and an unset/yield vs blind A/B), then Step 7 status-03 reaping. Object-path parity qualification is closed (s4187-s4191); do not add witnesses there.
+1. **M5 audio de-stubbing:** A12 countdown wait de-stubbed (s4192); A12 second spin at `0x8014974C` CLOSED as never-stuck (s4193: entered once, flag already 0, no spin; nothing to de-stub). Next: Step 7 status-03 reaping (A14). Object-path parity qualification is closed (s4187-s4191); do not add witnesses there.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
