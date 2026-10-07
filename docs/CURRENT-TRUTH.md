@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4145 (2026-10-07).
+Updated for session 4146 (2026-10-07).
 
 ## Current state
 
@@ -177,6 +177,16 @@ installed Clang also has no MIPS backend, and local filesystem checks found no
 toolchain or rebuildable source tree. The sentinel guard's ORIGIN is
 `heap_tail_loc` and the active-queue append stores; a predecessor on the
 sentinel path is not legitimate ownership state.
+
+Session 4146 added the missing allocator cursor/free-list ownership check to
+`func_80007D74`. The patch now walks the bounded chain published by
+`heap_free_head` and rejects `heap_bump` aliases both for a newly expanded
+chain and before dequeue publication. ORIGIN: `heap_bump` is written as the
+next allocation cursor, while free-list link stores own every reachable node;
+an alias is not legitimate shared ownership. The ordinary Debug target
+rebuilt successfully, while `PatchesLib` remains absent from this macOS CMake
+graph (`No rule to make target PatchesLib`), so this is a landed static guard,
+not runtime firing proof.
 
 Session 4137 ran the prescribed M3 environment discriminator. `command -v`
 found neither `mips64-elf-gcc` nor `mips64-elf-ld`, and

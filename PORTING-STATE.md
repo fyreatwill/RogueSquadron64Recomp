@@ -146117,3 +146117,17 @@ the source payload. ORIGIN: the existing guest `waitForAnyAudioSlot`/
 `anyAudioSlotActive` reads and slot-status writers; no guest behavior, wait,
 cap, predicate, slot state, or writeback mitigation changed. Evidence:
 `scratch/agent/s4145_m5_a11_terminal/`.
+
+## Session 4146 (2026-10-07) — added allocator cursor/free-list ownership guard
+
+Ran the mandated engineering pivot as a bounded M3 guard-class audit. The
+existing `func_80007D74` patch checked `heap_bump` against the active queue and
+sentinel, but not against nodes reachable from `heap_free_head`. Added a
+bounded `bump_cursor_disjoint_from_free_chain` check before free-list
+publication and on the fresh expansion chain. ORIGIN: `heap_bump` is the
+allocator's next-block writer and free-list link stores own the reachable
+nodes; aliasing is not legitimate ownership. The ordinary Debug target built
+successfully. `PatchesLib` still has no configured target, so no runtime guard
+firing is claimed. This rules out another observation-only M5 rerun for this
+iteration, but does not explain the M5 zero source payload or qualify the
+guard on the game route.

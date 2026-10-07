@@ -93,6 +93,26 @@ static int bump_cursor_disjoint_from_active_queue(const void* bump,
     return node == NULL;
 }
 
+// ORIGIN: heap_bump is published as the next allocation cursor, while the
+// free-list link stores publish every node reachable from heap_free_head. A
+// cursor alias would let the next allocation reuse a block still owned by the
+// free list, so reject it before either owner chain is mutated.
+static int bump_cursor_disjoint_from_free_chain(const void* bump,
+                                                const Block* free_head) {
+    const Block* node = free_head;
+    uint32_t count = 0;
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (!block_ok(node)) {
+            return 0;
+        }
+        if (bump == node) {
+            return 0;
+        }
+        node = node->next;
+    }
+    return node == NULL;
+}
+
 // ORIGIN: heap_other_listhead and heap_tail_loc are fixed linker-published
 // metadata slots, not heap objects. Accepting any aligned KSEG0 address here
 // would let a corrupted slot pointer redirect the queue-link stores into a
@@ -407,6 +427,9 @@ RECOMP_PATCH Block* func_80007D74(void) {
                                                           expansion_sentinel)) {
                 return NULL;
             }
+            if (!bump_cursor_disjoint_from_free_chain(heap_bump, fresh)) {
+                return NULL;
+            }
             if (metadata_slot_ok(heap_other_listhead, (void*)0x801163FC)) {
                 Block* active_head = *heap_other_listhead;
                 if (active_head != NULL &&
@@ -492,6 +515,9 @@ RECOMP_PATCH Block* func_80007D74(void) {
     }
 
     if (!bump_cursor_ok(heap_bump)) {
+        return NULL;
+    }
+    if (!bump_cursor_disjoint_from_free_chain(heap_bump, head)) {
         return NULL;
     }
 

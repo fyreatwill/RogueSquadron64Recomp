@@ -1,30 +1,37 @@
-# Next work unit: qualify the M5 source-construction caller boundary
+# Next work unit: qualify the M3 allocator cursor/free-list ownership class
 
-HYPOTHESIS-ID: m5-source-construction-caller-boundary
+HYPOTHESIS-ID: m3-allocator-cursor-free-list-ownership
 
-Run one rebuilt canonical real-audio/LLE/ungated/solo/spin-yield port and the
-independent retail oracle. Keep the guest store, audio waits, caps, predicates,
-slot state, and host writeback unchanged. The existing generated hook reports
-`ra=0`; the next discriminator must use an independent caller witness rather
-than treating that field as a guest fact.
+Before the next runtime qualification, perform one bounded source audit and
+ordinary Debug build for the missing ownership relation in `func_80007D74`.
+The new guard must reject `heap_bump` when it aliases any node reachable from
+`heap_free_head`, before the free-list dequeue or active-queue append stores.
+Do not change audio, generated functions, or the M5 route.
 
 Competing hypotheses and discriminator:
 
-- H-source-caller-same: phase-keyed retail and port executions of the
-  `0x800078EC` producer join to the same caller identity and argument shape;
-  the zero payload is downstream of a matched producer route.
-- H-source-caller-split: the paired phase-keyed caller/argument table differs
-  between retail and port, identifying a route/context split before the zero
-  store.
-- H-route-invalid: either whole-RDRAM control or title/hangar phase gate is
-  absent, or the port crashes/stalls before the paired witness is complete.
+- H-m3-cursor-free-alias: `heap_bump` and a free-list node can alias; the new
+  guard closes a real cross-owner publication hazard. Discriminator: the
+  complete bounded free-chain walk is present and checked before mutation.
+- H-m3-cursor-free-disjoint: the allocator invariant already makes the cursor
+  disjoint; the audit should prove the relation structurally and the new guard
+  remains a defensive no-op. Discriminator: all cursor and free-list writers
+  are enumerated and no alias path exists.
+- H-m3-invalid-chain: a malformed free chain is the actual class; the walk
+  must reject invalid nodes/cycles rather than silently accept a cursor test.
+  Discriminator: bounded traversal returns failure for invalid or overlong
+  chains before any publication.
 
-Before building, verify the existing source-context probe and its positive
-control in `docs/debug-trace-env-vars.md`. Build once. Run the oracle first
-with the whole-RDRAM watch, exact `0x800078EC` execution watch, and title/
-hangar phase buckets; then run the port from `build/` with the source-context
-probe and `PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`. Use the new host
-caller/stack or dispatch-context field in the same phase-keyed table; do not
-add a standalone counter. A qualified matching table selects H-source-caller-
-same; a qualified mismatch selects H-source-caller-split; any missing control
-or phase selects H-route-invalid.
+Exact commands:
+
+1. Inspect `patches/heap_guards.c` and `patches/syms.ld`; add the guard with
+   an `ORIGIN:` naming `heap_bump` and free-list link writers.
+2. Build: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+3. Record that `PatchesLib` runtime qualification remains unavailable if the
+   configured macOS graph still lacks the MIPS GCC/LD toolchain.
+
+Expected outcomes: a successful ordinary Debug build plus the committed guard
+selects H-m3-cursor-free-alias as a landed ownership boundary, but does not
+claim runtime firing; a failed build selects H-m3-build-invalid; a source
+audit finding no missing relation selects H-m3-cursor-free-disjoint and the
+guard must not be added.
