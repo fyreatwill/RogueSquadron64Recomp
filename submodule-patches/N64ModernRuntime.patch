@@ -973,7 +973,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..ee07a76 100644
+index 1cb3f6a..cf96cc1 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -987,7 +987,7 @@ index 1cb3f6a..ee07a76 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1682 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1684 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -999,6 +999,7 @@ index 1cb3f6a..ee07a76 100644
 +extern "C" __attribute__((weak)) void rs64_dmem_lock();
 +extern "C" __attribute__((weak)) void rs64_dmem_unlock();
 +extern "C" uint32_t rs64_phase_ord();
++extern "C" void rs64_s4207_after_audtask(uint8_t* rdram, int exit_reason);
 +extern "C" uint32_t rs64_vi_committed_width();
 +extern "C" uint32_t rs64_vi_committed_origin();
 +extern "C" __attribute__((weak)) uint32_t rs64_audio_image_break_pc();
@@ -2514,6 +2515,7 @@ index 1cb3f6a..ee07a76 100644
 +    }
      RspExitReason exit_reason = ucode_func(rdram, task->t.ucode);
 +    g_audio_dma_probe = previous_audio_probe;
++    if (is_audio_task) { rs64_s4207_after_audtask(rdram, static_cast<int>(exit_reason)); }
 +    const uint32_t audio_break_pc =
 +        rs64_audio_image_break_pc ? rs64_audio_image_break_pc() : 0u;
 +
