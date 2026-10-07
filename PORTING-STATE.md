@@ -146741,3 +146741,18 @@ origins were `0x00790800` and `0x006AB800`, while the recipe used stale
 `0x00790400` and `0x006AB400` gates. This rejects H-route-invalid but leaves
 entry-context parity unevaluable and identifies the next measurement. No audio,
 gate, writer, payload, or mitigation behavior changed.
+
+## Session 4179 (2026-10-07) — qualified M5 retail/port predecessor context
+
+Repaired the oracle phase gates in `scratch/agent/run_s4175_m5_object_entry.sh`
+from the stale `0x00790400`/`0x006AB400` origins to the observed retail
+`0x00790800`/`0x006AB800` origins and reran the paired route. The whole-RDRAM
+positive control, both retail phases, both port phases, and the port predecessor
+joins all fired. Retail produced one `pc-field-row` for `0x8008F900` with 71
+hits. In hangar, the port predecessor joined with the same `s0=0x48` and
+`s1=0x1B000` as retail, but its source/branch context differed: retail had
+`source_word=0x00000000`, while port had `source_word=0xFFFFFFFF`, with
+different selector/state fields. This selects H-earlier-producer-mismatch at
+or before `0x8008F900` over H-entry-context-match. The corrected oracle gate
+is now qualified; no audio, gate, writer, payload, or mitigation behavior
+changed.

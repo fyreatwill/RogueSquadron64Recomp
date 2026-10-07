@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4178 (2026-10-07).
+Updated for session 4179 (2026-10-07).
 
 ## Current state
 
@@ -155,15 +155,25 @@ entry-context parity remains unevaluable. This rejects H-route-invalid but
 does not select H-entry-context-match or H-earlier-producer-mismatch. No
 audio, gate, writer, payload, or mitigation behavior changed.
 
+Session 4179 repaired those oracle phase gates and reran the paired route. The
+whole-RDRAM positive control, both retail phases, both port phases, and the
+port predecessor joins all fired. Retail produced one `0x8008F900`
+`pc-field-row` with 71 hits; the hangar port predecessor had matching `s0` and
+`s1` but diverging source/branch context (`retail source_word=0x00000000`,
+`port source_word=0xFFFFFFFF`, with different selector/state fields). This
+selects H-earlier-producer-mismatch at or before `0x8008F900` over
+H-entry-context-match. No audio, gate, writer, payload, or mitigation behavior
+changed.
+
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** rerun the paired predecessor-context measurement
-   with oracle phase gates `0x00790800`/`0x006AB800`, the origins observed in
-   the qualified retail run, while leaving the port witness and port gates
-   unchanged. Require positive control, both retail phases, both port phases,
-   and nonzero oracle `pc-field-row` output for `0x8008F900`. A row enables
-   the context comparison; another absent row means the oracle exact-PC path
-   needs repair. Do not change audio, gate, writer, or payload behavior.
+1. **M5 audio de-stubbing:** trace the earlier producer boundary feeding
+   `0x8008F900`, starting at its observed predecessor `0x8008F8FC`, with one
+   paired oracle/port measurement. Keep all current positive controls and phase
+   gates; compare the predecessor's object/source context before interpreting
+   downstream fields. A qualified context divergence selects an earlier
+   producer mismatch; parity moves the boundary into the `0x8008F900` body. Do
+   not change audio, gate, writer, or payload behavior.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -185,7 +195,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 Step 4 producer context | H-writer-counterpart-parity selected at s4171: retail and port both exercised `0x80090268`, `0x80090278`, and `0x8008FF04/0C/14` in hangar; port target-span rows carried matching nonzero values and destinations. The downstream port DMA/PCM remained zero-valued, so caller/object context is the next boundary. |
 | M5 writer object context | H-context-mismatch selected at s4173: retail field dumps fired for all five PCs and showed changing per-object source words/branch fields, while the port matched source-context path retained zero target-span values and did not expose equivalent object-field state. The first divergent object-field input is open; no behavior change is authorized. |
 | M5 object-field witness | H-legitimate-field-mismatch selected at s4174: the corrected port witness fired in both target phases and recorded all five producer PCs. Its runtime-memory field values and object records did not reconcile with the independent retail field table after using `MEM_W/MEM_BU/MEM_HU` semantics. The earlier raw-byte result is superseded as an endian instrumentation defect. |
-| M5 object-entry boundary | H-route-qualified at s4178: positive control, both retail phases, both port phases, and the port `0x8008F900` witness all fired. Retail field rows for that PC were absent under the stale origin gate, so H-entry-context-match versus H-earlier-producer-mismatch remains open. |
+| M5 object-entry boundary | H-earlier-producer-mismatch selected at s4179: corrected retail gates produced one `0x8008F900` field row with 71 hits, while the hangar port predecessor joined with matching `s0/s1` but differing source/branch context. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |

@@ -17,9 +17,9 @@ env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
   --watch-write 0x178c80:0x178f18 \
   --watch-pc 0x8008f900 --watch-pc 0x80090268 --watch-pc 0x80090278 \
   --watch-pc 0x8008ff04 --watch-pc 0x8008ff0c --watch-pc 0x8008ff14 \
-  --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006ab400:512 \
+  --pc-phase-log-width 0x00790800:1024 --pc-phase-log-width 0x006ab800:512 \
   --pc-field-dump 0x8008f900,0x80090268,0x80090278,0x8008ff04,0x8008ff0c,0x8008ff14 \
-  --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006ab400:512 \
+  --pc-hist-phase 0x00790800:1024 --pc-hist-phase 0x006ab800:512 \
   --vi-trace --press "$PRESS" --hold-ms 150 > "$OUT/retail.log" 2>&1 &
 retail=$!
 
