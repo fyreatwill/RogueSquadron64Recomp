@@ -146871,3 +146871,19 @@ relation. This selects H-loop-control-parity and moves the open boundary to
 the `0x8008F91C` branch. It rules out a mismatch through the loop-control
 tuple at the measured scope; it does not explain the upstream zero audio
 payload and changes no audio, gate, writer, payload, or mitigation behavior.
+
+## Session 4187 (2026-10-07) — qualified M5 loop-branch parity
+
+Added a regeneration-safe branch witness at `0x8008F91C` and ran the paired
+oracle/port recipe in `scratch/agent/run_s4187_m5_object_branch.sh`. The
+whole-RDRAM positive control, both retail target phases, both port target
+phases, and 130 port branch rows qualified. Port took the branch with `v0=1`
+through `a2=0x47` and fell through at `v0=0`, `a2=s0=0x48`, in both title and
+hangar. The independent retail oracle recorded 71 branch hits with the same
+70/1 taken-versus-fall-through split. Its `0x8008F920` watch reported zero
+because the debugger attributes the delay-slot execution to the branch PC;
+this is a measurement limitation, not a route failure. This selects
+H-branch-parity and moves the open boundary after the delay-slot increment,
+at the loop-exit successor. It rules out a branch-input or taken/not-taken
+divergence at the measured scope; it does not explain the upstream zero audio
+payload and changes no audio, gate, writer, payload, or mitigation behavior.
