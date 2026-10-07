@@ -145780,3 +145780,21 @@ Ran the retail oracle first with the whole-RDRAM positive control and source-spa
 Rebuilt the Debug target once and ran the declared `0x800` staging arm and legacy `0xF80` arm concurrently on the canonical real-audio/LLE/ungated/solo/spin-yield route. Both arms reached title and hangar with no crash or abort. Declared recorded 10,459 staging rows with `dma_size=0x800`; legacy recorded 10,462 with `dma_size=0xF80` and `declared=0x800`. Both had positive phase-scoped task ABI/DMA rows (5,351 versus 5,375), audio returns (551 each), PCM source rows (121 each), and PCM consumer rows (551 each). The task/image-stage logs continued to show the same zero-valued payload hashes at the measured downstream boundary.
 
 H-step3-equivalent is selected at this qualified scope: changing the staging span produced no downstream task, return, PCM, or route split. This validates the declared-size staging behavior as a no-regression change, but does not prove the legacy span is semantically irrelevant outside the measured contract. The old staging A/B is closed; no de-stubbing or mitigation was changed. ORIGIN: the staging writer is the host audio-ucode-data DMA; both sizes are intentional test arms, not a guest corruption fix.
+
+## Session 4127 (2026-10-07) — qualified A11 pending-call non-reproduction
+
+Asked the retail oracle first with a whole-RDRAM positive control and VI
+tracing. The control fired 10,000 writes; retail reached title
+`0x00790400/1024` and hangar `0x006AB400/512`. The one rebuilt canonical
+real-audio/LLE/ungated/solo/spin-yield port route reached both target phases
+with no crash or abort. Its phase-scoped controls included audio task handoff
+and return, PCM source and consumer rows, and normal key-on/divisor tails.
+
+The A11 table recorded one target-phase `waitForAnyAudioSlot` entry with
+`a3=0x8`, followed by `wait-post-any-slot`; the previously observed pending
+`chCount=16` call did not recur. H-A11-not-reproduced is selected. This makes
+the pending writer/terminal relationship unevaluable, not safe, and rules out
+neither the pending call nor its slot predicate. No wait, cap, predicate, slot
+state, force-clear, or mitigation changed. ORIGIN: the existing guest wait,
+slot/status readers, and their writers were observed; no guest behavior was
+modified.
