@@ -146145,3 +146145,23 @@ it does not prove runtime firing or allocator behavior. The M3 runtime item is
 deferred pending a host with `mips64-elf-gcc`/`mips64-elf-ld` and a configured
 `PatchesLib` target. The next applicable work is the M5 source-construction
 caller boundary.
+
+## Session 4148 (2026-10-07) — qualified M5 source-construction callsite split
+
+Built the ordinary Debug target once after applying the regeneration-safe
+`s2240` fixup to all 88 generated `rs_memset` callsites. The paired retail
+oracle and port capture both passed the whole-RDRAM positive control and title
+VI `0x00790400/1024` plus hangar VI `0x006AB400/512` gates. Retail's exact
+`0x800078EC` execution watch recorded 7,163,165 hits and predecessor
+`0x8002BEEC`; its whole-RDRAM and source-span watches recorded 12,042 and
+2,042 writes. Port source-context rows reported callsite `0x8008F2CC` in
+title and `0x800AB694` in hangar, while generated `ra=0` stayed zero and was
+discarded as an instrument limitation. H-retail-port-caller-split is selected
+at this boundary: the independent retail predecessor line and port direct
+callsite line do not match. This rules out a matched caller identity at the
+measured boundary, but does not identify the differing source state or cause.
+ORIGIN: the guest `rs_memset` callsites and retail execution predecessor;
+zero stores remained legitimate memset behavior and no guest, audio wait,
+cap, predicate, slot, or writeback behavior changed. Evidence:
+`docs/M5-S4148-SOURCE-CALLSITE.md` and
+`scratch/agent/s4148_m5_source_callsite/`.

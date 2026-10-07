@@ -1,36 +1,41 @@
-# Next work unit: qualify the M5 source-construction caller boundary
+# Next work unit: qualify source-construction predecessor/state setup
 
-HYPOTHESIS-ID: m5-source-construction-caller-boundary
+HYPOTHESIS-ID: m5-source-construction-predecessor-state
 
-Run one rebuilt, phase-gated paired capture of the qualified retail oracle and
-canonical real-audio/LLE/ungated/solo/spin-yield port to replace the invalid
-generated `ra=0` caller field at the `0x800078EC` source-construction boundary.
-Do not change guest behavior, audio waits, caps, predicates, slot state, or
+Run one rebuilt, phase-gated paired retail-oracle/port capture that follows
+the selected caller split into the argument-setup boundary immediately before
+port `rs_memset` callsites `0x8008F2CC` (title) and `0x800AB694` (hangar).
+Keep the whole-RDRAM positive control and both target VI phase gates. Do not
+change guest behavior, audio waits, caps, predicates, slot state, or
 writeback.
 
 Competing hypotheses and discriminator:
 
-- H-retail-port-caller-split: retail and port execute different source
-  construction callers. Discriminator: phase-keyed oracle previous-PC/call
-  tuples differ from a valid port call-site attribution while both controls
-  reach title 1024 and hangar 512.
-- H-shared-caller-different-state: both routes use the same caller but enter
-  with different arguments or state. Discriminator: joined caller PCs match,
-  while source/destination/length or phase-keyed state differs.
-- H-route-invalid: either arm lacks the whole-RDRAM positive control or a
-  target phase, so the comparison is unevaluable. Discriminator: missing
-  control, title, or hangar gate in the captured logs.
+- H-shared-source-state: retail and port reach equivalent source-construction
+  state despite different caller paths. Discriminator: phase-keyed source,
+  destination, length, and immediately preceding setup writes match after
+  normalizing the caller identity.
+- H-port-predecessor-state-split: the caller split brings different setup
+  state into the port memset. Discriminator: the port callsite rows join to
+  setup arguments or object pointers absent from the retail phase-keyed
+  predecessor/context rows.
+- H-route-invalid: either arm lacks the whole-RDRAM control or title/hangar
+  gate. Discriminator: any required control or phase bucket is missing; keep
+  the s4148 caller split as the last qualified result.
 
 Exact commands:
 
-1. Read `docs/M5-AUDIO-PLAN.md`, the existing source-context recipe, and
-   `tools/oracle/README.md`; arm the oracle whole-RDRAM and phase controls first.
-2. Build one Debug `RogueSquadron64Recomp` binary carrying every caller-PC
-   discriminator and positive-control counter.
-3. Run the retail oracle and port capture concurrently with phase gates; kill
-   both with SIGKILL and inspect bounded log excerpts, never a stopwatch.
+1. Read the existing `s4148` evidence and `tools/oracle/README.md`; arm the
+   oracle control and phase gates before interpreting any setup null.
+2. Use the existing regeneration-safe `s2240` callsite annotations and add
+   one batched phase-scoped setup/entry probe for both port callsites.
+3. Build once with `cmake --build build --config Debug --target
+   RogueSquadron64Recomp`.
+4. Run `zsh scratch/agent/run_s4148_m5_source_callsite.sh` after updating its
+   probe env/output tag for the setup join; SIGKILL both processes and inspect
+   bounded summaries only.
 
-Expected outcomes: matching valid caller tuples select H-shared-caller-
-different-state; differing valid tuples select H-retail-port-caller-split;
-missing controls or target phases select H-route-invalid and preserve the
-previous qualified split without a causal claim.
+Expected outcomes: matching normalized setup tuples select
+H-shared-source-state; a valid joined setup difference selects
+H-port-predecessor-state-split; missing controls or target phases select
+H-route-invalid without a causal claim.

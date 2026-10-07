@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4147 (2026-10-07).
+Updated for session 4148 (2026-10-07).
 
 ## Current state
 
@@ -12,6 +12,18 @@ cinematic, star flare, Factor 5 logo, title VI 1024 (`0x00790400`), and hangar
 VI 512 (`0x006AB400`) on the qualified real-audio/LLE/spin-yield route.
 Hangar geometry and color artifacts remain. `ROGUESQ_AUDIO_UCODE=0` is the
 silent `Broke` control; real audio is not production-complete.
+
+Session 4148 qualified the new source-construction callsite discriminator with
+one rebuilt port/oracle pair. The retail oracle passed the whole-RDRAM control
+and both target phase buckets, and its `0x800078EC` execution watch recorded
+7,163,165 hits with predecessor `0x8002BEEC` present. The port reached title
+and hangar and, after the regeneration-safe `s2240` annotation of all 88
+`rs_memset` callsites, reported `0x8008F2CC` at title and `0x800AB694` at
+hangar. H-retail-port-caller-split is selected: the direct port callsites do
+not match the retail predecessor family. The generated `ra=0` remains an
+instrument limitation. ORIGIN: the legitimate `rs_memset` callsites and
+retail execution predecessor; the observed zero fill was not suppressed or
+changed. Evidence: `docs/M5-S4148-SOURCE-CALLSITE.md`.
 
 Session 4143 re-ran the A11 terminal-table capture with the independent retail
 oracle and one rebuilt canonical real-audio/LLE/ungated/solo/spin-yield port.
@@ -538,9 +550,11 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-construction predecessor:** follow the selected context split
-   with a new caller-attribution discriminator; the generated `ra=0` field is
-   not evidence, so do not treat it as a guest caller.
+1. **M5 source-construction predecessor/state join:** follow the selected
+   retail/port caller split by capturing the argument-setup writes and entry
+   state immediately before the port callsites `0x8008F2CC` and `0x800AB694`,
+   then compare them with the oracle's phase-gated predecessor/context rows.
+   Do not use generated `ra=0` as caller evidence.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.

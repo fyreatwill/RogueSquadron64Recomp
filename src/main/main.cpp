@@ -1508,9 +1508,9 @@ extern "C" void rs64_m5_source_context(uint8_t*, uint32_t pc, uint32_t ra,
     std::fprintf(stderr,
         "[m5-source-context] row=%u phase=%u width=%u origin=0x%06X pc=0x%08X "
         "ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X "
-        "source=0x%08X destination=0x%08X value=0x%08X\n",
+        "callsite=0x%08X source=0x%08X destination=0x%08X value=0x%08X\n",
         rows++, rs64_phase_ord(), width, origin, pc, ra, a0, a1, a2, a3,
-        source_ptr, destination, value);
+        g_rs64_m5_field348_static_callsite, source_ptr, destination, value);
     std::fflush(stderr);
 }
 }
