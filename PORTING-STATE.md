@@ -145087,3 +145087,18 @@ target phases. No host-control, generated detail, or post-call port row was
 phase-qualified, so Hcoverage is selected and hook transport remains open.
 The generated object still contains the detail-hook relocation. ORIGIN: the
 synthetic row is diagnostic-only; no guest value or mitigation changed.
+
+## Session 4089 (2026-10-06) — proved M5 detail-hook transport at title scope
+
+Moved the synthetic M5 detail-hook invocation from the `0x8008D5FC` callee
+witness to the already-observed `0x8008D604` post-call hook and rebuilt the
+Debug target. The oracle whole-RDRAM positive control fired and reached title
+1024, with all watched PCs `0x8008D5FC`, `0x80084860`, `0x8008488C`,
+`0x800848A8`, and `0x800848C4` executing. The port reached title 1024 and
+hangar 512, emitted 86 post-call rows, one synthetic detail row from
+`0x8008D604`, and 511 genuine detail rows. Retail did not reach its required
+hangar phase, so this is Hcoverage for the value comparison, but it positively
+proves host transport and generated detail-hook linkage at title scope and
+refutes Htransport there. No callee value classification was made. ORIGIN:
+the synthetic and detail values are diagnostic-only; no guest value or
+mitigation changed.

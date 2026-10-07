@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4088 (2026-10-06).
+Updated for session 4089 (2026-10-06).
 
 ## Current state
 
@@ -415,18 +415,30 @@ on the already-observed `0x8008D604` post-call path so host transport is
 positive even when the `0x8008D5FC` call is absent. ORIGIN: the synthetic row
 is diagnostic-only; no guest value or mitigation changed.
 
+Session 4089 moved the synthetic detail-hook control from the `0x8008D5FC`
+callee witness to the already-observed `0x8008D604` post-call hook and rebuilt
+the Debug target. The oracle whole-RDRAM positive control fired and reached
+title 1024, executing all five watched PCs; it did not reach the required
+retail hangar phase in this capture. The port reached title 1024 and hangar
+512 with 86 post-call rows. The synthetic row (`pc=0xC0DEC002`) fired once
+from the post-call path, and the genuine detail hooks produced 511 rows in
+addition to it. This positively proves host transport and generated detail
+hook linkage at title scope, refuting Htransport there; entry/return
+value-classification remains pending a retail-and-port hangar-qualified run.
+The missing retail hangar gate makes the overall capture Hcoverage, not a
+callee-value result. ORIGIN: the synthetic and detail values are
+diagnostic-only; no guest value or mitigation changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4l witness transport for the `0x8008D5FC` call.** Resolve why
-   the qualified port executes the existing callee/post-call witnesses but
-   emits no new `funcs_20.c` detail-hook rows, despite the object referencing
-   the hook. Use one build/run with a positive host-hook control and inspect
-   the exact linked callee path before comparing values; do not infer from the
-   s4087/s4088 zero. Move the synthetic host control to the already qualified
-   `0x8008D604` post-call witness, then rerun the control-first qualified
-   timing route; classify only if title and hangar both pass.
+1. **M5 Step 4l callee value comparison.** Reuse the now-proven detail-hook
+   transport, remove the invalid `ra=0x8008D604` filter from the summary
+   counters, and run the control-first route until the retail oracle and port
+   both pass title 1024 and hangar 512. Compare the phase-scoped retail
+   `0x8008488C/0x800848A8/0x800848C4` rows with the generated port detail
+   rows; do not classify from the title-only s4089 capture.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -497,6 +509,11 @@ explanation. The s3579–s3584 stored-value inference is unsupported because a
 retail byte store was compared with an aligned word containing neighboring
 bytes. Request-only SP-yield conclusions are limited to the old diagnostic
 arm.
+
+The s4088 conclusion that detail-hook transport remained open is superseded
+by s4089: it was believable because the first positive control was attached
+to an unqualified callsite, but moving it to `0x8008D604` fired the synthetic
+row and exposed genuine detail rows.
 
 ## Durable operating rules
 

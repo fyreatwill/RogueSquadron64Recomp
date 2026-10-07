@@ -1398,6 +1398,12 @@ extern "C" void rs64_m5_voice_modulation_postcall(uint8_t* rdram, uint32_t pc,
     if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
     uint32_t width = 0, origin = 0;
     if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static bool control_emitted = false;
+    if (pc == 0x8008D604u && !control_emitted) {
+        control_emitted = true;
+        rs64_m5_voice_modulation_callee_detail(
+            rdram, 0xC0DEC002u, 0u, 0u, 0u, 0xC0DEu, 0xD604u);
+    }
     static uint32_t rows[2] = {};
     const uint32_t slot = width == 1024u ? 0u : 1u;
     if (rows[slot] >= 256u) return;
@@ -1464,12 +1470,6 @@ extern "C" void rs64_m5_voice_modulation_callee(uint8_t* rdram, uint32_t stage,
     if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
     if (stage == 0u && pc == 0x8008D5FCu) {
         rs64_m5_voice_callee_detail_pending = true;
-        static bool control_emitted = false;
-        if (!control_emitted) {
-            control_emitted = true;
-            rs64_m5_voice_modulation_callee_detail(
-                rdram, 0xC0DEC001u, ra, 0u, a0, a1, v0);
-        }
     } else if (stage == 1u && rs64_m5_voice_callee_detail_pending &&
                pc == 0x80084860u) {
         rs64_m5_voice_callee_detail_active = true;

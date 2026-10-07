@@ -1,37 +1,32 @@
-# Next work unit: M5 Step 4l positive host transport on the post-call route
+# Next work unit: M5 Step 4l callee value comparison on a qualified route
 
 HYPOTHESIS-ID: m5-audio-step4l-callee-path
 
-Session 4088 was Hcoverage: retail controls passed, but both port attempts
-crashed before title/hangar. The synthetic control was attached too late in
-the path to be positive. Move it to the already-observed `0x8008D604`
-post-call hook, then retain genuine detail rows only for `0x8008488C`,
-`0x800848A8`, and `0x800848C4`.
+Session 4089 proved detail-hook transport at title scope: the synthetic row
+fired from `0x8008D604`, and 511 genuine detail rows fired. Retail did not
+reach hangar, so no value classification is allowed yet.
 
 Competing hypotheses:
 
-- Htransport: the generated detail calls are not on the executed linked path,
-  while the post-call host path is live.
-- Hcallee-entry/load: generated detail rows become positive and show divergence
-  at the count/record loads.
-- Hcallee-return: generated detail rows match, but the callee return diverges.
-- Hcoverage: either arm misses the whole-RDRAM, title, or hangar controls.
+- Hcallee-entry/load: the first divergence is in the values observed at
+  `0x8008488C` or `0x800848A8`.
+- Hcallee-return: the first two detail stages match, but `0x800848C4`
+  diverges.
+- Hlater: all three detail stages match and the mismatch is downstream.
+- Hcoverage: either side misses the required title or hangar phase.
 
-Discriminating measurement: one build and one control-first capture must show
-retail whole-RDRAM/title/hangar controls, a port title/hangar pair, the
-synthetic detail row emitted from the `0x8008D604` host path, and the existing
-post-call row. With those controls, zero genuine detail rows selects
-Htransport; genuine rows select entry/load/return by their values; missing
-port phases selects Hcoverage.
+Discriminating measurement: one control-first capture must show the retail
+whole-RDRAM/title/hangar controls, a port title/hangar pair, and phase-scoped
+detail rows on both sides. Compare the three watched PCs by record and value;
+the first mismatch selects the boundary, while matching all three moves the
+search later.
 
 Preparation:
 
-1. Change only the host control placement in `src/main/upstream_compat.cpp`;
-   do not change the guest detail hooks.
+1. Remove the invalid `ra=0x8008D604` condition from the recipe summary
+   counters; retain the synthetic marker and three detail PCs.
 2. Build once:
    `cmake --build build --config Debug --target RogueSquadron64Recomp`
-3. Run the qualified route:
-   `zsh scratch/agent/run_s4087_m5_callee_detail_qualified.sh`
-   with the retail watches extended by `0x8008488C,0x800848A8,0x800848C4`.
-   Capture under a new `scratch/agent/s4089_*` directory and SIGKILL both
-   processes.
+3. Run the control-first qualified timing route, capturing under a new
+   `scratch/agent/s4090_*` directory and SIGKILLing both processes. Accept a
+   result only if the oracle positive control and both title/hangar gates fire.
