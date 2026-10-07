@@ -1,28 +1,27 @@
-# Next work unit: requalify the M5 source-construction predecessor route
+# Next work unit: qualify the M5 A11 terminal transition on a valid route
 
-HYPOTHESIS-ID: m5-source-construction-predecessor-route
+HYPOTHESIS-ID: m5-a11-terminal-transition
 
 Use one rebuilt canonical real-audio/LLE/ungated/solo/spin-yield port and the
-independent retail oracle. The new discriminator is route validity at the
-port's known `musyxSynthFrame+3828` / guest PC `0x80001B08` boundary: a port
-run that reaches hangar without this crash may be compared at the s4139
-source-construction tuple; a pre-hangar crash or missing hangar gate is
-H-route-invalid and must not be interpreted as a writer null.
+independent retail oracle. The route is now valid: the s4144 port reached title
+and hangar without the known pre-hangar crash. Capture the A11 wait, slot-state,
+terminal, and post-wait rows in both target phases without changing behavior.
 
 Competing hypotheses and discriminator:
 
-- H-source-context-split: both arms pass whole-RDRAM/title/hangar controls and
-  the phase-keyed source-construction tuple differs between retail and port.
-- H-source-context-match: both arms pass the same controls and the tuple
-  matches at the measured source-construction boundary.
+- H-A11-terminal-reaches: both arms pass whole-RDRAM/title/hangar controls and
+  the port emits a complete terminal transition after `waitForAnyAudioSlot`.
+- H-A11-terminal-missing: the route is valid but the terminal transition or
+  post-wait row is absent in the port while retail reaches the corresponding
+  phase-keyed boundary.
 - H-route-invalid: either positive control or target phase is absent, or the
-  port hits the known pre-hangar `musyxSynthFrame+3828` boundary.
+  port again hits the known pre-hangar `musyxSynthFrame+3828` boundary.
 
-Before building, verify the existing s4139 source-context probe and its
-positive-control env vars in the tracked debug catalog. Build once. Run the
-retail oracle first with whole-RDRAM and title/hangar controls, then run the
-canonical port from `build/` with the same phase gates. Do not change guest
-behavior, audio waits, caps, predicates, slot state, or host writeback.
+Before building, verify the existing A11 probe and its positive-control env vars
+in the tracked debug catalog. Build once. Run the retail oracle first with the
+whole-RDRAM control and title/hangar phase gates, then run the canonical port
+from `build/` with the same gates. Do not change guest behavior, audio waits,
+caps, predicates, slot state, or host writeback.
 
-Expected outcome: a qualified paired tuple comparison selects split or match;
+Expected outcome: qualified paired terminal rows select reaches or missing;
 any missing gate or known pre-hangar crash selects H-route-invalid.

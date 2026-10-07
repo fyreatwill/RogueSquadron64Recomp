@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4143 (2026-10-07).
+Updated for session 4144 (2026-10-07).
 
 ## Current state
 
@@ -486,18 +486,32 @@ worker/service activity and the named zeroing-store execution are real, so no
 wait replacement or force-clear is authorized. The exact port-side store-to-
 return join remains a diagnostic detail, not a reason to alter behavior.
 
+Session 4144 requalified the source-construction predecessor route after the
+retail preflight passed its whole-RDRAM control (12,138 writes) and both target
+phase buckets. Retail's exact `0x800078EC` witness used title
+`a0=0x801B08A0, a2=0x1C` and hangar `a0=0x8065E0A0, a2=0x1C`; the canonical
+port reached title and hangar with its positive source-context controls but
+used title `a0=0x80178C80, a2=0x298` and hangar `a0=0x801797B0, a2=0x298`, all
+zero-valued. H-source-context-split is selected at this measured boundary.
+The port's generated hook still reports `ra=0`, so caller attribution remains
+unevaluable; this is an instrument limitation, not a guest fact. ORIGIN: the
+legitimate guest `0x800078EC` source-construction store loop and the retail
+oracle's previous-PC/GPR witness; no guest behavior, audio wait, cap,
+predicate, slot state, or host writeback changed. The first PC-range oracle
+attempt generated an unusable 3.2 GB log; the fixed exact-PC run is the
+selected evidence. Evidence: `scratch/agent/s4144_retail_fixed.log` and
+`scratch/agent/s4144_port.log`.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-construction predecessor:** return to the s4139 tuple split
-   with a genuinely new route discriminator: use the current port crash's
-   `musyxSynthFrame+3828`/guest-PC boundary as a route-validity gate before
-   attempting any caller join. Do not treat a pre-hangar null as writer
-   evidence.
-2. **M5 A11 terminal transition:** retry only after a route-valid canonical
-   port run reaches hangar; keep the cap and wait unchanged and do not infer
-   from a status read alone.
+1. **M5 A11 terminal transition:** use the newly route-valid canonical port
+   run to capture the complete wait/slot terminal table; keep the cap and wait
+   unchanged and do not infer from a status read alone.
+2. **M5 source-construction predecessor:** follow the selected context split
+   with a new caller-attribution discriminator; the generated `ra=0` field is
+   not evidence, so do not treat it as a guest caller.
 3. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.

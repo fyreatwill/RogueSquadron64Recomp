@@ -146081,3 +146081,23 @@ before starting; the corrected command was the selected capture. ORIGIN: the
 existing guest wait/slot readers and status writers; no guest behavior or
 mitigation changed. Evidence: `scratch/agent/s4143_a11_oracle.log` and
 `scratch/agent/s4143_a11_port.log`.
+
+## Session 4144 (2026-10-07) — qualified M5 source-context split on valid route
+
+Built the ordinary Debug target once. The first retail oracle attempt used a
+PC-range watch and produced an unusable 3.2 GB attribution log; it was replaced
+in this iteration by an exact `0x800078EC` watch. The fixed retail run passed
+the whole-RDRAM positive control with 12,138 writes and reached title/hangar
+phase buckets. Its source-construction witness used title
+`a0=0x801B08A0, a2=0x1C` and hangar `a0=0x8065E0A0, a2=0x1C`. The canonical
+real-audio/LLE/ungated/solo/spin-yield port reached title and hangar without a
+crash and its positive source-context control fired; its tuples were title
+`a0=0x80178C80, a2=0x298` and hangar `a0=0x801797B0, a2=0x298`, with zero
+values. H-source-context-split is selected. The generated hook's `ra=0` is an
+instrument limitation and not caller evidence. ORIGIN: the legitimate guest
+`0x800078EC` source-construction store loop and the retail oracle's
+previous-PC/GPR witness; no guest behavior, audio wait, cap, predicate, slot
+state, or host writeback changed. This rules out a matched source-construction
+tuple at the measured title/hangar boundaries, but does not identify the port
+caller or authorize a mitigation. Evidence: `scratch/agent/s4144_retail_fixed.log`
+and `scratch/agent/s4144_port.log`.
