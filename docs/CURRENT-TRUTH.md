@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4083 (2026-10-06).
+Updated for session 4084 (2026-10-06).
 
 ## Current state
 
@@ -350,17 +350,29 @@ earlier multiply or later shift. ORIGIN: the legitimate source is the guest
 `0x80084860` return/input at the `0x8008D610` arithmetic site; the new rows
 are diagnostic-only.
 
+Session 4084 added a regeneration-safe witness at the `0x8008D624` callsite
+and inside `0x80084860`, including phase-scoped entry/return rows. Retail
+passed the whole-RDRAM and title/hangar controls and recorded hangar entry
+arguments `a0=0x8013D880`, `a1=0x8013D952`, with pre-call `v0=0x00800000`;
+the qualified port callsite carried the same tuple. Retail's post-call
+`0x8008D62C` witness and the port callee return both reported
+`v0=0x00002000` for the corresponding hangar call. Hcallee-match is
+selected: this call's inputs and return agree, so its caller-side use or a
+different earlier callsite remains open. The first expanded paired port retry
+missed target phases and was rejected; the isolated rerun reached hangar and
+provided the qualified port rows. ORIGIN: the legitimate value is the guest
+`0x80084860` return; the witness is diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4i `0x80084860` return/input.** Audit the call and return feeding
-   `0x8008D610`/`0x8008D614`, using the same retail controls and the fixed
-   control-first isolated direct-AUTOPILOT route. Batch the call-entry operands,
-   callee execution, and return value in one witness; a retail-shaped nonzero
-   return with a qualified port zero confirms the callee boundary, while
-   matching returns move the search into its consumer-side arithmetic. Do not
-   change the gate or add a mitigation from a port-only zero.
+1. **M5 Step 4j caller-side use after `0x8008D624`.** Trace the matching
+   `0x00002000` return through `0x8008D62C`–`0x8008D660` on retail and the
+   qualified port route, batching the post-call shift, bias, clamp, and `$s3`
+   update. A first mismatch in those values selects the caller-use boundary;
+   matching rows move the search to the next producer/callsite. Keep the same
+   whole-RDRAM/title/hangar controls and do not add a mitigation.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -383,7 +395,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
-| M5 voice modulation transform | Hvoice-modulator-return selected at s4083: the earlier `0x8008D5D0`/`0x8008D5EC` arithmetic matches retail-shaped zeros, but retail's `0x8008D614` input is nonzero while the port's `0x8008D610` lhs is zero. Search moves to the `0x80084860` call return. |
+| M5 voice modulation transform | Hcallee-match selected at s4084 for the `0x8008D624` call: retail and port agree on its inputs and `0x00002000` return at `0x8008D62C`; search moves into caller-side use. The separate `0x8008D5FC` call still feeds the earlier `0x8008D610` divergence. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |

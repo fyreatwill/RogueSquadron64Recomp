@@ -144991,3 +144991,23 @@ This selects the `0x80084860` return/input boundary as the next producer
 candidate and rules out the earlier multiply stages as the first divergence.
 ORIGIN: the legitimate source is the guest return/input from `0x80084860`;
 the new arithmetic rows are diagnostic-only, not a mitigation.
+## Session 4084 (2026-10-06) — qualified voice-modulator callee return at 0x8008D624
+
+Ran the M5 Step 4i discriminator with one build carrying a regeneration-safe
+callsite witness at `0x8008D624` and entry/return witnesses in
+`0x80084860`. The retail oracle passed the whole-RDRAM positive control and
+title/hangar VI controls. In the exact hangar phase, retail's
+`0x80084860` entry for the `0x8008D624` predecessor carried
+`a0=0x8013D880`, `a1=0x8013D952`, and pre-call `v0=0x00800000`; its
+post-call `0x8008D62C` row carried `v0=0x00002000`. The isolated qualified
+port reached hangar; its callsite carried the same arguments and its callee
+return row carried `v0=0x00002000`.
+
+This selects Hcallee-match for the `0x8008D624` path and rules out a call-input
+or callee-return divergence at that boundary. The first expanded paired port
+retry missed its phase controls and was rejected; the isolated rerun supplied
+the qualified port evidence. The separate earlier `0x8008D5FC` call feeding
+`0x8008D610` remains open. The next unit is a batched witness through
+`0x8008D62C`–`0x8008D63C` to distinguish caller-side use from moving to that
+earlier callsite. ORIGIN: the legitimate value is the guest return from
+`0x80084860`; all new machinery is diagnostic-only.

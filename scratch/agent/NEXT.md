@@ -1,37 +1,39 @@
-# Next work unit: M5 Step 4i `0x80084860` return/input
+# Next work unit: M5 Step 4j caller-side use after `0x8008D624`
 
-HYPOTHESIS-ID: m5-audio-step4i-voice-modulator-return
+HYPOTHESIS-ID: m5-audio-step4j-caller-use
 
-Session 4083 qualified the predecessor arithmetic. Retail and port matched
-zero-shaped stages at `0x8008D5D0`/`0x8008D5EC`, but retail's
-`0x8008D614` input was nonzero while the port's `0x8008D610` lhs was zero.
-That lhs is the return of the preceding `evaluateVoiceModulatorRecord` call
-at `0x80084860`.
+Session 4084 qualified the `0x8008D624` call boundary. Retail and port
+carried matching hangar inputs (`a0=0x8013D880`, `a1=0x8013D952`, pre-call
+`v0=0x00800000`), and retail's `0x8008D62C` plus the port callee return both
+reported `v0=0x00002000`.
 
 Competing hypotheses:
 
-- Hcallee-return: retail returns a nonzero value from `0x80084860` while the
-  qualified port returns zero; the callee or its input boundary is the first
-  divergence.
-- Hcallee-input: the call-entry pointer/offset or source record differs before
-  the call, while the callee's arithmetic is otherwise comparable.
-- Hcallee-match: retail and port return matching values; the divergence is in
-  the caller's use of the return or a later path.
-- Hcoverage: either arm lacks the whole-RDRAM, title/hangar, or positive
-  call/phase controls, making the comparison unevaluable.
+- Hcaller-use: the matching return is transformed differently in the port
+  between `0x8008D62C` and the `$s3` update at `0x8008D63C`.
+- Hcaller-input: the caller's live `$s3`/other state differs immediately after
+  the return, before the shift/bias/clamp sequence.
+- Hnext-callsite: the whole `0x8008D624` path matches, and the earlier
+  `0x8008D5FC` call remains the source of the separate `0x8008D610` split.
+- Hcoverage: either arm misses whole-RDRAM, title, or hangar controls.
 
-Discriminating measurement: batch one regeneration-safe witness at the
-`0x8008D624` call-entry/delay-slot and the `0x80084860` callee entry/return,
-including call arguments, returned `v0`, and phase/route identity. Use the
-existing arithmetic/setup rows as positive controls. Hcallee-return selects a
-qualified retail nonzero versus port zero return; Hcallee-input selects a
-qualified argument mismatch before the call; Hcallee-match moves into the
-caller-side use; Hcoverage rejects the run.
+Discriminating measurement: batch one regeneration-safe witness for the
+post-call values at `0x8008D62C`, `0x8008D630`, `0x8008D634`, `0x8008D638`,
+and `0x8008D63C`, including `$s3`, `$v0`, and phase/route identity. Retail
+must watch the same PCs with `--watch-pc`; the port must log the same fields.
+Hcaller-use selects a first retail/port mismatch in this sequence; matching
+rows select Hnext-callsite. Hcoverage rejects the run.
 
-Exact preparation/run: extend the same `funcs_23.c` regeneration fixup and
-host logger, then build Debug. Run the fixed control-first recipe in
-`scratch/agent/run_s4083_m5_predecessor_arithmetic_fixed.sh` shape, with the
-retail oracle first and the isolated port second; arm whole-RDRAM, title and
-hangar controls and all existing M5 breadcrumbs. Capture under a new
-`scratch/agent/s4084_*` directory. Do not infer a writer from a port-only
-zero or from the invalid concurrent retry.
+Preparation before building:
+
+1. Extend `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
+   and `src/main/upstream_compat.cpp` with one phase-scoped post-call witness;
+   apply the regenerated-equivalent patch to `RecompiledFuncs/funcs_23.c`.
+2. Build once:
+   `cmake --build build --config Debug --target RogueSquadron64Recomp`
+3. Run the fixed control-first recipe shape in
+   `scratch/agent/run_s4083_m5_predecessor_arithmetic_fixed.sh`, with retail
+   `--watch-pc 0x8008D62C,0x8008D630,0x8008D634,0x8008D638,0x8008D63C`
+   and the isolated direct-AUTOPILOT port arm. Capture under a new
+   `scratch/agent/s4085_*` directory. Kill with SIGKILL and reject any arm
+   missing the whole-RDRAM/title/hangar controls.

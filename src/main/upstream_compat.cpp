@@ -1435,6 +1435,36 @@ extern "C" void rs64_m5_voice_modulation_state(uint8_t* rdram, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_voice_modulation_callee(uint8_t* rdram, uint32_t stage,
+                                                   uint32_t pc, uint32_t ra,
+                                                   uint32_t a0, uint32_t a1,
+                                                   uint32_t v0) {
+    if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
+    uint32_t width = 0, origin = 0;
+    width = rs64_vi_committed_width();
+    origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    static uint32_t controls = 0;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) {
+        if (controls < 8u) {
+            std::fprintf(stderr,
+                "[m5-voice-callee-control] n=%u stage=%u pc=0x%08X width=%u origin=0x%06X\n",
+                controls++, stage, pc, width, origin);
+            std::fflush(stderr);
+        }
+        return;
+    }
+    static uint32_t rows[2] = {};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] >= 256u) return;
+    const char* label = stage == 0u ? "call" : (stage == 1u ? "entry" : "return");
+    std::fprintf(stderr,
+        "[m5-voice-callee] row=%u stage=%s phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X ra=0x%08X a0=0x%08X a1=0x%08X v0=0x%08X\n",
+        rows[slot]++, label, rs64_phase_ord(), width, origin, pc, ra, a0, a1, v0);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
                                                 uint32_t addr,
                                                 uint32_t value);
