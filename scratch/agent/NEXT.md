@@ -1,29 +1,33 @@
-# Next work unit: repair the paired M5 source-producer route
+# Next work unit: identify the first M5 source-construction divergence
 
-HYPOTHESIS-ID: m5-source-producer-context
+HYPOTHESIS-ID: m5-source-producer-call-context
 
-The M3 runtime discriminator is closed for this host: do not repeat a
-host-only PatchesLib check. Repair the paired retail/port source-producer
-capture, keeping guest behavior and all mitigations unchanged.
+Use the qualified s4138 retail writer table and the existing port source/DMA
+rows to join the first divergent caller, argument, or source-buffer
+construction boundary. Keep image, wait, cap, predicate, slot state, guest
+behavior, and host writeback unchanged. Do not repeat the completed watch-index
+repair or chase downstream rendering.
 
 Competing hypotheses and discriminator:
 
-- H-retail-port-writer-match: the same phase-keyed source writer/context table
-  matches between retail and a qualified canonical port hangar run.
-- H-port-writer-context-split: both routes reach the phase, but the writer PC,
-  source span, or value-producing context differs.
-- H-route-invalid: the port does not reach hangar or the retail watch is not
-  phase-keyed, so the comparison is unevaluable.
+- H-retail-port-caller-match: retail and port share the same caller/arguments
+  and source buffer, so the split is after the named producer.
+- H-retail-port-caller-split: the first divergent caller, source pointer, or
+  length appears before the source-span store.
+- H-route-invalid: either route loses a target phase or the phase-keyed join
+  lacks a positive control.
 
-The single discriminating measurement is one rebuilt run containing the full
-retail-gated phase-keyed writer/context table and the canonical port arm with
-route controls sufficient to reach title 1024 and hangar 512. A qualified
-retail/port match selects H-retail-port-writer-match; a qualified split selects
-H-port-writer-context-split; either missing phase or missing phase-keyed retail
-join selects H-route-invalid. The oracle whole-RDRAM positive control must fire
-in the same run.
+The single discriminating measurement is one batch instrument that records a
+phase-keyed tuple at the known retail writer family and its immediate caller
+chain: writer PC, previous PC/return site, `a0`, `a1`, `a2`, source pointer,
+length, destination span, and value/hash. The same run must include the
+whole-RDRAM oracle control, title/hangar gates, and the qualified port image
+source/DMA rows. A matching tuple selects H-retail-port-caller-match; a
+qualified tuple split selects H-retail-port-caller-split; missing controls or
+phases selects H-route-invalid.
 
-Use the existing source-producer capture recipe and fix its oracle watch-index
-table before trusting post-value rows. Batch all counters in one build/run;
-do not alter image, wait, cap, predicate, slot state, guest behavior, or host
-writeback.
+Before building, read `tools/oracle/README.md` and ask ground truth with the
+existing positive-control oracle route. Then batch the new oracle caller table
+and port tuple fields in one Debug build/run. Exact commands should be recorded
+here before execution; use SIGKILL cleanup and capture logs under a non-dot
+final path.

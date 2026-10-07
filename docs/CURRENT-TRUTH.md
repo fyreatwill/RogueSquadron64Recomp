@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4137 (2026-10-07).
+Updated for session 4138 (2026-10-07).
 
 ## Current state
 
@@ -22,6 +22,19 @@ writes to the same span were downstream zero writeback. Retail independently
 reached both target phases and recorded nonzero source bytes plus the same
 span's writer family. Hguest-zero-producer is selected at this boundary; no
 nonzero port producer is established.
+
+Session 4138 repaired the paired source-producer capture's oracle watch-index
+table and qualified the discriminator in one rebuilt run. Retail passed the
+whole-RDRAM control, title 1024, and hangar 512; its source-span watch at
+index 1 recorded 664 stores, 72 nonzero post-value bytes, zero scalar-store
+mismatches, and a hangar writer table with 29 PCs. The port reached title and
+hangar with no crash or abort; its target-phase image rows remained zero for
+the source and `0x1798B0` DMA payloads (1,854 and 1,841 rows respectively).
+H-port-writer-context-split is selected at this measured boundary: retail's
+phase-keyed source stores are nonzero while the qualified port payload remains
+zero. The exact retail-to-port call-context join remains open. ORIGIN: retail
+source-span guest stores and the port image-stage/DMA writer rows; no guest,
+wait, cap, predicate, slot, or writeback behavior changed.
 
 The task-contract consumer boundary is closed at the measured scope: declared
 and legacy real-audio arms reached both target phases with matching zero
@@ -421,12 +434,11 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-producer context census (repair the paired route):** rerun the
-   same retail-gated writer/context table, then run the canonical port with a
-   phase-scoped source table and enough route controls to reach hangar. Keep
+1. **M5 source-producer call-context join:** use the qualified s4138 retail
+   writer table and the existing port source/DMA rows to identify the first
+   divergent caller/argument or source-buffer construction boundary. Keep
    image, wait, cap, predicate, slot state, guest behavior, and host writeback
-   unchanged. Fix the oracle watch-index table before post-value evidence.
-   A qualified retail/port context match or split is the discriminator.
+   unchanged. Do not repeat the completed watch-index repair.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -460,7 +472,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
 | M5 A11 wait terminal transition | H-A11-not-reproduced selected at s4127: the qualified canonical route had one target-phase wait entry (`a3=0x8`) and a clean `wait-post-any-slot` return, but no pending `chCount=16` call. The pending writer/terminal relationship remains unevaluable; no wait change is authorized. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
-| M5 source-producer context | H-route-invalid selected at s4131: retail independently passed both phase gates, but the source-PC watch was not phase-keyed; the initial port arm crashed in 640 and the corrected Start schedule never left 640. No writer/context conclusion is selected. |
+| M5 source-producer context | H-port-writer-context-split selected at s4138: the repaired same-build capture qualified retail whole-RDRAM/title/hangar controls and port title/hangar controls. Retail source watch index 1 recorded 664 stores, 72 nonzero post-value bytes, zero scalar mismatches, and 29 hangar writer PCs; port target-phase image rows remained zero for source and `0x1798B0` DMA payloads. The exact call-context divergence remains open. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 

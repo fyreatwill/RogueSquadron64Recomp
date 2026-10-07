@@ -145972,3 +145972,21 @@ the ordinary host target. This closes the allowed host-only check and pivots
 the next unit to the paired M5 source-producer route repair. ORIGIN: the tested
 boundary is the configured `PatchesLib` target and its MIPS GCC/LD dependency;
 no allocator writer, guard, or runtime behavior changed.
+
+## Session 4138 (2026-10-07) — qualified M5 source-producer context split
+
+Rebuilt the ordinary Debug target and ran one paired retail-oracle/port
+capture with an explicit watch table: index 0 whole-RDRAM control, index 1
+`0x178C80..0x178F18`, index 2 `0x1798B0..0x179A48`, and index 3 task data.
+Retail passed the whole-RDRAM control and reached title `0x00790400/1024` and
+hangar `0x006AB400/512`. Its source-span index recorded 664 stores, 72
+nonzero post-value bytes, zero post-store scalar mismatches, and 29 distinct
+hangar-phase writer PCs. The port reached both target phases with no crash or
+abort; its target-phase image rows recorded zero source payload (1,854 rows)
+and zero `0x1798B0` DMA payload (1,841 rows). H-port-writer-context-split is
+selected: the qualified retail and port routes disagree at the source/value
+boundary. H-route-invalid is ruled out for this run, while the exact divergent
+caller/constructor remains open. ORIGIN: retail guest source-span stores and
+port image-stage/DMA rows; no guest, wait, cap, predicate, slot, or host
+writeback behavior changed. Evidence:
+`scratch/agent/s4138_m5_source_producer_context/`.
