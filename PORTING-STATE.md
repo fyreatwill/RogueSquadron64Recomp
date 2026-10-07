@@ -147075,3 +147075,11 @@ Repeat of s4197 A/B (concurrent arms): default cap fires=1 (positive control), y
 Made the yield the default (unset -> 2000; ROGUESQ_WAITFORSLOT_YIELD=0 restores old behaviour) in N64Recomp funcs_15.c, fixup_game_funcs.py template and tools/apply_s4197_m5_waitforslot_yield.py; rebuilt. Post-build A/B (scratch/agent/s4198_yield_default_ab.sh): env unset => yields, fires=0, title 2280 rows, hangar 169 rows, no crash; env=0 => fires=1 and that run never reached title (0 rows), so the stall is real.
 ORIGIN: the slot byte is cleared by the audio tick (musyxRenderVoiceSamples), which only runs when the spin yields; the cap fire was a symptom of starvation, not a legitimate wedge.
 Caveat: one repeat; hangar row counts differ between runs (animating scene, not compared across runs).
+
+## Session 4199 (2026-10-07) — M5 A15: ROGUESQ_SPIN_YIELD made default-on; spin-yield sites never fire once A11 yields
+
+HYPOTHESIS-ID: m5-audio-destub-sequence. Selects: H-spin-dormant (after the s4198 A11 yield default, the menuInit/menuInput/cinematicInit anyAudioSlotActive spins never reach 100000 laps). Refutes: H-spin-still-starves (default-off arm would stall before hangar as in s1942's 180s staller).
+Change: tools/apply_s4199_m5_spin_yield_default.py flips the 13 getenv("ROGUESQ_SPIN_YIELD") sites (8 generated in funcs_28/30/31/33x4/36, 5 fixup_game_funcs.py templates) so unset/empty = on, `=0` = off. Rebuilt.
+A/B (scratch/agent/s4199_spin_yield_default_ab.sh, concurrent, one build): off (=0) title 2290 rows, hangar 1987; on (unset) title 2331, hangar 7 (animating scene, rows not compared across runs); 0 crash lines in either. `[spin-yield]` count: 0 in BOTH arms. Positive control for the instrument: waitforslot-yield (A11) logged 5 lines in both arms, but there is NO positive control that the spin-yield sites themselves fire, so this is "dormant on this route", not "proven harmless when firing".
+ORIGIN: the spin on the slot byte is non-yielding, starving host VI/SI in external_messages (hardware preempts); s1942-s1949 showed that starvation, and s4196-s4198 showed A11 yield removes the same starvation at the producer-side wait. The default-on is a latent safety, no observed effect on this route.
+Rules out: A15 as a remaining de-stub target on title+hangar (route reaches hangar with it off once A11 yields).
