@@ -603,16 +603,28 @@ whole-RDRAM positive control but the port crashed in
 `Hroute-invalid`; worker-entry, status-zero-writer, and shutdown-return nulls
 are unevaluable. No force-clear or wait change is authorized.
 
+Session 4106 rebuilt the ordinary Debug target and ran a same-build sequential
+image/silent contract matrix after the retail whole-RDRAM positive control.
+Retail reached title 1024 and hangar 512. The silent port arm reached both
+target phases. The image arm produced repeated audio-stage (`dma_size=0x800`)
+and scheduler/task rows, but stayed at VI 640 and reached neither target
+phase; no crash or abort marker was present. The phase-gate source and the
+independent task/stage source agree on an image-specific route failure, so
+image downstream service, status, slot, and PCM nulls remain unevaluable.
+This selects H-image-specific-failure at the measured route scope, not an
+audio-degeneracy explanation. The default image arm remains unqualified, and
+no status-03 or wait behavior changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 1: re-baseline the complete image/silent contract on a qualified
-   phase-gated route.** Build both arms together and require the oracle
-   whole-RDRAM control, retail title/hangar, and port title/hangar before
-   interpreting service, status-03, slot, DMA, or PCM nulls. The immediate
-   status-03 capture is closed as route-invalid; do not force-clear or change
-   the wait until a qualified worker row exists.
+1. **M5 Step 1: isolate the image-arm route failure on a qualified
+   phase-gated route.** Keep silent as the same-build route control and compare
+   default declared-size image staging with the legacy `0xF80` image staging
+   arm after the retail whole-RDRAM/title/hangar controls. Require the port
+   phase gates before interpreting service, status-03, slot, DMA, or PCM
+   nulls. Do not force-clear status 03 or change the wait.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -636,7 +648,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
 | M5 voice modulation transform | Hlater-transform selected at s4091's first demonstrated boundary: the port `0x80084AB8` return values are the low 16 bits of `s0` after the source `andi`, and every sampled port value (`0`, `0xF00`, `0x1900`, `0x2000`, `0x3F80`) occurs in the qualified retail title/hangar support. The independent rows are not record-synchronized, so a later transform remains open. |
-| M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
+| M5 route failure | H-image-specific-failure selected at s4106's measured scope: silent reached both target phases, while the image arm emitted task/audio-stage rows but remained at VI 640. The cause is still open; image downstream nulls remain unevaluable. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |

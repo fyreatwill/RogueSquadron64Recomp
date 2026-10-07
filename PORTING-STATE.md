@@ -145382,3 +145382,24 @@ Hworker-clears from Hworker-missing. No force-clear or wait change landed.
 ORIGIN: the script-only changes repair capture execution and do not alter the
 guest status or worker; the missing target-phase values are route failure,
 not legitimate evidence of absent worker activity.
+## Session 4106 (2026-10-06) — isolated M5 image-arm route failure
+
+Recorded the competing hypotheses and discriminator in `scratch/agent/NEXT.md`
+before building. Rebuilt the ordinary Debug target successfully, then ran a
+same-build sequential matrix: retail oracle positive control and title/hangar
+controls, followed by silent (`ROGUESQ_AUDIO_UCODE=0`) and image
+(`ROGUESQ_AUDIO_UCODE=1`) port arms. The retail whole-RDRAM control fired and
+retail reached title 1024 and hangar 512. Silent reached port title
+`0x00790400:1024` and hangar `0x006AB400:512`. Image emitted repeated
+`[m5-audio-stage]` rows with `dma_size=0x800` and scheduler/task rows, but
+remained at VI 640 and reached neither target phase; no crash or abort marker
+was present.
+
+The phase-gate result and the independent task/audio-stage rows both support
+an image-specific route failure in this capture. This selects
+H-image-specific-failure at the measured scope and rules out treating image
+service/status/slot/PCM nulls as evidence; it does not explain the route
+failure or select audio degeneracy. No status-03 force-clear, wait change, or
+guest/runtime mitigation landed. The next discriminator is default declared
+`0x800` image staging versus the legacy `0xF80` image staging arm, with silent
+as the same-build route control.
