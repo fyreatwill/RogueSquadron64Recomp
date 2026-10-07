@@ -147039,3 +147039,18 @@ at 0x02 (`[avf-gate] site=slot-byte` n=8,000,000, nzn=7,999,945). The 500k-itera
 mitigation standing in for a missing 0x02->0x00 writer. ORIGIN of that stall is not yet named (no behavior change this session).
 Rules out: A9/A10 guards as active mitigations on the title/hangar route; nothing to relax in Step 8. Mission-phase use is
 unmeasured. Next: name the pre-title slot-0 0x02 clearer.
+
+## Session 4196 (2026-10-07) — M5 A11 pre-title slot-0 stall: producer exists and is tick-paced; iteration cap is the wrong unit
+
+Hypotheses: H-no-producer, H-slow (cap too small), H-retail-same. One run, two concurrent arms (scratch/agent/s4196_slot0_cap_ab.sh,
+logs in scratch/agent/soak_results/s4196_slot0_cap_ab/): default cap 500k vs ROGUESQ_WAITFORSLOT_GUARD_CAP=5000000. No build.
+Result: BOTH arms fired the guard once (default iters=500000; cap5m iters=5000000 at cap5m.log:110202, phase width 640 origin
+0x696100), so 10x the cap does not let the spin finish. But the producer exists: slot-0 byte (0x8018D4A0) history repeats Init
+00->00, TriggerVoiceAttack 00->01, RenderVoiceSamples 01->02, 33x RenderVoiceSamples 02->02, then a clearing write
+(stopVoiceMarkRetrigger 02->00 in earlier cycles). In the stalled cycle the clear is musyxRenderVoiceSamples 02->00 at
+cap5m.log:110398, 196 lines AFTER the guard fire. Between the last 02->02 render (109796) and the next (110349) the spin burned
+5M iterations. The producer advances once per audio tick; a non-yielding spin outruns ticks, so any iteration cap fires before
+the last render. H-no-producer REFUTED; H-slow-by-iterations refuted as stated. Retail comparison not done (oracle cannot go
+past boot/attract), so H-retail-same is unmeasured. ORIGIN: the stall is a missing yield in the spin (ticks starved while the
+guest busy-waits), same family as the A12 countdown de-stub; the cap is a mitigation, not a fix. Single-source (one run per arm).
+Next: yield inside the waitForAnyAudioSlot spin and confirm cap fires go 1 -> 0 in one run.
