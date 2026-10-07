@@ -15,8 +15,8 @@ cd "$ROOT" || exit 2
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
   --watch-write 0x0:0x800000 --hit-cap 10000 \
   --watch-write 0x178c80:0x178f18 \
-  --watch-pc 0x8008f2a8 --watch-pc 0x8008f2bc --watch-pc 0x8008f2c0 \
-  --watch-pc 0x8008f2c4 --watch-pc 0x8008f2c8 --watch-pc 0x800ab694 \
+  --watch-pc 0x80090268 --watch-pc 0x80090278 \
+  --watch-pc-range 0x8008ff00:0x8008ffb0 --watch-pc 0x800ab694 \
   --watch-pc 0x800078ec --pc-hist-watch 1 --post-value-watch 1 \
   --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006ab400:512 \
   --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006ab400:512 \

@@ -146600,3 +146600,25 @@ must compare the first nonzero retail writer's port counterpart. No writer,
 payload, gate, or consumer behavior was changed. ORIGIN: retail writer PCs are
 the independent ground-truth origins; their values are legitimate source-span
 data, while the port zero payload remains unexplained.
+
+## Session 4171 (2026-10-07) — qualified M5 writer-counterpart parity
+
+Ran the next Step 4 work unit with the corrected concurrent retail-oracle and
+port harness. The harness oracle watch list was updated to include
+`0x80090268`, `0x80090278`, and the `0x8008FF00:0x8008FFB0` family; the Debug
+build completed successfully before the run. Both arms fired the whole-RDRAM
+positive control and reached title VI 1024 (`0x00790400`) and hangar VI 512
+(`0x006AB400`).
+
+Retail phase data recorded zero-mismatch scalar stores at `0x80090268`,
+`0x80090278`, `0x8008FF04`, `0x8008FF0C`, and `0x8008FF14`; the first, third,
+and fifth were nonzero while `0x8008FF0C` was legitimately zero. The port
+phase-gated source-producer rows recorded the same PCs in hangar with matching
+target-span destinations and nonzero values, including `0x80090268` and
+`0x80090278`. Independent downstream port rows still showed image source DMA
+`FNV=0x762B22A5`, `nz=0`, and PCM source/consumer `FNV=0xF59C39C5`, `nz=0`.
+
+This selects H-writer-counterpart-parity and rules out a missing or simply
+zero-valued first writer as the explanation. It moves the open boundary to
+caller/object context and does not identify the earlier producer input. No
+writer, payload, gate, consumer, or mitigation behavior was changed.

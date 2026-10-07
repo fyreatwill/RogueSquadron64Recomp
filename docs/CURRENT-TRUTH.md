@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4170 (2026-10-07).
+Updated for session 4171 (2026-10-07).
 
 ## Current state
 
@@ -69,22 +69,28 @@ writer/DMA rows remained `FNV=0x762B22A5`, `nz=0`, and its source-context rows
 were zero-valued. This selects a producer-context/source-writer mismatch over
 producer parity; no writer or payload mitigation is authorized.
 
+Session 4171 qualified the first matched source-span writer family in the
+same phase-gated oracle/port run. Retail scalar stores at `0x80090268`,
+`0x80090278`, and `0x8008FF04/0C/14` were observed with zero store-sample
+mismatches; the port emitted the same PCs in hangar with matching target-span
+destinations and nonzero values. Both arms fired the positive control and
+reached title VI 1024 and hangar VI 512. Port image DMA and PCM rows remained
+zero-valued (`0x762B22A5` source span and `0xF59C39C5` PCM), so this selects
+writer-counterpart parity and moves the boundary to caller/object context.
+No behavior change is authorized.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
 1. **M5 audio de-stubbing:** advance Step 4 in `docs/M5-AUDIO-PLAN.md` by
-   auditing the first nonzero retail source-span writer family against its port
-   counterpart, joining writer PC, callsite/context, destination, value, image
-   task input, and PCM in one phase-gated run. Start with retail
-   `0x80090268`, `0x80090278`, and the `0x8008FF*` family; retain
-   `0x800078EC` as a clear control rather than treating it as the explanation.
-   Retail ground truth is now present: the whole-RDRAM control fired, and the
-   gate at `0x800A0F50` has writers `0x8008EA34`, `0x8008EB40`, `0x8008ED48`,
-   `0x8008EB7C`, and `0x8008EC88`; the last is the nonzero enable writer.
-   Port writer/value parity is qualified; keep the real-audio route and do not
-   use the silent control as a production fix while moving earlier in the
-   producer chain.
+   joining the now-matched retail/port writer family to caller/object context
+   in one phase-gated run. Use retail field/context evidence for
+   `0x80090268`, `0x80090278`, and `0x8008FF04/0C/14`, and the existing port
+   source-producer rows; retain `0x800078EC` as a clear control. Discriminate
+   whether the matched writers share caller, object base, destination layout,
+   and value provenance. Keep the real-audio route and do not use the silent
+   control as a production fix.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -103,7 +109,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 Step 3 declared audio staging | H-step3-equivalent independently requalified at s4164: declared `0x800` and legacy `0xF80` arms match at the measured downstream contract. Semantic irrelevance outside that contract is unproven. |
 | M5 Step 4 retail gate ground truth | H-retail-gate-writers selected at s4166: the independent oracle whole-RDRAM control fired in both target phases; `0x800A0F50` was written 14 times by five PCs, with `0x8008EC88` producing the observed nonzero value. The watched `0x80094648`, `0x80090AAC`, and `0x80090BA4` words had zero writes in this retail route. This selects the port parity measurement, not a gate change. |
 | M5 Step 4 port parity | H-upstream-zero-payload selected at s4167: the clean canonical pair reached title/hangar and live gate/task/PCM controls. Both arms had gate `0x01` and zero-valued hangar PCM source/consumer rows; only the real image's DMEM/DMA activity differed. The initial route-invalid attempts are excluded because they stopped at VI 640 or crashed with stale game children present. |
-| M5 Step 4 producer context | H-producer-context-mismatch selected at s4170: retail independently had 664 nonzero bytes in the target source span and a nonzero writer family, while the port phase-gated source-span rows remained `FNV=0x762B22A5`, `nz=0`; port context rows were zero-valued. The shared `0x800078EC` clear is a control, not by itself the cause. |
+| M5 Step 4 producer context | H-writer-counterpart-parity selected at s4171: retail and port both exercised `0x80090268`, `0x80090278`, and `0x8008FF04/0C/14` in hangar; port target-span rows carried matching nonzero values and destinations. The downstream port DMA/PCM remained zero-valued, so caller/object context is the next boundary. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |
