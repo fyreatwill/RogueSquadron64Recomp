@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4113 (2026-10-06).
+Updated for session 4114 (2026-10-06).
 
 ## Current state
 
@@ -721,15 +721,23 @@ phase-scoped comparison. This is Hroute-invalid for Step 6, not evidence that
 the tick is required. The same-build concurrent diagnostic retry also showed
 topology-sensitive divergence and is not promoted to truth.
 
+Session 4114 reran the same-build Step 6 A/B with the retail whole-RDRAM,
+title, and hangar controls valid. Both real-audio arms reached title and
+hangar with no crash/abort, 16 VI controls, 88 PCM-source rows, 518
+PCM-consumer rows, and two qualified hangar stages. Tick-on had 738
+guest-receive rows and tick-off had 741; their joined stage/route-context
+tables differed, so the harness selected H-DrainChangesOrdering. This
+independently requalifies the existing Step 6 policy result; it does not
+prove the tick is required or change runtime behavior.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 6 validation:** compare default drain-tick-off with
-   the explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` control in one build and one
-   phase-gated run. Require task/SP completion, named status/slot transitions,
-   nonzero PCM source/consumer joins, and the same title/hangar route; do not
-   infer success from a clean exit or route alone.
+1. **M5 de-stubbing Step 7:** qualify the remaining status-03 wait/timeout
+   hatch against the observed worker contract, beginning with status-03
+   service reaping. First qualify the named worker entry and zeroing store in
+   one phase-gated run; do not force-clear unexplained status.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -759,7 +767,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
 | M5 key-on early returns | Hreturns-dead/Hguard-valid selected (s4101): retail and port reached the measured key-on route with valid `0xC0` divisors, normal tails, and slot `02`/`00` transitions; all eight guard counts were zero. |
-| M5 drain-tick policy | HDrainChangesOrdering remains the last qualified policy result (s4103). Session 4113's reverse-order rerun was Hroute-invalid because tick-off crashed pre-target while tick-on qualified; it does not overturn s4103 or establish tick-required behavior. |
+| M5 drain-tick policy | HDrainChangesOrdering remains qualified (s4103, independently requalified s4114). Session 4113's reverse-order rerun was Hroute-invalid because tick-off crashed pre-target; s4114 qualified both arms and again found differing joined stage/route-context tables. This does not establish tick-required behavior. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary

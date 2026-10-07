@@ -145549,3 +145549,21 @@ retry also showed topology-sensitive divergence and is not promoted to truth.
 This does not overturn s4103's qualified HDrainChangesOrdering result and
 does not establish that the tick is required. ORIGIN: no guest/runtime
 behavior changed; the only new artifact is diagnostic harness coverage.
+
+## Session 4114 (2026-10-06) — requalified drain-tick ordering difference
+
+Ran the same-build sequential Step 6 A/B with the retail oracle positive
+control, stub warmup, explicit `ROGUESQ_DRAIN_INLOOP_TICK=1`, and default
+tick-off arms. Retail passed the whole-RDRAM, title `0x00790400/1024`, and
+hangar `0x006AB400/512` controls. Both real-audio arms reached title and
+hangar with no crash/abort and were fully qualified: each had 16 VI controls,
+88 PCM-source rows, 518 PCM-consumer rows, and two nonzero hangar stages;
+tick-on had 738 guest-receive rows and tick-off had 741. The joined stage
+tables differed in route-context ordering and destination rows, so the
+harness selected H-DrainChangesOrdering rather than H-DrainRequired.
+
+This independently requalifies s4103's Step 6 policy result and rules out
+route failure, missing target phases, and a tick-only PCM/task completion
+loss in this capture. It does not prove that the tick is required, identify
+the downstream consumer of the ordering difference, or change runtime
+behavior. No code or mitigation was changed.
