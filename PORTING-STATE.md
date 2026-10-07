@@ -146407,3 +146407,22 @@ ORIGIN: independent retail watch and observation-only port callbacks; no guest,
 audio, wait, cap, predicate, slot, or writeback behavior changed. Evidence:
 `docs/M5-S4160-PRECLEAR-NONSCALAR-CENSUS.md` and
 `scratch/agent/s4159_m5_preclear_span_census/`.
+
+## Session 4161 (2026-10-07) — qualified M5 DMA/non-scalar pre-clear boundary
+
+Corrected `scratch/agent/run_s4159_m5_preclear_span_census.sh` to enable its
+span-census gate, added the previously qualified in-loop drain tick and used
+the last qualified autopilot schedule. Rebuilt the port and ran one
+phase-gated capture. The host-write control fired; title VI 1024 appeared at
+13.5s and hangar VI 512 at 24.7s. The generated census emitted 664 target-
+span rows, all zero-valued byte stores from guest PC `0x800078EC`. The active
+`rs64_m5_source_range_dma_write` callback emitted zero target-span rows.
+H-host-dma-writer is not observed at this boundary. H-other-guest-writer
+versus H-preclear-snapshot-artifact remains unevaluable because the
+non-scalar guest census still lacks a positive-control row. The first two
+runner attempts stayed at VI 640; their logs showed the host control but no
+target phase, so they were route-invalid and not interpreted. ORIGIN:
+legitimate host/RSP DMA and guest scalar-store observations; no game value,
+guest behavior, or mitigation changed. Evidence:
+`docs/M5-S4161-PRECLEAR-DMA-NONSCALAR.md` and
+`scratch/agent/s4159_m5_preclear_span_census/`.

@@ -3,7 +3,18 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4160 (2026-10-07).
+Updated for session 4161 (2026-10-07).
+
+Session 4161 reran the corrected, regeneration-safe pre-clear span census on
+the qualified autopilot route. The port passed whole-RDRAM/host-write,
+title-VI-1024, and hangar-VI-512 controls. All 664 target-span guest rows
+were zero-valued byte stores from `0x800078EC`; the active
+`rs64_m5_source_range_dma_write` callback emitted no target-span DMA rows.
+H-host-dma-writer is not observed at this measured boundary. The non-scalar
+guest census still lacks a positive-control row, so H-other-guest-writer
+versus H-preclear-snapshot-artifact remains unevaluable. ORIGIN: legitimate
+host/RSP DMA and guest scalar-store observations; no game behavior or
+mitigation changed. Evidence: [M5-S4161-PRECLEAR-DMA-NONSCALAR.md](M5-S4161-PRECLEAR-DMA-NONSCALAR.md).
 
 Session 4160 widened the regeneration-safe host/RSP census to the exact
 pre-clear span and added an observation-only RT64 writeback callback. The
@@ -705,7 +716,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A11 wait terminal transition | H-A11-target-phase-absent-both selected at s4145: both qualified arms passed whole-RDRAM/title/hangar controls, but neither emitted a target-phase wait/post-wait terminal row; port A11 rows were confined to earlier 640 phases. This rules out a target-phase port/retail split, not the wait's safety or the source-payload cause. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
 | M5 source-producer context | H-producer-context-split selected at s4151: retail's phase-qualified execution histogram attributed `0x800078EC` to predecessor `0x8002BEEC` and `rs_memset` entry `0x800078E0` to `0x800052C4`, while the port used title callsite `0x8008F2CC` and hangar callsites `0x8008F2CC`/`0x800AB694` with distinct tuples and zero values. The caller-state cause remains open; generated port `ra=0` is not evidence. |
-| M5 pre-clear provenance | H-port-scalar-writer-omitted selected at s4159: a target-valid port census captured all 664 intersecting guest scalar stores, all zero-valued `0x800078EC` bytes, while retail recorded 1,830 writes and nonzero earlier hangar bytes. The remaining earlier port state must come from host/DMA or another non-scalar writer. |
+| M5 pre-clear provenance | H-port-scalar-writer-omitted remains selected for generated guest byte/halfword/word stores. Session 4161 found no target-span host/RSP DMA row, but the non-scalar guest class still lacks a positive control; earlier port state remains open between an uninstrumented non-scalar writer and snapshot provenance. |
 | M5 producer caller state | H-caller-state-split selected at s4152: retail title entry rows had `prev=0x800052C4`, live `s0` objects and nonzero pointed words, while port title setup used `s0=0xF`, `s1=0x561F`, `0x80178C80/0x298`, and zero fill. Hangar includes a shared-looking `s0=0`, `s1=0x800D0000` family, so the split is phase/context-specific. The s4153 entry/body join then selected H-entry-body-shared: retail preserves the producer object/state into `0x800078EC`; the remaining gap is earlier provenance. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
