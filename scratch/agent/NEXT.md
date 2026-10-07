@@ -1,37 +1,35 @@
-# Next work unit: qualify the pre-publication free/active ownership guard
+# Next work unit: qualify the M5 status-03 worker boundary
 
-HYPOTHESIS-ID: m3-free-active-prepublication
+HYPOTHESIS-ID: m5-status03-worker-join
 
-The next M5 status-03 behavior edge is not safe to land here: the generated
-worker/store implementation is external to this checkout and the current
-truth explicitly forbids a force-clear or wait replacement without that
-contract. This iteration instead audits one complete M3 ownership idiom in
-`patches/heap_guards.c`: reject a free-list/active-queue overlap before
-publishing the advanced free-list head.
+Run one qualified silent-arm investigation of the status-03 worker. The
+external generated tree must be instrumented as one phase-scoped table joining
+`serviceVoicePoolFrame` entry, the guest `0x8009B7EC` zeroing store, and the
+worker shutdown return. Do not replace the wait, force-clear status, or add a
+guard during this unit.
 
 Competing hypotheses and discriminator:
 
-- H-overlap-prevented: the new pre-publication check is compiled into the
-  regeneration-safe patch and rejects only the non-legitimate overlap class.
-- H-guard-not-integrated: the patch source changes but the configured build
-  omits or cannot compile `PatchesLib`, so runtime behavior is not qualified.
-- H-guard-too-broad: a valid allocator path is rejected; this requires a
-  runtime qualification on a host with the MIPS toolchain.
+- H-status03-port-writer: the qualified port executes the named zeroing store
+  between worker entry and shutdown return, establishing the port-side writer
+  ordering.
+- H-status03-port-no-writer: the qualified port reaches the worker boundary
+  but no named zeroing store occurs before return, separating the port worker
+  from the retail writer witness.
+- H-status03-route-invalid: the silent arm misses title/hangar or crashes before
+  the joined table is phase-qualified; no writer conclusion is allowed.
 
-The single discriminating measurement is the build/link artifact check:
-`PatchesLib` must compile and the full Debug target must link the override.
-Successful integration selects H-overlap-prevented pending runtime
-qualification; omission or missing cross-compiler selects H-guard-not-
-integrated; only a qualified runtime rejection can select H-guard-too-broad.
+The single discriminating measurement is a phase-keyed entry/store/return join
+on a route that passes the whole-RDRAM retail positive control plus title 1024
+and hangar 512. Entry with a store before return selects the writer-ordering
+hypothesis; entry/return without the store selects no-writer; either missing
+phase gate or a pre-gate crash selects route-invalid. A counter that merely
+proves the branch ran is not sufficient.
 
-Commands:
-
-1. Build the patch and full target once:
-   `cmake --build build --config Debug --target PatchesLib`
-   `cmake --build build --config Debug --target RogueSquadron64Recomp`
-2. Inspect the generated patch/build dependency and link result. A runtime
-   soak is not authorized if the cross-toolchain is absent.
-
-Expected outcomes: `PatchesLib` is rebuilt and the ordinary Debug target links,
-or the build reports the known missing MIPS GCC/LD dependency; in either case
-do not infer runtime guard firing from a build-only result.
+Before running, inspect the existing M5 audio plan and generated-tree probe
+helpers for the exact source and fixup locations. Then build once with all
+entry/store/return counters and run the retail control and silent port arm.
+Use `PROBE_PHASE_WIDTH` and `PROBE_KEYS_FROM_PHASE=1`; kill only with SIGKILL.
+If the external generated tree or required toolchain is unavailable, record
+the measured failure and a falsifiable retry condition rather than changing the
+worker behavior.

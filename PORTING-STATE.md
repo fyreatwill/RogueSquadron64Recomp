@@ -145897,3 +145897,19 @@ shown, but no runtime guard firing or valid-path preservation is claimed. This
 rules out neither M5 audio behavior nor the guard's runtime scope. ORIGIN:
 free-list head publication and active-queue link stores; cross-owner aliasing
 is not legitimate state.
+
+## Session 4133 (2026-10-07) — PatchesLib integration remained unavailable
+
+Ran the prescribed build discriminator for the new pre-publication free/active
+ownership guard. `cmake --build build --config Debug --target PatchesLib`
+failed immediately with `No rule to make target PatchesLib`. The same configured
+build then completed the ordinary `RogueSquadron64Recomp` Debug target
+successfully.
+
+H-guard-not-integrated remains selected: the host target is buildable, but this
+macOS CMake graph does not expose the MIPS patch-library target, so this run
+provides no evidence that the guard is compiled, linked, fires, or preserves a
+valid allocator path. It rules out only a host-target build failure and does
+not advance runtime qualification. ORIGIN: the tested integration boundary is
+the configured `PatchesLib` target and its MIPS GCC/LD dependency; no allocator
+writer, guard, or runtime behavior changed.

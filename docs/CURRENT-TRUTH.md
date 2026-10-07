@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4132 (2026-10-07).
+Updated for session 4133 (2026-10-07).
 
 ## Current state
 
@@ -150,6 +150,18 @@ Debug target rebuilt successfully. H-guard-not-integrated is selected for
 runtime purposes: this proves source/host integration only, not that the guard
 fires or preserves a valid runtime path. ORIGIN: free-list head publication
 and active-queue link stores; cross-owner aliasing is not legitimate state.
+
+Session 4133 repeated the prescribed integration discriminator without changing
+the guard. `cmake --build build --config Debug --target PatchesLib` failed
+immediately with `No rule to make target PatchesLib`, while the same configured
+build completed `RogueSquadron64Recomp` successfully. H-guard-not-integrated
+remains selected: the ordinary host target is buildable, but this checkout's
+macOS CMake graph cannot compile or link the MIPS patch library, so no runtime
+guard firing or valid-path preservation is claimed. This closes the current
+build-only probe and does not authorize another host-only guard iteration.
+ORIGIN: the tested integration boundary is the configured `PatchesLib` target
+and its MIPS GCC/LD dependency; no allocator writer, guard, or runtime behavior
+changed.
 
 ## Earlier qualified evidence (compacted)
 
@@ -368,8 +380,9 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 2. **Qualify the new M3 pre-publication guard** on a host with
    `mips64-elf-gcc` and `mips64-elf-ld`, then runtime-test valid and overlapping
    ownership cases. The ordinary host target passes, but this macOS CMake
-   configuration has no `PatchesLib` target; do not infer runtime behavior
-   from the host build alone.
+   configuration has no `PatchesLib` target and the integration discriminator
+   failed in session 4133; do not spend another host-only iteration or infer
+   runtime behavior from the host build alone.
 3. **M5 source-producer context census (repair the paired route):** rerun the
    same retail-gated writer/context table, then run the canonical port with a
    phase-scoped source table and enough route controls to reach hangar. Keep
