@@ -1,12 +1,10 @@
-# Next work unit: M5 A11 pre-title slot-0 0x02 stall — who should clear it?
+# Next work unit: M5 A11 — yield inside waitForAnyAudioSlot spin so ticks can finish the voice
 
 HYPOTHESIS-ID: m5-a11-pretitle-slot-stall
 
-s4195: waitForAnyAudioSlot's 500k cap fired once in phase 3 (width 640, origin 0x62BD00) with slot-0 status byte stuck 0x02
-(base 0x8018D4A0) after 8M `[avf-gate] site=slot-byte` reads. Hypotheses: H-no-producer (nothing runs the 0x02->0x00
-writer pre-title; audio worker/tick gated off: stub artifact), H-slow (writer runs but needs more than 500k iterations;
-cap too small), H-retail-same (retail also spins briefly here). Discriminator: in ONE run, log writers of the slot-0 byte
-(existing `[avf-gate] site=slot-sb` stores) plus tick/serviceVoicePoolFrame entry counters within phase 3, compared with a
-concurrent ROGUESQ_WAITFORSLOT_GUARD_CAP=5000000 arm of the same recipe to see whether the byte ever clears.
-Template: scratch/agent/s4195_voice_guard_class.sh. Cap=5M clears it -> H-slow; never clears -> H-no-producer, name the gate.
-Optionally check retail wait duration with tools/oracle/README.md (boot phase only).
+s4196: slot-0 byte stall pre-title is NOT a missing producer; musyxRenderVoiceSamples clears 02->00 only after the cap fires
+(cap5m.log:110398 vs fire 110202). The spin is non-yielding so audio ticks are starved. Hypotheses: H-no-yield (adding a yield in
+the spin lets render finish, fires 1->0), H-tick-gated-elsewhere (yield added but ticks still don't come; fires stay 1), H-retail-same.
+Discriminator: one run, two concurrent arms: (a) unchanged, (b) yield-per-N-iterations in the waitForAnyAudioSlot loop
+(fixup_game_funcs.py, same pattern as the A12 countdown yield, s4192). Positive control: arm (a) still prints
+[waitforslot-guard-fire] fires=1. Template: scratch/agent/s4196_slot0_cap_ab.sh. Regen order applies (fixup script, then cmake).
