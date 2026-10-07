@@ -65,6 +65,14 @@ static int bump_cursor_ok(const void* p) {
            addr <= 0x80800000U;
 }
 
+// ORIGIN: heap_bump is the allocator's next-block cursor, while
+// heap_tail_loc publishes the active-queue sentinel. The sentinel is already
+// owned as queue metadata, so it is not a legitimate cursor value.
+static int bump_cursor_disjoint_from_sentinel(const void* bump,
+                                               const Block* sentinel) {
+    return bump == NULL || sentinel == NULL || bump != sentinel;
+}
+
 // ORIGIN: heap_other_listhead and heap_tail_loc are fixed linker-published
 // metadata slots, not heap objects. Accepting any aligned KSEG0 address here
 // would let a corrupted slot pointer redirect the queue-link stores into a
@@ -464,6 +472,10 @@ RECOMP_PATCH Block* func_80007D74(void) {
         return NULL;
     }
     if (!active_queue_sentinel_link_ok(tail)) {
+        return NULL;
+    }
+
+    if (!bump_cursor_disjoint_from_sentinel(heap_bump, tail)) {
         return NULL;
     }
 

@@ -145403,3 +145403,15 @@ failure or select audio degeneracy. No status-03 force-clear, wait change, or
 guest/runtime mitigation landed. The next discriminator is default declared
 `0x800` image staging versus the legacy `0xF80` image staging arm, with silent
 as the same-build route control.
+
+## Session 4107 (2026-10-06) — added allocator cursor/sentinel ownership guard
+
+Recorded the competing hypotheses and discriminator in `scratch/agent/NEXT.md`
+before building. Added a regeneration-safe guard to `patches/heap_guards.c`:
+the allocator's `heap_bump` cursor is rejected when it aliases the active
+queue sentinel published by `heap_tail_loc`. ORIGIN: `heap_bump` is published
+by the allocator as the next-block cursor, while the sentinel is queue
+metadata and is not legitimate cursor state. Rebuilt the ordinary Debug
+target successfully. The `PatchesLib` target remains absent on this host
+(`No rule to make target 'PatchesLib'`), so this is source/host-build evidence
+only; no runtime behavior is inferred.

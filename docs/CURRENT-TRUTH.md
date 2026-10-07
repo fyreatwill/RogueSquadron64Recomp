@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4105 (2026-10-06).
+Updated for session 4107 (2026-10-06).
 
 ## Current state
 
@@ -29,7 +29,7 @@ audio-staging explanation. The legitimate legacy staging writer is still
 M3 has landed regeneration-safe ownership guards in `patches/heap_guards.c`
 for free-list span/reciprocal links, active-queue reachability and aliasing,
 empty-queue tail state, expansion ownership, the active sentinel's
-predecessor, and full free-chain/active-queue disjointness. The ordinary Debug
+predecessor, allocator-cursor/sentinel aliasing, and full free-chain/active-queue disjointness. The ordinary Debug
 target builds. Runtime qualification is
 blocked because this host has neither `mips64-elf-gcc` nor `mips64-elf-ld`, so
 CMake still omits `PatchesLib` after the cross-platform discovery repair. The
@@ -615,6 +615,14 @@ This selects H-image-specific-failure at the measured route scope, not an
 audio-degeneracy explanation. The default image arm remains unqualified, and
 no status-03 or wait behavior changed.
 
+Session 4107 added a regeneration-safe M3 ownership guard in
+`patches/heap_guards.c`: `heap_bump` is rejected when it aliases the active
+queue sentinel published through `heap_tail_loc`. The ORIGIN is the allocator
+cursor publication versus the sentinel metadata owner; that alias is not
+legitimate allocator state. The ordinary Debug target built successfully, but
+`PatchesLib` remains unavailable (`No rule to make target 'PatchesLib'`) on
+this host, so runtime qualification is still unevaluable.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
@@ -627,7 +635,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
    nulls. Do not force-clear status 03 or change the wait.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
-   active-sentinel predecessor guard. The source and ordinary host target
+   active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
