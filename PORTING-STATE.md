@@ -146656,3 +146656,27 @@ This selects H-context-mismatch over route-invalid and moves the open boundary
 to the first divergent object-field input. It rules out a missing field-watch
 or a route-null explanation, but does not identify the producer input. No
 audio, gate, writer, payload, or mitigation behavior changed.
+## Session 4174 (2026-10-07) — qualified M5 object-field witness
+
+Added `rs64_m5_object_field_witness` in `src/main/main.cpp` and the
+regeneration-safe `RS64_S4174_M5_OBJECT_FIELD` injection in
+`../N64Recomp/fixup_game_funcs.py`. The hook covers the five retail-watched
+producer PCs (`0x80090268`, `0x80090278`, `0x8008FF04/0C/14`) and records the
+port `s0`, `s1`, store address/value, `s0+0x60`, `s0+0x22`, `$v0`, and
+`s1+0x22` relation. The first run qualified the wrapper gates but exposed a
+raw-byte endian mistake; it was corrected to use `MEM_W`, `MEM_BU`, and
+`MEM_HU`, then rebuilt and rerun.
+
+The corrected run fired the whole-RDRAM positive control, and its raw phase
+trace reached port title 1024 and hangar 512 with the witness control firing
+in both target phases and 512 capped rows covering all five PCs. The wrapper
+verdict missed the route because its exact-origin grep did not accept the
+observed phase-origin spelling; retail independently reached title 1024 and
+hangar 512 and emitted the oracle field table. The qualified two-sided table
+does not reconcile: port object bases/layouts and the `s0+0x60`, `s0+0x22`,
+and `s1+0x22` values differ from retail. This selects
+H-legitimate-field-mismatch over H-instrumentation-alias and moves the open
+boundary to the first producer/caller of those object fields. The route-invalid
+rerun is recorded as unevaluable, not as evidence. No audio, gate, writer, or
+payload behavior changed. The initial raw-byte comparison is superseded by
+the corrected runtime-memory witness.

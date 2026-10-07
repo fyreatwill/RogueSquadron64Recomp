@@ -1,32 +1,28 @@
-# Next work unit: trace the first divergent writer object-field input
+# Next work unit: trace the first producer/caller of the divergent object fields
 
-HYPOTHESIS-ID: m5-step4-object-field-boundary
+HYPOTHESIS-ID: m5-step4-object-field-producer
 
-Session 4173 selected H-context-mismatch. The retail oracle reached the
-positive-control threshold, title VI 1024, and hangar VI 512; all five field
-watches fired in hangar. The port reached the same phases and retained live
-source/image/PCM controls, but its matched `0x800AB694 -> 0x800078EC` context
-did not expose the retail per-object source-word/branch-field state and its
-target-span payload stayed zero.
+Use the qualified s4174 route as the base. The port-side witness at
+`0x80090268`, `0x80090278`, and `0x8008FF04/0C/14` fired in title/hangar, but
+its `s0+0x60`, `s0+0x22`, and `s1+0x22` values did not reconcile with the
+independent retail oracle. Do exactly one phase-gated producer-context
+instrument build/run. Retain the oracle whole-RDRAM positive control,
+`--pc-field-dump`, `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`,
+real-audio/LLE/ungated/solo route, and all existing source/object/task/image/
+PCM joins. Add one port witness at the first generated producer/caller that
+supplies the object base or the divergent pointed fields; persist it through
+`../N64Recomp/fixup_game_funcs.py`.
 
-Do exactly one phase-gated instrument build/run. Use the existing
-`scratch/agent/run_s4148_m5_source_callsite.sh` as the base. Add a single
-port-side field/object witness for the first divergent relation identified by
-the retail rows (object base plus the source word/branch field used by
-`0x80090268`, `0x80090278`, `0x8008FF04`, `0x8008FF0C`, and `0x8008FF14`). Keep
-the retail `--pc-field-dump` watches, whole-RDRAM positive control,
-`PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, real-audio/LLE/ungated/
-solo route, and all existing source/task/image/PCM logs. Run both arms in one
-build/run; kill with SIGKILL and capture under `build/`.
+Before building, compare the new witness against these hypotheses:
 
-Discriminator:
+- H-earlier-producer-mismatch: the port producer/caller emits a legitimate
+  object or field value different from retail; this moves the boundary earlier.
+- H-object-layout-alias: the producer values reconcile after normalizing the
+  port allocation/layout relation; the s4174 mismatch was an address alias.
+- H-route-invalid: either independent positive control or title/hangar phase
+  is absent; object nulls are unevaluable.
 
-- H-legitimate-field-mismatch: the port counterpart has a real, stable object
-  and field relation, but its value/provenance differs from retail; select
-  that writer/input boundary.
-- H-instrumentation-alias: the apparent mismatch is caused by a join/address
-  alias; object identity and field values reconcile after the witness.
-- H-route-invalid: either arm misses the positive control or title/hangar VI;
-  all object and PCM nulls are unevaluable.
-
-No audio, gate, writer, payload, or mitigation behavior change is authorized.
+The discriminator is one same-run table joining producer PC/caller, object
+base, the selected field values, and the existing five-PC rows in both retail
+and port. No audio, gate, writer, payload, or mitigation behavior change is
+authorized.

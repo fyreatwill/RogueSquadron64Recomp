@@ -1567,6 +1567,57 @@ extern "C" void rs64_m5_source_context(uint8_t*, uint32_t pc, uint32_t ra,
         g_rs64_m5_field348_static_callsite, source_ptr, destination, value);
     std::fflush(stderr);
 }
+
+extern "C" void rs64_m5_object_field_witness(uint8_t* rdram, uint32_t pc,
+                                                recomp_context* ctx,
+                                                uint32_t store_addr,
+                                                uint32_t store_value) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_OBJECT_FIELD");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled || !rdram || !ctx) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+        std::fprintf(stderr,
+                     "[m5-object-field-control] phase=%u width=%u origin=0x%06X pc=0x%08X\n",
+                     rs64_phase_ord(), width, origin, pc);
+        std::fflush(stderr);
+    }
+    if (rows >= 512u) return;
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        return static_cast<uint32_t>(MEM_W(0x00, guest));
+    };
+    auto byte = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        return static_cast<uint32_t>(MEM_BU(0x00, guest));
+    };
+    const uint32_t s0 = U32(ctx->r16);
+    const uint32_t s1 = U32(ctx->r17);
+    std::fprintf(stderr,
+        "[m5-object-field] row=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X ra=0x%08X store_addr=0x%08X store_value=0x%08X "
+        "s0=0x%08X s1=0x%08X source_word=0x%08X source_byte=0x%02X "
+        "branch_selector=0x%08X branch_state=0x%04X\n",
+        rows++, rs64_phase_ord(), width, origin, pc, U32(ctx->r31),
+        store_addr, store_value, s0, s1, word(s0 + 0x60u),
+        byte(s0 + 0x22u), U32(ctx->r2), word(s1 + 0x22u) & 0xFFFFu);
+    std::fflush(stderr);
+}
 }
 
 extern "C" void rs64_m5_pcm_set_callsite(uint32_t callsite) {
