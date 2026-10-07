@@ -145692,3 +145692,29 @@ This selects H-A8-trap-live at the measured scope and rules out the A8 traps
 suppressing valid qualified work. It does not prove every audio cause is
 closed, and no trap or return was changed. ORIGIN: `0x80090768` is the
 legitimate `0xC0` divisor publisher; no mitigation or guest behavior changed.
+
+## Session 4122 (2026-10-07) — qualified A11 wait terminal-return audit
+
+Asked the retail oracle first with a whole-RDRAM positive control, the
+`D_80141AD0` count-byte watch, wait/active-slot execution PCs, known slot
+writers, and title/hangar phase tracing. The positive control fired 10,010
+times; retail reached title `0x00790400/1024` and hangar
+`0x006AB400/512`. This driven schedule executed none of the wait/active-slot
+PCs, so it is not a retail wait witness; prior independent retail evidence
+still records `waitForAnyAudioSlot` and `anyAudioSlotActive` execution.
+
+The existing regeneration-safe A11 instrumentation built with the ordinary
+Debug target. The qualified real-audio/LLE/ungated/solo/spin-yield port reached
+title and hangar with positive audio-task and audio-return controls and no
+crash or abort. It emitted three A11 entries: calls 0 and 2 returned after one
+iteration, while call 1 entered with `chCount=16` and had no exit before the
+required SIGKILL. The wait-for-slot cap and audio-slot-active guard both fired
+zero times. This selects H-A11-nonterminal-return at the qualified port scope:
+the class is live, but the wait path is not uniformly terminal. It does not
+prove whether a slot writer or predicate input is responsible; the next unit
+must join the complete `01/02/00` writer and terminal-transition table.
+
+This rules out a cap firing as the cause at this scope and does not authorize
+removing the cap, replacing the wait, or forcing slot state. ORIGIN: the
+pending path is the existing guest `waitForAnyAudioSlot` loop and predicate;
+no guest writer or mitigation changed.

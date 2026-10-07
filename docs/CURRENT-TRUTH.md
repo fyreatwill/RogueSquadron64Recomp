@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4121 (2026-10-06).
+Updated for session 4122 (2026-10-07).
 
 ## Current state
 
@@ -99,6 +99,22 @@ active divide sites at `0x80090CEC`, `0x80090D30`, `0x80090D74`, and
 H-A8-trap-live is selected at this measured scope: the traps did not suppress
 valid qualified work. ORIGIN: `0x80090768` is the legitimate `0xC0` divisor
 publisher; no trap or guest behavior changed.
+
+Session 4122 completed the A11 wait-for-any-audio-slot capture. The retail
+oracle passed the whole-RDRAM positive control and reached title
+`0x00790400/1024` and hangar `0x006AB400/512`, but this driven schedule did not
+execute the wait/active-slot PCs; earlier independent retail evidence still
+shows the wait and active-slot callee are real. The same-build qualified
+real-audio/LLE/ungated/solo/spin-yield port reached both target phases with
+positive audio-task and return controls. Port A11 entered three times: calls 0
+and 2 returned after one iteration, while call 1 entered with `chCount=16` and
+had no return before SIGKILL. The wait cap and audio-slot-active guard both
+fired zero times. H-A11-nonterminal-return is selected at this measured port
+scope; the wait class is live but not every qualified call reaches a terminal
+return. This does not authorize removing the cap, replacing the wait, or
+changing slot state. ORIGIN: the observed pending path is the existing guest
+`waitForAnyAudioSlot` loop and its slot predicate; no guest writer or
+mitigation changed.
 
 Generated-tree audits confirmed the relevant service and image functions exist outside this checkout and in the fixup inputs. Guard changes require an ORIGIN naming the legitimate writer; no force-clear, wait replacement, synthetic DMA, or default-on mitigation was authorized.
 
@@ -214,11 +230,12 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing next idiom class:** audit A11's `waitForAnyAudioSlot` /
-   `anyAudioSlotActive` guard and return path as one complete class. Reconfirm
-   slot `01/02/00` writers, wait entry/return, task completion, and the
-   phase-gated retail/port controls in one capture. Do not remove the cap or
-   replace the wait.
+1. **M5 A11 follow-up:** capture the complete slot `01/02/00` writer and
+   terminal-transition table in the same qualified port run, with
+   `ROGUESQ_LOG_M5_WAIT_CONTRACT=1` and `ROGUESQ_LOG_M5_KEYON_CENSUS=1`.
+   Reconcile the pending `chCount=16` call against its slot predicate and the
+   independent retail wait evidence. Do not remove the cap, replace the wait,
+   or force a slot state.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target

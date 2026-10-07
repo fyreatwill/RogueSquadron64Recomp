@@ -1,31 +1,30 @@
-# Next work unit: audit the A11 wait-for-any-audio-slot idiom class
+# Next work unit: complete the A11 terminal-transition table
 
-Session 4121 selected H-A8-trap-live at the qualified title/hangar scope.
-Execute exactly one complete A11 census/capture next; do not remove the wait
-cap, replace the wait, or force a slot state.
+Session 4122 selected H-A11-nonterminal-return at the qualified port scope.
+Execute exactly one complete A11 terminal-transition capture next; do not
+remove the wait cap, replace the wait, or force a slot state.
 
 HYPOTHESIS-ID: m5-step9-wait-for-any-audio-slot-class
 
 Competing hypotheses and discriminator:
 
-- H-A11-return-live: the wait entry/return path is live and slot writers reach
-  the required terminal states; the guard cap does not fire on qualified work.
-- H-A11-suppresses-valid: the cap fires or a qualified valid slot transition
-  is lost at the wait path, while retail independently reaches the matching
-  wait/slot behavior.
+- H-A11-terminal-slot: the pending `chCount=16` call has a valid terminal slot
+  transition that was not logged by the first capture; the full writer table
+  will show the return edge.
+- H-A11-nonterminal-slot: a slot `01/02/00` writer or predicate input remains
+  nonterminal, explaining the missing return without a cap fire.
 - H-A11-route-invalid: a required positive control or title/hangar phase is
   missing, so wait and guard nulls are unevaluable.
 
-The single discriminating measurement is one complete regeneration-safe A11
-source census plus one same-build retail/port phase-gated capture. Enumerate
-every `waitForAnyAudioSlot` / `anyAudioSlotActive` entry, loop, cap, return,
-and slot `01/02/00` writer. Ask the retail oracle first with whole-RDRAM and
-wait/slot execution controls. Retail must reach title and hangar; port must
-reach both phases, fire its positive controls, and report task completion.
-Any missing control or phase selects H-A11-route-invalid. A cap fire or a
-missing qualified terminal transition with retail-valid wait evidence selects
-H-A11-suppresses-valid; otherwise select H-A11-return-live. Do not alter the
-wait or cap.
+The single discriminating measurement is one same-build phase-gated port
+capture with the complete writer/terminal table. Enable
+`ROGUESQ_LOG_M5_WAIT_CONTRACT=1` and `ROGUESQ_LOG_M5_KEYON_CENSUS=1` so every
+wait entry/return, slot `01/02/00` transition, task completion, and positive
+control is collected together. The oracle is still run first with the
+whole-RDRAM control and exact title/hangar gates. A missing control or phase
+selects H-A11-route-invalid; a terminal transition joined to the pending call
+selects H-A11-terminal-slot; otherwise the still-pending call plus a valid
+control selects H-A11-nonterminal-slot. Do not alter the wait or cap.
 
 Before building, use bounded `rg` searches in the generated tree, fixup
 script, and oracle watch configuration to enumerate the full idiom. Use the
@@ -39,4 +38,6 @@ Required build:
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
 Required run properties: oracle first, whole-RDRAM positive control, exact
-title/hangar VI phase gates, port positive controls, and SIGKILL cleanup.
+title/hangar VI phase gates, port positive controls, the qualified route
+parameters above, `ROGUESQ_LOG_M5_WAIT_CONTRACT=1`,
+`ROGUESQ_LOG_M5_KEYON_CENSUS=1`, and SIGKILL cleanup.
