@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4073 (2026-10-04).
+Updated for session 4074 (2026-10-06).
 
 ## Current state
 
@@ -232,6 +232,18 @@ boundary; playback/drain timing remains open.
   strengthens Hnative-residue and rejects an immediate-versus-delayed dummy
   phase-gate split for this recipe; it does not qualify the sink because both
   arms were silent controls.
+- Session 4074 first ran the prescribed same-build default-image/silent pair.
+  Retail passed the whole-RDRAM, title, and hangar controls; silent reached
+  both target phases, but the image arm crashed before its first audio
+  dispatch in `spTaskSchedulerThread+9632` at fault `0x400128d47` (guest PC
+  `0x8000834c`). The pair was therefore route-invalid. The fixed image-only
+  rerun kept the same retail controls and reached hangar without a crash:
+  the image changed DMEM, emitted two DMAs, exited at `0x1328`, completed SP
+  service, and delivered the guest completion message. Its hangar stage-3
+  output and PCM source/consumer rows remained zero (`FNV=0x762B22A5`,
+  `nz=0`), while the gate was zero. This closes image task/DMEM/DMA/SP
+  coverage at the isolated route and leaves the named hangar-output writer
+  boundary open; it does not authorize a gate change.
 
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
@@ -240,12 +252,12 @@ ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 1 re-baseline.** Run one same-build default-image
-   versus silent-control capture with the retail whole-RDRAM positive control
-   and title/hangar VI gates. Require dispatch, task fields/source, DMEM/DMA,
-   image exit, SP completion, service/slot, PCM source/consumer, and route
-   rows before interpreting any divergence. Keep `ROGUESQ_AUDIO_UCODE=0` as
-   rollback; do not change a gate or wait path from a route-only result.
+1. **M5 Step 4 writer qualification.** Use the isolated image route and the
+   retail oracle to qualify the hangar PCM/gate writer class, beginning with
+   the already named `0x80094648` value/destination boundary. Require the
+   whole-RDRAM/title/hangar controls, retail writer/value attribution, and
+   matching port gate/PCM rows in one phase-gated capture. Do not change the
+   gate or add a mitigation from a port-only zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -263,7 +275,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 
 | Hypothesis | Status |
 |---|---|
-| M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063). |
+| M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063); the isolated image arm still has zero hangar output and the `0x80094648` writer boundary remains open (s4074). |
 | M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |

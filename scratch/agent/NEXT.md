@@ -1,31 +1,32 @@
-# Next work unit: M5 de-stubbing Step 1 re-baseline
+# Next work unit: M5 Step 4 hangar writer qualification
 
-HYPOTHESIS-ID: m5-audio-step1-rebaseline
+HYPOTHESIS-ID: m5-audio-step4-hangar-writer
 
-Session 4073 ran the clean dummy-silent immediate-versus-7-second-delayed A/B
-after the retail whole-RDRAM positive control. Both arms reached title 1024 and
-hangar 512 with no crash or abort, so the recipe does not split on launch delay.
+Session 4074 qualified the isolated default image after the concurrent image /
+silent pair was route-invalid. The image-only arm passed the retail
+whole-RDRAM/title/hangar controls and reached hangar with DMEM change, two
+DMAs, image exit at `0x1328`, SP completion, and guest receive; stage-3 and
+PCM source/consumer payloads were zero. The gate stayed zero.
 
 Competing hypotheses:
 
-- Himage-contract: the default Factor 5 image arm reaches the complete task,
-  DMEM/DMA, SP completion, service/slot, and PCM chain at the target phases.
-- Himage-gap: the image performs task work and exits but a named contract edge
-  remains absent or divergent from the silent control.
-- Hroute-control: retail whole-RDRAM or either port phase gate fails; no audio
-  contract conclusion is valid.
+- H94648-writer: retail's `0x80094648` writer/value/destination class is the
+  hangar source boundary and the port has a corresponding gate/output row.
+- Hother-writer: retail reaches hangar with the named class absent or
+  non-matching, so another ranked writer class owns the missing output.
+- Hcoverage: retail whole-RDRAM/title/hangar or isolated image phase coverage
+  fails, making writer nulls unevaluable.
 
-Discriminating measurement: one same-build, retail-gated capture with the
-default image arm and `ROGUESQ_AUDIO_UCODE=0` silent arm, phase-keyed at title
-1024 and hangar 512. Record dispatch, task fields/source, DMEM/DMA, image exit,
-SP completion, service return, status/slot, voice/reap, MORT class, PCM source,
-PCM consumer, and route phase. Himage-contract requires the complete image row;
-Himage-gap is selected by a target-phase missing/divergent edge with the other
-controls present; any missing positive control or phase gate selects
-Hroute-control.
+Discriminating measurement: one same-build retail-gated isolated image capture
+with the existing phase-keyed task/PCM joins plus the retail writer/value
+watch for `0x80094648` and its destination. H94648-writer requires retail
+hangar attribution and a matching port gate/PCM row; Hother-writer requires
+valid controls with no matching `0x80094648` attribution; Hcoverage is selected
+by any missing whole-RDRAM, title, hangar, or isolated-image gate.
 
-Exact implementation: use the existing Step 1/default-image validation driver
-and add no new counter until the independent retail control and current port
-task/PCM joins are confirmed. Run both arms in one build/run from `build/`,
-retain `PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`, and SIGKILL the
-process group. Keep `ROGUESQ_AUDIO_UCODE=0` as the rollback/control arm.
+Exact implementation: start from the existing retail oracle and isolated image
+driver, batch the single `0x80094648` writer/value/destination watch with the
+existing task/PCM joins, run from `build/`, retain
+`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`, and SIGKILL the
+process group. Do not change the gate; there is no behavior rollback arm for
+this qualification capture.

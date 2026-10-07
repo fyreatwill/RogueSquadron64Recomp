@@ -144783,3 +144783,10 @@ Both arms therefore succeeded, strengthening Hnative-residue and rejecting an
 immediate-versus-delayed dummy phase-gate split for this recipe. This does not
 qualify the sink because both arms were silent controls. The next work unit is
 the M5 plan's Step 1 default-image versus silent-control contract re-baseline.
+## Session 4074 (2026-10-06) — qualified isolated image audio contract boundary
+
+Ran the planned M5 Step 1 re-baseline after rebuilding the ordinary Debug target. The same-build retail-gated concurrent default-image versus silent pair passed the retail whole-RDRAM positive control and title/hangar phase controls; silent reached both target phases, but the image arm crashed before its first audio dispatch in `spTaskSchedulerThread+9632`, with fault `0x400128d47` and guest PC `0x8000834c`. This pair was route-invalid for image nulls.
+
+Ran the fixed image-only capture with the same retail controls, removing concurrent-arm topology. The isolated image reached title and hangar without a crash. At hangar it changed DMEM (`changed=959`), emitted two DMA ranges, exited at image PC `0x1328`, returned `Broke`, entered and returned SP completion, delivered the external SP message, and reached guest receive. The stage-3 image destination and PCM source/consumer rows all remained zero (`FNV=0x762B22A5`, `nz=0`); the MusyX gate remained zero. This qualifies the image task/DMEM/DMA/SP/service chain at the isolated route and leaves the named hangar-output writer boundary open.
+
+The result rules out treating the first pair's image crash as evidence of an image-contract null, and rules out a missing image dispatch, DMEM activity, DMA activity, image exit, or SP completion on the isolated route. It does not identify the zero producer, prove the SDL sink is at fault, or authorize changing the gate. Next is the retail-grounded `0x80094648` hangar writer/value/destination qualification.
