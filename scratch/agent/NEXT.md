@@ -1,13 +1,13 @@
-# Next work unit: M5 Step 9d — does the zero PCM appear between the (populated) command list and the ucode output?
+# Next work unit: M5 Step 9e — is the rec+0x7C output buffer filled after audio-task completion?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4205: command-list records at the render jal are nonzero (138752/138752 in hangar); mixer visits voices. Patch the live tree only (tools/apply_s*.py); never regen.
+s4206: guest side is fully populated in hangar (n=139264): volume rec+0x58 nonzero 100%, source buffers rec+0x2C/+0x40/+0x78 nonzero 100%, rec+0x7C output buffer zero at render return (expected). H-list-zero-volume refuted. Patch the live tree only (tools/apply_s*.py; s4205 and s4206 already applied in N64Recomp/RecompiledFuncs/funcs_24.c); never regen.
 
 Hypotheses:
-- H-ucode-drop: list is fine; the F5 ucode HLE/LLE path never DMAs the sources or zeroes the output (docs/F5-UCODE-REFERENCE.md, s4163 pi_rom_to_rdram).
-- H-list-zero-volume: records nonzero but the volume halfwords (field unidentified; read musyxRenderVoiceSamples stores to s0+0x40..0x60) are zero.
-- H-p-not-samples: p28/p2c/p40 are tables, not samples.
+- H-ucode-drop: the F5 ucode path (HLE/LLE, docs/F5-UCODE-REFERENCE.md) never fills the output buffer.
+- H-downstream: output buffer is filled after the task, but the AI DMA / SDL path delivers silence.
+- H-wrong-ptr: +0x7C is not the PCM output (could be a state buffer), so zero there means nothing.
 
-Discriminator (one build, one run, s4205 recipe): in rs64_s4205_rec also hash the buffers at rec+0x08/+0x10/+0x40 immediately and again at the next audio task completion; log render's stores to s0+0x40..0x60 as named fields. Positive control: s1 nonzero hash.
-Outcomes: volume fields zero => H-list-zero-volume (chase writer, ORIGIN rule 11); volumes and input buffers nonzero but output zero => H-ucode-drop.
+Discriminator (one build, one run, s4205_cmdlist.sh recipe): at audio-task completion (find the SP task-done hook for the audio ucode), re-scan the last N records' +0x7C buffers (keep a ring of recent rec pointers) and the AI DMA source buffer at each AI_LEN write; count nonzero bytes. Positive control: the +0x2C source buffers still nonzero in the same row.
+Outcomes: +0x7C zero after completion and AI buffer zero => H-ucode-drop; +0x7C nonzero but AI buffer zero => H-downstream; AI buffer nonzero => H-wrong-ptr or silence is not at PCM level.
