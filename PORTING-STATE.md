@@ -146948,3 +146948,7 @@ hits at `0x8008F958` while `0x8008F93C` hit, so the post-store return is not
 measurable via that PC. Next discriminator: oracle `--watch-pc 0x8008F4C0` vs
 the port witness at `0x8008F4C0` (the caller's continuation after
 `jal 0x8008F858`), selecting parity or the first divergent register.
+
+This run selects H-return-parity at `0x8008F8A8` (hangar), refutes
+H-return-mismatch at that PC, and refutes the oracle-sees-delay-slot assumption.
+The next run must discriminate parity from mismatch at `0x8008F4C0`.
