@@ -3,7 +3,18 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4162 (2026-10-07).
+Updated for session 4163 (2026-10-07).
+
+Session 4163 qualified the complete pre-clear writer boundary. Host-write,
+non-scalar, title, and hangar controls fired. `pi_rom_to_rdram` wrote nonzero
+bytes into the target span during title (`0x179720`/`0x179820`, length
+`0x100`, post prefix `0x00010540`), and the later hangar pre-clear snapshot
+contained 607 nonzero bytes before the clear. Generated guest scalar and
+non-scalar target rows remained zero. H-host-ROM-writer is selected: the
+earlier state is a legitimate host ROM asset load, not an unobserved inline
+guest store. ORIGIN: `pi_rom_to_rdram` is the writer and the clear is the
+legitimate guest `rs_memset`; no mitigation or behavior changed. Evidence:
+[M5-S4163-PRECLEAR-HOST-WRITER.md](M5-S4163-PRECLEAR-HOST-WRITER.md).
 
 Session 4162 qualified the regeneration-safe non-scalar operation census on
 the same autopilot route. Host-write, title, hangar, and non-scalar positive
@@ -690,11 +701,9 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 earlier-writer attribution:** complete the phase-gated census for
-   inline or otherwise uninstrumented guest writes to
-   `0x1797B0..0x179A48`, joined to `0x800078EC` and the existing host/DMA
-   witness. The `rs_memset`/`zmemcpy` entry class is now qualified with no
-   distinct nonzero writer; do not add a guard or other mitigation.
+1. **M5 audio de-stubbing:** continue from `docs/M5-AUDIO-PLAN.md` with the
+   next incremental audio step and its phase-gated validation contract. Keep
+   the real-audio route; do not use the silent control as a production fix.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -727,7 +736,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A11 wait terminal transition | H-A11-target-phase-absent-both selected at s4145: both qualified arms passed whole-RDRAM/title/hangar controls, but neither emitted a target-phase wait/post-wait terminal row; port A11 rows were confined to earlier 640 phases. This rules out a target-phase port/retail split, not the wait's safety or the source-payload cause. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
 | M5 source-producer context | H-producer-context-split selected at s4151: retail's phase-qualified execution histogram attributed `0x800078EC` to predecessor `0x8002BEEC` and `rs_memset` entry `0x800078E0` to `0x800052C4`, while the port used title callsite `0x8008F2CC` and hangar callsites `0x8008F2CC`/`0x800AB694` with distinct tuples and zero values. The caller-state cause remains open; generated port `ra=0` is not evidence. |
-| M5 pre-clear provenance | H-port-scalar-writer-omitted remains selected for generated guest byte/halfword/word stores. Session 4161 found no target-span host/RSP DMA row, and s4162 found only the expected zero `rs_memset` operation row. Inline/other uninstrumented guest writes remain open; snapshot-artifact is not selected. |
+| M5 pre-clear provenance | H-host-ROM-writer selected at s4163: the host-write callback observed legitimate `pi_rom_to_rdram` target overlaps with nonzero post bytes before the hangar pre-clear snapshot, while generated guest scalar/non-scalar target rows remained zero. The clear remains a later state boundary; no mitigation is authorized. |
 | M5 producer caller state | H-caller-state-split selected at s4152: retail title entry rows had `prev=0x800052C4`, live `s0` objects and nonzero pointed words, while port title setup used `s0=0xF`, `s1=0x561F`, `0x80178C80/0x298`, and zero fill. Hangar includes a shared-looking `s0=0`, `s1=0x800D0000` family, so the split is phase/context-specific. The s4153 entry/body join then selected H-entry-body-shared: retail preserves the producer object/state into `0x800078EC`; the remaining gap is earlier provenance. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |

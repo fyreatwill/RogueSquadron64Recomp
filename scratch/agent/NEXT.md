@@ -1,34 +1,24 @@
-# Next work unit: complete the inline guest-write census at the pre-clear span
+# Next work unit: execute the next bounded M5 audio de-stubbing step
 
-HYPOTHESIS-ID: m5-pre-clear-inline-writer
+HYPOTHESIS-ID: m5-audio-destub-step
 
-Session 4162 qualified the `rs_memset`/`zmemcpy` operation-entry class. Its
-only target row was the expected zero `rs_memset` fill; no distinct nonzero
-writer was observed. The remaining gap is direct or inline guest code that is
-not represented by those operation entries, versus a stale/non-live pre-clear
-snapshot.
+Session 4163 closed the earlier-writer census: `pi_rom_to_rdram` is the
+legitimate nonzero host writer before the hangar clear, while generated guest
+scalar/non-scalar rows remain zero. Do not repeat that census.
 
 Competing hypotheses and discriminator:
 
-- H-inline-guest-writer: a direct, uninstrumented guest store or inline copy
-  reaches `0x1797B0..0x179A48`; a complete phase-gated target-span write table
-  shows a distinct guest PC and value/order before `0x800078EC`.
-- H-host-dma-writer: a host/RSP path writes the span; the same run shows a
-  nonzero target-span DMA/writeback row joined before the clear.
-- H-preclear-snapshot-artifact: all guest and host/DMA writer arms are
-  positive-controlled but no nonzero target-span write exists before the
-  clear; the earlier nonzero snapshot is not a live writer event.
+- H-audio-stub-artifact: one bounded audio de-stub removes a degenerate path;
+  its arm reaches title/hangar with the targeted stub signature absent and no
+  new crash family.
+- H-audio-real-route-defect: the same de-stub causes a new pre-target failure
+  or changes the existing route signature.
+- H-unrelated-state-defect: the de-stub leaves the target source and route
+  signature unchanged.
 
-Exact work: add one regeneration-safe whole-target-page guest write witness
-for direct/inline stores, retaining the existing scalar, `rs_memset`/`zmemcpy`,
-host/DMA, clear-order, and independent retail controls. Run one rebuilt
-capture:
-
-`zsh scratch/agent/run_s4159_m5_preclear_span_census.sh`
-
-Require whole-RDRAM/host-write, title, hangar, scalar, and non-scalar controls.
-A distinct nonzero guest row selects H-inline-guest-writer; a qualified
-nonzero DMA row selects H-host-dma-writer; no nonzero row from either complete
-arm selects H-preclear-snapshot-artifact. If the new witness cannot produce a
-positive control in both target phases, fix the witness and do not interpret
-its null.
+Exact work: read `docs/M5-AUDIO-PLAN.md`, select its first not-yet-qualified
+incremental step, implement only that step, and run its phase-gated validation
+capture. Build every required control arm in this iteration. Expected outcome:
+title/hangar controls and unchanged route markers with the targeted stub
+signature removed supports H-audio-stub-artifact; a new pre-target failure or
+unchanged route supports the other hypotheses.

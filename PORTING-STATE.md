@@ -146443,3 +146443,21 @@ entries and zero fill; no guest behavior, audio, wait, cap, predicate, slot,
 or writeback behavior changed. Evidence:
 `docs/M5-S4162-PRECLEAR-NONSCALAR.md` and
 `scratch/agent/s4159_m5_preclear_span_census/`.
+
+## Session 4163 (2026-10-07) — qualified M5 pre-clear host ROM writer
+
+Ran `zsh scratch/agent/run_s4159_m5_preclear_span_census.sh` on the qualified
+real-audio/LLE/autopilot route. Host-write, non-scalar, title VI 1024, and
+hangar VI 512 controls all fired. The host callback recorded
+`pi_rom_to_rdram` overlaps into `0x1797B0..0x179A48` during title at
+`0x179720` and `0x179820`, each length `0x100`, with post prefix
+`0x00010540`. The later hangar pre-clear snapshot contained 607 nonzero bytes
+before the guest clear. Generated guest scalar/non-scalar target rows remained
+zero: `rs_memset` filled with zero and the `0x800078EC` target row was zero.
+H-host-ROM-writer is selected; H-inline-guest-writer is not observed in the
+covered generated store classes. This rules out the prior snapshot-artifact
+interpretation at this boundary, but does not explain why the legitimate ROM
+asset is cleared before the hangar consumer. ORIGIN: `pi_rom_to_rdram` is the
+writer and guest `rs_memset` is the clear; no mitigation or game behavior
+changed. Evidence: `docs/M5-S4163-PRECLEAR-HOST-WRITER.md` and
+`scratch/agent/s4159_m5_preclear_span_census/port.log`.
