@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4180 (2026-10-07).
+Updated for session 4181 (2026-10-07).
 
 ## Current state
 
@@ -167,15 +167,26 @@ H-predecessor-register-parity and identifies the source/branch comparison as a
 measurement-alias defect; the earlier s4179 divergence conclusion is
 superseded. No audio, gate, writer, payload, or mitigation behavior changed.
 
+Session 4181 repaired the port predecessor witness to use raw physical-address
+semantics for low `s0`/`s1` values, then reran the paired measurement. The
+whole-RDRAM control, both target phases, 71 retail hangar predecessor hits,
+and two port joins all fired. At the shared hangar phase, retail and port
+matched `s0=0x48`, `s1=0x1B000`, `source_word=0`, `source_byte=0`,
+`branch_selector=1`, and `branch_state=0x1100`. The first attempt was
+unevaluable because the recipe used stale retail origin `0x006AB400`; the
+corrected rerun used observed retail origin `0x006AB800`. This selects
+H-entry-body-mismatch: the predecessor context is parity and the next boundary
+is inside `0x8008F900`. No audio, gate, writer, payload, or mitigation
+behavior changed.
+
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** repair the port predecessor witness's low-address
-   field semantics, then run one paired oracle/port measurement at
-   `0x8008F8FC`/`0x8008F900`. Preserve the whole-RDRAM control and stable
-   phase gates (`0x00790400`/`0x006AB400`). A comparable source/branch
-   divergence selects an earlier producer mismatch; parity moves the boundary
-   into the `0x8008F900` body. Do not change audio, gate, writer, or payload
-   behavior.
+1. **M5 audio de-stubbing:** instrument the first body loads inside
+   `0x8008F900`, then run one paired oracle/port measurement. Preserve the
+   whole-RDRAM control and qualified title/hangar phase gates (`0x00790400`;
+   retail hangar `0x006AB800`, port hangar `0x006AB400`). A comparable body
+   input mismatch selects the first divergent load; parity moves the boundary
+   inward. Do not change audio, gate, writer, or payload behavior.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -197,7 +208,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 Step 4 producer context | H-writer-counterpart-parity selected at s4171: retail and port both exercised `0x80090268`, `0x80090278`, and `0x8008FF04/0C/14` in hangar; port target-span rows carried matching nonzero values and destinations. The downstream port DMA/PCM remained zero-valued, so caller/object context is the next boundary. |
 | M5 writer object context | H-context-mismatch selected at s4173: retail field dumps fired for all five PCs and showed changing per-object source words/branch fields, while the port matched source-context path retained zero target-span values and did not expose equivalent object-field state. The first divergent object-field input is open; no behavior change is authorized. |
 | M5 object-field witness | H-legitimate-field-mismatch selected at s4174: the corrected port witness fired in both target phases and recorded all five producer PCs. Its runtime-memory field values and object records did not reconcile with the independent retail field table after using `MEM_W/MEM_BU/MEM_HU` semantics. The earlier raw-byte result is superseded as an endian instrumentation defect. |
-| M5 object-entry boundary | H-predecessor-register-parity selected at s4180: isolated stable-origin rows matched port/retail `s0=0x48` and `s1=0x1B000`; the apparent source/branch divergence is an instrumentation alias because the port helper rejects low raw values as pointers. |
+| M5 object-entry boundary | H-entry-body-mismatch selected at s4181: after repairing the port witness to raw physical-address semantics, retail and port matched `s0=0x48`, `s1=0x1B000`, source word/byte, selector, and branch state at the shared hangar phase. The open boundary is inside `0x8008F900`. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |
@@ -248,6 +259,12 @@ superseded by s4180. Its retail row was valid, but the port helper's
 `0xFFFFFFFF` fields came from a KSEG-only guard while the shared predecessor
 registers were low raw values (`0x48` and `0x1B000`), so those fields were not a
 like-for-like comparison.
+
+The s4180 H-predecessor-register-parity conclusion is refined by s4181: the
+shared register values were correct, but the pointed-field reads were not yet
+like-for-like. The corrected raw-address witness and independent retail rows
+now establish parity at the shared hangar phase; the open boundary is the
+`0x8008F900` body.
 
 The overlay/menu-only explanation, intrinsic VI-640 flakiness, missing-input
 and wait-return explanations, global-zero image-DMA theory, route-wide PCM-gap

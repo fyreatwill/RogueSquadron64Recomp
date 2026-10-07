@@ -1656,21 +1656,25 @@ extern "C" void rs64_m5_object_entry_witness(uint8_t* rdram,
                (all && all[0] && all[0] != '0');
     }();
     if (!enabled || !rdram || !ctx) return;
-    auto word = [rdram](uint32_t guest) -> uint32_t {
-        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
-        return static_cast<uint32_t>(MEM_W(0x00, guest));
+    auto raw_word = [rdram](uint32_t address) -> uint32_t {
+        const uint32_t p = address & 0x007FFFFCu;
+        return (uint32_t(rdram[p]) << 24) | (uint32_t(rdram[p + 1]) << 16) |
+               (uint32_t(rdram[p + 2]) << 8) | rdram[p + 3];
     };
-    auto half = [rdram](uint32_t guest) -> uint32_t {
-        if (guest < 0x80000000u || guest > 0x807FFFFEu) return 0xFFFFFFFFu;
-        return static_cast<uint32_t>(MEM_HU(0x00, guest));
+    auto raw_half = [rdram](uint32_t address) -> uint32_t {
+        const uint32_t p = address & 0x007FFFFCu;
+        const uint32_t word = (uint32_t(rdram[p]) << 24) |
+                              (uint32_t(rdram[p + 1]) << 16) |
+                              (uint32_t(rdram[p + 2]) << 8) | rdram[p + 3];
+        return (word >> ((address & 2u) ? 0u : 16u)) & 0xFFFFu;
     };
     const uint32_t s0 = U32(ctx->r16);
     const uint32_t s1 = U32(ctx->r17);
     std::lock_guard<std::mutex> lock(g_rs64_m5_object_entry_mutex);
     g_rs64_m5_object_entry = {true, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5),
                               U32(ctx->r6), U32(ctx->r7), s0, s1,
-                              word(s0 + 0x60u), half(s0 + 0x22u),
-                              half(s1 + 0x22u)};
+                              raw_word(s0 + 0x60u), raw_half(s0 + 0x22u),
+                              raw_half(s1 + 0x22u)};
 }
 }
 

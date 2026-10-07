@@ -146778,3 +146778,18 @@ over an earlier-producer mismatch. It supersedes s4179's source/branch
 divergence conclusion, which compared retail raw low-address fields against the
 port helper's guarded sentinel values. No audio, gate, writer, payload, or
 mitigation behavior changed.
+## Session 4181 (2026-10-07) — qualified M5 predecessor raw-address witness
+
+Repaired `rs64_m5_object_entry_witness` in `src/main/main.cpp` so low
+predecessor register values use the same raw physical/RDRAM, big-endian field
+semantics as the independent oracle; no guest behavior or audio path changed.
+The target built successfully. The first paired run fired the whole-RDRAM
+positive control, title and hangar gates on both arms, and two port joins, but
+its retail field rows were unevaluable because the recipe still gated stale
+origin `0x006AB400` while retail was at `0x006AB800`. After correcting that
+recipe gate, the same paired measurement recorded 71 retail predecessor hits,
+two port joins, and shared hangar values: `s0=0x48`, `s1=0x1B000`,
+`source_word=0`, `source_byte=0`, `branch_selector=1`, and
+`branch_state=0x1100`. This selects predecessor-context parity and moves the
+open boundary into the `0x8008F900` body. It rules out the earlier
+KSEG-only witness alias and does not explain the zero audio payload.
