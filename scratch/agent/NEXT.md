@@ -1,28 +1,29 @@
-# Next work unit: capture the M5 A11 pending-slot recurrence
+# Next work unit: complete the M5 A11 pending-slot terminal table
 
-HYPOTHESIS-ID: m5-a11-pending-slot-recurrence
+HYPOTHESIS-ID: m5-a11-pending-slot-terminal-table
 
 Use the existing canonical real-audio/LLE/ungated/solo/spin-yield route and the
 existing A11 phase-scoped table. Do not change the wait, cap, predicate, slot
-state, guest behavior, or host writeback. The s4141 source-context route is
-parked after two retries failed to reach a paired hangar phase.
+state, guest behavior, or host writeback. Session 4142 qualified a pending
+wait-cap recurrence but did not close the slot writer/terminal relationship.
 
 Competing hypotheses and discriminator:
 
-- H-A11-pending-reproduced: a qualified title/hangar run records the pending
-  `chCount=16` call and the complete slot `01/02/00` writer/terminal sequence.
-- H-A11-not-reproduced: both phase gates and the positive control pass, but no
-  pending `chCount=16` call appears; this parks the recurrence without
-  changing the wait.
+- H-A11-terminal-complete: a qualified title/hangar run joins the pending
+  wait-cap call to a named slot writer and a complete `01/02/00` transition.
+- H-A11-terminal-absent: both phase gates and the positive control pass, the
+  pending call recurs, but no complete transition is observed; keep the wait
+  unchanged and leave the writer boundary open.
 - H-route-invalid: the positive control or either target phase gate is absent.
 
 Before building, verify the existing A11 probe and its positive-control env
-var in the tracked debug catalog. Build once, then run one bounded canonical
-real-audio route from `build/` with the existing phase and A11 env vars. Kill
-the process group with SIGKILL. Accept a conclusion only if the run has the
-whole-RDRAM/phase controls plus either the complete pending transition or a
-qualified null.
+var in the tracked debug catalog. Build once, then run the paired oracle and
+canonical real-audio port independently from `build/`, waiting for both arms
+to reach their title and hangar gates before SIGKILL cleanup. Accept a
+conclusion only if both arms have the whole-RDRAM/phase controls plus either
+the complete pending transition or a qualified pending-without-terminal row.
 
-Expected discriminating outcomes: pending `chCount=16` plus a complete
-writer/terminal table selects H-A11-pending-reproduced; qualified absence
-selects H-A11-not-reproduced; missing controls select H-route-invalid.
+Expected discriminating outcomes: a pending wait-cap row joined to a named
+writer and `01/02/00` transition selects H-A11-terminal-complete; a qualified
+pending row with no complete transition selects H-A11-terminal-absent; missing
+controls select H-route-invalid.

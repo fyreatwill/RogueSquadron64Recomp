@@ -146043,3 +146043,25 @@ source or caller explanation and does not authorize another route-identical
 retry in the next unit. ORIGIN: the guest `0x800078EC` source-construction/
 store boundary; no guest behavior, wait, cap, predicate, slot state, or host
 writeback changed. Evidence: `scratch/agent/s4141_m5_source_context/`.
+
+## Session 4142 (2026-10-07) — qualified M5 A11 pending recurrence without terminal table
+
+Built the ordinary Debug target once and ran the paired retail-oracle/port
+capture. The corrected run waited for both arms independently: retail fired
+the whole-RDRAM positive control and reached title `0x00790400/1024` and
+hangar `0x006AB400/512`; the port reached both phase gates with no crash or
+abort. The port A11 table recorded 2,544 phase-scoped status reads and a
+`wait-post-any-slot` row after `500002` `anyAudioSlotActive` calls, with
+`slot0=00 slot1=00 slot2=00` and `a3=0x8`; its slot writer table was active
+(`slot-sb` count 23,988) but did not show the required complete `01/02/00`
+transition. No literal `chCount=16` row appeared in this current table.
+H-A11-pending-recurrence-without-terminal is selected: the pending wait
+recurs on a qualified route, but its terminal writer relationship remains
+unevaluable. This does not authorize changing the wait, cap, predicate, slot
+state, or writeback. The first attempt was route-invalid because the oracle
+was killed when the faster port reached hangar; the fixed run waited for both
+arms and is the selected result. ORIGIN: the existing guest
+`waitForAnyAudioSlot`/`anyAudioSlotActive` reads and the guest slot-status
+writers; no mitigation or guest behavior changed. Evidence:
+`scratch/agent/s4142_m5_a11_recurrence_run/` and
+`scratch/agent/s4142_m5_a11_recurrence_fixed/`.

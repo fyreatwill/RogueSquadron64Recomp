@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4141 (2026-10-07).
+Updated for session 4142 (2026-10-07).
 
 ## Current state
 
@@ -477,10 +477,9 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
-   writer and terminal table only when the pending `chCount=16` call appears
-   on a qualified route. Keep the cap and wait unchanged; do not infer from
-   another pre-hangar route failure.
+1. **M5 A11 terminal transition:** capture the complete slot `01/02/00`
+   writer and terminal table after the qualified pending wait recurrence.
+   Keep the cap and wait unchanged; do not infer from a status read alone.
 2. **M5 source-construction predecessor:** return to the s4139 tuple split
    only with a genuinely new route discriminator; the s4141 port retry was
    route-invalid before hangar.
