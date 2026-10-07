@@ -1,13 +1,13 @@
-# Next work unit: M5 Step 9f — does the audio ucode ever DMA-write into a +0x7C buffer?
+# Next work unit: M5 Step 9g — why are all audio ucode DMA writes zero after early phase 4?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4207: after every audio task (exit=1), +0x7C buffers are zero in phase 4/5 (hangar 0/138065) while +0x2C sources are nonzero; phase 3 control shows +0x7C can be nonzero. Patch the live tree only (tools/apply_s42*.py, funcs_24.c; hook in lib rsp.cpp already exported); never regen.
+s4208: ucode writes DMEM->RDRAM into +0x7C buffers but all bytes zero from early phase 4 on (cum_nzbytes frozen 264405; phase-3 control nonzero). Live-tree patches only (tools/apply_s4208_dma_ring.py); never regen.
 
 Hypotheses:
-- H-never-writes: the ucode image never DMAs DMEM->RDRAM into any +0x7C address in phase 5 (internal branch skips mixing/save).
-- H-writes-zeros: it DMAs there but the data is zero (ADPCM decode/state/volume math yields zero).
-- H-wrong-ptr: +0x7C is not the PCM output; the real output goes elsewhere (check where the AI-bound buffer is written).
+- H-src-dma-zero: DMEM->input DMA reads (source samples/ADPCM) arrive zero in DMEM (host DMA read path / address translation wrong).
+- H-state-zero: inputs fine, but loop/ADPCM state or volume ramps in DMEM are zero so mix is zero.
+- H-cmd-skip: ucode command dispatch skips the mix commands (cmdlist ops differ from phase 3).
 
-Discriminator (one build, one run, s4207_postaud.sh): in rsp.cpp use AudioDmaProbe ranges (RDRAM write ranges per task) and intersect with the task's ring of +0x7C addresses; also record the ranges that overlap the AI-bound PCM buffer (rs64 pcm consumer source). Positive control: ranges overlapping +0x2C-style reads and any write range nonzero in phase 3.
-Outcomes: no write overlaps +0x7C but writes hit another range that later reaches AI => H-wrong-ptr; no writes at all in phase 5 => H-never-writes; overlapped writes with zero bytes => H-writes-zeros.
+Discriminator: extend ring to RDRAM->DMEM reads (dram, len, nz of RDRAM source and of DMEM after) plus per-task DMEM nz hash at exit; compare phase 3 vs 5 in one run.
+Outcomes: reads nz>0 in phase 5 but DMEM region zero => translation bug; reads zero => upstream source bytes at read address zero (address mismatch with +0x2C); reads nz and DMEM nz but writes zero => H-state/H-cmd, then count executed command ops.

@@ -147141,3 +147141,13 @@ Selects: H-ucode-drop (the audio ucode returns normally with populated lists/vol
 ORIGIN: diagnostic-only; no value rewritten, skipped or guarded.
 Next discriminator (NEXT.md): use the AudioDmaProbe ranges in rsp.cpp (DMEM->RDRAM writes) to see whether the ucode ever DMA-writes into any +0x7C buffer address in phase 5; none written => the image's mixing/save path is not reached for those records (ucode-internal branch), written-but-zero => ucode mixes zeros (decode/ADPCM state).
 s4207 conclusion (gate wording): this run refutes H-downstream, selects H-ucode-drop, and the next probe discriminates ucode-never-writes from ucode-writes-zeros.
+
+## Session 4208 (2026-10-07) — M5 Step 9f: audio ucode DMAs into +0x7C buffers but every write after early phase 4 is all-zero; H-writes-zeros selected, H-never-writes and H-wrong-ptr refuted
+
+Ran tools/apply_s4208_dma_ring.py (rsp.cpp ring of every audio-task DMEM->RDRAM write, flagged active only around the audio ucode_func; intersect in rs64_s4207_after_audtask) and scratch/agent/s4207_postaud.sh. Lib edit exported via export.sh.
+- Writes happen: 3 DMA writes per task, 15.0 MB over 36226 writes by phase-5 task 11776 (H-never-writes REFUTED).
+- Overlap with +0x7C: phase 5 cum_overlap=11684 of 114246 output records; the ranges intersect the +0x7C pointers (H-wrong-ptr REFUTED for these records).
+- Data: cum_nzbytes stays frozen at 264405 (set in phase 3 and early phase 4, 195 nonzero overlaps) while cum_bytes keeps growing to 15044040. After early phase 4 NO audio DMA write carries one nonzero byte. Positive control: phase 3 has nz writes and 195 nonzero overlaps in the same run.
+- Selected: H-writes-zeros (the ucode produces zero PCM/state; the mix input path inside DMEM is the next place). Single-run, same instrument; the cmdlist inputs (+0x2C sources, volumes) were nonzero in s4205/s4206.
+ORIGIN: diagnostic only, no mitigation added.
+Next: split zero-output between ADPCM-decode input (DMEM contents after source DMA reads) and mix/volume stage using DMA-read nz plus DMEM nz at exit (extend the same ring to reads).
