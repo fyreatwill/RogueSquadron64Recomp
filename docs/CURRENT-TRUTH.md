@@ -3,7 +3,20 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4153 (2026-10-07).
+Updated for session 4154 (2026-10-07).
+
+Session 4154 ran the pre-clear provenance discriminator with a rebuilt port and
+independent retail oracle. The oracle passed the whole-RDRAM positive control,
+title `0x00790400/1024`, and hangar `0x006AB400/512` gates; its source-span
+snapshot had 70 nonzero bytes overall and 24 in hangar, with writer PCs
+including `0x800078EC` and downstream `0x8008FFxx`/`0x80090xxx` families.
+The port arm crashed in boot before either target phase, so H-route-invalid is
+selected and the absent-versus-overwritten producer split remains open. The
+first attempt was invalidated by an unsupported oracle option and was rerun
+with the corrected `--post-value-watch` contract. ORIGIN: retail source-span
+writes and the port boot crash; no guest, audio, wait, cap, predicate, slot,
+or writeback behavior changed. Evidence:
+`scratch/agent/s4154_m5_preclear_provenance/`.
 
 Session 4153 qualified the producer entry/body object join with one rebuilt
 port and one independent retail oracle capture. Whole-RDRAM and both target

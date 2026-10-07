@@ -146275,3 +146275,22 @@ no guest, audio, wait, cap, predicate, slot, or writeback behavior changed.
 The new body field-dump arm was added to
 `scratch/agent/run_s4152_m5_caller_state_join.sh`; the ordinary Debug target
 rebuilt successfully. Evidence: `docs/M5-S4153-PRODUCER-OBJECT-BODY-SHARED.md`.
+
+## Session 4154 (2026-10-07) — M5 pre-clear provenance route-invalid
+
+The fixed rebuilt pair ran the retail oracle to natural completion and the
+real-audio/LLE port under the pre-clear source-span census. Retail passed the
+whole-RDRAM positive control and reached title `0x00790400/1024` and hangar
+`0x006AB400/512`. Its watched span `0x178C80..0x178F18` had 70 nonzero bytes
+in the final summary and 24 nonzero bytes in the hangar phase snapshot; the
+writer histogram included the known `0x800078EC` clear and downstream
+`0x8008FFxx`/`0x80090xxx` writers. The port crashed in boot at a host-side
+segmentation fault before either target phase, with no source-context rows.
+The first attempt exited the oracle on an unsupported standalone
+`--post-store-scalar` option; the corrected rerun used `--post-value-watch`,
+which emits scalar rows automatically, and let the oracle flush its shutdown
+summary. H-route-invalid is selected: no absent-versus-overwritten producer
+conclusion is valid, and this run rules out nothing at the target boundary.
+ORIGIN: the retail source-span writers and the port boot crash; no guest,
+audio, wait, cap, predicate, slot, or writeback behavior changed. Evidence:
+`scratch/agent/s4154_m5_preclear_provenance/`.

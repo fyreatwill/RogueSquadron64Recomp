@@ -1,10 +1,12 @@
-# Next work unit: pre-clear producer provenance
+# Next work unit: route-qualified pre-clear producer provenance
 
 HYPOTHESIS-ID: m5-pre-clear-producer-provenance
 
 Determine whether retail's nonzero source-span writer before the legitimate
 `0x800078EC` clear is absent from the port or is present and subsequently
-overwritten.
+overwritten. Re-run the same discriminator with the canonical
+route-qualified port launch; the s4154 port arm was boot-invalid and emitted
+no target-phase rows.
 
 Competing hypotheses and discriminator:
 
@@ -20,10 +22,12 @@ Competing hypotheses and discriminator:
 
 Exact work: adapt the existing source-span writer-census recipe to watch the
 same aligned source range and scalar post-store values in one rebuilt port /
-retail pair. Use `--pc-hist-phase` and `--post-value-watch`/`--post-store-
-scalar` for the retail arm, and the existing phase-scoped port source-span
-writer rows. Run from `build/` for at least 75 seconds with the fixed
-two-second launch stagger if needed; kill both processes with SIGKILL. Retain
+retail pair. Use `--pc-hist-phase` and `--post-value-watch` (which emits the
+scalar rows) for the retail arm, and the existing phase-scoped port source-span
+writer rows. Use the previously qualified canonical real-audio/LLE/ungated/
+solo/spin-yield launch and its autopilot; do not add the s4154 two-second
+stagger unless the recipe requires it. Run from `build/` for at least 75
+seconds; let the oracle flush its summary, then SIGKILL the port. Retain
 the whole-RDRAM positive control and title `0x00790400/1024` plus hangar
 `0x006AB400/512` phase gates. Do not change guest, audio, wait, cap,
 predicate, slot, or writeback behavior.
