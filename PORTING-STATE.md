@@ -146856,3 +146856,18 @@ field, so no stronger value equality is claimed. This rules out a divergence
 at the measured second store/link contract; it does not explain the upstream
 zero audio payload and changes no audio, gate, writer, payload, or mitigation
 behavior.
+
+## Session 4186 (2026-10-07) — qualified M5 loop-control parity
+
+Extended `scratch/agent/run_s4182_m5_object_body.sh` with a regeneration-safe
+port witness and independent retail watches for `0x8008F914` and
+`0x8008F918`. The canonical paired run passed the whole-RDRAM positive
+control, both retail target phases, both port target phases, and 130 port body
+rows; the new port witness emitted 260 loop rows. At the shared hangar phase,
+port showed `a2=0x47` at `0x8008F914`, then `a2=0x48` at `0x8008F918`, with
+`s0=0x48` and compare `1` then `0`. The independent retail oracle recorded 71
+hits at each exact PC, with the same `s0=0x48`, `s1=0x1B000`, and predecessor
+relation. This selects H-loop-control-parity and moves the open boundary to
+the `0x8008F91C` branch. It rules out a mismatch through the loop-control
+tuple at the measured scope; it does not explain the upstream zero audio
+payload and changes no audio, gate, writer, payload, or mitigation behavior.

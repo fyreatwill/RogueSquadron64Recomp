@@ -1720,6 +1720,45 @@ extern "C" void rs64_m5_object_body_witness(uint8_t* rdram,
         a3 + 0x600u, v1 - 0x18u, v1, v1 + 0x4u, v0);
     std::fflush(stderr);
 }
+
+extern "C" void rs64_m5_object_loop_witness(uint8_t* rdram,
+                                               recomp_context* ctx,
+                                               uint32_t pc) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_OBJECT_LOOP");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled || !rdram || !ctx) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+        std::fprintf(stderr,
+                     "[m5-object-loop-control] phase=%u width=%u origin=0x%06X\n",
+                     rs64_phase_ord(), width, origin);
+    }
+    if (rows >= 512u) return;
+    const uint32_t a2 = U32(ctx->r6);
+    const uint32_t s0 = U32(ctx->r16);
+    std::fprintf(stderr,
+        "[m5-object-loop] row=%u phase=%u width=%u origin=0x%06X pc=0x%08X "
+        "a2=0x%08X s0=0x%08X compare=%u ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, pc, a2, s0,
+        static_cast<unsigned>(static_cast<int32_t>(a2) < static_cast<int32_t>(s0)),
+        U32(ctx->r31));
+    std::fflush(stderr);
+}
 }
 
 extern "C" void rs64_m5_pcm_set_callsite(uint32_t callsite) {

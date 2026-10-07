@@ -3,7 +3,7 @@ set -u
 set -o pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT="$ROOT/scratch/agent/s4182_m5_object_body"
+OUT="$ROOT/scratch/agent/s4186_m5_object_loop"
 mkdir -p "$OUT"
 ORACLE="$ROOT/tools/oracle/build/rs64_oracle"
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
@@ -17,9 +17,11 @@ env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
   --watch-write 0x178c80:0x178f18 \
   --watch-write 0x17d9e0:0x17da00 \
   --watch-pc 0x8008f8fc --watch-pc 0x8008f900 \
+  --watch-pc 0x8008f914,0x8008f918 \
   --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x00790800:1024 \
   --pc-phase-log-width 0x006ab400:512 --pc-phase-log-width 0x006ab800:512 \
   --pc-field-dump 0x8008f8fc,0x8008f900 \
+  --pc-field-dump 0x8008f914,0x8008f918 \
   --store-field-dump 2:0x8008f90c,0x8008f910 \
   --post-value-watch 2 \
   --post-value-pc 0x8008f90c,0x8008f910 \
@@ -33,6 +35,7 @@ sleep 2
   exec env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
     ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 \
     ROGUESQ_LOG_M5_OBJECT_ENTRY=1 ROGUESQ_LOG_M5_OBJECT_BODY=1 \
+    ROGUESQ_LOG_M5_OBJECT_LOOP=1 \
     ROGUESQ_LOG_M5_OBJECT_FIELD=1 ROGUESQ_LOG_M5_SOURCE_CONTEXT=1 \
     ROGUESQ_LOG_M5_WRITER_SETUP=1 ROGUESQ_LOG_PHASE=1 \
     ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
@@ -62,7 +65,8 @@ grep -aEq '\[phase\].*width=512.*origin=0x006AB400|\[phase\].*width=512.*origin=
 printf 'control=%s retail_title=%s retail_hangar=%s port_title=%s port_hangar=%s body_rows=%s\n' \
   "$control" "$retail_title" "$retail_hangar" "$port_title" "$port_hangar" \
   "$(grep -a -c '^\[m5-object-body\]' "$OUT/port.log" || true)" > "$OUT/verdict.txt"
-grep -a -E '^\[(m5-object-entry|m5-object-body|m5-object-field|phase|CRASH|ABORT)' "$OUT/port.log" | tail -700 > "$OUT/port-summary.txt" || true
+printf ' loop_rows=%s\n' "$(grep -a -c '^\[m5-object-loop\]' "$OUT/port.log" || true)" >> "$OUT/verdict.txt"
+grep -a -E '^\[(m5-object-entry|m5-object-body|m5-object-loop|m5-object-field|phase|CRASH|ABORT)' "$OUT/port.log" | tail -900 > "$OUT/port-summary.txt" || true
 grep -a -E '^([[]oracle|[[]vi|[[]pc-field-dump|[[]pc-hist-phase|[[]pc-phase)' "$OUT/retail.log" | tail -700 > "$OUT/retail-summary.txt" || true
 cat "$OUT/verdict.txt"
 (( control && retail_title && retail_hangar && port_title && port_hangar ))
