@@ -145718,3 +145718,24 @@ This rules out a cap firing as the cause at this scope and does not authorize
 removing the cap, replacing the wait, or forcing slot state. ORIGIN: the
 pending path is the existing guest `waitForAnyAudioSlot` loop and predicate;
 no guest writer or mitigation changed.
+
+## Session 4123 (2026-10-07) — A11 capture was route-invalid without AUTOPILOT
+
+Asked the retail oracle first with the whole-RDRAM positive control, exact
+title/hangar phase tracing, and wait/active-slot execution watches. The control
+fired and retail reached title `0x00790400/1024` and hangar
+`0x006AB400/512`; independent wait/active-slot witnesses were live, though
+the wait entry was not driven in the target phase by this schedule.
+
+Built the existing Debug target once. The first same-build port launch crashed
+in RT64 `copyToRAM` during the 640 phase before title, so it was route-invalid.
+The fixed real-audio/LLE/ungated/solo/spin-yield launch reached title 1024 and
+recorded real audio dispatch plus `waitForAnyAudioSlot` caller rows, but did
+not reach hangar 512. A 120-second retry reached title at about 48 seconds,
+then returned to 640 without a hangar phase before SIGKILL. No requested A11
+wait-contract or key-on census row was therefore phase-evaluable. This selects
+H-A11-route-invalid for this iteration and rules out interpreting the absent
+writer/terminal rows as a nonterminal slot result. The next capture must use
+the canonical AUTOPILOT and phase-gated driver. No guest writer, wait, cap,
+force-clear, or mitigation changed. ORIGIN: no guest writer or mitigation was
+changed.

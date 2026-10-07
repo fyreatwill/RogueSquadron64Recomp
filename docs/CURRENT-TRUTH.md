@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4122 (2026-10-07).
+Updated for session 4123 (2026-10-07).
 
 ## Current state
 
@@ -114,6 +114,21 @@ scope; the wait class is live but not every qualified call reaches a terminal
 return. This does not authorize removing the cap, replacing the wait, or
 changing slot state. ORIGIN: the observed pending path is the existing guest
 `waitForAnyAudioSlot` loop and its slot predicate; no guest writer or
+mitigation changed.
+
+Session 4123 attempted the required A11 terminal-transition table after first
+running the retail oracle. Retail passed the whole-RDRAM positive control and
+reached title `0x00790400/1024` and hangar `0x006AB400/512`; independent
+wait/active-slot execution witnesses were live, although the wait entry itself
+was not target-phase-driven in this schedule. The first same-build port launch
+was route-invalid: it crashed in RT64 `copyToRAM` during 640 before title.
+The fixed real-audio/LLE/ungated/solo/spin-yield launch reached title 1024 and
+recorded real audio dispatch plus `waitForAnyAudioSlot` caller rows, but did
+not reach the required hangar 512 phase before SIGKILL. A 120-second retry
+again reached title and then returned to 640 without a hangar phase. The A11
+writer/terminal table therefore remains unevaluable; H-A11-route-invalid is
+selected for this iteration. This does not select a slot predicate or permit
+changing the wait/cap. ORIGIN: no guest writer, wait, force-clear, or
 mitigation changed.
 
 Generated-tree audits confirmed the relevant service and image functions exist outside this checkout and in the fixup inputs. Guard changes require an ORIGIN naming the legitimate writer; no force-clear, wait replacement, synthetic DMA, or default-on mitigation was authorized.
@@ -230,8 +245,9 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 A11 follow-up:** capture the complete slot `01/02/00` writer and
-   terminal-transition table in the same qualified port run, with
+1. **M5 A11 route-qualified follow-up:** rerun the complete slot `01/02/00`
+   writer and terminal-transition table using the canonical AUTOPILOT and
+   phase-gated route, with
    `ROGUESQ_LOG_M5_WAIT_CONTRACT=1` and `ROGUESQ_LOG_M5_KEYON_CENSUS=1`.
    Reconcile the pending `chCount=16` call against its slot predicate and the
    independent retail wait evidence. Do not remove the cap, replace the wait,
