@@ -169,9 +169,14 @@ run_arm() {
 }
 
 print "arms=stub,image_tick_on,image_tick_off; each uses eleven-start schedule" | tee -a "$OUT/driver.log"
-run_arm stub 0 1
-run_arm image_tick_on 1 1
-run_arm image_tick_off 1 0
+if [[ "${DRAIN_TICK_ORDER:-legacy}" == "image-off-first" ]]; then
+    run_arm image_tick_off 1 0
+    run_arm image_tick_on 1 1
+else
+    run_arm stub 0 1
+    run_arm image_tick_on 1 1
+    run_arm image_tick_off 1 0
+fi
 
 for name in stub image_tick_on image_tick_off; do
     log="$OUT/$name.log"

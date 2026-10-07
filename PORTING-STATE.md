@@ -145312,3 +145312,25 @@ normal tail, and slot transitions make the null guard counts interpretable.
 ORIGIN: `0x80090768` owns the legitimate `0xC0` cmd-list divisor; all changes
 were diagnostic-only. The initial fixup command correctly refused to rerun on
 already-marked generated files; the existing generated output built cleanly.
+
+## Session 4102 (2026-10-06) — M5 drain-tick A/B coverage predicate is stale
+
+Built the Debug target and ran the prescribed retail-gated drain-tick A/B.
+The oracle positive control and both retail target phases passed. In the
+original stub -> tick-on -> tick-off order, tick-on reached hangar with
+VI/task/SP/PCM rows but the recipe's `[drain-inloop-gate]` count was zero;
+tick-off crashed before target phases at `spTaskSchedulerThread+9632` with
+guest PC `0x8000834c`, so the result was `H-CoverageInvalid`.
+
+Applied the smallest fixed-version change: made the existing recipe support
+`DRAIN_TICK_ORDER=image-off-first`, then reran the same build and controls.
+Both image arms reached title and hangar with matching positive controls:
+tick-on had VI/ABI/SP/PCM/lifecycle counts 16/1137/756/88/518/1142 and
+tick-off had 16/1129/772/88/518/1136. Both produced one `[drain-tick]` row,
+but both still had `gate=0` and the stale `[drain-inloop-gate]` count was zero,
+so the fixed capture remained `H-CoverageInvalid`; no policy conclusion was
+drawn. A binary-string audit found `[drain-tick]` in the executable but no
+`[drain-inloop-gate]` string. This rules out arm-order residue as the current
+coverage explanation, but does not select drain-required versus redundant.
+ORIGIN: no guest/runtime behavior changed; only diagnostic recipe ordering
+was made selectable.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4101 (2026-10-06).
+Updated for session 4102 (2026-10-06).
 
 ## Current state
 
@@ -558,15 +558,33 @@ for the measured route: no early return is implicated and none may be
 removed or replaced. ORIGIN: the `0x80090768` publisher owns the legitimate
 `0xC0` cmd-list divisor; the audit was diagnostic-only.
 
+Session 4102 ran the M5 drain-tick A/B with the retail whole-RDRAM, title, and
+hangar controls. The original stub -> tick-on -> tick-off order produced
+`H-CoverageInvalid`: tick-on reached hangar with VI/task/SP/PCM controls but
+the required `[drain-inloop-gate]` marker was absent, while tick-off crashed
+before target phases at `spTaskSchedulerThread+9632` / guest PC `0x8000834c`.
+The fixed reverse-order rerun removed that route failure: both tick-on and
+tick-off reached title and hangar and had matching positive counts (VI 16,
+ABI 1137/1129, SP 756/772, PCM source 88, consumer 518, lifecycle 1142/1136),
+but both still had `gate=0` and remained unqualified. The binary contains
+`[drain-tick]` but no `[drain-inloop-gate]` string, so the recipe's gate
+predicate is stale and cannot discriminate policy. This is two-source evidence
+for coverage invalidity (same-build port arms plus binary-string audit), not a
+drain-policy result. ORIGIN: no guest behavior changed; only the recipe arm
+order was made selectable to test schedule residue.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 6 validation: qualify the default-off drain-tick policy.** Run
-   the default arm and `ROGUESQ_DRAIN_INLOOP_TICK=1` control in one build and
-   one hangar-phase capture. Require the whole-RDRAM oracle control, both port
-   target phases, task/SP completion, named status/slot transitions, and PCM
-   joins before interpreting a null. Do not change the policy in this unit.
+1. **Repair the M5 Step 6 gate predicate, then rerun the policy A/B.** Replace
+   the stale `[drain-inloop-gate]` requirement in the existing recipe with a
+   field/value check on the live `[drain-tick]` rows, preserving the oracle,
+   phase, task/SP, slot/status, PCM, and tick-row controls. Run tick-off first
+   and tick-on second in one build. A corrected predicate that qualifies both
+   arms permits the policy comparison; any arm-specific missing tick row or
+   downstream join selects the required-policy hypothesis; missing live rows
+   keeps coverage invalid.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -595,6 +613,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
 | M5 key-on early returns | Hreturns-dead/Hguard-valid selected (s4101): retail and port reached the measured key-on route with valid `0xC0` divisors, normal tails, and slot `02`/`00` transitions; all eight guard counts were zero. |
+| M5 drain-tick policy | Open. Session 4102 is coverage-invalid: both reverse-order image arms reached title/hangar with matching task/SP/PCM counts, but the recipe required a nonexistent `[drain-inloop-gate]` marker. The live binary emits `[drain-tick]`; policy is not selected. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary
