@@ -146208,3 +146208,29 @@ independent instruments; no guest behavior, audio wait, cap, predicate, slot
 state, or writeback mitigation changed. Evidence:
 `docs/M5-S4150-SOURCE-SETUP-SHARED.md` and
 `scratch/agent/s4150_m5_source_setup/`.
+
+## Session 4151 (2026-10-07) — qualified M5 source-producer context split
+
+Built the ordinary Debug target once and ran the planned paired
+retail-oracle/port capture with the whole-RDRAM positive control and title
+`0x00790400/1024` plus hangar `0x006AB400/512` phase gates. All controls and
+both target phases passed; the port had no crash or abort.
+
+The port source-context control fired in both target phases. Title rows used
+callsite `0x8008F2CC`, `a0=0x80178C80`, and length `0x298`; hangar rows used
+`0x8008F2CC` or `0x800AB694`, including `a0=0x80165E50` and length `0xC`.
+All sampled values were zero. The generated hook's `ra=0` is not caller
+evidence.
+
+Retail recorded 796 writes to the watched source span and target phase
+buckets. Its execution histogram attributed `0x800078EC` to predecessor
+`0x8002BEEC` 253 times and `0x800078E0` to predecessor `0x800052C4` 1,693
+times. H-producer-context-split is selected at this boundary: the
+phase-qualified retail predecessor family differs from the port's
+regeneration-safe callsite and argument tuples. This identifies a context
+divergence, not its cause, and rules out using generated `ra=0` as a caller
+explanation. ORIGIN: the legitimate guest `rs_memset` store loop and the
+retail execution predecessor witness; no guest behavior, audio wait, cap,
+predicate, slot state, or writeback mitigation changed. Evidence:
+`docs/M5-S4151-SOURCE-PRODUCER-CONTEXT-SPLIT.md` and
+`scratch/agent/s4140_m5_source_context/`.

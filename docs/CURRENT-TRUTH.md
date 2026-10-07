@@ -3,7 +3,17 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4150 (2026-10-07).
+Updated for session 4151 (2026-10-07).
+
+Session 4151 qualified the source-producer context join with the independent
+retail oracle and one rebuilt port. Whole-RDRAM/title/hangar controls passed.
+Retail's phase-qualified execution histogram attributed `0x800078EC` to the
+`0x8002BEEC` predecessor family and `rs_memset` entry `0x800078E0` to
+`0x800052C4`; the port's regeneration-safe rows used title callsite
+`0x8008F2CC` and hangar callsites `0x8008F2CC`/`0x800AB694`, with distinct
+argument tuples and zero values. H-producer-context-split is selected at this
+boundary. Generated port `ra=0` remains an instrument limitation. Evidence:
+`docs/M5-S4151-SOURCE-PRODUCER-CONTEXT-SPLIT.md`.
 
 Session 4150 qualified the repaired setup/state join with the independent
 retail oracle. The port and oracle both passed whole-RDRAM/title/hangar
@@ -559,12 +569,13 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-construction producer/context join:** use the now-qualified
-   shared setup tuples to join the phase-gated `0x800078EC` source stores to
-   their immediate caller/return context in a route-stable paired
-   retail-oracle/port capture. Keep whole-RDRAM and both phase controls; do not
+1. **M5 producer caller-state join:** use the newly qualified retail/port
+   context split to compare caller state fields at `0x800078E0`/`0x800078EC`
+   in one phase-gated retail-oracle/port capture. Add retail
+   `--pc-field-dump` for the `rs_memset` entry and retain the port's
+   callsite/argument rows, whole-RDRAM control, and both target phases. Do not
    change guest behavior, audio waits, caps, predicates, slot state, or
-   writeback. Do not use generated `ra=0` as caller evidence.
+   writeback; do not use generated `ra=0` as caller evidence.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -596,7 +607,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
 | M5 A11 wait terminal transition | H-A11-target-phase-absent-both selected at s4145: both qualified arms passed whole-RDRAM/title/hangar controls, but neither emitted a target-phase wait/post-wait terminal row; port A11 rows were confined to earlier 640 phases. This rules out a target-phase port/retail split, not the wait's safety or the source-payload cause. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
-| M5 source-producer context | H-port-writer-context-split selected at s4138: the repaired same-build capture qualified retail whole-RDRAM/title/hangar controls and port title/hangar controls. Retail source watch index 1 recorded 664 stores, 72 nonzero post-value bytes, zero scalar mismatches, and 29 hangar writer PCs; port target-phase image rows remained zero for source and `0x1798B0` DMA payloads. The exact call-context divergence remains open. |
+| M5 source-producer context | H-producer-context-split selected at s4151: retail's phase-qualified execution histogram attributed `0x800078EC` to predecessor `0x8002BEEC` and `rs_memset` entry `0x800078E0` to `0x800052C4`, while the port used title callsite `0x8008F2CC` and hangar callsites `0x8008F2CC`/`0x800AB694` with distinct tuples and zero values. The caller-state cause remains open; generated port `ra=0` is not evidence. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
