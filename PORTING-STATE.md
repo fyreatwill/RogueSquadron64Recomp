@@ -145594,3 +145594,20 @@ reached title and hangar. The real-audio/image arm failed before title at
 nulls are unevaluable. This rejects H-generated-absent and establishes the
 next work unit as a silent-arm qualification of the status-03 entry/store/
 return chain. No guest writer, wait, force-clear, or mitigation changed.
+## Session 4117 (2026-10-06) — qualified status-03 worker chain on silent audio
+
+Ran the prescribed single-arm status-03 capture after rebuilding the ordinary
+Debug target. The retail oracle whole-RDRAM positive control fired, retail
+reached title 1024 and hangar 512, and the silent port reached both target
+phases. The port log contained repeated phase-5 `s2020-svc` status-03 entry
+and exit pairs. The independent retail oracle PC watch fired at `0x8009B7EC`
+four times and at the surrounding worker PCs `0x8009B30C`, `0x8009B7CC`,
+`0x8009B600`, `0x8009BDE8`, and `0x8009BCF8`.
+
+This selects Hstatus03-chain-live at the measured scope and rules out a
+route-invalid interpretation for the silent arm. It does not prove a
+record-synchronized port store-to-return join; that remains diagnostic detail.
+It rules out adding a wait replacement, force-clear, or other mitigation to
+the status-03 loop. ORIGIN: the legitimate status-03 zeroing writer is the
+retail-observed worker path at `0x8009B7EC`; no guest writer or mitigation was
+changed.

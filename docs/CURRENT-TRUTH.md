@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4115 (2026-10-06).
+Updated for session 4117 (2026-10-06).
 
 ## Current state
 
@@ -751,14 +751,26 @@ H-generated-absent is rejected; the status-03 worker/store chain remains
 unqualified and needs a silent-arm phase-gated capture. ORIGIN: no guest
 writer, wait, force-clear, or mitigation was changed.
 
+Session 4117 ran the prescribed retail-gated silent-arm capture. The oracle
+whole-RDRAM control and retail title/hangar transitions passed; the silent port
+also reached title `0x00790400/1024` and hangar `0x006AB400/512`. In the port,
+phase-5 status-03 service rows contained repeated entry/exit pairs. Retail's
+independent PC watch fired at `0x8009B7EC` four times and at the surrounding
+worker PCs, including `0x8009B30C`, `0x8009B7CC`, `0x8009B600`, `0x8009BDE8`,
+and `0x8009BCF8`. Hstatus03-chain-live is selected at the measured scope:
+worker/service activity and the named zeroing-store execution are real, so no
+wait replacement or force-clear is authorized. The exact port-side store-to-
+return join remains a diagnostic detail, not a reason to alter behavior.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 7:** use the now-located generated tree/fixup to
-   qualify the named worker entry, `0x8009B7EC` zeroing store, and shutdown
-   return on a silent arm that reaches both target phases; the real-audio/image
-   arm is currently route-invalid. Do not force-clear unexplained status.
+1. **M5 de-stubbing Step 8:** audit one complete voice-base/list/table guard
+   idiom class after the status-03 worker contract is qualified. Start with
+   the first ranked class in the generated/fixup source, identify its guest
+   writer and legitimacy, and build one phase-gated retail/port census. Do not
+   relax a guard unless the writer and valid range are independently proven.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -789,6 +801,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
 | M5 key-on early returns | Hreturns-dead/Hguard-valid selected (s4101): retail and port reached the measured key-on route with valid `0xC0` divisors, normal tails, and slot `02`/`00` transitions; all eight guard counts were zero. |
 | M5 drain-tick policy | HDrainChangesOrdering remains qualified (s4103, independently requalified s4114). Session 4113's reverse-order rerun was Hroute-invalid because tick-off crashed pre-target; s4114 qualified both arms and again found differing joined stage/route-context tables. This does not establish tick-required behavior. |
+| M5 status-03 reaping | Hstatus03-chain-live selected at s4117's measured scope: silent port reached both phases with repeated service entry/exit pairs, and retail independently executed the named `0x8009B7EC` zeroing-store PC plus surrounding worker PCs. Exact port-side store-to-return synchronization remains diagnostic; no force-clear or wait change is authorized. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary

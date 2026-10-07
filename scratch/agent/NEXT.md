@@ -1,33 +1,36 @@
-# Next work unit: qualify the Step 7 status-03 worker contract on silent audio
+# Next work unit: audit the first voice/list/table guard idiom class
 
-HYPOTHESIS-ID: m5-step7-status03-silent
+HYPOTHESIS-ID: m5-step8-voice-list-guard-class
 
 Competing hypotheses and discriminator:
 
-- H-chain-live: the located generated tree/fixup produces the named worker
-  entry, `0x8009B7EC` zeroing store, and return on the silent arm.
-- H-chain-absent: the silent arm reaches both phase gates but none of the
-  status-03 entry/store/return edges occurs.
-- H-route-invalid: the silent arm does not reach both target phases, so a
-  status-03 null is unevaluable and the next discriminator is startup route
-  topology rather than worker behavior.
+- H-guard-legitimate: every site in the selected idiom class protects a
+  legitimate invalid pointer and is not suppressing valid audio work.
+- H-guard-suppresses-valid: at least one guarded pointer has an independently
+  attributed retail writer and a valid phase-scoped port range, so the guard
+  can explain lost voice/list/table work.
+- H-class-route-invalid: the paired capture misses a required control or target
+  phase, so guard nulls are unevaluable and the class must not be relaxed.
 
-The single discriminating measurement is one same-build retail-gated silent
-capture, phase-gated on title `0x00790400:1024` and hangar `0x006AB400:512`,
-with the existing status-03 entry/store/return probes enabled. Positive
-control must fire and both retail phases must pass. A complete entry -> store
--> return chain selects H-chain-live; paired phase-qualified absence selects
-H-chain-absent; missing silent phase gates selects H-route-invalid. Do not
-alter the wait or force-clear status.
+The single discriminating measurement is one complete source census plus one
+same-build retail/port phase-gated capture for the first ranked A10 guard
+idiom class. Positive control must fire; retail must reach title and hangar;
+the port must reach both phases; every guard site must be paired with its guest
+writer, pointer value/range, and downstream traversal result. A retail writer
+and valid port range at a guarded site selects H-guard-suppresses-valid; all
+sites invalid or unreachable selects H-guard-legitimate; missing controls or
+phases selects H-class-route-invalid. Do not remove or bypass any guard in
+this unit.
 
 Exact commands:
 
+Before building, enumerate the first complete guard idiom and its writers with
+bounded `rg` searches in the generated tree, fixup scripts, and oracle watch
+configuration; then add all site/writer fields to one recipe and run it once.
+
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Then run the new single-arm recipe from the repo root:
-`zsh scratch/agent/run_s4117_m5_status03_silent.sh`
-
-The recipe must launch the retail oracle first, wait for its whole-RDRAM
-positive control, launch only `ROGUESQ_AUDIO_UCODE=0`, SIGKILL its process,
-and write a verdict plus bounded status-03 rows under
-`scratch/agent/s4117_m5_status03_silent/`.
+Use the existing retail positive-control and title/hangar phase-gate contract.
+Do not land a behavior change unless the measurement selects
+H-guard-suppresses-valid and the changed guard has an `ORIGIN:` naming the
+writer and explaining why the value is legitimate.
