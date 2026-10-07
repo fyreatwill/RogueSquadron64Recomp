@@ -1,11 +1,12 @@
-# Next work unit: M5 Step 8 survey — voice-base/list/table guard classes
+# Next work unit: M5 A11 pre-title slot-0 0x02 stall — who should clear it?
 
-HYPOTHESIS-ID: m5-step8-voice-guard-class
+HYPOTHESIS-ID: m5-a11-pretitle-slot-stall
 
-A12 (s4192/4193) and A14 (s4194) closed: neither wait is stuck on the title/hangar route. Step 8 of
-docs/M5-AUDIO-PLAN.md: enumerate the voice-base/list/table guard idiom class (grep fixup scripts for voice-array
-guards), classify each site (legitimate / mitigation / dead), and for any mitigation name the writer (iron rule 11).
-Hypotheses: H-guards-fire-in-hangar (counters nonzero), H-guards-dead-on-route. Discriminator: one build with fire
-counters on every guard in the class + positive control (mark-all), one hangar-gated run
-(template scratch/agent/s4193_spin2_hangar.sh). If no guard fires, close the class like A12/A14 and move to the
-M3 idiom-class audits.
+s4195: waitForAnyAudioSlot's 500k cap fired once in phase 3 (width 640, origin 0x62BD00) with slot-0 status byte stuck 0x02
+(base 0x8018D4A0) after 8M `[avf-gate] site=slot-byte` reads. Hypotheses: H-no-producer (nothing runs the 0x02->0x00
+writer pre-title; audio worker/tick gated off: stub artifact), H-slow (writer runs but needs more than 500k iterations;
+cap too small), H-retail-same (retail also spins briefly here). Discriminator: in ONE run, log writers of the slot-0 byte
+(existing `[avf-gate] site=slot-sb` stores) plus tick/serviceVoicePoolFrame entry counters within phase 3, compared with a
+concurrent ROGUESQ_WAITFORSLOT_GUARD_CAP=5000000 arm of the same recipe to see whether the byte ever clears.
+Template: scratch/agent/s4195_voice_guard_class.sh. Cap=5M clears it -> H-slow; never clears -> H-no-producer, name the gate.
+Optionally check retail wait duration with tools/oracle/README.md (boot phase only).

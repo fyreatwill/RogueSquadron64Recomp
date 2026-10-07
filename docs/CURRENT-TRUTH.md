@@ -277,7 +277,7 @@ No audio, gate, writer, payload, or mitigation behavior changed.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** A12 countdown wait de-stubbed (s4192); A12 second spin at `0x8014974C` CLOSED as never-stuck (s4193: entered once, flag already 0, no spin; nothing to de-stub). A14 status-03 shutdown wait CLOSED as never-entered (s4194: 4/4 entries status 0x00, call 2 only; tools/audit_a14_shutdown_wait.py). Next: M5 Step 8 (voice-base/list guard class; needs retail writer + valid range first) or the first genuinely stuck wait. Object-path parity qualification is closed (s4187-s4191); do not add witnesses there.
+1. **M5 audio de-stubbing:** A12 countdown wait de-stubbed (s4192); A12 second spin at `0x8014974C` CLOSED as never-stuck (s4193: entered once, flag already 0, no spin; nothing to de-stub). A14 status-03 shutdown wait CLOSED as never-entered (s4194: 4/4 entries status 0x00, call 2 only; tools/audit_a14_shutdown_wait.py). M5 Step 8 voice-base (A9, 12 sites) and song-tick-table (A10, 43 sites) guards CLOSED as never-firing on title+hangar (s4195: all fire-logs armed, 0 fires; control = A11 `waitforslot-guard-fire`, so single-source for the other classes). That A11 500k cap fired once PRE-TITLE (phase 3 width 640, slot-0 byte stuck 0x02): next lead, see NEXT.md (m5-a11-pretitle-slot-stall). Object-path parity qualification is closed (s4187-s4191); do not add witnesses there.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
