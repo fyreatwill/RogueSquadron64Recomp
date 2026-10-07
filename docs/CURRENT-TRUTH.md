@@ -150,6 +150,8 @@ mitigation behavior changed.
 
 ## Next steps
 
+Session 4201 (single join, s4200 log): AI source and `queue_samples` consumer PCM agree 124/124 by FNV; hangar buffers are 81/81 all-zero at source (guest silence -> M5 Step 9, voice/MORT gap); title has 19 fully-nonzero buffers (every byte nonzero, atypical for real PCM; content unverified). `tools/pcm_join.py <log>` reproduces it. Next: dump title buffer samples + hangar voice-slot state.
+
 Session 4178 qualified the regeneration-safe port witness at `0x8008F900` in
 a paired oracle/port run. The whole-RDRAM positive control, both retail target
 phases, and both port target phases fired. The port witness joined to the

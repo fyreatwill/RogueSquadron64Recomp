@@ -1,7 +1,7 @@
-# Next work unit: M5 Step 9/10 gate — does nonzero PCM exist at AI source / callback / SDL on title+hangar?
+# Next work unit: M5 Step 9 — why is hangar PCM all-zero at the AI source, and is title's fully-nonzero PCM real?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4200 closed Step 6/A13 as dormant on title+hangar (drain never entered; gate now actually wired into full fixup — a regen must keep `apply_s1993_drain_inloop_gate()` at the end of fixup_game_funcs.py). Steps 7/8 are effectively closed (A14/A9/A10 never fire). Remaining: Steps 9 (CPU-side MORT) and 10 (AI/SDL).
-Hypotheses: H-pcm-zero-at-source (guest never produces nonzero PCM -> Step 9: MORT/voice-matrix gap); H-pcm-lost-host (nonzero at AI source, zero/different at callback or SDL -> Step 10); H-pcm-clean (nonzero and identical at all three -> audio path de-stubbed on title+hangar; update plan, move to M3 idiom audits).
-Discriminator: one run (title+hangar, copy scratch/agent/s4200_drain_tick_ab.sh single arm) logging, per AI buffer: address, sample count, hash, nonzero span at AI source, callback consumer, SDL queue. First check docs/M5-AUDIO-PLAN.md Step 10 and grep existing `[m5-audio-drain-raw]` logs — they may already carry the three joins. Positive control: a synthetic nonzero buffer injected at the source must show at all three points.
+s4201: source==consumer (124/124 FNV). Hangar 81/81 source buffers all-zero; title 19 buffers 768/768 nonzero bytes (17 distinct hashes), 24 zero.
+Hypotheses: H-title-garbage (title nonzero is a fill/uninit pattern, not audio); H-title-real (genuine loud PCM); H-hangar-no-voices (no active voices/music started at hangar so ucode mixes silence); H-hangar-mix-broken (voices active but ucode output zero).
+Discriminator (one build, one run, title+hangar, s4200_drain_tick_ab.sh single default arm): in the pcm-boundary-source row also print the first 16 int16 samples and min/max; at hangar entry also log the MusyX active-voice count/slot status per buffer. Title min/max/sample pattern splits garbage vs real; hangar voice count splits no-voices vs broken mix. Positive control: the title nonzero buffers must show non-trivial samples in the same run.
