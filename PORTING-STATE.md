@@ -144815,3 +144815,21 @@ production. ORIGIN: `0x80094648` is the legitimate retail indexed writer to
 the watched channel span; no mitigation, gate change, or behavior change was
 made. Evidence lines are the independent retail oracle attribution and the
 paired port writer/task/PCM witness.
+
+## Session 4076 (2026-10-06) — repaired regenerated 94648 store witness
+
+Audited the generated `funcs_25.c` and the companion `fixup_game_funcs.py`
+after s4075's apparent port-side `0x80094648` store null. The generated source
+does contain the guest `sb` at `0x80094648`, building its destination from
+`0x80140000 + s1` and storing `$a2` at `0x1AD8($at)`. The host-side
+`rs64_s2609_m5_channel_store` call was absent, even though its declaration was
+present. The fixup inserted that call only inside the broad s2586 entry-patch
+guard, so a regenerated file with the s2586 marker skipped the store witness.
+
+Added an independent unique-anchor insertion to the fixup. Python compilation
+and the companion repository's diff check passed. This is diagnostic-only and
+does not alter the guest store or audio behavior. The s4075 port null is
+superseded as path evidence: it was an instrumentation false negative, not a
+qualified branch divergence. Retail's 88 execution rows and 72 mismatch-free
+nonzero samples remain valid. ORIGIN: the legitimate writer is the guest
+`sb` at `0x80094648`; the new host call only observes address and value.

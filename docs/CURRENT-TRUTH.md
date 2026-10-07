@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4075 (2026-10-06).
+Updated for session 4076 (2026-10-06).
 
 ## Current state
 
@@ -248,17 +248,15 @@ boundary; playback/drain timing remains open.
 Detailed counts and every failed or superseded run remain in the append-only
 ledger. Use bounded `grep`/`sed` windows for that file; never read it whole.
 
-Session 4075 qualified the retail `0x80094648` boundary against the isolated
-image port. Retail passed whole-RDRAM, title, and hangar controls; the named
-PC produced 88 hangar-bucket execution rows and 72 mismatch-free nonzero
-scalar stores to `0x00141AD8..0x00141AEC`. The port independently reached
-title and hangar with positive gate/source/consumer activity, but its
-`startSongSequence` witness reached only entry/branches and no target store;
-PCM retained the zero `FNV=0xF59C39C5`, `nz=0` signature. Hcoverage is
-refuted. This selects H94648-port-path-gap over Hother-writer at this scope:
-retail proves the named writer is legitimate and nonzero, while the port does
-not reach its corresponding store. ORIGIN: `0x80094648` is a legitimate
-retail indexed channel-span writer; no mitigation or gate change was made.
+Session 4076 audited the session-4075 `0x80094648` boundary. Retail passed
+whole-RDRAM, title, and hangar controls; the named PC produced 88 hangar-bucket
+execution rows and 72 mismatch-free nonzero scalar stores to
+`0x00141AD8..0x00141AEC`. The generated port source contains the guest store,
+but its `s2609` host witness was absent because the fixup's broad s2586-entry
+guard skipped the insertion after regeneration. The s4075 port null is
+therefore unqualified for path divergence; a regenerated witness run is
+required. ORIGIN: `0x80094648` is the legitimate guest indexed channel-span
+writer; the fix is diagnostic-only.
 
 ## Next steps
 
@@ -287,7 +285,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 
 | Hypothesis | Status |
 |---|---|
-| M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063); the isolated image arm still has zero hangar output. Session 4075 shows retail `0x80094648` writes nonzero channel data while the port reaches only its entry/branch path, so the missing port writer path remains open. |
+| M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063); the isolated image arm still has zero hangar output. Retail `0x80094648` writes nonzero channel data, while the port-side store witness now requires a regenerated run because s4076 found the prior witness was absent. |
 | M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
@@ -325,6 +323,11 @@ and wait-return explanations, global-zero image-DMA theory, route-wide PCM-gap
 theory, and force-zero default policy are superseded at their measured
 scopes. They were plausible before qualified routes, same-build controls, or
 independent retail attribution existed.
+
+The s4075 inference that the port did not reach the `0x80094648` store is
+superseded by s4076's source audit. It was believable because the port had
+entry/branch rows and no target-store rows, but the generated source contained
+the store and the fixup had silently omitted the target-store witness.
 
 The early s4009/s4010 staging-based route explanation is superseded by later
 same-build route tables: launch order and timing change the qualifying arm,

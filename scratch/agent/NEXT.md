@@ -1,34 +1,36 @@
-# Next work unit: M5 Step 4 port writer-path audit
+# Next work unit: M5 Step 4c qualified 94648 store witness run
 
-HYPOTHESIS-ID: m5-audio-step4-port-writer-path
+HYPOTHESIS-ID: m5-audio-step4c-94648-port-store
 
-Session 4075 qualified retail `0x80094648` as a legitimate nonzero indexed
-channel-span writer, but the port's `startSongSequence` witness reached only
-entry/branches and no target store. The port reached both target phases, with
-positive gate/source/consumer controls and zero PCM payload.
+Session 4076 repaired the regeneration-safe `s2609` witness. The guest
+`0x80094648` store exists in generated source, but s4075 could not observe it
+because the witness insertion was skipped by an already-present s2586 marker.
 
 Competing hypotheses:
 
-- H94648-port-store: the port reaches the indexed store after a missing or
-  unobserved predecessor; the next capture will show a retail-shaped target
-  store destination/value relation.
-- H94648-port-branch: a branch/state/input mismatch prevents the target store;
-  the full entry-to-branch trace will show the divergent predicate and no
-  target store despite valid phase/task controls.
-- Hcoverage: the isolated image route loses title/hangar or writer witness
-  coverage, making the port null unevaluable.
+- H94648-port-store-live: the port executes the indexed store with a valid
+  destination/value relation after the fix; the new witness will report rows
+  in the title/hangar phase buckets.
+- H94648-port-branch: the fixed witness remains silent in the target phase,
+  while the complete `startSongSequence` branch trace shows a predicate or
+  loop-state divergence before `0x80094648`.
+- H94648-port-value: the store executes, but its requested byte or effective
+  destination differs from retail; paired rows will show the mismatch.
+- Hcoverage: any required retail whole-RDRAM/title/hangar or isolated-port
+  phase control is missing, making the null unevaluable.
 
-Discriminating measurement: one same-build retail-gated isolated image capture
-with the existing phase-keyed task/PCM joins and the complete port
-`startSongSequence` writer trace, including entry/branch/target-store rows.
-H94648-port-store requires valid controls plus a target-store row matching the
-retail destination/value relation; H94648-port-branch requires valid controls
-plus entry/branch rows and zero target stores; Hcoverage is selected by any
-missing whole-RDRAM, title, hangar, or isolated-image gate.
+Discriminating measurement: rebuild after the fixup through the normal
+regeneration order, then run one same-build retail-gated isolated image
+capture with `PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`. Require
+the retail positive controls, the port title/hangar gates, the new
+`m5-94648-control`, and phase-keyed `m5-94648` rows. Live selects rows with a
+retail-shaped destination/value relation; branch selects valid controls plus
+entry/branch rows and zero store rows; value selects store rows with a
+destination/value mismatch; coverage selects any missing control.
 
-Exact implementation: reuse `scratch/agent/run_s4075_m5_step4_94648.sh`, keep
-the retail whole-RDRAM/title/hangar and `0x80094648` controls, and add only the
-missing port-side target-store fields to the existing generated-function
-fixup/instrument. Build once, run once from `build/`, retain
-`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`, and SIGKILL the process
-group. Do not change the gate or add a mitigation.
+Exact commands: run the repository's normal regeneration/fixup pipeline from
+the companion N64Recomp tree, build the Debug target, then adapt
+`scratch/agent/run_s4075_m5_step4_94648.sh` only to assert the new
+`m5-94648-control`/row markers. Run from `build/`, capture logs under
+`scratch/agent/s4077_m5_step4c_94648`, and SIGKILL both processes. Do not alter
+the guest store or any gate.
