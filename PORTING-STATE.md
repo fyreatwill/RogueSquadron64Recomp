@@ -145874,3 +145874,26 @@ behavior changed.
 Ran the planned retail-gated source-producer context census after one Debug build. The retail oracle's whole-RDRAM positive control fired, and the retail run reached title `1024` and hangar `512`; the watched guest producer PC executed overall. This invocation did not include a phase-keyed PC join, so it supplied no target-phase writer/context rows and cannot identify the retail source value or ordering.
 
 The first canonical real-audio/LLE/ungated/solo/spin-yield port launch crashed in `fillSampleStreamRange` during VI 640 before title or hangar. Per the required fixed-version rule, reran the same build with the validated repeated Start schedule and the full task/DMEM/DMA/service/slot/PCM probe matrix. That arm remained in VI 640 for 78 seconds without either target gate and was SIGKILLed. H-route-invalid is selected for this iteration. The run rules out no source writer, image writeback, audio wait, slot predicate, or mitigation; it only shows that this route cannot qualify the requested comparison. ORIGIN: the measured boundary remains the guest `0x800078EC` source-span writer; no guest behavior or mitigation changed.
+
+## Session 4132 (2026-10-07) — landed pre-publication free/active ownership guard
+
+The planned M5 status-03 worker change was not safely available: the worker
+implementation is in the external generated tree, and the current evidence
+does not authorize replacing its wait or force-clearing status. I therefore
+ran one bounded M3 idiom audit and changed `patches/heap_guards.c`.
+
+The patch now checks the complete published free-list chain against the
+published active queue before advancing `heap_free_head`. The legitimate
+writers are the allocator's free-list link stores and active-queue link
+publishers; a shared node is not legitimate ownership state. This closes the
+previous ordering hole where a later overlap check could occur after the free
+head had already been advanced.
+
+`cmake --build build --config Debug --target PatchesLib` failed because this
+configuration has no `PatchesLib` target. The ordinary
+`RogueSquadron64Recomp` Debug target rebuilt successfully. H-guard-not-
+integrated is selected for runtime purposes: source and host integration are
+shown, but no runtime guard firing or valid-path preservation is claimed. This
+rules out neither M5 audio behavior nor the guard's runtime scope. ORIGIN:
+free-list head publication and active-queue link stores; cross-owner aliasing
+is not legitimate state.

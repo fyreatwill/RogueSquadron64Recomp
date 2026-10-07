@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4131 (2026-10-07).
+Updated for session 4132 (2026-10-07).
 
 ## Current state
 
@@ -139,6 +139,17 @@ unevaluable and no source producer, image, wait, predicate, or writeback
 explanation is authorized. ORIGIN: the only boundary under test remains the
 guest `0x800078EC` writer and its source span; no guest behavior or mitigation
 changed.
+
+Session 4132 landed a regeneration-safe M3 ownership guard in
+`patches/heap_guards.c`. Before advancing `heap_free_head`, the patch now
+rejects any overlap between the published free-list chain and the active
+queue, whose legitimate owners are the allocator's free-list link stores and
+active-queue link publishers. The `PatchesLib` target is absent from this
+macOS CMake configuration, so that target could not be built; the ordinary
+Debug target rebuilt successfully. H-guard-not-integrated is selected for
+runtime purposes: this proves source/host integration only, not that the guard
+fires or preserves a valid runtime path. ORIGIN: free-list head publication
+and active-queue link stores; cross-owner aliasing is not legitimate state.
 
 ## Earlier qualified evidence (compacted)
 
@@ -350,22 +361,24 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-producer context census (repair the paired route):** rerun the
+1. **M5 status-03 worker qualification:** use the external generated tree on a
+   qualified silent-arm route to join `serviceVoicePoolFrame` entry, the
+   `0x8009B7EC` zeroing store, and shutdown return. Do not replace the wait or
+   force-clear status without that join.
+2. **Qualify the new M3 pre-publication guard** on a host with
+   `mips64-elf-gcc` and `mips64-elf-ld`, then runtime-test valid and overlapping
+   ownership cases. The ordinary host target passes, but this macOS CMake
+   configuration has no `PatchesLib` target; do not infer runtime behavior
+   from the host build alone.
+3. **M5 source-producer context census (repair the paired route):** rerun the
    same retail-gated writer/context table, then run the canonical port with a
    phase-scoped source table and enough route controls to reach hangar. Keep
-   the image, wait, cap, predicate, slot state, guest behavior, and host
-   writeback unchanged. Fix the oracle watch-index table before collecting
-   post-value evidence. A qualified retail/port context match or split is the
-   discriminator; a pre-hangar port crash remains H-route-invalid.
-2. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
+   image, wait, cap, predicate, slot state, guest behavior, and host writeback
+   unchanged. Fix the oracle watch-index table before post-value evidence.
+   A qualified retail/port context match or split is the discriminator.
+4. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
    writer and terminal table only when the pending `chCount=16` call appears
    on a qualified route. Keep the cap and wait unchanged.
-3. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
-   the repaired discovery path to build `PatchesLib` and runtime-qualify the
-   active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
-   already pass; do not infer runtime behavior from that build alone. This
-   macOS host is blocked on installing/providing `mips64-elf-gcc` and
-   `mips64-elf-ld` or using another host with them.
 4. **Generated-symbol renaming sweep.** Parked while M5 has applicable route,
    writer, or audio work. Keep slug `generated-symbol-renaming-sweep` if it
    resumes; mapping-only edits do not reset the engineering-change gate.

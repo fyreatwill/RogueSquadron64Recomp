@@ -1,41 +1,37 @@
-# Next work unit: execute the next bounded M5 de-stubbing edge
+# Next work unit: qualify the pre-publication free/active ownership guard
 
-HYPOTHESIS-ID: m5-audio-destub-step2
+HYPOTHESIS-ID: m3-free-active-prepublication
 
-Do not rerun the source-producer census until a new route discriminator exists.
-Session 4131 had no qualified port target phase: one real-audio arm crashed in
-640 and the corrected Start schedule stayed in 640. Execute one named,
-regeneration-safe M5 audio contract edge from `docs/M5-AUDIO-PLAN.md`, keeping
-the silent `ROGUESQ_AUDIO_UCODE=0` arm as the same-build control. Do not change
-the guest source writer, image writeback, wait cap, slot predicate, or add a
-mitigation.
+The next M5 status-03 behavior edge is not safe to land here: the generated
+worker/store implementation is external to this checkout and the current
+truth explicitly forbids a force-clear or wait replacement without that
+contract. This iteration instead audits one complete M3 ownership idiom in
+`patches/heap_guards.c`: reject a free-list/active-queue overlap before
+publishing the advanced free-list head.
 
 Competing hypotheses and discriminator:
 
-- H-audio-degeneracy: one real contract edge produces a new downstream task,
-  service, slot, voice, or PCM control without merely changing route reachability.
-- H-contract-gap: the edge changes task/DMEM/DMA or service identity, but the
-  phase-scoped slot/PCM join remains closed.
-- H-route-invalid: either arm lacks both target gates, so no audio-contract
-  conclusion is allowed.
+- H-overlap-prevented: the new pre-publication check is compiled into the
+  regeneration-safe patch and rejects only the non-legitimate overlap class.
+- H-guard-not-integrated: the patch source changes but the configured build
+  omits or cannot compile `PatchesLib`, so runtime behavior is not qualified.
+- H-guard-too-broad: a valid allocator path is rejected; this requires a
+  runtime qualification on a host with the MIPS toolchain.
 
-The single discriminating measurement is one same-build, phase-keyed table
-covering dispatch/exit, task ABI, DMEM/DMA, service return, slot transitions,
-PCM source/consumer joins, and title/hangar gates. A new downstream control
-selects H-audio-degeneracy; task progress without downstream closure selects
-H-contract-gap; either missing target gate selects H-route-invalid.
+The single discriminating measurement is the build/link artifact check:
+`PatchesLib` must compile and the full Debug target must link the override.
+Successful integration selects H-overlap-prevented pending runtime
+qualification; omission or missing cross-compiler selects H-guard-not-
+integrated; only a qualified runtime rejection can select H-guard-too-broad.
 
 Commands:
 
-1. Select the next single behavior edge from the incremental sequence in
-   `docs/M5-AUDIO-PLAN.md`, and write its exact rollback/control arm here
-   before building.
-2. Build once:
+1. Build the patch and full target once:
+   `cmake --build build --config Debug --target PatchesLib`
    `cmake --build build --config Debug --target RogueSquadron64Recomp`
-3. Run real and silent arms from `build/` with the qualified phase-gated
-   route, the whole-RDRAM oracle positive control, and all task/DMEM/DMA/
-   service/slot/PCM controls. SIGKILL at 120s.
+2. Inspect the generated patch/build dependency and link result. A runtime
+   soak is not authorized if the cross-toolchain is absent.
 
-Expected outcomes: both arms reach title/hangar and the changed edge selects
-H-audio-degeneracy or H-contract-gap; a missing target gate leaves
-H-route-invalid selected without interpreting null downstream counters.
+Expected outcomes: `PatchesLib` is rebuilt and the ordinary Debug target links,
+or the build reports the known missing MIPS GCC/LD dependency; in either case
+do not infer runtime guard firing from a build-only result.

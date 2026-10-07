@@ -458,6 +458,20 @@ RECOMP_PATCH Block* func_80007D74(void) {
     } else {
         new_head = head->next;
     }
+
+    // ORIGIN: heap_free_head publishes the free-list owner chain, while
+    // heap_other_listhead publishes the active-queue owner chain. Reject an
+    // overlap before advancing either free-list publication; otherwise the
+    // later queue append could mutate a block still owned by the free list.
+    if (!metadata_slot_ok(heap_other_listhead, (void*)0x801163FC)) {
+        return NULL;
+    }
+    Block* published_active_head = *heap_other_listhead;
+    if (head != NULL && published_active_head != NULL &&
+        !free_chain_disjoint_from_active_queue(head, published_active_head)) {
+        return NULL;
+    }
+
     heap_free_head = new_head;
     if (block_ok(new_head)) {
         new_head->prev = NULL;
