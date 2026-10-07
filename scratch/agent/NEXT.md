@@ -1,33 +1,19 @@
-# Next work unit: discriminate the post-loop store return/caller
+# Next work unit: pair the object-init return at the caller continuation
 
 HYPOTHESIS-ID: m5-step4-object-entry-body
 
-Session 4189 selected H-load-use-parity: the corrected canonical paired route
-qualified its positive control and both title/hangar phases, and retail and
-port matched the load/use/store tuple at `0x8008F928`, `0x8008F938`, and
-`0x8008F93C`. The next boundary is the return after the store and the caller
-continuation at `0x8008F8A8`.
+s4190: caller continuation 0x8008F8A8 matched retail in the hangar; the oracle
+cannot observe the `jr` delay slot 0x8008F958 (0 hits, port fired). The caller
+of initSampleStreamBlockCache does `jal 0x8008F858` at 0x8008F4B8; the
+continuation is 0x8008F4C0.
 
-Competing hypotheses:
+Hypotheses:
+- H-return-parity: retail and port agree on v0/s-regs/sp at 0x8008F4C0.
+- H-return-mismatch: restored regs/sp differ, selecting the divergent register.
+- H-route-invalid: controls/phases fail.
 
-- H-return-parity: port and retail agree at the post-store return state and
-  caller continuation, moving the boundary to the first caller consumer.
-- H-return-mismatch: the stored state, restored return registers, or caller
-  continuation differs, selecting the first divergent return state.
-- H-target-route-invalid: any positive control or target phase fails; no return
-  or caller comparison is valid.
-
-Discriminator: add a regeneration-safe witness at the post-store return delay
-slot `0x8008F958` and caller continuation `0x8008F8A8`, plus oracle execution
-watches for both PCs. Run one paired phase-gated measurement with:
-
-`zsh scratch/agent/run_s4190_m5_object_return.sh`
-
-Preserve the whole-RDRAM positive control, both title origins
-(`0x00790400`/`0x00790800`), both hangar origins
-(`0x006AB400`/`0x006AB800`), all existing entry/body/loop/branch/successor/
-load rows, and the canonical autopilot with
-`ROGUESQ_AUTOPILOT_STOP_WIDTH=512`. Matching return/caller tuples select
-parity; a mismatch selects the first divergent return state; missing controls
-or target phases selects route-invalid. Do not change audio, gate, writer,
-payload, or mitigation behavior.
+Discriminator: add a port witness at 0x8008F4C0 (new apply script modelled on
+tools/apply_s4190_m5_object_return.py; marker `    // 0x8008F4C0: lw          $ra, 0x18($sp)`),
+add `--watch-pc 0x8008f4c0` with pc-field-dump to a copy of the s4190 recipe
+(run_s4191_*.sh), and gate retail rows by phase so the title row is not lost to
+the 10000 hit cap. Keep 0x8008F8A8 as the positive control.

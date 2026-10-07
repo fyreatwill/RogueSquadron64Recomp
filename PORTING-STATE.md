@@ -146919,3 +146919,23 @@ and store address `0x8017E088`; title tuples matched as well. This selects
 H-load-use-parity and moves the open boundary to the post-loop store/caller.
 The failed first run is recorded as route-invalid, not as evidence of a null.
 No audio, gate, writer, payload, or mitigation behavior changed.
+
+## Session 4190 (2026-10-07) — M5 object return: caller-continuation parity, oracle return PC unobservable
+
+Installed the regeneration-safe witness (`tools/apply_s4190_m5_object_return.py`,
+`rs64_m5_object_return_witness` in main.cpp) at `0x8008F8A8` (the return
+from `rs_malloc` inside `initSampleStreamBlockCache`) and at the `jr $ra` slot
+`0x8008F958`; the apply script's markers were corrected to the real generated
+layout. Canonical paired run: control=1, retail title/hangar=1/1, port
+title/hangar=1/1. At `0x8008F8A8` in the hangar, retail and port match on
+`v0=0x8017D9E0`, `v1=0x000175C0`, `s0=0xD8`, `s1=0x1B000`, `s2=0x48`. The
+only difference is `ra` (retail `0x8008F8A8`, port 0), which is the recomp
+native-call convention (no `ra` is set for direct calls), not a state
+divergence. At `0x8008F958` the port fired (title and hangar) but the oracle
+recorded 0 hits even though the same function's `0x8008F93C` store matched in
+s4189, so the oracle's `--watch-pc` does not see this `jr` delay slot; the
+retail return is NOT compared (single-source on the port side). The title
+retail `0x8008F8A8` row was lost to the 10000 hit-cap, so only the hangar is
+paired. No audio, gate, writer, payload, or mitigation behavior changed.
+Next: watch the caller's continuation `0x8008F4C0` (after
+`jal 0x8008F858` at `0x8008F4B8`) instead of the delay slot.

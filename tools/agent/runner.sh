@@ -65,7 +65,7 @@ codex_default_model() {
 # invocation (it printed "model=sonnet" for a grok run that never saw it).
 if [ "$PROMPT_FILE" = "--describe" ]; then
   case "$RUNNER" in
-    claude) echo "runner=claude model=${RUNNER_MODEL:-${LOOP_MODEL:-claude-sonnet-4-6}}" ;;
+    claude) echo "runner=claude model=${RUNNER_MODEL:-${LOOP_MODEL:-claude-sonnet-5-5}}" ;;
     deepseek) echo "runner=deepseek model=${RUNNER_MODEL:-deepseek-v4-pro} endpoint=https://api.deepseek.com/anthropic key=$([ -n "${DEEPSEEK_API_KEY:-${RUNNER_API_KEY:-}}" ] && echo set || echo MISSING)" ;;
     grok)   gm="${RUNNER_MODEL:-$(grok_default_model)}";   echo "runner=grok model=${gm:-<unresolved>} max_turns=${RUNNER_MAX_TURNS:-200}" ;;
     codex)  cm="${RUNNER_MODEL:-$(codex_default_model)}";  echo "runner=codex model=${cm:-<unresolved>} sandbox=${RUNNER_SANDBOX:-danger-full-access}" ;;
@@ -89,7 +89,7 @@ case "$RUNNER" in
     # through untouched, and claude's exit code is preserved either way —
     # loop.sh classifies limits by rc.
     out="$(claude -p "$(cat "$PROMPT_FILE")" \
-      --model "${RUNNER_MODEL:-${LOOP_MODEL:-claude-sonnet-4-6}}" \
+      --model "${RUNNER_MODEL:-${LOOP_MODEL:-claude-sonnet-5-5}}" \
       --permission-mode acceptEdits \
       --output-format json 2>&1)"
     rc=$?
