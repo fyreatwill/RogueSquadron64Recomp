@@ -145415,3 +145415,25 @@ metadata and is not legitimate cursor state. Rebuilt the ordinary Debug
 target successfully. The `PatchesLib` target remains absent on this host
 (`No rule to make target 'PatchesLib'`), so this is source/host-build evidence
 only; no runtime behavior is inferred.
+
+## Session 4108 (2026-10-06) — ruled out staging size as image route cause
+
+Recorded the competing hypotheses and discriminator in `scratch/agent/NEXT.md`
+before building. Rebuilt the ordinary Debug target successfully, then ran one
+retail-grounded, same-build sequential matrix with silent, declared-size
+image, and legacy-size image arms. Retail passed the whole-RDRAM positive
+control and reached title VI 1024 and hangar VI 512. The silent arm reached
+title VI 1024 but not hangar. Both image arms reached title and hangar with no
+`[CRASH]` or `[ABORT]` marker. The declared arm reported
+`[m5-audio-stage] dma_size=0x800 declared=0x800`; the legacy arm reported
+`dma_size=0xF80 declared=0x800`.
+
+The two image arms therefore both qualify for target-phase interpretation, and
+neither staging size is sufficient to explain the image-specific route
+difference from silent. This selects H-image-specific-failure at the measured
+scope and rejects declared-size and legacy-size as standalone route causes.
+It does not identify the image failure or authorize a status-03/wait change;
+the next work unit is the phase-gated declared-versus-legacy downstream task,
+service, slot, and PCM contract comparison. ORIGIN: the host audio-task
+staging writer selected the declared field or compatibility span; both are
+legitimate experiment arms, not mitigation machinery.
