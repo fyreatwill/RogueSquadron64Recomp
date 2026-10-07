@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4139 (2026-10-07).
+Updated for session 4140 (2026-10-07).
 
 ## Current state
 
@@ -51,6 +51,19 @@ limitation, not a guest fact. ORIGIN: the guest `0x800078EC` store-loop
 arguments and the retail oracle's previous-PC execution witness; no guest
 behavior, wait, cap, predicate, slot state, or host writeback changed.
 Evidence: `scratch/agent/s4140_m5_source_context/`.
+
+Session 4140 retried the retail ground-truth preflight twice before using the
+rebuilt source-context port arm. Both retail captures passed whole-RDRAM and
+source-PC controls but remained at VI 640 through 75 and 90 seconds, so they
+were route-invalid for the caller comparison. The port reached title 1024 at
+13.5s and hangar 512 at 33.7s, firing its positive control and emitting 256
+sampled zero-valued rows in each phase. Its title tuple was
+`a0=0x80178C80`, `a2=0x298`, `ra=0`; hangar used `a0=0x801797B0`,
+`a2=0x298`, `ra=0`. H-source-context-retry-route-invalid is selected for this
+iteration only; the prior s4139 H-retail-port-caller-split remains qualified.
+ORIGIN: the guest `0x800078EC` store loop and its entry tuple; no guest
+behavior, wait, cap, predicate, slot state, or host writeback changed.
+Evidence: `scratch/agent/s4140_port.log` and the two retail logs.
 
 The task-contract consumer boundary is closed at the measured scope: declared
 and legacy real-audio arms reached both target phases with matching zero

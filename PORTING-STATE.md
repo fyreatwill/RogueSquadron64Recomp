@@ -146009,3 +146009,21 @@ or source constructor. ORIGIN: the guest `0x800078EC` store-loop arguments
 and retail oracle previous-PC witness; no guest behavior, wait, cap,
 predicate, slot state, or host writeback changed. Evidence:
 `scratch/agent/s4140_m5_source_context/`.
+
+## Session 4140 (2026-10-07) — M5 source-context retry route-invalid
+
+Ran the required retail ground-truth preflight twice before using the rebuilt
+port instrument. Both retail captures had live whole-RDRAM and source-PC
+activity but remained at VI 640 through their 75-second and 90-second windows;
+neither reached the required title 1024 or hangar 512 gates. Those retail
+captures are route-invalid and provide no new caller comparison. The rebuilt
+port nevertheless reached title at 13.5s and hangar at 33.7s, fired the
+source-context positive control in both phases, and emitted 256 sampled rows
+per phase. Its title tuple was `a0=0x80178C80`, `a2=0x298`, `ra=0`; hangar was
+`a0=0x801797B0`, `a2=0x298`, `ra=0`; all sampled values were zero. The prior
+s4139 H-retail-port-caller-split remains the selected comparison; this retry
+does not requalify or overturn it. ORIGIN: the measured boundary is the guest
+`0x800078EC` store loop and its entry tuple; no guest behavior, wait, cap,
+predicate, slot state, or host writeback changed. Evidence:
+`scratch/agent/s4140_retail.log`, `scratch/agent/s4140_retail_retry.log`,
+`scratch/agent/s4140_port.log`.
