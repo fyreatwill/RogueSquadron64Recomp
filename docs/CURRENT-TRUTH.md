@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4093 (2026-10-06).
+Updated for session 4095 (2026-10-06).
 
 ## Current state
 
@@ -486,18 +486,33 @@ there is no basis to remove or replace any return. The first wrapper launch
 left a game process after its controller was interrupted and its mixed logs
 were discarded; only the isolated clean output was used.
 
+Session 4095 extended that capture with an independent retail PC/field tuple
+watch in the same run. The whole-RDRAM positive control and both retail and port
+phase controls fired. Retail recorded 26,913 executions each at
+`0x80090A3C` and `0x80090DE8`, plus 27,016 at publisher `0x80090768`; its
+normal-tail descriptor rows carried selector values `1..7`. The port reached
+both phases, retained live entry/tail counts (`110,901` in the final hangar
+bucket), and its pointer/branch rows carried selector `0` with the same
+`0xC0` mix-length inputs; all eight returns remained zero. Htuple-diverge is
+selected: the first measured mismatch is the descriptor branch selector, not
+the caller or return guards. This is two-source evidence at the route/tuple
+boundary (retail oracle plus port witness), but the rows are not
+record-synchronized, so it does not yet name the missing writer. ORIGIN: the
+selector is a legitimate guest descriptor field; no mitigation or guest
+behavior changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 6 descriptor-branch comparison.** Keep the eight early returns
-   unchanged. In one phase-gated declared-real run, batch witnesses for
-   `musyxKeyOnVoice` entry, normal tail, all eight early-return PCs, and the
-   divisor publisher; require the existing route/PCM controls and compare the
-   port counts with s4093's retail entry/tail result. Entry/tail with zero
-   traps selects a port descriptor/branch gap; zero entry is a port caller
-   gap; missing route controls is Hcoverage. The boundary is now qualified;
-   compare the descriptor tuple before changing runtime code.
+1. **M5 Step 7 descriptor-selector writer census.** Keep the eight early
+   returns unchanged. Run the retail oracle with the whole-RDRAM positive
+   control, title/hangar phase gates, a physical watch covering the dynamic
+   `s1+0x22` selector field, and phase-gated writer-PC histograms. Hwriter-live
+   is selected if target-phase writes identify a legitimate writer and value
+   transition; Hselector-absent if the qualified retail field is never written
+   in the target route; Hcoverage if any control or phase gate is absent. The
+   result must identify the writer before any port-side behavior change.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target

@@ -145199,3 +145199,22 @@ independently counted in this run, so publisher attribution remains open.
 The first launch's orphaned process and mixed output were not used. ORIGIN:
 no mitigation or guest behavior changed; the observed `0xC0` divisor is the
 legitimate published mix length.
+
+## Session 4095 (2026-10-06) — selected M5 descriptor tuple divergence
+
+Ran the fresh same-run descriptor comparison after extending the retail oracle
+with PC and field tuple watches for `0x80090A3C`, `0x80090DE8`,
+`0x80090768`, and all eight early-return PCs. The whole-RDRAM positive control
+and both retail and declared-real port phase controls fired. Retail recorded
+26,913 executions at both entry and normal tail and 27,016 at the publisher;
+its normal-tail descriptor rows carried selector values `1..7`. The port
+reached both phases with final hangar-bucket entry/tail counts of 110,901; its
+pointer/branch rows carried selector `0`, while the divisor sites retained the
+legitimate `0xC0` mix length and all eight returns stayed at zero.
+
+This selects Htuple-diverge: the first measured mismatch is the descriptor
+branch selector, not caller absence or a live early-return guard. It rules out
+changing the returns and moves the next probe to the retail writer census for
+the dynamic `s1+0x22` selector field. Retail and port are independent evidence
+lines, but their rows are not record-synchronized. ORIGIN: the selector is a
+legitimate guest descriptor field; no mitigation or guest behavior changed.
