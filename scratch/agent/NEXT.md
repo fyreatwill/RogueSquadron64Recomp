@@ -1,26 +1,30 @@
-# Next work unit: qualify M5 Step 7 status-03 worker contract
+# Next work unit: recover the Step 7 generated-tree/fixup boundary
 
-HYPOTHESIS-ID: m5-step7-status03-worker
+HYPOTHESIS-ID: m5-step7-generated-boundary
 
-Competing hypotheses and discriminator written before the next build:
+Competing hypotheses and discriminator:
 
-- H-worker-clears: the named `serviceVoicePoolFrame` worker enters during the
-  hangar status-03 interval, stores zero to the status slot, and the existing
-  drain/shutdown returns without the timeout hatch.
-- H-other-writer: status-03 is cleared by another legitimate writer or a
-  different service path; the named worker has no matching zeroing store.
-- H-route-invalid: the arm misses the retail controls, hangar phase, or the
-  status-03 interval, making writer absence unevaluable.
+- H-generated-present: the external generated tree and regeneration fixup are
+  available under a discoverable path; the status-03 store probe can be
+  rebuilt and a phase-gated worker-entry -> `0x8009B7EC` store -> return chain
+  can be run.
+- H-generated-absent: the implementation/fixup inputs are not present on this
+  host, so the prior runtime artifact cannot be reproduced from this checkout.
+- H-wrong-fixup: the inputs exist, but the fixup's function-slice or marker
+  anchor is stale and cannot produce the exact store witness.
 
-The single discriminating measurement is a complete status-03 writer table
-from the current source/fixup inventory: worker entry PC, every status-03
-zeroing store PC/value, drain/shutdown return, and timeout/force-idle path.
-A matching worker-entry-to-zero-store-to-return chain selects H-worker-clears;
-a complete inventory with no such chain but another named zeroing writer
-selects H-other-writer; an unresolved/generated-only site selects
-H-route-invalid until a phase-gated runtime arm exists.
+The single discriminating measurement is a bounded filesystem/toolchain
+inventory followed, only if the inputs are found, by one ordinary Debug build
+and the existing retail-gated status-03 capture. A discoverable generated
+tree plus rebuilt exact-store marker selects H-generated-present; no matching
+tree/fixup selects H-generated-absent; a tree with a fixup/build mismatch
+selects H-wrong-fixup. Do not alter the wait or force-clear status.
 
-Exact command: `rg -n "status.?03|0x03|serviceVoicePoolFrame|stopVoiceSlotSynced|force.?idle|timeout" src tools scratch/agent/s3370_m5_status03_worker_contract.md`.
-Do not change the wait or force-clear until this table names the legitimate
-writer and its value; then build both rollback/control arms together and run
-the phase-gated validation with SIGKILL cleanup.
+Exact first command:
+
+`find /Users/williambuckley/Documents/Tools -maxdepth 4 -type f \( -name 'funcs_*.c' -o -name 'fixup_game_funcs.py' -o -name '*status*03*' \) -print`
+
+If the inputs are found, inspect only the matching files, then use the
+existing `scratch/agent/run_s4106_m5_contract_rebaseline.sh` recipe as the
+phase-gated route after rebuilding. If absent, record the path/toolchain
+request as the blocker rather than adding another runtime probe.

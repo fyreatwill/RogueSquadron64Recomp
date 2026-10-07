@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4114 (2026-10-06).
+Updated for session 4115 (2026-10-06).
 
 ## Current state
 
@@ -730,13 +730,23 @@ tables differed, so the harness selected H-DrainChangesOrdering. This
 independently requalifies the existing Step 6 policy result; it does not
 prove the tick is required or change runtime behavior.
 
+Session 4115 ran the required status-03 worker inventory over the tracked
+source, tools, and scratch/fixup tree. It found no implementation or probe
+definition for `serviceVoicePoolFrame`, `stopVoiceSlotSynced`, status-03,
+or `0x8009B7EC`; only the symbol-table names and runtime registration remain
+in this checkout. The earlier qualified port artifact remains the only
+runtime evidence for the worker/store chain, and the generated game tree or
+its fixup is external/absent here. This leaves the current source inventory
+unresolved/generated-only and does not qualify a new run or authorize a wait
+or force-clear change. ORIGIN: no guest writer or mitigation was changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 7:** qualify the remaining status-03 wait/timeout
-   hatch against the observed worker contract, beginning with status-03
-   service reaping. First qualify the named worker entry and zeroing store in
+1. **M5 de-stubbing Step 7:** recover the external generated-tree/fixup
+   inputs needed to reproduce the status-03 worker contract, then qualify
+   the named worker entry, `0x8009B7EC` zeroing store, and shutdown return in
    one phase-gated run; do not force-clear unexplained status.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
