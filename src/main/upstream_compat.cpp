@@ -1329,6 +1329,9 @@ static bool rs64_m5_voice_modulation_phase(uint32_t* width, uint32_t* origin) {
            (*width == 512u && *origin == 0x006AB400u);
 }
 
+static bool rs64_m5_voice_callee_detail_active = false;
+static bool rs64_m5_voice_callee_detail_pending = false;
+
 extern "C" void rs64_m5_voice_modulation_setup(uint8_t* rdram, uint32_t pc,
                                                    uint32_t s2, uint32_t s3,
                                                    uint32_t s0, uint32_t v1,
@@ -1455,6 +1458,16 @@ extern "C" void rs64_m5_voice_modulation_callee(uint8_t* rdram, uint32_t stage,
                                                    uint32_t a0, uint32_t a1,
                                                    uint32_t v0) {
     if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
+    if (stage == 0u && pc == 0x8008D5FCu) {
+        rs64_m5_voice_callee_detail_pending = true;
+    } else if (stage == 1u && rs64_m5_voice_callee_detail_pending &&
+               pc == 0x80084860u) {
+        rs64_m5_voice_callee_detail_active = true;
+        rs64_m5_voice_callee_detail_pending = false;
+    } else if (stage == 2u && rs64_m5_voice_callee_detail_active &&
+               pc == 0x80084860u) {
+        rs64_m5_voice_callee_detail_active = false;
+    }
     uint32_t width = 0, origin = 0;
     width = rs64_vi_committed_width();
     origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
@@ -1477,6 +1490,23 @@ extern "C" void rs64_m5_voice_modulation_callee(uint8_t* rdram, uint32_t stage,
         "[m5-voice-callee] row=%u stage=%s phase=%u width=%u origin=0x%06X "
         "pc=0x%08X ra=0x%08X a0=0x%08X a1=0x%08X v0=0x%08X\n",
         rows[slot]++, label, rs64_phase_ord(), width, origin, pc, ra, a0, a1, v0);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_voice_modulation_callee_detail(
+    uint8_t* rdram, uint32_t pc, uint32_t ra, uint32_t kind,
+    uint32_t ptr, uint32_t value, uint32_t aux) {
+    if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
+    uint32_t width = 0, origin = 0;
+    if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static uint32_t rows[2] = {};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-voice-callee-detail] row=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X ra=0x%08X kind=%u ptr=0x%08X value=0x%08X aux=0x%08X\n",
+        rows[slot]++, rs64_phase_ord(), width, origin, pc, ra, kind, ptr,
+        value, aux);
     std::fflush(stderr);
 }
 

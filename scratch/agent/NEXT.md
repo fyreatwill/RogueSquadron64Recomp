@@ -1,39 +1,39 @@
-# Next work unit: M5 Step 4l callee path for the `0x8008D5FC` call
+# Next work unit: M5 Step 4l witness transport for the `0x8008D5FC` call
 
 HYPOTHESIS-ID: m5-audio-step4l-callee-path
 
-Session 4086 qualified the separate callsite. Retail's `0x8008D5FC` return
-varied by voice record, while the port's sampled `0x8008D604` result repeated
-`0x3F80`; the port's `0x8008D610` lhs stayed zero. The next boundary is inside
-`evaluateVoiceModulatorRecord` for the `a1=s0+0xC0` call path.
+Session 4087 qualified the retail controls and port title/hangar route, but the
+new `funcs_20.c` callee-detail hooks produced zero rows while the existing
+`0x8008D604` post-call hook produced 86 rows. The generated object references
+the detail symbol; the existing callee witness reports saved `ra=0`, so the
+original return-address filter was invalid. Removing only that host-side filter
+still produced zero detail rows. This is a hook transport/linkage problem, not
+callee evidence.
 
 Competing hypotheses:
 
-- Hcallee-entry: the call arguments or callee entry state already diverge.
-- Hcallee-load: entry matches, but a callee input load or branch diverges.
-- Hcallee-return: entry and inputs match, but the callee's return arithmetic
-  diverges.
+- Htransport: the detail calls are not on the executed linked callee path, or
+  the host hook is not reachable from that path.
+- Hcallee-entry/load: once transport is proven, entry or the
+  `0x8008488C`/`0x800848A8`/`0x800848C4` rows diverge.
+- Hcallee-return: once inputs match, the callee's return arithmetic diverges.
 - Hcoverage: either arm misses the whole-RDRAM, title, or hangar controls.
 
-Discriminating measurement: one build and one control-first capture must pair
-retail `--watch-pc 0x8008D5FC,0x80084860,0x80084AB8` rows with a port witness
-that tags the `0x80084860` entry/return to the `0x8008D5FC` caller (using its
-return address), records the callee's input loads/branch result, and retains
-the `0x8008D604` return row. Hcallee-entry selects the first argument/state
-mismatch; Hcallee-load selects the first load/branch mismatch after matching
-entry; Hcallee-return selects a first mismatch only at the callee return;
-matching all rows moves the search earlier than this callee. Hcoverage rejects
-the run.
+Discriminating measurement: one build and control-first capture must prove a
+host-hook control, prove the linked `funcs_20` detail call executes, and retain
+the existing `0x8008D604` row. A linked-call positive proves Htransport false;
+zero detail calls with a positive host control selects Htransport; missing
+phase controls selects Hcoverage. Only then compare retail
+`--watch-pc 0x8008D5FC,0x80084860,0x80084AB8` rows with callee inputs.
 
 Preparation and exact commands:
 
-1. Extend `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-   and `src/main/upstream_compat.cpp` with the tagged callee witness; apply
-   the regenerated-equivalent patch to
-   `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_20.c`.
+1. Inspect `nm build/libRecompiledFuncs.a`, the linked `funcs_20.c.o`, and the
+   exact executed `evaluateVoiceModulatorRecord` path; add a positive host-hook
+   control if needed. Keep detail rows phase-scoped and regeneration-safe.
 2. Build once:
    `cmake --build build --config Debug --target RogueSquadron64Recomp`
-3. Run one new `scratch/agent/run_s4087_*` recipe with the retail oracle
-   positive control first, `--watch-pc 0x8008D5FC,0x80084860,0x80084AB8`, and
-   the isolated direct-AUTOPILOT port arm. Capture under
-   `scratch/agent/s4087_*`; SIGKILL every arm and reject missing controls.
+3. Run one new `scratch/agent/run_s4088_*` recipe with the retail oracle
+   positive control, `--watch-pc 0x8008D5FC,0x80084860,0x80084AB8`, and the
+   qualified timing route. Capture under `scratch/agent/s4088_*`; SIGKILL
+   every arm and reject missing controls.

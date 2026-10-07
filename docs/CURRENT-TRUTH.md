@@ -389,16 +389,29 @@ zero. Hnext-return is selected: the first qualified mismatch is inside
 legitimate value is the guest return from `0x80084860`; the hooks are
 diagnostic-only.
 
+Session 4087 ran the callee-path discriminator. The retail oracle passed the
+whole-RDRAM positive control and both target phases; its hangar
+`0x8008D5FC -> 0x80084860` rows included varying nonzero returns. The first two
+port attempts were Hcoverage. A qualified timing retry reached title and
+hangar and retained 86 `0x8008D604` post-call rows, but the new detail hooks at
+`0x8008488C`, `0x800848A8`, and `0x800848C4` produced zero rows even though
+`funcs_20.c.o` references the hook symbol. The saved guest `ra` was zero in
+the existing callee witness, invalidating the planned return-address filter;
+removing that host-side filter still produced zero detail rows. The callee
+entry/load/return hypotheses remain unevaluable; the next discriminator is
+hook transport/linkage. ORIGIN: the new values are legitimate guest callee
+inputs and branch results; this was diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4l callee path for the `0x8008D5FC` call.** Ground and trace
-   `evaluateVoiceModulatorRecord` entry, its input loads, and its return for
-   the `a1=s0+0xC0` call path. The first matching/returning boundary moves the
-   search earlier inside that callee; a mismatch identifies its producer.
-   Do not infer from the already-qualified `0x8008D624` path or add a
-   mitigation.
+1. **M5 Step 4l witness transport for the `0x8008D5FC` call.** Resolve why
+   the qualified port executes the existing callee/post-call witnesses but
+   emits no new `funcs_20.c` detail-hook rows, despite the object referencing
+   the hook. Use one build/run with a positive host-hook control and inspect
+   the exact linked callee path before comparing values; do not infer from the
+   s4087 zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target

@@ -145056,3 +145056,22 @@ Hother-path are ruled out at this measured boundary; the first parser attempt
 is a documented Hcoverage dead end, not evidence. ORIGIN: the legitimate
 value is the guest return from `0x80084860` at `0x8008D5FC`; the hooks and
 summary counters are diagnostic-only.
+
+## Session 4087 (2026-10-06) — qualified callee route, detail hook unevaluable
+
+Ran the M5 callee-path discriminator with independent retail ground truth.
+The oracle passed the whole-RDRAM positive control and both target phases; its
+hangar `0x8008D5FC -> 0x80084860` executions showed varying nonzero returns.
+Two initial port attempts were Hcoverage: one scheduler crash and one
+fill-sample crash before target phases. The qualified timing retry reached
+title and hangar and produced 86 existing `0x8008D604` post-call rows.
+
+The new regeneration-safe detail hooks at `0x8008488C`, `0x800848A8`, and
+`0x800848C4` produced zero rows, although `funcs_20.c.o` contains an
+unresolved reference to the hook symbol. The existing callee witness reports
+saved guest `ra=0`, so the planned return-address filter was invalid; removing
+that host-side filter still produced zero detail rows. This does not select
+callee entry/load/return and does not identify a source writer. The next unit
+is a hook transport/linkage audit with a positive host-hook control. ORIGIN:
+the intended values are legitimate guest callee inputs and branch results;
+all changes were diagnostic-only.
