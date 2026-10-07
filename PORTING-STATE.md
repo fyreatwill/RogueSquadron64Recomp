@@ -145648,3 +145648,28 @@ out guard firing as the explanation for the qualified route's missing work.
 It does not prove every audio cause is closed, and it does not authorize a
 guard relaxation. ORIGIN: the legitimate table-root writer is the
 retail-observed `0x80096D88` path; no guest behavior or mitigation changed.
+
+## Session 4120 (2026-10-06) — qualified A9 voice-array-base guard audit
+
+Asked the retail oracle first with the whole-RDRAM positive control, physical
+watch of the allocator root, all twelve A9 execution PCs, and title/hangar
+phase gates. The control fired; retail reached title `0x00790400/1024` and
+hangar `0x006AB400/512`. The allocator writer at `0x8008F0EC` executed in
+hangar. Retail reached 10 of the 12 A9 PCs in hangar; the two remaining sites
+were reached overall but not in hangar.
+
+The generated source census found the two loop sites `0x80090E78` and
+`0x800913BC`, plus entry sites `0x80092138`, `0x800922C8`, `0x80092328`,
+`0x8009236C`, `0x800923A4`, `0x800923C0`, `0x80092450`, `0x80092494`,
+`0x800924F4`, and `0x80092568`. The single Debug build completed cleanly.
+Two initial port arms were route-invalid: one crashed pre-title in
+`spTaskSchedulerThread+9632` at guest PC `0x8000834C`, and one stalled at the
+640 phase. The documented qualified route with drain tick and C88 control
+reached title and hangar, fired the filter and init-voice positive controls,
+and recorded zero fires at all twelve A9 guards, with no crash or abort.
+
+This selects H-A9-legitimate at the measured scope and rules out A9 guard
+firing as the explanation for suppressed valid voice work. It does not prove
+all audio causes are closed, and no guard was changed. ORIGIN: the legitimate
+voice-array publisher is `allocateSongChannelArray` at `0x8008F0EC`; no
+mitigation or guest behavior changed.

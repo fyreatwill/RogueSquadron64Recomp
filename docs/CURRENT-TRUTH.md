@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4119 (2026-10-06).
+Updated for session 4120 (2026-10-06).
 
 ## Current state
 
@@ -71,6 +71,21 @@ positive control, and emitted 226 valid-range traversal rows plus 30 indexed
 table rows; neither A10 guard fired. H-A10-not-suppressing-valid-work is
 selected at this scope. This closes guard firing, not every possible audio
 cause, and no guard or writer behavior changed.
+
+Session 4120 completed the A9 voice-array-base guard census. The generated
+source contains 12 sites in `funcs_24.c`: loop sites `0x80090E78` and
+`0x800913BC`, plus ten entry sites from `0x80092138` through `0x80092568`.
+The retail oracle passed the whole-RDRAM control and reached title and hangar;
+the allocator writer at `0x8008F0EC` executed in hangar, and retail executed
+10 of 12 A9 PCs in hangar (the two remaining sites were overall-only). The
+qualified real-audio/LLE/ungated/solo/spin-yield port reached both target VIs,
+fired the filter and init-voice positive controls, and recorded zero fires at
+all 12 A9 guards. H-A9-legitimate is selected at this measured scope: no
+valid port work was suppressed by the guards, and no guard relaxation is
+authorized. The first two port attempts were route-invalid (one pre-title
+crash and one 640 stall) and were not used as A9 evidence. ORIGIN: the
+legitimate voice-array publisher is `allocateSongChannelArray` at
+`0x8008F0EC`; no mitigation or guest behavior changed.
 
 Generated-tree audits confirmed the relevant service and image functions exist outside this checkout and in the fixup inputs. Guard changes require an ORIGIN naming the legitimate writer; no force-clear, wait replacement, synthetic DMA, or default-on mitigation was authorized.
 
@@ -186,11 +201,10 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 8 continuation:** audit the next ranked complete
-   voice-array-base guard idiom class (A9) in `funcs_24.c`. Identify the
-   allocator writer and legitimacy, then build one phase-gated retail/port
-   census with positive controls. Do not relax a guard unless the writer and
-   valid range are independently proven.
+1. **M5 de-stubbing Step 8 continuation:** audit the A8 key-on
+   divide/overflow idiom class in `funcs_24.c`. Reconfirm the eight trap sites,
+   divisor publisher, and normal-tail/slot controls with one phase-gated
+   retail/port census. Do not remove or bypass a trap.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -223,6 +237,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 drain-tick policy | HDrainChangesOrdering remains qualified (s4103, independently requalified s4114). Session 4113's reverse-order rerun was Hroute-invalid because tick-off crashed pre-target; s4114 qualified both arms and again found differing joined stage/route-context tables. This does not establish tick-required behavior. |
 | M5 status-03 reaping | Hstatus03-chain-live selected at s4117's measured scope: silent port reached both phases with repeated service entry/exit pairs, and retail independently executed the named `0x8009B7EC` zeroing-store PC plus surrounding worker PCs. Exact port-side store-to-return synchronization remains diagnostic; no force-clear or wait change is authorized. |
 | M5 A10 voice/list/table guards | H-A10-not-suppressing-valid-work selected at s4119's measured scope: retail's independent `0x80096D88` writer reached the target table root (371 hangar writes), while the qualified port reached both phases with valid traversal/table rows and zero A10 guard fires. No guard relaxation is authorized. |
+| M5 A9 voice-array-base guards | H-A9-legitimate selected at s4120's measured scope: retail reached the allocator writer and 10/12 A9 PCs in hangar; the qualified port reached both phases with positive controls and zero fires at all 12 A9 guards. No guard relaxation is authorized. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary
