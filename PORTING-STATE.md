@@ -146259,3 +146259,19 @@ remains unusable caller evidence. ORIGIN: legitimate retail entry/body and
 port setup/store rows; no value was suppressed or rewritten. Evidence:
 `docs/M5-S4152-CALLER-STATE-SPLIT.md` and
 `scratch/agent/s4152_m5_caller_state_join/`.
+## Session 4153 (2026-10-07) — qualified M5 producer entry/body object join
+
+The rebuilt port and independent retail oracle both passed the whole-RDRAM
+positive control and title/hangar phase gates. The retail oracle watched
+`0x800078E0` and `0x800078EC` in one phase-gated run. At title, entry and
+first body rows shared `s0=0x801BB9B0`, `s1=0x88`, and source word
+`0xE51EE75C`; at hangar, entry and body preserved `s0=0x8065E0A0`,
+`s1=0x1C`. The port setup/store rows were consistent with the phase-specific
+body boundary but stored zero values. H-entry-body-shared is selected. This
+rules out an entry-to-body producer-state transition as the explanation for
+the port zero payload, but leaves the earlier nonzero producer open. ORIGIN:
+the legitimate retail entry/body state and port source-construction stores;
+no guest, audio, wait, cap, predicate, slot, or writeback behavior changed.
+The new body field-dump arm was added to
+`scratch/agent/run_s4152_m5_caller_state_join.sh`; the ordinary Debug target
+rebuilt successfully. Evidence: `docs/M5-S4153-PRODUCER-OBJECT-BODY-SHARED.md`.

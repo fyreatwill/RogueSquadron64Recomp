@@ -1,39 +1,34 @@
-# Next work unit: join producer entry/body object state
+# Next work unit: pre-clear producer provenance
 
-HYPOTHESIS-ID: m5-producer-object-body-join
+HYPOTHESIS-ID: m5-pre-clear-producer-provenance
 
-Use the s4152-qualified phase-specific caller-state split to determine
-whether retail's `rs_memset` entry state persists into the `0x800078EC` body
-and whether the port's zero-fill context diverges before the store.
+Determine whether retail's nonzero source-span writer before the legitimate
+`0x800078EC` clear is absent from the port or is present and subsequently
+overwritten.
 
-Competing hypotheses and the discriminator:
+Competing hypotheses and discriminator:
 
-- H-entry-body-shared: retail entry and body preserve the same producer
-  object/state. Discriminator: phase-keyed `s0`, `s1`, and pointed-field rows
-  match between `0x800078E0` and `0x800078EC`; the port setup/store tuple is
-  consistent with that object.
-- H-entry-body-split: retail changes producer object/state between entry and
-  body, or the port's setup object is not the retail body object.
-  Discriminator: an independently phase-keyed `s0`, `s1`, or pointed-field
-  difference appears, with the positive controls still valid.
-- H-route-invalid: a control or target phase is absent in either arm.
-  Discriminator: missing whole-RDRAM control or title/hangar bucket invalidates
-  the comparison.
+- H-port-preclear-absent: the retail writer-PC histogram has nonzero stores
+  before `0x800078EC`, while the same phase-gated port writer census has no
+  corresponding nonzero source-span writer. This proves a missing port-side
+  producer boundary.
+- H-port-preclear-overwritten: the port has a nonzero source-span writer
+  before its clear, but the later zero clear overwrites it. Matching writer
+  order and a nonzero pre-clear port sample select this explanation.
+- H-route-invalid: either arm lacks the whole-RDRAM control or a target phase;
+  no provenance conclusion is valid.
 
-Exact work:
+Exact work: adapt the existing source-span writer-census recipe to watch the
+same aligned source range and scalar post-store values in one rebuilt port /
+retail pair. Use `--pc-hist-phase` and `--post-value-watch`/`--post-store-
+scalar` for the retail arm, and the existing phase-scoped port source-span
+writer rows. Run from `build/` for at least 75 seconds with the fixed
+two-second launch stagger if needed; kill both processes with SIGKILL. Retain
+the whole-RDRAM positive control and title `0x00790400/1024` plus hangar
+`0x006AB400/512` phase gates. Do not change guest, audio, wait, cap,
+predicate, slot, or writeback behavior.
 
-1. Build once with `cmake --build build --config Debug --target
-   RogueSquadron64Recomp` after adding only a retail-oracle
-   `--pc-field-dump 0x800078EC` arm to the existing s4152 recipe; retain
-   `--pc-field-dump 0x800078E0`, source-span watch, whole-RDRAM control, and
-   both phase gates.
-2. Run the retail oracle and port concurrently for at least 75 seconds from
-   `build/`, with SIGKILL cleanup. If the known startup race recurs, use the
-   existing two-second launch stagger as the fixed route; do not alter guest,
-   audio, wait, cap, predicate, slot, or writeback behavior.
-3. Inspect bounded summaries only. Do not use generated port `ra=0` as caller
-   evidence.
-
-Expected outcomes: matching entry/body fields selects H-entry-body-shared;
-an independently phase-keyed field/object difference selects
-H-entry-body-split; missing controls or phases selects H-route-invalid.
+Expected outcomes: nonzero retail writers with no port counterpart selects
+H-port-preclear-absent; a nonzero port writer followed by the known clear
+selects H-port-preclear-overwritten; missing controls/phases selects
+H-route-invalid.
