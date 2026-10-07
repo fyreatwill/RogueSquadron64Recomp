@@ -1272,6 +1272,49 @@ extern "C" void rs64_m5_route_exact_load(uint8_t* rdram, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_audio_channel_load(uint8_t* rdram, uint32_t pc,
+                                               uint32_t base, uint32_t offset,
+                                               uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_AUDIO_CHANNEL_LOAD");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || rdram == nullptr || pc != 0x8008D5E4u) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
+                              (width == 512u && origin == 0x006AB400u);
+    if (!target_phase) return;
+    static std::mutex mutex;
+    static bool control_seen = false;
+    static uint32_t rows[2] = {};
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (!control_seen) {
+        control_seen = true;
+        std::fprintf(stderr,
+            "[m5-audio-channel-load-control] pc=0x%08X base=0x%08X offset=0x%X value=0x%08X\n",
+            pc, base, offset, value);
+        std::fflush(stderr);
+    }
+    if (rows[slot] >= 128u) return;
+    uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &route_row, &exit_reason, &arm);
+    std::fprintf(stderr,
+        "[m5-audio-channel-load] row=%u phase=%u width=%u origin=0x%06X arm=%s "
+        "pc=0x%08X base=0x%08X offset=0x%X effective=0x%08X value=0x%02X "
+        "route_ordinal=%u route_row=%u active=%u exit=%d\n",
+        rows[slot]++, rs64_phase_ord(), width, origin, arm ? arm : "n/a", pc,
+        base, offset, base + offset, value & 0xFFu, ordinal, route_row,
+        active ? 1u : 0u, exit_reason);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
                                                 uint32_t addr,
                                                 uint32_t value);

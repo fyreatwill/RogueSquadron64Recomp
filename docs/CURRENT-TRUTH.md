@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4077 (2026-10-06).
+Updated for session 4078 (2026-10-06).
 
 ## Current state
 
@@ -269,15 +269,28 @@ PCM/image payload is downstream or in a later producer/transform boundary, not
 evidence that this store was skipped. ORIGIN: the legitimate writer is the
 guest `sb` at `0x80094648`; the witness remains diagnostic-only.
 
+Session 4078 grounded the next consumer before instrumentation: retail read the
+physical `0x00141AD8..0x00141AEC` span 89,976 times after the whole-RDRAM
+positive control, and the only exact generated reader is `0x8008D5E4` in
+`tickAllAudioChannels`. A regenerated port witness at that load reached title
+and hangar, with 256 sampled rows and hangar activity before the phase budget;
+effective addresses covered `0x80141AD8..0x80141AEC`, and sampled values were
+`0x7F`, matching the qualified writer value. Hconsumer-live is selected: the
+indexed channel span is consumed on the port, so the zero PCM/image payload is
+downstream of this load. The first oracle-first schedule crashed at the known
+pre-target scheduler boundary; the port-first retry qualified the controls and
+is the result used here.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4 downstream boundary.** Use the qualified `0x80094648` store
-   rows as the source-side anchor and identify the next phase-gated writer or
-   transform that should carry its channel bytes into the image/PCM path.
-   Require the retail whole-RDRAM/title/hangar controls plus a same-run port
-   join; do not change the gate or add a mitigation from a port-only zero.
+1. **M5 Step 4 next transform.** Use the qualified `0x8008D5E4` load as the
+   consumer-side anchor and identify whether its scaled result reaches the
+   following `setVoiceModulationParams` call at `0x8008D710` and downstream
+   voice state. Require retail execution evidence for the corresponding
+   `0x800923E4` target, a same-run port call witness, and title/hangar controls;
+   do not change the gate or add a mitigation from a port-only zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -299,6 +312,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
+| M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. The next open boundary is the scaled result into voice modulation/state. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |

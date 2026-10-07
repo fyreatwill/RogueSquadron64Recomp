@@ -144856,3 +144856,26 @@ legitimate writer is the guest `sb` at `0x80094648`; the host witness is
 diagnostic-only. The script's legacy phase-count expression reported
 Hcoverage despite the raw phase and witness markers; the raw markers are the
 result evidence.
+
+## Session 4078 (2026-10-06) — qualified 94648 channel-span consumer
+
+Ground truth ran first with the retail oracle. Its whole-RDRAM positive control
+reached 10,000 callbacks, title 1024, and hangar 512; a physical read watch on
+`0x00141AD8..0x00141AF0` recorded 89,976 reads. Bounded generated-source
+inspection identified the exact consumer load as `0x8008D5E4` in
+`tickAllAudioChannels`, following the `0x80094648` indexed writer.
+
+The first same-build oracle-first port attempt was invalid: it crashed at the
+known `spTaskSchedulerThread+9632` boundary while still at VI 320, so no port
+null was interpreted. The fixed port-first/oracle-second retry passed the
+retail positive control and port title/hangar gates. The regeneration-safe
+port witness fired in both target phases; its 256 sampled rows included
+effective addresses across `0x80141AD8..0x80141AEC`, all sampled as `0x7F`,
+matching the qualified writer value. The hangar phase produced 2430 raw
+phase-marker rows before the bounded witness budget.
+
+This selects Hconsumer-live and rules out a skipped or value-divergent port
+read at this boundary. It does not prove PCM/image production: the paired
+image joins still show zero payload. The next boundary is the scaled result
+from this load into the `setVoiceModulationParams` call at `0x8008D710`.
+The instrument is diagnostic-only; no guest behavior or gate changed.
