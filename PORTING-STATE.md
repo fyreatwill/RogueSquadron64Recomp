@@ -145960,3 +145960,15 @@ retail ordering nor the worker's broader contract. No wait replacement,
 force-clear, status guard, or guest behavior changed. ORIGIN: the legitimate
 writer is the guest `0x8009B7EC` service store; `03 -> 00` is legitimate
 reaping state.
+
+## Session 4137 (2026-10-07) — M3 runtime qualification blocked by environment
+
+Ran the prescribed M3 environment discriminator before selecting the next
+unit. `command -v mips64-elf-gcc` and `command -v mips64-elf-ld` both returned
+no path. `cmake --build build --config Debug --target PatchesLib` then failed
+with `No rule to make target PatchesLib`. H-m3-toolchain-absent and
+H-m3-target-missing are selected; runtime guard behavior is not inferred from
+the ordinary host target. This closes the allowed host-only check and pivots
+the next unit to the paired M5 source-producer route repair. ORIGIN: the tested
+boundary is the configured `PatchesLib` target and its MIPS GCC/LD dependency;
+no allocator writer, guard, or runtime behavior changed.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4136 (2026-10-07).
+Updated for session 4137 (2026-10-07).
 
 ## Current state
 
@@ -108,6 +108,15 @@ installed Clang also has no MIPS backend, and local filesystem checks found no
 toolchain or rebuildable source tree. The sentinel guard's ORIGIN is
 `heap_tail_loc` and the active-queue append stores; a predecessor on the
 sentinel path is not legitimate ownership state.
+
+Session 4137 ran the prescribed M3 environment discriminator. `command -v`
+found neither `mips64-elf-gcc` nor `mips64-elf-ld`, and
+`cmake --build build --config Debug --target PatchesLib` failed with
+`No rule to make target PatchesLib`. H-m3-toolchain-absent and
+H-m3-target-missing are selected; no runtime guard behavior is inferred from
+the ordinary host target. ORIGIN: the tested boundary is the configured
+`PatchesLib` target and its MIPS GCC/LD dependency; no allocator writer,
+guard, or runtime behavior changed.
 
 Session 4125 completed the remaining cursor/active-queue alias idiom at the
 checked-in patch boundary. `func_80007D74` now walks the bounded active queue
@@ -412,18 +421,15 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Qualify the new M3 pre-publication guard** on a host with
-   `mips64-elf-gcc` and `mips64-elf-ld`, then runtime-test valid and overlapping
-   ownership cases. The ordinary host target passes, but this macOS CMake
-   configuration has no `PatchesLib` target and the integration discriminator
-   failed in session 4133; do not spend another host-only iteration or infer
-   runtime behavior from the host build alone.
-2. **M5 source-producer context census (repair the paired route):** rerun the
+1. **M5 source-producer context census (repair the paired route):** rerun the
    same retail-gated writer/context table, then run the canonical port with a
    phase-scoped source table and enough route controls to reach hangar. Keep
    image, wait, cap, predicate, slot state, guest behavior, and host writeback
    unchanged. Fix the oracle watch-index table before post-value evidence.
    A qualified retail/port context match or split is the discriminator.
+2. **M3 pre-publication guard runtime qualification** remains blocked on a host
+   with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
+   do not spend another host-only iteration.
 3. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
    writer and terminal table only when the pending `chCount=16` call appears
    on a qualified route. Keep the cap and wait unchanged.

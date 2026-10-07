@@ -1,27 +1,29 @@
-# Next work unit: qualify the M3 pre-publication ownership guard
+# Next work unit: repair the paired M5 source-producer route
 
-HYPOTHESIS-ID: m3-prepublication-guard-runtime
+HYPOTHESIS-ID: m5-source-producer-context
 
-The status-03 join is complete at single-source port scope; do not repeat it.
-Runtime qualification of the checked-in M3 guard requires a host with the MIPS
-GCC/LD toolchain, so first perform the one allowed environment discriminator.
+The M3 runtime discriminator is closed for this host: do not repeat a
+host-only PatchesLib check. Repair the paired retail/port source-producer
+capture, keeping guest behavior and all mitigations unchanged.
 
 Competing hypotheses and discriminator:
 
-- H-m3-toolchain-present: `mips64-elf-gcc` and `mips64-elf-ld` are available and
-  the configured `PatchesLib` target can be built.
-- H-m3-toolchain-absent: one or both cross tools are unavailable, so runtime
-  guard qualification cannot run on this host.
-- H-m3-target-missing: the tools exist but this CMake graph still has no
-  `PatchesLib` target; no runtime guard conclusion is allowed.
+- H-retail-port-writer-match: the same phase-keyed source writer/context table
+  matches between retail and a qualified canonical port hangar run.
+- H-port-writer-context-split: both routes reach the phase, but the writer PC,
+  source span, or value-producing context differs.
+- H-route-invalid: the port does not reach hangar or the retail watch is not
+  phase-keyed, so the comparison is unevaluable.
 
-The single discriminating measurement is command/tool discovery plus
-`cmake --build build --config Debug --target PatchesLib`. Tool presence and a
-successful target build select H-m3-toolchain-present; missing tools select
-H-m3-toolchain-absent; `No rule to make target PatchesLib` selects
-H-m3-target-missing. Do not infer runtime behavior from the ordinary target.
+The single discriminating measurement is one rebuilt run containing the full
+retail-gated phase-keyed writer/context table and the canonical port arm with
+route controls sufficient to reach title 1024 and hangar 512. A qualified
+retail/port match selects H-retail-port-writer-match; a qualified split selects
+H-port-writer-context-split; either missing phase or missing phase-keyed retail
+join selects H-route-invalid. The oracle whole-RDRAM positive control must fire
+in the same run.
 
-Exact commands: `command -v mips64-elf-gcc; command -v mips64-elf-ld`; then
-the PatchesLib build above. If the tools and target are available, the next
-iteration must run one valid-path and one overlap case; otherwise record the
-environment blocker and pivot to the paired M5 source-producer route repair.
+Use the existing source-producer capture recipe and fix its oracle watch-index
+table before trusting post-value rows. Batch all counters in one build/run;
+do not alter image, wait, cap, predicate, slot state, guest behavior, or host
+writeback.
