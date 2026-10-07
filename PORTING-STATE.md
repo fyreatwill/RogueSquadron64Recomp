@@ -144924,3 +144924,22 @@ neither a setup register nor a first divergence is qualified. This rules out
 using the port-only title rows to identify the producer; it does not overturn
 Htransform-value. The next run must reuse the exact qualified s4079 route
 recipe before interpreting setup nulls.
+
+## Session 4081 (2026-10-06) — qualified voice-modulation setup divergence
+
+Ran the corrected direct-AUTOPILOT route from `build/` with the regenerated
+setup witness at `0x8008D70C`, while the retail oracle carried the whole-RDRAM
+positive control, title 1024, and hangar 512 phase controls. The port reached
+both target phases and emitted 256 channel-load, setup, call, and state rows;
+the hangar setup bucket contained 128 rows. The setup rows consistently showed
+`s2=0`, `s0=0`, `v1=0`, `a1=0`, `a3=0`, and `scaled=0`, with `s3` matching the
+nonzero prepared `a2` values. The paired s4079 retail oracle had nonzero
+hangar call inputs, so Hsetup-divergent is selected and the producer search
+moves earlier than `0x8008D70C`.
+
+The first probe-wrapper retry was invalid because it reached only title before
+its watchdog; the next retry crashed before title at `fillSampleStreamRange`.
+Those runs are Hcoverage and were not used for the setup conclusion. The
+direct-AUTOPILOT run is the qualified result. This rules out Hsetup-live at
+the measured setup boundary, but does not identify which earlier writer leaves
+`s2`/`s0` zero.

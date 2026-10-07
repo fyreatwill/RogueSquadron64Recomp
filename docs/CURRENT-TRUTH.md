@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4078 (2026-10-06).
+Updated for session 4081 (2026-10-06).
 
 ## Current state
 
@@ -311,17 +311,25 @@ divergence and Htransform-value remains unchanged. The fresh oracle attempt
 did fire its whole-RDRAM positive control but was terminated at the wrapper
 layer before target-phase output, so it adds no new retail phase evidence.
 
+Session 4081 reran the witness on the exact qualified direct-AUTOPILOT s4079
+route. Retail passed the whole-RDRAM, title, and hangar controls; the port
+produced 256 channel-load, setup, call, and state rows, including 128 hangar
+setup rows. Every sampled setup row had `s2=0`, `s0=0`, `v1=0`, `a1=0`,
+`a3=0`, and `scaled=0`; `s3` matched nonzero prepared `a2`. Together with
+s4079's paired retail nonzero call inputs, Hsetup-divergent is selected: the
+first qualified zero inputs are already present at the setup boundary, so the
+producer search moves earlier. ORIGIN: the legitimate transform inputs are
+the guest setup registers before `0x8008D70C`; this is diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4f call-input producer.** Re-run the new setup witness using the
-   exact qualified s4079 `tools/probe.sh` route and a correctly supervised
-   retail oracle. Require whole-RDRAM, title, and hangar controls plus
-   hangar setup rows before interpreting values. A qualified zero in `$s2`,
-   `$s3`, or `$s0` identifies the first producer boundary; matching setup
-   values pivot earlier; missing hangar rows remain Hcoverage. Do not change
-   the gate or add a mitigation from a port-only zero.
+1. **M5 Step 4g earlier setup producer.** Audit the writers feeding the
+   zero-valued `$s2`/`$s0` at `0x8008D70C`, using the same retail controls and
+   qualified direct-AUTOPILOT route. Batch the next whole setup/input witness
+   in one run; matching retail values move earlier, while absent rows remain
+   Hcoverage. Do not change the gate or add a mitigation from a port-only zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -344,7 +352,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
-| M5 voice modulation transform | Htransform-value selected at s4079 call-input scope: retail executes `0x800923E4` from `0x8008D710` with nonzero hangar inputs, while qualified port rows carry zero `a1`/`a3`/scaled values. The first two probe-route attempts were invalid; the direct AUTOPILOT image route qualified both phases. |
+| M5 voice modulation transform | Hsetup-divergent selected at s4081: the qualified setup boundary already has zero `s2`/`s0`/`a1`/`a3`/scaled in hangar, while s4079's paired retail calls had nonzero inputs. Search moves to the earlier producer. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
