@@ -1,32 +1,34 @@
-# Next work unit: M5 Step 4 hangar writer qualification
+# Next work unit: M5 Step 4 port writer-path audit
 
-HYPOTHESIS-ID: m5-audio-step4-hangar-writer
+HYPOTHESIS-ID: m5-audio-step4-port-writer-path
 
-Session 4074 qualified the isolated default image after the concurrent image /
-silent pair was route-invalid. The image-only arm passed the retail
-whole-RDRAM/title/hangar controls and reached hangar with DMEM change, two
-DMAs, image exit at `0x1328`, SP completion, and guest receive; stage-3 and
-PCM source/consumer payloads were zero. The gate stayed zero.
+Session 4075 qualified retail `0x80094648` as a legitimate nonzero indexed
+channel-span writer, but the port's `startSongSequence` witness reached only
+entry/branches and no target store. The port reached both target phases, with
+positive gate/source/consumer controls and zero PCM payload.
 
 Competing hypotheses:
 
-- H94648-writer: retail's `0x80094648` writer/value/destination class is the
-  hangar source boundary and the port has a corresponding gate/output row.
-- Hother-writer: retail reaches hangar with the named class absent or
-  non-matching, so another ranked writer class owns the missing output.
-- Hcoverage: retail whole-RDRAM/title/hangar or isolated image phase coverage
-  fails, making writer nulls unevaluable.
+- H94648-port-store: the port reaches the indexed store after a missing or
+  unobserved predecessor; the next capture will show a retail-shaped target
+  store destination/value relation.
+- H94648-port-branch: a branch/state/input mismatch prevents the target store;
+  the full entry-to-branch trace will show the divergent predicate and no
+  target store despite valid phase/task controls.
+- Hcoverage: the isolated image route loses title/hangar or writer witness
+  coverage, making the port null unevaluable.
 
 Discriminating measurement: one same-build retail-gated isolated image capture
-with the existing phase-keyed task/PCM joins plus the retail writer/value
-watch for `0x80094648` and its destination. H94648-writer requires retail
-hangar attribution and a matching port gate/PCM row; Hother-writer requires
-valid controls with no matching `0x80094648` attribution; Hcoverage is selected
-by any missing whole-RDRAM, title, hangar, or isolated-image gate.
+with the existing phase-keyed task/PCM joins and the complete port
+`startSongSequence` writer trace, including entry/branch/target-store rows.
+H94648-port-store requires valid controls plus a target-store row matching the
+retail destination/value relation; H94648-port-branch requires valid controls
+plus entry/branch rows and zero target stores; Hcoverage is selected by any
+missing whole-RDRAM, title, hangar, or isolated-image gate.
 
-Exact implementation: start from the existing retail oracle and isolated image
-driver, batch the single `0x80094648` writer/value/destination watch with the
-existing task/PCM joins, run from `build/`, retain
-`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`, and SIGKILL the
-process group. Do not change the gate; there is no behavior rollback arm for
-this qualification capture.
+Exact implementation: reuse `scratch/agent/run_s4075_m5_step4_94648.sh`, keep
+the retail whole-RDRAM/title/hangar and `0x80094648` controls, and add only the
+missing port-side target-store fields to the existing generated-function
+fixup/instrument. Build once, run once from `build/`, retain
+`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`, and SIGKILL the process
+group. Do not change the gate or add a mitigation.

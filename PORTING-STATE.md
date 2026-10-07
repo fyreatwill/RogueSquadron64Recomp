@@ -144790,3 +144790,28 @@ Ran the planned M5 Step 1 re-baseline after rebuilding the ordinary Debug target
 Ran the fixed image-only capture with the same retail controls, removing concurrent-arm topology. The isolated image reached title and hangar without a crash. At hangar it changed DMEM (`changed=959`), emitted two DMA ranges, exited at image PC `0x1328`, returned `Broke`, entered and returned SP completion, delivered the external SP message, and reached guest receive. The stage-3 image destination and PCM source/consumer rows all remained zero (`FNV=0x762B22A5`, `nz=0`); the MusyX gate remained zero. This qualifies the image task/DMEM/DMA/SP/service chain at the isolated route and leaves the named hangar-output writer boundary open.
 
 The result rules out treating the first pair's image crash as evidence of an image-contract null, and rules out a missing image dispatch, DMEM activity, DMA activity, image exit, or SP completion on the isolated route. It does not identify the zero producer, prove the SDL sink is at fault, or authorize changing the gate. Next is the retail-grounded `0x80094648` hangar writer/value/destination qualification.
+
+## Session 4075 (2026-10-06) — qualified retail 94648 writer against port path
+
+Ran the same-build retail-gated isolated image capture with the batched
+`0x80094648` writer/value/destination watch and the existing phase-keyed task
+and PCM joins. The retail oracle passed the whole-RDRAM positive control and
+reached title `0x00790400/1024` and hangar `0x006AB400/512`. The named PC
+produced 88 hangar-bucket execution rows; post-store scalar sampling reported
+72 nonzero samples, mismatch=0, at physical destinations
+`0x00141AD8..0x00141AEC`.
+
+The isolated image port independently reached title and hangar, with positive
+gate, source, consumer, and image-task controls. Its `startSongSequence`
+writer witness reached entry and branch rows in hangar but no target-store row;
+the stage-3 and PCM source/consumer payloads retained the zero signature
+(`FNV=0xF59C39C5`, `nz=0`). The port run had no crash or abort.
+
+This refutes Hcoverage and selects H94648-port-path-gap over Hother-writer at
+this scope: independent retail evidence proves `0x80094648` is a legitimate
+nonzero indexed channel-span writer, while the paired port does not reach its
+corresponding store. The positive port gate is not sufficient to claim PCM
+production. ORIGIN: `0x80094648` is the legitimate retail indexed writer to
+the watched channel span; no mitigation, gate change, or behavior change was
+made. Evidence lines are the independent retail oracle attribution and the
+paired port writer/task/PCM witness.
