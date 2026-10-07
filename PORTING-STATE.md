@@ -146481,3 +146481,15 @@ not explain the upstream zero source payload. ORIGIN: `rsp.cpp` owns the
 staging DMA size and the OSTask declaration is legitimate; no mitigation or
 game behavior changed. Evidence: `docs/M5-S4164-TASK-STAGING.md` and
 `scratch/agent/soak_results/s3977_m5_task_staging/`.
+
+## Session 4165 (2026-10-07) — compacted current truth maintenance record
+
+The mandated maintenance check found `docs/CURRENT-TRUTH.md` at 60,399 bytes
+and 837 lines, over the 60,000-byte threshold. No experiment or build was run.
+Compacted the document to 9,493 bytes and 134 lines, retaining the active M5
+Step 4 work unit, durable evidence boundary, live hypotheses, superseded
+conclusions, operating rules, and evidence index. Session-level detail remains
+in this append-only ledger and durable background remains in
+`docs/PROJECT-OVERVIEW.md`. The compaction removed more than 200 lines and did
+not change code, runtime behavior, or any hypothesis. ORIGIN: documentation
+maintenance only; no game writer or value was changed.

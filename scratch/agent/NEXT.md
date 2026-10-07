@@ -2,31 +2,25 @@
 
 HYPOTHESIS-ID: m5-step4-gate-consumer-edge
 
-Session 4164 closed the declared-size staging qualification: `0x800` reaches
-both target phases with the full measured task/SP/route contract, while the
-legacy `0xF80` arm adds DMEM writes without a downstream change. Do not repeat
-Step 3 or the pre-clear writer census.
+The maintenance iteration compacted CURRENT-TRUTH and ran no experiment.
+Next, inspect Step 4 of `docs/M5-AUDIO-PLAN.md` and qualify its named
+gate/consumer edge with one rebuilt port and independent retail ground truth.
+Batch the real-image and silent arms in the same build/run; do not repeat Step
+3 staging or the pre-clear census.
 
 Competing hypotheses and discriminator:
 
-- H-gate-or-consumer-edge: the named Step 4 gate/consumer boundary changes a
-  downstream slot/PCM join when its writer and value match retail.
-- H-upstream-zero-payload: the named edge remains unchanged because the
-  source payload is already zero before it can affect the consumer.
-- H-route-invalid: the paired retail/port phase controls do not qualify, so
-  no gate or consumer conclusion is allowed.
+- H-gate-or-consumer-edge: the named Step 4 edge changes a downstream
+  slot/PCM join when its writer and value match retail.
+- H-upstream-zero-payload: the edge remains unchanged because the source is
+  already zero before the consumer boundary.
+- H-route-invalid: whole-RDRAM, title VI 1024, or hangar VI 512 controls fail,
+  so no gate/consumer conclusion is allowed.
 
-Discriminating measurement: before changing anything, use the existing
-qualified retail writer/value evidence and one rebuilt port with the selected
-Step 4 consumer/gate probe. Require whole-RDRAM control, title VI 1024,
-hangar VI 512, matching writer/value tuples, and the same phase-keyed chain
+Discriminating measurement: require positive controls plus phase-keyed tuples
 through task/SP completion, slot/status transition, PCM source, and consumer.
-If the named edge changes a downstream join in the declared arm while the
-silent arm remains the rollback control, select H-gate-or-consumer-edge. If
-the source is zero before the edge in both arms, select H-upstream-zero-
-payload. Missing phase controls select H-route-invalid.
+Select H-gate-or-consumer-edge only if the named edge changes in the declared
+real-image arm while silent is the rollback control; select H-upstream-zero-
+payload only if both arms prove zero before that edge.
 
-Exact commands: inspect `docs/M5-AUDIO-PLAN.md` Step 4 and the current truth
-entry for the named writer/consumer; batch both real-image and silent arms in
-one build; run from `build/` with phase-gated controls; kill games with
-SIGKILL; capture each arm separately.
+Run from `build/`, capture each arm separately, and kill games with SIGKILL.
