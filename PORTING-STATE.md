@@ -146186,3 +146186,25 @@ runs, not the source-state hypothesis.
 
 ORIGIN: retail setup-PC execution and predecessor witnesses; no guest
 behavior, audio wait, cap, predicate, slot state, or host writeback changed.
+
+## Session 4150 (2026-10-07) — qualified shared M5 source-setup state
+
+Added the regeneration-safe hangar setup predecessor/state witness to the
+fixup and regenerated `funcs_28.c` at `0x800AB68C`, `0x800AB690`, and
+`0x800AB694`. Built the ordinary Debug target once and ran one paired
+retail-oracle/port capture with the whole-RDRAM positive control and title
+`0x00790400/1024` plus hangar `0x006AB400/512` phase gates. All controls passed;
+the port had no crash or abort.
+
+The port title setup tuple was destination `0x801797B0`, length `0x298`,
+`s0=0x12`, `s1=0x561F`, `t0=1`, `t1=0`, matching the retail setup-PC state
+family. The dominant hangar tuple was `a0=0x80165E50`, length `0xC`,
+`s0=0`, `s1=0x800D0000`, `t0=t1=4`, matching retail's `0x800AB690 ->
+0x800AB694` rows. H-shared-source-state is selected at this setup boundary;
+the next open boundary is the later `0x800078EC` producer/context join. This
+rules out the setup-state split as the explanation for the zero source
+payload. ORIGIN: legitimate guest setup arguments and state observed by two
+independent instruments; no guest behavior, audio wait, cap, predicate, slot
+state, or writeback mitigation changed. Evidence:
+`docs/M5-S4150-SOURCE-SETUP-SHARED.md` and
+`scratch/agent/s4150_m5_source_setup/`.

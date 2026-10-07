@@ -3,14 +3,16 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4149 (2026-10-07).
+Updated for session 4150 (2026-10-07).
 
-Session 4149 repaired the regeneration-safe setup probe and ran the retail
-setup-PC control, but the concurrent port stayed at VI 640, so the planned
-setup/state join is route-invalid. Retail setup PCs `0x8008F2A8/BC/C0/C4/C8`
-each hit twice with predecessor `0x80001C90`; hangar `0x800AB694` hit 437 times
-with predecessor `0x800AB690`. No shared/split setup-state conclusion is
-selected. Evidence: `docs/M5-S4149-SOURCE-SETUP-ROUTE-INVALID.md`.
+Session 4150 qualified the repaired setup/state join with the independent
+retail oracle. The port and oracle both passed whole-RDRAM/title/hangar
+controls. Port title setup matched retail's `s0=0x12`, `s1=0x561F`,
+destination `0x801797B0`, length `0x298`; the dominant hangar setup matched
+retail at `a0=0x80165E50`, `s0=0`, `s1=0x800D0000`, `t0=t1=4`, length `0xC`.
+H-shared-source-state is selected at this setup boundary. The zero source
+payload therefore remains open at the later `0x800078EC` producer/context
+join. Evidence: `docs/M5-S4150-SOURCE-SETUP-SHARED.md`.
 
 ## Current state
 
@@ -557,11 +559,12 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-construction predecessor/state join retry:** use the repaired
-   setup fixup and a route-stable paired capture. Keep the retail setup-PC
-   watches, but avoid high-frequency oracle watches that starve the port; retain
-   whole-RDRAM and both phase controls. Do not use generated `ra=0` as caller
-   evidence.
+1. **M5 source-construction producer/context join:** use the now-qualified
+   shared setup tuples to join the phase-gated `0x800078EC` source stores to
+   their immediate caller/return context in a route-stable paired
+   retail-oracle/port capture. Keep whole-RDRAM and both phase controls; do not
+   change guest behavior, audio waits, caps, predicates, slot state, or
+   writeback. Do not use generated `ra=0` as caller evidence.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -581,6 +584,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 voice modulation transform | Hlater-transform selected at s4091's first demonstrated boundary: the port `0x80084AB8` return values are the low 16 bits of `s0` after the source `andi`, and every sampled port value (`0`, `0xF00`, `0x1900`, `0x2000`, `0x3F80`) occurs in the qualified retail title/hangar support. The independent rows are not record-synchronized, so a later transform remains open. |
 | M5 route failure | H-image-specific-failure remains selected at s4116's measured scope: the silent arm reached title/hangar, while the real-audio/image arm crashed pre-title in `spTaskSchedulerThread+9632`; the image arm's status/source nulls are unevaluable. Earlier declared/legacy image qualifications remain valid for their own schedules. |
 | M5 image zero boundary | Hguest-zero-producer selected at s4112: both qualified port arms recorded 664 zero-valued `0x800078EC` stores into `0x178C80..0x178F18` before the zero input reads; host `rsp_dmem_to_rdram` writes were downstream zero writeback. Retail independently reached both phases and recorded nonzero span bytes. |
+| M5 source setup state | H-shared-source-state selected at s4150: independent retail and port setup tuples matched for the title clear and dominant hangar source-construction calls. The setup boundary is not the explanation for the later zero `0x800078EC` producer payload. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
@@ -643,6 +647,11 @@ The s4088 conclusion that detail-hook transport remained open is superseded
 by s4089: it was believable because the first positive control was attached
 to an unqualified callsite, but moving it to `0x8008D604` fired the synthetic
 row and exposed genuine detail rows.
+
+The s4149 setup/state route-invalid conclusion is superseded by s4150: it was
+believable because the concurrent port stayed at VI 640, but the repaired
+route-stable capture reached both target phases and independently matched the
+retail setup tuples. The setup boundary remains open only as a causal null.
 
 ## Durable operating rules
 
