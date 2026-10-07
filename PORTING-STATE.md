@@ -146827,3 +146827,16 @@ symbol and guest PC. Neither port arm reached a target phase or emitted an
 body mismatch versus parity unevaluable; it does not select a body input or
 authorize an audio, gate, writer, payload, or mitigation change. The recipe
 correction is retained for the next canonical-route retry.
+## Session 4184 (2026-10-07) — requalified M5 object-body witness on canonical route
+
+Restored the canonical autopilot schedule and `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`
+in `scratch/agent/run_s4182_m5_object_body.sh`, then ran the paired oracle/port
+measurement. The whole-RDRAM positive control, both retail target phases, both
+port target phases, and 130 port body rows qualified: 59 title and 71 hangar.
+At the shared hangar body entry, port rows matched retail `a0/a1/a2`, `s0/s1`,
+and the first derived store value. Retail and port also matched the field tuple
+`s0=0x48`, `s1=0x1B000`, zero source word/byte, selector `1`, and state
+`0x1100`. This selects H-body-entry-parity and moves the open boundary after
+the first body stores. It rules out the prior route-invalid result for this
+canonical recipe; it does not explain the upstream zero audio payload. No
+audio, gate, writer, payload, or mitigation behavior changed.
