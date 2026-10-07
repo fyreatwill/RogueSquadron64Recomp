@@ -1,7 +1,7 @@
-# Next work unit: M5 Step 9 — why is hangar PCM all-zero at the AI source, and is title's fully-nonzero PCM real?
+# Next work unit: M5 Step 9 — are any MusyX voices ever started (title/hangar), and does a started voice decode?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4201: source==consumer (124/124 FNV). Hangar 81/81 source buffers all-zero; title 19 buffers 768/768 nonzero bytes (17 distinct hashes), 24 zero.
-Hypotheses: H-title-garbage (title nonzero is a fill/uninit pattern, not audio); H-title-real (genuine loud PCM); H-hangar-no-voices (no active voices/music started at hangar so ucode mixes silence); H-hangar-mix-broken (voices active but ucode output zero).
-Discriminator (one build, one run, title+hangar, s4200_drain_tick_ab.sh single default arm): in the pcm-boundary-source row also print the first 16 int16 samples and min/max; at hangar entry also log the MusyX active-voice count/slot status per buffer. Title min/max/sample pattern splits garbage vs real; hangar voice count splits no-voices vs broken mix. Positive control: the title nonzero buffers must show non-trivial samples in the same run.
+s4202: PCM content is nil: title = 19 buffers of decaying constant L/R DC, hangar = all zeros (min=max=0).
+Hypotheses: H-no-voices (no voice/song start ever reaches the synth: sound API calls stubbed/never issued); H-voice-no-decode (voices allocated but sample ADPCM/DMA yields zeros); H-mix-drop (voices decode but the ucode mix/envelope zeroes them).
+Discriminator (one build, one run, s4200_drain_tick_ab.sh default arm): log per audio-frame count of active voice slots (voice array at the MusyX struct, see waitForAnyAudioSlot/ slot status guards) plus count of voice-start (note on) calls, and first 8 decoded-sample words of the first active voice. 0 voices => H-no-voices; voices>0 with zero decoded words => H-voice-no-decode; nonzero decoded but zero out => H-mix-drop. Positive control: the title DC buffers must coincide with a nonzero voice/filter state.

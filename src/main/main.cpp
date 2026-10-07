@@ -5978,6 +5978,18 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                 fnv = (fnv * 16777619u) ^ p[i];
                 nonzero += p[i] != 0;
             }
+            int smin = 32767, smax = -32768;
+            for (size_t i = 0; i < num_samples; i++) {
+                if (samples[i] < smin) smin = samples[i];
+                if (samples[i] > smax) smax = samples[i];
+            }
+            if (n < 256 || (n % 128) == 0) {
+                fprintf(stderr, "[pcm-samples] width=%u n=%u min=%d max=%d first16:",
+                        width, n, smin, smax);
+                for (size_t i = 0; i < 16 && i < num_samples; i++)
+                    fprintf(stderr, " %d", samples[i]);
+                fputc('\n', stderr);
+            }
             uint32_t ordinal = 0xFFFFFFFFu;
             uint32_t row = 0xFFFFFFFFu;
             rs64_audio_current_route_snapshot(nullptr, nullptr, nullptr,
