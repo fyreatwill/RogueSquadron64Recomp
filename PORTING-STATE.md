@@ -146385,3 +146385,25 @@ and independent retail watch; zero values were observed, not suppressed. No
 guest, audio, wait, cap, predicate, slot, or writeback behavior changed.
 Evidence: `docs/M5-S4159-PRECLEAR-SCALAR-CENSUS.md` and
 `scratch/agent/s4159_m5_preclear_span_census/`.
+
+## Session 4160 (2026-10-07) — qualified M5 non-scalar census boundary
+
+Ran the independent retail oracle and rebuilt
+`zsh scratch/agent/run_s4159_m5_preclear_span_census.sh`. Retail passed the
+whole-RDRAM control (11,166 writes), target-span control (1,166 writes), and
+title/hangar VI gates. Its target-span writer families included `0x80007670`,
+`0x800078EC`, `0x8001E2C0`, and `0x8001FAxx`; the hangar final snapshot was
+zero, so ordering remained material. The port reached both phases and passed
+its controls. The widened host/RSP census produced 516 rows, all confined to
+the existing image-input span `0x178C80..0x178F18`; no row intersected
+`0x1797B0..0x179A48`. The observation-only RT64 writeback callback produced no
+target-span row. The existing pre-clear snapshot still showed 607 nonzero
+bytes at hangar entry and zero after the `0x800078EC` clear. H-host-dma-writer
+is not observed in the instrumented host/RSP and RT64-writeback paths.
+H-other-guest-writer versus H-preclear-snapshot-artifact remains unevaluable:
+the non-scalar guest census is incomplete and the existing
+`rs64_m5_source_range_dma_write` hook is not wired into the active DMA path.
+ORIGIN: independent retail watch and observation-only port callbacks; no guest,
+audio, wait, cap, predicate, slot, or writeback behavior changed. Evidence:
+`docs/M5-S4160-PRECLEAR-NONSCALAR-CENSUS.md` and
+`scratch/agent/s4159_m5_preclear_span_census/`.

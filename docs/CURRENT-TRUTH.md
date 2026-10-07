@@ -3,7 +3,20 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4159 (2026-10-07).
+Updated for session 4160 (2026-10-07).
+
+Session 4160 widened the regeneration-safe host/RSP census to the exact
+pre-clear span and added an observation-only RT64 writeback callback. The
+qualified retail oracle passed whole-RDRAM, target-span, title, and hangar
+controls. The port reached both phases; host/RSP rows remained confined to the
+existing image-input span and no RT64 writeback row intersected
+`0x1797B0..0x179A48`. H-host-dma-writer is not observed at this boundary.
+H-other-guest-writer versus H-preclear-snapshot-artifact remains unevaluable:
+the active non-scalar guest census is incomplete and the existing
+`rs64_m5_source_range_dma_write` callback is not wired into the active DMA
+path. ORIGIN: independent retail watch plus observation-only port callbacks;
+no guest, audio, wait, cap, predicate, slot, or writeback behavior changed.
+Evidence: `docs/M5-S4160-PRECLEAR-NONSCALAR-CENSUS.md`.
 
 Session 4159 ran the regeneration-safe full-intersection scalar-store census
 with a qualified retail oracle and target-valid port. The oracle passed the

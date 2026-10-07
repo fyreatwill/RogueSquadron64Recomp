@@ -1612,6 +1612,7 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
         {0x128CD0u, 4u, "route_word"},
         {0x171E70u, 0x100u, "task_data"},
         {0x178C80u, 0x198u, "image_input"},
+        {0x1797B0u, 0x298u, "preclear_target"},
     };
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
