@@ -146727,3 +146727,17 @@ This independently selects H-entry-executed over an unexecuted static entry
 and route-invalid explanations. It establishes `0x8008F900` as the next port
 witness boundary, but does not establish port/retail context parity. No audio,
 gate, writer, payload, or mitigation behavior changed.
+
+## Session 4178 (2026-10-07) — qualified M5 port predecessor witness
+
+Moved the regeneration-safe M5 entry witness from the rejected function-entry
+site to the executed `0x8008F900` predecessor in `fixup_game_funcs.py`, and
+updated the paired recipe and join label. The normal build succeeded. One
+paired oracle/port run fired the whole-RDRAM positive control, both retail
+title/hangar phases, both port title/hangar phases, and the port witness in
+both phases; the witness joined the existing object-field rows. The oracle
+reported no phase-gated `pc-field-row` for `0x8008F900`: its observed retail
+origins were `0x00790800` and `0x006AB800`, while the recipe used stale
+`0x00790400` and `0x006AB400` gates. This rejects H-route-invalid but leaves
+entry-context parity unevaluable and identifies the next measurement. No audio,
+gate, writer, payload, or mitigation behavior changed.

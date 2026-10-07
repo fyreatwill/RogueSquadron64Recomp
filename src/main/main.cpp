@@ -1617,7 +1617,7 @@ extern "C" void rs64_m5_object_field_witness(uint8_t* rdram, uint32_t pc,
             const auto& e = g_rs64_m5_object_entry;
             std::fprintf(stderr,
                 "[m5-object-entry-join] phase=%u width=%u origin=0x%06X "
-                "pc=0x8008F9C8 ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X "
+                "pc=0x8008F900 ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X "
                 "s0=0x%08X s1=0x%08X source_word=0x%08X source_half=0x%04X "
                 "s1_half=0x%04X\n",
                 rs64_phase_ord(), width, origin, e.ra, e.a0, e.a1, e.a2,
