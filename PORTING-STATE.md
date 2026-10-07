@@ -147152,3 +147152,13 @@ Ran tools/apply_s4208_dma_ring.py (rsp.cpp ring of every audio-task DMEM->RDRAM 
 ORIGIN: diagnostic only, no mitigation added.
 Next: split zero-output between ADPCM-decode input (DMEM contents after source DMA reads) and mix/volume stage using DMA-read nz plus DMEM nz at exit (extend the same ring to reads).
 Conclusion (gate wording): this run selects H-writes-zeros and refutes H-never-writes and H-wrong-ptr. The next discriminator splits H-src-dma-zero, H-state-zero and H-cmd-skip by logging RDRAM->DMEM read nonzero counts and DMEM nonzero hash at exit, phase 3 versus phase 5, in one run (Step 9g, NEXT.md).
+
+## Session 4209 (2026-10-07) — M5 Step 9g: audio ucode inputs reach DMEM nonzero in phases 4/5 while every output DMA is zero; H-src-dma-zero refuted
+
+Ran tools/apply_s4209_dma_read_ring.py (rsp.hpp/rsp.cpp ring of every audio-task RDRAM->DMEM read: dram, len, source nonzero bytes, DMEM nonzero bytes after copy; summary in rs64_s4207_after_audtask) via scratch/agent/s4209_dmaread.sh (s4207 recipe). Lib edit exported via export.sh.
+- Reads are healthy: phase 5 task 11776 cum_reads=501503, cum_bytes=77.8 MB, cum_src_nz=59.2 MB (76%); cum_dmem_nz == cum_src_nz in every row and cum_nzsrc_but_zero_dmem=0 in all rows (positive control: DMEM nz tracks source nz exactly, so the counter fires when data is nonzero; phase 3 shows the same). Zero-source reads (>=32B) are 23229 of 501503 (4.6%), a steady fraction, not a phase change.
+- Same run: cum_nzbytes of DMEM->RDRAM writes frozen at 265494 from early phase 4 through phase 5 task 11776 (15.04 MB written). So nonzero inputs reach DMEM, copy path is correct, and outputs are zero. H-src-dma-zero REFUTED (two lines: nz-source==nz-DMEM per row, and nonzero reads continue while writes stay zero).
+- Remaining: H-state-zero (volumes/ADPCM state/loop state inside DMEM zero or masked) vs H-cmd-skip (mix commands not executed). Not split by this run.
+- Observation to chase: first-task writes are w0 len=768, w1 len=408 (dram 0x167050/0x171FB0), 3 writes per task constant across phases; per-index nz is not yet logged.
+ORIGIN: diagnostic only, no mitigation added.
+Conclusion (gate wording): this run refutes H-src-dma-zero (inputs reach DMEM nonzero, nzsrc_but_zero_dmem=0) and leaves H-state-zero and H-cmd-skip; the next discriminator splits them by logging per-write-index nz/len for phase 3 vs 5 and the count of executed ucode command ops per task (Step 9h, NEXT.md).

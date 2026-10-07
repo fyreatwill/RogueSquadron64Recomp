@@ -414,3 +414,4 @@ Detailed counts and session-specific notes remain in `PORTING-STATE.md`.
 - s4207 (m5): after audio task returns (exit=1), +0x7C output buffers are zero in 100% of phase 4/5 records (hangar 0/138065, src 137561 nonzero; phase 3 control out_nz 3348/3973); H-downstream refuted, H-ucode-drop selected, H-wrong-ptr open. Next: AudioDmaProbe ranges vs +0x7C addresses (PORTING-STATE Session 4207).
 
 - s4208: audio ucode DMA writes into +0x7C buffers are all-zero after early phase 4 (15.0 MB written, nz bytes frozen at 264405; phase-3 control nonzero). H-writes-zeros selected; next is Step 9g in scratch/agent/NEXT.md.
+- s4209: RDRAM->DMEM reads to the audio ucode are nonzero and copied exactly in phases 4/5 (59.2 MB nz of 77.8 MB; nzsrc_but_zero_dmem=0) while output writes stay zero. H-src-dma-zero refuted; H-state-zero vs H-cmd-skip open (Step 9h).

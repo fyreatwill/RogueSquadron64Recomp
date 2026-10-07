@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..6fa8888 100644
+index b0d6bef..9a08e4e 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -57,7 +57,7 @@ index b0d6bef..6fa8888 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,6 +109,68 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,6 +109,69 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -77,6 +77,7 @@ index b0d6bef..6fa8888 100644
 +extern uint32_t g_rsp_last_chunk_len;
 +extern "C" void rs64_probe_dma_write_origin(uint32_t dram_addr, uint32_t len,
 +                                               uint32_t dmem_addr);
++extern "C" void rs64_s4209_read(uint8_t* rdram, uint32_t dram_addr, uint32_t len, uint32_t dmem_addr);
 +extern "C" void rs64_probe_audio_dma_write(uint8_t* rdram,
 +                                              uint32_t dram_addr, uint32_t len,
 +                                              uint32_t dmem_addr);
@@ -126,7 +127,7 @@ index b0d6bef..6fa8888 100644
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,14 +178,106 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,14 +179,108 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -224,6 +225,7 @@ index b0d6bef..6fa8888 100644
 +        }
 +        rs64_m5_audio_dmem_dma_write(dmem_addr, rd_len);
 +        rs64_m5_audio_source_dma(rdram, dram_addr, rd_len, dmem_addr);
++    rs64_s4209_read(rdram, dram_addr, rd_len, dmem_addr);
 +        return;
 +    }
      for (uint32_t i = 0; i < rd_len; i++) {
@@ -231,10 +233,11 @@ index b0d6bef..6fa8888 100644
      }
 +    rs64_m5_audio_dmem_dma_write(dmem_addr, rd_len);
 +    rs64_m5_audio_source_dma(rdram, dram_addr, rd_len, dmem_addr);
++    rs64_s4209_read(rdram, dram_addr, rd_len, dmem_addr);
  }
  
  static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t wr_len) {
-@@ -121,9 +290,14 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -121,9 +293,14 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
@@ -973,7 +976,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..c00d1f7 100644
+index 1cb3f6a..288cc0b 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -987,7 +990,7 @@ index 1cb3f6a..c00d1f7 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1695 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1706 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2204,6 +2207,17 @@ index 1cb3f6a..c00d1f7 100644
 +}
 +
 +extern "C" { uint32_t rs64_s4208_dma[4096][3]; uint32_t rs64_s4208_n; int rs64_s4208_active; }
++extern "C" { uint32_t rs64_s4209_rd[4096][5]; uint32_t rs64_s4209_n; }
++extern "C" void rs64_s4209_read(uint8_t* rdram, uint32_t dram_addr, uint32_t len, uint32_t dmem_addr) {
++    if (!rs64_s4208_active || rs64_s4209_n >= 4096u) return;
++    uint32_t s = 0, d = 0;
++    for (uint32_t i = 0; i < len; i++) {
++        s += rdram[(dram_addr + i) & 0x007FFFFFu] != 0;
++        d += RSP_MEM_BU(0, dmem_addr + i) != 0;
++    }
++    uint32_t* r = rs64_s4209_rd[rs64_s4209_n++];
++    r[0] = dram_addr & 0x007FFFFFu; r[1] = len; r[2] = s; r[3] = d; r[4] = dmem_addr;
++}
 +extern "C" void rs64_probe_audio_dma_write(uint8_t* rdram,
 +                                              uint32_t dram_addr, uint32_t len,
 +                                              uint32_t dmem_addr) {
@@ -2522,7 +2536,7 @@ index 1cb3f6a..c00d1f7 100644
 +                rs64_vi_committed_width(), rs64_vi_committed_origin());
 +        fflush(stderr);
 +    }
-+    if (is_audio_task) { rs64_s4208_n = 0; rs64_s4208_active = 1; }
++    if (is_audio_task) { rs64_s4208_n = 0; rs64_s4209_n = 0; rs64_s4208_active = 1; }
      RspExitReason exit_reason = ucode_func(rdram, task->t.ucode);
 +    rs64_s4208_active = 0;
 +    g_audio_dma_probe = previous_audio_probe;

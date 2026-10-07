@@ -1,13 +1,12 @@
-# Next work unit: M5 Step 9g — why are all audio ucode DMA writes zero after early phase 4?
+# Next work unit: M5 Step 9h — split H-state-zero vs H-cmd-skip for the zero audio-ucode output
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4208: ucode writes DMEM->RDRAM into +0x7C buffers but all bytes zero from early phase 4 on (cum_nzbytes frozen 264405; phase-3 control nonzero). Live-tree patches only (tools/apply_s4208_dma_ring.py); never regen.
+s4209: RDRAM->DMEM reads are nonzero and exact in phases 4/5; DMEM->RDRAM writes are all-zero after early phase 4 (3 writes/task: w0 len 768, w1 len 408, ...). Live-tree patches only (tools/apply_s4208_dma_ring.py, apply_s4209_dma_read_ring.py); never regen.
 
 Hypotheses:
-- H-src-dma-zero: DMEM->input DMA reads (source samples/ADPCM) arrive zero in DMEM (host DMA read path / address translation wrong).
-- H-state-zero: inputs fine, but loop/ADPCM state or volume ramps in DMEM are zero so mix is zero.
-- H-cmd-skip: ucode command dispatch skips the mix commands (cmdlist ops differ from phase 3).
+- H-state-zero: mix executes but volume/ADPCM/loop state in DMEM is zero (state read from +0x2C/saved state arrives zero or is masked).
+- H-cmd-skip: ucode command dispatch skips the mix/ADPCM ops (cmdlist op histogram differs from phase 3).
 
-Discriminator: extend ring to RDRAM->DMEM reads (dram, len, nz of RDRAM source and of DMEM after) plus per-task DMEM nz hash at exit; compare phase 3 vs 5 in one run.
-Outcomes: reads nz>0 in phase 5 but DMEM region zero => translation bug; reads zero => upstream source bytes at read address zero (address mismatch with +0x2C); reads nz and DMEM nz but writes zero => H-state/H-cmd, then count executed command ops.
+Discriminator (one build, one run): per task log per-write-index (len, nz) and a histogram of executed command opcodes (hook the ucode dispatch loop in build/factor5_ucode or rsp.cpp audio path) for phase 3 vs 5, plus DMEM nz hash of the mix buffers at exit. Positive control: phase 3 has nonzero writes.
+Outcomes: op histogram equal and writes zero => H-state-zero (log state words read); histogram lacks mix/ADPCM ops in phase 5 => H-cmd-skip (find which op and why the cmd list differs).
