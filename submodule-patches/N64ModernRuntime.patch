@@ -994,7 +994,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..8fd8923 100644
+index 1cb3f6a..cb8f63a 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -1008,7 +1008,7 @@ index 1cb3f6a..8fd8923 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1800 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1820 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2440,7 +2440,27 @@ index 1cb3f6a..8fd8923 100644
 +}
 +
  // Runs a recompiled RSP microcode
++extern "C" volatile uint32_t g_rs64_last_guest_pc;
++static void rs64_s4213_census(const OSTask* task) {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4213"); return e && e[0] && e[0] != '0'; }();
++    if (!on) return;
++    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned cnt[16]; static unsigned total;
++    uint32_t phase = rs64_phase_ord();
++    if (phase != ph_key) { ph_key = phase; for (auto& c : cnt) c = 0; total = 0; }
++    uint32_t ty = static_cast<uint32_t>(task->t.type);
++    total++; unsigned n = ++cnt[ty & 15];
++    if (n <= 6 || (n & (n - 1)) == 0) {
++        std::fprintf(stderr, "[s4213-task] phase=%u type=%u n=%u total=%u flags=0x%X boot=0x%08X/%X ucode=0x%08X/%X udata=0x%08X/%X data_ptr=0x%08X/%X yield=0x%08X pc=0x%08X\n",
++            phase, ty, n, total, (unsigned)task->t.flags,
++            (uint32_t)task->t.ucode_boot, (unsigned)task->t.ucode_boot_size,
++            (uint32_t)task->t.ucode, (unsigned)task->t.ucode_size,
++            (uint32_t)task->t.ucode_data, (unsigned)task->t.ucode_data_size,
++            (uint32_t)task->t.data_ptr, (unsigned)task->t.data_size,
++            (uint32_t)task->t.yield_data_ptr, (uint32_t)g_rs64_last_guest_pc);
++    }
++}
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
++    rs64_s4213_census(task);
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
      RspUcodeFunc* ucode_func = rsp_callbacks.get_rsp_microcode(task);
  

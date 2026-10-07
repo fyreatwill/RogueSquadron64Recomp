@@ -1,12 +1,13 @@
-# Next work unit: M5 Step 9k — is the "audio" task with data_ptr in a 7728 B menu block really audio?
+# Next work unit: M5 Step 9l — who writes the audio command buffer (7728 B block) records, and does the record builder ever run on it?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4212: data_ptr pairs are ordinary rs_malloc 7728 B blocks (menu initializer, alloc at phase entry, free at phase exit). No double ownership.
+s4213: all run_task tasks are type 2 with the real audio ucode; data_ptr = per-phase 7728 B (=96*0x50+0x30) rs_malloc block; data_size 1..3. H-misclassified refuted.
 
 Hypotheses:
-- H-misclassified: task classified as audio (rsp.cpp is_audio_task) is actually a gfx/other task whose data_ptr is the menu double buffer.
-- H-stale-ptr: audio thread submits a real audio task whose OSTask data_ptr field was never refreshed and aliases freed/reused heap.
-- H-menu-uses-audio-ucode: menu code legitimately builds a Factor5 audio-format buffer there (unlikely: contents are ASCII names).
+- H-cmdbuf-never-built: block is the audio command buffer but the builder never writes records into it (ASCII filename text from earlier use persists).
+- H-builder-wrong-target: builder writes records elsewhere; OSTask.data_ptr points at the wrong block.
+- H-text-is-header: ASCII is the 0x30 header/other field and real records sit later (we only looked at first 0x50).
 
-Discriminator (one run): at the is_audio_task hook in lib/N64ModernRuntime/librecomp/src/rsp.cpp log task type, ucode_boot, ucode, ucode_data, data_ptr, data_size and g_rs64_last_guest_pc, plus at rs_malloc entry (funcs_0.c, via fixup script) log g_rs64_last_guest_pc for size==7728. Positive control: log all tasks incl. gfx. Outcomes: ucode ptr equals gfx ucode => H-misclassified; ucode is audio ucode and data_ptr in freed/reused block => H-stale-ptr. Any lib/ edit needs submodule-patches/export.sh + commit.
+Discriminator (one build, one run, phases 3-5): in rsp.cpp census also (a) hash+count nonzero-ASCII fraction of ALL 96 records at data_ptr+0x30 each task, (b) record which records changed since previous task; (c) log the guest address of the OSTask data_ptr field ((uint8_t*)task - rdram + offset) and its writer via existing guest-write watch if available; control: count changed bytes must be >0 across phase transition (new block). Outcomes: all 96 records ASCII/constant => never-built; records vary non-ASCII beyond first => H-text-is-header; builder pc seen writing a different block => wrong-target.
+Any lib/ edit needs submodule-patches/export.sh + commit.
