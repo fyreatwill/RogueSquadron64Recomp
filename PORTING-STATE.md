@@ -145334,3 +145334,20 @@ drawn. A binary-string audit found `[drain-tick]` in the executable but no
 coverage explanation, but does not select drain-required versus redundant.
 ORIGIN: no guest/runtime behavior changed; only diagnostic recipe ordering
 was made selectable.
+
+## Session 4103 (2026-10-06) — repaired drain-tick predicate selects ordering change
+
+Repaired the existing drain-tick A/B harness so qualification uses live
+`[drain-tick]` rows and records their parsed `gate=` values instead of requiring
+the nonexistent `[drain-inloop-gate]` marker. Built the Debug target and ran
+the prescribed retail-gated reverse-order capture (`image_tick_off` then
+`image_tick_on`). The retail whole-RDRAM/title/hangar controls passed. Both
+image arms reached title and hangar, with two stage rows each and positive
+VI/task/SP/PCM/lifecycle controls. Each emitted one `[drain-tick]` row with
+`gate=0x00`; tick-on counts were ABI/SP/PCM-source/consumer 1135/758/88/518,
+and tick-off counts were 1131/756/88/518. Their phase-5 join tables differed
+in ordinals and event ordering, so the harness selected
+`H-DrainChangesOrdering`, not drain-required or coverage-invalid. This rules
+out the in-loop tick as required for route reachability or the measured PCM
+joins, while leaving audible playback equivalence open. ORIGIN: the changed
+predicate is diagnostic-only; no guest/runtime behavior changed.

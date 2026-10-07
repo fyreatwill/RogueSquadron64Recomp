@@ -213,7 +213,7 @@ def scope(row):
     return (integer(row.get("phase")), integer(row.get("width")), integer(row.get("origin")))
 
 def parse_log(name, tick):
-    stages, joins, tasks, events = [], [], [], []
+    stages, joins, tasks, events, drain_ticks = [], [], [], [], []
     phase = {"phase": "", "width": "", "origin": ""}
     path = f"{out_dir}/{name}.log"
     with open(path, errors="replace") as stream:
@@ -236,9 +236,11 @@ def parse_log(name, tick):
                 tasks.append(row)
             elif tag == "[m5-audio-event]":
                 events.append(row)
+            elif tag == "[drain-tick]":
+                drain_ticks.append(row)
     stages = [s for s in stages if integer(s.get("width")) == 512 and integer(s.get("origin")) == 0x6AB400 and integer(s.get("stage")) in (2, 3) and integer(s.get("nz")) > 0]
     stages.sort(key=lambda row: row["seq"])
-    return stages, joins, tasks, events
+    return stages, joins, tasks, events, drain_ticks
 
 def same_scope(a, b):
     return scope(a) == scope(b)
@@ -266,7 +268,7 @@ header = ["arm", "tick", "phase", "width", "origin", "ordinal", "row", "stage", 
 rows = []
 metrics = {}
 for name, tick in arms:
-    stages, joins, tasks, events = parse_log(name, tick)
+    stages, joins, tasks, events, drain_ticks = parse_log(name, tick)
     arm_rows = []
     for stage in stages:
         join = stage_join(stage, joins)
@@ -279,7 +281,8 @@ for name, tick in arms:
         row = [name, tick, stage.get("phase", ""), stage.get("width", ""), stage.get("origin", ""), stage.get("ordinal", ""), stage.get("row", ""), stage.get("stage", ""), stage.get("dest", ""), stage.get("event", ""), join.get("complete_event", ""), join.get("source_event", ""), join.get("consumer_event", ""), len(pre), len(post), prior_signature, signature]
         rows.append(row)
         arm_rows.append((len(pre), len(post), prior_signature, signature, join.get("classification", "")))
-    metrics[name] = {"stages": len(stages), "abi": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[audtask-abi]" in _), "vi": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[vi-callers-control]" in _), "join_control": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[m5-audio-join-control]" in _), "sp_receive": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[audio-sp-route] edge=guest-receive" in _), "pcm_source": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[pcm-boundary-source]" in _), "pcm_consumer": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[pcm-boundary-consumer]" in _), "lifecycle": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[m5-audio-event]" in _), "gate": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[drain-inloop-gate]" in _), "tick_rows": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[drain-tick]" in _), "hangar": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[phase] vi_width=512" in _), "rows": arm_rows}
+    tick_gate_values = Counter(integer(row.get("gate"), -1) for row in drain_ticks)
+    metrics[name] = {"stages": len(stages), "abi": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[audtask-abi]" in _), "vi": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[vi-callers-control]" in _), "join_control": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[m5-audio-join-control]" in _), "sp_receive": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[audio-sp-route] edge=guest-receive" in _), "pcm_source": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[pcm-boundary-source]" in _), "pcm_consumer": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[pcm-boundary-consumer]" in _), "lifecycle": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[m5-audio-event]" in _), "gate": len(drain_ticks), "tick_rows": len(drain_ticks), "tick_gate_values": tick_gate_values, "hangar": sum(1 for _ in open(f"{out_dir}/{name}.log", errors="replace") if "[phase] vi_width=512" in _), "rows": arm_rows}
 
 with open(table_path, "w") as out:
     out.write("\t".join(header) + "\n")
@@ -287,7 +290,7 @@ with open(table_path, "w") as out:
         out.write("\t".join(map(str, row)) + "\n")
 
 def qualified(m):
-    return all(m[key] > 0 for key in ("hangar", "abi", "vi", "stages", "join_control", "sp_receive", "pcm_source", "pcm_consumer", "gate"))
+    return all(m[key] > 0 for key in ("hangar", "abi", "vi", "stages", "join_control", "sp_receive", "pcm_source", "pcm_consumer", "tick_rows"))
 
 on, off = metrics["image_tick_on"], metrics["image_tick_off"]
 same_table = sorted(on["rows"]) == sorted(off["rows"]) and on["stages"] == off["stages"]
@@ -301,10 +304,10 @@ else:
     verdict = "H-DrainRedundant"
 
 with open(summary_path, "w") as out:
-    out.write("arm\ttick\tqualified\thangar\tvi\tabi\tstages\tjoin_control\tsp_receive\tpcm_source\tpcm_consumer\tlifecycle\tgate\ttick_rows\n")
+    out.write("arm\ttick\tqualified\thangar\tvi\tabi\tstages\tjoin_control\tsp_receive\tpcm_source\tpcm_consumer\tlifecycle\ttick_rows\ttick_gate_values\n")
     for name, tick in arms:
         m = metrics[name]
-        out.write(f"{name}\t{tick}\t{int(qualified(m))}\t{m['hangar']}\t{m['vi']}\t{m['abi']}\t{m['stages']}\t{m['join_control']}\t{m['sp_receive']}\t{m['pcm_source']}\t{m['pcm_consumer']}\t{m['lifecycle']}\t{m['gate']}\t{m['tick_rows']}\n")
+        out.write(f"{name}\t{tick}\t{int(qualified(m))}\t{m['hangar']}\t{m['vi']}\t{m['abi']}\t{m['stages']}\t{m['join_control']}\t{m['sp_receive']}\t{m['pcm_source']}\t{m['pcm_consumer']}\t{m['lifecycle']}\t{m['tick_rows']}\t{dict(m['tick_gate_values'])}\n")
 print(f"verdict={verdict} on_qualified={int(qualified(on))} off_qualified={int(qualified(off))} on_stages={on['stages']} off_stages={off['stages']} same_table={int(same_table)}")
 PY
 

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4102 (2026-10-06).
+Updated for session 4103 (2026-10-06).
 
 ## Current state
 
@@ -573,18 +573,29 @@ for coverage invalidity (same-build port arms plus binary-string audit), not a
 drain-policy result. ORIGIN: no guest behavior changed; only the recipe arm
 order was made selectable to test schedule residue.
 
+Session 4103 repaired the stale predicate in the existing recipe and reran the
+same-build reverse-order A/B. The retail oracle passed all controls; both
+image arms reached title and hangar with positive VI/task/SP/PCM/lifecycle
+controls and two stage rows each. Each arm emitted one live `[drain-tick]`
+row, both parsed as `gate=0x00`. Tick-on had ABI/SP/PCM-source/consumer
+counts 1135/758/88/518; tick-off had 1131/756/88/518. The phase-5 join table
+was not identical: tick-on and tick-off used different ordinals and event
+ordering, while both still qualified. This selects HDrainChangesOrdering at
+the measured scope: the injection changes audio lifecycle ordering without
+being required for route reachability or the measured PCM joins. It does not
+prove audible playback equivalence. Two evidence lines are the independent
+retail controls and the paired qualified port arms. ORIGIN: the changed
+predicate is diagnostic-only; no guest/runtime behavior changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **Repair the M5 Step 6 gate predicate, then rerun the policy A/B.** Replace
-   the stale `[drain-inloop-gate]` requirement in the existing recipe with a
-   field/value check on the live `[drain-tick]` rows, preserving the oracle,
-   phase, task/SP, slot/status, PCM, and tick-row controls. Run tick-off first
-   and tick-on second in one build. A corrected predicate that qualifies both
-   arms permits the policy comparison; any arm-specific missing tick row or
-   downstream join selects the required-policy hypothesis; missing live rows
-   keeps coverage invalid.
+1. **M5 Step 7: audit the status-03 service-reaping contract as one bounded
+   experiment.** Use retail-grounded worker-entry and status-zero evidence to
+   compare the current wait/drain path; do not force-clear the status. Require
+   the hangar phase, named worker entry, a legitimate zeroing writer, and a
+   clean shutdown/drain return in both paired arms before interpreting a null.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -613,7 +624,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
 | M5 key-on early returns | Hreturns-dead/Hguard-valid selected (s4101): retail and port reached the measured key-on route with valid `0xC0` divisors, normal tails, and slot `02`/`00` transitions; all eight guard counts were zero. |
-| M5 drain-tick policy | Open. Session 4102 is coverage-invalid: both reverse-order image arms reached title/hangar with matching task/SP/PCM counts, but the recipe required a nonexistent `[drain-inloop-gate]` marker. The live binary emits `[drain-tick]`; policy is not selected. |
+| M5 drain-tick policy | HDrainChangesOrdering selected at measured scope (s4103): both qualified image arms emitted one live `gate=0x00` tick row and matched route/PCM controls, but their phase-5 join ordering/ordinals differed. Tick injection is not required for reachability or measured PCM joins; audible equivalence remains unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary
