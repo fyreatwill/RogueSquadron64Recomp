@@ -1,57 +1,26 @@
-# Next work unit: validate declared-size versus legacy-size audio staging
+# Next work unit: capture the pending A11 audio-slot terminal transition
 
-Run one same-build A/B of the M5 Step 3 staging behavior on the canonical
-qualified route. The declared arm uses the current `ucode_data_size` (`0x800`);
-the legacy arm sets `ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` (`0xF80`). Keep both
-arms real-audio and collect the complete phase-keyed contract row. This is a
-validation/de-stubbing unit, not permission to change the image or infer a
-cause from the already-known zero payload.
+Run one retail-gated, same-build canonical real-audio/LLE/ungated/solo/spin-yield capture. Do not change the wait, cap, predicate, or slot state. The target is the previously observed `waitForAnyAudioSlot` call with `chCount=16`; if it does not recur on a qualified route, classify the table as unevaluable and do not infer safety.
 
-HYPOTHESIS-ID: m5-step3-declared-audio-ucode-dma
+HYPOTHESIS-ID: m5-a11-pending-terminal-transition
 
 Competing hypotheses and discriminator:
 
-- H-step3-contract: the declared `0x800` staging span is the required task
-  contract; declared and legacy arms will differ in DMEM/DMA or downstream
-  service/slot/PCM joins while retaining route controls.
-- H-step3-equivalent: the reserved `0xF80` legacy span is behaviorally
-  irrelevant on the qualified route; both arms have matching task, DMA,
-  service, slot, and PCM signatures.
-- H-step3-route-invalid: either arm misses a positive control or title/hangar
-  phase, so its nulls are unevaluable.
+- H-A11-legitimate-pending: the pending call is a legitimate guest wait whose slot/status writer reaches a terminal transition; the complete writer/terminal table will show a valid `01/02/00` progression and a return.
+- H-A11-degenerate-pending: the call remains pending because the audio-disabled or incomplete path fails to publish the required slot transition; the qualified table will show entry plus a missing writer/terminal edge while other audio controls continue.
+- H-A11-not-reproduced: the canonical route reaches both target phases but does not produce the pending `chCount=16` call; the table is unevaluable, not a safety result.
+- H-A11-route-invalid: retail control, port controls, or title/hangar phase is absent; all nulls are invalid.
 
-The single discriminating measurement is the same-build, phase-gated two-arm
-table joined by task ordinal/generation: dispatch and exit, declared task
-fields, DMEM/DMA ranges and hashes, SP completion, service return, slot/status,
-PCM source/consumer, and title/hangar phase. Missing whole-RDRAM retail
-control, port controls, or either target phase selects H-step3-route-invalid.
-Matching qualified rows select H-step3-equivalent; a qualified downstream
-split tied to the staging arm selects H-step3-contract.
+The single discriminating measurement is a phase-keyed join for each A11 call: entry `chCount`, slot/status reads, every matching slot/status writer, wait iterations/cap, terminal return, audio task/PCM controls, and task generation. A qualified pending call with a complete writer-to-terminal return selects H-A11-legitimate; a qualified pending call with no terminal edge and continuing downstream controls selects H-A11-degenerate-pending. Missing pending call selects H-A11-not-reproduced. Missing controls selects H-A11-route-invalid.
 
-Before building, verify the existing staging switch and driver with bounded
-searches:
+Before any build, verify the existing A11 switches and driver:
 
-`rg -n 'ROGUESQ_AUDIO_LEGACY_UCODE_DMA|audtask-image-stage|audtask-dma|pcm-boundary|AUTOPILOT' src tools scratch/agent --glob '!*.log'`
+`rg -n 'waitForAnyAudioSlot|A11|active-slot|ROGUESQ_LOG_M5_WAIT|ROGUESQ_LOG_M5_KEYON|AUTOPILOT' src tools scratch/agent --glob '!*.log'`
 
 Build once:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run the retail oracle first with a whole-RDRAM positive control and title/hangar
-phase gates. Then run both port arms concurrently from `build/` with:
+Run the retail oracle first from the oracle recipe with whole-RDRAM positive control, `--vi-trace`, and title/hangar phase watches. Then run the canonical port from `build/` with `ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a'`, `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`, `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, `PROBE_LEAVE_OK=1`, `ROGUESQ_LOG_PHASE=1`, `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`, and `ROGUESQ_AUDIO_UCODE=1`.
 
-`ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a'`
-`ROGUESQ_AUTOPILOT_STOP_WIDTH=512 PROBE_PHASE_WIDTH=1024`
-`PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1`
-`ROGUESQ_LOG_PHASE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1`
-`ROGUESQ_LLE_SOLO=1 ROGUESQ_DRAIN_INLOOP_TICK=1 ROGUESQ_SPIN_YIELD=1`
-`ROGUESQ_M5_C88_VALUE=0 ROGUESQ_AUDIO_UCODE=1`
-
-Arm `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, `ROGUESQ_LOG_M5_WAIT_CONTRACT=1`,
-`ROGUESQ_LOG_M5_KEYON_CENSUS=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`,
-`ROGUESQ_LOG_PCM_BOUNDARY=1`, and the existing image-stage/DMA route logs.
-SIGKILL both games after both arms reach hangar or after the phase timeout.
-
-If either arm misses the positive controls or target phases, classify it as
-route-invalid and do not infer anything from its null rows. Do not change the
-declared-size staging code during this validation unit.
+Arm `ROGUESQ_LOG_M5_WAIT_CONTRACT=1`, `ROGUESQ_LOG_M5_KEYON_CENSUS=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, and `ROGUESQ_LOG_PCM_BOUNDARY=1`. SIGKILL the game after hangar or the phase timeout. Report the positive controls and the full A11 join; do not treat a non-reproduction as proof that the wait is safe.

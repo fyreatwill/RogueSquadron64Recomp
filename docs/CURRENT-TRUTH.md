@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4125 (2026-10-07).
+Updated for session 4126 (2026-10-07).
 
 ## Current state
 
@@ -29,6 +29,15 @@ payload consumer signatures, while the silent arm remained a valid control.
 The old declared-size/legacy crash split is schedule-sensitive and is not an
 audio-staging explanation. The legitimate legacy staging writer is still
 `0xF80`; declared-size staging is `0x800`.
+
+Session 4126 qualified the declared-versus-legacy audio staging A/B. On one
+build, both canonical real-audio arms reached title and hangar with positive
+task ABI/DMA, audio-return, PCM-source, and PCM-consumer controls and no
+crash/abort. The declared arm staged `0x800`; the legacy arm staged `0xF80`
+against the same declared `0x800`. Their downstream counts and zero payload
+hashes matched at the measured scope. H-step3-equivalent is selected: the
+declared-size staging path is a qualified no-regression result, not proof that
+the legacy span is irrelevant outside this contract.
 
 M3 has landed regeneration-safe ownership guards in `patches/heap_guards.c`
 for free-list span/reciprocal links, active-queue reachability and aliasing,
@@ -269,25 +278,19 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 3 validation:** run the declared-size versus legacy-size audio
-   staging A/B in one build, using the canonical AUTOPILOT and phase-gated
-   route. Require task dispatch/exit, SP completion, image-stage/DMA joins,
-   slot/service, PCM, and title/hangar controls in both arms. Do not infer a
-   cause from matching zero payloads; this validates or rejects the staging
-   behavior change as a de-stubbing step.
-2. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
+1. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
    writer and terminal table only when the pending `chCount=16` call appears
    on a qualified route. Keep the cap and wait unchanged.
-3. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
+2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-4. **M5 de-stubbing.** After the current route/source discriminator is closed,
+3. **M5 de-stubbing.** After the current route/source discriminator is closed,
    follow the incremental validation sequence in `M5-AUDIO-PLAN.md`; do not
    treat the silent control as real-audio evidence.
-5. **Generated-symbol renaming sweep.** Parked while M5 has applicable route,
+4. **Generated-symbol renaming sweep.** Parked while M5 has applicable route,
    writer, or audio work. Keep slug `generated-symbol-renaming-sweep` if it
    resumes; mapping-only edits do not reset the engineering-change gate.
 
@@ -313,6 +316,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A9 voice-array-base guards | H-A9-legitimate selected at s4120's measured scope: retail reached the allocator writer and 10/12 A9 PCs in hangar; the qualified port reached both phases with positive controls and zero fires at all 12 A9 guards. No guard relaxation is authorized. |
 | M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
 | M5 A11 wait terminal transition | H-A11-route-invalid is rejected by s4124's qualified canonical route. The run cleanly returned from one wait call but did not reproduce s4122's pending `chCount=16` call; the pending writer/terminal relationship remains open. |
+| M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary

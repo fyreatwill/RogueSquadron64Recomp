@@ -145772,3 +145772,11 @@ target built successfully through `RogueSquadron64Recomp`. This closes the
 static guard idiom at the checked-in patch boundary, but does not claim a
 runtime hit; M3 runtime qualification remains blocked by the absent MIPS
 GCC/LD toolchain.
+
+## Session 4126 (2026-10-07) — qualified declared versus legacy audio staging
+
+Ran the retail oracle first with the whole-RDRAM positive control and source-span watch. The positive control reached 10,000 callbacks; VI tracing reached title `0x00790400/1024` at about 17.4 seconds and hangar `0x006AB400/512` at about 38.4 seconds. Retail wrote the source span `0x178C80..0x178F18` 2,110 times in the 75-second run. The first oracle invocation without VI tracing was route-invalid and was not used for inference.
+
+Rebuilt the Debug target once and ran the declared `0x800` staging arm and legacy `0xF80` arm concurrently on the canonical real-audio/LLE/ungated/solo/spin-yield route. Both arms reached title and hangar with no crash or abort. Declared recorded 10,459 staging rows with `dma_size=0x800`; legacy recorded 10,462 with `dma_size=0xF80` and `declared=0x800`. Both had positive phase-scoped task ABI/DMA rows (5,351 versus 5,375), audio returns (551 each), PCM source rows (121 each), and PCM consumer rows (551 each). The task/image-stage logs continued to show the same zero-valued payload hashes at the measured downstream boundary.
+
+H-step3-equivalent is selected at this qualified scope: changing the staging span produced no downstream task, return, PCM, or route split. This validates the declared-size staging behavior as a no-regression change, but does not prove the legacy span is semantically irrelevant outside the measured contract. The old staging A/B is closed; no de-stubbing or mitigation was changed. ORIGIN: the staging writer is the host audio-ucode-data DMA; both sizes are intentional test arms, not a guest corruption fix.
