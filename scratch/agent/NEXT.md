@@ -1,36 +1,35 @@
-# Next work unit: M5 Step 5 retail key-on/divisor ground truth
+# Next work unit: M5 Step 5 caller/tail ground truth
 
-HYPOTHESIS-ID: m5-step5-keyon-ground-truth
+HYPOTHESIS-ID: m5-step5-caller-tail-ground-truth
 
-Session 4091 qualified the first downstream return boundary: the port
-`stage=return v0` values matched the low-16-bit `s0` support observed at the
-retail `0x80084AB8` instruction boundary. The next M5 unit is the required
-ground-truth prerequisite for the eight key-on early-return sites; it does
-not remove or relax any return yet.
+Session 4092 qualified the retail controls and found zero execution at all
+eight key-on early-return PCs, despite 50,643 executions of the divisor
+publisher `0x80090768`. Do not change or remove the returns.
 
 Competing hypotheses:
 
-- Hvalid-divisor: retail reaches the key-on sites with an in-range divisor
-  published by `0x80090768`, so a later port A/B can audit the early returns.
-- Hreturns-dead: no target-phase key-on site is reached, so the returns are
-  not the current M5 boundary.
-- Hcoverage: the oracle positive control or either target phase is absent.
-- Hwriter-mapping: the watched divisor publisher is not the actual value
-  writer or its phase attribution is inconsistent.
+- Hdescriptor-branch: `musyxKeyOnVoice` entry `0x80090A3C` executes in the
+  target phases, but its `+0x21` descriptor branch never reaches the trap
+  sites; the normal tail `0x80090DE8` should provide a positive control.
+- Hcaller-gap: the key-on entry itself is absent in target phases, so the
+  missing boundary is upstream of `musyxKeyOnVoice`.
+- Hcoverage: the oracle whole-RDRAM control or either title/hangar phase is
+  absent.
+- Hpublisher-misjoin: `0x80090768` is not the relevant target-phase divisor
+  publisher despite its observed activity.
 
-Discriminating measurement: one oracle-only ground-truth capture must fire the
-whole-RDRAM positive control and both target phase gates, then report all eight
-key-on PCs (`0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
-`0x80090D74`, `0x80090D8C`, `0x80090DB8`, `0x80090DD0`) plus the known divisor
-publisher `0x80090768`. In-range divisor evidence and target-phase site hits
-select Hvalid-divisor; zero target-phase site hits select Hreturns-dead; a
-missing control/phase selects Hcoverage; inconsistent publisher/value rows
-select Hwriter-mapping.
+Discriminating measurement: one oracle-only run, no build, with the
+whole-RDRAM watch first, explicit title/hangar phase gates, and watches on
+`0x80090A3C`, `0x80090DE8`, and `0x80090768` together. Entry plus tail with
+zero trap activity selects Hdescriptor-branch; zero entry selects Hcaller-gap;
+missing control/phase selects Hcoverage; publisher activity without matching
+entry/tail phase rows selects Hpublisher-misjoin.
 
-Exact preparation:
+Exact command shape:
 
-1. Do not build or add runtime instrumentation before the oracle measurement.
-2. Create a self-contained oracle driver from the repo root, with `--watch-pc`
-   containing the whole-RDRAM watch, all eight sites, and `0x80090768`.
-3. Use the existing title/hangar phase gates and synthetic keypress schedule;
-   terminate with SIGKILL and summarize counts by phase.
+`zsh scratch/agent/run_s4093_m5_keyon_entry_tail.sh`
+
+The driver must use the validated Rice video and six-start schedule, kill the
+oracle with SIGKILL, and report lifetime plus title/hangar counts for all
+three watched PCs. Keep the eight trap watches as controls if breakpoint
+capacity permits; do not add runtime instrumentation.

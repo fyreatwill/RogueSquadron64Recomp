@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4091 (2026-10-06).
+Updated for session 4092 (2026-10-06).
 
 ## Current state
 
@@ -442,18 +442,35 @@ does not prove the later transform globally because the port is sampled and
 the oracle is not record-synchronized. ORIGIN: these are legitimate callee
 register/value observations; all hooks are diagnostic-only.
 
+Session 4091 qualified the first post-callee return boundary: the port
+`0x80084AB8` return support matched the low-16-bit `s0` support observed at
+retail, selecting Hlater-transform at that sampled boundary. The rows were
+not record-synchronized, so later transform stages remain open.
+
+Session 4092 ran the required oracle-only key-on/divisor capture. The
+whole-RDRAM positive control and both title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400` phase gates fired. All eight key-on early-return PCs
+(`0x80090CEC` through `0x80090DD0`) recorded zero executions, while the
+known publisher `0x80090768` executed 50,643 times, including printed rows in
+both target buckets with values including `0x180`. Hreturns-dead is selected
+for this measurement: no target-phase key-on site is reachable, so Step 5
+must not remove or replace the returns. This does not prove why the caller
+does not enter the sites or authorize a guard change. The capture wrapper
+also corrected its parser after the run; the raw oracle summary, not the
+initial wrapper counters, is the evidence.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 5 ground-truth key-on/divisor qualification.** Before changing
-   the eight key-on early returns, use the retail oracle with its whole-RDRAM
-   positive control and both target phase gates to watch all eight sites and
-   the known divisor publisher at `0x80090768` in one capture. Hvalid-divisor
-   requires in-range divisor evidence and normal-tail site activity;
-   Hreturns-dead requires no target-phase site activity; Hcoverage applies if
-   either phase/control is absent. This is a prerequisite, not authorization
-   to remove a guard.
+1. **M5 Step 5 caller/tail ground truth.** Keep the eight early returns
+   unchanged. Use one oracle capture with the whole-RDRAM positive control and
+   both target phase gates to watch `musyxKeyOnVoice` entry `0x80090A3C`, its
+   normal tail `0x80090DE8`, and the existing divisor publisher `0x80090768`.
+   Entry/tail activity with zero trap activity selects a descriptor/branch
+   explanation; zero entry activity selects an upstream caller gap; missing
+   control or either phase is Hcoverage. Do not change runtime code until
+   this boundary is qualified.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target

@@ -145146,3 +145146,23 @@ for the sampled scope. The independent oracle/port rows are not record-
 synchronized, so this does not prove a global record-by-record match. ORIGIN:
 the writer is the guest `andi` at `0x80084AB8`; its low-16-bit result is
 legitimate state, and the driver is diagnostic-only.
+
+## Session 4092 (2026-10-06) — qualified M5 key-on/divisor ground truth
+
+Ran the required oracle-only M5 Step 5 capture with all eight key-on
+early-return PCs and the known divisor publisher armed in one run. The
+whole-RDRAM positive control fired, and retail reached both title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Every early-return watch
+(`0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`, `0x80090D74`,
+`0x80090D8C`, `0x80090DB8`, `0x80090DD0`) recorded zero executions. The
+publisher `0x80090768` recorded 50,643 executions, including target-bucket
+rows in both phases with values such as `0x180`.
+
+This selects Hreturns-dead for the measured retail route: the eight trap
+sites are not currently reachable, so no return may be removed or replaced.
+It does not identify whether the missing boundary is the key-on caller,
+descriptor branch, or an upstream route difference. The first wrapper
+summary parser assumed the wrong field order; it was corrected from the raw
+log without rerunning the experiment. The raw oracle watch summary and phase
+markers are the evidence. ORIGIN: the watched divisor publisher is a
+legitimate guest `+0x60` store; no mitigation or guest behavior changed.
