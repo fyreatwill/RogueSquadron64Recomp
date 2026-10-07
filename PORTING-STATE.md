@@ -147151,3 +147151,4 @@ Ran tools/apply_s4208_dma_ring.py (rsp.cpp ring of every audio-task DMEM->RDRAM 
 - Selected: H-writes-zeros (the ucode produces zero PCM/state; the mix input path inside DMEM is the next place). Single-run, same instrument; the cmdlist inputs (+0x2C sources, volumes) were nonzero in s4205/s4206.
 ORIGIN: diagnostic only, no mitigation added.
 Next: split zero-output between ADPCM-decode input (DMEM contents after source DMA reads) and mix/volume stage using DMA-read nz plus DMEM nz at exit (extend the same ring to reads).
+Conclusion (gate wording): this run selects H-writes-zeros and refutes H-never-writes and H-wrong-ptr. The next discriminator splits H-src-dma-zero, H-state-zero and H-cmd-skip by logging RDRAM->DMEM read nonzero counts and DMEM nonzero hash at exit, phase 3 versus phase 5, in one run (Step 9g, NEXT.md).
