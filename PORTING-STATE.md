@@ -146461,3 +146461,23 @@ asset is cleared before the hangar consumer. ORIGIN: `pi_rom_to_rdram` is the
 writer and guest `rs_memset` is the clear; no mitigation or game behavior
 changed. Evidence: `docs/M5-S4163-PRECLEAR-HOST-WRITER.md` and
 `scratch/agent/s4159_m5_preclear_span_census/port.log`.
+## Session 4164 (2026-10-07) — qualified M5 declared audio staging span
+
+Ran the first unfinished M5 unit, Step 3, after building the existing
+declared-size implementation. The two concurrent real-image arms used the
+same phase-gated AUTOPILOT route: the declared arm staged `0x800` bytes and
+reached title VI 1024 and hangar VI 512 with repeated image `break_pc=0x1328`,
+SP completion, and the existing zero-payload joins. Its first concurrent
+legacy arm crashed in `spTaskSchedulerThread` before audio dispatch, so that
+arm was route-invalid. A same-recipe legacy-only retry qualified the control:
+it staged `0xF80` against declared `0x800`, reached both target phases, and
+showed the same downstream signatures while changing DMEM contents.
+
+H-step3-equivalent is selected: the declared span is sufficient at the
+measured task/SP/route boundary, and legacy staging has no measured downstream
+benefit. The concurrent legacy crash is not attributed to staging because its
+audio staging row was absent; the retry is the comparison evidence. This does
+not explain the upstream zero source payload. ORIGIN: `rsp.cpp` owns the
+staging DMA size and the OSTask declaration is legitimate; no mitigation or
+game behavior changed. Evidence: `docs/M5-S4164-TASK-STAGING.md` and
+`scratch/agent/soak_results/s3977_m5_task_staging/`.

@@ -28,5 +28,9 @@ run_arm() {
     )
 }
 
-run_arm declared-size
-run_arm legacy-size env ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1
+run_arm declared-size &
+pid_declared=$!
+run_arm legacy-size env ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1 &
+pid_legacy=$!
+wait "$pid_declared"
+wait "$pid_legacy"

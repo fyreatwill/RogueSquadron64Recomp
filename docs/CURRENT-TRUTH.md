@@ -3,7 +3,19 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4163 (2026-10-07).
+Updated for session 4164 (2026-10-07).
+
+Session 4164 independently requalified M5 Step 3 with one rebuilt binary and
+declared-size/legacy-size real-image arms. The declared arm staged exactly the
+OSTask-declared `0x800` bytes, reached title VI 1024 and hangar VI 512, and
+preserved image `break_pc=0x1328`, SP completion, and the measured zero-payload
+joins. A concurrent legacy arm was route-invalid before audio dispatch, but a
+same-recipe legacy-only retry staged `0xF80`, reached both target phases, and
+showed the same downstream signatures while changing DMEM contents. H-step3-
+equivalent is selected: the declared span is sufficient at this boundary;
+legacy staging has no measured benefit. ORIGIN: `rsp.cpp`'s staging DMA is the
+writer and the OSTask declaration is legitimate; no mitigation or game
+behavior changed. Evidence: [M5-S4164-TASK-STAGING.md](M5-S4164-TASK-STAGING.md).
 
 Session 4163 qualified the complete pre-clear writer boundary. Host-write,
 non-scalar, title, and hangar controls fired. `pi_rom_to_rdram` wrote nonzero
@@ -701,9 +713,10 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** continue from `docs/M5-AUDIO-PLAN.md` with the
-   next incremental audio step and its phase-gated validation contract. Keep
-   the real-audio route; do not use the silent control as a production fix.
+1. **M5 audio de-stubbing:** advance to Step 4 in `docs/M5-AUDIO-PLAN.md`.
+   Qualify the named gate/consumer edge with independent retail writer/value
+   evidence and same-build real-image/silent port arms. Keep the real-audio
+   route; do not use the silent control as a production fix.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -738,7 +751,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 source-producer context | H-producer-context-split selected at s4151: retail's phase-qualified execution histogram attributed `0x800078EC` to predecessor `0x8002BEEC` and `rs_memset` entry `0x800078E0` to `0x800052C4`, while the port used title callsite `0x8008F2CC` and hangar callsites `0x8008F2CC`/`0x800AB694` with distinct tuples and zero values. The caller-state cause remains open; generated port `ra=0` is not evidence. |
 | M5 pre-clear provenance | H-host-ROM-writer selected at s4163: the host-write callback observed legitimate `pi_rom_to_rdram` target overlaps with nonzero post bytes before the hangar pre-clear snapshot, while generated guest scalar/non-scalar target rows remained zero. The clear remains a later state boundary; no mitigation is authorized. |
 | M5 producer caller state | H-caller-state-split selected at s4152: retail title entry rows had `prev=0x800052C4`, live `s0` objects and nonzero pointed words, while port title setup used `s0=0xF`, `s1=0x561F`, `0x80178C80/0x298`, and zero fill. Hangar includes a shared-looking `s0=0`, `s1=0x800D0000` family, so the split is phase/context-specific. The s4153 entry/body join then selected H-entry-body-shared: retail preserves the producer object/state into `0x800078EC`; the remaining gap is earlier provenance. |
-| M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
+| M5 Step 3 declared audio staging | H-step3-equivalent independently requalified at s4164: declared `0x800` and legacy `0xF80` arms reached title/hangar with matching task, return, zero-payload, and route signatures; only staging size and DMEM contents differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary
