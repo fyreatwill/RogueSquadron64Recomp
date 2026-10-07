@@ -1315,6 +1315,69 @@ extern "C" void rs64_m5_audio_channel_load(uint8_t* rdram, uint32_t pc,
     std::fflush(stderr);
 }
 
+static bool rs64_m5_voice_modulation_enabled() {
+    const char* all = std::getenv("ROGUESQ_LOG_ALL");
+    const char* own = std::getenv("ROGUESQ_LOG_M5_VOICE_MODULATION");
+    return (all && all[0] && all[0] != '0') ||
+           (own && own[0] && own[0] != '0');
+}
+
+static bool rs64_m5_voice_modulation_phase(uint32_t* width, uint32_t* origin) {
+    *width = rs64_vi_committed_width();
+    *origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    return (*width == 1024u && *origin == 0x00790400u) ||
+           (*width == 512u && *origin == 0x006AB400u);
+}
+
+extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
+                                                 uint32_t voice_index,
+                                                 uint32_t a1, uint32_t a2,
+                                                 uint32_t a3, uint32_t scaled,
+                                                 uint32_t voice_base) {
+    if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
+    uint32_t width = 0, origin = 0;
+    if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static uint32_t rows[2] = {};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] >= 128u) return;
+    std::fprintf(stderr,
+        "[m5-voice-mod-call] row=%u phase=%u width=%u origin=0x%06X pc=0x%08X "
+        "voice=%u a1=0x%08X a2=0x%08X a3=0x%08X scaled=0x%08X base=0x%08X\n",
+        rows[slot]++, rs64_phase_ord(), width, origin, pc, voice_index, a1,
+        a2, a3, scaled, voice_base);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_voice_modulation_state(uint8_t* rdram, uint32_t pc,
+                                                  uint32_t voice_ptr,
+                                                  uint32_t coeff_ptr,
+                                                  uint32_t coeff_value,
+                                                  uint32_t voice_base) {
+    if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
+    uint32_t width = 0, origin = 0;
+    if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static uint32_t rows[2] = {};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] >= 128u) return;
+    const auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        const uint8_t* p = rdram + (guest - 0x80000000u);
+        return (static_cast<uint32_t>(p[0]) << 24) |
+               (static_cast<uint32_t>(p[1]) << 16) |
+               (static_cast<uint32_t>(p[2]) << 8) | p[3];
+    };
+    const uint32_t voice_record = voice_ptr >= 0x80000046u
+        ? voice_ptr - 0x46u : 0xFFFFFFFFu;
+    std::fprintf(stderr,
+        "[m5-voice-mod-state] row=%u phase=%u width=%u origin=0x%06X pc=0x%08X "
+        "record=0x%08X base=0x%08X coeff_ptr=0x%08X coeff=0x%08X "
+        "w44=0x%08X w48=0x%08X w4c=0x%08X\n",
+        rows[slot]++, rs64_phase_ord(), width, origin, pc, voice_record,
+        voice_base, coeff_ptr, coeff_value, word(voice_record + 0x44u),
+        word(voice_record + 0x48u), word(voice_record + 0x4Cu));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
                                                 uint32_t addr,
                                                 uint32_t value);

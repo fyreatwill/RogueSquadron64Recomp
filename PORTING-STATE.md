@@ -144879,3 +144879,25 @@ read at this boundary. It does not prove PCM/image production: the paired
 image joins still show zero payload. The next boundary is the scaled result
 from this load into the `setVoiceModulationParams` call at `0x8008D710`.
 The instrument is diagnostic-only; no guest behavior or gate changed.
+
+## Session 4079 (2026-10-06) — qualified voice-modulation call inputs
+
+Ground truth ran before instrumentation. The retail oracle passed the
+whole-RDRAM positive control and executed `0x800923E4` 100,372 times; 100,359
+had caller `0x8008D710`, with title and hangar phase rows. Two port-first
+probe-route attempts were invalid: both crashed at `fillSampleStreamRange+932`
+before title, so their missing witness rows were unevaluable.
+
+The fixed direct-AUTOPILOT image route passed the retail controls and both port
+target phases. The regeneration-safe port call and post-call state witnesses
+each emitted 128 title and 128 hangar rows. Hangar port call rows carried
+`a1=0`, `a3=0`, and `scaled=0`; paired retail calls carried nonzero `a1`/`v1`
+values, including `a1=0x004A79E0`. Port sampled state words at `+0x44/+0x48`
+were zero. Htransform-value is selected at the call-input boundary: the
+qualified channel load reaches `0x8008D710`, but the port's transform inputs
+are zero where retail's are not. The port-only state comparison is not treated
+as independent retail attribution. ORIGIN: the legitimate inputs are the guest
+register values prepared before `0x8008D710`; witnesses are diagnostic-only.
+The next work unit audits `0x8008D6F4..0x8008D70C` to find the first divergent
+setup value. The failed probe-route attempts rule out no transform hypothesis;
+they rule out only those route captures as evidence.

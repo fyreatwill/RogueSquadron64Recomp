@@ -281,16 +281,36 @@ downstream of this load. The first oracle-first schedule crashed at the known
 pre-target scheduler boundary; the port-first retry qualified the controls and
 is the result used here.
 
+Session 4079 grounded the next transform with the retail oracle before adding
+the port witness. Retail passed the whole-RDRAM positive control and executed
+`0x800923E4` 100,372 times; 100,359 executions had caller `0x8008D710`,
+including both title and hangar phase buckets. Two probe-route port attempts
+were invalid: both died at `fillSampleStreamRange+932` before title, so their
+nulls were not interpreted.
+
+The fixed direct-AUTOPILOT image route passed the same oracle controls and
+both port target phases. The regenerated port call/state witnesses each
+produced 128 title and 128 hangar rows. At the hangar call boundary, the port
+carried `a1=0`, `a3=0`, and `scaled=0`, while retail's paired oracle calls
+carried nonzero `a1`/`v1` values in the same phase (including
+`a1=0x004A79E0`). The downstream port state witness remained zero at the
+sampled `+0x44/+0x48` words. Htransform-value is selected at the call-input
+boundary: the qualified channel load reaches the callsite, but the port's
+transform inputs are zero where retail's are not. The state comparison is
+port-only and is not treated as independent retail attribution. ORIGIN: the
+legitimate transform inputs are the guest register values prepared before
+`0x8008D710`; these are diagnostic-only witnesses, not a mitigation.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4 next transform.** Use the qualified `0x8008D5E4` load as the
-   consumer-side anchor and identify whether its scaled result reaches the
-   following `setVoiceModulationParams` call at `0x8008D710` and downstream
-   voice state. Require retail execution evidence for the corresponding
-   `0x800923E4` target, a same-run port call witness, and title/hangar controls;
-   do not change the gate or add a mitigation from a port-only zero.
+1. **M5 Step 4f call-input producer.** Audit the values prepared between the
+   qualified `0x8008D5E4` channel load and the `0x8008D710` call. Ground retail
+   at `0x8008D710` and add one regeneration-safe port witness for
+   `0x8008D6F4..0x8008D70C` in one run, with title/hangar controls. Identify
+   which input first diverges; do not change the gate or add a mitigation from
+   a port-only zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -312,7 +332,8 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
-| M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. The next open boundary is the scaled result into voice modulation/state. |
+| M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
+| M5 voice modulation transform | Htransform-value selected at s4079 call-input scope: retail executes `0x800923E4` from `0x8008D710` with nonzero hangar inputs, while qualified port rows carry zero `a1`/`a3`/scaled values. The first two probe-route attempts were invalid; the direct AUTOPILOT image route qualified both phases. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
