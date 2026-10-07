@@ -1,7 +1,7 @@
-# Next work unit: M5 Step 6 / A13 — validate default-off drain tick vs ROGUESQ_DRAIN_INLOOP_TICK=1
+# Next work unit: M5 Step 9/10 gate — does nonzero PCM exist at AI source / callback / SDL on title+hangar?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4199 closed A15 (spin yield default-on, dormant on title+hangar). Remaining open plan rows: Step 6 (A13 drain-tick, "validation pending" since s2692), then Step 9/10.
-Hypotheses: H-drain-not-entered (drainAudioAndFinalizeSpeechBuffer never runs on title+hangar -> A13 closes like A14); H-drain-clean-both (entered, both arms return, no 10M timeout); H-tick-needed (default-off arm hits the 10M timeout, tick-on does not).
-Discriminator: one build, two concurrent arms (copy scratch/agent/s4199_spin_yield_default_ab.sh; arm2 adds ROGUESQ_DRAIN_INLOOP_TICK=1), count drain entries/returns and timeout logs per arm. Positive control: entry count >0 in tick-on arm; if 0 in both, A13 is dormant -> close, move to Step 9/10.
+s4200 closed Step 6/A13 as dormant on title+hangar (drain never entered; gate now actually wired into full fixup — a regen must keep `apply_s1993_drain_inloop_gate()` at the end of fixup_game_funcs.py). Steps 7/8 are effectively closed (A14/A9/A10 never fire). Remaining: Steps 9 (CPU-side MORT) and 10 (AI/SDL).
+Hypotheses: H-pcm-zero-at-source (guest never produces nonzero PCM -> Step 9: MORT/voice-matrix gap); H-pcm-lost-host (nonzero at AI source, zero/different at callback or SDL -> Step 10); H-pcm-clean (nonzero and identical at all three -> audio path de-stubbed on title+hangar; update plan, move to M3 idiom audits).
+Discriminator: one run (title+hangar, copy scratch/agent/s4200_drain_tick_ab.sh single arm) logging, per AI buffer: address, sample count, hash, nonzero span at AI source, callback consumer, SDL queue. First check docs/M5-AUDIO-PLAN.md Step 10 and grep existing `[m5-audio-drain-raw]` logs — they may already carry the three joins. Positive control: a synthetic nonzero buffer injected at the source must show at all three points.
