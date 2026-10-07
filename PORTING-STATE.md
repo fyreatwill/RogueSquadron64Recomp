@@ -144834,3 +144834,25 @@ superseded as path evidence: it was an instrumentation false negative, not a
 qualified branch divergence. Retail's 88 execution rows and 72 mismatch-free
 nonzero samples remain valid. ORIGIN: the legitimate writer is the guest
 `sb` at `0x80094648`; the new host call only observes address and value.
+
+## Session 4077 (2026-10-06) — qualified regenerated 94648 port store
+
+Ran the prescribed same-build retail-gated isolated image capture after the
+normal `make_elf.py -> N64Recomp -> fixup_game_funcs.py -> CMake` regeneration
+order. The Debug target built successfully, and fresh generated `funcs_25.c`
+contained one `s2609` witness. Retail passed the whole-RDRAM positive control
+and reached title `0x00790400/1024` and hangar `0x006AB400/512`; its oracle
+reported 88 hangar-bucket `0x80094648` rows. The port reached both phases with
+no crash or abort. The new `[m5-94648-control]` fired in title and hangar, and
+the port emitted 11 hangar rows whose destinations began at `0x80141AD8` and
+whose requested/stored bytes were both `0x7F`.
+
+This selects H94648-port-store-live and rules out the prior port-path-gap
+interpretation. The named indexed writer executes on the port with a
+retail-shaped destination/value relation, while the hangar image/PCM payload
+remains zero. The missing boundary is therefore downstream of this store or
+in a later producer/transform; no gate or mitigation was changed. ORIGIN: the
+legitimate writer is the guest `sb` at `0x80094648`; the host witness is
+diagnostic-only. The script's legacy phase-count expression reported
+Hcoverage despite the raw phase and witness markers; the raw markers are the
+result evidence.

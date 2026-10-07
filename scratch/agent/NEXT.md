@@ -1,36 +1,40 @@
-# Next work unit: M5 Step 4c qualified 94648 store witness run
+# Next work unit: M5 Step 4d immediate consumer of the qualified 94648 span
 
-HYPOTHESIS-ID: m5-audio-step4c-94648-port-store
+HYPOTHESIS-ID: m5-audio-step4d-94648-consumer
 
-Session 4076 repaired the regeneration-safe `s2609` witness. The guest
-`0x80094648` store exists in generated source, but s4075 could not observe it
-because the witness insertion was skipped by an already-present s2586 marker.
+Session 4077 qualified the port `0x80094648` indexed store. The next single
+experiment is to identify whether the written `0x80141AD8..` channel span is
+read/copied into the image/PCM path, or whether the port diverges immediately
+after the store.
 
 Competing hypotheses:
 
-- H94648-port-store-live: the port executes the indexed store with a valid
-  destination/value relation after the fix; the new witness will report rows
-  in the title/hangar phase buckets.
-- H94648-port-branch: the fixed witness remains silent in the target phase,
-  while the complete `startSongSequence` branch trace shows a predicate or
-  loop-state divergence before `0x80094648`.
-- H94648-port-value: the store executes, but its requested byte or effective
-  destination differs from retail; paired rows will show the mismatch.
-- Hcoverage: any required retail whole-RDRAM/title/hangar or isolated-port
-  phase control is missing, making the null unevaluable.
+- Hconsumer-live: a retail-shaped post-store read/copy occurs in the hangar
+  phase and reaches the downstream image/PCM input; the zero payload is later.
+- Hconsumer-absent: retail has a post-store read/copy but the port has no
+  matching phase-scoped consumer activity after the qualified store.
+- Hconsumer-value: both arms consume the span, but the port's read/copy value
+  or destination differs from retail.
+- Hcoverage: either arm lacks the whole-RDRAM/title/hangar controls or the
+  qualified `m5-94648` positive control, making a null unevaluable.
 
-Discriminating measurement: rebuild after the fixup through the normal
-regeneration order, then run one same-build retail-gated isolated image
-capture with `PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`. Require
-the retail positive controls, the port title/hangar gates, the new
-`m5-94648-control`, and phase-keyed `m5-94648` rows. Live selects rows with a
-retail-shaped destination/value relation; branch selects valid controls plus
-entry/branch rows and zero store rows; value selects store rows with a
-destination/value mismatch; coverage selects any missing control.
+Discriminating measurement: first use the retail oracle to ground-truth reads
+of physical `0x141AD8..0x141AF0` after the `0x80094648` stores, including PC and
+destination attribution. Then batch one port witness for the selected retail
+consumer idiom and run one same-build isolated image capture with
+`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`. Require the retail
+whole-RDRAM/title/hangar controls, port title/hangar gates, and
+`m5-94648-control`/hangar rows. Hconsumer-live selects matching post-store
+read/copy rows and downstream nonzero handoff; Hconsumer-absent selects valid
+controls plus retail rows but zero port rows; Hconsumer-value selects paired
+rows with a value/destination mismatch; Hcoverage selects any missing control.
 
-Exact commands: run the repository's normal regeneration/fixup pipeline from
-the companion N64Recomp tree, build the Debug target, then adapt
-`scratch/agent/run_s4075_m5_step4_94648.sh` only to assert the new
-`m5-94648-control`/row markers. Run from `build/`, capture logs under
-`scratch/agent/s4077_m5_step4c_94648`, and SIGKILL both processes. Do not alter
-the guest store or any gate.
+Exact preparation/run: inspect the retail consumer with bounded `rg`/oracle
+watch output before adding a witness; then regenerate with
+`python3 /Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py`,
+`/Users/williambuckley/Documents/Tools/N64Recomp/build/N64Recomp rogue_squadron.toml`,
+`python3 fixup_game_funcs.py`, build with
+`cmake --build build --config Debug --target RogueSquadron64Recomp`, and run
+`zsh scratch/agent/run_s4075_m5_step4_94648.sh`. Keep all output under a new
+`scratch/agent/s4078_m5_step4d_94648_consumer` directory; SIGKILL both arms.
+Do not change the gate or add a mitigation from a port-only zero.

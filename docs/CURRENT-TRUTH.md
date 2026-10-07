@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4076 (2026-10-06).
+Updated for session 4077 (2026-10-06).
 
 ## Current state
 
@@ -258,16 +258,26 @@ therefore unqualified for path divergence; a regenerated witness run is
 required. ORIGIN: `0x80094648` is the legitimate guest indexed channel-span
 writer; the fix is diagnostic-only.
 
+Session 4077 reran the regenerated witness on the isolated image route. The
+retail oracle again passed whole-RDRAM, title, and hangar controls and reported
+88 hangar-bucket `0x80094648` rows. The port passed title and hangar with no
+crash or abort; its new positive control fired in both phases and emitted 11
+hangar rows. Those rows matched the retail-shaped relation: destinations began
+at `0x80141AD8` and requested/stored bytes were both `0x7F`. H94648-port-store-live
+is selected: the port reaches the named indexed writer, so the zero hangar
+PCM/image payload is downstream or in a later producer/transform boundary, not
+evidence that this store was skipped. ORIGIN: the legitimate writer is the
+guest `sb` at `0x80094648`; the witness remains diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4 writer qualification.** Use the isolated image route and the
-   retail oracle to qualify the hangar PCM/gate writer class, beginning with
-   the already named `0x80094648` value/destination boundary. Require the
-   whole-RDRAM/title/hangar controls, retail writer/value attribution, and
-   matching port gate/PCM rows in one phase-gated capture. Do not change the
-   gate or add a mitigation from a port-only zero.
+1. **M5 Step 4 downstream boundary.** Use the qualified `0x80094648` store
+   rows as the source-side anchor and identify the next phase-gated writer or
+   transform that should carry its channel bytes into the image/PCM path.
+   Require the retail whole-RDRAM/title/hangar controls plus a same-run port
+   join; do not change the gate or add a mitigation from a port-only zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -285,7 +295,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 
 | Hypothesis | Status |
 |---|---|
-| M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063); the isolated image arm still has zero hangar output. Retail `0x80094648` writes nonzero channel data, while the port-side store witness now requires a regenerated run because s4076 found the prior witness was absent. |
+| M5 producer absent | Hangar span closed as retail parity (s3820). Title AI producer is nonzero in retail and declared-real port (s4063); the isolated image arm still has zero hangar output. Session 4077 qualifies the port `0x80094648` store with retail-shaped nonzero values, so the missing boundary is downstream of that indexed writer. |
 | M5 title host sink | Hplay selected (s4065): device 2 opens, host queue calls are positive, and drain depth advances without zero-starvation; s4066 native-SDL qualification is blocked by pre-target route failure, so device callback/output behavior remains open. |
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
