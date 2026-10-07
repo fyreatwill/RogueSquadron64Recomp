@@ -146330,3 +146330,22 @@ legitimate. No guest, audio, wait, cap, predicate, slot, or writeback
 behavior changed. ORIGIN: the `rs_memset` snapshots and guest clear stores.
 Evidence: `docs/M5-S4156-PRECLEAR-OVERWRITE.md` and
 `scratch/agent/s4154_m5_preclear_provenance/`.
+
+## Session 4157 (2026-10-07) — M5 pre-clear writer census route-invalid
+
+The regeneration-safe `s2190` writer-parity fixup was extended to the
+`0x1797B0..0x179A48` target span, title/hangar phase buckets, and actual
+scalar values, with an explicit target-phase writer control. The generated
+tree rebuilt successfully. The corrected retail oracle passed whole-RDRAM,
+title, and hangar controls; its target-span watch recorded 1,830 writes,
+including 664 hangar writes from `0x800078EC`, with earlier families at
+`0x80007670`, `0x8001E2C0`, and `0x8001FAxx`. Its hangar post-phase snapshot
+was zero (`664` bytes, `FNV=0xC0EFD6A5`). Both paired port retries crashed
+before title in `spTaskSchedulerThread+9772`, last guest PC `0x8000834C`, so
+the port writer control and target rows did not fire. H-preclear-writer-route-
+invalid is selected; no legitimate-versus-mismatching port provenance split
+is valid. This rules out neither earlier-writer legitimacy nor mismatch. ORIGIN:
+the independent retail writer histogram and the repeated port route crash; no
+guest, audio, wait, cap, predicate, slot, or writeback behavior changed.
+Evidence: `docs/M5-S4157-PRECLEAR-WRITER-CENSUS.md` and
+`scratch/agent/s4157_m5_preclear_writer_census/`.

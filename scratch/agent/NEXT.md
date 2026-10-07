@@ -1,11 +1,12 @@
-# Next work unit: attribute the earlier nonzero pre-clear writer
+# Next work unit: qualify the port route, then attribute the earlier writer
 
 HYPOTHESIS-ID: m5-pre-clear-producer-provenance
 
-Use the repaired `rs_memset` entry/exit control to attribute the earlier
-nonzero writer that populates `0x1797B0..0x179A48` before `0x800078EC` clears
-it. The s4156 port reached both target phases, with hangar `pre_nz=400` at
-entry and `pre_nz=0` at exit; its known clear stores were zero.
+Use the repaired `rs_memset` entry/exit control and the new target-span writer
+census to attribute the earlier nonzero writer that populates
+`0x1797B0..0x179A48` before `0x800078EC` clears it. Session 4157's retail arm
+was valid and saw 664 hangar `0x800078EC` writes plus the named earlier writer
+families, but both port retries crashed before title at `0x8000834C`.
 
 Competing hypotheses and discriminator:
 
@@ -18,12 +19,11 @@ Competing hypotheses and discriminator:
   not fire, or either arm lacks whole-RDRAM/title/hangar gates. No provenance
   conclusion is valid.
 
-Exact work: add one regeneration-safe, phase-gated writer census at the
-source-level stores that can populate `0x1797B0..0x179A48`, batch its positive
-control with the existing entry/exit snapshots, build once, and run the paired
-capture. Require whole-RDRAM, title, and hangar controls plus a writer-control
-row before interpreting source rows. Do not change guest, audio, wait, cap,
-predicate, slot, or writeback behavior.
+Exact work: rerun `zsh scratch/agent/run_s4157_m5_preclear_writer_census.sh`
+with the same rebuilt binary, after first requiring a port title/hangar route.
+Require whole-RDRAM, title, and hangar controls plus
+`[m5-preclear-writer-control]` before interpreting target rows. Do not change
+guest, audio, wait, cap, predicate, slot, or writeback behavior.
 
 Expected outcomes: a matching nonzero port writer selects
 H-earlier-writer-legitimate; a mismatching writer selects

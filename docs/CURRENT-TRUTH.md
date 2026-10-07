@@ -3,7 +3,19 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4156 (2026-10-07).
+Updated for session 4157 (2026-10-07).
+
+Session 4157 extended the regeneration-safe scalar writer census to the
+pre-clear span and actual stored values. The independent retail oracle passed
+whole-RDRAM/title/hangar controls and recorded 1,830 target-span writes,
+including 664 hangar writes by `0x800078EC` plus the `0x80007670`,
+`0x8001E2C0`, and `0x8001FAxx` families. Two same-build port retries crashed
+before title at `spTaskSchedulerThread+9772` / guest PC `0x8000834C`, so the
+port writer control did not fire and no provenance conclusion is valid.
+H-preclear-writer-route-invalid is selected for this iteration. ORIGIN: the
+qualified retail writer histogram and the repeated port route crash; no guest,
+audio, wait, cap, predicate, slot, or writeback behavior changed. Evidence:
+`docs/M5-S4157-PRECLEAR-WRITER-CENSUS.md`.
 
 Session 4156 repaired and verified the regeneration-safe `rs_memset` entry/exit
 hook. The target-valid port reached title and hangar; hangar entry had 400
