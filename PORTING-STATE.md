@@ -145458,3 +145458,26 @@ image input, transform, or writeback. ORIGIN: the host audio-task staging
 writer is the legitimate source of the `0x800`/`0xF80` diagnostic difference;
 no mitigation or guest behavior changed. Next: locate the first zero boundary
 in the image source/transform/writeback chain.
+
+## Session 4110 (2026-10-06) — located zero at image preimage boundary
+
+Asked the retail oracle first, using the whole-RDRAM positive control plus
+physical watches for the candidate image ranges. The control fired with
+111,644 writes, and retail reached title `0x00790400/1024` and hangar
+`0x006AB400/512`. Retail wrote the input/working span `0x178C80..0x178F18`
+664 times and its hangar snapshot contained 24 nonzero bytes; stage storage
+`0x166000..0x168000` and descriptor storage were also active.
+
+Built the existing regeneration-safe image-stage probe and ran one same-build,
+phase-gated declared-size/legacy-size matrix. Both arms reached title and
+hangar, emitted positive stage/task/PCM controls, and had no crash or abort.
+In both arms, hangar stage 0 (`DMEM 0xCC0`) was zero; stage 1 remained zero,
+stage 2 output/writeback was zero, and stage 3 retained `FNV=0x762B22A5`,
+`nz=0`. This selects H-preimage-zero at the qualified port boundary: the
+first measured zero is before the transform, while the independent retail
+watch proves the corresponding retail input span is nonzero. It rules out
+transform-stage and writeback as the first zero boundary, and it does not
+identify the port-side source DMA or producer. ORIGIN: the legitimate writer
+to investigate is the image input/source-DMA path; no skip, force-clear, or
+guest behavior changed. The declared/legacy staging difference remains
+non-causal at this boundary.

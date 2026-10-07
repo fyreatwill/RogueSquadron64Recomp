@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4109 (2026-10-06).
+Updated for session 4110 (2026-10-06).
 
 ## Current state
 
@@ -652,16 +652,34 @@ zero-payload origin before or during the image source/transform path. ORIGIN:
 the staging writer is the host audio-task DMA setup; both sizes are legitimate
 diagnostic arms, and no mitigation or guest behavior changed.
 
+Session 4110 asked the retail oracle before building the next probe. The
+whole-RDRAM positive control fired with 111,644 writes and retail reached title
+`0x00790400/1024` and hangar `0x006AB400/512`. Retail wrote the physical image
+input/working span `0x178C80..0x178F18` 664 times and its hangar snapshot had
+24 nonzero bytes; stage storage `0x166000..0x168000` and descriptor storage
+were also active. The existing regeneration-safe image-stage probe was then
+run in one same-build declared-size/legacy-size matrix. Both arms reached both
+target VIs with positive stage/task/PCM controls and no crash or abort. In
+both arms, hangar stage 0 (`DMEM 0xCC0`) was zero; stage 1 remained zero, stage
+2 output/writeback was zero, and stage 3 retained `FNV=0x762B22A5`, `nz=0`.
+Hpreimage-zero is selected at the qualified port boundary: retail's
+independent nonzero input witness and the port's zero stage-0 witness place
+the first measured zero before the transform. This rules out transform-stage
+and writeback as the first zero boundary, but does not identify the port-side
+source DMA or producer. ORIGIN: the legitimate writer to investigate is the
+image input/source-DMA path; no skip, force-clear, or guest behavior changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 image zero-payload origin:** run one retail-grounded, phase-gated
-   source/transform matrix that joins the image input DMEM snapshot, stage-2
-   and stage-3 values, destination writeback, and PCM source/consumer rows for
-   both image arms. Positive controls must include retail whole-RDRAM/title/
-   hangar and both port image target VIs. Attribute the first zero boundary;
-   do not add a guard or force-clear any status.
+1. **M5 image preimage producer:** run one retail-grounded, phase-gated
+   source-DMA matrix for the port image input. Join the image task's source
+   RDRAM span and DMA into `DMEM 0xCC0` with stage-0 rows, while retaining
+   declared/legacy arms and title/hangar/task/PCM controls. Split H-source-zero
+   (source RDRAM already zero) from H-DMA-zero (source nonzero but DMEM zero)
+   and H-route-misjoin (no qualified stage-0 row). Do not add a guard or
+   force-clear any status.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -686,6 +704,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
 | M5 voice modulation transform | Hlater-transform selected at s4091's first demonstrated boundary: the port `0x80084AB8` return values are the low 16 bits of `s0` after the source `andi`, and every sampled port value (`0`, `0xF00`, `0x1900`, `0x2000`, `0x3F80`) occurs in the qualified retail title/hangar support. The independent rows are not record-synchronized, so a later transform remains open. |
 | M5 route failure | H-image-specific-failure remains selected at s4108's measured scope: silent reached title only, while both declared `0x800` and legacy `0xF80` image arms reached title/hangar. Session 4109 rejects staging size as the sufficient downstream explanation; the zero-payload origin remains open. |
+| M5 image zero boundary | Hpreimage-zero selected at s4110: retail's physical `0x178C80..0x178F18` input span is nonzero in hangar, while both qualified port image arms have zero stage-0 DMEM `0xCC0`; stages 1–3 remain zero. The port-side source DMA/producer is open. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
