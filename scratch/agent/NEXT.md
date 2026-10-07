@@ -1,39 +1,27 @@
-# Next work unit: qualify the first body loads at 0x8008F900
+# Next work unit: requalify the port route for the 0x8008F900 body witness
 
 HYPOTHESIS-ID: m5-step4-object-entry-body
 
-Session 4181 repaired the predecessor witness's raw-address semantics and
-qualified parity at the shared hangar phase. The next boundary is inside
-`0x8008F900`; use one batched, regeneration-safe witness for its first body
-loads and compare the values against an independent oracle watch.
+Session 4182 added the regeneration-safe pre-instruction body witness, but the
+paired run was route-invalid on both port arms. Reuse the witness and first
+establish a clean port target-phase route, then compare it against the already
+qualified retail oracle rows.
 
 Competing hypotheses:
 
-- H-body-input-mismatch: a first body load/input differs between retail and
-  port after the matched predecessor context.
-- H-body-input-parity: body inputs match, moving the boundary to the next
-  instruction or consumer.
-- H-route-invalid: the independent body watch or phase joins do not qualify;
-  no conclusion is allowed.
+- H-body-input-mismatch: the first qualified body tuple differs between retail
+  and port after the matched predecessor context.
+- H-body-input-parity: qualified body tuples match, moving the boundary inward.
+- H-route-invalid: the port does not reach a target phase; no body conclusion
+  is allowed.
 
-Discriminator: one build/run with the whole-RDRAM positive control, both retail
-target phases (`0x00790400`/`0x006AB800`), both port target phases, and joined
-`0x8008F8FC`/`0x8008F900` body rows. A comparable body-input mismatch selects
-the first divergent load; parity moves the boundary inward; missing controls
-or joins is unevaluable. Do not change audio, gate, writer, payload, or
-mitigation logic.
+Discriminator: one run with the existing build, whole-RDRAM positive control,
+both title origins (`0x00790400`/`0x00790800`), both hangar origins
+(`0x006AB400`/`0x006AB800`), and joined `0x8008F8FC`/`0x8008F900` body rows.
+A qualified tuple mismatch selects the first divergent input; parity moves the
+boundary inward; missing port target phases is route-invalid. Do not change
+audio, gate, writer, payload, or mitigation logic.
 
-Exact work:
-
-1. Add one witness at the first body loads after `0x8008F900`, recording the
-   raw register/address/value tuple with a phase-scoped budget; do not alter
-   guest behavior.
-2. Add the matching oracle watch/field dump to the paired recipe, using retail
-   hangar origin `0x006AB800` and port hangar origin `0x006AB400`.
-3. Build once, run both arms concurrently, and require the positive-control
-   line, retail title/hangar, port title/hangar, 71 retail predecessor hits,
-   and two port joins before judging any null or mismatch.
-
-Use [F5-UCODE-REFERENCE.md](../../docs/F5-UCODE-REFERENCE.md), not standard
-F3DEX assumptions. MusyX/MORT audio remains partially stubbed; do not send
-MusyX data to stock `aspMain`.
+Exact command: `zsh scratch/agent/run_s4182_m5_object_body.sh` after confirming
+no stale game/oracle children. The script is self-watching and SIGKILLs both
+arms; it uses the already-built body witness and the independent retail oracle.

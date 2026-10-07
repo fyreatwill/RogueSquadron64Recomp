@@ -146793,3 +146793,23 @@ two port joins, and shared hangar values: `s0=0x48`, `s1=0x1B000`,
 `branch_state=0x1100`. This selects predecessor-context parity and moves the
 open boundary into the `0x8008F900` body. It rules out the earlier
 KSEG-only witness alias and does not explain the zero audio payload.
+
+## Session 4182 (2026-10-07) — added M5 object-body boundary witness
+
+Added the regeneration-safe `s4182` witness at the pre-instruction boundary
+`0x8008F900`. It records the raw register tuple and the first derived store
+addresses/values with a 512-row budget per target VI phase. The body begins
+with arithmetic and stores, not a guest load; the witness therefore does not
+invent a load. The matching retail oracle watch used both observed title
+origins (`0x00790400`/`0x00790800`) and both observed hangar origins
+(`0x006AB400`/`0x006AB800`).
+
+The real-audio port arm crashed before title at the known audio-path site
+`spTaskSchedulerThread+9772` (last guest PC `0x8000834c`), and the silent
+control arm stopped at width 640. Neither port arm reached a target phase, so
+the port body-row count of zero is route-invalid and is not evidence about the
+body. The independent retail arm passed the whole-RDRAM positive control,
+reached title and hangar, and recorded 71 phase-gated executions at
+`0x8008F900`; this independently validates the oracle side but does not select
+body-input mismatch or parity. The body boundary remains open. No audio, gate,
+writer, payload, or mitigation behavior changed.

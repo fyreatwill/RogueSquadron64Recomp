@@ -1676,6 +1676,50 @@ extern "C" void rs64_m5_object_entry_witness(uint8_t* rdram,
                               raw_word(s0 + 0x60u), raw_half(s0 + 0x22u),
                               raw_half(s1 + 0x22u)};
 }
+
+extern "C" void rs64_m5_object_body_witness(uint8_t* rdram,
+                                               recomp_context* ctx) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_OBJECT_BODY");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled || !rdram || !ctx) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+        std::fprintf(stderr,
+                     "[m5-object-body-control] phase=%u width=%u origin=0x%06X\n",
+                     rs64_phase_ord(), width, origin);
+        std::fflush(stderr);
+    }
+    if (rows >= 512u) return;
+    const uint32_t a3 = U32(ctx->r7);
+    const uint32_t t0 = U32(ctx->r8);
+    const uint32_t a1 = U32(ctx->r5);
+    const uint32_t v1 = t0 + 0x18u;
+    const uint32_t v0 = t0 + a1;
+    std::fprintf(stderr,
+        "[m5-object-body] row=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x8008F900 ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X "
+        "s0=0x%08X s1=0x%08X t0=0x%08X next_a3=0x%08X "
+        "store1_addr=0x%08X store1_value=0x%08X store2_addr=0x%08X store2_value=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, U32(ctx->r31), U32(ctx->r4),
+        a1, U32(ctx->r6), a3, U32(ctx->r16), U32(ctx->r17), t0,
+        a3 + 0x600u, v1 - 0x18u, v1, v1 + 0x4u, v0);
+    std::fflush(stderr);
+}
 }
 
 extern "C" void rs64_m5_pcm_set_callsite(uint32_t callsite) {

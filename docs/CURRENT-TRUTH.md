@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4181 (2026-10-07).
+Updated for session 4182 (2026-10-07).
 
 ## Current state
 
@@ -179,14 +179,28 @@ H-entry-body-mismatch: the predecessor context is parity and the next boundary
 is inside `0x8008F900`. No audio, gate, writer, payload, or mitigation
 behavior changed.
 
+Session 4182 added a regeneration-safe witness at the pre-instruction body
+boundary `0x8008F900`, recording raw registers and first derived store
+addresses/values. The body begins with arithmetic and stores rather than a
+guest load, so the witness does not invent one. The retail oracle arm passed
+the whole-RDRAM control, reached title/hangar, and recorded 71 phase-gated
+`0x8008F900` executions using both observed title/hangar origin variants. The
+real-audio port arm crashed before title at `spTaskSchedulerThread+9772` (last
+guest PC `0x8000834c`); the silent port control stopped at width 640. Neither
+port arm qualified a target phase, so zero port body rows are route-invalid and
+do not select body mismatch or parity. The body boundary remains open; no
+audio, gate, writer, payload, or mitigation behavior changed.
+
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** instrument the first body loads inside
-   `0x8008F900`, then run one paired oracle/port measurement. Preserve the
-   whole-RDRAM control and qualified title/hangar phase gates (`0x00790400`;
-   retail hangar `0x006AB800`, port hangar `0x006AB400`). A comparable body
-   input mismatch selects the first divergent load; parity moves the boundary
-   inward. Do not change audio, gate, writer, or payload behavior.
+1. **M5 audio de-stubbing:** requalify the clean port route for the new
+   `0x8008F900` body witness, then run one paired oracle/port measurement.
+   Preserve the whole-RDRAM control and arm both observed title origins
+   (`0x00790400`/`0x00790800`) and hangar origins
+   (`0x006AB400`/`0x006AB800`). A qualified comparable body tuple mismatch
+   selects the first divergent input; parity moves the boundary inward; absent
+   port target phases is route-invalid. Do not change audio, gate, writer, or
+   payload behavior.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -209,6 +223,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 writer object context | H-context-mismatch selected at s4173: retail field dumps fired for all five PCs and showed changing per-object source words/branch fields, while the port matched source-context path retained zero target-span values and did not expose equivalent object-field state. The first divergent object-field input is open; no behavior change is authorized. |
 | M5 object-field witness | H-legitimate-field-mismatch selected at s4174: the corrected port witness fired in both target phases and recorded all five producer PCs. Its runtime-memory field values and object records did not reconcile with the independent retail field table after using `MEM_W/MEM_BU/MEM_HU` semantics. The earlier raw-byte result is superseded as an endian instrumentation defect. |
 | M5 object-entry boundary | H-entry-body-mismatch selected at s4181: after repairing the port witness to raw physical-address semantics, retail and port matched `s0=0x48`, `s1=0x1B000`, source word/byte, selector, and branch state at the shared hangar phase. The open boundary is inside `0x8008F900`. |
+| M5 object-body witness | H-body-route-invalid at s4182: the retail positive control and 71 body executions qualified, but both real-audio and silent port arms failed to reach a target VI phase. Zero port body rows are unevaluable; body mismatch versus parity remains open. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |
