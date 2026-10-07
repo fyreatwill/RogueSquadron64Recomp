@@ -147009,3 +147009,17 @@ behaved (`spin-enter countdown0=16` -> `spin-exit countdown=0 yields=206`). Repr
 Single-run, single-source for the hangar phase (agrees with s332 for a second phase). Rules out the second
 spin as a de-stub target. No code change (ORIGIN not applicable: no mitigation added).
 Pre-wait width-320 segfault si_addr=0x400128d47 not chased (M3 family).
+
+## Session 4194 (2026-10-07) — M5 A14 status-03 shutdown wait: never entered on the title/hangar route, closed
+
+Read the generated `shutdownMusyXVoices` (funcs_26.c:14576): after the `stopVoiceSlotSynced` loop, the wait at
+`L_8009BCEC` scans slot status bytes (`0x80154620`, stride `0x1228`) and restarts only when the byte is nonzero,
+with no yield in the loop. Hypotheses: H-spins-on-03 (status 03 at entry, needs the service worker to clear it),
+H-idle-at-entry (status 0, loop exits first pass), H-call3-only (spin only on a third shutdown call). Discriminator:
+slot-0 status at every `shutdown-entry`/`shutdown-exit` row of the existing `[s2028-a11]` stream. Tallied with the new
+tools/audit_a14_shutdown_wait.py over four existing logs from two sessions (s4142 port, s4117 silent, s4168 real and
+silent): 4 entries and 4 exits, all phase=4 width=1024 call=2 status=0x00; spin_reachable_rows=0; no call 3 on the route.
+Positive control for the stream: the same logs carry the phase-5 `0x8009B7EC` `03 -> 00` store (s4136/s4142), so nonzero
+statuses are observable. H-idle-at-entry holds; H-spins-on-03 and H-call3-only are not reached on this route. This is
+analysis of existing logs (no new run), two sessions. A14 is a never-stuck wait like A12's second spin (s4193): nothing to
+de-stub, no force-clear authorized. No behavior change (ORIGIN not applicable).

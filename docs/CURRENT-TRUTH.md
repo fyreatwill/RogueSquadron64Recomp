@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4192 (2026-10-07).
+Updated for session 4194 (2026-10-07).
 
 Session 4192: M5 A12 de-stub landed. The countdown wait at `0x8014998A` now defaults to a yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset = mode 2): the real producer takes the countdown 16 -> 0 in ~200 x 1 ms yields and title/hangar are reached. The old musyxSynthFrame pump left the countdown at 16 (64-pump ceiling, stall row every wait) - it was a silent skip, so the s327 "only decrementer" justification is superseded. `=0` restores the pump, `=1` the deadlocking blind spin (control). Pre-wait width-320 segfault (`si_addr=0x400128d47`) seen in 2 of 6 arm-runs, unrelated. See PORTING-STATE s4192.
 
@@ -277,7 +277,7 @@ No audio, gate, writer, payload, or mitigation behavior changed.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** A12 countdown wait de-stubbed (s4192); A12 second spin at `0x8014974C` CLOSED as never-stuck (s4193: entered once, flag already 0, no spin; nothing to de-stub). Next: Step 7 status-03 reaping (A14). Object-path parity qualification is closed (s4187-s4191); do not add witnesses there.
+1. **M5 audio de-stubbing:** A12 countdown wait de-stubbed (s4192); A12 second spin at `0x8014974C` CLOSED as never-stuck (s4193: entered once, flag already 0, no spin; nothing to de-stub). A14 status-03 shutdown wait CLOSED as never-entered (s4194: 4/4 entries status 0x00, call 2 only; tools/audit_a14_shutdown_wait.py). Next: M5 Step 8 (voice-base/list guard class; needs retail writer + valid range first) or the first genuinely stuck wait. Object-path parity qualification is closed (s4187-s4191); do not add witnesses there.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
