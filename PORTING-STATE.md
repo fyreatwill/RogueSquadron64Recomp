@@ -145990,3 +145990,22 @@ caller/constructor remains open. ORIGIN: retail guest source-span stores and
 port image-stage/DMA rows; no guest, wait, cap, predicate, slot, or host
 writeback behavior changed. Evidence:
 `scratch/agent/s4138_m5_source_producer_context/`.
+
+## Session 4139 (2026-10-07) — qualified M5 source-construction caller split
+
+Read the oracle contract, ran a corrected retail ground-truth preflight, then
+added the regeneration-replayable `s4140` source-context hook and rebuilt the
+ordinary Debug target. The paired capture passed the whole-RDRAM positive
+control, retail title/hangar gates, and port title/hangar gates with no port
+crash or abort. Retail's phase-gated `0x800078EC` execution showed immediate
+caller `prev_pc=0x800052C4`; its title tuple used `a0=0x801BB9B0`,
+`a2=0x88`, while the port used source/destination `0x80178C80`, `a2=0x298`,
+and zero values. Retail hangar used `0x8065E0A0`/`0x1C`; port used
+`0x80165E50`/`0xC`. H-retail-port-caller-split is selected at the first
+measured boundary; H-route-invalid is ruled out. The port hook's `ra=0` is
+instrument-limited and is not treated as a guest caller fact. This rules out
+tuple parity at the store loop but does not yet identify the port predecessor
+or source constructor. ORIGIN: the guest `0x800078EC` store-loop arguments
+and retail oracle previous-PC witness; no guest behavior, wait, cap,
+predicate, slot state, or host writeback changed. Evidence:
+`scratch/agent/s4140_m5_source_context/`.

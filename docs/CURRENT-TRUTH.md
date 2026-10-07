@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4138 (2026-10-07).
+Updated for session 4139 (2026-10-07).
 
 ## Current state
 
@@ -35,6 +35,22 @@ phase-keyed source stores are nonzero while the qualified port payload remains
 zero. The exact retail-to-port call-context join remains open. ORIGIN: retail
 source-span guest stores and the port image-stage/DMA writer rows; no guest,
 wait, cap, predicate, slot, or writeback behavior changed.
+
+Session 4139 qualified the planned source-construction context discriminator
+with one rebuilt port and retail oracle capture. Whole-RDRAM controls and both
+title/hangar phase gates passed, and the new port marker fired in both target
+phases. At title, retail's phase-gated writer execution had immediate caller
+`0x800052C4`, source/destination `0x801BB9B0`, and length `0x88`; the port
+writer had `ra=0`, source/destination `0x80178C80`, and length `0x298`, with
+zero values. Retail's hangar tuple was also distinct (`0x8065E0A0`, length
+`0x1C`), while the port used `0x80165E50`, length `0xC`. H-retail-port-caller-
+split is selected at this first measured boundary. The port `ra=0` field is
+not yet a valid caller attribution because the generated context does not
+preserve a usable return register at this hook; it is an instrument
+limitation, not a guest fact. ORIGIN: the guest `0x800078EC` store-loop
+arguments and the retail oracle's previous-PC execution witness; no guest
+behavior, wait, cap, predicate, slot state, or host writeback changed.
+Evidence: `scratch/agent/s4140_m5_source_context/`.
 
 The task-contract consumer boundary is closed at the measured scope: declared
 and legacy real-audio arms reached both target phases with matching zero
@@ -434,11 +450,10 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-producer call-context join:** use the qualified s4138 retail
-   writer table and the existing port source/DMA rows to identify the first
-   divergent caller/argument or source-buffer construction boundary. Keep
-   image, wait, cap, predicate, slot state, guest behavior, and host writeback
-   unchanged. Do not repeat the completed watch-index repair.
+1. **M5 source-construction predecessor:** explain the qualified s4139 tuple
+   split by tracing the port's caller/entry setup before `0x800078EC` and
+   joining it to retail's `prev_pc=0x800052C4`; keep image, wait, cap,
+   predicate, slot state, guest behavior, and host writeback unchanged.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.

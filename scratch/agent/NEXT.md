@@ -1,6 +1,6 @@
-# Next work unit: identify the first M5 source-construction divergence
+# Next work unit: identify the M5 source-construction predecessor
 
-HYPOTHESIS-ID: m5-source-producer-call-context
+HYPOTHESIS-ID: m5-source-construction-predecessor
 
 Use the qualified s4138 retail writer table and the existing port source/DMA
 rows to join the first divergent caller, argument, or source-buffer
@@ -17,17 +17,54 @@ Competing hypotheses and discriminator:
 - H-route-invalid: either route loses a target phase or the phase-keyed join
   lacks a positive control.
 
-The single discriminating measurement is one batch instrument that records a
-phase-keyed tuple at the known retail writer family and its immediate caller
-chain: writer PC, previous PC/return site, `a0`, `a1`, `a2`, source pointer,
-length, destination span, and value/hash. The same run must include the
-whole-RDRAM oracle control, title/hangar gates, and the qualified port image
-source/DMA rows. A matching tuple selects H-retail-port-caller-match; a
-qualified tuple split selects H-retail-port-caller-split; missing controls or
-phases selects H-route-invalid.
+The s4139 discriminator selected H-retail-port-caller-split: retail title
+uses `prev_pc=0x800052C4`, `a0=0x801BB9B0`, `a2=0x88`, while the port uses
+`a0=0x80178C80`, `a2=0x298`; retail hangar and port hangar also differ. The
+port hook's `ra=0` is an instrument limitation because this generated context
+does not preserve a usable return register.
 
-Before building, read `tools/oracle/README.md` and ask ground truth with the
-existing positive-control oracle route. Then batch the new oracle caller table
-and port tuple fields in one Debug build/run. Exact commands should be recorded
-here before execution; use SIGKILL cleanup and capture logs under a non-dot
-final path.
+Competing hypotheses and discriminator:
+
+- H-port-entry-setup-split: the port's entry caller or pre-loop argument
+  construction differs from retail's `prev_pc=0x800052C4` before the first
+  `0x800078EC` store.
+- H-port-hook-register-loss: the guest entry matches, but the generated hook
+  loses the return register while adapting the MIPS context.
+- H-route-invalid: a new paired run lacks the positive control or target gates.
+
+The single measurement is one phase-gated port entry/return trace around the
+`rs_memset` loop (entry PC, caller/return-site state, and first argument tuple)
+plus the retail `watch-pc-range`/phase-gated previous-PC table already used in
+s4139. Matching entry/caller state selects hook-register-loss; a qualified
+entry or argument split selects port-entry-setup-split; missing controls or
+phases selects route-invalid. Do not change guest behavior or writeback.
+
+Ground-truth preflight completed before instrumentation. The first 45-second
+run had a live whole-RDRAM control and 664 source-span stores but no target
+phase; the corrected 65-second run with `--hold-ms 150` reached title and
+hangar and produced live phase-gated `0x800078EC` rows. The first result is
+route-invalid; the second is the accepted control.
+
+Exact commands for this iteration:
+
+```sh
+python3 tools/apply_s4140_m5_source_context.py
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 \
+  ROGUESQ_LOG_M5_SOURCE_CONTEXT=1 \
+  ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a' \
+  PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 \
+  ./build/RogueSquadron64Recomp > scratch/agent/s4140_port.log 2>&1 &
+```
+
+The paired retail command is the accepted preflight shape, expanded with the
+writer execution table and source-span watch:
+
+```sh
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 75 --watch-write 0x0:0x800000 --hit-cap 10000 --watch-write 0x178c80:0x178f18 --watch-pc-range 0x800078d0:0x80007910 --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006ab400:512 --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006ab400:512 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150 > scratch/agent/s4140_retail.log 2>&1
+```
+
+The s4139 run passed the positive control and both target transitions. Before
+the next build, use the existing entry/callsite hooks where possible and batch
+all entry fields in one Debug build/run.
