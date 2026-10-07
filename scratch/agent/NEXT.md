@@ -1,46 +1,48 @@
-# Next work unit: M5 de-stubbing Step 1 same-build re-baseline
+# Next work unit: M5 source-producer context census
 
-Run one retail-gated, same-build comparison of the default Factor 5 image arm
-and `ROGUESQ_AUDIO_UCODE=0` silent control, following Step 1 of
-`docs/M5-AUDIO-PLAN.md`. Do not change the image, wait, cap, predicate, slot
-state, or any guest behavior.
+Run one retail-gated census of the guest source-span writer at `0x800078EC`
+and its caller/input context. Do not change the image, wait, cap, predicate,
+slot state, guest behavior, or host writeback. Use the existing source-writer
+instrumentation with the canonical AUTOPILOT and phase gates; correct the
+existing recipe if non-canonical drain-tick or launch ordering invalidates the
+route.
 
-HYPOTHESIS-ID: m5-audio-destub-step1-rebaseline
+HYPOTHESIS-ID: m5-image-source-producer-context
 
 Competing hypotheses and discriminator:
 
-- H-image-contract-complete: the image arm reaches the full task → DMEM/DMA →
-  `Broke` → SP completion → service/slot → PCM chain, while the silent arm
-  remains a no-write control.
-- H-contract-gap: the image arm dispatches and returns but a named downstream
-  edge is absent or diverges from the silent control; that missing edge becomes
-  the next bounded step.
-- H-route-invalid: the retail positive control, either port arm, or
-  title/hangar phase is absent; all nulls are invalid.
+- H-port-writer-legitimate-zero: retail and port agree on the writer's
+  destination, value, loop/input context, and ordering; the zero is an
+  upstream producer/input contract gap.
+- H-port-writer-context-split: the port writer's arguments, destination,
+  value, loop bound, or ordering diverges from retail; that first split is the
+  next contract edge.
+- H-route-invalid: the retail whole-RDRAM/title/hangar controls or the
+  phase-keyed port source-span join is absent.
 
-The single discriminating measurement is one phase-keyed row per arm joining
-M_AUDTASK dispatch/exit, task fields and source hash, DMEM/DMA activity, SP
-completion, guest service/slot progress, PCM source/consumer, and title/hangar
-phase. A complete image chain plus silent no-write control selects
-H-image-contract-complete; a qualified missing edge selects H-contract-gap;
-missing controls selects H-route-invalid.
+The single discriminating measurement is one phase-keyed writer-context table
+joining retail PC/value/destination/field context and port guest-store
+arguments, source-span hash, ordering, and title/hangar phase. Matching
+zero-valued context selects H-port-writer-legitimate-zero; a qualified
+argument/context split selects H-port-writer-context-split; missing controls
+selects H-route-invalid.
 
-Before any build, verify the existing Step 1 switches and driver:
+Before any build, verify the existing writer switches and driver:
 
-`rg -n 'ROGUESQ_AUDIO_UCODE|audtask-dispatch|audtask-abi|audio-return|PCM_BOUNDARY|AUTOPILOT' src tools scratch/agent --glob '!*.log'`
+`rg -n '800078EC|M5_SOURCE_PRODUCER|M5_SOURCE_WRITER|M5_INPUT_WRITER|M5_SOURCE_TRANSITION' src tools scratch/agent --glob '!*.log' --glob '!*.md'`
 
-Build once:
+Ask ground truth first with the oracle recipe: whole-RDRAM positive control,
+title/hangar VI gates, `--watch-pc 0x800078EC`, post-store value/field context,
+and the same source-span watches. Build once with:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run the retail oracle first from the oracle recipe with whole-RDRAM positive
-control, `--vi-trace`, and title/hangar phase watches. Then run both port arms
-from `build/` using the canonical AUTOPILOT, phase gates, LLE/solo/spin-yield
-settings, and all task/SP/service/slot/PCM logs; set
-`ROGUESQ_AUDIO_UCODE=0` for the silent arm and `1` for the image arm.
-
-Arm `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`, and
-`ROGUESQ_LOG_PCM_BOUNDARY=1` plus the existing dispatch, ABI, DMA, service, and
-slot traces. SIGKILL each game after hangar or the phase timeout. Report both
-arms' complete rows; do not treat `Broke` alone as proof of contract
-completion.
+Run the image arm from `build/` with LLE/solo/spin-yield, canonical AUTOPILOT,
+`PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and these logs:
+`ROGUESQ_LOG_M5_SOURCE_PRODUCER=1`, `ROGUESQ_LOG_M5_SOURCE_WRITER=1`,
+`ROGUESQ_LOG_M5_INPUT_WRITER=1`, `ROGUESQ_LOG_M5_SOURCE_TRANSITION=1`,
+`ROGUESQ_LOG_M5_TASK_CONTRACT=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`, and
+`ROGUESQ_LOG_PCM_BOUNDARY=1`. Run the fixed silent control only if needed for
+the no-write positive control. SIGKILL after hangar or the phase timeout.
+Report the complete writer-context table; a writer counter alone is not a
+control.

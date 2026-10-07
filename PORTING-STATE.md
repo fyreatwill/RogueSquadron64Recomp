@@ -145798,3 +145798,27 @@ neither the pending call nor its slot predicate. No wait, cap, predicate, slot
 state, force-clear, or mitigation changed. ORIGIN: the existing guest wait,
 slot/status readers, and their writers were observed; no guest behavior was
 modified.
+## Session 4128 (2026-10-07) — qualified M5 image versus silent contract checkpoint
+
+Ran the retail oracle first with the whole-RDRAM positive control and title/
+hangar VI gates. The control passed 10,000 writes; retail reached title
+`0x00790400/1024` and hangar `0x006AB400/512`.
+
+Rebuilt the Debug target once and ran the default image and silent
+`M_AUDTASK` arms from the same build with the canonical LLE/ungated/solo/
+spin-yield/AUTOPILOT route. The image arm reached both phases with 55
+dispatches, 794 task ABI/DMA rows, 515 returns, 85 PCM-source rows, and 515
+PCM-consumer rows, with no crash or abort. The concurrent silent arm crashed
+pre-title in `spTaskSchedulerThread+9632` at guest PC `0x8000834c`, so that
+null was treated as route-invalid rather than as a silent-control result.
+
+Reran the silent arm alone with the same phase gates and logging. It reached
+title and hangar with 48 dispatches, 482 ABI/DMA rows, 277 returns, and no
+crash or abort. Its `musyx_stub` rows had `dmem changed=0`, no image-stage
+rows, and zero task writeback. Both arms had phase-scoped PCM source and
+consumer rows with `FNV=0xF59C39C5` and `nz=0`. H-contract-gap is selected at
+this boundary: the image task/completion path is live, but its measured PCM
+payload remains identical to the silent no-write control. This identifies no
+writer yet and authorizes no guest or host mitigation. ORIGIN: the next
+legitimate writer boundary is the guest source-span producer at `0x800078EC`
+and its caller context.

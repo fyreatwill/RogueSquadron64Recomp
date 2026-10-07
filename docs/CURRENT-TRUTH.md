@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4127 (2026-10-07).
+Updated for session 4128 (2026-10-07).
 
 ## Current state
 
@@ -48,6 +48,23 @@ one `waitForAnyAudioSlot` entry with `a3=0x8` followed by
 not recur. H-A11-not-reproduced is selected: the pending writer/terminal table
 is unevaluable, not evidence that the wait is safe. No wait, cap, predicate,
 slot state, or mitigation changed.
+
+Session 4128 qualified the M5 Step 1 image-versus-silent contract checkpoint.
+The retail oracle passed the whole-RDRAM control and reached title 1024 and
+hangar 512. In the same rebuilt pair, the image arm reached both phases with
+55 dispatches, 794 task ABI/DMA rows, 515 audio returns, 85 PCM-source rows,
+and 515 PCM-consumer rows, with no crash or abort. A concurrent silent arm
+crashed before title, so that null was rejected as route-invalid; the fixed
+silent arm run alone reached both phases with 48 dispatches, 482 ABI/DMA rows,
+277 returns, and no crash or abort. Its `musyx_stub` ABI rows had
+`dmem changed=0`, no image-stage rows, and zero PCM payloads. Both arms'
+phase-scoped PCM samples were the zero control (`FNV=0xF59C39C5`, `nz=0`).
+H-contract-gap is selected at this measured boundary: the image task and
+completion path are live, but the image does not produce a nonzero downstream
+PCM payload relative to the silent control. This does not identify the source
+writer or authorize a guest/host mitigation. ORIGIN: the next legitimate
+writer boundary is the guest source-span producer at `0x800078EC` and its
+caller context; no behavior changed.
 
 M3 has landed regeneration-safe ownership guards in `patches/heap_guards.c`
 for free-list span/reciprocal links, active-queue reachability and aliasing,
@@ -288,11 +305,14 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 1 re-baseline:** run the same-build default image and
-   silent `M_AUDTASK` control with the complete task/DMEM-DMA/SP/service/
-   slot/PCM/phase row from `docs/M5-AUDIO-PLAN.md`. Keep the image and all
-   safety hatches unchanged; require both arms to qualify before interpreting
-   any downstream difference.
+1. **M5 source-producer context census:** qualify the guest writer at
+   `0x800078EC` and its caller/input context against the retail oracle. Keep
+   the image, wait, cap, predicate, slot state, and host writeback unchanged.
+   Require whole-RDRAM plus title/hangar controls, writer PC/value/context
+   rows, and a phase-keyed port source-span join. Matching zero-valued port
+   input selects a legitimate upstream producer gap; a context/argument split
+   selects the first port contract mismatch; missing phase controls is
+   route-invalid.
 2. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
    writer and terminal table only when the pending `chCount=16` call appears
    on a qualified route. Keep the cap and wait unchanged.
@@ -328,6 +348,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A9 voice-array-base guards | H-A9-legitimate selected at s4120's measured scope: retail reached the allocator writer and 10/12 A9 PCs in hangar; the qualified port reached both phases with positive controls and zero fires at all 12 A9 guards. No guard relaxation is authorized. |
 | M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
 | M5 A11 wait terminal transition | H-A11-not-reproduced selected at s4127: the qualified canonical route had one target-phase wait entry (`a3=0x8`) and a clean `wait-post-any-slot` return, but no pending `chCount=16` call. The pending writer/terminal relationship remains unevaluable; no wait change is authorized. |
+| M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
