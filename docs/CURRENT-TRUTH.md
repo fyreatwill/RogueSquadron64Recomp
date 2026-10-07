@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4166 (2026-10-07).
+Updated for session 4167 (2026-10-07).
 
 ## Current state
 
@@ -27,6 +27,17 @@ title and hangar with matching task/SP/route, zero-payload, and downstream
 signatures. The declared arm is sufficient at this boundary; legacy staging
 adds DMEM writes without a measured downstream benefit. ORIGIN: `rsp.cpp`
 staging DMA is the writer and the OSTask declaration is legitimate.
+
+Session 4167 completed a clean canonical same-build real-image/silent port
+pair after two route-invalid attempts caused by missing route flags and stale
+game child processes. Both clean arms passed the positive controls, reached
+title VI 1024 and hangar VI 512, and had live gate/task/SP/PCM instrumentation.
+The gate was `0x01` in both arms; hangar PCM source and consumer rows were
+present but zero-valued in both (`384` samples, `FNV=0xF59C39C5`, `nz=0`).
+The real image completed its DMEM/DMA path (`break_pc=0x1328`, `dma_count=3`)
+while the silent arm had `dma_count=0`. No downstream real-versus-silent
+divergence was measured, so H-upstream-zero-payload remains selected and no
+gate change is authorized.
 
 ## Next steps
 
@@ -56,6 +67,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 producer caller state | H-caller-state-split selected at s4152, with s4153 selecting H-entry-body-shared: retail preserves producer object/state into `0x800078EC`, while port context differs earlier. Generated port `ra=0` is an instrument limitation, not guest evidence. |
 | M5 Step 3 declared audio staging | H-step3-equivalent independently requalified at s4164: declared `0x800` and legacy `0xF80` arms match at the measured downstream contract. Semantic irrelevance outside that contract is unproven. |
 | M5 Step 4 retail gate ground truth | H-retail-gate-writers selected at s4166: the independent oracle whole-RDRAM control fired in both target phases; `0x800A0F50` was written 14 times by five PCs, with `0x8008EC88` producing the observed nonzero value. The watched `0x80094648`, `0x80090AAC`, and `0x80090BA4` words had zero writes in this retail route. This selects the port parity measurement, not a gate change. |
+| M5 Step 4 port parity | H-upstream-zero-payload selected at s4167: the clean canonical pair reached title/hangar and live gate/task/PCM controls. Both arms had gate `0x01` and zero-valued hangar PCM source/consumer rows; only the real image's DMEM/DMA activity differed. The initial route-invalid attempts are excluded because they stopped at VI 640 or crashed with stale game children present. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |

@@ -146507,3 +146507,25 @@ writes. This rules out selecting those candidate words as retail writers on
 this route, and selects port writer/value parity plus downstream joins as the
 next measurement. It does not authorize a gate change: retail is one evidence
 line and port parity remains open.
+
+## Session 4167 (2026-10-07) — qualified clean port M5 gate/consumer pair
+
+Built `RogueSquadron64Recomp` Debug once and ran the Step 4 real-image and
+silent arms. The first pair omitted the validated route controls and stopped
+at VI 640. A second pair used the route controls but collided with two stale
+game children left by the first probe wrappers and crashed in
+`spTaskSchedulerThread+9772` with last guest PC `0x8000834c`. After killing
+those identified children, the canonical pair ran cleanly with
+`ROGUESQ_STUB_MISSING_FUNCS=1`, LLE force/ungated/solo, spin-yield, and the
+validated AUTOPILOT schedule.
+
+Both clean arms passed the positive controls and reached title VI 1024 and
+hangar VI 512. The real arm logged Factor 5 image completion at
+`break_pc=0x1328` with three DMEM-to-RDRAM DMA ranges; the silent arm logged
+the same task/SP route with zero image DMA. Both arms had gate `0x01` and
+hangar PCM source and consumer rows for 384 samples, 768 bytes,
+`FNV=0xF59C39C5`, `nz=0`; no downstream real-versus-silent divergence was
+measured. This selects H-upstream-zero-payload at the port gate/consumer
+scope, rules out route invalidity for the clean pair, and does not authorize a
+gate or consumer change. ORIGIN: no mitigation or game value was changed;
+the real image's DMEM/DMA writes are legitimate task behavior.
