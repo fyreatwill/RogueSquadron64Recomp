@@ -1,47 +1,41 @@
-# Next work unit: repair the paired M5 source-producer route
+# Next work unit: execute the next bounded M5 de-stubbing edge
 
-HYPOTHESIS-ID: m5-image-source-producer-context
+HYPOTHESIS-ID: m5-audio-destub-step2
 
-Run one retail-gated source-producer context census, fixing the oracle watch
-indexing and the port launch path before interpreting values. Do not change
-the image, audio wait, cap, predicate, slot state, guest writer, or host
-writeback.
+Do not rerun the source-producer census until a new route discriminator exists.
+Session 4131 had no qualified port target phase: one real-audio arm crashed in
+640 and the corrected Start schedule stayed in 640. Execute one named,
+regeneration-safe M5 audio contract edge from `docs/M5-AUDIO-PLAN.md`, keeping
+the silent `ROGUESQ_AUDIO_UCODE=0` arm as the same-build control. Do not change
+the guest source writer, image writeback, wait cap, slot predicate, or add a
+mitigation.
 
 Competing hypotheses and discriminator:
 
-- H-port-writer-legitimate-zero: qualified retail and port reach hangar and
-  agree on writer destination, value, loop/input context, and ordering.
-- H-port-writer-context-split: both routes reach hangar, but the first
-  phase-keyed argument, destination, loop-bound, value, or ordering split is
-  at the port writer.
-- H-route-invalid: either retail lacks title/hangar or the canonical port
-  crashes before hangar; no writer conclusion is allowed.
+- H-audio-degeneracy: one real contract edge produces a new downstream task,
+  service, slot, voice, or PCM control without merely changing route reachability.
+- H-contract-gap: the edge changes task/DMEM/DMA or service identity, but the
+  phase-scoped slot/PCM join remains closed.
+- H-route-invalid: either arm lacks both target gates, so no audio-contract
+  conclusion is allowed.
 
-The single discriminating measurement is a phase-keyed table containing the
-retail `0x800078EC` PC/value/context rows, the port guest-store arguments,
-source-span hashes, route ordinals, and both title/hangar gates. A matching
-qualified table selects H-port-writer-legitimate-zero; a qualified context
-split selects H-port-writer-context-split; either missing target gate selects
-H-route-invalid.
+The single discriminating measurement is one same-build, phase-keyed table
+covering dispatch/exit, task ABI, DMEM/DMA, service return, slot transitions,
+PCM source/consumer joins, and title/hangar gates. A new downstream control
+selects H-audio-degeneracy; task progress without downstream closure selects
+H-contract-gap; either missing target gate selects H-route-invalid.
 
 Commands:
 
-1. Run the oracle from the repo root with whole-RDRAM positive control,
-   source-span watch, `--watch-pc 0x800078EC`, VI trace, and the validated
-   repeated Start presses. Allocate memory-watch indices first, then use the
-   actual printed index for `--post-value-watch`; do not assume the PC watch
-   is index 1. Capture to `scratch/agent/soak_results/iter4131/retail.log`
-   and use a background PID watchdog that SIGKILLs at 120s.
+1. Select the next single behavior edge from the incremental sequence in
+   `docs/M5-AUDIO-PLAN.md`, and write its exact rollback/control arm here
+   before building.
 2. Build once:
    `cmake --build build --config Debug --target RogueSquadron64Recomp`
-3. Run from `build/` as `./RogueSquadron64Recomp` with
-   `ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1
-   ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUTOPILOT=1`,
-   `PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`, and the existing
-   source-producer, source-writer, source-transition, task-contract,
-   audio-return, and PCM-boundary logs. SIGKILL at 120s or immediately after
-   a qualified hangar capture.
+3. Run real and silent arms from `build/` with the qualified phase-gated
+   route, the whole-RDRAM oracle positive control, and all task/DMEM/DMA/
+   service/slot/PCM controls. SIGKILL at 120s.
 
-Expected outcomes: retail and port both reach title/hangar and produce a
-   comparable table (writer-legitimate-zero or context-split), or the port's
-   pre-hangar crash reproduces and leaves H-route-invalid selected.
+Expected outcomes: both arms reach title/hangar and the changed edge selects
+H-audio-degeneracy or H-contract-gap; a missing target gate leaves
+H-route-invalid selected without interpreting null downstream counters.

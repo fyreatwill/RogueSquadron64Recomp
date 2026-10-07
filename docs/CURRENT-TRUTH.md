@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4130 (2026-10-07).
+Updated for session 4131 (2026-10-07).
 
 ## Current state
 
@@ -125,6 +125,20 @@ the port reached title and hangar with nonzero consumer PCM. In both phases
 the host opened device 2 and recorded positive `call_delta`/`queued_after`
 rows. This rules out device-open failure and zero enqueue at the measured
 boundary; playback/drain timing remains open.
+
+Session 4131 reran the retail-gated source-producer census with one Debug
+build and the full phase-scoped probe matrix. Retail passed the whole-RDRAM
+control, reached title `1024` and hangar `512`, and executed the watched
+producer PC overall; this invocation did not include the required phase-keyed
+PC join, so it provides no target-phase writer rows. The first canonical port
+launch crashed in `fillSampleStreamRange` during 640 before either target
+phase. The corrected validated Start schedule then remained in 640 for 78
+seconds with no title or hangar gate and was SIGKILLed. H-route-invalid is
+selected for this iteration: the retail writer/context comparison is
+unevaluable and no source producer, image, wait, predicate, or writeback
+explanation is authorized. ORIGIN: the only boundary under test remains the
+guest `0x800078EC` writer and its source span; no guest behavior or mitigation
+changed.
 
 ## Earlier qualified evidence (compacted)
 
@@ -379,7 +393,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
 | M5 A11 wait terminal transition | H-A11-not-reproduced selected at s4127: the qualified canonical route had one target-phase wait entry (`a3=0x8`) and a clean `wait-post-any-slot` return, but no pending `chCount=16` call. The pending writer/terminal relationship remains unevaluable; no wait change is authorized. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
-| M5 source-producer context | H-route-invalid selected only for s4129: the port reached both target phases and recorded zero-valued `0x800078EC`/source-DMA context, but the same-iteration retail oracle reached title and not hangar. Retail comparison remains unevaluable; no source explanation or mitigation is selected. |
+| M5 source-producer context | H-route-invalid selected at s4131: retail independently passed both phase gates, but the source-PC watch was not phase-keyed; the initial port arm crashed in 640 and the corrected Start schedule never left 640. No writer/context conclusion is selected. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 

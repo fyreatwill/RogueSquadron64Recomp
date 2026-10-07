@@ -145869,3 +145869,8 @@ retail/port writer comparison remains unevaluable. This rules out no producer
 and authorizes no mitigation. ORIGIN: the measured guest `0x800078EC` writer
 and source-span path remain the boundaries under test; no guest or host
 behavior changed.
+## Session 4131 (2026-10-07) — source-producer census remained route-invalid after fixed retry
+
+Ran the planned retail-gated source-producer context census after one Debug build. The retail oracle's whole-RDRAM positive control fired, and the retail run reached title `1024` and hangar `512`; the watched guest producer PC executed overall. This invocation did not include a phase-keyed PC join, so it supplied no target-phase writer/context rows and cannot identify the retail source value or ordering.
+
+The first canonical real-audio/LLE/ungated/solo/spin-yield port launch crashed in `fillSampleStreamRange` during VI 640 before title or hangar. Per the required fixed-version rule, reran the same build with the validated repeated Start schedule and the full task/DMEM/DMA/service/slot/PCM probe matrix. That arm remained in VI 640 for 78 seconds without either target gate and was SIGKILLed. H-route-invalid is selected for this iteration. The run rules out no source writer, image writeback, audio wait, slot predicate, or mitigation; it only shows that this route cannot qualify the requested comparison. ORIGIN: the measured boundary remains the guest `0x800078EC` source-span writer; no guest behavior or mitigation changed.
