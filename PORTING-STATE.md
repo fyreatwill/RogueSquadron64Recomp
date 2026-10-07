@@ -145611,3 +145611,16 @@ It rules out adding a wait replacement, force-clear, or other mitigation to
 the status-03 loop. ORIGIN: the legitimate status-03 zeroing writer is the
 retail-observed worker path at `0x8009B7EC`; no guest writer or mitigation was
 changed.
+
+## Session 4118 (2026-10-06) — compacted current truth during maintenance
+
+The mandated size check found `docs/CURRENT-TRUTH.md` at 60,473 bytes, so this
+was a maintenance iteration and no experiment or build was run. Compacted the
+document from 882 to 291 lines and 21,040 bytes, collapsing stale
+session-by-session evidence into durable boundary summaries while retaining
+the latest qualified sessions, live hypotheses, backlog, superseded
+conclusions, and operating rules. The backlog remains one monotonic sequence.
+
+This rules out treating the removed historical detail as current truth; the
+full chronology remains in this ledger. No runtime conclusion changed and no
+mitigation-shaped code was added.

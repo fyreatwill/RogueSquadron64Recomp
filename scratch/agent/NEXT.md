@@ -1,5 +1,8 @@
 # Next work unit: audit the first voice/list/table guard idiom class
 
+Maintenance completed in session 4118; no experiment was run. Resume this
+single work unit next.
+
 HYPOTHESIS-ID: m5-step8-voice-list-guard-class
 
 Competing hypotheses and discriminator:
