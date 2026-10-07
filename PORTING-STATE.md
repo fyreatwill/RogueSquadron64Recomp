@@ -145529,3 +145529,23 @@ guest fill differs from retail's nonzero source content. ORIGIN: the guest
 byte-fill at `0x800078EC` is the named legitimate writer; the downstream host
 writeback is not the origin and no mitigation, force-clear, or synthetic DMA
 was added.
+
+## Session 4113 (2026-10-06) — Step 6 drain-tick rerun was route-invalid
+
+Built the Debug target and ran the Step 6 drain-tick A/B with the retail
+oracle positive control and the existing reverse-order sequential harness.
+Retail passed the whole-RDRAM control and reached title `0x00790400/1024`
+and hangar `0x006AB400/512`, with the expected status/slot and writer
+controls. The explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` arm reached both target
+phases with 1113 ABI rows, 754 SP receives, 88 PCM-source rows, 518
+PCM-consumer rows, and one live drain-tick row. The default tick-off arm
+crashed before title or audio-task dispatch in `spTaskSchedulerThread+9632`
+at guest PC `0x8000834c` (36 crash-marker lines); it had no phase-scoped
+task, SP, slot, or PCM rows. The harness therefore reported H-DrainRequired,
+but that label is not admissible: H-route-invalid is selected because the
+off arm failed its route predicate. The same-build concurrent diagnostic
+retry also showed topology-sensitive divergence and is not promoted to truth.
+
+This does not overturn s4103's qualified HDrainChangesOrdering result and
+does not establish that the tick is required. ORIGIN: no guest/runtime
+behavior changed; the only new artifact is diagnostic harness coverage.

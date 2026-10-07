@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4112 (2026-10-06).
+Updated for session 4113 (2026-10-06).
 
 ## Current state
 
@@ -710,6 +710,17 @@ Hproducer-absent at this measured boundary. ORIGIN: the legitimate writer is
 the guest byte-fill at `0x800078EC`; the host writeback is downstream and no
 mitigation, force-clear, or synthetic DMA was added.
 
+Session 4113 reran the Step 6 drain-tick A/B with the retail oracle positive
+control and the existing reverse-order sequential harness. Retail passed all
+whole-RDRAM, title/hangar, status, slot, and writer controls. The explicit
+tick-on arm reached title and hangar with 1113 ABI rows, 754 SP receives, 88
+nonzero source rows, 518 consumer rows, and one live tick row. The default
+tick-off arm crashed in `spTaskSchedulerThread+9632` at guest PC
+`0x8000834C` before title or audio-task dispatch, so it has no valid
+phase-scoped comparison. This is Hroute-invalid for Step 6, not evidence that
+the tick is required. The same-build concurrent diagnostic retry also showed
+topology-sensitive divergence and is not promoted to truth.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
@@ -748,7 +759,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
 | M5 key-on early returns | Hreturns-dead/Hguard-valid selected (s4101): retail and port reached the measured key-on route with valid `0xC0` divisors, normal tails, and slot `02`/`00` transitions; all eight guard counts were zero. |
-| M5 drain-tick policy | HDrainChangesOrdering selected at measured scope (s4103): both qualified image arms emitted one live `gate=0x00` tick row and matched route/PCM controls, but their phase-5 join ordering/ordinals differed. Tick injection is not required for reachability or measured PCM joins; audible equivalence remains unproven. |
+| M5 drain-tick policy | HDrainChangesOrdering remains the last qualified policy result (s4103). Session 4113's reverse-order rerun was Hroute-invalid because tick-off crashed pre-target while tick-on qualified; it does not overturn s4103 or establish tick-required behavior. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary
