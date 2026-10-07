@@ -857,6 +857,60 @@ extern "C" void rs64_m5_preclear_snapshot(uint8_t* rdram, uint32_t dst,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_preclear_nonscalar(uint8_t* rdram, char kind,
+                                             uint32_t pc, uint32_t dst,
+                                             uint32_t src_or_fill, uint32_t len,
+                                             uint32_t ra) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_PRECLEAR_NONSCALAR");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled || !rdram || len == 0u) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t controls = 0;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (key != phase_key) { phase_key = key; controls = 0; rows = 0; }
+    if (controls++ == 0u) {
+        std::fprintf(stderr,
+            "[m5-nonscalar-control] phase=%u width=%u origin=0x%06X kind=%c\n",
+            rs64_phase_ord(), width, origin, kind);
+        std::fflush(stderr);
+    }
+    const uint32_t dst_phys = (dst - 0x80000000u) & 0x007FFFFFu;
+    const uint64_t end = static_cast<uint64_t>(dst_phys) + len;
+    const uint32_t first = 0x1797B0u, last = 0x179A48u;
+    if (dst_phys >= last || end <= first || rows >= 512u) return;
+    uint32_t payload_fnv = 2166136261u, payload_nz = 0u;
+    if (kind == 'M') {
+        const uint32_t src_phys = (src_or_fill - 0x80000000u) & 0x007FFFFFu;
+        for (uint32_t i = 0; i < len && i < 0x4000u; ++i) {
+            const uint8_t b = rdram[(src_phys + i) & 0x007FFFFFu];
+            payload_fnv = (payload_fnv * 16777619u) ^ b;
+            payload_nz += b != 0u;
+        }
+    } else {
+        const uint8_t b = static_cast<uint8_t>(src_or_fill);
+        payload_fnv = b ? 0xFFFFFFFFu : 2166136261u;
+        payload_nz = b ? len : 0u;
+    }
+    std::fprintf(stderr,
+        "[m5-nonscalar] row=%u phase=%u width=%u origin=0x%06X kind=%c "
+        "pc=0x%08X ra=0x%08X dst=0x%08X phys=0x%06X src_or_fill=0x%08X "
+        "len=0x%X payload_fnv=%08X payload_nz=%u\n",
+        rows++, rs64_phase_ord(), width, origin, kind, pc, ra, dst, dst_phys,
+        src_or_fill, len, payload_fnv, payload_nz);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_destination_contract(uint8_t*, uint32_t pc,
                                                 char width, uint32_t base,
                                                 uint32_t index, uint32_t addr,

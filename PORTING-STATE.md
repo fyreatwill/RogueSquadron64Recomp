@@ -146426,3 +146426,20 @@ legitimate host/RSP DMA and guest scalar-store observations; no game value,
 guest behavior, or mitigation changed. Evidence:
 `docs/M5-S4161-PRECLEAR-DMA-NONSCALAR.md` and
 `scratch/agent/s4159_m5_preclear_span_census/`.
+
+## Session 4162 (2026-10-07) — qualified M5 non-scalar operation census
+
+Added the regeneration-safe `rs_memset`/`zmemcpy` entry witness through
+`tools/apply_s4162_m5_nonscalar_writer.py`, rebuilt the Debug target, and ran
+`zsh scratch/agent/run_s4159_m5_preclear_span_census.sh`. Host-write, title VI
+1024, hangar VI 512, and the new non-scalar positive-control gates all fired.
+The target span produced one operation row: `rs_memset` entry `0x800078E0`,
+destination `0x801797B0`, length `0x298`, zero fill. No target-overlapping
+`zmemcpy` row or nonzero non-scalar payload appeared. H-other-guest-writer is
+not observed for this covered entry class; H-preclear-snapshot-artifact is
+still unevaluable because inline or otherwise uninstrumented guest/host writes
+remain outside the census. ORIGIN: legitimate `rs_memset`/`zmemcpy` operation
+entries and zero fill; no guest behavior, audio, wait, cap, predicate, slot,
+or writeback behavior changed. Evidence:
+`docs/M5-S4162-PRECLEAR-NONSCALAR.md` and
+`scratch/agent/s4159_m5_preclear_span_census/`.
