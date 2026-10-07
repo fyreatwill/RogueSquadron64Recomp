@@ -147067,3 +147067,11 @@ SELECTS H-no-yield; REFUTES H-tick-gated-elsewhere and H-retail-same (this wait 
 NEXT DISCRIMINATOR: repeat the A/B (control must again show fires=1). If yield fires=0 twice with no crash, H-no-yield is two-source and the yield becomes the default (cap kept as backstop); if fires>=1 in the yield arm, a second tick gate exists and the discriminator becomes the slot-byte writer PC under yield.
 
 In plain terms: this run selects H-no-yield and refutes H-tick-gated-elsewhere for the A11 wait; the repeat A/B is the next discriminator to confirm it.
+
+## Session 4198 (2026-10-07) — M5 A11: waitForAnyAudioSlot yield made default (repeat confirmed)
+
+HYPOTHESIS-ID: m5-a11-pretitle-slot-stall. Selects: starvation of the audio-tick producer by the non-yielding waitForAnyAudioSlot spin. Refutes: cap fire is a harmless boot artifact.
+Repeat of s4197 A/B (concurrent arms): default cap fires=1 (positive control), yield=2000 fires=0, 0 crashes, title 2316 rows, hangar reached.
+Made the yield the default (unset -> 2000; ROGUESQ_WAITFORSLOT_YIELD=0 restores old behaviour) in N64Recomp funcs_15.c, fixup_game_funcs.py template and tools/apply_s4197_m5_waitforslot_yield.py; rebuilt. Post-build A/B (scratch/agent/s4198_yield_default_ab.sh): env unset => yields, fires=0, title 2280 rows, hangar 169 rows, no crash; env=0 => fires=1 and that run never reached title (0 rows), so the stall is real.
+ORIGIN: the slot byte is cleared by the audio tick (musyxRenderVoiceSamples), which only runs when the spin yields; the cap fire was a symptom of starvation, not a legitimate wedge.
+Caveat: one repeat; hangar row counts differ between runs (animating scene, not compared across runs).

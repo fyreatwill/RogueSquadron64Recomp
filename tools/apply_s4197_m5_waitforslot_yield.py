@@ -2,7 +2,7 @@
 
 ROGUESQ_WAITFORSLOT_YIELD=N (N>0) calls yield_self_1ms every N laps while no slot
 is active, so audio ticks (musyxRenderVoiceSamples) can run and clear the slot
-byte instead of the 500k cap firing. Unset = unchanged (control arm).
+byte instead of the 500k cap firing. Unset = 2000 (default since s4198); 0 = old control arm.
 
 ORIGIN: s4196 showed the slot-0 byte clears only after the cap fires; the spin is
 non-yielding and starves the producer. Yield tests that starvation directly.
@@ -19,7 +19,7 @@ OLD = "        if (ctx->r2 == 0 && g_audio_drain_iters >= s_waitforslot_guard_ca
 NEW = (
     "        if (ctx->r2 == 0) { /* PATCH: s4197 waitforslot yield */\n"
     "            static long s_wfs_yield_n = -1; static long s_wfs_yields = 0;\n"
-    "            if (s_wfs_yield_n < 0) { const char* e = getenv(\"ROGUESQ_WAITFORSLOT_YIELD\"); s_wfs_yield_n = (e && e[0]) ? atol(e) : 0; }\n"
+    "            if (s_wfs_yield_n < 0) { const char* e = getenv(\"ROGUESQ_WAITFORSLOT_YIELD\"); s_wfs_yield_n = (e && e[0]) ? atol(e) : 2000; }\n"
     "            if (s_wfs_yield_n > 0 && (g_audio_drain_iters % s_wfs_yield_n) == 0) {\n"
     "                extern void yield_self_1ms(uint8_t* rdram);\n"
     "                yield_self_1ms(rdram); ++s_wfs_yields;\n"
