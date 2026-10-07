@@ -1258,7 +1258,7 @@ extern "C" void rs64_m5_audio_input_dma(uint8_t* rdram, uint32_t dram_addr,
     const bool active = rs64_audio_current_route_snapshot(
         &phase, &width, &origin, &route_ordinal, &route_row, &exit_reason,
         &arm);
-    const uint32_t source_first = 0x1797B0u, source_last = 0x179A48u;
+    const uint32_t source_first = 0x178C80u, source_last = 0x178F18u;
     if (!active || !((width == 1024u && origin == 0x00790400u) ||
                      (width == 512u && origin == 0x006AB400u)) ||
         dram_addr >= source_last || dram_addr + len <= source_first) return;

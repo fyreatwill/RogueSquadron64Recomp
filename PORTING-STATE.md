@@ -145481,3 +145481,27 @@ identify the port-side source DMA or producer. ORIGIN: the legitimate writer
 to investigate is the image input/source-DMA path; no skip, force-clear, or
 guest behavior changed. The declared/legacy staging difference remains
 non-causal at this boundary.
+
+## Session 4111 (2026-10-06) — selected zero-valued image source boundary
+
+The fresh retail oracle attempt passed the whole-RDRAM positive control but
+hit an unsupported uCode at 1.6 seconds and never reached target VIs, so its
+target-phase null was rejected. The prior s4110 retail capture remains the
+independent control: 664 writes to `0x178C80..0x178F18` and 24 nonzero hangar
+bytes.
+
+Corrected the existing DMA witness to cover that full input span, enabled the
+all-RSP-DMA census, rebuilt the ordinary Debug target, and ran one same-build
+declared/legacy image matrix. Both arms reached title 1024 and hangar 512,
+produced positive task/stage/PCM controls, and had no crash or abort. Both
+directly read `0x178C80` with zero payloads (`0x100` read
+`FNV=E6A1D1C5,nz=0`; `0x198` read `FNV=762B22A5,nz=0`). Stage-0 rows
+entered with `field348=0x80178C80`, zero `DMEM 0xCC0`, and `source_event=0`.
+The all-DMA census recorded no transfer into `DMEM 0xCC0`; this is not the
+actual image input edge. Valid route/task joins and matching declared/legacy
+results rule out H-route-misjoin at this scope. H-source-zero is selected over
+H-DMA-zero at the measured port source boundary. This rules out staging size,
+transform, writeback, and a missing task join as the first measured zero, but
+does not identify the writer that leaves the source span zero. ORIGIN: the
+legitimate writer to investigate is the producer of
+`0x178C80..0x178F18`; no mitigation or guest behavior changed.
