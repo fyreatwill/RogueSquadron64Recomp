@@ -1,38 +1,35 @@
-# Next work unit: qualify M5 upstream producer context
+# Next work unit: audit the first nonzero retail source-span writers
 
-HYPOTHESIS-ID: m5-step4-upstream-producer-context
+HYPOTHESIS-ID: m5-step4-source-writer-counterpart
 
-The s4169 clean pair selected H-port-writer-parity: both arms reached the
-target phases, recorded the retail-matching port gate writers, and hangar PCM
-remained zero. The next discriminator is the producer context feeding the
-zero-valued image/task payload; do not change a gate, writer, or consumer.
+Session 4170 selected H-producer-context-mismatch. The independent retail
+oracle saw 664 nonzero post-store bytes in the target span
+`0x00178C80:0x00178F18`, while the port reached both target phases but its
+source-span rows stayed `FNV=0x762B22A5`, `nz=0`. The shared `0x800078EC`
+clear is a control; do not change it or add a mitigation.
 
-Exact work: use the already-built binary and run the retail oracle plus the
-port real-image arm concurrently with
-`scratch/agent/run_s4148_m5_source_callsite.sh` as the harness template. Keep
-the whole-RDRAM oracle positive control, title/hangar phase gates, and
-`ROGUESQ_LOG_M5_SOURCE_CONTEXT=1`, `ROGUESQ_LOG_M5_SOURCE_PRODUCER=1`,
-`ROGUESQ_LOG_M5_PRODUCER_INPUT=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, and
-`ROGUESQ_LOG_PCM_BOUNDARY=1`. Capture retail writer PCs for the source span,
-port `0x800078EC` callsite/context/destination/value rows, image task input
-hash/nonzero state, task completion, and PCM source/consumer joins in the same
-run. Kill the process group with SIGKILL after both target phases.
+Run one concurrent retail/port comparison using
+`scratch/agent/run_s4148_m5_source_callsite.sh` as the harness. Keep the
+whole-RDRAM positive control, `PROBE_PHASE_WIDTH=1024`,
+`PROBE_KEYS_FROM_PHASE=1`, and the real-audio/LLE/ungated/solo route. Add
+retail `--pc-hist-watch 1 --post-value-watch 1 --watch-pc 0x800078EC` and
+keep `ROGUESQ_LOG_M5_SOURCE_CONTEXT=1`,
+`ROGUESQ_LOG_M5_SOURCE_PRODUCER=1`, `ROGUESQ_LOG_M5_SOURCE_WRITER=1`,
+`ROGUESQ_LOG_M5_TASK_CONTRACT=1`, and `ROGUESQ_LOG_PCM_BOUNDARY=1`.
 
 Competing hypotheses and discriminator:
 
-- H-producer-context-parity: port `0x800078EC` context and source-span writer
-  behavior match retail, while the image task input is already zero; the gap is
-  before or outside this producer context.
-- H-producer-context-mismatch: port context, callsite, destination, or source
-  writer/value differs from retail and explains the zero task input; select the
-  exact mismatching writer/context for the next audit.
-- H-route-invalid: either arm misses the positive control or fails to reach VI
-  1024 and VI 512, making writer/PCM nulls unevaluable.
+- H-writer-counterpart-parity: the first nonzero retail writers
+  (`0x80090268`, `0x80090278`, `0x8008FF*` first) have matching port PCs,
+  destinations, and nonzero values; the zero payload is later.
+- H-writer-counterpart-mismatch: a retail nonzero writer has no matching port
+  row, or the port row has a different context/destination/value; select that
+  writer as the next source audit boundary.
+- H-route-invalid: either arm misses the positive control or title/hangar VI,
+  so writer and PCM nulls are unevaluable.
 
-The discriminating table is phase-keyed and must contain: route phases,
-positive control, retail source-span writer PCs/values, port producer
-callsite/context/destination/value rows, image input hash/nonzero state, task
-exit/DMA count, and PCM source/consumer. A missing target phase is unevaluable.
-If producer parity holds, keep H-upstream-zero-payload and move earlier in the
-producer chain; if it fails, select the specific context mismatch without
-changing behavior.
+The result table must include route/positive-control status, retail writer-PC
+and value rows, port counterpart PC/context/destination/value rows, source-span
+FNV/nz, image task input, and PCM source/consumer. If parity holds, move to the
+next producer layer; if mismatch holds, investigate the first missing or
+zero-valued counterpart. Do not change behavior.

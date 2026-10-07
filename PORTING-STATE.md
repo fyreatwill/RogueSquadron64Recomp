@@ -146576,3 +146576,27 @@ producer context as the next boundary. The late process cleanup is not a route
 failure because both target phases and the positive control preceded it. No
 writer, gate, consumer, or mitigation was changed. ORIGIN: the observed
 `0x8008EC88 -> 0x01` store and image DMAs are legitimate game/task behavior.
+
+## Session 4170 (2026-10-07) — qualified M5 source producer-context mismatch
+
+Ran the Step 4 producer-context work unit with a concurrent retail-oracle and
+port real-image arm. The first pass exposed that the retail writer histogram
+was missing; the harness was fixed in the same iteration with
+`--pc-hist-watch 1`, `--post-value-watch 1`, and a retail watch at
+`0x800078EC`, then rerun. Both arms fired the whole-RDRAM positive control and
+reached title VI 1024 (`0x00790400`) and hangar VI 512 (`0x006AB400`).
+
+Retail independently recorded 664 nonzero post-store bytes in
+`0x00178C80:0x00178F18`. Its writer set included `0x800078EC`,
+`0x80090268`, `0x80090278`, the `0x8008FF*` family, and the remaining
+`0x800906*`–`0x800910*` producer family; the phase post-value snapshot was
+`bytes=664`, `nonzero=63`. The port's phase-gated source-span DMA rows stayed
+`FNV=0x762B22A5`, `nz=0`, while its source-context rows for the producer path
+were zero-valued. Port PCM source and consumer rows also remained zero.
+
+This selects H-producer-context-mismatch over producer parity and rules out a
+route failure. It does not identify which writer is causal: the next audit
+must compare the first nonzero retail writer's port counterpart. No writer,
+payload, gate, or consumer behavior was changed. ORIGIN: retail writer PCs are
+the independent ground-truth origins; their values are legitimate source-span
+data, while the port zero payload remains unexplained.
