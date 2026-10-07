@@ -145011,3 +145011,24 @@ the qualified port evidence. The separate earlier `0x8008D5FC` call feeding
 `0x8008D62C`–`0x8008D63C` to distinguish caller-side use from moving to that
 earlier callsite. ORIGIN: the legitimate value is the guest return from
 `0x80084860`; all new machinery is diagnostic-only.
+
+## Session 4085 (2026-10-06) — qualified caller-side use after 0x8008D624
+
+Added a regeneration-safe, phase-scoped witness after the caller instructions
+at `0x8008D62C`, `0x8008D630`, `0x8008D634`, `0x8008D638`, and `0x8008D63C`,
+and applied the regenerated-equivalent calls to `RecompiledFuncs/funcs_23.c`.
+The ordinary Debug target built successfully. The first control-first wrapper
+attempt orphaned its retail oracle arm before launching the port; the oracle
+log nevertheless contained the whole-RDRAM positive control and watched-PC
+rows in both title and hangar. After killing the orphan with SIGKILL, the
+fixed isolated port arm reached both target phases and emitted 512 post-call
+rows, including 256 hangar-budget rows, with no crash or abort marker.
+
+Retail's watched rows and the port's post-instruction rows agree on the
+caller sequence: the `0x8008D624` return is `0x00002000`, then the caller
+holds `0x00002000`, shifts to `0x40`, biases to `0`, shifts to `0`, and
+updates `$s3` consistently at `0x8008D63C`. This selects Hnext-callsite and
+rules out a caller-side-use divergence on this path. The next search is the
+separate `0x8008D5FC` call feeding the earlier `0x8008D610` split. ORIGIN:
+the legitimate values are the guest return and caller arithmetic registers;
+the hooks are diagnostic-only.

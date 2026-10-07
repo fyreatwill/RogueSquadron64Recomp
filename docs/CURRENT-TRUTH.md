@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4084 (2026-10-06).
+Updated for session 4085 (2026-10-06).
 
 ## Current state
 
@@ -363,16 +363,27 @@ missed target phases and was rejected; the isolated rerun reached hangar and
 provided the qualified port rows. ORIGIN: the legitimate value is the guest
 `0x80084860` return; the witness is diagnostic-only.
 
+Session 4085 added a regeneration-safe witness after each caller-side
+instruction at `0x8008D62C`, `0x8008D630`, `0x8008D634`, `0x8008D638`, and
+`0x8008D63C`. The retail oracle passed the whole-RDRAM positive control and
+both target phases. The qualified port reached both target phases and emitted
+512 post-call rows, including the hangar bucket. Its post-instruction values
+matched retail's sequence: `0x2000 -> 0x40 -> 0 -> 0`, with `$s3` unchanged
+through preparation and updated at `0x8008D63C`. Hcaller-use is selected;
+the search moves to the separate `0x8008D5FC` call. The first wrapper attempt
+orphaned the oracle before launching the port; a fixed port continuation
+supplied the qualified route. ORIGIN: the values are legitimate guest return
+and arithmetic registers; all hooks are diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4j caller-side use after `0x8008D624`.** Trace the matching
-   `0x00002000` return through `0x8008D62C`–`0x8008D660` on retail and the
-   qualified port route, batching the post-call shift, bias, clamp, and `$s3`
-   update. A first mismatch in those values selects the caller-use boundary;
-   matching rows move the search to the next producer/callsite. Keep the same
-   whole-RDRAM/title/hangar controls and do not add a mitigation.
+1. **M5 Step 4k next voice-modulator callsite.** Ground and trace the
+   separate `0x8008D5FC` call feeding the earlier `0x8008D610` divergence,
+   using one retail watch/port witness batch and the same controls. A matching
+   return and caller arithmetic move the search earlier; the first mismatch
+   identifies the next producer boundary. Do not add a mitigation.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -395,7 +406,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
-| M5 voice modulation transform | Hcallee-match selected at s4084 for the `0x8008D624` call: retail and port agree on its inputs and `0x00002000` return at `0x8008D62C`; search moves into caller-side use. The separate `0x8008D5FC` call still feeds the earlier `0x8008D610` divergence. |
+| M5 voice modulation transform | Hnext-callsite selected at s4085: retail and port agree through the `0x8008D624` return and caller sequence `0x2000 -> 0x40 -> 0 -> 0`, with the matching `$s3` update. The separate `0x8008D5FC` call still feeds the earlier `0x8008D610` divergence. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |

@@ -1386,6 +1386,21 @@ extern "C" void rs64_m5_voice_modulation_arithmetic(
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_voice_modulation_postcall(uint8_t* rdram, uint32_t pc,
+                                                    uint32_t s3, uint32_t v0) {
+    if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
+    uint32_t width = 0, origin = 0;
+    if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static uint32_t rows[2] = {};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-voice-mod-post] row=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X s3=0x%08X v0=0x%08X\n",
+        rows[slot]++, rs64_phase_ord(), width, origin, pc, s3, v0);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,
                                                  uint32_t a1, uint32_t a2,
