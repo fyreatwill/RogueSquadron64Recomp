@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4182 (2026-10-07).
+Updated for session 4183 (2026-10-07).
 
 ## Current state
 
@@ -191,10 +191,22 @@ port arm qualified a target phase, so zero port body rows are route-invalid and
 do not select body mismatch or parity. The body boundary remains open; no
 audio, gate, writer, payload, or mitigation behavior changed.
 
+Session 4183 reran the body discriminator after correcting its port arm from
+silent to real audio. The retail positive control and both title/hangar phases
+qualified, but the silent attempt crashed at VI width 320 with SIGSEGV and the
+real-audio attempt stopped at the same width with SIGBUS; both reported
+`spTaskSchedulerThread+9772`, last guest PC `0x8000834c`. Neither port arm
+reached a target phase or emitted body rows. This independently requalifies
+H-body-route-invalid; body mismatch versus parity remains unevaluable. The
+recipe still lacks the canonical autopilot/stop-width settings used by the
+earlier qualified route, so no body, audio, gate, writer, payload, or
+mitigation conclusion is authorized.
+
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** requalify the clean port route for the new
-   `0x8008F900` body witness, then run one paired oracle/port measurement.
+1. **M5 audio de-stubbing:** restore the canonical qualified port recipe
+   (`ROGUESQ_AUTOPILOT_STOP_WIDTH=512` and the s4168 event schedule) in the
+   body-witness script, then run one paired oracle/port measurement.
    Preserve the whole-RDRAM control and arm both observed title origins
    (`0x00790400`/`0x00790800`) and hangar origins
    (`0x006AB400`/`0x006AB800`). A qualified comparable body tuple mismatch
@@ -223,7 +235,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 writer object context | H-context-mismatch selected at s4173: retail field dumps fired for all five PCs and showed changing per-object source words/branch fields, while the port matched source-context path retained zero target-span values and did not expose equivalent object-field state. The first divergent object-field input is open; no behavior change is authorized. |
 | M5 object-field witness | H-legitimate-field-mismatch selected at s4174: the corrected port witness fired in both target phases and recorded all five producer PCs. Its runtime-memory field values and object records did not reconcile with the independent retail field table after using `MEM_W/MEM_BU/MEM_HU` semantics. The earlier raw-byte result is superseded as an endian instrumentation defect. |
 | M5 object-entry boundary | H-entry-body-mismatch selected at s4181: after repairing the port witness to raw physical-address semantics, retail and port matched `s0=0x48`, `s1=0x1B000`, source word/byte, selector, and branch state at the shared hangar phase. The open boundary is inside `0x8008F900`. |
-| M5 object-body witness | H-body-route-invalid at s4182: the retail positive control and 71 body executions qualified, but both real-audio and silent port arms failed to reach a target VI phase. Zero port body rows are unevaluable; body mismatch versus parity remains open. |
+| M5 object-body witness | H-body-route-invalid at s4183: the retail positive control and both target phases qualified, but silent and corrected real-audio port attempts stopped at VI width 320 with the same scheduler guest PC and emitted zero body rows. Body mismatch versus parity remains open; the canonical route recipe is the next discriminator. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |

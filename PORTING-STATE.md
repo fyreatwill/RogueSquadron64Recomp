@@ -146813,3 +146813,17 @@ reached title and hangar, and recorded 71 phase-gated executions at
 `0x8008F900`; this independently validates the oracle side but does not select
 body-input mismatch or parity. The body boundary remains open. No audio, gate,
 writer, payload, or mitigation behavior changed.
+## Session 4183 (2026-10-07) — requalified M5 object-body route
+
+Ran `run_s4182_m5_object_body.sh` with its original silent arm, then corrected
+the port arm to `ROGUESQ_AUDIO_UCODE=1` and reran the same paired discriminator.
+The independent retail arm passed the whole-RDRAM positive control and reached
+both title and hangar phases in both attempts. The first port attempt was
+silent-audio and crashed at VI width 320 with SIGSEGV in
+`spTaskSchedulerThread+9772` (last guest PC `0x8000834c`); the corrected
+real-audio attempt likewise stopped at width 320, with SIGBUS at the same host
+symbol and guest PC. Neither port arm reached a target phase or emitted an
+`m5-object-body` row. This requalifies the result as route-invalid and leaves
+body mismatch versus parity unevaluable; it does not select a body input or
+authorize an audio, gate, writer, payload, or mitigation change. The recipe
+correction is retained for the next canonical-route retry.
