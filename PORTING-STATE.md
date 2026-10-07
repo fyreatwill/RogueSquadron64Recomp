@@ -146366,3 +146366,22 @@ the span. ORIGIN: the guest target-span writers; retail nonzero values are
 legitimate and port zero values were observed rather than suppressed. No guest,
 audio, wait, cap, predicate, slot, or writeback behavior changed. Evidence:
 `docs/M5-S4158-PRECLEAR-WRITER-MISMATCH.md`.
+
+## Session 4159 (2026-10-07) — qualified M5 pre-clear scalar census
+
+Ran the independent retail ground-truth watch and the rebuilt
+`zsh scratch/agent/run_s4159_m5_preclear_span_census.sh` port arm. Retail
+passed the whole-RDRAM control (11,830 writes), title VI 1024, and hangar VI
+512; its target span recorded 1,830 writes and nonzero earlier hangar bytes.
+The port reached both target phases and the new census control fired. After
+expanding the budget beyond the initial 512-row cap, it captured all 664
+intersecting scalar stores in `0x1797B0..0x179A48`: every row was a zero-valued
+byte store from guest PC `0x800078EC`, with no nonzero scalar writer.
+Selected H-port-scalar-writer-omitted for the generated guest
+byte/halfword/word-store class. This rules out scalar-store under-sampling but
+does not explain the earlier nonzero port pre-clear snapshot; host/DMA or
+another non-scalar writer remains open. ORIGIN: the guest scalar-store hook
+and independent retail watch; zero values were observed, not suppressed. No
+guest, audio, wait, cap, predicate, slot, or writeback behavior changed.
+Evidence: `docs/M5-S4159-PRECLEAR-SCALAR-CENSUS.md` and
+`scratch/agent/s4159_m5_preclear_span_census/`.
