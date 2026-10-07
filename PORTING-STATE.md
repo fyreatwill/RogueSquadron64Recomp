@@ -145351,3 +145351,17 @@ in ordinals and event ordering, so the harness selected
 out the in-loop tick as required for route reachability or the measured PCM
 joins, while leaving audible playback equivalence open. ORIGIN: the changed
 predicate is diagnostic-only; no guest/runtime behavior changed.
+
+## Session 4104 (2026-10-06) — queued M5 status-03 service-reaping qualification
+
+Built `RogueSquadron64Recomp` with the Debug target successfully. The existing
+generated source contains the named `serviceVoicePoolFrame` worker and its
+legitimate `0x8009B7EC` status-zero store; the retail oracle watch set also
+covers the status-03 publisher/republisher, worker, shutdown scan, and the
+whole-RDRAM positive control. Added and queued
+`scratch/agent/soak_queue/s4104_m5_status03_service_reaping.sh`, which runs the
+oracle and the real-audio/LLE port arm together, requires title and hangar
+phase controls, and uses SIGKILL cleanup. Syntax and `git diff --check` pass.
+The soak has not yet run, so Hworker-clears, Hworker-missing, and Hroute-invalid
+remain open; no runtime null is interpreted. ORIGIN: the queued changes are
+diagnostic-only and do not alter the worker or status value.
