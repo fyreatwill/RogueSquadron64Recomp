@@ -531,30 +531,31 @@ rows. Selector values and source fields were present in the matching records.
 Hwriter-live is selected at retail scope. This names two live selector
 writers but does not yet prove which writer/value the port fails to reproduce.
 
-Session 4099 qualified the declared-real port route after a concurrent launch
-crashed in `spTaskSchedulerThread+9632`; the schedule-gated rerun reached both
-title `0x00790400/1024` and hangar `0x006AB400/512`, while retail passed the
-whole-RDRAM positive control and both target phases. Retail again produced
-exact hangar rows from `0x80090AAC` and `0x80090BA4`. The port selector witness
-produced zero rows, but its own control marker never fired (only the generic
-input-writer control did), so this is not a valid writer-null result. The route
-is qualified; the port-side exact-writer instrumentation remains unqualified.
-This is two-line route evidence plus single-source retail writer evidence.
-ORIGIN: selector fields are legitimate guest descriptor state; no mitigation
-or guest behavior changed.
+Session 4100 repaired the regeneration-safe port selector-writer witness and
+ran one retail-gated declared-real capture. Retail passed the whole-RDRAM
+positive control and reached title `0x00790400/1024` and hangar
+`0x006AB400/512`; the port reached both phases. The new witness control fired
+in both target phases, and `0x80090AAC` produced 512 title and 512 hangar rows.
+No port `0x80090BA4` row appeared. Retail's independent store-field rows
+attributed 157 exact target rows to `0x80090AAC` and carried matching selector
+values, so the port writer boundary is live; a null at these two sites is
+rejected. This is two-line evidence for the live-port-writer result, with
+retail and port rows not record-synchronized. ORIGIN: selector fields are
+legitimate guest descriptor state; the hooks are diagnostic-only and changed
+no guest behavior.
 
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 8 repair and positive-control the port selector-writer witness.**
-   Keep the eight early returns unchanged. Add the exact candidate-store hook
-   through the regeneration path so `0x80090AAC` and `0x80090BA4` emit a
-   phase-gated control and selector/source rows on the qualified declared-real
-   route. A same-run positive control must visibly fire before any null is
-   interpreted. Matching rows select the port boundary; a fired control plus
-   zero candidate rows selects a port writer gap; missing the route or control
-   is unevaluable. Do not change guest behavior.
+1. **M5 Step 5: audit the eight key-on early returns as one idiom class.**
+   Ground the retail divisor/descriptor inputs and port guard-hit/normal-tail
+   rows at `0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
+   `0x80090D74`, `0x80090D8C`, `0x80090DB8`, and `0x80090DD0` in one
+   phase-gated instrument. Competing outcomes must distinguish legitimate
+   invalid-input fallbacks from a port-only guard hit; do not remove a return
+   until the same run shows a valid divisor, normal key-on tail, and slot
+   `02` then `00` transition. Keep the existing guard behavior in this unit.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -581,7 +582,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
-| M5 descriptor selector writer | Hwriter-live selected at retail scope (s4098): hangar phase rows came from `0x80090AAC` and `0x80090BA4`; paired port attribution remains open. |
+| M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary

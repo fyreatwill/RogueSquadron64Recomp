@@ -1,34 +1,35 @@
-# Next work unit: wire a positive-controlled port selector-writer witness
+# Next work unit: ground the eight key-on early-return sites
 
-HYPOTHESIS-ID: m5-port-descriptor-selector-writer
+HYPOTHESIS-ID: m5-keyon-early-return-idiom
 
-The declared-real route is now qualified through title and hangar, but the
-existing port selector witness did not emit its own control marker. Its zero
-rows therefore cannot distinguish a missing writer from an unwired witness.
+Do one diagnostic-only, regeneration-safe audit of the complete eight-site
+key-on early-return class before changing any return. The port selector-writer
+boundary is now qualified; the next question is whether these returns suppress
+legitimate key-on work.
 
 Competing hypotheses:
 
-- Hport-writer-live: exact port stores at `0x80090AAC` or `0x80090BA4` run in
-  the target phases and carry selector/source values comparable to retail.
-- Hport-writer-gap: the exact witness control fires on the qualified route, but
-  neither candidate store runs in title or hangar.
-- Hwitness-unwired: the route reaches both phases, but the candidate hook or
-  its positive-control path is absent from the regenerated host code.
+- Hguard-legitimate: target-phase inputs fail the divisor/descriptor contract,
+  so the early returns are valid fallbacks and the normal key-on tail is not
+  expected.
+- Hguard-port-only: retail reaches the normal key-on tail for the same class,
+  but the port hits one or more guards with valid inputs; this authorizes a
+  later single-class behavior change.
+- Hguard-unwired: the port route reaches the sites, but the regenerated guard
+  witness/control is absent or phase-gated incorrectly, so a null is
+  unevaluable.
 
-Discriminating measurement: add a regeneration-safe `fixup_game_funcs.py`
-block for `funcs_24.c` that declares and calls one host witness immediately
-before each existing `sh $v0, 0x22($s1)` at PCs `0x80090AAC` and
-`0x80090BA4`. The host witness must emit one control line on the first target
-phase, then phase-gated rows with PC, address, selector value, source word,
-and VI origin/width. Build the ordinary Debug target and run one
-retail-gated declared-real capture using
-`scratch/agent/run_s4099_m5_port_selector_writers.sh` with the new env var.
+Discriminating measurement: one build and one retail-gated capture with all
+eight PCs instrumented together. The retail oracle must pass its whole-RDRAM
+positive control and both title/hangar phase gates. The port must reach both
+target phases. For each PC, record guard entry, divisor/descriptor inputs,
+normal-tail entry, and slot status `02`/`00`; emit a first target-phase control
+from the shared helper. A retail normal-tail row paired with a port guard row
+on valid inputs selects Hguard-port-only; matching invalid-input rows select
+Hguard-legitimate; missing control despite both phases selects Hguard-unwired.
 
-Expected outcomes: control plus matching port rows selects Hport-writer-live;
-control plus zero candidate rows selects Hport-writer-gap; missing control
-despite both target phases selects Hwitness-unwired and requires fixing the
-regeneration anchor before another null interpretation. Retail's whole-RDRAM
-control and both target phases remain mandatory. No guest behavior changes.
+Do not remove or bypass any return in this unit. Any later mitigation needs an
+ORIGIN naming the guest writer and stating why its value is legitimate.
 
 Commands:
 
@@ -36,4 +37,7 @@ Commands:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-`zsh scratch/agent/run_s4099_m5_port_selector_writers.sh`
+Create/run one bounded retail-gated script from `build/`, using
+`PROBE_PHASE_WIDTH`/`PROBE_KEYS_FROM_PHASE=1`, the whole-RDRAM oracle control,
+and SIGKILL cleanup. Do not interpret any null unless both route controls and
+the shared positive control are present.

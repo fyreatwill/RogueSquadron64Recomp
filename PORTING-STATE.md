@@ -145275,3 +145275,20 @@ writer gap. The route is qualified and the next unit must wire the exact
 candidate-store witness through the regeneration path. ORIGIN: selector fields
 are legitimate guest descriptor state; no mitigation or guest behavior
 changed.
+## Session 4100 (2026-10-06) — qualified live port selector writer
+
+The planned M5 work unit repaired the regeneration-safe port selector-writer
+witness at `0x80090AAC` and `0x80090BA4`, built the ordinary Debug target, and
+ran one retail-gated declared-real capture. The oracle whole-RDRAM positive
+control fired and retail reached title `0x00790400/1024` and hangar
+`0x006AB400/512`; the port reached both target phases. The new witness control
+fired in both phases. Port rows numbered 512 in title and 512 in hangar for
+`0x80090AAC`; no port row came from `0x80090BA4`. Retail's paired store-field
+output independently attributed 157 exact target rows to `0x80090AAC`, with
+matching selector values. Hport-writer-live is selected: the port reaches the
+known selector writer, so a null at these candidate sites is ruled out. Retail
+and port rows are not record-synchronized, so this does not identify a later
+transform. ORIGIN: selector fields are legitimate guest descriptor state; the
+new hooks are diagnostic-only and changed no guest behavior. The next unit is
+the complete eight-site key-on early-return idiom audit, with no return removal
+until valid-input guard hits are distinguished from legitimate fallbacks.

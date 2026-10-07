@@ -46,6 +46,7 @@ done
     PROBE_PHASE_TIMEOUT=110 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
     ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M5_SELECTOR_STORE_CONTEXT=1 \
     ROGUESQ_LOG_M5_SELECTOR_TABLE=1 ROGUESQ_LOG_M5_INPUT_WRITER=1 \
+    ROGUESQ_LOG_M5_PORT_SELECTOR_WRITERS=1 \
     ROGUESQ_AUDIO_UCODE=1 ./RogueSquadron64Recomp
 ) > "$OUT/port.log" 2>&1 &
 port_pid=$!
@@ -72,7 +73,7 @@ grep -aq '\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/port.log" && port_ha
 
 print "control=$control retail_title=$retail_title retail_hangar=$retail_hangar port_title=$port_title port_hangar=$port_hangar" | tee "$OUT/driver.log"
 grep -a -E '^\[store-field-dump\].*(80090aac|80090ba4)|^\[oracle\] (pc-hist-phase|done:|positive-control)' "$OUT/retail.log" | tail -160 | tee -a "$OUT/driver.log" || true
-grep -a -E '^\[m5-selector-(store-context|table-store)|^\[phase\]|^\[CRASH\]|^\[ABORT\]' "$OUT/port.log" | tail -240 | tee -a "$OUT/driver.log" || true
+grep -a -E '^\[m5-port-selector-writer|^\[m5-selector-(store-context|table-store)|^\[phase\]|^\[CRASH\]|^\[ABORT\]' "$OUT/port.log" | tail -240 | tee -a "$OUT/driver.log" || true
 if (( control && retail_title && retail_hangar && port_title && port_hangar )); then
   print 'verdict=qualified; compare exact retail writer rows with paired port selector witness' | tee -a "$OUT/driver.log"
 else
