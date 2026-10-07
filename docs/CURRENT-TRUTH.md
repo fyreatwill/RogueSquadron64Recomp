@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4118 (2026-10-06).
+Updated for session 4119 (2026-10-06).
 
 ## Current state
 
@@ -60,6 +60,17 @@ M5 image work moved from stage/writeback suspicion to the source span 0x178C80..
 M5 route permutations repeatedly showed topology and launch-order sensitivity. Silent arms can qualify where real/image arms crash in spTaskSchedulerThread+9632 at guest PC 0x8000834C; such failures are Hroute-invalid for source and guard nulls.
 
 M3 audits added regeneration-safe ownership guards for free/active chains, sentinel/cursor aliases, predecessor state, and expansion ownership. Ordinary host builds pass, but runtime qualification is blocked by the absent MIPS GCC/LD toolchain.
+
+Session 4119 completed the A10 voice/list/table guard audit. The generated
+source census contains 43 song-tempo table-pointer guards in `funcs_25.c` and
+one voice-list-node guard in `funcs_26.c`. The retail oracle passed the
+whole-RDRAM control, reached title and hangar, and wrote the shared table root
+`0x801529C0` 2,542 times overall and 371 times in hangar from guest PC
+`0x80096D88`. The qualified port reached title and hangar, passed the audit's
+positive control, and emitted 226 valid-range traversal rows plus 30 indexed
+table rows; neither A10 guard fired. H-A10-not-suppressing-valid-work is
+selected at this scope. This closes guard firing, not every possible audio
+cause, and no guard or writer behavior changed.
 
 Generated-tree audits confirmed the relevant service and image functions exist outside this checkout and in the fixup inputs. Guard changes require an ORIGIN naming the legitimate writer; no force-clear, wait replacement, synthetic DMA, or default-on mitigation was authorized.
 
@@ -175,11 +186,11 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 8:** audit one complete voice-base/list/table guard
-   idiom class after the status-03 worker contract is qualified. Start with
-   the first ranked class in the generated/fixup source, identify its guest
-   writer and legitimacy, and build one phase-gated retail/port census. Do not
-   relax a guard unless the writer and valid range are independently proven.
+1. **M5 de-stubbing Step 8 continuation:** audit the next ranked complete
+   voice-array-base guard idiom class (A9) in `funcs_24.c`. Identify the
+   allocator writer and legitimacy, then build one phase-gated retail/port
+   census with positive controls. Do not relax a guard unless the writer and
+   valid range are independently proven.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -211,6 +222,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 key-on early returns | Hreturns-dead/Hguard-valid selected (s4101): retail and port reached the measured key-on route with valid `0xC0` divisors, normal tails, and slot `02`/`00` transitions; all eight guard counts were zero. |
 | M5 drain-tick policy | HDrainChangesOrdering remains qualified (s4103, independently requalified s4114). Session 4113's reverse-order rerun was Hroute-invalid because tick-off crashed pre-target; s4114 qualified both arms and again found differing joined stage/route-context tables. This does not establish tick-required behavior. |
 | M5 status-03 reaping | Hstatus03-chain-live selected at s4117's measured scope: silent port reached both phases with repeated service entry/exit pairs, and retail independently executed the named `0x8009B7EC` zeroing-store PC plus surrounding worker PCs. Exact port-side store-to-return synchronization remains diagnostic; no force-clear or wait change is authorized. |
+| M5 A10 voice/list/table guards | H-A10-not-suppressing-valid-work selected at s4119's measured scope: retail's independent `0x80096D88` writer reached the target table root (371 hangar writes), while the qualified port reached both phases with valid traversal/table rows and zero A10 guard fires. No guard relaxation is authorized. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary

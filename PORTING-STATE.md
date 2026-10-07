@@ -145624,3 +145624,27 @@ conclusions, and operating rules. The backlog remains one monotonic sequence.
 This rules out treating the removed historical detail as current truth; the
 full chronology remains in this ledger. No runtime conclusion changed and no
 mitigation-shaped code was added.
+
+## Session 4119 (2026-10-06) — qualified A10 voice/list/table guard audit
+
+Asked the retail oracle first with a whole-RDRAM positive control and a
+physical watch on the shared song-tempo table root. The positive control
+reached 10,000 callbacks before removal; retail reached title 1024 and hangar
+512. The root at physical `0x1529C0` was written 2,542 times overall and 371
+times during hangar from guest PC `0x80096D88`.
+
+The generated/fixup census found 43 song-tempo table-pointer guard sites in
+`funcs_25.c` and one voice-list-node guard in `funcs_26.c`. The single Debug
+build completed cleanly. The qualified real-audio/LLE/ungated/solo/spin-yield
+port capture reached title `0x00790400/1024` and hangar
+`0x006AB400/512`, emitted the host-positive filter audit control, and recorded
+226 valid-range traversal rows plus 30 indexed-table rows. Neither the
+song-tempo guard nor voice-list guard fired. The initial port attempt without
+the qualified route flags stalled at VI 640; it was killed with SIGKILL and
+treated as route-invalid, not as A10 evidence.
+
+This selects H-A10-not-suppressing-valid-work at the measured scope and rules
+out guard firing as the explanation for the qualified route's missing work.
+It does not prove every audio cause is closed, and it does not authorize a
+guard relaxation. ORIGIN: the legitimate table-root writer is the
+retail-observed `0x80096D88` path; no guest behavior or mitigation changed.
