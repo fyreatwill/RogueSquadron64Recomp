@@ -146131,3 +146131,17 @@ successfully. `PatchesLib` still has no configured target, so no runtime guard
 firing is claimed. This rules out another observation-only M5 rerun for this
 iteration, but does not explain the M5 zero source payload or qualify the
 guard on the game route.
+## Session 4147 (2026-10-07) — requalified allocator cursor/free-list guard build
+
+Ran the prescribed M3 cursor/free-list ownership work unit. Re-audited
+`patches/heap_guards.c`: the bounded chain rooted at `heap_free_head` rejects
+malformed or overlong links and rejects `heap_bump` aliases before free-list
+dequeue publication; ORIGIN is the `heap_bump` writer versus free-list link
+stores, and the alias is not legitimate shared ownership. The ordinary Debug
+`RogueSquadron64Recomp` target built successfully. `cmake --build build
+--config Debug --target PatchesLib` failed because this configured macOS graph
+has no such target. This confirms the landed static guard and host build only;
+it does not prove runtime firing or allocator behavior. The M3 runtime item is
+deferred pending a host with `mips64-elf-gcc`/`mips64-elf-ld` and a configured
+`PatchesLib` target. The next applicable work is the M5 source-construction
+caller boundary.

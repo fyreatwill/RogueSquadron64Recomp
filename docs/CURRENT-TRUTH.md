@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4146 (2026-10-07).
+Updated for session 4147 (2026-10-07).
 
 ## Current state
 
@@ -187,6 +187,14 @@ an alias is not legitimate shared ownership. The ordinary Debug target
 rebuilt successfully, while `PatchesLib` remains absent from this macOS CMake
 graph (`No rule to make target PatchesLib`), so this is a landed static guard,
 not runtime firing proof.
+
+Session 4147 re-audited the cursor/free-list ownership class against the
+checked-in patch and rebuilt the ordinary Debug target successfully. The
+bounded `heap_free_head` walk rejects malformed/overlong chains and cursor
+aliases before free-list dequeue publication. `PatchesLib` remains unavailable
+in the configured macOS graph, so no runtime guard firing is claimed. The M3
+runtime item is deferred until a host with the MIPS GCC/LD toolchain and a
+configured target is available.
 
 Session 4137 ran the prescribed M3 environment discriminator. `command -v`
 found neither `mips64-elf-gcc` nor `mips64-elf-ld`, and

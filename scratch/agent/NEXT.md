@@ -1,37 +1,36 @@
-# Next work unit: qualify the M3 allocator cursor/free-list ownership class
+# Next work unit: qualify the M5 source-construction caller boundary
 
-HYPOTHESIS-ID: m3-allocator-cursor-free-list-ownership
+HYPOTHESIS-ID: m5-source-construction-caller-boundary
 
-Before the next runtime qualification, perform one bounded source audit and
-ordinary Debug build for the missing ownership relation in `func_80007D74`.
-The new guard must reject `heap_bump` when it aliases any node reachable from
-`heap_free_head`, before the free-list dequeue or active-queue append stores.
-Do not change audio, generated functions, or the M5 route.
+Run one rebuilt, phase-gated paired capture of the qualified retail oracle and
+canonical real-audio/LLE/ungated/solo/spin-yield port to replace the invalid
+generated `ra=0` caller field at the `0x800078EC` source-construction boundary.
+Do not change guest behavior, audio waits, caps, predicates, slot state, or
+writeback.
 
 Competing hypotheses and discriminator:
 
-- H-m3-cursor-free-alias: `heap_bump` and a free-list node can alias; the new
-  guard closes a real cross-owner publication hazard. Discriminator: the
-  complete bounded free-chain walk is present and checked before mutation.
-- H-m3-cursor-free-disjoint: the allocator invariant already makes the cursor
-  disjoint; the audit should prove the relation structurally and the new guard
-  remains a defensive no-op. Discriminator: all cursor and free-list writers
-  are enumerated and no alias path exists.
-- H-m3-invalid-chain: a malformed free chain is the actual class; the walk
-  must reject invalid nodes/cycles rather than silently accept a cursor test.
-  Discriminator: bounded traversal returns failure for invalid or overlong
-  chains before any publication.
+- H-retail-port-caller-split: retail and port execute different source
+  construction callers. Discriminator: phase-keyed oracle previous-PC/call
+  tuples differ from a valid port call-site attribution while both controls
+  reach title 1024 and hangar 512.
+- H-shared-caller-different-state: both routes use the same caller but enter
+  with different arguments or state. Discriminator: joined caller PCs match,
+  while source/destination/length or phase-keyed state differs.
+- H-route-invalid: either arm lacks the whole-RDRAM positive control or a
+  target phase, so the comparison is unevaluable. Discriminator: missing
+  control, title, or hangar gate in the captured logs.
 
 Exact commands:
 
-1. Inspect `patches/heap_guards.c` and `patches/syms.ld`; add the guard with
-   an `ORIGIN:` naming `heap_bump` and free-list link writers.
-2. Build: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
-3. Record that `PatchesLib` runtime qualification remains unavailable if the
-   configured macOS graph still lacks the MIPS GCC/LD toolchain.
+1. Read `docs/M5-AUDIO-PLAN.md`, the existing source-context recipe, and
+   `tools/oracle/README.md`; arm the oracle whole-RDRAM and phase controls first.
+2. Build one Debug `RogueSquadron64Recomp` binary carrying every caller-PC
+   discriminator and positive-control counter.
+3. Run the retail oracle and port capture concurrently with phase gates; kill
+   both with SIGKILL and inspect bounded log excerpts, never a stopwatch.
 
-Expected outcomes: a successful ordinary Debug build plus the committed guard
-selects H-m3-cursor-free-alias as a landed ownership boundary, but does not
-claim runtime firing; a failed build selects H-m3-build-invalid; a source
-audit finding no missing relation selects H-m3-cursor-free-disjoint and the
-guard must not be added.
+Expected outcomes: matching valid caller tuples select H-shared-caller-
+different-state; differing valid tuples select H-retail-port-caller-split;
+missing controls or target phases select H-route-invalid and preserve the
+previous qualified split without a causal claim.
