@@ -145928,3 +145928,19 @@ inferred. H-status03-route-invalid is selected. This rules out neither the
 writer nor the worker return path and changes no wait, status, guard, or guest
 behavior. ORIGIN: the boundary remains the guest `serviceVoicePoolFrame`
 zeroing writer at `0x8009B7EC`; no mitigation was added.
+
+## Session 4135 (2026-10-07) — qualified status-03 join observed store after return
+
+Repaired the external regeneration-safe s2028 fixup so the live generated tree
+falls back from absent s2007/s2008 anchors to its existing s2020/s2022 service
+and shutdown anchors. The Debug target rebuilt successfully. The retail-gated
+silent route passed the whole-RDRAM control and reached title 1024 and hangar
+512 without crash or abort. The phase-scoped event stream emitted 9,881
+service-entry rows, 9,881 service-exit rows, one `0x8009B7EC` service-store
+row (`old=0x03`, `new=0`, phase 5, sequence 2647), and one shutdown
+entry/return pair in phase 4 (sequences 1007/1008). The store therefore
+followed the observed shutdown return in this run. H-status03-store-after-
+return is selected as single-source port evidence; before-return ordering is
+not established and no wait, force-clear, status guard, or guest behavior
+changed. ORIGIN: the legitimate writer is the guest `0x8009B7EC` store; the
+observed `03 -> 00` value is legitimate reaping state.

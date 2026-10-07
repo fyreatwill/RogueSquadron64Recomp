@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4134 (2026-10-07).
+Updated for session 4135 (2026-10-07).
 
 ## Current state
 
@@ -173,6 +173,21 @@ service positive-control rows in VI 640 but never reached title 1024 or hangar
 status-03 conclusion is allowed. ORIGIN: the named guest writer remains
 `serviceVoicePoolFrame` at `0x8009B7EC`; no wait replacement, force-clear,
 guard, or guest behavior changed.
+
+Session 4135 repaired the regeneration-safe s2028 worker/status fixup for the
+live generated tree: it now falls back from absent s2007/s2008 anchors to the
+existing s2020/s2022 service and shutdown anchors. The Debug target rebuilt
+successfully. The retail-gated silent port route qualified title 1024 and
+hangar 512 with no crash or abort. The phase-scoped table emitted 9,881
+service-entry rows, 9,881 service-exit rows, one `0x8009B7EC` service-store
+row (`old=0x03`, `new=0`, phase 5, event sequence 2647), and one shutdown
+entry/return pair in phase 4 (sequences 1007/1008). The observed store is
+after that shutdown return in this event stream, so H-status03-store-after-
+return is selected; the before-return worker contract is not demonstrated.
+This ordering result is single-source port evidence pending an independent
+retail or second-route join. No wait, force-clear, status guard, or guest
+behavior changed. ORIGIN: the legitimate status writer is the guest store at
+`0x8009B7EC`; the observed `03 -> 00` value is legitimate reaping state.
 
 ## Earlier qualified evidence (compacted)
 
@@ -384,10 +399,11 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 status-03 worker qualification:** use the external generated tree on a
-   qualified silent-arm route to join `serviceVoicePoolFrame` entry, the
-   `0x8009B7EC` zeroing store, and shutdown return. Do not replace the wait or
-   force-clear status without that join.
+1. **M5 status-03 ordering requalification:** repair the join so service,
+   store, and shutdown events share one monotonic event sequence and rerun the
+   same retail-gated silent route. The current single-source table places the
+   only `03 -> 00` store after a phase-4 shutdown return; do not replace the
+   wait or force-clear status without an independently qualified ordering.
 2. **Qualify the new M3 pre-publication guard** on a host with
    `mips64-elf-gcc` and `mips64-elf-ld`, then runtime-test valid and overlapping
    ownership cases. The ordinary host target passes, but this macOS CMake
@@ -424,7 +440,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
 | M5 key-on early returns | Hreturns-dead/Hguard-valid selected (s4101): retail and port reached the measured key-on route with valid `0xC0` divisors, normal tails, and slot `02`/`00` transitions; all eight guard counts were zero. |
 | M5 drain-tick policy | HDrainChangesOrdering remains qualified (s4103, independently requalified s4114). Session 4113's reverse-order rerun was Hroute-invalid because tick-off crashed pre-target; s4114 qualified both arms and again found differing joined stage/route-context tables. This does not establish tick-required behavior. |
-| M5 status-03 reaping | Hstatus03-chain-live selected at s4117's measured scope: silent port reached both phases with repeated service entry/exit pairs, and retail independently executed the named `0x8009B7EC` zeroing-store PC plus surrounding worker PCs. Exact port-side store-to-return synchronization remains diagnostic; no force-clear or wait change is authorized. |
+| M5 status-03 reaping | Hstatus03-chain-live remains the prior retail/port reachability boundary. Session 4135's single-source port join selected H-status03-store-after-return: the only phase-5 `03 -> 00` service store followed the observed phase-4 shutdown return in the event stream. Independent ordering remains open; no force-clear or wait change is authorized. |
 | M5 A10 voice/list/table guards | H-A10-not-suppressing-valid-work selected at s4119's measured scope: retail's independent `0x80096D88` writer reached the target table root (371 hangar writes), while the qualified port reached both phases with valid traversal/table rows and zero A10 guard fires. No guard relaxation is authorized. |
 | M5 A9 voice-array-base guards | H-A9-legitimate selected at s4120's measured scope: retail reached the allocator writer and 10/12 A9 PCs in hangar; the qualified port reached both phases with positive controls and zero fires at all 12 A9 guards. No guard relaxation is authorized. |
 | M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
