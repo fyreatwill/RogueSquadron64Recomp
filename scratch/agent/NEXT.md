@@ -1,34 +1,27 @@
-# Next work unit: requalify the M5 status-03 event ordering
+# Next work unit: qualify the M3 pre-publication ownership guard
 
-HYPOTHESIS-ID: m5-status03-worker-join
+HYPOTHESIS-ID: m3-prepublication-guard-runtime
 
-The live-tree fallback now builds and the route qualifies, but the first table
-uses separate shutdown/service ordinals and places the only phase-5 store after
-the phase-4 shutdown return. Before a new build, make the existing s2028 event
-helper use one monotonic sequence for every edge, then rerun the same qualified
-silent route. Do not replace the wait, force-clear status, or add a guard.
+The status-03 join is complete at single-source port scope; do not repeat it.
+Runtime qualification of the checked-in M3 guard requires a host with the MIPS
+GCC/LD toolchain, so first perform the one allowed environment discriminator.
 
 Competing hypotheses and discriminator:
 
-- H-status03-before-return: the qualified port's `03 -> 00` store sequence lies
-  between a service entry and the matching shutdown return.
-- H-status03-after-return: the qualified port's store sequence lies after the
-  matching shutdown return, so the worker contract is not the observed cause.
-- H-status03-route-invalid: the silent arm misses title/hangar or crashes before
-  the joined table is phase-qualified; no ordering conclusion is allowed.
+- H-m3-toolchain-present: `mips64-elf-gcc` and `mips64-elf-ld` are available and
+  the configured `PatchesLib` target can be built.
+- H-m3-toolchain-absent: one or both cross tools are unavailable, so runtime
+  guard qualification cannot run on this host.
+- H-m3-target-missing: the tools exist but this CMake graph still has no
+  `PatchesLib` target; no runtime guard conclusion is allowed.
 
-The single discriminating measurement is one monotonic, phase-keyed event
-sequence joining service entry, `0x8009B7EC` store, and shutdown return on a
-route that passes the whole-RDRAM retail positive control plus title 1024 and
-hangar 512. Store sequence between entry and return selects before-return;
-store sequence after return selects after-return; either missing phase gate or
-a pre-gate crash selects route-invalid. A counter that merely proves a branch
-ran is not sufficient.
+The single discriminating measurement is command/tool discovery plus
+`cmake --build build --config Debug --target PatchesLib`. Tool presence and a
+successful target build select H-m3-toolchain-present; missing tools select
+H-m3-toolchain-absent; `No rule to make target PatchesLib` selects
+H-m3-target-missing. Do not infer runtime behavior from the ordinary target.
 
-Before running, edit only the regeneration-safe s2028 fixup, run its apply mode,
-then build once with all three event classes and run the existing
-`scratch/agent/run_s4117_m5_status03_silent.sh` recipe. Use
-`PROBE_PHASE_WIDTH` and `PROBE_KEYS_FROM_PHASE=1`; kill only with SIGKILL.
-Retry condition: the live `funcs_26.c` contains one shared event-sequence
-helper plus service/store/shutdown markers, and the rebuilt binary reaches both
-target VIs.
+Exact commands: `command -v mips64-elf-gcc; command -v mips64-elf-ld`; then
+the PatchesLib build above. If the tools and target are available, the next
+iteration must run one valid-path and one overlap case; otherwise record the
+environment blocker and pivot to the paired M5 source-producer route repair.

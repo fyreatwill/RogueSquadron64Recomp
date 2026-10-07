@@ -145944,3 +145944,19 @@ return is selected as single-source port evidence; before-return ordering is
 not established and no wait, force-clear, status guard, or guest behavior
 changed. ORIGIN: the legitimate writer is the guest `0x8009B7EC` store; the
 observed `03 -> 00` value is legitimate reaping state.
+
+## Session 4136 (2026-10-07) — qualified monotonic status-03 event ordering
+
+Refreshed the regeneration-safe s2028 fixup with an explicit single global
+`event_seq` field, rebuilt the Debug target, and reran the same retail-gated
+silent route. Retail passed the whole-RDRAM positive control and title/hangar;
+the port passed title 1024 and hangar 512 with no crash or abort. The qualified
+port stream placed service entry at `event_seq=2637`, status-03 read at 2638,
+the `0x8009B7EC` `03 -> 00` store at 2639, and service exit at 2640. The
+phase-4 shutdown return was 1000. H-status03-after-return is selected: the
+store is inside a later service call, after the observed shutdown return. This
+is single-source port ordering evidence and rules out neither a separate
+retail ordering nor the worker's broader contract. No wait replacement,
+force-clear, status guard, or guest behavior changed. ORIGIN: the legitimate
+writer is the guest `0x8009B7EC` service store; `03 -> 00` is legitimate
+reaping state.
