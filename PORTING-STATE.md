@@ -145758,3 +145758,17 @@ The next work unit pivots to the planned declared-size versus legacy-size
 audio staging A/B. No guest writer, wait, cap, force-clear, or mitigation
 changed. ORIGIN: the existing guest wait/predicate and slot-status writers
 were observed; no mitigation was added.
+## Session 4125 (2026-10-07) — closed heap-bump active-queue alias guard class
+
+Audited the remaining cursor/active-queue ownership idiom in the
+regeneration-safe `patches/heap_guards.c` override for `func_80007D74`. The
+existing guard rejected `heap_bump == heap_tail_loc`'s sentinel but did not
+compare the cursor against every node reachable from the published active
+queue. Added a bounded `bump_cursor_disjoint_from_active_queue` check before
+the append stores. ORIGIN: `heap_bump` is published by the allocator cursor
+writer and active nodes are published by the queue link stores; a cursor alias
+with an active node is not legitimate ownership state. The ordinary Debug
+target built successfully through `RogueSquadron64Recomp`. This closes the
+static guard idiom at the checked-in patch boundary, but does not claim a
+runtime hit; M3 runtime qualification remains blocked by the absent MIPS
+GCC/LD toolchain.

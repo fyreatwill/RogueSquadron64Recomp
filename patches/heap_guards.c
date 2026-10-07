@@ -73,6 +73,26 @@ static int bump_cursor_disjoint_from_sentinel(const void* bump,
     return bump == NULL || sentinel == NULL || bump != sentinel;
 }
 
+// ORIGIN: the allocator publishes heap_bump as the next block cursor, while
+// active-queue link stores publish every node reachable from the queue head.
+// A cursor alias with any active node would let the next allocation reuse an
+// object that is still owned by the active queue.
+static int bump_cursor_disjoint_from_active_queue(const void* bump,
+                                                   const Block* queue_head) {
+    const Block* node = queue_head;
+    uint32_t count = 0;
+    while (node != NULL && count++ < MAX_FREE_BLOCKS) {
+        if (!block_ok(node)) {
+            return 0;
+        }
+        if (bump == node) {
+            return 0;
+        }
+        node = node->next;
+    }
+    return node == NULL;
+}
+
 // ORIGIN: heap_other_listhead and heap_tail_loc are fixed linker-published
 // metadata slots, not heap objects. Accepting any aligned KSEG0 address here
 // would let a corrupted slot pointer redirect the queue-link stores into a
@@ -492,6 +512,10 @@ RECOMP_PATCH Block* func_80007D74(void) {
 
     Block* queue_head = *heap_other_listhead;
     if (!active_queue_head_disjoint_from_sentinel(queue_head, tail)) {
+        return NULL;
+    }
+
+    if (!bump_cursor_disjoint_from_active_queue(heap_bump, queue_head)) {
         return NULL;
     }
 

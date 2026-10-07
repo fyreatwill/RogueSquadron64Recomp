@@ -51,3 +51,7 @@ Arm `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, `ROGUESQ_LOG_M5_WAIT_CONTRACT=1`,
 `ROGUESQ_LOG_M5_KEYON_CENSUS=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`,
 `ROGUESQ_LOG_PCM_BOUNDARY=1`, and the existing image-stage/DMA route logs.
 SIGKILL both games after both arms reach hangar or after the phase timeout.
+
+If either arm misses the positive controls or target phases, classify it as
+route-invalid and do not infer anything from its null rows. Do not change the
+declared-size staging code during this validation unit.

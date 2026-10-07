@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4123 (2026-10-07).
+Updated for session 4125 (2026-10-07).
 
 ## Current state
 
@@ -41,6 +41,16 @@ installed Clang also has no MIPS backend, and local filesystem checks found no
 toolchain or rebuildable source tree. The sentinel guard's ORIGIN is
 `heap_tail_loc` and the active-queue append stores; a predecessor on the
 sentinel path is not legitimate ownership state.
+
+Session 4125 completed the remaining cursor/active-queue alias idiom at the
+checked-in patch boundary. `func_80007D74` now walks the bounded active queue
+and rejects `heap_bump` when it aliases any active node, before the append
+stores publish another allocation. The ORIGIN is the allocator's
+`heap_bump` writer together with the active-queue link publishers; such an
+alias is not legitimate ownership state. The ordinary Debug target rebuilt
+successfully. This is a static ownership guard audit, not runtime proof that
+the alias occurs; M3 runtime qualification remains blocked by the absent MIPS
+GCC/LD toolchain.
 
 The title host-sink boundary is closed on the schedule-gated declared-real
 route. Retail passed the whole-RDRAM positive control and both target phases;
