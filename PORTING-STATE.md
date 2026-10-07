@@ -145848,3 +145848,24 @@ iteration keeps the same hypothesis and repairs the retail route before
 interpreting the table. ORIGIN: the measured writers are the guest
 `0x800078EC` store loop and the image source-DMA path; no guest behavior,
 wait, predicate, cap, or writeback mitigation changed.
+
+## Session 4130 (2026-10-07) — source-producer census remained route-invalid
+
+The first oracle launch did not run because this host has no `timeout`
+utility (`rc=127`); the corrected background-PID/SIGKILL launch passed the
+whole-RDRAM positive control and reached retail title `0x00790800/1024` and
+hangar `0x006AB400/512`. The `0x800078EC` execution watch fired with
+nonzero loop context. Its requested post-value watch index was invalid because
+the oracle uses one shared namespace for memory and execution watches; those
+post-value rows were excluded from the result.
+
+The Debug target rebuilt successfully. The fixed canonical real-audio/LLE/
+ungated/solo/spin-yield port launch reached title `0x00790400/1024`, then
+crashed before hangar at 77.3s in `musyxSynthFrame+3828`, guest PC
+`0x80001B08`, with a bus error. The source-producer positive control fired
+664 stores at `0x800078EC`, all zero, before the route phase. H-route-invalid
+is selected: the paired port source context did not reach hangar, so the
+retail/port writer comparison remains unevaluable. This rules out no producer
+and authorizes no mitigation. ORIGIN: the measured guest `0x800078EC` writer
+and source-span path remain the boundaries under test; no guest or host
+behavior changed.

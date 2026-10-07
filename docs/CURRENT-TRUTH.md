@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4129 (2026-10-07).
+Updated for session 4130 (2026-10-07).
 
 ## Current state
 
@@ -81,6 +81,21 @@ this run only: the producer context remains unevaluable against retail, not
 explained. ORIGIN: the measured writers are the guest `0x800078EC` store loop
 and the image source-DMA path; no guest behavior, wait, predicate, cap, or
 writeback mitigation changed.
+
+Session 4130 reran the retail-gated source-producer census with a corrected
+SIGKILL watchdog. The oracle whole-RDRAM positive control fired and reached
+title (`0x00790800/1024`) and hangar (`0x006AB400/512`); the source PC watch
+also fired with nonzero loop context. The oracle's requested post-value index
+was malformed because execution and memory watches share one index namespace,
+so those post-value rows are discarded rather than used as evidence. The
+rebuilt canonical real-audio/LLE/ungated/solo/spin-yield port reached title
+(`0x00790400/1024`) but crashed before hangar at 77.3s in
+`musyxSynthFrame+3828` (guest PC `0x80001B08`). Its source-producer control
+fired 664 stores, all zero, before the route phase. H-route-invalid is selected
+for this run: the paired port context is unevaluable at hangar, so no retail
+writer comparison or source explanation is established. ORIGIN: the measured
+guest `0x800078EC` writer remains the legitimate boundary under test; no guest
+writer, audio wait, cap, predicate, or writeback behavior changed.
 
 M3 has landed regeneration-safe ownership guards in `patches/heap_guards.c`
 for free-list span/reciprocal links, active-queue reachability and aliasing,
@@ -321,14 +336,13 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-producer context census (retail route repair):** rerun the
-   retail-gated writer/context table using the already-qualified VI-traced
-   launch ordering before interpreting the port's zero context. Keep the
-   image, wait, cap, predicate, slot state, guest behavior, and host writeback
-   unchanged. Require whole-RDRAM plus title/hangar controls, writer
-   PC/value/context rows, and a phase-keyed port source-span join. A retail
-   context match/split selects the corresponding hypothesis; missing hangar
-   remains H-route-invalid and requires route repair, not an inference.
+1. **M5 source-producer context census (repair the paired route):** rerun the
+   same retail-gated writer/context table, then run the canonical port with a
+   phase-scoped source table and enough route controls to reach hangar. Keep
+   the image, wait, cap, predicate, slot state, guest behavior, and host
+   writeback unchanged. Fix the oracle watch-index table before collecting
+   post-value evidence. A qualified retail/port context match or split is the
+   discriminator; a pre-hangar port crash remains H-route-invalid.
 2. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
    writer and terminal table only when the pending `chCount=16` call appears
    on a qualified route. Keep the cap and wait unchanged.
