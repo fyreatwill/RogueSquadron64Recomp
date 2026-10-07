@@ -145822,3 +145822,29 @@ payload remains identical to the silent no-write control. This identifies no
 writer yet and authorizes no guest or host mitigation. ORIGIN: the next
 legitimate writer boundary is the guest source-span producer at `0x800078EC`
 and its caller context.
+
+## Session 4129 (2026-10-07) — source-producer context census was route-invalid
+
+Asked the retail oracle first with whole-RDRAM positive control, the
+`0x800078EC` execution watch, source-span watches, post-store context, and
+title/hangar phase gates. The whole-RDRAM control passed and retail reached
+title `0x00790400/1024`, but neither oracle invocation reached hangar, so the
+retail side of the context table was not qualified for inference.
+
+Rebuilt the Debug target once and ran the canonical real-audio/LLE/ungated/
+solo/spin-yield image arm with all source-producer, source-transition,
+task-return, and PCM controls. The port reached title and hangar with no crash
+or abort. The guest producer positive control at `0x800078EC` fired 664 stores
+overall, all observed values zero. In phase 5, source-DMA rows were stable
+across route ordinals 644--676: `0x1797B0` length `0x38` had
+`FNV=0x9D4D4B25`, `nz=0`, while `0x1798B0` length `0x198` had
+`FNV=0x762B22A5`, `nz=0`; host writeback preserved those hashes. The run
+recorded 294 audio returns and no crash/abort.
+
+H-route-invalid is selected for this run only. The port writer/source context
+is live and measured, but the required retail comparison is unevaluable; this
+does not identify a legitimate producer gap or a port context split. The next
+iteration keeps the same hypothesis and repairs the retail route before
+interpreting the table. ORIGIN: the measured writers are the guest
+`0x800078EC` store loop and the image source-DMA path; no guest behavior,
+wait, predicate, cap, or writeback mitigation changed.
