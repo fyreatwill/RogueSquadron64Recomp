@@ -145032,3 +145032,27 @@ rules out a caller-side-use divergence on this path. The next search is the
 separate `0x8008D5FC` call feeding the earlier `0x8008D610` split. ORIGIN:
 the legitimate values are the guest return and caller arithmetic registers;
 the hooks are diagnostic-only.
+
+## Session 4086 (2026-10-06) — qualified separate voice-modulator call
+
+Added a regeneration-safe witness at the separate `0x8008D5FC` call and at
+the first post-return instruction `0x8008D604`, with the existing
+`0x8008D610` arithmetic witness retained. The Debug target built successfully.
+The first capture was rejected by a parser-order bug: its logs already showed
+the retail whole-RDRAM/title/hangar controls and port hangar rows, but the
+summary searched for `pc` before `origin`. The fixed control-first rerun
+qualified all controls and produced 14 hangar call rows, 43 hangar return
+rows, and 24 arithmetic rows.
+
+Retail watched `0x8008D5FC` rows showed the call's post-return `v0` varying
+with the voice record, including nonzero values such as `0x4203`, `0x9C46`,
+and `0x3F80`; the corresponding port `0x8008D604` rows were the repeated
+`0x3F80` result in the qualified sample, while the call arguments and
+`0x8008D610` lhs remained zero-shaped on the port. This selects
+Hnext-return: the first qualified mismatch is the return from the separate
+`0x80084860` call, so the next producer boundary is inside
+`evaluateVoiceModulatorRecord` for its `a1 = s0 + 0xC0` path. Hnext-caller and
+Hother-path are ruled out at this measured boundary; the first parser attempt
+is a documented Hcoverage dead end, not evidence. ORIGIN: the legitimate
+value is the guest return from `0x80084860` at `0x8008D5FC`; the hooks and
+summary counters are diagnostic-only.

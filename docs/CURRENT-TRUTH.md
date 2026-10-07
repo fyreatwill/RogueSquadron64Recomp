@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4085 (2026-10-06).
+Updated for session 4086 (2026-10-06).
 
 ## Current state
 
@@ -375,15 +375,30 @@ orphaned the oracle before launching the port; a fixed port continuation
 supplied the qualified route. ORIGIN: the values are legitimate guest return
 and arithmetic registers; all hooks are diagnostic-only.
 
+Session 4086 added a regeneration-safe witness at the separate `0x8008D5FC`
+call and its first post-return instruction `0x8008D604`, retaining the
+`0x8008D610` arithmetic witness. The first capture's parser searched for
+fields in the wrong order; its logs already showed both controls and port
+hangar rows, so it was rejected as Hcoverage. The fixed rerun qualified all
+controls and produced 14 hangar call rows, 43 hangar return rows, and 24
+arithmetic rows. Retail's watched `0x8008D5FC` return values varied by voice
+record, including `0x4203`, `0x9C46`, and `0x3F80`, while the port's sampled
+`0x8008D604` result repeated `0x3F80`; the port's `0x8008D610` lhs remained
+zero. Hnext-return is selected: the first qualified mismatch is inside
+`evaluateVoiceModulatorRecord` on the `s0 + 0xC0` call path. ORIGIN: the
+legitimate value is the guest return from `0x80084860`; the hooks are
+diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4k next voice-modulator callsite.** Ground and trace the
-   separate `0x8008D5FC` call feeding the earlier `0x8008D610` divergence,
-   using one retail watch/port witness batch and the same controls. A matching
-   return and caller arithmetic move the search earlier; the first mismatch
-   identifies the next producer boundary. Do not add a mitigation.
+1. **M5 Step 4l callee path for the `0x8008D5FC` call.** Ground and trace
+   `evaluateVoiceModulatorRecord` entry, its input loads, and its return for
+   the `a1=s0+0xC0` call path. The first matching/returning boundary moves the
+   search earlier inside that callee; a mismatch identifies its producer.
+   Do not infer from the already-qualified `0x8008D624` path or add a
+   mitigation.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -406,7 +421,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
-| M5 voice modulation transform | Hnext-callsite selected at s4085: retail and port agree through the `0x8008D624` return and caller sequence `0x2000 -> 0x40 -> 0 -> 0`, with the matching `$s3` update. The separate `0x8008D5FC` call still feeds the earlier `0x8008D610` divergence. |
+| M5 voice modulation transform | Hnext-return selected at s4086: the `0x8008D624` path matches, but retail's separate `0x8008D5FC` return varies by voice record while the qualified port sample repeats `0x3F80`; the next boundary is inside `evaluateVoiceModulatorRecord` on its `s0+0xC0` path. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
