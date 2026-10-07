@@ -146906,3 +146906,16 @@ the open boundary into the first post-loop loaded state. It rules out a
 successor control mismatch at the measured scope; it does not explain the
 zero audio payload and changes no audio, gate, writer, payload, or mitigation
 behavior.
+## Session 4189 (2026-10-07) — qualified M5 first post-loop load/use parity
+
+Extended the regeneration-safe M5 witness to `0x8008F928`, `0x8008F938`, and
+`0x8008F93C`, and ran the canonical paired retail-oracle/port measurement.
+The first run was route-invalid: the port crashed at
+`spTaskSchedulerThread+9772` before VI 320. The fixed rerun passed the
+whole-RDRAM positive control, both retail target phases, and both port target
+phases. Independent retail and port matched the hangar load/use tuple:
+`0x801499C8=0xE0D91780`, loaded `v1=0x8017D9E0`, derived `v0=0x8017E0A0`,
+and store address `0x8017E088`; title tuples matched as well. This selects
+H-load-use-parity and moves the open boundary to the post-loop store/caller.
+The failed first run is recorded as route-invalid, not as evidence of a null.
+No audio, gate, writer, payload, or mitigation behavior changed.

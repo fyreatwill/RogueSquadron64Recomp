@@ -1848,6 +1848,53 @@ extern "C" void rs64_m5_object_successor_witness(uint8_t* rdram,
         load_addr, load_value, U32(ctx->r31));
     std::fflush(stderr);
 }
+
+extern "C" void rs64_m5_object_load_witness(uint8_t* rdram,
+                                                recomp_context* ctx,
+                                                uint32_t pc) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_OBJECT_LOAD");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled || !rdram || !ctx) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+        std::fprintf(stderr,
+                     "[m5-object-load-control] phase=%u width=%u origin=0x%06X pc=0x%08X\n",
+                     rs64_phase_ord(), width, origin, pc);
+        std::fflush(stderr);
+    }
+    if (rows >= 512u) return;
+    const uint32_t load_addr = 0x801499C8u;
+    const uint32_t load_phys = load_addr - 0x80000000u;
+    const uint32_t load_value =
+        (uint32_t(rdram[load_phys]) << 24) |
+        (uint32_t(rdram[load_phys + 1]) << 16) |
+        (uint32_t(rdram[load_phys + 2]) << 8) |
+        uint32_t(rdram[load_phys + 3]);
+    const uint32_t v0 = U32(ctx->r2);
+    const uint32_t v1 = U32(ctx->r3);
+    std::fprintf(stderr,
+        "[m5-object-load] row=%u phase=%u width=%u origin=0x%06X pc=0x%08X "
+        "v0=0x%08X v1=0x%08X a2=0x%08X load_addr=0x%08X "
+        "load_value=0x%08X derived_addr=0x%08X store_value=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, pc, v0, v1, U32(ctx->r6),
+        load_addr, load_value, v0 - 0x18u, 0u, U32(ctx->r31));
+    std::fflush(stderr);
+}
 }
 
 extern "C" void rs64_m5_pcm_set_callsite(uint32_t callsite) {

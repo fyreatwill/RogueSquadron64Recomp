@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4187 (2026-10-07).
+Updated for session 4189 (2026-10-07).
 
 ## Current state
 
@@ -257,13 +257,26 @@ is `0x801499C8`, and the port witness read `0xE0D91780` there. This selects
 H-successor-parity and moves the open boundary into the first post-loop loaded
 state. No audio, gate, writer, payload, or mitigation behavior changed.
 
+Session 4189 extended the canonical paired run to the first post-loop load/use
+at `0x8008F928`, `0x8008F938`, and `0x8008F93C`. The first attempt was
+route-invalid because the port crashed at `spTaskSchedulerThread+9772` before
+VI 320; the fixed rerun qualified the whole-RDRAM control, both retail phases,
+and both port phases. At the shared hangar phase, the independent retail oracle
+and port matched the loaded word at `0x801499C8` (`0xE0D91780`), the loaded
+`v1` (`0x8017D9E0`), the derived `v0` (`0x8017E0A0`), and the resulting store
+address (`0x8017E088`). Title tuples also matched (`0x402C1980`,
+`0x80192C40`, `0x801931E0`, and `0x801931C8`). This selects
+H-load-use-parity and moves the open boundary to the post-loop store/caller.
+No audio, gate, writer, payload, or mitigation behavior changed.
+
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** extend the regeneration-safe witness to the first
-   post-loop load/use after `0x8008F924`, then run one paired oracle/port
-   measurement using the same canonical recipe and all existing positive
-   controls. Matching loaded state moves the boundary to the first consumer;
-   a mismatch selects the first divergent loaded value; absent target phases is
+1. **M5 audio de-stubbing:** extend the regeneration-safe witness to the
+   post-loop store return/caller boundary at `0x8008F958` and its caller
+   continuation `0x8008F8A8`, then run one paired oracle/port measurement using
+   the same canonical recipe and all existing positive controls. Matching
+   post-store/return state moves the boundary to the first caller consumer; a
+   mismatch selects the first divergent return state; absent target phases is
    route-invalid. Do not change audio, gate, writer, payload, or mitigation
    behavior.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
@@ -289,6 +302,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 object-field witness | H-legitimate-field-mismatch selected at s4174: the corrected port witness fired in both target phases and recorded all five producer PCs. Its runtime-memory field values and object records did not reconcile with the independent retail field table after using `MEM_W/MEM_BU/MEM_HU` semantics. The earlier raw-byte result is superseded as an endian instrumentation defect. |
 | M5 object-entry boundary | H-entry-body-mismatch selected at s4181: after repairing the port witness to raw physical-address semantics, retail and port matched `s0=0x48`, `s1=0x1B000`, source word/byte, selector, and branch state at the shared hangar phase. The open boundary is inside `0x8008F900`. |
 | M5 object-body witness | H-successor-parity selected at s4188: the canonical route qualified both target phases and two port successor rows; independent retail and port rows matched terminal `v0=0`, `a2=s0=0x48`, and the successor PC. The first post-loop load is `0x801499C8`; the open boundary is its loaded state/use. |
+| M5 object load/use witness | H-load-use-parity selected at s4189: the qualified paired route matched the independent retail loaded word, loaded `v1`, derived `v0`, and post-store address in both title and hangar target phases. The open boundary is the post-loop store return/caller. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |
