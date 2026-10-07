@@ -145292,3 +145292,23 @@ transform. ORIGIN: selector fields are legitimate guest descriptor state; the
 new hooks are diagnostic-only and changed no guest behavior. The next unit is
 the complete eight-site key-on early-return idiom audit, with no return removal
 until valid-input guard hits are distinguished from legitimate fallbacks.
+## Session 4101 (2026-10-06) — closed M5 key-on early-return audit
+
+Built the existing regeneration-safe key-on census and ran one control-first
+retail/port capture from `scratch/agent/run_s4094_m5_port_keyon_boundary.sh`.
+The oracle whole-RDRAM positive control fired, and the retail log reached the
+exact title and hangar target origins. The port reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Its hangar census reported
+`entry=4383`, `normal_tail=4383`, and `slot02=13`, `slot00=5`; the active
+divide witnesses at `0x80090CEC`, `0x80090D30`, `0x80090D74`, and
+`0x80090DB8` each had divisor `0xC0` and 4383 rows, while all eight guard
+counts were zero. The four alternating break-6 sites had no guard hits.
+
+Combined with the independent retail oracle capture showing all eight early
+return PCs unreachable, this selects Hreturns-dead/Hguard-valid for the
+measured route. It rules out a port-only valid-input guard hit and authorizes
+no return removal or replacement. The positive control, exact phase markers,
+normal tail, and slot transitions make the null guard counts interpretable.
+ORIGIN: `0x80090768` owns the legitimate `0xC0` cmd-list divisor; all changes
+were diagnostic-only. The initial fixup command correctly refused to rerun on
+already-marked generated files; the existing generated output built cleanly.

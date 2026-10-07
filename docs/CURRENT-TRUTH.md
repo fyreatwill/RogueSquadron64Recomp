@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4099 (2026-10-06).
+Updated for session 4101 (2026-10-06).
 
 ## Current state
 
@@ -544,18 +544,29 @@ retail and port rows not record-synchronized. ORIGIN: selector fields are
 legitimate guest descriptor state; the hooks are diagnostic-only and changed
 no guest behavior.
 
+Session 4101 completed the eight-site key-on early-return audit in one
+control-first capture. The retail oracle whole-RDRAM positive control fired
+and the retail log contained exact title and hangar target rows; the port also
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. In the port
+hangar bucket, entry and normal-tail counts were both 4,383, the three
+divide-witness sites that execute each had divisor `0xC0` and 4,383 rows, and
+all eight early-return guard counts were zero. Slot transitions included
+`02` (13) and `00` (5). The four alternating break-6 sites were not reached,
+matching the valid divisor path. Together with the independent retail result
+that all eight PCs are unreachable, this selects Hreturns-dead/Hguard-valid
+for the measured route: no early return is implicated and none may be
+removed or replaced. ORIGIN: the `0x80090768` publisher owns the legitimate
+`0xC0` cmd-list divisor; the audit was diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 5: audit the eight key-on early returns as one idiom class.**
-   Ground the retail divisor/descriptor inputs and port guard-hit/normal-tail
-   rows at `0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
-   `0x80090D74`, `0x80090D8C`, `0x80090DB8`, and `0x80090DD0` in one
-   phase-gated instrument. Competing outcomes must distinguish legitimate
-   invalid-input fallbacks from a port-only guard hit; do not remove a return
-   until the same run shows a valid divisor, normal key-on tail, and slot
-   `02` then `00` transition. Keep the existing guard behavior in this unit.
+1. **M5 Step 6 validation: qualify the default-off drain-tick policy.** Run
+   the default arm and `ROGUESQ_DRAIN_INLOOP_TICK=1` control in one build and
+   one hangar-phase capture. Require the whole-RDRAM oracle control, both port
+   target phases, task/SP completion, named status/slot transitions, and PCM
+   joins before interpreting a null. Do not change the policy in this unit.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -583,6 +594,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |
+| M5 key-on early returns | Hreturns-dead/Hguard-valid selected (s4101): retail and port reached the measured key-on route with valid `0xC0` divisors, normal tails, and slot `02`/`00` transitions; all eight guard counts were zero. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary

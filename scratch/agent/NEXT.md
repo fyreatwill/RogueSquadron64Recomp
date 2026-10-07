@@ -1,43 +1,21 @@
-# Next work unit: ground the eight key-on early-return sites
+# Next work unit: validate the M5 drain-tick policy A/B
 
-HYPOTHESIS-ID: m5-keyon-early-return-idiom
+HYPOTHESIS-ID: m5-drain-tick-policy-validation
 
-Do one diagnostic-only, regeneration-safe audit of the complete eight-site
-key-on early-return class before changing any return. The port selector-writer
-boundary is now qualified; the next question is whether these returns suppress
-legitimate key-on work.
+Run the existing three-arm validation recipe `scratch/agent/run_s2328_m5_drain_tick_ab.sh` after the key-on audit closed with no guard hits. This is one bounded validation unit: keep the image arm's default-off drain tick and compare it with the same-build `ROGUESQ_DRAIN_INLOOP_TICK=1` control; retain the silent stub as the task-dispatch control. Do not change the policy.
 
 Competing hypotheses:
 
-- Hguard-legitimate: target-phase inputs fail the divisor/descriptor contract,
-  so the early returns are valid fallbacks and the normal key-on tail is not
-  expected.
-- Hguard-port-only: retail reaches the normal key-on tail for the same class,
-  but the port hits one or more guards with valid inputs; this authorizes a
-  later single-class behavior change.
-- Hguard-unwired: the port route reaches the sites, but the regenerated guard
-  witness/control is absent or phase-gated incorrectly, so a null is
-  unevaluable.
+- Hdrain-required: tick-on is required for a qualified hangar route or for downstream task/SP, slot/status, or PCM joins; tick-off loses one of those controls.
+- Hdrain-redundant: both image arms qualify with matching downstream joins and tick-on only adds redundant tick rows.
+- Hdrain-coverage: one or both image arms lack the whole-RDRAM oracle control, phase gate, or shared positive controls, so the comparison is unevaluable.
 
-Discriminating measurement: one build and one retail-gated capture with all
-eight PCs instrumented together. The retail oracle must pass its whole-RDRAM
-positive control and both title/hangar phase gates. The port must reach both
-target phases. For each PC, record guard entry, divisor/descriptor inputs,
-normal-tail entry, and slot status `02`/`00`; emit a first target-phase control
-from the shared helper. A retail normal-tail row paired with a port guard row
-on valid inputs selects Hguard-port-only; matching invalid-input rows select
-Hguard-legitimate; missing control despite both phases selects Hguard-unwired.
-
-Do not remove or bypass any return in this unit. Any later mitigation needs an
-ORIGIN naming the guest writer and stating why its value is legitimate.
+Discriminating measurement: the oracle must pass its whole-RDRAM and retail title/hangar controls. Both image arms must reach port hangar `512 @ 0x006AB400` and emit the shared VI, task ABI/stage, SP receive, audio-join, PCM source/consumer, and drain-policy controls. On qualified arms, a tick-on-only downstream completion/PCM or a tick-off missing join selects Hdrain-required; matching qualified rows select Hdrain-redundant; missing controls select Hdrain-coverage. Report `tick_rows` separately from the positive controls.
 
 Commands:
 
-`python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Create/run one bounded retail-gated script from `build/`, using
-`PROBE_PHASE_WIDTH`/`PROBE_KEYS_FROM_PHASE=1`, the whole-RDRAM oracle control,
-and SIGKILL cleanup. Do not interpret any null unless both route controls and
-the shared positive control are present.
+`zsh scratch/agent/run_s2328_m5_drain_tick_ab.sh`
+
+The recipe must launch from `build/`, use phase gates, and SIGKILL its game arms. Do not interpret pre-target nulls or change a wait/timeout based on this run.
