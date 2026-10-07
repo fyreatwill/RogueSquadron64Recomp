@@ -144901,3 +144901,26 @@ register values prepared before `0x8008D710`; witnesses are diagnostic-only.
 The next work unit audits `0x8008D6F4..0x8008D70C` to find the first divergent
 setup value. The failed probe-route attempts rule out no transform hypothesis;
 they rule out only those route captures as evidence.
+
+## Session 4080 (2026-10-06) — instrumented voice-modulation setup boundary
+
+Ground truth was attempted first with a fresh `0x800923E4` execution watch and
+the whole-RDRAM positive control. The control fired at 10,000 callbacks, but
+the wrapper killed the parent rather than the oracle child; the exact child was
+then SIGKILLed. Its retained output is therefore control-only, and the paired
+retail call values used for planning remain the qualified s4079 capture.
+
+Added a regeneration-safe witness in `fixup_game_funcs.py` and
+`src/main/upstream_compat.cpp`. At `0x8008D70C` it records `$s2/$s3/$s0`,
+prepared `$a1/$a2/$a3`, and `$v1`/scaled, phase-gated to title and hangar.
+The regenerated source contains the witness and the Debug target builds.
+
+The first direct-AUTOPILOT image attempt reached the port's title 1024 and
+hangar VI markers, with positive channel-load and setup/call controls, but it
+emitted no hangar setup/call rows; the run was route-invalid for this
+discriminator. The fixed `tools/probe.sh` route did not reach its required
+1024 gate before the watchdog and was SIGKILLed. Hcoverage is selected:
+neither a setup register nor a first divergence is qualified. This rules out
+using the port-only title rows to identify the producer; it does not overturn
+Htransform-value. The next run must reuse the exact qualified s4079 route
+recipe before interpreting setup nulls.

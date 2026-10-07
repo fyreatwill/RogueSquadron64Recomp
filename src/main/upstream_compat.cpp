@@ -1329,6 +1329,26 @@ static bool rs64_m5_voice_modulation_phase(uint32_t* width, uint32_t* origin) {
            (*width == 512u && *origin == 0x006AB400u);
 }
 
+extern "C" void rs64_m5_voice_modulation_setup(uint8_t* rdram, uint32_t pc,
+                                                   uint32_t s2, uint32_t s3,
+                                                   uint32_t s0, uint32_t v1,
+                                                   uint32_t a1, uint32_t a2,
+                                                   uint32_t a3, uint32_t scaled) {
+    if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
+    uint32_t width = 0, origin = 0;
+    if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static uint32_t rows[2] = {};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (rows[slot] >= 128u) return;
+    std::fprintf(stderr,
+        "[m5-voice-mod-setup] row=%u phase=%u width=%u origin=0x%06X pc=0x%08X "
+        "s2=0x%08X s3=0x%08X s0=0x%08X v1=0x%08X "
+        "a1=0x%08X a2=0x%08X a3=0x%08X scaled=0x%08X\n",
+        rows[slot]++, rs64_phase_ord(), width, origin, pc, s2, s3, s0, v1,
+        a1, a2, a3, scaled);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,
                                                  uint32_t a1, uint32_t a2,

@@ -301,16 +301,27 @@ port-only and is not treated as independent retail attribution. ORIGIN: the
 legitimate transform inputs are the guest register values prepared before
 `0x8008D710`; these are diagnostic-only witnesses, not a mitigation.
 
+Session 4080 added a regeneration-safe setup witness at `0x8008D70C` for
+`$s2/$s3/$s0`, prepared `$a1/$a2/$a3`, and `$v1`/scaled. The regenerated
+source and ordinary Debug target both qualify. The direct-AUTOPILOT retry
+reached title and a hangar VI marker but produced no hangar setup/call rows;
+the fixed `tools/probe.sh` retry failed to reach its 1024 gate. Hcoverage is
+selected for this iteration, so no setup register is classified as the first
+divergence and Htransform-value remains unchanged. The fresh oracle attempt
+did fire its whole-RDRAM positive control but was terminated at the wrapper
+layer before target-phase output, so it adds no new retail phase evidence.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4f call-input producer.** Audit the values prepared between the
-   qualified `0x8008D5E4` channel load and the `0x8008D710` call. Ground retail
-   at `0x8008D710` and add one regeneration-safe port witness for
-   `0x8008D6F4..0x8008D70C` in one run, with title/hangar controls. Identify
-   which input first diverges; do not change the gate or add a mitigation from
-   a port-only zero.
+1. **M5 Step 4f call-input producer.** Re-run the new setup witness using the
+   exact qualified s4079 `tools/probe.sh` route and a correctly supervised
+   retail oracle. Require whole-RDRAM, title, and hangar controls plus
+   hangar setup rows before interpreting values. A qualified zero in `$s2`,
+   `$s3`, or `$s0` identifies the first producer boundary; matching setup
+   values pivot earlier; missing hangar rows remain Hcoverage. Do not change
+   the gate or add a mitigation from a port-only zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
