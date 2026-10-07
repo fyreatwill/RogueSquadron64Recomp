@@ -146349,3 +146349,20 @@ the independent retail writer histogram and the repeated port route crash; no
 guest, audio, wait, cap, predicate, slot, or writeback behavior changed.
 Evidence: `docs/M5-S4157-PRECLEAR-WRITER-CENSUS.md` and
 `scratch/agent/s4157_m5_preclear_writer_census/`.
+## Session 4158 (2026-10-07) — qualified M5 pre-clear writer mismatch
+
+Ran `zsh scratch/agent/run_s4157_m5_preclear_writer_census.sh` with the same
+rebuilt binary and independent retail oracle. The port reached VI 1024 at
+13.4s and VI 512 at 24.5s, and `[m5-preclear-writer-control]` fired in both
+target phases, so the route and positive control were valid. Port target-span
+parity rows were zero-valued: `0x80007670` in the earlier phase and
+`0x800078EC` in hangar. Retail passed whole-RDRAM/title/hangar controls,
+recorded 1,830 writes to `0x1797B0..0x179A48`, and had nonzero hangar bytes;
+its writer set included `0x80007670`, `0x800078EC`, `0x8001E2C0`, and
+`0x8001FAxx`. Selected H-earlier-writer-mismatch. This rules out the prior
+route-invalid and missing-positive-control explanations, but does not yet
+distinguish a missing port writer, wrong producer state, or under-sampling of
+the span. ORIGIN: the guest target-span writers; retail nonzero values are
+legitimate and port zero values were observed rather than suppressed. No guest,
+audio, wait, cap, predicate, slot, or writeback behavior changed. Evidence:
+`docs/M5-S4158-PRECLEAR-WRITER-MISMATCH.md`.

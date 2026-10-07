@@ -3,19 +3,22 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4157 (2026-10-07).
+Updated for session 4158 (2026-10-07).
 
-Session 4157 extended the regeneration-safe scalar writer census to the
-pre-clear span and actual stored values. The independent retail oracle passed
-whole-RDRAM/title/hangar controls and recorded 1,830 target-span writes,
-including 664 hangar writes by `0x800078EC` plus the `0x80007670`,
-`0x8001E2C0`, and `0x8001FAxx` families. Two same-build port retries crashed
-before title at `spTaskSchedulerThread+9772` / guest PC `0x8000834C`, so the
-port writer control did not fire and no provenance conclusion is valid.
-H-preclear-writer-route-invalid is selected for this iteration. ORIGIN: the
-qualified retail writer histogram and the repeated port route crash; no guest,
-audio, wait, cap, predicate, slot, or writeback behavior changed. Evidence:
-`docs/M5-S4157-PRECLEAR-WRITER-CENSUS.md`.
+Session 4158 reran the s4157 regeneration-safe scalar writer census with a
+target-valid port. The port reached title VI 1024 at 13.4s and hangar VI 512
+at 24.5s; the writer positive control fired in both target phases. Its
+observed target-span rows were zero-valued (`0x80007670` earlier and
+`0x800078EC` in hangar). The independent retail oracle passed all controls,
+recorded 1,830 target-span writes and nonzero hangar bytes, with writer PCs
+including `0x80007670`, `0x800078EC`, `0x8001E2C0`, and `0x8001FAxx`.
+H-earlier-writer-mismatch is selected: the live port writer evidence does not
+match the retail source. This does not yet distinguish a missing port writer,
+wrong producer state, or under-sampling of the port span. ORIGIN: the guest
+target-span writers; retail nonzero values are legitimate and port zero values
+were observed, not suppressed. No guest, audio, wait, cap, predicate, slot, or
+writeback behavior changed. Evidence:
+`docs/M5-S4158-PRECLEAR-WRITER-MISMATCH.md`.
 
 Session 4156 repaired and verified the regeneration-safe `rs_memset` entry/exit
 hook. The target-valid port reached title and hangar; hangar entry had 400
@@ -674,7 +677,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A11 wait terminal transition | H-A11-target-phase-absent-both selected at s4145: both qualified arms passed whole-RDRAM/title/hangar controls, but neither emitted a target-phase wait/post-wait terminal row; port A11 rows were confined to earlier 640 phases. This rules out a target-phase port/retail split, not the wait's safety or the source-payload cause. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
 | M5 source-producer context | H-producer-context-split selected at s4151: retail's phase-qualified execution histogram attributed `0x800078EC` to predecessor `0x8002BEEC` and `rs_memset` entry `0x800078E0` to `0x800052C4`, while the port used title callsite `0x8008F2CC` and hangar callsites `0x8008F2CC`/`0x800AB694` with distinct tuples and zero values. The caller-state cause remains open; generated port `ra=0` is not evidence. |
-| M5 pre-clear provenance | H-preclear-instrument-gap selected at s4155: both arms passed whole-RDRAM/title/hangar gates; retail had 12 nonzero hangar bytes, while port clear-body samples were all zero, but the port CPU-writer positive control emitted no `field348-writer` or transition rows. No producer absence/overwrite conclusion is valid. |
+| M5 pre-clear provenance | H-earlier-writer-mismatch selected at s4158: both arms passed whole-RDRAM/title/hangar gates and the port writer control fired in both target phases; port target-span rows were zero while retail recorded 1,830 writes and nonzero hangar bytes. The missing-writer versus wrong-state versus under-sampling split remains open. |
 | M5 producer caller state | H-caller-state-split selected at s4152: retail title entry rows had `prev=0x800052C4`, live `s0` objects and nonzero pointed words, while port title setup used `s0=0xF`, `s1=0x561F`, `0x80178C80/0x298`, and zero fill. Hangar includes a shared-looking `s0=0`, `s1=0x800D0000` family, so the split is phase/context-specific. The s4153 entry/body join then selected H-entry-body-shared: retail preserves the producer object/state into `0x800078EC`; the remaining gap is earlier provenance. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
