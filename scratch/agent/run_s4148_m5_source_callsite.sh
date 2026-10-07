@@ -15,7 +15,8 @@ cd "$ROOT" || exit 2
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
   --watch-write 0x0:0x800000 --hit-cap 10000 \
   --watch-write 0x178c80:0x178f18 \
-  --watch-pc 0x800078ec \
+  --watch-pc 0x8008f2a8 --watch-pc 0x8008f2bc --watch-pc 0x8008f2c0 \
+  --watch-pc 0x8008f2c4 --watch-pc 0x8008f2c8 --watch-pc 0x800ab694 \
   --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006ab400:512 \
   --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006ab400:512 \
   --vi-trace --press "$PRESS" --hold-ms 150 > "$OUT/retail.log" 2>&1 &
@@ -25,7 +26,7 @@ retail=$!
   cd "$ROOT/build" || exit 2
   exec env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
     ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 \
-    ROGUESQ_LOG_M5_SOURCE_CONTEXT=1 ROGUESQ_LOG_PHASE=1 \
+    ROGUESQ_LOG_M5_SOURCE_CONTEXT=1 ROGUESQ_LOG_M5_WRITER_SETUP=1 ROGUESQ_LOG_PHASE=1 \
     ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a' \
     PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 \
     ./RogueSquadron64Recomp

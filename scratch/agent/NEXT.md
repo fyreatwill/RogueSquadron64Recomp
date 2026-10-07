@@ -1,12 +1,14 @@
-# Next work unit: qualify source-construction predecessor/state setup
+# Next work unit: retry source-construction predecessor/state setup
 
 HYPOTHESIS-ID: m5-source-construction-predecessor-state
 
-Run one rebuilt, phase-gated paired retail-oracle/port capture that follows
+Run one route-stable, phase-gated paired retail-oracle/port capture that follows
 the selected caller split into the argument-setup boundary immediately before
 port `rs_memset` callsites `0x8008F2CC` (title) and `0x800AB694` (hangar).
-Keep the whole-RDRAM positive control and both target VI phase gates. Do not
-change guest behavior, audio waits, caps, predicates, slot state, or
+The setup fixup and title phase filter are repaired. Keep the retail setup-PC
+watches, but omit high-frequency oracle watches that starve the concurrent
+port. Retain the whole-RDRAM positive control and both target VI phase gates.
+Do not change guest behavior, audio waits, caps, predicates, slot state, or
 writeback.
 
 Competing hypotheses and discriminator:

@@ -468,7 +468,7 @@ extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, ui
     }
     uint32_t width = rs64_vi_committed_width();
     uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
-    if (!((width == 1024u && origin == 0x006AB800u) ||
+    if (!((width == 1024u && (origin == 0x006AB800u || origin == 0x00790400u)) ||
           (width == 512u && origin == 0x006AB400u))) return;
     uint32_t next_bucket = (width << 24) ^ origin;
     if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
@@ -680,7 +680,7 @@ extern "C" void rs64_m5_clear_branch(uint32_t pc, uint32_t branch_taken,
     if (!enabled) return;
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
-    if (!((width == 1024u && origin == 0x006AB800u) ||
+    if (!((width == 1024u && (origin == 0x006AB800u || origin == 0x00790400u)) ||
           (width == 512u && origin == 0x006AB400u))) return;
     const uint32_t next_bucket = (width << 24) ^ origin;
     if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }

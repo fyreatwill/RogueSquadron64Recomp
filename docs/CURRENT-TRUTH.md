@@ -3,7 +3,14 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4148 (2026-10-07).
+Updated for session 4149 (2026-10-07).
+
+Session 4149 repaired the regeneration-safe setup probe and ran the retail
+setup-PC control, but the concurrent port stayed at VI 640, so the planned
+setup/state join is route-invalid. Retail setup PCs `0x8008F2A8/BC/C0/C4/C8`
+each hit twice with predecessor `0x80001C90`; hangar `0x800AB694` hit 437 times
+with predecessor `0x800AB690`. No shared/split setup-state conclusion is
+selected. Evidence: `docs/M5-S4149-SOURCE-SETUP-ROUTE-INVALID.md`.
 
 ## Current state
 
@@ -550,11 +557,11 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-construction predecessor/state join:** follow the selected
-   retail/port caller split by capturing the argument-setup writes and entry
-   state immediately before the port callsites `0x8008F2CC` and `0x800AB694`,
-   then compare them with the oracle's phase-gated predecessor/context rows.
-   Do not use generated `ra=0` as caller evidence.
+1. **M5 source-construction predecessor/state join retry:** use the repaired
+   setup fixup and a route-stable paired capture. Keep the retail setup-PC
+   watches, but avoid high-frequency oracle watches that starve the port; retain
+   whole-RDRAM and both phase controls. Do not use generated `ra=0` as caller
+   evidence.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.

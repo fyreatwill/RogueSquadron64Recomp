@@ -146165,3 +146165,24 @@ zero stores remained legitimate memset behavior and no guest, audio wait,
 cap, predicate, slot, or writeback behavior changed. Evidence:
 `docs/M5-S4148-SOURCE-CALLSITE.md` and
 `scratch/agent/s4148_m5_source_callsite/`.
+
+## Session 4149 (2026-10-07) — repaired M5 setup probe and qualified retail setup controls
+
+The planned source-construction predecessor/state join was run with the
+whole-RDRAM control, title/hangar phase gates, and retail execution watches
+for the setup PCs. Retail passed the controls: `0x8008F2A8/BC/C0/C4/C8` each
+hit twice with predecessor `0x80001C90`, and hangar `0x800AB694` hit 437 times
+with predecessor `0x800AB690`. The concurrent port remained at VI 640 and
+emitted no target-phase setup rows, so H-route-invalid is selected and no
+shared/split setup-state conclusion is made.
+
+The iteration repaired two regeneration-safe instrument defects. The host
+setup phase filter now admits title origin `0x00790400`, and
+`fixup_game_funcs.py` handles the existing `s2240` annotation between the
+title delay slot and `rs_memset`, restoring the setup-step/state probes after
+regeneration. The ordinary Debug target rebuilt successfully. This rules out
+the prior probe-absence and oracle-watch-capacity explanations for future
+runs, not the source-state hypothesis.
+
+ORIGIN: retail setup-PC execution and predecessor witnesses; no guest
+behavior, audio wait, cap, predicate, slot state, or host writeback changed.
