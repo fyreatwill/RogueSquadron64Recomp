@@ -146234,3 +146234,28 @@ retail execution predecessor witness; no guest behavior, audio wait, cap,
 predicate, slot state, or writeback mitigation changed. Evidence:
 `docs/M5-S4151-SOURCE-PRODUCER-CONTEXT-SPLIT.md` and
 `scratch/agent/s4140_m5_source_context/`.
+
+## Session 4152 (2026-10-07) — qualified M5 producer caller-state split
+
+Built the ordinary Debug target once and ran the planned paired
+retail-oracle/port capture with the whole-RDRAM positive control and title
+`0x00790400/1024` plus hangar `0x006AB400/512` phase gates. The first attempt
+was route-invalid because the port crashed before title in
+`spTaskSchedulerThread+9632`; a fixed retry added only a two-second launch
+stagger and passed all controls and both target phases without a crash or
+abort. No guest, audio, wait, cap, predicate, slot, or writeback behavior
+changed.
+
+Retail's phase-gated `0x800078E0` field rows used predecessor `0x800052C4`,
+including title object/state rows such as `s0=0x801B1560`, `s1=0x18`, with
+nonzero pointed source words. The corresponding port title setup at
+`0x8008F2CC` used `s0=0xF`, `s1=0x561F`, destination `0x80178C80`, length
+`0x298`, and zero fill. Hangar also contained a retail `0x800AB694` row with
+`s0=0`, `s1=0x800D0000`, matching the port's shared-looking hangar tuple.
+H-caller-state-split is selected: the producer context differs by phase, not
+merely by callsite. This rules out a universal caller-register mismatch, but
+does not identify the object/body transition. The generated port `ra=0`
+remains unusable caller evidence. ORIGIN: legitimate retail entry/body and
+port setup/store rows; no value was suppressed or rewritten. Evidence:
+`docs/M5-S4152-CALLER-STATE-SPLIT.md` and
+`scratch/agent/s4152_m5_caller_state_join/`.

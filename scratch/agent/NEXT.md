@@ -1,39 +1,39 @@
-# Next work unit: join producer caller state fields
+# Next work unit: join producer entry/body object state
 
-HYPOTHESIS-ID: m5-producer-caller-state-join
+HYPOTHESIS-ID: m5-producer-object-body-join
 
-Use the s4151-qualified context split to compare the caller state around the
-retail `rs_memset` entry (`0x800078E0`) and the port's regeneration-safe
-`0x800078EC` rows. Keep the whole-RDRAM positive control and title
-`0x00790400/1024` plus hangar `0x006AB400/512` gates. Do not change guest
-behavior, audio waits, caps, predicates, slot state, or writeback. Do not use
-generated port `ra=0` as caller evidence.
+Use the s4152-qualified phase-specific caller-state split to determine
+whether retail's `rs_memset` entry state persists into the `0x800078EC` body
+and whether the port's zero-fill context diverges before the store.
 
 Competing hypotheses and the discriminator:
 
-- H-caller-state-shared: retail and port reach the same producer object/state
-  through different observable callsite paths. Discriminator: phase-keyed
-  `s0`, `s1`, object fields, source/destination, and length match after the
-  known callsite differences.
-- H-caller-state-split: the callsite difference carries a different producer
-  state or object. Discriminator: at least one phase-keyed caller field or
-  object/length tuple differs independently of the already observed callsite.
+- H-entry-body-shared: retail entry and body preserve the same producer
+  object/state. Discriminator: phase-keyed `s0`, `s1`, and pointed-field rows
+  match between `0x800078E0` and `0x800078EC`; the port setup/store tuple is
+  consistent with that object.
+- H-entry-body-split: retail changes producer object/state between entry and
+  body, or the port's setup object is not the retail body object.
+  Discriminator: an independently phase-keyed `s0`, `s1`, or pointed-field
+  difference appears, with the positive controls still valid.
 - H-route-invalid: a control or target phase is absent in either arm.
-  Discriminator: missing whole-RDRAM control or any required title/hangar
-  bucket invalidates the comparison.
+  Discriminator: missing whole-RDRAM control or title/hangar bucket invalidates
+  the comparison.
 
 Exact work:
 
-1. Add one retail-oracle arm to the existing source-context recipe with
-   `--pc-field-dump 0x800078E0` and phase-gated execution logging for
-   `0x00790400:1024` and `0x006AB400:512`; retain the source-span watch and
-   whole-RDRAM control.
-2. Reuse the existing port source-context hook and run both arms from
-   `build/` in one paired capture with SIGKILL cleanup.
-3. Build once with `cmake --build build --config Debug --target
-   RogueSquadron64Recomp`, then run the new paired script for at least 75
-   seconds and inspect only bounded summaries.
+1. Build once with `cmake --build build --config Debug --target
+   RogueSquadron64Recomp` after adding only a retail-oracle
+   `--pc-field-dump 0x800078EC` arm to the existing s4152 recipe; retain
+   `--pc-field-dump 0x800078E0`, source-span watch, whole-RDRAM control, and
+   both phase gates.
+2. Run the retail oracle and port concurrently for at least 75 seconds from
+   `build/`, with SIGKILL cleanup. If the known startup race recurs, use the
+   existing two-second launch stagger as the fixed route; do not alter guest,
+   audio, wait, cap, predicate, slot, or writeback behavior.
+3. Inspect bounded summaries only. Do not use generated port `ra=0` as caller
+   evidence.
 
-Expected outcomes: matching caller fields selects H-caller-state-shared;
+Expected outcomes: matching entry/body fields selects H-entry-body-shared;
 an independently phase-keyed field/object difference selects
-H-caller-state-split; missing controls or phases selects H-route-invalid.
+H-entry-body-split; missing controls or phases selects H-route-invalid.

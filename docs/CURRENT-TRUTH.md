@@ -3,7 +3,18 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4151 (2026-10-07).
+Updated for session 4152 (2026-10-07).
+
+Session 4152 qualified the caller-state join after a route-invalid first
+attempt and a fixed two-second launch-stagger retry. Whole-RDRAM/title/hangar
+controls passed. Retail `0x800078E0` rows used predecessor `0x800052C4` with
+phase-keyed object/state fields and nonzero source words; the port's title
+setup at `0x8008F2CC` used `s0=0xF`, `s1=0x561F`, destination `0x80178C80`,
+length `0x298`, and zero fill. Hangar also included a shared-looking
+`s0=0`, `s1=0x800D0000` tuple at `0x800AB694`. H-caller-state-split is
+selected: the producer context differs by phase, not merely by callsite.
+Generated port `ra=0` remains an instrument limitation. Evidence:
+`docs/M5-S4152-CALLER-STATE-SPLIT.md`.
 
 Session 4151 qualified the source-producer context join with the independent
 retail oracle and one rebuilt port. Whole-RDRAM/title/hangar controls passed.
@@ -569,13 +580,14 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 producer caller-state join:** use the newly qualified retail/port
-   context split to compare caller state fields at `0x800078E0`/`0x800078EC`
-   in one phase-gated retail-oracle/port capture. Add retail
-   `--pc-field-dump` for the `rs_memset` entry and retain the port's
-   callsite/argument rows, whole-RDRAM control, and both target phases. Do not
+1. **M5 producer object/body join:** use the qualified caller-state split to
+   add one retail-oracle `--pc-field-dump` arm for `0x800078EC` alongside
+   `0x800078E0`, phase-gated at title `0x00790400/1024` and hangar
+   `0x006AB400/512`. Compare the bounded `s0/s1` and pointed-field rows at
+   entry/body against the port's existing setup/store rows in one paired
+   capture. Retain the whole-RDRAM control and both target phases; do not
    change guest behavior, audio waits, caps, predicates, slot state, or
-   writeback; do not use generated `ra=0` as caller evidence.
+   writeback, and do not use generated port `ra=0` as caller evidence.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -608,6 +620,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A11 wait terminal transition | H-A11-target-phase-absent-both selected at s4145: both qualified arms passed whole-RDRAM/title/hangar controls, but neither emitted a target-phase wait/post-wait terminal row; port A11 rows were confined to earlier 640 phases. This rules out a target-phase port/retail split, not the wait's safety or the source-payload cause. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
 | M5 source-producer context | H-producer-context-split selected at s4151: retail's phase-qualified execution histogram attributed `0x800078EC` to predecessor `0x8002BEEC` and `rs_memset` entry `0x800078E0` to `0x800052C4`, while the port used title callsite `0x8008F2CC` and hangar callsites `0x8008F2CC`/`0x800AB694` with distinct tuples and zero values. The caller-state cause remains open; generated port `ra=0` is not evidence. |
+| M5 producer caller state | H-caller-state-split selected at s4152: retail title entry rows had `prev=0x800052C4`, live `s0` objects and nonzero pointed words, while port title setup used `s0=0xF`, `s1=0x561F`, `0x80178C80/0x298`, and zero fill. Hangar includes a shared-looking `s0=0`, `s1=0x800D0000` family, so the split is phase/context-specific. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
