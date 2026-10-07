@@ -145913,3 +145913,18 @@ valid allocator path. It rules out only a host-target build failure and does
 not advance runtime qualification. ORIGIN: the tested integration boundary is
 the configured `PatchesLib` target and its MIPS GCC/LD dependency; no allocator
 writer, guard, or runtime behavior changed.
+
+## Session 4134 (2026-10-07) — status-03 worker qualification was route-invalid
+
+Ran the planned M5 status-03 worker qualification. The live external generated
+tree lacked the s2008/s2007 helper anchors required by the existing s2028
+fixup; applying it failed with `funcs_26.c s2028 helper anchor count=0`.
+The compatible s2022 service branch/loop/store and shutdown-ordinal census did
+apply, and the Debug target rebuilt successfully. Its phase-3 service rows
+were a positive control, but the paired silent port remained at VI 640 and
+never reached title 1024 or hangar 512 before the watchdog kill. The wrapper
+therefore emitted no qualified verdict; no status-03 writer ordering can be
+inferred. H-status03-route-invalid is selected. This rules out neither the
+writer nor the worker return path and changes no wait, status, guard, or guest
+behavior. ORIGIN: the boundary remains the guest `serviceVoicePoolFrame`
+zeroing writer at `0x8009B7EC`; no mitigation was added.

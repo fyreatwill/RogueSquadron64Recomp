@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4133 (2026-10-07).
+Updated for session 4134 (2026-10-07).
 
 ## Current state
 
@@ -162,6 +162,17 @@ build-only probe and does not authorize another host-only guard iteration.
 ORIGIN: the tested integration boundary is the configured `PatchesLib` target
 and its MIPS GCC/LD dependency; no allocator writer, guard, or runtime behavior
 changed.
+
+Session 4134 attempted the M5 status-03 worker qualification. The live external
+generated tree lacked the s2008/s2007 anchors required by the existing s2028
+fixup; the measured failure was `funcs_26.c s2028 helper anchor count=0`.
+The compatible s2022 service branch/loop/store and shutdown-ordinal census
+applied and the Debug target rebuilt successfully. The silent port fired the
+service positive-control rows in VI 640 but never reached title 1024 or hangar
+512 before SIGKILL. H-status03-route-invalid is selected; no writer ordering or
+status-03 conclusion is allowed. ORIGIN: the named guest writer remains
+`serviceVoicePoolFrame` at `0x8009B7EC`; no wait replacement, force-clear,
+guard, or guest behavior changed.
 
 ## Earlier qualified evidence (compacted)
 

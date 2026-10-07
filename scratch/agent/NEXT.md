@@ -1,12 +1,14 @@
-# Next work unit: qualify the M5 status-03 worker boundary
+# Next work unit: repair and re-qualify the M5 status-03 worker boundary
 
 HYPOTHESIS-ID: m5-status03-worker-join
 
-Run one qualified silent-arm investigation of the status-03 worker. The
-external generated tree must be instrumented as one phase-scoped table joining
+The prior run was route-invalid at VI 640, and the s2028 fixup could not apply
+because the live generated tree lacks its s2008/s2007 helper anchors. Before a
+new build, make the existing fixup path compatible with the live tree so one
+phase-scoped table joins
 `serviceVoicePoolFrame` entry, the guest `0x8009B7EC` zeroing store, and the
 worker shutdown return. Do not replace the wait, force-clear status, or add a
-guard during this unit.
+guard.
 
 Competing hypotheses and discriminator:
 
@@ -32,4 +34,5 @@ entry/store/return counters and run the retail control and silent port arm.
 Use `PROBE_PHASE_WIDTH` and `PROBE_KEYS_FROM_PHASE=1`; kill only with SIGKILL.
 If the external generated tree or required toolchain is unavailable, record
 the measured failure and a falsifiable retry condition rather than changing the
-worker behavior.
+worker behavior. Retry condition: live `funcs_26.c` contains all helper and
+entry/store/return markers, and the rebuilt binary reaches both target VIs.
