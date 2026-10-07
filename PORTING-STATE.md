@@ -145235,3 +145235,9 @@ not legitimate ownership. `git diff --check` passed and the ordinary Debug
 qualification remain unavailable because this host has neither MIPS cross
 compiler nor linker. This rules out treating the host build as MIPS runtime
 evidence; it does not claim the new guard has fired in-game.
+
+## Session 4097 (2026-10-06) — narrowed M5 descriptor-selector writer census
+
+The first selector census command was rejected before emulation because this checkout's oracle does not support `--post-store-scalar`; its usage-only log was not used as evidence. I reran the same work unit with the supported `--store-field-dump` form, then corrected the physical range after the field dump showed live `s1` bases beginning at `0x80171E80`, rather than the initially watched tail.
+
+The corrected retail run passed the whole-RDRAM positive control at 10,000 callbacks, reached title `0x00790400`/1024 and hangar `0x006AB400`/512, and watched physical `0x00171E22..0x00172D00`. The range recorded 713,374 writes. Hangar's only high-volume writer PCs were `0x800907A0` (source confirms `sb +0x84`) and `0x8008F64C/0x8008F650` (source confirms `+0x60/+0x5C`); none is an `s1+0x22` selector store. The exact selector-store PCs were not included in the first valid run's store-field list, so this does not yet select selector-live versus selector-absent. It rules out treating the observed high-volume writers as the selector writer. This is single-source retail evidence; the next run arms the seven known exact selector-store PCs. ORIGIN: all observed stores are legitimate retail writes; no port behavior or mitigation changed.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4096 (2026-10-06).
+Updated for session 4097 (2026-10-06).
 
 ## Current state
 
@@ -513,18 +513,28 @@ state. The ordinary Debug target built successfully; MIPS patch/runtime
 qualification remains unavailable because this host lacks `mips64-elf-gcc` and
 `mips64-elf-ld`.
 
+Session 4097 ran the retail selector-range census with the whole-RDRAM positive
+control and both target VI buckets. The control reached 10,000 callbacks;
+title VI 1024 and hangar VI 512 both fired; the physical range
+`0x00171E22..0x00172D00` recorded 713,374 writes. Hangar's high-volume writers
+were `0x800907A0` (`sb +0x84`) and `0x8008F64C/50` (`+0x60/+0x5C`), not the
+known `s1+0x22` selector-store sites. This is single-source retail evidence:
+it narrows the writer census but does not yet prove selector absence because
+the exact candidate PCs were not armed with store-field rows.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 7 descriptor-selector writer census.** Keep the eight early
-   returns unchanged. Run the retail oracle with the whole-RDRAM positive
-   control, title/hangar phase gates, a physical watch covering the dynamic
-   `s1+0x22` selector field, and phase-gated writer-PC histograms. Hwriter-live
-   is selected if target-phase writes identify a legitimate writer and value
-   transition; Hselector-absent if the qualified retail field is never written
-   in the target route; Hcoverage if any control or phase gate is absent. The
-   result must identify the writer before any port-side behavior change.
+1. **M5 Step 7 exact selector-store census.** Keep the eight early returns
+   unchanged. Repeat the retail oracle controls and physical selector-range
+   watch, but arm `--store-field-dump` for the known `s1+0x22` writers
+   `0x800909B4`, `0x800909FC`, `0x80090AAC`, `0x80090BA4`, `0x80090F3C`,
+   `0x80090F8C`, and `0x80092170`. Hwriter-live is selected only if a
+   target-phase row names one of these sites and its scalar value; a qualified
+   zero across title/hangar selects Hselector-absent at retail scope; missing
+   controls selects Hcoverage. Do not change port behavior from this
+   single-source census.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
