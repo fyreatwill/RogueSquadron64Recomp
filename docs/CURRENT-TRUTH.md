@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4120 (2026-10-06).
+Updated for session 4121 (2026-10-06).
 
 ## Current state
 
@@ -86,6 +86,19 @@ authorized. The first two port attempts were route-invalid (one pre-title
 crash and one 640 stall) and were not used as A9 evidence. ORIGIN: the
 legitimate voice-array publisher is `allocateSongChannelArray` at
 `0x8008F0EC`; no mitigation or guest behavior changed.
+
+Session 4121 completed the A8 key-on divide/overflow census. The independent
+retail oracle passed the whole-RDRAM positive control, reached title
+`0x00790400/1024` and hangar `0x006AB400/512`, executed the divisor publisher
+at `0x80090768` 66,943 times, and executed none of the eight trap PCs. The
+same-build qualified real-audio/LLE/ungated/solo/spin-yield port also passed
+all controls and both target phases. Its phase-5 census reached
+`entry=17,262`, `normal_tail=17,262`, zero guards at all eight sites, and
+active divide sites at `0x80090CEC`, `0x80090D30`, `0x80090D74`, and
+`0x80090DB8` with divisor `0xC0`; slot `0x02` and `0x00` transitions fired.
+H-A8-trap-live is selected at this measured scope: the traps did not suppress
+valid qualified work. ORIGIN: `0x80090768` is the legitimate `0xC0` divisor
+publisher; no trap or guest behavior changed.
 
 Generated-tree audits confirmed the relevant service and image functions exist outside this checkout and in the fixup inputs. Guard changes require an ORIGIN naming the legitimate writer; no force-clear, wait replacement, synthetic DMA, or default-on mitigation was authorized.
 
@@ -201,10 +214,11 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 8 continuation:** audit the A8 key-on
-   divide/overflow idiom class in `funcs_24.c`. Reconfirm the eight trap sites,
-   divisor publisher, and normal-tail/slot controls with one phase-gated
-   retail/port census. Do not remove or bypass a trap.
+1. **M5 de-stubbing next idiom class:** audit A11's `waitForAnyAudioSlot` /
+   `anyAudioSlotActive` guard and return path as one complete class. Reconfirm
+   slot `01/02/00` writers, wait entry/return, task completion, and the
+   phase-gated retail/port controls in one capture. Do not remove the cap or
+   replace the wait.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -238,6 +252,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 status-03 reaping | Hstatus03-chain-live selected at s4117's measured scope: silent port reached both phases with repeated service entry/exit pairs, and retail independently executed the named `0x8009B7EC` zeroing-store PC plus surrounding worker PCs. Exact port-side store-to-return synchronization remains diagnostic; no force-clear or wait change is authorized. |
 | M5 A10 voice/list/table guards | H-A10-not-suppressing-valid-work selected at s4119's measured scope: retail's independent `0x80096D88` writer reached the target table root (371 hangar writes), while the qualified port reached both phases with valid traversal/table rows and zero A10 guard fires. No guard relaxation is authorized. |
 | M5 A9 voice-array-base guards | H-A9-legitimate selected at s4120's measured scope: retail reached the allocator writer and 10/12 A9 PCs in hangar; the qualified port reached both phases with positive controls and zero fires at all 12 A9 guards. No guard relaxation is authorized. |
+| M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary

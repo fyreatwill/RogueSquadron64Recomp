@@ -145673,3 +145673,22 @@ firing as the explanation for suppressed valid voice work. It does not prove
 all audio causes are closed, and no guard was changed. ORIGIN: the legitimate
 voice-array publisher is `allocateSongChannelArray` at `0x8008F0EC`; no
 mitigation or guest behavior changed.
+
+## Session 4121 (2026-10-06) — qualified A8 key-on divide/overflow audit
+
+Asked the retail oracle first with a whole-RDRAM positive control, all eight
+key-on trap PCs, and the `0x80090768` divisor publisher. The control fired;
+retail reached title `0x00790400/1024` and hangar `0x006AB400/512`, executed
+the publisher 66,943 times, and executed none of the eight trap PCs.
+
+The existing regeneration-safe A8 census built with the ordinary Debug target.
+The qualified real-audio/LLE/ungated/solo/spin-yield port capture reached both
+target phases with all controls present. Its phase-5 census reached
+`entry=17,262`, `normal_tail=17,262`, zero guard fires at all eight trap sites,
+and divisor `0xC0` at the active divide sites `0x80090CEC`, `0x80090D30`,
+`0x80090D74`, and `0x80090DB8`; slot `0x02` and `0x00` transitions also fired.
+
+This selects H-A8-trap-live at the measured scope and rules out the A8 traps
+suppressing valid qualified work. It does not prove every audio cause is
+closed, and no trap or return was changed. ORIGIN: `0x80090768` is the
+legitimate `0xC0` divisor publisher; no mitigation or guest behavior changed.

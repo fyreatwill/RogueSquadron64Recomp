@@ -1,38 +1,42 @@
-# Next work unit: audit the A8 key-on divide/overflow idiom class
+# Next work unit: audit the A11 wait-for-any-audio-slot idiom class
 
-Session 4120 selected H-A9-legitimate at the qualified title/hangar scope.
-Execute exactly one complete A8 census/capture next; do not remove or bypass
-the traps.
+Session 4121 selected H-A8-trap-live at the qualified title/hangar scope.
+Execute exactly one complete A11 census/capture next; do not remove the wait
+cap, replace the wait, or force a slot state.
 
-HYPOTHESIS-ID: m5-step8-keyon-divide-overflow-class
+HYPOTHESIS-ID: m5-step9-wait-for-any-audio-slot-class
 
 Competing hypotheses and discriminator:
 
-- H-A8-trap-live: the eight defensive divide/overflow sites are not reached
-  with invalid divisors, and the normal key-on tail remains live.
-- H-A8-suppresses-valid: a trap site fires on valid retail-shaped work or the
-  port loses a valid key-on tail/slot transition at that site.
-- H-A8-route-invalid: the paired capture misses a required control or target
-  phase, so trap and tail nulls are unevaluable.
+- H-A11-return-live: the wait entry/return path is live and slot writers reach
+  the required terminal states; the guard cap does not fire on qualified work.
+- H-A11-suppresses-valid: the cap fires or a qualified valid slot transition
+  is lost at the wait path, while retail independently reaches the matching
+  wait/slot behavior.
+- H-A11-route-invalid: a required positive control or title/hangar phase is
+  missing, so wait and guard nulls are unevaluable.
 
-The single discriminating measurement is one complete A8 source census plus
-one same-build retail/port phase-gated capture. The census must include all
-eight sites (`0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
-`0x80090D74`, `0x80090D8C`, `0x80090DB8`, `0x80090DD0`), the divisor publisher
-at `0x80090768`, the normal-tail rows, and slot `0x02` then `0x00` controls.
-Ask the retail oracle first with whole-RDRAM and divisor/source controls.
-Retail must reach title and hangar; port must reach both phases and fire the
-positive controls. Any missing phase selects H-A8-route-invalid. A trap with
-retail-valid divisor evidence or a missing normal tail selects
-H-A8-suppresses-valid; otherwise select H-A8-trap-live. Do not alter a trap.
+The single discriminating measurement is one complete regeneration-safe A11
+source census plus one same-build retail/port phase-gated capture. Enumerate
+every `waitForAnyAudioSlot` / `anyAudioSlotActive` entry, loop, cap, return,
+and slot `01/02/00` writer. Ask the retail oracle first with whole-RDRAM and
+wait/slot execution controls. Retail must reach title and hangar; port must
+reach both phases, fire its positive controls, and report task completion.
+Any missing control or phase selects H-A11-route-invalid. A cap fire or a
+missing qualified terminal transition with retail-valid wait evidence selects
+H-A11-suppresses-valid; otherwise select H-A11-return-live. Do not alter the
+wait or cap.
 
-Before building, enumerate every A8 site and publisher with bounded `rg`
-searches in the generated tree, fixup script, and oracle watch configuration.
-Use the qualified route parameters from s4120:
+Before building, use bounded `rg` searches in the generated tree, fixup
+script, and oracle watch configuration to enumerate the full idiom. Use the
+qualified route parameters from s4120/s4121:
 `ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
 ROGUESQ_DRAIN_INLOOP_TICK=1 ROGUESQ_SPIN_YIELD=1
-ROGUESQ_M5_C88_VALUE=0 ROGUESQ_AUDIO_UCODE=1`, with phase-gated controls.
+ROGUESQ_M5_C88_VALUE=0 ROGUESQ_AUDIO_UCODE=1`.
 
 Required build:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+Required run properties: oracle first, whole-RDRAM positive control, exact
+title/hangar VI phase gates, port positive controls, and SIGKILL cleanup.
