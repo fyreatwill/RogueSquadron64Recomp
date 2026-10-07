@@ -1332,6 +1332,10 @@ static bool rs64_m5_voice_modulation_phase(uint32_t* width, uint32_t* origin) {
 static bool rs64_m5_voice_callee_detail_active = false;
 static bool rs64_m5_voice_callee_detail_pending = false;
 
+extern "C" void rs64_m5_voice_modulation_callee_detail(
+    uint8_t* rdram, uint32_t pc, uint32_t ra, uint32_t kind,
+    uint32_t ptr, uint32_t value, uint32_t aux);
+
 extern "C" void rs64_m5_voice_modulation_setup(uint8_t* rdram, uint32_t pc,
                                                    uint32_t s2, uint32_t s3,
                                                    uint32_t s0, uint32_t v1,
@@ -1460,6 +1464,12 @@ extern "C" void rs64_m5_voice_modulation_callee(uint8_t* rdram, uint32_t stage,
     if (!rdram || !rs64_m5_voice_modulation_enabled()) return;
     if (stage == 0u && pc == 0x8008D5FCu) {
         rs64_m5_voice_callee_detail_pending = true;
+        static bool control_emitted = false;
+        if (!control_emitted) {
+            control_emitted = true;
+            rs64_m5_voice_modulation_callee_detail(
+                rdram, 0xC0DEC001u, ra, 0u, a0, a1, v0);
+        }
     } else if (stage == 1u && rs64_m5_voice_callee_detail_pending &&
                pc == 0x80084860u) {
         rs64_m5_voice_callee_detail_active = true;

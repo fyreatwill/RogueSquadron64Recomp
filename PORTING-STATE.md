@@ -145075,3 +145075,15 @@ callee entry/load/return and does not identify a source writer. The next unit
 is a hook transport/linkage audit with a positive host-hook control. ORIGIN:
 the intended values are legitimate guest callee inputs and branch results;
 all changes were diagnostic-only.
+
+## Session 4088 (2026-10-06) — host detail-hook control was not phase-qualified
+
+Added a bounded synthetic invocation of the M5 detail hook from the existing
+`0x8008D5FC` callee witness and rebuilt the Debug target. The first recipe had
+an oracle VI gate typo; after fixing it, retail passed the whole-RDRAM and
+hangar controls, but the port crashed in `fillSampleStreamRange` before title
+or hangar. A retry using the prior qualified timing route also crashed before
+target phases. No host-control, generated detail, or post-call port row was
+phase-qualified, so Hcoverage is selected and hook transport remains open.
+The generated object still contains the detail-hook relocation. ORIGIN: the
+synthetic row is diagnostic-only; no guest value or mitigation changed.

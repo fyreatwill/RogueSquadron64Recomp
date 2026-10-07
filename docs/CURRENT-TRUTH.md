@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4086 (2026-10-06).
+Updated for session 4088 (2026-10-06).
 
 ## Current state
 
@@ -402,6 +402,19 @@ entry/load/return hypotheses remain unevaluable; the next discriminator is
 hook transport/linkage. ORIGIN: the new values are legitimate guest callee
 inputs and branch results; this was diagnostic-only.
 
+Session 4088 added a host-side synthetic detail-hook control and rebuilt the
+Debug target successfully. The first combined capture had an oracle gate that
+checked the wrong VI-line shape; the fixed recipe passed the retail
+whole-RDRAM and hangar controls. Its port arm then crashed in
+`fillSampleStreamRange` before title/hangar, so no host-control or generated
+detail row was phase-qualified. A retry using the previously qualified timing
+route also crashed before target phases. This is Hcoverage, not evidence for
+hook transport or callee entry/load/return. The generated object still has the
+detail-hook relocation; a future qualified run must put the synthetic control
+on the already-observed `0x8008D604` post-call path so host transport is
+positive even when the `0x8008D5FC` call is absent. ORIGIN: the synthetic row
+is diagnostic-only; no guest value or mitigation changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
@@ -411,7 +424,9 @@ Work only the first applicable item. This backlog is one monotonic sequence.
    emits no new `funcs_20.c` detail-hook rows, despite the object referencing
    the hook. Use one build/run with a positive host-hook control and inspect
    the exact linked callee path before comparing values; do not infer from the
-   s4087 zero.
+   s4087/s4088 zero. Move the synthetic host control to the already qualified
+   `0x8008D604` post-call witness, then rerun the control-first qualified
+   timing route; classify only if title and hangar both pass.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
