@@ -1,37 +1,38 @@
-# Next work unit: qualify M5 port gate-writer parity
+# Next work unit: qualify M5 upstream producer context
 
-HYPOTHESIS-ID: m5-step4-gate-writer-parity
+HYPOTHESIS-ID: m5-step4-upstream-producer-context
 
-The s4168 clean pair reproduced H-upstream-zero-payload: both arms reached the
-target phases and hangar PCM remained zero. The next discriminator is the
-port-side writer/value contract for `0x800A0F50`; do not change a gate or
-consumer.
+The s4169 clean pair selected H-port-writer-parity: both arms reached the
+target phases, recorded the retail-matching port gate writers, and hangar PCM
+remained zero. The next discriminator is the producer context feeding the
+zero-valued image/task payload; do not change a gate, writer, or consumer.
 
-Exact work: use the already-built Debug binary and run both real-image and
-`ROGUESQ_AUDIO_UCODE=0` arms concurrently from `build/` using
-`scratch/agent/run_s4168_m5_step4_clean_pair.sh` as the harness template.
-Enable `ROGUESQ_LOG_M5_GATE_CONTRACT=1`, `ROGUESQ_LOG_M5_WRITER_ENTRY=1`,
-`ROGUESQ_LOG_M5_B40_WRITER=1`, `ROGUESQ_LOG_M5_GATE_CONTRACT=1`,
-`ROGUESQ_LOG_M5_TASK_CONTRACT=1`, `ROGUESQ_LOG_PCM_BOUNDARY=1`, the same
-LLE/route controls, and `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`.
-Capture title/hangar writer PCs, post-store gate values, task completion,
-slot/status transitions, and PCM source/consumer joins in one run; use the
-whole-RDRAM-equivalent positive control and SIGKILL both arms after the target
-phases.
+Exact work: use the already-built binary and run the retail oracle plus the
+port real-image arm concurrently with
+`scratch/agent/run_s4148_m5_source_callsite.sh` as the harness template. Keep
+the whole-RDRAM oracle positive control, title/hangar phase gates, and
+`ROGUESQ_LOG_M5_SOURCE_CONTEXT=1`, `ROGUESQ_LOG_M5_SOURCE_PRODUCER=1`,
+`ROGUESQ_LOG_M5_PRODUCER_INPUT=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, and
+`ROGUESQ_LOG_PCM_BOUNDARY=1`. Capture retail writer PCs for the source span,
+port `0x800078EC` callsite/context/destination/value rows, image task input
+hash/nonzero state, task completion, and PCM source/consumer joins in the same
+run. Kill the process group with SIGKILL after both target phases.
 
 Competing hypotheses and discriminator:
 
-- H-port-writer-parity: port writer PCs/values match the retail writer set,
-  gate reaches the observed nonzero state, and downstream rows remain zero.
-- H-port-writer-mismatch: a port writer/value differs from retail or its gate
-  transition changes task/slot/PCM joins, selecting the exact writer context
-  for the next audit.
+- H-producer-context-parity: port `0x800078EC` context and source-span writer
+  behavior match retail, while the image task input is already zero; the gap is
+  before or outside this producer context.
+- H-producer-context-mismatch: port context, callsite, destination, or source
+  writer/value differs from retail and explains the zero task input; select the
+  exact mismatching writer/context for the next audit.
 - H-route-invalid: either arm misses the positive control or fails to reach VI
   1024 and VI 512, making writer/PCM nulls unevaluable.
 
 The discriminating table is phase-keyed and must contain: route phases,
-positive control, audio dispatch/fields, image exit and DMA count, every
-`0x800A0F50` writer PC/value, service and slot/status rows, PCM source, and
-PCM consumer. A missing target phase is unevaluable. If writer parity holds,
-keep H-upstream-zero-payload and move to the producer-context boundary; if it
-fails, select the specific writer/value mismatch without changing behavior.
+positive control, retail source-span writer PCs/values, port producer
+callsite/context/destination/value rows, image input hash/nonzero state, task
+exit/DMA count, and PCM source/consumer. A missing target phase is unevaluable.
+If producer parity holds, keep H-upstream-zero-payload and move earlier in the
+producer chain; if it fails, select the specific context mismatch without
+changing behavior.

@@ -146550,3 +146550,29 @@ H-upstream-zero-payload and rules out route invalidity for this pair. It does
 not identify the upstream producer or authorize a gate/consumer change.
 ORIGIN: no mitigation or game value was changed; the real image queue and
 audio-stage activity are legitimate task behavior.
+
+## Session 4169 (2026-10-07) — qualified M5 port gate-writer parity
+
+Ran the prescribed Step 4 work unit with the already-built binary, using a
+concurrent real-image/silent pair, the validated LLE/route controls, and
+phase-gated logs. The wrapper was interrupted before its summary/trap ran, so
+the two identified game children were explicitly terminated with SIGKILL and
+the captured logs were analyzed directly.
+
+Both arms fired the same-run frame-sync positive control and reached title VI
+1024 (`0x00790400`) and hangar VI 512 (`0x006AB400`). Each recorded four
+`0x800A0F50` gate-writer rows, including the hangar `0x8008EC88` store of
+`0x01`, following the `0x8008ED48` and `0x8008EB7C` zero stores. The gate
+consumer rows with `gate=0x01` numbered 1,021 real and 1,022 silent.
+
+Real and silent audio task/SP completion edges were live (728/738 task-return
+rows and 728/738 SP-complete-return rows); real image tasks had DMA while the
+silent arm had none. Both arms still produced zero hangar PCM source and
+consumer rows: 384 samples, 768 bytes, `FNV=0xF59C39C5`, `nz=0`.
+
+This selects H-port-writer-parity and rules out the gate writer/value contract
+as the measured explanation for the zero PCM payload. It leaves the upstream
+producer context as the next boundary. The late process cleanup is not a route
+failure because both target phases and the positive control preceded it. No
+writer, gate, consumer, or mitigation was changed. ORIGIN: the observed
+`0x8008EC88 -> 0x01` store and image DMAs are legitimate game/task behavior.

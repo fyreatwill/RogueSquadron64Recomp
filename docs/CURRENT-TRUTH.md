@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4168 (2026-10-07).
+Updated for session 4169 (2026-10-07).
 
 ## Current state
 
@@ -49,19 +49,31 @@ does not invalidate the phase result. This independently requalifies
 H-upstream-zero-payload and rules out route invalidity for this clean pair; no
 gate or consumer change is authorized.
 
+Session 4169 qualified the port-side gate writer contract in a fresh concurrent
+real-image/silent pair. Both arms fired the positive control and reached title
+VI 1024 and hangar VI 512. Both recorded the same four gate-writer rows,
+including `0x8008EC88` storing `0x01` in hangar after the `0x8008ED48` and
+`0x8008EB7C` zero stores. Gate consumers saw `0x01` in 1,021 real and 1,022
+silent hangar rows. Real and silent task/SP completion routes were live; real
+had image DMA while silent had none. PCM source/consumer rows remained zero in
+both arms (`384` samples, `FNV=0xF59C39C5`, `nz=0`). This selects
+H-port-writer-parity and moves the open boundary to the upstream producer
+context; no writer or gate change is authorized.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
 1. **M5 audio de-stubbing:** advance Step 4 in `docs/M5-AUDIO-PLAN.md` by
-   qualifying the port-side `0x800A0F50` writer/value rows against the retail
-   writer set, with slot/status and PCM joins kept in the same phase-gated run.
+   qualifying the upstream producer context feeding the zero PCM payload,
+   joining the port `0x800078EC` source construction with the image task input
+   and retail writer PCs in one phase-gated run.
    Retail ground truth is now present: the whole-RDRAM control fired, and the
    gate at `0x800A0F50` has writers `0x8008EA34`, `0x8008EB40`, `0x8008ED48`,
    `0x8008EB7C`, and `0x8008EC88`; the last is the nonzero enable writer.
-   Qualify matching port writer/value and downstream slot/PCM joins before
-   changing one writer or consumer. Keep the real-audio route; do not use the
-   silent control as a production fix.
+   Port writer/value parity is qualified; keep the real-audio route and do not
+   use the silent control as a production fix while moving earlier in the
+   producer chain.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -80,6 +92,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 Step 3 declared audio staging | H-step3-equivalent independently requalified at s4164: declared `0x800` and legacy `0xF80` arms match at the measured downstream contract. Semantic irrelevance outside that contract is unproven. |
 | M5 Step 4 retail gate ground truth | H-retail-gate-writers selected at s4166: the independent oracle whole-RDRAM control fired in both target phases; `0x800A0F50` was written 14 times by five PCs, with `0x8008EC88` producing the observed nonzero value. The watched `0x80094648`, `0x80090AAC`, and `0x80090BA4` words had zero writes in this retail route. This selects the port parity measurement, not a gate change. |
 | M5 Step 4 port parity | H-upstream-zero-payload selected at s4167: the clean canonical pair reached title/hangar and live gate/task/PCM controls. Both arms had gate `0x01` and zero-valued hangar PCM source/consumer rows; only the real image's DMEM/DMA activity differed. The initial route-invalid attempts are excluded because they stopped at VI 640 or crashed with stale game children present. |
+| M5 Step 4 gate writer parity | H-port-writer-parity selected at s4169: both port arms reached title/hangar, fired the positive control, and recorded matching gate-writer PCs/values, including the legitimate `0x8008EC88 -> 0x01` enable store. PCM remained zero in both arms, so the gate writer is not the measured gap. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |
