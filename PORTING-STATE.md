@@ -145102,3 +145102,23 @@ proves host transport and generated detail-hook linkage at title scope and
 refutes Htransport there. No callee value classification was made. ORIGIN:
 the synthetic and detail values are diagnostic-only; no guest value or
 mitigation changed.
+
+## Session 4090 (2026-10-06) — matched M5 callee detail values
+
+Removed the invalid `ra=0x8008D604` filter from the callee-detail summary
+recipe, built the Debug target once, and ran the control-first oracle/port
+capture. The oracle whole-RDRAM positive control and title/hangar controls
+fired. The port reached title 1024 and hangar 512, and the synthetic transport
+row fired. It emitted 85 title and 86 hangar samples at each of
+`0x8008488C`, `0x800848A8`, and `0x800848C4`; the entry/return summary counts
+were 226 each and the post-call control count was 86.
+
+For paired sampled records, port detail values matched the retail register
+handoff. Record `0x8013D9AC` was `(0x1, 0x40, 0x0)` on the port, matching the
+successive retail states `(v0=0x1, a0=0x40, a0=0x0)`; record `0x8013D9BE`
+matched `(0x1, 0x41, 0x0)`. This selects Hcallee-match at the sampled scope
+and moves the search downstream of `0x800848C4`, while not claiming global
+record synchronization between the independent oracle and sampled port.
+It rules out a callee entry/load/return mismatch as the first demonstrated
+boundary. ORIGIN: the observed values are legitimate guest callee register
+and result values; every hook is diagnostic-only.

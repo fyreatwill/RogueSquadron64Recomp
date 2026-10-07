@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4089 (2026-10-06).
+Updated for session 4090 (2026-10-06).
 
 ## Current state
 
@@ -429,16 +429,29 @@ The missing retail hangar gate makes the overall capture Hcoverage, not a
 callee-value result. ORIGIN: the synthetic and detail values are
 diagnostic-only; no guest value or mitigation changed.
 
+Session 4090 ran the corrected callee-value comparison. The oracle whole-RDRAM
+positive control and title/hangar phase controls fired; the port reached both
+phases and emitted the synthetic transport row plus 85 title and 86 hangar
+samples at each of `0x8008488C`, `0x800848A8`, and `0x800848C4`. For the
+paired records, the port detail values matched the retail register handoff:
+for example record `0x8013D9AC` was `(0x1, 0x40, 0x0)` and retail's successive
+watched states supplied `(v0=0x1, a0=0x40, a0=0x0)`; record `0x8013D9BE`
+matched `(0x1, 0x41, 0x0)`. Hcallee-entry/load/return is selected as matched
+at the sampled scope, so the search moves downstream of `0x800848C4`; this
+does not prove the later transform globally because the port is sampled and
+the oracle is not record-synchronized. ORIGIN: these are legitimate callee
+register/value observations; all hooks are diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4l callee value comparison.** Reuse the now-proven detail-hook
-   transport, remove the invalid `ra=0x8008D604` filter from the summary
-   counters, and run the control-first route until the retail oracle and port
-   both pass title 1024 and hangar 512. Compare the phase-scoped retail
-   `0x8008488C/0x800848A8/0x800848C4` rows with the generated port detail
-   rows; do not classify from the title-only s4089 capture.
+1. **M5 Step 4m downstream post-callee comparison.** On a qualified route,
+   retain the positive-control and phase gates, and compare the first
+   downstream handoff after `0x800848C4` (the existing `0x80084AB8` witness)
+   against the matched callee records. A mismatch there selects Hpost-callee;
+   matching it moves to the next caller-side transform. Do not use an
+   unsynchronized oracle/port row as proof of a global record match.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -461,7 +474,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
-| M5 voice modulation transform | Hnext-return selected at s4086: the `0x8008D624` path matches, but retail's separate `0x8008D5FC` return varies by voice record while the qualified port sample repeats `0x3F80`; the next boundary is inside `evaluateVoiceModulatorRecord` on its `s0+0xC0` path. |
+| M5 voice modulation transform | Hpost-callee pending at s4090: the qualified port detail values at `0x8008488C/0x800848A8/0x800848C4` matched the paired retail register handoff samples; the next boundary is the downstream `0x80084AB8` handoff. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
