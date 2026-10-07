@@ -472,18 +472,32 @@ the key-on entry and normal tail are live, while the guarded descriptor branch
 is not. It is single-source retail ground truth; qualify the paired port
 boundary before changing the returns.
 
+Session 4094 ran the repaired same-build declared-real port boundary capture
+with the retail whole-RDRAM positive control and title/hangar phase controls.
+The clean capture reached port title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`; the retail control fired and reached both target
+transitions. The port key-on table recorded `entry=102806` and
+`normal_tail=102806` in the hangar bucket, with all eight early-return sites
+at `guard=0`; the live divisor sites had `div=102806` and the alternating
+sites remained zero. This selects Hport-descriptor-branch over Hport-caller-gap
+and Hport-returns-live at the qualified boundary. The port publisher was not
+independently counted in this run, so publisher attribution remains open;
+there is no basis to remove or replace any return. The first wrapper launch
+left a game process after its controller was interrupted and its mixed logs
+were discarded; only the isolated clean output was used.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 5 port boundary qualification.** Keep the eight early returns
+1. **M5 Step 6 descriptor-branch comparison.** Keep the eight early returns
    unchanged. In one phase-gated declared-real run, batch witnesses for
    `musyxKeyOnVoice` entry, normal tail, all eight early-return PCs, and the
    divisor publisher; require the existing route/PCM controls and compare the
    port counts with s4093's retail entry/tail result. Entry/tail with zero
    traps selects a port descriptor/branch gap; zero entry is a port caller
-   gap; missing route controls is Hcoverage. Do not change runtime code until
-   this boundary is qualified.
+   gap; missing route controls is Hcoverage. The boundary is now qualified;
+   compare the descriptor tuple before changing runtime code.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target

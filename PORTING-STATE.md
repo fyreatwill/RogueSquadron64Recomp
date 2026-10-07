@@ -145182,3 +145182,20 @@ is not. It rules out removing or replacing the returns based on caller absence
 alone. This is single-source retail ground truth; the paired port boundary is
 the next discriminator. ORIGIN: the watched publisher is a legitimate guest
 `+0x60` store; no mitigation or guest behavior changed.
+
+## Session 4094 (2026-10-06) — qualified M5 port key-on boundary
+
+The prescribed boundary script was absent, so I restored it from the validated
+route recipe and ran one clean isolated capture after discarding an interrupted
+launch's mixed logs. The retail oracle whole-RDRAM positive control fired and
+reached title and hangar. The declared-real port reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; its phase-5 key-on table
+reported `entry=102806` and `normal_tail=102806`, while all eight early-return
+sites had `guard=0`. The live divisor sites had `div=102806` with divisor
+`0xC0`; the alternating sites remained zero. This selects
+Hport-descriptor-branch over Hport-caller-gap and Hport-returns-live at the
+qualified scope, and rules out changing any return. The port publisher was not
+independently counted in this run, so publisher attribution remains open.
+The first launch's orphaned process and mixed output were not used. ORIGIN:
+no mitigation or guest behavior changed; the observed `0xC0` divisor is the
+legitimate published mix length.
