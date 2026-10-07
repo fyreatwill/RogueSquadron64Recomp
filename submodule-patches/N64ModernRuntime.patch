@@ -973,7 +973,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..92805f5 100644
+index 1cb3f6a..ee07a76 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -987,7 +987,7 @@ index 1cb3f6a..92805f5 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1676 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1682 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2364,11 +2364,17 @@ index 1cb3f6a..92805f5 100644
 +    if (task->t.type == M_AUDTASK) {
 +        const char* legacy = std::getenv("ROGUESQ_AUDIO_LEGACY_UCODE_DMA");
 +        const bool use_legacy = legacy && legacy[0] && legacy[0] != '0';
-+        ucode_data_dma_size = use_legacy ? 0xF80u :
++        const uint32_t declared_size =
 +            static_cast<uint32_t>(task->t.ucode_data_size);
-+        if (ucode_data_dma_size > 0xFC0u) {
-+            ucode_data_dma_size = 0xFC0u;
++        if (!use_legacy && (declared_size == 0 || declared_size > 0xFC0u)) {
++            fprintf(stderr,
++                    "[audio-contract-reject] ucode_data=0x%08X"
++                    " ucode_data_size=0x%X limit=0xFC0\n",
++                    static_cast<uint32_t>(task->t.ucode_data), declared_size);
++            fflush(stderr);
++            return false;
 +        }
++        ucode_data_dma_size = use_legacy ? 0xF80u : declared_size;
 +        rs64_m5_audio_stage_boundary(task, ucode_data_dma_size);
 +    }
 +    if (ucode_data_dma_size != 0) {

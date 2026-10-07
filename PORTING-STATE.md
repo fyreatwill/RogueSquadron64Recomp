@@ -146622,3 +146622,19 @@ This selects H-writer-counterpart-parity and rules out a missing or simply
 zero-valued first writer as the explanation. It moves the open boundary to
 caller/object context and does not identify the earlier producer input. No
 writer, payload, gate, consumer, or mitigation behavior was changed.
+
+## Session 4172 (2026-10-07) — landed M5 audio task-contract guard
+
+The prescribed writer-context probe was observation-only, so this iteration
+pivoted to the next concrete M5 runtime contract edge. In
+`librecomp/src/rsp.cpp`, audio DMEM staging now rejects a non-legacy task when
+the guest-declared `ucode_data_size` is zero or exceeds `0xFC0`, before the
+staging DMA and before the image runner. The explicit
+`ROGUESQ_AUDIO_LEGACY_UCODE_DMA=1` rollback arm still stages `0xF80`; valid
+qualified tasks declaring `0x800` are unchanged. The Debug target rebuilt
+successfully, including the modified `librecomp` object and final executable.
+
+This is a safety/contract change, not evidence for the zero PCM boundary; no
+run was used to claim downstream audio progress. ORIGIN: the guest OSTask
+producer writes `ucode_data` and `ucode_data_size`; zero or over-DMEM declared
+spans are invalid task metadata, while the observed `0x800` span is legitimate.

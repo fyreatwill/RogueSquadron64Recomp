@@ -2,19 +2,18 @@
 
 HYPOTHESIS-ID: m5-step4-writer-context-join
 
-Session 4171 selected H-writer-counterpart-parity. In one qualified concurrent
-run, retail and port both exercised `0x80090268`, `0x80090278`, and
-`0x8008FF04/0C/14` in the hangar source span. Port rows had matching
-nonzero values and destinations; the downstream image DMA and PCM stayed
-zero-valued. Do not change behavior or treat `0x800078EC` as the explanation.
+The previous iteration landed and built the audio task-contract guard. Keep
+the valid declared `0x800` image path; do not use the new reject path as an
+explanation for the qualified zero PCM payload.
 
 Run one phase-gated retail/port comparison using
-`scratch/agent/run_s4148_m5_source_callsite.sh`. Extend the retail command in
-that script with `--pc-field-dump 0x80090268,0x80090278,0x8008ff04,0x8008ff0c,0x8008ff14`
+`scratch/agent/run_s4148_m5_source_callsite.sh`. Extend the retail command
+with `--pc-field-dump 0x80090268,0x80090278,0x8008ff04,0x8008ff0c,0x8008ff14`
 and retain `--pc-hist-watch 1 --post-value-watch 1 --watch-pc 0x800078EC`.
 Keep the whole-RDRAM positive control, `PROBE_PHASE_WIDTH=1024`,
 `PROBE_KEYS_FROM_PHASE=1`, and the real-audio/LLE/ungated/solo route. Keep
-all existing M5 source/context, task-contract, and PCM logs.
+the existing M5 source/context, task-contract, and PCM logs. Kill all game
+processes with SIGKILL and capture from `build/`.
 
 Competing hypotheses and discriminator:
 

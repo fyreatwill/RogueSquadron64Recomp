@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4171 (2026-10-07).
+Updated for session 4172 (2026-10-07).
 
 ## Current state
 
@@ -78,6 +78,14 @@ reached title VI 1024 and hangar VI 512. Port image DMA and PCM rows remained
 zero-valued (`0x762B22A5` source span and `0xF59C39C5` PCM), so this selects
 writer-counterpart parity and moves the boundary to caller/object context.
 No behavior change is authorized.
+
+Session 4172 landed and built an M5 task-contract guard in the runtime. The
+declared audio `ucode_data_size` is now rejected before DMEM staging when it
+is zero or exceeds the `0xFC0` DMEM limit; the explicit legacy `0xF80` arm is
+unchanged. This protects the task/SP contract but does not explain the
+qualified zero PCM payload: the valid `0x800` task remains on the same image
+path. ORIGIN: the guest OSTask producer owns `ucode_data` and
+`ucode_data_size`; invalid span metadata is not legitimate audio input.
 
 ## Next steps
 
