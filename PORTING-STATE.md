@@ -147101,3 +147101,6 @@ Result (default arm): 535 zero buffers (width 512: 296/296 min=max=0; width 1024
 Selects: H-title-garbage in the structured sense (not noise, not music: a released DC level from a voice/filter state decaying to silence) and H-hangar-no-voices-or-no-decode. Refutes H-title-real (genuine loud PCM) and the s4201 reading that title "fully nonzero" was meaningful audio.
 Not done: the MusyX active-voice count per buffer (would split no-voices from broken-decode); no accessor was wired this iteration.
 Rules out: that the port's mixer output differs from retail merely in loudness; the guest ucode path produces no audio content on title or hangar in either arm.
+
+Gate addendum (s4202): this run selects H-title-garbage (structured decaying DC, not music) and selects H-hangar-no-voices-or-no-decode; it refutes H-title-real (genuine loud PCM) and refutes the s4201 reading that fully-nonzero title buffers were audio.
+Next discriminator: per-audio-frame active MusyX voice-slot count plus voice-start call count plus first decoded words of the first active voice; zero voices selects H-no-voices, voices with zero decode selects H-voice-no-decode, nonzero decode with zero output selects H-mix-drop.
