@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT="$ROOT/scratch/agent/s4081_m5_setup_witness"
+OUT="$ROOT/scratch/agent/s4082_m5_setup_witness_final"
 ORACLE="$ROOT/tools/oracle/build/rs64_oracle"
 CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 ROM=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
@@ -24,13 +24,14 @@ sleep 7
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 180 \
   --watch-write 0x0:0x800000 \
   --watch-pc 0x800923E4 --pc-phase-log-width 0x00790400:1024 \
-  --pc-phase-log-width 0x006AB400:512 --hit-cap 200 --vi-trace \
+  --pc-phase-log-width 0x00790800:1024 \
+  --pc-phase-log-width 0x006AB400:512 --pc-phase-log-width 0x006AB800:512 \
+  --hit-cap 200 --vi-trace \
   --press "$PRESS" > "$OUT/oracle.log" 2>&1 &
 OPID=$!
 sleep 75
 kill -9 "$GAMEPID" 2>/dev/null || true
 wait "$GAMEPID" 2>/dev/null; print "port_rc=$?" | tee "$OUT/driver.log"
-kill -9 "$OPID" 2>/dev/null || true
 wait "$OPID" 2>/dev/null || true
 
 grep -a -E '^\[oracle\] (positive-control threshold|watch pc|exec-prev|done)|^\[vi\].*WIDTH (1024|512)' "$OUT/oracle.log" | tail -160 > "$OUT/oracle-summary.txt" || true
@@ -43,11 +44,12 @@ grep -aq 'origin=0x006ab400 width=512' "$OUT/oracle.log" && hangar=1
 port_load=$(grep -a -c '^\[m5-audio-channel-load\]' "$OUT/port.log" || true)
 port_call=$(grep -a -c '^\[m5-voice-mod-call\]' "$OUT/port.log" || true)
 port_setup=$(grep -a -c '^\[m5-voice-mod-setup\]' "$OUT/port.log" || true)
+port_pre=$(grep -a -c '^\[m5-voice-mod-pre\]' "$OUT/port.log" || true)
 port_state=$(grep -a -c '^\[m5-voice-mod-state\]' "$OUT/port.log" || true)
 port_hangar_setup=$(grep -a -c '^\[m5-voice-mod-setup\].*origin=0x6AB400' "$OUT/port.log" || true)
 port_hangar_call=$(grep -a -c '^\[m5-voice-mod-call\].*origin=0x6AB400' "$OUT/port.log" || true)
-print "controls=$control title=$title hangar=$hangar port_load=$port_load port_setup=$port_setup port_call=$port_call port_state=$port_state port_hangar_setup=$port_hangar_setup port_hangar_call=$port_hangar_call" | tee -a "$OUT/driver.log"
-if (( control && title && hangar && port_load > 0 && port_hangar_setup > 0 && port_hangar_call > 0 )); then
+print "controls=$control title=$title hangar=$hangar port_load=$port_load port_pre=$port_pre port_setup=$port_setup port_call=$port_call port_state=$port_state port_hangar_setup=$port_hangar_setup port_hangar_call=$port_hangar_call" | tee -a "$OUT/driver.log"
+if (( control && title && hangar && port_load > 0 && port_pre > 0 && port_hangar_setup > 0 && port_hangar_call > 0 )); then
   print 'verdict=qualified; inspect setup registers and call inputs' | tee -a "$OUT/driver.log"
 else
   print 'verdict=Hcoverage' | tee -a "$OUT/driver.log"

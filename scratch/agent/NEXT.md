@@ -1,11 +1,13 @@
-# Next work unit: M5 Step 4g earlier setup producer
+# Next work unit: M5 Step 4h predecessor arithmetic/source
 
 HYPOTHESIS-ID: m5-audio-step4f-call-input-producer
 
-Session 4081 qualified `0x8008D70C`: the port's hangar setup rows have zero
-`s2`/`s0`/`a1`/`a3`/scaled while `s3` matches nonzero `a2`; s4079's paired
-retail calls had nonzero inputs. The next unit audits the earlier writer/input
-boundary without changing the gate.
+Session 4082 qualified predecessor rows at `0x8008D5D0`, `0x8008D5EC`,
+`0x8008D614`, and `0x8008D674`: port `$s2` is already zero at the first
+stage and the later `$s0` path is zero. A separate retail-oracle run passed
+the whole-RDRAM control and recorded 90,484 executions of `0x800923E4`, with
+caller `0x8008D710` and nonzero title `$a1` values. The next unit audits the
+source arithmetic and its inputs without changing the gate.
 
 Competing hypotheses:
 
@@ -18,13 +20,14 @@ Competing hypotheses:
 - Hcoverage: a required whole-RDRAM, title/hangar, channel-load, or setup
   control is absent.
 
-Discriminating measurement: batch one regeneration-safe witness over the next
-earlier setup/source instructions feeding `$s2` and `$s0`, retain the existing
-`0x8008D5E4` positive control, and run the retail oracle with whole-RDRAM plus
-the `0x800923E4` execution watch and both phase buckets. Hsetup-live selects
-matching values and moves earlier; Hsetup-divergent selects the first mismatch;
-Hsetup-path selects qualified phases with no comparable rows; Hcoverage selects
-any missing control.
+Discriminating measurement: batch one regeneration-safe witness over the
+operands feeding the `0x8008D5D0` multiply and the `0x8008D674` `$s0`
+derivation, retain the existing `0x8008D5E4` positive control, and run the
+retail oracle with whole-RDRAM plus the `0x800923E4` execution watch and all
+observed title/hangar origin variants. Hpre-live selects matching nonzero
+predecessor values and moves earlier; Hpre-divergent selects the first
+mismatch; Hpre-path selects qualified phases with no comparable rows;
+Hcoverage selects any missing control.
 
 Exact preparation/run: use the direct-AUTOPILOT shape in
 `scratch/agent/run_s4081_m5_setup_witness.sh`, adding only the new earlier

@@ -144943,3 +144943,31 @@ Those runs are Hcoverage and were not used for the setup conclusion. The
 direct-AUTOPILOT run is the qualified result. This rules out Hsetup-live at
 the measured setup boundary, but does not identify which earlier writer leaves
 `s2`/`s0` zero.
+
+## Session 4082 (2026-10-06) — qualified voice-modulation predecessor census
+
+Ground truth was run before interpreting the new instrument. The retail oracle
+passed the whole-RDRAM positive control and recorded 90,484 executions of
+`0x800923E4` before its required SIGKILL; the dominant caller was
+`0x8008D710`, and title-phase rows included nonzero `$a1` values. Its VI trace
+used the observed title/hangar origin variants, so the phase-origin difference
+from the port was not treated as a null.
+
+Added `rs64_m5_voice_modulation_pre_setup` to the host and the regeneration
+fixup. It records the four earlier arithmetic stages at `0x8008D5D0`,
+`0x8008D5EC`, `0x8008D614`, and `0x8008D674`, phase-gated with a 256-row
+per-phase budget. The clean regeneration inserted all four hooks and the
+ordinary Debug target built successfully.
+
+The first direct-AUTOPILOT capture qualified: the existing `0x8008D5E4`
+channel-load control fired, both port target phases arrived, and all four
+predecessor PCs produced rows. The first-stage `$s2` and later `$s0` samples
+were zero; the earlier qualified setup boundary remains zero as well. The
+recipe was then corrected to arm the retail phase-origin variants. One
+shutdown-enabled retry crashed before the port witness, and a final fresh
+retry also crashed before target phases; both are Hcoverage and their nulls
+are not evidence. Hpre-early is selected from the qualified port census plus
+the independent retail execution/input witness: the search moves before
+`0x8008D70C`, but no exact writer is identified. ORIGIN: the legitimate values
+are the guest arithmetic results at the four predecessor instructions; this
+change is diagnostic-only and adds no mitigation.

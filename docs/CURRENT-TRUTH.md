@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4081 (2026-10-06).
+Updated for session 4082 (2026-10-06).
 
 ## Current state
 
@@ -321,15 +321,30 @@ first qualified zero inputs are already present at the setup boundary, so the
 producer search moves earlier. ORIGIN: the legitimate transform inputs are
 the guest setup registers before `0x8008D70C`; this is diagnostic-only.
 
+Session 4082 added a regeneration-safe predecessor witness at the four earlier
+stages `0x8008D5D0`, `0x8008D5EC`, `0x8008D614`, and `0x8008D674`. The
+qualified port route reached both target phases, fired the existing
+`0x8008D5E4` channel-load control, and produced predecessor rows at all four
+PCs; the first stage's `$s2` and the later `$s0` path were zero in the sampled
+port rows. A separate completed retail-oracle run passed the whole-RDRAM
+control and recorded 90,484 executions of `0x800923E4` before its required
+SIGKILL, with caller `0x8008D710` and nonzero title-phase `$a1` values. The final paired rerun
+crashed before the port witness, so it is not used as a null. Hpre-early is
+selected: the search moves before `0x8008D70C`, but no earlier writer is yet
+identified. ORIGIN: the legitimate values are the guest arithmetic results at
+the four predecessor instructions; the witness is diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4g earlier setup producer.** Audit the writers feeding the
-   zero-valued `$s2`/`$s0` at `0x8008D70C`, using the same retail controls and
-   qualified direct-AUTOPILOT route. Batch the next whole setup/input witness
-   in one run; matching retail values move earlier, while absent rows remain
-   Hcoverage. Do not change the gate or add a mitigation from a port-only zero.
+1. **M5 Step 4h predecessor arithmetic/source.** Audit the inputs and writers
+   feeding the zero result at `0x8008D5D0` and the `$s0` derivation through
+   `0x8008D674`, using the same retail controls and qualified direct-AUTOPILOT
+   route. Batch the next source/register witness in one run; a retail-shaped
+   nonzero predecessor moves the boundary earlier, while a qualified port
+   mismatch identifies the first divergence. Do not change the gate or add a
+   mitigation from a port-only zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -352,7 +367,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
-| M5 voice modulation transform | Hsetup-divergent selected at s4081: the qualified setup boundary already has zero `s2`/`s0`/`a1`/`a3`/scaled in hangar, while s4079's paired retail calls had nonzero inputs. Search moves to the earlier producer. |
+| M5 voice modulation transform | Hpre-early selected at s4082: the qualified port predecessor witness has zero `s2` at `0x8008D5D0` and zero downstream `s0`, while an independent retail oracle reaches `0x800923E4` from `0x8008D710` with nonzero title inputs. Search moves before `0x8008D70C`; exact writer remains open. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
