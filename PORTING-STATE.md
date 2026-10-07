@@ -145122,3 +145122,27 @@ record synchronization between the independent oracle and sampled port.
 It rules out a callee entry/load/return mismatch as the first demonstrated
 boundary. ORIGIN: the observed values are legitimate guest callee register
 and result values; every hook is diagnostic-only.
+
+## Session 4091 (2026-10-06) — qualified M5 post-callee return boundary
+
+Added the missing control-first driver for the existing M5 voice-modulation
+witness, built the ordinary Debug target once, and ran the corrected capture.
+The first three driver attempts stopped at harness gates: the oracle reached
+the whole-RDRAM control and title but the script first used a too-short wait,
+then matched the emitted phase fields in the wrong order and case. The final
+fixed run admitted the port only after the oracle control and both title/hangar
+phase markers fired.
+
+The qualified oracle recorded `0x80084AB8` rows in both target phases. Its
+register snapshot is taken at the instruction boundary, so the comparable
+value is `s0 & 0xffff`, not the pre-instruction `v0` field. The port emitted
+226 `stage=return` rows and 512 callee-detail rows across title/hangar. The
+port return support was `0`, `0xF00`, `0x1900`, `0x2000`, and `0x3F80`; each
+was present in the corresponding retail `s0` support. The generated source
+confirms that `0x80084AB8` computes exactly this low-16-bit result. With two
+independent lines (source semantics and retail value support), Hpost-callee is
+not selected at the first demonstrated boundary; Hlater-transform is selected
+for the sampled scope. The independent oracle/port rows are not record-
+synchronized, so this does not prove a global record-by-record match. ORIGIN:
+the writer is the guest `andi` at `0x80084AB8`; its low-16-bit result is
+legitimate state, and the driver is diagnostic-only.

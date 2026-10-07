@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4090 (2026-10-06).
+Updated for session 4091 (2026-10-06).
 
 ## Current state
 
@@ -446,12 +446,14 @@ register/value observations; all hooks are diagnostic-only.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4m downstream post-callee comparison.** On a qualified route,
-   retain the positive-control and phase gates, and compare the first
-   downstream handoff after `0x800848C4` (the existing `0x80084AB8` witness)
-   against the matched callee records. A mismatch there selects Hpost-callee;
-   matching it moves to the next caller-side transform. Do not use an
-   unsynchronized oracle/port row as proof of a global record match.
+1. **M5 Step 5 ground-truth key-on/divisor qualification.** Before changing
+   the eight key-on early returns, use the retail oracle with its whole-RDRAM
+   positive control and both target phase gates to watch all eight sites and
+   the known divisor publisher at `0x80090768` in one capture. Hvalid-divisor
+   requires in-range divisor evidence and normal-tail site activity;
+   Hreturns-dead requires no target-phase site activity; Hcoverage applies if
+   either phase/control is absent. This is a prerequisite, not authorization
+   to remove a guard.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -474,7 +476,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
-| M5 voice modulation transform | Hpost-callee pending at s4090: the qualified port detail values at `0x8008488C/0x800848A8/0x800848C4` matched the paired retail register handoff samples; the next boundary is the downstream `0x80084AB8` handoff. |
+| M5 voice modulation transform | Hlater-transform selected at s4091's first demonstrated boundary: the port `0x80084AB8` return values are the low 16 bits of `s0` after the source `andi`, and every sampled port value (`0`, `0xF00`, `0x1900`, `0x2000`, `0x3F80`) occurs in the qualified retail title/hangar support. The independent rows are not record-synchronized, so a later transform remains open. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
