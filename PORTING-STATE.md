@@ -146840,3 +146840,19 @@ and the first derived store value. Retail and port also matched the field tuple
 the first body stores. It rules out the prior route-invalid result for this
 canonical recipe; it does not explain the upstream zero audio payload. No
 audio, gate, writer, payload, or mitigation behavior changed.
+## Session 4185 (2026-10-07) — qualified M5 second body store/link parity
+
+Extended `scratch/agent/run_s4182_m5_object_body.sh` with one physical oracle
+watch covering the body-store range, exact `0x8008F90C`/`0x8008F910`
+`--store-field-dump` PCs, and post-store scalar controls. Ran the canonical
+paired oracle/port recipe. The whole-RDRAM positive control, both retail target
+phases, both port target phases, and 130 port body rows qualified. At the
+shared hangar tuple, retail exact-store rows matched the port's physical
+store/link addresses (`0x17D9E0`/`0x17D9F8` and `0x17D9FC`), while both exact
+retail store PCs had nonzero post-store scalar samples with mismatch=0. This
+selects H-next-store-parity and moves the open boundary after the second body
+store/link tuple. The oracle callback does not provide a stable written-value
+field, so no stronger value equality is claimed. This rules out a divergence
+at the measured second store/link contract; it does not explain the upstream
+zero audio payload and changes no audio, gate, writer, payload, or mitigation
+behavior.

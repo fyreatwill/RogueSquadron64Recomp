@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4183 (2026-10-07).
+Updated for session 4185 (2026-10-07).
 
 ## Current state
 
@@ -213,16 +213,28 @@ state `0x1100`). This selects H-body-entry-parity and moves the open boundary
 after the first body stores. No audio, gate, writer, payload, or mitigation
 behavior changed.
 
+Session 4185 extended that canonical paired run with an independent oracle
+physical watch for the body-store range and exact `0x8008F90C`/`0x8008F910`
+store PCs, including post-store scalar controls. The whole-RDRAM control,
+both retail phases, both port phases, and 130 port body rows qualified. At the
+shared hangar tuple, retail and port matched the body store/link addresses
+(`0x8017D9E0`/`0x8017D9F8` and `0x8017D9FC`) and both exact retail store PCs
+had nonzero, mismatch-free post-store samples. This selects
+H-next-store-parity and moves the open boundary after the second body
+store/link tuple. The oracle GPR callback does not expose a stable written
+value field, so the conclusion is limited to the independently matched
+address/link and scalar-write contract; no audio, gate, writer, payload, or
+mitigation behavior changed.
+
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 audio de-stubbing:** use the qualified canonical recipe to compare the
-   next body-store/link tuple at `0x8008F900` in one paired oracle/port run.
-   Preserve the whole-RDRAM control, both title origins
-   (`0x00790400`/`0x00790800`), both hangar origins
-   (`0x006AB400`/`0x006AB800`), and the existing body rows. A mismatch in the
-   first derived store/link tuple selects the first divergent body input;
-   parity moves the boundary inward again; absent port target phases is
-   route-invalid. Do not change audio, gate, writer, or payload behavior.
+1. **M5 audio de-stubbing:** extend the regeneration-safe witness past the
+   matched `0x8008F90C`/`0x8008F910` body stores to the loop-control tuple at
+   `0x8008F914`/`0x8008F918`, then run one paired oracle/port measurement using
+   the same canonical recipe and all existing positive controls. A mismatch
+   selects the first divergent post-store input; parity moves the boundary to
+   the loop branch; absent target phases is route-invalid. Do not change
+   audio, gate, writer, payload, or mitigation behavior.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -245,7 +257,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 writer object context | H-context-mismatch selected at s4173: retail field dumps fired for all five PCs and showed changing per-object source words/branch fields, while the port matched source-context path retained zero target-span values and did not expose equivalent object-field state. The first divergent object-field input is open; no behavior change is authorized. |
 | M5 object-field witness | H-legitimate-field-mismatch selected at s4174: the corrected port witness fired in both target phases and recorded all five producer PCs. Its runtime-memory field values and object records did not reconcile with the independent retail field table after using `MEM_W/MEM_BU/MEM_HU` semantics. The earlier raw-byte result is superseded as an endian instrumentation defect. |
 | M5 object-entry boundary | H-entry-body-mismatch selected at s4181: after repairing the port witness to raw physical-address semantics, retail and port matched `s0=0x48`, `s1=0x1B000`, source word/byte, selector, and branch state at the shared hangar phase. The open boundary is inside `0x8008F900`. |
-| M5 object-body witness | H-body-entry-parity selected at s4184: the canonical route qualified 130 port body rows, and the hangar `a0/a1/a2`, `s0/s1`, and first derived store value matched retail. The open boundary is after the first body stores. |
+| M5 object-body witness | H-next-store-parity selected at s4185: the canonical route qualified 130 port body rows; independent retail store-PC/range watches matched the port's second body store/link addresses, and both exact retail store PCs had nonzero, mismatch-free post-store scalar samples. The open boundary is after the second body store/link tuple. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |

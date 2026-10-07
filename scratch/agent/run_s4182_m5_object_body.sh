@@ -15,10 +15,14 @@ cd "$ROOT" || exit 2
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 75 \
   --watch-write 0x0:0x800000 --hit-cap 10000 \
   --watch-write 0x178c80:0x178f18 \
+  --watch-write 0x17d9e0:0x17da00 \
   --watch-pc 0x8008f8fc --watch-pc 0x8008f900 \
   --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x00790800:1024 \
   --pc-phase-log-width 0x006ab400:512 --pc-phase-log-width 0x006ab800:512 \
   --pc-field-dump 0x8008f8fc,0x8008f900 \
+  --store-field-dump 2:0x8008f90c,0x8008f910 \
+  --post-value-watch 2 \
+  --post-value-pc 0x8008f90c,0x8008f910 \
   --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x00790800:1024 \
   --pc-hist-phase 0x006ab400:512 --pc-hist-phase 0x006ab800:512 \
   --vi-trace --press "$PRESS" --hold-ms 150 > "$OUT/retail.log" 2>&1 &
