@@ -146294,3 +146294,21 @@ conclusion is valid, and this run rules out nothing at the target boundary.
 ORIGIN: the retail source-span writers and the port boot crash; no guest,
 audio, wait, cap, predicate, slot, or writeback behavior changed. Evidence:
 `scratch/agent/s4154_m5_preclear_provenance/`.
+
+## Session 4155 (2026-10-07) — M5 pre-clear provenance instrument gap
+
+The rerun of the rebuilt real-audio/LLE port and independent retail oracle was
+target-valid. Retail passed the whole-RDRAM positive control and title
+`0x00790400/1024` plus hangar `0x006AB400/512` gates; its watched span
+`0x178C80..0x178F18` had 12 nonzero bytes in the hangar phase snapshot and a
+populated phase writer histogram. The port reached both target phases and
+emitted 512 sampled `0x800078EC` clear-body rows, all with value zero.
+However, the intended port CPU-writer positive controls emitted zero
+`field348-writer`, `field348-candidate`, and `m5-source-transition` rows.
+H-preclear-instrument-gap is selected: absent versus overwritten is not
+discriminated, and the zero clear body does not prove that no earlier writer
+ran. ORIGIN: the legitimate retail source-span writers and the port clear and
+CPU-writer probes; no guest, audio, wait, cap, predicate, slot, or writeback
+behavior changed. Evidence:
+`docs/M5-S4155-PRECLEAR-INSTRUMENT-GAP.md` and
+`scratch/agent/s4154_m5_preclear_provenance/`.

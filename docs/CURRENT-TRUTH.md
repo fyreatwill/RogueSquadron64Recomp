@@ -3,7 +3,18 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4154 (2026-10-07).
+Updated for session 4155 (2026-10-07).
+
+Session 4155 reran the pre-clear provenance pair with a target-valid port. The
+retail oracle passed whole-RDRAM, title, and hangar controls and recorded 12
+nonzero bytes in the hangar source snapshot. The port reached title and hangar
+and emitted 512 sampled `0x800078EC` clear-body rows, all zero. However, the
+port's intended pre-clear CPU-writer positive-control markers emitted no rows,
+so absent-versus-overwritten remains unevaluable. H-preclear-instrument-gap is
+selected; the clear-body zero is not evidence that no earlier writer exists.
+ORIGIN: the legitimate retail source-span writers and port clear/writer
+probes; no guest, audio, wait, cap, predicate, slot, or writeback behavior
+changed. Evidence: `docs/M5-S4155-PRECLEAR-INSTRUMENT-GAP.md`.
 
 Session 4154 ran the pre-clear provenance discriminator with a rebuilt port and
 independent retail oracle. The oracle passed the whole-RDRAM positive control,
@@ -606,12 +617,12 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 pre-clear producer provenance:** use one phase-gated retail/port
-   source-span writer census to determine whether the nonzero producer before
-   `0x800078EC` is absent in the port or is present and later overwritten.
-   Retain the whole-RDRAM control, both target phases, and the existing
-   source-span post-value/scalar controls. Do not change guest behavior,
-   audio waits, caps, predicates, slot state, or writeback.
+1. **M5 pre-clear producer provenance instrumentation repair:** make the port
+   pre-clear CPU-writer positive control fire for the `0x178C80..0x178F18`
+   span, then rerun the same phase-gated retail/port census. The s4155 run
+   reached both target phases but emitted zero `field348-writer`/transition
+   rows, so it cannot distinguish absent from overwritten. Do not change guest
+   behavior, audio waits, caps, predicates, slot state, or writeback.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -644,6 +655,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A11 wait terminal transition | H-A11-target-phase-absent-both selected at s4145: both qualified arms passed whole-RDRAM/title/hangar controls, but neither emitted a target-phase wait/post-wait terminal row; port A11 rows were confined to earlier 640 phases. This rules out a target-phase port/retail split, not the wait's safety or the source-payload cause. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
 | M5 source-producer context | H-producer-context-split selected at s4151: retail's phase-qualified execution histogram attributed `0x800078EC` to predecessor `0x8002BEEC` and `rs_memset` entry `0x800078E0` to `0x800052C4`, while the port used title callsite `0x8008F2CC` and hangar callsites `0x8008F2CC`/`0x800AB694` with distinct tuples and zero values. The caller-state cause remains open; generated port `ra=0` is not evidence. |
+| M5 pre-clear provenance | H-preclear-instrument-gap selected at s4155: both arms passed whole-RDRAM/title/hangar gates; retail had 12 nonzero hangar bytes, while port clear-body samples were all zero, but the port CPU-writer positive control emitted no `field348-writer` or transition rows. No producer absence/overwrite conclusion is valid. |
 | M5 producer caller state | H-caller-state-split selected at s4152: retail title entry rows had `prev=0x800052C4`, live `s0` objects and nonzero pointed words, while port title setup used `s0=0xF`, `s1=0x561F`, `0x80178C80/0x298`, and zero fill. Hangar includes a shared-looking `s0=0`, `s1=0x800D0000` family, so the split is phase/context-specific. The s4153 entry/body join then selected H-entry-body-shared: retail preserves the producer object/state into `0x800078EC`; the remaining gap is earlier provenance. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
