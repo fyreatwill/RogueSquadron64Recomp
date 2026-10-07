@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4142 (2026-10-07).
+Updated for session 4143 (2026-10-07).
 
 ## Current state
 
@@ -12,6 +12,19 @@ cinematic, star flare, Factor 5 logo, title VI 1024 (`0x00790400`), and hangar
 VI 512 (`0x006AB400`) on the qualified real-audio/LLE/spin-yield route.
 Hangar geometry and color artifacts remain. `ROGUESQ_AUDIO_UCODE=0` is the
 silent `Broke` control; real audio is not production-complete.
+
+Session 4143 re-ran the A11 terminal-table capture with the independent retail
+oracle and one rebuilt canonical real-audio/LLE/ungated/solo/spin-yield port.
+Retail passed the whole-RDRAM positive control and recorded both title
+`0x00790400/1024` and hangar `0x006AB400/512` phase buckets, including the
+named slot/wait PCs. The port reached title at 46.0s but returned to 640 at
+76.4s and crashed in `musyxSynthFrame+3828` before hangar; it emitted no
+target-phase `wait-post-any-slot` row. H-route-invalid is selected for this
+run, so the A11 writer/terminal relationship remains open and no wait, cap,
+predicate, slot-state, or writeback change is authorized. ORIGIN: the
+existing guest wait/slot readers and slot-status writers; no guest behavior or
+mitigation changed. Evidence: `scratch/agent/s4143_a11_oracle.log` and
+`scratch/agent/s4143_a11_port.log`.
 
 The active M5 boundary is source payload, not rendering. Qualified retail and
 port hangar-phase source spans are zero (`FNV=0x762B22A5`). Session 4112
@@ -477,12 +490,14 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 A11 terminal transition:** capture the complete slot `01/02/00`
-   writer and terminal table after the qualified pending wait recurrence.
-   Keep the cap and wait unchanged; do not infer from a status read alone.
-2. **M5 source-construction predecessor:** return to the s4139 tuple split
-   only with a genuinely new route discriminator; the s4141 port retry was
-   route-invalid before hangar.
+1. **M5 source-construction predecessor:** return to the s4139 tuple split
+   with a genuinely new route discriminator: use the current port crash's
+   `musyxSynthFrame+3828`/guest-PC boundary as a route-validity gate before
+   attempting any caller join. Do not treat a pre-hangar null as writer
+   evidence.
+2. **M5 A11 terminal transition:** retry only after a route-valid canonical
+   port run reaches hangar; keep the cap and wait unchanged and do not infer
+   from a status read alone.
 3. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -511,7 +526,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A10 voice/list/table guards | H-A10-not-suppressing-valid-work selected at s4119's measured scope: retail's independent `0x80096D88` writer reached the target table root (371 hangar writes), while the qualified port reached both phases with valid traversal/table rows and zero A10 guard fires. No guard relaxation is authorized. |
 | M5 A9 voice-array-base guards | H-A9-legitimate selected at s4120's measured scope: retail reached the allocator writer and 10/12 A9 PCs in hangar; the qualified port reached both phases with positive controls and zero fires at all 12 A9 guards. No guard relaxation is authorized. |
 | M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
-| M5 A11 wait terminal transition | H-A11-not-reproduced selected at s4127: the qualified canonical route had one target-phase wait entry (`a3=0x8`) and a clean `wait-post-any-slot` return, but no pending `chCount=16` call. The pending writer/terminal relationship remains unevaluable; no wait change is authorized. |
+| M5 A11 wait terminal transition | H-A11-not-reproduced selected at s4127 and pending recurrence without a complete terminal table at s4142. Session 4143 is H-route-invalid: retail passed both phase buckets, but the port crashed in `musyxSynthFrame+3828` after title and before hangar, so no A11 terminal conclusion is allowed. |
 | M5 Step 1 task contract | H-contract-gap selected at s4128: the image arm reached title/hangar with task ABI/DMA, image completion, and PCM rows, while the fixed silent control reached both phases with `dmem changed=0`; both arms' measured PCM payloads remained zero. The next boundary is source-producer context, not a task-return or host-queue mitigation. |
 | M5 source-producer context | H-port-writer-context-split selected at s4138: the repaired same-build capture qualified retail whole-RDRAM/title/hangar controls and port title/hangar controls. Retail source watch index 1 recorded 664 stores, 72 nonzero post-value bytes, zero scalar mismatches, and 29 hangar writer PCs; port target-phase image rows remained zero for source and `0x1798B0` DMA payloads. The exact call-context divergence remains open. |
 | M5 Step 3 declared audio staging | H-step3-equivalent selected at s4126: qualified declared `0x800` and legacy `0xF80` arms both reached title/hangar with matching task, return, PCM, and route signatures; only the staging size differed. The legacy path is not needed for this measured no-regression contract, but semantic irrelevance outside it is unproven. |

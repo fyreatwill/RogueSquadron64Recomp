@@ -146065,3 +146065,19 @@ arms and is the selected result. ORIGIN: the existing guest
 writers; no mitigation or guest behavior changed. Evidence:
 `scratch/agent/s4142_m5_a11_recurrence_run/` and
 `scratch/agent/s4142_m5_a11_recurrence_fixed/`.
+## Session 4143 (2026-10-07) — A11 terminal capture route-invalid before hangar
+
+Built the ordinary Debug target once and ran the independent retail oracle and
+canonical real-audio/LLE/ungated/solo/spin-yield port capture. The oracle
+passed its whole-RDRAM positive control, reached title `0x00790400/1024` and
+hangar `0x006AB400/512`, and recorded the named A11 slot/wait PCs in both
+phase buckets. The port reached title at 46.0s but returned to 640 at 76.4s
+and crashed in `musyxSynthFrame+3828` (guest PC `0x80001B08`) before hangar;
+there was no target-phase `wait-post-any-slot` row. H-route-invalid is
+selected, so this run provides no A11 writer/terminal evidence and does not
+authorize changing the wait, cap, predicate, slot state, or writeback. The
+initial oracle command used a malformed phase-bucket spelling and exited
+before starting; the corrected command was the selected capture. ORIGIN: the
+existing guest wait/slot readers and status writers; no guest behavior or
+mitigation changed. Evidence: `scratch/agent/s4143_a11_oracle.log` and
+`scratch/agent/s4143_a11_port.log`.
