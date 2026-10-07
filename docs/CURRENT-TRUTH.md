@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4176 (2026-10-07).
+Updated for session 4177 (2026-10-07).
 
 ## Current state
 
@@ -134,6 +134,14 @@ H-earlier-executed-entry over H-static-entry-unexecuted-at-range and
 H-route-invalid, making `0x8008F900` the next port witness boundary. No
 audio, gate, writer, payload, or mitigation behavior changed.
 
+Session 4177 independently requalified that retail predecessor boundary with
+the exact target-PC joins. The whole-RDRAM control and both title/hangar phase
+gates fired; the range `0x8008F900:0x8008FB00` executed, and exact
+`0x8008F900` executed 71 times with `PREVIOUS_PC=0x8008F8FC`. This selects
+H-entry-executed and makes `0x8008F900` the next port witness boundary. The
+retail result is ground truth only; no port, audio, gate, writer, payload, or
+mitigation behavior changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
@@ -164,7 +172,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 Step 4 producer context | H-writer-counterpart-parity selected at s4171: retail and port both exercised `0x80090268`, `0x80090278`, and `0x8008FF04/0C/14` in hangar; port target-span rows carried matching nonzero values and destinations. The downstream port DMA/PCM remained zero-valued, so caller/object context is the next boundary. |
 | M5 writer object context | H-context-mismatch selected at s4173: retail field dumps fired for all five PCs and showed changing per-object source words/branch fields, while the port matched source-context path retained zero target-span values and did not expose equivalent object-field state. The first divergent object-field input is open; no behavior change is authorized. |
 | M5 object-field witness | H-legitimate-field-mismatch selected at s4174: the corrected port witness fired in both target phases and recorded all five producer PCs. Its runtime-memory field values and object records did not reconcile with the independent retail field table after using `MEM_W/MEM_BU/MEM_HU` semantics. The earlier raw-byte result is superseded as an endian instrumentation defect. |
-| M5 object-entry boundary | H-earlier-executed-entry selected at s4176: independent retail range `0x8008F900:0x8008FB00` had 4,480,806 executions and its earliest entry `0x8008F900` came from `0x8008F8FC` 142 times, while exact `0x8008F9C8` had zero hits and all five target PCs were live. The next boundary is now `0x8008F900`; port qualification remains open. |
+| M5 object-entry boundary | H-entry-executed independently requalified at s4177: positive control, retail title/hangar phases, the predecessor range, and exact `0x8008F900 <- 0x8008F8FC` execution all fired. The port-side entry-context join remains open. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |

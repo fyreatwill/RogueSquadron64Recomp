@@ -146714,3 +146714,16 @@ route-invalid and the static candidate as the executed boundary, selecting
 `0x8008F900` as the next port witness. It does not yet distinguish whether
 that entry's object context matches, and no audio, gate, writer, payload, or
 mitigation behavior changed.
+
+## Session 4177 (2026-10-07) — requalified M5 retail predecessor boundary
+
+Ran one independent retail-oracle measurement before adding the corresponding
+port witness. The whole-RDRAM positive control fired, and the driven retail
+route reached title VI 1024 and hangar VI 512. The watched range
+`0x8008F900:0x8008FB00` executed; exact `0x8008F900` executed 71 times and its
+`PREVIOUS_PC` was `0x8008F8FC`. The existing target PCs also remained live.
+
+This independently selects H-entry-executed over an unexecuted static entry
+and route-invalid explanations. It establishes `0x8008F900` as the next port
+witness boundary, but does not establish port/retail context parity. No audio,
+gate, writer, payload, or mitigation behavior changed.
