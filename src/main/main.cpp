@@ -1198,7 +1198,7 @@ extern "C" void rs64_m5_pre_dma_writer_store(char width, uint32_t pc,
     const uint32_t adjust = width == 'B' ? 3u : (width == 'H' ? 2u : 0u);
     const uint32_t len = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
     const uint32_t phys = ((addr ^ adjust) - 0x80000000u) & 0x007FFFFFu;
-    if (phys >= 0x179A48u || phys + len <= 0x1797B0u) return;
+    if (phys >= 0x178F18u || phys + len <= 0x178C80u) return;
 
     uint32_t phase = 0, width_n = 0, origin = 0;
     uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
@@ -1571,6 +1571,7 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
         {0x128C92u, 1u, "route_byte"},
         {0x128CD0u, 4u, "route_word"},
         {0x171E70u, 0x100u, "task_data"},
+        {0x178C80u, 0x198u, "image_input"},
     };
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;

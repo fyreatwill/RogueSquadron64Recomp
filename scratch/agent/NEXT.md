@@ -1,36 +1,27 @@
-# Next work unit: locate the M5 image source-span producer
+# Next work unit: validate M5 Step 6 drain-tick removal
 
-HYPOTHESIS-ID: m5-image-preimage-producer
+HYPOTHESIS-ID: m5-step6-drain-tick-validation
 
 Competing hypotheses and discriminator written before the next build:
 
-- H-guest-producer: a legitimate guest store writes the port source span with
-  zero values before the image task reads it.
-- H-host-producer: a host-side copy/DMA path writes or clears the span after
-  the guest producer and before the image task.
-- H-producer-absent: no qualified writer reaches the span before the image
-  task, so the zero source is an upstream missing route/producer.
-- H-control-invalid: if retail whole-RDRAM/title/hangar controls or either
-  image target phase fails, the corresponding null is unevaluable.
+- H-tick-required: the default drain-tick-off arm loses a required status/slot
+  transition or downstream PCM contract, while the same-build tick-on arm
+  preserves it.
+- H-tick-not-required: both arms preserve task/SP completion, status/slot
+  progress, nonzero PCM joins, and title/hangar phases.
+- H-route-invalid: either arm misses a mandatory target phase or the whole
+  positive-control route, making its downstream null unevaluable.
 
-The single discriminating measurement is one same-build, retail-grounded,
-phase-gated writer census for the full span, joined to the next image-task
-read for declared and legacy arms. Retail ground truth qualified the physical
-span (`664` writes; hangar snapshot nonzero=24); the paired port capture
-qualified both target VIs and read zero from it in both arms. Classify every
-qualified writer as guest store, host copy/DMA, or absent, with writer PC,
-value, task generation, and phase. A zero-valued guest writer selects
-H-guest-producer; a host write selects H-host-producer; no writer before the
-read selects H-producer-absent. Retail whole-RDRAM/title/hangar and both port
-image target VIs are mandatory positive controls; a missing phase makes that
-arm unevaluable.
+The single discriminating measurement is one same-build, phase-gated A/B with
+`ROGUESQ_DRAIN_INLOOP_TICK=1` and unset/default, joined by phase and arm across
+task dispatch/exit, SP completion, status `01/02/00` and `03` reaping, PCM
+source/consumer, and title/hangar VIs. A tick-only status/PCM loss selects
+H-tick-required; matching complete rows select H-tick-not-required; a missing
+control or target phase selects H-route-invalid and proves nothing downstream.
 
-ORIGIN: the candidate values are legitimate image source bytes; s4111 showed
-the port reads the span directly as zero and did not observe a DMA into
-`DMEM 0xCC0`. No skip, force-clear, or guest behavior change is authorized.
-
-Exact work: ask the oracle for the same physical span with the whole-RDRAM
-positive control and target phase gates before the next build. Then enable the
-existing regeneration-safe guest-store and host-write witnesses together,
-rebuild once if needed, and run declared/legacy with the existing
-stage/task/PCM controls. Any missing title/hangar gate invalidates that arm.
+Exact work: use the qualified image route from
+`scratch/agent/run_s4111_m5_image_preimage.sh`, retain the silent control only
+as a same-build route sanity check if needed, and run both tick arms in one
+build. Require the retail whole-RDRAM positive control if an oracle is paired;
+kill every process group with SIGKILL. Enqueue the resulting phase-gated soak
+instead of babysitting a repeat run.

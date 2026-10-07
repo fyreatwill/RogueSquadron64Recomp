@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4111 (2026-10-06).
+Updated for session 4112 (2026-10-06).
 
 ## Current state
 
@@ -14,10 +14,14 @@ Hangar geometry and color artifacts remain. `ROGUESQ_AUDIO_UCODE=0` is the
 silent `Broke` control; real audio is not production-complete.
 
 The active M5 boundary is source payload, not rendering. Qualified retail and
-port hangar-phase source spans are zero (`FNV=0x762B22A5`); retail's
-phase-gated hangar snapshot is 408 bytes with nonzero=0. The port descriptor
-`0x1798B0 -> DMEM 0xCB0` is written by legitimate zero-valued
-`0x800078EC` fill activity. No nonzero hangar producer is established.
+port hangar-phase source spans are zero (`FNV=0x762B22A5`). Session 4112
+qualified the exact source-span census: both declared and legacy port arms had
+664 zero-valued guest stores from `0x800078EC` into
+`0x178C80..0x178F18`, before their image reads; host `rsp_dmem_to_rdram`
+writes to the same span were downstream zero writeback. Retail independently
+reached both target phases and recorded nonzero source bytes plus the same
+span's writer family. Hguest-zero-producer is selected at this boundary; no
+nonzero port producer is established.
 
 The task-contract consumer boundary is closed at the measured scope: declared
 and legacy real-audio arms reached both target phases with matching zero
@@ -687,16 +691,34 @@ s4110 qualification, not this failed fresh route. ORIGIN: the legitimate
 writer to investigate is the producer of the port's `0x178C80..0x178F18`
 RDRAM source span; no mitigation or guest behavior changed.
 
+Session 4112 asked the retail oracle first with the whole-RDRAM positive
+control, the exact physical source-span watch, and title/hangar phase gates.
+The control fired with 11,717 writes; retail reached title 1024 and hangar
+512, and the span recorded 1,717 writes with a final 77/664 nonzero snapshot
+(`FNV=0x215A7BAD`). The retail writer census named `0x800078EC` as the
+dominant span writer (664 stores), with additional pre-target writer PCs.
+
+Widened the regeneration-safe port guest-store witness to the qualified full
+span and added that span to the host-copy census, then rebuilt once. The same
+build's declared and legacy image arms both reached title and hangar with
+positive task/stage/PCM controls and no crash or abort. Each arm recorded 664
+zero guest stores from `0x800078EC`; each also recorded host
+`rsp_dmem_to_rdram` writes whose post-span remained zero, but those writes
+followed the source reads. The paired input DMA rows read zero from the span
+before stage 0. Hguest-zero-producer is selected over Hhost-producer and
+Hproducer-absent at this measured boundary. ORIGIN: the legitimate writer is
+the guest byte-fill at `0x800078EC`; the host writeback is downstream and no
+mitigation, force-clear, or synthetic DMA was added.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 image source-span producer:** run one retail-grounded, phase-gated
-   writer census for `0x178C80..0x178F18`, retaining declared/legacy image
-   arms and title/hangar/task/PCM controls. The source-DMA witness now shows
-   the port reads zero bytes directly from this span; identify whether a
-   legitimate guest store, host copy/DMA, or missing producer precedes those
-   reads. Do not add a guard, force-clear, or synthetic DMA.
+1. **M5 de-stubbing Step 6 validation:** compare default drain-tick-off with
+   the explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` control in one build and one
+   phase-gated run. Require task/SP completion, named status/slot transitions,
+   nonzero PCM source/consumer joins, and the same title/hangar route; do not
+   infer success from a clean exit or route alone.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -721,7 +743,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
 | M5 voice modulation transform | Hlater-transform selected at s4091's first demonstrated boundary: the port `0x80084AB8` return values are the low 16 bits of `s0` after the source `andi`, and every sampled port value (`0`, `0xF00`, `0x1900`, `0x2000`, `0x3F80`) occurs in the qualified retail title/hangar support. The independent rows are not record-synchronized, so a later transform remains open. |
 | M5 route failure | H-image-specific-failure remains selected at s4108's measured scope: silent reached title only, while both declared `0x800` and legacy `0xF80` image arms reached title/hangar. Session 4109 rejects staging size as the sufficient downstream explanation; the zero-payload origin remains open. |
-| M5 image zero boundary | Hsource-zero selected at s4111: both qualified port arms directly read zero from `0x178C80..0x178F18` and enter stage 0 with zero DMEM `0xCC0`; no DMA into `0xCC0` was observed. Retail's independent s4110 witness had 24 nonzero bytes in the same hangar span. The legitimate port source-span producer is open. |
+| M5 image zero boundary | Hguest-zero-producer selected at s4112: both qualified port arms recorded 664 zero-valued `0x800078EC` stores into `0x178C80..0x178F18` before the zero input reads; host `rsp_dmem_to_rdram` writes were downstream zero writeback. Retail independently reached both phases and recorded nonzero span bytes. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |
 | M5 descriptor selector writer | Hport-writer-live selected (s4100): the port witness control fired in title/hangar and `0x80090AAC` produced rows with retail-matching selector values; `0x80090BA4` had no port rows. |

@@ -145505,3 +145505,27 @@ transform, writeback, and a missing task join as the first measured zero, but
 does not identify the writer that leaves the source span zero. ORIGIN: the
 legitimate writer to investigate is the producer of
 `0x178C80..0x178F18`; no mitigation or guest behavior changed.
+
+## Session 4112 (2026-10-06) — identified zero-valued image source producer
+
+Asked the retail oracle first with the whole-RDRAM positive control, an exact
+physical watch on `0x178C80..0x178F18`, and title/hangar phase gates. The
+control fired with 11,717 writes; retail reached title `0x00790400/1024` and
+hangar `0x006AB400/512`. The source span recorded 1,717 writes and ended with
+77 nonzero bytes out of 664 (`FNV=0x215A7BAD`). The writer census named
+`0x800078EC` for 664 stores, alongside several other pre-target PCs.
+
+Widened the regeneration-safe guest-store witness to the exact source span,
+added the span to the host-copy census, rebuilt the ordinary target, and ran
+one same-build declared/legacy image matrix. Both arms reached both target
+VIs with positive task/stage/PCM controls and no crash or abort. Each arm
+recorded exactly 664 zero-valued guest stores from `0x800078EC`; each also
+recorded `rsp_dmem_to_rdram` host writes with zero post-span, but those rows
+followed the source reads. The paired input DMA rows read zero from the span
+before stage 0. Hguest-zero-producer is selected over Hhost-producer and
+Hproducer-absent at this boundary. This rules out an absent producer and a
+host pre-read producer, but does not yet establish why the port's legitimate
+guest fill differs from retail's nonzero source content. ORIGIN: the guest
+byte-fill at `0x800078EC` is the named legitimate writer; the downstream host
+writeback is not the origin and no mitigation, force-clear, or synthetic DMA
+was added.
