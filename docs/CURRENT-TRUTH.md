@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4165 (2026-10-07).
+Updated for session 4166 (2026-10-07).
 
 ## Current state
 
@@ -33,9 +33,12 @@ staging DMA is the writer and the OSTask declaration is legitimate.
 Work only the first applicable item. This backlog is one monotonic sequence.
 
 1. **M5 audio de-stubbing:** advance to Step 4 in `docs/M5-AUDIO-PLAN.md`.
-   Qualify the named gate/consumer edge with independent retail writer/value
-   evidence and same-build real-image/silent port arms. Keep the real-audio
-   route; do not use the silent control as a production fix.
+   Retail ground truth is now present: the whole-RDRAM control fired, and the
+   gate at `0x800A0F50` has writers `0x8008EA34`, `0x8008EB40`, `0x8008ED48`,
+   `0x8008EB7C`, and `0x8008EC88`; the last is the nonzero enable writer.
+   Qualify matching port writer/value and downstream slot/PCM joins before
+   changing one writer or consumer. Keep the real-audio route; do not use the
+   silent control as a production fix.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
@@ -52,6 +55,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 source setup state | H-shared-source-state selected at s4150: independent retail and port setup tuples match for the title clear and dominant hangar source-construction calls. The setup boundary is not the measured explanation for the later zero producer payload. |
 | M5 producer caller state | H-caller-state-split selected at s4152, with s4153 selecting H-entry-body-shared: retail preserves producer object/state into `0x800078EC`, while port context differs earlier. Generated port `ra=0` is an instrument limitation, not guest evidence. |
 | M5 Step 3 declared audio staging | H-step3-equivalent independently requalified at s4164: declared `0x800` and legacy `0xF80` arms match at the measured downstream contract. Semantic irrelevance outside that contract is unproven. |
+| M5 Step 4 retail gate ground truth | H-retail-gate-writers selected at s4166: the independent oracle whole-RDRAM control fired in both target phases; `0x800A0F50` was written 14 times by five PCs, with `0x8008EC88` producing the observed nonzero value. The watched `0x80094648`, `0x80090AAC`, and `0x80090BA4` words had zero writes in this retail route. This selects the port parity measurement, not a gate change. |
 | M5 task contract | H-contract-gap selected at s4128: image task handoff/completion is live, but image and silent controls both have zero measured PCM payload at the tested scope. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 title host sink | H-play selected at s4065: device 2 opens, host queue calls are positive, and drain depth advances. Native device callback/output behavior remains open. |
@@ -78,6 +82,16 @@ writer.
 The qualified consumer comparison used same-build declared/real,
 declared/silent, and legacy/real arms. It found matching phase-5 zero-payload
 signatures. A route failure invalidates a null; it never proves absence.
+
+Session 4166 supplied the independent retail line for Step 4. The oracle's
+whole-RDRAM watch reached its 10,000-callback positive-control threshold and
+the driven route reached title `1024 @ 0x00790400` and hangar `512 @
+0x006AB400`. Its narrow gate watch recorded 14 writes: the writer set was
+`0x8008EA34`, `0x8008EB40`, `0x8008ED48`, `0x8008EB7C`, and `0x8008EC88`;
+post-store samples were zero for the `ED48`/`EB7C` rows and nonzero for the
+`EC88` row. The three candidate consumer/selector watches had no writes.
+This is independent retail evidence only; port parity and downstream joins
+remain open.
 
 The title playback/drain capture is independently controlled by retail
 whole-RDRAM and title/hangar AI-output witnesses. On the paired port,

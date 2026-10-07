@@ -146493,3 +146493,17 @@ in this append-only ledger and durable background remains in
 `docs/PROJECT-OVERVIEW.md`. The compaction removed more than 200 lines and did
 not change code, runtime behavior, or any hypothesis. ORIGIN: documentation
 maintenance only; no game writer or value was changed.
+
+## Session 4166 (2026-10-07) — qualified independent retail M5 gate writers
+
+Ran the Step 4 ground-truth work unit with the retail oracle. In one driven
+45-second run, a whole-RDRAM write watch reached its 10,000-callback positive
+control, and VI transitions reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The `0x800A0F50` watch recorded 14 writes from
+`0x8008EA34`, `0x8008EB40`, `0x8008ED48`, `0x8008EB7C`, and `0x8008EC88`.
+Post-store samples showed zero at `ED48` and `EB7C`, and nonzero at `EC88`.
+The candidate watches at `0x80094648`, `0x80090AAC`, and `0x80090BA4` had no
+writes. This rules out selecting those candidate words as retail writers on
+this route, and selects port writer/value parity plus downstream joins as the
+next measurement. It does not authorize a gate change: retail is one evidence
+line and port parity remains open.

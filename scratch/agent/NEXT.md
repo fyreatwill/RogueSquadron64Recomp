@@ -1,26 +1,35 @@
-# Next work unit: qualify the next M5 audio contract edge
+# Next work unit: qualify the port M5 gate/consumer edge
 
 HYPOTHESIS-ID: m5-step4-gate-consumer-edge
 
-The maintenance iteration compacted CURRENT-TRUTH and ran no experiment.
-Next, inspect Step 4 of `docs/M5-AUDIO-PLAN.md` and qualify its named
-gate/consumer edge with one rebuilt port and independent retail ground truth.
-Batch the real-image and silent arms in the same build/run; do not repeat Step
-3 staging or the pre-clear census.
+Retail ground truth is complete in s4166: the whole-RDRAM oracle control
+fired, target phases were reached, and `0x800A0F50` was written by five PCs;
+`0x8008EC88` is the observed nonzero writer. Candidate watches at
+`0x80094648`, `0x80090AAC`, and `0x80090BA4` had no retail writes. Qualify
+port parity and downstream behavior; do not change a gate yet.
+
+Exact work: build once with `cmake --build build --config Debug --target
+RogueSquadron64Recomp`; run the real-image and `ROGUESQ_AUDIO_UCODE=0` arms
+from `build/` in parallel using `tools/probe.sh`, phase-gated with
+`PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1`, and enable
+the existing M5 writer/route/task/PCM categories plus `ROGUESQ_LOG_ALL=1`.
+Capture the two logs under distinct absolute `scratch/agent/soak_results/`
+directories and SIGKILL each process group after both title and hangar phases.
 
 Competing hypotheses and discriminator:
 
-- H-gate-or-consumer-edge: the named Step 4 edge changes a downstream
-  slot/PCM join when its writer and value match retail.
-- H-upstream-zero-payload: the edge remains unchanged because the source is
-  already zero before the consumer boundary.
-- H-route-invalid: whole-RDRAM, title VI 1024, or hangar VI 512 controls fail,
-  so no gate/consumer conclusion is allowed.
+- H-gate-parity: port records the retail writer/value transition, and one
+  downstream slot/PCM join changes in the real-image arm versus silent.
+- H-upstream-zero-payload: both arms reach the target phases and match through
+  the gate, but the source remains zero before the consumer edge.
+- H-route-invalid: either port arm lacks the whole-RDRAM-equivalent control,
+  title `1024 @ 0x00790400`, or hangar `512 @ 0x006AB400`.
 
-Discriminating measurement: require positive controls plus phase-keyed tuples
-through task/SP completion, slot/status transition, PCM source, and consumer.
-Select H-gate-or-consumer-edge only if the named edge changes in the declared
-real-image arm while silent is the rollback control; select H-upstream-zero-
-payload only if both arms prove zero before that edge.
+Discriminating measurement: one phase-keyed comparison table for both arms
+containing gate writer/value, task/SP completion, service/status/slot, PCM
+source, and consumer joins. Select H-gate-parity only if the port writer/value
+matches the retail PCs and the real arm changes a downstream join; select
+H-upstream-zero-payload only if both arms prove zero before the edge.
 
-Run from `build/`, capture each arm separately, and kill games with SIGKILL.
+The oracle evidence is in `scratch/agent/retail_step4_values.log`; do not
+repeat the retail run unless the port measurement exposes a route mismatch.
