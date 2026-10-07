@@ -1568,6 +1568,22 @@ extern "C" void rs64_m5_source_context(uint8_t*, uint32_t pc, uint32_t ra,
     std::fflush(stderr);
 }
 
+struct Rs64M5ObjectEntrySnapshot {
+    bool valid = false;
+    uint32_t ra = 0;
+    uint32_t a0 = 0;
+    uint32_t a1 = 0;
+    uint32_t a2 = 0;
+    uint32_t a3 = 0;
+    uint32_t s0 = 0;
+    uint32_t s1 = 0;
+    uint32_t source_word = 0xFFFFFFFFu;
+    uint32_t source_half = 0xFFFFFFFFu;
+    uint32_t s1_half = 0xFFFFFFFFu;
+};
+static std::mutex g_rs64_m5_object_entry_mutex;
+static Rs64M5ObjectEntrySnapshot g_rs64_m5_object_entry;
+
 extern "C" void rs64_m5_object_field_witness(uint8_t* rdram, uint32_t pc,
                                                 recomp_context* ctx,
                                                 uint32_t store_addr,
@@ -1596,6 +1612,18 @@ extern "C" void rs64_m5_object_field_witness(uint8_t* rdram, uint32_t pc,
                      "[m5-object-field-control] phase=%u width=%u origin=0x%06X pc=0x%08X\n",
                      rs64_phase_ord(), width, origin, pc);
         std::fflush(stderr);
+        std::lock_guard<std::mutex> entry_lock(g_rs64_m5_object_entry_mutex);
+        if (g_rs64_m5_object_entry.valid) {
+            const auto& e = g_rs64_m5_object_entry;
+            std::fprintf(stderr,
+                "[m5-object-entry-join] phase=%u width=%u origin=0x%06X "
+                "pc=0x8008F9C8 ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X "
+                "s0=0x%08X s1=0x%08X source_word=0x%08X source_half=0x%04X "
+                "s1_half=0x%04X\n",
+                rs64_phase_ord(), width, origin, e.ra, e.a0, e.a1, e.a2,
+                e.a3, e.s0, e.s1, e.source_word, e.source_half, e.s1_half);
+            std::fflush(stderr);
+        }
     }
     if (rows >= 512u) return;
     auto word = [rdram](uint32_t guest) -> uint32_t {
@@ -1617,6 +1645,32 @@ extern "C" void rs64_m5_object_field_witness(uint8_t* rdram, uint32_t pc,
         store_addr, store_value, s0, s1, word(s0 + 0x60u),
         byte(s0 + 0x22u), U32(ctx->r2), word(s1 + 0x22u) & 0xFFFFu);
     std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_object_entry_witness(uint8_t* rdram,
+                                                recomp_context* ctx) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_OBJECT_ENTRY");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled || !rdram || !ctx) return;
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        return static_cast<uint32_t>(MEM_W(0x00, guest));
+    };
+    auto half = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFEu) return 0xFFFFFFFFu;
+        return static_cast<uint32_t>(MEM_HU(0x00, guest));
+    };
+    const uint32_t s0 = U32(ctx->r16);
+    const uint32_t s1 = U32(ctx->r17);
+    std::lock_guard<std::mutex> lock(g_rs64_m5_object_entry_mutex);
+    g_rs64_m5_object_entry = {true, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5),
+                              U32(ctx->r6), U32(ctx->r7), s0, s1,
+                              word(s0 + 0x60u), half(s0 + 0x22u),
+                              half(s1 + 0x22u)};
 }
 }
 

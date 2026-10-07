@@ -146680,3 +146680,23 @@ boundary to the first producer/caller of those object fields. The route-invalid
 rerun is recorded as unevaluable, not as evidence. No audio, gate, writer, or
 payload behavior changed. The initial raw-byte comparison is superseded by
 the corrected runtime-memory witness.
+
+## Session 4175 (2026-10-07) — rejected unexecuted M5 object-entry candidate
+
+Added `rs64_m5_object_entry_witness` in `src/main/main.cpp` and the
+regeneration-safe `RS64_S4175_M5_OBJECT_ENTRY` injection in
+`../N64Recomp/fixup_game_funcs.py`, targeting the static
+`recycleSampleStreamBlock` entry at `0x8008F9C8`. The witness retained the
+latest incoming `ra`, `a0-a3`, `s0/s1`, and pointed fields, then joined that
+snapshot at target-phase rows after the first phase-gated attempt proved
+unevaluable.
+
+The fixed concurrent retail/port run fired the oracle whole-RDRAM positive
+control and reached title 1024 and hangar 512 on both sides. Independent
+retail execution counted zero hits at `0x8008F9C8`, while the existing target
+PCs counted 73,352 hits each at `0x80090268`/`0x80090278` and 67,918 hits each
+at `0x8008FF04`/`0x8008FF0C`. Port target-field controls fired in both phases,
+but the latched entry produced zero joins. This rejects `0x8008F9C8` as the
+executed entry boundary and leaves the first executed predecessor open. It
+does not reject the broader object-field mismatch, and no behavior change was
+made.
