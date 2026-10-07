@@ -146887,3 +146887,22 @@ H-branch-parity and moves the open boundary after the delay-slot increment,
 at the loop-exit successor. It rules out a branch-input or taken/not-taken
 divergence at the measured scope; it does not explain the upstream zero audio
 payload and changes no audio, gate, writer, payload, or mitigation behavior.
+
+## Session 4188 (2026-10-07) — qualified M5 loop-exit successor parity
+
+The prescribed successor recipe was missing, so I repaired it before running
+the work unit. Added a regeneration-safe witness at `0x8008F924` and a paired
+oracle/port recipe that retained the whole-RDRAM control, existing object
+witnesses, both title origins, both hangar origins, and the canonical
+autopilot/stop-width settings. The single build completed successfully.
+
+The positive control, both retail target phases, both port target phases, and
+two port successor rows qualified. Port's terminal hangar row had `v0=0`,
+`a2=s0=0x48`, and the unchanged successor context; the independent retail
+oracle recorded the same `0x8008F924` PC with `s0=0x48`, `s1=0x1B000`, and
+`v0=0`. The first post-loop instruction is a load from `0x801499C8`, and the
+port witness read `0xE0D91780` there. This selects H-successor-parity and moves
+the open boundary into the first post-loop loaded state. It rules out a
+successor control mismatch at the measured scope; it does not explain the
+zero audio payload and changes no audio, gate, writer, payload, or mitigation
+behavior.

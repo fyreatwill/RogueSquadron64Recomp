@@ -1,32 +1,33 @@
-# Next work unit: discriminate the loop-exit successor after 0x8008F91C
+# Next work unit: discriminate the first post-loop load/use
 
 HYPOTHESIS-ID: m5-step4-object-entry-body
 
-Session 4187 qualified the canonical paired oracle/port route with a
-regeneration-safe witness at `0x8008F91C`. The positive control, both retail
-phases, both port phases, and 130 port branch rows fired. Port and retail
-matched `v0=1` through `a2=0x47` and `v0=0` at `a2=s0=0x48`; the open
-boundary is the loop-exit successor after the delay-slot increment.
+Session 4188 selected H-successor-parity at `0x8008F924`: the canonical paired
+route qualified its positive control and both title/hangar phases, and retail
+and port matched the terminal successor tuple. The first post-loop load is at
+`0x8008F928`, reading guest address `0x801499C8`; the next derived operation
+uses that loaded value at `0x8008F938` and stores zero at `0x8008F93C`.
 
 Competing hypotheses:
 
-- H-successor-parity: the post-delay-slot `v1` and first loop-exit state match,
-  moving the boundary into the first post-loop load.
-- H-successor-mismatch: the exit-side `v1` or post-loop state diverges,
-  selecting the first divergent control value.
-- H-target-route-invalid: any positive control or target phase fails; no
-  branch comparison is valid.
+- H-load-parity: port and retail agree on the loaded state and derived address,
+  moving the boundary to the post-loop store/caller.
+- H-load-mismatch: the loaded value or derived address differs, selecting the
+  first divergent loaded/use value.
+- H-target-route-invalid: any positive control or target phase fails; no load
+  comparison is valid.
 
-Discriminator: add a regeneration-safe port witness at `0x8008F924` and the
-first post-loop load, plus an oracle `--watch-pc`/field capture for the same
-successor. Run one paired phase-gated measurement with:
+Discriminator: add a regeneration-safe witness at `0x8008F928`, `0x8008F938`,
+and `0x8008F93C`, plus oracle PC/field capture for the same load/use/store
+sequence. Run one paired phase-gated measurement with:
 
-`zsh scratch/agent/run_s4188_m5_object_successor.sh`
+`zsh scratch/agent/run_s4189_m5_object_load.sh`
 
 Preserve the whole-RDRAM positive control, both title origins
 (`0x00790400`/`0x00790800`), both hangar origins
-(`0x006AB400`/`0x006AB800`), the existing entry/body/loop rows, and the
-canonical autopilot with `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`. Matching
-successor tuples select parity; a mismatch selects the first divergent
-control input; missing controls or target phases selects route-invalid. Do
-not change audio, gate, writer, payload, or mitigation behavior.
+(`0x006AB400`/`0x006AB800`), all existing entry/body/loop/branch/successor
+rows, and the canonical autopilot with
+`ROGUESQ_AUTOPILOT_STOP_WIDTH=512`. Matching load/use tuples select parity;
+a mismatch selects the first divergent value; missing controls or target
+phases selects route-invalid. Do not change audio, gate, writer, payload, or
+mitigation behavior.
