@@ -146952,3 +146952,26 @@ the port witness at `0x8008F4C0` (the caller's continuation after
 This run selects H-return-parity at `0x8008F8A8` (hangar), refutes
 H-return-mismatch at that PC, and refutes the oracle-sees-delay-slot assumption.
 The next run must discriminate parity from mismatch at `0x8008F4C0`.
+
+## Session 4191 (2026-10-07) — M5 object return: caller continuation 0x8008F4C0 matches retail in the hangar
+
+Added `tools/apply_s4191_m5_object_caller.py` (regeneration-safe witness at
+`0x8008F4C0`, the continuation after `jal 0x8008F858` in funcs_23.c, reusing
+`rs64_m5_object_return_witness`) and `scratch/agent/run_s4191_m5_object_caller.sh`
+(s4190 recipe with `--watch-pc 0x8008f4c0` and its field dump). Canonical paired
+run: control=1, retail title/hangar=1/1, port title/hangar=1/1. Hangar row:
+retail `v0=0x8017E0A0 v1=0x8017D9E0 a0=0x80195190 a2=0x48 s0=0x12 s1=1 s2=1`;
+port identical on every one of those registers (`ra` 0 vs 0x8008F4C0 is the
+native-call convention again; port `sp=0x80165E48`, oracle `sp` not captured).
+The oracle counted 2 executions of `0x8008F4C0` but logged only the hangar row;
+the title row was again lost to the 10000 hit cap, so the title phase is
+port-only (single-source). No audio, gate, writer, payload or mitigation
+behavior changed.
+
+Discrimination (s4191): H-return-parity SELECTED at the caller continuation
+for the hangar phase; H-return-mismatch REFUTED there; H-route-invalid REFUTED
+(controls and phases valid). Together with s4187-s4190 the whole
+initSampleStreamBlockCache object path (entry through return to its caller) now
+matches retail in the hangar on observable registers. Nothing diverged, so this
+thread no longer selects a de-stub target; the next unit should leave
+register-parity qualification and move to the M5 plan's next de-stub step.

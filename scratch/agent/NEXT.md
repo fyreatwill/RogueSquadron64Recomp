@@ -1,19 +1,16 @@
-# Next work unit: pair the object-init return at the caller continuation
+# Next work unit: leave object-path parity qualification; pick the next M5 de-stub step
 
 HYPOTHESIS-ID: m5-step4-object-entry-body
 
-s4190: caller continuation 0x8008F8A8 matched retail in the hangar; the oracle
-cannot observe the `jr` delay slot 0x8008F958 (0 hits, port fired). The caller
-of initSampleStreamBlockCache does `jal 0x8008F858` at 0x8008F4B8; the
-continuation is 0x8008F4C0.
+s4191: caller continuation 0x8008F4C0 matched retail in the hangar (v0/v1/a0/a2/
+s0/s1/s2 equal). With s4187-s4190 the whole initSampleStreamBlockCache object
+path is register-parity clean in the hangar; six consecutive qualification
+sessions found no divergence. Do NOT add another parity witness on this path.
 
-Hypotheses:
-- H-return-parity: retail and port agree on v0/s-regs/sp at 0x8008F4C0.
-- H-return-mismatch: restored regs/sp differ, selecting the divergent register.
-- H-route-invalid: controls/phases fail.
-
-Discriminator: add a port witness at 0x8008F4C0 (new apply script modelled on
-tools/apply_s4190_m5_object_return.py; marker `    // 0x8008F4C0: lw          $ra, 0x18($sp)`),
-add `--watch-pc 0x8008f4c0` with pc-field-dump to a copy of the s4190 recipe
-(run_s4191_*.sh), and gate retail rows by phase so the title row is not lost to
-the 10000 hit cap. Keep 0x8008F8A8 as the positive control.
+Next: read docs/M5-AUDIO-PLAN.md, choose the next not-yet-done de-stub step
+(a stub/gate still in force whose removal could be soaked), and land it with a
+validation soak. Hypotheses: H-destub-dissolves-guard (crash family disappears),
+H-destub-neutral (no change), H-destub-regresses (new crash). Discriminator: the
+same hangar soak recipe with the gate off vs on, built as two arms in one iteration
+(iron rule 13). If the plan has no remaining safe step, go BLOCKED with a
+specific question.

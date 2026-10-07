@@ -3,7 +3,9 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4190 (2026-10-07).
+Updated for session 4191 (2026-10-07).
+
+Session 4191: caller continuation `0x8008F4C0` (after `jal 0x8008F858`) matched retail in the hangar on v0/v1/a0/a2/s0/s1/s2; title row lost to oracle hit cap (port-only). initSampleStreamBlockCache object path is register-parity clean entry-to-return; no divergence found, so stop parity qualification and take the next M5 de-stub step.
 
 Session 4190: hangar caller-continuation `0x8008F8A8` (return from `rs_malloc`) matched retail on v0/v1/s0/s1/s2; `ra` differs by native-call convention only. Oracle `--watch-pc` never fires on the `jr` delay slot `0x8008F958` (0 hits despite the matched store), so the retail return is unpaired; next watch the caller continuation `0x8008F4C0`.
 
