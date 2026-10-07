@@ -145218,3 +145218,20 @@ changing the returns and moves the next probe to the retail writer census for
 the dynamic `s1+0x22` selector field. Retail and port are independent evidence
 lines, but their rows are not record-synchronized. ORIGIN: the selector is a
 legitimate guest descriptor field; no mitigation or guest behavior changed.
+
+## Session 4096 (2026-10-06) — closed M3 expansion-sentinel ownership gap
+
+The prescribed M5 selector census was oracle-only and would not satisfy the
+engineering-change requirement, so I ran a bounded M3 ownership audit instead.
+The expansion path validates the fresh chain's reciprocal links and its
+disjointness from the active queue, but before this change it did not compare
+the fresh chain with the active allocator sentinel until after the expansion
+could be spliced. Added a guard in `patches/heap_guards.c` that validates the
+fixed `heap_tail_loc` slot, sentinel link state, and fresh-chain disjointness
+before any expansion splice store. ORIGIN: `func_8002221C` publishes free-list
+nodes and `heap_tail_loc` publishes the active sentinel; sharing that node is
+not legitimate ownership. `git diff --check` passed and the ordinary Debug
+`RogueSquadron64Recomp` target built successfully. `PatchesLib` and runtime
+qualification remain unavailable because this host has neither MIPS cross
+compiler nor linker. This rules out treating the host build as MIPS runtime
+evidence; it does not claim the new guard has fired in-game.

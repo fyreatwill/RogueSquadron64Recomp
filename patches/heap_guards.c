@@ -366,6 +366,19 @@ RECOMP_PATCH Block* func_80007D74(void) {
             if (!expansion_chain_links_ok(fresh)) {
                 return NULL;
             }
+            // ORIGIN: func_8002221C publishes fresh free-list nodes, while
+            // heap_tail_loc publishes the active allocator sentinel. They
+            // are separate ownership domains; reject an expansion alias
+            // before the splice below can rewrite either chain.
+            if (!metadata_slot_ok(heap_tail_loc, (void*)0x8011A7DC)) {
+                return NULL;
+            }
+            Block* expansion_sentinel = *heap_tail_loc;
+            if (!active_queue_sentinel_link_ok(expansion_sentinel) ||
+                !free_chain_disjoint_from_active_sentinel(fresh,
+                                                          expansion_sentinel)) {
+                return NULL;
+            }
             if (metadata_slot_ok(heap_other_listhead, (void*)0x801163FC)) {
                 Block* active_head = *heap_other_listhead;
                 if (active_head != NULL &&

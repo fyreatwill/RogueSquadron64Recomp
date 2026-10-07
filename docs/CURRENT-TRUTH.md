@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4095 (2026-10-06).
+Updated for session 4096 (2026-10-06).
 
 ## Current state
 
@@ -500,6 +500,18 @@ boundary (retail oracle plus port witness), but the rows are not
 record-synchronized, so it does not yet name the missing writer. ORIGIN: the
 selector is a legitimate guest descriptor field; no mitigation or guest
 behavior changed.
+
+Session 4096 performed the bounded M3 expansion-chain ownership audit required
+by the no-churn pivot. `func_8002221C`'s fresh chain was checked for link
+reciprocity and active-queue overlap, but the active sentinel was not checked
+until after the expansion could be spliced. Added a regeneration-safe guard in
+`patches/heap_guards.c` that validates the fixed `heap_tail_loc` metadata slot,
+the sentinel's predecessor/successor state, and fresh-chain disjointness before
+any splice store. ORIGIN: `func_8002221C` owns fresh free-list nodes and
+`heap_tail_loc` owns allocator metadata; an alias is not legitimate ownership
+state. The ordinary Debug target built successfully; MIPS patch/runtime
+qualification remains unavailable because this host lacks `mips64-elf-gcc` and
+`mips64-elf-ld`.
 
 ## Next steps
 
