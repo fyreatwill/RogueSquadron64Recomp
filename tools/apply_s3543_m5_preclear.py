@@ -13,7 +13,15 @@ DECL = "extern void rs64_m5_preclear_snapshot(uint8_t*, uint32_t, uint32_t, uint
 def main() -> None:
     text = TARGET.read_text(encoding="utf-8")
     if MARKER in text:
-        print("s3543 pre-clear snapshot already present")
+        required = (
+            "rs64_m5_preclear_snapshot(rdram, U32(ctx->r4), U32(ctx->r5), "
+            "U32(ctx->r6), U32(ctx->r31), U32(g_rs64_last_guest_pc), 0u);",
+            "rs64_m5_preclear_snapshot(rdram, U32(ctx->r4), U32(ctx->r5), "
+            "U32(ctx->r6), U32(ctx->r31), U32(g_rs64_last_guest_pc), 1u);",
+        )
+        if any(call not in text for call in required):
+            raise SystemExit("s3543: partial pre-clear hook is missing an edge")
+        print("s3543 pre-clear snapshot already present and complete")
         return
     if text.count(SIGNATURE) != 1:
         raise SystemExit("s3543: rs_memset signature is not unique")

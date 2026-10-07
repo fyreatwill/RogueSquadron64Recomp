@@ -146312,3 +146312,21 @@ CPU-writer probes; no guest, audio, wait, cap, predicate, slot, or writeback
 behavior changed. Evidence:
 `docs/M5-S4155-PRECLEAR-INSTRUMENT-GAP.md` and
 `scratch/agent/s4154_m5_preclear_provenance/`.
+
+## Session 4156 (2026-10-07) — qualified M5 pre-clear overwrite
+
+The existing regeneration-safe `s3543` fixup was absent from the current
+generated `funcs_2.c`; applying it inserted `rs64_m5_preclear_snapshot` at
+both `rs_memset` edges. The paired target-valid run enabled the repaired
+positive control. Retail passed whole-RDRAM, title, and hangar controls. The
+port reached both target phases. At hangar `rs_memset` entry, the watched
+`0x1797B0..0x179A48` span had `pre_nz=400` and `FNV=0xCB1E1263`; at exit it
+had `pre_nz=0` and `FNV=0xC0EFD6A5`. The same run observed the known
+`0x800078EC` clear stores in the span, all zero-valued. H-port-preclear-
+overwritten is selected: an earlier nonzero port state is destroyed by the
+known clear. This rules out port-side producer absence at this boundary, but
+does not identify the earlier writer or establish whether its values are
+legitimate. No guest, audio, wait, cap, predicate, slot, or writeback
+behavior changed. ORIGIN: the `rs_memset` snapshots and guest clear stores.
+Evidence: `docs/M5-S4156-PRECLEAR-OVERWRITE.md` and
+`scratch/agent/s4154_m5_preclear_provenance/`.

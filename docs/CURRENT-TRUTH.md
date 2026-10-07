@@ -3,7 +3,16 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4155 (2026-10-07).
+Updated for session 4156 (2026-10-07).
+
+Session 4156 repaired and verified the regeneration-safe `rs_memset` entry/exit
+hook. The target-valid port reached title and hangar; hangar entry had 400
+nonzero bytes in `0x1797B0..0x179A48`, while exit had zero, and the known
+`0x800078EC` clear stores were zero. H-port-preclear-overwritten is selected:
+the port has an earlier nonzero state that the clear destroys. The earlier
+writer identity remains open. ORIGIN: the legitimate pre-clear snapshot and
+guest clear-store observations; no behavior changed. Evidence:
+`docs/M5-S4156-PRECLEAR-OVERWRITE.md`.
 
 Session 4155 reran the pre-clear provenance pair with a target-valid port. The
 retail oracle passed whole-RDRAM, title, and hangar controls and recorded 12
@@ -617,12 +626,10 @@ Evidence: `scratch/agent/s4145_m5_a11_terminal/`.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 pre-clear producer provenance instrumentation repair:** make the port
-   pre-clear CPU-writer positive control fire for the `0x178C80..0x178F18`
-   span, then rerun the same phase-gated retail/port census. The s4155 run
-   reached both target phases but emitted zero `field348-writer`/transition
-   rows, so it cannot distinguish absent from overwritten. Do not change guest
-   behavior, audio waits, caps, predicates, slot state, or writeback.
+1. **M5 earlier-writer attribution:** identify the legitimate port writer that
+   populated `0x1797B0..0x179A48` before `0x800078EC` cleared it. Use one
+   phase-gated, source-level writer census with an independent positive control;
+   do not add a guard or other mitigation.
 2. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
