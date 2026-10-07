@@ -145167,3 +145167,18 @@ log without rerunning the experiment. The raw oracle watch summary and phase
 markers are the evidence. This is single-source retail ground truth; no
 port-side behavior conclusion is drawn. ORIGIN: the watched divisor publisher is a
 legitimate guest `+0x60` store; no mitigation or guest behavior changed.
+
+## Session 4093 (2026-10-06) — qualified M5 key-on caller and tail
+
+Ran the required oracle-only caller/tail capture with the whole-RDRAM positive
+control, Rice video, and the six-start schedule. The control fired and the
+retail route reached title and hangar. `0x80090A3C` executed 53,505 times,
+with 12,964 title rows and 6,988 hangar rows; normal tail `0x80090DE8`
+matched those rows. Publisher `0x80090768` executed 53,513 times, with 12,961
+title rows and 7,000 hangar rows. All eight early-return watches remained at
+zero. This selects Hdescriptor-branch over Hcaller-gap and Hpublisher-misjoin
+at retail scope: the entry and normal tail are live, while the guarded branch
+is not. It rules out removing or replacing the returns based on caller absence
+alone. This is single-source retail ground truth; the paired port boundary is
+the next discriminator. ORIGIN: the watched publisher is a legitimate guest
+`+0x60` store; no mitigation or guest behavior changed.

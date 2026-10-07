@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4092 (2026-10-06).
+Updated for session 4093 (2026-10-06).
 
 ## Current state
 
@@ -461,17 +461,28 @@ initial wrapper counters, is the evidence. This is single-source retail
 ground truth; a port-side witness is still required before any behavior
 change.
 
+Session 4093 ran the required oracle-only caller/tail capture with the
+whole-RDRAM positive control and both target phase transitions. Retail reached
+title and hangar; `0x80090A3C` executed 53,505 times (12,964 title rows and
+6,988 hangar rows), and its normal tail `0x80090DE8` matched those executions.
+The divisor publisher `0x80090768` executed 53,513 times (12,961 title and
+7,000 hangar rows). The eight early-return PCs remained at zero. This selects
+Hdescriptor-branch over Hcaller-gap and Hpublisher-misjoin at retail scope:
+the key-on entry and normal tail are live, while the guarded descriptor branch
+is not. It is single-source retail ground truth; qualify the paired port
+boundary before changing the returns.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 5 caller/tail ground truth.** Keep the eight early returns
-   unchanged. Use one oracle capture with the whole-RDRAM positive control and
-   both target phase gates to watch `musyxKeyOnVoice` entry `0x80090A3C`, its
-   normal tail `0x80090DE8`, and the existing divisor publisher `0x80090768`.
-   Entry/tail activity with zero trap activity selects a descriptor/branch
-   explanation; zero entry activity selects an upstream caller gap; missing
-   control or either phase is Hcoverage. Do not change runtime code until
+1. **M5 Step 5 port boundary qualification.** Keep the eight early returns
+   unchanged. In one phase-gated declared-real run, batch witnesses for
+   `musyxKeyOnVoice` entry, normal tail, all eight early-return PCs, and the
+   divisor publisher; require the existing route/PCM controls and compare the
+   port counts with s4093's retail entry/tail result. Entry/tail with zero
+   traps selects a port descriptor/branch gap; zero entry is a port caller
+   gap; missing route controls is Hcoverage. Do not change runtime code until
    this boundary is qualified.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
