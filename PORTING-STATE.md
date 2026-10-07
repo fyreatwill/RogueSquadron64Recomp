@@ -146101,3 +146101,19 @@ state, or host writeback changed. This rules out a matched source-construction
 tuple at the measured title/hangar boundaries, but does not identify the port
 caller or authorize a mitigation. Evidence: `scratch/agent/s4144_retail_fixed.log`
 and `scratch/agent/s4144_port.log`.
+
+## Session 4145 (2026-10-07) — A11 target-phase terminal rows absent on both arms
+
+Built the ordinary Debug target once and ran the independent retail oracle and
+canonical real-audio/LLE/ungated/solo/spin-yield port capture with the existing
+A11 post-wait table. The oracle passed the whole-RDRAM positive control and
+reached title `0x00790400/1024` and hangar `0x006AB400/512`; the port reached
+both phase gates with no crash or abort. Port A11 wait/post-wait rows occurred
+only in earlier width-640 phases, with no target-phase row at title or hangar.
+The retail A11 PCs fired overall but likewise produced no target-phase terminal
+row. H-A11-target-phase-absent-both is selected: this rules out a target-phase
+port-versus-retail terminal split, but does not establish wait safety or explain
+the source payload. ORIGIN: the existing guest `waitForAnyAudioSlot`/
+`anyAudioSlotActive` reads and slot-status writers; no guest behavior, wait,
+cap, predicate, slot state, or writeback mitigation changed. Evidence:
+`scratch/agent/s4145_m5_a11_terminal/`.
