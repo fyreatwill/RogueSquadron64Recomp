@@ -1,16 +1,18 @@
-# Next work unit: leave object-path parity qualification; pick the next M5 de-stub step
+# Next work unit: A12 second spin (0x8014974C) — same treatment as the countdown wait
 
-HYPOTHESIS-ID: m5-step4-object-entry-body
+HYPOTHESIS-ID: m5-a12-wait-hatches
 
-s4191: caller continuation 0x8008F4C0 matched retail in the hangar (v0/v1/a0/a2/
-s0/s1/s2 equal). With s4187-s4190 the whole initSampleStreamBlockCache object
-path is register-parity clean in the hangar; six consecutive qualification
-sessions found no divergence. Do NOT add another parity witness on this path.
+s4192 de-stubbed the 0x8014998A countdown wait: default is now a yielding spin;
+the old pump measured 16->16 (no-op). Template: tools/apply_s4192_m5_wait_spin_yield.py
+(+ _default) and scratch/agent/s4192_wait_spin_default.sh (3 concurrent arms).
 
-Next: read docs/M5-AUDIO-PLAN.md, choose the next not-yet-done de-stub step
-(a stub/gate still in force whose removal could be soaked), and land it with a
-validation soak. Hypotheses: H-destub-dissolves-guard (crash family disappears),
-H-destub-neutral (no change), H-destub-regresses (new crash). Discriminator: the
-same hangar soak recipe with the gate off vs on, built as two arms in one iteration
-(iron rule 13). If the plan has no remaining safe step, go BLOCKED with a
-specific question.
+Work unit: instrument the separate one-byte gate spin at RAM 0x8014974C
+(G_BASE-0x68B4) in waitForMusyXAudioTaskDone (see fixup_game_funcs.py ~line 8240
+comment, s330-332). Hypotheses: H-never-entered (gate already satisfied at target
+phases; nothing to de-stub), H-yield-clears (a yielding spin lets the real writer
+clear it), H-needs-other-writer (still stuck after yield cap -> name the writer).
+Discriminator: enter/exit rows with initial gate byte, blind vs yield arm, in one
+run (blind arm = positive control: enter row without exit). If H-never-entered,
+close it and move to Step 7 (status-03 reaping, A14).
+Also worth one line: the pre-wait width-320 segfault si_addr=0x400128d47 (2/6 runs)
+is an M3-family item; do not chase reactively.

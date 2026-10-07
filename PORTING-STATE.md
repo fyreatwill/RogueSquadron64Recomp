@@ -146975,3 +146975,23 @@ initSampleStreamBlockCache object path (entry through return to its caller) now
 matches retail in the hangar on observable registers. Nothing diverged, so this
 thread no longer selects a de-stub target; the next unit should leave
 register-parity qualification and move to the M5 plan's next de-stub step.
+
+## Session 4192 (2026-10-07) — M5 A12: countdown wait now yields to the real producer instead of pumping musyxSynthFrame
+
+HYPOTHESIS-ID: m5-step4-object-entry-body (closed by s4191; thread moves to M5 A12/Step 7 hatches)
+
+Chose the next de-stub from the plan's inventory: A12, the `0x8014998A` countdown wait in `waitForMusyXAudioTaskDone`. Hypotheses: H-pump-works (pump decrements the countdown, so removing it deadlocks), H-pump-noop (pump never writes the countdown and the wait falls through unsatisfied; only a real producer can), H-yield-deadlock (even yielding cannot run the producer). Discriminator: three concurrent arms of one build — pump (unset), blind spin (`NOPUMP=1`), yielding spin (`NOPUMP=2`, new: `yield_self_1ms` every 2000 spins, 5000-yield diagnostic cap) — each logging the seed countdown. Patch: `tools/apply_s4192_m5_wait_spin_yield.py` (live `funcs_24.c` x2 sites + `N64Recomp/fixup_game_funcs.py` template, regen-safe).
+
+Result (VI-phase-gated recipe, ROGUESQ_SPIN_YIELD=1, two full runs):
+- pump arm: `[audio-wait-pump] countdown0=16 pumps=64 remaining=16` and `[audio-wait-pump-stall]` on every target wait. The pump hit its ceiling with the countdown UNCHANGED; the old "musyxSynthFrame is the only decrementer" reasoning (s327) did not hold for what the pump actually executes. The pump was a silent skip, not a producer. H-pump-works REFUTED.
+- blind arm (positive control): `[audio-wait-spin-enter] mode=1 countdown0=16`, never an exit, never reached title/hangar: wait genuinely entered and a non-yielding spin deadlocks.
+- yield arm: `spin-enter countdown0=16` then `spin-exit iters≈400000 yields≈200 countdown=0`, repeated; title (1024 @ 0x00790400) and hangar (512 @ 0x006AB400) reached in both runs. H-pump-noop SELECTED; H-yield-deadlock REFUTED. The real producer, once the guest thread yields, takes the countdown 16 -> 0.
+- Run 1 pump arm segfaulted at phase=2 width=320 (`si_addr=0x400128d47`, scheduler-dispatch family, a0 sign-extended `0xffffffff80128c70`), before any wait; the rerun pump arm was fine. That crash is pre-wait and unrelated to this change (reappeared in a default-arm run below, also pre-wait).
+
+Landed (`tools/apply_s4192b_wait_spin_default.py`): unset `ROGUESQ_AUDIO_WAIT_NOPUMP` now selects the yielding spin (mode 2); `=0` restores the pump (rollback), `=1` the blind spin. Validation run (default x2, pump `=0` x1): default2 reached title+hangar with 3+ clean `spin-exit countdown=0` rows (~200 yields each); default1 hit the pre-wait width-320 segfault above (title 0); pump0 hit the pump stall (16->16) and reached no title in that window. So one clean default run plus the earlier clean yield runs (3 of 4 yield-semantics runs clean; the 4th died pre-wait): enough to land as default, NOT enough to call the width-320 crash closed.
+
+Caveat: ~200 yields at 1 ms per countdown is a real-time wait (~0.2-0.4 s per target wait); the 5000-yield cap is a diagnostic fall-out, never hit. Mission-phase waits are unmeasured (oracle cannot reach them).
+
+ORIGIN: countdown at 0x8014998A is cleared by the producer that runs when the guest thread yields; the old pump called musyxSynthFrame inline without effect (16 -> 16), so removing it as the default removes a no-op skip. The 5000-yield cap and `=0` rollback remain as hatches.
+
+Note: `fixup_game_funcs.py` and `RecompiledFuncs/` live in the sibling N64Recomp tree; the apply scripts here reproduce the edit.
