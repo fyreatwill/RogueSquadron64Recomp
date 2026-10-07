@@ -1,31 +1,43 @@
-# Next work unit: qualify the earlier producer context before 0x8008F900
+# Next work unit: repair the port predecessor field witness
 
 HYPOTHESIS-ID: m5-step4-object-field-producer
 
-Build one paired oracle/port measurement around the observed predecessor
-`0x8008F8FC`, using the existing `0x8008F900` witness and all current positive
-controls. Add a regeneration-safe predecessor snapshot only if the existing
-instrument does not already expose the required fields; otherwise reuse the
-current witness and change no runtime behavior. Phase-gate both sides on the
-qualified origins (`0x00790800`/`0x006AB800` for retail and
-`0x00790400`/`0x006AB400` for port).
+The s4180 paired run qualified the route and matched predecessor registers
+(`s0=0x48`, `s1=0x1B000`) but exposed a witness alias: the port helper's
+KSEG-only guards turn the low raw predecessor fields into `0xFFFFFFFF`, while
+the independent oracle reads the corresponding raw RDRAM fields. Make the
+diagnostic witness use the same raw-address semantics for this predecessor,
+without changing guest behavior, then rerun the paired oracle/port route.
 
 Competing hypotheses:
 
-- H-earlier-producer-context-mismatch: the predecessor context already differs,
-  moving the open boundary before `0x8008F900`.
-- H-entry-body-mismatch: predecessor context matches, so the divergence begins
-  in the `0x8008F900` body or its immediate field loads.
-- H-measurement-alias: the apparent source/branch difference is caused by
-  mismatched field semantics or phase joins rather than guest state.
+- H-earlier-producer-mismatch: comparable source/branch fields still diverge
+  after the witness semantics are repaired.
+- H-entry-body-mismatch: predecessor fields match, so divergence begins in the
+  `0x8008F900` body or its immediate loads.
+- H-measurement-alias: the repaired raw-address witness reconciles the apparent
+  divergence, leaving the current boundary unevaluable or moving it inward.
 
-The discriminator is a qualified two-sided predecessor table: positive
-control, both retail phases, both port phases, and nonzero predecessor rows
-joined to the `0x8008F900` rows. Matching predecessor fields select the entry
-body; a reproducible field divergence selects the earlier boundary; missing
-controls or joins makes the run unevaluable and does not prove absence. No
-audio, gate, writer, payload, or mitigation behavior change is authorized.
+Discriminator: one build/run with the whole-RDRAM positive control, both retail
+target phases (`0x00790400`/`0x006AB400`), both port target phases, and joined
+predecessor rows. A comparable nonzero field mismatch selects the earlier
+producer; parity selects the entry body; missing controls or joins is
+unevaluable. Do not change audio, gate, writer, payload, or mitigation logic.
+
+Exact work:
+
+1. In `rs64_m5_object_entry_witness`, preserve the register snapshot but read
+   the low raw addresses with the same physical/RDRAM semantics as the oracle;
+   keep the existing KSEG behavior for ordinary object pointers if needed and
+   label the raw-address branch explicitly.
+2. Build the normal target from `build/` and run
+   `zsh scratch/agent/run_s4180_m5_predecessor_context.sh`, using a fresh OUT
+   directory or verified child cleanup. Keep `ROGUESQ_LOG_M5_OBJECT_ENTRY=1`,
+   `ROGUESQ_LOG_M5_OBJECT_FIELD=1`, and all route flags already in the recipe.
+3. Require the positive-control line, retail title/hangar, port title/hangar,
+   71 retail predecessor hits, and two port predecessor joins before judging
+   any null or mismatch.
 
 Use [F5-UCODE-REFERENCE.md](../../docs/F5-UCODE-REFERENCE.md), not standard
-F3DEX assumptions. The qualified graphics path is LLE-only. MusyX/MORT audio
-remains partially stubbed; do not send MusyX data to stock `aspMain`.
+F3DEX assumptions. MusyX/MORT audio remains partially stubbed; do not send
+MusyX data to stock `aspMain`.

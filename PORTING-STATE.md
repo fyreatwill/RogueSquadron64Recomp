@@ -146756,3 +146756,25 @@ different selector/state fields. This selects H-earlier-producer-mismatch at
 or before `0x8008F900` over H-entry-context-match. The corrected oracle gate
 is now qualified; no audio, gate, writer, payload, or mitigation behavior
 changed.
+
+## Session 4180 (2026-10-07) — isolated M5 predecessor context semantics
+
+Ran one paired oracle/port predecessor measurement using a fresh output
+directory after a first attempt was contaminated by an orphaned child writing
+the shared output path. The fixed run's whole-RDRAM positive control fired;
+retail reached title 1024 and hangar 512; port reached both target phases; and
+both port predecessor joins fired.
+
+Retail `0x8008F8FC` and `0x8008F900` each executed 71 times. The stable
+phase-gated predecessor row was `s0=0x48`, `s1=0x1B000`,
+`source_word=0`, `branch_selector=1`, `branch_state=0x1100`. Port predecessor
+joins matched `s0=0x48` and `s1=0x1B000` in both title and hangar, but the port
+helper reported `source_word/source_half/s1_half=0xFFFFFFFF`; those values are
+produced by its KSEG-only guard, not by the guest. The port field rows
+therefore cannot yet be compared for source/branch semantics.
+
+This selects predecessor-register parity and the measurement-alias explanation
+over an earlier-producer mismatch. It supersedes s4179's source/branch
+divergence conclusion, which compared retail raw low-address fields against the
+port helper's guarded sentinel values. No audio, gate, writer, payload, or
+mitigation behavior changed.
