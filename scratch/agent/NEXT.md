@@ -1,38 +1,37 @@
-# Next work unit: M5 Step 4h predecessor arithmetic/source
+# Next work unit: M5 Step 4i `0x80084860` return/input
 
-HYPOTHESIS-ID: m5-audio-step4f-call-input-producer
+HYPOTHESIS-ID: m5-audio-step4i-voice-modulator-return
 
-Session 4082 qualified predecessor rows at `0x8008D5D0`, `0x8008D5EC`,
-`0x8008D614`, and `0x8008D674`: port `$s2` is already zero at the first
-stage and the later `$s0` path is zero. A separate retail-oracle run passed
-the whole-RDRAM control and recorded 90,484 executions of `0x800923E4`, with
-caller `0x8008D710` and nonzero title `$a1` values. The next unit audits the
-source arithmetic and its inputs without changing the gate.
+Session 4083 qualified the predecessor arithmetic. Retail and port matched
+zero-shaped stages at `0x8008D5D0`/`0x8008D5EC`, but retail's
+`0x8008D614` input was nonzero while the port's `0x8008D610` lhs was zero.
+That lhs is the return of the preceding `evaluateVoiceModulatorRecord` call
+at `0x80084860`.
 
 Competing hypotheses:
 
-- Hsetup-live: the next earlier setup/source witness matches the retail-shaped
-  values, so the producer is earlier than that witness.
-- Hsetup-divergent: an earlier source/register is already zero; its first
-  mismatch identifies the producer boundary.
-- Hsetup-path: the port reaches a different branch/object shape despite both
-  phase gates, so same-PC setup rows are not comparable.
-- Hcoverage: a required whole-RDRAM, title/hangar, channel-load, or setup
-  control is absent.
+- Hcallee-return: retail returns a nonzero value from `0x80084860` while the
+  qualified port returns zero; the callee or its input boundary is the first
+  divergence.
+- Hcallee-input: the call-entry pointer/offset or source record differs before
+  the call, while the callee's arithmetic is otherwise comparable.
+- Hcallee-match: retail and port return matching values; the divergence is in
+  the caller's use of the return or a later path.
+- Hcoverage: either arm lacks the whole-RDRAM, title/hangar, or positive
+  call/phase controls, making the comparison unevaluable.
 
-Discriminating measurement: batch one regeneration-safe witness over the
-operands feeding the `0x8008D5D0` multiply and the `0x8008D674` `$s0`
-derivation, retain the existing `0x8008D5E4` positive control, and run the
-retail oracle with whole-RDRAM plus the `0x800923E4` execution watch and all
-observed title/hangar origin variants. Hpre-live selects matching nonzero
-predecessor values and moves earlier; Hpre-divergent selects the first
-mismatch; Hpre-path selects qualified phases with no comparable rows;
-Hcoverage selects any missing control.
+Discriminating measurement: batch one regeneration-safe witness at the
+`0x8008D624` call-entry/delay-slot and the `0x80084860` callee entry/return,
+including call arguments, returned `v0`, and phase/route identity. Use the
+existing arithmetic/setup rows as positive controls. Hcallee-return selects a
+qualified retail nonzero versus port zero return; Hcallee-input selects a
+qualified argument mismatch before the call; Hcallee-match moves into the
+caller-side use; Hcoverage rejects the run.
 
-Exact preparation/run: use the direct-AUTOPILOT shape in
-`scratch/agent/run_s4081_m5_setup_witness.sh`, adding only the new earlier
-witness. Run port first, then the oracle; supervise both child PIDs and
-SIGKILL them after the required controls. If regeneration is needed, use
-`make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake` before running.
-Keep the output in a new scratch directory and do not infer a producer from a
-port-only zero.
+Exact preparation/run: extend the same `funcs_23.c` regeneration fixup and
+host logger, then build Debug. Run the fixed control-first recipe in
+`scratch/agent/run_s4083_m5_predecessor_arithmetic_fixed.sh` shape, with the
+retail oracle first and the isolated port second; arm whole-RDRAM, title and
+hangar controls and all existing M5 breadcrumbs. Capture under a new
+`scratch/agent/s4084_*` directory. Do not infer a writer from a port-only
+zero or from the invalid concurrent retry.

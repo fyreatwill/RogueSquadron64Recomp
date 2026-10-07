@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4082 (2026-10-06).
+Updated for session 4083 (2026-10-06).
 
 ## Current state
 
@@ -334,17 +334,33 @@ selected: the search moves before `0x8008D70C`, but no earlier writer is yet
 identified. ORIGIN: the legitimate values are the guest arithmetic results at
 the four predecessor instructions; the witness is diagnostic-only.
 
+Session 4083 first ran a retail-grounded predecessor capture with the
+whole-RDRAM positive control and both target phases; retail executed all four
+predecessor PCs. The first concurrent port arm hit the known
+`spTaskSchedulerThread+9632` schedule-sensitive crash before target phases,
+so its null was rejected. A fixed control-first retry qualified the retail
+controls and the isolated port reached both phases with 256 arithmetic rows,
+including 128 hangar rows. Retail's `0x8008D5D0`/`0x8008D5EC` rows and the
+port's corresponding `0x8008D5CC`/`0x8008D5E8` operands were shaped as zeros;
+retail's `0x8008D614` rows carried nonzero `v1` and products, while the port's
+`0x8008D610` rows had `lhs=0`. Both sides kept the later `0x8008D674` source
+zero. Hvoice-modulator-return is selected: the first qualified divergence is
+the value returned by the `0x80084860` call feeding `0x8008D610`, not the
+earlier multiply or later shift. ORIGIN: the legitimate source is the guest
+`0x80084860` return/input at the `0x8008D610` arithmetic site; the new rows
+are diagnostic-only.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 4h predecessor arithmetic/source.** Audit the inputs and writers
-   feeding the zero result at `0x8008D5D0` and the `$s0` derivation through
-   `0x8008D674`, using the same retail controls and qualified direct-AUTOPILOT
-   route. Batch the next source/register witness in one run; a retail-shaped
-   nonzero predecessor moves the boundary earlier, while a qualified port
-   mismatch identifies the first divergence. Do not change the gate or add a
-   mitigation from a port-only zero.
+1. **M5 Step 4i `0x80084860` return/input.** Audit the call and return feeding
+   `0x8008D610`/`0x8008D614`, using the same retail controls and the fixed
+   control-first isolated direct-AUTOPILOT route. Batch the call-entry operands,
+   callee execution, and return value in one witness; a retail-shaped nonzero
+   return with a qualified port zero confirms the callee boundary, while
+   matching returns move the search into its consumer-side arithmetic. Do not
+   change the gate or add a mitigation from a port-only zero.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
@@ -367,7 +383,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 clear is expected | Selected for clear witness `0x8008F2CC` writing object `0x801797B0`, length `0x298`. |
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
-| M5 voice modulation transform | Hpre-early selected at s4082: the qualified port predecessor witness has zero `s2` at `0x8008D5D0` and zero downstream `s0`, while an independent retail oracle reaches `0x800923E4` from `0x8008D710` with nonzero title inputs. Search moves before `0x8008D70C`; exact writer remains open. |
+| M5 voice modulation transform | Hvoice-modulator-return selected at s4083: the earlier `0x8008D5D0`/`0x8008D5EC` arithmetic matches retail-shaped zeros, but retail's `0x8008D614` input is nonzero while the port's `0x8008D610` lhs is zero. Search moves to the `0x80084860` call return. |
 | M5 route failure | Hnative-residue supported at silent pre-target scope (s4072): clean dummy-only reached both phases, while s4069's native-first dummy arm failed and s4071's native-first dummy arm succeeded. Timing/resource sensitivity remains open; no sink inference is made. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |

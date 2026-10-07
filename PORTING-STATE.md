@@ -144971,3 +144971,23 @@ the independent retail execution/input witness: the search moves before
 `0x8008D70C`, but no exact writer is identified. ORIGIN: the legitimate values
 are the guest arithmetic results at the four predecessor instructions; this
 change is diagnostic-only and adds no mitigation.
+
+## Session 4083 (2026-10-06) — qualified predecessor arithmetic divergence
+
+Ran the M5 predecessor-arithmetic work unit. First captured independent retail
+ground truth with the whole-RDRAM positive control and predecessor execution
+watches; retail reached the 512 hangar phase and showed zero-shaped
+`0x8008D5D0`/`0x8008D5EC` results but nonzero `0x8008D614` inputs/products.
+Added the regeneration-safe `s4083` arithmetic witness at the three multiply
+sites and the pre-shift source at `0x8008D670`; the ordinary Debug target
+rebuilt successfully. The first concurrent port arm crashed at the known
+`spTaskSchedulerThread+9632` route boundary before any target rows and was not
+interpreted. A control-first isolated retry qualified the oracle controls and
+the port's title/hangar phases, producing 256 arithmetic rows, 128 in hangar.
+Port rows matched the retail-shaped zero stages at `0x8008D5CC`/`0x8008D5E8`,
+but the port's `0x8008D610` lhs was zero where retail's `0x8008D614` v1/input
+was nonzero; both later `0x8008D670`/`0x8008D674` sources stayed zero.
+This selects the `0x80084860` return/input boundary as the next producer
+candidate and rules out the earlier multiply stages as the first divergence.
+ORIGIN: the legitimate source is the guest return/input from `0x80084860`;
+the new arithmetic rows are diagnostic-only, not a mitigation.
