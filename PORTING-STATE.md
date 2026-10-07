@@ -147065,3 +147065,5 @@ Result: default arm (positive control) `[waitforslot-guard-fire] fires=1 iters=5
 
 SELECTS H-no-yield; REFUTES H-tick-gated-elsewhere and H-retail-same (this wait site). Discriminating measurement: same run, same build, one arm with yield and one without; the control arm fired the guard (fires=1) and the yield arm did not (fires=0), so the starvation of the non-yielding spin, not a missing producer, is what forced the cap. This is a behavioural change (a de-stub that dissolves a guard fire), not only an instrument.
 NEXT DISCRIMINATOR: repeat the A/B (control must again show fires=1). If yield fires=0 twice with no crash, H-no-yield is two-source and the yield becomes the default (cap kept as backstop); if fires>=1 in the yield arm, a second tick gate exists and the discriminator becomes the slot-byte writer PC under yield.
+
+In plain terms: this run selects H-no-yield and refutes H-tick-gated-elsewhere for the A11 wait; the repeat A/B is the next discriminator to confirm it.
