@@ -1,10 +1,7 @@
-# Next work unit: M5 A11 — yield inside waitForAnyAudioSlot spin so ticks can finish the voice
+# Next work unit: M5 A11 — repeat the yield arm and make it default
 
 HYPOTHESIS-ID: m5-a11-pretitle-slot-stall
 
-s4196: slot-0 byte stall pre-title is NOT a missing producer; musyxRenderVoiceSamples clears 02->00 only after the cap fires
-(cap5m.log:110398 vs fire 110202). The spin is non-yielding so audio ticks are starved. Hypotheses: H-no-yield (adding a yield in
-the spin lets render finish, fires 1->0), H-tick-gated-elsewhere (yield added but ticks still don't come; fires stay 1), H-retail-same.
-Discriminator: one run, two concurrent arms: (a) unchanged, (b) yield-per-N-iterations in the waitForAnyAudioSlot loop
-(fixup_game_funcs.py, same pattern as the A12 countdown yield, s4192). Positive control: arm (a) still prints
-[waitforslot-guard-fire] fires=1. Template: scratch/agent/s4196_slot0_cap_ab.sh. Regen order applies (fixup script, then cmake).
+s4197: ROGUESQ_WAITFORSLOT_YIELD=2000 removed the cap fire (1 -> 0) in one run; hangar reached with 535 VI-512 rows.
+Next: rerun scripts scratch/agent/s4197_slot0_yield_ab.sh once more (control must show fires=1), then enqueue it as a soak;
+if fires stay 0 and no crash, make unset default to 2000 (edit the fixup template + generated, regen order applies), then move to the next A-item in docs/M5-AUDIO-PLAN.md.

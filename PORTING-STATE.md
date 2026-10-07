@@ -147054,3 +147054,11 @@ the last render. H-no-producer REFUTED; H-slow-by-iterations refuted as stated. 
 past boot/attract), so H-retail-same is unmeasured. ORIGIN: the stall is a missing yield in the spin (ticks starved while the
 guest busy-waits), same family as the A12 countdown de-stub; the cap is a mitigation, not a fix. Single-source (one run per arm).
 Next: yield inside the waitForAnyAudioSlot spin and confirm cap fires go 1 -> 0 in one run.
+
+## Session 4197 (2026-10-07) — M5 A11 de-stub: yield in waitForAnyAudioSlot spin lets ticks finish; guard fires 1 -> 0
+
+HYPOTHESIS-ID: m5-a11-pretitle-slot-stall
+
+ORIGIN: the slot-0 byte clears only in musyxRenderVoiceSamples, which the non-yielding wait spin starves (s4196); the 500k cap was a mitigation for that starvation. Added `ROGUESQ_WAITFORSLOT_YIELD=N` (yield_self_1ms every N laps while no slot active; unset = unchanged) via tools/apply_s4197_m5_waitforslot_yield.py (patches funcs_15.c + the fixup_game_funcs.py template). Built, ran two concurrent arms (scratch/agent/s4197_slot0_yield_ab.sh).
+
+Result: default arm (positive control) `[waitforslot-guard-fire] fires=1 iters=500000`; yield=2000 arm fires=0, `[waitforslot-yield]` rows yields=1..5 (iters 2000..10000), spin exited before the 1000th yield (<2M laps). Both arms reached title (2305/2260 VI-1024 rows) and hangar (7 vs 535 VI-512 rows). H-no-yield CONFIRMED; H-tick-gated-elsewhere and H-retail-same-spin refuted for this site. Caveat: single run per arm, no crash seen in either log window; yield stays opt-in (env) until a second run and a soak confirm.
