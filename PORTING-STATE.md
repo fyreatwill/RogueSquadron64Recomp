@@ -144827,7 +144827,8 @@ present. The fixup inserted that call only inside the broad s2586 entry-patch
 guard, so a regenerated file with the s2586 marker skipped the store witness.
 
 Added an independent unique-anchor insertion to the fixup. Python compilation
-and the companion repository's diff check passed. This is diagnostic-only and
+passed; the companion repository's diff check also reported pre-existing
+trailing whitespace in generated `funcs_30.c`. This is diagnostic-only and
 does not alter the guest store or audio behavior. The s4075 port null is
 superseded as path evidence: it was an instrumentation false negative, not a
 qualified branch divergence. Retail's 88 execution rows and 72 mismatch-free
