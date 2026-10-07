@@ -146027,3 +146027,19 @@ does not requalify or overturn it. ORIGIN: the measured boundary is the guest
 predicate, slot state, or host writeback changed. Evidence:
 `scratch/agent/s4140_retail.log`, `scratch/agent/s4140_retail_retry.log`,
 `scratch/agent/s4140_port.log`.
+## Session 4141 (2026-10-07) — M5 source-context route-invalid retry
+
+Ran the required retail ground-truth preflight with the whole-RDRAM positive
+control and source-span watch. It recorded 12,240 whole-RDRAM writes, 2,240
+source-span writes, and nonempty title VI-1024 (633) and hangar VI-512 (528)
+phase buckets. The rebuilt canonical real-audio/LLE/ungated/solo/spin-yield
+port arm first crashed before title in `fillSampleStreamRange+8136` at guest
+PC `0x8000B650`. A fixed retry reached title VI 1024 and fired the source-
+context control with 256 rows, but a 90-second retry crashed before hangar in
+`fillSampleStreamRange+932` at the same guest PC. H-source-context-route-
+invalid is selected: the paired caller tuple is unevaluable at hangar, so the
+s4139 caller split remains the last qualified comparison. This rules out no
+source or caller explanation and does not authorize another route-identical
+retry in the next unit. ORIGIN: the guest `0x800078EC` source-construction/
+store boundary; no guest behavior, wait, cap, predicate, slot state, or host
+writeback changed. Evidence: `scratch/agent/s4141_m5_source_context/`.

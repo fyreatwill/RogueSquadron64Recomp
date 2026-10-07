@@ -1,35 +1,28 @@
-# Next work unit: requalify the M5 source-construction predecessor pair
+# Next work unit: capture the M5 A11 pending-slot recurrence
 
-HYPOTHESIS-ID: m5-source-construction-predecessor
+HYPOTHESIS-ID: m5-a11-pending-slot-recurrence
 
-Retry the s4139 caller/entry discriminator only with a retail capture that
-reaches title 1024 and hangar 512. Keep the existing port source-context hook;
-do not change image, wait, cap, predicate, slot state, guest behavior, or host
-writeback.
+Use the existing canonical real-audio/LLE/ungated/solo/spin-yield route and the
+existing A11 phase-scoped table. Do not change the wait, cap, predicate, slot
+state, guest behavior, or host writeback. The s4141 source-context route is
+parked after two retries failed to reach a paired hangar phase.
 
 Competing hypotheses and discriminator:
 
-- H-retail-port-caller-match: a qualified paired run shows matching retail and
-  port caller/argument setup before `0x800078EC`.
-- H-retail-port-caller-split: a qualified paired run repeats a divergent
-  caller, source pointer, or length before the zero-valued store.
-- H-route-invalid: either arm lacks whole-RDRAM control or one of the two
-  target phase gates.
+- H-A11-pending-reproduced: a qualified title/hangar run records the pending
+  `chCount=16` call and the complete slot `01/02/00` writer/terminal sequence.
+- H-A11-not-reproduced: both phase gates and the positive control pass, but no
+  pending `chCount=16` call appears; this parks the recurrence without
+  changing the wait.
+- H-route-invalid: the positive control or either target phase gate is absent.
 
-The s4140 port arm is phase-qualified and emitted 256 sampled rows per phase:
-title `a0=0x80178C80`, `a2=0x298`; hangar `a0=0x801797B0`, `a2=0x298`; `ra=0`
-is still an instrument limitation. Both s4140 retail retries remained at VI
-640, so they cannot update the caller split.
+Before building, verify the existing A11 probe and its positive-control env
+var in the tracked debug catalog. Build once, then run one bounded canonical
+real-audio route from `build/` with the existing phase and A11 env vars. Kill
+the process group with SIGKILL. Accept a conclusion only if the run has the
+whole-RDRAM/phase controls plus either the complete pending transition or a
+qualified null.
 
-Before the next build, run the retail oracle with the existing accepted
-schedule and require the whole-RDRAM control plus title/hangar gates. If it is
-qualified, build once and run the port with:
-
-```sh
-python3 tools/apply_s4140_m5_source_context.py
-cmake --build build --config Debug --target RogueSquadron64Recomp
-```
-
-Use the s4140 real-audio/LLE/solo/spin-yield environment and phase settings
-from the prior iteration. A missing gate selects H-route-invalid and must not
-be used to infer a source or caller fact.
+Expected discriminating outcomes: pending `chCount=16` plus a complete
+writer/terminal table selects H-A11-pending-reproduced; qualified absence
+selects H-A11-not-reproduced; missing controls select H-route-invalid.

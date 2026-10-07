@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4140 (2026-10-07).
+Updated for session 4141 (2026-10-07).
 
 ## Current state
 
@@ -64,6 +64,20 @@ iteration only; the prior s4139 H-retail-port-caller-split remains qualified.
 ORIGIN: the guest `0x800078EC` store loop and its entry tuple; no guest
 behavior, wait, cap, predicate, slot state, or host writeback changed.
 Evidence: `scratch/agent/s4140_port.log` and the two retail logs.
+
+Session 4141 qualified the independent retail preflight with a live
+whole-RDRAM control (12,240 writes), source-span writes (2,240), and nonempty
+title/hangar phase buckets (633 title VI-1024 rows and 528 hangar VI-512 rows).
+The rebuilt port arm first failed before title in `fillSampleStreamRange+8136`
+at guest PC `0x8000B650`; a fixed retry reached title VI 1024 and emitted 256
+source-context rows, but a 90-second retry crashed before hangar in
+`fillSampleStreamRange+932` at the same guest PC. H-source-context-route-
+invalid is selected for this iteration: the retail witness is qualified, but
+the paired port caller tuple is unevaluable at hangar. The s4139 caller split
+therefore remains the last qualified comparison. ORIGIN: the guest
+`0x800078EC` source-construction/store boundary; no guest behavior, wait, cap,
+predicate, slot state, or host writeback changed. Evidence:
+`scratch/agent/s4141_m5_source_context/`.
 
 The task-contract consumer boundary is closed at the measured scope: declared
 and legacy real-audio arms reached both target phases with matching zero
@@ -463,16 +477,16 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 source-construction predecessor:** explain the qualified s4139 tuple
-   split by tracing the port's caller/entry setup before `0x800078EC` and
-   joining it to retail's `prev_pc=0x800052C4`; keep image, wait, cap,
-   predicate, slot state, guest behavior, and host writeback unchanged.
-2. **M3 pre-publication guard runtime qualification** remains blocked on a host
+1. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
+   writer and terminal table only when the pending `chCount=16` call appears
+   on a qualified route. Keep the cap and wait unchanged; do not infer from
+   another pre-hangar route failure.
+2. **M5 source-construction predecessor:** return to the s4139 tuple split
+   only with a genuinely new route discriminator; the s4141 port retry was
+   route-invalid before hangar.
+3. **M3 pre-publication guard runtime qualification** remains blocked on a host
    with `mips64-elf-gcc`/`mips64-elf-ld` and a configured `PatchesLib` target;
    do not spend another host-only iteration.
-3. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
-   writer and terminal table only when the pending `chCount=16` call appears
-   on a qualified route. Keep the cap and wait unchanged.
 4. **Generated-symbol renaming sweep.** Parked while M5 has applicable route,
    writer, or audio work. Keep slug `generated-symbol-renaming-sweep` if it
    resumes; mapping-only edits do not reset the engineering-change gate.
