@@ -131,6 +131,20 @@ selected for this iteration. This does not select a slot predicate or permit
 changing the wait/cap. ORIGIN: no guest writer, wait, force-clear, or
 mitigation changed.
 
+Session 4124 reran the retail oracle first: the whole-RDRAM positive control
+fired, and retail reached title `0x00790400/1024` and hangar
+`0x006AB400/512`. The rebuilt canonical real-audio/LLE/ungated/solo/spin-yield
+port route also reached both phases, dispatched real audio, returned 516 audio
+tasks, and had no crash or abort. Its phase-4 A11 table recorded one
+`waitForAnyAudioSlot` entry with `wait-post-any-slot`; no cap or active-slot
+guard fired. The earlier pending `chCount=16` call did not recur, and hangar
+had only status reads of `slot0=01, slot1=00, slot2=00`. H-A11-route-invalid is
+rejected for this run, but the terminal-transition table for the absent pending
+call remains unevaluable. This is a qualified non-reproduction, not evidence
+that the pending call is safe or that a slot writer is irrelevant. ORIGIN: the
+existing guest wait/predicate and slot-status writers were observed; no guest
+writer, wait, cap, force-clear, or mitigation changed.
+
 Generated-tree audits confirmed the relevant service and image functions exist outside this checkout and in the fixup inputs. Guard changes require an ORIGIN naming the legitimate writer; no force-clear, wait replacement, synthetic DMA, or default-on mitigation was authorized.
 
 The preceding session-specific details remain in PORTING-STATE.md; only evidence that changes the current decision boundary belongs in this compact file.
@@ -245,23 +259,25 @@ return join remains a diagnostic detail, not a reason to alter behavior.
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 A11 route-qualified follow-up:** rerun the complete slot `01/02/00`
-   writer and terminal-transition table using the canonical AUTOPILOT and
-   phase-gated route, with
-   `ROGUESQ_LOG_M5_WAIT_CONTRACT=1` and `ROGUESQ_LOG_M5_KEYON_CENSUS=1`.
-   Reconcile the pending `chCount=16` call against its slot predicate and the
-   independent retail wait evidence. Do not remove the cap, replace the wait,
-   or force a slot state.
-2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
+1. **M5 Step 3 validation:** run the declared-size versus legacy-size audio
+   staging A/B in one build, using the canonical AUTOPILOT and phase-gated
+   route. Require task dispatch/exit, SP completion, image-stage/DMA joins,
+   slot/service, PCM, and title/hangar controls in both arms. Do not infer a
+   cause from matching zero payloads; this validates or rejects the staging
+   behavior change as a de-stubbing step.
+2. **M5 A11 recurrence capture:** interpret the complete slot `01/02/00`
+   writer and terminal table only when the pending `chCount=16` call appears
+   on a qualified route. Keep the cap and wait unchanged.
+3. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
    already pass; do not infer runtime behavior from that build alone. This
    macOS host is blocked on installing/providing `mips64-elf-gcc` and
    `mips64-elf-ld` or using another host with them.
-3. **M5 de-stubbing.** After the current route/source discriminator is closed,
+4. **M5 de-stubbing.** After the current route/source discriminator is closed,
    follow the incremental validation sequence in `M5-AUDIO-PLAN.md`; do not
    treat the silent control as real-audio evidence.
-4. **Generated-symbol renaming sweep.** Parked while M5 has applicable route,
+5. **Generated-symbol renaming sweep.** Parked while M5 has applicable route,
    writer, or audio work. Keep slug `generated-symbol-renaming-sweep` if it
    resumes; mapping-only edits do not reset the engineering-change gate.
 
@@ -286,6 +302,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 A10 voice/list/table guards | H-A10-not-suppressing-valid-work selected at s4119's measured scope: retail's independent `0x80096D88` writer reached the target table root (371 hangar writes), while the qualified port reached both phases with valid traversal/table rows and zero A10 guard fires. No guard relaxation is authorized. |
 | M5 A9 voice-array-base guards | H-A9-legitimate selected at s4120's measured scope: retail reached the allocator writer and 10/12 A9 PCs in hangar; the qualified port reached both phases with positive controls and zero fires at all 12 A9 guards. No guard relaxation is authorized. |
 | M5 A8 key-on divide/overflow traps | H-A8-trap-live selected at s4121's measured scope: retail and qualified port both reached title/hangar with positive controls; retail hit none of the eight trap PCs, and port recorded zero guards, normal-tail progress, divisor `0xC0`, and slot `0x02`/`0x00` transitions. No trap change is authorized. |
+| M5 A11 wait terminal transition | H-A11-route-invalid is rejected by s4124's qualified canonical route. The run cleanly returned from one wait call but did not reproduce s4122's pending `chCount=16` call; the pending writer/terminal relationship remains open. |
 | Generated symbol sweep | Parked until higher-priority M5/M3 work is inapplicable. |
 
 ## Durable evidence boundary

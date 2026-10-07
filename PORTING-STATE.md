@@ -145739,3 +145739,22 @@ writer/terminal rows as a nonterminal slot result. The next capture must use
 the canonical AUTOPILOT and phase-gated driver. No guest writer, wait, cap,
 force-clear, or mitigation changed. ORIGIN: no guest writer or mitigation was
 changed.
+
+## Session 4124 (2026-10-07) — qualified A11 non-reproduction on canonical route
+
+Asked the retail oracle first with the whole-RDRAM positive control and title/
+hangar phase tracing. The control fired; retail reached title
+`0x00790400/1024` and hangar `0x006AB400/512`. The rebuilt canonical
+real-audio/LLE/ungated/solo/spin-yield port route reached both phases, recorded
+real audio dispatch, returned 516 audio tasks, and had no crash or abort.
+
+The phase-4 wait table recorded one `waitForAnyAudioSlot` entry followed by
+`wait-post-any-slot`; no wait cap or active-slot guard fired. The pending
+`chCount=16` call from s4122 did not recur. Hangar status reads were
+`slot0=01, slot1=00, slot2=00`. This rejects H-A11-route-invalid for this
+run, but leaves the pending call's writer/terminal relationship unevaluable;
+it is a qualified non-reproduction, not evidence that the pending call is safe.
+The next work unit pivots to the planned declared-size versus legacy-size
+audio staging A/B. No guest writer, wait, cap, force-clear, or mitigation
+changed. ORIGIN: the existing guest wait/predicate and slot-status writers
+were observed; no mitigation was added.
