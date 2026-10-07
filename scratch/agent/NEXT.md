@@ -1,7 +1,7 @@
-# Next work unit: M5 Step 9 — are any MusyX voices ever started (title/hangar), and does a started voice decode?
+# Next work unit: M5 Step 9b — at key-on normal tail, are the voice's ADPCM source bytes nonzero, and does the ucode DMA them?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4202: PCM content is nil: title = 19 buffers of decaying constant L/R DC, hangar = all zeros (min=max=0).
-Hypotheses: H-no-voices (no voice/song start ever reaches the synth: sound API calls stubbed/never issued); H-voice-no-decode (voices allocated but sample ADPCM/DMA yields zeros); H-mix-drop (voices decode but the ucode mix/envelope zeroes them).
-Discriminator (one build, one run, s4200_drain_tick_ab.sh default arm): log per audio-frame count of active voice slots (voice array at the MusyX struct, see waitForAnyAudioSlot/ slot status guards) plus count of voice-start (note on) calls, and first 8 decoded-sample words of the first active voice. 0 voices => H-no-voices; voices>0 with zero decoded words => H-voice-no-decode; nonzero decoded but zero out => H-mix-drop. Positive control: the title DC buffers must coincide with a nonzero voice/filter state.
+s4203: voices ARE keyed on (entry>=22, normal_tail>=21, slot 01->02->00) in title and hangar. H-no-voices refuted.
+Hypotheses: H-voice-no-decode (voice sample-source bytes in RDRAM are zero, or the DMA from them is never issued), H-mix-drop (source bytes nonzero and DMA'd, but ucode mix/envelope/volume zeroes the output).
+Discriminator (one build, one run, s4203 recipe): at musyxKeyOnVoice normal tail (0x80090DE8) log the voice record's sample pointer and FNV of its first 64 bytes; in the same run log RSP-ucode DMEM input FNV for the first audio task per phase and the voice volume/envelope fields. Source zero => H-voice-no-decode (chase sample load; ties to s4163 pi_rom_to_rdram writer); source nonzero + volume field 0 => H-mix-drop. Positive control: a known-nonzero region (the 0x00C00092 source_word record) must hash nonzero.

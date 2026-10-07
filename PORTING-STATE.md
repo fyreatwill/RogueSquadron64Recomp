@@ -147104,3 +147104,10 @@ Rules out: that the port's mixer output differs from retail merely in loudness; 
 
 Gate addendum (s4202): this run selects H-title-garbage (structured decaying DC, not music) and selects H-hangar-no-voices-or-no-decode; it refutes H-title-real (genuine loud PCM) and refutes the s4201 reading that fully-nonzero title buffers were audio.
 Next discriminator: per-audio-frame active MusyX voice-slot count plus voice-start call count plus first decoded words of the first active voice; zero voices selects H-no-voices, voices with zero decode selects H-voice-no-decode, nonzero decode with zero output selects H-mix-drop.
+
+## Session 4203 (2026-10-07) — M5 Step 9: voices ARE keyed on in title and hangar; H-no-voices refuted, zero PCM sits downstream of key-on
+
+Ran scratch/agent/s4203_keyon_census.sh (s4200 default arm + ROGUESQ_LOG_M5_KEYON_CENSUS=1, ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1; existing s2122 census, no build). Route valid: title 2326 / hangar 745 vi_width lines, no crash.
+Result: musyxKeyOnVoice entered in phases 3 (pre-title 640), 4 (title 1024), 5 (hangar 512): each reached entry=22 / div=22 / guard=0 / normal_tail=21 (row-capped, so floors), divisor 0xC0, zero guard fires at all eight sites. Slot-byte writers fire 01->02 and 02->00 in every phase (slot02/slot00 = 51/41, 59/59, 68/60 at last logged row). Pointer-branch rows reach n=69430 in hangar with nonzero source_word 0x00C00092.
+Verdict: H-no-voices REFUTED (positive control = the census rows; dead-site control = 0 guard fires). Voices are allocated, keyed and retired, yet PCM is DC/zero (s4202). Open: H-voice-no-decode (voice sample source bytes zero at RSP DMA) vs H-mix-drop (decoded nonzero, zeroed by ucode mix/envelope). Single-source (port only; retail has no key-on count at this phase); counts are floors.
+ORIGIN: no mitigation added; diagnostic-only run.
