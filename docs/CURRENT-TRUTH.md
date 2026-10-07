@@ -740,14 +740,25 @@ its fixup is external/absent here. This leaves the current source inventory
 unresolved/generated-only and does not qualify a new run or authorize a wait
 or force-clear change. ORIGIN: no guest writer or mitigation was changed.
 
+Session 4116 ran the required generated-tree/fixup boundary check. The external
+`N64Recomp/RecompiledFuncs` tree, `fixup_game_funcs.py`, and the exact
+`0x8009B7EC` witness are present; the ordinary Debug target rebuilt cleanly.
+The retail positive control and both retail phase gates passed. The silent
+port arm reached title and hangar, but the real-audio/image arm failed before
+title in `spTaskSchedulerThread+9632` at guest PC `0x8000834C`; no image-arm
+status-03 rows are therefore valid. The generated inputs are present, so
+H-generated-absent is rejected; the status-03 worker/store chain remains
+unqualified and needs a silent-arm phase-gated capture. ORIGIN: no guest
+writer, wait, force-clear, or mitigation was changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 de-stubbing Step 7:** recover the external generated-tree/fixup
-   inputs needed to reproduce the status-03 worker contract, then qualify
-   the named worker entry, `0x8009B7EC` zeroing store, and shutdown return in
-   one phase-gated run; do not force-clear unexplained status.
+1. **M5 de-stubbing Step 7:** use the now-located generated tree/fixup to
+   qualify the named worker entry, `0x8009B7EC` zeroing store, and shutdown
+   return on a silent arm that reaches both target phases; the real-audio/image
+   arm is currently route-invalid. Do not force-clear unexplained status.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor and allocator-cursor/sentinel guards. The source and ordinary host target
@@ -771,7 +782,7 @@ Work only the first applicable item. This backlog is one monotonic sequence.
 | M5 consumer disconnected | Selected at the measured task/output scope; upstream zero payload remains open. |
 | M5 channel-span consumer | Hconsumer-live selected (s4078): retail reads the span and the port loads retail-shaped `0x7F` bytes at `0x8008D5E4` in title/hangar. |
 | M5 voice modulation transform | Hlater-transform selected at s4091's first demonstrated boundary: the port `0x80084AB8` return values are the low 16 bits of `s0` after the source `andi`, and every sampled port value (`0`, `0xF00`, `0x1900`, `0x2000`, `0x3F80`) occurs in the qualified retail title/hangar support. The independent rows are not record-synchronized, so a later transform remains open. |
-| M5 route failure | H-image-specific-failure remains selected at s4108's measured scope: silent reached title only, while both declared `0x800` and legacy `0xF80` image arms reached title/hangar. Session 4109 rejects staging size as the sufficient downstream explanation; the zero-payload origin remains open. |
+| M5 route failure | H-image-specific-failure remains selected at s4116's measured scope: the silent arm reached title/hangar, while the real-audio/image arm crashed pre-title in `spTaskSchedulerThread+9632`; the image arm's status/source nulls are unevaluable. Earlier declared/legacy image qualifications remain valid for their own schedules. |
 | M5 image zero boundary | Hguest-zero-producer selected at s4112: both qualified port arms recorded 664 zero-valued `0x800078EC` stores into `0x178C80..0x178F18` before the zero input reads; host `rsp_dmem_to_rdram` writes were downstream zero writeback. Retail independently reached both phases and recorded nonzero span bytes. |
 | M3 sentinel ownership | H1 selected at source/host-build scope; runtime unqualified. |
 | M5 gate value | Selected at measured scope: retail gate writes were zero-byte pre-target activity. |

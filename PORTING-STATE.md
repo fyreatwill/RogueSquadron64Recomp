@@ -145579,3 +145579,18 @@ reproduce or extend its runtime qualification. This rules out treating a
 tracked source implementation as available for the next build, but does not
 rule out the worker contract itself. No guest behavior, wait, or force-clear
 changed.
+## Session 4116 (2026-10-06) — located generated tree, image route invalid
+
+Ran the prescribed Step 7 boundary inventory. The external generated tree at
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`, its
+`fixup_game_funcs.py`, and the exact `0x8009B7EC` witness in `funcs_26.c` are
+present. Rebuilt `RogueSquadron64Recomp` successfully, then ran
+`scratch/agent/run_s4106_m5_contract_rebaseline.sh` with the independent retail
+oracle and its whole-RDRAM positive control.
+
+Retail passed the positive control and title/hangar gates. The silent port arm
+reached title and hangar. The real-audio/image arm failed before title at
+`spTaskSchedulerThread+9632`, guest PC `0x8000834C`; its downstream status-03
+nulls are unevaluable. This rejects H-generated-absent and establishes the
+next work unit as a silent-arm qualification of the status-03 entry/store/
+return chain. No guest writer, wait, force-clear, or mitigation changed.
