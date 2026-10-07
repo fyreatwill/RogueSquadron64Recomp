@@ -812,7 +812,7 @@ index 8c8e5d1..0907c36 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..81e0a5f 100644
+index 43509ba..e48631d 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -8,9 +8,15 @@
@@ -874,10 +874,29 @@ index 43509ba..81e0a5f 100644
  }
  
  void save_clear(uint32_t start, uint32_t size, char value) {
-@@ -274,6 +302,23 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -266,6 +294,16 @@ void ultramodern::join_saving_thread() {
+     }
+ }
+ 
++extern "C" uint32_t rs64_phase_ord();
++extern "C" volatile uint32_t g_rs64_last_guest_pc;
++struct Rs64S4211Pi { uint32_t dram, size, rom_off, phase, pc; };
++Rs64S4211Pi rs64_s4211_pi_ring[8192];
++uint64_t rs64_s4211_pi_n;
++static void rs64_s4211_pi_note(uint32_t dram, uint32_t size, uint32_t rom_off) {
++    Rs64S4211Pi& e = rs64_s4211_pi_ring[rs64_s4211_pi_n % 8192];
++    e.dram = dram & 0x7FFFFFu; e.size = size; e.rom_off = rom_off; e.phase = rs64_phase_ord(); e.pc = g_rs64_last_guest_pc;
++    rs64_s4211_pi_n++;
++}
+ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_addr, uint32_t size, uint32_t direction) {
+     // TODO asynchronous transfer
+     // TODO implement unaligned DMA correctly
+@@ -273,6 +311,24 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+         if (physical_addr >= recomp::rom_base) {
              // read cart rom
              recomp::do_rom_read(rdram, rdram_address, physical_addr, size);
- 
++            rs64_s4211_pi_note((uint32_t)rdram_address, size, physical_addr - recomp::rom_base);
++
 +            // ROGUESQ: when a ROM-to-RDRAM DMA brings in an overlay region,
 +            // register its recompiled functions in func_map so subsequent
 +            // calls to addresses in that range dispatch correctly. Internal
@@ -894,11 +913,10 @@ index 43509ba..81e0a5f 100644
 +                fflush(stderr);
 +            }
 +            load_overlays_by_start(rom_offset, (int32_t)rdram_address, size);
-+
+ 
              // Send a message to the mq to indicate that the transfer completed
              ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
-         } else if (physical_addr >= recomp::sram_base) {
-@@ -313,12 +358,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,12 +369,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
@@ -976,7 +994,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..4b414b3 100644
+index 1cb3f6a..8fd8923 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -990,7 +1008,7 @@ index 1cb3f6a..4b414b3 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1751 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1800 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2263,6 +2281,54 @@ index 1cb3f6a..4b414b3 100644
 +        std::fflush(stderr);
 +    }
 +}
++struct Rs64S4211Pi { uint32_t dram, size, rom_off, phase, pc; };
++extern Rs64S4211Pi rs64_s4211_pi_ring[8192];
++extern uint64_t rs64_s4211_pi_n;
++extern "C" void rs64_s4211_task(uint8_t* rdram, uint32_t dp_virt) {
++    struct Slot { uint32_t dp; uint32_t hash; uint64_t tasks, changes, first_phase; };
++    static Slot slots[32]; static int nslots;
++    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned long ph_tasks, ph_changes;
++    uint32_t phase = rs64_phase_ord();
++    if (phase != ph_key) { ph_key = phase; ph_tasks = ph_changes = 0; }
++    const uint32_t dp = dp_virt & 0x7FFFFFu;
++    const uint32_t lo = dp - 0x10, len = 0x130;
++    auto byte = [&](uint32_t p) { return rdram[(p) ^ 3]; };
++    uint32_t h = 2166136261u;
++    for (uint32_t i = 0; i < len; i++) { h ^= byte(lo + i); h *= 16777619u; }
++    Slot* s = nullptr;
++    for (int i = 0; i < nslots; i++) if (slots[i].dp == dp) s = &slots[i];
++    ph_tasks++;
++    if (!s) {
++        if (nslots >= 32) return;
++        s = &slots[nslots++]; *s = Slot{dp, h, 0, 0, phase};
++        std::fprintf(stderr, "[s4211-new] phase=%u dp=0x%06X pi_ring_total=%llu ascii0x10=\"", phase, dp, (unsigned long long)rs64_s4211_pi_n);
++        for (uint32_t i = 0; i < 0x30; i++) { uint8_t c = byte(dp + i); std::fputc((c >= 32 && c < 127) ? c : '.', stderr); }
++        std::fprintf(stderr, "\"\n");
++        uint64_t total = rs64_s4211_pi_n, avail = total < 8192 ? total : 8192; int hits = 0;
++        for (uint64_t k = 0; k < avail && hits < 4; k++) {
++            const Rs64S4211Pi& e = rs64_s4211_pi_ring[(total - 1 - k) % 8192];
++            if (e.dram < lo + len && e.dram + e.size > lo) {
++                std::fprintf(stderr, "[s4211-pi-hit] dp=0x%06X age=%llu dram=0x%06X size=0x%X rom_off=0x%08X dma_phase=%u guest_pc=0x%08X\n", dp, (unsigned long long)k, e.dram, e.size, e.rom_off, e.phase, e.pc);
++                hits++;
++            }
++        }
++        if (avail) {
++            const Rs64S4211Pi& e = rs64_s4211_pi_ring[(total - 1) % 8192];
++            std::fprintf(stderr, "[s4211-ctl] dp=0x%06X pi_hits=%d newest_dma=0x%06X+0x%X self_overlap=%d\n", dp, hits, e.dram, e.size, (int)(e.size > 0 && e.dram < e.dram + e.size));
++        } else std::fprintf(stderr, "[s4211-ctl] dp=0x%06X pi_hits=%d ring_empty\n", dp, hits);
++        std::fflush(stderr);
++        return;
++    }
++    s->tasks++;
++    if (h != s->hash) {
++        s->changes++; ph_changes++; s->hash = h;
++        if (s->changes <= 3) std::fprintf(stderr, "[s4211-chg] phase=%u dp=0x%06X change#%llu at task#%llu\n", phase, dp, (unsigned long long)s->changes, (unsigned long long)s->tasks);
++    }
++    if ((ph_tasks % 1024ul) == 0) {
++        std::fprintf(stderr, "[s4211-sum] phase=%u phase_tasks=%lu phase_changes=%lu slot_dp=0x%06X slot_tasks=%llu slot_changes=%llu\n", phase, ph_tasks, ph_changes, dp, (unsigned long long)s->tasks, (unsigned long long)s->changes);
++        std::fflush(stderr);
++    }
++}
 +extern "C" void rs64_probe_audio_dma_write(uint8_t* rdram,
 +                                              uint32_t dram_addr, uint32_t len,
 +                                              uint32_t dmem_addr) {
@@ -2581,6 +2647,7 @@ index 1cb3f6a..4b414b3 100644
 +                rs64_vi_committed_width(), rs64_vi_committed_origin());
 +        fflush(stderr);
 +    }
++    if (is_audio_task) { rs64_s4211_task(rdram, static_cast<uint32_t>(task->t.data_ptr)); }
 +    if (is_audio_task) { rs64_s4208_n = 0; rs64_s4209_n = 0; rs64_s4210_n = 0; rs64_s4208_active = 1; }
      RspExitReason exit_reason = ucode_func(rdram, task->t.ucode);
 +    rs64_s4208_active = 0;
