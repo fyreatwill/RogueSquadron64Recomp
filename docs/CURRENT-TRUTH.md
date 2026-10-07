@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4104 (2026-10-06).
+Updated for session 4105 (2026-10-06).
 
 ## Current state
 
@@ -595,16 +595,24 @@ phase-gated service and status instrumentation. It requires title and hangar
 controls on both sides and kills both processes with SIGKILL. No guest or
 runtime behavior changed; the worker/writer verdict is pending the queued soak.
 
+Session 4105 consumed the status-03 service-reaping capture. The queued
+recipe first failed because zsh did not provide `print`; after repairing the
+output commands and the moved-script root path, the rerun passed the retail
+whole-RDRAM positive control but the port crashed in
+`spTaskSchedulerThread+9632` before title or hangar. The verdict was
+`Hroute-invalid`; worker-entry, status-zero-writer, and shutdown-return nulls
+are unevaluable. No force-clear or wait change is authorized.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 7: consume the queued status-03 service-reaping capture.** Read
-   the next `SOAK-RESULTS.md` verdict and inspect its paired retail/port logs.
-   Select Hworker-clears only if the qualified hangar rows show worker entry,
-   legitimate status-zero writing, and clean return; otherwise classify the
-   route invalid or leave the writer null unevaluable. Do not force-clear the
-   status or enqueue a replacement until this result is classified.
+1. **M5 Step 1: re-baseline the complete image/silent contract on a qualified
+   phase-gated route.** Build both arms together and require the oracle
+   whole-RDRAM control, retail title/hangar, and port title/hangar before
+   interpreting service, status-03, slot, DMA, or PCM nulls. The immediate
+   status-03 capture is closed as route-invalid; do not force-clear or change
+   the wait until a qualified worker row exists.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target

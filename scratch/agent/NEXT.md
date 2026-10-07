@@ -1,20 +1,21 @@
-# Next work unit: classify the queued M5 status-03 service-reaping capture
+# Next work unit: re-baseline the complete M5 image/silent contract on a qualified route
 
-HYPOTHESIS-ID: m5-status03-service-reaping-contract
+HYPOTHESIS-ID: m5-audio-contract-rebaseline
 
-Read the new `scratch/agent/SOAK-RESULTS.md` verdict and inspect only the
-queued run's `verdict.txt`, `retail-summary.txt`, and `port-summary.txt`.
-Require the same-run positive controls: retail whole-RDRAM, retail title and
-hangar, and port title and hangar. Then classify the hangar rows:
+Before any build, write the competing hypotheses and discriminator into this
+file: H-contract-live predicts both image and silent arms reach the target
+phases with dispatch/SP/task controls; H-route-only predicts only a route
+change while task/service/slot controls remain absent; H-audio-degeneracy
+predicts the image arm adds service/slot/PCM progress beyond the silent arm.
+The discriminator is one same-build, phase-gated matrix containing the oracle
+whole-RDRAM control, retail title/hangar, port title/hangar, both arm identities,
+task dispatch/exit, SP completion, service entry/return, status/slot rows, and
+PCM source/consumer joins. Any missing route control makes downstream nulls
+unevaluable.
 
-- Hworker-clears: qualified worker entry, `service-store`/`status-writer` at
-  `0x8009B7EC` with old status `0x03` and value zero, followed by worker and
-  shutdown/drain return.
-- Hworker-missing: all route controls pass and status-03 worker/read activity
-  is present, but no legitimate zeroing writer is observed.
-- Hroute-invalid: any required control or either paired route is absent; writer
-  nulls are unevaluable.
-
-Do not force-clear status 03 or enqueue another recipe. No build is needed
-unless the queued result identifies a diagnostic coverage failure that can be
-fixed in the existing regeneration-safe probe.
+Use the existing Step-1 phase-gated recipe/configuration, but repair any
+startup/path defect before running it; launch from `build/`, keep
+`ROGUESQ_AUDIO_UCODE=0` and the default image arm in the same build/run, and
+kill the process group with SIGKILL. Do not force-clear status 03 or change
+the wait. Record the full arm comparison and route verdict in the ledger and
+CURRENT-TRUTH.

@@ -145365,3 +145365,20 @@ phase controls, and uses SIGKILL cleanup. Syntax and `git diff --check` pass.
 The soak has not yet run, so Hworker-clears, Hworker-missing, and Hroute-invalid
 remain open; no runtime null is interpreted. ORIGIN: the queued changes are
 diagnostic-only and do not alter the worker or status value.
+
+## Session 4105 (2026-10-06) — classified status-03 capture as route-invalid
+
+The queued status-03 service-reaping recipe first failed at one second because
+its zsh script used the unavailable `print` command, producing no verdict or
+paired summaries. Repaired the two output commands and corrected the moved
+script's repository-root calculation, then reran the same capture. The retail
+oracle whole-RDRAM positive control fired (`callbacks=10000`), but retail did
+not reach title/hangar in the captured window and the port crashed before both
+phases in `spTaskSchedulerThread+9632` (last guest PC `0x8000B650`). The fixed
+recipe produced `control=1 retail_title=0 retail_hangar=0 port_title=0
+port_hangar=0` and `verdict=Hroute-invalid`. This rules out interpreting worker
+entry, status-zero writer, or shutdown-return nulls; it does not distinguish
+Hworker-clears from Hworker-missing. No force-clear or wait change landed.
+ORIGIN: the script-only changes repair capture execution and do not alter the
+guest status or worker; the missing target-phase values are route failure,
+not legitimate evidence of absent worker activity.
