@@ -146638,3 +146638,21 @@ This is a safety/contract change, not evidence for the zero PCM boundary; no
 run was used to claim downstream audio progress. ORIGIN: the guest OSTask
 producer writes `ucode_data` and `ucode_data_size`; zero or over-DMEM declared
 spans are invalid task metadata, while the observed `0x800` span is legitimate.
+
+## Session 4173 (2026-10-07) — qualified M5 writer object-field mismatch
+
+The matched-writer context probe added the oracle's five `--pc-field-dump`
+watches and ran retail and port concurrently with the whole-RDRAM positive
+control and title/hangar phase gates. Both arms were route-valid: control,
+title VI 1024, and hangar VI 512 all fired. Retail field rows fired at every
+watched PC in hangar and exposed per-object source words `0x00C0006F/C6/D7/DE`,
+branch state, and changing object bases. Port source-context rows stayed on
+the matched `0x800AB694 -> 0x800078EC` path, with target-span values zero; its
+source-producer rows remained live but did not provide the equivalent retail
+object-field state. Port image input and PCM stayed zero (`FNV=0x762B22A5` and
+`0xF59C39C5`, `nz=0`).
+
+This selects H-context-mismatch over route-invalid and moves the open boundary
+to the first divergent object-field input. It rules out a missing field-watch
+or a route-null explanation, but does not identify the producer input. No
+audio, gate, writer, payload, or mitigation behavior changed.
