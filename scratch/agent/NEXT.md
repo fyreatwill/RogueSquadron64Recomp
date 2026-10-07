@@ -1,38 +1,39 @@
-# Next work unit: M5 qualify live descriptor-selector writers on the port
+# Next work unit: wire a positive-controlled port selector-writer witness
 
 HYPOTHESIS-ID: m5-port-descriptor-selector-writer
 
-Retail ground truth identified two live hangar-phase selector writers. The
-next bounded unit compares those exact writers with the qualified declared-real
-port route in one same-build capture.
+The declared-real route is now qualified through title and hangar, but the
+existing port selector witness did not emit its own control marker. Its zero
+rows therefore cannot distinguish a missing writer from an unwired witness.
 
 Competing hypotheses:
 
-- Hport-writer-live: port rows at `0x80090AAC`/`0x80090BA4` carry the same
-  selector/source relationship as retail in title or hangar.
-- Hport-writer-gap: retail has phase-qualified rows, but the paired port has
-  no row from either live writer despite reaching both target VIs.
-- Hroute-invalid: either the retail positive control or one port target phase
-  is absent, so a port writer null is unevaluable.
+- Hport-writer-live: exact port stores at `0x80090AAC` or `0x80090BA4` run in
+  the target phases and carry selector/source values comparable to retail.
+- Hport-writer-gap: the exact witness control fires on the qualified route, but
+  neither candidate store runs in title or hangar.
+- Hwitness-unwired: the route reaches both phases, but the candidate hook or
+  its positive-control path is absent from the regenerated host code.
 
-Discriminating measurement: one same-build run must retain the retail
-whole-RDRAM/title/hangar controls and launch the declared-real port with the
-existing phase-gated selector-store witness. Compare rows for exactly
-`0x80090AAC` and `0x80090BA4`, including selector, source, phase, and VI
-origin/width. Paired port rows with the retail-shaped relationship select
-Hport-writer-live; qualified retail rows plus zero port rows select
-Hport-writer-gap; missing control or either target phase selects Hroute-invalid.
+Discriminating measurement: add a regeneration-safe `fixup_game_funcs.py`
+block for `funcs_24.c` that declares and calls one host witness immediately
+before each existing `sh $v0, 0x22($s1)` at PCs `0x80090AAC` and
+`0x80090BA4`. The host witness must emit one control line on the first target
+phase, then phase-gated rows with PC, address, selector value, source word,
+and VI origin/width. Build the ordinary Debug target and run one
+retail-gated declared-real capture using
+`scratch/agent/run_s4099_m5_port_selector_writers.sh` with the new env var.
 
-Ground truth is already checked in `tools/oracle/README.md`; the port witness
-is diagnostic-only and no guest behavior change is authorized by this unit.
+Expected outcomes: control plus matching port rows selects Hport-writer-live;
+control plus zero candidate rows selects Hport-writer-gap; missing control
+despite both target phases selects Hwitness-unwired and requires fixing the
+regeneration anchor before another null interpretation. Retail's whole-RDRAM
+control and both target phases remain mandatory. No guest behavior changes.
 
 Commands:
 
+`python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
+
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-`env ROGUESQ_LOG_M5_SELECTOR_STORE_CONTEXT=1 build/Debug/RogueSquadron64Recomp.exe > /tmp/rs64-port-selector-writer-20261006.log 2>&1`
-
-Run the existing retail oracle command from the prior unit concurrently, saving
-it to `/tmp/rs64-retail-selector-writer-20261006.log`; retain its whole-RDRAM
-and both phase controls. Inspect only phase-gated rows and the positive-control
-markers.
+`zsh scratch/agent/run_s4099_m5_port_selector_writers.sh`

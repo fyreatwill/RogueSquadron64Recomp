@@ -145255,3 +145255,23 @@ Hselector-absent for these candidates. It does not yet qualify the paired port
 writer boundary. This is single-source retail ground truth. ORIGIN: these are
 legitimate guest descriptor-field stores; no mitigation or guest behavior
 changed.
+
+## Session 4099 (2026-10-06) — qualified route, port selector witness unqualified
+
+Ran the M5 live-selector comparison with the retail whole-RDRAM positive
+control, exact phase-gated retail store-field dumps for `0x80090AAC` and
+`0x80090BA4`, and the declared-real port selector witness. The first
+concurrent topology was invalid: retail passed all controls but the port
+crashed before target phases at `spTaskSchedulerThread+9632`. A schedule-gated
+rerun with `ROGUESQ_DRAIN_INLOOP_TICK=1` qualified the route: retail passed the
+positive control and both target phases, and the port reached title
+`0x00790400/1024` and hangar `0x006AB400/512` without a crash or abort.
+
+Retail's hangar rows again came from both `0x80090AAC` and `0x80090BA4`. The
+port emitted no selector-writer rows, but the selector witness's own control
+marker was absent; only the generic input-writer control fired. Under the
+positive-control rule, the port null is unevaluable and does not select a
+writer gap. The route is qualified and the next unit must wire the exact
+candidate-store witness through the regeneration path. ORIGIN: selector fields
+are legitimate guest descriptor state; no mitigation or guest behavior
+changed.

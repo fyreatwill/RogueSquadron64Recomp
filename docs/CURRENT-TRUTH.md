@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4098 (2026-10-06).
+Updated for session 4099 (2026-10-06).
 
 ## Current state
 
@@ -531,18 +531,30 @@ rows. Selector values and source fields were present in the matching records.
 Hwriter-live is selected at retail scope. This names two live selector
 writers but does not yet prove which writer/value the port fails to reproduce.
 
+Session 4099 qualified the declared-real port route after a concurrent launch
+crashed in `spTaskSchedulerThread+9632`; the schedule-gated rerun reached both
+title `0x00790400/1024` and hangar `0x006AB400/512`, while retail passed the
+whole-RDRAM positive control and both target phases. Retail again produced
+exact hangar rows from `0x80090AAC` and `0x80090BA4`. The port selector witness
+produced zero rows, but its own control marker never fired (only the generic
+input-writer control did), so this is not a valid writer-null result. The route
+is qualified; the port-side exact-writer instrumentation remains unqualified.
+This is two-line route evidence plus single-source retail writer evidence.
+ORIGIN: selector fields are legitimate guest descriptor state; no mitigation
+or guest behavior changed.
+
 ## Next steps
 
 Work only the first applicable item. This backlog is one monotonic sequence.
 
-1. **M5 Step 8 qualify the live selector writers on the port.** Keep the
-   eight early returns unchanged. Run one same-build retail-oracle plus
-   declared-real port capture with the whole-RDRAM/title/hangar controls and
-   the existing phase-gated port selector-store witness, keyed to
-   `0x80090AAC` and `0x80090BA4`. Matching selector/source rows select the
-   port boundary; qualified retail hits with no paired port row select a port
-   writer gap; missing either route control is unevaluable. Do not change
-   guest behavior.
+1. **M5 Step 8 repair and positive-control the port selector-writer witness.**
+   Keep the eight early returns unchanged. Add the exact candidate-store hook
+   through the regeneration path so `0x80090AAC` and `0x80090BA4` emit a
+   phase-gated control and selector/source rows on the qualified declared-real
+   route. A same-run positive control must visibly fire before any null is
+   interpreted. Matching rows select the port boundary; a fired control plus
+   zero candidate rows selects a port writer gap; missing the route or control
+   is unevaluable. Do not change guest behavior.
 2. **Qualify M3 patch integration (external dependency).** On a host with the MIPS toolchain, use
    the repaired discovery path to build `PatchesLib` and runtime-qualify the
    active-sentinel predecessor guard. The source and ordinary host target
