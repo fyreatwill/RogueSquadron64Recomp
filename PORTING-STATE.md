@@ -146939,3 +146939,12 @@ retail `0x8008F8A8` row was lost to the 10000 hit-cap, so only the hangar is
 paired. No audio, gate, writer, payload, or mitigation behavior changed.
 Next: watch the caller's continuation `0x8008F4C0` (after
 `jal 0x8008F858` at `0x8008F4B8`) instead of the delay slot.
+
+Discrimination (s4190): H-return-parity SELECTED at the caller continuation
+`0x8008F8A8` for the hangar phase (v0/v1/s0/s1/s2 equal in retail and port);
+H-return-mismatch REFUTED at that PC; H-target-route-invalid REFUTED (all
+controls and phases valid). H-oracle-observes-jr-delay-slot REFUTED: 0 oracle
+hits at `0x8008F958` while `0x8008F93C` hit, so the post-store return is not
+measurable via that PC. Next discriminator: oracle `--watch-pc 0x8008F4C0` vs
+the port witness at `0x8008F4C0` (the caller's continuation after
+`jal 0x8008F858`), selecting parity or the first divergent register.
