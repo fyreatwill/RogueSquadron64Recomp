@@ -147993,8 +147993,9 @@ but its adjacent read control did not fire, so that arm was instrument-invalid.
 The corrected one-build instrument covered `musyxSynthFrame`,
 `musyxMixActiveVoices`, `musyxRenderVoiceSamples`, and `fillSampleStreamRange`.
 The final seeded VI-512 route passed the phase-gated positive control, captured
-256 target reads joined to the preceding selected writer, captured 256 writer
-rows with 0 requested-vs-post mismatches, and had no crash. The port's first
+256 target reads joined to the preceding selected writer, and captured 256
+writer rows with 0 requested-vs-post mismatches before a later crash. The
+captured table is valid, but this was not a clean soak. The port's first
 target read was `read_pc=0x8008FCE8 addr=0x17D9E0 value=0x8017D9F8` before any
 selected writer; subsequent reads used shifted node fields through
 0x8008FF1C. The independent retail s4305 sequence instead began with post-free
