@@ -1,8 +1,8 @@
-# Next work unit: name the writer of the wild pointer at the t~28s fillSampleStreamRange crash (s4253)
+# Next work unit: why do ~40% of private-DMEM arms never leave VI phase 640 (intro) — and when does the sample-block chain break? (s4254)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4252b: private-DMEM crash B 3/6, silent-ucode C 3/6 -> ucode-independent (c1 refuted). Crashes cluster at 27-28s fillSampleStreamRange (4/4 in one wave, 0/4 in another) plus one RT64 copyToRAM at 15s.
-Hypotheses: h-a guest-side sample-stream state (voice array) corrupted by non-audio writer at phase transition; h-b RT64 copyToRAM/vertex cache writes into guest RDRAM (cross-thread); h-c shared timing (wave-level correlation: load on host).
-Discriminator: use tools/apply_s4230_listwatch.py / write-watch on the faulting pointer's source in a B arm; also compare crash with ROGUESQ_AUDIO_PRIVATE_DMEM=1 and sample-stream fill disabled entirely (skip fillSampleStreamRange): if crash migrates elsewhere at ~28s, trigger is phase event, not audio.
-Harness: env OUTN=c TAG=_N ARMS="B1 B2 C1 C2" zsh scratch/agent/s4252_ab.sh ; python3 tools/s4250_summarize.py ...
+s4253: crash = stuck at 640 x cache first recycle (12/12 vs 12/12 separation). Two open questions:
+(a) stuck-intro cause. Hypotheses: h1 intro end gated on audio/stream completion that private-DMEM/hurried audio perturbs; h2 input/autopilot timing; h3 gfx stall (LLE lock) delaying VI. Discriminator (offline first, no run): diff the logs of a stuck arm vs a good arm (s4252e4253_ab_1 armB2 vs armB1) in the 10-14 s window: first line present in good, absent in stuck.
+(b) chain break: add head->next + node count to the [s4234-ENTRY] probe (tools/apply_s4234_entryprobe.py) for every call n>=15000; one B-arm wave of 4, SECS=75, env ROGUESQ_LOG_S4222=1. Control: ringS rows fire.
+Harness: env OUTN=f TAG=_1 ARMS="B1 B2 B3 B4" SECS=75 zsh scratch/agent/s4252_ab.sh ; classify arms by last [phase] line + CRASH.

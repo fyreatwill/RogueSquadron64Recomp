@@ -1522,7 +1522,7 @@ extern "C" void rs64_s4222_store_watch(char width, uint32_t pc, uint32_t addr, u
     uint32_t li = (addr >> 2) & 63u;
     if (last[li] == value + 1u) return;
     last[li] = value + 1u;
-    if (rows >= 6000) return;
+    if (rows >= 40000) return;
     rows++;
     std::fprintf(stderr, "[s4222-S] w=%u pc=%08X %c addr=%08X val=%08X\n", rs64_vi_committed_width(), pc, width, addr, value);
 }
