@@ -1505,8 +1505,9 @@ extern "C" void rs64_s4222_vol(uint8_t* rdram, uint32_t pc, uint32_t a0) {
     std::fprintf(stderr, "[s4222-V] w=%u pc=%08X n=%lu a0=%08X vol=%02X,%02X,%02X b23=%02X flags=%08X\n", rs64_vi_committed_width(), pc, n, a0, B(0x80130B60u), B(0x80130B61u), B(0x80130B62u), B(0x80130B63u), fl);
 }
 
+extern "C" volatile unsigned rs64_s4234_g = 0;
 extern "C" void rs64_s4222_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
-    if (!rs64_s4222_on()) return;
+    if (!rs64_s4222_on() || rs64_s4234_g < 9400u) return;
     static int rows = 0;
     static uint32_t last[64];  // s4230: drop value-unchanged rewrites (tail loop at 0x8008FBE8 was 5553/6000 rows)
     { // s4239 ring: aggregate per store PC
@@ -1518,7 +1519,7 @@ extern "C" void rs64_s4222_store_watch(char width, uint32_t pc, uint32_t addr, u
         unsigned long c = ++pcs[k].n;
         if (c == 1 || (c % 500) == 0)
             std::fprintf(stderr, "[s4239-ringS] w=%u pc=%08X %c addr=%08X val=%08X cnt=%lu\n", rs64_vi_committed_width(), pc, width, addr, value, c);
-        return;
+        /* s4278: fall through to per-write rows */
     }
     uint32_t li = (addr >> 2) & 63u;
     if (last[li] == value + 1u) return;

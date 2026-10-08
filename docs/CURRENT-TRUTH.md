@@ -52,7 +52,7 @@ widths 1-1217, unaligned addresses like 0x001CFFFF; sane before). Writer UNNAMED
 **Crash families (M3, parked).** The VI-640-intro crash (fillSampleStreamRange
 +8136/+8292/+932 NULL or wild ptr; RT64 copyToRAM) is independent of private DMEM
 and of the audio ucode (s4252/s4255/s4256: pooled ~2/13 vs ~4/21); writer
-unnamed. Allocator head==0/tail!=0 (s4230) RECURRED 8/8 in s4277 (s1949 early-Start recipe) and precedes the early musyx crash; writer unnamed; was parked wait-for-recurrence (`tools/apply_s4234_entryprobe.py`). Crash PCs 0x80001b08 and
+unnamed. Allocator head==0/tail!=0 (s4230) RECURRED 8/8 in s4277 and precedes the early musyx crash; s4278 named the writer: legitimate unlink at 0x8008FD94 once the node pool hits 0 (~9.5k calls, key-timing independent; `tools/apply_s4278_headwriter.py`); root = pool never replenished. Crash PCs 0x80001b08 and
 the early `spTaskSchedulerThread+9632`/0x8000834c were OUR zero-extended
 `MEM_x(...,0x8...u)` diagnostics (s4229, class closed); last-guest-pc is not the
 fault site (use the host pc-symbol).
@@ -62,7 +62,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-0. (s4277) The s1949-recipe early crash (8/9 runs, ~16-20 s, fillSampleStreamRange+9264, far=0x380000000) is the s4230 allocator head==0 recurrence: `[s4230-FD60] head=0 tail=801F9D10` precedes all 8 crashes; independent of audio ucode (silent 3/3 crash) and private DMEM (off 3/3 crash). Name the WRITER that zeroes the list head (watch-write ring from ENTRY n~9400, tools/apply_s4234_entryprobe.py) and test whether the early Start presses (from 6 s vs 40 s) are the trigger (scratch/agent/NEXT.md). Hangar route and the WRAP_FLUSH A/B stay blocked until resolved.
+0. (s4278) Allocator head==0 writer NAMED: legitimate unlink at 0x8008FD94 after the sample-stream node pool (0x801499CC, bump region 0x801F9D10..0x801FB2D0, ~231 nodes) reaches 0 at ENTRY n~9514-9522; independent of Start timing (late-key arm crashes identically; H1 refuted) and of memset (H3 refuted). Find why nodes are never returned in the port vs retail (call rate or missing free/completion path) via oracle pool-word watch + port pool-store log (scratch/agent/NEXT.md). Hangar route and the WRAP_FLUSH A/B stay blocked until resolved.
 
 Work only the first applicable item. One monotonic sequence.
 
