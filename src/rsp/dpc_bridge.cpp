@@ -3641,8 +3641,17 @@ extern "C" void rs64_dpc_defer_end(int commit) {
             }
             for (int i = 0; i < n && i < 256; i++) {   // s4280b: full bump-vs-commit walk of the range holding the 0x130393 / w1033 event
                 const RT64::S4280Ev &ev = RT64::g_s4280_ev[i];
-                if (ev.addr != 0x130393u) continue;
+                static int s4283Shown = 0;
+                const bool s4283 = ev.odd && ev.addr != 0x130393u && s4283Shown < 4;
+                if (ev.addr != 0x130393u && !s4283) continue;
+                if (s4283) s4283Shown++;
                 const uint32_t off = (uint32_t)ev.off;
+                if (s4283) {   // s4283b: ALL deferred ranges (incl. >0x400, unshadowed) that overlap the event, in push order: >1 hit = ring lap inside this commit
+                    for (size_t j = 0; j < g_deferred_ranges.size(); j++) { const auto &r = g_deferred_ranges[j];
+                        if ((uint32_t)r.second + 0x80 >= off && (uint32_t)r.first <= off + 0x80) fprintf(stderr, "[s4283-def] j=%zu/%zu %06X..%06X len=%X\n", j, g_deferred_ranges.size(), (uint32_t)r.first, (uint32_t)r.second, (uint32_t)(r.second - r.first)); } }
+                if (s4283) {   // s4283: range tiling around the ODD event (push order) to test H-F (range starts mid-block) vs H-D/H-E
+                    for (size_t k = 0; k < g_s4272_sh.size(); k++) { const S4272Sh &r = g_s4272_sh[k];
+                        if (r.hi + 0x200 >= off && r.lo <= off + 0x100) fprintf(stderr, "[s4283-rng] k=%zu/%zu %06X..%06X len=%X%s\n", k, g_s4272_sh.size(), r.lo, r.hi, r.hi - r.lo, (off >= r.lo && off + 8 <= r.hi) ? " <== holds cimg" : ""); } }
                 for (const S4272Sh &e : g_s4272_sh) if (off >= e.lo && off + 8 <= e.hi) {
                     for (uint32_t a = e.lo; a < e.hi; a += 8) { uint32_t b0, b1, n0 = 0, n1 = 0; memcpy(&b0, &g_s4272_shadow[e.off + (a - e.lo)], 4); memcpy(&b1, &g_s4272_shadow[e.off + (a - e.lo) + 4], 4);
                         if (g_rdram_for_submit) { memcpy(&n0, g_rdram_for_submit + a, 4); memcpy(&n1, g_rdram_for_submit + a + 4, 4); }

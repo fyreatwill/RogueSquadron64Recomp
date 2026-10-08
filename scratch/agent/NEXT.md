@@ -1,7 +1,7 @@
-# Next work unit (s4283): name the writer of the missing triangle header at the desync point
+# Next work unit (s4284): count ring-lap bump drops per commit and join to ODD cimg events
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4282: ODD cimg = decoded triangle data; desync precedes it (data follows a 2F/E6 with no header). Hypotheses: D) the LLE ucode never wrote the header (output pointer/advance wrong); E) a later write (other task / bump filter) overwrote the header before RT64 walked; F) the DPC bridge range starts mid-block.
-Discriminator: at the first ODD event, record the offset of the last valid command, then re-run with a write-watch (or oracle) on offset+8: who wrote it and when relative to walk entry. D vs E: never written this frame vs overwritten. Positive control: watch a known-written command word.
-Script template: scratch/agent/s4282_walk.sh.
+s4283: ODD cimg = old CF-triangle tail beneath a newer command burst; header existed at bump; no dup range starts in the commit. Hypotheses: E1) ucode laps the ring inside the task and rsp_dpc_submit's high-water filter (s_submit_last_end) drops the lap's bumps, so the overwrite never reaches RT64 as a range; E2) overwrite comes from a different task (cross-task, outside this commit); E3) CPU/guest store into the ring.
+Discriminator: in dpc_bridge.cpp rsp_dpc_submit count, per commit, submits where end < s_submit_last_end (lap) or lo < s_submit_last_end (drop); at each ODD event print that commit's lap count and the first lap's lo..hi. E1: ODD commits have laps>0 and the ODD addr lies in a dropped span; E2: laps==0 in ODD commits. Positive control: run ROGUESQ_DPC_WRAP_FLUSH=0/1 arms concurrently; with =1 the ODD rate must fall (s4273: 12.4%->8.6%) and laps>0 commits must exist in both arms. Template: scratch/agent/s4283_walk.sh (env block), reset build/saves per arm.
+If E1 holds: qualify ROGUESQ_DPC_WRAP_FLUSH default ON (CURRENT-TRUTH item 1), phase-gated on VI 640.
