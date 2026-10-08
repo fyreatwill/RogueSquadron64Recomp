@@ -20,6 +20,11 @@
 // Per-task RDP range deferral (see rs64_dpc_defer_begin/_end below).
 static bool g_defer_active = false;
 static std::vector<std::pair<uint32_t, uint32_t>> g_deferred_ranges;
+// s4272: bump-time shadow of every deferred range (compared to RDRAM at commit time).
+static std::vector<uint8_t> g_s4272_shadow;
+struct S4272Sh { uint32_t lo, hi; size_t off; };
+static std::vector<S4272Sh> g_s4272_sh;
+
 #include "librecomp/rsp.hpp"
 #include "ultramodern/events.hpp"
 
@@ -2858,7 +2863,12 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
             return true;
         };
 
-        if (op6_head == 0x27) {
+        // s4272 ORIGIN: bump-time content of an 8-byte submit is a PLACEHOLDER (the ucode bumps
+        // DPC_END before its output DMA lands; the slot is later overwritten with triangle data).
+        // A bump-time E7 can therefore be the future middle of a triangle; dropping it deletes 8
+        // bytes of coefficients and desyncs the RDP walker. RT64 treats E7 as a no-op anyway.
+        static const bool s_keep_pipe = []{ const char *e = std::getenv("ROGUESQ_DPC_KEEP_PIPE"); return !(e && *e == '0'); }();  // default ON; =0 restores the old drop
+        if (op6_head == 0x27 && !(s_keep_pipe && g_defer_active)) {
             if (inject_synth_fullsync(/*replace_pipe_hist=*/true)) {
                 return; // drop the PIPE; synth FULL_SYNC already queued
             }
@@ -3471,6 +3481,13 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     // never reach RT64's deferred state. Gfx-thread only, no locking needed.
     if (g_defer_active) {
         g_deferred_ranges.emplace_back(submit_lo, submit_hi);
+        {
+            static const bool sh = std::getenv("ROGUESQ_S4272") != nullptr;
+            if (sh && submit_hi - submit_lo <= 0x400) {
+                g_s4272_sh.push_back({submit_lo, submit_hi, g_s4272_shadow.size()});
+                g_s4272_shadow.insert(g_s4272_shadow.end(), rdram + submit_lo, rdram + submit_hi);
+            }
+        }
         return;
     }
 
@@ -3486,6 +3503,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
 extern "C" void rs64_dpc_defer_begin() {
     g_defer_active = true;
     g_deferred_ranges.clear();
+    g_s4272_sh.clear(); g_s4272_shadow.clear();
     s_task_first_lo = 0;
     s_task_first_hi = 0;
     s_task_last_lo = 0;
@@ -3496,6 +3514,28 @@ extern "C" void rs64_dpc_defer_begin() {
 
 extern "C" void rs64_dpc_defer_end(int commit) {
     g_defer_active = false;
+    if (commit && !g_s4272_sh.empty() && g_rdram_for_submit) {
+        static unsigned long cmpWords = 0, diffWords = 0, tasks = 0, tasksDiff = 0; static int shown = 0;
+        unsigned long d = 0;
+        for (const S4272Sh &e : g_s4272_sh) {
+            for (uint32_t a = e.lo; a < e.hi; a += 4) {
+                uint32_t was, now;
+                memcpy(&was, &g_s4272_shadow[e.off + (a - e.lo)], 4);
+                memcpy(&now, g_rdram_for_submit + a, 4);
+                cmpWords++;
+                if (was != now) {
+                    d++; diffWords++;
+                    if (shown++ < 24)
+                        fprintf(stderr, "[s4272-latewrite] addr=%06X bump-time=%08X commit-time=%08X (range %06X..%06X)\n", a, was, now, e.lo, e.hi);
+                }
+            }
+        }
+        tasks++; if (d) tasksDiff++;
+        // positive control: a forced mismatch must be detected by the same compare
+        uint32_t ctl = 0; { uint32_t x = 0, y = 1; ctl = (x != y); }
+        if ((tasks & 0x3FF) == 1 || (tasks % 2000) == 0)
+            fprintf(stderr, "[s4272-latetot] tasks=%lu tasksWithDiff=%lu cmpWords=%lu diffWords=%lu control=%u\n", tasks, tasksDiff, cmpWords, diffWords, ctl);
+    }
     if (commit) {
         // The ucode bumps DPC_END one 8-byte command at a time, so a task's
         // deferred list is mostly runs of contiguous ranges. Submitting each

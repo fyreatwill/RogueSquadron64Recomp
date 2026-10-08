@@ -65,10 +65,12 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 Work only the first applicable item. One monotonic sequence.
 
-1. **Find where the DL walk desyncs** (s4271: garbage SetColorImage words are
-   inline data in command position, DL rdramoff ~0x4C7C68, preceded by
-   E7/F5/F2 then `2F..` words; scratch/agent/NEXT.md): trace the opcode/pointer
-   sequence from DL start to the first ODD cimg; compare with the oracle.
+1. **Finish the placeholder-drop class** (s4272: bump-time PIPESYNC drop deleted
+   future triangle words; ROGUESQ_DPC_KEEP_PIPE default ON cut ODD cimg 61% -> 7%).
+   Audit the remaining bump-time 8-byte filters in `rsp_dpc_submit` (0xFF cimg
+   suppress, fs-inject/`gate_inject`, F3/FD/F5 drop): bump-time content is a
+   placeholder, so apply any filter at commit time on final content instead.
+   Then qualify: hangar reach + crash soak with the fix (scratch/agent/NEXT.md).
 2. **Resume M5 plan steps** (docs/M5-AUDIO-PLAN.md Step 9/10) once the stall is
    explained; measure default-arm audio task rate t=18-28 with an `=0` control.
 3. **M3 pre-publication guard runtime qualification:** blocked on a host with
@@ -81,7 +83,7 @@ Work only the first applicable item. One monotonic sequence.
 
 | Hypothesis | Status |
 |---|---|
-| RT64 fb-set growth origin | A CONFIRMED (s4270); s4271 raw words = inline data in command position (B refuted); walker-advance vs producer open (single-source). |
+| RT64 fb-set growth origin | RESOLVED at source (s4272): bump-time E7 drop in dpc_bridge deleted triangle words (slots are placeholders until after the DPC_END bump); fix default ON, ODD 61%->7% (cross-run, single-source); residual 7% = other bump-time filters. |
 | VI-640 intro crash writer | Open; independent of private DMEM and audio ucode (silent-ucode arm crashes equally, s4252). |
 | M5 producer provenance | Port hangar source span is zero because ROM-DMA data (`pi_rom_to_rdram`) is cleared by the legitimate `rs_memset` (0x800078E0/EC); producer setup/object/loop/load-use state is retail-parity (s4150-s4189). No mitigation authorised. |
 | Allocator list head==0 | Single-source s4230, not reproduced (s4231/s4234); parked. |

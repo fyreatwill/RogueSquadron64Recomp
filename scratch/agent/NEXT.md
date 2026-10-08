@@ -1,13 +1,11 @@
-# Next work unit: trace the DL walk to the first desync (s4272)
+# Next work unit: kill the residual 7% ODD cimg + qualify the KEEP_PIPE fix (s4273)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-Context (s4271): the garbage SetColorImage words are inline-data-looking words in command position (DL at rdramoff ~0x4C7C68, valid E7/F5/F2 then `2F182C30 C8104240` x3 then data). Log: scratch/agent/soak_results/s4271_cimg/arm1.log (grep s4271-w).
+Context (s4272): bump-time content of 8-byte DPC submits is a placeholder (2F/E7); final triangle words land after the DPC_END bump. The E7 drop in rsp_dpc_submit deleted future triangle data (ODD cimg 61% -> 7% with ROGUESQ_DPC_KEEP_PIPE default ON). Tools: scratch/agent/s4272_ab.sh (arm0/arm1 sequential), ROGUESQ_S4272=1 shadow-diff (`[s4272-latewrite]`, `[s4272-latetot]`), ring/list dumps `[s4271-ring]`, `[s4271-list]`.
 
-Hypotheses:
-- A1: our RT64 gbi walker mis-advances (F5 inline-advance rules, op_consume16 for B4/BF, opcode 0x2F unmapped) so it walks into data the producer laid out correctly.
-- A2: the producer (our recompiled/LLE F5 ucode output or game) emits the data mid-stream (retail ucode would skip it with correct advance).
-- C: RDRAM DL content differs from retail at that point.
-
-Discriminator (one build, one run): in the gbi dispatch loop (rt64_gbi.cpp runDl) keep a ring of the last 64 (dl offset, w0, handler advance) and dump it at the first ODD cimg; also dump the DL's first command of this run. Control: dump the same ring at a SANE cimg. If the ring shows a handler advancing differently from the retail rule (docs/F5-UCODE-REFERENCE.md table) -> A1; if every step matches the reference and data is still in a command slot -> A2/C, then compare to oracle.
-Run: zsh scratch/agent/s4271_cimg.sh as template (env ROGUESQ_S4271=1), SIGKILL ~38 s. lib/ edit => export.sh + commit.
+Hypotheses for the residual ~98 ODD:
+- R1: other bump-time 8-byte filters (0xFF cimg suppress `s_suppress`, `gate_inject` F3/FD/F5 drop) delete placeholder-slot words.
+- R2: multi-word bumps whose content is still placeholder at commit (DMA lands after task end).
+- R3: legitimate odd-looking cimgs.
+Discriminator (one build, one run): per-filter drop counters keyed on whether the dropped word's commit-time value differs from its bump-time value (use the existing shadow); positive control = KEEP_PIPE=0 arm must show the E7 filter with diffs > 0. If an R1 filter has diffs>0 -> move it to commit time. Then run the hangar reach/crash soak (s1949 recipe) with the default fix to see if crash families (filterVoiceSampleBlock+220, waitForAnyAudioSlot) change; resume M5 plan Step 9/10.

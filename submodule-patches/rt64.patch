@@ -1671,10 +1671,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..61314c0 100644
+index dccaa87..cdb397c 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,450 @@
+@@ -5,12 +5,454 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1718,6 +1718,10 @@ index dccaa87..61314c0 100644
 +        uint16_t pendingBefore, pendingAfter;
 +        uint8_t rawOp, cmdLength;
 +    };
++    struct S4271Ent { const DisplayList *pre, *post; uint32_t w0, w1; };
++    S4271Ent g_s4271_ring[64]; unsigned g_s4271_head = 0; const DisplayList *g_s4271_start = nullptr, *g_s4271_end = nullptr;
++    struct S4271List { uint32_t start, end, pend; size_t pendCur; };
++    S4271List g_s4271_lists[32]; unsigned g_s4271_lhead = 0;
 +    static Rs64RdpAdvanceRec s_rdp_advance_ring[512];
 +    static uint32_t s_rdp_advance_n = 0;
 +    static uint32_t s_rdp_advance_total = 0;
@@ -2125,7 +2129,7 @@ index dccaa87..61314c0 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -69,6 +507,12 @@ namespace RT64 {
+@@ -69,6 +511,18 @@ namespace RT64 {
          GBIFunction func;
          uint32_t cmdLength;
          size_t pendingCommandRemainingBytes = state->rdp->pendingCommandRemainingBytes;
@@ -2135,10 +2139,16 @@ index dccaa87..61314c0 100644
 +        const uint32_t submit_task = rs64_e9prov_current_task ? rs64_e9prov_current_task() : 0;
 +        const uint64_t submit_serial = rs64_dpc_get_last_submit_serial ?
 +            rs64_dpc_get_last_submit_serial() : 0;
++
++        {
++            S4271List &l = g_s4271_lists[g_s4271_lhead++ & 31];
++            l.start = dlStartAdddress; l.end = submit_hi; l.pend = (uint32_t)pendingCommandRemainingBytes;
++            l.pendCur = state->rdp->pendingCommandCurrentBytes;
++        }
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +533,47 @@ namespace RT64 {
+@@ -89,8 +543,47 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -2186,7 +2196,7 @@ index dccaa87..61314c0 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +582,11 @@ namespace RT64 {
+@@ -99,6 +592,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -2198,7 +2208,7 @@ index dccaa87..61314c0 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,9 +600,61 @@ namespace RT64 {
+@@ -112,9 +610,61 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -2261,10 +2271,15 @@ index dccaa87..61314c0 100644
                  dummy = dl;
                  extendedFunction(state, &dl);
                  cmdLength = 1;
-@@ -122,6 +662,40 @@ namespace RT64 {
+@@ -122,6 +672,45 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
++                {
++                    S4271Ent &re = g_s4271_ring[g_s4271_head++ & 63];
++                    re.pre = dl; re.w0 = dl->w0; re.w1 = dl->w1; re.post = dl + cmdLength;
++                    g_s4271_start = dlStart; g_s4271_end = dlEnd;
++                }
 +                if (rs64_e9prov_authoritative_span) {
 +                    rs64_e9prov_authoritative_span(commandAddress,
 +                        commandAddress + cmdLength * sizeof(DisplayList), rawOpCode, 0);
@@ -2302,7 +2317,7 @@ index dccaa87..61314c0 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +703,14 @@ namespace RT64 {
+@@ -129,6 +718,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -2317,7 +2332,7 @@ index dccaa87..61314c0 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +718,211 @@ namespace RT64 {
+@@ -136,13 +733,211 @@ namespace RT64 {
                      break;
                  }
  
@@ -2531,6 +2546,72 @@ index dccaa87..61314c0 100644
              }
  
              if (dl != nullptr) {
+@@ -153,6 +948,45 @@ namespace RT64 {
+         state->dlCpuProfiler.end();
+     }
+ 
++
++    void s4271DumpRing(bool odd, const uint8_t *rdram) {
++        std::fprintf(stderr, "[s4271-ring] %s liststart=%lld listend=%lld head=%u\n", odd ? "ODD" : "SANE",
++            g_s4271_start ? (long long)((const uint8_t *)g_s4271_start - rdram) : -1LL,
++            g_s4271_end ? (long long)((const uint8_t *)g_s4271_end - rdram) : -1LL, g_s4271_head);
++        for (unsigned i = 64; i > 0; i--) {
++            if (g_s4271_head < i) continue;
++            const S4271Ent &e = g_s4271_ring[(g_s4271_head - i) & 63];
++            std::fprintf(stderr, "[s4271-ring] off=%06llX op=%02X %08X %08X adv=%lld\n",
++                (long long)((const uint8_t *)e.pre - rdram), e.w0 >> 24, e.w0, e.w1,
++                e.post ? (long long)(e.post - e.pre) : -999LL);
++        }
++        for (unsigned i = 32; i > 0; i--) {
++            if (g_s4271_lhead < i) continue;
++            const S4271List &l = g_s4271_lists[(g_s4271_lhead - i) & 31];
++            std::fprintf(stderr, "[s4271-list] #%u start=%06X end=%06X pendRemain=%u pendCur=%zu\n",
++                g_s4271_lhead - i, l.start & 0xFFFFFF, l.end & 0xFFFFFF, l.pend, l.pendCur);
++            if (i < 32) {
++                const S4271List &pl = g_s4271_lists[(g_s4271_lhead - i - 1) & 31];
++                const uint32_t pe = pl.end & 0xFFFFFF;
++                if (pe != (l.start & 0xFFFFFF) && (l.start & 0xFFFFFF) - pe < 64) {
++                    const uint32_t *gw = (const uint32_t *)(rdram + pe);
++                    std::fprintf(stderr, "[s4271-gap] before list #%u: %u bytes at %06X: %08X %08X\n",
++                        g_s4271_lhead - i, (l.start & 0xFFFFFF) - pe, pe, gw[0], gw[1]);
++                }
++            }
++        }
++        if (g_s4271_head > 0) {
++            const uint8_t *last = (const uint8_t *)g_s4271_ring[(g_s4271_head - 1) & 63].pre;
++            const uint32_t *regions[2] = { (const uint32_t *)(last - 0x100), (const uint32_t *)(rdram + 0x4E2250) };
++            for (int r = 0; r < 2; r++) {
++                const int n = r ? 0x90 / 8 : 0x110 / 8;
++                for (int i = 0; i < n; i++)
++                    std::fprintf(stderr, "[s4271-raw] r%d off=%06llX %08X %08X\n", r,
++                        (long long)((const uint8_t *)(regions[r] + i * 2) - rdram), regions[r][i * 2], regions[r][i * 2 + 1]);
++            }
++        }
++    }
++
+     void Interpreter::processDisplayLists(uint32_t dlStartAdddress, DisplayList *dlStart) {
+         assert(hleGBI != nullptr);
+ 
+@@ -169,8 +1003,11 @@ namespace RT64 {
+         DisplayList *dl = dlStart;
+         uint8_t opCode;
+         GBIFunction func;
++        g_s4271_start = dlStart;
+         while (dl != nullptr) {
+             opCode = (dl->w0 >> 24);
++            S4271Ent &re = g_s4271_ring[g_s4271_head++ & 63];
++            re.pre = dl; re.w0 = dl->w0; re.w1 = dl->w1; re.post = nullptr;
+ 
+             if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
+                 extendedFunction(state, &dl);
+@@ -190,6 +1027,7 @@ namespace RT64 {
+                 }
+             }
+ 
++            re.post = dl;
+             if (dl != nullptr) {
+                 dl++;
+             }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
 index f17db9b..5087cef 100644
 --- a/src/hle/rt64_present_queue.cpp
@@ -2860,7 +2941,7 @@ index f17db9b..5087cef 100644
                      }
                  }
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..f6cd681 100644
+index d1a9f4e..81f34dd 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -2884,7 +2965,7 @@ index d1a9f4e..f6cd681 100644
  
  #include "../include/rt64_extended_gbi.h"
  
-@@ -28,7 +38,71 @@
+@@ -28,7 +38,72 @@
  //#   define LOG_LOAD_METHODS
  #endif
  
@@ -2952,11 +3033,12 @@ index d1a9f4e..f6cd681 100644
 +
  namespace RT64 {
 +    const void *g_s4271_dl = nullptr;
++    void s4271DumpRing(bool odd, const uint8_t *rdram);
 +    int g_s4271_src = 0;
      // RDP
      static uint8_t getCommandLength(uint32_t commandId) {
          if (commandId == (G_TEXRECT & 0x3F) || commandId == (G_TEXRECTFLIP & 0x3F)) {
-@@ -62,6 +136,85 @@ namespace RT64 {
+@@ -62,6 +137,85 @@ namespace RT64 {
          }
      }
  
@@ -3042,7 +3124,7 @@ index d1a9f4e..f6cd681 100644
      RDP::RDP(State *state) : state(state) {
          memset(TMEM, 0, sizeof(TMEM));
          crashed = false;
-@@ -250,6 +403,8 @@ namespace RT64 {
+@@ -250,6 +404,8 @@ namespace RT64 {
          }
      }
  
@@ -3051,7 +3133,7 @@ index d1a9f4e..f6cd681 100644
      void RDP::setColorImage(uint8_t fmt, uint8_t siz, uint16_t width, uint32_t address) {
          // Make sure the new color image is actually different. Some games will set the color image
          // multiple times despite setting the exact same parameters.
-@@ -264,10 +419,58 @@ namespace RT64 {
+@@ -264,10 +420,63 @@ namespace RT64 {
              colorImage.width = width;
              colorImage.address = newAddress;
              colorImage.changed = true;
@@ -3060,6 +3142,10 @@ index d1a9f4e..f6cd681 100644
 +                static int oddN = 0, sane = 0;
 +                if (s4271) {
 +                    const bool odd = ((newAddress & 7) != 0) || (width & 1);
++                    static unsigned totOdd = 0, totSane = 0;
++                    (odd ? totOdd : totSane)++;
++                    if (((totOdd + totSane) & 15) == 0)
++                        std::fprintf(stderr, "[s4272-cimgtot] odd=%u sane=%u\n", totOdd, totSane);
 +                    if ((odd && oddN < 4) || (!odd && sane < 2)) {
 +                        (odd ? oddN : sane)++;
 +                        std::fprintf(stderr, "[s4271-cimg] %s src=%d fmt=%u siz=%u w=%u addr=0x%08X dl=%p rdramoff=%lld\n",
@@ -3071,6 +3157,7 @@ index d1a9f4e..f6cd681 100644
 +                                std::fprintf(stderr, "[s4271-w] %+d %08X %08X%s\n", i, w[i * 2], w[i * 2 + 1], i == 0 ? " <==" : "");
 +                            }
 +                        }
++                        if (odd ? oddN == 1 : sane == 1) s4271DumpRing(odd, state->RDRAM);
 +                        std::fflush(stderr);
 +                    }
 +                }
@@ -3110,7 +3197,7 @@ index d1a9f4e..f6cd681 100644
          }
      }
  
-@@ -293,6 +496,67 @@ namespace RT64 {
+@@ -293,6 +502,67 @@ namespace RT64 {
  #   ifdef LOG_TEXTURE_IMAGE_METHODS
          RT64_LOG_PRINTF("RDP::setTextureImage(fmt %u, siz %u, width %u, address 0x%08X)", fmt, siz, width, address);
  #   endif
@@ -3178,7 +3265,7 @@ index d1a9f4e..f6cd681 100644
      }
  
      void RDP::setCombine(uint64_t combine) {
-@@ -324,6 +588,46 @@ namespace RT64 {
+@@ -324,6 +594,46 @@ namespace RT64 {
  #ifdef LOG_TILE_METHODS
          RT64_LOG_PRINTF("RDP::setTile(tile %u, fmt %u, siz %u, line %u, tmem %u, palette %u, cmt %u, cms %u, maskt %u, masks %u, shiftt %u, shifts %u)", tile, fmt, siz, line, tmem, palette, cmt, cms, maskt, masks, shiftt, shifts);
  #endif
@@ -3225,7 +3312,7 @@ index d1a9f4e..f6cd681 100644
  
          assert(tile < RDP_TILES);
  
-@@ -340,6 +644,11 @@ namespace RT64 {
+@@ -340,6 +650,11 @@ namespace RT64 {
          t.shifts = shifts;
          t.shiftt = shiftt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3237,7 +3324,7 @@ index d1a9f4e..f6cd681 100644
      }
  
      void RDP::setTileSize(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
-@@ -354,6 +663,10 @@ namespace RT64 {
+@@ -354,6 +669,10 @@ namespace RT64 {
          t.lrs = lrs;
          t.lrt = lrt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3248,7 +3335,7 @@ index d1a9f4e..f6cd681 100644
      }
  
      void RDP::clearTileReplacementHash(uint8_t tile) {
-@@ -379,22 +692,26 @@ namespace RT64 {
+@@ -379,22 +698,26 @@ namespace RT64 {
              offsetMask = 0x7;
          }
  
@@ -3284,7 +3371,7 @@ index d1a9f4e..f6cd681 100644
              }
          }
      }
-@@ -404,7 +721,15 @@ namespace RT64 {
+@@ -404,7 +727,15 @@ namespace RT64 {
          uint32_t tmemStride, uint32_t wordsPerRow, uint32_t rowCount, uint32_t dxtIncrement = 0)
      {
          assert((!BLOCK || (rowCount == 1)) && "Load block must behave as if it only loads one row of data.");
@@ -3301,7 +3388,7 @@ index d1a9f4e..f6cd681 100644
          const uint32_t DXTSwap = 0x800;
          uint32_t textureAddress, tmemAddress, wordCount, tmemMask, tmemAdvance;
          if constexpr (RGBA32) {
-@@ -540,12 +865,207 @@ namespace RT64 {
+@@ -540,12 +871,207 @@ namespace RT64 {
              // Load into TMEM.
              uint8_t *TMEM8 = reinterpret_cast<uint8_t *>(TMEM);
              const uint8_t *RDRAM = state->RDRAM;
@@ -3509,7 +3596,7 @@ index d1a9f4e..f6cd681 100644
          }
      }
  
-@@ -722,6 +1242,117 @@ namespace RT64 {
+@@ -722,6 +1248,117 @@ namespace RT64 {
  #ifdef LOG_LOAD_METHODS
          RT64_LOG_PRINTF("RDP::loadBlock(tile %u, uls %u, ult %u, lrs %u, dxt %u)", tile, uls, ult, lrs, dxt);
  #endif
@@ -3627,7 +3714,7 @@ index d1a9f4e..f6cd681 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -775,12 +1406,82 @@ namespace RT64 {
+@@ -775,12 +1412,82 @@ namespace RT64 {
          workload.drawData.loadOperations.emplace_back(operation);
  
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3710,7 +3797,7 @@ index d1a9f4e..f6cd681 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -912,6 +1613,18 @@ namespace RT64 {
+@@ -912,6 +1619,18 @@ namespace RT64 {
      }
  
      void RDP::setFogColor(uint32_t color) {
@@ -3729,7 +3816,7 @@ index d1a9f4e..f6cd681 100644
          hlslpp::float4 &fogColor = fogColorStack[fogColorStackSize - 1];
          fogColor.x = ((color >> 24) & 0xFF) / 255.0f;
          fogColor.y = ((color >> 16) & 0xFF) / 255.0f;
-@@ -935,6 +1648,23 @@ namespace RT64 {
+@@ -935,6 +1654,23 @@ namespace RT64 {
      }
  
      void RDP::setFillColor(uint32_t color) {
@@ -3753,7 +3840,7 @@ index d1a9f4e..f6cd681 100644
          fillColorStack[fillColorStackSize - 1] = color;
          state->updateDrawStatusAttribute(DrawAttribute::FillColor);
      }
-@@ -1049,6 +1779,44 @@ namespace RT64 {
+@@ -1049,6 +1785,44 @@ namespace RT64 {
              lry |= 3;
          }
  
@@ -3798,7 +3885,7 @@ index d1a9f4e..f6cd681 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1132,6 +1900,828 @@ namespace RT64 {
+@@ -1132,6 +1906,828 @@ namespace RT64 {
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
  
@@ -4627,7 +4714,7 @@ index d1a9f4e..f6cd681 100644
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
              fbPair.scissorRect.merge(scissorRect);
-@@ -1319,6 +2909,40 @@ namespace RT64 {
+@@ -1319,6 +2915,40 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  
