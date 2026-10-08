@@ -147805,3 +147805,13 @@ ORIGIN: lap-2 ring stores by the ucode legitimately overwrite lap-1 head bytes b
 Next: make WRAP_FLUSH + shadow default for the VI 640 phase, then a hangar-length run (>=120 s) comparing tracked-framebuffer growth and garbage cimg sets between RESTORE=0/1.
 Verdict (s4287): SELECTS H-R1 (RT64 reading lap-overwritten RDRAM at submit causes the ODD cimgs; bump-time bytes remove them) with 3/3 replication, and REFUTES H-Q2 (first-run luck) and H-R2 (shadow cap/deferred read keeps ODD). H-Q1 (restore also kills hangar fb-set growth / 0x130393 wipe) stays OPEN: the route never reached hangar. Next discriminator: hangar-length (>=130 s) run, RESTORE=0 vs default, comparing garbage cimg count and tracked-framebuffer count after VI 512; restore removes them -> H-Q1 selected, unchanged -> hangar garbage has a different writer (H-Q2'). Positive control: arm0 odd=60 at VI 640 in the same run.
 Verdict wording (s4287): this selects R1 (bump-time content fed to RT64 removes ODD cimgs, 3/3 runs) and refutes Q2 (first-run luck) and R2 (shadow cap keeps ODD). Next discriminator: the hangar-length restore A/B above resolves Q1 against a different hangar writer.
+
+## Session 4288 (2026-10-08) — hangar-length restore A/B: route never reaches hangar, restore arm survives VI 640 with fb set <=4
+
+Ran scratch/agent/s4288_hangar.sh (140 s, two concurrent arms, WRAP_FLUSH=1 both, S4268 fb counter; arm0 WRAP_RESTORE=0, arm1 default restore).
+- arm0 (no restore): odd=60, fb set maxFbs reached 7 then 9 (avgBytes 1.3 -> 1.96 MB) and the run went silent at VI 640 after 14 samples (rt64-guard tile copy spam, no crash string) -- the known VI-640 intro death family.
+- arm1 (restore): odd=0, survived all ~134 samples, VI 1024 at 53.0 s, maxFbs <=4 (81 samples at 1, 44 at 3, 5 at 4), avgBytes 457728 flat; no crash.
+- NEITHER arm reached hangar VI 512: the AUTOPILOT route (40:start..) is title-only inside 140 s (same as s4274/s4275). Q1 (hangar garbage fb growth 3 -> 56) is UNDECIDED; the s1949 route (tools/probe.sh PROBE_KEYS='6:start 11:start ...' PROBE_PHASE_WIDTH=512) is the one that reaches 512 at ~26 s and must be used.
+- Weak signal only (single run per arm, arm0 death is confounded with the ~2/13 intro-crash base rate): restore arm kept the tracked framebuffer set at 1-4 through title where the control grew to 9. Not enough to flip WRAP_FLUSH default.
+ORIGIN: no code change this session (WRAP_RESTORE default stays as landed in s4287).
+Next: port the A/B onto the probe.sh PROBE_KEYS route (s1949 recipe), both arms, >=100 s after the 512 phase.
