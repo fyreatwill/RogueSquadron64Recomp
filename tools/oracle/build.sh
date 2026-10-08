@@ -20,6 +20,6 @@ mkdir -p "$here/build"
 cc -O2 -Wall -Wextra -std=c11 \
    -I"$CORE_SRC/src/api" \
    -o "$here/build/rs64_oracle" \
-   "$here/rs64_oracle.c"
+   "$here/rs64_oracle.c" -lm
 
 echo "built $here/build/rs64_oracle"

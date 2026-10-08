@@ -353,15 +353,16 @@ index dbf46b2..60d1401 100644
  
  template<u8 e>
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..66cba68 100644
+index 0195f2b..bb518ea 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,152 @@
+@@ -1,29 +1,165 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
  #include <string>
 +#include <unordered_set>
++#include <cmath>
  #include <ultramodern/ultra64.h>
  #include <ultramodern/ultramodern.hpp>
  
@@ -466,6 +467,18 @@ index 0195f2b..66cba68 100644
 +                distinct[c].insert(v);
 +            }
 +        }
++        // s4238: clip fraction (|x|>=32000) and RMS over both channels, for port-vs-retail loudness.
++        uint64_t clipped = 0, total = 0;
++        double sumsq = 0.0;
++        for (uint32_t i = 0; i + 1 < len; i += 2) {
++            const int32_t v = (int16_t)((p[i] << 8) | p[i + 1]);
++            if (v >= 32000 || v <= -32000) clipped++;
++            sumsq += (double)v * v;
++            total++;
++        }
++        std::fprintf(stderr, "[ai-output-clip] bucket=%s n=%u clipped=%llu total=%llu rms=%.1f\n",
++                     title ? "title" : "hangar", n, (unsigned long long)clipped,
++                     (unsigned long long)total, total ? std::sqrt(sumsq / total) : 0.0);
 +        std::fprintf(stderr,
 +                     "[ai-output-stats] bucket=%s n=%u addr=0x%08X L[min=%d max=%d distinct=%zu]"
 +                     " R[min=%d max=%d distinct=%zu] head=",

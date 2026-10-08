@@ -1,3 +1,4 @@
+#include <math.h>
 /* rs64_oracle - ground-truth oracle for RogueSquadron64Recomp.
  *
  * Runs the retail ROM under mupen64plus (built with DEBUGGER=1) and reports
@@ -254,6 +255,8 @@ struct ai_output_bucket {
     long calls;
     long rows;
     long nonzero_rows;
+    long clipped, total;
+    double sumsq;
 };
 static struct ai_output_bucket g_ai_output[] = {
     { "pre-title", 0, 0, 0, 0, 0 },
@@ -282,6 +285,18 @@ static void dump_ai_output(void)
     }
     g_ai_output[bucket].rows++;
     g_ai_output[bucket].nonzero_rows += nonzero != 0;
+    {   /* s4238: clip fraction (|x|>=32000) + RMS, big-endian s16 samples, matches port [ai-output-clip] */
+        double sumsq = 0.0; long clipped = 0, total = 0;
+        for (i = 0; i + 1 < len; i += 2) {
+            int v = (int16_t)((debug_mem_u8(addr + i) << 8) | debug_mem_u8(addr + i + 1));
+            if (v >= 32000 || v <= -32000) clipped++;
+            sumsq += (double)v * v; total++;
+        }
+        g_ai_output[bucket].clipped += clipped; g_ai_output[bucket].total += total; g_ai_output[bucket].sumsq += sumsq;
+        if (g_ai_output[bucket].rows <= 20 || (g_ai_output[bucket].rows % 128) == 0)
+            printf("[ai-output-clip] bucket=%s n=%ld clipped=%ld total=%ld rms=%.1f\n",
+                   g_ai_output[bucket].name, g_ai_output[bucket].rows, clipped, total, total ? sqrt(sumsq / total) : 0.0);
+    }
     if (g_ai_output[bucket].rows <= 20 || (g_ai_output[bucket].rows % 128) == 0) {
         printf("[ai-output] bucket=%s width=%u origin=0x%06x addr=0x%08x len=%u fnv=0x%08x nz=%u n=%ld\n",
                g_ai_output[bucket].name, width, origin, addr, len, fnv, nonzero,

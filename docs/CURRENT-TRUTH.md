@@ -166,6 +166,7 @@ mitigation behavior changed.
 ## Next steps
 0. (s4237) SUPERSEDES s4236: hangar AI output is a DC ramp (+256/buffer, distinct=1) only for the first ~19 buffers after hangar entry (then one zero buffer); from n=128 it is wide-band (distinct ~188, +-32.7k) like title; hangar phase-5 ucode mix buses are populated. The 'constant DC hangar' conclusion was a window artifact. Open: (a) writer of the 19-buffer entry transient (low value), (b) title and hangar both reach +-32.7k - quantify clipping fraction vs retail oracle title AI buffers. Hangar claim single-source (one run, title control in same run).
 
+- **s4238:** port title AI output meanRMS 18.3k with 2.1% samples |x|>=32000 vs retail oracle title meanRMS 1.4k (max 9.0k), 0% clipped; hangar retail RMS 0.7k. Port ~13x too hot (single run each; scale not shape). Next: find the stage where gain is over-applied.
 - **s4235:** fresh-save hangar `[ai-output]`: 24/25 nonzero, but 19/25 are one identical FNV 0x95E590C5 with all 768 bytes nonzero (constant/saturated-looking; bytes not dumped, single run). Next: dump the first 32 bytes + sample min/max of that buffer at the AI boundary and compare with a retail oracle hangar AI buffer (NEXT.md).
 
 - **s4231 note:** allocator-list head==0/tail!=0 (s4230) NOT reproduced in 6 stale runs with host DMA watch + 200us poll (dmaHIT 0/6, controls fired, head/tail always written together by guest). Treat s4230 as single-source/possible probe artifact. New dominant crash PCs: last-guest-pc 0x8000b650 (3/6), 0x80001b08 (2/6) - classify next.
