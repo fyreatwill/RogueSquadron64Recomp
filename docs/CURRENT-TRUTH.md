@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4269 (2026-10-08, maintenance compaction).
+Updated for session 4270 (2026-10-08).
 
 ## Current state (as of s4268)
 
@@ -43,9 +43,9 @@ parity-clean; add no more witnesses there.
 are RT64 `send_dl` taking 0.2-0.9 s per gfx task (healthy 12-20 ms), persisting
 in a single-arm run (no 2-instance contention). >=95% is `processDisplayLists`
 CPU, waits ~0 (s4267). Hotspot (s4268): `State::checkRDRAM` XXH3-hashing a
-tracked framebuffer set that grows 3 -> 56 (1.8 -> 13 MB per fullSync). ORIGIN of
-the extra framebuffers is UNNAMED (A bogus LLE colour-image sets, B legit
-per-effect fbs never pruned, C alias duplicates). Guest-side chain behind it: tid
+tracked framebuffer set that grows 3 -> 56 (1.8 -> 13 MB per fullSync). The extra
+framebuffers are GARBAGE colour-image sets (s4270: from t=14.09 s hangar entry,
+widths 1-1217, unaligned addresses like 0x001CFFFF; sane before). Writer UNNAMED. Guest-side chain behind it: tid
 3 waits on 0x8011A818 sent only by tid 0 (s4261); completions fan out from
 `spTaskSchedulerThread`/`dpInterruptHandlerThread` (s4263).
 
@@ -65,11 +65,9 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 Work only the first applicable item. One monotonic sequence.
 
-1. **Name the ~50 tracked framebuffers behind the RT64 stall**
-   (scratch/agent/NEXT.md): one-shot framebuffer-map dump + creation log at
-   framebuffer_manager.cpp:95 (`ROGUESQ_S4268`); positive control = initial 3
-   entries at t~3 s. If bogus LLE colour-image sets: name the writer (ORIGIN). If
-   legit: prune in lib/rt64 (`export.sh` + commit).
+1. **Name the writer of the garbage SetColorImage words** (s4270 confirmed
+   hypothesis A; scratch/agent/NEXT.md): dump raw RDP words + DL source at the first
+   non-aligned creation and compare with the oracle.
 2. **Resume M5 plan steps** (docs/M5-AUDIO-PLAN.md Step 9/10) once the stall is
    explained; measure default-arm audio task rate t=18-28 with an `=0` control.
 3. **M3 pre-publication guard runtime qualification:** blocked on a host with
@@ -82,7 +80,7 @@ Work only the first applicable item. One monotonic sequence.
 
 | Hypothesis | Status |
 |---|---|
-| RT64 fb-set growth origin | A bogus LLE colour-image / B legit unpruned / C alias duplicates: open (s4269). |
+| RT64 fb-set growth origin | A CONFIRMED (s4270): garbage colour-image sets from t=14 s; B/C refuted; writer open. |
 | VI-640 intro crash writer | Open; independent of private DMEM and audio ucode (silent-ucode arm crashes equally, s4252). |
 | M5 producer provenance | Port hangar source span is zero because ROM-DMA data (`pi_rom_to_rdram`) is cleared by the legitimate `rs_memset` (0x800078E0/EC); producer setup/object/loop/load-use state is retail-parity (s4150-s4189). No mitigation authorised. |
 | Allocator list head==0 | Single-source s4230, not reproduced (s4231/s4234); parked. |

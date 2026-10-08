@@ -1261,7 +1261,7 @@ index 873883d..1a2db5c 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..6e815eb 100644
+index 7d385fa..12257ac 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
 @@ -6,6 +6,10 @@
@@ -1293,7 +1293,7 @@ index 7d385fa..6e815eb 100644
      static void fixSizeToMultiple(uint32_t &width, uint32_t &height) {
          const uint32_t SizeMultiple = 32;
          width = ((width + SizeMultiple - 1) / SizeMultiple) * SizeMultiple;
-@@ -31,6 +46,52 @@ namespace RT64 {
+@@ -31,7 +46,63 @@ namespace RT64 {
      FramebufferManager::~FramebufferManager() {}
  
      Framebuffer &FramebufferManager::get(uint32_t address, uint8_t siz, uint32_t width, uint32_t height) {
@@ -1343,10 +1343,21 @@ index 7d385fa..6e815eb 100644
 +            return refuseFb;
 +        }
 +
++        static const bool s4270 = getenv("ROGUESQ_S4268") != nullptr;
++        const bool s4270New = s4270 && (framebuffers.find(address) == framebuffers.end());
          auto &fb = framebuffers[address];
++        if (s4270New) {
++            static const auto t0 = std::chrono::steady_clock::now();
++            static std::atomic<int> s_create{0};
++            const double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
++            std::fprintf(stderr, "[s4270-create] #%d t=%.2f addr=0x%08X w=%u h=%u siz=%u map=%zu\n",
++                ++s_create, t, address, width, height, (unsigned)siz, framebuffers.size());
++            std::fflush(stderr);
++        }
          fb.widthChanged = (fb.width != width);
          fb.sizChanged = (fb.siz != siz);
-@@ -107,8 +168,35 @@ namespace RT64 {
+ 
+@@ -107,8 +178,35 @@ namespace RT64 {
          auto fbIt = framebuffers.find(op.createTileCopy.address);
          if (fbIt == framebuffers.end()) {
              tileCopy.ignore = true;
@@ -1382,7 +1393,7 @@ index 7d385fa..6e815eb 100644
  
          const FramebufferTile &fbTile = op.createTileCopy.fbTile;
          const uint32_t tileWidth = std::clamp<long>(lround((fbTile.right - fbTile.left) * resolutionScale.x), 1L, RenderTarget::MaxDimension);
-@@ -183,10 +271,48 @@ namespace RT64 {
+@@ -183,10 +281,48 @@ namespace RT64 {
          // Texture for tile copy must exist.
          TileCopy &tileCopy = tileCopies[op.createTileCopy.id];
          if (tileCopy.ignore) {
@@ -1431,7 +1442,7 @@ index 7d385fa..6e815eb 100644
          assert(fbIt != framebuffers.end());
          RenderTargetKey colorTargetKey(fbIt->second.addressStart, fbIt->second.width, fbIt->second.siz, Framebuffer::Type::Color);
          RenderTarget &colorTarget = targetManager.get(colorTargetKey);
-@@ -245,7 +371,11 @@ namespace RT64 {
+@@ -245,7 +381,11 @@ namespace RT64 {
      }
  
      void FramebufferManager::reinterpretTileSetup(RenderWorker *renderWorker, const FramebufferOperation &op, hlslpp::float2 resolutionScale, bool usesHDR) {
@@ -1444,7 +1455,7 @@ index 7d385fa..6e815eb 100644
  
          // Source tile must exist.
          TileCopy &srcTile = tileCopies[op.reinterpretTile.srcId];
-@@ -310,7 +440,9 @@ namespace RT64 {
+@@ -310,7 +450,9 @@ namespace RT64 {
      void FramebufferManager::reinterpretTileRecord(RenderWorker *renderWorker, const FramebufferOperation &op, TextureCache &textureCache, hlslpp::float2 resolutionScale,
          uint64_t submissionFrame, bool usesHDR, CommandListReinterpretations &cmdListReinterpretations, CommandListDiscards &cmdListDiscards)
      {
@@ -1455,7 +1466,7 @@ index 7d385fa..6e815eb 100644
  
          TileCopy &srcTile = tileCopies[op.reinterpretTile.srcId];
          if (srcTile.ignore) {
-@@ -341,12 +473,37 @@ namespace RT64 {
+@@ -341,12 +483,37 @@ namespace RT64 {
              dstTile.needsDiscard = false;
          }
  
@@ -1497,7 +1508,7 @@ index 7d385fa..6e815eb 100644
  
          while (descriptorReinterpretSetsCount >= descriptorReinterpretSets.size()) {
              descriptorReinterpretSets.emplace_back();
-@@ -797,6 +954,24 @@ namespace RT64 {
+@@ -797,6 +964,41 @@ namespace RT64 {
          assert(RDRAM != nullptr);
  
          differentFbs.clear();
@@ -1517,6 +1528,23 @@ index 7d385fa..6e815eb 100644
 +                        (unsigned long long)(s4268Fbs / s4268Calls), (unsigned long long)s4268Max, (unsigned long long)(s4268Bytes / s4268Calls));
 +                    s4268Calls = s4268Bytes = s4268Fbs = s4268Max = 0; s4268Last = now;
 +                }
++            }
++        }
++        {
++            static const bool s4270 = getenv("ROGUESQ_S4268") != nullptr;
++            static const auto t0 = std::chrono::steady_clock::now();
++            static bool dumped = false;
++            if (s4270 && !dumped && std::chrono::steady_clock::now() - t0 > std::chrono::seconds(28)) {
++                dumped = true;
++                uint64_t total = 0;
++                for (const auto &f : framebuffers) {
++                    total += f.second.RAMBytes;
++                    std::fprintf(stderr, "[s4270-dump] addr=0x%08X w=%u h=%u siz=%u RAMBytes=%u lastWriteType=%d ts=%llu\n",
++                        f.first, f.second.width, f.second.height, (unsigned)f.second.siz, (unsigned)f.second.RAMBytes,
++                        (int)f.second.lastWriteType, (unsigned long long)f.second.lastWriteTimestamp);
++                }
++                std::fprintf(stderr, "[s4270-dump] total entries=%zu bytes=%llu\n", framebuffers.size(), (unsigned long long)total);
++                std::fflush(stderr);
 +            }
 +        }
          auto it = framebuffers.begin();
