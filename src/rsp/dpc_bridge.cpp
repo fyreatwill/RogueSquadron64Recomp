@@ -60,6 +60,8 @@ static int s_dpc_poll_repeats = 0;
 // than the largest previous task's — 64 of 66 tasks emitted "0 bytes" that way.
 static uint32_t s_submit_dl_base = 0;
 static uint32_t s_submit_last_end = 0;
+// s4284: per-commit ring-lap census (END < seen). Reset at each deferred commit.
+static uint32_t s_c4284_laps = 0, s_c4284_first_lo = 0, s_c4284_first_hi = 0, s_c4284_start = 0, s_c4284_maxseen = 0;
 
 // Task-local committed output bounds. These are reset before each deferred
 // task and populated only when a range is accepted for RT64 submission.
@@ -2343,6 +2345,8 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         g_last_wrap_seen.store(s_last_end, std::memory_order_release);
         g_last_wrap_start.store(start_phys, std::memory_order_release);
         g_last_wrap_n.store((uint32_t)n, std::memory_order_release);
+        if (s_c4284_laps++ == 0) { s_c4284_first_lo = end_phys; s_c4284_first_hi = s_last_end; s_c4284_start = start_phys; }
+        if (s_last_end > s_c4284_maxseen) s_c4284_maxseen = s_last_end;
         if (n <= 4 || (n % 4096) == 0) {
             fprintf(stderr, "[dpc-wrap #%d] end=0x%06X < seen=0x%06X start=0x%06X (dropped)\n",
                     n, end_phys, s_last_end, start_phys);
@@ -3658,6 +3662,12 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                         fprintf(stderr, "[s4280-walk] %06X bump=%08X %08X commit=%08X %08X%s%s\n", a, b0, b1, n0, n1, (b0 != n0 || b1 != n1) ? " DIFF" : "", a == off ? " <== cimg" : ""); }
                     break; }
             }
+            { static unsigned long cm = 0, cmLap = 0, oddCm = 0, oddCmLap = 0, shown4284 = 0; cm++; if (s_c4284_laps) cmLap++;
+              bool anyOdd = false; for (int i = 0; i < n && i < 256; i++) if (RT64::g_s4280_ev[i].odd) { anyOdd = true;
+                  const uint32_t off = (uint32_t)RT64::g_s4280_ev[i].off;
+                  if (shown4284++ < 60) fprintf(stderr, "[s4284-odd] off=%06X laps=%u firstLap end=%06X seen=%06X start=%06X maxseen=%06X inDropped=%d\n", off, s_c4284_laps, s_c4284_first_lo, s_c4284_first_hi, s_c4284_start, s_c4284_maxseen, (s_c4284_laps && off >= s_c4284_start && off < s_c4284_maxseen) ? 1 : 0); }
+              if (anyOdd) { oddCm++; if (s_c4284_laps) oddCmLap++; }
+              if ((cm & 0xFF) == 0) fprintf(stderr, "[s4284-tot] commits=%lu withLap=%lu oddCommits=%lu oddWithLap=%lu\n", cm, cmLap, oddCm, oddCmLap); }
             RT64::g_s4280_n = 0;
             static unsigned long cnt = 0;
             if ((++cnt & 0xFFF) == 0)
@@ -3691,6 +3701,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
             fflush(stderr);
         }
     }
+    s_c4284_laps = 0; s_c4284_maxseen = 0;
     g_deferred_ranges.clear();
 }
 
