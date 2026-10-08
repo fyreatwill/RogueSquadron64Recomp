@@ -147697,3 +147697,7 @@ Result (single run per arm): flush fired (positive control: 1856+ flushes, 185 M
 ORIGIN: writer = the ring-lap overwrite of unread deferred bytes (ucode legitimately reuses its DPC ring; our commit-time read is what makes it lossy). Flush is opt-in, not a mitigation of a wild value.
 Selects: ring-lap loss is real and large (≈38 MB of dropped bumps/45 s); refutes R1. Does not select between R2 (placeholders unfilled at commit) and R3.
 Next discriminator: phase-gated (hangar-reached) re-run of arm0/arm1 with the flush shadow fixed (compare flushed ranges' commit-time vs bump-time), plus a visual frame dump of each arm.
+
+## Session 4274 (2026-10-08) — DPC_WRAP_FLUSH A/B to 75 s: neither arm reached hangar; flush stays default OFF
+
+Ran scratch/agent/s4273_ab.sh with sleep 75 (fresh build/saves per arm). arm0 (WRAP_FLUSH=0): final odd=336 sane=2608 (11.4% odd), VI 640 only. arm1 (=1): odd=336 sane=3024 (10.0% odd), VI 1024 at 49.8 s. VI 512 hangar NOT reached in either arm, so the phase-gated discriminator was not obtained; arms not phase-matched, cross-run counts on animating content (single-source, weak). No frame dumps, so W2 unexamined. Rules out nothing. The 40..68 s autopilot recipe is wrong for reaching the hangar; use the s1949 route (Start at title ~14 s, VI 512 ~26 s).
