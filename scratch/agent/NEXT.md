@@ -1,11 +1,7 @@
-# Next work unit: M5 Step 10b - why is hangar (VI 512) not reached with the fresh 7F save?
+# Next work unit: M5 Step 10b - what is the fresh-save 640 phase (2.8-49 s) and post-title 640@0x696100 screen?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4225: fresh save -> real PCM nonzero at title (nz~759/768). But no hangar in 200 s (s4224 also none); stale-save runs reached 512 at ~26 s.
-
-Hypotheses:
-- H-save-menu-flow: a fresh/blank save changes title->hangar flow (first-run screen) so the scripted Start/A no longer lands on SELECT LEVEL.
-- H-audio-timing: nonzero audio changes a wait/countdown so title never advances.
-- H-a12-regression: the s4192 A12 default (not the save) blocks hangar.
-Discriminator (one iteration, arms built together): s4225_pcm_fresh.sh variants: (a) fresh save; (b) stale zero-volume save restored (must reproduce 512 at ~26 s = positive control); (c) fresh save + ROGUESQ_AUDIO_WAIT_NOPUMP=0. Per arm report: 512 reached?, pcm-sanity nonzero?, title frame dump. (b) reaches 512 and (a) not -> save/audio; (c) reaches 512 -> H-a12-regression.
+s4226: stale save -> title 14.7 s, hangar 24.0 s (control OK). Fresh save -> title 49.3 s, then 640@0x696100 at 75.9 s, no hangar, crash last-guest-pc 0x80001b08. NOPUMP=0 no effect (A12 refuted).
+Hypotheses: (a) fresh save triggers a first-run/intro flow needing different input; (b) nonzero audio lengthens an intro wait (audio-timing); (c) crash at 0x80001b08 truncates the run.
+Discriminator: fresh-save arm with frame dumps at ~20 s, 49 s, 76 s, plus a fresh-save arm with volume forced to 0 after load. Title still at ~49 s with zero volume -> flow (a); 14.7 s -> audio timing (b).
