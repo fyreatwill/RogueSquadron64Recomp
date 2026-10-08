@@ -1,10 +1,11 @@
-# Next work unit: M5 Step 10 - re-validate audio with the fresh (7f) save
+# Next work unit: M5 Step 10b - why is hangar (VI 512) not reached with the fresh 7F save?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4224 closed the zero-volume chain: stale build/saves poisoned volume bytes. Fresh save -> cmd 0x15 a0=0x7F.
+s4225: fresh save -> real PCM nonzero at title (nz~759/768). But no hangar in 200 s (s4224 also none); stale-save runs reached 512 at ~26 s.
 
 Hypotheses:
-- H-audio-now-mixes: with volume 0x7F the RSP audio path produces nonzero PCM samples at the host output and some crash families change.
-- H-other-zero-gate: another gate (voice-array / key-on) still yields silence despite nonzero volume.
-Discriminator: run the s4224_eep_fresh recipe (scratch/agent/s4224_eep_fresh.sh, delete build/saves first) with the PCM/host-output census flag (grep docs/M5-AUDIO-PLAN.md for the output-sample census env), same run reports max |sample|. Positive control: a mark-everything / synthetic tone if available. Nonzero -> H-audio-now-mixes: run a 300 s soak and compare crash family counts.
+- H-save-menu-flow: a fresh/blank save changes title->hangar flow (first-run screen) so the scripted Start/A no longer lands on SELECT LEVEL.
+- H-audio-timing: nonzero audio changes a wait/countdown so title never advances.
+- H-a12-regression: the s4192 A12 default (not the save) blocks hangar.
+Discriminator (one iteration, arms built together): s4225_pcm_fresh.sh variants: (a) fresh save; (b) stale zero-volume save restored (must reproduce 512 at ~26 s = positive control); (c) fresh save + ROGUESQ_AUDIO_WAIT_NOPUMP=0. Per arm report: 512 reached?, pcm-sanity nonzero?, title frame dump. (b) reaches 512 and (a) not -> save/audio; (c) reaches 512 -> H-a12-regression.

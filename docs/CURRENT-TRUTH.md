@@ -13,7 +13,9 @@ Session 4190: hangar caller-continuation `0x8008F8A8` (return from `rs_malloc`) 
 
 ## Current state
 
-**s4224 (latest, closes the s4219-s4223 zero-volume chain):** the zero volume was a stale persisted port save (build/saves had 00 00 00 at 0x48; retail/fresh/default is 7f7f7f). With a good or fresh save the cmd 0x15 a0 is 0x7F. The "unrecompiled gap" 0x8002A120..0x8002B18F is libultra EEPROM/controller code natively replaced by librecomp (writer 0x8002A518 = retail osEepromRead). Reset build/saves before any audio A/B; `RS64_EEP_TRACE=1` prints save_read. Next: re-validate M5 audio output with the fresh save (NEXT.md). Superseded: s4222/s4223 "port misses code that fills the source block".
+**s4225 (latest):** with the fresh 7F save the real audio ucode produces NONZERO PCM at title (`[ai-output]` nz~759/768 on 107 of 107 rows; `[pcm-sanity]` callbacks non-silent after title); the `nz=0` / `FNV=0xF59C39C5` zero-payload boundary (s4164-s4224) was a stale-save artifact. Hangar (512) was NOT reached in 200 s with the fresh save (also absent in s4224) - cause unmeasured. Next: NEXT.md.
+
+**s4224 (closes the s4219-s4223 zero-volume chain):** the zero volume was a stale persisted port save (build/saves had 00 00 00 at 0x48; retail/fresh/default is 7f7f7f). With a good or fresh save the cmd 0x15 a0 is 0x7F. The "unrecompiled gap" 0x8002A120..0x8002B18F is libultra EEPROM/controller code natively replaced by librecomp (writer 0x8002A518 = retail osEepromRead). Reset build/saves before any audio A/B; `RS64_EEP_TRACE=1` prints save_read. Next: re-validate M5 audio output with the fresh save (NEXT.md). Superseded: s4222/s4223 "port misses code that fills the source block".
 
 **s4223 (latest, supersedes the s4222 "save-loaded bytes" framing):** the zero volume is a copy chain, not
 EEPROM: settings source block 0x80194FC8 (+0x10..0x12 = 7F in retail, 0 in port) -> memcpy to 0x8013A5C0 ->
