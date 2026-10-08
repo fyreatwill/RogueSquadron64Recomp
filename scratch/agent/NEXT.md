@@ -1,10 +1,37 @@
-# Next work unit (s4302): in retail, does anything read the freed stream-node block after waitForAnyAudioSlot's three frees?
+# Next work unit (s4303): compare post-free reuse of the stream-node block in retail and port
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-State (s4301): the free is verbatim retail code in waitForAnyAudioSlot (frees ptrs at 0x80139B4C/B50/B54 when byte 0x80130B39==0), taken on the natural first-poll exit; guard/yield not involved (control cap=1 fires, default 0). pc 0x80095D54 was a stale last-guest-pc.
-Hypotheses:
-- H-retail-same-walk: retail also frees and the synth keeps walking, but retail's reuse of the block differs (texture cache allocates elsewhere), so no corruption.
-- H-flag-differs: retail has byte 0x80130B39 != 0 (frees skipped) at this point and ours is 0 because of an upstream audio stub.
-- H-order: retail stops the synth earlier (e.g. 0x80130B39 or a synth-enable flag set by code we skip).
-Discriminator: tools/oracle (README) — read-watch physical 0x00130B39 and write-watch 0x00139B4C..B54 (positive control: whole-RDRAM watch fires), on retail reaching the mission transition; log value of 0x80130B39 at the waitForAnyAudioSlot return and who writes it. Compare to ours (log byte at the same point). Note the oracle reaches only boot/attract; if the transition is unreachable, instead log our writer of 0x80130B39 (rs64_m5_writer_parity) and its value history.
+State (s4302): retail reaches hangar, enters `waitForAnyAudioSlot` 3-4 times,
+reads the B39 flag at aligned physical word 0x00130B38, then reads all three
+asset pointers and takes the same free path as the port. The B39-difference
+hypothesis is closed. The port still sees the freed 0x8017D910 block reused by
+level-texture-cache records while `musyxSynthFrame` continues to walk it.
+
+Competing hypotheses:
+
+- H-retail-different-reuse: retail's allocator gives the post-free block to a
+  different legitimate consumer, so the synth's stale walk does not encounter
+  text records.
+- H-retail-synth-stop: retail stops or retargets `musyxSynthFrame` before the
+  first post-free walk; the port's audio scheduling/de-stubbing leaves it live.
+- H-port-only-writer: the same retail reuse occurs, but only the port writes
+  the damaging ltex-cache/name bytes into the stream-node range.
+
+Discriminator: first run the retail oracle with whole-RDRAM positive control,
+read/write watches on physical 0x17D000:0x17E200, and `--watch-pc` for the
+known synth entry plus `waitForAnyAudioSlot`; phase-gate attribution to the
+hangar origin. In the same iteration, use the existing port guest write/synth
+breadcrumbs (no new field-by-field counter) on the matching VI-512 phase.
+
+Interpretation: retail writes in the block after the wait and synth reads it
+after those writes => H-retail-different-reuse is false and the allocator
+consumer/value layout is the discriminator. Retail has no post-free synth reads
+=> H-retail-synth-stop is supported. Retail and port have the same post-free
+writer/synth sequence but only port produces ASCII pairs => H-port-only-writer
+is supported. A zero result without the positive control or without VI 512 is
+invalid. Do not add a free guard or skip; this is an origin/lifetime probe.
+
+Exact first command shape:
+
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 65 --hit-cap 20 --watch-write 0x0:0x800000 --watch-rw 0x17D000:0x17E200 --watch-pc <synth-entry>,0x800668B0 --pc-hist-watch 1 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace`

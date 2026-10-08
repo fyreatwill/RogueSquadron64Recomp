@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4300 (free attributed to guest pc 0x80095D54). Previously 4299 (stale stream-node root of the do_rom_read crash named). Previously: session 4290.
+Updated for session 4302 (retail also frees the three waitForAnyAudioSlot asset pointers). Previously 4301 (retail free path named). Previously: session 4290.
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4299) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (holds the stream nodes at 0x17DBE0 + 0x100 DMA sample buffers) is rs_freed together with 4 other blocks right after `waitForAnyAudioSlot` (audio teardown; freeing function unverified, candidate shutdownAudioEngine 0x80091D40), then loadLevelTextureCache's table init ("ltex_cache_N" 0x24-stride records, via rs_malloc) lands on it while `musyxSynthFrame` keeps running (synth-entry 573x before vs 4466x after the free) and builds DMA batches from the text-overwritten ROM pairs. Name-copy and host-write refuted. (s4300) The free is `rs_free <- waitForAnyAudioSlot+2432 <- menuOverlayInit+14480`, guest pc 0x80095D54, once in BOTH A14 arms (yield-independent). (s4301) The free is retail guest code in waitForAnyAudioSlot (3 frees when byte 0x80130B39==0), natural first-poll exit; s301 guard/s4197 yield do not fire (control cap=1 does); guest_pc 0x80095D54 is a stale last-pc. Next: why does retail not corrupt — oracle/our-writer check of 0x80130B39 and block reuse (scratch/agent/NEXT.md). Single-source for the free ordering (1 run logged frees; poller+control in 3).
+00. (s4299) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (holds the stream nodes at 0x17DBE0 + 0x100 DMA sample buffers) is rs_freed together with 4 other blocks after `waitForAnyAudioSlot`, then `loadLevelTextureCache` reuses it for ltex-cache records while `musyxSynthFrame` keeps walking it. Name-copy and host-write refuted. (s4300-s4301) The three frees are retail guest code in `waitForAnyAudioSlot`, on the natural exit path; the port's A14 arm and control-cap probe reproduce that path. (s4302) Retail independently reaches hangar, enters the wait 3-4 times, reads the three asset pointers at 0x800668E0/0x800668F0/0x80066900 after the B39 check, and performs the same free path. The apparent missing B39 read was an aligned-watch artifact: the byte at 0x80130B39 is reported at physical word 0x00130B38. Next: compare post-free block writes and synth reads in retail versus port; do not add a skip/guard until a legitimate retail/port lifetime difference is named. Single-source for exact retail counts; combined with the port-side s4301 trace this closes the flag-difference hypothesis.
 
 0c. (s4295) Odd control restored only on the s4290 route (PHASE_WIDTH=1024, phase-relative keys, S4268): RESTORE=0 odd=60 vs RESTORE=1 odd=0, with seeded saves, but that route never reaches 512. The s4294-style route (PHASE_WIDTH=512) reaches 512 but shows odd=0 in both arms, with or without SPIN_YIELD/Y8000. Next: isolate S4268 vs 1024-width phase gating (NEXT.md), find a route with odd>0 AND 512, then run the hangar RESTORE A/B. Hangar effect still UNMEASURED.
 
@@ -106,6 +106,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 producer provenance | Port hangar source span is zero because ROM-DMA data (`pi_rom_to_rdram`) is cleared by the legitimate `rs_memset` (0x800078E0/EC); producer setup/object/loop/load-use state is retail-parity (s4150-s4189). No mitigation authorised. |
 | Allocator list head==0 | Single-source s4230, not reproduced (s4231/s4234); parked. |
 | M3 sentinel ownership | H1 at source scope; runtime unqualified (no MIPS toolchain). |
+| waitForAnyAudioSlot B39 skip flag | Retail does not avoid the frees: the aligned physical watch shows the B39-byte read at 0x00130B38, followed by all three asset-pointer reads at the free sites (s4302). |
 
 ## Durable evidence boundary
 
