@@ -28,6 +28,28 @@ diff --git a/src/contrib/plume b/src/contrib/plume
 @@ -1 +1 @@
 -Subproject commit 51b1ad443b9f202c5cfc930ae25345d3f2ba7716
 +Subproject commit 51b1ad443b9f202c5cfc930ae25345d3f2ba7716-dirty
+diff --git a/src/gbi/rt64_gbi_f3d.cpp b/src/gbi/rt64_gbi_f3d.cpp
+index cf05674..d863758 100644
+--- a/src/gbi/rt64_gbi_f3d.cpp
++++ b/src/gbi/rt64_gbi_f3d.cpp
+@@ -12,6 +12,7 @@
+ #include "rt64_gbi_extended.h"
+ #include "rt64_gbi_rdp.h"
+ 
++namespace RT64 { extern const void *g_s4271_dl; extern int g_s4271_src; }
+ namespace RT64 {
+     namespace GBI_F3D {
+         void matrix(State *state, DisplayList **dl) {
+@@ -178,7 +179,9 @@ namespace RT64 {
+             const uint8_t siz = (*dl)->p0(19, 2);
+             const uint16_t width = (*dl)->p0(0, 12) + 1;
+             const uint32_t address = (*dl)->w1;
++            g_s4271_dl = *dl; g_s4271_src = 2;
+             state->rsp->setColorImage(fmt, siz, width, address);
++            g_s4271_dl = nullptr;
+         }
+ 
+         void setDepthImage(State *state, DisplayList **dl) {
 diff --git a/src/gbi/rt64_gbi_f3dfactor5.cpp b/src/gbi/rt64_gbi_f3dfactor5.cpp
 index a0d4a6a..39c294f 100644
 --- a/src/gbi/rt64_gbi_f3dfactor5.cpp
@@ -116,10 +138,10 @@ index a0d4a6a..39c294f 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..df82c27 100644
+index 6255872..afb0672 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
-@@ -4,12 +4,38 @@
+@@ -4,12 +4,39 @@
  
  #include "rt64_gbi_rdp.h"
  
@@ -145,6 +167,7 @@ index 6255872..df82c27 100644
 +                                                             uint32_t *ordinal, uint32_t *pc,
 +                                                             uint32_t *source);
 +
++namespace RT64 { extern const void *g_s4271_dl; extern int g_s4271_src; }
  namespace RT64 {
      namespace GBI_RDP {
 +        static uint32_t rs64_shade_ordinal(uint32_t task, uint32_t dl) {
@@ -158,7 +181,17 @@ index 6255872..df82c27 100644
          void noOp(State *state, DisplayList **dl) {
              // Do nothing.
          }
-@@ -253,6 +279,17 @@ namespace RT64 {
+@@ -19,7 +46,9 @@ namespace RT64 {
+             const uint8_t siz = (*dl)->p0(19, 2);
+             const uint16_t width = (*dl)->p0(0, 12) + 1;
+             const uint32_t address = (*dl)->w1;
++            g_s4271_dl = *dl; g_s4271_src = 1;
+             state->rdp->setColorImage(fmt, siz, width, address);
++            g_s4271_dl = nullptr;
+         }
+ 
+         void setDepthImage(State *state, DisplayList **dl) {
+@@ -253,6 +282,17 @@ namespace RT64 {
          }
  
          void fullSync(State *state, DisplayList **dl) {
@@ -176,7 +209,7 @@ index 6255872..df82c27 100644
              RT64_LOG_PRINTF("GBI_RDP::fullSync()");
              state->fullSync();
              state->dpInterrupt();
-@@ -336,9 +373,11 @@ namespace RT64 {
+@@ -336,9 +376,11 @@ namespace RT64 {
              size_t workBufferIndex = 0;
              uint32_t tile = -1;
              uint32_t level = -1;
@@ -188,7 +221,7 @@ index 6255872..df82c27 100644
                  // TODO flush when tile and level change
                  tile = (curData[0].w0 >> 16) & 0x7;
                  level = (curData[0].w0 >> 19) & 0x7;
-@@ -420,6 +459,22 @@ namespace RT64 {
+@@ -420,6 +462,22 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -211,7 +244,7 @@ index 6255872..df82c27 100644
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +510,14 @@ namespace RT64 {
+@@ -455,6 +513,14 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
@@ -226,7 +259,7 @@ index 6255872..df82c27 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +527,179 @@ namespace RT64 {
+@@ -464,6 +530,179 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -406,7 +439,7 @@ index 6255872..df82c27 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +713,369 @@ namespace RT64 {
+@@ -477,6 +716,369 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -776,7 +809,7 @@ index 6255872..df82c27 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,6 +1136,66 @@ namespace RT64 {
+@@ -537,6 +1139,66 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -843,7 +876,7 @@ index 6255872..df82c27 100644
                      curData += triangleTexWords;
                  }
                  // No texture coefficients
-@@ -584,6 +1243,68 @@ namespace RT64 {
+@@ -584,6 +1246,68 @@ namespace RT64 {
                  break;
              }
  
@@ -2827,7 +2860,7 @@ index f17db9b..5087cef 100644
                      }
                  }
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..11a9595 100644
+index d1a9f4e..f6cd681 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -2851,7 +2884,7 @@ index d1a9f4e..11a9595 100644
  
  #include "../include/rt64_extended_gbi.h"
  
-@@ -28,6 +38,68 @@
+@@ -28,7 +38,71 @@
  //#   define LOG_LOAD_METHODS
  #endif
  
@@ -2918,9 +2951,12 @@ index d1a9f4e..11a9595 100644
 +}
 +
  namespace RT64 {
++    const void *g_s4271_dl = nullptr;
++    int g_s4271_src = 0;
      // RDP
      static uint8_t getCommandLength(uint32_t commandId) {
-@@ -62,6 +134,85 @@ namespace RT64 {
+         if (commandId == (G_TEXRECT & 0x3F) || commandId == (G_TEXRECTFLIP & 0x3F)) {
+@@ -62,6 +136,85 @@ namespace RT64 {
          }
      }
  
@@ -3006,7 +3042,40 @@ index d1a9f4e..11a9595 100644
      RDP::RDP(State *state) : state(state) {
          memset(TMEM, 0, sizeof(TMEM));
          crashed = false;
-@@ -268,6 +419,34 @@ namespace RT64 {
+@@ -250,6 +403,8 @@ namespace RT64 {
+         }
+     }
+ 
++    // s4271: DL context of the SetColorImage being applied (set by callers).
++
+     void RDP::setColorImage(uint8_t fmt, uint8_t siz, uint16_t width, uint32_t address) {
+         // Make sure the new color image is actually different. Some games will set the color image
+         // multiple times despite setting the exact same parameters.
+@@ -264,10 +419,58 @@ namespace RT64 {
+             colorImage.width = width;
+             colorImage.address = newAddress;
+             colorImage.changed = true;
++            {
++                static const bool s4271 = getenv("ROGUESQ_S4271") != nullptr;
++                static int oddN = 0, sane = 0;
++                if (s4271) {
++                    const bool odd = ((newAddress & 7) != 0) || (width & 1);
++                    if ((odd && oddN < 4) || (!odd && sane < 2)) {
++                        (odd ? oddN : sane)++;
++                        std::fprintf(stderr, "[s4271-cimg] %s src=%d fmt=%u siz=%u w=%u addr=0x%08X dl=%p rdramoff=%lld\n",
++                            odd ? "ODD" : "SANE", g_s4271_src, fmt, siz, width, newAddress, g_s4271_dl,
++                            g_s4271_dl ? (long long)((const uint8_t *)g_s4271_dl - state->RDRAM) : -1LL);
++                        if (g_s4271_dl) {
++                            const uint32_t *w = (const uint32_t *)g_s4271_dl;
++                            for (int i = -8; i <= 8; i++) {
++                                std::fprintf(stderr, "[s4271-w] %+d %08X %08X%s\n", i, w[i * 2], w[i * 2 + 1], i == 0 ? " <==" : "");
++                            }
++                        }
++                        std::fflush(stderr);
++                    }
++                }
++            }
+ 
  #       ifdef LOG_COLOR_DEPTH_IMAGE_METHODS
              RT64_LOG_PRINTF("RDP::setColorImage(fmt %u, siz %u, width %u, address 0x%08X)", fmt, siz, width, address);
  #       endif
@@ -3041,7 +3110,7 @@ index d1a9f4e..11a9595 100644
          }
      }
  
-@@ -293,6 +472,67 @@ namespace RT64 {
+@@ -293,6 +496,67 @@ namespace RT64 {
  #   ifdef LOG_TEXTURE_IMAGE_METHODS
          RT64_LOG_PRINTF("RDP::setTextureImage(fmt %u, siz %u, width %u, address 0x%08X)", fmt, siz, width, address);
  #   endif
@@ -3109,7 +3178,7 @@ index d1a9f4e..11a9595 100644
      }
  
      void RDP::setCombine(uint64_t combine) {
-@@ -324,6 +564,46 @@ namespace RT64 {
+@@ -324,6 +588,46 @@ namespace RT64 {
  #ifdef LOG_TILE_METHODS
          RT64_LOG_PRINTF("RDP::setTile(tile %u, fmt %u, siz %u, line %u, tmem %u, palette %u, cmt %u, cms %u, maskt %u, masks %u, shiftt %u, shifts %u)", tile, fmt, siz, line, tmem, palette, cmt, cms, maskt, masks, shiftt, shifts);
  #endif
@@ -3156,7 +3225,7 @@ index d1a9f4e..11a9595 100644
  
          assert(tile < RDP_TILES);
  
-@@ -340,6 +620,11 @@ namespace RT64 {
+@@ -340,6 +644,11 @@ namespace RT64 {
          t.shifts = shifts;
          t.shiftt = shiftt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3168,7 +3237,7 @@ index d1a9f4e..11a9595 100644
      }
  
      void RDP::setTileSize(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
-@@ -354,6 +639,10 @@ namespace RT64 {
+@@ -354,6 +663,10 @@ namespace RT64 {
          t.lrs = lrs;
          t.lrt = lrt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3179,7 +3248,7 @@ index d1a9f4e..11a9595 100644
      }
  
      void RDP::clearTileReplacementHash(uint8_t tile) {
-@@ -379,22 +668,26 @@ namespace RT64 {
+@@ -379,22 +692,26 @@ namespace RT64 {
              offsetMask = 0x7;
          }
  
@@ -3215,7 +3284,7 @@ index d1a9f4e..11a9595 100644
              }
          }
      }
-@@ -404,7 +697,15 @@ namespace RT64 {
+@@ -404,7 +721,15 @@ namespace RT64 {
          uint32_t tmemStride, uint32_t wordsPerRow, uint32_t rowCount, uint32_t dxtIncrement = 0)
      {
          assert((!BLOCK || (rowCount == 1)) && "Load block must behave as if it only loads one row of data.");
@@ -3232,7 +3301,7 @@ index d1a9f4e..11a9595 100644
          const uint32_t DXTSwap = 0x800;
          uint32_t textureAddress, tmemAddress, wordCount, tmemMask, tmemAdvance;
          if constexpr (RGBA32) {
-@@ -540,12 +841,207 @@ namespace RT64 {
+@@ -540,12 +865,207 @@ namespace RT64 {
              // Load into TMEM.
              uint8_t *TMEM8 = reinterpret_cast<uint8_t *>(TMEM);
              const uint8_t *RDRAM = state->RDRAM;
@@ -3440,7 +3509,7 @@ index d1a9f4e..11a9595 100644
          }
      }
  
-@@ -722,6 +1218,117 @@ namespace RT64 {
+@@ -722,6 +1242,117 @@ namespace RT64 {
  #ifdef LOG_LOAD_METHODS
          RT64_LOG_PRINTF("RDP::loadBlock(tile %u, uls %u, ult %u, lrs %u, dxt %u)", tile, uls, ult, lrs, dxt);
  #endif
@@ -3558,7 +3627,7 @@ index d1a9f4e..11a9595 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -775,12 +1382,82 @@ namespace RT64 {
+@@ -775,12 +1406,82 @@ namespace RT64 {
          workload.drawData.loadOperations.emplace_back(operation);
  
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3641,7 +3710,7 @@ index d1a9f4e..11a9595 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -912,6 +1589,18 @@ namespace RT64 {
+@@ -912,6 +1613,18 @@ namespace RT64 {
      }
  
      void RDP::setFogColor(uint32_t color) {
@@ -3660,7 +3729,7 @@ index d1a9f4e..11a9595 100644
          hlslpp::float4 &fogColor = fogColorStack[fogColorStackSize - 1];
          fogColor.x = ((color >> 24) & 0xFF) / 255.0f;
          fogColor.y = ((color >> 16) & 0xFF) / 255.0f;
-@@ -935,6 +1624,23 @@ namespace RT64 {
+@@ -935,6 +1648,23 @@ namespace RT64 {
      }
  
      void RDP::setFillColor(uint32_t color) {
@@ -3684,7 +3753,7 @@ index d1a9f4e..11a9595 100644
          fillColorStack[fillColorStackSize - 1] = color;
          state->updateDrawStatusAttribute(DrawAttribute::FillColor);
      }
-@@ -1049,6 +1755,44 @@ namespace RT64 {
+@@ -1049,6 +1779,44 @@ namespace RT64 {
              lry |= 3;
          }
  
@@ -3729,7 +3798,7 @@ index d1a9f4e..11a9595 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1132,6 +1876,828 @@ namespace RT64 {
+@@ -1132,6 +1900,828 @@ namespace RT64 {
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
  
@@ -4558,7 +4627,7 @@ index d1a9f4e..11a9595 100644
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
              fbPair.scissorRect.merge(scissorRect);
-@@ -1319,6 +2885,40 @@ namespace RT64 {
+@@ -1319,6 +2909,40 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  

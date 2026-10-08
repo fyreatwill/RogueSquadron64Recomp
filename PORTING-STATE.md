@@ -147671,3 +147671,11 @@ ORIGIN: unnamed. Next discriminator: at the first non-aligned creation, dump the
 Verdict (s4270): SELECTS H-fb-garbage-colorimage (hypothesis A); REFUTES H-fb-legit-unpruned (B) and H-fb-alias-duplicates (C). Evidence: 118 creations; all pre-t=7 s entries sane, all post-t=14 s entries unaligned/odd-width. Next discriminator: raw RDP words + DL source dump at the first non-aligned SetColorImage (t~14.09 s, 0x001CFFFF), with the first sane SetColorImage as same-run control, compared against the oracle at the same hangar frame; outcomes split ucode/DL producer vs RDRAM-corrupt DL vs RT64 misparse (scratch/agent/NEXT.md).
 
 This run selects garbage-colour-image sets (A) and refutes unpruned-legit (B) and alias (C); the next probe will discriminate producer vs RT64 misparse.
+
+## Session 4271 (2026-10-08) — raw DL words at garbage SetColorImage: data in command position (selects desync; refutes B)
+
+Instrument (lib/rt64, ROGUESQ_S4271=1, patch exported): RDP::setColorImage dumps dl[-8..+8] for the first 4 ODD (addr&7 or odd width) and first 2 SANE creations; callers tag src (1=gbi_rdp, 2=f3d). Script scratch/agent/s4271_cimg.sh, log scratch/agent/soak_results/s4271_cimg/arm1.log.
+Positive control: 2 SANE creations (addr 0x7DD000, 0x6BA000, src=1, rdramoff 0x777880) show well-formed `FF10013F 807DD000` preceded by valid E7/F8/ED/FE RDP words.
+Result: the 4 ODD ones (src=1, rdramoff 0x4C7C68/0x4C7CB0/0x4C8260/0x4C8268; first at log line 80032, phase 640 hangar=0) are `FFFFFFFF FFFFFFDB`, `FFF66640 FFF3FFE0`, `FFFF0000 0000FF9A`, `FFD70009 00090033` at 8-byte-aligned slots, but the surrounding words (`2F182C30 C8104240` x3, `00FF8000 FFFFCCCC`, `80008000 80008000`, `7E18D608 00200000`, `CD0000DA 00D800D4`) look like inline vertex/coefficient data, not commands. Preceding valid words: E7, F5, F2.
+ORIGIN: no mitigation added; instrument only. Writer = whatever places data in command position at RDRAM 0x4C7C68+ (walker advance desync vs producer) — still unnamed.
+Selects: hypothesis A (stream desync; data decoded as commands). Refutes B (bytes are not a valid command). C (bad DL in RDRAM) not separated from A: bytes are in RDRAM by construction; the open question is a walker mis-advance (F5 inline advances, op_consume16 on B4/BF, opcode 0x2F unmapped) vs the producer emitting them. Single run, single-source.
