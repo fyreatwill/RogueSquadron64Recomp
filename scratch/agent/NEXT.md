@@ -1,9 +1,8 @@
-# Next work unit: is the hangar's repeated all-nonzero AI buffer (FNV 0x95E590C5) real audio or a constant/saturated fill?
+# Next work unit: who writes the hangar's constant DC AI output (s4236)?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4235: fresh-save hangar run (scratch/agent/s4235_hangar_pcm.sh, hangar at 72 s) gave 19/25 identical AI buffers, nz=768/768.
-Hypotheses: (a) constant DC/clipped fill (mixer saturating or an uninitialised bus); (b) legitimate looping ambience/music tail repeated; (c) host-side repeat of a stale buffer.
-Discriminator: at the ai.cpp `[ai-output]` census also log the first 32 bytes and per-channel s16 min/max/distinct-count of each buffer. (a) -> min==max or 1-2 distinct values; (b) -> wide distinct count, different FNVs on later buffers; (c) -> same rdram addr reused. Positive control: title buffers in the same run must show wide distinct counts.
-Optional retail twin: tools/oracle/README.md hangar AI buffer (oracle currently reaches boot/attract only, so likely unavailable).
-Park: allocator head==0/tail!=0 corruption (s4234) until it recurs.
+s4236: hangar AI buffers are one repeated stereo frame (distinct=1 per channel), L/R ramping +0x100 per buffer, ~-12000/-8200; title control wide-band.
+Hypotheses: (a) sources silent, DC is filter/accumulator state of the LLE ucode mixing stage; (b) final stage (resample/limiter/DMEM->RDRAM) injects an uninitialised bias; (c) our HLE/stub path writes the output buffer (not the ucode).
+Discriminator: in hangar, dump RDRAM mix-bus/intermediate buffers feeding the output (or log writer PC for the output ring 0x80166450..0x80169150 via existing write-watch tooling) in the same run as the title control. Writer = ucode LLE -> (a)/(b) (compare input bus nonzero?); writer = host/stub -> (c).
+Recipe: scratch/agent/s4236_hangar_stats.sh (needs ~360 s window to reach hangar). Positive control: title buffers in same run.

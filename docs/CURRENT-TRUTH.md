@@ -164,6 +164,7 @@ retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
 ## Next steps
+0. (s4236) Hangar AI output is constant per-channel DC ramping +0x100/buffer (distinct=1, ~-12000/-8200, not clipped; title control wide-band). Find the writer: dump the audio ucode's pre-final mix bus in hangar (silent sources + filter/accumulator state vs final-stage injection). Single-source (one run).
 
 - **s4235:** fresh-save hangar `[ai-output]`: 24/25 nonzero, but 19/25 are one identical FNV 0x95E590C5 with all 768 bytes nonzero (constant/saturated-looking; bytes not dumped, single run). Next: dump the first 32 bytes + sample min/max of that buffer at the AI boundary and compare with a retail oracle hangar AI buffer (NEXT.md).
 

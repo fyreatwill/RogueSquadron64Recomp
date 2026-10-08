@@ -353,14 +353,15 @@ index dbf46b2..60d1401 100644
  
  template<u8 e>
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..e113650 100644
+index 0195f2b..66cba68 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,133 @@
+@@ -1,29 +1,152 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
  #include <string>
++#include <unordered_set>
  #include <ultramodern/ultra64.h>
  #include <ultramodern/ultramodern.hpp>
  
@@ -454,6 +455,24 @@ index 0195f2b..e113650 100644
 +                     " addr=0x%08X len=%u fnv=0x%08X nz=%u n=%u\n",
 +                     title ? "title" : "hangar", rs64_phase_ord(), width, origin,
 +                     addr, len, fnv, nonzero, n);
++        // s4236: per-channel stats to split constant/saturated fill from real audio.
++        int32_t mn[2] = {32767, 32767}, mx[2] = {-32768, -32768};
++        std::unordered_set<int16_t> distinct[2];
++        for (uint32_t i = 0; i + 3 < len; i += 4) {
++            for (uint32_t c = 0; c < 2; c++) {
++                const int16_t v = (int16_t)((p[i + 2 * c] << 8) | p[i + 2 * c + 1]);
++                if (v < mn[c]) mn[c] = v;
++                if (v > mx[c]) mx[c] = v;
++                distinct[c].insert(v);
++            }
++        }
++        std::fprintf(stderr,
++                     "[ai-output-stats] bucket=%s n=%u addr=0x%08X L[min=%d max=%d distinct=%zu]"
++                     " R[min=%d max=%d distinct=%zu] head=",
++                     title ? "title" : "hangar", n, addr, mn[0], mx[0], distinct[0].size(),
++                     mn[1], mx[1], distinct[1].size());
++        for (uint32_t i = 0; i < 32 && i < len; i++) std::fprintf(stderr, "%02X", p[i]);
++        std::fprintf(stderr, "\n");
 +        std::fflush(stderr);
 +    }
 +}
