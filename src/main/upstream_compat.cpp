@@ -1421,6 +1421,28 @@ static bool rs64_s4222_on() { static const bool on = [] { const char* e = std::g
 extern "C" void rs64_s4230_poll_start(uint8_t* rdram) {
     static std::atomic<bool> started{false};
     if (!rdram || !rs64_s4222_on() || started.exchange(true)) return;
+    if (const char* e = std::getenv("ROGUESQ_LOG_S4299P"); e && e[0] && e[0] != '0') {
+        // s4299: 200 us poll of the stream-node block 0x17D000..0x17E200; logs each word that becomes 4 printable ASCII bytes
+        // (the name-text-over-ROM-pair corruption) with last guest pc, plus total change count as the positive control.
+        std::thread([rdram] {
+            static uint32_t prev[0x1200 / 4]; bool init = false; unsigned long changes = 0, ticks = 0; int rows = 0, ctl = 0;
+            auto asc = [](uint32_t v) { for (int i = 0; i < 4; i++) { uint32_t b = (v >> (8 * i)) & 0xFF; if (b < 0x20 || b > 0x7E) return false; } return true; };
+            for (;;) {
+                for (uint32_t i = 0; i < 0x1200 / 4; i++) {
+                    uint32_t c = *(volatile uint32_t*)(rdram + 0x17D000u + i * 4u);
+                    if (!init) { prev[i] = c; continue; }
+                    if (c == prev[i]) continue;
+                    changes++;
+                    if (ctl < 5) { ctl++; std::fprintf(stderr, "[s4299-P] control change addr=%06X %08X -> %08X pc=%08X\n", 0x17D000u + i * 4u, prev[i], c, (unsigned)g_rs64_last_guest_pc); }
+                    if (asc(c) && !asc(prev[i]) && rows < 6000 && (c == 0x6C746578u || (i & 7) == 0)) { rows++; std::fprintf(stderr, "[s4299-P] ASCII addr=%06X %08X -> %08X t=%lu changes=%lu pc=%08X width=%u\n", 0x17D000u + i * 4u, prev[i], c, ticks, changes, (unsigned)g_rs64_last_guest_pc, rs64_vi_committed_width()); }
+                    prev[i] = c;
+                }
+                init = true; ticks++;
+                if ((ticks % 20000) == 0) std::fprintf(stderr, "[s4299-P] alive ticks=%lu changes=%lu\n", ticks, changes);
+                std::this_thread::sleep_for(std::chrono::microseconds(200));
+            }
+        }).detach();
+    }
     std::thread([rdram] {
         uint32_t pv[3] = {0xDEADBEEFu, 0xDEADBEEFu, 0xDEADBEEFu}; int rows = 0; unsigned long ticks = 0;
         static const uint32_t A[3] = {0x1499E4u, 0x1499B4u, 0x1499CCu};
@@ -1572,6 +1594,42 @@ extern "C" void rs64_s4223_memcpy(uint8_t* rdram, uint32_t dst, uint32_t src, ui
     std::fprintf(stderr, "[s4223-memcpy] ra=%08X dst=%08X src=%08X len=%u src+0x10=", ra, dst, src, len);
     for (uint32_t o = 0x10; o < 0x20; o++) std::fprintf(stderr, "%02x", rdram[((src + o) & 0x1FFFFFFFu) ^ 3]);
     std::fprintf(stderr, "\n");
+}
+
+struct S4299Ent { uint32_t pc, addr; uint32_t seq; char w; const char* fn; };
+static S4299Ent g_s4299_ring[1 << 20];
+static unsigned long g_s4299_total = 0;
+static unsigned long g_s4299_swlr_total = 0;
+extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    (void)value;
+    S4299Ent& e = g_s4299_ring[g_s4299_total & ((1u << 20) - 1)];
+    e.pc = pc; e.addr = addr; e.seq = (uint32_t)g_s4299_total; e.w = width; e.fn = nullptr;
+    g_s4299_total++;
+}
+extern "C" void rs64_s4299_swlr(char w, const char* fn, uint32_t line, uint32_t addr) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    g_s4299_swlr_total++;
+    uint32_t p = addr & 0x1FFFFFFFu;
+    if (p < 0x17C000u || p >= 0x180000u) return;
+    S4299Ent& e = g_s4299_ring[g_s4299_total & ((1u << 20) - 1)];
+    e.pc = line; e.addr = addr; e.seq = (uint32_t)g_s4299_total; e.w = w; e.fn = fn;
+    g_s4299_total++;
+}
+extern "C" void rs64_s4299_dump(uint32_t lo, uint32_t hi) {
+    unsigned long n = g_s4299_total < (1u << 20) ? g_s4299_total : (1u << 20);
+    std::fprintf(stderr, "[s4299-D] dump [%08X,%08X) ring total=%lu held=%lu swlr_calls=%lu\n", lo, hi, g_s4299_total, n, g_s4299_swlr_total);
+    int shown = 0;
+    for (unsigned long i = 0; i < n && shown < 24; i++) {
+        const S4299Ent& e = g_s4299_ring[(g_s4299_total - 1 - i) & ((1u << 20) - 1)];
+        if (e.addr < hi && e.addr + (e.w == 'D' ? 8u : (e.w == 'W' || e.w == 'L' || e.w == 'R') ? 4u : e.w == 'H' ? 2u : 1u) > lo) {
+            std::fprintf(stderr, "[s4299-D]  back=%lu seq=%u pc=%08X %c addr=%08X fn=%s\n", i, e.seq, e.pc, e.w, e.addr, e.fn ? e.fn : "-");
+            shown++;
+        }
+    }
+    std::fprintf(stderr, "[s4299-D] matches shown=%d\n", shown);
 }
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,

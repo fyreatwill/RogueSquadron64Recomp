@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4290 (restore effect reproduced, odd 58-60 vs 0; hangar 512 still unreached on concurrent route). Previously: session 4289 (2026-10-08). s4289: probe.sh key route with two concurrent arms still misses hangar VI 512 (title arrived at 52.7 s, from-boot keys mistimed); ODD 60 vs 0 and maxFbs 10-14 vs 1 at VI 640/title (single run per arm). Hangar A/B needs phase-relative keys (PROBE_KEYS_FROM_PHASE=1, PROBE_PHASE_WIDTH=1024).
+Updated for session 4299 (stale stream-node root of the do_rom_read crash named). Previously: session 4290.
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4298) do_rom_read odd-address crash (reachable after hangar->640 with A14 yield) NAMED to source: `musyxSynthFrame` -> `submitDmaRequestBatch` enqueues devAddr = ASCII base + offset ("wing"/"lcre"); the 24-byte stream nodes {romA,romB,size,dram,prev,next} (e.g. at 0x17DBE0) have their first 8 bytes replaced by name-table text ("lcrelate"); rest of node intact. Writer of the text UNNAMED; value illegitimate; no mitigation. Next: guest store watch on the node ROM pair (scratch/agent/NEXT.md). Single-run for the node-content part.
+00. (s4299) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (holds the stream nodes at 0x17DBE0 + 0x100 DMA sample buffers) is rs_freed together with 4 other blocks right after `waitForAnyAudioSlot` (audio teardown; freeing function unverified, candidate shutdownAudioEngine 0x80091D40), then loadLevelTextureCache's table init ("ltex_cache_N" 0x24-stride records, via rs_malloc) lands on it while `musyxSynthFrame` keeps running (synth-entry 573x before vs 4466x after the free) and builds DMA batches from the text-overwritten ROM pairs. Name-copy and host-write refuted. Next: name the freeing function (rs-free + guest pc) and ask retail (oracle / decomp) whether the synth VI callback is removed before the free (scratch/agent/NEXT.md). Single-source for the free ordering (1 run logged frees; poller+control in 3).
 
 0c. (s4295) Odd control restored only on the s4290 route (PHASE_WIDTH=1024, phase-relative keys, S4268): RESTORE=0 odd=60 vs RESTORE=1 odd=0, with seeded saves, but that route never reaches 512. The s4294-style route (PHASE_WIDTH=512) reaches 512 but shows odd=0 in both arms, with or without SPIN_YIELD/Y8000. Next: isolate S4268 vs 1024-width phase gating (NEXT.md), find a route with odd>0 AND 512, then run the hangar RESTORE A/B. Hangar effect still UNMEASURED.
 
