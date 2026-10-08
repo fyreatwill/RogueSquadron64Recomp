@@ -74,6 +74,44 @@ extern "C" void rs64_cine_progress_log(void);
 // ultramodern/ultra64.h (already included via ultramodern.hpp).
 extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task);
 
+// s4267: per-second phase aggregates (ROGUESQ_S4267=1). Phases: 0 pipeline wait, 1 tex-upload wait (fb), 2 fb uploaders+gfx worker wait,
+// 3 drawdata/transforms uploaders+worker+tex wait, 4 RT64 State::fullSync total, 5 processDisplayLists (RDP submit), 6 rs64_run_lle_gfx, 7 send_dl total.
+#include <chrono>
+#include <mutex>
+#include <string>
+namespace s4267 {
+static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4267"); return e && *e && *e != '0'; }();
+static std::mutex m;
+static const auto t0 = std::chrono::steady_clock::now();
+struct A { uint64_t n = 0; double sum = 0, mx = 0; };
+static A agg[8];
+static int last_sec = -1;
+static void flush_locked(int sec) {
+    static const char* nm[8] = {"pipeline","texwait","fbwait","ddwait","fullSync","procDL","lleRun","sendDl"};
+    std::string o;
+    char b[96];
+    for (int i = 0; i < 8; ++i) {
+        std::snprintf(b, sizeof b, " %s=%llu/%.0fms/max%.0f", nm[i], (unsigned long long)agg[i].n, agg[i].sum, agg[i].mx);
+        o += b; agg[i] = A{};
+    }
+    std::fprintf(stderr, "[s4267] t=%d%s\n", sec, o.c_str());
+}
+struct T {
+    int p; std::chrono::steady_clock::time_point a = std::chrono::steady_clock::now();
+    explicit T(int ph) : p(ph) {}
+    ~T();
+};
+}
+extern "C" void rs64_s4267_acc(int phase, double ms) {
+    if (!s4267::on) return;
+    std::lock_guard<std::mutex> lk(s4267::m);
+    const int sec = (int)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - s4267::t0).count();
+    if (s4267::last_sec >= 0 && sec != s4267::last_sec) s4267::flush_locked(s4267::last_sec);
+    s4267::last_sec = sec;
+    auto& a = s4267::agg[phase]; a.n++; a.sum += ms; if (ms > a.mx) a.mx = ms;
+}
+s4267::T::~T() { if (on) rs64_s4267_acc(p, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - a).count()); }
+
 // RDP/RSP register state owned by this file
 static uint8_t DMEM[0x1000];
 static uint8_t IMEM[0x1000];
@@ -295,6 +333,7 @@ public:
     }
 
     void send_dl(const OSTask* task) override {
+        s4267::T s4267_total(7);
         const uint32_t m5_task_seq = rs64_m5_host_send_begin(
             static_cast<uint32_t>(task->t.data_ptr));
         // ROGUESQ_LLE_FORCE=1: route this GFX task through the LLE RSP
@@ -357,7 +396,8 @@ public:
             if (lle_this) {
                 static int s_n = 0;
                 int n = ++s_n;
-                int r = rs64_run_lle_gfx(app->core.RDRAM, task);
+                int r;
+                { s4267::T s4267_run(6); r = rs64_run_lle_gfx(app->core.RDRAM, task); }
                 if (n <= 8 || (n & 31) == 0) {
                     const char *gate = in_attribution_page ? "attr"
                         : (in_hangar ? "hangar" : "ungated");
@@ -1078,7 +1118,7 @@ namespace ultramodern {
             fflush(stderr);
         }
 #else
-        app->processDisplayLists(app->core.RDRAM, lo_phys, hi_phys, /*isHLE*/ false);
+        { s4267::T s4267_pd(5); app->processDisplayLists(app->core.RDRAM, lo_phys, hi_phys, /*isHLE*/ false); }
 #endif
     }
 

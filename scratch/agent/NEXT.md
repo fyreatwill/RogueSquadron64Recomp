@@ -1,8 +1,7 @@
-# Next work unit: phase-split RT64 send_dl (s4267)
+# Next work unit: locate RT64 CPU hotspot in the send_dl stall (s4268)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4266: single-arm run reproduces the send_dl stall (t=20–26 s, 0.15–0.9 s/task), so 2-instance GPU contention (G2) is refuted. Remaining: (G1) first-use Metal pipeline/shader compile; (G3) texture upload burst; (G4) present/vsync wait; (G5) CPU-side DL processing growth in RT64.
-Discriminator: ONE build with per-second aggregate timers inside RT64 send_dl (lib/rt64): pipeline/shader create, texture upload, draw submit, present wait, plus counts of pipelines created. Run single arm via scratch/agent/s4266_single.sh. G1 predicts time concentrated in pipeline create at t=17–26 with a pipeline-count burst; G3 upload; G4 present; G5 none of those but total dominated by DL parse. Positive control: healthy seconds t=9–14 must show nonzero in the phases that run each frame (submit/present).
-After editing lib/: ./submodule-patches/export.sh and commit.
-Also decide: if purely host-renderer, re-rank M5 de-stub steps (audio gap is not an M5 defect).
+s4267 result: stall (t=21-26) is >=95% RT64 processDisplayLists CPU (fullSync body 300-500 ms non-wait + interpreter ~300 ms), waits ~0. Audio gap is host-renderer, not M5.
+Next: ONE sample-based profile (macOS `sample <pid> 5 -file` during t=22-26 of scratch/agent/s4267_single.sh) as discriminator; top frames name the hotspot (texture decode / draw-call list growth / checkRDRAM / mutex). Control: sample at t=10-14 healthy for comparison. Then decide: fix in lib/rt64 (export.sh + commit) or park as host perf.
+Then return to re-ranking M5 de-stub steps (docs/M5-AUDIO-PLAN.md); gap is not an audio defect.
