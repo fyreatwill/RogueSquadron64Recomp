@@ -1867,6 +1867,10 @@ static void dbg_update(unsigned int pc)
     }
     if ((flags & M64P_BKP_FLAG_EXEC) && !g_pc_phase_quiet && pc_phase_log_match())
         detail_hit = 1;
+    if ((flags & M64P_BKP_FLAG_EXEC) && getenv("RS64_STACK_DUMP_PCS")) {
+        char sb[24]; snprintf(sb, sizeof sb, "%08X", pc);
+        if (strcasestr(getenv("RS64_STACK_DUMP_PCS"), sb)) detail_hit = 1;
+    }
     if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].write_hits == 10000) {
         int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX,
                                           g_watch[0].breakpoint_idx, NULL);
@@ -1893,6 +1897,38 @@ static void dbg_update(unsigned int pc)
             if (pc == 0x80059D48u)
                 printf(" w_a1p20=0x%08x",
                        pDebugMemRead32(debug_rdram_addr((gpr32(5) + 0x20) & ~3u)));
+        }
+        {   /* RS64_MEM_DUMP=hexvaddr:nwords: dump guest words at every printed hit */
+            const char *m = getenv("RS64_MEM_DUMP");
+            if (m) {
+                uint32_t base = (uint32_t)strtoul(m, NULL, 16), nw = 8, o;
+                const char *c = strchr(m, ':');
+                if (c) nw = (uint32_t)strtoul(c + 1, NULL, 0);
+                if (getenv("RS64_SRC_DUMP") && pc == 0x80034710u) { /* memcpy byte loop: v1-1 = src ptr */
+                    uint32_t src = gpr32(3) - 1u;
+                    printf(" ra=0x%08x src=0x%08x a2=0x%08x srcmem=", gpr32(31), src, gpr32(6));
+                    for (o = 0; o < 8; o++)
+                        printf("%08x,", pDebugMemRead32(debug_rdram_addr((src + o * 4) & 0x1FFFFFFFu)));
+                }
+                printf(" mem=");
+                for (o = 0; o < nw && o < 64; o++)
+                    printf("%08x,", pDebugMemRead32(debug_rdram_addr((base + o * 4) & 0x1FFFFFFFu)));
+            }
+        }
+        {   /* RS64_STACK_DUMP_PCS=hexpc[,hexpc]: dump sp+0x18..0x90 words at those exec PCs */
+            const char *e = getenv("RS64_STACK_DUMP_PCS");
+            if (e) {
+                char buf[128]; char *tok, *sv = NULL;
+                strncpy(buf, e, sizeof buf - 1); buf[sizeof buf - 1] = 0;
+                for (tok = strtok_r(buf, ",", &sv); tok; tok = strtok_r(NULL, ",", &sv)) {
+                    if (tok[0] == '*' || (uint32_t)strtoul(tok, NULL, 16) == pc) {
+                        uint32_t sp = gpr32(29), o;
+                        printf(" sp=0x%08x stk=", sp);
+                        for (o = 0x18; o < 0x90; o += 4)
+                            printf("%08x,", pDebugMemRead32(debug_rdram_addr((sp + o) & 0x1FFFFFFFu)));
+                    }
+                }
+            }
         }
         printf("\n");
         if ((flags & (M64P_BKP_FLAG_WRITE | M64P_BKP_FLAG_READ)) &&

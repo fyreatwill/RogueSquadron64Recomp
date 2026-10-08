@@ -13,6 +13,13 @@ Session 4190: hangar caller-continuation `0x8008F8A8` (return from `rs_malloc`) 
 
 ## Current state
 
+**s4223 (latest, supersedes the s4222 "save-loaded bytes" framing):** the zero volume is a copy chain, not
+EEPROM: settings source block 0x80194FC8 (+0x10..0x12 = 7F in retail, 0 in port) -> memcpy to 0x8013A5C0 ->
+0x8006E0C8 -> live 0x80130B60..62 -> saved/restored via stack (0x800A5DF4 / 0x800A6528). Retail fills the
+source block at PC 0x8002A518 (1 s boot), an address in an unrecompiled gap 0x8002A120..0x8002B18F of the
+generated C. 0x800AF60C does not touch the buffer in either build. Next: NEXT.md (name that code, find the
+port's writer). Single-run per side.
+
 The validated native route boots through attribution, N64 logo, intro
 cinematic, star flare, Factor 5 logo, title VI 1024 (`0x00790400`), and
 hangar VI 512 (`0x006AB400`) on the qualified real-audio/LLE/ungated/solo/

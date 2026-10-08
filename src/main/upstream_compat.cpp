@@ -1495,6 +1495,28 @@ extern "C" void rs64_s4222_store_watch(char width, uint32_t pc, uint32_t addr, u
     rows++;
     std::fprintf(stderr, "[s4222-S] w=%u pc=%08X %c addr=%08X val=%08X\n", rs64_vi_committed_width(), pc, width, addr, value);
 }
+
+extern "C" void rs64_s4223_stk(uint8_t* rdram, uint32_t pc, uint32_t sp, uint32_t v0) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4223"); return e && e[0] && e[0] != '0'; }();
+    if (!rdram || !on) return;
+    static int n = 0; if (++n > 64) return;
+    std::fprintf(stderr, "[s4223-stk] pc=%08X sp=%08X v0=%08X stk=", pc, sp, v0);
+    for (uint32_t o = 0x18; o < 0x90; o += 4) {
+        const uint32_t a = (sp + o) & 0x1FFFFFFFu;
+        const uint32_t w = (uint32_t(rdram[(a + 0) ^ 3]) << 24) | (uint32_t(rdram[(a + 1) ^ 3]) << 16) | (uint32_t(rdram[(a + 2) ^ 3]) << 8) | rdram[(a + 3) ^ 3];
+        std::fprintf(stderr, "%08x,", w);
+    }
+    std::fprintf(stderr, "\n");
+}
+
+extern "C" void rs64_s4223_memcpy(uint8_t* rdram, uint32_t dst, uint32_t src, uint32_t len, uint32_t ra) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4223"); return e && e[0] && e[0] != '0'; }();
+    if (!rdram || !on || dst != 0x8013A5C0u) return;
+    static int n = 0; if (++n > 16) return;
+    std::fprintf(stderr, "[s4223-memcpy] ra=%08X dst=%08X src=%08X len=%u src+0x10=", ra, dst, src, len);
+    for (uint32_t o = 0x10; o < 0x20; o++) std::fprintf(stderr, "%02x", rdram[((src + o) & 0x1FFFFFFFu) ^ 3]);
+    std::fprintf(stderr, "\n");
+}
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,
                                                  uint32_t a1, uint32_t a2,

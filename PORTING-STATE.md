@@ -147289,3 +147289,15 @@ ORIGIN: n/a (diagnostic hooks only; no mitigation).
 Next: dump the stack buffer / EEPROM bytes at 0x800AF60C return in port and retail (scratch/agent/NEXT.md).
 
 Verdict (gate-readable): this run selects H-save-load-returns-blank and refutes H-channel-state-zero (commands are issued; their volume byte comes from zeroed saved settings) and H-other-caller.
+
+## Session 4223 (2026-10-07) — M5 Step 9u: the zero volume bytes are copied from a settings source block (0x80194FC8+0x10..0x12) that retail fills with 0x7F at boot via code at 0x8002A518 and the port leaves zero; the 0x800AF60C stack-buffer hypotheses are refuted
+
+What ran: oracle gained RS64_STACK_DUMP_PCS (sp+0x18..0x8C words at exec PCs, or '*' for every write hit), RS64_MEM_DUMP (N words at an address on every hit) and RS64_SRC_DUMP (ra/src/len at the memcpy byte loop 0x80034710). Port gained tools/apply_s4223_stk.py (stack dumps at 0x800A64CC/64D4/64FC/6520) and tools/apply_s4223_memcpy.py (memcpy to 0x8013A5C0), env ROGUESQ_LOG_S4223=1, recipe scratch/agent/s4223_port.sh. Retail scripts: scratch/agent/run_s4223_retail_{stk,stk2,src2,src3}.sh.
+Results (retail vs port):
+- H-stack-buffer-clobber REFUTED: port buffer is identical at 0x800A64CC, 64D4, 64FC and 6520 (sp+0x88 word 0x00000060, volume bytes 00,00,00). 0x800AF60C (cinematicDeactivator, v0=1) writes nothing into it in the port; in retail no write touches sp+0x88 between 10.4 s and the 0x800A6528 read at 17.0 s either.
+- H-save-load-returns-blank as framed REFUTED: the stack buffer is a SAVE of the live volume bytes taken at 0x800A5DF4..5E0C (sb to sp+0x88..0x8A) and restored at 0x800A6528..653C. Retail saved 0x7F, port saved 0 (s4222-V at 0x800A5E28 shows live 00,00,00). Not EEPROM.
+- Live bytes at 0x80130B60..62 come from 0x8006E0C8 copying s4+0x10..0x12 (s4 = 0x8013A5C0, settings struct). Retail fills that struct with memcpy_recomp (0x80034710, ra 0x80006a40, 0xAF bytes, src 0x80194FC8); source +0x10..0x12 = 7f7f7f00 in retail. Port runs the same memcpy (dst 0x8013A5C0, src 0x80194FC8, len 176) but source +0x10.. = 00000000 41414100 (retail 7f7f7f00 41414100).
+- Source block writer in retail: byte stores at PC 0x8002A518 at t=1.4 s (3 hits, block already holds 0x11 at +0 and 0x8b at +4). 0x8002A518 has NO generated code: funcs_*.c comments cover 0x8002A000..0x8002A11C then resume at 0x8002B190 (gap 0x8002A120..0x8002B18F). The port log has no [missing-func] lines this run, so which port path covers that code is unresolved.
+Caveats: s4222-S rows print val=0 for stores because the parity hook passes 0u — that column is NOT evidence. A subagent lookup of 0x8002A518 failed (Bash denied), so the symbol is unnamed. Port boots crash ~1/3; reruns used. Each side measured in one run (single-source per side).
+ORIGIN: n/a (diagnostic hooks only; no mitigation).
+Verdict (gate-readable): this run selects H-source-block-default-init-missing and refutes H-stack-buffer-clobber and H-save-load-returns-blank.
