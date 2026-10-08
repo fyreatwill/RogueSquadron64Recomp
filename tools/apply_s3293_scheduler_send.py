@@ -55,7 +55,7 @@ ED0_NEW = (
     "    ctx->r2 = MEM_BU(ctx->r18, 0X0);\n"
     "    { /* PATCH: s3293 scheduler send */\n"
     "        rs64_s3293_scheduler_send(\"19ED0\", U32(ctx->r4), U32(ctx->r5), U32(ctx->r6),\n"
-    "                                  (uint32_t)MEM_BU(-0X72BC, 0x80130000u), U32(ctx->r2));\n"
+    "                                  (uint32_t)MEM_BU(-0X72BC, S32(0x80130000u)), U32(ctx->r2));\n"
     "    }\n"
 )
 
@@ -105,7 +105,7 @@ SEND_NEW = (
     "    ctx->r6 = ADD32(0, 0);\n"
     "    { /* PATCH: s3293 scheduler send */\n"
     "        rs64_s3293_scheduler_send(\"19F1C\", U32(ctx->r4), U32(ctx->r5), U32(ctx->r6),\n"
-    "                                  (uint32_t)MEM_BU(-0X72BC, 0x80130000u), (uint32_t)MEM_BU(0X0, ctx->r18));\n"
+    "                                  (uint32_t)MEM_BU(-0X72BC, S32(0x80130000u)), (uint32_t)MEM_BU(0X0, ctx->r18));\n"
     "    }\n"
     "    osSendMesg_recomp(rdram, ctx);\n"
 )

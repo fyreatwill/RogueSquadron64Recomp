@@ -1,7 +1,7 @@
-# Next work unit: M5 - classify the early 0x8000834c crash (spTaskSchedulerThread+9632)
+# Next work unit: M5 - classify fillSampleStreamRange+8136 crash (null guest ptr)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4228: crash at last-guest-pc 0x8000834c (SEGV in spTaskSchedulerThread+9632, 1-3 s after launch, phase 320) hit a stale-save run; 0x8000b650 SIGABRT hit a fresh run. Both save states crash -> not volume. In stale2 x19=0xffffffff8011a89c (sign-extended guest ptr used as host ptr?).
-Hypotheses: (a) a sign-extended/unmasked guest address reaches host deref in the scheduler thread (recomp idiom, class audit); (b) race with audio thread start (timing); (c) bad DMA descriptor.
-Discriminator: disassemble spTaskSchedulerThread+9632 (lldb/objdump on the binary or the generated .c), find the load that faults, name the register source; then count crash frequency over 10 stale-save runs of 10 s each (cheap) with a log of that register.
+s4229: probe-induced crashes (sched+9632, stage_adv) fixed; remaining early crash fillSampleStreamRange+8136 (fault 0x380000000 = rdram+0x80000000, i.e. guest pointer 0 dereferenced), last-guest-pc 0x8000b650 / 0x8000834c, ~1/4 stale runs.
+Hypotheses: (a) guest passes uninitialised/zero sample-stream descriptor because audio bring-up state differs (race with audio thread start); (b) our stub of a MusyX DMA/alloc returns 0; (c) another unsigned-literal probe (grep class is closed, so unlikely).
+Discriminator: python3 -I tools/agent/disasm_at.py fillSampleStreamRange 8136 (prints lldb window); name the register holding 0 and its source in the generated .c; then run scratch/agent/s4229b_tally.sh style runs logging that field.

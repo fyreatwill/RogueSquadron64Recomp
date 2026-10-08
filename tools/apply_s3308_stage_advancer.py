@@ -73,8 +73,8 @@ static void rs64_s3308_stage_adv(uint8_t* rdram, uint32_t edge_id,
         printed[edge_id]++;
         if (printed[edge_id] > 8ul && (c % 50ul) != 0ul) return;
     }
-    ptr = MEM_W(0x800B0000u, 0x934u);
-    stage = MEM_BU(0x800B0000u, 0x938u);
+    ptr = MEM_W(0x934, S32(0x800B0000u));
+    stage = MEM_BU(0x938, S32(0x800B0000u));
     fprintf(stderr,
             "[s3308-stage-adv] phase=%u width=%u origin=0x%06X edge_id=%u site=%s pc=0x%08X v0=0x%08X v1=0x%08X taken=%u n=%lu ptr=0x%08X stage=%u acc=0x%02X f0=0x%08X f2=0x%08X a2=0x%08X ra=0x%08X\n",
             rs64_phase_ord(), width, rs64_vi_committed_origin() & 0x00FFFFFFu,
