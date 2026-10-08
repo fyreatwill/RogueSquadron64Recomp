@@ -147669,3 +147669,5 @@ Implication: checkRAM hashes ~13 MB because RT64 is handed SetColorImage words t
 ORIGIN: unnamed. Next discriminator: at the first non-aligned creation, dump the raw RDP words around the SetColorImage plus the DL source address, and compare with the oracle at the same hangar frame.
 
 Verdict (s4270): SELECTS H-fb-garbage-colorimage (hypothesis A); REFUTES H-fb-legit-unpruned (B) and H-fb-alias-duplicates (C). Evidence: 118 creations; all pre-t=7 s entries sane, all post-t=14 s entries unaligned/odd-width. Next discriminator: raw RDP words + DL source dump at the first non-aligned SetColorImage (t~14.09 s, 0x001CFFFF), with the first sane SetColorImage as same-run control, compared against the oracle at the same hangar frame; outcomes split ucode/DL producer vs RDRAM-corrupt DL vs RT64 misparse (scratch/agent/NEXT.md).
+
+This run selects garbage-colour-image sets (A) and refutes unpruned-legit (B) and alias (C); the next probe will discriminate producer vs RT64 misparse.
