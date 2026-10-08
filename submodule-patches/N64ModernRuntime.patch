@@ -3446,7 +3446,7 @@ index 3198be0..e35819c 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..371f02c 100644
+index 149e770..1660a43 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,11 +8,21 @@
@@ -4093,7 +4093,48 @@ index 149e770..371f02c 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +777,19 @@ void vi_thread_func() {
+@@ -249,15 +774,60 @@ void vi_thread_func() {
+     }
+ }
+ 
++
++// s4265: per-task SP pipeline timing (ROGUESQ_S4265=1). Phases: qwait (enqueue->consume), run (LLE run_task / RT64 send_dl), spc (sp_complete).
++#include <deque>
++namespace s4265 {
++using clk = std::chrono::steady_clock;
++static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4265"); return e && *e && *e != '0'; }();
++static std::mutex m;
++static std::deque<clk::time_point> q_gfx, q_aud;
++static clk::time_point t0 = clk::now();
++struct Agg { uint64_t n = 0; double qw = 0, run = 0, spc = 0, qwmax = 0, runmax = 0, spcmax = 0; };
++static Agg agg[2];
++static int last_sec = -1;
++static double ms(clk::time_point a, clk::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); }
++static void flush_locked(int sec) {
++    for (int k = 0; k < 2; ++k) {
++        Agg& a = agg[k];
++        if (a.n) std::fprintf(stderr, "[s4265-agg] t=%d kind=%s n=%llu qw_avg=%.2f qw_max=%.0f run_avg=%.2f run_max=%.0f spc_avg=%.2f spc_max=%.0f\n", sec, k ? "aud" : "gfx", (unsigned long long)a.n, a.qw / a.n, a.qwmax, a.run / a.n, a.runmax, a.spc / a.n, a.spcmax);
++        a = Agg{};
++    }
++}
++static void enq(bool gfx) { if (!on) return; std::lock_guard<std::mutex> lk(m); (gfx ? q_gfx : q_aud).push_back(clk::now()); }
++static clk::time_point deq(bool gfx) {
++    std::lock_guard<std::mutex> lk(m); auto& q = gfx ? q_gfx : q_aud; auto now = clk::now();
++    if (q.empty()) return now; auto t = q.front(); q.pop_front(); return t;
++}
++static void rec(bool gfx, uint32_t type, clk::time_point enq_t, clk::time_point t_a, clk::time_point t_b, clk::time_point t_c) {
++    std::lock_guard<std::mutex> lk(m);
++    const double qw = ms(enq_t, t_a), run = ms(t_a, t_b), spc = ms(t_b, t_c);
++    const int sec = (int)std::chrono::duration_cast<std::chrono::seconds>(t_c - t0).count();
++    if (last_sec >= 0 && sec != last_sec) flush_locked(last_sec);
++    last_sec = sec;
++    Agg& a = agg[gfx ? 0 : 1];
++    a.n++; a.qw += qw; a.run += run; a.spc += spc;
++    if (qw > a.qwmax) a.qwmax = qw; if (run > a.runmax) a.runmax = run; if (spc > a.spcmax) a.spcmax = spc;
++    if (qw > 100 || run > 100 || spc > 100)
++        std::fprintf(stderr, "[s4265-slow] t=%.3f kind=%s type=%u qw=%.0f run=%.0f spc=%.0f\n", ms(t0, t_c) / 1000.0, gfx ? "gfx" : "aud", type, qw, run, spc);
++}
++}
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -4113,7 +4154,7 @@ index 149e770..371f02c 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +809,47 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +847,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -4124,9 +4165,13 @@ index 149e770..371f02c 100644
          // Cache the task type before running — run_task can clobber the
          // pointer's contents (DMA, etc).
          const uint32_t task_type = task->t.type;
- 
+-
 -        if (!ultramodern::rsp::run_task(PASS_RDRAM task)) {
++        const auto s4265_a = s4265::clk::now();
++        const auto s4265_enq = s4265::on ? s4265::deq(false) : s4265_a;
++
 +        const bool task_ok = ultramodern::rsp::run_task(PASS_RDRAM task);
++        const auto s4265_b = s4265::clk::now();
 +        if (task_type == M_AUDTASK) {
 +            static const bool first_task_probe_enabled = [] {
 +                const char* e = std::getenv("ROGUESQ_LOG_M5_FIRST_TASK");
@@ -4156,23 +4201,26 @@ index 149e770..371f02c 100644
 +            rs64_audio_route_log("sp-complete-enter", 1u);
 +        }
          sp_complete();
++        if (s4265::on) s4265::rec(false, task_type, s4265_enq, s4265_a, s4265_b, s4265::clk::now());
 +        if (task_type == M_AUDTASK && rs64_audio_route_log != nullptr) {
 +            rs64_audio_route_log("sp-complete-return", 1u);
 +        }
  
          (void)task_type;
      }
-@@ -359,6 +921,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -359,6 +963,11 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
          if (events_context.action_queue.wait_dequeue_timed(action, 1ms)) {
              // Determine the action type and act on it
              if (const auto* task_action = std::get_if<SpTaskAction>(&action)) {
 +                const uint32_t displaylist = static_cast<uint32_t>(task_action->task.t.data_ptr);
++                const auto s4265_a = s4265::clk::now();
++                const auto s4265_enq = s4265::on ? s4265::deq(true) : s4265_a;
 +                const uint32_t action_seq = rs64_m5_host_action_begin != nullptr
 +                    ? rs64_m5_host_action_begin(displaylist) : 0xFFFFFFFFu;
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +933,19 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +977,20 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
@@ -4180,6 +4228,7 @@ index 149e770..371f02c 100644
 +                    rs64_m5_host_edge("sp-complete-enter", action_seq, displaylist, 0, 0, 1, -1, -1);
 +                }
                  sp_complete();
++                const auto s4265_b = s4265::clk::now();
 +                if (rs64_m5_host_edge != nullptr) {
 +                    rs64_m5_host_edge("sp-complete-return", action_seq, displaylist, 0, 0, 1, -1, -1);
 +                }
@@ -4193,8 +4242,12 @@ index 149e770..371f02c 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -387,13 +960,26 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -385,15 +1003,30 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+                 // for context but supersede with HLE path.
+                 renderer_context->send_dl(&task_action->task);
                  [[maybe_unused]] auto renderer_end = std::chrono::high_resolution_clock::now();
++                // s4265 gfx mapping: qw=enqueue->dequeue, run=sp_complete(early) path to here is split: run=send_dl total, spc=sp_complete
++                if (s4265::on) { auto s4265_c = s4265::clk::now(); s4265::rec(true, 1, s4265_enq, s4265_a, s4265_c, s4265_c); (void)s4265_b; }
  
                  dp_complete();
 +                if (rs64_m5_host_edge != nullptr) {
@@ -4220,7 +4273,7 @@ index 149e770..371f02c 100644
                  renderer_context->update_screen();
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
-@@ -456,6 +1042,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1089,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -4228,7 +4281,7 @@ index 149e770..371f02c 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -473,6 +1060,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +1107,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -4236,7 +4289,7 @@ index 149e770..371f02c 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -568,6 +1156,7 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
+@@ -568,15 +1203,19 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
  
  void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
      OSTask* task = TO_PTR(OSTask, task_);
@@ -4244,11 +4297,15 @@ index 149e770..371f02c 100644
  
      // 2026-05-10: GFX tasks now route to the gfx_thread's action_queue so
      // RT64's registered F3DFACTOR5 GBI handles them via send_dl →
-@@ -577,6 +1166,7 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
+     // processDisplayLists(isHLE=true). Non-GFX tasks (audio, etc.) still go
+     // to sp_task_queue → task_thread_func → rsp::run_task (LLE).
+     if (task->t.type == M_GFXTASK) {
++        s4265::enq(true);
          events_context.action_queue.enqueue(SpTaskAction{ *task });
      }
      else {
 +        rs64_m5_task_lifetime_edge("enqueue", static_cast<uint32_t>(task_), task);
++        s4265::enq(false);
          events_context.sp_task_queue.enqueue(task);
      }
  }

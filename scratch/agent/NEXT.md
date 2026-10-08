@@ -1,8 +1,8 @@
-# Next work unit: why does the SP task completion take ~1 s in gap seconds (s4265)
+# Next work unit: why is RT64 send_dl slow (0.2–0.9 s/task) in t≈17–31 s (s4266)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4264: in gap seconds tid3 (spTaskSchedulerThread) is blocked on 0x8011A7E8 while tid0 sends only ~1 completion/s there (healthy: 30/s); tid2/tid5 starve behind tid3; tid0 keeps submitting to 0x8011A420.
-Hypotheses: (C1) a single long SP task (audio ucode LLE loop) occupies the RSP ~1 s; (C2) the host SP-complete notification is delayed/coalesced (timer or retry), the task itself finished fast; (C3) the task is a gfx task whose RDP/DP-complete wait (0x8011A818 side) is the real holdup.
-Discriminator: one build, one run: at the host SP-task start and SP-complete send (find where tid0 sends 0x8011A7E8), log per task (task type, ucode ptr, start_ts, done_ts), plus RSP-halt timestamp. Gap-second tasks vs healthy tasks as control. C1: done-start ~1 s with type=audio; C2: RSP halt early, notify late; C3: type=gfx and DP-complete late.
-Reuse scratch/agent/s4264_gate.sh (copy to s4265).
+s4265: gap seconds = send_dl on Gfx thread slow (both arms), audio SP tasks 0.2 ms. See PORTING-STATE s4265.
+Hypotheses: (G1) first-use Metal pipeline/shader compilation in a new scene; (G2) two concurrent game instances contend for the GPU (the gate runs 2 arms); (G3) texture/upload burst; (G4) present/vsync wait.
+Discriminator: run ONE arm alone (copy s4265_gate.sh with a single arm) — G2 predicts the stall vanishes/shrinks; if it persists, time send_dl phases inside RT64 (pipeline creation vs upload vs present) in one build; G1 predicts slowness decays after first appearance of each scene and shows in pipeline-create timing.
+Also decide: if the stall is purely host-renderer, the "audio gap" is not an M5 defect — re-rank M5 de-stub steps accordingly.
