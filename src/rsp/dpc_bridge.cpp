@@ -2347,7 +2347,33 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                     n, end_phys, s_last_end, start_phys);
             fflush(stderr);
         }
-        return;
+        // s4273 ORIGIN: with the defer layer the RDP reads RDRAM at COMMIT time, so a task whose
+        // ring laps (END < seen) has its lap-1 head overwritten by lap-2 before RT64 reads it, and
+        // the lap-2 bumps were dropped here => lap-1 head commands are lost / replaced. Flush the
+        // pending ranges to RT64 now (submit is synchronous), then restart the ring mark.
+        static const bool s_wrap_flush = []{ const char *e = std::getenv("ROGUESQ_DPC_WRAP_FLUSH"); return e && *e && *e != '0'; }();
+        static std::atomic<uint64_t> s_wf_n{0}, s_wf_bytes{0}, s_wf_dropped{0};
+        if (!(s_wrap_flush && g_defer_active)) {
+            ++s_wf_dropped;
+            if ((n & 1023) == 1)
+                fprintf(stderr, "[s4273-wrap] flush=0 wrapBumps=%llu\n", (unsigned long long)s_wf_dropped.load());
+            return;
+        }
+        {
+            uint32_t b = 0;
+            for (const auto &r : g_deferred_ranges) {
+                if (should_drop_wrap_rdp(r.first, r.second)) continue;
+                b += r.second - r.first;
+                rs64_e9prov_mark_submitted(r.first, r.second);
+                rs64_dpc_record_submit(r.first, r.second);
+                ultramodern::submit_rdp_range(r.first, r.second);
+            }
+            g_deferred_ranges.clear(); g_s4272_sh.clear(); g_s4272_shadow.clear();
+            uint64_t k = ++s_wf_n; s_wf_bytes += b;
+            if (k <= 8 || (k & 63) == 0)
+                fprintf(stderr, "[s4273-wrap] flush=1 n=%llu bytes=%u totbytes=%llu\n", (unsigned long long)k, b, (unsigned long long)s_wf_bytes.load());
+            s_last_end = start_phys;
+        }
     }
 
     uint32_t submit_lo = s_last_end;

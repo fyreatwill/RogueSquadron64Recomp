@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4270 (2026-10-08).
+Updated for session 4273 (2026-10-08).
 
 ## Current state (as of s4268)
 
@@ -65,7 +65,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 Work only the first applicable item. One monotonic sequence.
 
-1. **Finish the placeholder-drop class** (s4272: bump-time PIPESYNC drop deleted
+1. **Qualify `ROGUESQ_DPC_WRAP_FLUSH`** (s4273: ring laps drop ~4.8M bumps/45 s; lap-1 head is overwritten before commit-time read; flush option default OFF, ODD 12.4%->8.6% single-run, VI 640 only). Re-run `scratch/agent/s4273_ab.sh` to hangar (phase-gated) + frame dumps; decide default. The other bump-time filters (cimg suppress, gate_inject, PRIM_FF) are default OFF - R1 closed. Older text: **Finish the placeholder-drop class** (s4272: bump-time PIPESYNC drop deleted
    future triangle words; ROGUESQ_DPC_KEEP_PIPE default ON cut ODD cimg 61% -> 7%).
    Audit the remaining bump-time 8-byte filters in `rsp_dpc_submit` (0xFF cimg
    suppress, fs-inject/`gate_inject`, F3/FD/F5 drop): bump-time content is a
