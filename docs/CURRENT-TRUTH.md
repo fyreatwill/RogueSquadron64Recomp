@@ -149,6 +149,7 @@ retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
 ## Next steps
+0. (s4219) Retail output buffers are ~98% nonzero at title-1024 n>=256 while the port's are all-zero, and the voice records are equal (s4218): the defect is the port's RSP/ucode consumption. Find the first zero-producing ucode command for one voice (scratch/agent/NEXT.md). Single-source (oracle).
 
 Session 4218: port voice records (active=15, state 0x80178C80, block 0x171CE0, output ring) MATCH retail at end-state -> H-records-equal; producer side exonerated, divergence is in ucode consumption of identical input. Next: retail post-task contents of the +0x7C output buffers (nonzero?) vs port zeros (s4208) to pin it to RSP execution; if retail is nonzero, diff DMEM/command execution on one voice.
 
