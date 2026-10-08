@@ -147512,3 +147512,13 @@ Rules out: fairness/other-holder (s4249) and h3 for audio: a private DMEM is suf
 Verdict (s4250): SELECTS h1 (audio ucode state is fully contained in dmem, so a per-thread private DMEM runs audio concurrently with gfx); REFUTES h3 (no other shared RSP state needed for audio to run: 3 of 3 B arms sustain 48-52 tasks/s) and h2 as a blocker (38 textual sites, scripted). This is an engineering change (the default-off private-DMEM path in run_task), not only an instrument. ORIGIN: the shared `dmem[]` plus `g_lle_task_mutex` is the writer of the starvation; the t≈28 s crash origin remains unnamed (single-source, n=3 pairs).
 Next discriminator (NEXT.md, s4251): B arm with ROGUESQ_AUDIO_UCODE=0 (silent control). Crash at 28 s persists => c2/c3 (gfx/RT64 or wall-time event) and REFUTES c1; crash vanishes and the `[s4230-FD60]` probe shows list head==0 => SELECTS c1 (faster audio drains guest sample streams into the s4230 allocator race).
 Gate-wording note (s4250): this iteration selects h1 (private audio DMEM suffices), refutes h3 (no other shared state needed for audio), and the next run will discriminate c1 from c2/c3 via the silent-audio B arm.
+
+## Session 4251 (2026-10-08) — private-DMEM crash is NOT a fixed 28 s event; silent-audio arm survives (0/2) but is under-powered
+
+Built `scratch/agent/s4251_ab.sh` (4 concurrent arms, same binary, 110 s): A shared lock (control), B private DMEM, C private DMEM + `ROGUESQ_AUDIO_UCODE=0` (silent), D private repeat. Ran twice (`soak_results/s4251_ab_1`, `_2`).
+- Positive control held in both runs: arm A rate18-28 = 13.0 / 6.2 tasks/s (starved); private arms 31-40.
+- Crashes: run1 B crashed at t=45.4 s (bus error, far=0x320000004, frame resetVertexCacheSlot, gfx side); every other arm in both runs (A x2, B run2, C x2, D x2) reached 107 s with zero crashes.
+- c3 (fixed wall-time event at ~28 s) REFUTED: the only crash this session is at 45 s and 5 private-audio arms passed 28 s cleanly. Combined with s4250: private+real-audio crashes 3 of 9 arms (28.2, 28.2, 45.4 s); shared 1 of 5 (60 s); silent-private 0 of 2.
+- c1 vs c2 NOT discriminated: C 0/2 leans toward audio-driven (c1) but n=2 with a ~33% base crash rate gives p~0.45 of seeing it by chance. Crash frames are gfx-side (resetVertexCacheSlot/copyToRAM) with a wild pointer, i.e. writer unnamed. Faster audio exposes a latent race rather than creating one.
+ORIGIN: no mitigation landed; diagnostic script only. Writer of the wild pointer 0x20000004-derived value still unnamed.
+Next: ~8 more silent-private (C) arms vs private-real arms in one batch (4+4 concurrent) to power the comparison, or add a pc-attribution for the wild write.

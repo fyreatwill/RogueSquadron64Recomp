@@ -5,6 +5,7 @@ background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 Updated for session 4194 (2026-10-07).
 
+**s4251 (latest):** private-DMEM crash is not a fixed 28 s event (s4251 crash at 45 s; 5 private arms passed 28 s). Pooled: private+real audio 3/9 crash, shared 1/5, private+silent 0/2 (under-powered). Crash frames are gfx-side with wild ptr; writer unnamed. Default stays OFF. Tool: `scratch/agent/s4251_ab.sh`. Next: NEXT.md.
 **s4250 (latest):** `ROGUESQ_AUDIO_PRIVATE_DMEM=1` (private audio DMEM, no `g_lle_task_mutex`) lifts audio from 7-19 to 48-52 tasks/s at t=18-28 (3 A/B pairs), but 2 of 3 B arms crash at t≈28.2 s (fillSampleStreamRange / RT64 copyToRAM) vs 1 of 3 A crash at 60 s. Default OFF. Crash origin unnamed. Tools: `tools/s4250_private_dmem.py`, `scratch/agent/s4250_ab.sh`. Next: NEXT.md.
 
 **s4230:** fillSampleStreamRange+8136 = `lw $a0,0($v1)` at 0x8008FD60 with allocator list head (0x801499E4) == 0 but tail (0x801499B4) = 0x801F9D10 (probe `[s4230-FD60]`, 1 of 6 stale runs). No watched guest store changed the tail after boot init (14 rows), so the writer is unwatched (host DMA/memcpy or an uninstrumented store). Single-run evidence. Tools: `tools/apply_s4230_listwatch.py`, `apply_s4230_fd60probe.py`, `scratch/agent/s4230_listwatch.sh`. Next: host-side write watch over phys 0x1499B0..0x1499E8 (NEXT.md).
