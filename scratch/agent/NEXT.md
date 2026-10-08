@@ -1,8 +1,8 @@
-# Next work unit: why does guest tid 0 not send to 0x8011A818 on gap-time VI wakes? (s4262)
+# Next work unit: name the gate that suppresses tid 0's sends to 0x8011A818/0x8011A7E8/0x80128CF0 in audio-gap seconds (s4263)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4261: tid 3 (audio) produces 0x8010FEE0, then blocks on 0x8011A818; only sender is tid 0 (~6/s in gap vs ~800/s healthy). Tid 0 wakes on each VI post on 0x80149670 but skips the send.
-Hypotheses: (A) tid 0 loop gates the send on a game-state flag/counter (e.g. an audio-request-pending bit set by a callback that never runs); (B) tid 0 branches differently because a reply from thr3 (on 0x80128D10/0x80149990) is missing; (C) tid 0 sends via osJamMesg, which is not counted in on_result.
-Discriminator: record guest ra of osSendMesg/osJamMesg to 0x8011A818 (add osJamMesg to on_result) and, per tid-0 osRecvMesg wake on 0x80149670 in a GAP window, the next mq tid 0 touches. Healthy (CONTROL) vs gap in one run. Positive control: ra table non-empty for a healthy-period send to 0x8011A818.
-Reuse scratch/agent/s4259_gap.sh.
+s4262: in gap seconds tid 0 loops at full VI rate and still sends to 6 other queues, but the triple 0x8011A818 / 0x8011A7E8 / 0x80128CF0 drops 30/s -> 1-2/s together (2 arms). Guest ra is 0 in the native wrapper, so the send site is unnamed.
+Hypotheses: (A1) the gate is a counter/flag word in guest RDRAM (frame-skip / "previous task still pending") that stays set during the gap; (A2) the gate depends on a completion posted to 0x8011A420 or 0x80128D10 whose payload differs; (A3) host-side timing (the gate reads a time/VI count that our VI pacing makes stale).
+Discriminator: grep the generated C (build/RecompiledFuncs) for the function that loads 0x8011A818 and 0x8011A7E8 back to back; list its branch conditions and the RDRAM words they read; dump those words once per second with the s4262 table (healthy vs gap, same run). Positive control: the words change between healthy seconds.
+Reuse scratch/agent/s4262_send.sh (2 arms, ROGUESQ_S4262=1).

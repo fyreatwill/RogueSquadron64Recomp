@@ -4129,8 +4129,35 @@ extern "C" void rs64_m5_frequency_output_use(uint8_t* rdram,
     g_rs64_m5_frequency_pending.valid = false;
 }
 
+extern "C" int rogue_current_thread_id(uint8_t* rdram);
+// s4262: per-second table of (guest tid, mq, guest ra) osSendMesg counts for tid 0 and for
+// every sender to 0x8011A818 (ROGUESQ_S4262=1). Correlate with [s4259] GAP t= lines.
+static void s4262_note_send(uint8_t* rdram, uint32_t mq, uint32_t ra) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4262"); return e && *e && *e != '0'; }();
+    if (!on) return;
+    const int tid = rogue_current_thread_id(rdram) & 63;
+    if (tid != 0 && mq != 0x8011A818u) return;
+    static std::mutex m;
+    static std::map<std::tuple<int, uint32_t, uint32_t>, uint64_t> tab;
+    static auto t0 = std::chrono::steady_clock::now();
+    static int last_sec = 0;
+    std::lock_guard<std::mutex> lk(m);
+    tab[{tid, mq, ra}]++;
+    const int sec = (int)std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    if (sec != last_sec) {
+        for (auto& kv : tab)
+            std::fprintf(stderr, "[s4262] t=%d tid=%d mq=0x%08X ra=0x%08X n=%llu\n", last_sec,
+                         std::get<0>(kv.first), std::get<1>(kv.first), std::get<2>(kv.first),
+                         (unsigned long long)kv.second);
+        std::fflush(stderr);
+        tab.clear();
+        last_sec = sec;
+    }
+}
+
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     const uint32_t mq_addr = (uint32_t)ctx->r4;
+    s4262_note_send(rdram, mq_addr, (uint32_t)ctx->r31);
     rs64_m5_frequency_producer(rdram, ctx, mq_addr, (uint32_t)ctx->r5,
                                (s32)ctx->r6);
     sendtgt_note(mq_addr, GetCurrentThreadId(),
