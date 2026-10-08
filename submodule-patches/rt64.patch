@@ -2959,7 +2959,7 @@ index f17db9b..5087cef 100644
                      }
                  }
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..81f34dd 100644
+index d1a9f4e..00d5781 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -2983,7 +2983,7 @@ index d1a9f4e..81f34dd 100644
  
  #include "../include/rt64_extended_gbi.h"
  
-@@ -28,7 +38,72 @@
+@@ -28,7 +38,75 @@
  //#   define LOG_LOAD_METHODS
  #endif
  
@@ -3053,10 +3053,13 @@ index d1a9f4e..81f34dd 100644
 +    const void *g_s4271_dl = nullptr;
 +    void s4271DumpRing(bool odd, const uint8_t *rdram);
 +    int g_s4271_src = 0;
++    // s4280: ring of SetColorImage events (odd/sane) with their DL rdram offset, drained by dpc_bridge at commit.
++    struct S4280Ev { int64_t off; uint32_t addr; uint16_t width; uint8_t odd; };
++    S4280Ev g_s4280_ev[256]; volatile int g_s4280_n = 0;
      // RDP
      static uint8_t getCommandLength(uint32_t commandId) {
          if (commandId == (G_TEXRECT & 0x3F) || commandId == (G_TEXRECTFLIP & 0x3F)) {
-@@ -62,6 +137,85 @@ namespace RT64 {
+@@ -62,6 +140,85 @@ namespace RT64 {
          }
      }
  
@@ -3142,7 +3145,7 @@ index d1a9f4e..81f34dd 100644
      RDP::RDP(State *state) : state(state) {
          memset(TMEM, 0, sizeof(TMEM));
          crashed = false;
-@@ -250,6 +404,8 @@ namespace RT64 {
+@@ -250,6 +407,8 @@ namespace RT64 {
          }
      }
  
@@ -3151,10 +3154,16 @@ index d1a9f4e..81f34dd 100644
      void RDP::setColorImage(uint8_t fmt, uint8_t siz, uint16_t width, uint32_t address) {
          // Make sure the new color image is actually different. Some games will set the color image
          // multiple times despite setting the exact same parameters.
-@@ -264,10 +420,63 @@ namespace RT64 {
+@@ -264,10 +423,69 @@ namespace RT64 {
              colorImage.width = width;
              colorImage.address = newAddress;
              colorImage.changed = true;
++            if (newAddress == 0x130393u && width == 1033) { static int dumpedK = 0; if (dumpedK++ < 2) s4271DumpRing(true, state->RDRAM); }
++            if (g_s4271_dl && g_s4280_n < 256) {
++                const bool odd = ((newAddress & 7) != 0) || (width & 1);
++                g_s4280_ev[g_s4280_n] = { (int64_t)((const uint8_t *)g_s4271_dl - state->RDRAM), newAddress, width, (uint8_t)odd };
++                g_s4280_n = g_s4280_n + 1;
++            }
 +            {
 +                static const bool s4271 = getenv("ROGUESQ_S4271") != nullptr;
 +                static int oddN = 0, sane = 0;
@@ -3215,7 +3224,7 @@ index d1a9f4e..81f34dd 100644
          }
      }
  
-@@ -293,6 +502,67 @@ namespace RT64 {
+@@ -293,6 +511,67 @@ namespace RT64 {
  #   ifdef LOG_TEXTURE_IMAGE_METHODS
          RT64_LOG_PRINTF("RDP::setTextureImage(fmt %u, siz %u, width %u, address 0x%08X)", fmt, siz, width, address);
  #   endif
@@ -3283,7 +3292,7 @@ index d1a9f4e..81f34dd 100644
      }
  
      void RDP::setCombine(uint64_t combine) {
-@@ -324,6 +594,46 @@ namespace RT64 {
+@@ -324,6 +603,46 @@ namespace RT64 {
  #ifdef LOG_TILE_METHODS
          RT64_LOG_PRINTF("RDP::setTile(tile %u, fmt %u, siz %u, line %u, tmem %u, palette %u, cmt %u, cms %u, maskt %u, masks %u, shiftt %u, shifts %u)", tile, fmt, siz, line, tmem, palette, cmt, cms, maskt, masks, shiftt, shifts);
  #endif
@@ -3330,7 +3339,7 @@ index d1a9f4e..81f34dd 100644
  
          assert(tile < RDP_TILES);
  
-@@ -340,6 +650,11 @@ namespace RT64 {
+@@ -340,6 +659,11 @@ namespace RT64 {
          t.shifts = shifts;
          t.shiftt = shiftt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3342,7 +3351,7 @@ index d1a9f4e..81f34dd 100644
      }
  
      void RDP::setTileSize(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
-@@ -354,6 +669,10 @@ namespace RT64 {
+@@ -354,6 +678,10 @@ namespace RT64 {
          t.lrs = lrs;
          t.lrt = lrt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3353,7 +3362,7 @@ index d1a9f4e..81f34dd 100644
      }
  
      void RDP::clearTileReplacementHash(uint8_t tile) {
-@@ -379,22 +698,26 @@ namespace RT64 {
+@@ -379,22 +707,26 @@ namespace RT64 {
              offsetMask = 0x7;
          }
  
@@ -3389,7 +3398,7 @@ index d1a9f4e..81f34dd 100644
              }
          }
      }
-@@ -404,7 +727,15 @@ namespace RT64 {
+@@ -404,7 +736,15 @@ namespace RT64 {
          uint32_t tmemStride, uint32_t wordsPerRow, uint32_t rowCount, uint32_t dxtIncrement = 0)
      {
          assert((!BLOCK || (rowCount == 1)) && "Load block must behave as if it only loads one row of data.");
@@ -3406,7 +3415,7 @@ index d1a9f4e..81f34dd 100644
          const uint32_t DXTSwap = 0x800;
          uint32_t textureAddress, tmemAddress, wordCount, tmemMask, tmemAdvance;
          if constexpr (RGBA32) {
-@@ -540,12 +871,207 @@ namespace RT64 {
+@@ -540,12 +880,207 @@ namespace RT64 {
              // Load into TMEM.
              uint8_t *TMEM8 = reinterpret_cast<uint8_t *>(TMEM);
              const uint8_t *RDRAM = state->RDRAM;
@@ -3614,7 +3623,7 @@ index d1a9f4e..81f34dd 100644
          }
      }
  
-@@ -722,6 +1248,117 @@ namespace RT64 {
+@@ -722,6 +1257,117 @@ namespace RT64 {
  #ifdef LOG_LOAD_METHODS
          RT64_LOG_PRINTF("RDP::loadBlock(tile %u, uls %u, ult %u, lrs %u, dxt %u)", tile, uls, ult, lrs, dxt);
  #endif
@@ -3732,7 +3741,7 @@ index d1a9f4e..81f34dd 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -775,12 +1412,82 @@ namespace RT64 {
+@@ -775,12 +1421,82 @@ namespace RT64 {
          workload.drawData.loadOperations.emplace_back(operation);
  
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -3815,7 +3824,7 @@ index d1a9f4e..81f34dd 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -912,6 +1619,18 @@ namespace RT64 {
+@@ -912,6 +1628,18 @@ namespace RT64 {
      }
  
      void RDP::setFogColor(uint32_t color) {
@@ -3834,7 +3843,7 @@ index d1a9f4e..81f34dd 100644
          hlslpp::float4 &fogColor = fogColorStack[fogColorStackSize - 1];
          fogColor.x = ((color >> 24) & 0xFF) / 255.0f;
          fogColor.y = ((color >> 16) & 0xFF) / 255.0f;
-@@ -935,6 +1654,23 @@ namespace RT64 {
+@@ -935,6 +1663,23 @@ namespace RT64 {
      }
  
      void RDP::setFillColor(uint32_t color) {
@@ -3858,7 +3867,7 @@ index d1a9f4e..81f34dd 100644
          fillColorStack[fillColorStackSize - 1] = color;
          state->updateDrawStatusAttribute(DrawAttribute::FillColor);
      }
-@@ -1049,6 +1785,44 @@ namespace RT64 {
+@@ -1049,6 +1794,44 @@ namespace RT64 {
              lry |= 3;
          }
  
@@ -3903,7 +3912,7 @@ index d1a9f4e..81f34dd 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1132,6 +1906,828 @@ namespace RT64 {
+@@ -1132,6 +1915,828 @@ namespace RT64 {
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
  
@@ -4732,7 +4741,7 @@ index d1a9f4e..81f34dd 100644
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
              fbPair.scissorRect.merge(scissorRect);
-@@ -1319,6 +2915,40 @@ namespace RT64 {
+@@ -1319,6 +2924,40 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  

@@ -17,6 +17,7 @@
 #include <vector>
 #include <utility>
 
+namespace RT64 { struct S4280Ev { int64_t off; uint32_t addr; uint16_t width; uint8_t odd; }; extern S4280Ev g_s4280_ev[256]; extern volatile int g_s4280_n; }
 // Per-task RDP range deferral (see rs64_dpc_defer_begin/_end below).
 static bool g_defer_active = false;
 static std::vector<std::pair<uint32_t, uint32_t>> g_deferred_ranges;
@@ -3619,6 +3620,40 @@ extern "C" void rs64_dpc_defer_end(int commit) {
             }
         }
 
+        {   // s4280: attribute each SetColorImage RT64 saw during this commit to its bump-time shadow range.
+            int n = RT64::g_s4280_n; static unsigned long nOdd = 0, nSane = 0, oddNoShadow = 0, oddDiff = 0, sane_diff = 0; static int shownO = 0, shownS = 0;
+            for (int i = 0; i < n && i < 256; i++) {
+                const RT64::S4280Ev &ev = RT64::g_s4280_ev[i];
+                const uint32_t off = (uint32_t)ev.off;
+                const S4272Sh *hit = nullptr;
+                for (const S4272Sh &e : g_s4272_sh) if (off >= e.lo && off + 8 <= e.hi) { hit = &e; break; }
+                uint32_t bw0 = 0, bw1 = 0, nw0 = 0, nw1 = 0;
+                if (g_rdram_for_submit) { memcpy(&nw0, g_rdram_for_submit + off, 4); memcpy(&nw1, g_rdram_for_submit + off + 4, 4); }
+                if (hit) { memcpy(&bw0, &g_s4272_shadow[hit->off + (off - hit->lo)], 4); memcpy(&bw1, &g_s4272_shadow[hit->off + (off - hit->lo) + 4], 4); }
+                const bool diff = hit && (bw0 != nw0 || bw1 != nw1);
+                if (ev.odd) { nOdd++; if (!hit) oddNoShadow++; if (diff) oddDiff++; } else { nSane++; if (diff) sane_diff++; }
+                int &shown = ev.odd ? shownO : shownS;
+                if (shown < 12 || ev.addr == 0x130393u) {
+                    shown++;
+                    fprintf(stderr, "[s4280-cimg] %s off=%06X addr=%08X w=%u shadow=%s bump=%08X %08X commit=%08X %08X range=%06X..%06X\n",
+                            ev.odd ? "ODD" : "SANE", off, ev.addr, ev.width, hit ? "yes" : "NO", bw0, bw1, nw0, nw1, hit ? hit->lo : 0, hit ? hit->hi : 0);
+                }
+            }
+            for (int i = 0; i < n && i < 256; i++) {   // s4280b: full bump-vs-commit walk of the range holding the 0x130393 / w1033 event
+                const RT64::S4280Ev &ev = RT64::g_s4280_ev[i];
+                if (ev.addr != 0x130393u) continue;
+                const uint32_t off = (uint32_t)ev.off;
+                for (const S4272Sh &e : g_s4272_sh) if (off >= e.lo && off + 8 <= e.hi) {
+                    for (uint32_t a = e.lo; a < e.hi; a += 8) { uint32_t b0, b1, n0 = 0, n1 = 0; memcpy(&b0, &g_s4272_shadow[e.off + (a - e.lo)], 4); memcpy(&b1, &g_s4272_shadow[e.off + (a - e.lo) + 4], 4);
+                        if (g_rdram_for_submit) { memcpy(&n0, g_rdram_for_submit + a, 4); memcpy(&n1, g_rdram_for_submit + a + 4, 4); }
+                        fprintf(stderr, "[s4280-walk] %06X bump=%08X %08X commit=%08X %08X%s%s\n", a, b0, b1, n0, n1, (b0 != n0 || b1 != n1) ? " DIFF" : "", a == off ? " <== cimg" : ""); }
+                    break; }
+            }
+            RT64::g_s4280_n = 0;
+            static unsigned long cnt = 0;
+            if ((++cnt & 0xFFF) == 0)
+                fprintf(stderr, "[s4280-tot] odd=%lu (noShadow=%lu bumpNeCommit=%lu) sane=%lu (bumpNeCommit=%lu)\n", nOdd, oddNoShadow, oddDiff, nSane, sane_diff);
+        }
         static std::atomic<uint64_t> s_ranges_in{0};
         static std::atomic<uint64_t> s_calls_out{0};
         const uint64_t in = s_ranges_in.fetch_add(g_deferred_ranges.size()) + g_deferred_ranges.size();
