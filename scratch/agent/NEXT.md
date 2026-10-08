@@ -1,7 +1,7 @@
-# Next work unit (s4295): restore the ODD positive control, then decide on WRAP_RESTORE
+# Next work unit (s4296): find which b-recipe element exposes odd (S4268 vs 1024-width phase-relative keys), then reach 512 with it
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4294: seeded hangar A/B reached 512 at 47.4s in both arms but the WRAP_RESTORE=0 arm had oddCommits=0 (even at 640), so the A/B is non-discriminating. Differences vs s4286/s4290 (odd 58-60): SPIN_YIELD/Y8000_WIDTH env, key route.
-Hypotheses: H1) SPIN_YIELD/Y8000 suppress the ODD condition; H2) seeded saves change 640-phase content; H3) ODD is intermittent run to run.
-Discriminator: variants of scratch/agent/s4294_hangar_ab.sh, both arms RESTORE=0: (a) drop SPIN_YIELD+Y8000, seeded; (b) s4286 env (autopilot) with seeded saves. Whichever shows odd>0 becomes the control for the hangar A/B (RESTORE 0 vs 1, maxFbs added).
+s4295: odd control works in recipe b (RESTORE=0 odd=60, RESTORE=1 odd=0) but b never reaches 512; recipe a reaches 512 but odd=0 in both arms (SPIN_YIELD/Y8000 and seeded saves exonerated).
+Hypotheses: H1) S4268 exposes odd; H2) PHASE_WIDTH=1024 + KEYS_FROM_PHASE key timing exposes odd (the 640 stage dwell differs); H3) odd is only counted before a threshold the a-route passes too fast.
+Discriminator: RESTORE=0 arms only, three concurrent: a+S4268; b without S4268; b with keys extended (add 18:start 22:start 26:start) and PHASE_WIDTH=512 gating. odd>0 and 512 reached = the control for the hangar A/B.
