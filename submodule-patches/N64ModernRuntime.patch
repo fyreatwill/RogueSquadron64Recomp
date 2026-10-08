@@ -994,7 +994,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..501693d 100644
+index 1cb3f6a..87a054f 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -1008,7 +1008,7 @@ index 1cb3f6a..501693d 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1862 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1880 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2459,6 +2459,24 @@ index 1cb3f6a..501693d 100644
 +    if (have && prev_dp == dp) for (size_t i = 0; i < sizeof(cur); i++) changed += cur[i] != prev[i];
 +    else changed = 0xFFFFFFFFu;
 +    memcpy(prev, cur, sizeof(cur)); prev_dp = dp; have = true;
++    if (n <= 8 || n % 64 == 0) {
++        uint32_t cnt = (uint32_t)task->t.data_size; if (cnt > 4) cnt = 4;
++        auto rd32 = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x1FFFFFFFu) ^ 3]; return v; };
++        auto rd16 = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x1FFFFFFFu) ^ 3] << 8) | rdram[((a + 1) & 0x1FFFFFFFu) ^ 3]); };
++        for (uint32_t f = 0; f < cnt; f++) {
++            uint32_t base = off + f * 0xA10u; unsigned active = 0; uint32_t output = 0;
++            for (uint32_t v = 0; v < 32; v++) {
++                uint32_t va = base + 0x10 + v * 0x50;
++                output = rd32(va + 0x44);
++                if (rd16(va + 0x2C) == 0) break;
++                active++;
++                if (output) break;
++            }
++            std::fprintf(stderr, "[s4218-act] phase=%u n=%u frame=%u base=%08X h0=%08X state=%08X active=%u output=%08X first=", phase, n, f, base, rd32(base), rd32(base + 8), active, output);
++            for (uint32_t i = 0; i < 0x50; i += 4) std::fprintf(stderr, "%08X,", rd32(base + 0x10 + i));
++            std::fprintf(stderr, "\n");
++        }
++    }
 +    if (n <= 6 || (n & (n - 1)) == 0) {
 +        std::fprintf(stderr, "[s4214-scan] phase=%u n=%u dp=0x%08X ascii_bytes=%u zero_bytes=%u ascii_recs=%u zero_recs=%u first_nonascii_rec=%u first_nz_nonascii_rec=%u changed=%d hdr=%02X%02X%02X%02X rec0=%02X%02X%02X%02X%02X%02X%02X%02X\n",
 +            phase, n, dp, ascii, zero, ascii_recs, zero_recs, first_non, first_nz_non, (int)changed,

@@ -150,6 +150,8 @@ mitigation behavior changed.
 
 ## Next steps
 
+Session 4218: port voice records (active=15, state 0x80178C80, block 0x171CE0, output ring) MATCH retail at end-state -> H-records-equal; producer side exonerated, divergence is in ucode consumption of identical input. Next: retail post-task contents of the +0x7C output buffers (nonzero?) vs port zeros (s4208) to pin it to RSP execution; if retail is nonzero, diff DMEM/command execution on one voice.
+
 Session 4217: retail data_ptr block ALSO has ASCII names (+0x40 'ltext_cache_3') early, real records (p801~100) from task n~256 -> s4214's "not audio records / builder-wrong-target" inference is void (retail identical in kind); block content is not the divergence. Next: field-by-field retail/port voice-record (+0x10, stride 0x50) compare at equal phase/ordinal.
 
 Session 4215: raw guest OSTask words (struct at RDRAM 0x149470) equal host-read fields -> H-task-struct-stale refuted; data_ptr alternates 0x8016BD50/0x80169F10 in phase 2. Next: guest writer PC of 0x1494A0 (check M5-S3482-TASK-WRITER-JOIN.md first). Session 4216: writer already named (PC 0x8009177C, s3482-s3486); retail stores same 7728 B blocks -> H-builder-wrong-target refuted; next: retail content dump of 0x171CE0 (docs/M5-S4216-DATAPTR-RECONCILE.md).

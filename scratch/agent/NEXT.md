@@ -1,10 +1,10 @@
-# Next work unit: M5 Step 9p — retail vs port voice-record field compare
+# Next work unit: M5 Step 9q — retail post-task output-buffer contents vs port zeros
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4217: retail data_ptr block has ASCII names early + real records from task n~256 (same as port shape); content census does not diverge.
+s4218: voice records equal retail (end-state). Divergence is downstream: ucode consumption.
 
 Hypotheses:
-- H-records-equal: voice records (base+0x10+voice*0x50: +0x2C flags, +0x44 output) match retail at same phase => divergence is in ucode consumption/PCM output.
-- H-records-differ: specific fields (flags/output ptr) differ => producer-side bug at that field.
-Discriminator: retail `[audio-objects-frame]` rows (oracle already prints, see run_s3481 script) vs port ROGUESQ_AUDIO_UCODE dump of same 0x50 words, matched on phase (VI 1024 origin) and late task ordinal; compare active-voice count and first-voice words.
+- H-retail-nonzero: retail output buffers (output ring 0x80166450.., +0x7C/ptr in record) are nonzero after the audio task in title-1024 n>=256 while port is all-zero => port RSP/ucode execution loses audio on identical input (LLE bug); next diff one voice's DMEM.
+- H-retail-zero: retail output is also zero/DC at this phase => title has no real PCM in retail either; "zero PCM" is not the defect, look at AI/sound path elsewhere.
+Discriminator: extend oracle (`tools/oracle/rs64_oracle.c`, near dump_pc_task / blk-census) to census nonzero bytes of the output ring (record +0x44 ptr, 0x300 B each) at the audio task return PC for n>=256; positive control: nonzero-census of the data_ptr block (known nonzero). Compare to port s4207/s4208 zero counts.
