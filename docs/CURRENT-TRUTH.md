@@ -64,7 +64,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 0. (s4279) Allocator head==0 / early musyx crash ROOT FOUND: the sample-stream node heap block (0x801F9CD0..0x801FB3F4, header 0x1800) is zeroed wholesale by ONE RT64 `copyToRAM` of a garbage colour image (addressStart 0x130393 unaligned, width 1033, siz 3, rows 118..339 -> range [0x1A742B,0x28633F), VI 640), within one ENTRY of the wipe in 2/2 runs; list was invariant-clean before, no guest store did it. Pool==0 is designed (free list has no push site; LRU steal) — the s4278 "pool never replenished" framing is superseded. Next: name the guest SetColorImage/DPC source of addr 0x130393 w1033 (scratch/agent/NEXT.md). Hangar route and the WRAP_FLUSH A/B stay blocked until resolved.
 
-0a. (s4280) The 0x130393 w1033 'SetColorImage' is NOT a guest command and NOT edited by our bump/commit filters (bump==commit; it is the 2nd word of intact CF-triangle coefficients at 4E2958). RT64's walk parsed different bytes at 4E27B0..4E2910 than RDRAM shows at bump or post-commit (ring: E9 at 4E2910; RDRAM: FF2E0C68). Next: snapshot the list at RT64 walk start and diff (scratch/agent/NEXT.md). About half of ODD cimgs are late-filled placeholders (R2), half are this unexplained class.
+0a. (s4280) The 0x130393 w1033 'SetColorImage' is NOT a guest command and NOT edited by our bump/commit filters (bump==commit; it is the 2nd word of intact CF-triangle coefficients at 4E2958). RT64's walk parsed different bytes at 4E27B0..4E2910 than RDRAM shows at bump or post-commit (ring: E9 at 4E2910; RDRAM: FF2E0C68). s4281: walk-entry snapshot == live RDRAM at the event (0 DIFF, 9 runs), so A is refuted; the walker's ring sits at 4E22D0..4E2308, ~0x500 before the bridge window. Next: print 16 words around g_s4271_dl and check that the previous command's advance lands on it, plus a DIFF positive control (scratch/agent/NEXT.md). About half of ODD cimgs are late-filled placeholders (R2), half are this unexplained class.
 
 Work only the first applicable item. One monotonic sequence.
 
@@ -101,6 +101,8 @@ same-build declared/real, declared/silent and legacy/real arms. A route failure
 invalidates a null; it never proves absence.
 
 ## Superseded conclusions
+
+- s4280 hypothesis A "RDRAM changes between bump time and RT64's walk read" (believable: the walk saw E9 at 4E2910 while RDRAM showed FF2E0C68): s4281 snapshotted the list at walk entry and diffed it against live RDRAM at the event, 0 differing words over 9 runs (single-source, no DIFF positive control). The list is rewritten between walks, not within one.
 
 - s4278 "root = node pool never replenished / port consumes nodes faster than retail" (believable: pool hit 0 right before head==0): pool==0 is the designed LRU-steal state; the list is clean until RT64 copyToRAM wipes the whole block (s4279).
 
