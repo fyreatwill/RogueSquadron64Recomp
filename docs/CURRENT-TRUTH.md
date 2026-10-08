@@ -164,6 +164,8 @@ retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
 ## Next steps
+
+- s4243: audible-PCM "repeated RMS" was sampling aliasing; no consecutive-buffer repeats (0/1660); 16-buffer periodic hashes remain (loop vs stale ring) — see scratch/agent/NEXT.md.
 0. (s4242) **The audible path had the s4239 byte-order bug too**: `main.cpp queue_samples` fed SDL byte-swapped PCM (old-order RMS ~18.5k noise vs correct fade-in 1->520 on the same buffers, same-run control). Fixed with `^3`. ai.cpp/audio.cpp audited; no other s16 readers. Single run, not yet confirmed by ear. Open: identical RMS at consecutive buffers n=1616/1632.
 0. (s4241) Retail oracle (s4238_clip/oracle.log) ALSO emits constant rms=33 AI buffers at title (n=1..7) and hangar (n=1..8) entry, then zeros, audible by n=128: the port's -33 x19 entry transient is BENIGN prefill (hypothesis b not supported; stretch 19 vs 8 buffers is single-run/unaligned). Remaining: ^3 audit of other TO_PTR audio readers; RMS 4.7k vs 1.4k phase alignment.
 0. (s4240) With the FIXED reader the hangar entry is still a real transient: hangar AI buffers n=1..19 are constant L==R==-33 (distinct=1), n=20 all zeros, wide-band (distinct ~190, peak 2-19k) from n=128; title n=1..3 are also constant but ramping (-213,-208,-203). So the s4239 'hangar must be re-measured' item is DONE: transient real (not a logger artifact), small amplitude, not hangar-specific. Single run (run1, VI 512 at 72.2s). NEXT: does retail title entry also emit constant buffers for its first N AI buffers (oracle per-buffer distinct counts n=1..40) -- benign prefill vs late voice start; plus ^3 audit of other audio rdram readers. See NEXT.md.

@@ -5919,6 +5919,19 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
             if (b > 0 && (cn % 16) == 0)
             std::fprintf(stderr, "[s4242-ctrl] n=%u fixed_rms=%.0f old_rms=%.0f samples=%zu\n",
                          cn, std::sqrt(a / n), std::sqrt(b / n), num_samples);
+            // s4243: per-buffer FNV; a repeated hash on distinct DMA addrs = stall/re-feed.
+            static uint64_t prev_h = 0; static uint32_t prev_addr = 0, reps = 0;
+            uint64_t h = 1469598103934665603ull;
+            for (size_t i = 0; i < num_samples; ++i) { h ^= (uint16_t)native_samples[i]; h *= 1099511628211ull; }
+            if (b > 0 && h == prev_h && reps++ < 300)
+                std::fprintf(stderr, "[s4243-rep] n=%u fnv=%016llx addr=0x%08X prev_addr=0x%08X rms=%.0f\n",
+                             cn, (unsigned long long)h, rdram_addr, prev_addr, std::sqrt(a / n));
+            if (b > 0 && cn >= 1500 && cn < 1660 && (cn % 4) == 0)
+                std::fprintf(stderr, "[s4243-seq] n=%u fnv=%016llx addr=0x%08X\n", cn, (unsigned long long)h, rdram_addr);
+            prev_h = h; prev_addr = rdram_addr;
+            static FILE* pcm = getenv("ROGUESQ_S4243_PCM") ? fopen(getenv("ROGUESQ_S4243_PCM"), "wb") : nullptr;
+            static size_t pcm_bytes = 0;
+            if (pcm && cn >= 1200 && pcm_bytes < 2400000) { fwrite(native_samples.data(), 2, num_samples, pcm); pcm_bytes += num_samples * 2; fflush(pcm); }
         }
     }
 
