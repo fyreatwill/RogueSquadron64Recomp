@@ -408,7 +408,6 @@ extern "C" void rs64_dpc_get_task_range(uint32_t *first_lo, uint32_t *first_hi,
                                          uint32_t *last_lo, uint32_t *last_hi,
                                          uint32_t *min_lo, uint32_t *max_hi);
 extern RspExitReason factor5_boot (uint8_t* rdram, uint32_t ucode_addr);
-extern uint8_t dmem[];
 extern "C" void rs64_dpc_drain_histogram(uint32_t out[64]);
 extern "C" uint32_t rs64_dpc_get_last_fullsync_addr();
 extern "C" void rs64_rdp_advance_reset();
@@ -2270,7 +2269,7 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
             uint32_t exact_fnv = 2166136261u;
             uint32_t exact_nz = 0;
             for (uint32_t i = first; i < last; ++i) {
-                const uint8_t b = dmem[i ^ 3u];
+                const uint8_t b = g_dmem_cur[i ^ 3u];
                 exact_fnv = (exact_fnv * 16777619u) ^ b;
                 exact_nz += b != 0;
             }
@@ -2324,7 +2323,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
     uint32_t payload_fnv = 2166136261u, payload_nz = 0u;
     uint32_t post_fnv = 2166136261u, post_nz = 0u;
     for (uint32_t addr = overlap_first; addr < overlap_last; ++addr) {
-        const uint8_t source = dmem[((dmem_addr + (addr - dram_addr)) & 0xFFFu) ^ 3u];
+        const uint8_t source = g_dmem_cur[((dmem_addr + (addr - dram_addr)) & 0xFFFu) ^ 3u];
         payload_fnv = (payload_fnv * 16777619u) ^ source;
         payload_nz += source != 0u;
         const uint8_t stored = rdram[addr & 0x007FFFFFu];
@@ -3963,7 +3962,7 @@ static void rs64_audio_hash_dmem(uint32_t addr, uint32_t len,
     fnv = 2166136261u;
     nonzero = 0;
     for (uint32_t i = 0; i < len; ++i) {
-        const uint8_t b = dmem[((addr + i) & 0xFFFu) ^ 3u];
+        const uint8_t b = g_dmem_cur[((addr + i) & 0xFFFu) ^ 3u];
         fnv = (fnv * 16777619u) ^ b;
         nonzero += b != 0;
     }
@@ -3974,7 +3973,7 @@ static void rs64_audio_hash_dmem_dma(uint32_t addr, uint32_t len,
     fnv = 2166136261u;
     nonzero = 0;
     for (uint32_t i = 0; i < len; ++i) {
-        const uint8_t b = dmem[((addr + (i ^ 3u)) & 0xFFFu) ^ 3u];
+        const uint8_t b = g_dmem_cur[((addr + (i ^ 3u)) & 0xFFFu) ^ 3u];
         fnv = (fnv * 16777619u) ^ b;
         nonzero += b != 0;
     }
@@ -4023,7 +4022,7 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
     g_rs64_m5_last_dmem_writer_fnv = 2166136261u;
     g_rs64_m5_last_dmem_writer_nonzero = 0u;
     for (uint32_t i = 0; i < len && i < 16u; ++i) {
-        const uint8_t byte = dmem[((dmem_addr + i) & 0xFFFu) ^ 3u];
+        const uint8_t byte = g_dmem_cur[((dmem_addr + i) & 0xFFFu) ^ 3u];
         g_rs64_m5_last_dmem_writer_fnv =
             (g_rs64_m5_last_dmem_writer_fnv * 16777619u) ^ byte;
         g_rs64_m5_last_dmem_writer_nonzero += byte != 0u;
@@ -4073,7 +4072,7 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
     uint32_t fnv = 2166136261u;
     uint32_t nonzero = 0;
     for (uint32_t i = 0; i < 0xAB8u; ++i) {
-        const uint8_t b = dmem[((0x3F0u + i) & 0xFFFu) ^ 3u];
+        const uint8_t b = g_dmem_cur[((0x3F0u + i) & 0xFFFu) ^ 3u];
         fnv = (fnv * 16777619u) ^ b;
         nonzero += b != 0;
     }
@@ -4104,7 +4103,7 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
             uint32_t exact_fnv = 2166136261u;
             uint32_t exact_nz = 0;
             for (uint32_t i = first; i < last; ++i) {
-                const uint8_t b = dmem[i ^ 3u];
+                const uint8_t b = g_dmem_cur[i ^ 3u];
                 exact_fnv = (exact_fnv * 16777619u) ^ b;
                 exact_nz += b != 0;
             }
@@ -4152,7 +4151,7 @@ extern "C" void rs64_m5_audio_dmem_dma_write(uint32_t dmem_addr,
     uint32_t fnv = 2166136261u;
     uint32_t nonzero = 0u;
     for (uint32_t i = 0; i < count; ++i) {
-        const uint8_t byte = dmem[((first + i) & 0xFFFu) ^ 3u];
+        const uint8_t byte = g_dmem_cur[((first + i) & 0xFFFu) ^ 3u];
         fnv = (fnv * 16777619u) ^ byte;
         nonzero += byte != 0u;
     }
@@ -4551,7 +4550,7 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
             const uint32_t sample_len = dest_len < 16u ? dest_len : 16u;
             const uint32_t source_len = len_a < 16u ? len_a : 16u;
             for (uint32_t i = 0; i < source_len; ++i) {
-                const uint8_t b = dmem[((dmem_a + (i ^ 3u)) & 0xFFFu) ^ 3u];
+                const uint8_t b = g_dmem_cur[((dmem_a + (i ^ 3u)) & 0xFFFu) ^ 3u];
                 std::snprintf(source_sample + i * 3u, 4u, "%02X%s", b,
                               i + 1u == source_len ? "" : " ");
             }
@@ -4787,15 +4786,15 @@ static void rs64_dump_ucode(uint8_t* rdram, uint32_t phys) {
 
 // Diag: canary snapshot of DMEM[0x130] word + dispatch-table hash (0x60..0xE0).
 static void rs64_canary(const char* tag, int task_n) {
-    uint32_t c130 = ((uint32_t)dmem[0x130 ^ 3] << 24) | ((uint32_t)dmem[0x131 ^ 3] << 16) |
-                    ((uint32_t)dmem[0x132 ^ 3] << 8) | (uint32_t)dmem[0x133 ^ 3];
+    uint32_t c130 = ((uint32_t)g_dmem_cur[0x130 ^ 3] << 24) | ((uint32_t)g_dmem_cur[0x131 ^ 3] << 16) |
+                    ((uint32_t)g_dmem_cur[0x132 ^ 3] << 8) | (uint32_t)g_dmem_cur[0x133 ^ 3];
     uint32_t h = 0;
-    for (uint32_t a = 0x60; a < 0xE0; ++a) h = h * 31 + dmem[a ^ 3];
+    for (uint32_t a = 0x60; a < 0xE0; ++a) h = h * 31 + g_dmem_cur[a ^ 3];
     fprintf(stderr, "[rcanary t%d %s] 0x130=0x%08X tblhash=0x%08X\n", task_n, tag, c130, h);
 }
 
 // Serializes every LLE gfx task (OSTask pokes + boot + main ucode) against
-// the single shared global dmem[]. The old "tasks are serialized (single
+// the single shared global g_dmem_cur[]. The old "tasks are serialized (single
 // virtual RSP)" assumption was FALSE: send_dl invokes the runner from more
 // than one thread, and 2026-07-13 DMA traces caught runner-step #4's boot
 // interleaved with task #3's pre-ucode — a concurrent B task's ucode_data DMA
@@ -4861,7 +4860,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     // populate DMEM[0..ucode_data_size]. Leave DMEM[0xFC0..0x1000] alone —
     // that's the OSTask region the boot ucode reads.
     //
-    std::memset(dmem, 0, 0xFC0);
+    std::memset(g_dmem_cur, 0, 0xFC0);
     // Always load each task's ucode data from live RDRAM. Before shared-DMEM
     // serialization, a concurrent audio task could overwrite this area while
     // GFX was running; a first-task snapshot only hid that race and could make
@@ -4936,7 +4935,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                     "[spboot] task #%d ucode_data=0x%08X size=0x%X DMEM[0..0x10]:",
                     s_n, ucode_data_addr, ucode_data_size);
                 for (int i = 0; i < 0x10; ++i) {
-                    fprintf(stderr, " %02X", dmem[i ^ 3]);
+                    fprintf(stderr, " %02X", g_dmem_cur[i ^ 3]);
                 }
                 fprintf(stderr, "\n");
                 fflush(stderr);
@@ -4967,8 +4966,8 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     // DMEM writer exists. (An earlier theory recompiled 0x99FE0 as a "second
     // gfx ucode" factor5_ucode_b — wrong: it's the audio ucode. The recompile
     // is kept in-tree but must never run for gfx tasks.)
-    uint32_t embedded_ucode = ((uint32_t)dmem[0xFD0 ^ 3] << 24) | ((uint32_t)dmem[0xFD1 ^ 3] << 16) |
-                              ((uint32_t)dmem[0xFD2 ^ 3] << 8) | (uint32_t)dmem[0xFD3 ^ 3];
+    uint32_t embedded_ucode = ((uint32_t)g_dmem_cur[0xFD0 ^ 3] << 24) | ((uint32_t)g_dmem_cur[0xFD1 ^ 3] << 16) |
+                              ((uint32_t)g_dmem_cur[0xFD2 ^ 3] << 8) | (uint32_t)g_dmem_cur[0xFD3 ^ 3];
     if ((embedded_ucode & 0x00FFFFF8) != (ucode_addr & 0x00FFFFF8) &&
         (embedded_ucode & 0x00FFFFF8) != 0) {
         static int s_bn = 0;
@@ -4989,14 +4988,14 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
 
     auto poke_be32 = [](uint32_t off, uint32_t val) {
         for (int i = 0; i < 4; ++i) {
-            dmem[(off + i) ^ 3] = (uint8_t)(val >> (24 - 8*i));
+            g_dmem_cur[(off + i) ^ 3] = (uint8_t)(val >> (24 - 8*i));
         }
     };
     auto peek_be32 = [](uint32_t off) {
-        return ((uint32_t)dmem[(off + 0) ^ 3] << 24) |
-               ((uint32_t)dmem[(off + 1) ^ 3] << 16) |
-               ((uint32_t)dmem[(off + 2) ^ 3] << 8) |
-               (uint32_t)dmem[(off + 3) ^ 3];
+        return ((uint32_t)g_dmem_cur[(off + 0) ^ 3] << 24) |
+               ((uint32_t)g_dmem_cur[(off + 1) ^ 3] << 16) |
+               ((uint32_t)g_dmem_cur[(off + 2) ^ 3] << 8) |
+               (uint32_t)g_dmem_cur[(off + 3) ^ 3];
     };
     if (dl_ptr) {
         // Stage the first 0x110 bytes of DL into DMEM at 0x170 (where the
@@ -5047,8 +5046,8 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             s_ring = (e && *e && *e != '0') ? 1 : 0;
         }
         if (s_ring) {
-            uint32_t ring_base = ((uint32_t)dmem[0x100 ^ 3] << 24) | ((uint32_t)dmem[0x101 ^ 3] << 16) |
-                                 ((uint32_t)dmem[0x102 ^ 3] << 8) | (uint32_t)dmem[0x103 ^ 3];
+            uint32_t ring_base = ((uint32_t)g_dmem_cur[0x100 ^ 3] << 24) | ((uint32_t)g_dmem_cur[0x101 ^ 3] << 16) |
+                                 ((uint32_t)g_dmem_cur[0x102 ^ 3] << 8) | (uint32_t)g_dmem_cur[0x103 ^ 3];
             poke_be32(0x108, ring_base);
         }
         // Reset the DL-stack-pointer byte. The ucode runs with $18 = 0x100
@@ -5057,11 +5056,11 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         // dispatch loop when it goes negative. After task #1 underflows the
         // byte is left negative; subsequent tasks would exit immediately with
         // 0 RDP work emitted. Reset to 0x18 (3 stack entries) at task start.
-        dmem[0x152 ^ 3] = 0x18;
+        g_dmem_cur[0x152 ^ 3] = 0x18;
         // Resident-segment cache byte (L_1DB0 clears it). Forcing an invalid
         // id (0xFF) to make the loader always reload was tried 2026-07-12 and
         // INCREASED failures — the entry path apparently relies on 0 here.
-        dmem[0x153 ^ 3] = 0;
+        g_dmem_cur[0x153 ^ 3] = 0;
 
         // Diagnostic: dump first 16 DMEM bytes at the dispatch start so we
         // can see what opcode the first iter is dispatching on per task.
@@ -5077,7 +5076,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                 fprintf(stderr, "[dl] task #%d dl_ptr=0x%08X DMEM[0x178..0x190]:",
                         s_n, dl_ptr);
                 for (int i = 0x178; i < 0x190; ++i) {
-                    fprintf(stderr, " %02X", dmem[i ^ 3]);
+                    fprintf(stderr, " %02X", g_dmem_cur[i ^ 3]);
                 }
                 fprintf(stderr, "\n");
                 fflush(stderr);
@@ -5639,7 +5638,7 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
     // output_buff/output_buff_size/data_ptr/data_size/yield_data_ptr/yield_data_size.
     auto poke = [](uint32_t off, uint32_t val) {
         for (int j = 0; j < 4; ++j) {
-            dmem[(off + j) ^ 3] = (uint8_t)(val >> (24 - j * 8));
+            g_dmem_cur[(off + j) ^ 3] = (uint8_t)(val >> (24 - j * 8));
         }
     };
     poke(0xFC0 + 0x00, (uint32_t)task->t.type);

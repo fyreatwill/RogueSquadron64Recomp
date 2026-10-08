@@ -2638,13 +2638,12 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                 }
                 fprintf(stderr, "\n");
             }
-            extern uint8_t dmem[];
             fprintf(stderr, "[early-dump #%u] DMEM 0x170-0x1C0 host order:\n", n);
             for (uint32_t row = 0; row < 5; ++row) {
                 uint32_t base = 0x170u + row * 16;
                 fprintf(stderr, "  %03X:", base);
                 for (uint32_t col = 0; col < 16; ++col) {
-                    fprintf(stderr, " %02X", (unsigned)dmem[base + col]);
+                    fprintf(stderr, " %02X", (unsigned)g_dmem_cur[base + col]);
                 }
                 fprintf(stderr, "\n");
             }
@@ -2748,13 +2747,12 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                             fprintf(stderr, "\n");
                         }
                         // Dump DMEM contents at the same moment.
-                        extern uint8_t dmem[];  // defined in librecomp/rsp.cpp
                         fprintf(stderr, "[mem-dump-DMEM] 1KB (host order, DMEM 0x000-0x400):\n");
                         for (uint32_t row = 0; row < 64; ++row) {
                             uint32_t base = row * 16;
                             fprintf(stderr, "  %03X:", base);
                             for (uint32_t col = 0; col < 16; ++col) {
-                                fprintf(stderr, " %02X", (unsigned)dmem[base + col]);
+                                fprintf(stderr, " %02X", (unsigned)g_dmem_cur[base + col]);
                             }
                             fprintf(stderr, "\n");
                         }

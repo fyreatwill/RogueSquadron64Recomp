@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..6fd69da 100644
+index b0d6bef..ef2cb45 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -22,8 +22,15 @@ index b0d6bef..6fd69da 100644
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -37,6 +38,18 @@ using RspUcodeFunc = RspExitReason(uint8_t* rdram, uint32_t ucode_addr);
+@@ -34,15 +35,31 @@ struct RspContext {
+ 
+ using RspUcodeFunc = RspExitReason(uint8_t* rdram, uint32_t ucode_addr);
+ 
++// s4250: `dmem` is the gfx storage; audio SP tasks may run on a private copy.
  extern uint8_t dmem[];
++extern uint8_t dmem_audio[];
++inline thread_local uint8_t* g_dmem_cur = dmem;
++
  extern uint16_t rspReciprocals[512];
  extern uint16_t rspInverseSquareRoots[512];
 +extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
@@ -40,8 +47,16 @@ index b0d6bef..6fd69da 100644
 +                                                uint32_t dma_size);
  
  #define RSP_MEM_B(offset, addr) \
-     (*reinterpret_cast<int8_t*>(dmem + (0xFFF & (((offset) + (addr)) ^ 3))))
-@@ -56,6 +69,7 @@ static inline void RSP_MEM_W_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+-    (*reinterpret_cast<int8_t*>(dmem + (0xFFF & (((offset) + (addr)) ^ 3))))
++    (*reinterpret_cast<int8_t*>(g_dmem_cur + (0xFFF & (((offset) + (addr)) ^ 3))))
+ 
+ #define RSP_MEM_BU(offset, addr) \
+-    (*reinterpret_cast<uint8_t*>(dmem + (0xFFF & (((offset) + (addr)) ^ 3))))
++    (*reinterpret_cast<uint8_t*>(g_dmem_cur + (0xFFF & (((offset) + (addr)) ^ 3))))
+ 
+ static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
+     uint32_t out;
+@@ -56,6 +73,7 @@ static inline void RSP_MEM_W_STORE(uint32_t offset, uint32_t addr, uint32_t val)
      for (int i = 0; i < 4; i++) {
          RSP_MEM_BU(offset + i, addr) = reinterpret_cast<uint8_t*>(&val)[i ^ 3];
      }
@@ -49,7 +64,7 @@ index b0d6bef..6fd69da 100644
  }
  
  static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
-@@ -78,6 +92,7 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -78,6 +96,7 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
      for (int i = 0; i < 2; i++) {
          RSP_MEM_BU(offset + i, addr) = reinterpret_cast<uint8_t*>(&val)[(i + 2) ^ 3];
      }
@@ -57,7 +72,7 @@ index b0d6bef..6fd69da 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,25 +109,189 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,25 +113,188 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -205,9 +220,8 @@ index b0d6bef..6fd69da 100644
 +        if (s_trace) {
 +            static int s_n = 0;
 +            if (++s_n <= 4000) {
-+                extern uint8_t dmem[];
 +                fprintf(stderr, "[dma %d] dmem=0x%03X dram=0x%06X len=0x%X seg153=0x%02X",
-+                        s_n, dmem_addr, dram_addr, rd_len, dmem[0x153 ^ 3]);
++                        s_n, dmem_addr, dram_addr, rd_len, g_dmem_cur[0x153 ^ 3]);
 +                // Content peek for chunk-sized fetches: discriminates
 +                // alternating prolog-DL forms from corruption.
 +                if (rd_len <= 0x200 && dram_addr < 0x800000) {
@@ -248,7 +262,7 @@ index b0d6bef..6fd69da 100644
      dram_addr &= 0xFFFFF8;
      // Same IMEM/DMEM split as the rdram→dmem direction: silently skip IMEM
      // writebacks, clamp lengths to actual memory bounds.
-@@ -121,9 +300,15 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -121,9 +303,15 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
@@ -1097,7 +1111,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..5785237 100644
+index 1cb3f6a..23c75d4 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,12 @@
@@ -1113,12 +1127,20 @@ index 1cb3f6a..5785237 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +38,2003 @@ void recomp::rsp::constants_init() {
+@@ -11,6 +17,7 @@ void recomp::rsp::set_callbacks(const callbacks_t& callbacks) {
+ }
+ 
+ uint8_t dmem[0x1000];
++uint8_t dmem_audio[0x1000];
+ uint16_t rspReciprocals[512];
+ uint16_t rspInverseSquareRoots[512];
+ 
+@@ -32,24 +39,2011 @@ void recomp::rsp::constants_init() {
      }
  }
  
 +// Optional host hook serializing ALL DMEM users (RogueSquadron64Recomp: the
-+// gfx LLE runner on the gfx thread shares the single global dmem[] with this
++// gfx LLE runner on the gfx thread shares the single global g_dmem_cur[] with this
 +// audio-task path on the SP task thread; unserialized, this function's OSTask
 +// memcpy + ucode_data DMA trample a gfx task mid-run — audio wavetables over
 +// the gfx dispatch tables). Weak so other hosts need not provide it.
@@ -2785,17 +2807,26 @@ index 1cb3f6a..5785237 100644
          return false;
      }
  
++    // s4250: private audio DMEM (ROGUESQ_AUDIO_PRIVATE_DMEM=1) -> no shared-dmem lock.
++    static const bool s_private_audio_dmem = [] {
++        const char* e = std::getenv("ROGUESQ_AUDIO_PRIVATE_DMEM");
++        return e && e[0] && e[0] != '0';
++    }();
++    const bool use_private_dmem = s_private_audio_dmem && task->t.type == M_AUDTASK;
 +    struct DmemGuard {
-+        DmemGuard() {
++        bool priv;
++        explicit DmemGuard(bool p) : priv(p) {
++            if (priv) { g_dmem_cur = dmem_audio; g_s4248_lock_wait_us = 0; return; }
 +            auto lt0 = std::chrono::steady_clock::now();
 +            if (rs64_dmem_lock) rs64_dmem_lock();
 +            g_s4248_lock_wait_us = (uint32_t)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - lt0).count();
 +        }
-+        ~DmemGuard() { if (rs64_dmem_unlock) rs64_dmem_unlock(); }
-+    } dmem_guard;
++        ~DmemGuard() { if (priv) { g_dmem_cur = dmem; return; } if (rs64_dmem_unlock) rs64_dmem_unlock(); }
++    } dmem_guard(use_private_dmem);
 +
      // Load the OSTask into DMEM
-     memcpy(&dmem[0xFC0], task, sizeof(OSTask));
+-    memcpy(&dmem[0xFC0], task, sizeof(OSTask));
++    memcpy(&g_dmem_cur[0xFC0], task, sizeof(OSTask));
  
 -    // Load the ucode data into DMEM
 -    dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, 0xF80 - 1);
@@ -3119,7 +3150,7 @@ index 1cb3f6a..5785237 100644
  
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
-@@ -58,5 +2043,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -58,5 +2052,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
