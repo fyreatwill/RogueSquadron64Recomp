@@ -870,6 +870,31 @@ static void dump_pc_task(uint32_t pc)
     row->yield_data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x3Cu));
     if (row->type == 2 && !g_pc_task_join_enabled)
         dump_audio_objects(task_phys, row->data_ptr, row->data_size);
+    if (row->type == 2) {
+        /* s4217: content census of the whole data_ptr block (count*0xA10 B) */
+        static long blk_n;
+        uint32_t base = row->data_ptr & 0x1FFFFFFFu;
+        uint32_t len = row->data_size * 0xA10u;
+        long n = blk_n++;
+        if (len && len <= 0x4000u && base < RDRAM_SIZE &&
+            len <= RDRAM_SIZE - base && (n < 24 || n % 64 == 0)) {
+            uint32_t zero = 0, ascii = 0, p801 = 0, i;
+            for (i = 0; i < len; i++) {
+                uint32_t b = debug_mem_u8(base + i);
+                zero += b == 0;
+                ascii += b >= 0x20 && b < 0x7F;
+            }
+            for (i = 0; i + 4 <= len; i += 4)
+                p801 += (pDebugMemRead32(debug_rdram_addr(base + i)) >> 20) == 0x801;
+            printf("[blk-census] n=%ld width=%u origin=0x%08x base=0x%06x len=0x%x "
+                   "zero=%u ascii=%u p801=%u w30=",
+                   n, pDebugMemRead32(VI_WIDTH_ADDR), pDebugMemRead32(VI_ORIGIN_ADDR),
+                   base, len, zero, ascii, p801);
+            for (i = 0x30; i < 0x70 && i + 4 <= len; i += 4)
+                printf("%08X,", pDebugMemRead32(debug_rdram_addr(base + i)));
+            printf("\n");
+        }
+    }
     data_ptr = row->data_ptr;
     row->data_ptr_plus_100 = data_ptr + 0x100u;
     row->field_phys = row->data_ptr_plus_100 & 0x007FFFFFu;

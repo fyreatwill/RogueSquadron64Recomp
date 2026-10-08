@@ -150,6 +150,8 @@ mitigation behavior changed.
 
 ## Next steps
 
+Session 4217: retail data_ptr block ALSO has ASCII names (+0x40 'ltext_cache_3') early, real records (p801~100) from task n~256 -> s4214's "not audio records / builder-wrong-target" inference is void (retail identical in kind); block content is not the divergence. Next: field-by-field retail/port voice-record (+0x10, stride 0x50) compare at equal phase/ordinal.
+
 Session 4215: raw guest OSTask words (struct at RDRAM 0x149470) equal host-read fields -> H-task-struct-stale refuted; data_ptr alternates 0x8016BD50/0x80169F10 in phase 2. Next: guest writer PC of 0x1494A0 (check M5-S3482-TASK-WRITER-JOIN.md first). Session 4216: writer already named (PC 0x8009177C, s3482-s3486); retail stores same 7728 B blocks -> H-builder-wrong-target refuted; next: retail content dump of 0x171CE0 (docs/M5-S4216-DATAPTR-RECONCILE.md).
 
 Session 4214: audio data_ptr block (menu heap) holds ASCII filenames + 0x28-stride pointer structs that change per task, not audio records -> H-cmdbuf-never-built refuted, H-builder-wrong-target selected (s4212 ownership + s4214 content). Next: writer of OSTask.data_ptr (NEXT.md).

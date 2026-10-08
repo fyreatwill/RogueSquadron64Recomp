@@ -147227,3 +147227,11 @@ ORIGIN: no mitigation added; documentation/reconciliation only.
 Next: retail-oracle dump of block 0x80171CE0 content for comparison with the s4214 port scan (see NEXT.md).
 
 Session 4216 conclusion (gate-readable): this iteration REFUTES H-builder-wrong-target and H-builder-skipped (retail oracle stores the same data_ptr values from the same writer PC 0x8009177C) and leaves H-ucode-uses-other-ptr; the next discriminator is a retail-oracle content dump of the 7728 B block at 0x80171CE0 versus the port s4214 scan.
+
+## Session 4217 (2026-10-07) — M5 Step 9o: retail data_ptr block also holds ASCII names at +0x40 (ltext_cache_3, mat_13, explo_tex…) — H-content-matches; s4214's "not audio records" inference is void
+
+Added `[blk-census]` to `tools/oracle/rs64_oracle.c` (`dump_pc_task`, type-2 tasks: zero/ascii/0x801xxxxx-pointer counts over data_size*0xA10 bytes + words 0x30..0x70). Script `scratch/agent/run_s4217_retail_blk_census.sh`, retail ROM, title 1024 phase, watch PC 0x80033FCC. Positive control: whole-RDRAM write watch fired 12309 `[hit]` lines in the same run. Output: scratch/agent/soak_results/s4217_blk_census/retail.log.
+
+Result: retail alternates two blocks (0x171CE0 / 0x173B20, len 0x1420 or 0xA10, i.e. 2 or 1 frames). Early title (n=0..24, n<256) both blocks contain ASCII names at +0x30..0x4F ("ltext_cache_3", "mat_13", "explo_tex0") and pointers 0x801xxxxx at the 0x28-stride (p801=4–6, ascii 17–69%). From n≈256 onward the same blocks carry real-looking records (hdr words like 74000937, 0x8017DD38 pointers, 0x40000111 flags; p801≈100, ascii ~8%) while "ltext_cache_3" persists at +0x40. The port's s4214 scan shows the same ASCII-then-records shape (rec0 at n=8192 = C800045A 801AF250). So the s4214 inference "ASCII filenames => not audio records => H-cmdbuf-never-built/builder-wrong-target" does not discriminate: retail has the same names in the same block. H-content-matches holds at this granularity; no port/retail divergence located.
+ORIGIN: n/a (diagnostic only; oracle instrument, no mitigation).
+Rules out: block content as the divergence. Next: compare records at equal retail/port task ordinals field-by-field (voice record +0x10 stride 0x50: flags 0x2C, output 0x44) — dump_audio_objects already prints these for retail; join with port ROGUESQ_AUDIO_UCODE output for the same phase.
