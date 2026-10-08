@@ -812,7 +812,7 @@ index 8c8e5d1..0907c36 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..e48631d 100644
+index 43509ba..45623ca 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -8,9 +8,15 @@
@@ -865,16 +865,26 @@ index 43509ba..e48631d 100644
  }
  
  void recomp::do_rom_pio(uint8_t* rdram, gpr ram_address, uint32_t physical_addr) {
-@@ -193,6 +219,8 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
+@@ -193,6 +219,18 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
      for (gpr i = 0; i < count; i++) {
          MEM_B(i, rdram_address) = save_context.save_buffer[offset + i];
      }
++    if (getenv("RS64_EEP_TRACE")) {
++        static int n = 0;
++        if (n++ < 200) {
++            fprintf(stderr, "[s4224-eep] save_read addr=0x%08x off=0x%x count=%u bufsize=%zu b0..7=%02x %02x %02x %02x %02x %02x %02x %02x\n",
++                    (unsigned)rdram_address, offset, (unsigned)count, save_context.save_buffer.size(),
++                    save_context.save_buffer[offset], save_context.save_buffer[offset + 1], save_context.save_buffer[offset + 2],
++                    save_context.save_buffer[offset + 3], save_context.save_buffer[offset + 4], save_context.save_buffer[offset + 5],
++                    save_context.save_buffer[offset + 6], save_context.save_buffer[offset + 7]);
++        }
++    }
 +    rs64_m5_host_write_census(rdram, static_cast<uint32_t>(rdram_address) & 0x007FFFFFu,
 +                              count, "pi_sram_to_rdram");
  }
  
  void save_clear(uint32_t start, uint32_t size, char value) {
-@@ -266,6 +294,16 @@ void ultramodern::join_saving_thread() {
+@@ -266,6 +304,16 @@ void ultramodern::join_saving_thread() {
      }
  }
  
@@ -891,7 +901,7 @@ index 43509ba..e48631d 100644
  void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_addr, uint32_t size, uint32_t direction) {
      // TODO asynchronous transfer
      // TODO implement unaligned DMA correctly
-@@ -273,6 +311,24 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -273,6 +321,24 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
          if (physical_addr >= recomp::rom_base) {
              // read cart rom
              recomp::do_rom_read(rdram, rdram_address, physical_addr, size);
@@ -916,7 +926,7 @@ index 43509ba..e48631d 100644
  
              // Send a message to the mq to indicate that the transfer completed
              ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
-@@ -313,12 +369,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,12 +379,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
