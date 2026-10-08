@@ -164,7 +164,7 @@ retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
 ## Next steps
-0. (s4236) Hangar AI output is constant per-channel DC ramping +0x100/buffer (distinct=1, ~-12000/-8200, not clipped; title control wide-band). Find the writer: dump the audio ucode's pre-final mix bus in hangar (silent sources + filter/accumulator state vs final-stage injection). Single-source (one run).
+0. (s4237) SUPERSEDES s4236: hangar AI output is a DC ramp (+256/buffer, distinct=1) only for the first ~19 buffers after hangar entry (then one zero buffer); from n=128 it is wide-band (distinct ~188, +-32.7k) like title; hangar phase-5 ucode mix buses are populated. The 'constant DC hangar' conclusion was a window artifact. Open: (a) writer of the 19-buffer entry transient (low value), (b) title and hangar both reach +-32.7k - quantify clipping fraction vs retail oracle title AI buffers. Hangar claim single-source (one run, title control in same run).
 
 - **s4235:** fresh-save hangar `[ai-output]`: 24/25 nonzero, but 19/25 are one identical FNV 0x95E590C5 with all 768 bytes nonzero (constant/saturated-looking; bytes not dumped, single run). Next: dump the first 32 bytes + sample min/max of that buffer at the AI boundary and compare with a retail oracle hangar AI buffer (NEXT.md).
 
