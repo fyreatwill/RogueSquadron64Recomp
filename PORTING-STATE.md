@@ -147655,3 +147655,7 @@ Work unit: macOS `sample` (4 s) at t~10 vs t~18-22 in one run (`scratch/agent/s4
 - Next: dump the framebuffers map (address, width, RAMBytes, fmt, creator DL pc) once at ~28 s and compare against retail's expected 2-3 color images + depth.
 - Verdict: selects H-rt64-cpu-checkRAM (hashing cost scales with tracked-framebuffer count) over H-audio-defect and H-lock-wait; refutes the M5 audio-starvation reading of the t=21-30 gap (two lines: sample profile 55% in checkRAM XXH3, counter 3->56 fbs with calls/s 39->14).
 - Next discriminator: log each framebuffer creation (address, width, height, fmt, creating DL) in one run; selects between H-A bogus LLE color images and H-B legit-but-unpruned buffers (expected retail set: 2-3 color + depth).
+
+## Session 4269 (2026-10-08) — maintenance: CURRENT-TRUTH compacted 507 -> 147 lines
+
+Step 0 triggered (CURRENT-TRUTH was 60,149 B > 60,000). No experiments run. Moved the s4164-s4268 per-session chains, the old hypothesis table and the s4232-s4267 addenda verbatim to `docs/M5-CURRENT-TRUTH-ARCHIVE-s4269.md` (434 lines); rewrote CURRENT-TRUTH to 147 lines / 8.9 KB: durable state (route, real audio output, landed M5 de-stubs, RT64 send_dl/checkRDRAM stall, parked M3 crash families, regen warning), ONE monotonic Next-steps sequence (1 = name the ~50 tracked framebuffers per NEXT.md; 2 = resume M5 Step 9/10; 3 = M3 blocked on toolchain; 4 = rename sweep), consolidated Superseded list with why each was believable. Headline refreshed to s4268. No conclusion changed; no code touched.
