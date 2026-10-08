@@ -163,3 +163,6 @@ writer and whether its value is legitimate.
 [M5-S3824-FAMILY-ROUTE-OBJECT-JOIN.md](M5-S3824-FAMILY-ROUTE-OBJECT-JOIN.md),
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 Detailed counts remain in `PORTING-STATE.md`.
+
+## s4291 note
+Hangar (VI 512) unreachable on current route: title at ~52 s vs 14 s at s1949 (640->1024 idle ~48 s), either key schedule, solo or concurrent. Restore effect (odd 60 vs 0) reproduced again. Next: bisect the slowdown (drop DPC_WRAP_FLUSH / S4271+S4272+S4268 / add M4_Y8000_WIDTH=512, concurrent arms, compare [phase] 1024 time).
