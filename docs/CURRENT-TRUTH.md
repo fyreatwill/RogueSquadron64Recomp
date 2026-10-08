@@ -5,6 +5,8 @@ background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 Updated for session 4194 (2026-10-07).
 
+**s4230 (latest):** fillSampleStreamRange+8136 = `lw $a0,0($v1)` at 0x8008FD60 with allocator list head (0x801499E4) == 0 but tail (0x801499B4) = 0x801F9D10 (probe `[s4230-FD60]`, 1 of 6 stale runs). No watched guest store changed the tail after boot init (14 rows), so the writer is unwatched (host DMA/memcpy or an uninstrumented store). Single-run evidence. Tools: `tools/apply_s4230_listwatch.py`, `apply_s4230_fd60probe.py`, `scratch/agent/s4230_listwatch.sh`. Next: host-side write watch over phys 0x1499B0..0x1499E8 (NEXT.md).
+
 Session 4192: M5 A12 de-stub landed. The countdown wait at `0x8014998A` now defaults to a yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset = mode 2): the real producer takes the countdown 16 -> 0 in ~200 x 1 ms yields and title/hangar are reached. The old musyxSynthFrame pump left the countdown at 16 (64-pump ceiling, stall row every wait) - it was a silent skip, so the s327 "only decrementer" justification is superseded. `=0` restores the pump, `=1` the deadlocking blind spin (control). Pre-wait width-320 segfault (`si_addr=0x400128d47`) seen in 2 of 6 arm-runs, unrelated. See PORTING-STATE s4192.
 
 Session 4191: caller continuation `0x8008F4C0` (after `jal 0x8008F858`) matched retail in the hangar on v0/v1/a0/a2/s0/s1/s2; title row lost to oracle hit cap (port-only). initSampleStreamBlockCache object path is register-parity clean entry-to-return; no divergence found, so stop parity qualification and take the next M5 de-stub step.
