@@ -1,9 +1,8 @@
-# Next work unit: who stops submitting tasks in audio-gap seconds (s4264)
+# Next work unit: why does the SP task completion take ~1 s in gap seconds (s4265)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4263: the 0x8011A818/0x8011A7E8 sends are spTaskSchedulerThread / dpInterruptHandlerThread task-completion notifications; no flag/queue gate (full=0, recv==send). In gap seconds (t~19-25, both arms) almost no tasks (gfx or audio) are submitted/completed, while VI retrace sends continue.
-Hypotheses: (B1) the guest game-logic/main thread is blocked on a recv that is only satisfied by a task completion (self-feeding stall that breaks after 1-2 s on a timer/retry); (B2) the scheduler thread's own input queue (0x8011A408/0x8011A420?) is empty - submitters upstream are blocked elsewhere (e.g. on a loader/DMA/PI queue); (B3) the producer threads are running but skipping submission by a guest policy (frame skip).
-Discriminator: one instrument, one run: in osRecvMesg_recomp, per guest tid keep (mq, flag, entered_ts); on return clear. Each second print the list of threads currently blocked (tid, mq, blocked_ms) - emit also at each [s4259] GAP. Healthy-second table is the control (different blocked set). Add sends-per-tid-per-mq for all mqs (not only tid 0).
-Outcome map: single thread chain blocked on a queue whose sender is itself blocked => B1/B2 and the queue names the culprit; all threads runnable/polling => B3.
-Reuse scratch/agent/s4263_gate.sh (copy to s4264).
+s4264: in gap seconds tid3 (spTaskSchedulerThread) is blocked on 0x8011A7E8 while tid0 sends only ~1 completion/s there (healthy: 30/s); tid2/tid5 starve behind tid3; tid0 keeps submitting to 0x8011A420.
+Hypotheses: (C1) a single long SP task (audio ucode LLE loop) occupies the RSP ~1 s; (C2) the host SP-complete notification is delayed/coalesced (timer or retry), the task itself finished fast; (C3) the task is a gfx task whose RDP/DP-complete wait (0x8011A818 side) is the real holdup.
+Discriminator: one build, one run: at the host SP-task start and SP-complete send (find where tid0 sends 0x8011A7E8), log per task (task type, ucode ptr, start_ts, done_ts), plus RSP-halt timestamp. Gap-second tasks vs healthy tasks as control. C1: done-start ~1 s with type=audio; C2: RSP halt early, notify late; C3: type=gfx and DP-complete late.
+Reuse scratch/agent/s4264_gate.sh (copy to s4265).

@@ -4153,7 +4153,34 @@ static void s4263_note(uint8_t* rdram, uint32_t mq, bool is_send, int32_t flag) 
     if (is_send) { g_s4263_send[i]++; if (q.validCount >= q.msgCount) g_s4263_full[i]++; }
     else { g_s4263_recv[i]++; if (q.validCount == 0 && flag != 0) g_s4263_rblock[i]++; }
 }
+// s4264: guest-thread blocked-recv registry + per-(tid,mq) send/recv counts, flushed per second.
+struct S4264Blk { uint32_t mq; int32_t flag; std::chrono::steady_clock::time_point t; bool active; };
+static std::mutex g_s4264_m;
+static S4264Blk g_s4264_blk[64];
+static std::map<std::pair<int, uint32_t>, uint64_t> g_s4264_sends, g_s4264_recvs;
+static void s4264_enter(int tid, uint32_t mq, int32_t flag) {
+    std::lock_guard<std::mutex> lk(g_s4264_m);
+    g_s4264_recvs[{tid, mq}]++;
+    g_s4264_blk[tid & 63] = {mq, flag, std::chrono::steady_clock::now(), true};
+}
+static void s4264_exit(int tid) {
+    std::lock_guard<std::mutex> lk(g_s4264_m);
+    g_s4264_blk[tid & 63].active = false;
+}
+static void s4264_flush(int sec) {
+    std::lock_guard<std::mutex> lk(g_s4264_m);
+    auto now = std::chrono::steady_clock::now();
+    for (int i = 0; i < 64; ++i) {
+        if (!g_s4264_blk[i].active) continue;
+        const double ms = std::chrono::duration<double, std::milli>(now - g_s4264_blk[i].t).count();
+        std::fprintf(stderr, "[s4264-blk] t=%d tid=%d mq=0x%08X flag=%d blocked_ms=%.0f\n", sec, i, g_s4264_blk[i].mq, g_s4264_blk[i].flag, ms);
+    }
+    for (auto& kv : g_s4264_sends) std::fprintf(stderr, "[s4264-snd] t=%d tid=%d mq=0x%08X n=%llu\n", sec, kv.first.first, kv.first.second, (unsigned long long)kv.second);
+    for (auto& kv : g_s4264_recvs) std::fprintf(stderr, "[s4264-rcv] t=%d tid=%d mq=0x%08X n=%llu\n", sec, kv.first.first, kv.first.second, (unsigned long long)kv.second);
+    g_s4264_sends.clear(); g_s4264_recvs.clear();
+}
 static void s4263_flush(uint8_t* rdram, int sec) {
+    s4264_flush(sec);
     char fl[64]; int n = 0;
     for (int a = 0; a < 16; ++a) n += std::snprintf(fl + n, sizeof(fl) - n, "%02X", (unsigned)MEM_BU(-0X5770 + a, (int64_t)(int32_t)0x80120000));
     for (int i = 0; i < 3; ++i) {
@@ -4168,6 +4195,7 @@ static void s4262_note_send(uint8_t* rdram, uint32_t mq, uint32_t ra) {
     if (!on) return;
     s4263_note(rdram, mq, true, 0);
     const int tid = rogue_current_thread_id(rdram) & 63;
+    { std::lock_guard<std::mutex> lk2(g_s4264_m); g_s4264_sends[{tid, mq}]++; }
     if (tid != 0 && mq != 0x8011A818u) return;
     static std::mutex m;
     static std::map<std::tuple<int, uint32_t, uint32_t>, uint64_t> tab;
@@ -4338,7 +4366,7 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
         }
     }
     { static const bool s4263_on = [] { const char* e = std::getenv("ROGUESQ_S4262"); return e && *e && *e != '0'; }();
-      if (s4263_on) s4263_note(rdram, mq_addr, false, flag); }
+      if (s4263_on) { s4263_note(rdram, mq_addr, false, flag); s4264_enter(rogue_current_thread_id(rdram) & 63, mq_addr, flag); } }
     rs64_m5_frequency_contract(rdram, ctx);
     recv_trace_enter(rdram, mq_addr, flag, tid);
     log_m5_frame_sync_edge(rdram, "recv", mq_addr, (uint32_t)ctx->r5, flag);
@@ -4372,6 +4400,8 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     }
     rs64_m5_frequency_receive_join(rdram, ctx, mq_addr, flag, (int32_t)ctx->r2,
                                    delivered_hint);
+    { static const bool s4264_on = [] { const char* e = std::getenv("ROGUESQ_S4262"); return e && *e && *e != '0'; }();
+      if (s4264_on) s4264_exit(rogue_current_thread_id(rdram) & 63); }
     recv_trace_exit(mq_addr, flag, tid, (int32_t)ctx->r2);
 }
 
