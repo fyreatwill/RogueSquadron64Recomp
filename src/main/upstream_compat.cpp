@@ -1604,9 +1604,49 @@ extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, u
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
     (void)value;
+    const uint32_t phys = addr & 0x1FFFFFFFu;
+    if (phys >= 0x17C000u && phys < 0x17D000u) {
+        static std::atomic<bool> control{false};
+        if (!control.exchange(true)) {
+            std::fprintf(stderr, "[s4306-control] adjacent-range-positive-control=1 phys=0x%06X width=%c pc=0x%08X\n",
+                         phys, width, pc);
+            std::fflush(stderr);
+        }
+    }
     S4299Ent& e = g_s4299_ring[g_s4299_total & ((1u << 20) - 1)];
     e.pc = pc; e.addr = addr; e.seq = (uint32_t)g_s4299_total; e.w = width; e.fn = nullptr;
     g_s4299_total++;
+}
+extern "C" void rs64_s4306_postfree_store(uint8_t* rdram, uint32_t pc,
+                                             uint32_t addr, uint32_t requested) {
+    static const bool on = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_S4306");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (!on || !rdram) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 512u || origin != 0x006AB400u) return;
+    const uint32_t phys = addr & 0x1FFFFFFFu;
+    if (phys < 0x17D000u || phys >= 0x17E200u) return;
+    static std::atomic<uint32_t> ordinal{0};
+    static std::atomic<bool> control{false};
+    const uint32_t post = (uint32_t(rdram[(phys + 0) ^ 3]) << 24) |
+                          (uint32_t(rdram[(phys + 1) ^ 3]) << 16) |
+                          (uint32_t(rdram[(phys + 2) ^ 3]) << 8) |
+                          uint32_t(rdram[(phys + 3) ^ 3]);
+    if (!control.exchange(true)) {
+        std::fprintf(stderr, "[s4306-control] adjacent-range-positive-control=1 phase=%u width=%u origin=0x%06X\n",
+                     rs64_phase_ord(), width, origin);
+        std::fflush(stderr);
+    }
+    const uint32_t n = ordinal.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 256u) return;
+    std::fprintf(stderr,
+        "[s4306-row] ordinal=%u phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%06X requested=0x%08X post=0x%08X mismatch=%u\n",
+        n, rs64_phase_ord(), width, origin, pc, phys, requested, post,
+        requested != post ? 1u : 0u);
+    std::fflush(stderr);
 }
 extern "C" void rs64_s4299_swlr(char w, const char* fn, uint32_t line, uint32_t addr) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();

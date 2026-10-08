@@ -1,41 +1,40 @@
-# Next work unit (s4306): port-side post-free value/order join
+# Next work unit (s4307): port-side post-free synth-read join
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-State (s4305): the retail oracle passed the whole-RDRAM positive control,
-reached VI-512 hangar, and captured an ordered post-store table for the target
-block. The first 256 rows repeatedly show structured stream-node links and
-sample metadata, with scalar-store mismatch=0. The port still has only
-writer/synth breadcrumbs, so the cross-runtime discriminator remains open.
+State (s4306): a valid seeded port VI-512 run passed both controls and captured
+256 ordered post-store rows with 0 requested-vs-post mismatches. Compared with
+the independent s4305 retail table, the port has a different reused-block
+layout/order and writer mix. This selects H-retail-layout-different; no
+port-only damaging value was observed. The exact synth consumer boundary is
+still open.
 
 Competing hypotheses:
 
-- H-layout-equivalent: retail and port perform the same post-free writes and
-  synth reads; the crash is caused by a later port-only timing/order defect.
-- H-retail-layout-different: retail writes a different object layout into the
-  reused block before synth reads it, so only the port forms invalid stream
-  nodes.
-- H-port-only-damaging-write: both runtimes reuse the block, but only the port
-  emits the damaging ASCII/name or ltex-cache value into the stream-node span.
+- H-layout-equivalent: the apparent tuple difference is only route/ordinal
+  sampling, and the first synth read still sees equivalent nodes.
+- H-retail-layout-different: the port's different writer/address sequence is
+  present at the first synth read and explains the invalid traversal.
+- H-port-only-damaging-write: a port-only damaging value appears in the joined
+  read, despite the captured scalar stores being internally consistent.
 
-Discriminator: one port run with the positive control equivalent (a phase-gated
-whole-RDRAM/known-framebuffer control), target range 0x17D000:0x17E200,
-phase VI 0x006ab400/512, and one bounded table containing writer PC, aligned
-address, post-store word, scalar mismatch, and ordinal. Compare the first
-post-free table rows and first synth read against the retail rows in
-`scratch/agent/oracle_s4305_fixed.log`. A matching table supports
-H-layout-equivalent; a different legitimate link/layout sequence supports
-H-retail-layout-different; a damaging value written only by the port supports
-H-port-only-damaging-write. A missing control or VI-512 phase is invalid.
+Discriminator: one build/run with the existing positive controls plus a
+phase-gated port read watch over 0x17D000:0x17E200. For each first read after a
+post-free writer, log read PC, address, value, phase, and the immediately
+preceding writer ordinal. Compare the first read tuple and its predecessor to
+the retail read watch and s4305 ordered rows. A matching read selects
+H-layout-equivalent; a different legitimate layout at the read selects
+H-retail-layout-different; a port-only damaging value selects
+H-port-only-damaging-write. Missing controls or VI 512 are invalid.
 
 Exact command:
 
-Before changing code, inspect the existing `ROGUESQ_LOG_AUDIOTICK_TRACE`,
-`ROGUESQ_LOG_AUDIO_OBJECTS`, and phase-key plumbing; add the entire table in
-one build, then run the existing seeded-save VI-512 driver from `build/` with
-all passive breadcrumbs enabled. Do not add a guard or skip.
+Before changing code, inspect the existing read-side MusyX/stream hooks and
+phase plumbing; add the entire read/write join in one build, then run the
+seeded-save phase-1024/key driver with PROBE_LEAVE_OK=1 from build/ and all
+passive breadcrumbs enabled. Do not add a guard or skip.
 
-Expected outcomes: matching rows select H-layout-equivalent; a different
-legitimate layout selects H-retail-layout-different; a damaging port-only
-value selects H-port-only-damaging-write. No control or no VI-512 phase is
-invalid. Do not add a guard or skip from this probe.
+Expected outcomes: matching read/predecessor tuples select H-layout-equivalent;
+a different legitimate read layout selects H-retail-layout-different; a
+damaging port-only value selects H-port-only-damaging-write. No control or no
+VI-512 phase is invalid. Do not add a guard or skip from this probe.

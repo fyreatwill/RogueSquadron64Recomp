@@ -147958,3 +147958,25 @@ Ran the fixed version of the s4304 retail oracle arm. The initial s4305 command 
 The fixed arm captured 256 ordered post-store rows before the bounded table filled, with 18,082 additional rows overflowed. The first rows and repeated phase rows show structured stream-node/list construction: 0x8008fbb4/0x8008fbec/0x8008fbf0/0x8008fbf4 write zeroed fields and links among 0x8017d9e0, 0x8017d9f8, 0x8017da10, 0x8017da28, while 0x8008fdc0/0x8008fdcc/0x8008fe60 write sample metadata. All selected scalar-store checks reported mismatch=0; the two 0x80018f5c/60 entries were unsupported instruction samples, not mismatches.
 
 This names legitimate retail post-free writers and values, but does not yet select H-layout-equivalent, H-retail-layout-different, or H-port-only-damaging-write because the port has no equivalent ordered table. The earlier run's empty sequence was an instrumentation configuration failure, not evidence of no sequence. The next work unit is one phase-gated port table with the same address, writer PC, post-value, scalar-mismatch, and ordinal fields. No guard or skip was added. ORIGIN: none; measurement only.
+## Session 4306 (2026-10-08) — port post-free stream-node layout differs from retail
+
+The bounded s4306 instrument added post-store rows at all 17 retail writer PCs
+from s4305, phase-gated to VI origin 0x006AB400/width 512. It logged writer PC,
+ordinal, physical address, requested value, post-store value, and mismatch, with
+an adjacent-range positive control. The first build/run reached VI 512, fired
+both controls, captured 256 rows, and showed 0 mismatches, but its first version
+covered only 11 writer PCs; that partial result was not interpreted. A corrected
+build with the remaining six PCs was route-invalid once (stalled at VI 640).
+The fixed phase-1024/key schedule then reached VI 512 with no crash, fired both
+controls, and captured 256 rows with 0 mismatches.
+
+Compared with the independent retail s4305 table, the valid port table has a
+different reused-block layout/order and writer mix: retail includes the full
+0x8008fb90/fbcc/fbec/fbf0/fbf4 construction pattern and metadata addresses,
+while the port's bounded sequence shifts several link/metadata addresses and
+values. This selects H-retail-layout-different, not H-port-only-damaging-write;
+the latter is unsupported because every captured port requested value matched
+the post-store word. The do_rom_read odd-address crash remains unexplained at
+the synth-read/lifetime boundary. No guard or skip was added. The next
+discriminator is a port-side first synth-read joined to the preceding writer
+ordinal, compared with the retail read watch.
