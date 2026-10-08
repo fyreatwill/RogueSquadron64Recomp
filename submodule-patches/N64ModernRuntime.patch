@@ -994,7 +994,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..cb8f63a 100644
+index 1cb3f6a..02745a7 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -1008,7 +1008,7 @@ index 1cb3f6a..cb8f63a 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1820 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1845 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2441,6 +2441,30 @@ index 1cb3f6a..cb8f63a 100644
 +
  // Runs a recompiled RSP microcode
 +extern "C" volatile uint32_t g_rs64_last_guest_pc;
++static void rs64_s4214_scan(uint8_t* rdram, const OSTask* task, uint32_t phase, unsigned n) {
++    static uint8_t prev[96 * 0x50 + 0x30]; static uint32_t prev_dp; static bool have;
++    uint32_t dp = (uint32_t)task->t.data_ptr; uint32_t off = dp & 0x1FFFFFFFu;
++    if (off == 0 || off + sizeof(prev) > 0x800000u) return;
++    const uint8_t* b = rdram + off;
++    uint8_t cur[sizeof(prev)];
++    for (size_t i = 0; i < sizeof(cur); i++) cur[i] = b[i ^ 3]; // guest byte order (rdram word-swapped)
++    unsigned ascii = 0, zero = 0, ascii_recs = 0, zero_recs = 0, changed = 0, first_non = 96, first_nz_non = 96;
++    for (unsigned r = 0; r < 96; r++) {
++        unsigned a = 0, z = 0;
++        for (unsigned k = 0; k < 0x50; k++) { uint8_t c = cur[0x30 + r * 0x50 + k]; if (c >= 0x20 && c < 0x7F) a++; if (c == 0) z++; }
++        ascii += a; zero += z;
++        if (z == 0x50) zero_recs++;
++        if (a >= 0x30) ascii_recs++; else { if (first_non == 96) first_non = r; if (z != 0x50 && first_nz_non == 96) first_nz_non = r; }
++    }
++    if (have && prev_dp == dp) for (size_t i = 0; i < sizeof(cur); i++) changed += cur[i] != prev[i];
++    else changed = 0xFFFFFFFFu;
++    memcpy(prev, cur, sizeof(cur)); prev_dp = dp; have = true;
++    if (n <= 6 || (n & (n - 1)) == 0) {
++        std::fprintf(stderr, "[s4214-scan] phase=%u n=%u dp=0x%08X ascii_bytes=%u zero_bytes=%u ascii_recs=%u zero_recs=%u first_nonascii_rec=%u first_nz_nonascii_rec=%u changed=%d hdr=%02X%02X%02X%02X rec0=%02X%02X%02X%02X%02X%02X%02X%02X\n",
++            phase, n, dp, ascii, zero, ascii_recs, zero_recs, first_non, first_nz_non, (int)changed,
++            cur[0], cur[1], cur[2], cur[3], cur[0x30], cur[0x31], cur[0x32], cur[0x33], cur[0x34], cur[0x35], cur[0x36], cur[0x37]);
++    }
++}
 +static void rs64_s4213_census(const OSTask* task) {
 +    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4213"); return e && e[0] && e[0] != '0'; }();
 +    if (!on) return;
@@ -2461,6 +2485,7 @@ index 1cb3f6a..cb8f63a 100644
 +}
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
 +    rs64_s4213_census(task);
++    { static const bool on2 = [] { const char* e = std::getenv("ROGUESQ_LOG_S4213"); return e && e[0] && e[0] != '0'; }(); static uint32_t pk = 0xFFFFFFFFu; static unsigned sn; if (on2) { uint32_t ph = rs64_phase_ord(); if (ph != pk) { pk = ph; sn = 0; } rs64_s4214_scan(rdram, task, ph, ++sn); } }
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
      RspUcodeFunc* ucode_func = rsp_callbacks.get_rsp_microcode(task);
  
