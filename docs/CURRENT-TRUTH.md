@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4275 (2026-10-08).
+Updated for session 4286 (2026-10-08).
 
 ## Current state (as of s4268)
 
@@ -63,6 +63,8 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 ## Next steps
 
 0. (s4279) Allocator head==0 / early musyx crash ROOT FOUND: the sample-stream node heap block (0x801F9CD0..0x801FB3F4, header 0x1800) is zeroed wholesale by ONE RT64 `copyToRAM` of a garbage colour image (addressStart 0x130393 unaligned, width 1033, siz 3, rows 118..339 -> range [0x1A742B,0x28633F), VI 640), within one ENTRY of the wipe in 2/2 runs; list was invariant-clean before, no guest store did it. Pool==0 is designed (free list has no push site; LRU steal) — the s4278 "pool never replenished" framing is superseded. Next: name the guest SetColorImage/DPC source of addr 0x130393 w1033 (scratch/agent/NEXT.md). Hangar route and the WRAP_FLUSH A/B stay blocked until resolved.
+
+0a'''''. (s4286) RESTORE-FROM-SHADOW WORKS: with WRAP_FLUSH=1 + `ROGUESQ_WRAP_RESTORE=1` + `ROGUESQ_S4272_CAP=0x2000` ODD cimgs 60 -> 0 vs 60 without restore (phase-matched to VI 1024, positive control postDiff=0, wordsRestored 5814; single run/arm). Next: replicate 2x, crash soak, then default-on candidate (`scratch/agent/s4286_restore.sh`).
 
 0a''''. (s4285) At WRAP_FLUSH time ~21% of flushes (591/2816, 564/2816, two runs) already have shadow!=live words: lap-2 overwrote lap-1 before the END<seen bump arrives, so flush cannot recover it (F2). Fix needs bump-time content fed to RT64 (restore-from-shadow arm next; shadow only covers ranges <=0x400).
 0a'''. (s4284) ODD cimg commits ALL contain ring-lap dropped bumps (210/210 over two arms, vs 26% of all commits); cross-task cause refuted. WRAP_FLUSH=1 trims ODD only 5.0%->4.0% (single run). Next: why flush leaves ODD (does RT64 read at commit after flush?)

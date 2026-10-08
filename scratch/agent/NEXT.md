@@ -1,8 +1,8 @@
-# Next work unit (s4286): restore-from-shadow arm at wrap flush
+# Next work unit (s4287): replicate restore arm and qualify as default
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4285: ~21% of wrap flushes find lap-1 bytes already overwritten (shadow!=live). ODD cimgs still 60/60 inDropped.
-Hypotheses: R1) feeding bump-time bytes (restore shadow words into RDRAM around submit_rdp_range, then put live back) removes ODD cimgs; R2) ODD persist (shadow cap >0x400 skips ranges, or RT64 reads deferred at commit not submit); R3) restore breaks lap-2 content.
-Discriminator: arm A flush=1 as now, arm B flush=1 + ROGUESQ_WRAP_RESTORE=1 (patch in the flush block of dpc_bridge.cpp, guarded env; also raise shadow cap to 0x2000 via env). Compare ODD count and `[s4285-flush]` diff after restore (must be 0 during submit = positive control). R1 if B odd << A odd.
-Template: scratch/agent/s4285_flush.sh (arm loop; set env per arm). Use tools/patch_s4286.py for the code change; sed -i needs '' on macOS.
+s4286: WRAP_FLUSH=1 + WRAP_RESTORE=1 + S4272_CAP=0x2000 -> ODD cimgs 0 vs 60 (same phases, control postDiff=0). Single run.
+Hypotheses: Q1) reproducible and also kills fb-set growth / 0x130393 wipe; Q2) ODD returns on repeat (first run luck); Q3) restore costs CPU/memory enough to hurt (per-range vector alloc, 2.6M ranges/53s).
+Discriminator: run `zsh scratch/agent/s4286_restore.sh` 2 more times (compare odd counts), also grep `[fbset]`/tracked framebuffer counts and the 0x130393 copyToRAM wipe line per arm; extend to 75s+ for VI 512 if reached.
+Then: make restore default-on (env =0 to disable), avoid per-range allocation, commit with ORIGIN line.
