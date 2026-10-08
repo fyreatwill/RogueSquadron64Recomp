@@ -147420,3 +147420,10 @@ ORIGIN: no mitigation machinery; ai.cpp logger fixed (patch exported), probes en
 Hypothesis verdicts (s4239): H(a) master/volume over-scaled REFUTED (ucode 0x6F0 output RMS ~4.7k equals AI-consumed RMS ~4.7k, 876/894 FNV join); H(b) missing RSP output shift REFUTED (same join, no gain between ucode output and AI); H(c) reverb/feedback growth REFUTED (RMS flat 4.7k over n=200-900, no growth); H(artifact) logger read rdram without the ^3 word swap SELECTED (pre-fix join 10/826 vs post-fix 876/894, same recipe; guest ring store watch silent after init with positive control firing).
 Next discriminator: hangar entry with the fixed reader. Constant per-channel rows (distinct=1) in the first ~20 hangar buffers = H-entry-transient real; wide-band from n=1 = H-artifact only. Positive control: title FNV join stays >95%. Then phase-aligned port-vs-retail title RMS by buffer index (3x gap real vs unaligned).
 s4239 gate wording: this run refutes the over-gain, missing-shift and reverb-growth hypotheses and selects the host byte-order logger artifact; the hangar-entry run with the fixed reader will discriminate a real entry transient from artifact.
+
+## Session 4240 (2026-10-08) — with the fixed (^3) AI reader the hangar entry still shows 19 constant-fill buffers, then wide-band audio
+
+Ran scratch/agent/s4236_hangar_stats.sh (now sets ROGUESQ_S4239=1); run1 reached VI 512 at 72.2s. Control: title [s4239-ai] rows present (31 title + 29 hangar stats rows).
+- Hangar n=1..19: every buffer L==R==-33, distinct=1 (constant DC fill); n=20 all zeros; n=128 onward wide-band (distinct ~190, peak 2-19k). Hypothesis (a) SELECTED, (b) refuted: the entry transient is real with the fixed reader, not a logger artifact.
+- Title n=1..3 also constant per channel but ramping (-213,-208,-203): constant-fill at phase start is not hangar-specific.
+- Not done: retail-aligned title loudness and the ^3 audit of other audio rdram readers. Next: does retail title entry also emit constant buffers for its first N AI buffers.
