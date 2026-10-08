@@ -1261,20 +1261,21 @@ index 873883d..1a2db5c 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..ac7cba2 100644
+index 7d385fa..6e815eb 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
-@@ -6,6 +6,9 @@
+@@ -6,6 +6,10 @@
  
  #include <cassert>
  #include <algorithm>
 +#include <atomic>
++#include <chrono>
 +#include <cstdio>
 +#include <cstdlib>
  
  #include "xxHash/xxh3.h"
  
-@@ -16,6 +19,17 @@
+@@ -16,6 +20,17 @@
  #include "render/rt64_render_worker.h"
  
  namespace RT64 {
@@ -1292,7 +1293,7 @@ index 7d385fa..ac7cba2 100644
      static void fixSizeToMultiple(uint32_t &width, uint32_t &height) {
          const uint32_t SizeMultiple = 32;
          width = ((width + SizeMultiple - 1) / SizeMultiple) * SizeMultiple;
-@@ -31,6 +45,52 @@ namespace RT64 {
+@@ -31,6 +46,52 @@ namespace RT64 {
      FramebufferManager::~FramebufferManager() {}
  
      Framebuffer &FramebufferManager::get(uint32_t address, uint8_t siz, uint32_t width, uint32_t height) {
@@ -1345,7 +1346,7 @@ index 7d385fa..ac7cba2 100644
          auto &fb = framebuffers[address];
          fb.widthChanged = (fb.width != width);
          fb.sizChanged = (fb.siz != siz);
-@@ -107,8 +167,35 @@ namespace RT64 {
+@@ -107,8 +168,35 @@ namespace RT64 {
          auto fbIt = framebuffers.find(op.createTileCopy.address);
          if (fbIt == framebuffers.end()) {
              tileCopy.ignore = true;
@@ -1381,7 +1382,7 @@ index 7d385fa..ac7cba2 100644
  
          const FramebufferTile &fbTile = op.createTileCopy.fbTile;
          const uint32_t tileWidth = std::clamp<long>(lround((fbTile.right - fbTile.left) * resolutionScale.x), 1L, RenderTarget::MaxDimension);
-@@ -183,10 +270,48 @@ namespace RT64 {
+@@ -183,10 +271,48 @@ namespace RT64 {
          // Texture for tile copy must exist.
          TileCopy &tileCopy = tileCopies[op.createTileCopy.id];
          if (tileCopy.ignore) {
@@ -1430,7 +1431,7 @@ index 7d385fa..ac7cba2 100644
          assert(fbIt != framebuffers.end());
          RenderTargetKey colorTargetKey(fbIt->second.addressStart, fbIt->second.width, fbIt->second.siz, Framebuffer::Type::Color);
          RenderTarget &colorTarget = targetManager.get(colorTargetKey);
-@@ -245,7 +370,11 @@ namespace RT64 {
+@@ -245,7 +371,11 @@ namespace RT64 {
      }
  
      void FramebufferManager::reinterpretTileSetup(RenderWorker *renderWorker, const FramebufferOperation &op, hlslpp::float2 resolutionScale, bool usesHDR) {
@@ -1443,7 +1444,7 @@ index 7d385fa..ac7cba2 100644
  
          // Source tile must exist.
          TileCopy &srcTile = tileCopies[op.reinterpretTile.srcId];
-@@ -310,7 +439,9 @@ namespace RT64 {
+@@ -310,7 +440,9 @@ namespace RT64 {
      void FramebufferManager::reinterpretTileRecord(RenderWorker *renderWorker, const FramebufferOperation &op, TextureCache &textureCache, hlslpp::float2 resolutionScale,
          uint64_t submissionFrame, bool usesHDR, CommandListReinterpretations &cmdListReinterpretations, CommandListDiscards &cmdListDiscards)
      {
@@ -1454,7 +1455,7 @@ index 7d385fa..ac7cba2 100644
  
          TileCopy &srcTile = tileCopies[op.reinterpretTile.srcId];
          if (srcTile.ignore) {
-@@ -341,12 +472,37 @@ namespace RT64 {
+@@ -341,12 +473,37 @@ namespace RT64 {
              dstTile.needsDiscard = false;
          }
  
@@ -1496,6 +1497,31 @@ index 7d385fa..ac7cba2 100644
  
          while (descriptorReinterpretSetsCount >= descriptorReinterpretSets.size()) {
              descriptorReinterpretSets.emplace_back();
+@@ -797,6 +954,24 @@ namespace RT64 {
+         assert(RDRAM != nullptr);
+ 
+         differentFbs.clear();
++        {
++            // s4268 probe: per-second count of checkRAM calls and the framebuffer bytes hashed.
++            static const bool s4268 = getenv("ROGUESQ_S4268") != nullptr;
++            static auto s4268Last = std::chrono::steady_clock::now();
++            static uint64_t s4268Calls = 0, s4268Bytes = 0, s4268Fbs = 0, s4268Max = 0;
++            if (s4268) {
++                uint64_t bytes = 0;
++                for (const auto &f : framebuffers) { bytes += f.second.RAMBytes; }
++                s4268Calls++; s4268Bytes += bytes; s4268Fbs += framebuffers.size();
++                if (framebuffers.size() > s4268Max) { s4268Max = framebuffers.size(); }
++                auto now = std::chrono::steady_clock::now();
++                if (now - s4268Last > std::chrono::seconds(1)) {
++                    fprintf(stderr, "[s4268] checkRAM calls=%llu avgFbs=%llu maxFbs=%llu avgBytes=%llu\n", (unsigned long long)s4268Calls,
++                        (unsigned long long)(s4268Fbs / s4268Calls), (unsigned long long)s4268Max, (unsigned long long)(s4268Bytes / s4268Calls));
++                    s4268Calls = s4268Bytes = s4268Fbs = s4268Max = 0; s4268Last = now;
++                }
++            }
++        }
+         auto it = framebuffers.begin();
+         while (it != framebuffers.end()) {
+             const uint8_t *fbRAM = &RDRAM[it->first];
 diff --git a/src/hle/rt64_framebuffer_pair.cpp b/src/hle/rt64_framebuffer_pair.cpp
 index c944393..d8803d4 100644
 --- a/src/hle/rt64_framebuffer_pair.cpp

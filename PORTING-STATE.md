@@ -147644,3 +147644,12 @@ Rules out: G1 shader compile, G3 texture-upload wait, G4 present wait (all measu
 ORIGIN: n/a (instrumentation only; no mitigation added).
 Verdict: this run selects H-G5-rt64-cpu (RT64 interpreter/fullSync CPU growth) and refutes H-G1-shader-compile, H-G3-texture-upload, H-G4-present-wait (waits measured 0–25 ms/s against a 600–1000 ms/s stall).
 Next discriminator: `sample <pid> 5` of the game during t=22–26 s (stall) vs t=10–14 s (healthy control); the top self-time frames name the hotspot — texture decode/TMEM load, draw-call list growth, checkRDRAM, or a mutex. Outcome per frame family selects the fix location in lib/rt64.
+
+## Session 4268 (2026-10-08) — send_dl stall hotspot = RT64 State::checkRDRAM hashing a growing framebuffer set (3 -> 56 fbs); not audio
+
+Work unit: macOS `sample` (4 s) at t~10 vs t~18-22 in one run (`scratch/agent/s4268_sample.sh`), then a one-second counter in `FramebufferManager::checkRAM` (ROGUESQ_S4268, lib/rt64 patch exported; `scratch/agent/s4268_fbcount.sh`).
+- Profile (stall window): processDisplayLists 1819 samples; 996 (55%) are `State::checkRDRAM -> FramebufferManager::checkRAM -> XXH3_64bits` (rt64_framebuffer_manager.cpp:959); `RDP::loadTLUTOperation` another ~310 top-of-stack. Healthy window top-of-stack XXH ~340 vs ~1285 in stall. Waits (psynch/semaphore) dominate both as idle threads.
+- Counter (positive control: it fires every second, calls=12..39/s): tracked framebuffers per call 3 -> 10 (t~15) -> 26 -> 37 -> 56 (t~28) then plateau 46; bytes hashed per call 1.8 MB -> 13 MB; checkRAM calls/s fall 39 -> 14 as per-call cost rises. `storeRAM` also copies every tracked fb per call.
+- Conclusion (profile + counter, two lines): the t=21-30 stall is RT64 CPU cost that scales with the number of tracked framebuffers hashed on every fullSync; the audio dip is host-renderer starvation, not an M5 defect.
+- ORIGIN: not named. The `framebuffers[address]` map (rt64_framebuffer_manager.cpp:95) acquires ~50 entries during the intro/title transition; which color-image set commands create them (likely LLE-stream images at wild addresses, cf. the 0x1F0D74 width-1161 case) and why they are never pruned is open. No mitigation landed.
+- Next: dump the framebuffers map (address, width, RAMBytes, fmt, creator DL pc) once at ~28 s and compare against retail's expected 2-3 color images + depth.

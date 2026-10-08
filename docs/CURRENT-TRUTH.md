@@ -5,7 +5,9 @@ background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); the audio
 inventory and de-stubbing contract are in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 Updated for session 4194 (2026-10-07).
 
-**s4263 (latest):** the s4262 "gated triple" is the scheduler's task-completion fan-out: 0x8011A818 is sent by `spTaskSchedulerThread`, 0x8011A7E8 by `dpInterruptHandlerThread` (host backtrace, 2 arms); queues never full, recv==send each second, counters at 0x8011A894/98 fall with the sends. No flag/queue gate: gap = no task completions (absent submissions, cf. s4258). Next: who stops submitting (blocked-recv table by guest tid/mq at mid-gap; NEXT.md). `scratch/agent/s4263_gate.sh`, ROGUESQ_S4262=1.
+**s4268 (latest):** send_dl/audio-gap stall = RT64 State::checkRDRAM XXH3-hashing a tracked-framebuffer set that grows 3 -> 56 (1.8 -> 13 MB per fullSync; profile + ROGUESQ_S4268 counter). Not an M5 defect; ORIGIN of the extra framebuffers unnamed (NEXT.md).
+
+**s4263:** the s4262 "gated triple" is the scheduler's task-completion fan-out: 0x8011A818 is sent by `spTaskSchedulerThread`, 0x8011A7E8 by `dpInterruptHandlerThread` (host backtrace, 2 arms); queues never full, recv==send each second, counters at 0x8011A894/98 fall with the sends. No flag/queue gate: gap = no task completions (absent submissions, cf. s4258). Next: who stops submitting (blocked-recv table by guest tid/mq at mid-gap; NEXT.md). `scratch/agent/s4263_gate.sh`, ROGUESQ_S4262=1.
 
 **s4262:** audio gap is a tid-0 send gate: in gap seconds tid 0 still sends at full VI rate to 0x8010FF50/0x80110750/0x8011A800/0x80128D10/0x80149990/0x80154650, but sends to 0x8011A818, 0x8011A7E8 and 0x80128CF0 collapse together (30/s -> 1-2/s; 2 arms, `scratch/agent/s4262_send.sh`). H-B (missing thr3 reply) refuted; guest ra unavailable (0). Next: name the gate condition in the tid-0 loop (NEXT.md).
 
