@@ -164,6 +164,8 @@ retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
 ## Next steps
+0. (s4240) With the FIXED reader the hangar entry is still a real transient: hangar AI buffers n=1..19 are constant L==R==-33 (distinct=1), n=20 all zeros, wide-band (distinct ~190, peak 2-19k) from n=128; title n=1..3 are also constant but ramping (-213,-208,-203). So the s4239 'hangar must be re-measured' item is DONE: transient real (not a logger artifact), small amplitude, not hangar-specific. Single run (run1, VI 512 at 72.2s). NEXT: does retail title entry also emit constant buffers for its first N AI buffers (oracle per-buffer distinct counts n=1..40) -- benign prefill vs late voice start; plus ^3 audit of other audio rdram readers. See NEXT.md.
+
 0. (s4239) **SUPERSEDES s4235-s4238 AI-output statistics: they were a host byte-order instrument artifact.** `ai.cpp` read the AI buffer with `TO_PTR` bytes in host (word-swapped) order, so every s16 pair was byte-swapped: small samples read as loud wide-band noise (the 'clipping', '13x hot', 'hangar constant DC ramp +0x100/buffer', 'identical 19/25 buffers' were that). Fixed (`p[i ^ 3]`); with it 876 of 894 title AI buffers FNV-match a ucode `0x6F0/0x300` DMA output exactly (independent join; before the fix 10/826), and AI RMS ~4.7k tracks ucode RMS ~4.7k with no guest store into the ring after init (store watch control fired: memset PC 0x800078EC). So the ucode->AI path is intact and NO over-gain stage was found. Residual: port title RMS ~4.7k vs retail oracle 1.4k (oracle used raw physical bytes = correct order) is ~3x, but phases are not sample-aligned (single run each). The hangar DC ramp (s4235-s4237) must be re-measured with the fixed reader before any hangar conclusion. Next: NEXT.md. Tools: `scratch/agent/s4239_stage.sh`, `tools/apply_s4239_ringwatch.py`, `ROGUESQ_S4239=1` (`[s4239-dma|out|ai]`).
 
 0. (s4237) SUPERSEDES s4236: hangar AI output is a DC ramp (+256/buffer, distinct=1) only for the first ~19 buffers after hangar entry (then one zero buffer); from n=128 it is wide-band (distinct ~188, +-32.7k) like title; hangar phase-5 ucode mix buses are populated. The 'constant DC hangar' conclusion was a window artifact. Open: (a) writer of the 19-buffer entry transient (low value), (b) title and hangar both reach +-32.7k - quantify clipping fraction vs retail oracle title AI buffers. Hangar claim single-source (one run, title control in same run).
@@ -387,6 +389,8 @@ positive in both phases. This closes immediate queue-drain starvation at the
 measured SDL queue boundary, not device delivery to audible output.
 
 ## Superseded conclusions
+
+- (s4240 narrowing of s4237) 'Hangar entry DC ramp +256/buffer' was believable from the byte-swapped logger; with the fixed reader it is a constant -33 fill for 19 buffers (no ramp), then one zero buffer. Entry transient is real, ramp magnitude was artifact.
 
 The s4179 H-earlier-producer-mismatch conclusion at `0x8008F8FC` is
 superseded by s4180. Its retail row was valid, but the port helper's
