@@ -40,8 +40,8 @@ OUTDIR=${1:?outdir}; SECS=${2:-60}; IVAL=${3:-0.5}
 START_DELAY=${PROBE_START:-2}
 KEYS=${PROBE_KEYS:-}
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-BUILD=$ROOT/build
-WINCTL=$BUILD/winctl
+BUILD=${PROBE_BUILD:-$ROOT/build}
+WINCTL=$ROOT/build/winctl
 
 mkdir -p "$OUTDIR"
 # Absolute, because the game must be started from build/ (it looks for the ROM

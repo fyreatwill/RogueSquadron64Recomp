@@ -147815,3 +147815,12 @@ Ran scratch/agent/s4288_hangar.sh (140 s, two concurrent arms, WRAP_FLUSH=1 both
 - Weak signal only (single run per arm, arm0 death is confounded with the ~2/13 intro-crash base rate): restore arm kept the tracked framebuffer set at 1-4 through title where the control grew to 9. Not enough to flip WRAP_FLUSH default.
 ORIGIN: no code change this session (WRAP_RESTORE default stays as landed in s4287).
 Next: port the A/B onto the probe.sh PROBE_KEYS route (s1949 recipe), both arms, >=100 s after the 512 phase.
+
+## Session 4289 (2026-10-08) — hangar A/B on probe.sh key route: still no VI 512; restore arm fb set 1 vs 10-14 at VI 640/title
+
+Ran `scratch/agent/s4289_hangar_ab.sh` (two concurrent arms, per-arm build_arm dirs, probe.sh now honours `PROBE_BUILD`; WRAP_FLUSH=1, S4271/S4272/S4268=1, SPIN_YIELD=1, s1949 PROBE_KEYS from boot).
+- arm0 (WRAP_RESTORE=0): odd=60 (positive control fired), maxFbs 10 -> 14, process died at VI 640 (before any 1024).
+- arm1 (restore, defaults): odd=0, maxFbs=1 flat (avgBytes 457728), reached VI 1024 at 52.7 s, no 512 within 150 s.
+- Result: ODD 60 vs 0 replicates a 4th time and the fb-set growth tracks ODD at 640/title (two lines: odd count and maxFbs; single run per arm). Q1 (hangar growth / 0x130393 wipe) still UNDECIDED: neither arm reached hangar. Cause of route miss: from-boot keys at 6..56 s assume title at ~14 s (s1949); with two instances title arrived at 52.7 s, so the Starts fired in the wrong phase.
+ORIGIN: no mitigation change (WRAP_RESTORE default unchanged from s4287).
+Next: single-arm-at-a-time or PROBE_KEYS_FROM_PHASE=1 with PROBE_PHASE_WIDTH=1024 so Starts are phase-relative; then 512.
