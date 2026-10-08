@@ -1,8 +1,8 @@
-# Next work unit: what blocks the guest audio producer at the stall? (s4246)
+# Next work unit: split gfx starvation from audio-thread block at the t~18.5 stall (s4247)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4245: steady-state audio tasks = AI set-next = 60/s; at t~18.5 (task ~1061) tasks stop while AI/VI continue (single run; run then died in Metal thread). See PORTING-STATE Session 4245.
-Hypotheses: (a) the audio thread blocks on a message/semaphore the port delivers late or never (e.g. an RSP/DP done event, or a VI-synced message); (b) scheduler is busy/blocked on a graphics task (RDP fence) so audio tasks starve; (c) stall is artefact of the Metal-compiler fault (shader compile stall in the same run) and not audio-specific.
-Discriminator: rerun scratch/agent/s4245_rates.sh twice, plus log at the stall the scheduler's pending-task queue depth and the thread each is blocked on (reuse [vi-wait]/[sp-task] logs near the stall; grep around the last task_enter increase). Outcomes: stall recurs at fixed time and graphics task also stalls => b/c; audio-only stall with VI+gfx tasks continuing => a.
-Positive control: [s4245] window shows task_enter flat while setnext rises.
+s4246: stall recurs at ~t=18.5 s in 2/2 runs without a Metal crash; task_enter drops from 60/s to ~0-30/s until t~25, setnext/VI continue; a pak-combiner/flush log burst precedes it.
+Hypotheses: (a) audio thread blocked in osRecvMesg on a message delivered late (log mq + site); (b) scheduler serialised behind long graphics tasks (gfx enter/ok counts per second, task duration); (c) host-side RSP/RDP task completion slow (time per gfx task in run_task).
+Discriminator: extend `rs64_s4245_tick` / rsp.cpp run_task hooks with per-second gfx (M_GFXTASK) enter/ok counts + max task wall time, and the audio thread's pending osRecvMesg site. Outcomes: gfx tasks long/continuous while audio tasks absent => (b)/(c); gfx idle and audio stalled => (a).
+Positive control: queue==setnext and gfx enter==ok in pre-stall windows. Run scratch/agent/s4245_rates.sh twice (one at a time).
