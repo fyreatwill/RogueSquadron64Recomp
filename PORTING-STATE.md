@@ -147835,3 +147835,12 @@ Next: run arm1 ALONE (faster title) with keys from phase 1024 to reach 512, or r
 - Script bug: zsh ${ARMS:-0 1} does not word-split; the first s4291b launch ran one malformed arm "0 1" (discarded). Fixed with explicit for arm in 0 1.
 - Finding (single-source, 3 runs): s1949 reached title at 14.2 s and 512 at 26.1 s; today 640 arrives at ~2.8 s then idles ~48 s before 1024. Remaining diffs vs s1949: DPC_WRAP_FLUSH=1, S4271/S4272/S4268, wrap-restore default-on, no LOG_* flags, no M4_Y8000_WIDTH=512. Hangar is unreachable because of a 640->1024 boot slowdown, not key timing. Not yet bisected.
 - Rules out: concurrency, key phase-anchoring, arm choice as cause of missing 512.
+
+## Session 4292 (2026-10-08) — title slowdown is a code regression, not a flag; frames-to-1024 is 3000+ vs 786 at s1949
+
+Ran two 4-arm concurrent bisects (scratch/agent/s4292_bisect.sh, s4292b_bisect.sh), 90 s each, metric = VI-1024 time and update_screen frame index.
+- s4292: base 1024@54.2s; DPC_WRAP_FLUSH=0 52.2s; S4271/S4272/S4268=0 54.3s; LLE_FORCE/UNGATED/SOLO=0 never reached 1024 in 90 s. (Caveat: the =0 form was assumed to disable each flag; not verified in source.)
+- s4292b: exact s1950 recipe (no WRAP/S42xx, with Y8000_WIDTH=512 and keys) 1024@53.3s #3120; +NODEFAULT 49.7s #2918; new-flags+Y8000_WIDTH 54.2s #3190; new flags 54.3s #3196. Reference: s1949 itself was 14.2s #786.
+- Frame rate is ~58-60 fps in both eras, so this is NOT host slowness: the game needs ~4x more VIs to leave the 640 phase. B1 (wrap flush), B2 (S42xx), B4 (missing flags) are REFUTED as the cause (single run per arm); B3 (code regression between s1949 and now) remains. Logs carry ~16k lines each of default-on s-stall tracer sites per run, unquantified as a cause.
+ORIGIN: no mitigation added this session; diagnostic scripts only.
+Next: build s1949-era commit d2663605 in a git worktree and measure frames-to-1024 with the same recipe, then bisect commits between.

@@ -1,7 +1,7 @@
-# Next work unit (s4292): bisect the 640->1024 boot slowdown
+# Next work unit (s4293): commit-bisect the title slowdown (frames to VI 1024)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4291: title at ~52 s (s1949: 14 s); no 512 with either key schedule.
-Hypotheses: B1) DPC_WRAP_FLUSH/wrap-restore cost; B2) S4271/S4272/S4268; B3) a regression since s1949; B4) missing M4_Y8000_WIDTH=512 / LOG flags.
-Discriminator: copy scratch/agent/s4291b_hangar_ab.sh into 3-4 concurrent arms each differing by one flag; compare [phase] 1024 time. Control: baseline arm still ~52 s.
+s4292: flags exonerated (4 arms x2). Exact s1950 recipe now takes #3120 frames to 1024 vs #786 at s1949 (d2663605). Frame rate unchanged => game needs more VIs => code regression.
+Hypotheses: R1) a later M5/audio de-stub makes boot wait longer (audio-ready handshake); R2) a generated-code fixup added a stall; R3) lib/ patch change; R4) build/saves or environment changed.
+Discriminator: git worktree at d2663605 (apply submodule-patches from that commit), build, run the s4292b 's50' arm; if ~#786 -> bisect between; if not -> environment (check build/saves first).
