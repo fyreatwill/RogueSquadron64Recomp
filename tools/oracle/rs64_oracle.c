@@ -1946,6 +1946,9 @@ static void dbg_update(unsigned int pc)
             }
         }
         printf("\n");
+        if (flags & M64P_BKP_FLAG_READ)
+            printf("[read-value] addr=0x%08x value=0x%08x\n",
+                   accessed, pDebugMemRead32(debug_rdram_addr(accessed & ~3u)));
         if ((flags & (M64P_BKP_FLAG_WRITE | M64P_BKP_FLAG_READ)) &&
             accessed >= 0x001496F8 && accessed < 0x001496FC) {
             if (flags & M64P_BKP_FLAG_WRITE) {

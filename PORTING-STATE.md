@@ -148006,3 +148006,13 @@ not H-shared-read-layout. H-port-only-consumer is not selected: the paired
 port writer rows remain internally consistent, with zero mismatches, and no
 port-only damaging scalar value was observed. The exact lifetime/consumer
 fault remains open. No guard or skip was added. ORIGIN: none; measurement only.
+
+## Session 4308 (2026-10-08) — retail read-PC/value join independently confirms consumer layout difference
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+The first retail arm used the required whole-RDRAM read positive control and the physical target watch 0x17D000:0x17E200 with Rice and the documented input schedule. The control fired 215,576,870 times, the target watch fired 1,422,613 times, and VI 512 at 0x006AB400 began at 38.4 s. The arm was valid, but the existing read logger printed only PC/address.
+
+The fixed oracle instrument added the loaded aligned word to every printed read row, rebuilt from the oracle source, and repeated the same arm. Its whole-RDRAM read control fired 214,786,365 times; the target watch fired 1,434,154 times; VI 512 at 0x006AB400 again began at 38.4 s. The first hangar consumer row was `pc=0x8008FCE8 addr=0x17D9E0 value=0x8017D9F8`, before the retail post-free writer sequence, and subsequent rows retained the retail-specific address/value order. This independently confirms H-retail-layout-different at the consumer boundary and rules out H-shared-read-layout. H-port-only-consumer remains unsupported by s4306's paired writer table with zero requested-vs-post mismatches. No guard or skip was added. ORIGIN: none; measurement only.
+
+This rules out an absent retail read callback, an invalid hangar route, and the claim that the observed difference was only an address-sampling artifact. It does not name the exact lifetime/consumer fault or authorize a mitigation. The oracle value logger is now part of the reproducible diagnostic source.
