@@ -1414,6 +1414,87 @@ extern "C" void rs64_m5_voice_modulation_postcall(uint8_t* rdram, uint32_t pc,
     std::fflush(stderr);
 }
 
+
+static bool rs64_s4222_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4222"); return e && e[0] && e[0] != '0'; }(); return on; }
+extern "C" void rs64_s4222_chain(uint8_t* rdram, uint32_t which, uint32_t s1, uint32_t s2, uint32_t s3, uint32_t s4, uint32_t fp) {
+    if (!rdram || !rs64_s4222_on()) return;
+    {   // ungated tripwire on the volume-settings bytes 0x80130B60..62
+        static uint32_t prev = 0xFFFFFFFFu; static int rows_t = 0;
+        uint32_t cur = 0; for (int j = 0; j < 3; j++) cur = (cur << 8) | rdram[(0x80130B60u + j) & 0x1FFFFFFFu ^ 3];
+        if (cur != prev && rows_t < 40) {
+            rows_t++;
+            std::fprintf(stderr, "[s4222-T] vol %06X -> %06X width=%u last_guest_pc=%08X\n", prev & 0xFFFFFF, cur, rs64_vi_committed_width(), (unsigned)g_rs64_last_guest_pc);
+            prev = cur;
+        }
+    }
+    uint32_t width = 0, origin = 0;
+    if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static uint32_t rows[2][2] = {}; static unsigned long calls[2][2] = {}, nz[2][2] = {};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    calls[slot][which]++; if (s2) nz[slot][which]++;
+    if (rows[slot][which] >= 48u) return;
+    rows[slot][which]++;
+    const auto w = [rdram](uint32_t g) -> uint32_t { if (g < 0x80000000u || g > 0x807FFFFCu) return 0xFFFFFFFFu; const uint8_t* p = rdram + (g - 0x80000000u); return ((uint32_t)p[3] << 24) | ((uint32_t)p[2] << 16) | ((uint32_t)p[1] << 8) | p[0]; };
+    // rdram is stored host-word-swapped (byte ^ 3): reuse the idiom from s4221
+    const auto W = [rdram](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x1FFFFFFFu) ^ 3]; return v; };
+    const auto H = [rdram](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 2; k++) v = (v << 8) | rdram[((a + k) & 0x1FFFFFFFu) ^ 3]; return v; };
+    const auto B = [rdram](uint32_t a) { return (uint32_t)rdram[(a & 0x1FFFFFFFu) ^ 3]; };
+    (void)w;
+    const uint32_t base = 0x80140000u + s1;
+    if (which == 0) {
+        const uint32_t idx = B(base - 0x26C6), grp = B(base - 0x2751);
+        std::fprintf(stderr, "[s4222-A] w=%u n=%lu nzs2=%lu s1=%08X s2=%08X raw(-2750)=%08X rec(-275C)=%08X idx=%u t1B30=%04X t1B18=%04X m370=%04X flag(-2730)=%02X grp=%02X t1AD8=%02X s3=%08X s4=%02X\n",
+            width, calls[slot][0], nz[slot][0], s1, s2, W(base - 0x2750), W(base - 0x275C), idx, H(0x80141B30u + idx * 40u), H(0x80141B18u + idx * 40u), H(0x80141B18u + 0x370u), B(base - 0x2730), grp, grp == 0xFF ? 0xFFu : B(0x80141AD8u + grp), s3, s4 & 0xFF);
+    } else {
+        const uint32_t s0 = s1 + fp;
+        std::fprintf(stderr, "[s4222-B] w=%u n=%lu nzs2=%lu s1=%08X s2(final)=%08X s3=%08X s0rec=%08X lerp@C0=%04X D2=%04X E4=%04X 150=%04X byteMasterOn(80148...)=%02X\n",
+            width, calls[slot][1], nz[slot][1], s1, s2, s3, s0, H(s0 + 0xC0), H(s0 + 0xD2), H(s0 + 0xE4), H(s0 + 0x150), B(0x80150000u - 0x7C38u));
+    }
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_s4222_pc(uint8_t* rdram, uint32_t pc, uint32_t addr, uint32_t val, uint32_t t1, uint32_t s0) {
+    if (!rdram || !rs64_s4222_on()) return;
+    uint32_t width = 0, origin = 0;
+    if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static unsigned long cnt[2][16] = {}; static uint32_t pcs[16] = {}; static int npc = 0;
+    int k = -1; for (int i = 0; i < npc; i++) if (pcs[i] == pc) { k = i; break; }
+    if (k < 0) { if (npc >= 16) return; k = npc; pcs[npc++] = pc; }
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    const unsigned long n = ++cnt[slot][k];
+    if (n <= 12 || (n & (n - 1)) == 0) std::fprintf(stderr, "[s4222-W] w=%u pc=%08X n=%lu at=%08X v0=%08X t1=%08X s0=%08X\n", width, pc, n, addr, val, t1, s0);
+}
+
+extern "C" void rs64_s4222_cmd(uint8_t* rdram, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t sp, uint32_t ra) {
+    if (!rdram || !rs64_s4222_on()) return;
+    uint32_t width = 0, origin = 0;
+    if (!rs64_m5_voice_modulation_phase(&width, &origin)) return;
+    static unsigned long n[2] = {};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (++n[slot] > 400) return;
+    uint32_t s10 = 0; for (int k = 0; k < 4; k++) s10 = (s10 << 8) | rdram[((sp + 0x10 + k) & 0x1FFFFFFFu) ^ 3];
+    std::fprintf(stderr, "[s4222-C] w=%u n=%lu a0=%08X a1=%08X a2=%08X a3=%08X sp10=%08X ra=%08X\n", width, n[slot], a0, a1, a2, a3, s10, ra);
+}
+
+extern "C" void rs64_s4222_vol(uint8_t* rdram, uint32_t pc, uint32_t a0) {
+    if (!rdram || !rs64_s4222_on()) return;
+    static unsigned long cnt[16] = {}; static uint32_t pcs[16] = {}; static int npc = 0;
+    int k = -1; for (int i = 0; i < npc; i++) if (pcs[i] == pc) { k = i; break; }
+    if (k < 0) { if (npc >= 16) return; k = npc; pcs[npc++] = pc; }
+    const unsigned long n = ++cnt[k];
+    if (n > 16 && (n & (n - 1)) != 0) return;
+    const auto B = [rdram](uint32_t a) { return (uint32_t)rdram[(a & 0x1FFFFFFFu) ^ 3]; };
+    uint32_t fl = 0; for (int j = 0; j < 4; j++) fl = (fl << 8) | B(0x80130B50u + j);
+    std::fprintf(stderr, "[s4222-V] w=%u pc=%08X n=%lu a0=%08X vol=%02X,%02X,%02X b23=%02X flags=%08X\n", rs64_vi_committed_width(), pc, n, a0, B(0x80130B60u), B(0x80130B61u), B(0x80130B62u), B(0x80130B63u), fl);
+}
+
+extern "C" void rs64_s4222_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
+    if (!rs64_s4222_on()) return;
+    static int rows = 0;
+    if (rows >= 60) return;
+    rows++;
+    std::fprintf(stderr, "[s4222-S] w=%u pc=%08X %c addr=%08X val=%08X\n", rs64_vi_committed_width(), pc, width, addr, value);
+}
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,
                                                  uint32_t a1, uint32_t a2,

@@ -147275,3 +147275,17 @@ ORIGIN: n/a (diagnostic hooks only; no mitigation).
 Next: trace the inputs at 0x8008D6B0..0x8008D710 (channel record volume/pan/master) per scratch/agent/NEXT.md.
 
 Verdict (gate-readable): this run selects H-writer-runs-zero-input and refutes H-writer-never-runs and H-overwritten; the next discriminator traces the zero volume/pan arguments of setVoiceModulationParams back to the channel record.
+
+## Session 4222 (2026-10-07) — M5 Step 9t: the zero volume reaching the mixer is the SAVE-LOADED volume-settings bytes (0x80130B60..62 = 0 in the port, 0x7F in retail); writer 0x800A6528 copies them from a stack buffer filled by 0x800AF60C
+
+What ran (one port recipe `scratch/agent/s4222_chain.sh`, hooks `tools/apply_s4222_{chain,wr,cmd,vol,storewatch}.py`, env ROGUESQ_LOG_S4222=1; retail twins `scratch/agent/run_s4222_retail{,_w,_c,_v}.sh`):
+- tickAllAudioChannels volume product (hook A 0x8008D5F0 / B 0x8008D6F4): port s2=0 in 96/96 rows (48/phase x 2), always because a table factor is 0 (t1B18[idx] or m370 = 0). Retail twin (positive control): 0x8008D710 hits with nonzero a1 (e.g. 0x006B44C6, 0x0024573F).
+- Writers of the group-volume table (0x80141B18+idx*40): retail writers 0x8008D77C/D7B4/E77C/DF88../E028 all also EXECUTE in the port (counters). The port's set-group-volume commands carry target 0.
+- dispatchAudioCommand 0x8008DD60 entry args, both sides: retail issues cmd 0x15 and 0x16 with a0=0x7F (ra 0x8008E17C/E19C, i.e. applyMusicOrSfxVolume); the port issues the same cmds with a0=0x00. Cmds 0xFD/0xFE match (0x78/0x7F vs same).
+- applyMusicOrSfxVolume is fed by applyVolumeSettingsToMixer 0x8006E468 reading bytes 0x80130B60/61/62 of a fixed struct at 0x80130B40. Port ungated log (`[s4222-V]`/`[s4222-S]`): defaults 0x7F written by 0x8006E5F8, cleared by 0x8006E0C8, set 0x7F by 0x800A5E28, then ZEROED by 0x800A6528/6530/653C (title/start path) with the port's value 0. Retail executes the same three PCs at 17.0 s and ends 0x7F. So same code path, different DATA: 0x800A6528 stores sp+0x88/0x89/0x8A, a stack buffer filled by jal 0x800AF60C (a1=sp+0x18) two screens earlier, i.e. a save/EEPROM load.
+Selects: H-save-load-returns-blank (port's EEPROM/save read yields zeros where retail has 0x7F; or loader defaults not applied). Refutes: H-channel-state-zero's "command never issued" variant (cmds issued), H-other-caller, a missing writer in tickAllAudioChannels. NOT yet shown: what 0x800AF60C actually reads in each side (single-source for the save-load link: static code + PC attribution, no value dump of the buffer).
+Caveat: port crashes at boot ~1 in 3 starts (spTaskSchedulerThread+9632, last-guest-pc 0x8000834c), known family; reruns used.
+ORIGIN: n/a (diagnostic hooks only; no mitigation).
+Next: dump the stack buffer / EEPROM bytes at 0x800AF60C return in port and retail (scratch/agent/NEXT.md).
+
+Verdict (gate-readable): this run selects H-save-load-returns-blank and refutes H-channel-state-zero (commands are issued; their volume byte comes from zeroed saved settings) and H-other-caller.
