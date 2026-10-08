@@ -379,10 +379,10 @@ index dbf46b2..60d1401 100644
  
  template<u8 e>
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..1174825 100644
+index 0195f2b..c808ad6 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,203 @@
+@@ -1,29 +1,205 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
@@ -542,7 +542,9 @@ index 0195f2b..1174825 100644
  
 +// s4245: one-second windowed rate table. kind 0=audio run_task enter, 1=audio run ok,
 +// 2=osAiSetNextBuffer call, 3=set-next bytes, 4=queue_samples call.
++extern std::atomic<uint64_t> g_s4259_audio_enter;
 +extern "C" void rs64_s4245_tick(int kind, uint32_t amount) {
++    if (kind == 0) g_s4259_audio_enter += amount;
 +    static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4245"); return e && e[0] && e[0] != '0'; }();
 +    if (!on) return;
 +    static std::mutex mu;
@@ -4251,10 +4253,10 @@ index 149e770..371f02c 100644
      }
  }
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..52748f7 100644
+index 9944a02..858256a 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,18 +1,258 @@
+@@ -1,18 +1,259 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -4262,6 +4264,7 @@ index 9944a02..52748f7 100644
 +#include <atomic>
 +#include <deque>
 +#include <mutex>
++#include <chrono>
 +#if !defined(_WIN32)
 +#include <execinfo.h>
 +#include <pthread.h>
@@ -4513,7 +4516,7 @@ index 9944a02..52748f7 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -28,7 +268,25 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -28,7 +269,25 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
  }
  
  void ultramodern::enqueue_external_message_src(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, EventMessageSource src) {
@@ -4540,7 +4543,7 @@ index 9944a02..52748f7 100644
  }
  
  void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, bool requeue_if_blocked) {
-@@ -37,37 +295,78 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
+@@ -37,37 +296,78 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block);
  
@@ -4623,7 +4626,7 @@ index 9944a02..52748f7 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      mq->blocked_on_recv = NULLPTR;
      mq->blocked_on_send = NULLPTR;
-@@ -75,6 +374,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
+@@ -75,6 +375,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
      mq->msg = msg;
      mq->validCount = 0;
      mq->first = 0;
@@ -4650,7 +4653,7 @@ index 9944a02..52748f7 100644
  }
  
  s32 MQ_GET_COUNT(OSMesgQueue *mq) {
-@@ -90,6 +409,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +410,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -4660,7 +4663,7 @@ index 9944a02..52748f7 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +428,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +429,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -4675,7 +4678,7 @@ index 9944a02..52748f7 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +459,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +460,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -4686,7 +4689,7 @@ index 9944a02..52748f7 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +479,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +480,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -4701,9 +4704,67 @@ index 9944a02..52748f7 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -161,7 +501,10 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -160,8 +501,68 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+     return true;
  }
  
++
++// s4259: per-guest-thread blocked-queue table + audio-gap watcher (ROGUESQ_S4259=1).
++extern "C" int rogue_current_thread_id(uint8_t* rdram);
++std::atomic<uint64_t> g_s4259_audio_enter{0};
++namespace {
++struct S4259Thr {
++    std::atomic<uint32_t> blocked_mq{0};   // mq a recv is currently blocked on (0 = not blocked)
++    std::atomic<uint32_t> last_mq{0};
++    std::atomic<uint64_t> recvs{0};
++    std::atomic<uint64_t> sends{0};
++    std::atomic<uint32_t> last_send_mq{0};
++};
++S4259Thr g_s4259[64];
++std::atomic<bool> g_s4259_started{false};
++bool s4259_on() {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4259"); return e && *e && *e != '0'; }();
++    return on;
++}
++void s4259_start() {
++    if (g_s4259_started.exchange(true)) return;
++    std::thread([] {
++        using clk = std::chrono::steady_clock;
++        const auto t0 = clk::now();
++        uint64_t last_cnt = 0, snap_recv[64] = {0}, snap_send[64] = {0};
++        auto last_change = clk::now();
++        bool dumped = false;
++        const double gap_thr = [] { const char* e = std::getenv("ROGUESQ_S4259_GAP_MS"); return e ? atof(e) / 1000.0 : 0.5; }();
++        for (;;) {
++            std::this_thread::sleep_for(std::chrono::milliseconds(10));
++            const uint64_t c = g_s4259_audio_enter.load();
++            const auto now = clk::now();
++            if (c != last_cnt) { last_cnt = c; last_change = now; dumped = false; }
++            const double gap = std::chrono::duration<double>(now - last_change).count();
++            const double t = std::chrono::duration<double>(now - t0).count();
++            // positive control: dump unconditionally once at t>=20 s as well
++            static bool ctrl = false;
++            const bool do_ctrl = (!ctrl && t >= 20.0);
++            if ((gap >= gap_thr && !dumped) || do_ctrl) {
++                if (do_ctrl) ctrl = true; else dumped = true;
++                std::fprintf(stderr, "[s4259] %s t=%.2f gap=%.2f audio_enter=%llu\n", do_ctrl ? "CONTROL" : "GAP", t, gap, (unsigned long long)c);
++                for (int i = 0; i < 64; i++) {
++                    const uint64_t r = g_s4259[i].recvs.load(), sn = g_s4259[i].sends.load();
++                    if (!r && !sn) continue;
++                    std::fprintf(stderr, "[s4259]   thr=%d blocked_mq=0x%08X last_mq=0x%08X last_send_mq=0x%08X d_recv=%llu d_send=%llu\n", i,
++                        g_s4259[i].blocked_mq.load(), g_s4259[i].last_mq.load(), g_s4259[i].last_send_mq.load(),
++                        (unsigned long long)(r - snap_recv[i]), (unsigned long long)(sn - snap_send[i]));
++                    snap_recv[i] = r; snap_send[i] = sn;
++                }
++                std::fflush(stderr);
++            } else if (gap < gap_thr) {
++                for (int i = 0; i < 64; i++) { snap_recv[i] = g_s4259[i].recvs.load(); snap_send[i] = g_s4259[i].sends.load(); }
++            }
++        }
++    }).detach();
++}
++}
++
  extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
 -    OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
 +    log_vi_mq("send", mq_, flags);
@@ -4713,7 +4774,19 @@ index 9944a02..52748f7 100644
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -183,7 +526,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,6 +574,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+     // Handle any messages that have been received from an external thread.
+     dequeue_external_messages(PASS_RDRAM1);
+ 
++    if (s4259_on()) {
++        s4259_start();
++        const int tid = rogue_current_thread_id(PASS_RDRAM1) & 63;
++        g_s4259[tid].sends++; g_s4259[tid].last_send_mq = static_cast<uint32_t>(mq_);
++    }
+     // Try to send the message.
+     bool sent = do_send(PASS_RDRAM mq_, msg, jam, flags == OS_MESG_BLOCK);
+     
+@@ -183,7 +589,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -4726,7 +4799,7 @@ index 9944a02..52748f7 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +552,57 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +615,65 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
@@ -4758,7 +4831,15 @@ index 9944a02..52748f7 100644
 +    }
  
      // Try to receive a message.
++    int s4259_tid = -1;
++    if (s4259_on()) {
++        s4259_start();
++        s4259_tid = rogue_current_thread_id(PASS_RDRAM1) & 63;
++        g_s4259[s4259_tid].recvs++; g_s4259[s4259_tid].last_mq = static_cast<uint32_t>(mq_);
++        if (flags == OS_MESG_BLOCK && mq->validCount == 0) g_s4259[s4259_tid].blocked_mq = static_cast<uint32_t>(mq_);
++    }
      bool received = do_recv(PASS_RDRAM mq_, msg_, flags == OS_MESG_BLOCK);
++    if (s4259_tid >= 0) g_s4259[s4259_tid].blocked_mq = 0;
 +    if (received) {
 +        log_audio_sp_receive(mq_, g_last_received_message);
 +    }

@@ -171,6 +171,8 @@ H-entry-executed and makes `0x8008F900` the next port witness boundary. The
 retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
+**s4259:** residual t≈19-28 audio dips are guest-idle: with ROGUESQ_S4259=1 every dip dump shows all 6 guest threads blocked in osRecvMesg (spin refuted; single-source). Next: timestamp host posts per mq to name the late message source (scratch/agent/NEXT.md).
+
 ## Next steps
 
 > s4254 correction: VI phase 640 is the ~52-56 s intro (all 22 survivors leave it then), not a "stuck" state; the private-DMEM ~28 s crash lands inside it at varying sites. The free-list chain was intact (len 256) at the crash, so the s4253 head->next / cache-recycle mechanism is unsupported. Probe: tools/apply_s4254_chainprobe.py.
