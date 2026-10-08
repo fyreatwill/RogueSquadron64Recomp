@@ -147244,3 +147244,5 @@ Rules out: producer-side voice-record bug; the guest builds equivalent records. 
 ORIGIN: n/a (diagnostic; no mitigation).
 
 Addendum (s4218, gate-readable): SELECTED H-records-equal; REFUTED H-records-differ and H-producer-side-record-bug. Discriminator that split them: active-voice count + state pointer + block address, retail 14-15 vs port 15 at n>=256, state 0x80178C80 in both. Next discriminator: retail census of nonzero bytes in the output ring after the audio task (H-retail-nonzero vs H-retail-zero), positive control = nonzero census of the data_ptr block; port side is all-zero per s4208.
+
+Gate wording (s4218): this result selects H-records-equal and refutes H-records-differ; it resolves whether the producer side is at fault (it is not). The next step is to discriminate H-retail-nonzero from H-retail-zero via the output-ring census.
