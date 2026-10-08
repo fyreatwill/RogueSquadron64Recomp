@@ -64,7 +64,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-0b. (s4292) Title slowdown (1024 at ~53 s/#3100 frames vs 14 s/#786 at s1949) survives the exact s1950 recipe and is independent of WRAP_FLUSH/S42xx (4 arms x2 bisects, single run each): a CODE regression since d2663605. Next: worktree build of d2663605 + commit bisect, frames-to-1024 metric (scratch/agent/s4292b_bisect.sh).
+0b. (s4293) Title slowdown s4289-s4292 was the EMPTY per-arm saves dir (build_arm_* skip saves): seeded save 1024@13.9s #765 (= s1949 #786) and hangar 512@47.4s; empty 1024@46.8s #2751. NOT a code regression. Every probe arm must copy build/saves in (scratch/agent/s4293_save_ab.sh). Next: hangar A/B WRAP_RESTORE 1 vs 0, seeded saves, phase-gated on VI 512.
 
 0. (s4279) Allocator head==0 / early musyx crash ROOT FOUND: the sample-stream node heap block (0x801F9CD0..0x801FB3F4, header 0x1800) is zeroed wholesale by ONE RT64 `copyToRAM` of a garbage colour image (addressStart 0x130393 unaligned, width 1033, siz 3, rows 118..339 -> range [0x1A742B,0x28633F), VI 640), within one ENTRY of the wipe in 2/2 runs; list was invariant-clean before, no guest store did it. Pool==0 is designed (free list has no push site; LRU steal) — the s4278 "pool never replenished" framing is superseded. Next: name the guest SetColorImage/DPC source of addr 0x130393 w1033 (scratch/agent/NEXT.md). Hangar route and the WRAP_FLUSH A/B stay blocked until resolved.
 
