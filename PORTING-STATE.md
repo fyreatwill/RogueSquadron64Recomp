@@ -147598,3 +147598,6 @@ Result (both arms, same recipe): in gap seconds (arm1 GAP t=19.49/21.38/22.26; a
 ORIGIN: no mitigation added; diagnostic only (env-gated counter).
 
 Next: name the gate. Find the guest function that sends the triple, enumerate its branch conditions, read those words in gap vs healthy windows (NEXT.md).
+
+Verdict (s4262): this run selects H-tid0-send-gate and refutes H-thr3-reply-missing (tid 0 still sends to 0x80128D10 and 0x80149990 at unchanged rate during the gap) and refutes H-jam-uncounted. It narrows the audio-gap cause from "producer starved on 0x8011A818" to "tid 0 skips a three-queue send group (0x8011A818/0x8011A7E8/0x80128CF0) while looping at full VI rate".
+Next discriminator: locate the guest function that sends that triple back to back in build/RecompiledFuncs, list its branch-condition RDRAM words, and dump them per second in healthy vs gap windows of one run; a word that is stuck only in gap seconds selects the gate, an unchanged word refutes it and points to host timing.
