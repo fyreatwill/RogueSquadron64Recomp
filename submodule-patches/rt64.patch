@@ -1689,10 +1689,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..cdb397c 100644
+index dccaa87..fd0f5cf 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,454 @@
+@@ -5,12 +5,456 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1740,6 +1740,8 @@ index dccaa87..cdb397c 100644
 +    S4271Ent g_s4271_ring[64]; unsigned g_s4271_head = 0; const DisplayList *g_s4271_start = nullptr, *g_s4271_end = nullptr;
 +    struct S4271List { uint32_t start, end, pend; size_t pendCur; };
 +    S4271List g_s4271_lists[32]; unsigned g_s4271_lhead = 0;
++    // s4281: bytes of the list at walk entry, to compare with live RDRAM at the 0x130393 event.
++    std::vector<uint8_t> g_s4281_snap; const uint8_t *g_s4281_base = nullptr;
 +    static Rs64RdpAdvanceRec s_rdp_advance_ring[512];
 +    static uint32_t s_rdp_advance_n = 0;
 +    static uint32_t s_rdp_advance_total = 0;
@@ -2147,7 +2149,7 @@ index dccaa87..cdb397c 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -69,6 +511,18 @@ namespace RT64 {
+@@ -69,6 +513,24 @@ namespace RT64 {
          GBIFunction func;
          uint32_t cmdLength;
          size_t pendingCommandRemainingBytes = state->rdp->pendingCommandRemainingBytes;
@@ -2163,10 +2165,16 @@ index dccaa87..cdb397c 100644
 +            l.start = dlStartAdddress; l.end = submit_hi; l.pend = (uint32_t)pendingCommandRemainingBytes;
 +            l.pendCur = state->rdp->pendingCommandCurrentBytes;
 +        }
++
++        if ((uintptr_t)dlEnd - (uintptr_t)dlStart >= 0x10000) {
++            size_t n = std::min<size_t>((uintptr_t)dlEnd - (uintptr_t)dlStart, 0x40000);
++            g_s4281_snap.assign((const uint8_t *)dlStart, (const uint8_t *)dlStart + n);
++            g_s4281_base = (const uint8_t *)dlStart;
++        }
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +543,47 @@ namespace RT64 {
+@@ -89,8 +551,47 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -2214,7 +2222,7 @@ index dccaa87..cdb397c 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +592,11 @@ namespace RT64 {
+@@ -99,6 +600,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -2226,7 +2234,7 @@ index dccaa87..cdb397c 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,9 +610,61 @@ namespace RT64 {
+@@ -112,9 +618,61 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -2289,7 +2297,7 @@ index dccaa87..cdb397c 100644
                  dummy = dl;
                  extendedFunction(state, &dl);
                  cmdLength = 1;
-@@ -122,6 +672,45 @@ namespace RT64 {
+@@ -122,6 +680,45 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -2335,7 +2343,7 @@ index dccaa87..cdb397c 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +718,14 @@ namespace RT64 {
+@@ -129,6 +726,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -2350,7 +2358,7 @@ index dccaa87..cdb397c 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +733,211 @@ namespace RT64 {
+@@ -136,13 +741,211 @@ namespace RT64 {
                      break;
                  }
  
@@ -2564,12 +2572,23 @@ index dccaa87..cdb397c 100644
              }
  
              if (dl != nullptr) {
-@@ -153,6 +948,45 @@ namespace RT64 {
+@@ -153,6 +956,56 @@ namespace RT64 {
          state->dlCpuProfiler.end();
      }
  
 +
 +    void s4271DumpRing(bool odd, const uint8_t *rdram) {
++        if (g_s4281_base) {
++            const long long b = (long long)(g_s4281_base - rdram);
++            for (long long a = 0x4E27B0; a < 0x4E2A60; a += 8) {
++                long long o = a - b; const uint32_t *live = (const uint32_t *)(rdram + a);
++                if (o >= 0 && o + 8 <= (long long)g_s4281_snap.size()) {
++                    const uint32_t *sn = (const uint32_t *)(g_s4281_snap.data() + o);
++                    std::fprintf(stderr, "[s4281] %06llX snap=%08X %08X live=%08X %08X%s\n", a, sn[0], sn[1], live[0], live[1],
++                        (sn[0] != live[0] || sn[1] != live[1]) ? " DIFF" : "");
++                } else std::fprintf(stderr, "[s4281] %06llX outside snap (base=%06llX size=%zu) live=%08X %08X\n", a, b, g_s4281_snap.size(), live[0], live[1]);
++            }
++        }
 +        std::fprintf(stderr, "[s4271-ring] %s liststart=%lld listend=%lld head=%u\n", odd ? "ODD" : "SANE",
 +            g_s4271_start ? (long long)((const uint8_t *)g_s4271_start - rdram) : -1LL,
 +            g_s4271_end ? (long long)((const uint8_t *)g_s4271_end - rdram) : -1LL, g_s4271_head);
@@ -2610,7 +2629,7 @@ index dccaa87..cdb397c 100644
      void Interpreter::processDisplayLists(uint32_t dlStartAdddress, DisplayList *dlStart) {
          assert(hleGBI != nullptr);
  
-@@ -169,8 +1003,11 @@ namespace RT64 {
+@@ -169,8 +1022,11 @@ namespace RT64 {
          DisplayList *dl = dlStart;
          uint8_t opCode;
          GBIFunction func;
@@ -2622,7 +2641,7 @@ index dccaa87..cdb397c 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  extendedFunction(state, &dl);
-@@ -190,6 +1027,7 @@ namespace RT64 {
+@@ -190,6 +1046,7 @@ namespace RT64 {
                  }
              }
  
