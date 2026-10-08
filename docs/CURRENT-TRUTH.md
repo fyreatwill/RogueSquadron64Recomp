@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4287 (2026-10-08).
+Updated for session 4288 (2026-10-08). s4288: the AUTOPILOT route never reaches hangar VI 512 (title-only in 140 s); the hangar A/B must use the s1949 probe.sh PROBE_KEYS route (see NEXT.md). Restore arm kept the tracked fb set <=4 at title vs 9 for the control (single run).
 
 ## Current state (as of s4268)
 
