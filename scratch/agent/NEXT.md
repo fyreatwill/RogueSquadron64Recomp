@@ -1,8 +1,8 @@
-# Next work unit: why do ~40% of private-DMEM arms never leave VI phase 640 (intro) — and when does the sample-block chain break? (s4254)
+# Next work unit: what is special about wall time ~28 s in the private-DMEM B arm? (s4255)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4253: crash = stuck at 640 x cache first recycle (12/12 vs 12/12 separation). Two open questions:
-(a) stuck-intro cause. Hypotheses: h1 intro end gated on audio/stream completion that private-DMEM/hurried audio perturbs; h2 input/autopilot timing; h3 gfx stall (LLE lock) delaying VI. Discriminator (offline first, no run): diff the logs of a stuck arm vs a good arm (s4252e4253_ab_1 armB2 vs armB1) in the 10-14 s window: first line present in good, absent in stuck.
-(b) chain break: add head->next + node count to the [s4234-ENTRY] probe (tools/apply_s4234_entryprobe.py) for every call n>=15000; one B-arm wave of 4, SECS=75, env ROGUESQ_LOG_S4222=1. Control: ringS rows fire.
-Harness: env OUTN=f TAG=_1 ARMS="B1 B2 B3 B4" SECS=75 zsh scratch/agent/s4252_ab.sh ; classify arms by last [phase] line + CRASH.
+s4254: VI 640 is the normal 52-56 s intro; the crash (1/6 to ~40%) lands ~28 s inside it at varying sites (fillSampleStreamRange+8516, emitAllocatedDLCommand+16244). Free list intact at crash.
+Hypotheses: h1 a timer/audio-thread event near 28 s writes a wild guest pointer; h2 a DL/audio buffer wraps at a fixed frame count; h3 plain host race (private-DMEM audio thread vs main).
+Discriminator: A (shared lock) arms vs B arms in one wave (crash rate), plus the faulting pointer's source register chain at the crash across 3+ crashed arms.
+Harness: env OUTN=g TAG=_1 ARMS="A1 A2 A3 A4 B1 B2 B3 B4" SECS=75 ROGUESQ_LOG_S4222=1 zsh scratch/agent/s4252_ab.sh ; classify by CRASH + pc-symbol.
