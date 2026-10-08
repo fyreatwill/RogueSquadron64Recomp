@@ -29,7 +29,7 @@ for f in files:
         new = '''    // s4250: private audio DMEM (ROGUESQ_AUDIO_PRIVATE_DMEM=1) -> no shared-dmem lock.
     static const bool s_private_audio_dmem = [] {
         const char* e = std::getenv("ROGUESQ_AUDIO_PRIVATE_DMEM");
-        return e && e[0] && e[0] != '0';
+        return !(e && e[0] == '0');  // s4256: default ON; =0 restores the shared-lock path
     }();
     const bool use_private_dmem = s_private_audio_dmem && task->t.type == M_AUDTASK;
     struct DmemGuard {

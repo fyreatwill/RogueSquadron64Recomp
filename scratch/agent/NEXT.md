@@ -1,7 +1,7 @@
-# Next work unit: read the queued s4255 wave, then name the wild-pointer writer (s4256)
+# Next work unit: confirm default private-DMEM removes the audio stall, then M5 Step 9/10 (s4257)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4255: A 0/4 vs B 1/4 crash (under-powered). Queued s4255_ab_wave.sh (4 A + 8 B); read its line in SOAK-RESULTS.md first.
-If B rate >> A rate with N>=12: private DMEM is the cause -> audit what host-side state the audio thread shares (h3). If equal: the crash is not DMEM-related -> drop the flag, move to the next M5 step in docs/M5-AUDIO-PLAN.md.
-Do not run more crash-rate waves by hand; add a single-instrument capture of the faulting pointer's source chain in crashed arms instead.
+s4256 made private audio DMEM the default (rollback ROGUESQ_AUDIO_PRIVATE_DMEM=0). Not yet measured in the default arm: audio tasks/s at t=18-28 s (s4250 saw 48-52 private vs 7-19 shared).
+Use scratch/agent/soak_results/s4256_default/arm*.log (ROGUESQ_S4245=1 armed): count audio task_enter per 3 s window; expect >=45/s through t=28.
+Positive control: one arm with ROGUESQ_AUDIO_PRIVATE_DMEM=0 should show the 7-19 dip. If the dip persists in the default arm, the flag is not taking effect (check the rebuilt binary). If it is gone, proceed to Step 10 (AI/SDL PCM join) or Step 9 per docs/M5-AUDIO-PLAN.md.

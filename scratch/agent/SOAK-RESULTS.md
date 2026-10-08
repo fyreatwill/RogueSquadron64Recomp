@@ -552,3 +552,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20260830-235420 | s3348_m5_slot_status_qualification | target-valid; VI 1024 at 14.5s, VI 512 at 26.3s; slot/status activity present, named consumer PCs 0 hits; game SIGKILLed after wrapper left process alive | scratch/agent/soak_results/s1949_menu_input_yield_20260830-235420/run.log
 20261006-221348 | s4104_m5_status03_service_reaping | rc=1 | 1s | scratch/agent/soak_results/s4104_m5_status03_service_reaping_20261006-221348.log
 20261006-221410 | s4104_m5_status03_service_reaping_fixed | rc=1 | 2s | control=1 retail_title=0 retail_hangar=0 port_title=0 port_hangar=0; verdict=Hroute-invalid; port crash spTaskSchedulerThread+9632; scratch/agent/soak_results/s4104_m5_status03_service_reaping/port.log
+20261008-020101 | s4255_ab_wave | rc=1 | 85s | scratch/agent/soak_results/s4255_ab_wave_20261008-020101.log
