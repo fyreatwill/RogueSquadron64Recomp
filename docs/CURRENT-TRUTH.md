@@ -171,6 +171,7 @@ H-entry-executed and makes `0x8008F900` the next port witness boundary. The
 retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
+**s4260:** per-mq post ages at t>=19.5 audio gaps: VI retrace (mq 0x80114388) delivered within 1-14 ms and main-thread queue 0x80149670 tracks it, but audio/sched queues 0x8010FEE0/0x80128D10/0x80149990 are 90-120 ms stale and thr3 queue 0x8011A818 340-910 ms. Only Vi/Pi host posts exist (no Timer/Ai/Sp/Dp), so s4259's "host message late" is REFUTED; the stall is a guest-internal producer. Single-source. Outlier: arm1 had a 3.5 s total delivery stall with fresh VI enqueues (unexplained).
 **s4259:** residual t≈19-28 audio dips are guest-idle: with ROGUESQ_S4259=1 every dip dump shows all 6 guest threads blocked in osRecvMesg (spin refuted; single-source). Next: timestamp host posts per mq to name the late message source (scratch/agent/NEXT.md).
 
 ## Next steps
