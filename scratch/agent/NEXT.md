@@ -3,9 +3,9 @@
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
 State (s4304): the retail oracle passed the whole-RDRAM positive control,
-reached VI-512 hangar, and measured 1,141,187 accesses to physical
-0x17D000:0x17E200 (1,072,566 reads and 68,621 writes), with 2,820
-`musyxSynthFrame` entries and three `waitForAnyAudioSlot` entries. Retail
+reached VI-512 hangar, and measured 1,142,716 accesses to physical
+0x17D000:0x17E200 (1,073,931 reads and 68,785 writes), with the target
+phase writer histogram active. Retail
 therefore continues synth activity after the shared free path. The port trace
 also shows the freed block and continued synth entries. The remaining
 discriminator is the first post-free writer/read value sequence, not whether
