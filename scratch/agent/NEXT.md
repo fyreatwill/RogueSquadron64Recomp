@@ -1,9 +1,8 @@
-# Next work unit (s4300): name the function that rs_frees the musyx stream-node block (0x8017D910, 47664 B) and decide whether retail quiesces the synth callback first
+# Next work unit (s4301): does retail's teardown at guest pc 0x80095D54 (inside the merged waitForAnyAudioSlot body, called from menuOverlayInit) unregister the synth VI callback before the five rs_frees?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-State (s4299): the stream-node block is freed in a 5-free teardown right after `waitForAnyAudioSlot`; `musyxSynthFrame` keeps running (4466 synth-entry after vs 573 before) and reads nodes that loadLevelTextureCache's "ltex_cache_N" table then overwrites. Competing hypotheses:
-- H-teardown-incomplete: the guest teardown (candidate shutdownAudioEngine 0x80091D40 via shutdownMusyXEngine 0x8008ECA4) is meant to also remove the synth VI callback (vi-cb-slot ptr 0x8009123C) but a port stub/gate (A-series) skips that step, so the synth runs on freed memory. Retail would then not corrupt.
-- H-retail-same: retail also frees with the synth callback live and relies on the audio thread being parked (a retail-only state we lack, e.g. synth sees an "engine off" flag at 0x800A0F50 b0 / D_80154620).
-- H-wrong-free: the port frees at the wrong time (A14 yield lets shutdownMusyXVoices finish early / out of order), retail would free later.
-Discriminator: add the guest pc/caller to the `[rs-free]` log (use g_rs64_last_guest_pc and the host-side function name via rs64_s2586_m5_writer_event rows for shutdownMusyXEngine/shutdownAudioEngine/shutdownMusyXVoices), run scratch/agent/s4299_nodewatch.sh (copy; ROGUESQ_A14_YIELD=1 vs 0 within the same recipe as two arms, run concurrently), and read: (a) which function owns the five frees, (b) whether synth-entry continues after it, (c) with A14 yield=0 does the free ever happen (A14 spin never exits => no free, no crash). Then check the decomp / oracle (tools/oracle/README.md) for whether retail's shutdownAudioEngine unregisters the vi callback; if it does, find the port step that skips it. Do NOT add a "skip synth when freed" guard before the ORIGIN is named (iron rule 11).
+State (s4300): free of 0x8017D910 attributed (rs_free <- waitForAnyAudioSlot+2432 <- menuOverlayInit+14480, pc 0x80095D54), yield-independent. Hypotheses left:
+- H-teardown-incomplete: guest code around 0x80095D54 removes the synth callback before freeing, and a port stub/gate skips it.
+- H-retail-same: retail frees with the callback live and relies on state we lack.
+Discriminator: read the recompiled code just before 0x80095D54 (RecompiledFuncs in ../N64Recomp) for the 5 frees and any call to the vi-callback unregister (slot 0x8009123C) or musyx shutdown; then confirm against retail with tools/oracle (write-watch on 0x8009123C, positive control first). If a skipped step is found, name the stub (iron rule 11) before any guard.

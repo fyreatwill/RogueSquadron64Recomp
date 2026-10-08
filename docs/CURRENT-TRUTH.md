@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4299 (stale stream-node root of the do_rom_read crash named). Previously: session 4290.
+Updated for session 4300 (free attributed to guest pc 0x80095D54). Previously 4299 (stale stream-node root of the do_rom_read crash named). Previously: session 4290.
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4299) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (holds the stream nodes at 0x17DBE0 + 0x100 DMA sample buffers) is rs_freed together with 4 other blocks right after `waitForAnyAudioSlot` (audio teardown; freeing function unverified, candidate shutdownAudioEngine 0x80091D40), then loadLevelTextureCache's table init ("ltex_cache_N" 0x24-stride records, via rs_malloc) lands on it while `musyxSynthFrame` keeps running (synth-entry 573x before vs 4466x after the free) and builds DMA batches from the text-overwritten ROM pairs. Name-copy and host-write refuted. Next: name the freeing function (rs-free + guest pc) and ask retail (oracle / decomp) whether the synth VI callback is removed before the free (scratch/agent/NEXT.md). Single-source for the free ordering (1 run logged frees; poller+control in 3).
+00. (s4299) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (holds the stream nodes at 0x17DBE0 + 0x100 DMA sample buffers) is rs_freed together with 4 other blocks right after `waitForAnyAudioSlot` (audio teardown; freeing function unverified, candidate shutdownAudioEngine 0x80091D40), then loadLevelTextureCache's table init ("ltex_cache_N" 0x24-stride records, via rs_malloc) lands on it while `musyxSynthFrame` keeps running (synth-entry 573x before vs 4466x after the free) and builds DMA batches from the text-overwritten ROM pairs. Name-copy and host-write refuted. (s4300) The free is `rs_free <- waitForAnyAudioSlot+2432 <- menuOverlayInit+14480`, guest pc 0x80095D54, once in BOTH A14 arms (yield-independent). Next: name the freeing function (rs-free + guest pc) and ask retail (oracle / decomp) whether the synth VI callback is removed before the free (scratch/agent/NEXT.md). Single-source for the free ordering (1 run logged frees; poller+control in 3).
 
 0c. (s4295) Odd control restored only on the s4290 route (PHASE_WIDTH=1024, phase-relative keys, S4268): RESTORE=0 odd=60 vs RESTORE=1 odd=0, with seeded saves, but that route never reaches 512. The s4294-style route (PHASE_WIDTH=512) reaches 512 but shows odd=0 in both arms, with or without SPIN_YIELD/Y8000. Next: isolate S4268 vs 1024-width phase gating (NEXT.md), find a route with odd>0 AND 512, then run the hangar RESTORE A/B. Hangar effect still UNMEASURED.
 
