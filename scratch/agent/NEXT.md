@@ -1,11 +1,14 @@
-# Next work unit: M5 Step 9s — who writes the voice-record gain words (+0x00..+0x0C), and why zero in the port
+# Next work unit: M5 Step 9t — why do the inputs of setVoiceModulationParams (0x8008D710 call) carry volume=0/pan=0 in the port?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4220: port voice records have zero gain words in phases 4/5 (0/181) vs retail 14/16 nonzero; ucode exonerated.
+s4221 chain (retail oracle + port hooks): record gain words <- musyxKeyOnVoice 0x80090CA4..CC8 <- voice-state +0x6E..0x74 <- musyxRenderVoiceSamples trunc(s1[0x44..0x4A]*f[0x5C]) <- computeVoiceVolumePanCoefficients (0x800940D4; vol arg sp+0, pan arg sp+0x14 are 0 in port phases 4/5) <- setVoiceModulationParams 0x800923E4 <- callers 0x8008D710 (100359/100372 retail calls), 0x8009818C, 0x80098264. s4079: port 0x8008D710 call has a1=0,a3=0 (retail nonzero, e.g. 0x004A79E0).
 
 Hypotheses:
-- H-writer-never-runs: the guest MusyX routine that computes per-bus gain (volume*pan*master) is not reached for active voices in the port (stubbed/gated audio path, e.g. synth tick or volume-update function).
-- H-writer-runs-zero-input: it runs but its input (voice volume / master volume / fade state) is 0 in the port (an upstream init that retail does, e.g. sfx volume set at boot, is skipped).
-- H-overwritten: gains are written nonzero then cleared before the task (reaping/zeroing of the record).
-Discriminator (one build, one run): port guest store-watch with PC on voice records' +0x00..+0x0C for voice 0..3 of the block at data_ptr (phase 5), logging store PC + value + a running count of nonzero vs zero stores; positive control: the same watch in phase 3 (4/5 rows nonzero) must fire with nonzero values. Writer PC never fires (only the clear/init) => H-writer-never-runs; fires with value 0 => runs-zero-input (then trace the operand); nonzero store followed by zero store => overwritten. Also arm oracle write-watch on the same retail field (tools/oracle/README.md, physical addresses, whole-RDRAM control first) for the retail writer PC. Reuse apply_s4218_active_voices.py to locate the block.
+- H-channel-state-zero: the per-channel volume/pan state that 0x8008D6B0..0x8008D70C reads (s2,s3,s0 <- channel record) is zero because the song/sfx start path that sets channel volume (startSongSequence 0x80094350, applyNoteEventToGroup 0x800873D4) is not reached or gets zero args.
+- H-scale-zero: channel state nonzero, but a master/fade multiplier in the 0x8008D6xx arithmetic is zero.
+- H-other-caller: 0x8009818C/0x80098264 callers are the live ones in port and pass zero.
+
+Discriminator (one build, one run, all arms): hooks at the three jal sites + the loads feeding 0x8008D6F4..D70C (print s2,s3,s0,s1,s6, v1, and the channel-record words they were loaded from), with a retail twin via oracle --watch-pc 0x8008D710 (prints a0..a3). Positive control: the retail twin in the same recipe must show nonzero a1. Split: channel words zero -> H-channel-state-zero (then find the writer of those words with an oracle write-watch as in s4221); channel words nonzero but a1 zero -> H-scale-zero; calls only from other sites -> H-other-caller.
+
+Reuse: scratch/agent/s4221_gain.sh, scratch/agent/run_s4221_retail_pan.sh (watch-pc template), tools/apply_s4221_*.py (patterns).

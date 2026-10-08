@@ -994,7 +994,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..e9c3065 100644
+index 1cb3f6a..2a3d60a 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -1008,7 +1008,7 @@ index 1cb3f6a..e9c3065 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1892 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1937 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2327,6 +2327,51 @@ index 1cb3f6a..e9c3065 100644
 +    if ((ph_tasks % 1024ul) == 0) {
 +        std::fprintf(stderr, "[s4211-sum] phase=%u phase_tasks=%lu phase_changes=%lu slot_dp=0x%06X slot_tasks=%llu slot_changes=%llu\n", phase, ph_tasks, ph_changes, dp, (unsigned long long)s->tasks, (unsigned long long)s->changes);
 +        std::fflush(stderr);
++    }
++}
++extern "C" void rs64_s4221_gain(uint8_t* rdram, uint32_t s0, uint32_t s1, uint32_t ra) {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4221"); return e && e[0] && e[0] != '0'; }();
++    if (!on) return;
++    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned long calls, nzcalls;
++    uint32_t phase = rs64_phase_ord();
++    if (phase != ph_key) {
++        if (ph_key != 0xFFFFFFFFu) std::fprintf(stderr, "[s4221-sum] phase=%u calls=%lu nonzero_gain_calls=%lu\n", ph_key, calls, nzcalls);
++        ph_key = phase; calls = 0; nzcalls = 0;
++    }
++    auto h = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x1FFFFFFFu) ^ 2] << 8) | rdram[((a & 0x1FFFFFFFu) + 1) ^ 2]); };
++    uint32_t g[4]; bool nz = false;
++    for (int i = 0; i < 4; i++) { g[i] = h(s0 + 0x6E + 2 * i); nz |= g[i] != 0; }
++    calls++; if (nz) nzcalls++;
++    if (calls <= 6 || calls % 256 == 0) {
++        std::fprintf(stderr, "[s4221] phase=%u n=%lu s0=%08X s1=%08X ra=%08X gain_src(+6E..74)=%04X,%04X,%04X,%04X vol60..6C=", phase, calls, s0, s1, ra, g[0], g[1], g[2], g[3]);
++        for (uint32_t o = 0x5C; o <= 0x6C; o += 2) std::fprintf(stderr, "%04X,", h(s0 + o));
++        std::fputc('\n', stderr);
++    }
++}
++extern "C" void rs64_s4221_pan(uint8_t* rdram, uint32_t s1, uint32_t sp, uint32_t s5) {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4221"); return e && e[0] && e[0] != '0'; }();
++    if (!on) return;
++    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned long calls, nzcalls;
++    uint32_t phase = rs64_phase_ord();
++    if (phase != ph_key) { ph_key = phase; calls = 0; nzcalls = 0; }
++    auto h = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x1FFFFFFFu) ^ 2] << 8) | rdram[((a & 0x1FFFFFFFu) + 1) ^ 2]); };
++    auto w = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x1FFFFFFFu) ^ 3]; return v; };
++    bool nz = h(s1 + 0x44) | h(s1 + 0x46) | h(s1 + 0x48) | h(s1 + 0x4A);
++    calls++; if (nz) nzcalls++;
++    if (calls <= 6 || calls % 256 == 0) {
++        std::fprintf(stderr, "[s4221-pan] phase=%u n=%lu nzcalls=%lu s1=%08X a1(s5)=%04X h44..4A=%04X,%04X,%04X,%04X f5C=%08X w38..40=%08X,%08X,%08X sp28=%08X,%08X,%08X,%08X\n", phase, calls, nzcalls, s1, s5 & 0xFFFF, h(s1 + 0x44), h(s1 + 0x46), h(s1 + 0x48), h(s1 + 0x4A), w(s1 + 0x5C), w(s1 + 0x38), w(s1 + 0x3C), w(s1 + 0x40), w(sp + 0x28), w(sp + 0x2C), w(sp + 0x30), w(sp + 0x34));
++    }
++}
++extern "C" void rs64_s4221_coef(uint8_t* rdram, uint32_t sp, uint32_t res, uint32_t a2, uint32_t outp) {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4221"); return e && e[0] && e[0] != '0'; }();
++    if (!on) return;
++    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned long calls, nzcalls;
++    uint32_t phase = rs64_phase_ord();
++    if (phase != ph_key) { ph_key = phase; calls = 0; nzcalls = 0; }
++    auto w = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x1FFFFFFFu) ^ 3]; return v; };
++    calls++; if (res & 0xFFFF) nzcalls++;
++    if (calls <= 6 || calls % 256 == 0) {
++        std::fprintf(stderr, "[s4221-coef] phase=%u n=%lu nzres=%lu res=%08X vol(sp0)=%08X a2now=%08X pan(sp14)=%08X out=%08X tabV=%08X,%08X,%08X tabS=%08X,%08X,%08X,%08X tabP=%08X,%08X\n", phase, calls, nzcalls, res, w(sp), a2, w(sp + 0x14), outp, w(0x800A4BD8), w(0x800A4BDC), w(0x800A4BE0), w(0x800A4DD8), w(0x800A4DDC), w(0x800A4DE0), w(0x800A4DE4), w(0x800A4DE8), w(0x800A4DEC));
 +    }
 +}
 +extern "C" void rs64_s4220_snap(uint32_t pc) {
