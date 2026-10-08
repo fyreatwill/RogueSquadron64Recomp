@@ -147206,3 +147206,5 @@ Caveat: byte order via `b[i^3]` assumed word-swapped RDRAM; hdr/rec0 prints read
 ORIGIN: no mitigation added; instrument only plus patch export.
 
 Session 4214 conclusion (gate-readable): this iteration REFUTES H-cmdbuf-never-built and H-text-is-header and SELECTS H-builder-wrong-target (data_ptr points at a menu heap block holding filenames and pointer structs, not audio records; positive control: changed bytes >0 across tasks). Next discriminator: name the guest writer of the OSTask data_ptr field (the audio thread's task build site) and compare with where the audio builder actually emits records.
+
+Session 4214 gate-wording addendum: this run refutes H-cmdbuf-never-built and H-text-is-header, and selects H-builder-wrong-target; the next discriminator is the guest writer of OSTask.data_ptr (see scratch/agent/NEXT.md).
