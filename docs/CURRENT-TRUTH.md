@@ -150,6 +150,8 @@ mitigation behavior changed.
 
 ## Next steps
 
+Session 4215: raw guest OSTask words (struct at RDRAM 0x149470) equal host-read fields -> H-task-struct-stale refuted; data_ptr alternates 0x8016BD50/0x80169F10 in phase 2. Next: guest writer PC of 0x1494A0 (check M5-S3482-TASK-WRITER-JOIN.md first).
+
 Session 4214: audio data_ptr block (menu heap) holds ASCII filenames + 0x28-stride pointer structs that change per task, not audio records -> H-cmdbuf-never-built refuted, H-builder-wrong-target selected (s4212 ownership + s4214 content). Next: writer of OSTask.data_ptr (NEXT.md).
 
 Session 4201 (single join, s4200 log): AI source and `queue_samples` consumer PCM agree 124/124 by FNV; hangar buffers are 81/81 all-zero at source (guest silence -> M5 Step 9, voice/MORT gap); title has 19 fully-nonzero buffers (every byte nonzero, atypical for real PCM; content unverified). `tools/pcm_join.py <log>` reproduces it. Next: dump title buffer samples + hangar voice-slot state.

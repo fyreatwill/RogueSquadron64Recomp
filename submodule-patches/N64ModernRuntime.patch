@@ -994,7 +994,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..02745a7 100644
+index 1cb3f6a..501693d 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -1008,7 +1008,7 @@ index 1cb3f6a..02745a7 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1845 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1862 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2483,7 +2483,24 @@ index 1cb3f6a..02745a7 100644
 +            (uint32_t)task->t.yield_data_ptr, (uint32_t)g_rs64_last_guest_pc);
 +    }
 +}
++static void rs64_s4215_dump(uint8_t* rdram, const OSTask* task) {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4213"); return e && e[0] && e[0] != '0'; }();
++    if (!on) return;
++    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned cnt;
++    uint32_t phase = rs64_phase_ord();
++    if (phase != ph_key) { ph_key = phase; cnt = 0; }
++    unsigned n = ++cnt;
++    if (!(n <= 3 || n == 64 || n == 512)) return;
++    uint32_t ga = (uint32_t)((const uint8_t*)task - rdram);
++    std::fprintf(stderr, "[s4215-task] phase=%u n=%u task_off=0x%X ctl_type=%u\n", phase, n, ga, (unsigned)task->t.type);
++    for (int row = -4; row < 20; row++) {
++        uint32_t a = ga + row * 4;
++        uint32_t w = (uint32_t)rdram[(a + 0) ^ 3] << 24 | (uint32_t)rdram[(a + 1) ^ 3] << 16 | (uint32_t)rdram[(a + 2) ^ 3] << 8 | rdram[(a + 3) ^ 3];
++        std::fprintf(stderr, "[s4215-w] phase=%u n=%u off=%+d w=0x%08X\n", phase, n, row * 4, w);
++    }
++}
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
++    rs64_s4215_dump(rdram, task);
 +    rs64_s4213_census(task);
 +    { static const bool on2 = [] { const char* e = std::getenv("ROGUESQ_LOG_S4213"); return e && e[0] && e[0] != '0'; }(); static uint32_t pk = 0xFFFFFFFFu; static unsigned sn; if (on2) { uint32_t ph = rs64_phase_ord(); if (ph != pk) { pk = ph; sn = 0; } rs64_s4214_scan(rdram, task, ph, ++sn); } }
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
