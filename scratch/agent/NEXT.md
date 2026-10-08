@@ -1,11 +1,13 @@
-# Next work unit (s4312): requalify the port free/read route before using the extended join
+# Next work unit (s4313): extend the independent retail read/value watch to 4,096 rows
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-State (s4311): the 4,096-row callback was built, but the first launch omitted
-the known M4 route qualifier and both corrected seeded-save launches crashed at
-`fillSampleStreamRange+13572` / guest `0x8000834C` at VI 640. Neither control
-fired and no target rows were captured, so the extended table has no result.
+State (s4312): the exact seeded-save/boot-key route with
+`ROGUESQ_M4_Y8000_WIDTH=512` reached VI 512 at 42.2 s. The adjacent-range and
+phase-gated read controls both fired; the target block was freed at guest PC
+`0x80095D54`; and 4,096 writer plus 4,096 read rows were captured with zero
+requested-vs-post mismatches and no crash marker. The extended port route is
+qualified.
 
 State (s4310): the corrected boot-relative seeded-save/key route reached VI 512
 at 42.0 s, passed the adjacent-range and phase-gated read positive controls,
@@ -25,20 +27,19 @@ Competing hypotheses:
 - H-retail-reclaims-different: remains possible for later traversal/layout;
   the bounded 256-row join does not yet name the first later divergence.
 
-Discriminator: first reproduce VI 512 with the adjacent-range and phase-gated
-read controls before interpreting the 4,096-row table. Controls plus target rows
-select a valid route; missing controls, no VI 512, or a VI-640 crash selects
-route/provenance failure and proves nothing about the join. Do not add a guard
-or skip.
+Discriminator: extend the independent retail oracle's target read/value sequence
+from 256 to 4,096 rows, retaining its whole-RDRAM positive control and VI-512
+watch. A retail sequence that continues through the port's 4,096 rows allows a
+keyed first-later-divergence comparison; a retail route/control failure is
+invalid and proves nothing about the hypotheses. Do not add a guard or skip.
 
 Before any build, inspect the existing port free/read join and confirm its
 positive-control and phase-gating fields. Batch all three hypotheses in one
 instrument/build/run; do not make an A/B arm or mitigation.
 
-Expected command family: recover the exact s4310 seeded-save provenance and
-reuse its successful boot-relative recipe. Start with the existing 256-row
-instrument (or retain 4096 if no rebuild is needed), and retain
-`ROGUESQ_LOG_S4306=1`, `ROGUESQ_LOG_S4307=1`, and `ROGUESQ_LOG_RS_FREE=1`, run
-from `build/`, kill with SIGKILL, and capture under
-`scratch/agent/s4311_port_free_read_join/`. A missing positive control or no
-VI 512 is invalid; do not add a guard or skip.
+Before any build, inspect `tools/oracle/README.md` and the current bounded
+retail logger; preserve the whole-RDRAM positive control and the phase-gated
+target watch. Batch the cap change and any keyed output fields in one oracle
+build/run. The port-side 4,096-row result is at
+`scratch/agent/s4312_port_free_read_join/run2/run.log`. A missing positive
+control or no VI 512 is invalid; do not add a guard or skip.

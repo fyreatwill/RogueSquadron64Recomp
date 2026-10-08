@@ -148070,3 +148070,26 @@ not rule out H-free-before-consumer, H-port-reuse-before-consumer, or
 H-retail-reclaims-different. The next work unit is to recover the exact s4310
 route/save provenance and requalify VI 512 before using the larger table. No
 guard or skip was added. ORIGIN: none; measurement/instrument only.
+
+## Session 4312 (2026-10-08) — requalified the extended port free/read join route
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+Replayed the seeded-save, boot-relative-key route with the known
+`ROGUESQ_M4_Y8000_WIDTH=512` qualifier. The run reached VI 512 at 42.2 s. Both
+same-run controls fired: `[s4306-control] adjacent-range-positive-control=1`
+and `[s4307-control] phase-gated-read-positive-control=1`, both at origin
+`0x006AB400`. The target block `0x8017D910` was freed at guest PC
+`0x80095D54` before the joined consumer rows.
+
+The existing expanded instrument emitted 4,096 writer rows and 4,096 synth-read
+rows. Every writer's requested value equaled its post-store value (`mismatch=0`
+for all 4,096); no `[CRASH]` marker appeared during the 180-second post-gate
+capture. The first joined read remained `0x8008FCE8: 0x17D9E0 -> 0x8017D9F8`.
+
+This qualifies the extended port route and makes the 4,096-row table usable for
+comparison. It does not yet distinguish the later retail traversal/layout
+hypotheses because the independent retail read/value sequence remains bounded
+to 256 rows. The previous route-invalid result was a provenance failure, not
+evidence against the join. No guard or skip was added. ORIGIN: none; measurement
+only.
