@@ -147585,3 +147585,16 @@ ORIGIN: no mitigation landed; diagnostic only (lib/ patch exported).
 Next: capture the guest ra of tid 0 sends to 0x8011A818 and what tid 0 does on gap-time wakes; see NEXT.md.
 Verdict: refutes H-send-refused (fail=2 constant, only tid 3 produces) and H-timer-unposted (osSetTimer n=0); selects H-main-loop-gate (tid 0 omits sends to 0x8011A818 on VI wakes).
 Next discriminator: guest ra of tid 0 sends/jams to 0x8011A818 plus tid 0 next-mq after each 0x80149670 wake, healthy vs GAP in one run (outcomes: ra absent in gap -> branch skipped upstream of the send site; ra present but rare -> request cadence is game-state driven; jam path -> uncounted sends).
+
+## Session 4262 (2026-10-08) — tid 0 gates the 0x8011A818 send as a triple with 0x8011A7E8 and 0x80128CF0; the gate, not a missing reply, starves audio
+
+Added s4262_note_send (src/main/upstream_compat.cpp, ROGUESQ_S4262=1): per-second table of (guest tid, mq, ra) osSendMesg counts for tid 0 and for every sender to 0x8011A818. Ran 2 concurrent arms (scratch/agent/s4262_send.sh, 45 s, logs in scratch/agent/soak_results/s4262_send/). Positive control: table non-empty in healthy seconds (tid 0 -> 0x8011A818 n=30/s at t=10) and the [s4259] CONTROL row fires at t=20.00.
+
+Result (both arms, same recipe): in gap seconds (arm1 GAP t=19.49/21.38/22.26; arm2 t=19.6-28.2) tid 0 keeps sending at its VI-driven rate to 0x8010FF50, 0x80110750, 0x8011A800, 0x80128D10, 0x80149990, 0x80154650 (~57/s at t=19), but sends to 0x8011A818, 0x8011A7E8 and 0x80128CF0 fall together (arm1 t=15: 24/25/29 -> t=19: 1/1/1; arm2 0x8011A818: 30/s healthy, 2,1,1,2,2,6 at t=19-25, back to ~20/s by t=30). 0x8011A420 sags only mildly (82 -> 59).
+- H-A (tid 0 gates the send on game state) SELECTED: tid 0 is awake and looping at full VI rate and the three sends are suppressed as a group.
+- H-B (missing reply from thr3 on 0x80128D10/0x80149990) REFUTED for those two queues: tid 0 still sends to both at unchanged rate during the gap.
+- H-C (send via osJamMesg, uncounted) REFUTED: the count that drops is osSendMesg itself; jam is not a substitute for an absent send.
+- Not learned: guest ra is 0 in every row (native-call convention leaves ctx->r31 unset), so the send site is unnamed.
+ORIGIN: no mitigation added; diagnostic only (env-gated counter).
+
+Next: name the gate. Find the guest function that sends the triple, enumerate its branch conditions, read those words in gap vs healthy windows (NEXT.md).
