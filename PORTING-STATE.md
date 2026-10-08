@@ -147492,3 +147492,11 @@ Implication: the stale-ring replay (s4244/s4245) is caused by audio tasks queuei
 Next: separate audio RSP state/DMEM from gfx or measure gfx hold time (NEXT.md).
 
 Verdict: this refutes c1 (more RSP work per task) and selects the lock-serialization form of c2 (g_lle_task_mutex wait, 99.5% of wall). Next discriminator: per-holder hold-time logging (factor5_gfx_runner vs rs64_run_lle_gfx vs DmemGuard) to discriminate h1 (gfx DL holds) from h3 (fairness starvation); see NEXT.md.
+
+## Session 4249 (2026-10-08) — gfx LLE holds g_lle_task_mutex for whole DLs (15-870 ms); audio holds <1 ms; audio starvation is serialization, not fairness
+
+Added a per-holder hold-time census on g_lle_task_mutex (src/main/main.cpp, namespace s4249; tags audio / rs64_run_lle_gfx / factor5_gfx_runner; outermost holds only; ROGUESQ_S4245=1; installer tools/s4249_patch.py). One run (s4245_rates.sh, run31, 28 s of VI).
+Result per 3 s window: audio holds n=86-181 with max 0.2-0.8 ms in every window (positive control: audio counts match the ~60/s task rate pre-stall and the lockwait numbers of s4248). rs64_run_lle_gfx holds n=42-104 pre-stall, every one >=1 ms, max 14-31 ms for t<15, then 146 ms (t18), 873 ms (t21), 628 ms (t25), 534 ms (t28); gfx duty cycle 40% at t15 -> ~93% at t22-28 while audio tasks fall 180 -> 22 per 3 s. factor5_gfx_runner was never outermost (always nested in run_lle_gfx).
+Verdict: h1 CONFIRMED (long gfx holds), h3 (fairness/many short holds) REFUTED, h2 (other holder) not seen (all holds attributed to the three tags). The audio-producer stall at t~18.5 is a host artifact of one shared DMEM mutex plus gfx DLs that grow to hundreds of ms.
+Not yet asked: why gfx DLs take 15-870 ms of host time (LLE ucode interpretation of a growing DL) - that is a performance question, separate from the audio de-stub.
+Next: give audio a private DMEM/state so run_task skips the gfx mutex (NEXT.md).
