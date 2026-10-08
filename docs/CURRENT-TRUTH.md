@@ -164,6 +164,7 @@ retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
 ## Next steps
+0. (s4245) Audio producer stalls (task_enter stops ~t=18.5 / task 1061 while AI set-next+VI continue at 60/s) -> stale-ring replay. Find what the guest audio thread/scheduler is blocked on; repeat run (scratch/agent/s4245_rates.sh, ROGUESQ_S4245=1) to see if the stall recurs. Steady-state task rate is 1:1 with AI (60/s); "half rate" hypothesis refuted (single-source).
 
 - s4244: **16-buffer audible periodicity = stale AI-ring re-DMA, not music.** Queued buffers join 343/346 to ucode writes; 62 duplicated queue hashes each map to ONE ucode write; ucode-out has 0 repeats; n-k offset steps by 16 (consumer replays the ring whenever the producer pauses; ~171 writes served ~345 queues). Open: why the audio task makes ~1 buffer per 2 AI periods. Next: audio-task submit/complete/osAiSetNextBuffer counts per phase (NEXT.md). Two lines of evidence.
 - s4243: audible-PCM "repeated RMS" was sampling aliasing; no consecutive-buffer repeats (0/1660); 16-buffer periodic hashes remain (loop vs stale ring) — see scratch/agent/NEXT.md.

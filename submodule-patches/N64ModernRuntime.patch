@@ -357,13 +357,15 @@ index dbf46b2..60d1401 100644
  
  template<u8 e>
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..9245ac3 100644
+index 0195f2b..5f156b1 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,173 @@
+@@ -1,29 +1,200 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
++#include <chrono>
++#include <mutex>
  #include <string>
 +#include <unordered_set>
 +#include <cmath>
@@ -516,7 +518,32 @@ index 0195f2b..9245ac3 100644
      ultramodern::set_audio_frequency(freq);
  }
  
++// s4245: one-second windowed rate table. kind 0=audio run_task enter, 1=audio run ok,
++// 2=osAiSetNextBuffer call, 3=set-next bytes, 4=queue_samples call.
++extern "C" void rs64_s4245_tick(int kind, uint32_t amount) {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4245"); return e && e[0] && e[0] != '0'; }();
++    if (!on) return;
++    static std::mutex mu;
++    static uint64_t cnt[5] = {0, 0, 0, 0, 0};
++    static auto t0 = std::chrono::steady_clock::now();
++    static auto last = t0;
++    std::lock_guard<std::mutex> lock(mu);
++    cnt[kind] += amount;
++    const auto now = std::chrono::steady_clock::now();
++    if (now - last >= std::chrono::seconds(1)) {
++        last = now;
++        std::fprintf(stderr,
++            "[s4245] t=%.1f phase=%u width=%u origin=0x%06X task_enter=%llu task_ok=%llu setnext=%llu setnext_bytes=%llu queue=%llu\n",
++            std::chrono::duration<double>(now - t0).count(), rs64_phase_ord(), rs64_vi_committed_width(),
++            rs64_vi_committed_origin() & 0xFFFFFFu, (unsigned long long)cnt[0], (unsigned long long)cnt[1],
++            (unsigned long long)cnt[2], (unsigned long long)cnt[3], (unsigned long long)cnt[4]);
++        std::fflush(stderr);
++    }
++}
++
  extern "C" void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
++    rs64_s4245_tick(2, 1);
++    rs64_s4245_tick(3, ctx->r5);
 +    rs64_log_ai_output(rdram, ctx->r4, ctx->r5);
      ultramodern::queue_audio_buffer(rdram, ctx->r4, ctx->r5);
      ctx->r2 = 0;
@@ -1059,7 +1086,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..5791139 100644
+index 1cb3f6a..2e9d659 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,11 @@
@@ -1074,7 +1101,7 @@ index 1cb3f6a..5791139 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +37,1965 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +37,1967 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2668,7 +2695,9 @@ index 1cb3f6a..5791139 100644
 +        std::fprintf(stderr, "[s4215-w] phase=%u n=%u off=%+d w=0x%08X\n", phase, n, row * 4, w);
 +    }
 +}
++extern "C" void rs64_s4245_tick(int kind, uint32_t amount);
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
++    if (task->t.type == M_AUDTASK) rs64_s4245_tick(0, 1);
 +    rs64_s4215_dump(rdram, task);
 +    rs64_s4213_census(task);
 +    { static const bool on2 = [] { const char* e = std::getenv("ROGUESQ_LOG_S4213"); return e && e[0] && e[0] != '0'; }(); static uint32_t pk = 0xFFFFFFFFu; static unsigned sn; if (on2) { uint32_t ph = rs64_phase_ord(); if (ph != pk) { pk = ph; sn = 0; } rs64_s4214_scan(rdram, task, ph, ++sn); } }
@@ -3042,6 +3071,13 @@ index 1cb3f6a..5791139 100644
  
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
+@@ -58,5 +2006,6 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+         return false;
+     }
+ 
++    if (task->t.type == M_AUDTASK) rs64_s4245_tick(1, 1);
+     return true;
+ }
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
 index ae0f44f..f77c306 100644
 --- a/librecomp/src/sp.cpp

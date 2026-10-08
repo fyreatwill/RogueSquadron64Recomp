@@ -1,8 +1,8 @@
-# Next work unit: why does the audio ucode produce ~1 buffer per 2 AI periods? (s4245)
+# Next work unit: what blocks the guest audio producer at the stall? (s4246)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4244 (two-line evidence): audible 16-buffer periodicity is stale ring re-DMA; ~171 ucode writes served ~345 AI queue calls in hangar phase. See PORTING-STATE Session 4244.
-Hypotheses: (a) audio tasks are submitted at half the AI rate (game audio thread blocked/starved, e.g. waiting on a message the port delivers late); (b) tasks submitted at full rate but scheduler skips/drops some; (c) AI queue/DMA path runs too fast (pacing ungated by ucode completion) while task rate is nominal for the port's frame rate.
-Discriminator: in ONE run, per phase, count (1) audio task submits (osSpTaskLoad/scheduler enqueue with ucode=audio), (2) completions, (3) osAiSetNextBuffer calls, (4) queue_samples calls, (5) VI frames. Positive control: queue count must equal (3) and writes must equal (2) (known from s4244). Outcomes: (1)~(2)~half of (3) => a; (1)>(2) => b; (1)~(2)~(3) but writes<queues => c is wrong, recheck.
-Reuse s4244_stage.sh (flags above); find existing audio-task counters via grep '\[m5-audio-stage\]' and '\[m5-frame-sync\]' before adding any.
+s4245: steady-state audio tasks = AI set-next = 60/s; at t~18.5 (task ~1061) tasks stop while AI/VI continue (single run; run then died in Metal thread). See PORTING-STATE Session 4245.
+Hypotheses: (a) the audio thread blocks on a message/semaphore the port delivers late or never (e.g. an RSP/DP done event, or a VI-synced message); (b) scheduler is busy/blocked on a graphics task (RDP fence) so audio tasks starve; (c) stall is artefact of the Metal-compiler fault (shader compile stall in the same run) and not audio-specific.
+Discriminator: rerun scratch/agent/s4245_rates.sh twice, plus log at the stall the scheduler's pending-task queue depth and the thread each is blocked on (reuse [vi-wait]/[sp-task] logs near the stall; grep around the last task_enter increase). Outcomes: stall recurs at fixed time and graphics task also stalls => b/c; audio-only stall with VI+gfx tasks continuing => a.
+Positive control: [s4245] window shows task_enter flat while setnext rises.

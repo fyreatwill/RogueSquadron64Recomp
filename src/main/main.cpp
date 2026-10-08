@@ -5877,7 +5877,9 @@ static void set_frequency(uint32_t freq) {
     SDL_PauseAudioDevice(audio_device, 0);
 }
 
+extern "C" void rs64_s4245_tick(int kind, uint32_t amount);
 static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_addr) {
+    rs64_s4245_tick(4, 1);
     // s371 (M5-AUDIO-PLAN.md Step 6): this parameter was named `num_bytes` but
     // is actually a SAMPLE count -- ultramodern::queue_audio_buffer
     // (lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36) computes
