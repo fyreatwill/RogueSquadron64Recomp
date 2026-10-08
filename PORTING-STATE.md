@@ -147474,3 +147474,10 @@ Window t=18.1-19.1 holds 11.3k log lines ([dpc-pak] 2974, [m4-y8000] 1751, [heap
 Verdicts: H-metal-fault-artefact REFUTED (stall without crash, 2 runs); H-stall-fixed-time SELECTED (2 of 2); H-scheduler-busy-with-gfx / H-audio-thread-blocked NOT split — no per-thread block site was logged (this iteration only counted). Evidence is two runs of one recipe, one counter family.
 ORIGIN: diagnostics only; no mitigation.
 Next: log the audio-thread's osRecvMesg site/mq and the scheduler's gfx-task enter/ok counts per second in [s4245] (one build), to split gfx-starvation from audio-thread block (NEXT.md).
+
+## Session 4247 (2026-10-08) — t~18.5 stall is the HOST audio run_task becoming 20-100x slower, not a blocked audio thread
+
+Instrument: `S4245Guard` in librecomp rsp.cpp run_task + extended `rs64_s4245_tick` (ai.cpp) with per-type enter/ok counts, wall-time sum and per-second max. Patches exported (N64ModernRuntime.patch). Two runs (`scratch/agent/soak_results/s4245_rates/run11.log`, `run12.log`, fresh save, shifted-key autopilot).
+Result (2/2): pre-stall audio run_task = 60/s at 6-11 ms each (rising slowly from 6.3 ms at t=12 to ~10-11 ms at t=18). From t~19: 26-30, then 1-12 tasks/s, per-task mean 60-860 ms, per-second max 350-860 ms, back to ~32-54/s (15-27 ms) at t~26+. setnext/queue stay 60/s throughout. Total wall time in audio run_task per second stays ~0.4-1.0 s, i.e. the audio thread is BUSY inside the ucode, not blocked in osRecvMesg: hypothesis (a) refuted, (b) not testable.
+Positive/consistency control: pre-stall counts 60/s match setnext 60/s; the timing sum is non-zero and consistent with the task counts. gfx_enter=0 and other_enter=0 in all windows: GFX tasks never reach recomp::rsp::run_task (the RT64/LLE path handles them), so "serialised behind gfx" via this hook is moot; scheduler-level gfx time is unmeasured.
+Open: why does the same audio ucode task cost 100x more? (c1) more RSP work per task (voice/command count spike after the pak-combiner burst), (c2) host CPU/GPU contention from the gfx thread (shader compile, Metal). ORIGIN: no mitigation landed; instrument only.
