@@ -1506,7 +1506,30 @@ extern "C" void rs64_s4222_vol(uint8_t* rdram, uint32_t pc, uint32_t a0) {
 }
 
 extern "C" volatile unsigned rs64_s4234_g = 0;
+
+static struct { uint32_t pc, addr, n; char w; } s4279_rg[96]; static unsigned s4279_rgi = 0;
+static void s4279_ring_push(uint32_t pc, uint32_t addr, char w) { auto& e = s4279_rg[s4279_rgi++ % 96]; e.pc = pc; e.addr = addr; e.n = rs64_s4234_g; e.w = w; }
+extern "C" void rs64_s4279_dump_ring(void) {
+    std::fprintf(stderr, "[s4279-ring] last 96 node-region stores (oldest first)\n");
+    for (unsigned k = 0; k < 96; k++) { auto& e = s4279_rg[(s4279_rgi + k) % 96]; if (e.pc) std::fprintf(stderr, "[s4279-ring] n=%u pc=%08X %c addr=%08X\n", e.n, e.pc, e.w, e.addr); }
+}
 extern "C" void rs64_s4222_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
+    if (rs64_s4222_on()) {
+        uint32_t np = addr & 0x1FFFFFFFu;
+        if (np >= 0x1F9C00u && np < 0x1FB400u) {
+            s4279_ring_push(pc, addr, width);
+            static unsigned long own = 0; static int frows = 0;
+            if (pc >= 0x8008F780u && pc < 0x8008FF00u) {
+                ++own;
+                if (own == 1 || own == 100 || (own % 20000) == 0)
+                    std::fprintf(stderr, "[s4279-own] n=%u cnt=%lu pc=%08X addr=%08X\n", rs64_s4234_g, own, pc, addr);
+            } else if (frows < 400) {
+                ++frows;
+                std::fprintf(stderr, "[s4279-foreign] n=%u pc=%08X %c addr=%08X val=%08X\n", rs64_s4234_g, pc, width, addr, value);
+            }
+            return;
+        }
+    }
     if (!rs64_s4222_on() || rs64_s4234_g < 9400u) return;
     static int rows = 0;
     static uint32_t last[64];  // s4230: drop value-unchanged rewrites (tail loop at 0x8008FBE8 was 5553/6000 rows)

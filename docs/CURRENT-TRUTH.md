@@ -62,7 +62,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-0. (s4278) Allocator head==0 writer NAMED: legitimate unlink at 0x8008FD94 after the sample-stream node pool (0x801499CC, bump region 0x801F9D10..0x801FB2D0, ~231 nodes) reaches 0 at ENTRY n~9514-9522; independent of Start timing (late-key arm crashes identically; H1 refuted) and of memset (H3 refuted). Find why nodes are never returned in the port vs retail (call rate or missing free/completion path) via oracle pool-word watch + port pool-store log (scratch/agent/NEXT.md). Hangar route and the WRAP_FLUSH A/B stay blocked until resolved.
+0. (s4279) Allocator head==0 / early musyx crash ROOT FOUND: the sample-stream node heap block (0x801F9CD0..0x801FB3F4, header 0x1800) is zeroed wholesale by ONE RT64 `copyToRAM` of a garbage colour image (addressStart 0x130393 unaligned, width 1033, siz 3, rows 118..339 -> range [0x1A742B,0x28633F), VI 640), within one ENTRY of the wipe in 2/2 runs; list was invariant-clean before, no guest store did it. Pool==0 is designed (free list has no push site; LRU steal) — the s4278 "pool never replenished" framing is superseded. Next: name the guest SetColorImage/DPC source of addr 0x130393 w1033 (scratch/agent/NEXT.md). Hangar route and the WRAP_FLUSH A/B stay blocked until resolved.
 
 Work only the first applicable item. One monotonic sequence.
 
@@ -99,6 +99,8 @@ same-build declared/real, declared/silent and legacy/real arms. A route failure
 invalidates a null; it never proves absence.
 
 ## Superseded conclusions
+
+- s4278 "root = node pool never replenished / port consumes nodes faster than retail" (believable: pool hit 0 right before head==0): pool==0 is the designed LRU-steal state; the list is clean until RT64 copyToRAM wipes the whole block (s4279).
 
 - s4222/s4223 "port misses code that fills the source block" and every
   zero-volume/zero-payload conclusion s4164-s4221: stale-save artifact (s4224).

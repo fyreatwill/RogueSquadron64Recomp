@@ -946,10 +946,10 @@ index 6255872..afb0672 100644
  
              return trianglesEnd;
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..1a2db5c 100644
+index 873883d..df92489 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
-@@ -16,6 +16,68 @@
+@@ -16,6 +16,70 @@
  
  #include "render/rt64_render_worker.h"
  
@@ -961,6 +961,8 @@ index 873883d..1a2db5c 100644
 +extern "C" uint32_t rs64_vi_committed_width(void);
 +extern "C" uint32_t rs64_vi_committed_origin(void);
 +extern "C" volatile uint32_t g_rs64_last_guest_pc;
++extern "C" __attribute__((weak)) volatile unsigned rs64_s4234_g;  // s4279: fillSampleStreamRange ENTRY ordinal
++static volatile unsigned *const rs64_s4234_g_weak = &rs64_s4234_g;
 +
 +static void rs64_log_m5_host_boundary(uint32_t addressStart, uint32_t dstRowStart,
 +                                      uint32_t dstRowEnd, uint32_t dstRowWidth,
@@ -1018,7 +1020,7 @@ index 873883d..1a2db5c 100644
  #ifdef __GNUC__
  #define _byteswap_ulong __builtin_bswap32
  #endif
-@@ -91,7 +153,58 @@ namespace RT64 {
+@@ -91,7 +155,58 @@ namespace RT64 {
              dstWords++;
          }
  
@@ -1077,7 +1079,7 @@ index 873883d..1a2db5c 100644
          return differentPixels;
      }
  
-@@ -143,7 +256,128 @@ namespace RT64 {
+@@ -143,7 +258,144 @@ namespace RT64 {
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
          uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
          uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
@@ -1200,13 +1202,29 @@ index 873883d..1a2db5c 100644
 +            }
 +        }
          uint32_t dstFirstWord = dstWords[0];
++        { // s4279: does this host readback land on the sample-stream node heap block 0x1F9C00..0x1FB400? (phase-ungated)
++            static int on = -1; static int rows = 0; static unsigned long calls = 0;
++            if (on < 0) { const char *e = std::getenv("ROGUESQ_LOG_S4222"); on = (e && e[0] && e[0] != '0') ? 1 : 0; }
++            if (on) {
++                ++calls;
++                uint32_t rb = imageRowBytes(dstRowWidth);
++                uint32_t lo = addressStart + dstRowStart * rb, hi = addressStart + dstRowEnd * rb;
++                if (lo < 0x1FB400u && hi > 0x1F9C00u && rows < 200) {
++                    ++rows;
++                    fprintf(stderr, "[s4279-rtw] ENTRYn=%u call#%lu vi=%u range=[0x%06X,0x%06X) addressStart=0x%06X rows=%u..%u rowWidth=%u siz=%u firstword=0x%08X\n",
++                            rs64_s4234_g_weak ? *rs64_s4234_g_weak : 0u, calls, rs64_vi_committed_width(), lo, hi, addressStart, dstRowStart, dstRowEnd, dstRowWidth, (unsigned)siz, dstFirstWord);
++                    fflush(stderr);
++                }
++                if (calls == 1) { fprintf(stderr, "[s4279-rtw-control] first copyToRAM seen range=[0x%06X,0x%06X)\n", lo, hi); fflush(stderr); }
++            }
++        }
 +        rs64_log_m5_host_boundary(addressStart, dstRowStart, dstRowEnd,
 +                                  dstRowWidth, siz, imageRowBytes(dstRowWidth),
 +                                  bytesToSwap);
          nativeTarget.copyToRAM(dstRowStart, dstRowEnd, dstRowWidth, siz, dstBytes);
  
          // Write back to RDRAM by swapping every word.
-@@ -165,6 +399,79 @@ namespace RT64 {
+@@ -165,6 +417,79 @@ namespace RT64 {
              dstWords[0] = dstFirstWord;
          }
  
@@ -1286,7 +1304,7 @@ index 873883d..1a2db5c 100644
  #   ifdef DUMP_RAW_RDRAM
          char path[1024];
          snprintf(path, sizeof(path), "dumps/FB_0x%X_W_%d_H_%d_SIZ_%d.rdram", addressStart, dstRowWidth, height, siz);
-@@ -199,4 +506,4 @@ namespace RT64 {
+@@ -199,4 +524,4 @@ namespace RT64 {
      uint64_t FramebufferTile::hash() const {
          return XXH3_64bits(this, sizeof(FramebufferTile));
      }
