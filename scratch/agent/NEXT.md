@@ -1,7 +1,7 @@
-# Next work unit: M5 - name the unwatched writer of allocator tail 0x801499B4 (=0x801F9D10 while head 0x801499E4 == 0)
+# Next work unit: M5 - classify dominant stale-save crash sites last-guest-pc 0x8000b650 and 0x80001b08
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4230: fillSampleStreamRange+8136 is `lw $a0,0($v1)` at 0x8008FD60 with head==0, tail=0x801F9D10 (probe [s4230-FD60], 1 of 6 stale runs). Watched guest stores (rs64_m5_writer_parity, retargeted by tools/apply_s4230_listwatch.py) show only boot init before the crash.
-Hypotheses: (a) host-side bulk write (osPiStartDma/memcpy/save/overlay copy) over 0x801499B0..E8; (b) guest store site without the writer_parity call (sb/sh/swl/swr/sdc/etc); (c) our own zero-init (pc 0x80000420/24 'D' stores) ordered after a legit tail write, so head is cleared after tail was set.
-Discriminator: in ONE build, add (1) a host-side watch in the DMA/memcpy helpers (lib/N64ModernRuntime + src) for physical overlap with 0x1499B0..0x1499E8 (log pc/caller/len), (2) a per-VI or 1 ms poll of the 3 words logging first change with last-guest-pc, (3) positive control: log any DMA overlapping 0x80000000..0x80200000. Run scratch/agent/s4230_listwatch.sh (6 stale runs). Outcome a => host log names the copy; b => poll fires with no host hit; c => head write by 0x8008F8C8 after tail nonzero. Edits under lib/ need submodule-patches/export.sh + commit.
+s4231: 6 stale runs (scratch/agent/soak_results/s4230_listwatch/r1..r6) crash at last-guest-pc 0x8000b650 (r1,r2,r5) and 0x80001b08 (r4,r6); allocator-list head==0 NOT reproduced (see PORTING-STATE s4231).
+Hypotheses: (a) both are audio-thread derefs of the same corrupted voice/list object; (b) 0x8000b650 is a different idiom (host-side garbage ptr, bus error si_addr=0x380000000 etc.); (c) our probe loads / stub gates fabricate the pointer.
+Discriminator: map both PCs to functions (grep symbols), read the faulting instruction and the register source from the run.log CRASH stack; one build adding per-site register dump if needed. Instruments from s4231 stay armed (ROGUESQ_LOG_S4222=1).

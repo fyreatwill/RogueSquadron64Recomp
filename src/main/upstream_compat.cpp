@@ -1416,6 +1416,22 @@ extern "C" void rs64_m5_voice_modulation_postcall(uint8_t* rdram, uint32_t pc,
 
 
 static bool rs64_s4222_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4222"); return e && e[0] && e[0] != '0'; }(); return on; }
+// s4231: 1 ms poll of allocator list words (head 0x801499E4, tail 0x801499B4, pool 0x801499CC); logs every change with last guest pc
+extern "C" void rs64_s4230_poll_start(uint8_t* rdram) {
+    static std::atomic<bool> started{false};
+    if (!rdram || !rs64_s4222_on() || started.exchange(true)) return;
+    std::thread([rdram] {
+        uint32_t pv[3] = {0xDEADBEEFu, 0xDEADBEEFu, 0xDEADBEEFu}; int rows = 0; unsigned long ticks = 0;
+        static const uint32_t A[3] = {0x1499E4u, 0x1499B4u, 0x1499CCu};
+        for (;;) {
+            for (int i = 0; i < 3; i++) {
+                uint32_t c = *(volatile uint32_t*)(rdram + A[i]);
+                if (c != pv[i] && rows < 400) { rows++; std::fprintf(stderr, "[s4231-P] t=%lu %s %08X -> %08X pc=%08X\n", ticks, i==0?"head":i==1?"tail":"pool", pv[i], c, (unsigned)g_rs64_last_guest_pc); pv[i] = c; }
+            }
+            ticks++; std::this_thread::sleep_for(std::chrono::microseconds(200));
+        }
+    }).detach();
+}
 extern "C" void rs64_s4222_chain(uint8_t* rdram, uint32_t which, uint32_t s1, uint32_t s2, uint32_t s3, uint32_t s4, uint32_t fp) {
     if (!rdram || !rs64_s4222_on()) return;
     {   // ungated tripwire on the volume-settings bytes 0x80130B60..62

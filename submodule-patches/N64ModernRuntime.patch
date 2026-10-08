@@ -812,7 +812,7 @@ index 8c8e5d1..0907c36 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..45623ca 100644
+index 43509ba..dedde24 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -8,9 +8,15 @@
@@ -884,7 +884,7 @@ index 43509ba..45623ca 100644
  }
  
  void save_clear(uint32_t start, uint32_t size, char value) {
-@@ -266,6 +304,16 @@ void ultramodern::join_saving_thread() {
+@@ -266,13 +304,52 @@ void ultramodern::join_saving_thread() {
      }
  }
  
@@ -898,10 +898,21 @@ index 43509ba..45623ca 100644
 +    e.dram = dram & 0x7FFFFFu; e.size = size; e.rom_off = rom_off; e.phase = rs64_phase_ord(); e.pc = g_rs64_last_guest_pc;
 +    rs64_s4211_pi_n++;
 +}
++extern "C" void rs64_s4230_poll_start(uint8_t*);
  void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_addr, uint32_t size, uint32_t direction) {
++    {   // ROGUESQ s4231: host-side DMA overlap watch of allocator list words 0x1499B0..0x1499E8 + positive control (any RDRAM<0x200000)
++        rs64_s4230_poll_start(rdram);
++        static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4222"); return e && e[0] && e[0] != '0'; }();
++        if (on) {
++            uint32_t lo = (uint32_t)rdram_address & 0x1FFFFFFFu, hi = lo + size;
++            bool hit = lo < 0x1499E8u && hi > 0x1499B0u;
++            static int ctl = 0;
++            if (hit || (lo < 0x200000u && ctl++ < 3)) fprintf(stderr, "[s4231-DMA] %s dir=%u ram=0x%08X len=0x%X rom=0x%08X\n", hit ? "HIT" : "ctl", direction, (uint32_t)rdram_address, size, physical_addr);
++        }
++    }
      // TODO asynchronous transfer
      // TODO implement unaligned DMA correctly
-@@ -273,6 +321,24 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+     if (direction == 0) {
          if (physical_addr >= recomp::rom_base) {
              // read cart rom
              recomp::do_rom_read(rdram, rdram_address, physical_addr, size);
@@ -926,7 +937,7 @@ index 43509ba..45623ca 100644
  
              // Send a message to the mq to indicate that the transfer completed
              ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
-@@ -313,12 +379,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,12 +390,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
