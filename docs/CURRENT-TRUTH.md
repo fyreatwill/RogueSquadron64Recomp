@@ -459,3 +459,6 @@ The s4231 crash PC 0x80001b08 was OUR rs64_log_ai_output probe (zero-extended TO
 
 ## s4233 addendum
 fillSampleStreamRange+8292 = unlink at 0x8008FD60 `lw $a0,0($v1)` with v1==0 (probe confirmed head=0, pool=0, tail=801F9E00, ra=0); +932 = list-walk `lw $v0,0xC($t0)` at 0x8008FADC with t0=0x10CF3001 (asm-map only). Host-offset mapping recipe: cmake --build build --target Users/<...>/funcs_N.s then scratch/agent/s4233/map.py (direct cc/otool/nm are denied). Next: who zeroes head+pool (0x8015-0x661C/-0x6634), and why ra==0 at the call.
+
+## s4234 addendum
+fillSampleStreamRange entry probe (4 runs, ~80k entries): ra==0 on every entry (host-called; NOT evidence of a zeroed context). Allocator-list stores occur only in init, before the first call. head==0 appears only with tail==0 (empty list/re-init with new pool). The s4233 state head==0/tail!=0 did NOT recur (1 sighting in ~10 runs): PARK as wait-for-recurrence; the probe stays in tools/apply_s4234_entryprobe.py. Next: resume the M5 de-stub sequence (docs/M5-AUDIO-PLAN.md), not another allocator chase.
