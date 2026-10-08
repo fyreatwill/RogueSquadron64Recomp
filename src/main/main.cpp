@@ -5898,9 +5898,28 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
     std::vector<int16_t> native_samples(num_samples);
     const uint8_t* n64_bytes = reinterpret_cast<const uint8_t*>(samples);
     for (size_t i = 0; i < num_samples; ++i) {
-        const uint16_t value = (static_cast<uint16_t>(n64_bytes[i * 2]) << 8) |
-                               static_cast<uint16_t>(n64_bytes[i * 2 + 1]);
+        // RDRAM is word-swapped on the host (byte at guest offset k lives at k^3);
+        // s4239 proved p[i^3] is the correct order (876/894 AI buffers FNV-match
+        // ucode output), so s4242 applies it here, the audible path.
+        const uint16_t value = (static_cast<uint16_t>(n64_bytes[(i * 2) ^ 3]) << 8) |
+                               static_cast<uint16_t>(n64_bytes[(i * 2 + 1) ^ 3]);
         native_samples[i] = static_cast<int16_t>(value);
+    }
+    if (const char* c = getenv("ROGUESQ_S4242_CTRL"); c && c[0] && c[0] != '0') {
+        static uint32_t cn = 0;
+        cn++;
+        {
+            double a = 0, b = 0;
+            for (size_t i = 0; i < num_samples; ++i) {
+                const int16_t w = static_cast<int16_t>((n64_bytes[i * 2] << 8) | n64_bytes[i * 2 + 1]);
+                a += (double)native_samples[i] * native_samples[i];
+                b += (double)w * w;
+            }
+            const double n = num_samples ? (double)num_samples : 1.0;
+            if (b > 0 && (cn % 16) == 0)
+            std::fprintf(stderr, "[s4242-ctrl] n=%u fixed_rms=%.0f old_rms=%.0f samples=%zu\n",
+                         cn, std::sqrt(a / n), std::sqrt(b / n), num_samples);
+        }
     }
 
     const uint32_t queued_before = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
