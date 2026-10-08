@@ -1508,6 +1508,17 @@ extern "C" void rs64_s4222_store_watch(char width, uint32_t pc, uint32_t addr, u
     if (!rs64_s4222_on()) return;
     static int rows = 0;
     static uint32_t last[64];  // s4230: drop value-unchanged rewrites (tail loop at 0x8008FBE8 was 5553/6000 rows)
+    { // s4239 ring: aggregate per store PC
+        static struct { uint32_t pc; unsigned long n; } pcs[64];
+        static int npc = 0;
+        int k = 0; while (k < npc && pcs[k].pc != pc) k++;
+        if (k == npc && npc < 64) { pcs[npc].pc = pc; pcs[npc].n = 0; npc++; }
+        if (k >= 64) return;
+        unsigned long c = ++pcs[k].n;
+        if (c == 1 || (c % 500) == 0)
+            std::fprintf(stderr, "[s4239-ringS] w=%u pc=%08X %c addr=%08X val=%08X cnt=%lu\n", rs64_vi_committed_width(), pc, width, addr, value, c);
+        return;
+    }
     uint32_t li = (addr >> 2) & 63u;
     if (last[li] == value + 1u) return;
     last[li] = value + 1u;
