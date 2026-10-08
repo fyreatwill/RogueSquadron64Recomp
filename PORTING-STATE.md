@@ -148132,3 +148132,17 @@ not interpretable and does not select a later divergence. The earlier attempts
 were also invalid: one omitted the probe input wrapper, one used dummy oracle
 video, and one used A14 yield-on. No guard or skip was added.
 ORIGIN: none; measurement/instrument only.
+
+### Session 4314 close-out addendum (checkpoint retry)
+Honest classification: the s4314 diff is cap-raising instrumentation only (port
+writer/read caps 4096 -> 16384, oracle sequence cap 16384). It qualified the
+PORT arm (hangar VI 512, origin 0x006AB400, both controls fired, 16,384 read
+rows, 13,830 writer rows all matching) but the RETAIL arm failed qualification:
+first detail tuple 0x8008FCE8,0x17DA40,0x17DA40 vs the s4313 boundary
+0x8008FCE8,0x17D9E0,0x8017D9F8 (address differs by +0x60; value is a bare
+index-like 0x17DA40, not a KSEG0 pointer). Selected/refuted: NOTHING about a
+port-vs-retail divergence. Still open: H-filter / H-route / H-port. The one
+thing ruled out is "the port cap was the limiter" (port is stable at 16,384).
+Next discriminator (unchanged, see NEXT.md): one oracle run emitting a
+phase-tagged table (PC, addr, value, VI origin) around the first hangar-phase
+hit of consumer PC 0x8008FCE8. OUTCOME downgraded to SUBSTITUTED.

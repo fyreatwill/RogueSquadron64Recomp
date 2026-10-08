@@ -36,3 +36,7 @@ Run from the repository root with Rice video, the whole-RDRAM positive control,
 target physical watch `0x17D000:0x17E200`, consumer PC watch `0x8008FCE8`, and
 the documented eleven `start` presses. Keep `RS64_DETAIL_HANGAR_READ=1` and
 phase-tag every emitted row. No port change or mitigation is authorised.
+
+RESUME (checkpoint close-out, s4314): port arm qualified at 16,384 rows; retail arm
+failed qualification (see PORTING-STATE s4314 addendum). Run the phase-tagged oracle
+table described above as ONE build/run; do not add more single-field counters.
