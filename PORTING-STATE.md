@@ -147939,3 +147939,13 @@ HYPOTHESIS-ID: m5-audio-destub-sequence
 Ran the planned retail lifetime probe with Rice, the real ROM, a whole-RDRAM write positive control, a read/write watch on physical 0x17D000:0x17E200, execution watches on `musyxSynthFrame` (0x8009123C) and `waitForAnyAudioSlot` (0x800668B0), and the documented input schedule. The positive control fired and was removed after 10,000 callbacks. Retail reached VI-512 hangar at 38.4 s and completed a clean 48 s run. The target block had 1,141,187 accesses: 1,072,566 reads and 68,621 writes. `musyxSynthFrame` executed 2,820 times and `waitForAnyAudioSlot` executed three times. The target writer histogram included the expected audio/object and cache/allocator guest PCs; exact value ordering was not captured by this arm.
 
 This rules out both “retail avoids the three frees” and “retail stops `musyxSynthFrame` globally.” Combined with s4301's port trace, it establishes shared free plus continued synth activity on both sides. It does not yet distinguish equivalent post-free layout from a retail-only layout or a port-only damaging write; the next probe must join the first post-free writer, values, and synth read. No guard or skip was added. ORIGIN: no mitigation.
+
+## Session 4304 (2026-10-08) — retail post-free writer phase remeasured; value/order discriminator still underpowered
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+Ran the planned retail oracle probe with Rice, the real ROM, the whole-RDRAM positive control, physical target watch 0x17D000:0x17E200, execution watches for `musyxSynthFrame` (0x8009123C) and `waitForAnyAudioSlot` (0x800668B0), the 0x006ab400/512 phase histogram, and the documented button schedule. The positive control fired 78,785 times and retail reached the hangar phase for 172 VI frames. The target range recorded 1,142,716 accesses: 1,073,931 reads and 68,785 writes. The phase writer histogram again included audio/object and cache/allocator PCs.
+
+The run was valid but did not capture post-store values or first post-free ordering, so it does not distinguish H-layout-equivalent, H-retail-layout-different, or H-port-only-damaging-write. It does independently repeat the retail-side lifetime and writer activity at the required phase. No guard or skip was added. ORIGIN: none; this was measurement only.
+
+Rules out: a route failure, absent oracle callbacks, and absence of post-free retail writes. Leaves open: which writer/value sequence follows the shared free and whether the port differs. Next run must add `--post-value-watch 1` before interpreting writer-PC parity.

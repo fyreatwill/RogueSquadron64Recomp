@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4303 (retail post-free block lifetime measured). Previously 4302 (retail also frees the three waitForAnyAudioSlot asset pointers). Previously: session 4290.
+Updated for session 4304 (retail post-free writer phase remeasured). Previously 4303 (retail post-free block lifetime measured). Previously 4302 (retail also frees the three waitForAnyAudioSlot asset pointers).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,9 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4299-s4303) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (stream nodes at 0x17DBE0 plus DMA sample buffers) is freed after `waitForAnyAudioSlot` and reused by level-texture/cache work while `musyxSynthFrame` keeps walking it. Name-copy and host-write refuted. The three frees are retail guest code on the natural exit path, and retail independently reaches hangar, enters the wait three times in 48 s, and accesses the block 1,141,187 times (1,072,566 reads, 68,621 writes) while `musyxSynthFrame` runs 2,820 times. This rules out both “retail skips the free” and “retail stops synth globally.” The writer histogram includes guest audio/object and cache/allocator PCs; exact post-free value/layout ordering remains open. Do not add a skip/guard until a legitimate retail/port lifetime difference is named. Single-source for exact retail counts; combined with the port-side s4301 trace this establishes shared free plus continued synth activity.
+00. (s4304) do_rom_read odd-address crash: the retail lifetime probe is valid but still does not identify the damaging reuse. Whole-RDRAM control fired 78,785 times; VI 0x006ab400/512 was present for 172 frames; target range 0x17D000:0x17E200 had 1,142,716 accesses (1,073,931 reads, 68,785 writes). The phase writer histogram contains the expected audio/object and cache/allocator PCs, but this arm did not capture post-store values or first post-free ordering. Therefore H-layout-equivalent, H-retail-layout-different, and H-port-only-damaging-write remain open. Next: one oracle arm with `--post-value-watch 1`, phase-gated to 0x006ab400/512, then compare the first post-free sequence to the existing port trace. No guard/skip is authorised.
+
+00a. (s4299-s4303) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (stream nodes at 0x17DBE0 plus DMA sample buffers) is freed after `waitForAnyAudioSlot` and reused by level-texture/cache work while `musyxSynthFrame` keeps walking it. Name-copy and host-write refuted. The three frees are retail guest code on the natural exit path, and retail independently reaches hangar, enters the wait three times in 48 s, and accesses the block 1,141,187 times (1,072,566 reads, 68,621 writes) while `musyxSynthFrame` runs 2,820 times. This rules out both “retail skips the free” and “retail stops synth globally.” The writer histogram includes guest audio/object and cache/allocator PCs; exact post-free value/layout ordering remains open. Do not add a skip/guard until a legitimate retail/port lifetime difference is named. Single-source for exact retail counts; combined with the port-side s4301 trace this establishes shared free plus continued synth activity.
 
 0c. (s4295) Odd control restored only on the s4290 route (PHASE_WIDTH=1024, phase-relative keys, S4268): RESTORE=0 odd=60 vs RESTORE=1 odd=0, with seeded saves, but that route never reaches 512. The s4294-style route (PHASE_WIDTH=512) reaches 512 but shows odd=0 in both arms, with or without SPIN_YIELD/Y8000. Next: isolate S4268 vs 1024-width phase gating (NEXT.md), find a route with odd>0 AND 512, then run the hangar RESTORE A/B. Hangar effect still UNMEASURED.
 
