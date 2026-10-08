@@ -4253,7 +4253,7 @@ index 149e770..371f02c 100644
      }
  }
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..6646ebc 100644
+index 9944a02..bc27380 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
 @@ -1,18 +1,259 @@
@@ -4516,13 +4516,13 @@ index 9944a02..6646ebc 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -27,47 +268,125 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -27,47 +268,127 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
      requeue_enabled.set(static_cast<int>(EventMessageSource::Dp), mqc.requeue_dp);
  }
  
 +// s4260: per-mq last host-enqueue / last do_send wall times (ROGUESQ_S4259=1 watcher dumps ages).
 +namespace s4260 {
-+struct Ent { std::atomic<uint32_t> mq{0}; std::atomic<int> src{-1}; std::atomic<int64_t> enq_ns{0}, send_ns{0}; std::atomic<uint64_t> enq_n{0}, send_n{0}; };
++struct Ent { std::atomic<uint32_t> mq{0}; std::atomic<int> src{-1}; std::atomic<int64_t> enq_ns{0}, send_ns{0}; std::atomic<uint64_t> enq_n{0}, send_n{0}, ok_n{0}, fail_n{0}; std::atomic<int> last_tid{-1}; };
 +Ent tab[48];
 +int64_t now_ns() { return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 +Ent* find(uint32_t mq) {
@@ -4534,6 +4534,8 @@ index 9944a02..6646ebc 100644
 +    return nullptr;
 +}
 +void on_enq(uint32_t mq, int src) { if (Ent* e = find(mq)) { e->src = src; e->enq_ns = now_ns(); e->enq_n++; } }
++void on_result(uint32_t mq, int tid, bool ok) { if (Ent* e = find(mq)) { e->last_tid = tid; if (ok) e->ok_n++; else e->fail_n++; } }
++std::atomic<uint64_t> timer_n{0}; std::atomic<uint32_t> timer_last_mq{0};
 +void on_send(uint32_t mq) { if (Ent* e = find(mq)) { e->send_ns = now_ns(); e->send_n++; } }
 +}
 +
@@ -4647,7 +4649,7 @@ index 9944a02..6646ebc 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      mq->blocked_on_recv = NULLPTR;
      mq->blocked_on_send = NULLPTR;
-@@ -75,6 +394,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
+@@ -75,6 +396,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
      mq->msg = msg;
      mq->validCount = 0;
      mq->first = 0;
@@ -4674,7 +4676,7 @@ index 9944a02..6646ebc 100644
  }
  
  s32 MQ_GET_COUNT(OSMesgQueue *mq) {
-@@ -90,6 +429,10 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +431,10 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -4685,7 +4687,7 @@ index 9944a02..6646ebc 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +449,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +451,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -4700,7 +4702,7 @@ index 9944a02..6646ebc 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +480,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +482,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -4711,7 +4713,7 @@ index 9944a02..6646ebc 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +500,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +502,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -4726,7 +4728,7 @@ index 9944a02..6646ebc 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -160,8 +521,75 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -160,8 +523,76 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      return true;
  }
  
@@ -4782,9 +4784,10 @@ index 9944a02..6646ebc 100644
 +                  for (int i = 0; i < 48; i++) {
 +                    const uint32_t m = s4260::tab[i].mq.load(); if (!m) continue;
 +                    const int64_t en = s4260::tab[i].enq_ns.load(), sd = s4260::tab[i].send_ns.load();
-+                    std::fprintf(stderr, "[s4260]   mq=0x%08X src=%d enq_age_ms=%.1f enq_n=%llu send_age_ms=%.1f send_n=%llu\n", m, s4260::tab[i].src.load(),
++                    std::fprintf(stderr, "[s4260]   mq=0x%08X src=%d enq_age_ms=%.1f enq_n=%llu send_age_ms=%.1f send_n=%llu ok=%llu fail=%llu last_tid=%d\n", m, s4260::tab[i].src.load(),
 +                        en ? (n - en) / 1e6 : -1.0, (unsigned long long)s4260::tab[i].enq_n.load(),
-+                        sd ? (n - sd) / 1e6 : -1.0, (unsigned long long)s4260::tab[i].send_n.load()); } }
++                        sd ? (n - sd) / 1e6 : -1.0, (unsigned long long)s4260::tab[i].send_n.load(), (unsigned long long)s4260::tab[i].ok_n.load(), (unsigned long long)s4260::tab[i].fail_n.load(), s4260::tab[i].last_tid.load()); }
++                  std::fprintf(stderr, "[s4261] osSetTimer n=%llu last_mq=0x%08X\n", (unsigned long long)s4260::timer_n.load(), s4260::timer_last_mq.load()); }
 +                std::fflush(stderr);
 +            } else if (gap < gap_thr) {
 +                for (int i = 0; i < 64; i++) { snap_recv[i] = g_s4259[i].recvs.load(); snap_send[i] = g_s4259[i].sends.load(); }
@@ -4803,7 +4806,7 @@ index 9944a02..6646ebc 100644
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -173,6 +601,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,8 +604,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
      // Handle any messages that have been received from an external thread.
      dequeue_external_messages(PASS_RDRAM1);
  
@@ -4814,8 +4817,11 @@ index 9944a02..6646ebc 100644
 +    }
      // Try to send the message.
      bool sent = do_send(PASS_RDRAM mq_, msg, jam, flags == OS_MESG_BLOCK);
++    if (s4259_on()) s4260::on_result(static_cast<uint32_t>(mq_), rogue_current_thread_id(PASS_RDRAM1) & 63, sent);
      
-@@ -183,7 +616,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+     // Check the queue to see if this thread should swap execution to another.
+     ultramodern::check_running_queue(PASS_RDRAM1);
+@@ -183,7 +620,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -4828,7 +4834,7 @@ index 9944a02..6646ebc 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +642,65 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +646,67 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
@@ -4896,6 +4902,8 @@ index 9944a02..6646ebc 100644
 +    }
 +    return result;
  }
++
++void s4261_note_timer(uint32_t mq) { s4260::timer_n++; s4260::timer_last_mq = mq; }
 diff --git a/ultramodern/src/scheduling.cpp b/ultramodern/src/scheduling.cpp
 index a22f747..d0510cb 100644
 --- a/ultramodern/src/scheduling.cpp
@@ -5310,3 +5318,17 @@ index 812c556..2080964 100644
      deleted_threads.enqueue(cur_context);
  }
  
+diff --git a/ultramodern/src/timer.cpp b/ultramodern/src/timer.cpp
+index ee26c45..a3ccdc1 100644
+--- a/ultramodern/src/timer.cpp
++++ b/ultramodern/src/timer.cpp
+@@ -178,7 +178,9 @@ extern "C" void osSetTime(OSTime t) {
+     ostime_offset = time_now() - t;
+ }
+ 
++void s4261_note_timer(uint32_t mq);
+ extern "C" int osSetTimer(RDRAM_ARG PTR(OSTimer) t_, OSTime countdown, OSTime interval, PTR(OSMesgQueue) mq, OSMesg msg) {
++    s4261_note_timer(static_cast<uint32_t>(mq));
+     OSTimer* t = TO_PTR(OSTimer, t_);
+ 
+     // Determine the time when this timer will trigger off
