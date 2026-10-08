@@ -553,3 +553,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261006-221348 | s4104_m5_status03_service_reaping | rc=1 | 1s | scratch/agent/soak_results/s4104_m5_status03_service_reaping_20261006-221348.log
 20261006-221410 | s4104_m5_status03_service_reaping_fixed | rc=1 | 2s | control=1 retail_title=0 retail_hangar=0 port_title=0 port_hangar=0; verdict=Hroute-invalid; port crash spTaskSchedulerThread+9632; scratch/agent/soak_results/s4104_m5_status03_service_reaping/port.log
 20261008-020101 | s4255_ab_wave | rc=1 | 85s | scratch/agent/soak_results/s4255_ab_wave_20261008-020101.log
+20261008-122208 | s4296_a14_yield_title_hangar | rc=3 | 84s | scratch/agent/soak_results/s4296_a14_yield_title_hangar_20261008-122208.log

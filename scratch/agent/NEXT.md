@@ -1,7 +1,5 @@
-# Next work unit (s4297): consume the s4296 A14-yield soak, then resume the odd-control/512 route isolation
+# Next work unit (s4298): name the writer of the odd ROM address in do_rom_read at guest 0x80001b08 (now reached deterministically after hangar->640 with A14 yield on)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-1. Read SOAK-RESULTS.md tail for s4296_a14_yield_title_hangar: expect 0 [a14-yield] rows, title 1024 ~14 s, hangar 512 ~26 s. Any [a14-yield] row = loop entered (new fact: record b0, a0/a1); a route regression = roll back with ROGUESQ_A14_YIELD=0 A/B.
-2. Then the s4296-prior unit: isolate S4268 vs PHASE_WIDTH=1024 key gating (three concurrent RESTORE=0 arms: a+S4268; b without S4268; b with extended keys + PHASE_WIDTH=512) to find a route with odd>0 AND 512, then the hangar RESTORE A/B.
-Next de-stub candidate if 1 is clean: the unbounded 0x8014974C spin (A12 note) with the same yield shape.
+Recipe: scratch/agent/s4297_a14on.sh (crashes ~21s after 512, 2/2 runs). Hypotheses: H-dma-args (caller passes odd PI address because a struct/offset field is stale/zero from a skipped init), H-audio-dma (MusyX sample DMA with odd offset - audio-related, fits M5), H-real (retail also does odd DMA, port's PI layer must support it). Discriminator: log a0..a3/ra and the caller chain at the assertion (or ROGUESQ-gated print before do_rom_read) plus retail oracle check of the same DMA. Also still open: what exits the A14 loop (b0 stays 0x03).

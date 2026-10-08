@@ -30,8 +30,7 @@ Residual: ~3x RMS vs retail at title (unaligned phases, single-run); the
 
 **M5 de-stubs landed.** A11 waitForAnyAudioSlot yield (default 2000), A12 countdown
 yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset=2; s4192), A15 spin-yield default
-on, A13 drain-tick gate (dormant on title+hangar), A14 status-03 wait (never
-entered; s4296 added a host yield, `ROGUESQ_A14_YIELD=0` rolls back, soak queued), A9/A10 voice-base/song-tick guards (0 fires). Declared-size staging
+on, A13 drain-tick gate (dormant on title+hangar), A14 status-03 wait (s4296 host yield, `ROGUESQ_A14_YIELD=0` rolls back; s4297: loop IS entered in the hangar, b0 stuck 0x03, exits after ~160-180k iterations only with the yield; yield-on reaches VI 640 and then the known do_rom_read crash at 0x80001b08, yield-off stays in hangar, no crash - 2 on / 1 off runs), A9/A10 voice-base/song-tick guards (0 fires). Declared-size staging
 (0x800) qualified equal to legacy 0xF80; task-contract guard rejects
 ucode_data_size 0 or >0xFC0. `ROGUESQ_AUDIO_PRIVATE_DMEM` defaults ON (s4256;
 =0 restores `g_lle_task_mutex` serialisation): audio 25-36 tasks/s at t=18-30
