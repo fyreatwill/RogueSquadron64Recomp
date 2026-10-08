@@ -5928,6 +5928,11 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                              cn, (unsigned long long)h, rdram_addr, prev_addr, std::sqrt(a / n));
             if (b > 0 && cn >= 1500 && cn < 1660 && (cn % 4) == 0)
                 std::fprintf(stderr, "[s4243-seq] n=%u fnv=%016llx addr=0x%08X\n", cn, (unsigned long long)h, rdram_addr);
+            if (cn >= 1000 && cn < 1720) { // s4244: same FNV32 as rsp.cpp s4239-out (guest byte order) for write/read join
+                uint32_t f32 = 2166136261u;
+                for (size_t i = 0; i < num_samples * 2; ++i) f32 = (f32 * 16777619u) ^ n64_bytes[i ^ 3];
+                std::fprintf(stderr, "[s4244-q] n=%u addr=0x%06X fnv=0x%08X\n", cn, rdram_addr & 0x7FFFFFu, f32);
+            }
             prev_h = h; prev_addr = rdram_addr;
             static FILE* pcm = getenv("ROGUESQ_S4243_PCM") ? fopen(getenv("ROGUESQ_S4243_PCM"), "wb") : nullptr;
             static size_t pcm_bytes = 0;
