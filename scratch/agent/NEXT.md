@@ -1,11 +1,11 @@
-# Next work unit: M5 Step 9r — find the first zero-producing ucode command for one voice in the port
+# Next work unit: M5 Step 9s — who writes the voice-record gain words (+0x00..+0x0C), and why zero in the port
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4219: retail output buffers ~98% nonzero at title-1024 n>=256; port all-zero; records equal (s4218). Divergence = port RSP/ucode execution.
+s4220: port voice records have zero gain words in phases 4/5 (0/181) vs retail 14/16 nonzero; ucode exonerated.
 
 Hypotheses:
-- H-cmd-decode: one command (ADPCM decode / resample / mix) in the port's ucode emulation yields zeros from nonzero input (LLE bug in a vector op).
-- H-param-zero: a command parameter read from the command struct (volume/pitch/loop addr) is zero in port DMEM due to a DMA/byte-order issue.
-- H-late-dma: output DMA out happens before mix completes (ordering).
-Discriminator: in one port run (gate ROGUESQ_LOG_S4213), after each ucode command in one phase-5 task dump DMEM nonzero-byte counts of the input, working and output regions (positive control: input region nonzero); the first command where nonzero->zero selects among hypotheses. Read docs/F5-UCODE-REFERENCE.md first.
+- H-writer-never-runs: the guest MusyX routine that computes per-bus gain (volume*pan*master) is not reached for active voices in the port (stubbed/gated audio path, e.g. synth tick or volume-update function).
+- H-writer-runs-zero-input: it runs but its input (voice volume / master volume / fade state) is 0 in the port (an upstream init that retail does, e.g. sfx volume set at boot, is skipped).
+- H-overwritten: gains are written nonzero then cleared before the task (reaping/zeroing of the record).
+Discriminator (one build, one run): port guest store-watch with PC on voice records' +0x00..+0x0C for voice 0..3 of the block at data_ptr (phase 5), logging store PC + value + a running count of nonzero vs zero stores; positive control: the same watch in phase 3 (4/5 rows nonzero) must fire with nonzero values. Writer PC never fires (only the clear/init) => H-writer-never-runs; fires with value 0 => runs-zero-input (then trace the operand); nonzero store followed by zero store => overwritten. Also arm oracle write-watch on the same retail field (tools/oracle/README.md, physical addresses, whole-RDRAM control first) for the retail writer PC. Reuse apply_s4218_active_voices.py to locate the block.

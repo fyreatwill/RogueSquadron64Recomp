@@ -3436,3 +3436,10 @@ if _p4210 is not None and _p4210.exists():
         _s = _s.replace(_old, _old + "    rs64_s4210_cmd_rec(r4);  /* fixup: s4210 cmd ring */\n")
         _s = _s.replace('extern "C" void rs64_audio_image_break(uint32_t pc);', 'extern "C" void rs64_s4210_cmd_rec(uint32_t src);\nextern "C" void rs64_audio_image_break(uint32_t pc);', 1)
         _p4210.write_text(_s)
+
+# --- s4220 DMEM snapshot instrument (idempotent; tools/apply_s4220_snap.py) ---
+if _p4210 is not None and _p4210.exists():
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location("apply_s4220_snap", str(Path(__file__).resolve().parent / "apply_s4220_snap.py"))
+    _m = _ilu.module_from_spec(_spec); _spec.loader.exec_module(_m)
+    _m.patch_rsp(); _m.patch_c(_p4210)

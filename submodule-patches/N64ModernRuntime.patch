@@ -994,7 +994,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..87a054f 100644
+index 1cb3f6a..e9c3065 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -1008,7 +1008,7 @@ index 1cb3f6a..87a054f 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1880 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1892 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -2328,6 +2328,18 @@ index 1cb3f6a..87a054f 100644
 +        std::fprintf(stderr, "[s4211-sum] phase=%u phase_tasks=%lu phase_changes=%lu slot_dp=0x%06X slot_tasks=%llu slot_changes=%llu\n", phase, ph_tasks, ph_changes, dp, (unsigned long long)s->tasks, (unsigned long long)s->changes);
 +        std::fflush(stderr);
 +    }
++}
++extern "C" void rs64_s4220_snap(uint32_t pc) {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4220"); return e && e[0] && e[0] != '0'; }();
++    if (!on || !rs64_s4208_active) return;
++    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned long fetches; static bool logging;
++    uint32_t phase = rs64_phase_ord();
++    if (phase != ph_key) { ph_key = phase; fetches = 0; logging = false; }
++    if (pc == 0x1104) { fetches++; logging = (fetches <= 3) || (fetches >= 300 && fetches < 304); }
++    if (!logging) return;
++    std::fprintf(stderr, "[s4220] phase=%u f=%lu pc=%04X nz:", phase, fetches, pc);
++    for (uint32_t c = 0; c < 16; c++) { uint32_t z = 0; for (uint32_t i = 0; i < 256; i++) z += RSP_MEM_BU(0, c * 256 + i) != 0; std::fprintf(stderr, " %u", z); }
++    std::fputc('\n', stderr);
 +}
 +extern "C" void rs64_probe_audio_dma_write(uint8_t* rdram,
 +                                              uint32_t dram_addr, uint32_t len,

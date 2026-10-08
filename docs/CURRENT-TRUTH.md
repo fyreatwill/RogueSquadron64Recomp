@@ -149,7 +149,8 @@ retail result is ground truth only; no port, audio, gate, writer, payload, or
 mitigation behavior changed.
 
 ## Next steps
-0. (s4219) Retail output buffers are ~98% nonzero at title-1024 n>=256 while the port's are all-zero, and the voice records are equal (s4218): the defect is the port's RSP/ucode consumption. Find the first zero-producing ucode command for one voice (scratch/agent/NEXT.md). Single-source (oracle).
+0. (s4220) SELECTED H-param-zero: port voice records have zero per-bus gain words (+0x00..+0x0C) in phases 4/5 (0/181 rows nonzero) vs retail 14/16 nonzero; ucode mix buses 0x3F0/0x570 never written (s4220 DMEM snaps, three views agree). The ucode is exonerated. Next: find the guest writer of record +0x00..+0x0C (port store-watch with PC + oracle write-watch), then why it writes 0 (scratch/agent/NEXT.md). Retail side single-source (voice 0).
+1. (s4219, now superseded as lead by item 0) Retail output buffers are ~98% nonzero at title-1024 n>=256 while the port's are all-zero, and the voice records are equal (s4218): the defect is the port's RSP/ucode consumption. Find the first zero-producing ucode command for one voice (scratch/agent/NEXT.md). Single-source (oracle).
 
 Session 4218: port voice records (active=15, state 0x80178C80, block 0x171CE0, output ring) MATCH retail at end-state -> H-records-equal; producer side exonerated, divergence is in ucode consumption of identical input. Next: retail post-task contents of the +0x7C output buffers (nonzero?) vs port zeros (s4208) to pin it to RSP execution; if retail is nonzero, diff DMEM/command execution on one voice.
 
