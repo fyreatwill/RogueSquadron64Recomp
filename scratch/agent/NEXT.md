@@ -1,8 +1,8 @@
-# Next work unit: why is RT64 send_dl slow (0.2–0.9 s/task) in t≈17–31 s (s4266)
+# Next work unit: phase-split RT64 send_dl (s4267)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4265: gap seconds = send_dl on Gfx thread slow (both arms), audio SP tasks 0.2 ms. See PORTING-STATE s4265.
-Hypotheses: (G1) first-use Metal pipeline/shader compilation in a new scene; (G2) two concurrent game instances contend for the GPU (the gate runs 2 arms); (G3) texture/upload burst; (G4) present/vsync wait.
-Discriminator: run ONE arm alone (copy s4265_gate.sh with a single arm) — G2 predicts the stall vanishes/shrinks; if it persists, time send_dl phases inside RT64 (pipeline creation vs upload vs present) in one build; G1 predicts slowness decays after first appearance of each scene and shows in pipeline-create timing.
-Also decide: if the stall is purely host-renderer, the "audio gap" is not an M5 defect — re-rank M5 de-stub steps accordingly.
+s4266: single-arm run reproduces the send_dl stall (t=20–26 s, 0.15–0.9 s/task), so 2-instance GPU contention (G2) is refuted. Remaining: (G1) first-use Metal pipeline/shader compile; (G3) texture upload burst; (G4) present/vsync wait; (G5) CPU-side DL processing growth in RT64.
+Discriminator: ONE build with per-second aggregate timers inside RT64 send_dl (lib/rt64): pipeline/shader create, texture upload, draw submit, present wait, plus counts of pipelines created. Run single arm via scratch/agent/s4266_single.sh. G1 predicts time concentrated in pipeline create at t=17–26 with a pipeline-count burst; G3 upload; G4 present; G5 none of those but total dominated by DL parse. Positive control: healthy seconds t=9–14 must show nonzero in the phases that run each frame (submit/present).
+After editing lib/: ./submodule-patches/export.sh and commit.
+Also decide: if purely host-renderer, re-rank M5 de-stub steps (audio gap is not an M5 defect).
