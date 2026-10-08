@@ -64,7 +64,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-0c. (s4294) Seeded hangar A/B (scratch/agent/s4294_hangar_ab.sh): both arms reach 512@47.4s, no crash, but the RESTORE=0 control shows oddCommits=0 (even at 640), so the A/B is non-discriminating; restore effect in the hangar UNMEASURED. Next: find the env/route that gives odd>0 with seeded saves (NEXT.md), then redo.
+0c. (s4295) Odd control restored only on the s4290 route (PHASE_WIDTH=1024, phase-relative keys, S4268): RESTORE=0 odd=60 vs RESTORE=1 odd=0, with seeded saves, but that route never reaches 512. The s4294-style route (PHASE_WIDTH=512) reaches 512 but shows odd=0 in both arms, with or without SPIN_YIELD/Y8000. Next: isolate S4268 vs 1024-width phase gating (NEXT.md), find a route with odd>0 AND 512, then run the hangar RESTORE A/B. Hangar effect still UNMEASURED.
 
 0b. (s4293) Title slowdown s4289-s4292 was the EMPTY per-arm saves dir (build_arm_* skip saves): seeded save 1024@13.9s #765 (= s1949 #786) and hangar 512@47.4s; empty 1024@46.8s #2751. NOT a code regression. Every probe arm must copy build/saves in (scratch/agent/s4293_save_ab.sh). Next: hangar A/B WRAP_RESTORE 1 vs 0, seeded saves, phase-gated on VI 512.
 
@@ -115,6 +115,7 @@ same-build declared/real, declared/silent and legacy/real arms. A route failure
 invalidates a null; it never proves absence.
 
 ## Superseded conclusions
+- (s4294 hypothesis) "SPIN_YIELD/Y8000 or seeded saves suppress the ODD condition" - superseded by s4295: a0 (neither env) still odd=0; b0 (seeded saves) odd=60. It was believable because s4294 was the first run changing those variables together with the key route.
 
 - s4280 hypothesis A "RDRAM changes between bump time and RT64's walk read" (believable: the walk saw E9 at 4E2910 while RDRAM showed FF2E0C68): s4281 snapshotted the list at walk entry and diffed it against live RDRAM at the event, 0 differing words over 9 runs (single-source, no DIFF positive control). The list is rewritten between walks, not within one.
 
