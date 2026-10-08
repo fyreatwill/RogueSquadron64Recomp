@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4306 (port/retail post-free layout join). Previously 4305 (retail post-free sequence captured). Previously 4304 (retail post-free writer phase remeasured).
+Updated for session 4307 (port synth-read join). Previously 4306 (port/retail post-free layout join). Previously 4305 (retail post-free sequence captured).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4306) do_rom_read odd-address crash: the valid seeded port route reached VI 512, fired both controls, and captured 256 ordered post-store rows with 0/256 requested-vs-post mismatches. Against the independent s4305 oracle table, the port uses a different reused-block layout/order (including shifted metadata/link addresses and a different writer mix); no port-only damaging value was observed. H-retail-layout-different is selected, but the exact lifetime/consumer fault remains open. The route-invalid and partial-instrument runs are excluded. Next: add a phase-gated port synth-read table for the same 0x17D000..0x17E200 block, with the first read address/value joined to the preceding writer ordinal; compare against the retail read watch before any mitigation. No guard/skip is authorised.
+00. (s4307) do_rom_read odd-address crash: a valid seeded port VI-512 run passed the phase-gated read positive control, captured 256 target reads and 256 writer rows, and had no crash. The first port reads already differ from the independent retail post-free sequence: port begins with a read of 0x17D9E0=0x8017D9F8 before any selected writer, then reads shifted node fields through PCs 0x8008FCE8..0x8008FF1C; retail's first post-free rows begin with writers at 0x17D9FC/0x17D9E8/0x17D9EC and its subsequent reads are not this tuple/order. This independently confirms H-retail-layout-different at the consumer boundary; H-port-only-damaging-write remains unsupported because the paired port writer rows had 0 mismatches. The 1024 route-invalid runs and the earlier narrow-hook run are excluded. Exact lifetime/consumer fault remains open. No guard/skip is authorised.
 
 00a. (s4299-s4303) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (stream nodes at 0x17DBE0 plus DMA sample buffers) is freed after `waitForAnyAudioSlot` and reused by level-texture/cache work while `musyxSynthFrame` keeps walking it. Name-copy and host-write refuted. The three frees are retail guest code on the natural exit path, and retail independently reaches hangar, enters the wait three times in 48 s, and accesses the block 1,141,187 times (1,072,566 reads, 68,621 writes) while `musyxSynthFrame` runs 2,820 times. This rules out both “retail skips the free” and “retail stops synth globally.” The writer histogram includes guest audio/object and cache/allocator PCs; exact post-free value/layout ordering remains open. Do not add a skip/guard until a legitimate retail/port lifetime difference is named. Single-source for exact retail counts; combined with the port-side s4301 trace this establishes shared free plus continued synth activity.
 
@@ -110,6 +110,7 @@ Work only the first applicable item. One monotonic sequence.
 | M3 sentinel ownership | H1 at source scope; runtime unqualified (no MIPS toolchain). |
 | waitForAnyAudioSlot B39 skip flag | Retail does not avoid the frees: the aligned physical watch shows the B39-byte read at 0x00130B38, followed by all three asset-pointer reads at the free sites (s4302). |
 | Retail/port post-free stream-node layout | s4306 matched an independent retail ordered table against a valid port VI-512 run: 256 port rows, 0 requested-vs-post mismatches, but different address/value/order tuples and writer mix. This selects H-retail-layout-different; exact synth consumer read/lifetime failure remains open. |
+| Port synth-read join | s4307: expanded hook over the MusyX call chain passed a phase-gated positive control and captured 256 reads. Port's first read/order differs from the independent retail post-free sequence, selecting H-retail-layout-different at the consumer boundary; no mitigation is authorised. |
 
 ## Durable evidence boundary
 

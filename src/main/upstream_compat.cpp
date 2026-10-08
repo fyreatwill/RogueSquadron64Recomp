@@ -1600,6 +1600,11 @@ struct S4299Ent { uint32_t pc, addr; uint32_t seq; char w; const char* fn; };
 static S4299Ent g_s4299_ring[1 << 20];
 static unsigned long g_s4299_total = 0;
 static unsigned long g_s4299_swlr_total = 0;
+struct S4307Writer { uint32_t ordinal, pc, addr, requested, post; };
+static S4307Writer g_s4307_last_writer{};
+extern "C" void rs64_s4307_note_writer(uint32_t ordinal, uint32_t pc,
+                                         uint32_t addr, uint32_t requested,
+                                         uint32_t post);
 extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
@@ -1641,11 +1646,43 @@ extern "C" void rs64_s4306_postfree_store(uint8_t* rdram, uint32_t pc,
         std::fflush(stderr);
     }
     const uint32_t n = ordinal.fetch_add(1, std::memory_order_relaxed);
+    rs64_s4307_note_writer(n, pc, phys, requested, post);
     if (n >= 256u) return;
     std::fprintf(stderr,
         "[s4306-row] ordinal=%u phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%06X requested=0x%08X post=0x%08X mismatch=%u\n",
         n, rs64_phase_ord(), width, origin, pc, phys, requested, post,
         requested != post ? 1u : 0u);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_s4307_note_writer(uint32_t ordinal, uint32_t pc,
+                                         uint32_t addr, uint32_t requested,
+                                         uint32_t post) {
+    g_s4307_last_writer = { ordinal, pc, addr, requested, post };
+}
+extern "C" void rs64_s4307_synth_read(uint8_t* rdram, uint32_t pc,
+                                        uint32_t addr, uint32_t value) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4307"); return e && e[0] && e[0] != '0'; }();
+    if (!on || !rdram) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 512u || origin != 0x006AB400u) return;
+    const uint32_t phys = addr & 0x1FFFFFFFu;
+    static std::atomic<bool> any_control{false};
+    if (!any_control.exchange(true)) {
+        std::fprintf(stderr, "[s4307-control] phase-gated-read-positive-control=1 phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%06X\n",
+                     rs64_phase_ord(), width, origin, pc, phys);
+        std::fflush(stderr);
+    }
+    if (phys < 0x17D000u || phys >= 0x17E200u) return;
+    static std::atomic<uint32_t> rows{0};
+    const uint32_t n = rows.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 256u) return;
+    const S4307Writer w = g_s4307_last_writer;
+    std::fprintf(stderr,
+        "[s4307-row] ordinal=%u phase=%u width=%u origin=0x%06X read_pc=0x%08X addr=0x%06X value=0x%08X preceding_writer_ordinal=%u writer_pc=0x%08X writer_addr=0x%06X requested=0x%08X post=0x%08X\n",
+        n, rs64_phase_ord(), width, origin, pc, phys, value, w.ordinal, w.pc,
+        w.addr, w.requested, w.post);
     std::fflush(stderr);
 }
 extern "C" void rs64_s4299_swlr(char w, const char* fn, uint32_t line, uint32_t addr) {

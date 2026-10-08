@@ -147980,3 +147980,28 @@ the post-store word. The do_rom_read odd-address crash remains unexplained at
 the synth-read/lifetime boundary. No guard or skip was added. The next
 discriminator is a port-side first synth-read joined to the preceding writer
 ordinal, compared with the retail read watch.
+
+## Session 4307 (2026-10-08) — port synth-read join selects a different consumer layout
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+The first 1024/key recipe was route-invalid: both attempts died in the known
+VI-640 `fillSampleStreamRange+12020` crash before VI 1024. A first 512 route
+with the narrow `musyxSynthFrame` hook reached VI 512 and captured writer rows,
+but its adjacent read control did not fire, so that arm was instrument-invalid.
+
+The corrected one-build instrument covered `musyxSynthFrame`,
+`musyxMixActiveVoices`, `musyxRenderVoiceSamples`, and `fillSampleStreamRange`.
+The final seeded VI-512 route passed the phase-gated positive control, captured
+256 target reads joined to the preceding selected writer, captured 256 writer
+rows with 0 requested-vs-post mismatches, and had no crash. The port's first
+target read was `read_pc=0x8008FCE8 addr=0x17D9E0 value=0x8017D9F8` before any
+selected writer; subsequent reads used shifted node fields through
+0x8008FF1C. The independent retail s4305 sequence instead began with post-free
+writers at 0x17D9FC/0x17D9E8/0x17D9EC and a different address/value order.
+
+This independently selects H-retail-layout-different at the consumer boundary,
+not H-shared-read-layout. H-port-only-consumer is not selected: the paired
+port writer rows remain internally consistent, with zero mismatches, and no
+port-only damaging scalar value was observed. The exact lifetime/consumer
+fault remains open. No guard or skip was added. ORIGIN: none; measurement only.
