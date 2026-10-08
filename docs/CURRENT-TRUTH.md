@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4286 (2026-10-08).
+Updated for session 4287 (2026-10-08).
 
 ## Current state (as of s4268)
 
@@ -48,6 +48,8 @@ framebuffers are GARBAGE colour-image sets (s4270: from t=14.09 s hangar entry,
 widths 1-1217, unaligned addresses like 0x001CFFFF; sane before). Writer UNNAMED. Guest-side chain behind it: tid
 3 waits on 0x8011A818 sent only by tid 0 (s4261); completions fan out from
 `spTaskSchedulerThread`/`dpInterruptHandlerThread` (s4263).
+
+**Wrap-flush restore (s4284-s4287).** ODD (garbage) colour-image sets at VI 640 come from RDP ring lap-2 stores overwriting lap-1 content before the wrap flush submits it (s4284/s4285). Feeding RT64 the bump-time shadow bytes (`ROGUESQ_WRAP_RESTORE`, now default ON, cap 0x2000; needs `ROGUESQ_DPC_WRAP_FLUSH=1` + S4271/S4272 shadow) takes ODD cimgs 60 -> 0, reproduced 3/3 runs (s4286, s4287 x2) and with pure defaults. Unmeasured: effect on the hangar fb-set growth / 0x130393 wipe (80 s route stops at title).
 
 **Crash families (M3, parked).** The VI-640-intro crash (fillSampleStreamRange
 +8136/+8292/+932 NULL or wild ptr; RT64 copyToRAM) is independent of private DMEM
