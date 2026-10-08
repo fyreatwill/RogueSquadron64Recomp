@@ -1,7 +1,8 @@
-# Next work unit: confirm default private-DMEM removes the audio stall, then M5 Step 9/10 (s4257)
+# Next work unit: name the residual audio stall at t≈22-30 with private DMEM on (s4258)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4256 made private audio DMEM the default (rollback ROGUESQ_AUDIO_PRIVATE_DMEM=0). Not yet measured in the default arm: audio tasks/s at t=18-28 s (s4250 saw 48-52 private vs 7-19 shared).
-Use scratch/agent/soak_results/s4256_default/arm*.log (ROGUESQ_S4245=1 armed): count audio task_enter per 3 s window; expect >=45/s through t=28.
-Positive control: one arm with ROGUESQ_AUDIO_PRIVATE_DMEM=0 should show the 7-19 dip. If the dip persists in the default arm, the flag is not taking effect (check the rebuilt binary). If it is gone, proceed to Step 10 (AI/SDL PCM join) or Step 9 per docs/M5-AUDIO-PLAN.md.
+s4257 showed private DMEM raises t=18-30 audio from ~8/s to 25-36/s, but dips of 0-17/s remain at t≈22-30 (default arms).
+Hypotheses: (H1) another lock on the gfx/audio path (e.g. g_lle_task_mutex still taken elsewhere); (H2) RT64 copyToRAM / gfx task blocking the scheduler thread; (H3) game-side wait (waitForAnyAudioSlot-style), not host.
+Discriminator: one build logging per-task wait breakdown (existing s4248 lock_wait_us plus scheduler queue wait) in the 22-30 s window, 3 default arms vs 3 with gfx tasks skipped. Audio dip vanishes without gfx -> H2; lock_wait_us nonzero -> H1; neither -> H3.
+Reuse scratch/agent/s4257_ctrl.sh as the runner.
