@@ -148112,3 +148112,23 @@ the qualified port table at `scratch/agent/s4312_port_free_read_join/run2/run.lo
 The first later-divergence hypothesis therefore remains open only after row
 4,096; the prior 256-row boundary is superseded. No guard or skip was added.
 ORIGIN: none; measurement/instrument only.
+
+## Session 4314 (2026-10-08) — extended port capture; retail detail stream not requalified
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+Raised the port writer/read caps and oracle sequence cap to 16,384 and built
+both arms. The qualified port probe used the seeded save, `A14_YIELD=0`,
+LLE/solo/spin-yield settings, and phase-gated input. It reached hangar VI 512
+at origin `0x006AB400`; both same-run controls fired; it emitted 16,384 read
+rows and 13,830 writer rows, all observed writer requested/post values matched.
+
+The retail oracle used Rice video, passed the whole-RDRAM positive control at
+10,000 writes, reached its hangar route, and recorded 5,463,109 target reads.
+The added phase-gated detail instrument emitted 16,384 rows, but the first
+consumer-era tuple was `0x8008FCE8,0x17DA40,0x17DA40`, not the already-qualified
+boundary `0x8008FCE8,0x17D9E0,0x8017D9F8`. Therefore the paired comparison was
+not interpretable and does not select a later divergence. The earlier attempts
+were also invalid: one omitted the probe input wrapper, one used dummy oracle
+video, and one used A14 yield-on. No guard or skip was added.
+ORIGIN: none; measurement/instrument only.

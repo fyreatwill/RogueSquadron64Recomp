@@ -1647,7 +1647,7 @@ extern "C" void rs64_s4306_postfree_store(uint8_t* rdram, uint32_t pc,
     }
     const uint32_t n = ordinal.fetch_add(1, std::memory_order_relaxed);
     rs64_s4307_note_writer(n, pc, phys, requested, post);
-    if (n >= 4096u) return;
+    if (n >= 16384u) return;
     std::fprintf(stderr,
         "[s4306-row] ordinal=%u phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%06X requested=0x%08X post=0x%08X mismatch=%u\n",
         n, rs64_phase_ord(), width, origin, pc, phys, requested, post,
@@ -1677,7 +1677,7 @@ extern "C" void rs64_s4307_synth_read(uint8_t* rdram, uint32_t pc,
     if (phys < 0x17D000u || phys >= 0x17E200u) return;
     static std::atomic<uint32_t> rows{0};
     const uint32_t n = rows.fetch_add(1, std::memory_order_relaxed);
-    if (n >= 4096u) return;
+    if (n >= 16384u) return;
     const S4307Writer w = g_s4307_last_writer;
     std::fprintf(stderr,
         "[s4307-row] ordinal=%u phase=%u width=%u origin=0x%06X read_pc=0x%08X addr=0x%06X value=0x%08X preceding_writer_ordinal=%u writer_pc=0x%08X writer_addr=0x%06X requested=0x%08X post=0x%08X\n",

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4313) The independent retail oracle passed the whole-RDRAM control, title VI 1024, and hangar VI 512. Its target watch recorded 1,438,563 reads with no crash; the first 4,096 keyed `(PC,address,value)` rows exactly match the qualified port free/read join. This extends the comparison past the prior 256-row boundary without a divergence. Next: extend both keyed sequences to 16,384 rows to locate a later divergence or further qualify parity. No guard/skip is authorised.
+00. (s4314) The port side validly reached hangar VI 512 and emitted 16,384 keyed reads with both controls; the retail oracle also passed its whole-RDRAM control and target watch, but the new detail stream's first consumer-era tuple did not reproduce the qualified s4313 boundary. Next: reproduce the exact s4313 retail consumer/read filter and phase route before comparing beyond row 4,096. A mismatch before the known boundary is an instrument/route failure, not a game divergence. No guard/skip is authorised.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 

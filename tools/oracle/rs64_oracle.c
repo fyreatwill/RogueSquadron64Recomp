@@ -53,7 +53,7 @@
 #define MAX_POST_VALUE_PCS 512
 #define MAX_POST_VALUE_SAMPLES 256
 #define MAX_POST_VALUE_ROWS_PER_PC 16
-#define MAX_POST_VALUE_SEQUENCE_ROWS 4096
+#define MAX_POST_VALUE_SEQUENCE_ROWS 16384
 #define MAX_POST_VALUE_PC_DETAIL_ROWS 16384
 #define MAX_VI_SWAP_PHASE_ROWS 256
 #define MAX_MODE_DUMP_ROWS 4096
@@ -132,6 +132,7 @@ static long g_hits;
 static volatile sig_atomic_t g_checkpoint_requested;
 static long g_hit_cap = 200;          /* stop logging after this many, keep running */
 static unsigned int g_detail_watch_mask;
+static unsigned int g_detail_hangar_read_rows;
 static int g_first_watch = -1;
 static uint64_t g_pc_hist_watch_mask;
 static uint64_t g_post_value_watch_mask;
@@ -1870,7 +1871,19 @@ static void dbg_update(unsigned int pc)
             (access_flags & g_watch[i].flags &
              (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE)) &&
             (g_detail_watch_mask & (1u << i)))
-            detail_hit = 1;
+            if (!getenv("RS64_DETAIL_HANGAR_READ") ||
+                !(access_flags & M64P_BKP_FLAG_READ) ||
+                (pDebugMemRead32(VI_WIDTH_ADDR) == 512u &&
+                 pDebugMemRead32(VI_ORIGIN_ADDR) == 0x006AB400u)) {
+                if (!(getenv("RS64_DETAIL_HANGAR_READ") &&
+                      (access_flags & M64P_BKP_FLAG_READ) &&
+                      g_detail_hangar_read_rows >= 16384u)) {
+                    detail_hit = 1;
+                    if (getenv("RS64_DETAIL_HANGAR_READ") &&
+                        (access_flags & M64P_BKP_FLAG_READ))
+                        g_detail_hangar_read_rows++;
+                }
+            }
         if (g_first_watch == i && g_watch[i].hits == 1)
             detail_hit = 1;
     }
