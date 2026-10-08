@@ -148035,3 +148035,20 @@ or H-retail-reclaims-different. It does establish a current route blocker for
 this recipe; the exact successful s4307 seeded-save/key route must be replayed
 before interpreting a null. No guard or skip was added. ORIGIN: none;
 measurement only.
+
+## Session 4310 (2026-10-08) — port free/read join qualifies the first consumer boundary
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+The corrected boot-relative seeded-save/key route reached VI 512 at 42.0 s.
+The adjacent-range positive control and the phase-gated synth-read positive
+control both fired. The target block `0x8017D910` was freed by
+`waitForAnyAudioSlot` at guest PC `0x80095D54` before the hangar phase. The
+port then captured 256 target reads and 256 selected writer rows, all with
+requested value equal to post-store value.
+
+The first port read was `0x8008FCE8: 0x17D9E0 -> 0x8017D9F8`, matching the
+independent retail first-read boundary. This selects the shared-free,
+equivalent-first-read boundary and rules out port-only reuse before that
+consumer read. Later traversal/layout divergence remains open; no guard or
+skip was added. ORIGIN: none; measurement only.

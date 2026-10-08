@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4309 (port consumer join route qualification). Previously 4308 (retail read-PC/value join). Previously 4307 (port synth-read join).
+Updated for session 4310 (port free/read join qualified). Previously 4309 (port consumer join route qualification). Previously 4308 (retail read-PC/value join).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,9 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4309, route-invalid) The planned port free/read join did not obtain a discriminating capture. Three launch variants reached only VI 640 or crashed in the known `fillSampleStreamRange+13572`/guest `0x8000834c` family before VI 512; the final wrap-shadow route remained at VI 640 until its watchdog. The s4306 adjacent-range control fired, but there were 0 s4306/s4307 target rows. This is route evidence only and does not select any consumer hypothesis. Next: replay the exact successful s4307 seeded-save route/driver, retaining the free/read instrumentation; no guard/skip is authorised.
+00. (s4310) The corrected seeded-save/key route reached VI 512 at 42.0 s and passed both same-run controls: the adjacent-range store control and the phase-gated synth-read control. The target block `0x8017D910` was freed by `waitForAnyAudioSlot` at guest PC `0x80095D54` before the hangar phase; the port then captured 256 target reads and 256 selected writer rows, all 0 requested-vs-post mismatches. The first port read was `0x8008FCE8: 0x17D9E0 -> 0x8017D9F8`, matching the independent retail boundary. This rules out port-only reuse before the first consumer read and selects the shared-free/equivalent-first-read boundary; later traversal/layout divergence remains open. Next: extend the bounded join past the first 256 rows or compare a keyed post-free snapshot at the first divergent read to name the later consumer divergence. No guard/skip is authorised.
+
+00a. (s4309, superseded by s4310) The first port free/read join route was invalid: three variants reached only VI 640 or crashed before VI 512, and the wrap-shadow variant stalled at VI 640. It was believable because the s4306 control fired, but the corrected boot-relative key schedule now reaches VI 512 with both controls and target rows.
 
 00a. (s4308) do_rom_read odd-address crash: the independent retail arm passed the whole-RDRAM read control (214,786,365 reads), reached hangar VI 512 at 38.4 s, and the target read watch captured 1,434,154 reads. The fixed oracle logger now records loaded words; the first hangar consumer row is `pc=0x8008FCE8 addr=0x17D9E0 value=0x8017D9F8`, before the retail post-free writer sequence, and later rows retain the retail-specific address/value order. This is a second independent line confirming H-retail-layout-different at the consumer boundary, not H-shared-read-layout. H-port-only-consumer remains unsupported by the paired port writer table's zero mismatches. Exact lifetime/consumer fault remains open; no guard/skip is authorised.
 
@@ -112,7 +114,7 @@ Work only the first applicable item. One monotonic sequence.
 | M3 sentinel ownership | H1 at source scope; runtime unqualified (no MIPS toolchain). |
 | waitForAnyAudioSlot B39 skip flag | Retail does not avoid the frees: the aligned physical watch shows the B39-byte read at 0x00130B38, followed by all three asset-pointer reads at the free sites (s4302). |
 | Retail/port post-free stream-node layout | s4306 matched an independent retail ordered table against a valid port VI-512 run: 256 port rows, 0 requested-vs-post mismatches, but different address/value/order tuples and writer mix. This selects H-retail-layout-different; exact synth consumer read/lifetime failure remains open. |
-| Port synth-read join | s4307: expanded hook over the MusyX call chain passed a phase-gated positive control and captured 256 reads. Port's first read/order differs from the independent retail post-free sequence, selecting H-retail-layout-different at the consumer boundary; no mitigation is authorised. |
+| Port synth-read/free join | s4307 captured 256 reads with a phase-gated control; s4310 additionally joined the shared free and captured 256 post-free writer rows. The first port read/value matches retail, and the free precedes it, ruling out port-only reuse before the first consumer read. Later traversal/layout divergence remains open; no mitigation is authorised. |
 | Retail synth-read value join | s4308: whole-RDRAM read control and VI-512 both passed; the value-aware oracle logger captured 1.43M target reads, including the first hangar row `0x8008FCE8: 0x17D9E0 -> 0x8017D9F8`. Retail's read PC/address/value sequence remains distinct from port's. |
 
 ## Durable evidence boundary
