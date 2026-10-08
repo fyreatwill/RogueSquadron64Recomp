@@ -823,6 +823,23 @@ static void dump_audio_objects(uint32_t task, uint32_t data, uint32_t count) {
                pDebugMemRead32(debug_rdram_addr(base + 12)), valid, nz, active, output);
         for (uint32_t i = 0; i < 0x50; i += 4) printf("%08X,", pDebugMemRead32(debug_rdram_addr(base + 0x10 + i)));
         printf("\n");
+        {
+            /* s4219: census of output-ring buffers (record +0x44 ptr, 0x300 B each) */
+            uint32_t nbuf = 0, nz_buf = 0, nz_bytes = 0, tot = 0, blk_nz = 0;
+            for (uint32_t i = 0; i < 0xA10 - 0x10 && base + 0x10 + i < RDRAM_SIZE; i++)
+                blk_nz += debug_mem_u8(base + 0x10 + i) != 0; /* positive control */
+            for (uint32_t voice = 0; voice < 32; voice++) {
+                uint32_t v = base + 0x10 + voice * 0x50;
+                uint32_t o = pDebugMemRead32(debug_rdram_addr(v + 0x44)) & 0x1FFFFFFF;
+                uint32_t k, c = 0;
+                if (!o || o > RDRAM_SIZE - 0x300) continue;
+                nbuf++;
+                for (k = 0; k < 0x300; k++) c += debug_mem_u8(o + k) != 0;
+                nz_bytes += c; tot += 0x300; nz_buf += c != 0;
+            }
+            printf("[out-census] width=%u row=%u frame=%u bufs=%u nz_bufs=%u nz_bytes=%u of=%u ctrl_blk_nz=%u\n",
+                   width, row, frame, nbuf, nz_buf, nz_bytes, tot, blk_nz);
+        }
     }
 }
 

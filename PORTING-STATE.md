@@ -147246,3 +147246,12 @@ ORIGIN: n/a (diagnostic; no mitigation).
 Addendum (s4218, gate-readable): SELECTED H-records-equal; REFUTED H-records-differ and H-producer-side-record-bug. Discriminator that split them: active-voice count + state pointer + block address, retail 14-15 vs port 15 at n>=256, state 0x80178C80 in both. Next discriminator: retail census of nonzero bytes in the output ring after the audio task (H-retail-nonzero vs H-retail-zero), positive control = nonzero census of the data_ptr block; port side is all-zero per s4208.
 
 Gate wording (s4218): this result selects H-records-equal and refutes H-records-differ; it resolves whether the producer side is at fault (it is not). The next step is to discriminate H-retail-nonzero from H-retail-zero via the output-ring census.
+
+## Session 4219 (2026-10-07) — M5 Step 9q: retail output-ring buffers are ~98% nonzero at title-1024 n>=256 while the port's are all-zero; H-retail-nonzero selected, H-retail-zero refuted
+
+Added `[out-census]` to `tools/oracle/rs64_oracle.c` (`dump_audio_objects`): per audio task/frame, nonzero-byte count over each voice record's +0x44 output buffer (0x300 B), plus a positive control (nonzero bytes of the same frame's record block, `ctrl_blk_nz`, 12..2142 — nonzero everywhere). Run `scratch/agent/run_s4219_retail_out.sh` (60 s retail, whole-RDRAM watch hit 13945 times = write-watch control alive).
+Result (retail, width 1024): rows 0-7 nz 768/768; row 128 nz 0/768 (early silence); rows 256..1152 nz 749-766/768 per buffer (1-2 buffers), i.e. real non-trivial PCM-like content. Port (s4208/s4209) writes only zeros after early phase 4 at the same stage with the same record shape (s4218).
+SELECTED H-retail-nonzero; REFUTED H-retail-zero ("zero PCM is not the defect"). Combined with s4218 (equal input records) the divergence is the emulated RSP/ucode consumption of identical input: the port ucode path emits zeros where retail emits content.
+Caveat: single-source (oracle only); the buffer is read at task start, so it holds the previous task's output; ordinals differ from port.
+ORIGIN: n/a (diagnostic; no mitigation).
+Next discriminator: in the port, per-voice DMEM trace through one voice's filterVoiceSampleBlock/resample/mix command sequence (first command whose DMEM output is zero given nonzero input) vs F5-UCODE-REFERENCE command semantics.
