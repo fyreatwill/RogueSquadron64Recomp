@@ -147440,3 +147440,6 @@ Audit: the only audio TO_PTR s16 consumers are ultramodern audio.cpp (byte FNV/n
 Fix: src/main/main.cpp queue_samples uses ^3. Same-run control (ROGUESQ_S4242_CTRL=1, scratch/agent/s4242_stage.sh): both orders computed on the same buffers; old order RMS 5k-19k wide-band noise (mean 18.5k over 75 samples) vs fixed order a smooth fade-in 1 -> 20 -> 179 -> 314 -> 520 (n=448..512) then ~8-10k at n=1600. Old order is silent only when buffers are all zero (positive control: old>0 whenever fixed>0).
 Caveat: single run; no listening test; n=1616 and n=1632 show identical RMS (possible repeated/stalled buffer, unexamined).
 Next: listen/capture-check the output; investigate repeated identical buffers; phase-align RMS vs retail.
+
+Verdicts (s4242): H-audible-path-byteswapped SELECTED (same-run control: old order 18.5k noise vs fixed order smooth fade-in on identical buffers). H-only-ai.cpp-affected (hypothesis b of s4241) REFUTED. This is a behavioural fix to the SDL feed, not only an instrument; the ROGUESQ_S4242_CTRL lines are the control.
+Next discriminator: per-buffer FNV on consecutive equal-RMS buffers (n=1616/1632) selects H-repeat-stall vs H-steady-tone; WAV dump + spectrum selects music vs noise.
