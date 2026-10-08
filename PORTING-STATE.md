@@ -148016,3 +148016,22 @@ The first retail arm used the required whole-RDRAM read positive control and the
 The fixed oracle instrument added the loaded aligned word to every printed read row, rebuilt from the oracle source, and repeated the same arm. Its whole-RDRAM read control fired 214,786,365 times; the target watch fired 1,434,154 times; VI 512 at 0x006AB400 again began at 38.4 s. The first hangar consumer row was `pc=0x8008FCE8 addr=0x17D9E0 value=0x8017D9F8`, before the retail post-free writer sequence, and subsequent rows retained the retail-specific address/value order. This independently confirms H-retail-layout-different at the consumer boundary and rules out H-shared-read-layout. H-port-only-consumer remains unsupported by s4306's paired writer table with zero requested-vs-post mismatches. No guard or skip was added. ORIGIN: none; measurement only.
 
 This rules out an absent retail read callback, an invalid hangar route, and the claim that the observed difference was only an address-sampling artifact. It does not name the exact lifetime/consumer fault or authorize a mitigation. The oracle value logger is now part of the reproducible diagnostic source.
+
+## Session 4309 (2026-10-08) — port free/read join route qualification failed
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+The planned port join was not interpretable. The initial 1024-gated arm died
+while waiting at VI 640. Two 512-gated arms reached the known
+`fillSampleStreamRange+13572` / guest `0x8000834c` crash before the wrapper saw
+VI 512. A final arm restored the validated DPC wrap-flush/shadow prerequisites
+(`ROGUESQ_DPC_WRAP_FLUSH=1`, `ROGUESQ_S4272_CAP=0x2000`,
+`ROGUESQ_WRAP_RESTORE=1`) but remained at VI 640 until the 180-second
+watchdog. The s4306 adjacent-range positive control fired in the final route,
+but there were zero s4306/s4307 target rows and no VI-512 phase.
+
+This rules out none of H-free-before-consumer, H-port-reuse-before-consumer,
+or H-retail-reclaims-different. It does establish a current route blocker for
+this recipe; the exact successful s4307 seeded-save/key route must be replayed
+before interpreting a null. No guard or skip was added. ORIGIN: none;
+measurement only.

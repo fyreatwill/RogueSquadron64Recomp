@@ -1,8 +1,12 @@
-# Next work unit (s4309): join the first post-free consumer read to the free boundary
+# Next work unit (s4310): replay the validated port route for the free/read join
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-State (s4308): independent retail evidence passed both controls and VI 512,
+State (s4309): the first port join attempt was route-invalid: three variants
+stalled or crashed before VI 512, with the final wrap-shadow route remaining at
+VI 640 until its watchdog. The adjacent-range positive control fired, but no
+target read/write rows were captured. Independent retail evidence still passed
+both controls and VI 512,
 and the value-aware oracle logger confirmed the first hangar consumer row
 `0x8008FCE8: 0x17D9E0 -> 0x8017D9F8` plus the retail-specific read order. The
 port table differs, but the exact lifetime/consumer fault is still open.
@@ -33,7 +37,9 @@ Before any build, inspect the existing port free/read join and confirm its
 positive-control and phase-gating fields. Batch all three hypotheses in one
 instrument/build/run; do not make an A/B arm or mitigation.
 
-Expected command family: use the existing s4307/s4306 port recipe from the
-seeded save, with the value-aware oracle diagnostic source retained only for
-the independent retail comparison. Run from `build/`, kill with SIGKILL, and
-capture the full log under `scratch/agent/s4309_port_free_read_join/`.
+Expected command family: reconstruct the exact successful s4307 recipe from
+`scratch/agent/s4307_read_join_512/run.log` and its seeded-save route, retain
+`ROGUESQ_LOG_S4306=1`, `ROGUESQ_LOG_S4307=1`, and `ROGUESQ_LOG_RS_FREE=1`, run
+from `build/`, kill with SIGKILL, and capture under
+`scratch/agent/s4310_port_free_read_join/`. A missing positive control or no
+VI 512 is invalid; do not add a guard or skip.

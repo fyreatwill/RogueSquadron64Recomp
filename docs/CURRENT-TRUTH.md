@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4308 (retail read-PC/value join). Previously 4307 (port synth-read join). Previously 4306 (port/retail post-free layout join).
+Updated for session 4309 (port consumer join route qualification). Previously 4308 (retail read-PC/value join). Previously 4307 (port synth-read join).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,9 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4308) do_rom_read odd-address crash: the independent retail arm passed the whole-RDRAM read control (214,786,365 reads), reached hangar VI 512 at 38.4 s, and the target read watch captured 1,434,154 reads. The fixed oracle logger now records loaded words; the first hangar consumer row is `pc=0x8008FCE8 addr=0x17D9E0 value=0x8017D9F8`, before the retail post-free writer sequence, and later rows retain the retail-specific address/value order. This is a second independent line confirming H-retail-layout-different at the consumer boundary, not H-shared-read-layout. H-port-only-consumer remains unsupported by the paired port writer table's zero mismatches. Exact lifetime/consumer fault remains open; no guard/skip is authorised.
+00. (s4309, route-invalid) The planned port free/read join did not obtain a discriminating capture. Three launch variants reached only VI 640 or crashed in the known `fillSampleStreamRange+13572`/guest `0x8000834c` family before VI 512; the final wrap-shadow route remained at VI 640 until its watchdog. The s4306 adjacent-range control fired, but there were 0 s4306/s4307 target rows. This is route evidence only and does not select any consumer hypothesis. Next: replay the exact successful s4307 seeded-save route/driver, retaining the free/read instrumentation; no guard/skip is authorised.
+
+00a. (s4308) do_rom_read odd-address crash: the independent retail arm passed the whole-RDRAM read control (214,786,365 reads), reached hangar VI 512 at 38.4 s, and the target read watch captured 1,434,154 reads. The fixed oracle logger now records loaded words; the first hangar consumer row is `pc=0x8008FCE8 addr=0x17D9E0 value=0x8017D9F8`, before the retail post-free writer sequence, and later rows retain the retail-specific address/value order. This is a second independent line confirming H-retail-layout-different at the consumer boundary, not H-shared-read-layout. H-port-only-consumer remains unsupported by the paired port writer table's zero mismatches. Exact lifetime/consumer fault remains open; no guard/skip is authorised.
 
 00a. (s4299-s4303) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (stream nodes at 0x17DBE0 plus DMA sample buffers) is freed after `waitForAnyAudioSlot` and reused by level-texture/cache work while `musyxSynthFrame` keeps walking it. Name-copy and host-write refuted. The three frees are retail guest code on the natural exit path, and retail independently reaches hangar, enters the wait three times in 48 s, and accesses the block 1,141,187 times (1,072,566 reads, 68,621 writes) while `musyxSynthFrame` runs 2,820 times. This rules out both “retail skips the free” and “retail stops synth globally.” The writer histogram includes guest audio/object and cache/allocator PCs; exact post-free value/layout ordering remains open. Do not add a skip/guard until a legitimate retail/port lifetime difference is named. Single-source for exact retail counts; combined with the port-side s4301 trace this establishes shared free plus continued synth activity.
 
