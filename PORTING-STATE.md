@@ -147583,3 +147583,5 @@ Result (arm 1, GAP dumps t=20.66..29.19): (1) 0x8010FEE0 is produced only by gue
 Verdict: remaining H-A SELECTED: a game-side condition in the main-thread (tid 0) loop gates its sends to 0x8011A818 (thr3 work-request queue); audio starves because main rarely issues requests. Not a runtime delivery defect.
 ORIGIN: no mitigation landed; diagnostic only (lib/ patch exported).
 Next: capture the guest ra of tid 0 sends to 0x8011A818 and what tid 0 does on gap-time wakes; see NEXT.md.
+Verdict: refutes H-send-refused (fail=2 constant, only tid 3 produces) and H-timer-unposted (osSetTimer n=0); selects H-main-loop-gate (tid 0 omits sends to 0x8011A818 on VI wakes).
+Next discriminator: guest ra of tid 0 sends/jams to 0x8011A818 plus tid 0 next-mq after each 0x80149670 wake, healthy vs GAP in one run (outcomes: ra absent in gap -> branch skipped upstream of the send site; ra present but rare -> request cadence is game-state driven; jam path -> uncounted sends).
