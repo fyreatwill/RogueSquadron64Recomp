@@ -31,6 +31,7 @@
 #endif
 
 #include <atomic>
+#include <execinfo.h>
 
 #include "recomp.h"
 
@@ -4132,9 +4133,40 @@ extern "C" void rs64_m5_frequency_output_use(uint8_t* rdram,
 extern "C" int rogue_current_thread_id(uint8_t* rdram);
 // s4262: per-second table of (guest tid, mq, guest ra) osSendMesg counts for tid 0 and for
 // every sender to 0x8011A818 (ROGUESQ_S4262=1). Correlate with [s4259] GAP t= lines.
+// s4263: per-queue send/recv/full/would-block counters for the gated triple, printed with
+// the s4262 per-second flush together with the guest flag bytes 0x8011A890..0x8011A8A0.
+static const uint32_t kS4263Q[3] = {0x8011A818u, 0x8011A7E8u, 0x80128CF0u};
+static std::atomic<uint64_t> g_s4263_send[3], g_s4263_full[3], g_s4263_recv[3], g_s4263_rblock[3];
+static int s4263_idx(uint32_t mq) { for (int i = 0; i < 3; ++i) if (kS4263Q[i] == mq) return i; return -1; }
+static void s4263_note(uint8_t* rdram, uint32_t mq, bool is_send, int32_t flag) {
+    const int i = s4263_idx(mq);
+    if (i < 0) return;
+    const OSMesgQueue& q = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq);
+    if (is_send) {
+        static std::atomic<int> bt_n[3];
+        if (bt_n[i].fetch_add(1) < 3) {
+            void* fr[24]; const int nf = backtrace(fr, 24);
+            std::fprintf(stderr, "[s4263-bt] send mq=0x%08X\n", mq); std::fflush(stderr);
+            backtrace_symbols_fd(fr, nf, 2);
+        }
+    }
+    if (is_send) { g_s4263_send[i]++; if (q.validCount >= q.msgCount) g_s4263_full[i]++; }
+    else { g_s4263_recv[i]++; if (q.validCount == 0 && flag != 0) g_s4263_rblock[i]++; }
+}
+static void s4263_flush(uint8_t* rdram, int sec) {
+    char fl[64]; int n = 0;
+    for (int a = 0; a < 16; ++a) n += std::snprintf(fl + n, sizeof(fl) - n, "%02X", (unsigned)MEM_BU(-0X5770 + a, (int64_t)(int32_t)0x80120000));
+    for (int i = 0; i < 3; ++i) {
+        const OSMesgQueue& q = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))kS4263Q[i]);
+        std::fprintf(stderr, "[s4263] t=%d mq=0x%08X send=%llu full=%llu recv=%llu rblock=%llu valid=%d flags[8011A890]=%s\n", sec,
+                     kS4263Q[i], (unsigned long long)g_s4263_send[i].exchange(0), (unsigned long long)g_s4263_full[i].exchange(0),
+                     (unsigned long long)g_s4263_recv[i].exchange(0), (unsigned long long)g_s4263_rblock[i].exchange(0), (int)q.validCount, fl);
+    }
+}
 static void s4262_note_send(uint8_t* rdram, uint32_t mq, uint32_t ra) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4262"); return e && *e && *e != '0'; }();
     if (!on) return;
+    s4263_note(rdram, mq, true, 0);
     const int tid = rogue_current_thread_id(rdram) & 63;
     if (tid != 0 && mq != 0x8011A818u) return;
     static std::mutex m;
@@ -4149,6 +4181,7 @@ static void s4262_note_send(uint8_t* rdram, uint32_t mq, uint32_t ra) {
             std::fprintf(stderr, "[s4262] t=%d tid=%d mq=0x%08X ra=0x%08X n=%llu\n", last_sec,
                          std::get<0>(kv.first), std::get<1>(kv.first), std::get<2>(kv.first),
                          (unsigned long long)kv.second);
+        s4263_flush(rdram, last_sec);
         std::fflush(stderr);
         tab.clear();
         last_sec = sec;
@@ -4304,6 +4337,8 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
             delivered_hint = (uint32_t)TO_PTR(OSMesg, queue.msg)[queue.first];
         }
     }
+    { static const bool s4263_on = [] { const char* e = std::getenv("ROGUESQ_S4262"); return e && *e && *e != '0'; }();
+      if (s4263_on) s4263_note(rdram, mq_addr, false, flag); }
     rs64_m5_frequency_contract(rdram, ctx);
     recv_trace_enter(rdram, mq_addr, flag, tid);
     log_m5_frame_sync_edge(rdram, "recv", mq_addr, (uint32_t)ctx->r5, flag);
