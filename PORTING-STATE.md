@@ -147500,3 +147500,5 @@ Result per 3 s window: audio holds n=86-181 with max 0.2-0.8 ms in every window 
 Verdict: h1 CONFIRMED (long gfx holds), h3 (fairness/many short holds) REFUTED, h2 (other holder) not seen (all holds attributed to the three tags). The audio-producer stall at t~18.5 is a host artifact of one shared DMEM mutex plus gfx DLs that grow to hundreds of ms.
 Not yet asked: why gfx DLs take 15-870 ms of host time (LLE ucode interpretation of a growing DL) - that is a performance question, separate from the audio de-stub.
 Next: give audio a private DMEM/state so run_task skips the gfx mutex (NEXT.md).
+
+Verdict: this selects H-lock-serialization (h1: gfx DL holds of the single shared DMEM mutex) and refutes H-fairness-starvation (h3) and H-other-holder (h2). Next discriminator: private audio DMEM (thread-local dmem redirect) - if audio lockwait goes to ~0 and audio tasks stay ~180/3 s through t=18-28 while gfx holds stay long, the shared mutex is the sole cause; if audio still stalls, hypothesis h3-of-NEXT (other shared ucode state) is selected. See NEXT.md.
