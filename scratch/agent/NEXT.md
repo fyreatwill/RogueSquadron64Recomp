@@ -1,8 +1,7 @@
-# Next work unit: M5 Step 10c - fresh-save crashes in audio code (nonzero PCM) and drive the pilot-create menu
+# Next work unit: M5 - classify the early 0x8000834c crash (spTaskSchedulerThread+9632)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4227: fresh save -> first-run SELECT GAME / ARE YOU SURE? menu (title 47.6 s). "No hangar" in s4226 was input mismatch. Fresh-save runs crash at varying audio sites: fillSampleStreamRange+8136 (pc 0x8000b650, 30 s) and last-guest-pc 0x80001b08 (s4226). Stale (zero-volume) save never hits these in the first 24 s.
-Hypotheses: (a) crashes are real nonzero-audio-path defects (sample stream/voice array) exposed by volume 0x7F; (b) crashes are run-timing noise unrelated to volume.
-Discriminator: 4+ fresh-save runs with keys shifted to the pilot menu (Start at 48, A at 56 on YES...) and tally crash sites/times; compare with stale-save runs of equal length. Control: stale arm must reach 512 at ~24 s.
-Then classify the fillSampleStreamRange crash (name the writer of the bad pointer before guarding).
+s4228: crash at last-guest-pc 0x8000834c (SEGV in spTaskSchedulerThread+9632, 1-3 s after launch, phase 320) hit a stale-save run; 0x8000b650 SIGABRT hit a fresh run. Both save states crash -> not volume. In stale2 x19=0xffffffff8011a89c (sign-extended guest ptr used as host ptr?).
+Hypotheses: (a) a sign-extended/unmasked guest address reaches host deref in the scheduler thread (recomp idiom, class audit); (b) race with audio thread start (timing); (c) bad DMA descriptor.
+Discriminator: disassemble spTaskSchedulerThread+9632 (lldb/objdump on the binary or the generated .c), find the load that faults, name the register source; then count crash frequency over 10 stale-save runs of 10 s each (cheap) with a log of that register.
