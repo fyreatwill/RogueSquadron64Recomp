@@ -1,7 +1,7 @@
-# Next work unit (s4296): find which b-recipe element exposes odd (S4268 vs 1024-width phase-relative keys), then reach 512 with it
+# Next work unit (s4297): consume the s4296 A14-yield soak, then resume the odd-control/512 route isolation
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4295: odd control works in recipe b (RESTORE=0 odd=60, RESTORE=1 odd=0) but b never reaches 512; recipe a reaches 512 but odd=0 in both arms (SPIN_YIELD/Y8000 and seeded saves exonerated).
-Hypotheses: H1) S4268 exposes odd; H2) PHASE_WIDTH=1024 + KEYS_FROM_PHASE key timing exposes odd (the 640 stage dwell differs); H3) odd is only counted before a threshold the a-route passes too fast.
-Discriminator: RESTORE=0 arms only, three concurrent: a+S4268; b without S4268; b with keys extended (add 18:start 22:start 26:start) and PHASE_WIDTH=512 gating. odd>0 and 512 reached = the control for the hangar A/B.
+1. Read SOAK-RESULTS.md tail for s4296_a14_yield_title_hangar: expect 0 [a14-yield] rows, title 1024 ~14 s, hangar 512 ~26 s. Any [a14-yield] row = loop entered (new fact: record b0, a0/a1); a route regression = roll back with ROGUESQ_A14_YIELD=0 A/B.
+2. Then the s4296-prior unit: isolate S4268 vs PHASE_WIDTH=1024 key gating (three concurrent RESTORE=0 arms: a+S4268; b without S4268; b with extended keys + PHASE_WIDTH=512) to find a route with odd>0 AND 512, then the hangar RESTORE A/B.
+Next de-stub candidate if 1 is clean: the unbounded 0x8014974C spin (A12 note) with the same yield shape.

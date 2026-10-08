@@ -147865,3 +147865,12 @@ Results (the restore-effect arm pair is b):
 - What remains: the odd condition tracks the b-recipe's phase window (PHASE_WIDTH=1024 with phase-relative keys, S4268) rather than the 512 route. Recipe a uses PHASE_WIDTH=512 and absolute-time keys, and that route has never shown odd>0.
 - Consequence: no arm has shown odd>0 and reached 512 in the same run, so the hangar restore A/B is still unmeasured. The restore effect is only measurable at the 640-to-1024 stage.
 ORIGIN: no mitigation machinery added; measurement script only.
+
+## Session 4296 (2026-10-08) — M5 A14 de-stub: shutdownMusyXVoices slot-scan spin now yields to the host (ROGUESQ_A14_YIELD)
+
+Mandatory-pivot iteration (6 observation-only sessions). Landed a runtime change instead of another odd/512 probe.
+- `tools/apply_s4296_a14_spin_yield.py` patches the live `funcs_26.c` at L_8009BD10 (the backward edge of the 0x8009BCEC..0x8009BD10 status-byte scan, base 0x80154620 stride 0x1228): unset/!=0 = `yield_self_1ms` every 20000 backward iterations; `ROGUESQ_A14_YIELD=0` restores the blind spin. Bounded `[a14-yield]` rows (first 8 + every 1000th). Built clean (`cmake --build build`).
+- ORIGIN: the slot status byte is written only by the guest voice-pool worker (serviceVoicePoolFrame, s1997); the loop never forces or clears state, the yield only gives that legitimate writer / VI / SI host time (A12 shape, s4192). Not a skip.
+- Live-tree only (REGEN WARNING s4204); a regen would drop it, re-run the apply script.
+- Validation NOT yet run: soak `scratch/agent/soak_queue/s4296_a14_yield_title_hangar.sh` (s1949 recipe, default-on) is queued. Expectation from A14 being "never entered" on title+hangar: 0 `[a14-yield]` rows and an unchanged route (title 1024 ~14 s, hangar 512 ~26 s). No positive control for the loop firing exists yet; a null from the soak proves only no regression.
+- Rules out nothing; M5-AUDIO-PLAN A14 row updated.
