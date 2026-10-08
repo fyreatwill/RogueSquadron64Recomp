@@ -147263,3 +147263,5 @@ Findings: (1) phase 4/5 voice loop runs multiple voices per frame; DMEM chunks 4
 Three independent views (DMEM buses, ucode record words, RDRAM records vs oracle) agree. SELECTED H-param-zero (guest never writes nonzero bus gains for active voices; defect is guest-side MusyX volume/pan computation, upstream of the ucode); REFUTED H-cmd-decode (kernel is fed zero gain, no bad vector-op evidence), H-late-dma (output DMA reads the correctly-cleared buffer).
 ORIGIN: n/a (diagnostic; no mitigation). Single-source caveat on retail side (oracle only, voice 0).
 Next: store-watch with PC on port record +0x00..+0x0C for an active voice (and oracle write-watch on the same field in retail) to find the guest writer; then why it writes 0 (volume source: voice volume/master volume/fade, synth tick not running?).
+
+Verdict (gate-readable): this run selects H-param-zero and refutes H-cmd-decode and H-late-dma; the next discriminator is a store-watch with PC on record +0x00..+0x0C to separate H-writer-never-runs, H-writer-runs-zero-input and H-overwritten.
