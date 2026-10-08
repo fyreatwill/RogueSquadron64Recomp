@@ -63,6 +63,8 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
+00. (s4298) do_rom_read odd-address crash (reachable after hangar->640 with A14 yield) NAMED to source: `musyxSynthFrame` -> `submitDmaRequestBatch` enqueues devAddr = ASCII base + offset ("wing"/"lcre"); the 24-byte stream nodes {romA,romB,size,dram,prev,next} (e.g. at 0x17DBE0) have their first 8 bytes replaced by name-table text ("lcrelate"); rest of node intact. Writer of the text UNNAMED; value illegitimate; no mitigation. Next: guest store watch on the node ROM pair (scratch/agent/NEXT.md). Single-run for the node-content part.
+
 0c. (s4295) Odd control restored only on the s4290 route (PHASE_WIDTH=1024, phase-relative keys, S4268): RESTORE=0 odd=60 vs RESTORE=1 odd=0, with seeded saves, but that route never reaches 512. The s4294-style route (PHASE_WIDTH=512) reaches 512 but shows odd=0 in both arms, with or without SPIN_YIELD/Y8000. Next: isolate S4268 vs 1024-width phase gating (NEXT.md), find a route with odd>0 AND 512, then run the hangar RESTORE A/B. Hangar effect still UNMEASURED.
 
 0b. (s4293) Title slowdown s4289-s4292 was the EMPTY per-arm saves dir (build_arm_* skip saves): seeded save 1024@13.9s #765 (= s1949 #786) and hangar 512@47.4s; empty 1024@46.8s #2751. NOT a code regression. Every probe arm must copy build/saves in (scratch/agent/s4293_save_ab.sh). Next: hangar A/B WRAP_RESTORE 1 vs 0, seeded saves, phase-gated on VI 512.

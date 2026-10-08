@@ -910,10 +910,15 @@ index 8c8e5d1..0907c36 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..dedde24 100644
+index 43509ba..af96a43 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
-@@ -8,9 +8,15 @@
+@@ -1,3 +1,4 @@
++#include <execinfo.h>
+ #include <memory>
+ #include <fstream>
+ #include <array>
+@@ -8,9 +9,15 @@
  #include "librecomp/addresses.hpp"
  #include "librecomp/game.hpp"
  #include "librecomp/files.hpp"
@@ -929,7 +934,7 @@ index 43509ba..dedde24 100644
  static std::vector<uint8_t> rom;
  
  bool recomp::is_rom_loaded() {
-@@ -64,6 +70,23 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -64,6 +71,43 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
  void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr, size_t num_bytes) {
      // TODO use word copies when possible
  
@@ -950,10 +955,30 @@ index 43509ba..dedde24 100644
 +        fflush(stderr);
 +    }
 +
++    if ((physical_addr & 0x1) && std::getenv("ROGUESQ_LOG_S4298")) {
++        // s4298: name where the odd ROM address lives in RDRAM (the node the guest read it from)
++        fprintf(stderr, "[s4298-odd] phys=0x%08X ram=0x%08llX bytes=0x%zX\n", physical_addr, (unsigned long long)ram_address, num_bytes);
++        int hits = 0;
++        for (uint32_t a = 0; a + 4 <= 0x800000 && hits < 16; a += 4) {
++            if (*(uint32_t*)(rdram + a) == physical_addr) {
++                hits++;
++                fprintf(stderr, "[s4298-odd] hit at rdram 0x%06X; words:", a);
++                for (int k = -8; k < 8; k++) { uint32_t b = a + k * 4; if (b + 4 <= 0x800000) fprintf(stderr, " %08X", *(uint32_t*)(rdram + b)); }
++                fprintf(stderr, "\n");
++            }
++        }
++        fprintf(stderr, "[s4298-odd] hits=%d\n", hits);
++        {
++            void* bt[24]; int n = backtrace(bt, 24);
++            fprintf(stderr, "[s4298-odd] backtrace:\n");
++            backtrace_symbols_fd(bt, n, 2);
++        }
++        fflush(stderr);
++    }
      // TODO handle misaligned DMA
      assert((physical_addr & 0x1) == 0 && "Only PI DMA from aligned ROM addresses is currently supported");
      assert((ram_address & 0x7) == 0 && "Only PI DMA to aligned RDRAM addresses is currently supported");
-@@ -72,6 +95,9 @@ void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr
+@@ -72,6 +116,9 @@ void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr
          MEM_B(i, ram_address) = *rom_addr;
          rom_addr++;
      }
@@ -963,7 +988,7 @@ index 43509ba..dedde24 100644
  }
  
  void recomp::do_rom_pio(uint8_t* rdram, gpr ram_address, uint32_t physical_addr) {
-@@ -193,6 +219,18 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
+@@ -193,6 +240,18 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
      for (gpr i = 0; i < count; i++) {
          MEM_B(i, rdram_address) = save_context.save_buffer[offset + i];
      }
@@ -982,7 +1007,7 @@ index 43509ba..dedde24 100644
  }
  
  void save_clear(uint32_t start, uint32_t size, char value) {
-@@ -266,13 +304,52 @@ void ultramodern::join_saving_thread() {
+@@ -266,13 +325,52 @@ void ultramodern::join_saving_thread() {
      }
  }
  
@@ -1035,7 +1060,7 @@ index 43509ba..dedde24 100644
  
              // Send a message to the mq to indicate that the transfer completed
              ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
-@@ -313,12 +390,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,12 +411,24 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
