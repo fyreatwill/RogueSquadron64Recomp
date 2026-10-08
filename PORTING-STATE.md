@@ -147949,3 +147949,12 @@ Ran the planned retail oracle probe with Rice, the real ROM, the whole-RDRAM pos
 The run was valid but did not capture post-store values or first post-free ordering, so it does not distinguish H-layout-equivalent, H-retail-layout-different, or H-port-only-damaging-write. It does independently repeat the retail-side lifetime and writer activity at the required phase. No guard or skip was added. ORIGIN: none; this was measurement only.
 
 Rules out: a route failure, absent oracle callbacks, and absence of post-free retail writes. Leaves open: which writer/value sequence follows the shared free and whether the port differs. Next run must add `--post-value-watch 1` before interpreting writer-PC parity.
+## Session 4305 (2026-10-08) — retail post-free stream-node value/order sequence captured
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+Ran the fixed version of the s4304 retail oracle arm. The initial s4305 command was valid but omitted `--post-value-pc`, so its post-target sequence was correctly empty; the fixed command requested all 19 writer PCs seen in the VI-512 phase histogram. The whole-RDRAM positive control fired 78,579 writes and was removed; retail reached VI 0x006ab400/512 for 182 frames and completed 48 seconds. The target range 0x17D000:0x17E200 recorded 1,142,292 accesses: 1,073,713 reads and 68,579 writes.
+
+The fixed arm captured 256 ordered post-store rows before the bounded table filled, with 18,082 additional rows overflowed. The first rows and repeated phase rows show structured stream-node/list construction: 0x8008fbb4/0x8008fbec/0x8008fbf0/0x8008fbf4 write zeroed fields and links among 0x8017d9e0, 0x8017d9f8, 0x8017da10, 0x8017da28, while 0x8008fdc0/0x8008fdcc/0x8008fe60 write sample metadata. All selected scalar-store checks reported mismatch=0; the two 0x80018f5c/60 entries were unsupported instruction samples, not mismatches.
+
+This names legitimate retail post-free writers and values, but does not yet select H-layout-equivalent, H-retail-layout-different, or H-port-only-damaging-write because the port has no equivalent ordered table. The earlier run's empty sequence was an instrumentation configuration failure, not evidence of no sequence. The next work unit is one phase-gated port table with the same address, writer PC, post-value, scalar-mismatch, and ordinal fields. No guard or skip was added. ORIGIN: none; measurement only.

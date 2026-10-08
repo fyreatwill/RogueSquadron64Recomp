@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4304 (retail post-free writer phase remeasured). Previously 4303 (retail post-free block lifetime measured). Previously 4302 (retail also frees the three waitForAnyAudioSlot asset pointers).
+Updated for session 4305 (retail post-free sequence captured). Previously 4304 (retail post-free writer phase remeasured). Previously 4303 (retail post-free block lifetime measured).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4304) do_rom_read odd-address crash: the retail lifetime probe is valid but still does not identify the damaging reuse. Whole-RDRAM control fired 78,785 times; VI 0x006ab400/512 was present for 172 frames; target range 0x17D000:0x17E200 had 1,142,716 accesses (1,073,931 reads, 68,785 writes). The phase writer histogram contains the expected audio/object and cache/allocator PCs, but this arm did not capture post-store values or first post-free ordering. Therefore H-layout-equivalent, H-retail-layout-different, and H-port-only-damaging-write remain open. Next: one oracle arm with `--post-value-watch 1`, phase-gated to 0x006ab400/512, then compare the first post-free sequence to the existing port trace. No guard/skip is authorised.
+00. (s4305) do_rom_read odd-address crash: retail post-free ordering is now captured, but the port comparison is still missing. The fixed oracle arm passed the whole-RDRAM control (78,579 writes), reached VI 0x006ab400/512 for 182 frames, and recorded 1,142,292 target accesses (1,073,713 reads, 68,579 writes). With all 19 phase writer PCs requested, it captured 256 ordered post-store rows before the bounded table filled, with 18,082 overflow rows; selected scalar-store checks all had mismatch=0. The sequence is structured stream-node/list construction: 0x8008fbb4/0x8008fbec/0x8008fbf0/0x8008fbf4 repeatedly write zeroed fields and 0x8017d9e0/0x8017d9f8/0x8017da10/0x8017da28 links, while 0x8008fdc0/0x8008fdcc/0x8008fe60 write sample metadata. This independently names legitimate retail writers and values, but does not select H-layout-equivalent, H-retail-layout-different, or H-port-only-damaging-write without the same ordered table from the port. Next: add one phase-gated port-side table covering the same target addresses and writer/value/order fields, then run one seeded VI-512 route and compare it to `scratch/agent/oracle_s4305_fixed.log`. No guard/skip is authorised.
 
 00a. (s4299-s4303) do_rom_read odd-address crash ROOT: stale musyx stream nodes. The 47664-byte block 0x8017D910 (stream nodes at 0x17DBE0 plus DMA sample buffers) is freed after `waitForAnyAudioSlot` and reused by level-texture/cache work while `musyxSynthFrame` keeps walking it. Name-copy and host-write refuted. The three frees are retail guest code on the natural exit path, and retail independently reaches hangar, enters the wait three times in 48 s, and accesses the block 1,141,187 times (1,072,566 reads, 68,621 writes) while `musyxSynthFrame` runs 2,820 times. This rules out both “retail skips the free” and “retail stops synth globally.” The writer histogram includes guest audio/object and cache/allocator PCs; exact post-free value/layout ordering remains open. Do not add a skip/guard until a legitimate retail/port lifetime difference is named. Single-source for exact retail counts; combined with the port-side s4301 trace this establishes shared free plus continued synth activity.
 
@@ -109,6 +109,7 @@ Work only the first applicable item. One monotonic sequence.
 | Allocator list head==0 | Single-source s4230, not reproduced (s4231/s4234); parked. |
 | M3 sentinel ownership | H1 at source scope; runtime unqualified (no MIPS toolchain). |
 | waitForAnyAudioSlot B39 skip flag | Retail does not avoid the frees: the aligned physical watch shows the B39-byte read at 0x00130B38, followed by all three asset-pointer reads at the free sites (s4302). |
+| Retail post-free stream-node writer sequence | The fixed s4305 oracle arm captured a phase-gated ordered sequence with scalar-store mismatch=0; it names structured list-link/sample-metadata writers but is single-source until matched against the port. |
 
 ## Durable evidence boundary
 

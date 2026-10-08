@@ -1,16 +1,12 @@
-# Next work unit (s4305): phase-gated post-free value/order join
+# Next work unit (s4306): port-side post-free value/order join
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-State (s4304): the retail oracle passed the whole-RDRAM positive control,
-reached VI-512 hangar, and measured 1,142,716 accesses to physical
-0x17D000:0x17E200 (1,073,931 reads and 68,785 writes), with the target
-phase writer histogram active. Retail
-therefore continues synth activity after the shared free path. The port trace
-also shows the freed block and continued synth entries. The remaining
-discriminator is the first post-free writer/read value sequence, not whether
-the free or synth entry exists. The s4304 arm was valid but underpowered for
-that discriminator: it recorded writer PCs, not post-store values/order.
+State (s4305): the retail oracle passed the whole-RDRAM positive control,
+reached VI-512 hangar, and captured an ordered post-store table for the target
+block. The first 256 rows repeatedly show structured stream-node links and
+sample metadata, with scalar-store mismatch=0. The port still has only
+writer/synth breadcrumbs, so the cross-runtime discriminator remains open.
 
 Competing hypotheses:
 
@@ -22,18 +18,24 @@ Competing hypotheses:
 - H-port-only-damaging-write: both runtimes reuse the block, but only the port
   emits the damaging ASCII/name or ltex-cache value into the stream-node span.
 
-Discriminator: one retail oracle run with the positive control, VI-512 phase
-bucket, `--post-value-watch 1`, `--first-watch 1`, `--pc-hist-watch 1`, and the existing port
-post-free/synth breadcrumbs from the matching seeded-save VI-512 run. Compare
-the first writer PCs and post-store word samples, then the first synth
-read after the free. Positive-control callbacks and VI-512 are mandatory.
+Discriminator: one port run with the positive control equivalent (a phase-gated
+whole-RDRAM/known-framebuffer control), target range 0x17D000:0x17E200,
+phase VI 0x006ab400/512, and one bounded table containing writer PC, aligned
+address, post-store word, scalar mismatch, and ordinal. Compare the first
+post-free table rows and first synth read against the retail rows in
+`scratch/agent/oracle_s4305_fixed.log`. A matching table supports
+H-layout-equivalent; a different legitimate link/layout sequence supports
+H-retail-layout-different; a damaging value written only by the port supports
+H-port-only-damaging-write. A missing control or VI-512 phase is invalid.
 
 Exact command:
 
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 48 --hit-cap 20 --watch-write 0x0:0x800000 --watch-rw 0x17D000:0x17E200 --watch-pc 0x8009123C,0x800668B0 --first-watch 1 --pc-hist-watch 1 --pc-hist-phase 0x006ab400:512 --post-value-watch 1 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start --vi-trace`
+Before changing code, inspect the existing `ROGUESQ_LOG_AUDIOTICK_TRACE`,
+`ROGUESQ_LOG_AUDIO_OBJECTS`, and phase-key plumbing; add the entire table in
+one build, then run the existing seeded-save VI-512 driver from `build/` with
+all passive breadcrumbs enabled. Do not add a guard or skip.
 
-Expected outcomes: matching post-free writer/value/read ordering supports
-H-layout-equivalent; retail-only differing values/order supports
-H-retail-layout-different; a damaging writer present only in the port supports
-H-port-only-damaging-write. A zero target count or no VI-512 phase is invalid.
-Do not add a guard or skip from this probe.
+Expected outcomes: matching rows select H-layout-equivalent; a different
+legitimate layout selects H-retail-layout-different; a damaging port-only
+value selects H-port-only-damaging-write. No control or no VI-512 phase is
+invalid. Do not add a guard or skip from this probe.
