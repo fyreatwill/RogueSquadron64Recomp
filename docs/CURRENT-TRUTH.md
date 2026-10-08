@@ -452,3 +452,7 @@ Detailed counts and session-specific notes remain in `PORTING-STATE.md`.
 
 ### s4227 addendum
 Fresh 7F save: intro->title at ~48 s; Start leads to the first-run SELECT GAME / pilot-create menu (not hangar); s4226 "no hangar" = input mismatch. Fresh-save runs crash at varying audio sites (fillSampleStreamRange+8136; 0x80001b08) - next: tally (NEXT.md).
+
+
+## s4232 addendum
+The s4231 crash PC 0x80001b08 was OUR rs64_log_ai_output probe (zero-extended TO_PTR; fixed). last-guest-pc is not the fault site: use the host pc-symbol. Remaining real faults: fillSampleStreamRange (+8292 NULL deref, +932 garbage ptr 0x10CF300D); one MetalFramebuffer null-ctor. Next: re-run the 6-run listwatch with the fix, and map fillSampleStreamRange+932/+8292 to the guest source loads.

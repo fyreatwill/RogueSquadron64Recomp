@@ -353,7 +353,7 @@ index dbf46b2..60d1401 100644
  
  template<u8 e>
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..ada341c 100644
+index 0195f2b..e113650 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
 @@ -1,29 +1,133 @@
@@ -440,7 +440,7 @@ index 0195f2b..ada341c 100644
 +        phase_key = key;
 +        n = 0;
 +    }
-+    const uint8_t* p = TO_PTR(uint8_t, addr);
++    const uint8_t* p = TO_PTR(uint8_t, (uint64_t)(int32_t)addr);  // sign-extend KSEG0 addr (s4232)
 +    uint32_t fnv = 2166136261u;
 +    uint32_t nonzero = 0;
 +    for (uint32_t i = 0; i < len; i++) {
