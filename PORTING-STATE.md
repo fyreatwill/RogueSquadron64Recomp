@@ -147701,3 +147701,7 @@ Next discriminator: phase-gated (hangar-reached) re-run of arm0/arm1 with the fl
 ## Session 4274 (2026-10-08) — DPC_WRAP_FLUSH A/B to 75 s: neither arm reached hangar; flush stays default OFF
 
 Ran scratch/agent/s4273_ab.sh with sleep 75 (fresh build/saves per arm). arm0 (WRAP_FLUSH=0): final odd=336 sane=2608 (11.4% odd), VI 640 only. arm1 (=1): odd=336 sane=3024 (10.0% odd), VI 1024 at 49.8 s. VI 512 hangar NOT reached in either arm, so the phase-gated discriminator was not obtained; arms not phase-matched, cross-run counts on animating content (single-source, weak). No frame dumps, so W2 unexamined. Rules out nothing. The 40..68 s autopilot recipe is wrong for reaching the hangar; use the s1949 route (Start at title ~14 s, VI 512 ~26 s).
+
+## Session 4275 (2026-10-08) — WRAP_FLUSH A/B with s1949 keys: neither arm reached VI 512 (no decision)
+
+Ran scratch/agent/s4275_ab.sh (s1949 PROBE_KEYS mash, PROBE_PHASE_WIDTH=512, timeout 120 s, fresh saves, S4271/S4272 on). Positive controls fired: arm0 wrapBumps=2068481; arm1 flush n=2752 totbytes=210300448. arm0: process died at VI 640 (probe: "process gone while waiting for width 512"; known VI-640 intro crash family), cimgtot odd=47 sane=1057 at death. arm1: VI 1024 only at 50.7 s (s1949: 14.2 s), no 512 within 120 s; cimgtot odd=432 sane=7120 at end. The arms are not comparable (different phases and durations). Nothing is ruled out about the flush; it stays OFF. The s1949 recipe did not reliably reach the hangar under the current build (0/2 hangar). ORIGIN: no mitigation added.
