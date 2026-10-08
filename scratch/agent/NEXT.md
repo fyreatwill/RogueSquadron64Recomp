@@ -1,6 +1,11 @@
-# Next work unit (s4311): extend the qualified port free/read join to the later divergence
+# Next work unit (s4312): requalify the port free/read route before using the extended join
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
+
+State (s4311): the 4,096-row callback was built, but the first launch omitted
+the known M4 route qualifier and both corrected seeded-save launches crashed at
+`fillSampleStreamRange+13572` / guest `0x8000834C` at VI 640. Neither control
+fired and no target rows were captured, so the extended table has no result.
 
 State (s4310): the corrected boot-relative seeded-save/key route reached VI 512
 at 42.0 s, passed the adjacent-range and phase-gated read positive controls,
@@ -20,20 +25,19 @@ Competing hypotheses:
 - H-retail-reclaims-different: remains possible for later traversal/layout;
   the bounded 256-row join does not yet name the first later divergence.
 
-Discriminator: one clean port VI-512 run extending the bounded read/write join
-past row 256, with a keyed snapshot at the first read whose PC/address/value
-differs from the retail sequence. A divergence after the matched first read
-with no intervening port-only writer selects a later consumer/overlay issue;
-an intervening port-only writer selects H-retail-reclaims-different. Missing
-controls, no VI 512, or a crash before the keyed divergence is invalid. Do not
-add a guard or skip.
+Discriminator: first reproduce VI 512 with the adjacent-range and phase-gated
+read controls before interpreting the 4,096-row table. Controls plus target rows
+select a valid route; missing controls, no VI 512, or a VI-640 crash selects
+route/provenance failure and proves nothing about the join. Do not add a guard
+or skip.
 
 Before any build, inspect the existing port free/read join and confirm its
 positive-control and phase-gating fields. Batch all three hypotheses in one
 instrument/build/run; do not make an A/B arm or mitigation.
 
-Expected command family: reuse the successful s4310 boot-relative recipe and
-extend the existing bounded rows in one build/run. Retain
+Expected command family: recover the exact s4310 seeded-save provenance and
+reuse its successful boot-relative recipe. Start with the existing 256-row
+instrument (or retain 4096 if no rebuild is needed), and retain
 `ROGUESQ_LOG_S4306=1`, `ROGUESQ_LOG_S4307=1`, and `ROGUESQ_LOG_RS_FREE=1`, run
 from `build/`, kill with SIGKILL, and capture under
 `scratch/agent/s4311_port_free_read_join/`. A missing positive control or no

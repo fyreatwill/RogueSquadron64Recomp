@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4310 (port free/read join qualified). Previously 4309 (port consumer join route qualification). Previously 4308 (retail read-PC/value join).
+Updated for session 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified). Previously 4309 (port consumer join route qualification).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,9 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4310) The corrected seeded-save/key route reached VI 512 at 42.0 s and passed both same-run controls: the adjacent-range store control and the phase-gated synth-read control. The target block `0x8017D910` was freed by `waitForAnyAudioSlot` at guest PC `0x80095D54` before the hangar phase; the port then captured 256 target reads and 256 selected writer rows, all 0 requested-vs-post mismatches. The first port read was `0x8008FCE8: 0x17D9E0 -> 0x8017D9F8`, matching the independent retail boundary. This rules out port-only reuse before the first consumer read and selects the shared-free/equivalent-first-read boundary; later traversal/layout divergence remains open. Next: extend the bounded join past the first 256 rows or compare a keyed post-free snapshot at the first divergent read to name the later consumer divergence. No guard/skip is authorised.
+00. (s4311) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including `ROGUESQ_A14_YIELD=0`) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. Both same-run controls and all target rows were zero. The expanded instrument is built but has no result. Next: recover the exact s4310 route/save provenance and requalify VI 512 with both controls before extending the table; do not interpret another null or add a guard/skip.
+
+00a. (s4310) The corrected seeded-save/key route reached VI 512 at 42.0 s and passed both same-run controls: the adjacent-range store control and the phase-gated synth-read control. The target block `0x8017D910` was freed by `waitForAnyAudioSlot` at guest PC `0x80095D54` before the hangar phase; the port then captured 256 target reads and 256 selected writer rows, all 0 requested-vs-post mismatches. The first port read was `0x8008FCE8: 0x17D9E0 -> 0x8017D9F8`, matching the independent retail boundary. This rules out port-only reuse before the first consumer read and selects the shared-free/equivalent-first-read boundary; later traversal/layout divergence remains open. Next: extend the bounded join past the first 256 rows or compare a keyed post-free snapshot at the first divergent read to name the later consumer divergence. No guard/skip is authorised.
 
 00a. (s4309, superseded by s4310) The first port free/read join route was invalid: three variants reached only VI 640 or crashed before VI 512, and the wrap-shadow variant stalled at VI 640. It was believable because the s4306 control fired, but the corrected boot-relative key schedule now reaches VI 512 with both controls and target rows.
 

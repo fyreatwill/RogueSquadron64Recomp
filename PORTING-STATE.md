@@ -148052,3 +148052,21 @@ independent retail first-read boundary. This selects the shared-free,
 equivalent-first-read boundary and rules out port-only reuse before that
 consumer read. Later traversal/layout divergence remains open; no guard or
 skip was added. ORIGIN: none; measurement only.
+## Session 4311 (2026-10-08) — extended port free/read join route-invalid
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+Expanded the existing phase-gated s4306/s4307 port free/read join from 256 to
+4,096 writer and read rows in one build, retaining the adjacent-range and
+phase-gated read positive controls. The first launch had an invalid route
+because it omitted `ROGUESQ_M4_Y8000_WIDTH=512`. Two corrected seeded-save
+launches, including the documented `ROGUESQ_A14_YIELD=0` rollback, still
+crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while VI 640 was
+active. Both controls and all target rows remained at zero, so the extended
+join produced no evidence and does not alter the s4310 boundary conclusion.
+
+This rules out interpreting the null as a later consumer divergence. It does
+not rule out H-free-before-consumer, H-port-reuse-before-consumer, or
+H-retail-reclaims-different. The next work unit is to recover the exact s4310
+route/save provenance and requalify VI 512 before using the larger table. No
+guard or skip was added. ORIGIN: none; measurement/instrument only.
