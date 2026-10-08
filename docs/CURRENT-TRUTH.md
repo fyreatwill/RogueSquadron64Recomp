@@ -456,3 +456,6 @@ Fresh 7F save: intro->title at ~48 s; Start leads to the first-run SELECT GAME /
 
 ## s4232 addendum
 The s4231 crash PC 0x80001b08 was OUR rs64_log_ai_output probe (zero-extended TO_PTR; fixed). last-guest-pc is not the fault site: use the host pc-symbol. Remaining real faults: fillSampleStreamRange (+8292 NULL deref, +932 garbage ptr 0x10CF300D); one MetalFramebuffer null-ctor. Next: re-run the 6-run listwatch with the fix, and map fillSampleStreamRange+932/+8292 to the guest source loads.
+
+## s4233 addendum
+fillSampleStreamRange+8292 = unlink at 0x8008FD60 `lw $a0,0($v1)` with v1==0 (probe confirmed head=0, pool=0, tail=801F9E00, ra=0); +932 = list-walk `lw $v0,0xC($t0)` at 0x8008FADC with t0=0x10CF3001 (asm-map only). Host-offset mapping recipe: cmake --build build --target Users/<...>/funcs_N.s then scratch/agent/s4233/map.py (direct cc/otool/nm are denied). Next: who zeroes head+pool (0x8015-0x661C/-0x6634), and why ra==0 at the call.
