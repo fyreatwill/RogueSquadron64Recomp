@@ -148093,3 +148093,22 @@ hypotheses because the independent retail read/value sequence remains bounded
 to 256 rows. The previous route-invalid result was a provenance failure, not
 evidence against the join. No guard or skip was added. ORIGIN: none; measurement
 only.
+
+## Session 4313 (2026-10-08) — retail/port consumer sequence matches through 4096 rows
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+Raised the oracle's bounded sequence cap from 256 to 4,096 and built the oracle.
+The first capture used the port-side store PCs (`0x8008F90C/10`) and therefore
+produced zero target sequence rows despite valid whole-RDRAM, title, and hangar
+controls; that was an instrument-target mistake and was not interpreted as a
+null. The corrected capture used the retail consumer read watch at
+`0x8008FCE8`, with the target physical range and detailed read values.
+
+The corrected retail run passed the whole-RDRAM positive control, reached title
+VI 1024 and hangar VI 512, recorded 1,438,563 target reads, and had no crash or
+abort marker. Its first 4,096 keyed `(PC,address,value)` rows exactly matched
+the qualified port table at `scratch/agent/s4312_port_free_read_join/run2/run.log`.
+The first later-divergence hypothesis therefore remains open only after row
+4,096; the prior 256-row boundary is superseded. No guard or skip was added.
+ORIGIN: none; measurement/instrument only.

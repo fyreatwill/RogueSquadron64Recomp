@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4312) The exact seeded-save/boot-key route, with `ROGUESQ_M4_Y8000_WIDTH=512`, reached VI 512 at 42.2 s. Both same-run controls fired, the target block was freed at guest PC `0x80095D54`, and the extended join captured 4,096 writer rows plus 4,096 synth-read rows with zero requested-vs-post mismatches and no crash. The route is qualified; the larger table still does not distinguish later retail traversal/layout divergence because the independent retail sequence is currently bounded to 256 rows. Next: extend the independent retail read/value watch to the same 4,096-row cap, then compare the keyed port/retail sequence through the first later divergence. No guard/skip is authorised.
+00. (s4313) The independent retail oracle passed the whole-RDRAM control, title VI 1024, and hangar VI 512. Its target watch recorded 1,438,563 reads with no crash; the first 4,096 keyed `(PC,address,value)` rows exactly match the qualified port free/read join. This extends the comparison past the prior 256-row boundary without a divergence. Next: extend both keyed sequences to 16,384 rows to locate a later divergence or further qualify parity. No guard/skip is authorised.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -120,7 +120,7 @@ Work only the first applicable item. One monotonic sequence.
 | Retail/port post-free stream-node layout | s4306 matched an independent retail ordered table against a valid port VI-512 run: 256 port rows, 0 requested-vs-post mismatches, but different address/value/order tuples and writer mix. This selects H-retail-layout-different; exact synth consumer read/lifetime failure remains open. |
 | Port synth-read/free join | s4307 captured 256 reads with a phase-gated control; s4310 additionally joined the shared free and captured 256 post-free writer rows. The first port read/value matches retail, and the free precedes it, ruling out port-only reuse before the first consumer read. Later traversal/layout divergence remains open; no mitigation is authorised. |
 | Port synth-read/free join, extended route | s4312 requalified the route and captured 4,096 writer/read rows in one run; both controls fired at VI 512, the free was again at guest `0x80095D54`, and all 4,096 requested/post pairs matched. This validates the extended port table but is single-source for the later sequence; retail comparison remains bounded to 256 rows. |
-| Retail synth-read value join | s4308: whole-RDRAM read control and VI-512 both passed; the value-aware oracle logger captured 1.43M target reads, including the first hangar row `0x8008FCE8: 0x17D9E0 -> 0x8017D9F8`. Retail's read PC/address/value sequence remains distinct from port's. |
+| Retail synth-read value join | s4308/s4313: whole-RDRAM and VI-512 controls passed; the value-aware oracle captured 1.43M target reads, and the first 4,096 keyed retail rows exactly match the qualified port sequence. Later divergence remains open. |
 
 ## Durable evidence boundary
 
