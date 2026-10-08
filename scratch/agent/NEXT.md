@@ -1,13 +1,11 @@
-# Next work unit: M5 Step 9n — guest writer of OSTask.data_ptr (RDRAM 0x1494A0)
+# Next work unit: M5 Step 9o — retail content of the data_ptr block
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4215: task struct layout verified (raw == host). H-task-struct-stale refuted.
+s4216: data_ptr writer = PC 0x8009177C (known since s3482); retail stores the same 7728 B heap blocks. H-builder-wrong-target / H-builder-skipped refuted. See docs/M5-S4216-DATAPTR-RECONCILE.md.
 
 Hypotheses:
-- H-builder-skipped: the real audio builder is stubbed; data_ptr is set by some other (menu) code.
-- H-builder-wrong-target: the guest audio builder writes data_ptr from a pointer it was handed by a stubbed/failed alloc.
-- H-ucode-uses-other-ptr: list is reached via ucode data; data_ptr irrelevant.
-
-First: read M5-S3482-TASK-WRITER-JOIN.md (may already name the writer). Then discriminator: store-watch on 0x1494A0 logging g_rs64_last_guest_pc / ra per write, with control watch on 0x149470 (type). Writer PC in audio-setup func => builder-skipped/wrong-target by its caller args.
+- H-content-matches: retail block 0x80171CE0 (title/1024 phase, physical 0x171CE0) also holds ASCII names + 0x28-stride pointer structs => input legit, divergence is in ucode consumption/output.
+- H-content-differs: retail block holds real audio records (zeros/commands, no 0x801xxxxx pointers) => content producer diverges in the port.
+Discriminator: tools/oracle (README) — whole-RDRAM watch control first (~1.6M fires/8 s), then read 0x1E30 bytes at physical 0x171CE0 at several title-phase VIs; compare record0 words/ASCII fraction with s4214 scan (scratch/agent/s4214_record_scan.sh output).
 Any lib/ edit needs submodule-patches/export.sh + commit.

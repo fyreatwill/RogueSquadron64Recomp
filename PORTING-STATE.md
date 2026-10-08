@@ -147219,3 +147219,11 @@ Next: name the guest store PC writing 0x149470+0x30 (0x1494A0) via a store-watch
 Session 4215 conclusion (gate-readable): this iteration REFUTES H-task-struct-stale (raw guest words equal host-read fields; control ctl_type matches) and does not yet select between H-builder-skipped and H-ucode-uses-other-ptr; next discriminator is the guest writer PC of OSTask.data_ptr at 0x1494A0, checking M5-S3482-TASK-WRITER-JOIN.md first.
 
 Session 4215 gate-wording addendum: this run refutes H-task-struct-stale (raw guest words equal host-read fields, control type matches) and thereby selects the guest-write side, keeping H-builder-wrong-target selected (the guest itself stores a menu-heap pointer in OSTask.data_ptr) over a runtime misread; single-run. The next discriminator is the guest store PC writing OSTask.data_ptr at RDRAM 0x1494A0, with a control watch on the type field at 0x149470 (see scratch/agent/NEXT.md).
+
+## Session 4216 (2026-10-07) — M5 Step 9n: data_ptr writer already named by s3482-s3486 (PC 0x8009177C); retail stores the same 7728 B menu-heap pointers, so H-builder-wrong-target and H-builder-skipped are refuted
+Checked the prior ledger before building a store-watch: s3482/s3483 (retail oracle, 629 rows, whole-RDRAM control fired) show data_ptr at 0x1494A0 is written by guest PC 0x8009177C (size by 0x80091784) and retail stores only 0x80171CE0/0x80173B20, the very 7728 B blocks s4212 found. The port executes the same writer PCs (s3482). New document docs/M5-S4216-DATAPTR-RECONCILE.md records this. No run this iteration (the s4215 NEXT.md watch would have re-measured a known fact).
+Rules out: H-builder-wrong-target (s4214), H-builder-skipped. Leaves H-ucode-uses-other-ptr; the s4214 block-content observation is port-only.
+ORIGIN: no mitigation added; documentation/reconciliation only.
+Next: retail-oracle dump of block 0x80171CE0 content for comparison with the s4214 port scan (see NEXT.md).
+
+Session 4216 conclusion (gate-readable): this iteration REFUTES H-builder-wrong-target and H-builder-skipped (retail oracle stores the same data_ptr values from the same writer PC 0x8009177C) and leaves H-ucode-uses-other-ptr; the next discriminator is a retail-oracle content dump of the 7728 B block at 0x80171CE0 versus the port s4214 scan.
