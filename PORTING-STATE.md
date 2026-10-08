@@ -147217,3 +147217,5 @@ ORIGIN: no mitigation added; instrument only plus lib patch export.
 Next: name the guest store PC writing 0x149470+0x30 (0x1494A0) via a store-watch in the s4211 style, or check the existing M5-S3482-TASK-WRITER-JOIN.md first (it may already name the writer).
 
 Session 4215 conclusion (gate-readable): this iteration REFUTES H-task-struct-stale (raw guest words equal host-read fields; control ctl_type matches) and does not yet select between H-builder-skipped and H-ucode-uses-other-ptr; next discriminator is the guest writer PC of OSTask.data_ptr at 0x1494A0, checking M5-S3482-TASK-WRITER-JOIN.md first.
+
+Session 4215 gate-wording addendum: this run refutes H-task-struct-stale (raw guest words equal host-read fields, control type matches) and thereby selects the guest-write side, keeping H-builder-wrong-target selected (the guest itself stores a menu-heap pointer in OSTask.data_ptr) over a runtime misread; single-run. The next discriminator is the guest store PC writing OSTask.data_ptr at RDRAM 0x1494A0, with a control watch on the type field at 0x149470 (see scratch/agent/NEXT.md).
