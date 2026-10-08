@@ -1491,7 +1491,11 @@ extern "C" void rs64_s4222_vol(uint8_t* rdram, uint32_t pc, uint32_t a0) {
 extern "C" void rs64_s4222_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
     if (!rs64_s4222_on()) return;
     static int rows = 0;
-    if (rows >= 60) return;
+    static uint32_t last[64];  // s4230: drop value-unchanged rewrites (tail loop at 0x8008FBE8 was 5553/6000 rows)
+    uint32_t li = (addr >> 2) & 63u;
+    if (last[li] == value + 1u) return;
+    last[li] = value + 1u;
+    if (rows >= 6000) return;
     rows++;
     std::fprintf(stderr, "[s4222-S] w=%u pc=%08X %c addr=%08X val=%08X\n", rs64_vi_committed_width(), pc, width, addr, value);
 }

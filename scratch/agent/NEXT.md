@@ -1,7 +1,7 @@
-# Next work unit: M5 - classify fillSampleStreamRange+8136 crash (null guest ptr)
+# Next work unit: M5 - name the unwatched writer of allocator tail 0x801499B4 (=0x801F9D10 while head 0x801499E4 == 0)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4229: probe-induced crashes (sched+9632, stage_adv) fixed; remaining early crash fillSampleStreamRange+8136 (fault 0x380000000 = rdram+0x80000000, i.e. guest pointer 0 dereferenced), last-guest-pc 0x8000b650 / 0x8000834c, ~1/4 stale runs.
-Hypotheses: (a) guest passes uninitialised/zero sample-stream descriptor because audio bring-up state differs (race with audio thread start); (b) our stub of a MusyX DMA/alloc returns 0; (c) another unsigned-literal probe (grep class is closed, so unlikely).
-Discriminator: python3 -I tools/agent/disasm_at.py fillSampleStreamRange 8136 (prints lldb window); name the register holding 0 and its source in the generated .c; then run scratch/agent/s4229b_tally.sh style runs logging that field.
+s4230: fillSampleStreamRange+8136 is `lw $a0,0($v1)` at 0x8008FD60 with head==0, tail=0x801F9D10 (probe [s4230-FD60], 1 of 6 stale runs). Watched guest stores (rs64_m5_writer_parity, retargeted by tools/apply_s4230_listwatch.py) show only boot init before the crash.
+Hypotheses: (a) host-side bulk write (osPiStartDma/memcpy/save/overlay copy) over 0x801499B0..E8; (b) guest store site without the writer_parity call (sb/sh/swl/swr/sdc/etc); (c) our own zero-init (pc 0x80000420/24 'D' stores) ordered after a legit tail write, so head is cleared after tail was set.
+Discriminator: in ONE build, add (1) a host-side watch in the DMA/memcpy helpers (lib/N64ModernRuntime + src) for physical overlap with 0x1499B0..0x1499E8 (log pc/caller/len), (2) a per-VI or 1 ms poll of the 3 words logging first change with last-guest-pc, (3) positive control: log any DMA overlapping 0x80000000..0x80200000. Run scratch/agent/s4230_listwatch.sh (6 stale runs). Outcome a => host log names the copy; b => poll fires with no host hit; c => head write by 0x8008F8C8 after tail nonzero. Edits under lib/ need submodule-patches/export.sh + commit.
