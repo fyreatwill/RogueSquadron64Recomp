@@ -1,6 +1,9 @@
-# Next work unit: resume the M5 audio de-stub sequence (docs/M5-AUDIO-PLAN.md) at its next unexecuted step
+# Next work unit: is the hangar's repeated all-nonzero AI buffer (FNV 0x95E590C5) real audio or a constant/saturated fill?
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4234: the allocator head==0/tail!=0 corruption did not recur in 4 runs (~80k entries); ra==0 at fillSampleStreamRange entry is normal. That thread is parked wait-for-recurrence (probe in tools/apply_s4234_entryprobe.py; recipe scratch/agent/s4234_entry.sh). Do NOT spend another iteration on it unless a soak shows head==0 with tail!=0.
-Do: read the "Validation row required for every step" section and the ordered step list of docs/M5-AUDIO-PLAN.md, pick the first step not marked executed, state the competing hypotheses and discriminator here before building, then run it with a same-run positive control.
+s4235: fresh-save hangar run (scratch/agent/s4235_hangar_pcm.sh, hangar at 72 s) gave 19/25 identical AI buffers, nz=768/768.
+Hypotheses: (a) constant DC/clipped fill (mixer saturating or an uninitialised bus); (b) legitimate looping ambience/music tail repeated; (c) host-side repeat of a stale buffer.
+Discriminator: at the ai.cpp `[ai-output]` census also log the first 32 bytes and per-channel s16 min/max/distinct-count of each buffer. (a) -> min==max or 1-2 distinct values; (b) -> wide distinct count, different FNVs on later buffers; (c) -> same rdram addr reused. Positive control: title buffers in the same run must show wide distinct counts.
+Optional retail twin: tools/oracle/README.md hangar AI buffer (oracle currently reaches boot/attract only, so likely unavailable).
+Park: allocator head==0/tail!=0 corruption (s4234) until it recurs.

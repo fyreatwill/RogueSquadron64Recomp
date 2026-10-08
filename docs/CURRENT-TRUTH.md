@@ -165,6 +165,8 @@ mitigation behavior changed.
 
 ## Next steps
 
+- **s4235:** fresh-save hangar `[ai-output]`: 24/25 nonzero, but 19/25 are one identical FNV 0x95E590C5 with all 768 bytes nonzero (constant/saturated-looking; bytes not dumped, single run). Next: dump the first 32 bytes + sample min/max of that buffer at the AI boundary and compare with a retail oracle hangar AI buffer (NEXT.md).
+
 - **s4231 note:** allocator-list head==0/tail!=0 (s4230) NOT reproduced in 6 stale runs with host DMA watch + 200us poll (dmaHIT 0/6, controls fired, head/tail always written together by guest). Treat s4230 as single-source/possible probe artifact. New dominant crash PCs: last-guest-pc 0x8000b650 (3/6), 0x80001b08 (2/6) - classify next.
 0000. (s4229) The s4228 'early crash at spTaskSchedulerThread+9632 / 0x8000834c' and the rs64_s3308_stage_adv crash were OUR diagnostic probes using `MEM_x(..., 0x8…u)` (zero-extended base -> rdram+0x1_00xx_xxxx, unmapped). Fixed by `S32(0x8…u)` as the reg arg with a SIGNED offset (unsigned offset re-zero-extends). Class-closed by grep in generated code + fixup/apply scripts (4 sites). Remaining real audio crash: fillSampleStreamRange+8136/+932 (fault rdram+0x80000000 = null guest ptr, last-guest 0x8000b650/0x834c). Supersedes the s4228 line below.
 0000. (s4228) Audio crashes at 0x8000834c (spTaskSchedulerThread+9632, SEGV, ~1-3 s) and 0x8000b650 (SIGABRT) occur under BOTH fresh (0x7F) and stale (zero-volume) saves: 1/5 fresh, 1/2 stale in 100 s (small n, tally only) -> not caused by nonzero volume. Fresh save + shifted keys reaches hangar (VI 512) at ~72 s (2/5). Next: classify the 0x8000834c early crash (writer of bad pointer, x19=0xffffffff8011a89c in stale2) before any guard.
