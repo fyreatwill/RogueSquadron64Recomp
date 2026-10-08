@@ -147522,3 +147522,9 @@ Built `scratch/agent/s4251_ab.sh` (4 concurrent arms, same binary, 110 s): A sha
 - c1 vs c2 NOT discriminated: C 0/2 leans toward audio-driven (c1) but n=2 with a ~33% base crash rate gives p~0.45 of seeing it by chance. Crash frames are gfx-side (resetVertexCacheSlot/copyToRAM) with a wild pointer, i.e. writer unnamed. Faster audio exposes a latent race rather than creating one.
 ORIGIN: no mitigation landed; diagnostic script only. Writer of the wild pointer 0x20000004-derived value still unnamed.
 Next: ~8 more silent-private (C) arms vs private-real arms in one batch (4+4 concurrent) to power the comparison, or add a pc-attribution for the wild write.
+
+## Session 4252 — silent-vs-real private-DMEM comparison powered: c1 refuted, crash independent of audio ucode
+Ran s4252b (3 waves x B1 B2 C1 C2 concurrent; B=private DMEM+real audio ucode, C=private+ROGUESQ_AUDIO_UCODE=0). First attempt (s4252_ab_*) was a harness bug: zsh does not word-split $ARMS, so each wave ran ONE B arm (3/3 crashed: fillSampleStreamRange, copyToRAM, spawnNpcOfType) and no C; fixed with ${=ARMS}.
+Result (s4252b): B 3/6 crash, C 3/6 crash. Wave 2: all four arms (2B,2C) died at t=27.3-28.2s in fillSampleStreamRange; wave 3: B1 died at 15.1s in RT64 NativeTarget::copyToRAM, C2 at 28.2s fillSampleStreamRange; wave 1 all four survived to 108s. Task rate 37-42/s in every arm.
+Rules out: c1 (crash is audio-rate/ucode driven) — silent ucode crashes at the same rate as real. Supports c2 (race independent of audio ucode). Caveat: ucode=0 silences only the RSP audio ucode; guest fillSampleStreamRange still runs, so "audio-independent" means ucode-independent. The fixed ~28s event (4/4 in wave 2) suggests a time/phase-triggered event, not random.
+ORIGIN: none landed (no mitigation); this is a measurement only. Harness: scratch/agent/s4252_ab.sh, s4252_all.sh.

@@ -1,9 +1,8 @@
-# Next work unit: power the silent-vs-real private-DMEM comparison (s4252)
+# Next work unit: name the writer of the wild pointer at the t~28s fillSampleStreamRange crash (s4253)
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
 
-s4251: private+real audio crashes 3/9 arms (28.2, 28.2, 45.4 s), shared 1/5, private+silent 0/2. c3 (fixed 28 s event) refuted.
-Hypotheses: c1 audio-rate-driven race (silent private never crashes); c2 gfx race independent of audio (silent private crashes at similar ~33%).
-Discriminator: edit s4251_ab.sh to 3 B + 3 C arms (6 concurrent may slow; check A-free so no starvation control: keep one A as positive control = 7 arms, or run in two waves of 4), 3 repeats => >=9 each. c1 predicted: C 0/9; c2: C ~3/9.
-Commands: env TAG=_N zsh scratch/agent/s4251_ab.sh ; python3 tools/s4250_summarize.py scratch/agent/soak_results/s4251_ab_N/arm*.log
-If c1: crash frames' writer is guest audio sample-stream; name it with tools/apply_s4230_listwatch.py. If c2: RT64 copyToRAM/vertex cache race — pc-attribute the wild pointer.
+s4252b: private-DMEM crash B 3/6, silent-ucode C 3/6 -> ucode-independent (c1 refuted). Crashes cluster at 27-28s fillSampleStreamRange (4/4 in one wave, 0/4 in another) plus one RT64 copyToRAM at 15s.
+Hypotheses: h-a guest-side sample-stream state (voice array) corrupted by non-audio writer at phase transition; h-b RT64 copyToRAM/vertex cache writes into guest RDRAM (cross-thread); h-c shared timing (wave-level correlation: load on host).
+Discriminator: use tools/apply_s4230_listwatch.py / write-watch on the faulting pointer's source in a B arm; also compare crash with ROGUESQ_AUDIO_PRIVATE_DMEM=1 and sample-stream fill disabled entirely (skip fillSampleStreamRange): if crash migrates elsewhere at ~28s, trigger is phase event, not audio.
+Harness: env OUTN=c TAG=_N ARMS="B1 B2 C1 C2" zsh scratch/agent/s4252_ab.sh ; python3 tools/s4250_summarize.py ...

@@ -483,3 +483,5 @@ fillSampleStreamRange+8292 = unlink at 0x8008FD60 `lw $a0,0($v1)` with v1==0 (pr
 
 ## s4234 addendum
 fillSampleStreamRange entry probe (4 runs, ~80k entries): ra==0 on every entry (host-called; NOT evidence of a zeroed context). Allocator-list stores occur only in init, before the first call. head==0 appears only with tail==0 (empty list/re-init with new pool). The s4233 state head==0/tail!=0 did NOT recur (1 sighting in ~10 runs): PARK as wait-for-recurrence; the probe stays in tools/apply_s4234_entryprobe.py. Next: resume the M5 de-stub sequence (docs/M5-AUDIO-PLAN.md), not another allocator chase.
+
+- s4252: private-DMEM crash rate is B 3/6 vs silent-ucode C 3/6 (ucode-independent; c1 refuted). Crashes cluster ~28s fillSampleStreamRange; one RT64 copyToRAM at 15s. Next: name the wild-pointer writer (see NEXT.md).
