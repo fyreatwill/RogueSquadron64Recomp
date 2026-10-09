@@ -4,8 +4,9 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4356 (2026-10-08). The preceding maintenance pass reduced
-this file to durable state; session 4356 qualified the audio-task-rate A/B.
+Updated for session 4357 (2026-10-09). The preceding maintenance pass reduced
+this file to durable state; session 4357 qualified phase coverage but exposed a
+retail task-join instrument boundary.
 
 ## Current state
 
@@ -29,6 +30,15 @@ and VI controls. Its later descriptor pointers, words, type/class sequence,
 source/output hashes, and branch fields diverge between arms. This rejects a
 post-filter-only explanation and leaves the pre-filter stream/selector
 boundary open.
+
+Session 4357's established consumer matrix passed the retail whole-RDRAM
+control (33,331,419 writes), reached title and hangar, and completed 4,478 VI;
+the port reached title 1024 at 13.7 s and hangar 512 at 34.0 s without a
+crash/abort. The retail task/field join at `0x80033FCC` produced zero rows,
+while the port produced 2,817 ABI rows and 2,812 DMA joins. This is an
+instrument-boundary result, not evidence for either stream-origin hypothesis;
+the next probe must repair the retail join at the already-qualified C904/C950
+witnesses.
 
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
@@ -70,12 +80,12 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. The qualified task-rate A/B found no useful
-   real-versus-silent split: both arms reached title and hangar at 15.0/24.2 s,
-   and the first hangar sequence differed by only four audio tasks after
-   pairing enqueue/consume edges. Resume the pre-filter selector/decode
-   measurement with a bounded consumer/source matrix; this is single-source
-   port evidence, not independent retail closure.
+   `m5-selector-decode-boundary`. Repair the bounded phase-keyed consumer join
+   at the already-qualified retail C904/C950 executions, retaining the whole-
+   RDRAM and VI controls, then compare it with the existing port descriptor,
+   source, and DMA rows in one capture. The s4357 `0x80033FCC` task watch was
+   phase-valid but empty, so it cannot discriminate selector-consumer from
+   earlier-stream origin.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -87,6 +97,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream confirmed for the qualified route by source audit plus retail read/write attribution: no direct post-C904 store reaches `0x1535C4..0x1545C0`; sampled stores stop at `0x1535AC..0x1535BC`. |
+| M5 consumer join | Single-source/port consumer rows are live, but the s4357 retail task/field join at `0x80033FCC` was empty despite whole-RDRAM and title/hangar controls; instrument boundary remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |
 | Retail/port post-free stream layout | Retail and port share the first qualified read/free boundary, then diverge in later layout/value/order; exact consumer cause open. |

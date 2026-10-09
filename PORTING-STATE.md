@@ -149196,3 +149196,22 @@ result: it does not close the question with independent retail evidence, and
 the row cap prevents claiming an exact t=18–28 count. It rejects a useful
 task-rate divergence as the next M5 discriminator and sends the investigation
 back to the selector/decode consumer boundary. No code behavior was changed.
+
+## Session 4357 (2026-10-09) — selector consumer matrix exposes retail join boundary
+
+Ran the established M5 selector/decode consumer matrix after first checking
+the independent oracle. The initial 75-second oracle capture passed its
+10,000-write whole-RDRAM positive control and reached title 1024, but stopped
+before hangar and was coverage-invalid for the discriminator. The fixed
+established recipe then qualified both phase controls: retail completed 4,478
+VI with 33,331,419 whole-RDRAM writes, title and hangar coverage, and the port
+reached title 1024 at 13.7 seconds and hangar 512 at 34.0 seconds with no
+crash/abort.
+
+The retail task/field join at `0x80033FCC` produced zero rows despite those
+controls. The port side produced 2,817 audio ABI rows and 2,812 image-DMA
+joins. This selects H-instrument-boundary for this work unit only: it rules
+out treating the missing retail join as evidence for either pre-filter origin
+or selector-consumer divergence. The next probe must repair the join at the
+already-qualified C904/C950 execution witnesses. No code behavior or
+mitigation changed.
