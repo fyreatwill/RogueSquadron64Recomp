@@ -1,34 +1,30 @@
-# Next work unit (s4367): order exact family writers against task publication
+# Next work unit (s4368): corroborate family-writer ordering
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-The s4366 final Rice capture passed the whole-RDRAM control, both title phase
-controls, hangar, and the type-2 task control. Exact writers were live at all
-four family addresses. With `--c904-witness`, exact memory histogram indices
-are 2–5; index 1 is the task-PC watch. Phase histograms show distinct
-title/hangar writer PCs but do not order each store against task publication.
+The s4367 final Rice capture passed the whole-RDRAM control, reached both title
+buckets and hangar, and retained 1,770 type-2 tasks plus 23,714 exact writes.
+The nearest-task ordinal join was before/after = 8047/1, 482/0, 8033/0,
+481/0, 798/0, and 5869/3 across the populated buckets, with no missing joins.
+This is qualified single-source retail evidence for H-earlier-producer.
 
 Competing hypotheses:
 
-- H-earlier-producer: the phase-specific task-data families are written by an
-  earlier retail producer before the selector/decode handoff.
-- H-post-task-transform: the family difference is created after the task data
-  is published, by a later consumer or transform.
-- H-watch-boundary: the exact watch/task ordinal join remains absent or
-  ambiguous, so aggregate histograms say nothing about handoff ordering.
+- H-earlier-producer: an independent witness agrees that family writes precede
+  the type-2 task publication.
+- H-post-task-transform: the independent witness places the family writes only
+  after publication.
+- H-watch-boundary: the second witness cannot identify the corresponding writer
+  or task boundary.
 
-Discriminating measurement: in one bounded Rice retail run, retain each exact
-write's phase, writer PC, and monotonic store ordinal, then join it to the
-nearest `0x80033FCC` type-2 task ordinal in the same phase/data family. A
-writer ordinal before task publication selects H-earlier-producer; only-after
-rows select H-post-task-transform; absent or ambiguous joins select
-H-watch-boundary.
+Discriminating measurement: one bounded qualified run using a second evidence
+mechanism, not another aggregate histogram, and report the same six phase /
+family ordering classes. Before selects H-earlier-producer; only-after selects
+H-post-task-transform; absent or contradictory joins select H-watch-boundary.
 
-Build/run: inspect the existing exact-watch and task-join implementation, add
-the bounded ordinal instrument in one build if needed, run
-`./tools/oracle/build.sh`, then run the Rice oracle for 75 seconds, capturing to
-`scratch/agent/soak_results/s4367_selector_writer_task_order.log`. Keep the
-whole-RDRAM watch, `--watch-pc 0x80033fcc`, typed task dump, all three
-`--pc-phase-log-width` buckets, `--c904-witness`, `--c904-task-join`, and
-`--vi-trace`; use exact memory histogram indices 2–5. Reject runs without the
-positive control, all three VI origins, or nonzero type-2 rows in every bucket.
+Build/run: inspect the existing oracle and choose one independent witness for
+the same writer/task boundary; build all arms together, then run the Rice route
+for 75 seconds. Retain the whole-RDRAM control, `--watch-pc 0x80033fcc`, typed
+task dump, all three `--pc-phase-log-width` buckets, `--c904-witness`,
+`--c904-task-join`, and `--vi-trace`. Reject runs without the positive control,
+all three VI origins, or nonzero type-2 rows in every bucket.

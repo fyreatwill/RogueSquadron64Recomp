@@ -136,6 +136,20 @@ corresponding task publication. The next probe must add a task-ordinal join.
 Independent retail evidence only. ORIGIN: named guest PCs are observed
 writers; no value was skipped, rewritten, or guarded.
 
+Session 4367's ordinal-join capture passed the whole-RDRAM control (10,000
+callbacks), reached 4,486 VI, both title buckets, hangar, and 1,770 type-2
+task rows. It retained 23,714 exact family writes with no ordinal overflow.
+Joining each write to the nearest same-phase type-2 task publication gave
+before/after counts of 8047/1, 482/0, 8033/0, 481/0, 798/0, and 5869/3
+across the populated title/hangar family buckets; no join was missing. This
+selects H-earlier-producer over H-post-task-transform for the qualified retail
+route, but remains single-source evidence because both ordinals come from the
+same retail debugger stream. The four after rows are nearest-task boundary
+outliers, not enough to reverse ordering. A second independent evidence line
+is still required before closing producer provenance. ORIGIN: guest writer PCs
+and task-publication PCs are observed; no value was skipped, rewritten, or
+guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405

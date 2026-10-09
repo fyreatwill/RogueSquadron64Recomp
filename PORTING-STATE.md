@@ -149412,3 +149412,23 @@ writer/selector family and rules out the absent exact-watch hypothesis, but
 the phase histograms do not order each store against its corresponding task
 publication. The next experiment must add that ordinal join. ORIGIN: named
 guest PCs are observed writers; no value was skipped, rewritten, or guarded.
+
+## Session 4367 (2026-10-09) — ordinally ordered task-family writers
+
+I added a bounded callback-ordinal join to the retail oracle and ran the
+qualified Rice route with the whole-RDRAM positive control, exact family
+watches, C904 witness, typed task dump, all three phase buckets, and VI trace.
+The run passed the control with 10,000 callbacks, reached 4,486 VI, both title
+buckets and hangar, and retained 1,770 type-2 task rows plus 23,714 exact
+writes with no ordinal overflow.
+
+Joining each exact write to the nearest same-phase type-2 task publication
+gave before/after counts 8047/1, 482/0, 8033/0, 481/0, 798/0, and 5869/3;
+there were no missing joins. This selects H-earlier-producer over
+H-post-task-transform for the qualified retail route, but is single-source
+evidence because both ordinals are from the same retail debugger stream. The
+four after rows are nearest-task boundary outliers. The first launch attempts
+were invalid due to a missing timeout utility and a duplicated core path; the
+fixed run above is the only qualified measurement. ORIGIN: guest writer PCs
+and task-publication PCs are observed; no value was skipped, rewritten, or
+guarded.

@@ -509,6 +509,7 @@ static int g_pc_task_dump_enabled;
 static uint32_t g_pc_task_dump_type = 2; /* 0 = any type */
 struct pc_task_dump_row {
     long task_n;
+    uint64_t event_ordinal;
     uint32_t task_ptr;
     uint32_t task_phys;
     uint32_t type;
@@ -533,6 +534,19 @@ static long g_pc_task_dump_overflow;
 static int g_n_pc_task_dump_rows;
 static int g_pc_task_join_enabled;
 static int g_pc_phase_quiet;
+static int g_ordinal_join_enabled;
+static uint64_t g_event_ordinal;
+#define MAX_ORDINAL_WRITES 32768
+struct ordinal_write_row {
+    int watch;
+    uint32_t pc;
+    uint32_t width;
+    uint32_t origin;
+    uint64_t event_ordinal;
+};
+static struct ordinal_write_row g_ordinal_writes[MAX_ORDINAL_WRITES];
+static int g_n_ordinal_writes;
+static long g_ordinal_write_overflow;
 #define MAX_PC_RANGE_TASK_ROWS 1536
 #define MAX_PC_RANGE_TASK_ROWS_PER_PHASE 512
 struct pc_range_task_row {
@@ -1215,6 +1229,7 @@ static void dump_pc_task(uint32_t pc)
         }
         row = &g_pc_task_dump_rows[g_n_pc_task_dump_rows++];
         row->task_n = g_pc_task_dump_type2_rows;
+        row->event_ordinal = g_event_ordinal;
         row->task_ptr = task_ptr;
         row->task_phys = task_phys;
         row->type = type;
@@ -2142,6 +2157,7 @@ static void dbg_update(unsigned int pc)
 
     pDebugBreakpointTriggeredBy(&flags, &accessed);
     access_flags = flags & (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE);
+    g_event_ordinal++;
 
     if ((access_flags & M64P_BKP_FLAG_WRITE) && pc_phase_log_match()) {
         int span_i;
@@ -2224,6 +2240,22 @@ static void dbg_update(unsigned int pc)
                             origin == g_pc_hist_phase_origin[phase])
                             count_writer_pc_phase(phase, i, pc);
                     }
+                }
+            }
+            if (g_ordinal_join_enabled &&
+                (access_flags & M64P_BKP_FLAG_WRITE) &&
+                g_watch[i].end - g_watch[i].start <= 4u &&
+                pc_phase_log_match()) {
+                if (g_n_ordinal_writes < MAX_ORDINAL_WRITES) {
+                    struct ordinal_write_row *write =
+                        &g_ordinal_writes[g_n_ordinal_writes++];
+                    write->watch = i;
+                    write->pc = pc;
+                    write->width = pDebugMemRead32(VI_WIDTH_ADDR);
+                    write->origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+                    write->event_ordinal = g_event_ordinal;
+                } else {
+                    g_ordinal_write_overflow++;
                 }
             }
             if ((access_flags & M64P_BKP_FLAG_WRITE) &&
@@ -2833,6 +2865,7 @@ static void usage(void)
         "  --pc-task-type N   OSTask type to dump (default 2=audio; 1=gfx; 0=any)\n"
         "  --pc-range-task-dump dump phase-gated $a0/task fields for the live range\n"
         "  --pc-task-join     join each field dump to the latest valid task row in its VI bucket\n"
+        "  --ordinal-join     order exact target writes against nearest phase task rows\n"
         "  --pc-phase-quiet   suppress per-hit phase execution lines (keep bounded dumps)\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
@@ -2950,6 +2983,8 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--pc-task-join"))
             g_pc_task_join_enabled = 1;
+        else if (!strcmp(argv[i], "--ordinal-join"))
+            g_ordinal_join_enabled = 1;
         else if (!strcmp(argv[i], "--pc-phase-quiet"))
             g_pc_phase_quiet = 1;
         else if (!strcmp(argv[i], "--pc-task-type") && i + 1 < argc)
@@ -3432,6 +3467,57 @@ int main(int argc, char **argv)
                    row->output_buff, row->output_buff_size, row->data_ptr,
                    row->data_size, row->yield_data_ptr, row->yield_data_size,
                    row->n);
+        }
+    }
+    if (g_ordinal_join_enabled) {
+        printf("[oracle] ordinal-join-summary writes=%d/%d overflow=%ld tasks=%d event=%llu\n",
+               g_n_ordinal_writes, MAX_ORDINAL_WRITES, g_ordinal_write_overflow,
+               g_n_pc_task_dump_rows, (unsigned long long)g_event_ordinal);
+        for (int phase = 0; phase < g_n_pc_phase_log_origin; phase++) {
+            for (int watch = 0; watch < g_nwatch; watch++) {
+                long before = 0, after = 0, equal = 0, no_task = 0;
+                long nearest_total = 0;
+                for (int wi = 0; wi < g_n_ordinal_writes; wi++) {
+                    struct ordinal_write_row *write = &g_ordinal_writes[wi];
+                    uint64_t best_distance = UINT64_MAX;
+                    struct pc_task_dump_row *best = NULL;
+                    if (write->watch != watch ||
+                        write->width != g_pc_phase_log[phase].width ||
+                        write->origin != g_pc_phase_log[phase].origin)
+                        continue;
+                    for (int ti = 0; ti < g_n_pc_task_dump_rows; ti++) {
+                        struct pc_task_dump_row *task = &g_pc_task_dump_rows[ti];
+                        uint64_t distance;
+                        if (task->width != write->width || task->origin != write->origin)
+                            continue;
+                        distance = task->event_ordinal > write->event_ordinal
+                            ? task->event_ordinal - write->event_ordinal
+                            : write->event_ordinal - task->event_ordinal;
+                        if (distance < best_distance) {
+                            best_distance = distance;
+                            best = task;
+                        }
+                    }
+                    if (!best)
+                        no_task++;
+                    else if (write->event_ordinal < best->event_ordinal)
+                        before++;
+                    else if (write->event_ordinal > best->event_ordinal)
+                        after++;
+                    else
+                        equal++;
+                    if (best)
+                        nearest_total++;
+                }
+                if (before || after || equal || no_task)
+                    printf("[oracle] ordinal-join phase=0x%08x:%u watch=%d "
+                           "range=0x%08x..0x%08x nearest=%ld before=%ld after=%ld "
+                           "equal=%ld no_task=%ld\n",
+                           g_pc_phase_log[phase].origin,
+                           g_pc_phase_log[phase].width, watch,
+                           g_watch[watch].start, g_watch[watch].end,
+                           nearest_total, before, after, equal, no_task);
+            }
         }
     }
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
