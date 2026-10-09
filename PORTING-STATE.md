@@ -149129,3 +149129,13 @@ PCs/source values. This keeps H-post-C904-selector and H-earlier-stream open;
 no decoder, RSP, AI, or runtime behavior changed and no mitigation was added.
 The field/value evidence is single-source retail attribution; whole-RDRAM, VI,
 and C904 execution controls independently qualify route and coverage.
+## Session 4353 (2026-10-08) — compact current truth after maintenance threshold
+
+Maintenance iteration: `docs/CURRENT-TRUTH.md` exceeded the 60,000-byte guard
+(61,135 bytes), so no experiment was run. The document was compacted to durable
+state and the late s4269–4352 M5 selector/decode checkpoint was migrated to
+`docs/PROJECT-OVERVIEW.md`. The active next unit remains the bounded retail
+physical writer watch from `scratch/agent/NEXT.md`; its competing hypotheses
+and positive-control discriminator are unchanged. This rules out no runtime
+hypothesis and records no new experiment result; it does close the stale
+historical duplication in CURRENT-TRUTH.

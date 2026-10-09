@@ -4949,6 +4949,39 @@ guard was added. Do not land a skip-path NULL store unless a later
 census identifies that same writer. See
 `docs/M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md`.
 
+## 39. M5 selector/decode boundary and late audio state (s4269–4352)
+
+The native route is qualified through title VI `0x00790400` and hangar VI
+`0x006AB400` on the real-audio/LLE/solo/spin-yield route. Fresh 7F saves
+produce nonzero PCM; the prior zero-payload line was a stale-save artifact.
+AI byte order is fixed. M5 Step 9's seeded silent/real matrix reaches the
+active filter callsite at `0x8009D740`, and independent MORT, whole-RDRAM,
+and VI controls qualify the route. Later descriptor/payload streams diverge;
+this is an unresolved pre-filter selector/stream boundary, not a stable
+real-image eligibility or dispatch null.
+
+The retail oracle's C904 witness is the current independent boundary. It
+executed 3,107 times with qualified title/hangar phases and a 10,000-hit
+whole-RDRAM control. Session 4352 found the retained family at C904 itself:
+584 rows with `0x3108` and 405 with `0x0010`. Selected words and decoded
+`+0x18A/+0x18C` fields varied. The post-value watch was mis-scoped to
+`0x8009C0E8..0x8009C0EC` and fired zero times, so no writer conclusion follows.
+The observed selected physical range is about `0x1535C4..0x1545BC`, with
+decoded state near `0x1535AC`; the next run must watch those ranges with
+writer-PC/source attribution.
+
+Earlier work rejected the source span, base/index, route alias, and stable
+base-buffer as the family producer. The base settled at `0x801B2C60`, the
+cursor advanced under `0x8009D790`, and the lattice store at `0x8009DB2C` is
+legitimate quantized output. The remaining discriminator is a bounded
+post-C904 selector/decode writer versus an earlier unjoined stream.
+
+The graphics-side framebuffer growth was traced to bump-time DPC ring-lap
+placeholder drops; wrap-shadow restoration reduced ODD colour-image events
+from 60 to 0 in three runs, but hangar impact is not qualified. VI-640 crash
+and M3 guard families remain parked. Full regeneration remains unsafe since
+s4204; use the existing apply scripts unless the regen failure is repaired.
+
 **Next unit (live in CURRENT-TRUTH / NEXT.md):**
 `rs_zcfree` `rs_free` of incoming `$a0` at `0x80005268`
 (last remaining original `jal 0x80001C98` in `funcs_1.c`).
