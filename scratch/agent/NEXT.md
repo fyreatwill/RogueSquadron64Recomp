@@ -1,43 +1,55 @@
-# Next work unit (s4427): name the first writer of the two user buffers
+# Next work unit (s4428): was the earlier copy into a live block?
 
-HYPOTHESIS-ID: m5-selector-block-fill
+HYPOTHESIS-ID: m5-selector-copy-lifetime
 
-Session 4426 selected H-freelist-header. On width 640, origin `0x00790500`,
-`rs_malloc` split one free block into the two title pointers. Headers
-`0x80171CD0` / `0x80173B10`, requests `0x1E30`, flags 0, user pointers
-`0x80171CE0` / `0x80173B20`. The publisher at `0x8008F228` / `0x8008F264`
-stores those pointers and returns without writing the user bytes. Its later
-`jal 0x800078E0` fills a different 664-byte buffer.
+Session 4427 selected H-residual for the post-publish window. The bytes at
+the first title `0x80091064` were already `mat_` / `ltex`. The only earlier
+CPU stores are four `sb` each at `0x80007670`, the store in the bounded copy
+`0x80007640`, called from `0x80022B44` with length 16. Destinations were
+already `0x80171CE0` (origin `0x00696600`, t=7.3s) and `0x80173B20` (same
+origin, t=9.4s). The table publish of those pointers is the later `sw v0`
+at `0x8008F228` / `0x8008F264` (this run: width 640, origin `0x00790A00`).
+s4426 showed that publish value is the malloc return `header+16`.
+
+Malloc reads a halfword at header+0 and tests bits `0x1` and `0x8`. The size
+word is at header+4. Do not assign names to those bits beyond what the
+`andi` tests. The two headers are `0x80171CD0` and `0x80173B10`.
 
 Competing hypotheses:
 
-- H-named-fill: after those stores and before the first title execution of
-  `0x80091064`, a guest PC writes the first word of `0x80171CE0` or
-  `0x80173B20`.
-- H-residual: both controls are live and neither user word is written in
-  that window. The selector load then reads leftover heap bytes.
-- H-join-failure: the establishing table stores or the `0x80091064` rows
-  do not appear in the same run as the user-word watches.
+- H-write-into-free: at the `sb`, the header still has the large free size
+  (`0x232C0` on the first block in s4426). The copy writes memory malloc
+  later returns uncleared.
+- H-previous-owner: at the `sb` the header is a small allocated block, and a
+  later store marks it free before the establishing malloc returns the same
+  user pointer.
+- H-not-a-fresh-split: the header fields are unchanged between the `sb` and
+  the establishing `sw`. That contradicts s4426's fresh split for this run.
+- H-join-failure: the four `sb` rows, the two establishing stores, or the
+  title `0x80091064` load are missing, so the header sample has no window.
 
-Discriminating measurement: one retail oracle capture. No execution watch
-on `rs_malloc`. Keep `--store-field-dump-all` and
-`--store-field-dump-any-phase` on the two table words so the
-`0x00790500` rows reappear. Watch writes of the first user word at physical
-`0x171CE0` and `0x173B20` for the whole run. Phase-print `0x80091064` at
-title origins `0x00790400:1024` and `0x00790800:1024` with `--exec-no-defer`
-so the watch is armed before that frame; do not add a phase that arms only
-at `0x00790500`, because that VI callback is after the stores. Record writer
-PC, value, width, and origin for any user-word store. Do not rewrite heap
-state.
+Discriminating measurement: one retail oracle capture. Sample the header
+halfword and size word at each of the four `sb` rows and at both
+establishing stores, and log every store to those eight header bytes with
+PC, value, width, and origin. A free-size header at the `sb` selects
+H-write-into-free. An allocated header at the `sb` plus a later free-store
+before the `sw` selects H-previous-owner. Identical header fields at the
+`sb` and the `sw` select H-not-a-fresh-split. Do not rewrite heap state.
 
 Exact commands:
 
-1. The oracle binary must be newer than `tools/oracle/rs64_oracle.c` (the
-   `--exec-no-defer` flag). Rebuild with `bash tools/oracle/build.sh` only
-   if it is older.
+1. The oracle binary must be newer than `tools/oracle/rs64_oracle.c`. The
+   s4427 repeat-store and comma-separated `RS64_MEM_DUMP` prints are already
+   there. Add a header sample on the existing user-word store rows when
+   `pc==0x80007670` and on the establishing `sw` rows, or an equivalent
+   one-run sample of physical `0x171CD0` (half) and `0x171CD4` (word), and
+   `0x173B10` / `0x173B14`. Rebuild only if the source is newer.
 2. Run from the repo root with `--oracle-emulator 1`, Rice, the Start-press
-   schedule, `--secs 25`, whole-RDRAM watch 0, the two table watches, the
-   two user-word watches, and `--watch-pc 0x80091064` gated as above.
-3. Kill with SIGKILL. Require the whole-RDRAM line, both establishing store
-   rows, and at least one `0x80091064` row whose `v0` is `0x80171CE0` or
-   `0x80173B20` before calling a zero-write result residual.
+   schedule, `--secs 25`, `--exec-no-defer`, whole-RDRAM watch 0, the two
+   table watches, the two user-word watches, and header-byte watches.
+   Print `0x80091064` only at `0x00790400:1024` and `0x00790800:1024`. Do
+   not arm execution from `0x00790500` or `0x00790A00`.
+3. Kill with SIGKILL only if the oracle overruns. Require the whole-RDRAM
+   line, both `0x80171CE0` / `0x80173B20` store rows, the four `sb` rows,
+   and one title `0x80091064` row whose `v0` is one of those pointers
+   before interpreting a header value.

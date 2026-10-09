@@ -535,6 +535,9 @@ static long g_store_field_dump_hits;
 static long g_store_field_dump_overflow;
 static long g_store_field_dump_candidate_callbacks;
 static int g_store_field_dump_any_phase;
+static int g_store_field_repeat;
+static int g_store_field_repeat_printed[32];
+static int g_store_field_repeat_capped[32];
 static uint32_t g_pc_task_dump_pc;
 static int g_pc_task_dump_enabled;
 static uint32_t g_pc_task_dump_type = 2; /* 0 = any type */
@@ -1238,6 +1241,23 @@ static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
             old->branch_selector == row.branch_selector &&
             old->branch_state == row.branch_state) {
             old->n++;
+            if (g_store_field_repeat && watch >= 0 && watch < 32) {
+                if (g_store_field_repeat_printed[watch] < 2000) {
+                    g_store_field_repeat_printed[watch]++;
+                    printf("[store-field-repeat] watch=%d pc=0x%08x width=%u "
+                           "origin=0x%08x store_addr=0x%08x source_value=0x%08x "
+                           "pre_store_word=0x%08x scalar_mask=0x%08x n=%ld\n",
+                           watch, pc, pDebugMemRead32(VI_WIDTH_ADDR),
+                           pDebugMemRead32(VI_ORIGIN_ADDR), accessed,
+                           row.source_value, row.pre_store_word,
+                           row.scalar_mask, old->n);
+                    fflush(stdout);
+                } else if (!g_store_field_repeat_capped[watch]) {
+                    g_store_field_repeat_capped[watch] = 1;
+                    printf("[store-field-repeat-cap] watch=%d\n", watch);
+                    fflush(stdout);
+                }
+            }
             return;
         }
     }
@@ -2575,21 +2595,36 @@ static void dbg_update(unsigned int pc)
                 printf(" w_a1p20=0x%08x",
                        pDebugMemRead32(debug_rdram_addr((gpr32(5) + 0x20) & ~3u)));
         }
-        {   /* RS64_MEM_DUMP=hexvaddr:nwords: dump guest words at every printed hit */
+        {   /* RS64_MEM_DUMP=hexvaddr[:nwords][,hexvaddr[:nwords]...] */
             const char *m = getenv("RS64_MEM_DUMP");
             if (m) {
-                uint32_t base = (uint32_t)strtoul(m, NULL, 16), nw = 8, o;
-                const char *c = strchr(m, ':');
-                if (c) nw = (uint32_t)strtoul(c + 1, NULL, 0);
-                if (getenv("RS64_SRC_DUMP") && pc == 0x80034710u) { /* memcpy byte loop: v1-1 = src ptr */
-                    uint32_t src = gpr32(3) - 1u;
+                int multi = strchr(m, ',') != NULL;
+                const char *spec = m;
+                if (getenv("RS64_SRC_DUMP") && pc == 0x80034710u) {
+                    uint32_t src = gpr32(3) - 1u, o;
                     printf(" ra=0x%08x src=0x%08x a2=0x%08x srcmem=", gpr32(31), src, gpr32(6));
                     for (o = 0; o < 8; o++)
                         printf("%08x,", pDebugMemRead32(debug_rdram_addr((src + o * 4) & 0x1FFFFFFFu)));
                 }
                 printf(" mem=");
-                for (o = 0; o < nw && o < 64; o++)
-                    printf("%08x,", pDebugMemRead32(debug_rdram_addr((base + o * 4) & 0x1FFFFFFFu)));
+                while (*spec) {
+                    char *end = NULL;
+                    uint32_t base = (uint32_t)strtoul(spec, &end, 16);
+                    uint32_t nw = 8, o;
+                    if (end && *end == ':')
+                        nw = (uint32_t)strtoul(end + 1, &end, 0);
+                    if (nw > 64)
+                        nw = 64;
+                    if (multi)
+                        printf("%08x:", base);
+                    for (o = 0; o < nw; o++)
+                        printf("%08x,", pDebugMemRead32(debug_rdram_addr((base + o * 4u) & 0x1FFFFFFFu)));
+                    if (!(end && *end == ','))
+                        break;
+                    spec = end + 1;
+                    if (multi)
+                        printf(" ");
+                }
             }
         }
         {   /* RS64_STACK_DUMP_PCS=hexpc[,hexpc]: dump sp+0x18..0x90 words at those exec PCs */
@@ -3334,6 +3369,7 @@ int main(int argc, char **argv)
     }
     if (!rom) usage();
     g_defer_exec_watches = g_n_pc_phase_log_origin > 0 && !g_exec_no_defer;
+    g_store_field_repeat = getenv("RS64_STORE_FIELD_REPEAT") != NULL;
     g_state_smoke = getenv("ORACLE_STATE_SMOKE") != NULL;
     g_state_reach = getenv("ORACLE_STATE_REACH") != NULL;
     g_state_path = state_path;
@@ -3643,7 +3679,7 @@ int main(int argc, char **argv)
                    row->source_value, row->n);
         }
     }
-    if (g_n_store_field_dump_pc > 0) {
+    if (g_n_store_field_dump_pc > 0 || g_store_field_dump_all_mask != 0) {
         printf("[oracle] store-field-summary pcs=%d callbacks=%ld phase_hits=%ld "
                "rows=%d/%d overflow=%ld\n", g_n_store_field_dump_pc,
                g_store_field_dump_candidate_callbacks, g_store_field_dump_hits,

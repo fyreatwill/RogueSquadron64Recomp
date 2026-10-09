@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4426 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4427 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -207,6 +207,25 @@ pointers are the user halves of one split free block. The publisher does not
 fill those bytes. ORIGIN: retail execution and store callbacks; no heap or
 table value was rewritten, skipped, or guarded.
 
+Session 4427 selected H-residual for the post-publish window. Whole-RDRAM,
+both title-pointer stores, and the title `0x80091064` loads were live
+(232 returns of each pointer). This run's publish was width 640 origin
+`0x00790A00`, not `0x00790500` (that origin had zero VI). No CPU store
+hit either user word between those publishes and the first title load, and
+the words were already `0x6D61745F` / `0x6C746578` at the publish and at
+that load. The same sample was zero at the previous table publish and
+changed again when `sh zero, 0(v0)` at `0x80091078` cleared the first
+halfword after the load, so the sample is not stuck. The only earlier
+stores are four `sb` each at `0x80007670` while origin was `0x00696600`:
+the bounded copy at `0x80007640`, called from `0x80022B44` with length 16,
+destinations already `0x80171CE0` (t=7.3s) and `0x80173B20` (t=9.4s).
+Lifetime counts reconcile to those four stores plus post-load writers
+only. A DMA fill inside the window is ruled out by the unchanged sample.
+Whether that copy wrote a live block later freed, or memory that was
+already free, is the open boundary. ORIGIN: retail store callbacks and
+paired memory samples; no heap or table value was rewritten, skipped, or
+guarded.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -246,21 +265,27 @@ available.
   calls and for every other allocation on that frame. A different `s2` was
   believable only because a breakpoint on the addiu itself samples `s2`
   before the instruction runs.
+- The title user words are not filled between pointer publish and the first
+  title selector load. s4427 saw zero CPU stores there, and the bytes were
+  already the earlier copy. A post-publish filler was believable because the
+  publisher returns without writing the user bytes.
 
 ## Next steps
 
-1. **Name the first writer of the two user buffers** —
-   HYPOTHESIS-ID `m5-selector-block-fill`. The title pointers are user
-   halves of one split free block: headers `0x80171CD0` (free size
-   `0x232C0`) and `0x80173B10` (remainder `0x21480`), both requests
-   `0x1E30`, flags 0. The publisher stores the pointers and returns without
-   filling them. On retail, watch the first word of each user buffer
-   (physical `0x171CE0` and `0x173B20`) from boot through the first title
-   selector load, with whole-RDRAM, the establishing table stores, and
-   `0x80091064` as controls. A named PC writing a user word after the
-   establishing store and before that load selects the filler; no such
-   write, with both controls live, selects residual heap contents; missing
-   controls leave it unresolved. Do not rewrite or guard heap state.
+1. **Decide whether the earlier copy wrote a live block** —
+   HYPOTHESIS-ID `m5-selector-copy-lifetime`. The bytes at the first title
+   load were written by `sb` at `0x80007670` (copy `0x80007640`, caller
+   `0x80022B44`, length 16) into `0x80171CE0` / `0x80173B20` at origin
+   `0x00696600`, seconds before those pointers were published. Malloc's
+   header is a halfword at +0 (bits `0x1` and `0x8` are tested) and a size
+   word at +4; the user pointer is header+16. On retail, sample those two
+   header fields at the copy and at the establishing `sw`, and record every
+   store to them in between. A free-size header at the copy selects a write
+   into the block malloc later returns. An allocated header at the copy,
+   then a free, then the establishing malloc, selects a previous owner. An
+   unchanged allocated header at both samples contradicts the fresh split.
+   Keep whole-RDRAM, both pointer stores, and one title `0x80091064` load
+   whose `v0` is one of those pointers. Do not rewrite or guard heap state.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

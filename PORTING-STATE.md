@@ -150540,3 +150540,46 @@ writer of the returned pointer is guest `addiu s2, a1, 16` in `rs_malloc`;
 the stores copy that pointer, and the title load consumes it, so the value
 is legitimate game data.
 
+## Session 4427 (2026-10-09) — the title user words are already copied before publish
+
+Ran `scratch/agent/run_s4427_m5_user_word_writers.sh`. Retail oracle, Rice,
+`--oracle-emulator 1`, `--secs 25`, the Start-press schedule, and
+`--exec-no-defer`. Watches were whole RDRAM, the two table words, the first
+user word of each title buffer, and `0x80091064` printed only at title
+origins `0x00790400:1024` and `0x00790800:1024`. Repeat store lines kept a
+duplicate from hiding inside the window. Printed hits also sampled both
+user words. Log: `scratch/agent/s4427_m5_user_word_writers/retail.log`.
+
+Controls: whole-RDRAM removed at 10,000 writes; `sw v0` at `0x8008F228` and
+`0x8008F264` stored `0x80171CE0` over `0x8018DD30` and `0x80173B20` over
+`0x8018FB70` at width 640 origin `0x00790A00`; 232 title executions of
+`0x80091064` returned each pointer. Origin `0x00790500` had zero VI here, so
+the publish field is the other 640-wide origin, not a missing store. The
+run reached 1,465 VI and stopped itself at 25.1s.
+
+No CPU store hit either user word after those publishes and before the first
+title load. The sample was `0x6D61745F` / `0x6C746578` at both publishes and
+at that load. It was `0x00000000` when the table still held `0x8018DD30` /
+`0x8018FB70` (t=6.9s), and it became `0x0000745F` after `sh zero, 0(v0)` at
+`0x80091078` cleared the first halfword. That later `sh` is after the load,
+so it is not a pre-load filler, and it shows the sample moves.
+
+The only earlier stores are four `sb v1, 0(a3)` at `0x80007670` per word,
+all at origin `0x00696600`. That `sb` is the store in the bounded copy at
+`0x80007640`, reached by `jal 0x80007640` at `0x80022B44` with `a2 = 16`.
+`a0` was already `0x80171CE0` at t=7.3s (source `s0+20` = `0x8062B9D4`) and
+`0x80173B20` at t=9.4s (source `0x80261E68`). Each word was built from zero.
+Lifetime counts match the watch totals: those four `sb`, then only the
+post-load writers `0x80091078`, `0x80091198`, and `0x80090DE4`. Store-field
+overflow was 0 and the repeat cap did not fire.
+
+This selects H-residual for the post-publish window and rejects H-named-fill
+and H-join-failure. It also rejects a DMA fill inside the window, because
+the memory sample did not change and it matches the `sb` result. The bytes
+are game-written. This run does not decide whether the copy wrote a live
+block that was later freed or memory that was already free when malloc
+returned the pointer. No heap or table value was rewritten, skipped, or
+guarded. ORIGIN: the pre-load bytes were written by guest `sb` at
+`0x80007670`; the publish stores the pointer and does not write them; the
+value is game data, not a port guard.
+
