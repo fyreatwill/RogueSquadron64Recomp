@@ -150754,3 +150754,12 @@ Work unit: what sets 192 frames/tick (constant vs derived), plus why the port su
 - Measurement (same recipe as s4434, phase 4 width 1024, 512 queue edges): arm B (N=115) 110.6 buffers/s over 4.62 s, queued_after median 4355 B / max 6117 B (~50-70 ms, not runaway). Arm A (env unset) crashed twice in `fillSampleStreamRange+15116` (musyxSynthFrame, last-guest-pc 0x8000834c, Bus error) before reaching phase 4 — known crash family, env unset so independent of the change; baseline rate therefore taken from s4435 (59.3/s, same recipe, cross-run but a rate not scene content). B also died with a Bus error after the window.
 - Not shown: that the audio is audibly correct, or that it matches retail. Positive control = the rate moved with the knob (59 -> 110.6).
 ORIGIN: not a mitigation of a corruption; this changes the writer of the AI event cadence (events.cpp vi_thread_func), which was the defect. Default stays off until audible/soak validation.
+
+## Session 4441 (2026-10-09) — 115 Hz AI cadence soak: 2 arms x 2 runs all crash in the MusyX/audio-fill family; 115 Hz neither fixes nor worsens it, not default-ready
+
+- Ran `scratch/agent/s4441/all.sh` (one game at a time, 150 s cap each, same passive instruments as s4440): B1/B2 = `ROGUESQ_AI_EVENT_HZ=115`, A1/A2 = unset.
+- Results (4/4 crashed): A1 Bus error `fillSampleStreamRange+15116`; B1 Bus error `fillSampleStreamRange+15116` (same PC); A2 RT64 assertion `createTileCopyRecord fbIt != framebuffers.end()` at phase 3 (width 640) — not an audio crash; B2 Bus error `musyxSynthFrame+5436` (si_addr 0x3800095c2) after reaching title phase 4 (width 1024 at 48.6 s, left it at 75.6 s).
+- Only B2 reached width 1024; no arm reached 512/hangar. n=2 per arm: no stability difference can be claimed in either direction (single-source, small n). Hypothesis (b) "115 Hz surfaces new races sooner": not supported (B1 and A1 crash at the identical PC); a new site (`musyxSynthFrame+5436`) appeared once in B. Hypothesis (a) "stable": refuted for default-on. (c) mupen CPU-Count discriminator NOT run this session.
+- Positive control: rate-knob control carried from s4440 (59 -> 110.6/s); crash classification from the same logs' `[CRASH][pc-symbol]` lines. `fillSampleStreamRange+15116` is live in the baseline (A1) as s4440 noted.
+- Rules out: "the 60 Hz AI cadence is what makes fillSampleStreamRange+15116 crash" (it crashes at 115 Hz too).
+- Next: name the writer of the fillSampleStreamRange+15116 fault (ORIGIN question, not another guard), and run the mupen Count-per-submit witness.
