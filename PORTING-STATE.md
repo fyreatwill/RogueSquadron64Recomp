@@ -150177,3 +150177,26 @@ next probe must latch the direct edge before the VI phase transition and join
 it to the hangar return/task row. ORIGIN: host probes observe guest call,
 input, boundary, and store arguments; no value was skipped, rewritten, or
 guarded.
+
+## Session 4409 (2026-10-09) — retry close-out: what session 4408 discriminated
+
+Checkpoint close-out of session 4408 (no new run; no build). Discrimination
+actually obtained by the 4408 run, stated explicitly so the ledger does not
+read as an instrument-only landing:
+- REFUTED: the "post-store join" ordering (H-join-after-store). The source
+  store row precedes the selector input/direct call, so that join can never
+  fire (0 joins with live positive controls: title 2,667 rows, hangar 672
+  rows, 2,293 audio-task joins).
+- SELECTED (single-source, qualified): the direct callsite join at
+  `0x80091CB8` is live in title with selector input `0x561F` and call
+  argument `0x5622`; no hangar callsite row was emitted while hangar
+  input/AI-boundary/return witnesses stayed live. Hangar-direct-call
+  absence is therefore NOT established; it is a phase-ordering ambiguity
+  (call before the committed VI phase change) vs genuinely absent.
+- Oracle arm invalid for hangar (route never left title); no inference.
+Next discriminator (unchanged, in NEXT.md s4409): pre-phase latch at the
+direct callsite consumed on the first hangar VI transition. Outcomes:
+pre-transition call + hangar join selects H-pre-phase-call; no call with
+controls live selects H-no-hangar-call; a call stuck in title phase selects
+H-phase-state-mismatch. ORIGIN: host probes observe guest call/input/
+boundary arguments only; no value was skipped, rewritten, or guarded.
