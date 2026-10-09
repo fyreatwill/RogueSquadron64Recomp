@@ -148279,3 +148279,32 @@ ORIGIN: the only guard-shaped diff restricts a diagnostic helper at
 `rs64_m5_descriptor_start`; `osSpTaskStartGo_recomp` legitimately submits many
 non-descriptor tasks, and `0x800377C8` is the established descriptor-task
 identity. No game-path value is skipped or altered.
+
+## Session 4320 (2026-10-08) — traced active MORT and voice-filter callsites
+
+HYPOTHESIS-ID: m5-step9-mort-boundary
+
+Ran the single batched s4320 matrix with the independent Rice-backed retail
+oracle and silent (`ROGUESQ_AUDIO_UCODE=0`) plus real-image (`=1`) port arms.
+The oracle whole-RDRAM positive control, title VI 1024, hangar VI 512, and
+watched-PC controls passed. Both port arms reached the same route controls and
+had zero crash/abort markers.
+
+Static enumeration found one generated descriptor site at `0x80092230` and
+three generated `filterVoiceSampleBlock` callsites: `0x8009C540`, `0x8009C88C`,
+and `0x8009D740`. The first run exposed a recipe defect: `init-desc` is gated
+by `ROGUESQ_LOG_ALL` or `ROGUESQ_LOG_VI_CALLERS`, and neither was enabled. The
+fixed rerun enabled `ROGUESQ_LOG_VI_CALLERS` in both arms. It captured 928
+`init-desc` rows in silent and 370 in the real image; the real image captured
+128 filter call/entry rows, all at `0x8009D740`, while the other two callsites
+were zero. The silent arm had zero filter rows in this run.
+
+This overturns s4319's “descriptor/filter absent” interpretation: that null
+was an instrumentation false zero for `init-desc`, not route evidence. It
+rules out stale/wrong-callsite as the explanation for the real-image filter
+null and identifies `0x8009D740` as the active generated edge. It does not yet
+select CPU MORT versus descriptor-layout or AI/host output; descriptor type,
+rate, decoded bytes, and PCM joins remain the next discriminator. No decoder,
+AI bridge, or game-path behavior changed.
+
+ORIGIN: none; this was callsite enumeration and diagnostic instrumentation.

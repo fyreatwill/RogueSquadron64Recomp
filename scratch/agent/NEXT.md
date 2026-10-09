@@ -1,37 +1,36 @@
-# Next work unit (s4320): trace the missing MORT/filter callsites
+# Next work unit (s4321): qualify MORT output for the witnessed descriptor class
 
-HYPOTHESIS-ID: m5-step9-mort-boundary
+HYPOTHESIS-ID: m5-step9-mort-output
 
-State (s4319): the independent retail oracle and both port arms passed all
-route/title/hangar controls. Descriptor-start fired in both arms, but no
-`init-desc` payload event or real `filter-voice-audit` row fired. The final
-probe was restricted to descriptor task `0x800377C8` after the initial run
-crashed on non-descriptor task `0x80149470`. No game-path behavior changed.
+State (s4320): the independent retail oracle and both port arms passed all
+route/title/hangar controls. `init-desc` fired in both arms; the real image
+reached `filterVoiceSampleBlock` through generated callsite `0x8009D740` with
+128 call/entry rows. Static enumeration also found quiet callsites
+`0x8009C540` and `0x8009C88C`. No game-path behavior changed.
 
 Competing hypotheses:
 
-- H-callsite: the existing generated hooks are attached to stale or wrong
-  callsites, so the active MORT payload/filter path is elsewhere.
-- H-route: the descriptor task reaches the host boundary but the selected
-  route never executes the payload/filter idioms.
-- H-data: the callsites execute, but their event predicates suppress rows
-  because the descriptor/voice fields are not in the expected shape.
+- H-MORT: the witnessed descriptor class is consumed by the CPU MORT path and
+  its decoded output reaches the voice/PCM joins.
+- H-layout: descriptor fields or type/rate interpretation differ from the
+  `tools/mort_probe.py` reference, so filter rows exist but output is invalid.
+- H-AI: MORT/filter output is valid and nonzero, but the remaining mismatch is
+  at the AI/host consumer boundary.
 
-Discriminator: enumerate every generated callsite and branch predicate for
-`init-desc` and `filterVoiceSampleBlock`, then add one bounded entry witness at
-each candidate callsite plus a host-positive control for each witness in one
-build/run. Keep both `ROGUESQ_AUDIO_UCODE=0` and `=1` arms, the oracle controls,
-and phase gates at VI 1024 (`0x00790400`) and VI 512 (`0x006AB400`). A control
-and candidate entry at a different generated site selects H-callsite; entries
-absent with descriptor-start and route controls selects H-route; entries with
-valid arguments but no event rows selects H-data. Do not modify decoder, AI,
-or game behavior.
+Discriminator: use the witnessed `init-desc` descriptor words and
+`filter-voice-audit` source/output rows to run `tools/mort_probe.py` on the
+same descriptor class, then join decoded nonzero bytes to the existing PCM
+source/consumer rows in one phase-gated two-arm capture. Matching descriptor
+type/rate and nonzero ordered PCM selects H-MORT; a mismatch with valid filter
+entries selects H-layout; matching nonzero CPU output with a missing host join
+selects H-AI. Keep the oracle whole-RDRAM/title/hangar controls and both audio
+arms. No decoder, AI, or game-path guard change is authorized.
 
 Exact preparation/checks before building:
 
-`rg -n 'init-desc|rs64_m5_audio_event|filterVoiceSampleBlock|filter-voice-audit|rs64_filter_voice' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs src tools --glob '*.{c,h,cpp,py}'`
+`rg -n 'init-desc|filterVoiceSampleBlock|filter-voice-audit|mort_probe|PCM' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs src tools docs/M5-AUDIO-PLAN.md --glob '*.{c,h,cpp,py,md}'`
 
-Read the matching generated windows, update the existing matrix driver with
-all candidate entry flags, build once, and run both arms into
-`scratch/agent/s4320_m5_callsite_trace`. Require positive controls for every
-new entry witness before interpreting any null.
+Read the matching generated windows and `tools/mort_probe.py` contract, update
+the existing matrix driver with the descriptor-class and PCM joins, build once,
+and run both arms into `scratch/agent/s4321_m5_mort_output`. Require the oracle
+and port route positive controls before interpreting any null.

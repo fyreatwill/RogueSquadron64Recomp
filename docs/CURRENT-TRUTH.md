@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -28,18 +28,20 @@ replaced natively by librecomp. The AI byte-order artifact (s4239) is fixed
 Residual: ~3x RMS vs retail at title (unaligned phases, single-run); the
 19-buffer constant -33 hangar entry transient is benign prefill (retail does it).
 
-**M5 Step 9 witness result (s4319).** The independent retail oracle passed its
-whole-RDRAM, target-range, title/hangar, and watched-PC controls. The fixed
-two-arm port matrix passed the same route/host controls and reached title 1024
-and hangar 512 in both silent and real-image arms. Descriptor-start fired in
-both arms, but no `init-desc` payload event or real filter row fired; descriptor
-fields also differed (silent arm garbage versus real arm `data_ptr=0x2CC`,
-`data_size=0x294`). This selects H-route/coverage-incomplete for the intended
-MORT/filter callsites. The first run exposed an unsafe probe dereference on
-non-descriptor task `0x80149470`; the final run restricted the diagnostic to
-the established descriptor task pointer `0x800377C8`. No decoder, AI bridge,
-or game-path guard changed. Single-source for descriptor values is the port
-matrix; the independent oracle validates route reach, not MORT payload.
+**M5 Step 9 callsite result (s4320).** The independent retail oracle passed its
+whole-RDRAM, title/hangar, and watched-PC controls; both port arms reached
+title 1024 and hangar 512. With the descriptor probe enable flag and all
+candidate witnesses enabled, `init-desc` fired 928 times in the silent arm and
+370 times in the real-image arm. The real arm produced 128 filter call/entry
+rows, all at generated callsite `0x8009D740`; the other two enumerated
+callsites (`0x8009C540`, `0x8009C88C`) produced zero rows. The silent arm
+produced zero filter rows in this run. This refutes the prior null as a
+coverage/config conclusion: the generated callsite is active and the MORT
+descriptor path is reachable. The prior s4319 null was caused by omitting
+`ROGUESQ_LOG_VI_CALLERS`, which gates `init-desc`; it is superseded below. No
+decoder, AI bridge, or game-path guard changed. Callsite ownership is
+static-enumeration plus port runtime evidence; the oracle supplies the
+independent route control.
 
 **M5 de-stubs landed.** A11 waitForAnyAudioSlot yield (default 2000), A12 countdown
 yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset=2; s4192), A15 spin-yield default
@@ -76,7 +78,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4319) The final M5 matrix passed independent retail controls and both port title/hangar route controls. Descriptor-start fired in both arms, but `init-desc` payload and real filter witnesses remained absent; descriptor fields differed between silent and real arms. The first run's probe crash on non-descriptor task `0x80149470` was fixed by restricting the diagnostic to task `0x800377C8`, then the matrix was rerun. H-route/coverage-incomplete is selected; H-MORT and H-AI remain unevaluable. Next: trace the actual generated callsites for the missing `init-desc` and `filterVoiceSampleBlock` witnesses, with per-callsite positive controls, before another ownership matrix. No decoder, AI bridge, guard, or skip is authorized.
+00. (s4320) Static enumeration found one descriptor site (`0x80092230`) and three filter callsites. The corrected matrix passed independent retail and both port route controls; `init-desc` fired in both arms and the real image reached `filterVoiceSampleBlock` through `0x8009D740` (128 rows), while the other two sites stayed quiet. Next: qualify Step 9's MORT output against `tools/mort_probe.py` for the witnessed descriptor class, retaining the full task/voice/PCM joins. Do not alter RSP dispatch or add a guard until descriptor/type/rate and PCM output are compared.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -136,6 +138,7 @@ Work only the first applicable item. One monotonic sequence.
 | Retail synth-read value join | s4308/s4313: whole-RDRAM and VI-512 controls passed; the value-aware oracle captured 1.43M target reads, and the first 4,096 keyed retail rows exactly match the qualified port sequence. Later divergence remains open. |
 | Retail/port 16,384-row consumer comparison | s4317: whole-RDRAM control and hangar VI 512 passed; both arms supplied 16,384 rows, with an ordinal-0 tuple divergence (retail `0x8008FADC,0x17DA1C,0xB035DC20`; port `0x8008FCE8,0x17D9E0,0x8017D9F8`). This selects a retail/port layout-or-filter divergence; exact writer/consumer cause remains open. |
 | M5 Step 9 complete matrix | s4319: both port arms reached title/hangar and passed route/host controls; descriptor-start fired in both, but no `init-desc` payload or real filter witness appeared. Descriptor fields differed between silent and real arms. H-route/coverage-incomplete is selected; H-MORT/H-AI remain unevaluable until active callsites are independently witnessed. |
+| M5 Step 9 MORT/filter callsite | s4320: `init-desc` fired in both arms; real-image filter rows came from `0x8009D740`, while `0x8009C540` and `0x8009C88C` were quiet. MORT output/type/rate versus PCM remains open. |
 
 ## Durable evidence boundary
 
@@ -146,6 +149,12 @@ same-build declared/real, declared/silent and legacy/real arms. A route failure
 invalidates a null; it never proves absence.
 
 ## Superseded conclusions
+- s4319 "MORT descriptor/filter witnesses absent" (believable because the
+  route controls and descriptor-start were valid): s4320 reran the matrix with
+  the generated `init-desc` gate `ROGUESQ_LOG_VI_CALLERS=1`; `init-desc` then
+  fired in both arms and the real filter callsite at `0x8009D740` produced
+  rows. The earlier null was instrumentation configuration, not route absence.
+
 - s4316 "full retail/port consumer comparison remains unevaluable" (believable:
   the first fixed retry stalled before VI 512 and the earlier detail cap left
   only 14,140 filtered rows); s4317 restored the Rice/`--vi-trace` route and
