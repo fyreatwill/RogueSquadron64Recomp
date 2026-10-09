@@ -148308,3 +148308,31 @@ rate, decoded bytes, and PCM joins remain the next discriminator. No decoder,
 AI bridge, or game-path behavior changed.
 
 ORIGIN: none; this was callsite enumeration and diagnostic instrumentation.
+
+## Session 4321 (2026-10-08) — qualified MORT reference; runtime route invalid
+
+HYPOTHESIS-ID: m5-step9-mort-output
+
+Ran one built s4321 matrix with the independent MORT reference rows, the retail
+oracle, and silent (`ROGUESQ_AUDIO_UCODE=0`) plus real-image (`=1`) port arms.
+The first driver attempt used the documented speech end address as a size and
+`mort_probe.py` rejected descriptor 487; measuring the span fixed it to
+`0x31D3E4`. A second preparation check found indices 0,1,59,440 were all 8 kHz;
+the first 16 kHz row is index 90, so the final run used 0,1,59,90.
+
+The final reference control passed: 546 descriptors, expected header/rate
+counts, four rows spanning 8000 and 16000 Hz, and nonzero decoded samples in
+all four rows. The oracle whole-RDRAM positive control passed and the retail
+trace reached title and hangar-capable route conditions. Both port arms reached
+title VI 1024 and produced PCM source/consumer joins; neither reached VI 512 at
+`0x006AB400` during this run. Consequently both arms produced zero active
+`filterVoiceSampleBlock` rows, so no descriptor/type/rate-to-runtime PCM join
+was available. There were no crash or abort markers.
+
+This validates the reference decoder and the title PCM boundary, but does not
+select H-MORT, H-layout, or H-AI. It rules out treating the absent runtime
+filter rows as evidence of a MORT/layout/AI null: the target phase was not
+reached. The next discriminator is a route-qualified rerun retaining the
+reference rows and controls. No decoder, AI, RSP, or game-path behavior changed.
+
+ORIGIN: none; this was reference validation and route-gated diagnostic capture.

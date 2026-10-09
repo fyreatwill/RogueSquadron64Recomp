@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -78,7 +78,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4320) Static enumeration found one descriptor site (`0x80092230`) and three filter callsites. The corrected matrix passed independent retail and both port route controls; `init-desc` fired in both arms and the real image reached `filterVoiceSampleBlock` through `0x8009D740` (128 rows), while the other two sites stayed quiet. Next: qualify Step 9's MORT output against `tools/mort_probe.py` for the witnessed descriptor class, retaining the full task/voice/PCM joins. Do not alter RSP dispatch or add a guard until descriptor/type/rate and PCM output are compared.
+00. (s4321) `tools/mort_probe.py` independently validated four speech descriptors spanning 8 kHz and 16 kHz, with nonzero decoded output. The fresh matrix passed the oracle whole-RDRAM/title controls and both port title controls, and both arms produced PCM source/consumer joins at VI 1024; neither arm reached VI 512, so no active filter row could be joined to a reference descriptor. Runtime CPU-MORT versus descriptor-layout versus AI/host remains unevaluable. Next: requalify the hangar route in one batched matrix (retain the MORT reference rows and all controls); only compare runtime filter/source/output rows after VI 512 is reached. Do not alter RSP dispatch or add a guard.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -139,6 +139,7 @@ Work only the first applicable item. One monotonic sequence.
 | Retail/port 16,384-row consumer comparison | s4317: whole-RDRAM control and hangar VI 512 passed; both arms supplied 16,384 rows, with an ordinal-0 tuple divergence (retail `0x8008FADC,0x17DA1C,0xB035DC20`; port `0x8008FCE8,0x17D9E0,0x8017D9F8`). This selects a retail/port layout-or-filter divergence; exact writer/consumer cause remains open. |
 | M5 Step 9 complete matrix | s4319: both port arms reached title/hangar and passed route/host controls; descriptor-start fired in both, but no `init-desc` payload or real filter witness appeared. Descriptor fields differed between silent and real arms. H-route/coverage-incomplete is selected; H-MORT/H-AI remain unevaluable until active callsites are independently witnessed. |
 | M5 Step 9 MORT/filter callsite | s4320: `init-desc` fired in both arms; real-image filter rows came from `0x8009D740`, while `0x8009C540` and `0x8009C88C` were quiet. MORT output/type/rate versus PCM remains open. |
+| M5 Step 9 MORT output | s4321: the independent reference decoder passed four rows covering both rates with nonzero output, but the fresh port arms stopped at title VI 1024 and supplied no active filter rows. Runtime MORT/layout/AI comparison remains route-invalid, not a null. |
 
 ## Durable evidence boundary
 
