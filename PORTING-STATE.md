@@ -148722,3 +148722,22 @@ open. No runtime behavior changed. A phase-gated field dump at C904 is next.
 
 ORIGIN: none; diagnostic oracle probes only, no mitigation or runtime behavior
 change.
+## Session 4335 (2026-10-08) — retail C904 field dump selected descriptor counterpart
+
+Ran one 180-second retail-oracle field census at the mapped counterpart
+candidate `0x8009C904`, with a whole-RDRAM positive control, VI tracing, and
+phase buckets for origins `0x006AB400:512` and `0x006AB800:512`. The run
+completed 10,783 VI and passed the whole-RDRAM control with 10,000 writes;
+title VI 1024 and hangar VI 512 both occurred. C904 executed 3,107 times and
+the phase-gated field dump emitted 461 rows at `0x006AB400` and 836 at
+`0x006AB800`. The rows consistently reported caller `0x8009C0E4`, object
+pointer `0x80153420`, and nonzero source/branch fields.
+
+This selects C904 as the retail counterpart boundary for the port's C88C
+descriptor helper. It rules out the null/invalid-C904 hypothesis, while exact
+retail-to-port payload parity remains open. The field table is retail-side
+evidence; the oracle controls independently qualify the route. No runtime
+behavior changed.
+
+ORIGIN: none; diagnostic oracle probe only, no mitigation or runtime behavior
+change.

@@ -4,11 +4,10 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4334: a controlled retail execution census found the
-descriptor/filter counterpart window: the old C88C address is absent, while
-retail executes C904, D7D0, D8C4, DB44, DC98, and DD7C in the watched audio
-region. Whole-RDRAM, title, and hangar controls passed. The next discriminator
-is a phase-gated field dump at retail C904; payload comparison remains open.
+Updated for session 4335: the controlled retail C904 field dump passed
+whole-RDRAM, title, and hangar controls and produced stable phase-gated
+object/source/branch rows. C904 is now the retail counterpart boundary for the
+port C88C descriptor helper; exact payload correspondence remains open.
 Previously 4333: the retail oracle reached the qualified hangar phase,
 but the port C88C address had zero retail execution hits even though the
 surrounding 0x8009C000-0x8009D000 range executed heavily; the exact retail
@@ -213,19 +212,17 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4334) The retail census passed whole-RDRAM, title 1024, and hangar 512
-controls. Exact watched PCs were active at C2D0 (937), C4C0 (937), C904
-(1,059), D7D0 (3,748), D8C4 (3,748), DB44 (937), DC98 (3,748), and DD7C
-(29,984); C540 and C5BC were zero. This identifies C904 as the first usable
-retail counterpart candidate for the port's C88C descriptor-helper boundary,
-with the D7D0/D8C4/DB44/DC98/DD7C chain as downstream confirmation. Counts are
-lifetime execution-watch counts, so phase-specific field equality is not yet
-proven. Next: run one hangar-512-gated `--pc-field-dump 0x8009C904` census
-with the same controls and compare its descriptor/object fields against the
-port C88C rows. A stable nonzero C904 field table selects the retail
-descriptor mapping; zero/invalid fields with controls intact selects a second
-boundary inside the C904 caller chain; lost controls are unevaluable. Keep
-decoder, RSP, AI, and game-path behavior unchanged.
+00. (s4335) The retail C904 field dump passed the whole-RDRAM positive
+control (10,000 writes), title VI 1024, and hangar VI 512 controls. C904
+executed 3,107 times; the phase-gated dump produced 461 rows at origin
+`0x006AB400` and 836 at `0x006AB800`. Rows consistently had caller
+`0x8009C0E4`, object pointer `0x80153420`, and nonzero source/branch fields.
+This selects C904 as the retail counterpart boundary for the port C88C
+descriptor helper; the rows are retail-side evidence and the controls are
+independent route evidence. Next: compare a bounded, same-phase port C88C
+field table against the retail C904 table, including object-relative source
+words and branch state. Keep decoder, RSP, AI, and game-path behavior
+unchanged; do not add a mitigation.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 

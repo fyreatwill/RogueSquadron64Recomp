@@ -1,30 +1,33 @@
-# Next work unit (s4335): field-dump the retail descriptor boundary
+# Next work unit (s4336): compare the retail C904 and port C88C field tables
 
-HYPOTHESIS-ID: m5-step9-retail-boundary-map
+HYPOTHESIS-ID: m5-step9-retail-port-field-join
 
-The s4334 retail census passed all controls. Exact C88C remained absent, while
-C904 (1,059), D7D0 (3,748), D8C4 (3,748), DB44 (937), DC98 (3,748), and DD7C
-(29,984) executed in the mapped region. C904 is the next retail descriptor
-candidate; these are lifetime counts, not yet a phase-specific field result.
+The s4335 retail field dump passed all controls. C904 executed 3,107 times and
+produced 461 phase-gated rows at `0x006AB400` and 836 at `0x006AB800`, with
+caller `0x8009C0E4`, object `0x80153420`, and nonzero source/branch fields.
 
 Competing hypotheses:
 
-- H-retail-counterpart: C904 is the retail descriptor-helper counterpart and
-  its phase-gated fields can be compared to port C88C rows.
-- H-retail-inner-boundary: C904 executes, but its fields are not the port
-  descriptor; the counterpart is another boundary in the C904-to-D7D0 chain.
-- H-oracle-invalid: a repeat loses the whole-RDRAM, title, or hangar controls.
+- H-port-retail-parity: port C88C and retail C904 expose the same descriptor
+  object-relative source and branch fields after phase normalization.
+- H-pre-route-divergence: the mapped boundaries are equivalent, but their
+  source/branch sequences differ before filtering, preserving the audio-route
+  divergence.
+- H-port-instrument-invalid: the port field witness cannot be joined or its
+  route controls fail, so the comparison is unevaluable.
 
-Discriminator: run one retail oracle census with whole-RDRAM, VI trace, and
-`--pc-field-dump 0x8009C904` phase-gated to `0x006AB400:512` and
-`0x006AB800:512`. Nonzero stable rows with valid object/descriptor fields
-select H-retail-counterpart; controls intact but zero/invalid C904 fields
-select H-retail-inner-boundary; missing controls select H-oracle-invalid. Do
-not change runtime behavior.
+Discriminator: run one same-build port matrix with the existing C88C field
+witness, phase-gated to VI origin `0x006AB400`/`0x006AB800` width 512, and
+normalize the first bounded rows by object-relative offsets. Matching ordered
+fields select H-port-retail-parity; valid controls with a stable mismatch
+select H-pre-route-divergence; missing port controls or no joinable rows select
+H-port-instrument-invalid. Do not change decoder, RSP, AI, or game-path code.
 
 Suggested command shape:
 
-`tools/oracle/build/rs64_oracle ... --watch-write 0x0:0x800000 --watch-pc 0x8009C904 --pc-field-dump 0x8009C904 --pc-phase-log-width 0x006AB400:512 --pc-phase-log-width 0x006AB800:512 --vi-trace ...`
+`env ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_M4=1 zsh tools/run-field-join.sh ...`
 
-Do not change decoder, RSP, AI, or game-path behavior. Keep all comparison
-rows phase-gated on VI origin `0x006AB400` and width 512.
+The script must retain the independent oracle result at
+`scratch/agent/oracle_s4335_c904_field.log` as the retail arm and capture the
+port arm in a new non-dot path. Positive controls are port VI 512, the existing
+field-call witness, and the oracle whole-RDRAM/title/hangar controls.
