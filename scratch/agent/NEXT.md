@@ -1,36 +1,39 @@
-# Next work unit (s4376): join title caller to task publication
+# Next work unit (s4377): bounded upstream caller audit
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-The s4375 qualified retail census found title-phase execution in
-`0x80019C00:0x80019E20`, including the observed chain
-`0x80019DEC -> 0x80033FCC`; the typed task join was live. Do not repeat the
-broad caller range or the closed first-eight payload comparison.
+The s4376 qualified retail capture directly joined `0x80019DEC ->
+0x80033FCC`: 3,452 caller executions were immediately followed by the task
+publication, and paired rows carried the same task pointer/publication fields.
+The remaining question is upstream selector/decode input, not a missing task
+publication boundary. Do not repeat the caller census, direct publication
+join, or closed first-eight payload comparison.
 
 Competing hypotheses:
 
-- H-publish-direct: the title caller at `0x80019DEC` passes the same task
-  identity/arguments directly into `0x80033FCC`; phase-keyed rows will show
-  matching caller `$a0` and task pointer/ordinal adjacency.
-- H-publish-transform: the caller is only a pre-publication stage; title rows
-  at `0x80019DEC` are live but its arguments differ from the task publication
-  fields or are separated by another call.
-- H-title-watch-gap: the prior range result was an attribution artifact; the
-  explicit `0x80019DEC` watch will have no title rows despite live title
-  C904/task rows.
+- H-upstream-selector: a bounded predecessor/caller writes or supplies the
+  selector/decode input that becomes the phase-specific published payload.
+- H-payload-overwrite: direct publication is correct, but a later writer
+  changes the payload before consumption.
+- H-input-watch-gap: the chosen upstream PCs are not on the title path while
+  the whole-RDRAM, VI, and task controls remain live.
 
-Discriminating measurement: one retail oracle run with explicit watches at
-`0x80019DEC` and `0x80033FCC`, phase-gated title/hangar GPR rows, the typed
-task dump, C904/task join, whole-RDRAM positive control, and all three VI
-buckets. Title caller rows adjacent to matching `0x80033FCC` task pointers
-select H-publish-direct; live title caller rows with changed/separated task
-fields select H-publish-transform; missing title caller rows or any failed
-control rejects the result as H-title-watch-gap/instrument failure.
+Discriminating measurement: first audit the existing generated-function
+listing for every `jal 0x80033FCC` in the caller function and its immediate
+predecessors, then choose one bounded oracle run that watches all identified
+upstream PCs plus one post-publication payload range. A title upstream row
+whose source fields predict the published family selects H-upstream-selector;
+a phase-matched writer after `0x80033FCC` selects H-payload-overwrite; no title
+upstream rows with live controls selects H-input-watch-gap. A null without the
+whole-RDRAM positive control, all three VI buckets, and at least 1,000 valid
+type-2 rows is invalid.
 
-Exact commands:
+Exact audit command (no build or run before this audit):
 
-    bash tools/oracle/build.sh
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --rsp /opt/homebrew/lib/mupen64plus/mupen64plus-rsp-hle.dylib --secs 75 --hit-cap 64 --watch-write 0x0:0x800000 --watch-pc 0x80019DEC --watch-pc 0x80033FCC --c904-witness --c904-task-join --pc-task-dump 0x80033FCC --pc-task-type 2 --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x00790800:1024 --pc-phase-log-width 0x006AB400:512 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150 > scratch/agent/soak_results/s4376_title_publish.log 2>&1
+    rg -n -C 8 'jal +0x80033FCC|osSpTask(StartGo|Load)_recomp|0x80019D' scratch/agent/s389_verify/before_current_applied/funcs_4.c
 
-Reject any run without 10,000 whole-RDRAM writes, all three phase buckets,
-and at least 1,000 valid type-2 task joins.
+Then run exactly one batched oracle capture from the repo root, using the
+audited PC list in one `--watch-pc` argument, `--pc-field-dump` for every
+audited upstream PC, `--watch-write` for the published payload range, the
+`0x80033FCC` typed task dump/join, `--watch-write 0x0:0x800000`, all three
+`--pc-phase-log-width` buckets, Rice, and the established Start schedule.
