@@ -358,6 +358,8 @@ available.
    `generated-symbol-renaming-sweep`, only when items 1–2 are inapplicable;
    mapping-only edits do not reset the engineering-change gate.
 
+0g. **s4455: port mix-call rate is 60/s (unset) and 86/s (`ROGUESQ_AI_EVENT_DRAIN=768`) vs retail 114.3/s (2,285 epilogue hits/20 s); build calls 120/s in both arms.** Mix rate tracks AI-event rate, so the port under-drives the mixer by 25-48%. Both arms crashed at ~32 s in musyxSynthFrame+5436. Next: `ROGUESQ_AI_EVENT_HZ=115` arm with `ROGUESQ_LOG_M5_RATE=1` — expect mix ~114/s if event pacing is the whole gap.
+
 ## Evidence boundary and operating rules
 
 Retail oracle watches are physical-address ground truth. Whole-RDRAM, VI, and
