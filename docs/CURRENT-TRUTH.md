@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4425 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4426 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -193,6 +193,20 @@ store. That callee returns `s2`, and `0x80001C10` is `addiu s2, a1, 16`.
 ORIGIN: retail physical store callbacks and ROM disassembly; no table or
 heap value was rewritten, skipped, or guarded.
 
+Session 4426 selected H-freelist-header. A deferred watch on `0x80001C10`
+armed on the single `0x00790500` VI and missed the stores. The corrected
+capture armed execution watches at the first VI and printed only while that
+origin was live. Whole-RDRAM, both establishing stores, the title VI switch,
+and 33/33 executions of `0x80001C10`/`0x80001C14` were in that run. The calls
+returning to `0x8008F218` and `0x8008F244` had headers `0x80171CD0` and
+`0x80173B10`; `s2` after `addiu s2, a1, 16` was the stored pointers. All 33
+post-addiu rows had `s2 == a1+16`. Both requests were `0x1E30` with flags 0.
+Free sizes `0x232C0` and `0x21480` satisfy `0x232C0 - 0x1E30 - 16 = 0x21480`,
+and the second header is the first user pointer plus `0x1E30`. The two title
+pointers are the user halves of one split free block. The publisher does not
+fill those bytes. ORIGIN: retail execution and store callbacks; no heap or
+table value was rewritten, skipped, or guarded.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -227,18 +241,25 @@ available.
   start at 0 and receive `0x80171CE0`/`0x80173B20` from `sw v0` at
   `0x8008F228`/`0x8008F264` on the last 640-wide frame. Empty title writer
   buckets were real; the writer runs one VI mode earlier.
+- Those stored words are not produced by a path other than `addiu s2, a1, 16`.
+  s4426 saw `s2` become `a1+16` on the next instruction for both establishing
+  calls and for every other allocation on that frame. A different `s2` was
+  believable only because a breakpoint on the addiu itself samples `s2`
+  before the instruction runs.
 
 ## Next steps
 
-1. **Attribute the allocator block behind the title pointers** —
-   HYPOTHESIS-ID `m5-selector-alloc-return`. The establishing stores are
-   the return values of `jal 0x80001ACC`. Inside that callee, `0x80001C10`
-   does `addiu s2, a1, 16`, and `0x80001C74` copies `s2` to `v0` before the
-   epilogue restores `s2`. On the establishing frame (width 640, origin
-   `0x00790500`), watch `0x80001C10` and keep the any-phase table-store
-   control. `a1+16` equal to `0x80171CE0`/`0x80173B20` on the two calls
-   that return to the store sites selects that free-block header; a
-   different `s2` with the store control live selects another path; missing
+1. **Name the first writer of the two user buffers** —
+   HYPOTHESIS-ID `m5-selector-block-fill`. The title pointers are user
+   halves of one split free block: headers `0x80171CD0` (free size
+   `0x232C0`) and `0x80173B10` (remainder `0x21480`), both requests
+   `0x1E30`, flags 0. The publisher stores the pointers and returns without
+   filling them. On retail, watch the first word of each user buffer
+   (physical `0x171CE0` and `0x173B20`) from boot through the first title
+   selector load, with whole-RDRAM, the establishing table stores, and
+   `0x80091064` as controls. A named PC writing a user word after the
+   establishing store and before that load selects the filler; no such
+   write, with both controls live, selects residual heap contents; missing
    controls leave it unresolved. Do not rewrite or guard heap state.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.

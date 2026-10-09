@@ -1,38 +1,43 @@
-# Next work unit (s4426): attribute the allocator block for the title pointers
+# Next work unit (s4427): name the first writer of the two user buffers
 
-HYPOTHESIS-ID: m5-selector-alloc-return
+HYPOTHESIS-ID: m5-selector-block-fill
 
-Session 4425 selected H-pretitle-same-writer. On the last 640-wide frame
-(origin `0x00790500`), before the 1024 title switch, `0x8008F228` stored
-`0x80171CE0` and `0x8008F264` stored `0x80173B20`. Both words had started at
-0. Straight-line code between `jal 0x80001ACC` and either `sw v0` does not
-write `v0`. The callee clears `s2`, sets `s2 = a1 + 16` at `0x80001C10`,
-and copies `s2` to `v0` at `0x80001C74` before the epilogue restores `s2`.
+Session 4426 selected H-freelist-header. On width 640, origin `0x00790500`,
+`rs_malloc` split one free block into the two title pointers. Headers
+`0x80171CD0` / `0x80173B10`, requests `0x1E30`, flags 0, user pointers
+`0x80171CE0` / `0x80173B20`. The publisher at `0x8008F228` / `0x8008F264`
+stores those pointers and returns without writing the user bytes. Its later
+`jal 0x800078E0` fills a different 664-byte buffer.
 
 Competing hypotheses:
 
-- H-freelist-header: on that frame, the two calls whose return address is
-  the store function execute `0x80001C10` with `a1+16` equal to
-  `0x80171CE0` and `0x80173B20`. The header at `a1` is the producing block.
-- H-other-s2: the store control is live, but `v0` at `0x80001C74` is not
-  `a1+16` from `0x80001C10` for those calls.
-- H-join-failure: the establishing store rows or the `0x80001C10` watch do
-  not fire in the same run.
+- H-named-fill: after those stores and before the first title execution of
+  `0x80091064`, a guest PC writes the first word of `0x80171CE0` or
+  `0x80173B20`.
+- H-residual: both controls are live and neither user word is written in
+  that window. The selector load then reads leftover heap bytes.
+- H-join-failure: the establishing table stores or the `0x80091064` rows
+  do not appear in the same run as the user-word watches.
 
-Discriminating measurement: one retail oracle capture, no pc-range over a
-hot function. Keep `--store-field-dump-all` on both table words with
-`--store-field-dump-any-phase` as the positive control (the
-`0x00790500` rows must reappear). Add `--watch-pc 0x80001C10` and
-`--pc-phase-log-width 0x00790500:640` so that frame's allocator GPR rows
-print. Record `a1`, `s2` after the addiu, and `ra`. Do not rewrite heap
+Discriminating measurement: one retail oracle capture. No execution watch
+on `rs_malloc`. Keep `--store-field-dump-all` and
+`--store-field-dump-any-phase` on the two table words so the
+`0x00790500` rows reappear. Watch writes of the first user word at physical
+`0x171CE0` and `0x173B20` for the whole run. Phase-print `0x80091064` at
+title origins `0x00790400:1024` and `0x00790800:1024` with `--exec-no-defer`
+so the watch is armed before that frame; do not add a phase that arms only
+at `0x00790500`, because that VI callback is after the stores. Record writer
+PC, value, width, and origin for any user-word store. Do not rewrite heap
 state.
 
 Exact commands:
 
-1. No rebuild unless the oracle binary is older than `tools/oracle/rs64_oracle.c`.
+1. The oracle binary must be newer than `tools/oracle/rs64_oracle.c` (the
+   `--exec-no-defer` flag). Rebuild with `bash tools/oracle/build.sh` only
+   if it is older.
 2. Run from the repo root with `--oracle-emulator 1`, Rice, the Start-press
-   schedule, `--secs 50` (the establishing frame is ~16s), whole-RDRAM
-   watch 0, the two physical table watches, and the watches above.
-3. Kill with SIGKILL. Require the whole-RDRAM line, the two establishing
-   store rows, and at least one `0x80001C10` row on origin `0x00790500`
-   before interpreting a mismatch.
+   schedule, `--secs 25`, whole-RDRAM watch 0, the two table watches, the
+   two user-word watches, and `--watch-pc 0x80091064` gated as above.
+3. Kill with SIGKILL. Require the whole-RDRAM line, both establishing store
+   rows, and at least one `0x80091064` row whose `v0` is `0x80171CE0` or
+   `0x80173B20` before calling a zero-write result residual.

@@ -250,6 +250,7 @@ static long g_vis;
 static int g_verbose;
 static int g_watches_armed;
 static int g_defer_exec_watches;
+static int g_exec_no_defer;
 static int g_exec_watches_phase_armed;
 static int g_positive_watch_removed;
 static uint32_t gpr32(int idx);
@@ -2542,10 +2543,9 @@ static void dbg_update(unsigned int pc)
     }
     if ((flags & M64P_BKP_FLAG_EXEC) && !g_pc_phase_quiet && pc_phase_log_match())
         detail_hit = 1;
-    if ((flags & M64P_BKP_FLAG_EXEC) && getenv("RS64_STACK_DUMP_PCS")) {
-        char sb[24]; snprintf(sb, sizeof sb, "%08X", pc);
-        if (strcasestr(getenv("RS64_STACK_DUMP_PCS"), sb)) detail_hit = 1;
-    }
+    /* RS64_STACK_DUMP_PCS annotates hits that are already printed. It must
+     * not force every execution of a hot PC onto the detail path: that
+     * defeats --pc-phase-log-width and floods the capture. */
     if (!getenv("RS64_KEEP_POSITIVE_CONTROL") &&
         !g_positive_watch_removed && g_nwatch > 0 &&
         g_watch[0].write_hits == 10000) {
@@ -3072,6 +3072,7 @@ static void usage(void)
         "  --detail-watch N      always log hits for watch index N\n"
         "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
         "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
+        "  --exec-no-defer       arm exec watches at first VI; phase log only filters prints\n"
         "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
         "  --pc-field-dump-any-phase allow field rows before/after phase buckets\n"
         "  --boundary-join     join C950/C954/D78C/D790/DC38 to latest phase task\n"
@@ -3179,6 +3180,8 @@ int main(int argc, char **argv)
                 g_n_pc_phase_log_origin++;
             }
         }
+        else if (!strcmp(argv[i], "--exec-no-defer"))
+            g_exec_no_defer = 1;
         else if (!strcmp(argv[i], "--pc-phase-log-width") && i + 1 < argc)
             add_pc_phase_log_width(argv[++i]);
         else if (!strcmp(argv[i], "--pc-field-dump") && i + 1 < argc)
@@ -3330,7 +3333,7 @@ int main(int argc, char **argv)
         else usage();
     }
     if (!rom) usage();
-    g_defer_exec_watches = g_n_pc_phase_log_origin > 0;
+    g_defer_exec_watches = g_n_pc_phase_log_origin > 0 && !g_exec_no_defer;
     g_state_smoke = getenv("ORACLE_STATE_SMOKE") != NULL;
     g_state_reach = getenv("ORACLE_STATE_REACH") != NULL;
     g_state_path = state_path;

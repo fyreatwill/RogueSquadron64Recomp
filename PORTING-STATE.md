@@ -150505,3 +150505,38 @@ table or heap value was rewritten, skipped, or guarded. ORIGIN: the writer
 is guest `sw v0` at `0x8008F228`/`0x8008F264`; the values are the pointers
 the title load consumes, so they are legitimate game data.
 
+## Session 4426 (2026-10-09) — the title pointers are one split malloc block
+
+The deferred exec watch cannot see these calls. `scratch/agent/s4426_m5_alloc_return/retail.log`
+armed `0x80001C10` at the one VI whose origin was `0x00790500`, which is
+after `0x8008F228`/`0x8008F264` had already stored `0x80171CE0`/`0x80173B20`.
+That run still passed whole-RDRAM and kept both establishing rows. Its later
+calls from the same return addresses did show the addiu relation, including
+the hangar pair `a1+16 = 0x80171E70`/`0x80173CB0`.
+
+`tools/oracle/rs64_oracle.c` now has `--exec-no-defer`: execution watches arm
+at the first VI, and `--pc-phase-log-width` only filters printing. The
+stack-dump env no longer forces every hit of a hot PC to print. The rerun is
+`scratch/agent/s4426_m5_alloc_return_early/retail.log`. Controls in that run:
+whole-RDRAM removed at 10,000 writes; both establishing store rows on width
+640 origin `0x00790500`; the 640-to-1024 VI switch; 33 executions of
+`0x80001C10` and 33 of `0x80001C14` while that origin register was live.
+
+The calls whose saved return address (`sp+0x30`) is `0x8008F218` and
+`0x8008F244` had `a1 = 0x80171CD0` and `0x80173B10`. The breakpoint at
+`0x80001C10` is before `addiu s2, a1, 16`, so `s2` is still 0 there. At
+`0x80001C14`, `s2` is `0x80171CE0` and `0x80173B20`, the two stored words.
+All 33 post-addiu rows on that frame had `s2 == a1+16`. Both requests were
+`0x1E30` with flags 0. The free-block sizes were `0x232C0` and `0x21480`.
+`0x232C0 - 0x1E30 - 16 = 0x21480`, and the second header is
+`0x80171CE0 + 0x1E30`. The two title pointers are the user halves of one
+free block split by that first call. The publisher returns without writing
+those user bytes; its later `jal 0x800078E0` fills a different 664-byte
+buffer.
+
+This selects H-freelist-header and refutes H-other-s2 and H-join-failure.
+No heap or table value was rewritten, skipped, or guarded. ORIGIN: the
+writer of the returned pointer is guest `addiu s2, a1, 16` in `rs_malloc`;
+the stores copy that pointer, and the title load consumes it, so the value
+is legitimate game data.
+
