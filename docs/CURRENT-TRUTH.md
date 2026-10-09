@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4376 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4377 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -280,6 +280,22 @@ inputs rather than a missing publication boundary. ORIGIN: retail execution,
 task, C904, and whole-RDRAM observations; no value was skipped, rewritten, or
 guarded.
 
+Session 4377's batched upstream audit passed the whole-RDRAM control (10,000
+callbacks), reached title VI buckets 1024 at origins `0x00790400`/`0x00790800`
+and hangar 512 at `0x006AB400`, and retained 1,958 valid type-2 task rows
+(`invalid=0`, `overflow=0`). The live caller chain was `0x80019D28/38/68`
+followed by `0x80019DD8/E8/EC` and `0x80033FCC`; the pending-task sites
+`0x80019E2C/E40/E44`, `0x80019EA4/EB8/EBC`, and `0x80019FA8/FB4/FB8` had zero
+hits on this qualified route. The title source/object rows changed with the
+phase (`0x80128C80` with source words `0x02000612`/`0x02000800` versus
+`0x80128CE0` with `0x02000400`), while the joined task data pointers changed
+between `0x80173B20` and `0x80171CE0`; all were observed before the direct
+publication call. This selects H-upstream-selector over H-input-watch-gap for
+the observed route and supplies the next boundary: attribute the phase-specific
+payload writer after publication. It does not yet rule out a later overwrite.
+ORIGIN: retail upstream execution, task joins, payload-range writes, and
+whole-RDRAM observations; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -319,13 +335,14 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 selector/decode upstream inputs** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. The explicit `0x80019DEC -> 0x80033FCC`
-   chain is now qualified as direct publication for the observed route. The
-   next run must locate the caller's upstream selector/decode input or writer
-   that supplies the differing payload family; do not repeat the caller
-   census, direct publication join, closed first-eight payload comparison, or
-   the `0x8009C904:0x8009DC3C` range.
+1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Session 4377 qualified the upstream
+   selector/object split and the phase-specific task data pointers. The next
+   run must attribute writes in the matching title/hangar payload ranges to
+   PCs after `0x80033FCC`, with the same whole-RDRAM, three-bucket, and typed
+   task controls. Do not repeat the caller census, direct publication join,
+   closed first-eight payload comparison, or the `0x8009C904:0x8009DC3C`
+   range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -337,7 +354,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
-| M5 title caller path | s4375's range census plus s4376's explicit join qualify `0x80019DEC -> 0x80033FCC` as the direct publication chain in title; the upstream selector/decode input remains open. |
+| M5 title caller path | s4375/s4376 qualify `0x80019DEC -> 0x80033FCC` as the direct publication chain; s4377's independent upstream audit selects a phase-specific selector/object input, while later payload overwrite remains open. |
 | M5 consumer join | s4363 plus s4370/s4371 independent retail captures confirm distinct phase-specific task families and zero exact recurrence of nonzero selected words in the first eight published payload words (591/591, 601/601, 344/344). H-later-consumer-transform is confirmed for that boundary; the intermediate transform/publication stage remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |

@@ -63805,6 +63805,8 @@ causes the recurring runtime SIGBUS, and no mitigation was added.
 ORIGIN: the distinct boundary is established by independent decomp symbols
 and the generated symbol table; no guest value was skipped, rewritten, or
 guarded.
+
+
 ## Session 1142 (2026-08-14) — located the NPC function-boundary loss
 
 Ran the bounded static regeneration audit from `scratch/agent/NEXT.md`; no
@@ -149579,3 +149581,22 @@ the upstream selector/decode input or rule out a later payload overwrite; the
 next work unit is a bounded upstream caller audit. ORIGIN: retail execution,
 task, C904, and whole-RDRAM observations; no value was skipped, rewritten, or
 guarded.
+
+## Session 4377 (2026-10-09) — upstream selector audit selected phase-specific inputs
+
+Ran one 75-second Rice retail-oracle capture after auditing every
+`osSpTaskStartGo` site in the generated caller. The run passed the whole-RDRAM
+positive control with 10,000 callbacks, reached title origins `0x00790400` and
+`0x00790800` plus hangar origin `0x006AB400`, and recorded 1,958 valid type-2
+task rows with invalid=0 and overflow=0. The live caller chain was
+`0x80019D28/38/68` followed by `0x80019DD8/E8/EC` and `0x80033FCC`; the
+pending-task sites `0x80019E2C/E40/E44`, `0x80019EA4/EB8/EBC`, and
+`0x80019FA8/FB4/FB8` had zero hits on this route. Phase-keyed upstream rows
+carried distinct source/object tuples (`0x80128C80` with `0x02000612` or
+`0x02000800`, versus `0x80128CE0` with `0x02000400`) and the task data pointer
+changed between `0x80173B20` and `0x80171CE0`. This selects
+H-upstream-selector over H-input-watch-gap and rules out an absent caller
+route; it does not yet rule out a later payload overwrite. The next work unit
+must attribute phase-specific payload writers after publication. ORIGIN: retail
+upstream execution, task joins, payload-range writes, and whole-RDRAM
+observations; no value was skipped, rewritten, or guarded.
