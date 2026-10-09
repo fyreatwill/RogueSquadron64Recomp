@@ -150808,3 +150808,8 @@ Re-analysis of scratch/agent/s4441/port_A1.log (9750 [s4234-ENTRY] rows, no new 
 ORIGIN: no mitigation added; no code changed.
 Rules out: caller-by-ra; a hand-written host caller (all callers are guest jal sites).
 Next: dump per-voice state (voice 0x801951B8+i*0x88 first words) in port vs retail oracle write/read-watch to find which field retail keeps idle.
+
+## Session 4448 (2026-10-09) — oracle: retail never READS voice 0 (0x1951B8..+0x88) in 20 s; supports (b) retail does not run the voice render path through title
+Ran (scratch/agent/s4448_oracle.sh, two concurrent oracle runs): read-watch phys 0x1951B8:0x195240 for 20 s emulated (1200 VI) -> 0 hits; positive control whole-RDRAM read-watch 8 s -> 2,830,555 hits. Logs: scratch/agent/soak_results/s4448_{voice0,ctl}_read.log.
+Meaning: combined with s4446 (retail never touches allocator head/tail/pool), retail does not execute musyxRenderVoiceSamples over this array in boot/title; the port's 31-voice render + fill allocations are port-induced. Caveats (single-source): assumes the voice array sits at the same address in retail (static ROM heap, not verified by a retail-side write watch); covers boot+title only, no hangar. Not yet run: port-side per-voice flag dump; retail exec-watch of musyxRenderVoiceSamples 0x8008FFAC (would be the direct (b) test and a second line of evidence).
+Next: oracle --watch-pc 0x8008FFAC (control: --watch-pc on a known-hot PC) to confirm retail never enters the function; then find what in the port gates it (caller of musyxRenderVoiceSamples).
