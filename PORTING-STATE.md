@@ -149470,3 +149470,22 @@ direct selected-word equality or the earlier writer, so producer provenance
 remains open pending an independent physical-payload witness. The run was
 fully qualified. ORIGIN: retail guest selector and task PCs are observed; no
 value was skipped, rewritten, or guarded.
+
+## Session 4370 (2026-10-09) — independently confirmed phase-specific payloads
+
+The first 75-second oracle launch used 7,728-byte phase snapshot watches and
+was invalid because the oracle rejects snapshot ranges over 4 KiB. The fixed
+Rice run used 32-byte watches for the first eight words at `0x80171CE0`,
+`0x80173B20`, and `0x80171E70`, plus the whole-RDRAM positive control,
+C904/C950 witness and join, and typed `0x80033FCC` task rows. It passed the
+control at 10,000 callbacks, reached 4,481 VI and all three buckets, and
+recorded 1,775 valid type-2 rows, 3,673 C904/task matches, and three
+unmatched witnesses. The snapshots were live in title and hangar: title
+contained `mat_10`/`mat_11`, `ltex_cache_328/329`, and `explh_tex0/1`, while
+hangar contained its pointer/data family. Joined task rows carried the same
+phase-specific roots (`0x80178C80`/`0x801E2FC0` in title and `0x801797B0` in
+hangar). This supplies the independent physical-memory evidence required to
+corroborate H-selector-multiplex and rules out an absent or misaligned watch.
+It does not prove direct selected-word equality or close pre-filter origin
+versus later consumer transform. ORIGIN: retail guest memory snapshots and
+task joins are observed; no value was skipped, rewritten, or guarded.

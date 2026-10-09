@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4369 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4370 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -181,6 +181,23 @@ independent evidence line is still required. ORIGIN: retail guest selector
 and task PCs are observed with positive-control and phase coverage; no value
 was skipped, rewritten, or guarded.
 
+Session 4370's independent physical-payload capture passed the whole-RDRAM
+control (10,000 callbacks), reached 4,481 VI and all three required buckets,
+and retained 1,775 valid type-2 task rows with 3,673 C904/task matches and
+three unmatched witnesses. The oracle's phase snapshots of the first eight
+words at `0x80171CE0`, `0x80173B20`, and `0x80171E70` were live in both title
+and hangar: title values contained the distinct `mat_10`/`mat_11`,
+`ltex_cache_328/329`, and `explh_tex0/1` families, while hangar values changed
+to its pointer/data family. Joined task rows independently carried the same
+phase-specific roots (`0x80178C80`/`0x801E2FC0` in title and `0x801797B0` in
+hangar). This supplies the second evidence line for H-selector-multiplex and
+rules out an absent or misaligned physical payload watch. It does not establish
+direct selected-word equality or close pre-filter origin versus later consumer
+transform. The initial oversized snapshot watches were invalid because the
+oracle rejects ranges over 4 KiB; the corrected 32-byte watches are the only
+qualified measurement. ORIGIN: retail guest memory snapshots and task joins
+are observed; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -220,15 +237,15 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 payload/consumer boundary — independent confirmation** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Run one qualified retail capture with the
-   same three VI buckets and positive control, but independently watch the
-   phase-latched physical payload blocks at the joined task `data_ptr` values
-   (`0x80171CE0`, `0x80173B20`, `0x80171E70`) and compare their first eight
-   words against the C904/C950 join table. Stable phase-family snapshots with
-   valid task joins corroborate H-selector-multiplex; absent or shifting
-   snapshots reopen the watch-boundary explanation. Do not close producer
-   provenance from this alone.
+1. **M5 selected-word versus payload origin** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Run one qualified retail oracle capture with
+   the same positive control and three VI buckets, retaining C904/C950 selected
+   addresses/words and the first eight words of each joined task payload. If
+   selected words recur exactly in the published payload, that supports
+   H-pre-filter-origin; if payload families vary while selected words are zero,
+   unrelated, or phase-stable, that supports H-later-consumer-transform. A
+   missing phase snapshot or fewer than 1,000 valid joins reopens the watch
+   boundary. Do not close producer provenance from this alone.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
