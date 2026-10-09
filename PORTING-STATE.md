@@ -149785,3 +149785,21 @@ next work unit must census the actual phase-512 writer/destination set. No
 mitigation or value rewrite was added. ORIGIN: retail writer PCs, exact scalar
 post-store values, task publication, payload-range writes, and whole-RDRAM/VI
 observations; no value was skipped, rewritten, or guarded.
+
+## Session 4387 (2026-10-09) — censused hangar payload-range writers
+
+Ran the batched retail-oracle phase-keyed writer/destination census. The
+whole-RDRAM positive control produced 125,701 writes; the run reached title
+VI buckets with 633/633 rows and hangar `0x006AB400:512` with 504 rows. It
+retained 1,753 valid type-2 tasks (`invalid=0`, `overflow=0`) and 44,845
+ordinal payload writes with zero ordinal overflow. In
+`0x178C80:0x179A48`, hangar's only high-volume writer was `0x800078EC` with
+664 stores; `0x8008F7D4` and `0x80091374` had no phase-512 rows. The sampled
+`0x800078EC` store was scalar-valid (`mismatch=0`) and zero-valued, and the
+exact ordinal rows formed a contiguous zero-fill tail at `0x179A28..0x179A47`.
+This selects hangar maintenance/other-range over the named semantic-writer
+hypothesis for that range and rules out a missing phase/task or writer-PC
+histogram boundary. It does not identify the actual task data/output
+destination; that is the next probe. ORIGIN: retail phase-keyed writer
+histograms, exact effective stores, scalar validation, task publication, and
+whole-RDRAM/VI observations; no value was skipped, rewritten, or guarded.

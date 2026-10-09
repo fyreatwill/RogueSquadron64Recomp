@@ -442,6 +442,22 @@ from all hangar destinations. ORIGIN: retail writer PCs, exact scalar
 post-store values, task publication, payload-range writes, and whole-RDRAM/VI
 observations; no value was skipped, rewritten, or guarded.
 
+Session 4387's phase-512 writer/destination census passed the whole-RDRAM
+control (125,701 writes), reached title buckets with 633/633 VI rows and the
+hangar bucket with 504 rows, and retained 1,753 valid type-2 tasks with
+`invalid=0`, `overflow=0`; the ordinal table retained 44,845 writes with
+`overflow=0`. In the hangar payload range `0x178C80:0x179A48`, the only
+high-volume writer was `0x800078EC` (`664` stores); the named title writers
+`0x8008F7D4` and `0x80091374` had no phase-512 rows. The retained scalar sample
+for `0x800078EC` had `mismatch=0` and wrote zero, and its exact ordinal rows
+were a contiguous zero-fill tail at `0x179A28..0x179A47`. This selects
+H-hangar-other-range/maintenance over H-actual-hangar-writer for the watched
+range: the range is being cleared in hangar, not populated by the semantic
+task writer. It remains single-source retail evidence and does not identify
+the actual task data/output destination. ORIGIN: retail phase-keyed writer
+histograms, exact effective stores, scalar validation, task publication, and
+whole-RDRAM/VI controls; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -482,14 +498,13 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4386 rules out the two named
-   `0x8008F7D4`/`0x80091374` PCs as hangar payload-range writers in the
-   qualified capture: both are scalar-valid, but neither has a phase-512
-   detail row while the payload/task watches are live. Identify the actual
-   hangar writer or destination range with one phase-keyed writer census, then
-   repeat the value comparison only for that live set. Do not treat the
-   absence of named-writer rows as proof that they write no other hangar
-   destination, and do not repeat the stale-PC detail capture.
+   `m5-selector-decode-boundary`. Session 4387 shows that the watched hangar
+   range is dominated by zero-fill from `0x800078EC`, while neither named
+   title writer reaches it in phase 512. Identify the actual hangar task
+   data/output destination by watching the phase-512 task pointers and their
+   bounded `+0x100` fields in one run, with the same payload-range census as a
+   stale-range control. Do not repeat the named-writer detail capture or treat
+   the clear writer as semantic payload provenance.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
