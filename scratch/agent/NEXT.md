@@ -1,30 +1,41 @@
-# Next work unit (s4402): compare qualified port and retail payload families
+# Next work unit (s4403): qualify the title AI-boundary callsite
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-The s4399/s4401 port route is qualified as `0x00790400 -> 0x006AB400`; do
-not seek or recount the absent `0x00790800` bucket.
+The qualified port route is `0x00790400 -> 0x006AB400`; the absent
+`0x00790800` bucket is not part of this unit. Session 4402 showed title
+selector setup/source/mixer/input/store-entry/tick activity, while the
+AI-boundary/callsite witness was filtered to hangar by host code.
 
 Competing hypotheses:
 
-- H-cross-source-equivalence: qualified port title/hangar task families match
-  corresponding qualified retail families after phase labeling.
-- H-cross-source-divergence: the direct port transition has phase-specific
-  families that do not match retail in the same phase.
-- H-cross-source-instrument-gap: a positive control, actual phase, or paired
-  task/image join is absent, so no cross-source conclusion is valid.
+- H-title-callsite-present: the existing AI-boundary/callsite hook executes in
+  title but its width/origin filter hid it; widening that filter yields title
+  callsite rows with the same phase/task controls.
+- H-title-callsite-absent: title setup activity does not reach the hooked AI
+  callsite; widening the filter yields no title callsite rows despite controls.
+- H-title-callsite-route-mismatch: the title phase label is not paired with the
+  selector callsite's task/image route; title callsite rows, if any, lack the
+  qualified phase/task join.
 
-Discriminating measurement: use the existing qualified retail payload capture
-and one phase-gated port capture to compare normalized task data pointers,
-source hashes, image-DMA hashes, and phase-family hashes for `0x00790400` and
-`0x006AB400`. Matching normalized families select equivalence; a stable
-phase-specific mismatch selects divergence; missing control, phase, or joins
-select instrument gap. Report the title selector witness separately because
-s4401 did not fire it in title.
+Discriminating measurement: change only the existing host filter in
+`rs64_m5_selector_ai_boundary`/`rs64_m5_selector_ai_callsite` to admit title
+`width=1024, origin=0x00790400` while retaining the hangar arm. Build once,
+then run `run_s4402_m5_title_selector_witness.sh` with its positive input
+control and all selector gates. Title callsite rows paired with live title
+task/image joins select H-title-callsite-present; zero title callsite rows
+select H-title-callsite-absent; rows without paired title controls select
+H-title-callsite-route-mismatch. The hangar arm is a same-run positive
+control for the widened diagnostic.
 
-Exact commands: inspect the existing qualified retail payload summary and
-port log, then create one bounded comparison script with `apply_patch` if a
-normalization is needed. Do not rebuild unless the existing logs lack a
-required field. Run one phase-gated capture only if needed, for 85 seconds,
-SIGKILL the game, and report controls, paired-row counts, and normalized
-family matches.
+Exact commands:
+
+1. Edit the two host filters in `src/main/upstream_compat.cpp` with
+   `apply_patch`; preserve the original hangar condition and add the title
+   condition.
+2. `cmake --build build --config Debug --target RogueSquadron64Recomp`
+3. `zsh scratch/agent/run_s4402_m5_title_selector_witness.sh`
+
+Capture to `scratch/agent/s4402_m5_title_selector_witness/`; SIGKILL the game
+and report positive control, title/hangar phase counts, task/image joins, and
+title/hangar AI-callsite rows.

@@ -682,6 +682,19 @@ leaving the title selector witness and retail transform/publication boundary
 open. ORIGIN: port phase, task, DMA, selector, and payload logs are observed;
 no value was skipped, rewritten, or guarded.
 
+Session 4402's all-selector-gates port capture passed the input-writer control,
+reached title `0x00790400` (2,692 observations) and hangar `0x006AB400` (163),
+and retained 2,325 audio-task rows with 2,325 joins and 256 filter joins; the
+middle title origin remained absent and there was no crash or abort. Title
+selector setup/source/mixer/input/store-entry/tick witnesses all fired, so the
+selector path is reached in title and the missing title row is not an env-gate
+or route-coverage null. The narrower AI-boundary callsite witness still fired
+only in hangar because its host filter is hard-coded to width 512/origin
+`0x006AB400`; this selects H-title-selector-uninstrumented and makes the next
+probe a title-enabled callsite capture. ORIGIN: port phase, task/image joins,
+positive control, and selector witnesses are observed; no value was skipped,
+rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -696,11 +709,11 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 selector/decode transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Compare the qualified port phase families
-   against a same-phase retail capture, then locate the title-side selector
-   witness; do not repeat the resolved VI-origin census or retail
-   range/address-containment work.
+1. **M5 title selector/decode callsite** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Widen the existing AI-boundary/callsite
+   witness to the qualified title phase, rebuild once, and run the same
+   positive-control port capture; do not repeat the resolved VI-origin census
+   or payload-family comparison.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

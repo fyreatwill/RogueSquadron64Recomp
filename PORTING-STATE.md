@@ -150052,3 +150052,21 @@ selects H-port-payload-divergence from phase-specific task payload families,
 but does not qualify direct selected-word equality in title or close the retail
 transform/publication boundary. ORIGIN: port phase, task, DMA, selector, and
 payload logs are observed; no value was skipped, rewritten, or guarded.
+
+## Session 4402 (2026-10-09) — qualified the title selector instrument boundary
+
+The all-selector-gates port capture passed the positive input-writer control,
+reached title `0x00790400` (2,692 observations) and hangar `0x006AB400` (163),
+and retained 2,325 audio-task rows with 2,325 task/image joins and 256 filter
+joins. The absent `0x00790800` origin persisted; there was no crash or abort.
+Title selector setup/source/mixer/input/store-entry/tick witnesses all fired,
+so the selector path is reached in title and the missing narrow witness is not
+an environment-gate or route-coverage null. The AI-boundary/callsite witness
+fired only in hangar because `src/main/upstream_compat.cpp` hard-codes its host
+filter to width 512/origin `0x006AB400`. This selects
+H-title-selector-uninstrumented and rules out H-title-selector-unreached and
+H-title-selector-gate for the qualified run. The wrapper did not finish its
+derived summary file, but the raw capture was complete and the same-run
+controls were extracted directly from it. ORIGIN: port phase, task/image
+joins, positive control, and selector witnesses are observed; no value was
+skipped, rewritten, or guarded.
