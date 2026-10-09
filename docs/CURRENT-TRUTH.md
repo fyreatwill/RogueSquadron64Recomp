@@ -101,6 +101,16 @@ shared selector input implying a shared payload. It remains single-source
 retail evidence and does not locate the earlier writer or distinguish a
 pre-filter source from a later transform after the task handoff.
 
+Session 4364's union writer capture passed the whole-RDRAM control (10,000
+callbacks before removal), reached all three phase buckets (632/632/535 VI
+rows), and retained 1,786 type-2 task rows with 3,689 C904/task joins. The
+published family addresses were written, but the broad `0x00171000:0x00174000`
+watch mixed initialization and maintenance stores with family traffic, so it
+did not attribute any one published address. This is a qualified
+watch-boundary result, not evidence for H-earlier-producer or
+H-post-task-transform. The next probe must watch the four published family
+addresses separately in the same phase-gated run.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -143,10 +153,11 @@ is explicitly repaired.
 1. **M5 selector/decode boundary** — HYPOTHESIS-ID
    `m5-selector-decode-boundary`. Attribute writers for the phase-specific task
    data-pointer families (`0x80171CE0`, `0x80173B20`, `0x80171E70`,
-   `0x80173CB0`) with one phase-gated retail run, retaining the whole-RDRAM,
-   title, hangar, and live type-2-task controls. Use the writer-PC result to
-   separate an earlier producer from a post-task consumer transform; a missing
-   writer is an instrument-boundary result.
+   `0x80173CB0`) with four exact-address watches in one phase-gated retail run,
+   retaining the whole-RDRAM, title, hangar, and live type-2-task controls. Use
+   address-specific writer PCs and phase timing to separate an earlier producer
+   from a post-task consumer transform; a missing exact writer is an
+   instrument-boundary result.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -157,7 +168,7 @@ is explicitly repaired.
 
 | Hypothesis | Status |
 |---|---|
-| M5 selector/decode family origin | H-earlier-stream confirmed for the qualified route by source audit plus retail read/write attribution: no direct post-C904 store reaches `0x1535C4..0x1545C0`; sampled stores stop at `0x1535AC..0x1535BC`. |
+| M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
 | M5 consumer join | s4363 phase-labelled source capture confirms distinct task data/payload families in both title buckets and hangar despite constant selector input; C904 decode rows were present in hangar only. This supports H-selector-multiplex at the task-family handoff, single-source retail evidence; pre-filter origin versus later consumer transform remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |

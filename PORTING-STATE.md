@@ -149356,3 +149356,21 @@ single-source retail evidence.
 ORIGIN: diagnostic-only oracle source snapshot and phase-label instrumentation;
 no guest or host value was skipped, rewritten, or guarded. The first unlabeled
 capture was discarded rather than used as evidence.
+
+## Session 4364 (2026-10-09) — qualified task-family union writer boundary
+
+I rebuilt the oracle and ran one 75-second Rice retail capture with the
+whole-RDRAM positive control, the union watch `0x00171000:0x00174000`, exact
+task/C904 joins, and phase-gated writer histograms. The control reached 10,000
+callbacks before removal; all three required phase buckets were live with 632,
+632, and 535 VI rows. The task watch recorded 1,786 type-2 rows, the C904
+witness recorded 3,692 executions, and 3,689 rows joined to task data.
+
+The union watch recorded 2,838,700 writes. The four published family addresses
+were hit, but address samples included initialization and maintenance writers
+as well as family traffic; the phase histograms therefore do not attribute a
+published family to an earlier producer or a post-task transform. This is a
+qualified watch-boundary result and leaves the three hypotheses unresolved.
+The next work unit watches the four published addresses separately in the same
+run. ORIGIN: diagnostic-only oracle writer watch; no guest or host value was
+skipped, rewritten, or guarded.
