@@ -281,14 +281,24 @@ available.
   title selector load. s4427 saw zero CPU stores there, and the bytes were
   already the earlier copy. A post-publish filler was believable because the
   publisher returns without writing the user bytes.
+- "The port's audio thread paces ~1 buffer/VI, half of what is needed" (s4435)
+  was believable because 59 vs 115 buffers/s looked like a 2x submit gap; s4437
+  showed retail also submits ~1 per VI, so the gap is in the 115/s figure or
+  the SDL side, not in the game-side submit rate.
 
 ## Next steps
 
-0b. **s4435: SDL end of title audio is starved.** Port feeds 59 buffers/s of 768 B
-   (queue depth <= one buffer, device 22047 Hz needs 115/s); retail buffers are
-   also 768 B. Next (`m5-ai-buffer-rate`): buffers per VI in port vs retail in
-   the same title window (oracle needs VI-stamped AI calls); then find what
-   paces the port's audio thread to ~1 buffer/VI.
+0c. **s4437: retail title also submits ~1 AI buffer per VI swap** (oracle: 1210
+   calls / 1052 vi_swaps; positive control pre-title 5882 / 464). The port's
+   ~59 buffers/s is retail cadence, so the shortfall is host-side. Next
+   (`m5-sdl-consume-rate`): reconcile the "115/s needed" figure (SDL freq vs
+   the game's programmed AI dacrate vs bytes per submit) and log SDL callback
+   consumption vs queue depth over the same title window. Build tools with
+   `clang`, not `cc`.
+
+0b. **s4435: SDL end of title audio is starved** (queue depth <= one 768 B
+   buffer, device 22047 Hz). Its "port is slow to feed" reading is overturned
+   by s4437; the starvation observation itself stands.
 
 0a. **s4434: Step 10 qualification result - nonzero PCM reaches
    `queue_samples` in the port title phase** (phase 4 width 1024: 251 nonzero
