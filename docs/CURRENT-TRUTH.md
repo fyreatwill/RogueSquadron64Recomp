@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4368 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4369 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -166,6 +166,21 @@ ORIGIN: retail guest writer PCs and task PCs are observed; post-store scalar
 values are validated with mismatch=0; no value was skipped, rewritten, or
 guarded.
 
+Session 4369's selector/payload capture passed the whole-RDRAM control (10,000
+callbacks), reached all three phase buckets, and retained 628/629/690 typed
+task rows for title `0x00790400`, title `0x00790800`, and hangar
+`0x006AB400`. The C904/C950 witness had 4,488 executions and 4,485 matched
+task joins (3 unmatched); the task rows had no invalid pointers or overflow.
+Canonical selector input remained `0x04001000` with words
+`0x09000419/0x20010FC0`, while joined payload families were title-rooted at
+`0x80178C80` (often paired with `0x801E2FC0`) and hangar-rooted at
+`0x801797B0`. This selects H-selector-multiplex / post-filter consumer
+divergence over H-watch-boundary for this capture, but does not establish the
+earlier writer or a direct selected-word-to-payload equality; a second
+independent evidence line is still required. ORIGIN: retail guest selector
+and task PCs are observed with positive-control and phase coverage; no value
+was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -205,14 +220,15 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 payload/consumer boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Use the qualified retail route with
-   `--c904-witness --c904-task-join`, typed task rows, and the three explicit VI
-   buckets to compare the C904/C950 input/selected fields with each joined
-   task's first eight payload words and phase-specific data pointer. A stable
-   payload relation at publication supports H-pre-filter-origin; unrelated
-   payload families with valid joins support H-post-task-transform; missing
-   joins or absent C904 rows remain an instrument-boundary result.
+1. **M5 payload/consumer boundary — independent confirmation** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Run one qualified retail capture with the
+   same three VI buckets and positive control, but independently watch the
+   phase-latched physical payload blocks at the joined task `data_ptr` values
+   (`0x80171CE0`, `0x80173B20`, `0x80171E70`) and compare their first eight
+   words against the C904/C950 join table. Stable phase-family snapshots with
+   valid task joins corroborate H-selector-multiplex; absent or shifting
+   snapshots reopen the watch-boundary explanation. Do not close producer
+   provenance from this alone.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

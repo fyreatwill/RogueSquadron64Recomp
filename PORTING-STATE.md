@@ -149453,3 +149453,20 @@ question. The remaining open question is whether the payload's semantic origin
 is pre-filter or a later consumer transform. ORIGIN: retail guest writer PCs
 and task PCs are observed; scalar values are validated with mismatch=0; no
 value was skipped, rewritten, or guarded.
+
+## Session 4369 (2026-10-09) — qualified selector-to-task payload boundary
+
+Ran one 75-second Rice retail-oracle capture using the whole-RDRAM positive
+control, explicit title/hangar VI buckets, C904/C950 witness and join, and
+typed `0x80033FCC` task rows. The positive control reached 10,000 callbacks;
+all three buckets were live with 628/629/690 task rows. C904/C950 executed
+4,488 times and 4,485 rows joined valid tasks (3 unmatched); task pointers had
+zero invalid and zero overflow rows. The canonical selector input stayed
+`0x04001000` with words `0x09000419/0x20010FC0`, while joined payload families
+were title-rooted at `0x80178C80` (often paired with `0x801E2FC0`) and
+hangar-rooted at `0x801797B0`. This selects H-selector-multiplex / post-filter
+consumer divergence over H-watch-boundary for this capture. It does not prove
+direct selected-word equality or the earlier writer, so producer provenance
+remains open pending an independent physical-payload witness. The run was
+fully qualified. ORIGIN: retail guest selector and task PCs are observed; no
+value was skipped, rewritten, or guarded.

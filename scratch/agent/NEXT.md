@@ -1,34 +1,36 @@
-# Next work unit (s4369): compare selector input with published task payload
+# Next work unit (s4370): independently confirm phase-specific task payloads
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-The s4368 fixed capture independently corroborated H-earlier-producer: the
-post-store scalar witness reported mismatch=0 for all 16 sampled writer-PC
-groups, while the ordinal join placed family writes before the nearest
-same-phase type-2 task except four nearest-task boundary outliers. The first
-launch omitted the task execution watch and is invalid.
+The s4369 capture qualified the selector/task boundary: whole-RDRAM control
+reached 10,000 callbacks, all three phase buckets were live, and 4,485 of
+4,488 C904/C950 witnesses joined valid type-2 task rows. The canonical input
+remained `0x04001000` with words `0x09000419/0x20010FC0`, while title payload
+families were rooted at `0x80178C80` and hangar payloads at `0x801797B0`.
 
 Competing hypotheses:
 
-- H-pre-filter-origin: C904/C950 selector input and selected fields are
-  reflected in the first eight task-payload words at publication.
-- H-post-task-transform: valid task rows publish phase-specific payloads that
-  do not correspond to the C904/C950 input; the meaningful transform is later.
-- H-watch-boundary: C904/task joins are absent or phase-incomplete.
+- H-selector-multiplex: valid task rows publish phase-specific payload families
+  despite the canonical selector input being constant.
+- H-watch-boundary: the apparent family split is caused by incomplete physical
+  payload observation or phase/task mis-joining.
+- H-pre-filter-origin: selected C904/C950 fields are directly reflected in
+  the published payload words.
 
 Discriminating measurement: one qualified retail run retaining the
-whole-RDRAM control, all three VI buckets, `--c904-witness`,
-`--c904-task-join`, typed `0x80033FCC` task rows, and the eight-word payload
-dump for each joined row. Stable input/selected-to-payload correspondence at
-publication selects H-pre-filter-origin; valid unrelated payload families
-select H-post-task-transform; missing C904/task coverage selects
-H-watch-boundary. Do not promote a single-source relation without a second
-evidence line.
+whole-RDRAM control and all three VI buckets, while independently watching the
+phase-latched physical payload blocks at `0x80171CE0`, `0x80173B20`, and
+`0x80171E70` and retaining `--c904-witness --c904-task-join` plus typed
+`0x80033FCC` task rows. Stable snapshots matching the joined task payloads
+and phase-specific roots corroborate H-selector-multiplex; absent or
+misaligned snapshots select H-watch-boundary; direct selected-word equality
+would revive H-pre-filter-origin. Reject missing positive control, any phase
+bucket, or fewer than 1,000 valid joins.
 
 Exact run shape: Rice retail route for 75 seconds with the established Start
-schedule, `--watch-write 0x0:0x800000`, `--watch-pc 0x80033FCC`,
-`--pc-task-dump 0x80033FCC --pc-task-type 2 --pc-task-join`,
-`--c904-witness --c904-task-join`, explicit phase buckets
+schedule, `--watch-write 0x0:0x800000`, phase-latched payload watches,
+`--watch-pc 0x80033FCC`, `--pc-task-dump 0x80033FCC --pc-task-type 2
+--pc-task-join`, `--c904-witness --c904-task-join`, explicit phase buckets
 `0x00790400:1024`, `0x00790800:1024`, `0x006AB400:512`, and `--vi-trace`.
-Reject missing positive control, any phase bucket, or zero valid C904/task
-joins.
+Kill with SIGKILL after the watchdog; do not build unless the payload watch
+requires a source change.
