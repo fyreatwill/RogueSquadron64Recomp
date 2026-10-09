@@ -149982,6 +149982,7 @@ No game value was skipped, rewritten, or guarded.
 ORIGIN: retail execution-range PCs, task-publication PCs, exact payload writer
 PCs, source/post scalar validation, and whole-RDRAM/VI controls were observed;
 no value was skipped, rewritten, or guarded.
+
 ## Session 4397 (2026-10-09) — port selector/decode capture hit a phase boundary
 
 Ran the prescribed bounded port-side selector/decode capture after fixing the
@@ -149998,4 +149999,21 @@ the missing middle-title route as a port-path boundary in the same run. No
 game value was skipped, rewritten, or guarded.
 
 ORIGIN: port phase/task/DMA witnesses and the same-run positive control were
+observed; no value was skipped, rewritten, or guarded.
+
+## Session 4398 (2026-10-09) — removed port stop gate and confirmed route boundary
+
+Ran the prescribed repaired port selector/decode capture with
+`ROGUESQ_AUTOPILOT_STOP_WIDTH` removed from the recipe. The run passed the
+positive control, reached 2,662 observations of title VI `0x00790400` and 224
+observations of hangar VI `0x006AB400`, and retained 2,320 audio-task rows plus
+2,320 task/image joins. It also recorded 1,051 input-DMA rows and 256
+selector/decode joins. No `0x00790800` observation occurred, and no crash or
+abort marker occurred. Removing the gate therefore selects H-port-route-boundary
+over H-port-three-buckets or H-port-instrument-failure for this route. It does
+not corroborate the retail payload relationship; the next probe must classify
+the actual port VI-origin/action sequence. No game value was skipped, rewritten,
+or guarded.
+
+ORIGIN: port phase/task/DMA witnesses and same-run positive control were
 observed; no value was skipped, rewritten, or guarded.

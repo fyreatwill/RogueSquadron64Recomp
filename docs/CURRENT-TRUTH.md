@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4397 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4398 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -643,6 +643,18 @@ relationships. ORIGIN: existing port phase/task/DMA witnesses and the
 same-run positive control were observed; no value was skipped, rewritten, or
 guarded.
 
+Session 4398's repaired port capture removed the stop-width gate and passed the
+same positive control. It recorded 2,662 `0x00790400` observations, 224
+`0x006AB400` observations, 2,320 audio-task rows and 2,320 task/image joins,
+plus 1,051 input-DMA and 256 selector/decode joins; it recorded zero
+`0x00790800` observations and no crash or abort. The missing middle-title
+bucket therefore persists with the gate removed and selects H-port-route-boundary
+over H-port-three-buckets or H-port-instrument-failure for this route. This is
+not yet a payload corroboration: the next probe must classify the port's actual
+VI-origin/action sequence in the same qualified run. ORIGIN: port phase/task/DMA
+witnesses and same-run positive control were observed; no value was skipped,
+rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -658,11 +670,9 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Repair the port phase capture so the same run
-   either retains `0x00790400`, `0x00790800`, and `0x006AB400` task/payload
-   buckets or proves the missing middle title route is a port-path boundary.
-   Do not repeat the retail range census or address-containment-only
-   comparisons.
+   `m5-selector-decode-boundary`. Classify the port's actual VI-origin/action
+   sequence around the missing middle-title route in one phase-gated run; do not
+   repeat the three-bucket comparison or retail range/address-containment work.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
