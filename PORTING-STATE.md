@@ -150583,3 +150583,33 @@ guarded. ORIGIN: the pre-load bytes were written by guest `sb` at
 `0x80007670`; the publish stores the pointer and does not write them; the
 value is game data, not a port guard.
 
+
+## Session 4429 (2026-10-09) — the title name copy lands on pre-heap memory, over the future malloc headers
+
+Ran `scratch/agent/run_s4428_m5_header_sample.sh` (retail oracle, Rice,
+`--oracle-emulator 1`, Start schedule, 25 s, `--exec-no-defer`) with the new
+`RS64_HEADER_SAMPLE_PCS/BASES` instrument in `tools/oracle/rs64_oracle.c`,
+which prints the halfword at header+0 and the word at header+4 for
+`0x80171CD0` / `0x80173B10` on every store-field row at `0x80007670`,
+`0x8008F228`, `0x8008F264`. Added exact watches 5/6 on the 8 header bytes.
+Log: `scratch/agent/s4428_m5_header_sample/retail.log`.
+
+Controls: 33 header-sample rows, 4123 store-field rows; the `sb` rows, both
+publish `sw` rows and the earlier 320/640-wide frames all fired.
+
+Result: at the first `sb` (origin `0x00696600`, width 640) both headers read
+`0x0000 / 0x00000000` — neither the free size `0x232C0` nor an allocated
+block. The copy itself writes 16 bytes at `0x171CD0` ("mat_9\0\0\0…") and
+16 at `0x173B10` ("ltex_cac…"), i.e. over the future header and the first
+user bytes, plus the separate word copies at `0x171CE0` / `0x173B20`. At
+the publish `sw` rows (origin `0x00790500`) the headers read
+`0x0002/0x1E30` and `0x0001/0x21480`, then `0x0002/0x1E30`.
+
+Selects: none of H-write-into-free (header was not free-sized),
+H-previous-owner (no allocated small block, no free store in the window), or
+H-not-a-fresh-split (headers changed). A fourth outcome: the memory was
+not yet heap when copied; the heap was carved over it later and malloc does
+not clear user bytes. ORIGIN: bytes written by guest `sb` `0x80007670`
+(copy `0x80007640` from `0x80022B44`); legitimate retail data, not a port
+guard. Nothing was rewritten or skipped. Single-source (one oracle run);
+the second line would be the port-side comparison queued in NEXT.md.

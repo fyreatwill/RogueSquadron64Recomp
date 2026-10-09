@@ -538,6 +538,12 @@ static int g_store_field_dump_any_phase;
 static int g_store_field_repeat;
 static int g_store_field_repeat_printed[32];
 static int g_store_field_repeat_capped[32];
+#define MAX_HEADER_SAMPLE_PCS 8
+#define MAX_HEADER_SAMPLE_BASES 4
+static int g_n_header_sample_pc;
+static uint32_t g_header_sample_pc[MAX_HEADER_SAMPLE_PCS];
+static int g_n_header_sample_base;
+static uint32_t g_header_sample_base[MAX_HEADER_SAMPLE_BASES];
 static uint32_t g_pc_task_dump_pc;
 static int g_pc_task_dump_enabled;
 static uint32_t g_pc_task_dump_type = 2; /* 0 = any type */
@@ -1185,6 +1191,58 @@ static int store_field_dump_pc_index(uint32_t pc)
     return -1;
 }
 
+/* RS64_HEADER_SAMPLE_PCS and RS64_HEADER_SAMPLE_BASES are comma-separated
+ * physical/guest hex. On a matching store PC, print each base's halfword
+ * and the word at base+4. The copy and the pointer publish do not write
+ * the heap header, so the sample has to be taken from those rows. */
+static void load_header_sample_env(void)
+{
+    const char *pcs = getenv("RS64_HEADER_SAMPLE_PCS");
+    const char *bases = getenv("RS64_HEADER_SAMPLE_BASES");
+    char buf[160];
+    char *tok, *sv = NULL;
+
+    if (!pcs || !bases)
+        return;
+    strncpy(buf, pcs, sizeof buf - 1);
+    buf[sizeof buf - 1] = 0;
+    for (tok = strtok_r(buf, ",", &sv);
+         tok && g_n_header_sample_pc < MAX_HEADER_SAMPLE_PCS;
+         tok = strtok_r(NULL, ",", &sv))
+        g_header_sample_pc[g_n_header_sample_pc++] =
+            (uint32_t)strtoul(tok, NULL, 16);
+    strncpy(buf, bases, sizeof buf - 1);
+    buf[sizeof buf - 1] = 0;
+    sv = NULL;
+    for (tok = strtok_r(buf, ",", &sv);
+         tok && g_n_header_sample_base < MAX_HEADER_SAMPLE_BASES;
+         tok = strtok_r(NULL, ",", &sv))
+        g_header_sample_base[g_n_header_sample_base++] =
+            (uint32_t)strtoul(tok, NULL, 16);
+    fprintf(stderr, "[header-sample] armed pcs=%d bases=%d\n",
+            g_n_header_sample_pc, g_n_header_sample_base);
+}
+
+static void print_header_sample(uint32_t pc, uint32_t accessed)
+{
+    int i, match = 0;
+    for (i = 0; i < g_n_header_sample_pc; i++)
+        if (g_header_sample_pc[i] == pc)
+            match = 1;
+    if (!match || g_n_header_sample_base == 0)
+        return;
+    printf("[header-sample] pc=0x%08x width=%u origin=0x%08x store_addr=0x%08x",
+           pc, pDebugMemRead32(VI_WIDTH_ADDR), pDebugMemRead32(VI_ORIGIN_ADDR),
+           accessed);
+    for (i = 0; i < g_n_header_sample_base; i++) {
+        uint32_t base = g_header_sample_base[i];
+        printf(" base=0x%08x half=0x%04x size=0x%08x",
+               base, debug_mem_u16(base), debug_mem_u32(base + 4u));
+    }
+    printf("\n");
+    fflush(stdout);
+}
+
 static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
 {
     struct store_field_dump_row row;
@@ -1198,6 +1256,7 @@ static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
     g_store_field_dump_candidate_callbacks++;
     if (!g_store_field_dump_any_phase && !store_field_phase_log_match())
         return;
+    print_header_sample(pc, accessed);
     g_store_field_dump_hits++;
     row.watch = watch;
     row.pc = pc;
@@ -3370,6 +3429,7 @@ int main(int argc, char **argv)
     if (!rom) usage();
     g_defer_exec_watches = g_n_pc_phase_log_origin > 0 && !g_exec_no_defer;
     g_store_field_repeat = getenv("RS64_STORE_FIELD_REPEAT") != NULL;
+    load_header_sample_env();
     g_state_smoke = getenv("ORACLE_STATE_SMOKE") != NULL;
     g_state_reach = getenv("ORACLE_STATE_REACH") != NULL;
     g_state_path = state_path;
