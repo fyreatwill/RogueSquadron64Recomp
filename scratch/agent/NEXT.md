@@ -1,36 +1,34 @@
-# Next work unit (s4372): locate the selected-word transform/publication boundary
+# Next work unit (s4373): phase-key the selected-word transform/publication join
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-The s4371 capture closed the direct selected-word-to-payload comparison with a
-second retail evidence line: 102,877 whole-RDRAM writes, all three phase
-buckets, 4,483 valid C904/task joins, and 591/591, 601/601, and 344/344
-nonzero selected words absent from the first eight payload words by phase.
+The s4372 fixed capture passed controls and produced 29,672 C904/task matches,
+but the generic boundary-PC field table retained only hangar rows. The title
+task/C904 joins were live, so the missing title intermediate rows are an
+instrument boundary, not evidence about the transform.
 
 Competing hypotheses:
 
-- H-transform-before-publication: a later consumer reads or rewrites the
-  selected value before the task payload is published.
-- H-payload-overwrite: the selected value is initially published, then a later
-  writer replaces the first eight payload words before task consumption.
-- H-join-alias: the selected row and payload row are still mismatched despite
-  valid aggregate joins.
+- H-transform-before-publication: C950's selected word is consumed by the
+  decode path and differs before the DC38 publication store.
+- H-payload-overwrite: a publication-stage value first equals the selected
+  word, then a later writer changes it before task consumption.
+- H-phase-instrument-gap: title intermediate rows are absent despite live
+  title C904/task joins, so the capture cannot classify either value path.
 
-Discriminating measurement: one qualified retail run that adds a phase-gated
-watch at the next known intermediate field/writer between C950 and the task
-publication, retaining the same C904/C950 row, task ordinal, and payload words.
-An intermediate value equal to the selected word then diverging before the
-task selects H-transform-before-publication; a payload that briefly equals it
-then changes selects H-payload-overwrite; inconsistent task joins selects
-H-join-alias. Reject missing positive control, any phase bucket, or fewer than
-1,000 valid joins. Do not repeat the already-closed first-eight comparison as
-the work unit.
+Discriminating measurement: one oracle build/run with an explicit phase-keyed
+join retaining C950/C954's selected word, D78C/D790's cursor transition, and
+DC38's publication source by the same phase/task ordinal. An intermediate
+value equal to the selected word then diverging before publication selects
+H-transform-before-publication; a publication value that briefly equals it
+then changes selects H-payload-overwrite; missing title rows with live title
+joins selects H-phase-instrument-gap. Reject missing positive control, any
+phase bucket, or fewer than 1,000 valid joins.
 
-Exact run shape: first identify the existing post-C950 intermediate field
-watch in the oracle/runtime docs, then run the Rice retail route for 75 seconds
-with `--watch-write 0x0:0x800000`, that field watch, `--watch-pc 0x80033FCC`,
+Exact run shape: implement the phase-keyed oracle join at C950/C954,
+D78C/D790, and DC38, then build the oracle and run the Rice retail route for
+75 seconds with `--watch-write 0x0:0x800000`, `--watch-pc 0x80033FCC`,
 `--pc-task-dump 0x80033FCC --pc-task-type 2 --pc-task-join`,
 `--c904-witness --c904-task-join`, explicit phase buckets
 `0x00790400:1024`, `0x00790800:1024`, `0x006AB400:512`, and `--vi-trace`.
-Do not build unless the missing intermediate instrument requires a source
-change; if it is not already available, redesign this work unit before a run.
+Do not repeat the closed first-eight payload comparison.

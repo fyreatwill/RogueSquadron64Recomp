@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4371 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4372 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -212,6 +212,20 @@ probe must locate the transform/publication boundary rather than repeat this
 comparison. ORIGIN: retail selector, task, and physical payload observations;
 no value was skipped, rewritten, or guarded.
 
+Session 4372's fixed boundary-PC capture passed the whole-RDRAM control,
+reached 7,190 VI, and recorded 1,709 typed `0x80033FCC` task rows with 29,672
+C904/task matches and three unmatched witnesses. The existing execution
+instrument path was live at C950, C954, D78C/D790, DB2C, and DC38; its retained
+field table, however, contained only hangar-phase rows while the task joins
+covered title and hangar. The first launch was invalid because `0x80033FCC`
+was not included in the execution watch list; the fixed launch corrected that
+and still did not produce phase-labelled title rows for the intermediate PCs.
+This is an instrument-boundary result: it selects neither transform-before-
+publication nor payload-overwrite. The next probe must add an explicit
+phase-keyed join for the C950 selected word and the D790/publication fields.
+ORIGIN: retail execution, task, and C904 observations; no value was skipped,
+rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -252,13 +266,12 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Locate the first post-C904 consumer stage
-   that changes the selected word into the published payload. The s4371 run
-   closed the direct selected-word-to-first-eight-payload comparison with two
-   independent retail evidence lines. The next capture must join the selected
-   row to the intermediate writer/reader or post-C950 field, with the same
-   whole-RDRAM control and three VI buckets; do not repeat the closed payload
-   comparison.
+   `m5-selector-decode-boundary`. Add a phase-keyed join for C950/C954's
+   selected table word, D78C/D790's cursor transition, and DC38's publication
+   stores. The s4372 generic field dump was live only in hangar, so it cannot
+   select transform-before-publication versus payload-overwrite. Preserve the
+   whole-RDRAM control, typed task join, C904 join, and all three VI buckets;
+   do not repeat the closed first-eight payload comparison.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

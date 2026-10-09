@@ -149507,3 +149507,20 @@ explanation for this comparison. It rules out direct selected-word recurrence
 in the published payload, not the identity of the intermediate transform or
 its writer. ORIGIN: retail selector, task, and physical payload observations;
 no value was skipped, rewritten, or guarded.
+
+## Session 4372 (2026-10-09) — boundary-PC capture exposed phase-key gap
+
+The first 75-second Rice oracle launch passed the whole-RDRAM positive control
+but was invalid for task joining because `0x80033FCC` was omitted from the
+execution watch list; it reached only the hangar boundary-PC rows. The fixed
+120-second launch added that watch and passed the control, reached 7,190 VI,
+and recorded 1,709 typed task rows, 29,672 C904/task matches, and three
+unmatched witnesses. C950/C954, D78C/D790, DB2C, and DC38 execution watches
+were live, but their retained field table still contained only hangar-phase
+rows even though title task/C904 joins were live. This is an
+instrument-boundary result and selects neither transform-before-publication
+nor payload-overwrite. The next work unit must add an explicit phase-keyed
+join for the selected word, cursor transition, and publication source.
+
+ORIGIN: retail execution, task, and C904 observations; no value was skipped,
+rewritten, or guarded.
