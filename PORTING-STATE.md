@@ -149432,3 +149432,24 @@ were invalid due to a missing timeout utility and a duplicated core path; the
 fixed run above is the only qualified measurement. ORIGIN: guest writer PCs
 and task-publication PCs are observed; no value was skipped, rewritten, or
 guarded.
+
+## Session 4368 (2026-10-09) — independently corroborated task-family ordering
+
+I ran the planned oracle capture with exact family watches, the whole-RDRAM
+positive control, typed task dump, all three phase buckets, and the independent
+post-store scalar witness. The first launch omitted the `0x80033FCC` execution
+watch and recorded zero task rows, so it was rejected as an instrument-boundary
+failure. The fixed 75-second Rice run passed the control with 63,773 writes,
+reached title origins `0x00790400` and `0x00790800` plus hangar origin
+`0x006AB400`, and recorded 629/629/687 type-2 rows in those buckets. It
+retained 28,713 exact writes with no overflow.
+
+All 16 post-store scalar groups reported `mismatch=0` and `unsupported=0`.
+The ordinal join placed the exact family writes before the nearest same-phase
+type-2 task in every class except four nearest-task boundary outliers; no join
+was missing. This supplies the second evidence line required by s4367 and
+corroborates H-earlier-producer, ruling out H-watch-boundary for this ordering
+question. The remaining open question is whether the payload's semantic origin
+is pre-filter or a later consumer transform. ORIGIN: retail guest writer PCs
+and task PCs are observed; scalar values are validated with mismatch=0; no
+value was skipped, rewritten, or guarded.

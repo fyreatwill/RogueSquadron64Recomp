@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4366 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4368 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -150,6 +150,22 @@ is still required before closing producer provenance. ORIGIN: guest writer PCs
 and task-publication PCs are observed; no value was skipped, rewritten, or
 guarded.
 
+Session 4368's fixed Rice capture added the oracle post-store scalar witness
+to the exact family watches and retained the ordinal join. The first launch
+omitted the task execution watch and was rejected with zero task rows. The
+fixed run passed the whole-RDRAM control with 63,773 writes, reached all three
+phase buckets, and recorded 629/629/687 type-2 rows for `0x00790400`,
+`0x00790800`, and `0x006AB400`. It retained 28,713 exact writes with no
+overflow. All 16 post-store scalar groups reported `mismatch=0` and
+`unsupported=0`; the ordinal join again placed each family class before its
+nearest same-phase task except four nearest-task boundary outliers, with no
+missing joins. This independently corroborates H-earlier-producer and closes
+the absent-writer/watch-boundary explanation for this ordering question. The
+payload's pre-filter origin versus a later consumer transform remains open.
+ORIGIN: retail guest writer PCs and task PCs are observed; post-store scalar
+values are validated with mismatch=0; no value was skipped, rewritten, or
+guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -189,12 +205,14 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 selector/decode ordering** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Add a bounded ordinal join between exact
-   family-address writes and the nearest `0x80033FCC` type-2 task row in the
-   same phase, retaining the qualified Rice controls. A writer ordinal before
-   task publication selects H-earlier-producer; only after publication selects
-   H-post-task-transform; missing joins remain a boundary result.
+1. **M5 payload/consumer boundary** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Use the qualified retail route with
+   `--c904-witness --c904-task-join`, typed task rows, and the three explicit VI
+   buckets to compare the C904/C950 input/selected fields with each joined
+   task's first eight payload words and phase-specific data pointer. A stable
+   payload relation at publication supports H-pre-filter-origin; unrelated
+   payload families with valid joins support H-post-task-transform; missing
+   joins or absent C904 rows remain an instrument-boundary result.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
