@@ -149703,3 +149703,25 @@ instrument boundary for title only and selects a longer hangar capture as the
 next work unit. No mitigation or value rewrite was added. ORIGIN: retail
 writer PCs, exact effective destinations, task publication ordinals, scalar
 validation, and whole-RDRAM/VI controls.
+
+## Session 4383 (2026-10-09) — extended named-writer join through hangar
+
+Ran the single batched retail-oracle work unit from s4382 after preserving the
+same physical watches, phase schedule, and positive controls. The oracle build
+completed with only the existing initializer warnings. The 75-second Rice
+capture passed the whole-RDRAM control with 125,025 writes, reached 4,472 VI,
+and retained 629/628/481 valid type-2 task rows for title origins
+`0x00790400`/`0x00790800` and hangar origin `0x006AB400`; `invalid=0` and
+`overflow=0`. It retained 44,363 ordinal writes with zero overflow, and named
+scalar samples stayed live with `mismatch=0`.
+
+Hangar range 1 had 165 nearest-task writes, proving the task/ordinal join was
+live, but neither title-named writer `0x8008F7D4` nor `0x80091374` wrote that
+range in the hangar bucket. This selects the actual-hangar-writer or
+maintenance branch over a writer/task-join boundary and rejects the simple
+short-window explanation. It remains single-source retail evidence; the next
+work unit must add the highest-volume actual hangar writer PCs to the scalar
+watch and test their task ordering/value correspondence. No mitigation or
+value rewrite was added. ORIGIN: retail writer PCs, exact effective
+destinations, task publication ordinals, scalar validation, and whole-RDRAM/VI
+controls; no value was skipped, rewritten, or guarded.

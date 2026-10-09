@@ -384,6 +384,20 @@ qualified hangar coverage boundary. ORIGIN: retail writer PCs, exact effective
 destinations, task publication ordinals, scalar validation, and whole-RDRAM/VI
 controls; no value was skipped, rewritten, or guarded.
 
+Session 4383 extended that same capture to 75 seconds. It passed the
+whole-RDRAM positive control with 125,025 writes, reached 4,472 VI, and
+retained 629/628/481 valid type-2 task rows for the two title buckets and
+hangar (`invalid=0`, `overflow=0`). The ordinal table retained 44,363 writes
+with zero overflow; named scalar samples remained live and had `mismatch=0`.
+Hangar range 1 had 165 nearest-task writes, so the task/ordinal join was live,
+but neither named writer (`0x8008F7D4` or `0x80091374`) wrote that range in the
+hangar bucket. This selects H-hangar-maintenance-or-other-range over
+H-writer-task-join-boundary and rejects the simple short-window explanation.
+It is single-source retail evidence: the actual hangar writer set and whether
+its traffic is maintenance remain open. ORIGIN: retail writer PCs, exact
+effective destinations, task publication ordinals, scalar validation, and
+whole-RDRAM/VI controls; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -424,13 +438,16 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4382 qualified task ordinals and
-   title writer ordering, but the 50-second route retained no writes in either
-   watched payload range during hangar. Extend the same batch to a 75-second
-   Rice capture with all existing watches and controls unchanged, then report
-   named-writer rows and the writer-PC/effective-destination join separately for
-   all three buckets. Do not repeat the caller census, direct publication join,
-   closed first-eight payload comparison, or the `0x8009C904:0x8009DC3C` range.
+   `m5-selector-decode-boundary`. Session 4383 qualified the longer hangar
+   window and the task join, but the two title-named writers were absent from
+   hangar range 1. Use the qualified hangar rows to select the highest-volume
+   actual hangar writer PCs, add those PCs to the same scalar/value watch, and
+   run one 75-second Rice capture with all existing controls unchanged. The
+   discriminator is whether actual hangar writers reproduce the task payload
+   values (`mismatch=0`) before/after publication; this splits a maintenance
+   writer from a live selector/decode writer. Do not repeat the caller census,
+   direct publication join, closed first-eight payload comparison, or the
+   `0x8009C904:0x8009DC3C` range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
