@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4365 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4366 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -123,6 +123,19 @@ This is an instrument-boundary result; it selects none of the three hypotheses.
 ORIGIN: diagnostic-only exact-address watch; no guest or host value was
 skipped, rewritten, or guarded.
 
+Session 4366's final Rice capture corrected the oracle histogram namespace and
+passed all controls: 59,327 whole-RDRAM writes, 4,481 VI, both title origins,
+hangar origin `0x006AB400`, and 1,933 type-2 task rows. Exact writes were
+confirmed at all four published family addresses. Title writer histograms used
+`0x80091078`, `0x80091198`, `0x80090DE4`, and `0x80090B68` in phase-specific
+combinations; hangar used `0x80090948`, `0x80090958`, `0x80092164`,
+`0x8009216C`, `0x80091078`, `0x80090DE4`, and `0x80090B68`. This selects a
+phase-specific producer/selector writer family over an absent-watch explanation,
+but aggregate histograms do not establish whether each store precedes its
+corresponding task publication. The next probe must add a task-ordinal join.
+Independent retail evidence only. ORIGIN: named guest PCs are observed
+writers; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -162,14 +175,12 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Repeat the exact-address retail capture with
-   the Rice plugin and correct exact-watch indices 5–8 for `--detail-watch` and
-   `--pc-hist-watch`; retain whole-RDRAM, both title buckets, hangar, and live
-   type-2-task controls. A qualified exact-address writer histogram that
-   precedes task publication selects H-earlier-producer; one after publication
-   selects H-post-task-transform; absent exact histograms remain a boundary
-   result.
+1. **M5 selector/decode ordering** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Add a bounded ordinal join between exact
+   family-address writes and the nearest `0x80033FCC` type-2 task row in the
+   same phase, retaining the qualified Rice controls. A writer ordinal before
+   task publication selects H-earlier-producer; only after publication selects
+   H-post-task-transform; missing joins remain a boundary result.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

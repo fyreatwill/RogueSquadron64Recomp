@@ -149393,3 +149393,22 @@ H-earlier-producer, H-post-task-transform, or H-watch-boundary. The next run
 must use indices 5..8, retain the Rice plugin, and reject missing hangar
 coverage. ORIGIN: diagnostic-only exact-address watch; no guest or host value
 was skipped, rewritten, or guarded.
+
+## Session 4366 (2026-10-09) — qualified phase-specific task-family writers
+
+I rebuilt the oracle and ran the planned Rice retail capture. Two initial
+captures exposed selector-namespace mistakes; the final capture used exact
+memory histogram indices 2–5 after `--c904-witness` inserted the task-PC
+watch.
+
+The final run passed the whole-RDRAM positive control with 59,327 writes,
+reached 4,481 VI, title origins `0x00790400` and `0x00790800`, hangar origin
+`0x006AB400`, and recorded 1,933 type-2 task rows. Exact writes occurred at
+all four family addresses. Title phase writer PCs were `0x80091078`,
+`0x80091198`, `0x80090DE4`, and `0x80090B68` in phase-specific combinations;
+hangar used `0x80090948`, `0x80090958`, `0x80092164`, `0x8009216C`,
+`0x80091078`, `0x80090DE4`, and `0x80090B68`. This selects a phase-specific
+writer/selector family and rules out the absent exact-watch hypothesis, but
+the phase histograms do not order each store against its corresponding task
+publication. The next experiment must add that ordinal join. ORIGIN: named
+guest PCs are observed writers; no value was skipped, rewritten, or guarded.
