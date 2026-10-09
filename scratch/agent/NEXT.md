@@ -1,5 +1,8 @@
-# Next work unit (s4452): fold s4452 replicate soak
+# Next work unit (s4453): oracle PC-range probe of retail audio producer
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-Read SOAK-RESULTS s4452 lines (arms drain, vi, drain2, vi2). Outcomes: vi arms crash (fillSampleStreamRange+15116) and drain arms clean => cadence matters, consider default-on; all four crash => cadence closed, return to oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000, hot-PC control); all four clean => baseline irreproducible; diff this recipe vs s4441's (env, keys, phase) and re-run with s4441's exact recipe; drain-only crash => poller/queue-depth bug.
+Context: s4452 closed AI-event cadence as a crash cause (4/4 arms crash, drain does not help). s4449 showed retail executes 0 hits at musyxRenderVoiceSamples 0x80090768 in 20 s pre-title.
+Run: rs64_oracle --secs 20 --watch-pc-range 0x8008F000:0x80092000 plus a hot-PC control (a PC known to fire often, e.g. the AI loop 0x8008EE08 region or whole-RDRAM write watch control per tools/oracle/README.md).
+Outcomes: range hits with control firing => retail runs MusyX code in range, report which PCs (compare with port); 0 hits with control firing => retail synthesises elsewhere (RSP/other overlay), port render path is port-induced; control silent => instrument invalid, redesign.
+Also noted: new crash signature wild jump 0x1859645e8 / last guest pc 0x80001b08 (3/4 arms in s4452) - if it recurs, do an indirect-call idiom-class audit, not a single-site chase.
