@@ -4,7 +4,13 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4336: three port field-join route attempts all crashed at
+Updated for session 4337: the fixed same-build route A/B selected the in-process
+autopilot schedule: it reached VI 512 with 253 C88C and 256 direct rows, while
+the external field-key arm stopped before VI 512 and crashed at
+`rs64_m5_descriptor_start+460`. This refutes stale-save and universal synth
+lifetime explanations; the C904/C88C comparison can resume on the qualified
+route. This is single-source port route evidence; the existing retail controls
+remain independent route qualification. Previously 4336: three port field-join route attempts all crashed at
 `musyxSynthFrame+4284` after VI 1024 and before VI 512, so the planned retail /
 port field comparison was unevaluable. The C904 retail table remains valid.
 Previously 4335: the controlled retail C904 field dump passed
@@ -169,6 +175,19 @@ stable post-descriptor selection and selects pre-filter route/stream selection.
 The paired descriptor comparison is port-side evidence; the independent
 oracle and VI controls qualify that both arms traversed the same target phase.
 
+**M5 Step 9 route recovery (s4337).** A fixed concurrent A/B copied the same
+seeded save into isolated build directories and passed the host positive control
+in both arms. The known in-process autopilot reached title VI 1024 and hangar
+VI 512, producing 253 phase-gated C88C descriptor rows and 256 direct-filter
+rows. The external field-key recipe was corrected to send its keys from boot;
+it reached VI 1024 but then crashed at `rs64_m5_descriptor_start+460`, before
+VI 512, with zero C88C/direct rows. The first attempt's phase-relative field
+arm was invalid because it waited for VI 1024 before sending the keys needed to
+reach VI 1024. The corrected result rejects stale-save/config and universal
+synth-lifetime blockers and selects input/route scheduling as the current
+blocker for the field recipe. Exact route selection is single-source port
+evidence; the existing oracle controls remain independent controls.
+
 **M5 Step 9 retail boundary probe (s4333).** The required 180-second retail
 oracle run passed the whole-RDRAM positive control (10,000 writes), reached
 title VI 1024 and hangar VI 512 at origin `0x006AB400`, but recorded zero
@@ -215,13 +234,13 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4336, substituted) Recover the qualified seeded-save port route to VI
-512 before repeating the C904/C88C field join. The initial arm, explicit
-A14-yield-on arm, and explicit A14-yield-off arm all reached VI 1024 then
-crashed at `musyxSynthFrame+4284` around 75-76 s, with zero C88C/direct/object
-witness rows. First distinguish stale save/config from the known synth lifetime
-crash; the positive control is VI 512 plus a nonzero C88C witness. Do not
-compare or add a mitigation until that control passes.
+00. (s4337) Repeat the bounded C904/C88C field join using only the qualified
+in-process autopilot route and the retained seeded save. Keep
+`M4_Y8000_WIDTH=512`, LLE/solo/spin-yield, real audio, and the existing
+descriptor/direct probes unchanged. Require the host positive control, title VI
+1024, hangar VI 512, and nonzero C88C/direct rows before comparing payloads.
+Do not use the external field-key arm or add a mitigation. Route scheduling is
+the blocker for that arm; exact payload parity is still open.
 
 00a. (s4335) The retail C904 field dump passed the whole-RDRAM positive
 control (10,000 writes), title VI 1024, and hangar VI 512 controls. C904

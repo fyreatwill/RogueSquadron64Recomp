@@ -148760,3 +148760,23 @@ the independent retail C904 table and its controls remain unchanged.
 
 ORIGIN: none; diagnostic route probes only, no mitigation or runtime behavior
 change.
+
+## Session 4337 (2026-10-08) — qualified autopilot route recovered for C88C join
+
+Ran one fixed concurrent A/B with isolated copies of the seeded save. Both arms
+passed the host positive-control marker and reached title VI 1024. The known
+in-process autopilot arm then reached hangar VI 512 and emitted 253 phase-gated
+C88C descriptor rows plus 256 direct-filter rows. The external field-key arm,
+with its keys corrected to run from boot, reached VI 1024 but crashed at
+`rs64_m5_descriptor_start+460` before VI 512 and emitted zero C88C/direct rows.
+
+The first attempt in this unit was invalid because its phase-relative field arm
+waited for VI 1024 before sending the inputs required to reach that phase; the
+fixed run is the result. The fixed A/B rejects stale-save/config and universal
+`musyxSynthFrame` lifetime explanations and selects route/input scheduling as
+the field-arm blocker. It does not compare retail payloads yet. This is
+single-source port route evidence; the retained retail C904 table and oracle
+route controls remain independent qualification. No runtime behavior or
+mitigation changed.
+
+ORIGIN: none; route recipe and watchdog script only, no mitigation.
