@@ -148955,3 +148955,26 @@ no decoder, RSP, AI, or game behavior changed, and no mitigation was added.
 (HYPOTHESIS-ID m5-step9-retail-branch-boundary): the table-value and
 decoded-state-at-C904 alternatives were rejected; the earlier-boundary
 hypothesis is selected for the next bounded probe.
+
+## Session 4345 (2026-10-08) — retail producer witness moves boundary to C904 input
+
+The first launch was a setup failure because the oracle could not locate its
+debug core dylib; adding the explicit source-tree core path reran the same
+instrument without changing the experiment. The corrected run completed 180.2
+seconds and 10,784 VI, with 20,986 whole-RDRAM positive-control writes, title
+VI `0x00790400`, hangar VI `0x006AB400`, and 3,107 executions at C904
+`0x8009C904`.
+
+The batched object-range witness recorded 10,986 writes. Phase-gated exact
+writer rows were 19 from `0x8009C9EC` and 184 from `0x8009CB0C`; both use
+instruction `0xA7C2018C` (`sh v0,0x18C(s8)`) at physical `0x1535AC`, object
+`0x80153420 + 0x18C`, with varied small source values. They are not stores of
+the retained C904 `0x0010/0x3108` family. This rejects the previously named
+decode-state writer as the semantic branch producer and selects the C904
+input/selector boundary for the next probe. The exact writer/source evidence is
+single-source retail attribution; the whole-RDRAM, VI, and C904 controls are
+the independent same-run qualification. No decoder, RSP, AI, or game behavior
+changed and no mitigation was added.
+(HYPOTHESIS-ID m5-step9-retail-input-selector-boundary): the candidate object
+stores are not the semantic branch producer; reader versus immediate caller
+input attribution is next.

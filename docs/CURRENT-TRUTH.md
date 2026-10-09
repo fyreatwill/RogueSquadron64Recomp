@@ -4,7 +4,15 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4344: the qualified value-aware retail oracle witness found
+Updated for session 4345: the qualified retail producer witness passed the
+whole-RDRAM, title, hangar, and C904 controls. Phase-gated stores attributed to
+`0x8009C9EC` and `0x8009CB0C` were `sh` instructions writing small source
+values into object `0x80153420 + 0x18C` (`0x801535AC`), not the retained
+`0x0010/0x3108` C904 branch-state family. This rejects the previously named
+decode-state writer as the semantic producer and moves the boundary to the
+C904 input/selector path. The new instruction/source-value witness is retail
+evidence; route and execution controls independently qualify the phase.
+Previously 4344: the qualified value-aware retail oracle witness found
 that C904's selected object-backed words are varied compressed-data words, not
 the retained `0x0010/0x3108` branch-state family; the object decode halfwords
 also vary independently. Whole-RDRAM, title, hangar, and C904 controls passed.
@@ -282,13 +290,26 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4344) Identify the earlier retail producer/semantic boundary selected by
-the value-aware C904 witness. Use the existing retained C904 rows plus the
-qualified object/cursor/table/state rows; do not infer that the selected words
-are branch selectors merely because they are read by C904. The next bounded
-measurement must capture the writer or selector transformation before C904,
-with the whole-RDRAM, title, hangar, and C904 controls. No mitigation or
-decoder/RSP/AI change is authorised.
+00. (s4345) Attribute the C904 input/selector boundary after the candidate
+`0x8009C9EC`/`0x8009CB0C` stores were proven to be object `+0x18C` index
+stores, not `0x0010/0x3108` branch-state stores. Add one phase-gated reader
+attribution for the low `s1`-indexed field read and its immediate caller/input
+transformation, recording PC, `s1`, loaded value, and preceding `$v0/$a1`.
+Keep whole-RDRAM, title, hangar, and C904 controls. A matching `0x0010/0x3108`
+reader/input family selects the semantic selector; a different family selects
+an earlier caller/data-source boundary. No mitigation or decoder/RSP/AI change
+is authorised.
+
+00a. (s4345) The batched retail producer witness passed the whole-RDRAM control
+(20,986 writes), title VI `0x00790400`, hangar VI `0x006AB400`, and C904
+execution control (3,107 executions). The watched object range had 10,986
+writes; phase-gated candidate rows were 19 at `0x8009C9EC` and 184 at
+`0x8009CB0C`. Both used instruction `0xA7C2018C` (`sh v0,0x18C(s8)`) at
+`0x801535AC`, with small varied source values, so they do not write the
+retained `0x0010/0x3108` family. This rejects the named decode-state writer as
+the semantic producer and selects the C904 input/selector boundary. The
+writer attribution is one retail evidence line; same-run controls independently
+qualify route and execution.
 
 00a. (s4344) The value-aware witness passed the whole-RDRAM control (13,107
 hits), title VI `0x00790400`, hangar VI `0x006AB400`, and C904 execution control
@@ -447,6 +468,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 branch-state candidates | s4342: the qualified active D740 witness recorded 256 rows with object `0x80153420`, varying `+0x11C8` cursor values, table addresses/words, and decoded a0/a1 index/selector values. The table words and a0/a1 values did not match retail C904's retained `0x0010/0x3108` branch-state family. The direct C88C callsite arm was not reached on this route, so this rejects direct port field parity but does not identify the retail producer or DMA boundary. |
 | M5 Step 9 C88C source/branch fields | s4339: the fixed port witness emitted 256 rows with retail-compatible `s0`, `s1`, and branch-selector shape, but port `branch_state` was 0 on every row versus retail `0x3108`/`0x0010`; source words/bytes and order also diverged. This selects pre-filter stream/state divergence; the writer/publication boundary remains open. Single-source cross-runtime field evidence, with independent route controls. |
 | M5 Step 9 branch-state writer census | s4340: the port scalar-store census passed its phase/control witness and found zero writes to physical `0x20..0x30`; the independent retail oracle passed whole-RDRAM and title/hangar VI controls and its exact low-range watch also found zero writes. This rejects both a missing scalar publication writer and a port stale-read at `s1+0x22`; the port interpretation is the wrong semantic field mapping. The cross-runtime field values remain single-source, with independent watch/VI qualification. |
+| M5 Step 9 retail producer witness | s4345: the phase-gated retail stores attributed to `0x8009C9EC`/`0x8009CB0C` are `sh v0,0x18C(s8)` writes of varied small indices at object `0x801535AC`, not the retained `0x0010/0x3108` C904 family. This rejects that named writer as the semantic producer and moves the boundary to C904 input/selector attribution. Retail writer evidence is single-source; whole-RDRAM/title/hangar/C904 controls independently qualify the run. |
 
 ## Durable evidence boundary
 

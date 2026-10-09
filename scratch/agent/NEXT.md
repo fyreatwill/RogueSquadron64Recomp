@@ -1,32 +1,38 @@
-# Next work unit (s4345): earlier retail producer boundary
+# Next work unit (s4346): C904 input/selector attribution
 
-HYPOTHESIS-ID: m5-step9-retail-earlier-boundary
+HYPOTHESIS-ID: m5-step9-retail-input-selector-boundary
 
-s4344 qualified the retail route and showed that C904's selected table words
-are varied compressed-data words, while object decode-state halfwords vary
-without the retained 0x0010/0x3108 family. The next unit is one bounded
-producer/selector-boundary measurement plus one run.
+s4345 qualified the retail candidate writers. The phase-gated `0x8009C9EC`
+and `0x8009CB0C` stores are `sh v0,0x18C(s8)` writes to object
+`0x801535AC`, with varied small source values; they are not stores of the
+retained C904 `0x0010/0x3108` family. The next unit moves one boundary earlier,
+to the C904 low-index input and its immediate caller transformation.
 
 Competing hypotheses:
 
-- H-retail-writer: an earlier writer produces the semantic branch values before
-  C904 and can be attributed by PC.
-- H-retail-selector: an earlier selector/transformation derives the values
-  from the compressed table stream without a direct family-valued store.
-- H-retail-unresolved: the existing C904 fields are not the retained branch
-  state, so the next boundary must be located from the caller/data-flow path.
+- H-C904-reader: C904 directly reads the semantic branch family through its
+  `s1`-indexed low-field load; reader PC attribution will show `0x0010/0x3108`.
+- H-C904-input-selector: the immediate caller computes/selects the family
+  before entry; its source registers and input values will carry the family
+  while the C904 read is only a consumer.
+- H-earlier-source: neither reader nor immediate caller carries the family;
+  the semantic producer is earlier in the voice/object input path.
 
-Discriminating measurement: phase-gated at retail C904, watch the earlier
-candidate stores/loads or the immediate caller transformation identified from
-the C904 body, recording PC, source register/value, destination/selected
-field, and the retained 0x0010/0x3108 comparison. A writer with the family
-selects H-retail-writer; a value-producing transformation without such a
-store selects H-retail-selector; neither selects H-retail-unresolved.
+Discriminating measurement: add one batched oracle reader witness for the
+physical low `s1`-indexed field read at C904, plus the immediate caller/input
+transformation. Record reader PC, `s1`, loaded value, previous PC, `$v0`,
+`$a1`, and the retained `0x0010/0x3108` comparison. A family-valued reader
+selects H-C904-reader; a family-valued caller/input row with a non-family
+reader selects H-C904-input-selector; neither selects H-earlier-source.
 
-Before building, re-read `tools/oracle/README.md`. Add the witness to
-`tools/oracle/rs64_oracle.c`, rebuild with `env CORE_SRC="$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core" bash tools/oracle/build.sh`, then run one 180-second oracle from the repo root with:
+Before building, inspect the C904 instruction window in the existing generated
+symbol/decomp output to identify the exact load PC and caller input edge. Add
+the witness to `tools/oracle/rs64_oracle.c`, rebuild with:
 
-`--watch-write 0x0:0x800000 --watch-pc 0x8009c904 --pc-phase-log-width 0x6ab400:512 --pc-field-dump 0x8009c904 --vi-trace --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`
+`env CORE_SRC="/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core" bash tools/oracle/build.sh`
 
-Require visible whole-RDRAM, title `0x00790400`, hangar `0x006AB400`, and C904
-controls. Do not alter decoder/RSP/AI behavior or add a mitigation.
+Run one 180-second retail oracle from the repo root with the debug core, ROM,
+Rice video, the standard start schedule, whole-RDRAM watch, title/hangar VI
+trace, C904 watch, and the new reader/input witness. Require visible positive
+controls: whole-RDRAM writes, title `0x00790400`, hangar `0x006AB400`, and C904
+execution. Do not alter decoder/RSP/AI behavior or add a mitigation.

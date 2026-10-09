@@ -413,6 +413,11 @@ struct store_field_dump_row {
     int watch;
     uint32_t pc;
     uint32_t store_addr;
+    uint32_t instruction;
+    uint32_t effective_addr;
+    uint32_t source_reg;
+    uint32_t source_value;
+    uint32_t scalar_mask;
     uint32_t pre_store_word;
     uint32_t ra;
     uint32_t a0;
@@ -485,6 +490,7 @@ static long g_pc_task_join_overflow;
 
 static uint32_t debug_rdram_addr(uint32_t physical);
 static uint32_t to_phys(uint32_t a);
+static uint32_t scalar_store_mask(uint32_t instruction, uint32_t address);
 
 /* GPR file is int64_t[32] (r4300_regs). Print the 32-bit guest view. */
 static uint32_t gpr32(int idx)
@@ -726,6 +732,14 @@ static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
     row.watch = watch;
     row.pc = pc;
     row.store_addr = accessed;
+    row.instruction = pDebugMemRead32(pc);
+    row.source_reg = (row.instruction >> 16) & 31u;
+    row.effective_addr = gpr32((row.instruction >> 21) & 31u) +
+        (uint32_t)(int32_t)(int16_t)row.instruction;
+    row.source_value = gpr32(row.source_reg);
+    row.scalar_mask = ((row.effective_addr & 0x1FFFFFFCu) ==
+                       (accessed & 0x1FFFFFFCu)) ?
+        scalar_store_mask(row.instruction, row.effective_addr) : 0;
     row.pre_store_word = pDebugMemRead32(debug_rdram_addr(accessed & ~3u));
     row.ra = gpr32(31);
     row.a0 = gpr32(4);
@@ -743,6 +757,11 @@ static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
         struct store_field_dump_row *old = &g_store_field_dump_rows[i];
         if (old->watch == row.watch && old->pc == row.pc &&
             old->store_addr == row.store_addr &&
+            old->instruction == row.instruction &&
+            old->effective_addr == row.effective_addr &&
+            old->source_reg == row.source_reg &&
+            old->source_value == row.source_value &&
+            old->scalar_mask == row.scalar_mask &&
             old->pre_store_word == row.pre_store_word &&
             old->ra == row.ra && old->a0 == row.a0 && old->a1 == row.a1 &&
             old->a2 == row.a2 && old->t0 == row.t0 && old->t1 == row.t1 &&
@@ -762,13 +781,17 @@ static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
     row.n = 1;
     g_store_field_dump_rows[g_n_store_field_dump_rows++] = row;
     printf("[store-field-dump] watch=%d pc=0x%08x width=%u origin=0x%08x "
-           "store_addr=0x%08x pre_store_word=0x%08x ra=0x%08x "
+           "store_addr=0x%08x instruction=0x%08x effective_addr=0x%08x "
+           "source_reg=%u source_value=0x%08x scalar_mask=0x%08x "
+           "pre_store_word=0x%08x ra=0x%08x "
            "a0=0x%08x a1=0x%08x a2=0x%08x t0=0x%08x t1=0x%08x "
            "s0=0x%08x s1=0x%08x source_word=0x%08x source_byte=0x%02x "
            "branch_selector=0x%08x branch_state=0x%04x n=1\n",
            row.watch, row.pc, pDebugMemRead32(VI_WIDTH_ADDR),
            pDebugMemRead32(VI_ORIGIN_ADDR), row.store_addr,
-           row.pre_store_word, row.ra, row.a0, row.a1, row.a2, row.t0, row.t1,
+           row.instruction, row.effective_addr, row.source_reg,
+           row.source_value, row.scalar_mask, row.pre_store_word, row.ra,
+           row.a0, row.a1, row.a2, row.t0, row.t1,
            row.s0, row.s1, row.source_word, row.source_byte,
            row.branch_selector, row.branch_state);
     fflush(stdout);
@@ -2942,12 +2965,16 @@ int main(int argc, char **argv)
         for (int i = 0; i < g_n_store_field_dump_rows; i++) {
             struct store_field_dump_row *row = &g_store_field_dump_rows[i];
             printf("[oracle] store-field-row watch=%d pc=0x%08x "
-                   "store_addr=0x%08x pre_store_word=0x%08x ra=0x%08x "
+                   "store_addr=0x%08x instruction=0x%08x effective_addr=0x%08x "
+                   "source_reg=%u source_value=0x%08x scalar_mask=0x%08x "
+                   "pre_store_word=0x%08x ra=0x%08x "
                    "a0=0x%08x a1=0x%08x a2=0x%08x t0=0x%08x t1=0x%08x "
                    "s0=0x%08x s1=0x%08x source_word=0x%08x source_byte=0x%02x "
                    "branch_selector=0x%08x branch_state=0x%04x n=%ld\n",
-                   row->watch, row->pc, row->store_addr, row->pre_store_word,
-                   row->ra, row->a0, row->a1, row->a2, row->t0, row->t1,
+                   row->watch, row->pc, row->store_addr, row->instruction,
+                   row->effective_addr, row->source_reg, row->source_value,
+                   row->scalar_mask, row->pre_store_word, row->ra, row->a0,
+                   row->a1, row->a2, row->t0, row->t1,
                    row->s0, row->s1, row->source_word, row->source_byte,
                    row->branch_selector, row->branch_state, row->n);
         }
