@@ -1,8 +1,7 @@
-# Next work unit (s4456): does ROGUESQ_AI_EVENT_HZ=115 bring port mix rate to retail 114.3/s?
+# Next work unit (s4457): characterise musyxSynthFrame+5436 crash with ROGUESQ_AI_EVENT_HZ=115 (reproduces ~15 s)
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-s4455: port mix calls/s = 60 (unset), 86 (AI_EVENT_DRAIN=768); retail 114.3. Build 120/s both arms.
-Work: rate gap CLOSED (hz115 = 114-116/s). Now: soak 4+4 hz115 vs unset, compare crash rate; then compare active-voice count at mix entry vs retail.
-Outcomes: HZ=115 arm mix ~114/s => event pacing is whole gap; then also characterise crash musyxSynthFrame+5436 (hit ~32 s in all s4455 arms). mix still <<114 => another gate inside the playback loop (runAiAudioStreamPlaybackLoop 0x8008EE08).
-Note: no `timeout` binary on this Mac.
+s4456: hz115 3/4 crash at ~15 s at musyxSynthFrame+5436 vs ctl 0/4 early. Mix rate matches retail, so the defect is real state exposed by mix calls.
+Work: with hz115 armed, dump at crash: faulting address/regs, voice index, voice struct fields; name the WRITER (ORIGIN line). Hypotheses: (A) voice array uninit/stale entry from missing audio init; (B) bad DMA'd sample/adpcm state pointer; (C) a stubbed MusyX callback leaves a field 0. Discriminator: faulting field value pattern (null / stale ptr / ROM addr).
+Note: no `timeout` binary; concurrent arms only.

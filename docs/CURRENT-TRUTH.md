@@ -359,6 +359,7 @@ available.
    mapping-only edits do not reset the engineering-change gate.
 
 0g. **s4455: port mix-call rate is 60/s (unset) and 86/s (`ROGUESQ_AI_EVENT_DRAIN=768`) vs retail 114.3/s (2,285 epilogue hits/20 s); build calls 120/s in both arms.** Mix rate tracks AI-event rate, so the port under-drives the mixer by 25-48%. Both arms crashed at ~32 s in musyxSynthFrame+5436. **Confirmed same session: HZ=115 gives mix 114-116/s (ctl 60/s in same run) — event pacing is the whole rate gap.** Crashes occur in both arms. Next: 4+4 soak for crash parity, then active-voice count vs retail.
+0h. **s4456: hz115 (mix 114/s) vs unset 4+4 soak: all 8 crash (7/8 musyxSynthFrame+5436); hz115 3/4 die at ~15 s vs ctl 0/4 early (ctl reach VI 1024 and live ~77-80 s). Single-source, n=4/arm.** Retail-rate mixing exposes the +5436 defect sooner; next: characterise +5436 (deref, voice/field, writer) with hz115 armed so it reproduces in ~15 s.
 
 ## Evidence boundary and operating rules
 
