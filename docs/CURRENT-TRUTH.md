@@ -4,8 +4,8 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4355 (2026-10-08). The preceding maintenance pass reduced
-this file to durable state; session 4355 ran the selector-boundary oracle.
+Updated for session 4356 (2026-10-08). The preceding maintenance pass reduced
+this file to durable state; session 4356 qualified the audio-task-rate A/B.
 
 ## Current state
 
@@ -69,17 +69,17 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 Step 10 audio-task rate** — HYPOTHESIS-ID
-   `m5-step10-audio-task-rate`. Measure the default real-audio arm's task rate
-   during t=18–28 s with an `ROGUESQ_AUDIO_UCODE=0` control in the same
-   phase-qualified capture.
-2. Resume M5 plan Steps 9/10 after the selector boundary is explained; measure
-   default-arm audio task rate at t=18–28 s with an `ROGUESQ_AUDIO_UCODE=0`
-   control.
-3. M3 pre-publication guard runtime qualification, blocked until a host with
+1. **M5 selector/decode boundary** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. The qualified task-rate A/B found no useful
+   real-versus-silent split: both arms reached title and hangar at 15.0/24.2 s,
+   and the first hangar sequence differed by only four audio tasks after
+   pairing enqueue/consume edges. Resume the pre-filter selector/decode
+   measurement with a bounded consumer/source matrix; this is single-source
+   port evidence, not independent retail closure.
+2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
-4. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
-   only when items 1–3 are inapplicable; mapping-only edits do not reset the
+3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
+   only when items 1–2 are inapplicable; mapping-only edits do not reset the
    engineering-change gate.
 
 ## Live hypotheses
@@ -87,6 +87,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream confirmed for the qualified route by source audit plus retail read/write attribution: no direct post-C904 store reaches `0x1535C4..0x1545C0`; sampled stores stop at `0x1535AC..0x1535BC`. |
+| M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |
 | Retail/port post-free stream layout | Retail and port share the first qualified read/free boundary, then diverge in later layout/value/order; exact consumer cause open. |
 | RT64 fb-set growth | Source is the DPC bump-time placeholder-drop class; hangar effect open. |

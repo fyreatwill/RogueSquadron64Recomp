@@ -149175,3 +149175,24 @@ out a post-C904 writer to the selected upper range on this route. The broad
 watch remains unsuitable for counting distinct upper-range writes because its
 lower metadata prefix is included. No decoder, RSP, AI, or runtime behavior
 changed and no mitigation was added.
+
+## Session 4356 (2026-10-08) — qualified real-versus-silent audio task-rate A/B
+
+Ran the planned M5 Step 10 work unit with one unchanged binary and both arms
+launched from isolated run directories using the qualified
+`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_STUB_MISSING_FUNCS=1`, and AUTOPILOT route.
+The initial generic probe-key attempt was invalid: both processes stopped at
+intro VI 640. After restoring the documented AUTOPILOT, both arms passed the
+phase controls in the same scheduled capture: title 1024 at 15.0 s and
+hangar 512 at 24.2 s. The task-lifetime handoff control fired in both arms.
+
+The scoped task rows were capped at 512 rows per phase. At the first hangar
+row, the global task-edge sequence was 1064 for `factor5_ucode_b` and 1056 for
+`musyx_stub`; since each audio task produces enqueue and consume edges, that
+is a four-task boundary difference. Both arms otherwise produced the same
+qualified route and sustained task activity. This is a single-source port
+result: it does not close the question with independent retail evidence, and
+the row cap prevents claiming an exact t=18–28 count. It rejects a useful
+task-rate divergence as the next M5 discriminator and sends the investigation
+back to the selector/decode consumer boundary. No code behavior was changed.
