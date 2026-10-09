@@ -149283,3 +149283,28 @@ divergence exists before the task payload or is introduced after the consumer.
 ORIGIN: diagnostic-only oracle range/task/C904 observations; no guest or host
 value was skipped, rewritten, or guarded. The result is single-source retail
 oracle evidence pending the next payload comparison.
+
+## Session 4361 (2026-10-09) — compared joined task payload fields by phase
+
+I extended `tools/oracle/rs64_oracle.c` so the existing bounded C904/C950-to-
+task join records the first eight aligned words at each joined `data_ptr` and
+includes them in the row key. The oracle rebuilt successfully. The corrected
+75-second Rice capture passed the whole-RDRAM positive control with 10,000
+retained hits, reached title origins `0x00790400` and `0x00790800` and hangar
+origin `0x006AB400`, and completed 4,481 VI. The live `0x80033FCC` task watch
+recorded 1,786 type-2 rows, with live task-row counts 628/628/530 in the two
+title buckets and hangar bucket respectively; no invalid task pointers occurred.
+
+In the retained title joins the task pointer stayed `0x80149470` while the
+C904/C950 input stayed `0x04001000` with words `0x09000419/0x20010FC0`.
+The first eight words at `data_ptr` varied by phase/data block, including
+distinct title-origin blocks and changing payload fields. This selects
+H-selector-multiplex for the qualified title comparison, not a shared-input
+payload identity. The capture did not retain C904-task summary rows for hangar
+despite live hangar task rows, so the cross-phase conclusion remains
+single-source and unqualified; this rules out neither H-consumer-transform nor
+H-pre-filter-origin at the hangar boundary. The next work unit repairs that
+join ordering/key and repeats the same controls.
+
+ORIGIN: diagnostic-only oracle payload capture and join-key instrumentation; no
+guest or host value was skipped, rewritten, or guarded.

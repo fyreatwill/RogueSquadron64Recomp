@@ -1,35 +1,38 @@
-# Next work unit (s4361): compare joined task payload with selector fields
+# Next work unit (s4362): repair hangar C904/task payload join
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-The qualified s4360 retail oracle capture passed whole-RDRAM and both target
-phase controls. A bounded range table retained 512 rows in each title origin
-(`0x00790400`, `0x00790800`) and hangar origin (`0x006AB400`). In all buckets,
-`0x80033FCC` received `$a0=0x80149470` with `MEM_W($a0)=2`; the C904/C950
-join was live. The prior zero at this PC was an instrument-boundary result.
+The s4361 capture qualified whole-RDRAM, title, and hangar coverage. Its new
+payload field was live in 1,786 type-2 task rows, and title joins showed a
+constant C904/C950 input with phase/data-block-specific payload words. The
+summary retained no hangar C904-task rows even though hangar task rows were
+live, so the cross-phase discriminator is not yet qualified.
 
 Competing hypotheses:
 
-- H-pre-filter-origin: the joined task payload/data block already disagrees
-  with the C904/C950 input or selected fields.
-- H-consumer-transform: the joined task payload agrees with the selector inputs,
-  and divergence is introduced after the task consumer.
-- H-selector-multiplex: the same type-2 task is shared, but phase/source-keyed
-  payload words identify a separate selector branch before output decode.
+- H-selector-multiplex: the hangar task payload is a distinct family selected
+  before or at the task handoff, as the two title-origin payload families
+  suggest.
+- H-consumer-transform: title and hangar share the joined payload/input and a
+  later consumer transform creates the observed divergence.
+- H-pre-filter-origin: a repaired hangar join exposes disagreement already in
+  the payload fields relative to its C904/C950 selector input.
 
-Discriminating measurement: add one phase-keyed bounded dump at the live
-`0x80033FCC` task rows that records the task `data_ptr` block words alongside
-the latest C904/C950 input words, selected address/word, and branch fields;
-retain all three phase buckets and the whole-RDRAM/C904/C950/VI controls. A
-joined payload/input disagreement selects H-pre-filter-origin; agreement with
-later-only divergence selects H-consumer-transform; phase-specific payload
-families with shared task identity select H-selector-multiplex.
+Discriminating measurement: fix the join ordering/key so a C904/C950 witness
+at `0x8009C904`/`0x8009C950` can join the latest type-2 task row at
+`0x80033FCC` in the `0x006AB400` bucket, then print/count the existing
+eight-word `data_ptr` payload for title and hangar. A valid hangar join with a
+distinct payload family selects H-selector-multiplex; a shared payload followed
+by later-only divergence selects H-consumer-transform; disagreement against
+the joined selector input selects H-pre-filter-origin. If the join remains
+empty, the result is an instrument-boundary finding, not a hypothesis result.
 
-Expected commands: extend `tools/oracle/rs64_oracle.c` with the joined payload
-dump, run `./tools/oracle/build.sh`, then repeat the verified s4360 Rice recipe
-from the repo root for 75 seconds with Start presses at 6,11,...,56 seconds,
-capturing to `scratch/agent/soak_results/s4361_payload_compare.log`. Keep
-`--watch-write 0x0:0x800000`, the three `--pc-phase-log-width` buckets,
-`--watch-pc 0x80033fcc`, `--pc-task-dump 0x80033fcc`, `--c904-witness`,
-`--c904-task-join`, and `--vi-trace`. Discard any run lacking the positive
-control or title and hangar VI origins.
+Build/run: edit `tools/oracle/rs64_oracle.c`, run `./tools/oracle/build.sh`,
+then from `build/` repeat the verified Rice command used for s4361 for 75 s,
+capturing to `scratch/agent/soak_results/s4362_hangar_payload_join.log`. Keep
+`--watch-write 0x0:0x800000`, `--watch-pc 0x80033fcc`,
+`--pc-task-dump 0x80033fcc`, all three
+`--pc-phase-log-width 0x00790400:1024`, `0x00790800:1024`,
+`0x006AB400:512`, `--c904-witness`, `--c904-task-join`, and `--vi-trace`.
+Reject runs without the whole-RDRAM positive control and all three phase
+origins.

@@ -444,6 +444,7 @@ struct c904_task_join_row {
     uint32_t input_w1;
     uint32_t selected_addr;
     uint32_t selected_word;
+    uint32_t payload[8];
     long n;
 };
 #define MAX_C904_TASK_JOIN_ROWS 512
@@ -856,6 +857,13 @@ static void dump_c904_witness(uint32_t pc)
         } else {
             int join_i;
             g_c904_task_join_matched++;
+            uint32_t payload[8];
+            uint32_t payload_phys = task->data_ptr & 0x1FFFFFFFu;
+            for (int payload_i = 0; payload_i < 8; payload_i++) {
+                uint32_t off = (uint32_t)payload_i * 4u;
+                payload[payload_i] = payload_phys <= RDRAM_SIZE - 4u - off
+                    ? pDebugMemRead32(debug_rdram_addr(payload_phys + off)) : 0;
+            }
             for (join_i = 0; join_i < g_n_c904_task_join_rows; join_i++) {
                 struct c904_task_join_row *joined =
                     &g_c904_task_join_rows[join_i];
@@ -868,7 +876,8 @@ static void dump_c904_witness(uint32_t pc)
                     joined->input_w0 == row.input_w0 &&
                     joined->input_w1 == row.input_w1 &&
                     joined->selected_addr == row.selected_addr &&
-                    joined->selected_word == row.selected_word) {
+                    joined->selected_word == row.selected_word &&
+                    memcmp(joined->payload, payload, sizeof(payload)) == 0) {
                     joined->n++;
                     goto c904_task_join_done;
                 }
@@ -889,14 +898,18 @@ static void dump_c904_witness(uint32_t pc)
                 joined->input_w1 = row.input_w1;
                 joined->selected_addr = row.selected_addr;
                 joined->selected_word = row.selected_word;
+                memcpy(joined->payload, payload, sizeof(payload));
                 joined->n = 1;
                 printf("[c904-task-join] pc=0x%08x width=%u origin=0x%08x "
                        "task_ptr=0x%08x data_ptr=0x%08x data_size=0x%08x "
                        "input=0x%08x input_w0=0x%08x input_w1=0x%08x "
-                       "selected_addr=0x%08x selected_word=0x%08x n=1\n",
+                       "selected_addr=0x%08x selected_word=0x%08x payload=",
                        pc, width, origin, task->task_ptr, task->data_ptr,
                        task->data_size, row.input, row.input_w0, row.input_w1,
                        row.selected_addr, row.selected_word);
+                for (int payload_i = 0; payload_i < 8; payload_i++)
+                    printf("%08x%s", payload[payload_i], payload_i == 7 ? "" : ",");
+                printf(" n=1\n");
                 fflush(stdout);
             }
         }
@@ -3297,11 +3310,13 @@ int main(int argc, char **argv)
             printf("[oracle] c904-task-row pc=0x%08x width=%u origin=0x%08x "
                    "task_ptr=0x%08x data_ptr=0x%08x data_size=0x%08x "
                    "input=0x%08x input_w0=0x%08x input_w1=0x%08x "
-                   "selected_addr=0x%08x selected_word=0x%08x n=%ld\n",
+                   "selected_addr=0x%08x selected_word=0x%08x payload=",
                    row->pc, row->width, row->origin, row->task_ptr,
                    row->data_ptr, row->data_size, row->input, row->input_w0,
-                   row->input_w1, row->selected_addr, row->selected_word,
-                   row->n);
+                   row->input_w1, row->selected_addr, row->selected_word);
+            for (int payload_i = 0; payload_i < 8; payload_i++)
+                printf("%08x%s", row->payload[payload_i], payload_i == 7 ? "" : ",");
+            printf(" n=%ld\n", row->n);
         }
     }
     if (g_n_store_field_dump_pc > 0) {

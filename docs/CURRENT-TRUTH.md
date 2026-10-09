@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4360 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4361 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -41,6 +41,19 @@ H-consumer-nearby and rules out an absent nearby type-2 consumer or the prior
 instrument boundary for this route. It does not yet distinguish a pre-filter
 origin from a consumer payload/layout transform; the next probe must compare
 the joined task payload fields against the C904/C950 input and selected fields.
+
+Session 4361's payload capture passed the whole-RDRAM control (10,000 retained
+hits), reached title origins `0x00790400` and `0x00790800` and hangar origin
+`0x006AB400`, and recorded 1,786 type-2 rows at `0x80033FCC` (628/628/530
+live task rows by those phase buckets). In the retained C904/C950 joins, the
+task pointer was shared (`0x80149470`) and the selector input was constant
+(`0x04001000`, words `0x09000419/0x20010FC0`), while the first eight words at
+the joined `data_ptr` varied by phase/data block. This selects
+H-selector-multiplex for the qualified title comparison: the shared task
+identity and input do not imply a shared payload family. It is single-source
+retail evidence only because this capture retained no C904-task summary rows
+for hangar despite live hangar task rows; the next probe must repair that join
+boundary before promoting the cross-phase conclusion.
 
 Session 4358's repaired C904/C950 join capture passed the retail whole-RDRAM
 control and reached the hangar phase. C904/C950 witnesses were live (512
@@ -102,14 +115,14 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Compare phase-keyed rows at the live
-   `0x80033FCC` task consumer with the C904/C950 input and selected fields,
-   including task data-block words needed to identify whether disagreement
-   already exists at the joined task payload. A valid type-2 task is established
-   in all three target buckets; payload/input agreement followed by later
-   divergence selects consumer transform, while disagreement already present in
-   the joined payload selects H-pre-filter-origin. Retain whole-RDRAM, C904/C950,
-   and VI controls.
+   `m5-selector-decode-boundary`. Repair the phase-keyed C904/C950-to-task
+   join so it retains hangar rows as well as title rows, then compare the same
+   first-eight-word `data_ptr` payload against the constant selector input.
+   Whole-RDRAM, title, hangar, and live type-2-task controls must remain in the
+   same run. Hangar payload families matching neither title family supports
+   H-selector-multiplex; agreement with the selector input followed by a later
+   divergence reopens H-consumer-transform; disagreement already in a repaired
+   joined payload supports H-pre-filter-origin.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
