@@ -150980,3 +150980,7 @@ Rules out: the s4470/s4471 claim "retail runs B7CC x0" (it ran x1 per run in two
 ORIGIN: no mitigation added; diagnostic hook only.
 HYPOTHESIS-ID: m5-status03-service-reaping — REFUTED (discriminating result): the retail oracle selects "retail also writes request byte 4 and runs B7CC" over "port-only reaping"; the port's status 03 is not a divergence and the lead is closed.
 Next discriminator: compare port vs retail timing of the first C21C/C2B0/C268 chain relative to hangar entry (retail VI512 at 38.4 s, chain 43.3-48.7 s) and the status writes after B7EC; if the port reaches C268 materially earlier/later, the delta selects an audio-clock/pacing cause, if equal the M5 step moves on to the next un-run step in docs/M5-AUDIO-PLAN.md.
+
+## Session 4473 (2026-10-09) — M5 step 7 closed: port status word completes the full 1->2->3->0 cycle at hangar
+
+Ran scratch/agent/s4472_run.sh (70 s, ROGUESQ_LOG_S4472=1, audio ucode on, phase-gated). Port reached phase 5 (width 512). Control: s4472-req/ctl hooks fire (17 distinct lines). At vi=512 status word 0x80154620 is written by guest code in order B214=1, B6F8=2, B7CC=3, B7EC=0 (then BBF0=0); request byte 0x801545FD takes BEC0=1, C21C=2, C2B0=3, C268=4. This matches the retail chain from s4472. The status-03 service-reaping wait hatch is not needed on this route; step 7 is CLOSED with no divergence. ORIGIN: no code changed; all writers are guest PCs. Evidence: s4472 oracle retail chain plus this single port run (not an A/B). Next: Step 10 AI/SDL join or Step 8 voice-guard audit.
