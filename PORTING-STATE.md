@@ -150382,3 +150382,20 @@ the remaining boundary is the writer/initializer of the `0x80150000` table or
 its index. ORIGIN: generated-file marker census plus phase-keyed runtime
 observations; no selector state or guest value was rewritten, skipped, or
 guarded.
+
+## Session 4420 (2026-10-09) — found selector writer witness coverage gap
+
+Ran the prescribed native M5 selector-table boundary capture after the s4419
+caller/pre-call repair. Phase 4 title and phase 5 hangar controls were live;
+selector input emitted 2 rows, caller/pre-call emitted 1,008/2,016 rows, and
+the filter positive control, task/image activity, and VI controls were live.
+The selector-table store and store-context hooks emitted zero rows. A bounded
+static census found `apply_s3509_m5_selector_table.py` and
+`apply_s3516_m5_selector_store_context.py` are standalone scripts and are not
+wired into the durable regeneration path, so this result selects
+H-join-failure/instrumentation coverage rather than H-init-route or
+H-writer-value. The run reached hangar and then hit the native VI-retrace bus
+error family; that crash is not selector evidence. This closes the attempted
+writer qualification and makes durable hook wiring the next unit. ORIGIN:
+phase-keyed host controls plus static script/artifact census; no table value
+was rewritten, skipped, or guarded.

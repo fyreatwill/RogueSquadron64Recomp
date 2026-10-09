@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4419 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4420 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -116,6 +116,18 @@ is the writer/initializer of the `0x80150000` selector table or its index.
 ORIGIN: generated marker census plus phase-keyed runtime witness; the probes
 only observed registers and table loads, and no selector state was rewritten.
 
+Session 4420 attempted the selector-table writer boundary with the repaired
+caller/pre-call witness, selector input, phase, task, image, and filter
+controls. Title phase 4 and hangar phase 5 controls were live; caller/pre-call
+emitted 1,008/2,016 rows and selector input emitted 2 rows. The table-store
+and store-context hooks emitted zero rows. A static census confirms their
+standalone apply scripts are not wired into the durable regeneration path, so
+this selects H-join-failure/instrumentation coverage rather than H-init-route
+or H-writer-value. The run reached hangar, then hit the native VI-retrace bus
+error family; that crash is not selector evidence. ORIGIN: phase-keyed host
+controls and a static script/artifact census; no table value was rewritten,
+skipped, or guarded.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -149,12 +161,14 @@ available.
 
 ## Next steps
 
-1. **M5 selector-table writer/initializer boundary** — HYPOTHESIS-ID
-   `m5-selector-table-writer-boundary`. Identify the first writer or initializer
-   that supplies the `0x80150000` table values and its selector index, then
-   qualify it with the existing caller/precall, selector/input, VI, task, and
-   image controls. Do not rewrite the differing values; determine whether the
-   writer is legitimate and whether the index differs before the table load.
+1. **Repair durable selector-table writer witnesses** — HYPOTHESIS-ID
+   `m5-selector-table-writer-boundary`. Wire the existing table-store and
+   store-context transforms into the durable regeneration path, rebuild, and
+   rerun the same phase-keyed capture. Require table-store/store-context rows
+   plus the already-live caller/precall, selector/input, VI, task, image, and
+   positive controls before interpreting writer or index values. Do not rewrite
+   differing values; determine whether the writer is legitimate and whether the
+   index differs before the table load.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug
