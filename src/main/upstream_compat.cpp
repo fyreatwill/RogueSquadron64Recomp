@@ -3927,7 +3927,10 @@ extern "C" void rs64_m5_selector_ai_boundary(uint32_t pc, uint32_t ra,
     }
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     const uint32_t width = rs64_vi_committed_width();
-    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
+    const bool title_phase = width == 1024u && origin == 0x00790400u;
+    const bool hangar_phase = width == 512u &&
+        (origin == 0x006AB400u || origin == 0x006AB800u);
+    if (!title_phase && !hangar_phase) return;
     static uint32_t phase_seen = 0xFFFFFFFFu;
     static uint32_t rows = 0;
     const uint32_t phase = rs64_phase_ord();
@@ -3937,16 +3940,16 @@ extern "C" void rs64_m5_selector_ai_boundary(uint32_t pc, uint32_t ra,
     }
     if (rows == 0) {
         std::fprintf(stderr,
-            "[m5-selector-ai-boundary-control] phase=%u width=512 origin=0x%06X pc=0x%08X\n",
-            phase, origin, pc);
+            "[m5-selector-ai-boundary-control] phase=%u width=%u origin=0x%06X pc=0x%08X\n",
+            phase, width, origin, pc);
         std::fflush(stderr);
     }
     if (rows >= 256u) return;
     std::fprintf(stderr,
-        "[m5-selector-ai-boundary] ordinal=%u phase=%u width=512 origin=0x%06X "
+        "[m5-selector-ai-boundary] ordinal=%u phase=%u width=%u origin=0x%06X "
         "pc=0x%08X ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X "
         "s0=0x%08X s1=0x%08X v0=0x%08X\n",
-        rows++, phase, origin, pc, ra, a0, a1, a2, s0, s1, v0);
+        rows++, phase, width, origin, pc, ra, a0, a1, a2, s0, s1, v0);
     std::fflush(stderr);
 }
 
@@ -4003,7 +4006,9 @@ extern "C" void rs64_m5_selector_ai_callsite(uint32_t callsite,
             callsite, width, origin);
         std::fflush(stderr);
     }
-    if (width != 512u || origin != 0x006AB400u) return;
+    const bool title_phase = width == 1024u && origin == 0x00790400u;
+    const bool hangar_phase = width == 512u && origin == 0x006AB400u;
+    if (!title_phase && !hangar_phase) return;
     static uint32_t phase_seen = 0xFFFFFFFFu;
     static uint32_t rows = 0;
     const uint32_t phase = rs64_phase_ord();
@@ -4013,9 +4018,9 @@ extern "C" void rs64_m5_selector_ai_callsite(uint32_t callsite,
     }
     if (rows >= 256u) return;
     std::fprintf(stderr,
-        "[m5-selector-ai-callsite] ordinal=%u phase=%u width=512 origin=0x%06X "
+        "[m5-selector-ai-callsite] ordinal=%u phase=%u width=%u origin=0x%06X "
         "callsite=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X s0=0x%08X s1=0x%08X v0=0x%08X\n",
-        rows++, phase, origin, callsite, a0, a1, a2, s0, s1, v0);
+        rows++, phase, width, origin, callsite, a0, a1, a2, s0, s1, v0);
     std::fflush(stderr);
 }
 

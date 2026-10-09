@@ -150070,3 +150070,22 @@ derived summary file, but the raw capture was complete and the same-run
 controls were extracted directly from it. ORIGIN: port phase, task/image
 joins, positive control, and selector witnesses are observed; no value was
 skipped, rewritten, or guarded.
+
+## Session 4403 (2026-10-09) — widened the title AI-boundary witness
+
+Widened the existing `rs64_m5_selector_ai_boundary` and
+`rs64_m5_selector_ai_callsite` host filters to include title
+`width=1024/origin=0x00790400`, retaining hangar `width=512/origin=0x006AB400`
+as the same-run control. The Debug build succeeded. The 85-second qualified
+port capture passed the input-writer control, reached title and hangar, and
+recorded 2,303 audio-task rows with 2,303 task/image joins and 256 filter
+joins; `0x00790800` remained absent, with no crash or abort. The widened
+AI-boundary witness produced title and hangar rows, including title boundary
+PC `0x80029E78` from setup edge `ai-call`; the separate AI-callsite witness
+produced zero rows in either phase. This selects
+H-title-boundary-without-callsite over the previous filter-hidden explanation
+and rules out a title route-coverage null. It does not identify the actual
+downstream consumer or prove that the boundary is terminal; the next unit is
+source-reading the call chain around `0x80029E78`/`0x80091CB8` and then adding
+one phase-keyed downstream witness. ORIGIN: guest boundary/callsite arguments
+were observed by host probes; no value was skipped, rewritten, or guarded.
