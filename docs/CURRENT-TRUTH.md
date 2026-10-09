@@ -279,8 +279,16 @@ available.
 
 ## Next steps
 
-1. **Why does retail reach the selector via `0x8008EE84 -> 0x80029E80` while
-   the port enters exact `0x80029E78`?** HYPOTHESIS-ID
+1. **s4431 REFRAME (static): `0x80029E78` is osAiSetFrequency's epilogue
+   (from reapplyAudioConfig `0x80091CB8`); `0x80029E80` is osAiSetNextBuffer's
+   entry, called at `0x8008EE84` (a1=0x300) by the audio loop
+   `0x8008EE10..0x8008EE9C`. The "selector entry" comparison of s4414-s4430
+   compared two different functions. Real question: why does the port's title
+   audio loop not reach that submit call (loop not run / branch at
+   `0x8008EE98` on byte `0x801596F0` / instrument gap)? HYPOTHESIS-ID
+   `m5-audio-loop-submit`. Older text follows, now superseded:** formerly: Why
+   does retail reach the selector via `0x8008EE84 -> 0x80029E80` while
+   the port enters exact `0x80029E78`? HYPOTHESIS-ID
    `m5-selector-entry-path`. s4430 (port, one run, ROGUESQ_LOG_ALL=1 needed to
    avoid an early audio bus error) showed the same pre-heap name copy and the
    same title user words (`mat_`/`ltex`) as retail s4428, so the table
