@@ -360,6 +360,7 @@ available.
 
 0g. **s4455: port mix-call rate is 60/s (unset) and 86/s (`ROGUESQ_AI_EVENT_DRAIN=768`) vs retail 114.3/s (2,285 epilogue hits/20 s); build calls 120/s in both arms.** Mix rate tracks AI-event rate, so the port under-drives the mixer by 25-48%. Both arms crashed at ~32 s in musyxSynthFrame+5436. **Confirmed same session: HZ=115 gives mix 114-116/s (ctl 60/s in same run) — event pacing is the whole rate gap.** Crashes occur in both arms. Next: 4+4 soak for crash parity, then active-voice count vs retail.
 0h. **s4456: hz115 (mix 114/s) vs unset 4+4 soak: all 8 crash (7/8 musyxSynthFrame+5436); hz115 3/4 die at ~15 s vs ctl 0/4 early (ctl reach VI 1024 and live ~77-80 s). Single-source, n=4/arm.** Retail-rate mixing exposes the +5436 defect sooner; next: characterise +5436 (deref, voice/field, writer) with hz115 armed so it reproduces in ~15 s.
+0i. **s4457: musyxSynthFrame+5436 = guest `lhu 0x10($v1)` (0x80091368) in the node countdown loop after a corrupt `next` (0x94fc in s4456 ctl; 0x80193C18, off the 0x14-stride pool grid, once in s4457). s4456's 'hz115 crashes earlier' did NOT replicate (+5436 1/20; families vary: fillSampleStreamRange+15116, bad-pc jumps).** `ROGUESQ_LOG_S4457=1` adds a last-two-writers table + list-walk check (control passes). Writer of the bad link still unnamed; treat +5436 as pool-list corruption, not a hz115 effect.
 
 ## Evidence boundary and operating rules
 

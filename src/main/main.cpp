@@ -4737,8 +4737,61 @@ extern "C" void rs64_s4429_heap_probe(const char* kind, uint32_t pc,
     }
 }
 
+// s4457: last-two-writers table per guest word (0x80000000..0x80400000), armed by
+// ROGUESQ_LOG_S4457. Queried by rs64_s4457_list_check at the synth list walk.
+struct S4457W { uint32_t pc, val, ppc, pval; uint16_t w; };
+static S4457W* g_s4457_tab = nullptr;
+static uint64_t g_s4457_stores = 0;
+static bool rs64_s4457_on() {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4457"); return e && e[0] && e[0] != '0'; }();
+    return on;
+}
+extern "C" void rs64_s4457_list_check(uint8_t* rdram, uint32_t value) {
+    if (!rs64_s4457_on() || !g_s4457_tab) return;
+    static uint32_t ring[16]; static uint32_t rn = 0;
+    static bool control = false, dumped = false;
+    if (!control) {  // positive control: the list head must have a recorded writer
+        control = true;
+        const S4457W& h = g_s4457_tab[(0x801499B0u & 0x3FFFFFu) >> 2];
+        std::fprintf(stderr, "[s4457-control] stores=%llu head_writer pc=0x%08X val=0x%08X prev_pc=0x%08X\n",
+                     (unsigned long long)g_s4457_stores, h.pc, h.val, h.ppc);
+    }
+    ring[rn++ & 15u] = value;
+    if (dumped || value == 0 || (value >> 24) == 0x80u) return;
+    dumped = true;
+    const uint32_t P = ring[(rn - 2) & 15u];
+    auto rd32 = [&](uint32_t g) { const uint32_t p = g & 0x7FFFFFu;
+        return (uint32_t(rdram[(p) ^ 3]) << 24) | (uint32_t(rdram[(p + 1) ^ 3]) << 16) | (uint32_t(rdram[(p + 2) ^ 3]) << 8) | uint32_t(rdram[(p + 3) ^ 3]); };
+    std::fprintf(stderr, "[s4457-bad] bad_next=0x%08X prev_node=0x%08X stores=%llu chain:", value, P, (unsigned long long)g_s4457_stores);
+    for (uint32_t i = 0; i < 8; ++i) std::fprintf(stderr, " 0x%08X", ring[(rn - 1 - i) & 15u]);
+    std::fprintf(stderr, "\n");
+    {   // writer of the pointer that led to the bad node (X+0, X = node before P; or the head itself)
+        const uint32_t X = ring[(rn - 3) & 15u];
+        for (uint32_t pa : {X, 0x801499B0u}) {
+            if (pa < 0x80000000u || pa >= 0x80400000u) continue;
+            const S4457W& e = g_s4457_tab[(pa & 0x3FFFFFu) >> 2];
+            std::fprintf(stderr, "[s4457-ptr] at=0x%08X now=0x%08X lastw pc=0x%08X w=%c val=0x%08X prev pc=0x%08X val=0x%08X\n",
+                         pa, rd32(pa), e.pc, e.w ? char(e.w) : '-', e.val, e.ppc, e.pval);
+        }
+    }
+    for (uint32_t o = 0; o < 0x30u; o += 4) {
+        const uint32_t a = P + o;
+        const S4457W& e = (P >= 0x80000000u && P < 0x80400000u) ? g_s4457_tab[(a & 0x3FFFFFu) >> 2] : S4457W{};
+        std::fprintf(stderr, "[s4457-node] +0x%02X now=0x%08X lastw pc=0x%08X w=%c val=0x%08X prev pc=0x%08X val=0x%08X\n",
+                     o, (P >= 0x80000000u && P < 0x80400000u) ? rd32(a) : 0u, e.pc, e.w ? char(e.w) : '-', e.val, e.ppc, e.pval);
+    }
+    std::fflush(stderr);
+}
 extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                                          uint32_t addr, uint32_t value) {
+    if (rs64_s4457_on()) {
+        if (!g_s4457_tab) g_s4457_tab = (S4457W*)std::calloc(0x100000, sizeof(S4457W));
+        if (addr >= 0x80000000u && addr < 0x80400000u) {
+            S4457W& e = g_s4457_tab[(addr & 0x3FFFFFu) >> 2];
+            e.ppc = e.pc; e.pval = e.val; e.pc = pc; e.val = value; e.w = (uint16_t)width;
+            ++g_s4457_stores;
+        }
+    }
     if (pc == 0x80007670u) rs64_s4429_heap_probe("B", pc, addr, value);
     {   // s4443: store watch on the pool-tail next word (and its +0x18 neighbour);
         // 0x801F9CE0 (init-written) is the positive control. Observes only.

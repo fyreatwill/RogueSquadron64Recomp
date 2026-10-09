@@ -1666,8 +1666,10 @@ extern "C" void rs64_s4307_note_writer(uint32_t ordinal, uint32_t pc,
                                          uint32_t post) {
     g_s4307_last_writer = { ordinal, pc, addr, requested, post };
 }
+extern "C" void rs64_s4457_list_check(uint8_t* rdram, uint32_t value);
 extern "C" void rs64_s4307_synth_read(uint8_t* rdram, uint32_t pc,
                                         uint32_t addr, uint32_t value) {
+    if (pc == 0x80091378u || pc == 0x8009133Cu) rs64_s4457_list_check(rdram, value);
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4307"); return e && e[0] && e[0] != '0'; }();
     if (!on || !rdram) return;
     const uint32_t width = rs64_vi_committed_width();
