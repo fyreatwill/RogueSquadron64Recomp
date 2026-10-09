@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4394 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4395 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -595,6 +595,24 @@ selector/decode boundary as open. ORIGIN: named retail writer PCs and task
 publication PCs are observed; task words are snapshotted before later reuse;
 no value was skipped, rewritten, or guarded.
 
+Session 4395's direction-split published-word capture passed the whole-RDRAM
+control (10,000 callbacks), reached 4,484 VI and all three phase buckets, and
+retained 1,731 valid type-2 tasks with 22,989 writer rows and zero ordinal
+overflow. Supported post-store scalar validation again reported mismatch=0.
+The nearest-task direction was overwhelmingly before-publication: title
+semantic writers matched 481/7,274 and maintenance writers 130/628 in the
+`0x00790400` bucket; hangar semantic matched 0/4,781 and maintenance 57/470.
+Only seven after rows occurred, all maintenance-class and all nonmatching
+(one title row and six hangar rows); no equal-direction rows were retained.
+This independent direction split strengthens H-maintenance over H-semantic for
+the bounded published-word value question and rules out a match advantage
+caused by after-publication mixing. The transform/publication boundary remains
+open because the dominant before rows still do not identify the upstream
+selector/decode transform. ORIGIN: retail task-publication PCs, exact writer
+PCs/effective addresses, snapshotted task words, ordinal direction, and
+whole-RDRAM/VI controls are observed; no value was skipped, rewritten, or
+guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -609,14 +627,15 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 selector/decode semantic writer mapping** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Add one independent evidence line for the
-   corrected task-publication snapshots: split exact writer/task joins by
-   writer-before-task versus writer-after-task and compare the snapshotted
-   words using the same scalar validation and phase controls. A repeatable
-   maintenance-over-semantic match pattern closes the bounded value question;
-   a direction-dependent or absent pattern leaves the transform/publication
-   boundary open. Do not infer payload equality from address containment alone.
+1. **M5 selector/decode transform/publication boundary** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Locate the remaining producer-to-publication
+   transform with one phase-gated boundary census around the qualified title
+   caller chain and task publication, retaining selected words, task ordinals,
+   effective destinations, and source/post scalar values in one table.
+   H-direct-prepublication predicts a same-value named intermediate writer;
+   H-later-transform predicts no such writer but a changed publication value;
+   H-maintenance-only predicts the existing maintenance matches without a
+   semantic intermediate. Do not repeat address-containment-only comparisons.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

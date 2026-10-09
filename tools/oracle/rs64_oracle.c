@@ -592,7 +592,7 @@ struct published_word_stats {
     long source_match, source_mismatch, post_match, post_mismatch;
     long no_task;
 };
-static struct published_word_stats g_published_word_stats[MAX_PC_PHASE_LOG_ORIGINS][4];
+static struct published_word_stats g_published_word_stats[MAX_PC_PHASE_LOG_ORIGINS][4][4];
 struct published_word_key {
     uint32_t width;
     uint32_t origin;
@@ -3958,7 +3958,7 @@ int main(int argc, char **argv)
                 struct published_word_stats *stats;
                 uint32_t addr, base;
                 uint64_t len;
-                int class_id;
+                int class_id, direction;
                 if (write->width != g_pc_phase_log[phase].width ||
                     write->origin != g_pc_phase_log[phase].origin)
                     continue;
@@ -3975,12 +3975,18 @@ int main(int argc, char **argv)
                         best = task;
                     }
                 }
-                class_id = ordinal_writer_class(write->pc);
-                stats = &g_published_word_stats[phase][class_id];
                 if (!best) {
-                    stats->no_task++;
+                    g_published_word_stats[phase][ordinal_writer_class(write->pc)][3].no_task++;
                     continue;
                 }
+                if (write->event_ordinal < best->event_ordinal)
+                    direction = 0;
+                else if (write->event_ordinal > best->event_ordinal)
+                    direction = 1;
+                else
+                    direction = 2;
+                class_id = ordinal_writer_class(write->pc);
+                stats = &g_published_word_stats[phase][class_id][direction];
                 stats->joined++;
                 addr = write->effective_addr & 0x1FFFFFFFu;
                 base = best->data_ptr & 0x1FFFFFFFu;
@@ -4022,16 +4028,22 @@ int main(int argc, char **argv)
         }
         for (int phase = 0; phase < g_n_pc_phase_log_origin; phase++) {
             for (int class_id = 1; class_id <= 3; class_id++) {
-                struct published_word_stats *stats = &g_published_word_stats[phase][class_id];
+                for (int direction = 0; direction < 4; direction++) {
+                struct published_word_stats *stats = &g_published_word_stats[phase][class_id][direction];
                 if (stats->joined || stats->no_task)
                     printf("[oracle] published-word phase=0x%08x:%u class=%s "
+                           "direction=%s "
                            "joined=%ld in_span=%ld unsupported=%ld source_match=%ld "
                            "source_mismatch=%ld post_match=%ld post_mismatch=%ld no_task=%ld\n",
                            g_pc_phase_log[phase].origin, g_pc_phase_log[phase].width,
-                           ordinal_writer_class_name(class_id), stats->joined,
+                           ordinal_writer_class_name(class_id),
+                           direction == 0 ? "before" : direction == 1 ? "after" :
+                           direction == 2 ? "equal" : "no-task",
+                           stats->joined,
                            stats->in_span, stats->unsupported, stats->source_match,
                            stats->source_mismatch, stats->post_match,
                            stats->post_mismatch, stats->no_task);
+                }
             }
         }
         for (int wi = 0; wi < g_n_ordinal_writes; wi++) {

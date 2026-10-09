@@ -149936,3 +149936,28 @@ rewrite was added.
 ORIGIN: named retail writer PCs and task-publication PCs were observed; task
 words were snapshotted before later reuse; no value was skipped, rewritten, or
 guarded.
+
+## Session 4395 (2026-10-09) — split published-word matches by task direction
+
+The missing s4395 runner was repaired from the qualified s4394 recipe, and the
+oracle was extended to report the corrected same-run published-word comparison
+by nearest-task direction (`before`, `after`, `equal`, and `no-task`). The
+qualified 75-second Rice capture passed the whole-RDRAM positive control (10,000
+callbacks), reached 4,484 VI and all three phase buckets, retained 1,731 valid
+type-2 task rows, 22,989 writer rows, and zero ordinal overflow. Supported
+post-store scalar validation again had mismatch=0.
+
+The direction split was overwhelmingly before-publication. In the 1024 title
+bucket `0x00790400`, semantic writers matched 481/7,274 and maintenance
+writers 130/628. In hangar, semantic writers matched 0/4,781 and maintenance
+writers 57/470. Only seven after rows occurred; all were maintenance-class and
+all were nonmatching (one title row and six hangar rows). No equal rows were
+retained. This supplies the independent direction evidence for the bounded
+published-word value question, strengthens H-maintenance over H-semantic, and
+rules out an after-publication mix as the source of the match advantage. It
+does not locate the upstream selector/decode transform, so that boundary
+remains the next M5 work unit. No mitigation or value rewrite was added.
+
+ORIGIN: retail task-publication PCs, exact writer PCs/effective addresses,
+snapshotted task words, ordinal direction, and whole-RDRAM/VI controls were
+observed; no value was skipped, rewritten, or guarded.
