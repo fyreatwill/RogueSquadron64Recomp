@@ -1,7 +1,8 @@
-# Next work unit (s4473): M5-AUDIO-PLAN next step after closing the status-03 lead
+# Next work unit (s4474): M5-AUDIO-PLAN Step 10 qualification (AI source -> callback -> SDL join)
 
-HYPOTHESIS-ID: m5-status03-service-reaping
+HYPOTHESIS-ID: m5-ai-sdl-join
 
-State (s4472): port status 03 / request-byte 4 chain is IDENTICAL to retail (C21C=2, C2B0=3, C268=4, B7CC at hangar+~10s). The "retail B7CC x0" premise was wrong. Lead has no retail-divergence basis; close it.
-Residual question: does the port reach C268/B7CC at a comparable time after hangar entry (retail: VI512 at 38.4s, first 2/3 at 43.3s, 4 at 48.7s), and what does the port do right AFTER B7EC (retail: status continues; port: crash family?). Compare the post-status-03 sequence (B7EC and following status writes 0x8009B7xx) retail vs port using s4472_run.sh logs (ROGUESQ_LOG_S4472 control already fires).
-Pick: read docs/M5-AUDIO-PLAN.md, take the next un-run de-stub step rather than another status-03 table. Expected: a step with a validation soak.
+Step 7 closed in s4473. Read docs/M5-AUDIO-PLAN.md Step 10 and A16.
+Hypotheses: H1 nonzero PCM at osAiSetNextBuffer reaches SDL intact (addr/count/hash); H2 source nonzero but consumer/SDL loses it; H3 source all zero (go to Step 8).
+Discriminator: one run logging per submit addr/len/hash/nonzero-span at AI source and SDL callback; positive control = a nonzero-span submit in title phase.
+If Step 10 already qualified (grep PORTING-STATE), do Step 8 voice-base guard class audit instead.
