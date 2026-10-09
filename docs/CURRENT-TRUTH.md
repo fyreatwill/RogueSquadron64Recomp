@@ -4,7 +4,16 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4348: a bounded generated-MIPS census resolved the
+Updated for session 4349: the qualified retail source-span witness reached
+hangar with 78,754,385 whole-RDRAM write-control hits, 535 C904 executions,
+and 128 phase-gated input spans. The observed span writers were `bzero` at
+`0x8002A0B8/0x8002A0BC` and lattice output at `0x8009DB2C`; no captured writer
+value matched the retained `0x0010/0x3108` family. The former is span
+initialization and the latter is output-buffer reuse, so this moves the
+semantic boundary to the caller's `+0x11C8` base/index publication. Retail
+writer attribution is single-source; whole-RDRAM, VI, and C904 execution
+controls qualify route and coverage.
+Previously 4348: a bounded generated-MIPS census resolved the
 `0x8009DB2C` writer. `runVoiceLatticeFilter` reads each input halfword from
 `$t1`/`a1` at `0x8009D980`, applies fixed-point lattice arithmetic and
 `& 0xFFF8`, then writes the result to the separate `$t0`/`a2` output span at
@@ -318,21 +327,25 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-1. (M5, HYPOTHESIS-ID `m5-step9-input-writer-source`) Attribute the source
-   span read by `runVoiceLatticeFilter`: the caller constructs `a1` from the
-   voice object's `+0x11C8` base plus an index-derived `<<3` offset at
-   `0x8009C0E4`, then the lattice helper reads that span before writing its
-   separate output. Run one phase-gated retail oracle witness for this source
-   pointer and its writer PCs, with whole-RDRAM, title, hangar, and C904
-   controls. A retained family value in the source span selects its producer;
-   absence moves the boundary to the `+0x11C8` index/base writer. Do not alter
-   decoder/RSP/AI behavior.
+1. (M5, HYPOTHESIS-ID `m5-step9-base-index-publication`) Attribute the
+   caller's `+0x11C8` cursor and `+0x198` base publication feeding the C904
+   input pointer at `0x8009C0E4`. The qualified s4349 witness found only
+   bzero initialization and lattice output reuse in the captured source
+   spans, with no retained family value. Run one phase-gated retail oracle
+   witness for both field writers and values, with whole-RDRAM, title, hangar,
+   and C904 controls. Do not alter decoder/RSP/AI behavior.
 
 (s4348) Static census result: `runVoiceLatticeFilter` reads `$t1`/`a1` and
 writes `$t0`/`a2`; the quantized `0x8009DB2C` store is legitimate lattice
 output. The four caller span pairs prove distinct input/output geometry and
-reject buffer aliasing. The next source boundary is the caller's input span,
-whose base/index is formed at `0x8009C0E4`.
+reject buffer aliasing. The next source boundary is the caller's `+0x11C8`
+base/index publication feeding `0x8009C0E4`.
+
+(s4349) The qualified retail source-span witness captured 128 hangar-phase
+spans. Dynamic writes were `bzero` at `0x8002A0B8/BC` and lattice output at
+`0x8009DB2C`; no captured writer value matched `0x0010/0x3108`. This rejects
+those writes as the retained family producer and moves the next boundary to
+the caller's `+0x11C8` base/index publication.
 
 00a. (s4344) The value-aware witness passed the whole-RDRAM control (13,107
 hits), title VI `0x00790400`, hangar VI `0x006AB400`, and C904 execution control
@@ -492,6 +505,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 C88C source/branch fields | s4339: the fixed port witness emitted 256 rows with retail-compatible `s0`, `s1`, and branch-selector shape, but port `branch_state` was 0 on every row versus retail `0x3108`/`0x0010`; source words/bytes and order also diverged. This selects pre-filter stream/state divergence; the writer/publication boundary remains open. Single-source cross-runtime field evidence, with independent route controls. |
 | M5 Step 9 branch-state writer census | s4340: the port scalar-store census passed its phase/control witness and found zero writes to physical `0x20..0x30`; the independent retail oracle passed whole-RDRAM and title/hangar VI controls and its exact low-range watch also found zero writes. This rejects both a missing scalar publication writer and a port stale-read at `s1+0x22`; the port interpretation is the wrong semantic field mapping. The cross-runtime field values remain single-source, with independent watch/VI qualification. |
 | M5 Step 9 retail producer witness | s4345: the phase-gated retail stores attributed to `0x8009C9EC`/`0x8009CB0C` are `sh v0,0x18C(s8)` writes of varied small indices at object `0x801535AC`, not the retained `0x0010/0x3108` C904 family. This rejects that named writer as the semantic producer and moves the boundary to C904 input/selector attribution. Retail writer evidence is single-source; whole-RDRAM/title/hangar/C904 controls independently qualify the run. |
+| M5 Step 9 source-span writer | s4349: 128 hangar-phase C904 input spans were captured under a 78.75M-hit whole-RDRAM control. Span writes came from bzero `0x8002A0B8/BC` and lattice output `0x8009DB2C`; no captured writer value matched `0x0010/0x3108`. This rejects the span as the retained semantic family source and moves the boundary to the caller's `+0x11C8` base/index publication. |
 
 ## Durable evidence boundary
 
@@ -502,6 +516,14 @@ same-build declared/real, declared/silent and legacy/real arms. A route failure
 invalidates a null; it never proves absence.
 
 ## Superseded conclusions
+
+- s4347 "the retained family source is the `0x8009DB2C` input-span writer"
+  (believable because seven exact `0x0010` events were attributed there):
+  s4348's generated-code census showed that store is the lattice helper's
+  legitimate quantized output, and s4349's dynamic span witness found no
+  retained-family writer value in the source-span capture. The matching store
+  is output-buffer reuse, not the semantic source; the caller base/index
+  publication is now the next boundary.
 - s4329 "active D740 callsite is reached without the probed function entry"
   (believable because direct rows and `d740_store_n` reached 256 while the
   retained D740 caller tuple never joined): s4331 placed the witness in the

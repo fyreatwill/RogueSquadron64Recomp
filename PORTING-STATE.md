@@ -149039,3 +149039,20 @@ The caller invokes four distinct input/output span pairs at offsets
 rejects the aliased-buffer hypothesis. It selects the input-span source
 boundary; the next witness must follow the caller's `+0x11C8` base/index
 construction at `0x8009C0E4`. No build or runtime behavior changed.
+## Session 4349 (2026-10-08) — retail source-span witness moves boundary to base/index
+
+Ran one qualified retail oracle witness with the whole-RDRAM positive control
+retained, C904 witness, `0x8009C904` and `0x8009D980` execution controls, and
+the hangar phase gate `origin=0x006AB400,width=512`. The run reached the target
+phase and passed controls: 78,754,385 whole-RDRAM write callbacks, 535 C904
+execution hits, 79,360 lattice iterations, and 128 phase-gated input spans.
+
+Dynamic writes into the captured `[input,input+8)` spans were attributed to
+`bzero` at `0x8002A0B8`/`0x8002A0BC` (19 each) and lattice output at
+`0x8009DB2C` (492). No captured source-register value matched exact
+`0x0010` or `0x3108`. The bzero stores are legitimate span initialization;
+the lattice stores are legitimate output-buffer reuse, not the retained
+family producer. This rejects H-input-span-source and moves the next boundary
+to the caller's `+0x11C8` base/index publication at `0x8009C0D8..0x8009C0E8`.
+The writer/value attribution is single-source retail evidence; whole-RDRAM,
+VI, and C904 execution controls independently qualify route and coverage.
