@@ -149982,3 +149982,20 @@ No game value was skipped, rewritten, or guarded.
 ORIGIN: retail execution-range PCs, task-publication PCs, exact payload writer
 PCs, source/post scalar validation, and whole-RDRAM/VI controls were observed;
 no value was skipped, rewritten, or guarded.
+## Session 4397 (2026-10-09) — port selector/decode capture hit a phase boundary
+
+Ran the prescribed bounded port-side selector/decode capture after fixing the
+wrapper's bash/zsh summary mismatch. The valid run passed the existing positive
+control (`[m5-input-writer-control]`), reached title VI `0x00790400` and hangar
+VI `0x006AB400`, retained 2,290 audio-task rows and 2,290 task/image joins, and
+had no crash or abort markers. It also recorded 1,058 input-DMA rows and 256
+`[m5-filter-join]` rows. The port produced no `0x00790800` title bucket, and
+the selector join's bounded rows were all hangar-phase; consequently the
+required three-bucket comparison was not qualified. This selects
+H-instrument-gap for the port corroboration attempt, not H-port-corrob or
+H-port-diverge. The next probe must repair the port phase capture or establish
+the missing middle-title route as a port-path boundary in the same run. No
+game value was skipped, rewritten, or guarded.
+
+ORIGIN: port phase/task/DMA witnesses and the same-run positive control were
+observed; no value was skipped, rewritten, or guarded.

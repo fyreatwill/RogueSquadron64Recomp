@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4396 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4397 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -630,6 +630,19 @@ execution range, task publication, exact writer PCs, source/post scalar
 validation, and phase/VI controls were observed; no value was skipped,
 rewritten, or guarded.
 
+Session 4397's bounded port capture passed its positive control, reached title
+VI `0x00790400` and hangar VI `0x006AB400`, and retained 2,290 valid audio-task
+rows plus 2,290 task/image joins with no crash or abort. It also produced 1,058
+phase-gated input-DMA rows and 256 selector/decode join rows. However, the port
+route produced no `0x00790800` title bucket, and the selector join was capped in
+the hangar bucket; therefore the required all-three-bucket comparison was not
+qualified. This is H-instrument-gap, not evidence for port corroboration or
+divergence. The next probe must repair the port phase capture (or explain the
+missing `0x00790800` route with a same-run control) before comparing payload
+relationships. ORIGIN: existing port phase/task/DMA witnesses and the
+same-run positive control were observed; no value was skipped, rewritten, or
+guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -645,9 +658,11 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Obtain the second, port-side evidence line
-   for s4396's qualified retail no-writer/value-divergence result. Do not
-   repeat the retail range census or address-containment-only comparisons.
+   `m5-selector-decode-boundary`. Repair the port phase capture so the same run
+   either retains `0x00790400`, `0x00790800`, and `0x006AB400` task/payload
+   buckets or proves the missing middle title route is a port-path boundary.
+   Do not repeat the retail range census or address-containment-only
+   comparisons.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

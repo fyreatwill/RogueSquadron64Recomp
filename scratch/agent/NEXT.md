@@ -1,31 +1,37 @@
-# Next work unit (s4397): obtain the second evidence line for the selector/decode boundary
+# Next work unit (s4398): repair the port phase capture boundary
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-Session 4396 qualified the caller/decode range census but remains single-source
-retail evidence. The next unit is one independent port evidence line for the
-same boundary, testing whether the no-writer/value-divergence result reproduces.
+Session 4397's port run was invalid for the intended three-bucket comparison:
+the positive control, `0x00790400`, and `0x006AB400` were live, but no
+`0x00790800` title bucket appeared and the selector rows were hangar-capped.
+Run one repaired port capture with the stop-width gate removed so the brief
+middle-title transition is observable and the same task/payload joins remain
+phase keyed.
 
 Competing hypotheses:
 
-- H-port-corrob: the port's phase/task/payload join independently reproduces
-  the retail no-writer/value-divergence result.
-- H-port-diverge: the port's task/payload fields diverge from the retail
-  publication relationship.
-- H-instrument-gap: the port arm cannot produce the required phase/task join;
-  this is invalid, not evidence for either semantic arm.
+- H-port-three-buckets: removing the stop gate retains all three required VI
+  buckets with valid task/image joins, enabling the retail/port comparison.
+- H-port-route-boundary: the port route genuinely never presents
+  `0x00790800`; positive control plus the other two buckets remain live, so
+  the missing bucket is a port-path boundary rather than a null instrument.
+- H-port-instrument-failure: the repaired run loses its positive control or
+  either known phase, so it is invalid and selects nothing.
 
-Discriminating measurement: one same-run port capture joining candidate-range
-callsite rows, task publication ordinals, exact task-data destinations, and
-source/post payload values in all three phase buckets. Reproduction selects
-H-port-corrob; a qualified different relationship selects H-port-diverge; a
-missing control selects H-instrument-gap. Require task rows >=1,000, exact
-payload joins, and zero join-table overflow.
+Discriminating measurement: one run's summary must report the positive
+control, counts for `vi_width=1024 origin=0x00790400`,
+`vi_width=1024 origin=0x00790800`, and `vi_width=512 origin=0x006AB400`, plus
+task rows and task/image joins. All three buckets with no crash selects
+H-port-three-buckets; control + 790400 + 6AB400 but zero 790800 selects
+H-port-route-boundary; missing control or either known phase selects
+H-port-instrument-failure.
 
-Exact commands:
+Exact command:
 
-    bash tools/oracle/build.sh
     bash scratch/agent/run_s4397_m5_selector_boundary_port.sh
 
-The script must run one bounded port capture from the repo root and write its
-log below `scratch/agent/s4397_m5_selector_boundary_port/`.
+Before running, edit only the recipe's `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`
+assignment out of the `COMMON` array, then run it from the repository root.
+The log must remain under
+`scratch/agent/s4397_m5_selector_boundary_port/`; kill the game with SIGKILL.
