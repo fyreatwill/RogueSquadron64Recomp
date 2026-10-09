@@ -149237,3 +149237,26 @@ changed.
 
 ORIGIN: diagnostic-only oracle join and phase-gated execution observations;
 no guest or host value was skipped, rewritten, or guarded.
+## Session 4359 (2026-10-09) — bounded range census finds live nearby code but no typed task join
+
+The first oracle attempt was invalid: an explicitly empty `--configdir` cleared
+the input mapping, the run reached width 0 at 10.6 seconds, and it never
+reached the target phases. I killed that process group with SIGKILL and did not
+use its null result. The corrected established recipe omitted `--configdir`
+and used the known Homebrew Rice path.
+
+The corrected capture passed the whole-RDRAM positive control, reached the
+retail hangar VI at width 512/origin `0x006AB400`, and recorded 512 bounded
+C904/C950 witness rows. A bounded execution watch over
+`0x80033C00..0x80034100` was live in the title phase, with printed PCs spanning
+`0x80033D20..0x800340FC`. The exact `0x80033FCC` task watch still produced zero
+typed task rows and zero C904-task joins. Because this oracle route remains
+alive past the requested duration, the watchdog killed it with SIGKILL before
+shutdown summaries; the range's 64 printed execution rows therefore did not
+classify hangar arguments. This rules out an absent local execution range, but
+does not identify a type-2 task consumer or select pre-filter origin. The next
+probe must dump the task fields pointed to by `$a0` for every phase-keyed range
+PC, including the observed title origin `0x00790800`.
+
+ORIGIN: diagnostic-only oracle range execution and task-join observations; no
+guest or host value was skipped, rewritten, or guarded.

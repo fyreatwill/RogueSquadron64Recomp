@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4358 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4359 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -30,6 +30,18 @@ and VI controls. Its later descriptor pointers, words, type/class sequence,
 source/output hashes, and branch fields diverge between arms. This rejects a
 post-filter-only explanation and leaves the pre-filter stream/selector
 boundary open.
+
+Session 4359's qualified range capture passed the whole-RDRAM positive control
+and reached the retail 512 phase at `0x006AB400`. The bounded execution range
+`0x80033C00..0x80034100` was live in the title phase, with observed PCs from
+`0x80033D20` through `0x800340FC`; this rules out treating the whole local
+range as absent. However, the exact `0x80033FCC` task watch still produced zero
+typed task rows and zero C904-task joins, and the range's bounded printed rows
+did not reach the hangar phase. The capture recorded 512 C904/C950 witness
+rows in hangar, so controls were live, but it does not identify a type-2 task
+consumer or select pre-filter origin. The next probe must dump task-structure
+fields for every phase-keyed PC in the live range, using the observed title
+origin as well as the hangar origin.
 
 Session 4358's repaired C904/C950 join capture passed the retail whole-RDRAM
 control and reached the hangar phase. C904/C950 witnesses were live (512
@@ -91,13 +103,13 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Locate the actual phase-qualified retail
-   task-consumer PC with one bounded execution-range census around the absent
-   `0x80033FCC` handoff, retaining C904/C950, whole-RDRAM, VI, and port task/DMA
-   controls. A live nearby task PC with C904 joins selects the consumer-boundary
-   route; no nearby task PC despite C904 and controls selects a wider
-   instrument-boundary explanation; a task row whose source fields already
-   differ selects H-pre-filter-origin.
+   `m5-selector-decode-boundary`. Add one phase-keyed task-structure dump to the
+   live `0x80033C00..0x80034100` range, using title origins `0x00790800` and
+   `0x00790400` plus hangar `0x006AB400`, while retaining whole-RDRAM,
+   C904/C950, and the exact `0x80033FCC` task control. A valid type-2 task
+   structure at a nearby PC selects H-consumer-nearby; only non-task structures
+   in the range selects H-consumer-other-overlay/instrument boundary; a joined
+   task whose source fields already disagree selects H-pre-filter-origin.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
