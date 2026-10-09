@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4423 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4425 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -163,11 +163,35 @@ times. Retail performed zero stores to physical `0x00149758/0x0014975C` in
 both title buckets, but performed six stores to each in hangar at
 `0x8008F228/0x8008F264`, with values `0x80171E70/0x80173CB0`. The port arm
 independently emitted title and hangar stores and remained crash-free. This
-selects retail title preinitialization versus a title bypass of the table-store
-route; it does not select between those two. The initial uncorrected capture is
-invalid for this distinction because its retail hangar writer control was zero.
+left retail title preinitialization versus a title bypass unresolved. The
+initial uncorrected capture is invalid for this distinction because its
+retail hangar writer control was zero. Session 4425 resolved it.
 ORIGIN: retail physical write callbacks, retail execution watches, and port
 phase-keyed generated hooks; no table value was rewritten, skipped, or guarded.
+
+Session 4424 passed those controls but did not sample the pre-title stores.
+Title `0x80091064` loads returned `0x80171CE0` and `0x80173B20`, the title
+writer buckets were empty, and the only lifetime writer PCs were
+`0x8008F228`/`0x8008F264` (six stores each). `v0` at `0x80091060` is the slot
+index shifted left by 2. Post-value arms only at the first title or hangar
+VI, so the earlier stores had no values. That capture cannot choose between
+a pre-title store and DMA or the initial image.
+
+Session 4425 recorded every store with `--store-field-dump-any-phase`.
+Whole-RDRAM, both title origins, hangar VI, and 3,734 selector-load
+executions were live. Each word was stored eight times, all by those two
+PCs, and all eight rows were kept. Both words started at 0. On the last
+640-wide frame, origin `0x00790500`, before the 1024 title switch,
+`0x8008F228` stored `0x80171CE0` over `0x8018DD30` and `0x8008F264` stored
+`0x80173B20` over `0x8018FB70`. The following title loads returned those
+pointers (629 and 628). The same PCs later stored the known hangar pointers.
+This selects H-pretitle-same-writer and refutes DMA, the initial image, and
+a title-phase bypass for these two words. Which title origin consumes which
+word swapped relative to the s4424 capture; the stored words did not.
+Straight-line code does not write `v0` between `jal 0x80001ACC` and either
+store. That callee returns `s2`, and `0x80001C10` is `addiu s2, a1, 16`.
+ORIGIN: retail physical store callbacks and ROM disassembly; no table or
+heap value was rewritten, skipped, or guarded.
 
 ## Other live lines
 
@@ -197,21 +221,25 @@ available.
   contention, and the prior hangar-yield interpretation are not the current
   selector/decode explanation. See the archive and ledger for the evidence.
 - The s4417 caller/precall zero is not a guest-path result: the generated
-  artifact does not contain those probe calls. It remains a probe coverage
-  defect until the regeneration-safe insertion is restored and qualified.
+  artifact did not contain those probe calls. Session 4419 restored them.
+- The two title table words are not supplied by DMA or the initial image,
+  and the title phase does not bypass their store. s4425 saw both words
+  start at 0 and receive `0x80171CE0`/`0x80173B20` from `sw v0` at
+  `0x8008F228`/`0x8008F264` on the last 640-wide frame. Empty title writer
+  buckets were real; the writer runs one VI mode earlier.
 
 ## Next steps
 
-1. **Split retail title preinitialization from table-route bypass** —
-   HYPOTHESIS-ID `m5-selector-title-init-route`. Use the live retail selector
-   load at `0x80091060` and title phase as the gate; capture the loaded table
-   value/index fields and all title-side selector caller/preceding execution
-   rows, while retaining the whole-RDRAM, VI, and hangar table-write controls.
-   A title load that consumes the same preexisting table value/index without a
-   title store selects H-retail-title-preinitialized; a title load with a
-   different selector field or caller path selects H-retail-title-bypass.
-   Failed controls leave the boundary unresolved. Do not rewrite or guard
-   table state.
+1. **Attribute the allocator block behind the title pointers** —
+   HYPOTHESIS-ID `m5-selector-alloc-return`. The establishing stores are
+   the return values of `jal 0x80001ACC`. Inside that callee, `0x80001C10`
+   does `addiu s2, a1, 16`, and `0x80001C74` copies `s2` to `v0` before the
+   epilogue restores `s2`. On the establishing frame (width 640, origin
+   `0x00790500`), watch `0x80001C10` and keep the any-phase table-store
+   control. `a1+16` equal to `0x80171CE0`/`0x80173B20` on the two calls
+   that return to the store sites selects that free-block header; a
+   different `s2` with the store control live selects another path; missing
+   controls leave it unresolved. Do not rewrite or guard heap state.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

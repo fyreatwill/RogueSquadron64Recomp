@@ -150449,3 +150449,59 @@ uncorrected recipe was invalid because its hangar positive control was zero.
 No value was rewritten, skipped, or guarded. ORIGIN: retail physical write and
 execution callbacks plus port phase-keyed generated hooks; all observations
 were read-only.
+
+## Session 4424 (2026-10-09) — title loads were live and the pre-title store values were not
+
+Re-read `scratch/agent/s4424_m5_title_init_route/retail.log` before treating
+the uncommitted write-up as truth. The capture passed whole-RDRAM (removed
+at 10,000 writes), title and hangar VI, and 1,410 executions of selector
+load `0x80091060`. Title writer buckets for `0x00149758` and `0x0014975C`
+were empty. The lifetime histograms contained only `0x8008F228` and
+`0x8008F264`, six stores each. Post-value sampling arms at the first title
+or hangar VI and retained two samples per word, both the later hangar
+pointers, so four earlier stores had no recorded value. At `0x80091064`,
+title origin `0x00790800` loaded `0x80171CE0` and origin `0x00790400` loaded
+`0x80173B20` (419 each). `v0` at `0x80091060` is the slot index shifted left
+by 2, because `0x80091060` is `lw v0, -26792(at)` after `sll v0, v0, 2`
+against `0x80149758`. This refutes a title-phase bypass and refutes reading
+the scaled index as selector index 4. It does not select a pre-title CPU
+store over DMA or the initial image. No value was rewritten, skipped, or
+guarded. ORIGIN: retail physical-write histograms, execution GPR rows, and
+ROM disassembly of the load.
+
+## Session 4425 (2026-10-09) — the title pointers are stored on the last 640-wide frame
+
+Ran `scratch/agent/run_s4425_m5_preinit_store_values.sh`. The retail oracle
+used whole-RDRAM, the two physical table watches, selector-load PCs
+`0x80091060` and `0x80091064`, and `--store-field-dump-any-phase` on both
+table watches. No instruction-range watch. Evidence:
+`s4425_preinit_store_summary.txt` and
+`scratch/agent/s4425_m5_preinit_store_values/retail.log`.
+
+Controls in that run: whole-RDRAM removed at 10,000 writes; title origins
+`0x00790400` and `0x00790800` at width 1024 (632 VI each); hangar origin
+`0x006ab400` at width 512 (515 VI); 3,734 selector-load executions. Each
+table word was written exactly eight times, the writer histogram named only
+`0x8008F228` and `0x8008F264`, and all sixteen store-field rows were
+retained. Title writer buckets stayed empty. Both words started at 0.
+
+The establishing stores are on width 640, origin `0x00790500`, before the
+width-1024 title switch: `0x8008F228` writes `0x80171CE0` over `0x8018DD30`,
+and `0x8008F264` writes `0x80173B20` over `0x8018FB70`. Both instructions
+are `sw v0` with `scalar_mask=0xffffffff`. After that, `0x80091064` returned
+`0x80171CE0` for 629 title hits and `0x80173B20` for 628. The same PCs later
+stored the known hangar pointers `0x80171E70` and `0x80173CB0`, which is
+the positive control for the value dump. The paired port reached title and
+hangar with no crash or abort marker; it was not used to attribute the
+retail store.
+
+This selects H-pretitle-same-writer. It refutes DMA, the initial RDRAM
+image, and a title-phase bypass for these two words. Which title origin
+consumes which word swapped relative to the s4424 capture; the stored words
+did not. ROM disassembly shows no `v0` write between `jal 0x80001ACC` and
+either store. That callee's only pre-return assignment of the result is
+`addiu s2, a1, 16` at `0x80001C10`, copied to `v0` at `0x80001C74`. No
+table or heap value was rewritten, skipped, or guarded. ORIGIN: the writer
+is guest `sw v0` at `0x8008F228`/`0x8008F264`; the values are the pointers
+the title load consumes, so they are legitimate game data.
+
