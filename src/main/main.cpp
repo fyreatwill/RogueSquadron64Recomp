@@ -2947,6 +2947,54 @@ extern "C" void rs64_filter_voice_c88c_field_probe(uint8_t* rdram,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_filter_voice_c88c_branch_probe(uint8_t* rdram,
+                                                       uint32_t object,
+                                                       uint32_t cursor,
+                                                       uint32_t table_addr,
+                                                       uint32_t table_word,
+                                                       uint32_t a0,
+                                                       uint32_t a1,
+                                                       uint32_t stack_ptr) {
+    static int enabled = -1;
+    static unsigned rows = 0;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+        enabled = ((all && *all && *all != '0') ||
+                   (own && *own && *own != '0')) ? 1 : 0;
+    }
+    static bool entry_control = false;
+    if (enabled && !entry_control) {
+        entry_control = true;
+        std::fprintf(stderr, "[m5-c88c-branch-control] helper entered\n");
+        std::fflush(stderr);
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u) ||
+        rows >= 256u) return;
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (!rdram) return 0xFFFFFFFFu;
+        const uint32_t segment = guest & 0xE0000000u;
+        const uint32_t phys = (segment == 0x80000000u || segment == 0xA0000000u)
+            ? (guest & 0x1FFFFFFFu) : guest;
+        if (phys > 0x7FFFFCu) return 0xFFFFFFFFu;
+        return (uint32_t(rdram[phys]) << 24) |
+               (uint32_t(rdram[phys + 1]) << 16) |
+               (uint32_t(rdram[phys + 2]) << 8) |
+               uint32_t(rdram[phys + 3]);
+    };
+    std::fprintf(stderr,
+        "[m5-c88c-branch] seq=%lu row=%u phase=%u origin=0x%06X "
+        "object=0x%08X cursor=0x%08X table_addr=0x%08X table_word=0x%08X "
+        "a0=0x%08X a1=0x%08X stack_ptr=0x%08X stack_w0=0x%08X stack_w1=0x%08X\n",
+        g_rs64_filter_voice_sequence, rows++, rs64_phase_ord(), origin,
+        object, cursor, table_addr, table_word, a0, a1, stack_ptr,
+        word(stack_ptr), word(stack_ptr + 4u));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_filter_voice_call_probe(uint32_t site, uint32_t sp,
                                                uint32_t ra, uint32_t a0,
                                                uint32_t a1, uint32_t a2,
@@ -2978,15 +3026,24 @@ extern "C" void rs64_filter_voice_direct_probe(uint32_t site, uint32_t sp,
     rs64_filter_voice_sequence_probe("direct", site);
     ++d740_store_n;
     if (d740_store_n > 256ul) return;
+    const uint32_t object = g_rs64_filter_voice_caller.valid ?
+        g_rs64_filter_voice_caller.object : 0u;
+    const uint32_t cursor = rs64_filter_voice_guest_word(object + 0x11C8u);
+    const uint32_t table_addr = object + 0x1A0u +
+        ((static_cast<int32_t>(cursor) >> 3) & 0xFFCu);
+    const uint32_t table_word = rs64_filter_voice_guest_word(table_addr);
     std::fprintf(stderr,
                  "[m5-filter-direct] site=0x%08X phase=%u origin=0x%06X "
                  "d740_store_n=%lu sp=0x%08X ra=0x%08X "
                  "actual_a0=0x%08X actual_a1=0x%08X actual_a2=0x%08X actual_a3=0x%08X "
+                 "branch_object=0x%08X branch_cursor=0x%08X branch_table=0x%08X "
+                 "branch_table_word=0x%08X branch_stack_ptr=0x%08X "
                  "caller_sequence=%lu "
                  "caller_join=%u caller_object=0x%08X caller_descriptor=0x%08X "
                  "caller_aux0=0x%08X caller_aux1=0x%08X\n",
                  site, rs64_phase_ord(), origin, d740_store_n, sp, ra,
                  a0, a1, a2, a3,
+                 object, cursor, table_addr, table_word, sp,
                  g_rs64_filter_voice_caller.sequence,
                  (g_rs64_filter_voice_caller.valid &&
                   g_rs64_filter_voice_caller.site == 0x8009C88Cu) ? 1u : 0u,

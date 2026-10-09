@@ -52,8 +52,12 @@ transfer; the runtime caller-row absence is an instrumentation/state
 contradiction, not a named static bypass.
 Updated for session 4327 (M5 descriptor witness rejected; CPU caller object is next boundary). Previously 4326 (clean M5 filter/output join selected input-stream divergence). Previously 4325 (M5 filter-join instrument built; matrix retries not jointly interpretable). Previously 4324 (M5 filter matrix route-qualified; both arms hit the same active callsite). Previously 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
-Updated for session 4330: the generated-source census found no alternate D740
-transfer; the direct/caller probe contradiction remains unresolved.
+Updated for session 4342: the active-path branch-candidate witness passed all
+route and host controls and recorded 256 direct filter rows. The object-backed
+table word and decoded filter a0/a1 values do not match retail C904's retained
+0x0010/0x3108 family; the direct C88C callsite arm itself was not reached on
+this route. This is qualified single-source port evidence plus the independent
+retained retail table, not a writer or DMA attribution.
 
 ## Current state (as of s4268)
 
@@ -265,7 +269,15 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4341) Capture the best static branch-state candidates at runtime in one
+00. (s4342) Use the oracle to watch the retail producer/consumer ranges for the
+object-relative branch candidates identified in the active port direct rows.
+Require the whole-RDRAM positive control, title/hangar VI controls, and a
+phase-gated watch at the retail C904 object/table boundary. A retail writer or
+reader carrying the 0x0010/0x3108 family selects the corresponding producer;
+absence with a qualified C904 witness rejects the port table/selector mapping
+and moves the boundary earlier. Do not alter decoder/RSP/AI behavior.
+
+00a. (s4341) Capture the best static branch-state candidates at runtime in one
 qualified port run: the selected word from `object+0x1A0+cursor_index`, its
 `+0x11C8` cursor/index, and the decoded stack halfwords immediately before the
 actual `0x8009C88C` filter call. Join them by phase and `s1` to the retained
@@ -392,6 +404,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 direct D740 witness | s4329: the direct D740 callsite emitted 256 rows per arm and its scoped counter reached 256, while no D740 caller-entry bucket or retained tuple joined. Static census s4330 found no alternate generated transfer, so this is an unresolved instrumentation/state contradiction rather than proof of entry bypass; descriptor class versus pre-filter route remains open. |
 | M5 Step 9 co-located sequence witness | s4331: image-arm entry, post-helper, and D740 direct events share sequence ids inside `decodeAndFillVoiceBlock`; silent-arm target rows are absent. This rejects the entry-bypass/helper-not-invoked reading and identifies the prior D740 caller null as a probe-boundary error. Descriptor class and payload ownership remain open. |
 | M5 Step 9 C88C descriptor join | s4332: both arms reached VI 512, every D740 row joined a C88C tuple, and the initial descriptor prefix matched; later descriptor pointer/word/type-class sequences diverged. This rejects H-join-boundary and stable post-descriptor selection; pre-filter route/stream selection remains open. |
+| M5 Step 9 branch-state candidates | s4342: the qualified active D740 witness recorded 256 rows with object `0x80153420`, varying `+0x11C8` cursor values, table addresses/words, and decoded a0/a1 index/selector values. The table words and a0/a1 values did not match retail C904's retained `0x0010/0x3108` branch-state family. The direct C88C callsite arm was not reached on this route, so this rejects direct port field parity but does not identify the retail producer or DMA boundary. |
 | M5 Step 9 C88C source/branch fields | s4339: the fixed port witness emitted 256 rows with retail-compatible `s0`, `s1`, and branch-selector shape, but port `branch_state` was 0 on every row versus retail `0x3108`/`0x0010`; source words/bytes and order also diverged. This selects pre-filter stream/state divergence; the writer/publication boundary remains open. Single-source cross-runtime field evidence, with independent route controls. |
 | M5 Step 9 branch-state writer census | s4340: the port scalar-store census passed its phase/control witness and found zero writes to physical `0x20..0x30`; the independent retail oracle passed whole-RDRAM and title/hangar VI controls and its exact low-range watch also found zero writes. This rejects both a missing scalar publication writer and a port stale-read at `s1+0x22`; the port interpretation is the wrong semantic field mapping. The cross-runtime field values remain single-source, with independent watch/VI qualification. |
 

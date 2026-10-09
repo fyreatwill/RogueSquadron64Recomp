@@ -1,32 +1,35 @@
-# Next work unit (s4342): witness the static branch-state candidates
+# Next work unit (s4343): ground-truth the retail branch candidate boundary
 
-HYPOTHESIS-ID: m5-step9-branch-state-runtime-witness
+HYPOTHESIS-ID: m5-step9-retail-branch-boundary
 
-s4341 corrected the static boundary: `0x8009C88C` is the filter callsite inside
-`updateVoiceChannelParamsLarge`, while C904 is the `decodeAndFillVoiceBlock`
-entry. C904's only external object data source is the word at
-`object+0x1A0+cursor_index`, where the cursor comes from `+0x11C8`; decoded
-stack halfwords then supply the actual C88C filter arguments. Retail C904 rows
-still use `branch_state=0x0010/0x3108` by `s1`.
+s4342 passed the qualified in-process-autopilot route, host control, title VI
+1024, hangar VI 512, and existing filter controls. The active D740 witness
+recorded 256 rows. Its object-backed table words varied with the cursor and
+its decoded a0/a1 values were small index/selector values; neither matched
+retail C904's retained `branch_state=0x0010/0x3108`. The direct C88C callsite
+probe itself was not reached on this route.
 
 Competing hypotheses:
 
-- H-port-table-field: the counterpart is in the object-backed bit-table word
-  selected by `+0x11C8`.
-- H-port-selector-field: the counterpart is one of the decoded stack halfwords
-  supplied as C88C `a0/a1`.
-- H-retail-DMA-field: an earlier DMA/ROM-loaded producer populates the table,
-  so C904 cannot expose a direct counterpart.
+- H-retail-table-producer: retail writes or reads the C904 object/table field
+  carrying the `0x0010/0x3108` family.
+- H-retail-selector-producer: retail carries that family through the decoded
+  selector/stack path rather than the table word.
+- H-port-boundary-remap: neither port candidate is the retail counterpart and
+  the semantic mapping boundary is earlier than C904.
 
-Discriminator: one phase-gated co-located witness at the actual C88C filter
-callsite recording cursor/index, selected table word, and decoded stack `a0/a1`.
-A value family following retail `0x0010/0x3108` selects table versus selector;
-only matching source-range provenance selects the DMA hypothesis. The host
-positive control, title VI 1024, hangar VI 512, and filter controls must fire.
+Discriminator: one independent retail oracle run with whole-RDRAM, title, and
+hangar positive controls plus phase-gated read/write watches on the C904 object
+and its table-relative candidate range. A retail writer/reader carrying the
+`0x0010/0x3108` family selects table versus selector; a qualified C904 witness
+with no such access rejects both direct port mappings and moves the boundary
+earlier.
 
 Run requirements:
 
-1. Build all candidate fields in one instrument and run one qualified
-   in-process-autopilot capture; do not use the external field-key route.
-2. Positive controls must visibly fire in the same run.
-3. Do not add a guard or alter decoder/RSP/AI behavior.
+1. Read `tools/oracle/README.md` before changing the watch instrument and arm
+   its whole-RDRAM positive control first.
+2. Build all retail candidate watches in one oracle instrument/run; no port
+   A/B and no external field-key route.
+3. Positive controls must visibly fire in the same run.
+4. Do not add a guard or alter decoder/RSP/AI behavior.

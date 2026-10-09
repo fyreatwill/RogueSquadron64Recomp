@@ -148881,3 +148881,22 @@ value join.
 ORIGIN: diagnostic-only static census. Evidence:
 `docs/M5-S4341-STATIC-BRANCH-FIELD-CENSUS.md` and the generated source at
 `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`.
+
+## Session 4342 (2026-10-08) — witnessed active branch-state candidates
+
+The new batched witness compiled cleanly and the qualified in-process-
+autopilot run passed the host positive control, title VI 1024, hangar VI 512,
+and existing filter controls. It recorded 256 active D740 filter rows with
+object `0x80153420`, varying `object+0x11C8` cursor values, the corresponding
+`object+0x1A0+cursor` table address/word, and the live decoded filter `a0/a1`.
+The table words varied (including `0x54524F4D` and `0x898D19B7`) while a0/a1
+were small index/selector values; neither matched the retained retail C904
+`branch_state=0x0010/0x3108` family. A direct probe placed at the static C88C
+callsite was not reached on this route, even with an unconditional helper-entry
+control, so that arm is a route-placement null rather than field evidence.
+
+This rejects direct port table-field and direct port selector-field parity with
+the retained retail tuple. It does not identify the retail producer, DMA, or
+semantic remapping boundary. The comparison is qualified single-source port
+evidence against the independently retained retail table; no guard or game
+behavior changed.
