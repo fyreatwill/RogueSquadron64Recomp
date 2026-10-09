@@ -566,6 +566,13 @@ static uint64_t g_event_ordinal;
 struct ordinal_write_row {
     int watch;
     uint32_t pc;
+    uint32_t store_addr;
+    uint32_t instruction;
+    uint32_t effective_addr;
+    uint32_t source_reg;
+    uint32_t source_value;
+    uint32_t scalar_mask;
+    uint32_t pre_store_word;
     uint32_t width;
     uint32_t origin;
     uint64_t event_ordinal;
@@ -2339,8 +2346,21 @@ static void dbg_update(unsigned int pc)
                 if (g_n_ordinal_writes < MAX_ORDINAL_WRITES) {
                     struct ordinal_write_row *write =
                         &g_ordinal_writes[g_n_ordinal_writes++];
+                    uint32_t instruction = pDebugMemRead32(pc);
+                    uint32_t effective = gpr32((instruction >> 21) & 31u) +
+                        (uint32_t)(int32_t)(int16_t)instruction;
                     write->watch = i;
                     write->pc = pc;
+                    write->store_addr = accessed;
+                    write->instruction = instruction;
+                    write->effective_addr = effective;
+                    write->source_reg = (instruction >> 16) & 31u;
+                    write->source_value = gpr32(write->source_reg);
+                    write->scalar_mask = ((effective & 0x1FFFFFFCu) ==
+                                          (accessed & 0x1FFFFFFCu)) ?
+                        scalar_store_mask(instruction, effective) : 0;
+                    write->pre_store_word =
+                        pDebugMemRead32(debug_rdram_addr(accessed & ~3u));
                     write->width = pDebugMemRead32(VI_WIDTH_ADDR);
                     write->origin = pDebugMemRead32(VI_ORIGIN_ADDR);
                     write->event_ordinal = g_event_ordinal;
@@ -3633,6 +3653,19 @@ int main(int argc, char **argv)
                            g_watch[watch].start, g_watch[watch].end,
                            nearest_total, before, after, equal, no_task);
             }
+        }
+        for (int wi = 0; wi < g_n_ordinal_writes; wi++) {
+            struct ordinal_write_row *write = &g_ordinal_writes[wi];
+            printf("[oracle] ordinal-write watch=%d pc=0x%08x ordinal=%llu "
+                   "width=%u origin=0x%08x store_addr=0x%08x "
+                   "instruction=0x%08x effective_addr=0x%08x source_reg=%u "
+                   "source_value=0x%08x scalar_mask=0x%08x pre_store_word=0x%08x\n",
+                   write->watch, write->pc,
+                   (unsigned long long)write->event_ordinal,
+                   write->width, write->origin, write->store_addr,
+                   write->instruction, write->effective_addr,
+                   write->source_reg, write->source_value,
+                   write->scalar_mask, write->pre_store_word);
         }
     }
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);

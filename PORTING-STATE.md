@@ -149657,3 +149657,27 @@ overflowed. The next experiment must add that writer-PC-plus-ordinal join.
 ORIGIN: retail writer PCs, scalar source-register comparison, task publication,
 payload writes, and whole-RDRAM observations; no value was skipped, rewritten,
 or guarded.
+
+## Session 4381 (2026-10-09) — extended ordinal writer fields
+
+The first two foreground launches were supervision-invalid: the harness cut
+them off before oracle shutdown at about 34 emulated seconds. A 20-second
+line-buffered diagnostic then completed cleanly with the whole-RDRAM control
+and 412 ordinal rows but did not reach hangar, so it was not used as evidence.
+The final PTY-backed 50-second Rice capture passed the controls, reached title
+origins `0x00790400`/`0x00790800` and hangar origin `0x006AB400`, and produced
+57,822 whole-RDRAM writes. It retained 1,462 valid type-2 task rows with
+`invalid=0` and `overflow=0`, plus 44,225 ordinal writes with zero overflow.
+
+Ordinal rows now carry exact store address, instruction, effective address,
+source register/value, scalar mask, and pre-store word. Named writers
+`0x8008F7D4` and `0x80091374` produced 26,020 and 7,971 scalar samples in
+payload range 1; all had `mismatch=0`. Aggregate nearest-task joins were
+before/after 21,247/503 and 21,422/640 for range 1 in the two title buckets,
+and 198/202 and 0/13 for range 2. This qualifies the new exact-write
+instrument and rules out missing writer/task/scalar-validation/phase coverage,
+but does not select overwrite versus maintenance because task rows did not
+print their event ordinal, preventing a named-writer-specific join. The next
+work unit adds that field and the per-writer aggregation. No mitigation or
+value rewrite was added. ORIGIN: retail writer PCs, exact guest store fields,
+task execution, scalar validation, and whole-RDRAM/VI controls.

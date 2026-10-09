@@ -348,6 +348,26 @@ semantics. ORIGIN: retail writer PCs, scalar source-register comparison, task
 publication, payload writes, and whole-RDRAM observations; no value was
 skipped, rewritten, or guarded.
 
+Session 4381 extended ordinal payload-write rows with exact destination,
+instruction, effective address, source register/value, scalar mask, and
+pre-store word, then ran the qualified retail capture through title and hangar
+using the PTY-backed oracle runner. The whole-RDRAM control produced 57,822
+writes; the run reached title origins `0x00790400`/`0x00790800` and hangar
+origin `0x006AB400`, with 1,462 valid type-2 task rows (`invalid=0`,
+`overflow=0`). The ordinal table retained 44,225 writes with zero overflow.
+Named writers `0x8008F7D4` and `0x80091374` were live in payload range 1 with
+26,020 and 7,971 scalar samples respectively; every scalar sample had
+`mismatch=0`. Aggregate nearest-task joins remained before/after 21,247/503
+and 21,422/640 for range 1 in the two title buckets, while range 2 was
+198/202 and 0/13. This qualifies the new exact-write instrument and rejects a
+missing-writer, task, scalar-validation, or phase-coverage explanation, but it
+does not select overwrite versus maintenance: task rows do not yet print their
+event ordinal, so named-writer rows cannot be joined to publication ordinal in
+the same table. The next probe must add task event ordinals and a per-writer
+before/after aggregation. ORIGIN: retail writer PCs, exact guest store fields,
+task execution, scalar validation, and whole-RDRAM/VI controls; no value was
+skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -388,13 +408,14 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4380 qualified scalar values from
-   both named writers but left their task-relative ordering and target field
-   unresolved. Add a bounded writer-PC-plus-task-ordinal join for both payload
-   ranges, retaining scalar source values and exact destination addresses.
-   Keep the whole-RDRAM, three-bucket, valid-task, and zero-overflow controls.
-   Do not repeat the caller census, direct publication join, closed first-eight
-   payload comparison, or the `0x8009C904:0x8009DC3C` range.
+   `m5-selector-decode-boundary`. Session 4381 qualified exact writer fields but
+   left named-writer task-relative ordering unresolved. Add task event ordinals
+   to the bounded dump and aggregate before/after counts by writer PC, exact
+   destination, and phase for both payload ranges. Retain scalar source values
+   and mismatch validation. Keep the whole-RDRAM, three-bucket, valid-task,
+   and zero-overflow controls. Do not repeat the caller census, direct
+   publication join, closed first-eight payload comparison, or the
+   `0x8009C904:0x8009DC3C` range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
