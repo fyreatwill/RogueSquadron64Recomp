@@ -4802,6 +4802,15 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                 std::fprintf(stderr, "\n"); std::fflush(stderr);
             }
         }
+        if (width == 'W' && value >= 0x80193C10u && value <= 0x80193C20u) {  // s4460: writer of a node-8-ish link value; 0x...C20 = positive control (legit head value)
+            static uint32_t nbad = 0, nctl = 0;
+            const bool ctl = value == 0x80193C20u;
+            if (ctl ? nctl++ < 8u : nbad++ < 20u) {
+                std::fprintf(stderr, "[s4460-%s] n=%u pc=0x%08X addr=0x%08X val=0x%08X vi=%u\n", ctl ? "ctl" : "linkval",
+                             ctl ? nctl : nbad, pc, addr, value, rs64_vi_committed_width());
+                std::fflush(stderr);
+            }
+        }
         if (pc == 0x80061520u && width == 'B') {  // s4459: loadCharTextureSet 256-byte 0xFF-fill table loop
             static uint32_t last = 0, tables = 0, lines = 0, overlap = 0;
             if (addr != last + 1u) {
