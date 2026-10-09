@@ -148629,5 +148629,18 @@ provided the required independent hangar control. The next unit is a C88C
 entry-argument/descriptor-word join to the D740 sequence, with all arms built
 and run together.
 
+
+DISCRIMINATION: this run REFUTES H-entry-bypass and H-helper-not-invoked (image
+arm: sequences 1-3 show entry and post-helper markers before every D740 direct
+row, so the D740 edge is reached through the decodeAndFillVoiceBlock entry and
+the C88C helper). It SELECTS "silent arm never enters the target-phase
+decodeAndFillVoiceBlock sequence" over "image arm reaches D740 by a separate
+path". Single-source on the silent arm (one seeded run each), with the oracle
+and VI controls passing in the same run.
+NEXT DISCRIMINATOR: C88C entry arguments (a0, a1, first three words at each
+valid RDRAM-segment argument) joined by sequence id to the first 256 D740
+direct rows: stable across arms selects H-post-descriptor, differing/invalid
+selects H-pre-filter-route, zero joins selects H-join-boundary (see
+scratch/agent/NEXT.md, s4332).
 ORIGIN: none; diagnostic-only sequence witness and probe-placement correction,
 no mitigation.
