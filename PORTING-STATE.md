@@ -149105,3 +149105,27 @@ the remaining semantic boundary is after base/cursor construction. Retail
 writer/value attribution is single-source; whole-RDRAM, title/hangar VI, and
 C904 execution controls independently qualify route and coverage. No decoder,
 RSP, AI, or runtime behavior changed.
+
+## Session 4352 (2026-10-08) — retail selector/decode witness bounds next writer
+
+Ran the prescribed retail selector/decode witness with Rice video, the
+whole-RDRAM positive control, C904 field dumps, phase logging, and the
+post-value watch. The run reached title VI 1024 and hangar VI 512, completed
+cleanly, and passed the controls: 10,000 whole-RDRAM writes and 3,107
+executions at both `0x8009C904` and `0x8009C950`.
+
+The bounded field capture produced 989 rows at each PC. At C904,
+`branch_state=0x3108` occurred in 584 rows and `branch_state=0x0010` in 405;
+the selected words and decoded `state_18a/state_18c` values varied and did not
+reproduce the retained family as a full decoded word. Selected addresses were
+bounded by the same run to physical `0x1535C4..0x1545BC`, with decoded object
+fields around `0x1535AC`.
+
+The configured post-value watch was actually the caller return range
+`0x8009C0E8..0x8009C0EC`; it recorded zero samples. That is an instrument
+boundary, not evidence against an immediate post-C904 writer. The next run
+must watch the bounded physical selector/object ranges and attribute writer
+PCs/source values. This keeps H-post-C904-selector and H-earlier-stream open;
+no decoder, RSP, AI, or runtime behavior changed and no mitigation was added.
+The field/value evidence is single-source retail attribution; whole-RDRAM, VI,
+and C904 execution controls independently qualify route and coverage.

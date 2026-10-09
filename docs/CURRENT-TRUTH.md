@@ -4,7 +4,21 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4351: the qualified retail base-buffer witness reached
+Updated for session 4352: the qualified retail selector/decode witness reached
+title VI 1024 and hangar VI 512, with 10,000 whole-RDRAM control writes and
+3,107 executions at both C904 PCs. It recorded 989 bounded rows at each of
+`0x8009C904` and `0x8009C950`; C904's retained family was present as
+`branch_state=0x3108` (584 rows) or `0x0010` (405 rows), while the selected
+words and decoded `+0x18A/+0x18C` fields varied and did not reproduce that
+family as a full word. The configured post-value watch covered only the
+caller return range `0x8009C0E8..0x8009C0EC` and fired zero times, so it is an
+instrument-boundary result, not evidence against an immediate post-C904
+writer. This keeps H-post-C904-selector and H-earlier-stream open, and makes
+the next bounded witness a physical watch over the observed selector/decoded
+object ranges. Retail field evidence is single-source; whole-RDRAM, VI, and
+C904 execution controls qualify route and coverage.
+
+Previously 4351: the qualified retail base-buffer witness reached
 title VI 1024 and hangar VI 512, with 554,396 whole-RDRAM control hits and
 3,107 C904 executions. The corrected watched span `0x801B2C60..0x801B4F60`
 contained every observed C904 input (`0x801B2C60..0x801B4CE0`), so the
@@ -364,6 +378,16 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
    to the earlier stream. Retain whole-RDRAM, title, hangar, and C904 controls;
    do not alter decoder/RSP/AI behavior.
 
+   The s4352 field rows qualify the family at C904 itself (584 `0x3108`, 405
+   `0x0010`), but the post-value watch was mis-scoped to the caller return
+   range and fired zero times. The bounded selected-address range observed in
+   the same rows is physical `0x1535C8..0x1545EC`; the decoded object fields
+   are around physical `0x1535AC`. Watch those ranges with writer-PC/source
+   attribution in one run. A family-valued write after C904 selects
+   H-post-C904-selector; a matching decoded-field write selects H-decoder-state;
+   otherwise retain H-earlier-stream. The zero post-value count alone is not a
+   result.
+
 (s4348) Static census result: `runVoiceLatticeFilter` reads `$t1`/`a1` and
 writes `$t0`/`a2`; the quantized `0x8009DB2C` store is legitimate lattice
 output. The four caller span pairs prove distinct input/output geometry and
@@ -552,6 +576,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 branch-state writer census | s4340: the port scalar-store census passed its phase/control witness and found zero writes to physical `0x20..0x30`; the independent retail oracle passed whole-RDRAM and title/hangar VI controls and its exact low-range watch also found zero writes. This rejects both a missing scalar publication writer and a port stale-read at `s1+0x22`; the port interpretation is the wrong semantic field mapping. The cross-runtime field values remain single-source, with independent watch/VI qualification. |
 | M5 Step 9 retail producer witness | s4345: the phase-gated retail stores attributed to `0x8009C9EC`/`0x8009CB0C` are `sh v0,0x18C(s8)` writes of varied small indices at object `0x801535AC`, not the retained `0x0010/0x3108` C904 family. This rejects that named writer as the semantic producer and moves the boundary to C904 input/selector attribution. Retail writer evidence is single-source; whole-RDRAM/title/hangar/C904 controls independently qualify the run. |
 | M5 Step 9 source-span writer | s4349: 128 hangar-phase C904 input spans were captured under a 78.75M-hit whole-RDRAM control. Span writes came from bzero `0x8002A0B8/BC` and lattice output `0x8009DB2C`; no captured writer value matched `0x0010/0x3108`. This rejects the span as the retained semantic family source and moves the boundary to the caller's `+0x11C8` base/index publication. |
+| M5 Step 9 selector/decode witness | s4352: qualified retail rows contained the retained C904 family (`584` rows at `0x3108`, `405` at `0x0010`), while selected words and decoded `+0x18A/+0x18C` values varied. The post-value watch was incorrectly limited to `0x8009C0E8..0x8009C0EC` and fired zero times, so immediate post-C904 writer attribution remains open. |
 
 ## Durable evidence boundary
 
