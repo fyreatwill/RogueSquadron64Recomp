@@ -10,7 +10,9 @@ DECL = "extern void rs64_m5_selector_ai_callsite(uint32_t callsite, uint32_t a0,
 
 
 def patch(text: str) -> str:
-    anchor = 'extern void rs64_m5_mix_entry(uint8_t* rdram, recomp_context* ctx, uint32_t pc);\n'
+    anchor = ('extern void rs64_m5_selector_mixer_callsite(const char* name, '
+              'uint32_t pc, uint32_t ra, uint32_t a0, uint32_t a1, '
+              'uint32_t a2, uint32_t a3);\n')
     if DECL.strip() not in text:
         if anchor not in text:
             raise SystemExit('selector probe declaration anchor not found')

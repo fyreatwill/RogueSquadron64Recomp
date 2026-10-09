@@ -150089,3 +150089,22 @@ downstream consumer or prove that the boundary is terminal; the next unit is
 source-reading the call chain around `0x80029E78`/`0x80091CB8` and then adding
 one phase-keyed downstream witness. ORIGIN: guest boundary/callsite arguments
 were observed by host probes; no value was skipped, rewritten, or guarded.
+
+## Session 4404 (2026-10-09) — repaired and qualified the title AI callsite probe
+
+Source inspection found exactly two generated direct calls to `0x80029D20`:
+`0x80091BAC` and `0x80091CB8`. Each calls `osAiSetFrequency_recomp` and then
+falls through to the corresponding setup stores. The existing regeneration-
+safe callsite script had a stale declaration anchor, and the current generated
+file consequently contained no callsite probes. After correcting that script
+anchor, the Debug target built successfully and the qualified 85-second
+real-audio/LLE/spin-yield/autopilot run passed its positive control, reached
+title `0x00790400` and hangar `0x006AB400`, and retained 2,295 task/image
+joins plus 256 filter joins without crash or abort. The repaired callsite
+control fired; a phase-keyed row fired at `0x80091CB8` in title, while no
+callsite row fired in hangar. Existing AI-boundary/setup controls remained
+live in both phases. This selects stale-probe omission as the explanation for
+the prior zero-row result and leaves the two-edge title/hangar split open; it
+rules out a title route-coverage null and a terminal boundary at the observed
+title edge. ORIGIN: guest callsite and phase arguments were observed; no
+value was skipped, rewritten, or guarded.

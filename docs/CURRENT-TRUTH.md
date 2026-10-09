@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4403 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4404 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -42,6 +42,18 @@ callsite or prove whether the boundary's direct path is a selector return,
 store, or dead-end; the next unit must locate that call chain. ORIGIN: host
 boundary and callsite probes observe guest call arguments; no value was
 skipped, rewritten, or guarded.
+
+Session 4404 repaired a stale generated probe anchor, rebuilt, and reran the
+qualified route. The positive control fired, title `0x00790400` and hangar
+`0x006AB400` were live, and the AI-boundary/setup controls remained live. The
+repaired direct-call witness fired at `0x80091CB8` in title but not hangar;
+the prior zero-row callsite result was an instrumentation omission, not
+evidence that the title boundary had no direct consumer. Static inspection
+found exactly two generated calls to `0x80029D20`: `0x80091BAC` and
+`0x80091CB8`, each followed by setup stores. The title/hangar split remains
+open; next compare the two direct edges with phase gates. ORIGIN: guest
+callsite and phase arguments were observed; no value was skipped, rewritten,
+or guarded.
 
 Session 4360's qualified range-argument capture passed the whole-RDRAM control,
 reached title and hangar, and retained 512 rows in each phase bucket
@@ -722,12 +734,12 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 title selector/decode call-chain locator** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Source-read the generated call path around
-   the title AI-boundary witness (`0x80029E78` / `0x80091CB8`) and identify the
-   actual downstream consumer/callsite that the zero-row hook was intended to
-   observe. Build one instrument only after naming the competing call-chain
-   routes and a phase/task join that distinguishes them; do not repeat the
-   resolved VI-origin census or payload-family comparison.
+   `m5-selector-decode-boundary`. Use the repaired callsite witness to compare
+   direct edges `0x80091BAC` and `0x80091CB8` under title/hangar phase gates.
+   Keep the positive control and AI-boundary/setup controls; a hangar row at
+   either edge identifies the live edge, while no hangar row with live controls
+   selects a phase gate or startup-only edge. Do not repeat the resolved
+   VI-origin census or payload-family comparison.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -739,7 +751,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
-| M5 title AI boundary | s4403 widened the phase filter and observed boundary rows in title and hangar, but zero rows at the separate AI-callsite hook; the actual downstream consumer remains unlocated. |
+| M5 title AI boundary | s4404 repaired the stale generated callsite probe; `0x80091CB8` is observed in title, while hangar remains absent at the direct callsite witness. The two-edge phase split is open. |
 | M5 title caller path | s4375/s4376 qualify `0x80019DEC -> 0x80033FCC` as the direct publication chain; s4377 selects a phase-specific selector/object input; s4378 finds payload writers outside the prior candidate set; s4379 confirms some writer traffic after publication but leaves value provenance open. |
 | M5 consumer join | s4363 plus s4370/s4371 independent retail captures confirm distinct phase-specific task families and zero exact recurrence of nonzero selected words in the first eight published payload words (591/591, 601/601, 344/344). H-later-consumer-transform is confirmed for that boundary; the intermediate transform/publication stage remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
