@@ -1,34 +1,32 @@
-# Next work unit (s4333): retail oracle C88C descriptor comparison
+# Next work unit (s4334): map the retail descriptor boundary
 
-HYPOTHESIS-ID: m5-step9-retail-descriptor-compare
+HYPOTHESIS-ID: m5-step9-retail-boundary-map
 
-The s4332 qualified port matrix closed the join-boundary issue: both arms
-joined C88C tuples to D740 rows. The initial descriptor prefix matched, but
-later descriptor pointers/words and type/class distributions diverged. The
-next bounded unit is an independent retail execution witness at C88C.
+The s4333 retail oracle controls passed, but exact `0x8009C88C` had zero hits.
+A broad `0x8009C000:0x8009D000` range hit 999,770 times in the valid 512-wide
+phase; the narrowed `0x8009C800:0x8009C900` range had zero hits. The port C88C
+address is not yet a usable retail descriptor boundary.
 
 Competing hypotheses:
 
-- H-retail-silent: retail C88C arguments/descriptor sequence matches the
-  silent/MusyX-stub port arm; the image arm's route/stream selection diverges.
-- H-retail-image: retail matches the real-image/Factor5 arm; the silent arm's
-  route/stream selection diverges.
-- H-shared-production: retail matches neither port sequence; descriptor
-  production or its earlier input stream diverges in both port arms.
-- H-oracle-invalid: the retail watch/control fails to reach the hangar phase,
-  so no descriptor comparison is admissible.
+- H-retail-counterpart: a nearby retail execution range/caller corresponds to
+  the port descriptor helper and can be field-dumped in the 512 phase.
+- H-retail-layout-gap: the mapped C88C/D740 windows have no stable retail
+  counterpart, so the comparison requires address/overlay translation first.
+- H-oracle-invalid: a repeat loses the whole-RDRAM, title, or hangar controls.
 
-Discriminator: run the retail ROM with a whole-RDRAM positive control, VI
-trace, and an execution watch at `0x8009C88C`; compare the phase-gated `$a0`,
-`$a1`, `$a2`, `$a3` rows and descriptor words with the two s4332 port logs.
-Retail matching one arm selects that arm's route/stream ownership; matching
-neither selects shared descriptor-production divergence; missing whole-RDRAM,
-title, or hangar controls selects H-oracle-invalid and proves nothing about
-the descriptor boundary.
+Discriminator: run one retail oracle census with the whole-RDRAM positive
+control, VI trace, and phase-gated execution ranges covering the port C88C/D740
+windows plus their `exec-prev` histogram. A stable 512-phase range/caller hit
+selects H-retail-counterpart and identifies the next `--pc-field-dump` target;
+zero across all mapped windows selects H-retail-layout-gap; missing controls
+selects H-oracle-invalid. Do not compare payloads or change runtime behavior.
 
-Before building any new port instrument, verify the oracle controls with:
+Before building any new port instrument, map the remaining port descriptor/D740
+windows from the generated source, then run one bounded oracle census. Suggested
+command shape:
 
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 180 --watch-write 0x0:0x800000 --watch-pc 0x8009C88C --pc-field-dump 0x8009C88C --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`
+`tools/oracle/build/rs64_oracle ... --watch-write 0x0:0x800000 --watch-pc-range 0x8009C000:0x8009D000 --pc-phase-log-width 0x006AB400:512 --pc-phase-quiet --vi-trace ...`
 
 Do not change decoder, RSP, AI, or game-path behavior. Keep all comparison
 rows phase-gated on VI origin `0x006AB400` and width 512.

@@ -148684,3 +148684,23 @@ H-post-descriptor and H-join-boundary.
 
 ORIGIN: none; this is diagnostic instrumentation and a recipe/input-race fix,
 not mitigation for a corruption or wild value.
+
+## Session 4333 (2026-10-08) — retail C88C boundary was absent
+
+Ran the prescribed 180-second retail oracle C88C watch with the whole-RDRAM
+positive control and VI trace. The positive control fired 10,000 writes, and
+retail reached title VI 1024 then hangar VI 512 at origin 0x006AB400, but exact
+guest PC 0x8009C88C had 0 execution hits and 0 field rows. A corrective
+phase-gated range probe found 999,770 executions in 0x8009C000..0x8009D000,
+including the 512-wide phase; a narrowed 0x8009C800..0x8009C900 probe found 0.
+
+This rules out a dead oracle route, debugger failure, and the assumption that
+the port C88C address is a retail execution boundary. It does not compare
+descriptor payloads or select silent versus real-image ownership. The exact
+retail null and range census are single-source oracle evidence; the port-side
+s4332 descriptor join remains the independent second line for the unresolved
+payload divergence. Next unit maps the retail counterpart with phase-gated
+execution ranges and exec-prev callers before adding field dumps.
+
+ORIGIN: none; diagnostic oracle probes only, no mitigation or runtime behavior
+change.

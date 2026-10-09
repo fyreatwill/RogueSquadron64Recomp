@@ -4,7 +4,10 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4332: the C88C descriptor witness joined every valid D740
+Updated for session 4333: the retail oracle reached the qualified hangar phase,
+but the port C88C address had zero retail execution hits even though the
+surrounding 0x8009C000-0x8009D000 range executed heavily; the exact retail
+descriptor counterpart is not yet identified. Previously 4332: the C88C descriptor witness joined every valid D740
 row in a qualified two-arm matrix; early descriptors match but later pointer,
 word, and type/class sequences diverge, selecting pre-filter route/stream
 selection. The initial matrix was invalid because concurrent frontmost key
@@ -159,6 +162,17 @@ stable post-descriptor selection and selects pre-filter route/stream selection.
 The paired descriptor comparison is port-side evidence; the independent
 oracle and VI controls qualify that both arms traversed the same target phase.
 
+**M5 Step 9 retail boundary probe (s4333).** The required 180-second retail
+oracle run passed the whole-RDRAM positive control (10,000 writes), reached
+title VI 1024 and hangar VI 512 at origin `0x006AB400`, but recorded zero
+execution hits at exact guest PC `0x8009C88C`. A corrective range probe in the
+same route recorded 999,770 hits in `0x8009C000..0x8009D000`, including the
+512-wide phase, while a narrowed `0x8009C800..0x8009C900` probe recorded zero.
+This is single-source retail evidence that the port's C88C symbol is not a
+retail execution boundary. It makes direct retail descriptor comparison at
+C88C unevaluable and selects a retail-boundary mapping probe; it does not
+select silent versus real-image payload ownership.
+
 **M5 de-stubs landed.** A11 waitForAnyAudioSlot yield (default 2000), A12 countdown
 yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset=2; s4192), A15 spin-yield default
 on, A13 drain-tick gate (dormant on title+hangar), A14 status-03 wait (s4296 host yield, `ROGUESQ_A14_YIELD=0` rolls back; s4297: loop IS entered in the hangar, b0 stuck 0x03, exits after ~160-180k iterations only with the yield; yield-on reaches VI 640 and then the known do_rom_read crash at 0x80001b08, yield-off stays in hangar, no crash - 2 on / 1 off runs), A9/A10 voice-base/song-tick guards (0 fires). Declared-size staging
@@ -194,15 +208,16 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4332) The C88C-to-D740 join is valid in both arms, but descriptor
-pointer/word/type-class sequences diverge after an identical initial prefix.
-Next: use the independent retail oracle at the C88C execution boundary to
-capture its phase-gated argument fields and compare the retail descriptor
-sequence against the two port arms. Competing outcomes: retail matches silent
-or image, selecting the corresponding port route/stream ownership; retail
-matches neither, selecting a shared descriptor-production divergence; an
-oracle route/control failure leaves the comparison unevaluable. Keep decoder,
-RSP, AI, and game-path behavior unchanged.
+00. (s4333) The retail oracle controls passed, but exact C88C had zero hits;
+the surrounding C000-D000 range executed 999,770 times while C800-C900 stayed
+at zero. Next: use a phase-gated retail execution-range census over the
+remaining port descriptor/D740 address windows and its `exec-prev` callers to
+identify the retail counterpart before requesting descriptor fields. Outcomes:
+a retail range/caller with stable 512-phase hits permits a field-dump arm;
+continued absence across the mapped windows selects an address/layout
+translation problem and postpones payload comparison; loss of whole-RDRAM or
+VI controls is unevaluable. Keep decoder, RSP, AI, and game-path behavior
+unchanged.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
