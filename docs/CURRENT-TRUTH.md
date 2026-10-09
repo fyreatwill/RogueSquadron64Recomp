@@ -4,8 +4,8 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4354 (2026-10-08). This maintenance pass reduced this file
-to durable state; it ran no game or oracle experiment.
+Updated for session 4355 (2026-10-08). The preceding maintenance pass reduced
+this file to durable state; session 4355 ran the selector-boundary oracle.
 
 ## Current state
 
@@ -39,10 +39,14 @@ post-value watch was mistakenly limited to caller return PCs
 result, not evidence against a writer. The s4354 bounded physical writer watch
 passed the whole-RDRAM positive control and retained C904/C950 coverage, but
 recorded only 150 stores at `0x1535AC..0x1535BC` and zero stores in the
-selected-address subrange `0x1535C4..0x1545C0`. This is a single-source
-selection of H-earlier-stream: the family is not written in the selected range
-after C904 in this qualified retail run. An independent evidence line is still
-required before treating that as the resolved origin.
+selected-address subrange `0x1535C4..0x1545C0`. The s4355 run independently
+watched both reads and writes: it qualified 10,820 whole-RDRAM writes, 3,107
+C904 executions, 7,182 VI frames, and 40,179 reads in the broad range, while
+sampled writer PCs emitted only the lower metadata-prefix stores. The bounded
+source audit likewise found no direct store to `0x1535C4..0x1545C0` in the
+C904 caller/callee path. This closes the post-C904 selected-range writer
+hypothesis for the qualified route; the broad watch must not be interpreted as
+820 distinct upper-range writes.
 
 Earlier qualified retail work rejected the source span, base/index, route alias,
 and stable base-buffer as the retained family producer. `+0x198` settled on
@@ -65,12 +69,10 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 pre-C904 stream boundary** — HYPOTHESIS-ID
-   `m5-step9-selector-decode-boundary`. Obtain the independent line for the
-   s4354 H-earlier-stream selection using the exact static call-chain audit and
-   one retail read/write watch specified in `scratch/agent/NEXT.md`. Preserve
-   whole-RDRAM, VI, and C904 controls; do not alter decoder, RSP, AI, or
-   runtime behavior.
+1. **M5 Step 10 audio-task rate** — HYPOTHESIS-ID
+   `m5-step10-audio-task-rate`. Measure the default real-audio arm's task rate
+   during t=18–28 s with an `ROGUESQ_AUDIO_UCODE=0` control in the same
+   phase-qualified capture.
 2. Resume M5 plan Steps 9/10 after the selector boundary is explained; measure
    default-arm audio task rate at t=18–28 s with an `ROGUESQ_AUDIO_UCODE=0`
    control.
@@ -84,7 +86,7 @@ is explicitly repaired.
 
 | Hypothesis | Status |
 |---|---|
-| M5 selector/decode family origin | H-earlier-stream selected by one qualified retail physical writer watch: zero stores in `0x1535C4..0x1545C0`, while C904 retains the family. Single-source; independent confirmation pending. |
+| M5 selector/decode family origin | H-earlier-stream confirmed for the qualified route by source audit plus retail read/write attribution: no direct post-C904 store reaches `0x1535C4..0x1545C0`; sampled stores stop at `0x1535AC..0x1535BC`. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |
 | Retail/port post-free stream layout | Retail and port share the first qualified read/free boundary, then diverge in later layout/value/order; exact consumer cause open. |
 | RT64 fb-set growth | Source is the DPC bump-time placeholder-drop class; hangar effect open. |

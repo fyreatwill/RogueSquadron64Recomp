@@ -149156,3 +149156,22 @@ run: the retained family is already present at C904 but is not published by a
 post-C904 selected-range store. This is single-source evidence; an independent
 static call-chain plus read/write witness is the next discriminator. No decoder,
 RSP, AI, or runtime behavior changed and no mitigation was added.
+
+## Session 4355 (2026-10-08) — independent retail pre-C904 boundary confirmation
+
+Ran the prescribed bounded source audit and one retail oracle run with both
+read and write watches over `0x1535AC..0x1545C0`. The audit found the C904
+caller at `0x8009C0E4` and decoder at `0x8009C904`; their direct stores are
+voice-object metadata/fields, with no direct store to the selected upper range
+`0x1535C4..0x1545C0`.
+
+The retail run reached 7,182 VI frames including title 1024 and hangar 512.
+Controls qualified: 10,820 whole-RDRAM writes, 3,107 executions at each C904
+boundary, and 40,179 reads in the broad target range. The broad target write
+watch counted 820 writes, but every sampled writer PC/address was confined to
+`0x1535AC..0x1535BC`; no sampled store reached `0x1535C4..0x1545C0`.
+Together these are two independent lines supporting H-earlier-stream and rule
+out a post-C904 writer to the selected upper range on this route. The broad
+watch remains unsuitable for counting distinct upper-range writes because its
+lower metadata prefix is included. No decoder, RSP, AI, or runtime behavior
+changed and no mitigation was added.
