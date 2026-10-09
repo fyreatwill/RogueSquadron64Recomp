@@ -150987,3 +150987,11 @@ Ran scratch/agent/s4472_run.sh (70 s, ROGUESQ_LOG_S4472=1, audio ucode on, phase
 
 ## Session 4474 (2026-10-09) — M5 Step 8 voice/table guard census: 0 fires across title→hangar (phase 5, width 512)
 Step 10 was already qualified (s4225/s4434), so took Step 8. Static class audits exist (M3-S3597..S3605 docs); the open piece was runtime fire counts. Ran scratch/agent/s4474_run.sh (s4472 recipe, 100 s, audio ucode on, all five guard-log env vars armed: SONGTEMPO_TABLE, AUDIO_VOICE_BASEPTR, AUDIO_VOICE_BASEPTR_LOOP, TICK_REAP_3D_VOICES, AUDIO_SLOT_ACTIVE). Run reached phase 5 width 512 (hangar), 1.21M log lines, guard lines = 0; audio-join-pcm source/consumer rows present with equal fnv. Binary contains 43/10/2/1/1 guard format strings, equal to the generated-source counts, so the instruments are compiled in. CAVEAT: no same-run positive control that a guard fires, and the AUDIO_SLOT_ACTIVE env var name was not verified against getenv; "0 fires" is single-source, not proof of deadness. It does support that A9/A10 guards mask nothing on this route, so Step 8 has nothing to relax. ORIGIN: no code changed; no guard added or relaxed. Next: Step 9 MORT gap check.
+
+## Session 4475 (2026-10-09) — M5 Step 9 closed: no MORT-owned gap
+
+HYPOTHESIS-ID: m5-mort-gap
+
+H1 (MORT-owned gap) vs H2 (pipelines independent, divergence upstream). Re-ran tools/mort_probe.py (control: 546 descriptors, type counts 0:419,1:59,2:36,3:17,4:9,5:6, rates 8000:440/16000:106; rows 0,1,59,90 decoded nonzero, verdict H-MORTReferenceMatches). Combined with s4321-s4416 ledger evidence (qualified oracle/VI/MORT controls; silent-vs-image descriptor divergence is pre-filter at the selector/stream boundary, D740 callsite executes), no MORT-owned gap is evidenced, so Step 9's condition is unmet and it is closed. Limits: this session did not run a new guest-vs-reference hash join; the guard-fire positive control for s4474 was not done. No code changed.
+
+ORIGIN: none; no mitigation added.

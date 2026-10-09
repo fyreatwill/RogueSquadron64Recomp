@@ -1,7 +1,7 @@
-# Next work unit (s4475): M5-AUDIO-PLAN Step 9 matrix check (is there a MORT-owned gap?)
+# Next work unit (s4476): M3 systematic idiom-class audit (priority 3; M5 closed at s4475)
 
-HYPOTHESIS-ID: m5-mort-gap
-Read docs/M5-AUDIO-PLAN.md Step 9, A20. Steps 7, 8, 10 closed (s4473, s4474, s4434).
-H1: complete task/voice matrix shows a MORT-owned gap; H2: no gap (pipelines independent) -> close M5.
-Discriminator: tools/mort_probe.py reference output vs guest descriptor/type/rate for the live hangar speech path. Include a same-run positive control.
-Optional cheap add: force a guard to fire once (positive control for the s4474 census).
+HYPOTHESIS-ID: m3-idiom-class-audit
+Pick ONE not-yet-audited idiom class (see M3-S3597..S3605 docs and the s282-s288 -0x25A4 model for the method): grep-enumerate every site in generated code, classify each, guard or prove dead, commit the guard/fixup. No reactive single-crash chases.
+H1: class has unguarded live sites; H2: all sites dead/guarded -> close class.
+Discriminator: per-site classification table with a positive control (a known guarded site must be found by the same grep).
+Optional: s4474 guard-fire positive control (force a guard once) if cheap.
