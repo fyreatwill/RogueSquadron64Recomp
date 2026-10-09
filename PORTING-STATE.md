@@ -148907,6 +148907,24 @@ H-port-selector-direct (the two port-side candidates for the retail C904
 either field. SELECTS H-port-boundary-remap as the surviving port-side
 hypothesis (single-source, port only; the C88C callsite arm was an unreached
 route-placement null, not evidence). Next discriminator, in NEXT.md
+
+## Session 4343 (2026-10-08) — retail table census moves producer boundary earlier
+
+The rebuilt oracle ran one batched retail watch with the whole-RDRAM positive
+control, phase-gated C904 execution, and object-relative read/write watches.
+The control reached 10,000 writes and was removed; the run reached the retail
+512 phase at `0x006AB400`, where the C904 witness executed 3,107 times. The
+backing table `0x1535C0..0x1545C0` was read 23,491 times and written zero
+times. The cursor field at `0x1545E8` had 3,117 writes, including 1,552 in
+the two target 512-origin buckets, with `0x8009D790` as the dominant writer.
+Decode-state bytes near `0x1535AA` had 792 writes, attributed primarily to
+`0x8009C9EC`, `0x8009CA1C`, `0x8009CA44`, `0x8009CA60`, and `0x8009CB0C`.
+
+This rejects a phase-local writer to the backing table and moves its producer
+boundary earlier than C904. It does not choose table versus selector semantics:
+the range watch did not capture table values, and no `0x0010/0x3108` value join
+was made. The result is independent retail attribution plus same-run controls;
+no runtime or game behavior changed.
 (HYPOTHESIS-ID m5-step9-retail-branch-boundary): one retail oracle run with
 whole-RDRAM/title/hangar positive controls and phase-gated read/write watches
 on the retail C904 object and table range; a retail accessor carrying the

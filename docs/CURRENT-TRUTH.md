@@ -4,7 +4,15 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4341: a bounded static/data-flow census corrected the
+Updated for session 4343: the qualified retail oracle read/write census found
+the C904 backing table read 23,491 times and written zero times, while the
+cursor field was written by `0x8009D790` and decode-state bytes were written by
+`0x8009C9EC..0x8009CB0C`. The whole-RDRAM control fired, the retail target
+phase was reached, and C904 executed 3,107 times. This rejects a phase-local
+table producer but does not identify an earlier producer or selector/value
+remap; no table values were captured by this run. Previously 4342: a bounded
+port branch-candidate witness rejected direct table/selector parity. Previously
+4341: a bounded static/data-flow census corrected the
 `0x8009C88C`/`0x8009C904` probe boundary and identified the object-backed bit
 table plus decoded stack fields as the only remaining branch-state candidates.
 No value-level match to retail is established yet. Previously 4340: a phase-gated scalar-store census and independent
@@ -269,13 +277,22 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4342) Use the oracle to watch the retail producer/consumer ranges for the
-object-relative branch candidates identified in the active port direct rows.
-Require the whole-RDRAM positive control, title/hangar VI controls, and a
-phase-gated watch at the retail C904 object/table boundary. A retail writer or
-reader carrying the 0x0010/0x3108 family selects the corresponding producer;
-absence with a qualified C904 witness rejects the port table/selector mapping
-and moves the boundary earlier. Do not alter decoder/RSP/AI behavior.
+00. (s4343) Add one value-aware retail C904 witness for object `0x80153420`:
+record the cursor, selected `object+0x1A0+((cursor>>3)&0xFFC)` word, and the
+decoded halfwords/state at phase `0x006AB400`. Keep the whole-RDRAM, title, and
+hangar controls. A selected table word carrying `0x0010/0x3108` selects the
+table producer; a qualified table read with no family but matching decoded
+halfwords selects the selector path; neither match moves the semantic boundary
+earlier. Do not alter decoder/RSP/AI behavior.
+
+00a. (s4343) The retail table-range census passed the whole-RDRAM control and
+reached the phase-gated C904 witness (3,107 executions). The table
+`0x1535C0..0x1545C0` had 23,491 reads and zero writes; cursor `0x1545E8` had
+3,117 writes, led by guest PC `0x8009D790`, and decode-state bytes near
+`0x1535AA` had 792 writes from `0x8009C9EC..0x8009CB0C`. This rejects a
+phase-local table producer, but the range watch did not capture table values,
+so it cannot choose table versus selector semantics. The producer boundary is
+earlier than C904; no mitigation or game behavior changed.
 
 00a. (s4341) Capture the best static branch-state candidates at runtime in one
 qualified port run: the selected word from `object+0x1A0+cursor_index`, its
