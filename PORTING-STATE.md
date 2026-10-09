@@ -73183,6 +73183,21 @@ inside the RSP. The oracle cannot watch `ACCH:ACCM:ACCL`. No mitigation.
 ORIGIN: observational oracle watches plus already-generated ucode; no guest
 value was skipped, rewritten, or guarded.
 
+## Session 4418 (2026-10-09) — found missing generated selector witnesses
+
+Ran the bounded static census required before another M5 runtime field. The
+current generated `RecompiledFuncs/funcs_24.c` contains the live selector edge
+at `0x8009131C`, `0x8009132C`, and `0x80091330`, but zero invocations or patch
+markers for `rs64_m5_selector_caller` and `rs64_m5_selector_precall`. The host
+callbacks are present in `src/main/upstream_compat.cpp`, and the standalone
+s3500/s3501 scripts still describe the missing insertions. This selects
+H-witness-mismatch and rules out interpreting the prior caller/precall zero as
+guest path divergence. The next unit is to repair retention through the
+regeneration-safe fixup path and then qualify it with the existing controls.
+ORIGIN: static generated-file, live-edge, host-callback, and apply-script
+census; no selector, input, task, audio, or output value was rewritten, skipped,
+or guarded.
+
 ## Session 4417 (2026-10-09) — paired selector boundary remained unevaluable
 
 Ran the paired retail/oracle and port capture from

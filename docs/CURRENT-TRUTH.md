@@ -92,6 +92,17 @@ path divergence. ORIGIN: retail debugger execution/GPR/VI/task observations
 and port phase-keyed runtime observations; no selector, input, task, or output
 value was rewritten, skipped, or guarded.
 
+The s4418 static witness census resolved that unevaluable result: the current
+generated `RecompiledFuncs/funcs_24.c` contains the live `0x8009131C`,
+`0x8009132C`, and `0x80091330` edge, but contains zero
+`rs64_m5_selector_caller` or `rs64_m5_selector_precall` invocations and zero
+s3500/s3501 markers. The host callbacks exist only in
+`src/main/upstream_compat.cpp`, while the standalone apply scripts still
+describe insertions absent from the generated artifact. This selects
+H-witness-mismatch and invalidates the prior caller/precall zero as evidence
+of guest divergence. ORIGIN: static generated-file and script census; no
+runtime value or control flow was changed.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -119,15 +130,19 @@ available.
 - Audio-disabled paths, framebuffer presentation, LLE/HLE mixing, queue
   contention, and the prior hangar-yield interpretation are not the current
   selector/decode explanation. See the archive and ledger for the evidence.
+- The s4417 caller/precall zero is not a guest-path result: the generated
+  artifact does not contain those probe calls. It remains a probe coverage
+  defect until the regeneration-safe insertion is restored and qualified.
 
 ## Next steps
 
 1. **M5 pre-filter selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Audit every generated port callsite and patch
-   marker for the caller/precall witnesses, then qualify the actual edge with
-   the existing selector/input, VI, task, and image controls. Do not interpret
-   the current caller/precall zero as a guest-path null until this witness is
-   proven live.
+   `m5-selector-decode-boundary`. Repair the regeneration-safe insertion path
+   for the `0x8009131C/0x8009132C/0x80091330` caller/precall witnesses, then
+   build and qualify the actual edge with the existing selector/input, VI, task,
+   and image controls. Do not interpret a caller/precall zero as guest
+   divergence until the generated artifact contains the markers and a positive
+   control proves them live.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug
