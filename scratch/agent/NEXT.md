@@ -26,3 +26,5 @@ Exact commands: create `scratch/agent/run_s4400_m5_port_payload_route.sh` with
 and add only bounded phase-keyed selector/task/payload comparison output. Run
 `zsh scratch/agent/run_s4400_m5_port_payload_route.sh` from the repository root
 for 85 seconds, SIGKILL the game, and inspect its summary plus bounded counts.
+
+RESUME NOTE (s4400 retry): the first attempt died with no artifacts; start from the work unit above unchanged.

@@ -150033,3 +150033,7 @@ known title and hangar phases, task rows, and joins were all live. It does not
 explain the retail selector/decode boundary or establish payload equivalence;
 those remain open. ORIGIN: phase transitions and action events are observed
 from the port runtime; no value was skipped, rewritten, or guarded.
+
+## Session 4400 (2026-10-09) — checkpoint: s4400 port payload-route unit did not start
+
+The primary session died before producing any artifact: no `run_s4400_*` script, no run output, no code change (working tree clean at f6f33bf6 apart from the usual lib/ submodule patches). Nothing was measured, so no hypothesis moved and CURRENT-TRUTH is unchanged. NEXT.md (s4400 work unit, HYPOTHESIS-ID m5-selector-decode-boundary) remains valid as written and is the resume instruction: create `scratch/agent/run_s4400_m5_port_payload_route.sh` from the s4399 script, run it 85 s, SIGKILL the game. ORIGIN: n/a, no mitigation added.
