@@ -148449,3 +148449,32 @@ H-descriptor-class-divergence; identical inputs + differing output hash =>
 H-output-join. Rows are valid only with oracle_gate=1, MORT verdict, and
 [m5-port-vi-control]=1 in both arms. Resume: `zsh scratch/agent/run_s4321_m5_mort_output.sh`
 (build already current with the aligned printf + live-sp table fix).
+
+## Session 4326 (2026-10-08) — clean M5 filter/output join selected input divergence
+
+HYPOTHESIS-ID: m5-step9-mort-output
+
+Ran `zsh scratch/agent/run_s4321_m5_mort_output.sh` from a clean process state
+with the seeded save and the already-built phase-scoped join instrument. The
+independent MORT reference selected `H-MORTReferenceMatches`. The oracle
+positive control reached 10,000 whole-RDRAM callbacks, and the oracle reached
+title VI 1024 and hangar VI 512 at `0x006AB400`; `oracle_gate=1`. Both port
+arms emitted their VI control and 128 filter calls at `0x8009D740` before the
+known shared crash; neither aborted.
+
+The 17 common route-row keys all differed in source and output FNV hashes.
+Rate stayed 22047 Hz, while route ordinals differed on all 17 rows, `a0`
+differed on 15/17, and `a1` on 12/17. This rejects H-output-join: the filter
+inputs are not equivalent with only a post-filter output mismatch. The current
+table does not record descriptor type/class or identity, so it cannot yet
+distinguish descriptor selection from an earlier producer/route divergence.
+PCM source/consumer counts were observed, but are not a substitute for that
+missing descriptor key. Oracle/MORT are independent route/reference controls;
+the exact payload comparison is single-source port evidence.
+
+This rules out H-output-join and leaves H-descriptor-class-divergence versus
+H-pre-filter-route-divergence open. No guard, skip, decoder, RSP, or AI change
+was made. The next discriminator adds descriptor type/class/identity and the
+descriptor-to-source pointer to the same phase-scoped table.
+
+ORIGIN: none; diagnostic-only matrix, no mitigation.

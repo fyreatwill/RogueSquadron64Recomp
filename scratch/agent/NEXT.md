@@ -1,58 +1,46 @@
-# Next work unit (s4326): cleanly qualify descriptor/filter/output payload join
+# Next work unit (s4327): classify descriptor/source divergence in the M5 join
 
 HYPOTHESIS-ID: m5-step9-mort-output
 
-State (s4325): the corrected join instrument is built, but paired retries were
-not jointly valid: one arm crashed before VI 512 and a later retry overlapped
-orphaned processes. No payload conclusion is entered into truth.
-
-State (s4324): the seeded-save matrix passed the independent MORT reference,
-oracle controls, and both VI-512 port controls. Silent and real-image arms
-each reached 128 calls at `0x8009D740` (256 call/entry rows total); early
-payloads matched but later `a0/a1` and table-used/value sequences diverged.
-Both arms then shared the known post-target `do_rom_read` crash.
+State (s4326): the clean seeded matrix passed oracle_gate=1, oracle whole-RDRAM,
+VI-1024 and VI-512 route controls, the MORT reference, and both port VI
+controls. Each port arm emitted 128 filter calls at 0x8009D740 before the
+shared crash. The 17 common route-row keys all differed in source/output hash;
+rate stayed 22047 Hz, while route ordinals differed and a0/a1 differed on
+15/17 and 12/17 rows. H-output-join is rejected. Descriptor type/class is not
+recorded, so the selection boundary is unresolved.
 
 Competing hypotheses:
 
-- H-same-descriptor-different-filter: both arms consume the same descriptor
-  class/rate and source bytes, but the filter table/arguments diverge before
-  output.
-- H-descriptor-class-divergence: the arms select different descriptor
-  type/rate or table classes before the filter call, explaining the payload
-  sequence.
-- H-output-join: filter inputs are equivalent, but post-filter PCM/output
-  bytes diverge at the generated or host boundary.
+- H-same-descriptor-different-filter: descriptor identity/type matches, but
+  source bytes differ before the filter; this is unlikely unless source_hash
+  is not the descriptor payload.
+- H-descriptor-class-divergence: descriptor type/class or identity differs
+  before the filter, explaining the source and argument sequence.
+- H-pre-filter-route-divergence: descriptor metadata matches, but an earlier
+  producer/route selection changes the source span before the filter call.
 
-Discriminator: one phase-scoped table covering all 128 filter calls in each
-arm, keyed by ordinal and descriptor identity, with descriptor type/rate,
-`a0/a1`, table value, source/output spans and hashes before/after the filter,
-and PCM source/consumer hash/count joins. Matching descriptor/type/rate and
-source hashes with divergent output selects H-output-join; divergent
-descriptor/table rows select H-descriptor-class-divergence; matching rows and
-matching output but a consumer mismatch selects the host/PCM join. A missing
-row is invalid unless both VI-512 controls and the filter positive control
-fire.
+Discriminator: extend the existing phase-scoped table in one batch with
+descriptor identity/type/class and the descriptor-to-source pointer, while
+retaining route ordinal/row, rate, a0/a1, table value, source/output spans and
+hashes, plus PCM source/consumer joins. Matching descriptor metadata with
+divergent source selects H-pre-filter-route-divergence; divergent descriptor
+metadata selects H-descriptor-class-divergence; matching metadata and source
+but a filter-only change supports H-same-descriptor-different-filter. A
+missing row is invalid unless the oracle positive control, oracle VI-1024 and
+VI-512, MORT verdict, both port VI controls, and both filter controls fire.
 
-Before building, inspect the independent controls and existing row writers:
+Before building, inspect the descriptor producer and existing join fields:
 
-`sed -n '1,220p' tools/oracle/README.md`
+`rg -n -C 5 'rs64_m5_descriptor_start|descriptor_type|route_snapshot|m5-filter-join' src/main/main.cpp src/main`
 
-`rg -n 'filter-voice-audit|init-desc|pcm-boundary-(source|consumer)|8009D740|mort_probe' src/main tools scratch/agent/run_s4321_m5_mort_output.sh`
-
-Add the complete table in one batch, preserving the positive controls and
-phase budget. Build once:
+Add the complete descriptor-to-filter fields in one batch, then build once:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run both arms in one matrix with the seeded `build/saves` and existing route
-recipe:
+Run the same clean seeded matrix:
 
-`zsh scratch/agent/run_s4321_m5_mort_output.sh`
+`pgrep -fl RogueSquadron64Recomp || true; zsh scratch/agent/run_s4321_m5_mort_output.sh`
 
-Require `oracle_gate=1`, the MORT reference verdict, one VI-1024 and one
-VI-512 marker in the oracle, and `[m5-port-vi-control]=1` in both arms before
-interpreting the payload table. Do not alter RSP dispatch, the decoder, AI
-bridge, or add a game-path guard.
-
-RESUME (s4326 close-out): instrument is built; only the clean matrix run remains.
-Check `pgrep -fl RogueSquadron64Recomp` is empty (SIGKILL strays) before running.
+Keep the same oracle/MORT/VI/filter controls. Do not alter RSP dispatch,
+decoder, AI bridge, or add a game-path guard.

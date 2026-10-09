@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4325 (M5 filter-join instrument built; matrix retries not jointly interpretable). Previously 4324 (M5 filter matrix route-qualified; both arms hit the same active callsite). Previously 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4326 (clean M5 filter/output join selected input-stream divergence). Previously 4325 (M5 filter-join instrument built; matrix retries not jointly interpretable). Previously 4324 (M5 filter matrix route-qualified; both arms hit the same active callsite). Previously 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -64,6 +64,20 @@ first filter payload rows matched, while later `a0/a1` and table-used/value
 sequences diverged; source/output buffer geometry remained the same. Both
 arms then hit the known shared `do_rom_read` crash after the target phase.
 
+**M5 Step 9 clean filter/output join (s4326).** The seeded matrix passed
+`oracle_gate=1`, the oracle whole-RDRAM positive control, oracle title VI 1024
+and hangar VI 512, the MORT reference verdict, and one port VI control in each
+arm. Silent and real-image arms each emitted 128 filter calls at
+`0x8009D740` before the shared known crash. Both arms stayed at rate 22047 Hz
+on the 17 common route-row keys, but every common row differed in source hash
+and output hash; route ordinals also differed, and 15/17 rows differed in
+`a0` and 12/17 in `a1`. This rejects H-output-join (equivalent filter inputs
+with only post-filter output divergence). It does not distinguish descriptor
+class from an earlier route/stream selection because the current join table
+records rate but not descriptor type. Exact row comparison is single-source
+port evidence; the independent oracle/MORT controls qualify the route and
+reference decoder, not the payload values.
+
 This refutes s4323's route/state blocker and rejects H-real-eligibility and
 H-real-dispatch as explanations for the previous real-arm null. It also
 supersedes s4322's real-arm-zero result, which was a route/run-state artifact,
@@ -107,7 +121,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4325) The phase-scoped [m5-filter-join] table now records route ordinal/row, arm, rate, arguments, live sp-based table address/value, and guest source/output hashes. The MORT reference and oracle controls passed in the first route attempt, and both arms reached 256 rows, but that attempt used a pre-fix field alignment; corrected retries were invalid because one arm crashed before VI 512 and a later retry overlapped orphaned processes. No payload conclusion is valid yet. Next: rerun the corrected matrix from a clean process state, require both arms' VI-512 and filter controls, then compare the keyed rows to PCM joins.
+00. (s4326) The clean route-qualified join finds same-rate but different source/output hashes on every common route-row key, with differing route ordinals and frequent argument differences. H-output-join is rejected; descriptor type/class and the producer/route boundary remain open. Next: add descriptor type/class and descriptor identity to the existing phase-scoped table in one batch, rerun the same seeded matrix with all oracle/MORT/VI controls, and classify whether the source divergence begins at descriptor selection or before the filter call. Do not add a guard or alter decoder/RSP/AI behavior.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -171,6 +185,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 MORT output | s4322: the independent reference decoder passed four rows covering both rates with nonzero output. Runtime comparison is now route-qualified but blocked on explaining why the real-image arm has no active filter rows. |
 | M5 Step 9 payload join | s4324: both arms reached `0x8009D740` for 128 calls and produced 256 call/entry rows; early payloads match but later arguments/table values diverge. Descriptor class/rate and decoded-output ownership remain open. |
 | M5 Step 9 filter join instrument | s4325: built a phase-scoped route-keyed table with rate, arguments, live sp-based table value, and source/output hashes. The reference/oracle controls passed, but corrected paired rows were not jointly valid; descriptor class/rate and decoded-output ownership remain open. |
+| M5 Step 9 clean filter/output join | s4326: both valid port arms emitted 128 calls at the same active site and rate, but all 17 common route-row keys differed in source and output hashes; H-output-join is rejected. Descriptor type/class is not yet recorded, so payload ownership remains open. |
 
 ## Durable evidence boundary
 
