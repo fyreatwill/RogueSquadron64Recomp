@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4349: the qualified retail source-span witness reached
+Updated for session 4350: the qualified retail source-span witness reached
 hangar with 78,754,385 whole-RDRAM write-control hits, 535 C904 executions,
 and 128 phase-gated input spans. The observed span writers were `bzero` at
 `0x8002A0B8/0x8002A0BC` and lattice output at `0x8009DB2C`; no captured writer
@@ -13,6 +13,16 @@ initialization and the latter is output-buffer reuse, so this moves the
 semantic boundary to the caller's `+0x11C8` base/index publication. Retail
 writer attribution is single-source; whole-RDRAM, VI, and C904 execution
 controls qualify route and coverage.
+The fixed retail base/index witness passed 124.6M
+whole-RDRAM callbacks, title VI 1024, hangar VI 512, and 535 C904 executions.
+`+0x198` was written four times by `0x8009BE90` and settled on stable base
+`0x801B2C60`; `+0x11C8` had five initialization/reset writes and 535 advancing
+writes from `0x8009D790`. No sampled cursor source value matched the retained
+`0x0010/0x3108` family. This rejects base/index as the family producer and
+selects ordinary ring-buffer scheduling; the next boundary is the stable
+base-buffer contents/producer. The source/value comparison is single-source
+retail evidence; whole-RDRAM, VI, and C904 controls independently qualify
+route and execution.
 Previously 4348: a bounded generated-MIPS census resolved the
 `0x8009DB2C` writer. `runVoiceLatticeFilter` reads each input halfword from
 `$t1`/`a1` at `0x8009D980`, applies fixed-point lattice arithmetic and
@@ -327,13 +337,15 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-1. (M5, HYPOTHESIS-ID `m5-step9-base-index-publication`) Attribute the
-   caller's `+0x11C8` cursor and `+0x198` base publication feeding the C904
-   input pointer at `0x8009C0E4`. The qualified s4349 witness found only
-   bzero initialization and lattice output reuse in the captured source
-   spans, with no retained family value. Run one phase-gated retail oracle
-   witness for both field writers and values, with whole-RDRAM, title, hangar,
-   and C904 controls. Do not alter decoder/RSP/AI behavior.
+1. (M5, HYPOTHESIS-ID `m5-step9-base-buffer-producer`) Attribute the stable
+   base buffer `0x801B2C60` selected by `+0x198` and the cursor-indexed C904
+   input pointer. Run one phase-gated retail oracle witness that joins C904
+   input pointers to the base-buffer source span and records writer PCs/source
+   values, retaining whole-RDRAM, title, hangar, and C904 controls. A
+   base-buffer writer carrying the retained family selects H-buffer-source;
+   stable ring data with no family selects H-selector/decode boundary; a
+   pointer/geometry mismatch selects H-route-alias. Do not alter decoder/RSP/AI
+   behavior.
 
 (s4348) Static census result: `runVoiceLatticeFilter` reads `$t1`/`a1` and
 writes `$t0`/`a2`; the quantized `0x8009DB2C` store is legitimate lattice
@@ -346,6 +358,14 @@ spans. Dynamic writes were `bzero` at `0x8002A0B8/BC` and lattice output at
 `0x8009DB2C`; no captured writer value matched `0x0010/0x3108`. This rejects
 those writes as the retained family producer and moves the next boundary to
 the caller's `+0x11C8` base/index publication.
+
+(s4350) The qualified retail base/index witness passed 124.6M whole-RDRAM
+callbacks, title/hangar VI controls, and 535 C904 executions. `+0x198` was
+written four times by `0x8009BE90` and settled on stable base `0x801B2C60`;
+`+0x11C8` had five initialization/reset writes and 535 advancing writes from
+`0x8009D790`. No sampled cursor source value matched the retained family.
+This rejects base/index as the family producer and selects ordinary ring-buffer
+scheduling; the next boundary is the stable base-buffer contents/producer.
 
 00a. (s4344) The value-aware witness passed the whole-RDRAM control (13,107
 hits), title VI `0x00790400`, hangar VI `0x006AB400`, and C904 execution control

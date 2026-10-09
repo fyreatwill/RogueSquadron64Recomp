@@ -149056,3 +149056,27 @@ family producer. This rejects H-input-span-source and moves the next boundary
 to the caller's `+0x11C8` base/index publication at `0x8009C0D8..0x8009C0E8`.
 The writer/value attribution is single-source retail evidence; whole-RDRAM,
 VI, and C904 execution controls independently qualify route and coverage.
+## Session 4350 (2026-10-08) — retail base/index witness selects ring scheduling
+
+Ran the prescribed M5 base/index retail witness. The first instrumented run
+used an incorrectly calculated cursor watch (`0x001535E8` instead of the
+correct physical `0x001545E8`) and stopped without a shutdown summary; it was
+discarded as invalid. The corrected run passed 124.9M whole-RDRAM writes,
+reached title VI 1024 and hangar VI 512, and recorded 535 C904 executions.
+
+The base field at object `0x80153420 + 0x198` had four writes from
+`0x8009BE90`; its source was zero during title initialization and
+`0x801B2C60` at hangar. The cursor field at `+0x11C8` had 540 writes: five
+initialization/reset writes from `0x8009BED8`/`0x8009BF74` and 535 advancing
+writes from `0x8009D790`. The final fixed witness captured source scalars for
+both fields and phase-gated C0D8 rows; base remained `0x801B2C60` while cursor
+values advanced through the ring, with no sampled cursor source matching the
+retained `0x0010/0x3108` family.
+
+This rejects H-index/base-source and selects ordinary span/ring scheduling;
+the next boundary is the contents and producer of stable base buffer
+`0x801B2C60`. The value attribution is single-source retail evidence, while
+whole-RDRAM, title/hangar VI, and C904 execution controls independently qualify
+route and coverage. The new oracle all-writer mode and base-field dump are
+regeneration-independent diagnostics; no decoder, RSP, AI, or runtime behavior
+changed.

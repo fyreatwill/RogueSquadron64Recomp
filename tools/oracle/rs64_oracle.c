@@ -389,6 +389,7 @@ struct pc_field_dump_row {
     uint32_t branch_selector;
     uint32_t branch_state;
     uint32_t cursor;
+    uint32_t base_198;
     uint32_t selected_addr;
     uint32_t selected_word;
     uint32_t state_18a;
@@ -468,6 +469,7 @@ struct store_field_dump_row {
 static struct store_field_dump_pc
     g_store_field_dump_pc[MAX_STORE_FIELD_DUMP_PCS];
 static int g_n_store_field_dump_pc;
+static unsigned int g_store_field_dump_all_mask;
 static struct store_field_dump_row
     g_store_field_dump_rows[MAX_STORE_FIELD_DUMP_ROWS];
 static int g_n_store_field_dump_rows;
@@ -648,6 +650,7 @@ static void dump_pc_field(uint32_t pc)
     row.branch_selector = gpr32(2);
     row.branch_state = debug_mem_u16(row.s1 + 0x22u);
     row.cursor = pDebugMemRead32(debug_rdram_addr((row.object + 0x11C8u) & ~3u));
+    row.base_198 = debug_mem_u32(row.object + 0x198u);
     row.selected_addr = (row.object + 0x1A0u + ((row.cursor >> 3) & 0xFFCu)) & 0x1FFFFFFFu;
     row.selected_word = pDebugMemRead32(debug_rdram_addr(row.selected_addr & ~3u));
     row.state_18a = debug_mem_u16(row.object + 0x18Au);
@@ -714,6 +717,7 @@ joined_done:
             bucket->rows[i].branch_selector == row.branch_selector &&
             bucket->rows[i].branch_state == row.branch_state) {
             if (bucket->rows[i].cursor == row.cursor &&
+                bucket->rows[i].base_198 == row.base_198 &&
                 bucket->rows[i].selected_addr == row.selected_addr &&
                 bucket->rows[i].selected_word == row.selected_word &&
                 bucket->rows[i].state_18a == row.state_18a &&
@@ -732,14 +736,14 @@ joined_done:
     printf("[pc-field-dump] pc=0x%08x width=%u origin=0x%08x "
            "prev_pc=0x%08x ra=0x%08x s0=0x%08x s1=0x%08x source_word=0x%08x "
            "source_byte=0x%02x branch_selector=0x%08x "
-           "branch_state=0x%04x object=0x%08x cursor=0x%08x "
+           "branch_state=0x%04x object=0x%08x cursor=0x%08x base_198=0x%08x "
            "selected_addr=0x%08x selected_word=0x%08x state_18a=0x%04x "
            "state_18c=0x%04x n=1\n",
            pc, pDebugMemRead32(VI_WIDTH_ADDR),
            pDebugMemRead32(VI_ORIGIN_ADDR), row.prev_pc, row.ra,
            row.s0, row.s1,
            row.source_word, row.source_byte, row.branch_selector,
-           row.branch_state, row.object, row.cursor, row.selected_addr,
+           row.branch_state, row.object, row.cursor, row.base_198, row.selected_addr,
            row.selected_word, row.state_18a, row.state_18c);
     fflush(stdout);
 }
@@ -836,8 +840,9 @@ static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
     int pc_index = store_field_dump_pc_index(pc);
     int i;
 
-    if (pc_index < 0 || !(g_store_field_dump_pc[pc_index].watch_mask &
-                           (UINT64_C(1) << watch)))
+    if ((g_store_field_dump_all_mask & (1u << watch)) == 0 &&
+        (pc_index < 0 || !(g_store_field_dump_pc[pc_index].watch_mask &
+                           (UINT64_C(1) << watch))))
         return;
     g_store_field_dump_candidate_callbacks++;
     if (!g_store_field_dump_any_phase && !store_field_phase_log_match())
@@ -948,6 +953,16 @@ static void add_store_field_dump(const char *arg)
         g_store_field_dump_pc[i].watch_mask |= UINT64_C(1) << watch;
     }
     free(copy);
+}
+
+static void add_store_field_dump_all(const char *arg)
+{
+    unsigned long watch = strtoul(arg, NULL, 0);
+    if (watch >= 32 || watch >= MAX_WATCHES) {
+        fprintf(stderr, "[oracle] bad --store-field-dump-all '%s'\n", arg);
+        exit(2);
+    }
+    g_store_field_dump_all_mask |= 1u << watch;
 }
 
 static void add_pc_field_dump_pcs(const char *arg)
@@ -2012,7 +2027,7 @@ static void dbg_update(unsigned int pc)
                 }
             }
             if ((access_flags & M64P_BKP_FLAG_WRITE) &&
-                g_n_store_field_dump_pc > 0)
+                (g_n_store_field_dump_pc > 0 || g_store_field_dump_all_mask != 0))
                 dump_store_field(i, pc, accessed);
             if ((g_post_value_watch_mask & (UINT64_C(1) << i)) &&
                 (access_flags & M64P_BKP_FLAG_WRITE) &&
@@ -2611,6 +2626,7 @@ static void usage(void)
         "  --pc-field-dump-any-phase allow field rows before/after phase buckets\n"
         "  --c904-witness       dump phase-gated C904 entry and selected-word reader rows\n"
         "  --store-field-dump W:A[,B...] dump phase-gated fields at exact writes on watch W\n"
+        "  --store-field-dump-all W dump phase-gated fields at every write on watch W\n"
         "  --store-field-dump-any-phase allow store-field-dump rows in any VI phase\n"
         "  --pc-task-dump A   dump phase-gated OSTask fields at PC A\n"
         "  --pc-task-type N   OSTask type to dump (default 2=audio; 1=gfx; 0=any)\n"
@@ -2720,6 +2736,8 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--store-field-dump") && i + 1 < argc)
             add_store_field_dump(argv[++i]);
+        else if (!strcmp(argv[i], "--store-field-dump-all") && i + 1 < argc)
+            add_store_field_dump_all(argv[++i]);
         else if (!strcmp(argv[i], "--store-field-dump-any-phase"))
             g_store_field_dump_any_phase = 1;
         else if (!strcmp(argv[i], "--pc-task-dump") && i + 1 < argc) {
