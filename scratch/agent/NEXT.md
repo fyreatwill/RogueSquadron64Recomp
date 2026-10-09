@@ -1,43 +1,43 @@
-# Next work unit (s4328): carry the CPU caller object into the M5 descriptor join
+# Next work unit (s4329): direct D740 caller witness
 
 HYPOTHESIS-ID: m5-step9-mort-output
 
-State (s4327): two seeded matrix runs passed oracle_gate=1, oracle whole-RDRAM,
-VI-1024 and VI-512 route controls, the MORT reference, and both port VI
-controls. Each port arm emitted 256 filter rows at 0x8009D740 before the shared
-crash. The RSP task and sp+0x114 descriptor candidates were invalid witnesses,
-not null descriptor results. The CPU caller probe already sees the original
-caller a0/a1/a2/a3; that object must be joined to the filter rows.
+The s4328 matrix passed oracle whole-RDRAM/title/hangar, MORT reference, both
+port VI controls, and both filter controls. Both arms emitted 256 filter rows,
+but the retained `rs64_filter_voice_caller_probe` tuple joined zero rows; its
+visible caller rows were only the `0x8009C88C` bucket. Do not interpret this as
+descriptor equality.
 
 Competing hypotheses:
 
-- H-same-descriptor-different-filter: CPU caller-object descriptor metadata
-  matches, but source bytes differ before the filter.
-- H-descriptor-class-divergence: CPU caller-object descriptor type/class or
-  identity differs before the filter.
-- H-pre-filter-route-divergence: caller-object metadata matches, but an earlier
-  producer/route selection changes the source span.
+- H-entry-bypassed: the generated D740 function-entry probe is not executed on
+  the path that reaches the active filter callsite.
+- H-cross-thread-or-overwritten: the entry probe runs, but its tuple is not
+  visible at the filter call because execution crosses workers or another
+  caller overwrites it.
+- H-wrong-saved-source: the entry probe runs and the join is visible, but the
+  original descriptor/source arguments were not retained from the actual
+  D740 caller frame.
 
-Discriminator: make rs64_filter_voice_caller_probe retain the original CPU
-caller object for the current thread, then extend the existing phase-scoped
-table in one batch with caller object, its descriptor candidate/type/class,
-and descriptor-to-source pointer. Retain route ordinal/row, rate, a0/a1, table
-value, source/output spans and hashes, plus PCM joins. Matching caller metadata
-with divergent source selects H-pre-filter-route-divergence; divergent metadata
-selects H-descriptor-class-divergence; matching metadata and source but a
-filter-only change supports H-same-descriptor-different-filter.
+Discriminator: add one direct witness immediately before the generated
+`filterVoiceSampleBlock` call at `0x8009D740`, carrying the original function
+arguments from verified saved-register locations (`a0/a1/a2/a3`), and emit a
+phase-scoped D740 store counter. One positive D740 store with a joinable tuple
+selects H-wrong-saved-source or H-cross-thread-or-overwritten; zero stores with
+the callsite active selects H-entry-bypassed; a matching tuple with divergent
+source selects pre-filter route divergence, while differing descriptor fields
+select descriptor-class divergence.
 
-Before building, inspect the descriptor producer and existing join fields:
+Before building, inspect the complete D740 prologue and saved-register flow:
 
-`rg -n -C 5 'rs64_filter_voice_caller_probe|rs64_filter_voice_audit_row|m5-filter-join' src/main/main.cpp src/main`
+`sed -n '1775,1865p' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`
+`sed -n '4740,4800p' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`
 
-Add the complete descriptor-to-filter fields in one batch, then build once:
+Patch the existing generated diagnostic through its fixup-compatible source,
+build once, and run the same matrix:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
+`zsh scratch/agent/run_s4321_m5_mort_output.sh`
 
-Run the same clean seeded matrix:
-
-`pgrep -fl RogueSquadron64Recomp || true; zsh scratch/agent/run_s4321_m5_mort_output.sh`
-
-Keep the same oracle/MORT/VI/filter controls. Do not alter RSP dispatch,
-decoder, AI bridge, or add a game-path guard.
+Keep all oracle/MORT/VI/filter controls. Do not change RSP dispatch, decoder,
+AI bridge, or add a game-path guard.

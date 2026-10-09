@@ -2621,6 +2621,17 @@ static const char* rs64_filter_voice_range_class(bool source_ok, bool output_ok,
     return value;
 }
 
+struct Rs64FilterVoiceCallerObject {
+    uint32_t site = 0;
+    uint32_t object = 0;
+    uint32_t descriptor = 0;
+    uint32_t aux0 = 0;
+    uint32_t aux1 = 0;
+    bool valid = false;
+};
+
+static Rs64FilterVoiceCallerObject g_rs64_filter_voice_caller;
+
 static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
                                         uint32_t sp, uint32_t ra,
                                         uint32_t a0, uint32_t a1,
@@ -2681,6 +2692,20 @@ static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
     const uint32_t voice_w5 = rs64_filter_voice_guest_word(voice_object + 0x14u);
     const uint32_t voice_w6 = rs64_filter_voice_guest_word(voice_object + 0x18u);
     const uint32_t voice_w7 = rs64_filter_voice_guest_word(voice_object + 0x1Cu);
+    const bool caller_join = g_rs64_filter_voice_caller.valid &&
+                             g_rs64_filter_voice_caller.site == site;
+    const uint32_t caller_object = caller_join ?
+        g_rs64_filter_voice_caller.object : 0u;
+    const uint32_t caller_descriptor = caller_join ?
+        g_rs64_filter_voice_caller.descriptor : 0u;
+    const uint32_t caller_aux0 = caller_join ? g_rs64_filter_voice_caller.aux0 : 0u;
+    const uint32_t caller_aux1 = caller_join ? g_rs64_filter_voice_caller.aux1 : 0u;
+    const uint32_t descriptor_w0 = rs64_filter_voice_guest_word(caller_descriptor);
+    const uint32_t descriptor_w1 = rs64_filter_voice_guest_word(caller_descriptor + 4u);
+    const uint32_t descriptor_w2 = rs64_filter_voice_guest_word(caller_descriptor + 8u);
+    const uint32_t descriptor_type = (descriptor_w0 >> 28) & 0xFu;
+    const uint32_t descriptor_class = (descriptor_w1 >> 24) & 0x3Fu;
+    const uint32_t descriptor_source = caller_join ? caller_aux1 : 0u;
     fprintf(stderr,
             "[m5-filter-join] edge=%s site=0x%08X arm=%s phase=%u width=%u origin=0x%06X "
             "route_ordinal=%u route_row=%u rate=%u a0=%d a1=%d a2=0x%08X a3=0x%08X "
@@ -2688,13 +2713,19 @@ static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
             "table=0x%08X table_value=0x%08X voice_object=0x%08X "
             "voice_w0=0x%08X voice_w1=0x%08X voice_w2=0x%08X voice_w3=0x%08X "
             "voice_w4=0x%08X voice_w5=0x%08X voice_w6=0x%08X voice_w7=0x%08X "
-            "source_delta=%d\n",
+            "source_delta=%d caller_join=%u caller_object=0x%08X caller_descriptor=0x%08X "
+            "caller_aux0=0x%08X caller_aux1=0x%08X descriptor_w0=0x%08X "
+            "descriptor_w1=0x%08X descriptor_w2=0x%08X descriptor_type=%u "
+            "descriptor_class=%u descriptor_source=0x%08X\n",
             edge, site, arm ? arm : "n/a", phase, width, origin, route_ordinal,
             route_row, rs64_audio_rate_snapshot(), index, selector, source, output,
             source, source_hash, output, output_hash, table, table_value,
             voice_object, voice_w0, voice_w1, voice_w2, voice_w3, voice_w4,
             voice_w5, voice_w6, voice_w7,
-            static_cast<int32_t>(source - voice_object));
+            static_cast<int32_t>(source - voice_object), caller_join ? 1u : 0u,
+            caller_object, caller_descriptor, caller_aux0, caller_aux1,
+            descriptor_w0, descriptor_w1, descriptor_w2, descriptor_type,
+            descriptor_class, descriptor_source);
     fflush(stderr);
     fprintf(stderr,
             "[filter-voice-audit] edge=%s site=0x%08X caller=%s phase=%u width=%u origin=0x%06X row=%lu sp=0x%08X ra=0x%08X a0=%d a1=%d source=0x%08X source_span=26 output=0x%08X output_span=40 table_used=%u table=0x%08X table_span=1 source_ok=%u output_ok=%u table_ok=%u source_delta=%d output_delta=%d range=%s\n",
@@ -2740,6 +2771,14 @@ extern "C" void rs64_filter_voice_caller_probe(const char* caller,
                    (own && *own && *own != '0')) ? 1 : 0;
     }
     if (!enabled) return;
+    if (site == 0x8009D740u) {
+        g_rs64_filter_voice_caller.site = site;
+        g_rs64_filter_voice_caller.object = a0;
+        g_rs64_filter_voice_caller.descriptor = a1;
+        g_rs64_filter_voice_caller.aux0 = a2;
+        g_rs64_filter_voice_caller.aux1 = a3;
+        g_rs64_filter_voice_caller.valid = true;
+    }
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;

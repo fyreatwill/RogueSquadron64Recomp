@@ -148514,3 +148514,31 @@ matching metadata + divergent source selects H-pre-filter-route-divergence,
 divergent metadata selects H-descriptor-class-divergence.
 
 ORIGIN: none; diagnostic-only instrument and matrix, no mitigation.
+
+## Session 4328 (2026-10-08) — M5 caller-object join remained unjoinable
+
+HYPOTHESIS-ID: m5-step9-mort-output
+
+Extended the M5 phase-scoped filter table with a retained CPU caller tuple,
+descriptor words, and derived fields. The first build/run exposed a phase-gated
+retention bug; moving retention before the phase gate and then changing the
+storage from thread-local to process-wide were both rerun with the prescribed
+seeded matrix. The final matrix passed the oracle whole-RDRAM positive control,
+title VI 1024, hangar VI 512, MORT reference, both port VI controls, and both
+filter controls. Silent and real-image arms each emitted 256 filter rows before
+the shared known crash.
+
+Despite those controls, all 512 final rows had `caller_join=0`. The caller
+probe emitted 128 rows for `0x8009C88C` in each arm and no joinable
+`0x8009D740` witness. This rules out treating the missing join as descriptor
+equality or a null descriptor. It leaves entry-probe bypass, cross-worker
+visibility/overwrite, or incorrect saved-source selection open. The descriptor
+class versus pre-filter route discriminator did not run. No decoder, RSP, AI,
+game-path, guard, or mitigation behavior changed.
+
+The independent oracle/MORT controls qualify route and reference behavior;
+caller absence is single-source port instrumentation evidence. Next is a direct
+callsite witness immediately before the generated D740 filter call, with a
+phase-scoped store counter and verified saved-register source.
+
+ORIGIN: none; diagnostic-only instrument and matrix, no mitigation.
