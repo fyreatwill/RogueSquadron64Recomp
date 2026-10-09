@@ -150930,3 +150930,10 @@ Result: positive control passed (5270-5386 `[rs-hdr]` lines per run, hflags=0x00
 Facts gained: header flag 2 = allocated at ptr-0x10, readable from the malloc exit hook. coalesceFreeHeapBlocks is called from inside rs_malloc (0x80001430), so it is a candidate unlogged free path for the nested blocks (B) - unmeasured.
 ORIGIN: no mitigation landed; diagnostic hook only.
 Next: reach VI 1024 reliably (only 1 of 7 runs so far) - s4467 recipe queued as a soak; replay `[rs-hdr-nested]` when it hits; or log coalesce flag 2->1 transitions as the B discriminator.
+
+## Session 4467 (2026-10-09) — s4467 soak was invalid (recipe resolved repo root wrong); fixed and requeued as s4468
+
+What ran: the loop ran queued soak s4467_hdr_nested (rc=0, 16s). Its log shows `cd: .../scratch/build: No such file or directory` — `cd "$(dirname "$0")/../.."` from scratch/agent/soak_queue/ lands in scratch/, not the repo root, so no game ever launched (0 rs-malloc lines, 0 rs-hdr-nested lines, no run.log). The "rc=0" verdict was a false pass: the script does not exit nonzero when cd fails.
+Result: NO evidence for or against hypothesis A (overlapping malloc) / B (benign free) — the instrument never ran, and no positive control fired. Nothing enters CURRENT-TRUTH.
+Fix: scratch/agent/soak_queue/s4468_hdr_nested.sh uses `git rev-parse --show-toplevel` and exits 2 if build/ is missing; also greps rs-hdr-nested counts per run. Queued for the loop (4 concurrent 300 s runs).
+Rules out: nothing. Lesson: soak recipes must derive the root via git, not dirname math (queue dir is 3 levels deep).
