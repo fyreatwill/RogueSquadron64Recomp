@@ -148900,3 +148900,16 @@ the retained retail tuple. It does not identify the retail producer, DMA, or
 semantic remapping boundary. The comparison is qualified single-source port
 evidence against the independently retained retail table; no guard or game
 behavior changed.
+
+Verdicts (close-out addendum): REFUTES H-port-table-direct and
+H-port-selector-direct (the two port-side candidates for the retail C904
+`branch_state=0x0010/0x3108` family) -- 256 qualified rows, zero matches on
+either field. SELECTS H-port-boundary-remap as the surviving port-side
+hypothesis (single-source, port only; the C88C callsite arm was an unreached
+route-placement null, not evidence). Next discriminator, in NEXT.md
+(HYPOTHESIS-ID m5-step9-retail-branch-boundary): one retail oracle run with
+whole-RDRAM/title/hangar positive controls and phase-gated read/write watches
+on the retail C904 object and table range; a retail accessor carrying the
+0x0010/0x3108 family selects retail-table vs retail-selector producer, and no
+access moves the boundary earlier than C904. ORIGIN: no mitigation added; the
+diff is instrumentation only.
