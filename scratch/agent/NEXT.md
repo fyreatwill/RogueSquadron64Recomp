@@ -1,33 +1,35 @@
-# Next work unit (s4360): classify live retail range arguments
+# Next work unit (s4361): compare joined task payload with selector fields
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-The s4359 qualified oracle capture passed whole-RDRAM, reached hangar, and
-captured 512 C904/C950 witness rows. The range was live in title at PCs
-`0x80033D20..0x800340FC`, but the exact `0x80033FCC` watch still produced zero
-typed task rows and zero joins. The range output cap prevented a hangar range
-classification.
+The qualified s4360 retail oracle capture passed whole-RDRAM and both target
+phase controls. A bounded range table retained 512 rows in each title origin
+(`0x00790400`, `0x00790800`) and hangar origin (`0x006AB400`). In all buckets,
+`0x80033FCC` received `$a0=0x80149470` with `MEM_W($a0)=2`; the C904/C950
+join was live. The prior zero at this PC was an instrument-boundary result.
 
 Competing hypotheses:
 
-- H-consumer-nearby: a nearby range PC receives a valid type-2 OSTask pointer;
-  its task fields can be joined to C904/C950.
-- H-consumer-other-overlay: nearby PCs execute, but their `$a0` structures are
-  not type-2 tasks in both qualified phase buckets.
-- H-pre-filter-origin: a joined task row has source fields that already
-  disagree with the C904/C950 input/selected fields.
+- H-pre-filter-origin: the joined task payload/data block already disagrees
+  with the C904/C950 input or selected fields.
+- H-consumer-transform: the joined task payload agrees with the selector inputs,
+  and divergence is introduced after the task consumer.
+- H-selector-multiplex: the same type-2 task is shared, but phase/source-keyed
+  payload words identify a separate selector branch before output decode.
 
-Discriminating measurement: add one bounded range-argument dump that records
-exact PC, phase, `$a0`, `MEM_W($a0)`, and the OSTask fields at `$a0+0x28..0x3C`
-for every range execution, with phase buckets `0x00790800:1024`,
-`0x00790400:1024`, and `0x006AB400:512`. Nearby valid type-2 rows select
-H-consumer-nearby; only non-task rows select H-consumer-other-overlay; source
-disagreement in a joined row selects H-pre-filter-origin. Keep the whole-RDRAM
-control, C904/C950 witness, exact `0x80033FCC` task watch, and VI trace in the
-same capture.
+Discriminating measurement: add one phase-keyed bounded dump at the live
+`0x80033FCC` task rows that records the task `data_ptr` block words alongside
+the latest C904/C950 input words, selected address/word, and branch fields;
+retain all three phase buckets and the whole-RDRAM/C904/C950/VI controls. A
+joined payload/input disagreement selects H-pre-filter-origin; agreement with
+later-only divergence selects H-consumer-transform; phase-specific payload
+families with shared task identity select H-selector-multiplex.
 
-Expected commands: extend `tools/oracle/rs64_oracle.c` with the bounded range
-argument dump, run `./tools/oracle/build.sh`, then repeat the known-good oracle
-recipe from s4359 with SIGKILL watchdogs. First run the whole-RDRAM and
-C904/C950 controls in that same capture; discard it if either control or the
-target VI phases is absent.
+Expected commands: extend `tools/oracle/rs64_oracle.c` with the joined payload
+dump, run `./tools/oracle/build.sh`, then repeat the verified s4360 Rice recipe
+from the repo root for 75 seconds with Start presses at 6,11,...,56 seconds,
+capturing to `scratch/agent/soak_results/s4361_payload_compare.log`. Keep
+`--watch-write 0x0:0x800000`, the three `--pc-phase-log-width` buckets,
+`--watch-pc 0x80033fcc`, `--pc-task-dump 0x80033fcc`, `--c904-witness`,
+`--c904-task-join`, and `--vi-trace`. Discard any run lacking the positive
+control or title and hangar VI origins.

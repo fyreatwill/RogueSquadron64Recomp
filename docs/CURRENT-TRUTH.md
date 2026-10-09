@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4359 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4360 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -31,17 +31,16 @@ source/output hashes, and branch fields diverge between arms. This rejects a
 post-filter-only explanation and leaves the pre-filter stream/selector
 boundary open.
 
-Session 4359's qualified range capture passed the whole-RDRAM positive control
-and reached the retail 512 phase at `0x006AB400`. The bounded execution range
-`0x80033C00..0x80034100` was live in the title phase, with observed PCs from
-`0x80033D20` through `0x800340FC`; this rules out treating the whole local
-range as absent. However, the exact `0x80033FCC` task watch still produced zero
-typed task rows and zero C904-task joins, and the range's bounded printed rows
-did not reach the hangar phase. The capture recorded 512 C904/C950 witness
-rows in hangar, so controls were live, but it does not identify a type-2 task
-consumer or select pre-filter origin. The next probe must dump task-structure
-fields for every phase-keyed PC in the live range, using the observed title
-origin as well as the hangar origin.
+Session 4360's qualified range-argument capture passed the whole-RDRAM control,
+reached title and hangar, and retained 512 rows in each phase bucket
+`0x00790400:1024`, `0x00790800:1024`, and `0x006AB400:512`. In every bucket,
+`0x80033FCC` received `$a0=0x80149470` with `MEM_W($a0)=2`; its task dump
+recorded 1,776 type-2 rows and 1,133 non-type-2 rows, while the C904/C950
+join recorded 356,986 matches. This single-source retail-oracle result selects
+H-consumer-nearby and rules out an absent nearby type-2 consumer or the prior
+instrument boundary for this route. It does not yet distinguish a pre-filter
+origin from a consumer payload/layout transform; the next probe must compare
+the joined task payload fields against the C904/C950 input and selected fields.
 
 Session 4358's repaired C904/C950 join capture passed the retail whole-RDRAM
 control and reached the hangar phase. C904/C950 witnesses were live (512
@@ -103,13 +102,14 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Add one phase-keyed task-structure dump to the
-   live `0x80033C00..0x80034100` range, using title origins `0x00790800` and
-   `0x00790400` plus hangar `0x006AB400`, while retaining whole-RDRAM,
-   C904/C950, and the exact `0x80033FCC` task control. A valid type-2 task
-   structure at a nearby PC selects H-consumer-nearby; only non-task structures
-   in the range selects H-consumer-other-overlay/instrument boundary; a joined
-   task whose source fields already disagree selects H-pre-filter-origin.
+   `m5-selector-decode-boundary`. Compare phase-keyed rows at the live
+   `0x80033FCC` task consumer with the C904/C950 input and selected fields,
+   including task data-block words needed to identify whether disagreement
+   already exists at the joined task payload. A valid type-2 task is established
+   in all three target buckets; payload/input agreement followed by later
+   divergence selects consumer transform, while disagreement already present in
+   the joined payload selects H-pre-filter-origin. Retain whole-RDRAM, C904/C950,
+   and VI controls.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -121,7 +121,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream confirmed for the qualified route by source audit plus retail read/write attribution: no direct post-C904 store reaches `0x1535C4..0x1545C0`; sampled stores stop at `0x1535AC..0x1535BC`. |
-| M5 consumer join | Retail C904/C950 witnesses are live, but both the prior task/field join and the s4358 repaired C904/C950-to-task join have zero task rows at `0x80033FCC`; the presumed consumer PC is absent and the actual consumer boundary remains open. |
+| M5 consumer join | Qualified s4360 range/task capture found valid type-2 tasks at `0x80033FCC` in title and hangar; C904/C950 joins are live. The prior zero was an instrument-boundary result. Payload/source comparison remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |
 | Retail/port post-free stream layout | Retail and port share the first qualified read/free boundary, then diverge in later layout/value/order; exact consumer cause open. |

@@ -528,6 +528,29 @@ static long g_pc_task_dump_overflow;
 static int g_n_pc_task_dump_rows;
 static int g_pc_task_join_enabled;
 static int g_pc_phase_quiet;
+#define MAX_PC_RANGE_TASK_ROWS 1536
+#define MAX_PC_RANGE_TASK_ROWS_PER_PHASE 512
+struct pc_range_task_row {
+    uint32_t pc;
+    uint32_t width;
+    uint32_t origin;
+    uint32_t a0;
+    uint32_t a0_word;
+    uint32_t output_buff;
+    uint32_t output_buff_size;
+    uint32_t data_ptr;
+    uint32_t data_size;
+    uint32_t yield_data_ptr;
+    uint32_t yield_data_size;
+    long n;
+};
+static int g_pc_range_task_dump_enabled;
+static struct pc_range_task_row
+    g_pc_range_task_rows[MAX_PC_RANGE_TASK_ROWS];
+static int g_n_pc_range_task_rows;
+static long g_pc_range_task_hits;
+static long g_pc_range_task_invalid;
+static long g_pc_range_task_overflow;
 struct pc_task_join_row {
     uint32_t width;
     uint32_t origin;
@@ -1208,6 +1231,53 @@ static void dump_pc_task(uint32_t pc)
            row->output_buff_size, row->yield_data_ptr,
            row->yield_data_size, row->data_ptr_plus_100, row->field_phys);
     fflush(stdout);
+}
+
+static void dump_pc_range_task(uint32_t pc)
+{
+    struct pc_range_task_row *row;
+    uint32_t task_ptr;
+    uint32_t task_phys;
+    uint32_t width;
+    uint32_t origin;
+
+    if (!g_pc_range_task_dump_enabled || !pc_phase_log_match())
+        return;
+    g_pc_range_task_hits++;
+    width = pDebugMemRead32(VI_WIDTH_ADDR);
+    origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    task_ptr = gpr32(4);
+    task_phys = task_ptr & 0x1FFFFFFFu;
+    if (task_phys > RDRAM_SIZE - 0x40u) {
+        g_pc_range_task_invalid++;
+        return;
+    }
+    {
+        int phase_rows = 0;
+        int i;
+        for (i = 0; i < g_n_pc_range_task_rows; i++)
+            if (g_pc_range_task_rows[i].width == width &&
+                g_pc_range_task_rows[i].origin == origin)
+                phase_rows++;
+        if (phase_rows >= MAX_PC_RANGE_TASK_ROWS_PER_PHASE ||
+            g_n_pc_range_task_rows >= MAX_PC_RANGE_TASK_ROWS) {
+            g_pc_range_task_overflow++;
+            return;
+        }
+    }
+    row = &g_pc_range_task_rows[g_n_pc_range_task_rows++];
+    row->pc = pc;
+    row->width = width;
+    row->origin = origin;
+    row->a0 = task_ptr;
+    row->a0_word = pDebugMemRead32(debug_rdram_addr(task_phys));
+    row->output_buff = pDebugMemRead32(debug_rdram_addr(task_phys + 0x28u));
+    row->output_buff_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x2Cu));
+    row->data_ptr = pDebugMemRead32(debug_rdram_addr(task_phys + 0x30u));
+    row->data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x34u));
+    row->yield_data_ptr = pDebugMemRead32(debug_rdram_addr(task_phys + 0x38u));
+    row->yield_data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x3Cu));
+    row->n = g_pc_range_task_hits;
 }
 
 static void add_pc_phase_log_width(char *spec)
@@ -2072,6 +2142,10 @@ static void dbg_update(unsigned int pc)
     if (flags & M64P_BKP_FLAG_EXEC)
         dump_pc_task(pc);
 
+    if ((flags & M64P_BKP_FLAG_EXEC) &&
+        pc >= 0x80033C00u && pc < 0x80034100u)
+        dump_pc_range_task(pc);
+
     if ((flags & M64P_BKP_FLAG_EXEC) && g_mode_dump_enabled &&
         pc == g_mode_dump_pc)
         dump_mode_descriptor(pc);
@@ -2718,6 +2792,7 @@ static void usage(void)
         "  --store-field-dump-any-phase allow store-field-dump rows in any VI phase\n"
         "  --pc-task-dump A   dump phase-gated OSTask fields at PC A\n"
         "  --pc-task-type N   OSTask type to dump (default 2=audio; 1=gfx; 0=any)\n"
+        "  --pc-range-task-dump dump phase-gated $a0/task fields for the live range\n"
         "  --pc-task-join     join each field dump to the latest valid task row in its VI bucket\n"
         "  --pc-phase-quiet   suppress per-hit phase execution lines (keep bounded dumps)\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
@@ -2840,6 +2915,8 @@ int main(int argc, char **argv)
             g_pc_phase_quiet = 1;
         else if (!strcmp(argv[i], "--pc-task-type") && i + 1 < argc)
             g_pc_task_dump_type = (uint32_t)strtoul(argv[++i], NULL, 0);
+        else if (!strcmp(argv[i], "--pc-range-task-dump"))
+            g_pc_range_task_dump_enabled = 1;
         else if (!strcmp(argv[i], "--mode-dump-pc") && i + 1 < argc) {
             g_mode_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_mode_dump_enabled = 1;
@@ -3298,6 +3375,22 @@ int main(int argc, char **argv)
                        "output_buff=0x%08x output_buff_size=0x%08x n=%ld\n",
                        uniq[ui].type, uniq[ui].task_ptr, uniq[ui].output_buff,
                        uniq[ui].output_buff_size, uniq[ui].n);
+        }
+    }
+    if (g_pc_range_task_dump_enabled) {
+        printf("[oracle] pc-range-task-summary rows=%d/%d hits=%ld invalid=%ld overflow=%ld\n",
+               g_n_pc_range_task_rows, MAX_PC_RANGE_TASK_ROWS,
+               g_pc_range_task_hits, g_pc_range_task_invalid,
+               g_pc_range_task_overflow);
+        for (int i = 0; i < g_n_pc_range_task_rows; i++) {
+            struct pc_range_task_row *row = &g_pc_range_task_rows[i];
+            printf("[oracle] pc-range-task-row pc=0x%08x width=%u origin=0x%08x "
+                   "a0=0x%08x a0_word=0x%08x output=0x%08x output_size=0x%08x "
+                   "data=0x%08x data_size=0x%08x yield=0x%08x yield_size=0x%08x n=%ld\n",
+                   row->pc, row->width, row->origin, row->a0, row->a0_word,
+                   row->output_buff, row->output_buff_size, row->data_ptr,
+                   row->data_size, row->yield_data_ptr, row->yield_data_size,
+                   row->n);
         }
     }
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);

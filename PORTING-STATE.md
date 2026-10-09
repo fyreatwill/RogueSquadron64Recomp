@@ -149260,3 +149260,26 @@ PC, including the observed title origin `0x00790800`.
 
 ORIGIN: diagnostic-only oracle range execution and task-join observations; no
 guest or host value was skipped, rewritten, or guarded.
+
+## Session 4360 (2026-10-09) — qualified range task dump finds live type-2 consumer
+
+The first s4360 capture passed the whole-RDRAM positive control but omitted the
+verified Start-button schedule, reached no title or hangar phase, and was
+discarded as coverage-invalid. I rebuilt the oracle after adding a bounded,
+phase-gated range-argument table. Its first qualified run passed the positive
+control, reached 4,476 VI, and reached title and hangar. The fixed table retained
+512 rows in each of `0x00790400:1024`, `0x00790800:1024`, and
+`0x006AB400:512` rather than filling during title.
+
+The live range `0x80033C00..0x80034100` included `0x80033FCC` in all three
+phase buckets. At that PC `$a0=0x80149470` and `MEM_W($a0)=2`; the exact task
+dump recorded 1,776 type-2 rows and 1,133 non-type-2 rows. The C904/C950
+source witness recorded 357,292 callbacks and its phase-keyed task join matched
+356,986 rows, with 306 unmatched. This selects H-consumer-nearby for the
+qualified retail route and rules out an absent nearby type-2 consumer or the
+prior zero-row instrument boundary. It does not yet identify whether source
+divergence exists before the task payload or is introduced after the consumer.
+
+ORIGIN: diagnostic-only oracle range/task/C904 observations; no guest or host
+value was skipped, rewritten, or guarded. The result is single-source retail
+oracle evidence pending the next payload comparison.
