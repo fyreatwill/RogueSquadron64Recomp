@@ -148704,3 +148704,21 @@ execution ranges and exec-prev callers before adding field dumps.
 
 ORIGIN: none; diagnostic oracle probes only, no mitigation or runtime behavior
 change.
+
+## Session 4334 (2026-10-08) — retail audio boundary census identified C904
+
+Ran one 180-second retail-oracle execution census after mapping the generated
+audio region. The whole-RDRAM positive control reached 10,000 writes; title VI
+1024 and hangar VI 512 both occurred; the run completed 10,807 VI. Exact
+execution watches reported C2D0=937, C4C0=937, C904=1,059, D7D0=3,748,
+D8C4=3,748, DB44=937, DC98=3,748, and DD7C=29,984, while C540 and C5BC were
+zero. The range had 22,477,404 hits and no debugger failure.
+
+This rules out the previously mapped C88C address as the retail execution
+boundary and identifies C904 as the next descriptor-helper candidate, with the
+D7D0/D8C4/DB44/DC98/DD7C chain active downstream. The exact counts are lifetime
+watch counts, not phase-specific field equality; payload comparison remains
+open. No runtime behavior changed. A phase-gated field dump at C904 is next.
+
+ORIGIN: none; diagnostic oracle probes only, no mitigation or runtime behavior
+change.
