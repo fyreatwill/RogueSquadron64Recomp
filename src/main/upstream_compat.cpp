@@ -4745,3 +4745,40 @@ extern "C" void osStopThread_recomp(uint8_t* rdram, recomp_context* ctx) {
         t->state = OSThreadState::STOPPED;
     }
 }
+
+// s4432: read-only witness for the title audio loop 0x8008EE10..0x8008EE9C.
+// Per (stage, phase) the first 12 hits print, then every 256th with a count.
+extern "C" void rs64_audioloop_witness(uint8_t* rdram, recomp_context* ctx,
+                                       uint32_t stage) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_AUDIOLOOP");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || stage > 4u) return;
+    const uint32_t phase = rs64_phase_ord() & 15u;
+    static uint32_t counts[5][16];
+    const uint32_t n = counts[stage][phase]++;
+    if (n >= 12u && (n & 255u) != 0u) return;
+    auto byte = [](uint8_t* rdram, uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        return rdram[guest - 0x80000000u];
+    };
+    const uint32_t msg = U32(ctx->r29) + 0x10u;
+    uint32_t msgp = 0xFFFFFFFFu, msgb = 0xFFFFFFFFu;
+    if (stage == 1u && msg >= 0x80000000u && msg < 0x807FFFFCu) {
+        const uint32_t p = msg - 0x80000000u;
+        msgp = (uint32_t(rdram[p]) << 24) | (uint32_t(rdram[p + 1]) << 16) |
+               (uint32_t(rdram[p + 2]) << 8) | uint32_t(rdram[p + 3]);
+        msgb = byte(rdram, 0x80000000u | (msgp & 0x1FFFFFFFu));
+    }
+    std::fprintf(stderr,
+        "[audioloop] stage=%u phase=%u width=%u n=%u s0=0x%08X s1=0x%08X "
+        "s2=0x%08X s3=0x%08X msgptr=0x%08X msgbyte=0x%02X byte801596F0=0x%02X "
+        "a0=0x%08X a1=0x%08X ra=0x%08X\n",
+        stage, phase, rs64_vi_committed_width(), n, U32(ctx->r16), U32(ctx->r17),
+        U32(ctx->r18), U32(ctx->r19), msgp, msgb, byte(rdram, 0x801596F0u),
+        U32(ctx->r4), U32(ctx->r5), U32(ctx->r31));
+    std::fflush(stderr);
+}

@@ -150655,3 +150655,35 @@ no mitigation added, nothing rewritten, skipped, or guarded.
 
 ## Session 4431 (2026-10-09) — the "selector entry" pair is two different libultra functions, not two entries of one
 Hand-decoded ROM words (rom = vram-0x80000400+0x1000). 0x80029E78 is `jr ra; addiu sp,sp,0x10` -- the EPILOGUE of osAiSetFrequency (0x80029D20..0x80029E80, symbols file). 0x80029E80 is the START of osAiSetNextBuffer (size 0xA4). 0x80091CB8 (`jal 0x80029D20`) sits in reapplyAudioConfig (0x80091C88): a SetFrequency call whose return lands on 0x80029E78. 0x8008EE84 (`jal 0x80029E80`, a1=0x300) sits in the audio output loop (0x8008EE10..0x8008EE9C, near serviceAudioOutputBuffers 0x8008ED6C): it submits a 0x300-byte AI buffer. So s4414/s4416/s4417 compared "exact 0x80029E78" (a return from SetFrequency) against "0x80029E80" (SetNextBuffer entry) -- different functions. Retail title: AI buffers submitted by the audio loop, SetFrequency only in hangar. Port title: reapplyAudioConfig->SetFrequency runs in title; the submit call from 0x8008EE84 never fired. Rules out: table contents (s4430) as the divergence. ORIGIN: static decode only; no value changed. Single-source (static) plus earlier witnesses; runtime confirmation pending.
+
+## Session 4432 (2026-10-09) — the port's title audio loop DOES submit at 0x8008EE84; the "selector entry" divergence was an instrument gap
+Work unit `m5-audio-loop-submit`. Added a read-only witness `rs64_audioloop_witness`
+(src/main/upstream_compat.cpp; generated-code insertions via
+`tools/apply_s4432_audioloop_witness.py`, wired into `tools/agent/regen_n64recomp.sh`)
+at five points in funcs_23.c: loop head `L_8008EE10` (stage 0), after the
+`osRecvMesg` at 0x8008EE1C (1), immediately before the 0x8008EE84 call (2), after
+that call returns (3), before the 0x8008EE08 call (4). Env `ROGUESQ_LOG_ALL=1` or
+`ROGUESQ_LOG_AUDIOLOOP=1`; first 12 hits per (stage, phase) then every 256th.
+Recipe `scratch/agent/s4432_port/run.sh` (s4429 recipe). Two of three runs died in
+phase 3 (VI 640 intro) in the known voice/free-list corruption family (bus error,
+si_addr 0x380000000, s4279-BAD rows) before title; the third reached title 1024
+`0x00790400` at 49.0s and VI 640 again at 76.1s. Log: `scratch/agent/s4432_port/port.log`.
+
+Result (port, run 3): stages 0,1,2,3 all fire in phase 2, 3, **4 (title)** and 5.
+Title phase 4: stage 0 n reached >=1536 loop iterations; stage 2 (immediately
+before the 0x8008EE84 call) and stage 3 (call returned, a1=0x300) fired every
+iteration, s3=1, s2=0xFF. This refutes H-loop-not-run and H-branch-skip.
+H-shim-bypass is the answer: the generated code calls `osAiSetNextBuffer_recomp`
+directly (lib/N64ModernRuntime/librecomp/src/ai.cpp:183), so guest PC 0x80029E80 is
+never executed in the port and the s4414/s4416/s4417 "port has zero 0x80029E80
+hits" was a coverage artifact, not a guest-path difference. Two lines: (1) runtime
+stage-2/3 hits in title and hangar-side phase 5, (2) static: the osAiSetNextBuffer
+call sites at 0x8008EE08/0x8008EE84 are shim calls. Positive control: stages 0/1
+(loop head, post-recv) fire in the same run.
+Caveat: the msgbyte column is unusable (msg pointer 0xA0961480 maps outside the
+8 MB RDRAM; harmless, stage 2 is reached each iteration).
+Not explained: the port's exact `0x80029E78` (osAiSetFrequency epilogue via
+reapplyAudioConfig 0x80091CB8) hits in title vs retail only in hangar (s4414 vs
+s4416) -- the remaining real difference; how that port witness is implemented is
+unchecked. ORIGIN: observation only, no value rewritten, skipped or guarded; no
+mitigation added.

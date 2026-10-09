@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4430 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4432 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -248,6 +248,11 @@ available.
 
 ## Superseded and closed conclusions
 
+- s4414/s4416/s4417 "port/retail selector-path divergence at `0x80029E80`" was
+  believable because the port witness sat on guest PCs, but the port routes
+  osAiSetNextBuffer through a host shim. s4432 saw the generated submit call at
+  `0x8008EE84` fire every title loop iteration.
+
 - The title selector is not globally absent: s4414's widened retail range
   executed the selector family in all three phases.
 - The s4413 title zero was not proof of a title route null; s4414 found the
@@ -279,25 +284,18 @@ available.
 
 ## Next steps
 
-1. **s4431 REFRAME (static): `0x80029E78` is osAiSetFrequency's epilogue
-   (from reapplyAudioConfig `0x80091CB8`); `0x80029E80` is osAiSetNextBuffer's
-   entry, called at `0x8008EE84` (a1=0x300) by the audio loop
-   `0x8008EE10..0x8008EE9C`. The "selector entry" comparison of s4414-s4430
-   compared two different functions. Real question: why does the port's title
-   audio loop not reach that submit call (loop not run / branch at
-   `0x8008EE98` on byte `0x801596F0` / instrument gap)? HYPOTHESIS-ID
-   `m5-audio-loop-submit`. Older text follows, now superseded:** formerly: Why
-   does retail reach the selector via `0x8008EE84 -> 0x80029E80` while
-   the port enters exact `0x80029E78`? HYPOTHESIS-ID
-   `m5-selector-entry-path`. s4430 (port, one run, ROGUESQ_LOG_ALL=1 needed to
-   avoid an early audio bus error) showed the same pre-heap name copy and the
-   same title user words (`mat_`/`ltex`) as retail s4428, so the table
-   contents are NOT the divergence (two lines: retail + port). Next: a single
-   paired capture of the caller chain into `0x80029D20`/`0x80029E78` --
-   retail's `0x8008EE84` caller vs the port's callers (generated caller
-   witnesses exist: s3500/s3501) -- including what selects between the
-   `0x80091CB8` and `0x8008EE84` entries (flag/state read before the branch).
-   Do not rewrite or guard state.
+1. **s4432: the port's title audio loop DOES reach the `0x8008EE84` submit**
+   (stages 0-3 fire in phases 2-5 incl. title, >=1536 loop iterations; the port
+   calls the `osAiSetNextBuffer_recomp` shim directly, so a guest-PC witness at
+   `0x80029E80` can never fire). The s4414-s4430 "retail enters `0x80029E80`,
+   port enters `0x80029E78`" divergence is therefore an instrument gap, and the
+   `m5-selector-entry-path` thread is closed. Remaining real difference: the
+   port hits `0x80029E78` (osAiSetFrequency epilogue via reapplyAudioConfig
+   `0x80091CB8`) in title while retail only does in hangar. Next work unit
+   (HYPOTHESIS-ID `m5-title-reapply-config`): identify the port's title caller
+   of reapplyAudioConfig (ra/state), and confirm with retail whether title
+   really lacks it. Port runs die pre-title ~2/3 of the time in the phase-3
+   voice/free-list corruption family; plan for retries.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

@@ -11,3 +11,4 @@ python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_
 python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3501_m5_selector_precall.py
 python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3509_m5_selector_table.py
 python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3516_m5_selector_store_context.py
+python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s4432_audioloop_witness.py
