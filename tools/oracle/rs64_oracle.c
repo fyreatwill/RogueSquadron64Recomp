@@ -265,6 +265,7 @@ struct ai_output_bucket {
     long nonzero_rows;
     long clipped, total;
     double sumsq;
+    long vi_swaps;
 };
 static struct ai_output_bucket g_ai_output[] = {
     { "pre-title", 0, 0, 0, 0, 0 },
@@ -2464,6 +2465,13 @@ static void dbg_update(unsigned int pc)
                             gpr32(4) & 0x1FFFFFFFu);
     }
 
+    if ((flags & M64P_BKP_FLAG_EXEC) && pc == VI_SWAP_PC) {
+        uint32_t w = pDebugMemRead32(VI_WIDTH_ADDR);   /* s4436: VI swaps per width bucket */
+        if (w == 1024u) g_ai_output[1].vi_swaps++;
+        else if (w == 512u) g_ai_output[2].vi_swaps++;
+        else g_ai_output[0].vi_swaps++;
+    }
+
     if ((flags & M64P_BKP_FLAG_EXEC) && pc == AI_SET_NEXT_PC)
         dump_ai_output();
 
@@ -3536,9 +3544,9 @@ int main(int argc, char **argv)
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",
            g_hits, now_s() - g_t0, g_vis, g_vis / 60.0);
     for (int i = 0; i < 3; i++)
-        printf("[oracle] ai-output-summary bucket=%s calls=%ld rows=%ld nonzero_rows=%ld\n",
+        printf("[oracle] ai-output-summary bucket=%s calls=%ld rows=%ld nonzero_rows=%ld vi_swaps=%ld\n",
                g_ai_output[i].name, g_ai_output[i].calls, g_ai_output[i].rows,
-               g_ai_output[i].nonzero_rows);
+               g_ai_output[i].nonzero_rows, g_ai_output[i].vi_swaps);
     if (g_post_value_watch_mask) {
         for (int watch = 0; watch < g_nwatch; watch++) {
             struct post_value_stats *stats;

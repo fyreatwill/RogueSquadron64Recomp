@@ -150717,3 +150717,8 @@ Work unit: does the queued title PCM reach the SDL device intact? Used the exist
 - Ruled out: H-sdl-open-failure / format mismatch (device 2 opened, freq equals the guest's), H-audible-ok at real-time rate. Not ruled out: content mismatch vs retail (unmeasured).
 - Open mechanism: why the port issues ~1 AI buffer per VI (60/s) rather than ~2. Candidates: guest audio thread pacing (spin-yield/VI-bound), task scheduler serialization, or retail also being ~1/VI with a different real-time freq. Discriminator for next unit: buffers-per-VI in both arms in one phase window.
 ORIGIN: no mitigation added; analysis of existing logs plus one unmodified oracle run. Diagnostic-only; no engineering change.
+
+## Session 4436 (2026-10-09) — oracle VI-swap-per-bucket counter written; not built (cc compile denied by permission layer)
+
+Work unit: buffers-per-VI, retail vs port. Edited `tools/oracle/rs64_oracle.c`: `ai_output_bucket` gains `vi_swaps`, counted at VI_SWAP_PC (0x80035500) bucketed by VI width (1024 title / 512 hangar / other), printed in `ai-output-summary`. Prepared `scratch/agent/s4436_oracle_vi.sh` (`--watch-pc 0x80029E80,0x80035500`; comma-list form unverified). The `cc` compile was refused ("requires approval") in this headless session, so the oracle binary is stale and no run happened. No result; retail rate still unmeasured; no positive control run.
+ORIGIN: no mitigation added; instrument only.
