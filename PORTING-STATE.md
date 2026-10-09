@@ -148542,3 +148542,13 @@ callsite witness immediately before the generated D740 filter call, with a
 phase-scoped store counter and verified saved-register source.
 
 ORIGIN: none; diagnostic-only instrument and matrix, no mitigation.
+
+DISCRIMINATION (s4328 close-out): refutes H-join-absence-means-equal-descriptor
+(512/512 rows `caller_join=0` with all controls passing, so missing join is an
+instrument/route property, not descriptor equality). Does NOT yet select among
+H-entry-bypassed / H-cross-thread-or-overwritten / H-wrong-saved-source.
+Next discriminator (s4329): a direct witness immediately before the generated
+`filterVoiceSampleBlock` call at 0x8009D740 plus a phase-scoped D740 store
+counter — zero stores with active callsite selects H-entry-bypassed; positive
+stores with joinable tuple selects cross-thread/wrong-saved-source (split by
+whether a0..a3 match the saved-register slots). Run per scratch/agent/NEXT.md.
