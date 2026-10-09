@@ -4,7 +4,10 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4340: a phase-gated scalar-store census and independent
+Updated for session 4341: a bounded static/data-flow census corrected the
+`0x8009C88C`/`0x8009C904` probe boundary and identified the object-backed bit
+table plus decoded stack fields as the only remaining branch-state candidates.
+No value-level match to retail is established yet. Previously 4340: a phase-gated scalar-store census and independent
 retail physical watch both passed their positive controls and target VI phases,
 but recorded zero writers to physical 0x20..0x30. This rejects a missing
 publication writer and a port stale-read explanation for the C904/C88C
@@ -261,6 +264,22 @@ at the s3290 E088 anchor and a regen clobbers the live patched RecompiledFuncs.
 Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
+
+00. (s4341) Capture the best static branch-state candidates at runtime in one
+qualified port run: the selected word from `object+0x1A0+cursor_index`, its
+`+0x11C8` cursor/index, and the decoded stack halfwords immediately before the
+actual `0x8009C88C` filter call. Join them by phase and `s1` to the retained
+retail C904 tuples. Keep the host positive control, title VI 1024, hangar VI
+512, and existing filter controls. Do not label the C904 entry probe as C88C,
+and do not alter decoder/RSP/AI behavior.
+
+00a. (s4341) Static census result: `0x8009C88C` is the filter callsite inside
+`updateVoiceChannelParamsLarge`, not the `decodeAndFillVoiceBlock` entry at
+`0x8009C904`. C904 reads object `+0x11C8`, an object-backed bit table rooted at
+`+0x1A0`, and internal `+0x18A/+0x18C` decode state; decoded stack halfwords
+feed the C88C arguments. H-port-table-field remains the best candidate but is
+not selected without a runtime value join. See
+`docs/M5-S4341-STATIC-BRANCH-FIELD-CENSUS.md`.
 
 00. (s4340) Re-map the C88C branch-state field after the writer census found no
 scalar writers to physical 0x20..0x30 in either runtime. The port callback

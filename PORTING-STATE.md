@@ -148854,3 +148854,30 @@ qualified by the retail memory watch and VI controls.
 ORIGIN: none; this iteration added diagnostic census machinery only. Evidence:
 `scratch/agent/s4340_lowfield_port/run.log` and
 `scratch/agent/s4340_lowfield_oracle_75.log`.
+
+## Session 4341 (2026-10-08) — static census corrected branch-field boundary
+
+The prescribed bounded static/data-flow census inspected the generated
+`updateVoiceChannelParamsLarge` / `decodeAndFillVoiceBlock` region and the
+retained retail C904 tuples. It found that `0x8009C88C` is the
+`filterVoiceSampleBlock` callsite inside `updateVoiceChannelParamsLarge`, not
+the C904 function entry. The actual C88C arguments are decoded stack
+halfwords plus stack pointers.
+
+C904's only external object data source is the word selected by
+`object+0x1A0+((object+0x11C8 >> 3) & 0xFFC)`; `+0x18A` and `+0x18C` are local
+decode accumulator/count fields, and the decoded stack halfwords are the
+remaining selector-side candidates. No candidate statically matches retail
+`branch_state=0x0010/0x3108`, so H-port-table-field remains the best candidate
+but is not selected. H-retail-DMA-field is unsupported by this body, though an
+earlier producer of the backing table remains possible. The next unit is one
+co-located runtime witness of the table word, cursor, and C88C `a0/a1`.
+
+This was a static, diagnostic-only result: no build, run, guard, or runtime
+behavior changed. It rules out treating the existing C904-entry rows as direct
+C88C argument rows and narrows the next measurement to the table/decoded-field
+value join.
+
+ORIGIN: diagnostic-only static census. Evidence:
+`docs/M5-S4341-STATIC-BRANCH-FIELD-CENSUS.md` and the generated source at
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`.

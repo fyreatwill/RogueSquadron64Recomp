@@ -1,40 +1,32 @@
-# Next work unit (s4341): identify the port counterpart of retail branch state
+# Next work unit (s4342): witness the static branch-state candidates
 
-HYPOTHESIS-ID: m5-step9-branch-state-field-mapping
+HYPOTHESIS-ID: m5-step9-branch-state-runtime-witness
 
-s4340 passed the port host positive control, title VI 1024, hangar VI 512, and
-255 C88C rows. Its all-generated-scalar-store census found zero writes to
-physical `0x20..0x30`. The independent 75-second retail oracle passed its
-whole-RDRAM control (10,000 callbacks), title/hangar VI controls, and exact
-low-range watch, which also found zero writes. Therefore port `s1+0x22` is not
-the semantic counterpart of retail C904 branch state. The external field-key
-arm remains route-invalid.
+s4341 corrected the static boundary: `0x8009C88C` is the filter callsite inside
+`updateVoiceChannelParamsLarge`, while C904 is the `decodeAndFillVoiceBlock`
+entry. C904's only external object data source is the word at
+`object+0x1A0+cursor_index`, where the cursor comes from `+0x11C8`; decoded
+stack halfwords then supply the actual C88C filter arguments. Retail C904 rows
+still use `branch_state=0x0010/0x3108` by `s1`.
 
 Competing hypotheses:
 
-- H-port-table-field: the port's branch-state counterpart is a different
-  offset in the object/table loaded by `decodeAndFillVoiceBlock`.
-- H-port-selector-field: the counterpart is derived from the C88C branch
-  selector or descriptor arguments rather than loaded from `s1+0x22`.
-- H-retail-DMA-field: retail's nonzero C904 field arrives in a DMA/ROM-loaded
-  block, so no scalar writer should be expected in either runtime's low range.
+- H-port-table-field: the counterpart is in the object-backed bit-table word
+  selected by `+0x11C8`.
+- H-port-selector-field: the counterpart is one of the decoded stack halfwords
+  supplied as C88C `a0/a1`.
+- H-retail-DMA-field: an earlier DMA/ROM-loaded producer populates the table,
+  so C904 cannot expose a direct counterpart.
 
-Discriminator: one bounded static/data-flow table over the generated
-`decodeAndFillVoiceBlock` body and its C88C call arguments: enumerate every
-load/store offset based on `s1`, every branch-selector/descriptor load, and the
-four argument values retained at C88C. Join those candidates to the retained
-retail C904 tuples by `s1=1/2` and phase. A candidate whose port value follows
-retail `0x0010/0x3108` selects H-port-table-field; a selector/descriptor value
-does so selects H-port-selector-field; only a DMA-loaded candidate with a
-matching source range selects H-retail-DMA-field. If no candidate qualifies,
-the next step is a single new runtime witness at the best static load, not
-another low-range writer census.
+Discriminator: one phase-gated co-located witness at the actual C88C filter
+callsite recording cursor/index, selected table word, and decoded stack `a0/a1`.
+A value family following retail `0x0010/0x3108` selects table versus selector;
+only matching source-range provenance selects the DMA hypothesis. The host
+positive control, title VI 1024, hangar VI 512, and filter controls must fire.
 
 Run requirements:
 
-1. Use `rg` plus bounded `sed` windows; inspect only the generated C88C helper,
-   its direct callees, and the retained retail C904 rows.
-2. Do not build or run until the candidate table has explicit outcomes for all
-   three hypotheses.
-3. Do not add a guard, alter decoder/RSP/AI behavior, or use the external
-   field-key route.
+1. Build all candidate fields in one instrument and run one qualified
+   in-process-autopilot capture; do not use the external field-key route.
+2. Positive controls must visibly fire in the same run.
+3. Do not add a guard or alter decoder/RSP/AI behavior.
