@@ -149308,3 +149308,51 @@ join ordering/key and repeats the same controls.
 
 ORIGIN: diagnostic-only oracle payload capture and join-key instrumentation; no
 guest or host value was skipped, rewritten, or guarded.
+## Session 4362 (2026-10-09) — repaired hangar C904/task payload join
+
+I widened the bounded C904/task join table in `tools/oracle/rs64_oracle.c`
+from 512 to 1,536 rows, matching the three phase buckets required by the
+qualified capture. The first 75-second command omitted the Rice video plugin;
+its whole-RDRAM control fired but it stayed at VI 320 and was rejected. The
+fixed command attached Rice and passed the same control with 10,000 retained
+writes, reached title and hangar, and recorded 1,948 type-2 task rows with
+4,490 C904/task matches. Retained join rows covered `0x00790400` (594),
+`0x00790800` (595), and `0x006AB400` (347); the table filled only after those
+rows and reported 1,524 additional overflow attempts.
+
+The hangar rows used `data_ptr` `0x80171E70`/`0x80173CB0` and payloads rooted
+at `0x801797B0`, while title rows used `0x80173B20`/`0x80171CE0` and payloads
+rooted at `0x80178C80`/`0x801E2FC0`. The C904/C950 selector input remained
+`0x04001000` with words `0x09000419/0x20010FC0`. This repairs the prior
+instrument boundary and supports a phase-specific selector-multiplex family,
+but it is single-source retail evidence; it does not yet distinguish
+pre-filter origin from a later consumer transform. It rules out the prior
+claim that the hangar join was absent. ORIGIN: diagnostic-only retention-table
+change and payload capture; no guest or host value was skipped, rewritten, or
+guarded.
+
+## Session 4363 (2026-10-09) — phase-labelled selector source witness
+
+I extended `tools/oracle/rs64_oracle.c` so the bounded C904/C950 witness
+retains eight aligned words at its input and labels each row with the live VI
+width and origin. The first capture had valid controls but lacked those phase
+labels and was rejected as an instrument-boundary result. The fixed 75-second
+Rice capture passed the whole-RDRAM positive control (200 printed hits at the
+configured cap), reached title origins `0x00790400` and `0x00790800` and hangar
+origin `0x006AB400`, and recorded 628/628/429 typed task rows at
+`0x80033FCC` in those buckets.
+
+The phase-keyed selector/task rows kept the same input pointer
+`0x04001000` and eight input words beginning `0x09000419/0x20010FC0`, while
+the task data pointers and payload families differed between title and hangar.
+The phase-labelled decode witness fired 250 bounded rows at each of
+`0x8009C904` and `0x8009C950` in hangar; no C904 decode row appeared in either
+title bucket. This supports H-selector-multiplex at the task-family handoff
+and rules out shared selector input as an explanation for shared payload
+identity. It does not locate the earlier writer or distinguish pre-filter
+origin from a later transform after the task handoff. The result is
+single-source retail evidence.
+
+ORIGIN: diagnostic-only oracle source snapshot and phase-label instrumentation;
+no guest or host value was skipped, rewritten, or guarded. The first unlabeled
+capture was discarded rather than used as evidence.

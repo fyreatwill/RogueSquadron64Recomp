@@ -1,38 +1,38 @@
-# Next work unit (s4362): repair hangar C904/task payload join
+# Next work unit (s4364): attribute phase-specific task-family writers
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-The s4361 capture qualified whole-RDRAM, title, and hangar coverage. Its new
-payload field was live in 1,786 type-2 task rows, and title joins showed a
-constant C904/C950 input with phase/data-block-specific payload words. The
-summary retained no hangar C904-task rows even though hangar task rows were
-live, so the cross-phase discriminator is not yet qualified.
+The s4363 fixed Rice capture passed the whole-RDRAM control and all three phase
+controls. At `0x80033FCC`, type-2 task rows were 628/628/429 for origins
+`0x00790400`, `0x00790800`, and `0x006AB400`. The selector input stayed
+`0x04001000` with words beginning `0x09000419/0x20010FC0`, while task data
+pointers and payload families differed by phase. C904/C950 decode witnesses
+were phase-labelled and live in hangar only.
 
 Competing hypotheses:
 
-- H-selector-multiplex: the hangar task payload is a distinct family selected
-  before or at the task handoff, as the two title-origin payload families
-  suggest.
-- H-consumer-transform: title and hangar share the joined payload/input and a
-  later consumer transform creates the observed divergence.
-- H-pre-filter-origin: a repaired hangar join exposes disagreement already in
-  the payload fields relative to its C904/C950 selector input.
+- H-earlier-producer: the phase-specific task-data families are written by an
+  earlier retail producer before the selector/decode handoff.
+- H-post-task-transform: the family difference is created after the task data
+  is published, by a later consumer or transform.
+- H-watch-boundary: the candidate data ranges are not the actual source range,
+  so a null writer result says nothing.
 
-Discriminating measurement: fix the join ordering/key so a C904/C950 witness
-at `0x8009C904`/`0x8009C950` can join the latest type-2 task row at
-`0x80033FCC` in the `0x006AB400` bucket, then print/count the existing
-eight-word `data_ptr` payload for title and hangar. A valid hangar join with a
-distinct payload family selects H-selector-multiplex; a shared payload followed
-by later-only divergence selects H-consumer-transform; disagreement against
-the joined selector input selects H-pre-filter-origin. If the join remains
-empty, the result is an instrument-boundary finding, not a hypothesis result.
+Discriminating measurement: in one bounded retail run, watch the union
+`0x00171000:0x00174000`, retain its first hit and writer-PC histogram, and
+phase-gate histograms for all three qualified VI buckets. A phase-specific
+writer PC that precedes the task rows selects H-earlier-producer; no writes
+after a positive control but valid task-family rows selects H-post-task-transform
+only if the watch range is proven to contain the published data; otherwise it
+selects H-watch-boundary. Any candidate writer must be checked against the
+physical address and phase bucket before promotion.
 
-Build/run: edit `tools/oracle/rs64_oracle.c`, run `./tools/oracle/build.sh`,
-then from `build/` repeat the verified Rice command used for s4361 for 75 s,
-capturing to `scratch/agent/soak_results/s4362_hangar_payload_join.log`. Keep
-`--watch-write 0x0:0x800000`, `--watch-pc 0x80033fcc`,
-`--pc-task-dump 0x80033fcc`, all three
-`--pc-phase-log-width 0x00790400:1024`, `0x00790800:1024`,
-`0x006AB400:512`, `--c904-witness`, `--c904-task-join`, and `--vi-trace`.
-Reject runs without the whole-RDRAM positive control and all three phase
-origins.
+Build/run: run `./tools/oracle/build.sh`, then from the repo root run the Rice
+oracle for 75 seconds, capturing to
+`scratch/agent/soak_results/s4364_task_family_writers.log`. Keep the whole-
+RDRAM watch, `--watch-pc 0x80033fcc`, typed task dump, all three
+`--pc-phase-log-width` buckets, `--c904-witness`, `--c904-task-join`, and
+`--vi-trace`; add `--watch-write 0x00171000:0x00174000 --detail-watch 1
+--first-watch 1 --pc-hist-watch 1` plus matching `--pc-hist-phase` options.
+Reject runs without the whole-RDRAM positive control, all three VI origins, and
+nonzero type-2 rows in every bucket.

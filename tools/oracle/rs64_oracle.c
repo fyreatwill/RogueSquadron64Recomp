@@ -409,11 +409,14 @@ static int g_n_pc_field_dump;
 static int g_pc_field_dump_any_phase;
 struct c904_witness_row {
     uint32_t pc;
+    uint32_t width;
+    uint32_t origin;
     uint32_t prev_pc;
     uint32_t object;
     uint32_t input;
     uint32_t input_w0;
     uint32_t input_w1;
+    uint32_t input_words[8];
     uint32_t v0;
     uint32_t a2;
     uint32_t a3;
@@ -442,12 +445,13 @@ struct c904_task_join_row {
     uint32_t input;
     uint32_t input_w0;
     uint32_t input_w1;
+    uint32_t input_words[8];
     uint32_t selected_addr;
     uint32_t selected_word;
     uint32_t payload[8];
     long n;
 };
-#define MAX_C904_TASK_JOIN_ROWS 512
+#define MAX_C904_TASK_JOIN_ROWS 1536
 static struct c904_task_join_row
     g_c904_task_join_rows[MAX_C904_TASK_JOIN_ROWS];
 static int g_n_c904_task_join_rows;
@@ -817,11 +821,16 @@ static void dump_c904_witness(uint32_t pc)
     }
     g_c904_witness_hits++;
     row.pc = pc;
+    row.width = pDebugMemRead32(VI_WIDTH_ADDR);
+    row.origin = pDebugMemRead32(VI_ORIGIN_ADDR);
     row.prev_pc = (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC);
     row.object = gpr32(4);
     row.input = gpr32(5);
     row.input_w0 = debug_mem_u32(row.input);
     row.input_w1 = debug_mem_u32(row.input + 4u);
+    for (int input_i = 0; input_i < 8; input_i++)
+        row.input_words[input_i] =
+            debug_mem_u32(row.input + (uint32_t)input_i * 4u);
     row.v0 = gpr32(2);
     row.a2 = gpr32(6);
     row.a3 = gpr32(7);
@@ -875,6 +884,8 @@ static void dump_c904_witness(uint32_t pc)
                     joined->input == row.input &&
                     joined->input_w0 == row.input_w0 &&
                     joined->input_w1 == row.input_w1 &&
+                    memcmp(joined->input_words, row.input_words,
+                           sizeof(row.input_words)) == 0 &&
                     joined->selected_addr == row.selected_addr &&
                     joined->selected_word == row.selected_word &&
                     memcmp(joined->payload, payload, sizeof(payload)) == 0) {
@@ -896,16 +907,21 @@ static void dump_c904_witness(uint32_t pc)
                 joined->input = row.input;
                 joined->input_w0 = row.input_w0;
                 joined->input_w1 = row.input_w1;
+                memcpy(joined->input_words, row.input_words,
+                       sizeof(row.input_words));
                 joined->selected_addr = row.selected_addr;
                 joined->selected_word = row.selected_word;
                 memcpy(joined->payload, payload, sizeof(payload));
                 joined->n = 1;
                 printf("[c904-task-join] pc=0x%08x width=%u origin=0x%08x "
                        "task_ptr=0x%08x data_ptr=0x%08x data_size=0x%08x "
-                       "input=0x%08x input_w0=0x%08x input_w1=0x%08x "
-                       "selected_addr=0x%08x selected_word=0x%08x payload=",
+                       "input=0x%08x input_w0=0x%08x input_w1=0x%08x input_words=",
                        pc, width, origin, task->task_ptr, task->data_ptr,
-                       task->data_size, row.input, row.input_w0, row.input_w1,
+                       task->data_size, row.input, row.input_w0, row.input_w1);
+                for (int input_i = 0; input_i < 8; input_i++)
+                    printf("%08x%s", row.input_words[input_i],
+                           input_i == 7 ? " " : ",");
+                printf("selected_addr=0x%08x selected_word=0x%08x payload=",
                        row.selected_addr, row.selected_word);
                 for (int payload_i = 0; payload_i < 8; payload_i++)
                     printf("%08x%s", payload[payload_i], payload_i == 7 ? "" : ",");
@@ -917,11 +933,15 @@ static void dump_c904_witness(uint32_t pc)
 c904_task_join_done:
     for (i = 0; i < MAX_C904_WITNESS_ROWS; i++) {
         if (g_c904_witness_rows[i].pc == row.pc &&
+            g_c904_witness_rows[i].width == row.width &&
+            g_c904_witness_rows[i].origin == row.origin &&
             g_c904_witness_rows[i].prev_pc == row.prev_pc &&
             g_c904_witness_rows[i].object == row.object &&
             g_c904_witness_rows[i].input == row.input &&
             g_c904_witness_rows[i].input_w0 == row.input_w0 &&
             g_c904_witness_rows[i].input_w1 == row.input_w1 &&
+            memcmp(g_c904_witness_rows[i].input_words, row.input_words,
+                   sizeof(row.input_words)) == 0 &&
             g_c904_witness_rows[i].v0 == row.v0 &&
             g_c904_witness_rows[i].a2 == row.a2 &&
             g_c904_witness_rows[i].a3 == row.a3 &&
@@ -934,13 +954,19 @@ c904_task_join_done:
         if (g_c904_witness_rows[i].n == 0) {
             row.n = 1;
             g_c904_witness_rows[i] = row;
-            printf("[c904-witness] pc=0x%08x prev_pc=0x%08x object=0x%08x "
-                   "input=0x%08x input_w0=0x%08x input_w1=0x%08x "
+            printf("[c904-witness] pc=0x%08x width=%u origin=0x%08x "
+                   "prev_pc=0x%08x object=0x%08x input=0x%08x "
+                   "input_w0=0x%08x input_w1=0x%08x "
                    "v0=0x%08x a2=0x%08x a3=0x%08x s1=0x%08x "
-                   "selected_addr=0x%08x selected_word=0x%08x family=%d n=1\n",
-                   row.pc, row.prev_pc, row.object, row.input,
+                   "selected_addr=0x%08x selected_word=0x%08x family=%d "
+                   "input_words=",
+                   row.pc, row.width, row.origin, row.prev_pc, row.object,
+                   row.input,
                    row.input_w0, row.input_w1, row.v0, row.a2, row.a3,
                    row.s1, row.selected_addr, row.selected_word, row.family);
+            for (int input_i = 0; input_i < 8; input_i++)
+                printf("%08x%s", row.input_words[input_i],
+                       input_i == 7 ? "\n" : ",");
             fflush(stdout);
             return;
         }
