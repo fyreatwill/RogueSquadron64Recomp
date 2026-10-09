@@ -1,38 +1,38 @@
-# Next work unit (s4418): repair and qualify the port selector caller/precall witness
+# Next work unit (s4419): qualify the selector-table writer boundary
 
-HYPOTHESIS-ID: m5-selector-decode-boundary
+HYPOTHESIS-ID: m5-selector-table-writer-boundary
 
-Session 4417's static census found the port caller/precall rows were absent
-because the current generated `RecompiledFuncs/funcs_24.c` has no
-`rs64_m5_selector_caller` or `rs64_m5_selector_precall` invocation or marker.
-The live edge is `0x8009131C/0x8009132C -> 0x80091330`; the host callbacks and
-standalone apply scripts exist, but the insertion is not retained in the
-generated artifact.
+The s4418/s4417 coverage defect is closed. The repaired fixup and regen helper
+retain the caller/precall witnesses. The qualified port run showed title-phase
+pre-call values `0x801919B0`, `0x801772F0`, and `0x80175960`, while retail's
+title boundary showed `0x801772F0` in every sampled row.
 
 Competing hypotheses:
 
-- H-fixup-retains: the repaired regeneration-safe insertion appears at all
-  three generated edge sites and fires with the existing controls.
-- H-script-anchor-drift: the repair script cannot match the current generated
-  form, so the marker remains absent after the prescribed generation step.
-- H-divergence-before-selector: live caller/precall rows appear and differ from
-  the retail predecessor tuple before selector entry.
-- H-route-boundary: phase, selector, task, or image controls fail, so the
-  comparison remains unevaluable.
+- H-writer-value: a port writer legitimately stores a different selector-table
+  value before `0x8009131C`.
+- H-index-value: the table is equivalent but the selector index differs before
+  the load.
+- H-init-route: the port takes a different initializer/route and never executes
+  the retail writer.
+- H-join-failure: writer rows or phase/task controls are absent, so the boundary
+  is unevaluable.
 
-Discriminating measurement: after repairing the regeneration-safe insertion,
-the generated-file marker census and one qualified run must show the markers,
-the caller/precall rows, and the existing positive controls in the same run.
-Markers absent after regeneration selects H-script-anchor-drift; markers live
-but rows absent with controls live selects a remaining route issue; live rows
-selects the pre-selector divergence comparison.
+Discriminating measurement: one phase-keyed run must include the existing
+selector-table writer/store-context/input, caller/precall, VI, task, image, and
+positive-control logs. Writer rows joined to the later `0x80150000` load split
+H-writer-value from H-index-value; absent writer rows with live controls selects
+H-init-route; failed controls selects H-join-failure.
 
 Exact commands:
 
-1. Repair the regeneration-safe insertion in the fixup/apply path, preserving
-   the existing guest PCs and adding no new runtime fields.
-2. Run the prescribed generation/fixup sequence, then verify with:
-   `rg -n -C 4 'rs64_m5_selector_(caller|precall)|PATCH: s350[01]' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c`.
-3. Build once and run the canonical qualified route with the existing M5
-   selector/input, VI, task, image, and positive-control env vars. Kill with
-   SIGKILL and compare marker, caller/precall, and control counts.
+1. Build: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+2. Run from `build/` with `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`,
+   `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_AUDIO_UCODE=1`,
+   the canonical autopilot, `ROGUESQ_LOG_M5_SELECTOR_TABLE=1`,
+   `ROGUESQ_LOG_M5_SELECTOR_STORE_CONTEXT=1`,
+   `ROGUESQ_LOG_M5_SELECTOR_INPUT=1`, `ROGUESQ_LOG_M5_SELECTOR_CALLER=1`,
+   `ROGUESQ_LOG_M5_SELECTOR_PRECALL=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`,
+   `ROGUESQ_LOG_FILTER_VOICE_AUDIT=1`, and `ROGUESQ_LOG_ALL=1`.
+3. Kill with SIGKILL. Require the selector/table, caller/precall, VI, task,
+   image, and positive-control markers before interpreting any null.

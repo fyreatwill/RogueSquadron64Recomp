@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4417 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4419 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -103,6 +103,19 @@ H-witness-mismatch and invalidates the prior caller/precall zero as evidence
 of guest divergence. ORIGIN: static generated-file and script census; no
 runtime value or control flow was changed.
 
+This iteration repaired that coverage defect in the durable regeneration path:
+the fixup now inserts the s3500 caller and s3501 pre-call witnesses, and the
+regen helper reapplies them after generation. The rebuilt artifact contains
+one caller marker and two pre-call markers. A qualified real-audio/LLE run
+passed the phase/task/filter controls and emitted 1,001 caller rows and 2,002
+pre-call rows in title phase 4, with no crash or abort marker. Port pre-call
+values included `0x801919B0`, `0x801772F0`, and `0x80175960`; the independent
+retail s3501 boundary had `0x801772F0` in all sampled title rows. This selects
+H-divergence-before-selector and closes H-witness-mismatch; the next boundary
+is the writer/initializer of the `0x80150000` selector table or its index.
+ORIGIN: generated marker census plus phase-keyed runtime witness; the probes
+only observed registers and table loads, and no selector state was rewritten.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -136,13 +149,12 @@ available.
 
 ## Next steps
 
-1. **M5 pre-filter selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Repair the regeneration-safe insertion path
-   for the `0x8009131C/0x8009132C/0x80091330` caller/precall witnesses, then
-   build and qualify the actual edge with the existing selector/input, VI, task,
-   and image controls. Do not interpret a caller/precall zero as guest
-   divergence until the generated artifact contains the markers and a positive
-   control proves them live.
+1. **M5 selector-table writer/initializer boundary** — HYPOTHESIS-ID
+   `m5-selector-table-writer-boundary`. Identify the first writer or initializer
+   that supplies the `0x80150000` table values and its selector index, then
+   qualify it with the existing caller/precall, selector/input, VI, task, and
+   image controls. Do not rewrite the differing values; determine whether the
+   writer is legitimate and whether the index differs before the table load.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

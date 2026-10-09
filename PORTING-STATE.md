@@ -150365,3 +150365,20 @@ divergence and rules out port corroboration of the retail alternate. The
 first divergent caller/input/state before the selector remains open. ORIGIN:
 the port runtime recorded generated guest PCs and phase-keyed controls; no
 value was skipped, rewritten, or guarded.
+
+## Session 4419 (2026-10-09) — repaired and qualified selector caller witnesses
+
+The static census showed that the prior caller/precall zero was an artifact:
+the generated `funcs_24.c` had no s3500/s3501 calls. Added a durable fixup
+transform and made the regeneration helper reapply both witnesses after
+N64Recomp; the live generated artifact then contained one caller marker and two
+pre-call markers. The rebuilt qualified real-audio/LLE route passed the phase,
+selector/input, task, filter, and image controls and emitted 1,001 caller rows
+and 2,002 pre-call rows in title phase 4, with no crash or abort marker. Port
+pre-call values included `0x801919B0`, `0x801772F0`, and `0x80175960`. The
+independent retail s3501 capture had `0x801772F0` in all sampled title rows.
+This closes H-witness-mismatch and selects divergence before selector entry;
+the remaining boundary is the writer/initializer of the `0x80150000` table or
+its index. ORIGIN: generated-file marker census plus phase-keyed runtime
+observations; no selector state or guest value was rewritten, skipped, or
+guarded.

@@ -6,3 +6,6 @@
 set -e
 cd /Users/williambuckley/Documents/Tools/N64Recomp
 ./build/N64Recomp rogue_squadron.toml
+python3 fixup_game_funcs.py
+python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3500_m5_selector_caller.py
+python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3501_m5_selector_precall.py
