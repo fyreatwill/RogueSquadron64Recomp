@@ -4784,6 +4784,18 @@ extern "C" void rs64_s4457_list_check(uint8_t* rdram, uint32_t value) {
 }
 extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                                          uint32_t addr, uint32_t value) {
+    {   // s4472: who stores into the slot-0 request byte 0x801545FD (word 0x801545FC)? Control: slot-0 status word 0x80154620.
+        static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4472"); return e && e[0] && e[0] != '0'; }();
+        if (on) {
+            static uint32_t nreq = 0, nctl = 0;
+            const bool req = addr == 0x801545FDu || (addr == 0x801545FCu && width != 'B');
+            const bool ctl = addr >= 0x80154620u && addr < 0x80154624u;
+            if ((req && nreq++ < 120u) || (ctl && nctl++ < 12u)) {
+                std::fprintf(stderr, "[s4472-%s] w=%c addr=0x%08X pc=0x%08X val=0x%08X vi=%u\n", req ? "req" : "ctl", width, addr, pc, value, rs64_vi_committed_width());
+                std::fflush(stderr);
+            }
+        }
+    }
     if (rs64_s4457_on()) {
         if (!g_s4457_tab) g_s4457_tab = (S4457W*)std::calloc(0x100000, sizeof(S4457W));
         if (addr >= 0x80000000u && addr < 0x80400000u) {
