@@ -150819,3 +150819,7 @@ Ran rs64_oracle --secs 20 --watch-pc 0x80090768,0x8008FFAC,0x80035500 (log scrat
 Meaning (single-source, caveats): retail produces audio pre-title without executing musyxRenderVoiceSamples at 0x80090768 -> either retail synthesises elsewhere (RSP ucode / another overlay copy; README warns exec watches on overlay-aliased VRAM can miss) or the function is not resident. Hypothesis (b) (port caller gate is the defect) supported, not proven. Rules out: 0x8008FFAC as the entry.
 ORIGIN: n/a (no mitigation added).
 Next: range watch over the musyx code + attribution of AI buffer producer in retail.
+
+## Session 4450 (2026-10-09) — M5 de-stub: host-queue-paced AI event (ROGUESQ_AI_EVENT_DRAIN)
+
+Pivot-guard iteration: landed a runtime change instead of another oracle probe. events.cpp (lib/N64ModernRuntime, patch exported) gains ROGUESQ_AI_EVENT_DRAIN=N: a poller posts OS_EVENT_AI when get_remaining_audio_bytes() <= N (1 ms poll, >=2 ms spacing), replacing the per-VI post (and taking precedence over AI_EVENT_HZ). This is the M5 plan Step 10 / s4440 direction: hardware raises the AI interrupt per buffer drain, paced by the consumer, not a fixed timer. Default OFF (rollback = unset). Build clean. Not yet validated: soak queued as scratch/agent/soak_queue/s4450_ai_drain_event.sh (drain=768 vs unset, concurrent, title/hangar phase-gated). s4441 showed fixed-115Hz soaks crash in fillSampleStreamRange+15116 in both arms, so crash-free is the bar, not audible quality. ORIGIN: n/a (no guard/skip added). Deferred s4449 oracle PC-range probe stays open.
