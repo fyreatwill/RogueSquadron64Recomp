@@ -533,15 +533,21 @@ extern "C" uint32_t rs64_phase_ord(void);
 extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller,
                                             uint32_t requested_width,
                                             uint32_t mode_ptr) {
+    extern void rs64_m5_selector_ai_call_latch_join(uint32_t width,
+                                                     uint32_t origin,
+                                                     uint32_t phase);
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_TRANSITION");
         return (all && all[0] && all[0] != '0') ||
                (own && own[0] && own[0] != '0');
     }();
+    const auto* vi = ultramodern::renderer::get_vi_regs();
+    rs64_m5_selector_ai_call_latch_join(vi->VI_WIDTH_REG,
+                                         vi->VI_ORIGIN_REG & 0x00FFFFFFu,
+                                         rs64_phase_ord());
     if (!enabled) return;
 
-    const auto* vi = ultramodern::renderer::get_vi_regs();
     const uint32_t seq = g_m5_vi_commit.next_sequence.fetch_add(1, std::memory_order_relaxed);
     if (seq >= 128u) return;
     g_m5_vi_commit.latest_sequence.store(seq, std::memory_order_release);
@@ -3731,6 +3737,23 @@ struct M5SelectorAiJoinState {
 };
 
 M5SelectorAiJoinState g_m5_selector_ai_join;
+
+struct M5SelectorAiCallLatch {
+    uint32_t callsite = 0;
+    uint32_t input = 0;
+    uint32_t input_source = 0;
+    uint32_t a0 = 0;
+    uint32_t a1 = 0;
+    uint32_t a2 = 0;
+    uint32_t s0 = 0;
+    uint32_t s1 = 0;
+    uint32_t v0 = 0;
+    uint32_t phase = 0;
+    bool valid = false;
+    bool consumed = false;
+};
+
+M5SelectorAiCallLatch g_m5_selector_ai_call_latch;
 }
 
 extern "C" void rs64_m5_selector_input_load(uint32_t pc, uint32_t value,
@@ -4048,6 +4071,25 @@ extern "C" void rs64_m5_selector_ai_callsite(uint32_t callsite,
     if (!enabled) return;
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     const uint32_t width = rs64_vi_committed_width();
+    static bool latch_control_seen = false;
+    if (!latch_control_seen) {
+        std::fprintf(stderr,
+            "[m5-selector-ai-call-latch-control] callsite=0x%08X width=%u origin=0x%06X\n",
+            callsite, width, origin);
+        std::fflush(stderr);
+        latch_control_seen = true;
+    }
+    g_m5_selector_ai_call_latch.callsite = callsite;
+    g_m5_selector_ai_call_latch.a0 = a0;
+    g_m5_selector_ai_call_latch.a1 = a1;
+    g_m5_selector_ai_call_latch.a2 = a2;
+    g_m5_selector_ai_call_latch.s0 = s0;
+    g_m5_selector_ai_call_latch.s1 = s1;
+    g_m5_selector_ai_call_latch.v0 = v0;
+    g_m5_selector_ai_call_latch.phase = rs64_phase_ord();
+    g_m5_selector_ai_call_latch.input = g_m5_selector_ai_join.input;
+    g_m5_selector_ai_call_latch.input_source = g_m5_selector_ai_join.input_source;
+    g_m5_selector_ai_call_latch.valid = true;
     g_m5_selector_ai_join.phase = rs64_phase_ord();
     g_m5_selector_ai_join.callsite = callsite;
     g_m5_selector_ai_join.call_a0 = a0;
@@ -4101,6 +4143,36 @@ extern "C" void rs64_m5_selector_ai_callsite(uint32_t callsite,
         "[m5-selector-ai-callsite] ordinal=%u phase=%u width=%u origin=0x%06X "
         "callsite=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X s0=0x%08X s1=0x%08X v0=0x%08X\n",
         rows++, phase, width, origin, callsite, a0, a1, a2, s0, s1, v0);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_selector_ai_call_latch_join(uint32_t width,
+                                                       uint32_t origin,
+                                                       uint32_t phase) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_M5_SELECTOR_AI_BOUNDARY");
+        return all && all[0] && all[0] != '0';
+    }();
+    if (!enabled || width != 512u || origin != 0x006AB400u) return;
+    if (g_m5_selector_ai_call_latch.consumed) return;
+    g_m5_selector_ai_call_latch.consumed = true;
+    if (!g_m5_selector_ai_call_latch.valid) {
+        std::fprintf(stderr,
+            "[m5-selector-ai-call-latch-join] phase=%u width=%u origin=0x%06X call=absent\n",
+            phase, width, origin);
+        std::fflush(stderr);
+        return;
+    }
+    std::fprintf(stderr,
+        "[m5-selector-ai-call-latch-join] phase=%u width=%u origin=0x%06X "
+        "call_phase=%u callsite=0x%08X input=0x%08X input_source=0x%08X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X s0=0x%08X s1=0x%08X v0=0x%08X\n",
+        phase, width, origin, g_m5_selector_ai_call_latch.phase,
+        g_m5_selector_ai_call_latch.callsite, g_m5_selector_ai_call_latch.input,
+        g_m5_selector_ai_call_latch.input_source, g_m5_selector_ai_call_latch.a0,
+        g_m5_selector_ai_call_latch.a1, g_m5_selector_ai_call_latch.a2,
+        g_m5_selector_ai_call_latch.s0, g_m5_selector_ai_call_latch.s1,
+        g_m5_selector_ai_call_latch.v0);
     std::fflush(stderr);
 }
 

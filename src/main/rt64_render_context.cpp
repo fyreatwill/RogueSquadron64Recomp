@@ -55,6 +55,9 @@ extern "C" void rs64_bump_phase_ord(void) {
 extern "C" uint32_t rs64_phase_ord(void) {
     return g_rs64_phase_ord.load(std::memory_order_relaxed);
 }
+extern "C" void rs64_m5_selector_ai_call_latch_join(uint32_t width,
+                                                       uint32_t origin,
+                                                       uint32_t phase);
 
 // Shared wall-clock epoch (s234) so guest-side diagnostics (funcs_*.c PATCH
 // blocks, via extern "C" declaration) can emit timestamps directly
@@ -936,6 +939,8 @@ public:
                     // themselves to one phase (see rs64_phase_ord below).
                     rs64_m5_route_fingerprint_phase(w, pvi->VI_ORIGIN_REG);
                     rs64_bump_phase_ord();
+                    rs64_m5_selector_ai_call_latch_join(
+                        w, pvi->VI_ORIGIN_REG & 0x00FFFFFFu, rs64_phase_ord());
                     if (w == 1024u && (pvi->VI_ORIGIN_REG & 0x00FFFFFFu) == 0x00790400u) {
                         rs64_m5_b40_route_title_transition();
                     }

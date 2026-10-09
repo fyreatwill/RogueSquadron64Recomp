@@ -150200,3 +150200,22 @@ pre-transition call + hangar join selects H-pre-phase-call; no call with
 controls live selects H-no-hangar-call; a call stuck in title phase selects
 H-phase-state-mismatch. ORIGIN: host probes observe guest call/input/
 boundary arguments only; no value was skipped, rewritten, or guarded.
+
+## Session 4410 (2026-10-09) — latched the selector call across the hangar VI transition
+
+Built and ran the qualified real-audio/LLE/ungated/solo/spin-yield port route
+with the existing selector witness matrix. The positive latch control fired;
+title `0x00790400` reached 2,672 rows, hangar `0x006AB400` reached 377, and
+the run retained 2,229 audio-task joins with no crash or abort. The phase
+boundary row was `phase=5 width=512 origin=0x6AB400 call_phase=4
+callsite=0x80091CB8`, with input `0x561F`, source `0x80165ED0`, and call
+argument `0x5622`. The same run then emitted hangar selector
+boundary/input/source/store rows and task joins. This selects
+H-pre-phase-call and rules out H-no-hangar-call and H-phase-state-mismatch for
+the qualified port route; the earlier filtered zero was a phase-ordering
+boundary. Two instrumentation corrections were required before the result:
+the latch was made independent of the route-log gate, then moved to RT64's
+actual VI-width-change phase publisher. ORIGIN: host probes observed guest
+call arguments and the RT64 phase transition; no value was skipped, rewritten,
+or guarded. Next: retail-oracle phase-keyed comparison of selector
+input/call arguments/task payload identity at the pre-filter boundary.
