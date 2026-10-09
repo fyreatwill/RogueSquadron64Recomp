@@ -381,3 +381,5 @@ writer and whether the value is legitimate.
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md), and the append-only detailed
 ledger in [PORTING-STATE.md](../PORTING-STATE.md). Use bounded grep/sed
 windows for the ledger; do not read it whole.
+
+- s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).

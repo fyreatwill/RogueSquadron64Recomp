@@ -1,7 +1,8 @@
-# Next work unit (s4445): chain drain accounting for the s4441 B1 crash
+# Next work unit (s4446): name the retire path that advances head
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-State (s4444): B1 = head 0x801FAB68 len=1 -> head=0 -> null deref; chain len 256 is walker cap. Drain writer unnamed.
-Hypotheses: (a) returns stop because a retire path needs audio-task completion the port lacks; (b) retail drains too but survives by cadence/size; (c) leak in a guest path we mis-execute.
-Discriminator: offline, from [s4234-ENTRY]/[s4254-CHAIN] rows in /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4441/port_*.log, count head advances vs tail inserts per 1000 ENTRYs; flatlined inserts -> (a)/(c); then oracle (tools/oracle/README.md) for retail rate.
+State (s4445): port chain only fills; head advances 91x in first 1000 ENTRYs then ~0/1000 (A1/A2), tail ~1/ENTRY.
+Hypotheses: (a) retire needs audio-task completion the port lacks; (b) retail also drains little (cadence); (c) mis-executed guest path.
+Discriminator: oracle retail run (tools/oracle/README.md, positive control first): watch head word of the chain (phys of 0x801F9CE0-region head var) over title; count head advances/1000 inserts. Retail ~0 -> (b); retail >>0 -> (a)/(c), then PC-attribute the writers from the oracle.
+Also: PC of the 91 early head advances in the port (store watch on head var) gives the retire function name.
