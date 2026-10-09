@@ -150995,3 +150995,6 @@ HYPOTHESIS-ID: m5-mort-gap
 H1 (MORT-owned gap) vs H2 (pipelines independent, divergence upstream). Re-ran tools/mort_probe.py (control: 546 descriptors, type counts 0:419,1:59,2:36,3:17,4:9,5:6, rates 8000:440/16000:106; rows 0,1,59,90 decoded nonzero, verdict H-MORTReferenceMatches). Combined with s4321-s4416 ledger evidence (qualified oracle/VI/MORT controls; silent-vs-image descriptor divergence is pre-filter at the selector/stream boundary, D740 callsite executes), no MORT-owned gap is evidenced, so Step 9's condition is unmet and it is closed. Limits: this session did not run a new guest-vs-reference hash join; the guard-fire positive control for s4474 was not done. No code changed.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4476 (2026-10-09) — M3 idiom-class audit has no unaudited class; BLOCKED with a specific question
+Read CURRENT-TRUTH, NEXT.md, SOAK-RESULTS tail; grepped PROJECT-OVERVIEW closed-class notes (s397 "frequency-scan method exhausted ... needs human input"; s3586-s3658 "Do not re-audit a closed class"). No experiment run: no candidate class exists to attach a same-run positive control to, and the only live crash lead (s4457 +5436 pool-list writer) is a reactive chase the loop rules bar. Priority 4 sweep no longer resets the churn counter. Options offered in scratch/agent/BLOCKED.md.
