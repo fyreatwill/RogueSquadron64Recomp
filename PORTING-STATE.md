@@ -149725,3 +149725,22 @@ watch and test their task ordering/value correspondence. No mitigation or
 value rewrite was added. ORIGIN: retail writer PCs, exact effective
 destinations, task publication ordinals, scalar validation, and whole-RDRAM/VI
 controls; no value was skipped, rewritten, or guarded.
+
+## Session 4384 (2026-10-09) — qualified actual hangar writer PCs
+
+Ran the single batched retail-oracle work unit after rebuilding the oracle.
+The 75-second Rice capture passed the whole-RDRAM positive control with 10,000
+callbacks before removal, reached title 1024 and hangar 512, and retained
+1,721 valid type-2 task rows with `invalid=0` and `overflow=0`. The ordinal
+writer table retained 920 keys with zero overflow.
+
+The complete actual hangar writer set selected from s4383 was live at high
+volume. Requested writer scalar validation was live for every retained writer
+with `mismatch=0`; the writers produced both before- and after-publication
+rows. This closes a missing-writer/value-watch boundary, but it does not prove
+selector/decode provenance: `ordinal-writer-join` reports publication ordering,
+not task-payload value equality, and this capture did not join post-values to
+the task payload. The next work unit must add that phase/task-keyed value join.
+No mitigation or value rewrite was added. ORIGIN: retail writer PCs, exact
+effective destinations, task publication ordinals, scalar validation, and
+whole-RDRAM/VI controls; no value was skipped, rewritten, or guarded.
