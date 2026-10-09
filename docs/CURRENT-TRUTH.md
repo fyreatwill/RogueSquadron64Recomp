@@ -4,7 +4,14 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4339: the fixed, qualified C904/C88C field witness reached
+Updated for session 4340: a phase-gated scalar-store census and independent
+retail physical watch both passed their positive controls and target VI phases,
+but recorded zero writers to physical 0x20..0x30. This rejects a missing
+publication writer and a port stale-read explanation for the C904/C88C
+branch-state mismatch; the port's s1+0x22 interpretation is the wrong semantic
+field mapping. The port source/branch comparison remains single-source field
+evidence, qualified by independent retail watch and VI controls. Previously
+4339: the fixed, qualified C904/C88C field witness reached
 both target phases and rejected source/branch field parity; port C88C had
 branch_state=0 on all 256 rows while retail C904 used 0x3108/0x0010 by s1,
 selecting a pre-filter stream/state divergence. This is single-source
@@ -255,7 +262,17 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4339) Name the branch-state writer behind the C904/C88C divergence. The
+00. (s4340) Re-map the C88C branch-state field after the writer census found no
+scalar writers to physical 0x20..0x30 in either runtime. The port callback
+control and retail whole-RDRAM/VI controls passed, while the port and retail
+low-range watches both recorded zero writes. Treat `s1+0x22` as a rejected
+semantic mapping, not as a stale-read or absent-writer boundary. Run one bounded
+static/data-flow census of the C88C helper's `s1` values, its backing table
+loads, and the retail C904 `s1`/branch-state tuple; identify a candidate port
+field whose phase-gated values can be compared directly. Do not add a guard or
+alter decoder/RSP/AI behavior.
+
+00a. (s4339) Name the branch-state writer behind the C904/C88C divergence. The
 fixed C88C-entry witness passed host/title/hangar/filter controls and emitted
 256 rows, but port `branch_state` was 0 for both `s1=1/2`, while retail C904
 phase-512 rows used `0x0010`/`0x3108`; source words/bytes and row order also
@@ -357,6 +374,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 co-located sequence witness | s4331: image-arm entry, post-helper, and D740 direct events share sequence ids inside `decodeAndFillVoiceBlock`; silent-arm target rows are absent. This rejects the entry-bypass/helper-not-invoked reading and identifies the prior D740 caller null as a probe-boundary error. Descriptor class and payload ownership remain open. |
 | M5 Step 9 C88C descriptor join | s4332: both arms reached VI 512, every D740 row joined a C88C tuple, and the initial descriptor prefix matched; later descriptor pointer/word/type-class sequences diverged. This rejects H-join-boundary and stable post-descriptor selection; pre-filter route/stream selection remains open. |
 | M5 Step 9 C88C source/branch fields | s4339: the fixed port witness emitted 256 rows with retail-compatible `s0`, `s1`, and branch-selector shape, but port `branch_state` was 0 on every row versus retail `0x3108`/`0x0010`; source words/bytes and order also diverged. This selects pre-filter stream/state divergence; the writer/publication boundary remains open. Single-source cross-runtime field evidence, with independent route controls. |
+| M5 Step 9 branch-state writer census | s4340: the port scalar-store census passed its phase/control witness and found zero writes to physical `0x20..0x30`; the independent retail oracle passed whole-RDRAM and title/hangar VI controls and its exact low-range watch also found zero writes. This rejects both a missing scalar publication writer and a port stale-read at `s1+0x22`; the port interpretation is the wrong semantic field mapping. The cross-runtime field values remain single-source, with independent watch/VI qualification. |
 
 ## Durable evidence boundary
 

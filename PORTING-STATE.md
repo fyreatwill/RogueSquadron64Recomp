@@ -148827,3 +148827,30 @@ evidence; route, phase, filter, and retained oracle controls are independent.
 
 ORIGIN: none; diagnostic witness capture only. The only fix was to make the
 instrument's physical low-address read semantics match the independent oracle.
+
+## Session 4340 (2026-10-08) — low-field writer census selected semantic remapping
+
+The prescribed s4340 discriminator was implemented as a regeneration-replayable
+scalar-store census. It inserted phase-gated callbacks after every generated
+`MEM_B/H/W` store, with a host positive-control row and target rows for physical
+`0x20..0x30`; no decoder, RSP, AI, or game behavior was changed. The Debug
+build completed successfully.
+
+The qualified port run reached title VI 1024 at `0x00790400` and hangar VI 512
+at `0x006AB400`, emitted the low-field census control, and emitted 255 C88C
+field rows, but recorded zero target low-field writer rows. The independent
+75-second retail oracle reached both title and hangar phases, passed the
+whole-RDRAM positive control at 10,000 callbacks, and its exact physical
+`0x20..0x30` watch recorded zero writes. The prior retained retail C904 rows
+still show `branch_state=0x3108` for `s1=2` and `0x0010` for `s1=1`.
+
+This rejects a retail-only missing scalar writer and a port stale-read at
+`s1+0x22`; under the predeclared discriminator it selects wrong semantic field
+mapping. It also proves the low-range null was not an instrumentation or route
+null: both target controls and the port callback control fired. The field-value
+comparison remains single-source cross-runtime evidence, independently
+qualified by the retail memory watch and VI controls.
+
+ORIGIN: none; this iteration added diagnostic census machinery only. Evidence:
+`scratch/agent/s4340_lowfield_port/run.log` and
+`scratch/agent/s4340_lowfield_oracle_75.log`.

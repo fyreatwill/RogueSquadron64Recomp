@@ -4625,6 +4625,45 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
     }
 }
 
+extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
+                                         uint32_t addr, uint32_t value) {
+    static int enabled = -1;
+    static uint32_t control = 0;
+    static uint32_t rows = 0;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_LOWFIELD_WRITER");
+        enabled = ((all && all[0] && all[0] != '0') ||
+                   (own && own[0] && own[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width_n = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width_n == 1024u && origin == 0x00790400u) ||
+          (width_n == 512u && origin == 0x006AB400u))) return;
+
+    const uint32_t phys = addr & 0x007FFFFFu;
+    const uint32_t len = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
+    const uint32_t logged_value = value & (len == 1u ? 0xFFu :
+                                           (len == 2u ? 0xFFFFu : 0xFFFFFFFFu));
+    if (!control) {
+        std::fprintf(stderr,
+            "[m5-lowfield-writer-control] phase=%u width=%u origin=0x%06X "
+            "pc=0x%08X phys=0x%06X len=%u value=0x%08X\n",
+            rs64_phase_ord(), width_n, origin, pc, phys, len, logged_value);
+        std::fflush(stderr);
+        control = 1;
+    }
+    if (phys >= 0x20u && phys < 0x31u && rows < 4096u) {
+        std::fprintf(stderr,
+            "[m5-lowfield-writer] row=%u phase=%u width=%u origin=0x%06X "
+            "pc=0x%08X addr=0x%08X phys=0x%06X len=%u value=0x%08X\n",
+            rows++, rs64_phase_ord(), width_n, origin, pc, addr, phys, len,
+            logged_value);
+        std::fflush(stderr);
+    }
+}
+
 extern "C" void rs64_m5_field348_candidate_store(uint32_t writer_pc,
                                                      char width,
                                                      uint32_t store_pc,
