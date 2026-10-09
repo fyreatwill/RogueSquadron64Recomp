@@ -148502,4 +148502,15 @@ This rules out neither descriptor-class divergence nor pre-filter route
 divergence. It rules out the two attempted RSP/task and stack-slot witnesses.
 No guard, skip, decoder, RSP, or AI behavior changed.
 
+Discrimination (s4327 close-out): REFUTES H-descriptor-via-RSP-task-data_ptr
+(silent arm data_ptr=0 vs image arm non-RDRAM: cannot be a guest descriptor in
+either arm) and H-descriptor-via-sp+0x114 (call rows 0xB2C71180, entry rows 0:
+a non-descriptor slot in both). Both witnesses are removed from the candidate
+set; neither is a null on descriptor class. SELECTS the CPU caller object
+(a0/a1/a2/a3 already captured by rs64_filter_voice_caller_probe) as the only
+remaining witness boundary. Next discriminator: s4328 joins that caller object
+and its descriptor type/class/source pointer to the 256 filter rows per arm;
+matching metadata + divergent source selects H-pre-filter-route-divergence,
+divergent metadata selects H-descriptor-class-divergence.
+
 ORIGIN: none; diagnostic-only instrument and matrix, no mitigation.
