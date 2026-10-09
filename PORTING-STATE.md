@@ -149541,3 +149541,19 @@ out missing task/C904 coverage as the cause. It does not select
 transform-before-publication versus payload-overwrite. The evidence is
 single-source retail oracle evidence. ORIGIN: retail execution, task, and
 C904 observations; no value was skipped, rewritten, or guarded.
+
+## Session 4374 (2026-10-09) — title range census selected predecessor path
+
+Ran one 75-second Rice retail-oracle capture with the whole-RDRAM positive
+control, typed `0x80033FCC` task watch, C904/task join, and an execution-range
+census for `0x8009C904:0x8009DC3C`. The run passed the control with 10,000
+writes, reached 3,490 VI and all three target buckets, and recorded 1,571
+valid type-2 task rows with no invalid pointers. The range was active with
+16,264,908 execution hits and 3,361,701 C904/task joins, but its retained
+joined rows were hangar-only; title C904/task witnesses remained live in both
+1024 buckets. This selects H-title-predecessor over a title overlay alias for
+the presumed decode range and rules out missing title task/C904 coverage. It
+does not identify the predecessor caller or close the transform/publication
+boundary. The evidence is single-source retail oracle evidence. ORIGIN: retail
+execution, task, and C904 observations; no value was skipped, rewritten, or
+guarded.

@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4373 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4374 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -242,6 +242,17 @@ payload-overwrite and is single-source retail evidence. ORIGIN: retail
 execution, task, and C904 observations; no value was skipped, rewritten, or
 guarded.
 
+Session 4374's title-range census passed the whole-RDRAM control (10,000
+writes), reached 3,490 VI and all three phase buckets, and recorded 1,571
+valid type-2 task rows. The range `0x8009C904:0x8009DC3C` was active with
+16,264,908 execution hits and 3,361,701 C904/task joins, but its retained
+joined rows were hangar-only; title C904/task witnesses remained live in both
+1024 buckets. This selects H-title-predecessor over a title overlay alias for
+the presumed decode range and rules out a missing title task/C904 route. It is
+single-source retail evidence; the next probe must census the title caller
+chain around `0x80019C00:0x80019E20`. ORIGIN: retail execution, task, and C904
+observations; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -283,12 +294,12 @@ is explicitly repaired.
 
 1. **M5 transform/publication boundary** — HYPOTHESIS-ID
    `m5-selector-decode-boundary`. Locate the title-specific intermediate
-   execution path rather than repeating C950/C954/D78C/D790/DC38: use one
-   phase-gated PC-range census around the live C904-to-DC38 region, joined to
-   the typed task ordinal, with the whole-RDRAM control and all three VI
-   buckets. The s4373 five-PC table was live and task-joined only in hangar,
-   selecting an instrument/path gap for title. Do not repeat the closed
-   first-eight payload comparison.
+   execution path rather than repeating C950/C954/D78C/D790/DC38: census the
+   title caller chain around `0x80019C00:0x80019E20`, joined to the typed task
+   ordinal, with the whole-RDRAM control and all three VI buckets. The s4374
+   decode-range table was live and task-joined only in hangar, selecting a
+   title predecessor path. Do not repeat the closed first-eight payload
+   comparison or the `0x8009C904:0x8009DC3C` range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
