@@ -150017,3 +150017,19 @@ or guarded.
 
 ORIGIN: port phase/task/DMA witnesses and same-run positive control were
 observed; no value was skipped, rewritten, or guarded.
+## Session 4399 (2026-10-09) — classified the port VI-origin/action sequence
+
+The new 85-second port capture passed the positive input-writer control, reached
+the known first-title origin `0x00790400` (2,692 observations) and hangar
+origin `0x006AB400` (135 observations), and retained 2,313 audio-task rows
+with 2,313 task/image joins, 1,064 input-DMA rows, and 256 selector/decode
+joins. The phase-gated ordered transitions were `0/320`, `640` cinematic,
+`1024 @ 0x00790400`, then `512 @ 0x006AB400`; the missing
+`1024 @ 0x00790800` origin did not occur. Autopilot actions fired at 3, 6,
+and 9 seconds while the 640 phase was active. No crash or abort occurred.
+This selects H-port-direct-transition over H-port-middle-origin for the
+qualified port route and rules out an instrument failure: the positive control,
+known title and hangar phases, task rows, and joins were all live. It does not
+explain the retail selector/decode boundary or establish payload equivalence;
+those remain open. ORIGIN: phase transitions and action events are observed
+from the port runtime; no value was skipped, rewritten, or guarded.

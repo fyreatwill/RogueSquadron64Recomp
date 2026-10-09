@@ -1,34 +1,28 @@
-# Next work unit (s4399): classify the port VI-origin/action boundary
+# Next work unit (s4400): compare port selector/task payloads on the qualified route
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-Session 4398 removed the stop-width gate and still observed the positive
-control, `0x00790400`, and `0x006AB400`, but zero `0x00790800`; task and image
-joins remained live. The next unit must establish whether the port emits a
-distinct middle-title VI origin/action or transitions directly from the first
-title origin to hangar.
+The s4399 route is qualified as `0x00790400 -> 0x006AB400`; do not seek or
+recount the absent `0x00790800` bucket.
 
 Competing hypotheses:
 
-- H-port-middle-origin: a phase-gated run exposes a distinct nonzero VI origin
-  or action between `0x00790400` and `0x006AB400`, identifying the route under a
-  different origin label.
-- H-port-direct-transition: the complete phase/action sequence contains only
-  the known first-title and hangar origins, proving the middle-title route is
-  absent from this port path.
-- H-port-instrument-failure: the run loses the positive control or either known
-  phase, so the sequence is not qualified.
+- H-port-payload-equivalence: selector/decode and task/image payloads match in
+  the first-title and hangar buckets; the missing origin is only a route label.
+- H-port-payload-divergence: the direct transition still produces
+  phase-specific selector/task payload families.
+- H-port-payload-instrument-gap: either actual phase, control, or join is
+  absent, so no payload conclusion is valid.
 
-Discriminating measurement: one run must retain a phase-gated ordered table of
-every `vi_width/origin` transition and autopilot action, plus the positive
-control, task rows, and task/image joins. A distinct intervening origin/action
-selects H-port-middle-origin; only the known first-title-to-hangar sequence
-selects H-port-direct-transition; missing control or either known phase selects
-H-port-instrument-failure.
+Discriminating measurement: one phase-gated run must retain paired selector,
+task, image-DMA, and payload-field rows for both actual origins, then report
+exact selected-word/payload matches and phase-family hashes. Equal relationships
+select equivalence; phase-specific families or zero matches select divergence;
+missing control, phase, or joins selects instrument gap.
 
-Exact command: create a new self-contained recipe by copying
-`scratch/agent/run_s4397_m5_selector_boundary_port.sh`, change only its output
-directory/name to `s4399_m5_port_vi_origin_sequence`, and replace the summary
-grep with a phase-gated ordered extraction of all `[phase]`/VI-origin and
-`[autopilot]` lines. Run it from the repository root for 85 seconds; keep the
-existing positive-control/task/image logging, and kill the game with SIGKILL.
+Exact commands: create `scratch/agent/run_s4400_m5_port_payload_route.sh` with
+`apply_patch`, based on
+`scratch/agent/run_s4399_m5_port_vi_origin_sequence.sh`; retain all controls
+and add only bounded phase-keyed selector/task/payload comparison output. Run
+`zsh scratch/agent/run_s4400_m5_port_payload_route.sh` from the repository root
+for 85 seconds, SIGKILL the game, and inspect its summary plus bounded counts.

@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4398 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4399 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -655,6 +655,19 @@ VI-origin/action sequence in the same qualified run. ORIGIN: port phase/task/DMA
 witnesses and same-run positive control were observed; no value was skipped,
 rewritten, or guarded.
 
+Session 4399's phase/action capture passed the positive input-writer control and
+recorded 2,692 `0x00790400` title observations, 135 `0x006AB400` hangar
+observations, 2,313 audio-task rows, 2,313 task/image joins, 1,064 input-DMA
+rows, and 256 selector/decode joins. The ordered phase transitions were
+`0/320`, `640` cinematic, `1024 @ 0x00790400`, then `512 @ 0x006AB400`;
+`0x00790800` never occurred. Autopilot actions fired at 3, 6, and 9 seconds
+in the 640 phase. No crash or abort occurred. This selects
+H-port-direct-transition over H-port-middle-origin and rules out
+H-port-instrument-failure for the qualified port route. It does not establish
+payload equivalence or explain the retail transform/publication boundary.
+ORIGIN: port phase transitions, action events, task/DMA witnesses, and the
+same-run control were observed; no value was skipped, rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -670,9 +683,10 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Classify the port's actual VI-origin/action
-   sequence around the missing middle-title route in one phase-gated run; do not
-   repeat the three-bucket comparison or retail range/address-containment work.
+   `m5-selector-decode-boundary`. Use the qualified port sequence
+   `0x00790400 -> 0x006AB400` as the phase gate for the next port/retail
+   payload comparison; do not repeat the resolved VI-origin census or retail
+   range/address-containment work.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
