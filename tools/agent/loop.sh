@@ -5,12 +5,24 @@
 # NEXT.md), which is exactly what they were built for. Usage-limit windows
 # become sleeps, not handoffs.
 #
-# Env: ITER_CAP (default 80), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12),
+# Env: ITER_CAP (default 0 = unlimited; set N for a bounded run), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12),
 #      LOOP_MODEL (default claude-sonnet-5-5), MAX_NO_CONTRACT (default 2),
 #      SLEEP_ON_ERROR (120s) / MAX_ERR_RETRIES (4) for nonzero-rc-without-limit-wording,
 #      SOAKS_BETWEEN_ITERS (2) / SOAK_TIMEOUT (600s) for the queued-soak runner,
 #      UNBLOCK_ENABLE (1) / MAX_UNBLOCK_ATTEMPTS (1) / UNBLOCK_RUNNER /
 #      UNBLOCK_MODEL for the automated unblock tier (see try_unblock below)
+#
+# RUNNER ROTATION (default when no runner= / RUNNER is given): iterations use the
+# first runner in ROTATE_ORDER (default "claude codex grok") that is not cooling
+# down. A runner that hits a limit is benched: claude/codex for COOLDOWN_CLAUDE /
+# COOLDOWN_CODEX (4h); if claude AND codex are both limited, both are benched
+# COOLDOWN_BOTH (5h) and grok carries the loop (grok benched COOLDOWN_GROK, 6h,
+# when IT hits a limit - it only has a weekly cap). Priority is re-evaluated every
+# iteration, so claude is retried first the moment its cooldown ends. If every
+# runner is benched the loop sleeps until the soonest one reopens. Per-runner
+# models: RUNNER_MODEL_CLAUDE / _CODEX / _GROK (claude falls back to LOOP_MODEL).
+# Pass runner=X (or RUNNER=X) to pin one runner and disable rotation.
+# Cooldown state lives in scratch/agent/runner-limits/<runner> (epoch seconds).
 #
 # Any of the above (or RUNNER, RUNNER_MODEL, ...) can also be passed as a
 # key=value argument instead of an env var prefix, e.g.:
@@ -33,7 +45,7 @@ for arg in "$@"; do
     *) echo "usage: $0 [key=value ...]  e.g. model=opus  runner=grok RUNNER_MODEL=grok-4.6" >&2; exit 2 ;;
   esac
 done
-ITER_CAP="${ITER_CAP:-80}"
+ITER_CAP="${ITER_CAP:-0}"   # 0 = unlimited; the BLOCKED/stop conditions below still end the run
 SLEEP_ON_LIMIT="${SLEEP_ON_LIMIT:-1800}"
 MAX_LIMIT_WAITS="${MAX_LIMIT_WAITS:-12}"
 MAX_NO_CONTRACT="${MAX_NO_CONTRACT:-2}"
@@ -52,6 +64,61 @@ SOAK_TIMEOUT="${SOAK_TIMEOUT:-600}"
 LOOP_MODEL="${LOOP_MODEL:-claude-sonnet-5-5}"
 
 log() { echo "[loop] $*" | tee -a "$AG/loop.log"; }
+
+# ---- runner rotation (see header) ----
+if [ -z "${RUNNER_ROTATE:-}" ]; then
+  if [ -n "${RUNNER:-}" ]; then RUNNER_ROTATE=0; else RUNNER_ROTATE=1; fi
+fi
+ROTATE_ORDER="${ROTATE_ORDER:-claude codex grok}"
+COOLDOWN_CLAUDE="${COOLDOWN_CLAUDE:-14400}"
+COOLDOWN_CODEX="${COOLDOWN_CODEX:-14400}"
+COOLDOWN_BOTH="${COOLDOWN_BOTH:-18000}"
+COOLDOWN_GROK="${COOLDOWN_GROK:-21600}"
+LIMDIR="$AG/runner-limits"
+mkdir -p "$LIMDIR"
+
+limit_until() {
+  local v; v="$(cat "$LIMDIR/$1" 2>/dev/null)"
+  case "$v" in ''|*[!0-9]*) echo 0 ;; *) echo "$v" ;; esac
+}
+runner_ready() { [ "$(limit_until "$1")" -le "$(date +%s)" ]; }
+
+# Bench a runner that hit a limit. If its claude<->codex peer is already benched
+# too, both are limited "repeatedly": push both out to COOLDOWN_BOTH.
+mark_limited() {
+  local r="$1" now cd peer=""
+  now="$(date +%s)"
+  case "$r" in
+    claude) cd="$COOLDOWN_CLAUDE"; peer=codex ;;
+    codex)  cd="$COOLDOWN_CODEX";  peer=claude ;;
+    grok)   cd="$COOLDOWN_GROK" ;;
+    *)      cd="$SLEEP_ON_LIMIT" ;;
+  esac
+  echo $((now+cd)) > "$LIMDIR/$r"
+  if [ -n "$peer" ] && [ "$(limit_until "$peer")" -gt "$now" ]; then
+    echo $((now+COOLDOWN_BOTH)) > "$LIMDIR/$r"
+    echo $((now+COOLDOWN_BOTH)) > "$LIMDIR/$peer"
+    log "claude and codex both limited - benching both until $(date -r $((now+COOLDOWN_BOTH))), grok takes over"
+  else
+    log "$r limited - benched until $(date -r $((now+cd)))"
+  fi
+}
+
+# Sets CUR_RUNNER to the highest-priority runner that is not benched; sleeps
+# until the soonest cooldown ends when all of them are.
+pick_runner() {
+  local now r u soonest
+  while true; do
+    now="$(date +%s)"; soonest=0
+    for r in $ROTATE_ORDER; do
+      u="$(limit_until "$r")"
+      if [ "$u" -le "$now" ]; then CUR_RUNNER="$r"; return; fi
+      if [ "$soonest" -eq 0 ] || [ "$u" -lt "$soonest" ]; then soonest="$u"; fi
+    done
+    log "all runners benched - sleeping until $(date -r "$soonest")"
+    sleep $((soonest-now+5))
+  done
+}
 
 # Runner output goes through the formatter on the way to the log ONLY. codex
 # emits JSONL whose command output arrives as one enormous escaped line per
@@ -183,14 +250,18 @@ runner_desc="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh --describe)"
 # default, see runner.sh) for the rest of THIS run, so every iteration - and
 # the finished-line stamp below - uses exactly the model just logged instead
 # of re-resolving (and possibly drifting, e.g. mid-run default change) later.
-if [ -z "${RUNNER_MODEL:-}" ]; then
+if [ "$RUNNER_ROTATE" != 1 ] && [ -z "${RUNNER_MODEL:-}" ]; then
   detected_model="$(printf '%s' "$runner_desc" | grep -oE 'model=[^ ]+' | cut -d= -f2)"
   case "$detected_model" in
     ''|'<unresolved>') : ;;  # leave RUNNER_MODEL unset, runner.sh falls back to its own default per-call
     *) export RUNNER_MODEL="$detected_model" ;;
   esac
 fi
-log "run starting $(date) — $runner_desc cap=$ITER_CAP"
+if [ "$RUNNER_ROTATE" = 1 ]; then
+  log "run starting $(date) — runner rotation: $ROTATE_ORDER (LOOP_MODEL=$LOOP_MODEL) cap=$ITER_CAP"
+else
+  log "run starting $(date) — $runner_desc cap=$ITER_CAP"
+fi
 
 n=0
 waits=0
@@ -207,7 +278,7 @@ HYPSTATE="${TMPDIR:-/tmp}/.rs64-hyp-state"
 prev_hyp=""; hyp_count=0
 [ -f "$HYPSTATE" ] && read -r prev_hyp hyp_count < "$HYPSTATE" 2>/dev/null
 case "${hyp_count:-0}" in ''|*[!0-9]*) hyp_count=0 ;; esac
-while [ "$n" -lt "$ITER_CAP" ]; do
+while [ "$ITER_CAP" -eq 0 ] || [ "$n" -lt "$ITER_CAP" ]; do
 
   # BLOCKED.md is the EXPLANATION of a block; scratch/agent/STATUS is the
   # DECLARATION. Halting on the file's mere existence killed a healthy run
@@ -255,6 +326,14 @@ while [ "$n" -lt "$ITER_CAP" ]; do
     cat "$AG/PIVOT.md" tools/agent/ITERATION.md > "$AG/ITERATION_WITH_PIVOT.md"
     prompt_file="$AG/ITERATION_WITH_PIVOT.md"
     log "rule-8 pivot preamble active this iteration"
+  fi
+  if [ "$RUNNER_ROTATE" = 1 ]; then
+    pick_runner
+    export RUNNER="$CUR_RUNNER"
+    mv_var="RUNNER_MODEL_$(printf '%s' "$RUNNER" | tr '[:lower:]' '[:upper:]')"
+    export RUNNER_MODEL="${!mv_var:-}"
+    runner_desc="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh --describe)"
+    log "iteration $n runner: $runner_desc"
   fi
   out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$prompt_file")"
   rc=$?
@@ -347,6 +426,11 @@ else:
   if printf '%s' "$errtxt" | grep -qiE 'resets? at|resets? in|resets? [0-9]|try again (later|at)|limit will reset'; then
     : # falls through to the transient handler below - sleep, do not stop
   elif printf '%s' "$errtxt" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota|insufficient balance'; then
+    if [ "$RUNNER_ROTATE" = 1 ]; then
+      # Providers word 5-hour windows as spend caps (see the probe note below);
+      # rotating away and retrying after the cooldown is right either way.
+      mark_limited "$RUNNER"; n=$((n-1)); continue
+    fi
     # 'insufficient balance' is DeepSeek's 402: a prepaid balance that ran out.
     # Genuinely a hard cap — it is not a window and no probe can talk it open.
     # The API's wording is not trustworthy here: on 2026-07-27 a 5-hour
@@ -386,6 +470,9 @@ else:
   fi
 
   if printf '%s' "$errtxt" | grep -qiE 'usage limit|session limit|rate.?limit|overloaded|resets at'; then
+    if [ "$RUNNER_ROTATE" = 1 ]; then
+      mark_limited "$RUNNER"; n=$((n-1)); continue   # an unworked window burns no iteration
+    fi
     waits=$((waits+1))
     if [ "$waits" -gt "$MAX_LIMIT_WAITS" ]; then
       { echo "# Loop gave up after $waits consecutive limit waits, $(date)"; echo;
@@ -462,6 +549,14 @@ else:
     # quietly spend the wrong provider's quota on every unmet contract.
     retry_runner=claude
     [ "${RUNNER:-claude}" = "deepseek" ] && retry_runner=deepseek
+    if [ "$RUNNER_ROTATE" = 1 ]; then
+      retry_runner=""
+      for r in claude codex; do runner_ready "$r" && { retry_runner="$r"; break; }; done
+      if [ -z "$retry_runner" ]; then
+        log "contract unmet but claude and codex are both benched - skipping retries"
+        break
+      fi
+    fi
     # RUNNER_MODEL is pinned to the ORIGINAL runner's model (see the
     # --describe block above) and is meaningless - or actively wrong, a
     # foreign provider's slug - for whichever runner this retry switches to.
@@ -477,6 +572,7 @@ else:
     # retrying early, it does not put the loop to sleep.)
     if printf '%s' "$out" | grep -qiE 'usage limit|rate.?limit|spend limit|overloaded'; then
       log "retry $cr hit a provider limit; abandoning contract retries this iteration"
+      [ "$RUNNER_ROTATE" = 1 ] && mark_limited "$retry_runner"
       break
     fi
   done
