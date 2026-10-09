@@ -272,20 +272,20 @@ available.
 
 ## Next steps
 
-1. **Decide whether the earlier copy wrote a live block** —
-   HYPOTHESIS-ID `m5-selector-copy-lifetime`. The bytes at the first title
-   load were written by `sb` at `0x80007670` (copy `0x80007640`, caller
-   `0x80022B44`, length 16) into `0x80171CE0` / `0x80173B20` at origin
-   `0x00696600`, seconds before those pointers were published. Malloc's
-   header is a halfword at +0 (bits `0x1` and `0x8` are tested) and a size
-   word at +4; the user pointer is header+16. On retail, sample those two
-   header fields at the copy and at the establishing `sw`, and record every
-   store to them in between. A free-size header at the copy selects a write
-   into the block malloc later returns. An allocated header at the copy,
-   then a free, then the establishing malloc, selects a previous owner. An
-   unchanged allocated header at both samples contradicts the fresh split.
-   Keep whole-RDRAM, both pointer stores, and one title `0x80091064` load
-   whose `v0` is one of those pointers. Do not rewrite or guard heap state.
+1. **Compare the port's title heap to the retail pre-heap state** —
+   HYPOTHESIS-ID `m5-selector-copy-lifetime`. s4428 (retail, one run, Rice,
+   Start schedule, whole-RDRAM control fired) found the 16-byte name copy
+   (`sb` at `0x80007670`) writes strings *over the future malloc headers*
+   `0x80171CD0` / `0x80173B10` ("mat_9", "ltex_cac") as well as the user
+   words, at origin `0x00696600` while those headers were all zero. At the
+   pointer-publish `sw` (origin `0x00790500`) the headers read
+   `0x0002/0x1E30` and `0x0001/0x21480` (then `0x0002/0x1E30`): the heap was
+   carved over the string bytes afterward, and malloc's split does not clear
+   user bytes. So the title user words are stale pre-heap string data,
+   game-written (single-source). Next: run the port to the same two moments
+   (copy `sb`, publish `sw`) and compare header/user-word bytes; zero or
+   differing user bytes at the title load is the divergence to chase. Do not
+   rewrite or guard heap state.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug
