@@ -106,6 +106,13 @@ address, instruction/effective address, source register/value, scalar mask,
 and pre-store word. The retained task rows are used internally as publication
 event ordinals for the nearest same-phase join.
 
+When `--pc-task-dump` is enabled, shutdown also prints each retained task row
+with its publication `event` ordinal. With `--ordinal-join`, the
+`ordinal-writer-join` table aggregates nearest-task ordering by phase, watch,
+writer PC, and exact effective destination; `before` and `after` are relative
+to the nearest same-phase task, while `no_task` is an instrument-boundary
+count.
+
 The `post-value` rows describe the entire aligned word, including bytes the
 instruction did not write. They do not establish the value written by an `sb`
 or `sh`. `post-store-scalar` rows separately count the bytes written by `sb`,

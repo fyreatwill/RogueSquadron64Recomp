@@ -149681,3 +149681,25 @@ print their event ordinal, preventing a named-writer-specific join. The next
 work unit adds that field and the per-writer aggregation. No mitigation or
 value rewrite was added. ORIGIN: retail writer PCs, exact guest store fields,
 task execution, scalar validation, and whole-RDRAM/VI controls.
+
+## Session 4382 (2026-10-09) — joined named writers to task ordinals
+
+The oracle now prints each retained task's publication event ordinal and a
+bounded aggregate keyed by phase, watch, writer PC, and exact effective
+destination. The build completed with only the existing initializer warnings.
+The qualified 50-second Rice capture passed the whole-RDRAM positive control
+with 60,782 hits, reached 2,979 VI, and retained 1,466 valid type-2 task rows
+with `invalid=0` and `overflow=0`. Task rows covered title origins
+`0x00790400`/`0x00790800` at 628 each and hangar origin `0x006AB400` at 210.
+
+For named writer `0x8008F7D4`, title range 1 joined 21202/548 before/after
+rows in the first title bucket and 21338/608 in the second. Writer
+`0x80091374` joined 3492/478 and 3485/495. All retained named-writer scalar
+samples had `mismatch=0`, and every title row had a nearest task with no join
+overflow. No ordinal write occurred in either watched payload range during the
+retained hangar rows, so this result does not distinguish hangar overwrite from
+maintenance or close writer provenance. It resolves the prior task-ordinal
+instrument boundary for title only and selects a longer hangar capture as the
+next work unit. No mitigation or value rewrite was added. ORIGIN: retail
+writer PCs, exact effective destinations, task publication ordinals, scalar
+validation, and whole-RDRAM/VI controls.

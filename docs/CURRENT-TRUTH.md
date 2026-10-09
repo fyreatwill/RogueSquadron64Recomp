@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4380 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4382 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -368,6 +368,22 @@ before/after aggregation. ORIGIN: retail writer PCs, exact guest store fields,
 task execution, scalar validation, and whole-RDRAM/VI controls; no value was
 skipped, rewritten, or guarded.
 
+Session 4382 added task publication ordinals to the oracle shutdown rows and a
+bounded writer-PC/effective-destination ordinal join. The qualified 50-second
+Rice run passed the whole-RDRAM control (60,782 hits), reached 2,979 VI, and
+retained 1,466 valid type-2 rows with zero invalid or ordinal overflow. Task
+rows covered title origins `0x00790400`/`0x00790800` (628 each) and hangar
+origin `0x006AB400` (210). For both named writers in both title buckets,
+every retained writer row had a nearest task: `0x8008F7D4` split
+21202/548 and 21338/608 before/after, while `0x80091374` split 3492/478 and
+3485/495. Scalar validation remained `mismatch=0`. No watched payload-range
+write occurred during the retained hangar rows, so this run does not
+distinguish hangar overwrite from maintenance and does not close writer
+provenance. This is single-source retail evidence for title ordering and a
+qualified hangar coverage boundary. ORIGIN: retail writer PCs, exact effective
+destinations, task publication ordinals, scalar validation, and whole-RDRAM/VI
+controls; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -408,14 +424,13 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4381 qualified exact writer fields but
-   left named-writer task-relative ordering unresolved. Add task event ordinals
-   to the bounded dump and aggregate before/after counts by writer PC, exact
-   destination, and phase for both payload ranges. Retain scalar source values
-   and mismatch validation. Keep the whole-RDRAM, three-bucket, valid-task,
-   and zero-overflow controls. Do not repeat the caller census, direct
-   publication join, closed first-eight payload comparison, or the
-   `0x8009C904:0x8009DC3C` range.
+   `m5-selector-decode-boundary`. Session 4382 qualified task ordinals and
+   title writer ordering, but the 50-second route retained no writes in either
+   watched payload range during hangar. Extend the same batch to a 75-second
+   Rice capture with all existing watches and controls unchanged, then report
+   named-writer rows and the writer-PC/effective-destination join separately for
+   all three buckets. Do not repeat the caller census, direct publication join,
+   closed first-eight payload comparison, or the `0x8009C904:0x8009DC3C` range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
