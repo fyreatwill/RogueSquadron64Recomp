@@ -5,8 +5,9 @@ background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 Updated for session 4327 (M5 descriptor witness rejected; CPU caller object is next boundary). Previously 4326 (clean M5 filter/output join selected input-stream divergence). Previously 4325 (M5 filter-join instrument built; matrix retries not jointly interpretable). Previously 4324 (M5 filter matrix route-qualified; both arms hit the same active callsite). Previously 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
-Updated for session 4328: caller-object retention did not produce a joinable
-`0x8009D740` witness; direct callsite capture is next.
+Updated for session 4329: direct D740 witness proved the active callsite is
+reached without the probed D740 function entry; transfer-boundary census is
+next.
 
 ## Current state (as of s4268)
 
@@ -108,6 +109,19 @@ instrument-boundary result, not descriptor equality or a null descriptor. The
 next discriminator must capture the original arguments directly at the
 `0x8009D740` filter callsite, or prove why the entry probe is bypassed.
 
+**M5 Step 9 direct D740 witness (s4329).** The corrected build and one
+prescribed seeded matrix passed the oracle whole-RDRAM/title/hangar controls,
+MORT reference, both port VI controls, and both filter controls. The direct
+probe immediately before the generated `filterVoiceSampleBlock` call at
+`0x8009D740` emitted 256 VI-512 rows in each silent and real-image arm, with
+the scoped `d740_store_n` reaching 256. The retained caller tuple was absent
+(`caller_join=0`) on all direct rows, and the caller probe emitted only its
+`0x8009C88C` bucket. This independently proves the D740 callsite executes and
+selects an entry-bypass or transfer/probe-placement boundary; it does not
+prove descriptor equality and leaves descriptor-class versus pre-filter route
+divergence open. Exact direct-row comparison is port-side evidence; the
+oracle/MORT controls independently qualify route and decoder behavior.
+
 **M5 de-stubs landed.** A11 waitForAnyAudioSlot yield (default 2000), A12 countdown
 yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset=2; s4192), A15 spin-yield default
 on, A13 drain-tick gate (dormant on title+hangar), A14 status-03 wait (s4296 host yield, `ROGUESQ_A14_YIELD=0` rolls back; s4297: loop IS entered in the hangar, b0 stuck 0x03, exits after ~160-180k iterations only with the yield; yield-on reaches VI 640 and then the known do_rom_read crash at 0x80001b08, yield-off stays in hangar, no crash - 2 on / 1 off runs), A9/A10 voice-base/song-tick guards (0 fires). Declared-size staging
@@ -143,7 +157,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4328) The route-qualified matrix still passes all controls and produces 256 filter rows per arm, but the retained caller tuple never joined: `caller_join=0` in all rows, while the caller probe emitted only the `0x8009C88C` bucket. Next: add one direct callsite witness immediately before the generated `filterVoiceSampleBlock` call at `0x8009D740`, carrying the original function arguments saved at entry (`a0/a1/a2/a3`, or their verified saved-register locations), plus a store counter proving the D740 arm. A positive D740 store with matching metadata/divergent source selects pre-filter route divergence; differing metadata selects descriptor-class divergence; zero D740 stores with the callsite still active proves the entry probe is bypassed and selects a probe-placement defect. Keep decoder/RSP/AI behavior unchanged.
+00. (s4329) The route-qualified matrix still passes all controls and produces 256 direct D740 rows per arm; `d740_store_n` reaches 256, while the retained caller tuple never joins and the caller probe emits only the `0x8009C88C` bucket. This selects an entry/transfer bypass or probe-placement boundary, not descriptor equality. Next: run the bounded static transfer census in `scratch/agent/NEXT.md` across every generated reference to the D740 body/callsite, the wrapper symbol, and the overlay map. Name the transfer boundary before adding runtime instrumentation; keep decoder/RSP/AI behavior unchanged.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -209,6 +223,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 filter join instrument | s4325: built a phase-scoped route-keyed table with rate, arguments, live sp-based table value, and source/output hashes. The reference/oracle controls passed, but corrected paired rows were not jointly valid; descriptor class/rate and decoded-output ownership remain open. |
 | M5 Step 9 clean filter/output join | s4326: both valid port arms emitted 128 calls at the same active site and rate, but all 17 common route-row keys differed in source and output hashes; H-output-join is rejected. Descriptor type/class is not yet recorded, so payload ownership remains open. |
 | M5 Step 9 caller-object join | s4328: all controls passed and both arms emitted 256 rows, but the retained caller tuple joined zero rows; only the C88C caller bucket emitted. Descriptor class versus pre-filter route remains open; this is a probe-boundary result, not a descriptor null. |
+| M5 Step 9 direct D740 witness | s4329: the direct D740 callsite emitted 256 rows per arm and its scoped counter reached 256, while no D740 caller-entry bucket or retained tuple joined. This selects entry/transfer bypass of the probed D740 entry; descriptor class versus pre-filter route remains open. |
 
 ## Durable evidence boundary
 

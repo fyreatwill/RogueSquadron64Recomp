@@ -148552,3 +148552,40 @@ Next discriminator (s4329): a direct witness immediately before the generated
 counter — zero stores with active callsite selects H-entry-bypassed; positive
 stores with joinable tuple selects cross-thread/wrong-saved-source (split by
 whether a0..a3 match the saved-register slots). Run per scratch/agent/NEXT.md.
+
+## Session 4329 (2026-10-08) — direct D740 witness selected entry bypass
+
+HYPOTHESIS-ID: m5-step9-mort-output
+
+Added the fixup-compatible `s4329` direct witness immediately before the
+generated `filterVoiceSampleBlock` call at `0x8009D740`. It records the actual
+pre-call register tuple and a VI-512-scoped `d740_store_n` counter, while
+reporting the retained caller tuple when present. The existing generated file
+was patched in parallel with the fixup source and the Debug target rebuilt
+successfully; the first build failure was a scope error from attempting to
+carry entry locals into a callsite reached outside that visible wrapper, so
+the final witness uses the process-wide retained tuple already owned by the
+caller probe.
+
+The prescribed seeded matrix passed the oracle whole-RDRAM positive control,
+title VI 1024, hangar VI 512, MORT reference, both port VI controls, and both
+filter controls. Silent and real-image arms each emitted 256 direct D740 rows;
+`d740_store_n` reached 256 in each arm. Every direct row had `caller_join=0`,
+and the caller probe still emitted only the `0x8009C88C` bucket (no D740 entry
+bucket). This proves the D740 callsite executes but is reached without the
+probed D740 function entry, selecting an entry-bypass/transfer or probe-
+placement boundary. It does not establish descriptor equality; descriptor
+class versus pre-filter route divergence remains open. The exact direct rows
+are port-side evidence; oracle and MORT controls independently qualify the
+route and reference decoder.
+
+No decoder, RSP, AI, game-path, guard, skip, or mitigation behavior changed.
+
+Discrimination (s4329 close-out): refutes H-zero-D740-store and H-join-means-
+descriptor-equality. The active callsite produced 512 total scoped direct
+rows with positive controls, while no D740 caller-entry tuple was observed.
+The next information-value work unit is a bounded static transfer census of
+the D740 body/callsite, wrapper symbol, and overlay mapping before any further
+runtime instrumentation.
+
+ORIGIN: none; diagnostic-only witness and matrix, no mitigation.

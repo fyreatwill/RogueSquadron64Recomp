@@ -2809,6 +2809,46 @@ extern "C" void rs64_filter_voice_call_probe(uint32_t site, uint32_t sp,
     rs64_filter_voice_audit_row("call", site, sp, ra, a0, a1, a2, a3);
 }
 
+extern "C" void rs64_filter_voice_direct_probe(uint32_t site, uint32_t sp,
+                                                  uint32_t ra, uint32_t a0,
+                                                  uint32_t a1, uint32_t a2,
+                                                  uint32_t a3) {
+    static int enabled = -1;
+    static uint32_t phase_key = 0;
+    static unsigned long d740_store_n = 0;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+        enabled = ((all && *all && *all != '0') ||
+                   (own && *own && *own != '0')) ? 1 : 0;
+    }
+    if (!enabled || site != 0x8009D740u) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
+    if (origin != phase_key) {
+        phase_key = origin;
+        d740_store_n = 0;
+    }
+    ++d740_store_n;
+    if (d740_store_n > 256ul) return;
+    std::fprintf(stderr,
+                 "[m5-filter-direct] site=0x%08X phase=%u origin=0x%06X "
+                 "d740_store_n=%lu sp=0x%08X ra=0x%08X "
+                 "actual_a0=0x%08X actual_a1=0x%08X actual_a2=0x%08X actual_a3=0x%08X "
+                 "caller_join=%u caller_object=0x%08X caller_descriptor=0x%08X "
+                 "caller_aux0=0x%08X caller_aux1=0x%08X\n",
+                 site, rs64_phase_ord(), origin, d740_store_n, sp, ra,
+                 a0, a1, a2, a3,
+                 (g_rs64_filter_voice_caller.valid &&
+                  g_rs64_filter_voice_caller.site == site) ? 1u : 0u,
+                 g_rs64_filter_voice_caller.object,
+                 g_rs64_filter_voice_caller.descriptor,
+                 g_rs64_filter_voice_caller.aux0,
+                 g_rs64_filter_voice_caller.aux1);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_filter_voice_entry_probe(uint32_t sp, uint32_t ra,
                                                 uint32_t a0, uint32_t a1,
                                                 uint32_t a2, uint32_t a3) {

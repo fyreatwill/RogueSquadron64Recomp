@@ -1,43 +1,38 @@
-# Next work unit (s4329): direct D740 caller witness
+# Next work unit (s4330): D740 transfer-boundary census
 
 HYPOTHESIS-ID: m5-step9-mort-output
 
-The s4328 matrix passed oracle whole-RDRAM/title/hangar, MORT reference, both
-port VI controls, and both filter controls. Both arms emitted 256 filter rows,
-but the retained `rs64_filter_voice_caller_probe` tuple joined zero rows; its
-visible caller rows were only the `0x8009C88C` bucket. Do not interpret this as
-descriptor equality.
+The s4329 matrix passed oracle whole-RDRAM/title/hangar, MORT reference, both
+port VI controls, and both filter controls. The direct witness immediately
+before the generated D740 filter call fired 256 times in each arm and its
+`d740_store_n` reached 256, but every row had `caller_join=0`; the caller probe
+had only the `0x8009C88C` bucket. Do not interpret this as descriptor equality.
 
 Competing hypotheses:
 
-- H-entry-bypassed: the generated D740 function-entry probe is not executed on
-  the path that reaches the active filter callsite.
-- H-cross-thread-or-overwritten: the entry probe runs, but its tuple is not
-  visible at the filter call because execution crosses workers or another
-  caller overwrites it.
-- H-wrong-saved-source: the entry probe runs and the join is visible, but the
-  original descriptor/source arguments were not retained from the actual
-  D740 caller frame.
+- H-entry-bypassed: a transfer targets the D740 body/callsite without entering
+  the generated function wrapper where the caller probe was inserted.
+- H-probe-placement: the generated wrapper is entered, but the active body is
+  reached through a label/overlay mapping whose instrumentation boundary is
+  not the real guest entry.
+- H-cross-thread-or-overwritten: a real D740 entry occurs, but its tuple is
+  lost before the direct call through a worker or overwrite.
 
-Discriminator: add one direct witness immediately before the generated
-`filterVoiceSampleBlock` call at `0x8009D740`, carrying the original function
-arguments from verified saved-register locations (`a0/a1/a2/a3`), and emit a
-phase-scoped D740 store counter. One positive D740 store with a joinable tuple
-selects H-wrong-saved-source or H-cross-thread-or-overwritten; zero stores with
-the callsite active selects H-entry-bypassed; a matching tuple with divergent
-source selects pre-filter route divergence, while differing descriptor fields
-select descriptor-class divergence.
+Discriminator: perform a bounded static transfer census before changing runtime
+behavior. Enumerate every generated reference to the D740 body/callsite and
+the `updateVoiceChannelParamsLarge` symbol, then inspect the complete enclosing
+labels and overlay map around each reference. A reference that targets the
+body/callsite without the wrapper selects H-entry-bypassed; a normal wrapper
+entry whose label map skips the probe selects H-probe-placement; a real entry
+plus a later overwrite requires one targeted witness at that transfer and
+selects H-cross-thread-or-overwritten.
 
-Before building, inspect the complete D740 prologue and saved-register flow:
+Commands:
 
-`sed -n '1775,1865p' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`
-`sed -n '4740,4800p' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`
+`rg -n "8009D740|updateVoiceChannelParamsLarge|8009C5BC" ../N64Recomp/RecompiledFuncs ../N64Recomp/fixup_game_funcs.py`
 
-Patch the existing generated diagnostic through its fixup-compatible source,
-build once, and run the same matrix:
+`sed -n '1768,1810p;4768,4805p' ../N64Recomp/RecompiledFuncs/funcs_27.c`
 
-`cmake --build build --config Debug --target RogueSquadron64Recomp`
-`zsh scratch/agent/run_s4321_m5_mort_output.sh`
-
-Keep all oracle/MORT/VI/filter controls. Do not change RSP dispatch, decoder,
-AI bridge, or add a game-path guard.
+Do not build or alter RSP, decoder, AI, or game-path behavior until the census
+names the transfer boundary. If the census is insufficient, add only one
+targeted transfer witness in the next unit.
