@@ -137376,6 +137376,20 @@ instrument in `tools/oracle/rs64_oracle.c`. ORIGIN: diagnostic-only physical
 write, task, selector, and phase observations; no guest or host value was
 skipped, rewritten, or guarded.
 
+## Session 4407 (2026-10-09) — repaired the hangar direct-edge interpretation
+
+Reran the qualified 85-second real-audio/LLE/spin-yield/autopilot capture using
+the existing phase-keyed direct-callsite and host boundary witnesses. The
+positive control fired; title `0x00790400` produced 2,692 rows, hangar
+`0x006AB400` 512, with 2,313 task/image joins, 256 filter joins, and no crash
+or abort. The hangar bucket contained a direct `0x80091CB8` callsite row,
+followed by the live AI boundary and return rows. This overturns the session
+4406 hangar-zero interpretation: the missing row was a readout/filter
+interpretation error, not an indirect caller. It rules out an indirect or
+aliased entry on this route and selects a phase-scoped direct-call witness
+discrepancy. ORIGIN: generated direct-callsite and host boundary witnesses
+observed guest execution; no value was skipped, rewritten, or guarded.
+
 ## Session 3668 (2026-09-21) — joined smaller pre-selector writer context
 
 The independent retail oracle passed the whole-RDRAM positive control, all
