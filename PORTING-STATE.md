@@ -148146,3 +148146,23 @@ thing ruled out is "the port cap was the limiter" (port is stable at 16,384).
 Next discriminator (unchanged, see NEXT.md): one oracle run emitting a
 phase-tagged table (PC, addr, value, VI origin) around the first hangar-phase
 hit of consumer PC 0x8008FCE8. OUTCOME downgraded to SUBSTITUTED.
+
+## Session 4315 (2026-10-08) — requalified retail consumer boundary
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+Inspected the s4313 oracle history and current detail-watch path, rebuilt the
+oracle once, and ran the documented retail arm with Rice video, eleven Start
+presses, the whole-RDRAM positive control, target watch
+`0x17D000:0x17E200`, `RS64_DETAIL_HANGAR_READ=1`, and consumer PC watch
+`0x8008FCE8`. The whole-RDRAM control fired 10,000 writes; the run reached the
+1024->512 transition at 38.4 s with hangar origin `0x006AB400`; the consumer
+PC watch fired 604 times; the target watch recorded 5,467,868 reads; and the
+run ended without a crash or error marker.
+
+The first hangar-phase consumer chain again read physical `0x17D9E0` as
+`0x8017D9F8` at the `0x8008FBA4`/`0x8008FBD0` readers. This requalifies the
+s4313 boundary and rules out the s4314 filter/route qualification failure.
+It does not yet compare the later rows against the port table, so it selects no
+retail/port layout hypothesis and authorizes no guard or skip.
+ORIGIN: none; measurement/instrument only.

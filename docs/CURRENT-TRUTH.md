@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4314) The port side validly reached hangar VI 512 and emitted 16,384 keyed reads with both controls; the retail oracle also passed its whole-RDRAM control and target watch, but the new detail stream's first consumer-era tuple did not reproduce the qualified s4313 boundary. Next: reproduce the exact s4313 retail consumer/read filter and phase route before comparing beyond row 4,096. A mismatch before the known boundary is an instrument/route failure, not a game divergence. No guard/skip is authorised.
+00. (s4315) The exact retail route now requalified: Rice video, eleven documented Start presses, whole-RDRAM control, hangar transition at 38.4 s to VI 512 origin `0x006AB400`, and consumer-PC watch all passed. The first hangar-phase consumer chain again reads `0x17D9E0 -> 0x8017D9F8` at the `0x8008FBA4`/`0x8008FBD0` readers; the PC watch saw 604 executions and the target watch saw 5,467,868 reads. This rules out the s4314 filter/route qualification failure. Next: compare the requalified retail detail rows against the 16,384-row qualified port table, using the first 16,384 rows in the same consumer-read chain; stop at the first keyed divergence and name its phase/PC/value. No guard/skip is authorised.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
