@@ -150108,3 +150108,19 @@ the prior zero-row result and leaves the two-edge title/hangar split open; it
 rules out a title route-coverage null and a terminal boundary at the observed
 title edge. ORIGIN: guest callsite and phase arguments were observed; no
 value was skipped, rewritten, or guarded.
+
+## Session 4405 (2026-10-09) — compared title and hangar AI direct edges
+
+Ran the prescribed single-build, single-run comparison with both generated
+direct-edge probes, the positive control, phase markers, AI-boundary/setup
+controls, and task/image joins. The Debug build succeeded. The 85-second
+real-audio/LLE/spin-yield/autopilot capture passed the control, reached title
+`0x00790400` and hangar `0x006AB400`, retained 2,320 task/image joins and 256
+filter joins, and had no crash or abort. The raw direct-callsite witness fired
+once at `0x80091CB8` in title and never at `0x80091BAC`; no direct-edge row
+occurred in hangar. Hangar setup, AI-boundary, source, mixer, input, and
+store-entry witnesses remained live. This supports a phase-specific/title-only
+direct edge and rejects a simple hangar callsite-filter or row-budget null; it
+does not locate the alternate hangar caller. ORIGIN: guest direct-edge,
+setup, and boundary PCs were observed; no value was skipped, rewritten, or
+guarded.
