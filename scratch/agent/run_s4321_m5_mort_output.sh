@@ -18,13 +18,14 @@ python3 tools/mort_probe.py --rom "$ROM" --speech-offset 0x583D90 \
   --speech-size 0x31D3E4 --indices 0,1,59,90 --reference "$REF" \
   > "$OUT/mort-reference.log" 2>&1 || exit 3
 
-PRESS=6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+ORACLE_PRESS='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start'
+PRESS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start'
 COMMON=(ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_DESCRIPTOR=1 ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_FILTER_VOICE_AUDIT=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_M5_ROUTE_TRANSITION=1 ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' ROGUESQ_AUTOPILOT_STOP_WIDTH=512 M4_Y8000_WIDTH=512 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS="$PRESS")
 
 env "$ORACLE" --core "$CORE" --rom "$ROM" --video "$VIDEO" --secs 180 \
   --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F54 \
   --watch-write 0x141AD0:0x141AF0 --watch-write 0x1498A:0x1498B \
-  --watch-pc 0x80029E80,0x80029F30 --vi-trace --press "$PRESS" \
+  --watch-pc 0x80029E80,0x80029F30 --vi-trace --press "$ORACLE_PRESS" \
   > "$OUT/oracle.log" 2>&1 &
 OPID=$!
 gate=0
@@ -40,12 +41,12 @@ if (( gate == 0 )); then kill -9 "$OPID" 2>/dev/null; wait "$OPID" 2>/dev/null; 
 
 launch() {
     local name=$1 arm=$2
-    ( exec env "${COMMON[@]}" ROGUESQ_AUDIO_UCODE="$arm" zsh "$ROOT/tools/probe.sh" "$OUT/$name" 90 1 ) > "$OUT/$name-driver.log" 2>&1 &
+    ( exec env "${COMMON[@]}" ROGUESQ_AUDIO_UCODE="$arm" zsh "$ROOT/tools/probe.sh" "$OUT/$name" 150 1 ) > "$OUT/$name-driver.log" 2>&1 &
     print "${name}_pid=$!" >> "$OUT/driver.log"
 }
 launch silent 0
 launch image 1
-sleep 105
+sleep 165
 for p in $(grep -E '_pid=' "$OUT/driver.log" | sed 's/.*=//') "$OPID"; do kill -9 "$p" 2>/dev/null || true; done
 wait "$OPID" 2>/dev/null || true
 

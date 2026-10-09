@@ -2656,6 +2656,42 @@ static void rs64_filter_voice_audit_positive_control() {
     std::fflush(stderr);
 }
 
+extern "C" void rs64_filter_voice_caller_probe(const char* caller,
+                                                 uint32_t site, uint32_t a0,
+                                                 uint32_t a1, uint32_t a2,
+                                                 uint32_t a3) {
+    static int enabled = -1;
+    static uint32_t rows[3] = {};
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+        enabled = ((all && *all && *all != '0') ||
+                   (own && *own && *own != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
+    unsigned bucket = site == 0x8009C540u ? 0u :
+                      (site == 0x8009C88Cu ? 1u : 2u);
+    if (rows[bucket] >= 128u) return;
+    uint32_t phase = 0, route_width = 0, route_origin = 0, ordinal = 0xFFFFFFFFu,
+             route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &phase, &route_width, &route_origin, &ordinal, &route_row,
+        &exit_reason, &arm);
+    std::fprintf(stderr,
+        "[filter-voice-caller] caller=%s site=0x%08X row=%u phase=%u width=%u "
+        "origin=0x%06X arm=%s active=%u ordinal=%u route_row=%u exit=%d "
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X\n",
+        caller, site, rows[bucket]++, phase, width, origin,
+        arm ? arm : "n/a", active ? 1u : 0u, ordinal, route_row,
+        exit_reason, a0, a1, a2, a3);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_filter_voice_call_probe(uint32_t site, uint32_t sp,
                                                uint32_t ra, uint32_t a0,
                                                uint32_t a1, uint32_t a2,

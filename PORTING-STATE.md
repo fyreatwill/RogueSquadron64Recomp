@@ -148362,3 +148362,26 @@ changed.
 
 ORIGIN: none; this iteration changed only the known route qualifier in the
 diagnostic matrix script and documentation.
+
+## Session 4323 (2026-10-08) — staged filter caller witness; matrix route-invalid
+
+Read the filter call chain in the generated MIPS output: all three enumerated
+callsites (`0x8009C540`, `0x8009C88C`, `0x8009D740`) invoke the same
+`filterVoiceSampleBlock` at `0x8009D7D0`; its only input-class split is the
+signed `a0 <= 7` versus `a0 > 7` path. Added a phase-scoped caller witness to
+the host and regenerated-function tree was already staged, built the target,
+and fixed the matrix recipe so oracle presses use comma syntax while
+`probe.sh` presses use space syntax.
+
+The first run with the coupled syntax was invalid: the oracle stopped at VI
+640/title and the probe received one malformed key token. The corrected run
+passed the MORT reference (four nonzero rows at 8000/16000 Hz), the oracle
+whole-RDRAM positive control, and the oracle hangar VI 512 control at
+`0x006AB400`. Both port arms nevertheless crashed before VI 512 at
+`rs64_m5_descriptor_start+460`, guest `0x8000834C`; neither emitted a caller
+or entry witness row. This leaves the filter-path hypotheses unevaluable and
+selects route/state requalification as the next work unit. It rules out no
+real-image eligibility or dispatch hypothesis. No runtime guard or game-path
+change landed.
+
+ORIGIN: none; the added witness is diagnostic-only and no mitigation was added.
