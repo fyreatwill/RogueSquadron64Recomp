@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4390 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4394 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -578,6 +578,23 @@ independent payload-value comparison. ORIGIN: retail task-publication PCs,
 exact writer PCs/effective addresses, task data spans, scalar value classes,
 and whole-RDRAM/VI controls; no value was skipped, rewritten, or guarded.
 
+Session 4394's first published-word comparison was invalidated because it read
+task words at shutdown after later task cycles had overwritten the same buffers.
+The corrected same-run capture snapshots the four published words at each task
+publication before joining exact writer rows. It passed the whole-RDRAM control
+(10,000 callbacks), reached 4,486 VI and all three phase buckets, retained
+1,724 valid type-2 tasks (`invalid=0`, `overflow=0`), 22,901 writer rows, and
+zero ordinal overflow; supported post-store scalar validation still reported
+`mismatch=0`. Title source-value match rates were semantic 482/7,291 and
+maintenance 130/629; post-store matches were semantic 482/7,291 and
+maintenance 20/629. Hangar was semantic 0/4,660 and maintenance 56/467 for
+both source/post comparisons. This single-source retail result favors
+H-maintenance over H-semantic for the published-word value discriminator, but
+it does not yet provide the required independent evidence line; retain the
+selector/decode boundary as open. ORIGIN: named retail writer PCs and task
+publication PCs are observed; task words are snapshotted before later reuse;
+no value was skipped, rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -593,13 +610,13 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode semantic writer mapping** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Add one bounded phase/task-keyed comparison of
-   semantic and maintenance writer source values against the corresponding
-   published task-data words, retaining exact effective address, task ordinal,
-   post-store scalar validation, and the existing whole-RDRAM/VI/task controls.
-   A repeated semantic-only value match supplies the second evidence line;
-   mixed or absent matches leave the transform/publication boundary open. Do
-   not infer payload equality from address containment alone.
+   `m5-selector-decode-boundary`. Add one independent evidence line for the
+   corrected task-publication snapshots: split exact writer/task joins by
+   writer-before-task versus writer-after-task and compare the snapshotted
+   words using the same scalar validation and phase controls. A repeatable
+   maintenance-over-semantic match pattern closes the bounded value question;
+   a direction-dependent or absent pattern leaves the transform/publication
+   boundary open. Do not infer payload equality from address containment alone.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

@@ -551,6 +551,8 @@ struct pc_task_dump_row {
     uint32_t yield_data_size;
     uint32_t data_ptr_plus_100;
     uint32_t field_phys;
+    uint32_t published_words[4];
+    uint8_t published_valid[4];
     uint32_t width;
     uint32_t origin;
 };
@@ -577,6 +579,7 @@ struct ordinal_write_row {
     uint32_t source_value;
     uint32_t scalar_mask;
     uint32_t pre_store_word;
+    uint32_t post_store_word;
     uint32_t width;
     uint32_t origin;
     uint64_t event_ordinal;
@@ -584,6 +587,27 @@ struct ordinal_write_row {
 static struct ordinal_write_row g_ordinal_writes[MAX_ORDINAL_WRITES];
 static int g_n_ordinal_writes;
 static long g_ordinal_write_overflow;
+struct published_word_stats {
+    long joined, in_span, unsupported;
+    long source_match, source_mismatch, post_match, post_mismatch;
+    long no_task;
+};
+static struct published_word_stats g_published_word_stats[MAX_PC_PHASE_LOG_ORIGINS][4];
+struct published_word_key {
+    uint32_t width;
+    uint32_t origin;
+    int writer_class;
+    int value_class;
+    long joined;
+    long in_span;
+    long unsupported;
+    long source_match;
+    long post_match;
+    long source_mismatch;
+    long post_mismatch;
+    long no_task;
+};
+#define MAX_PUBLISHED_WORD_KEYS 256
 struct ordinal_writer_key {
     uint32_t width;
     uint32_t origin;
@@ -680,6 +704,9 @@ static struct pc_task_join_row
     g_pc_task_join_rows[MAX_PC_TASK_DUMP_ROWS];
 static int g_n_pc_task_join_rows;
 static long g_pc_task_join_overflow;
+static const uint32_t g_published_word_addrs[4] = {
+    0x00171CE0u, 0x00173B20u, 0x00171E70u, 0x00173CB0u
+};
 
 static uint32_t debug_rdram_addr(uint32_t physical);
 static uint32_t to_phys(uint32_t a);
@@ -1397,6 +1424,17 @@ static void dump_pc_task(uint32_t pc)
     row->data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x34u));
     row->yield_data_ptr = pDebugMemRead32(debug_rdram_addr(task_phys + 0x38u));
     row->yield_data_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x3Cu));
+    for (int published_i = 0; published_i < 4; published_i++) {
+        uint32_t published_addr = g_published_word_addrs[published_i];
+        uint32_t base = row->data_ptr & 0x1FFFFFFFu;
+        uint64_t len = (uint64_t)row->data_size * 0xA10u;
+        row->published_valid[published_i] =
+            len && published_addr >= base &&
+            (uint64_t)published_addr + 4u <= (uint64_t)base + len &&
+            published_addr <= RDRAM_SIZE - 4u;
+        row->published_words[published_i] = row->published_valid[published_i]
+            ? debug_mem_u32(published_addr) : 0;
+    }
     if (row->type == 2 && !g_pc_task_join_enabled)
         dump_audio_objects(task_phys, row->data_ptr, row->data_size);
     if (row->type == 2) {
@@ -2427,6 +2465,10 @@ static void dbg_update(unsigned int pc)
                         scalar_store_mask(instruction, effective) : 0;
                     write->pre_store_word =
                         pDebugMemRead32(debug_rdram_addr(accessed & ~3u));
+                    write->post_store_word = write->scalar_mask
+                        ? ((write->pre_store_word & ~write->scalar_mask) |
+                           (write->source_value & write->scalar_mask))
+                        : 0;
                     write->width = pDebugMemRead32(VI_WIDTH_ADDR);
                     write->origin = pDebugMemRead32(VI_ORIGIN_ADDR);
                     write->event_ordinal = g_event_ordinal;
@@ -3905,6 +3947,91 @@ int main(int argc, char **argv)
                        ordinal_value_class_name(key->value_class), key->joined,
                        key->in_data_span, key->in_plus_100, key->outside,
                        key->no_task);
+            }
+        }
+        memset(g_published_word_stats, 0, sizeof(g_published_word_stats));
+        for (int phase = 0; phase < g_n_pc_phase_log_origin; phase++) {
+            for (int wi = 0; wi < g_n_ordinal_writes; wi++) {
+                struct ordinal_write_row *write = &g_ordinal_writes[wi];
+                struct pc_task_dump_row *best = NULL;
+                uint64_t best_distance = UINT64_MAX;
+                struct published_word_stats *stats;
+                uint32_t addr, base;
+                uint64_t len;
+                int class_id;
+                if (write->width != g_pc_phase_log[phase].width ||
+                    write->origin != g_pc_phase_log[phase].origin)
+                    continue;
+                for (int ti = 0; ti < g_n_pc_task_dump_rows; ti++) {
+                    struct pc_task_dump_row *task = &g_pc_task_dump_rows[ti];
+                    uint64_t distance;
+                    if (task->width != write->width || task->origin != write->origin)
+                        continue;
+                    distance = task->event_ordinal > write->event_ordinal
+                        ? task->event_ordinal - write->event_ordinal
+                        : write->event_ordinal - task->event_ordinal;
+                    if (distance < best_distance) {
+                        best_distance = distance;
+                        best = task;
+                    }
+                }
+                class_id = ordinal_writer_class(write->pc);
+                stats = &g_published_word_stats[phase][class_id];
+                if (!best) {
+                    stats->no_task++;
+                    continue;
+                }
+                stats->joined++;
+                addr = write->effective_addr & 0x1FFFFFFFu;
+                base = best->data_ptr & 0x1FFFFFFFu;
+                len = (uint64_t)best->data_size * 0xA10u;
+                if (!len || addr < base || (uint64_t)addr >= (uint64_t)base + len) {
+                    stats->unsupported++;
+                    continue;
+                }
+                stats->in_span++;
+                if (!write->scalar_mask) {
+                    stats->unsupported++;
+                    continue;
+                }
+                {
+                    uint32_t published = 0;
+                    int published_i = -1;
+                    for (int pi = 0; pi < 4; pi++) {
+                        if ((addr & ~3u) == g_published_word_addrs[pi]) {
+                            published_i = pi;
+                            break;
+                        }
+                    }
+                    if (published_i < 0 || !best->published_valid[published_i]) {
+                        stats->unsupported++;
+                        continue;
+                    }
+                    published = best->published_words[published_i];
+                    if ((write->source_value & write->scalar_mask) ==
+                        (published & write->scalar_mask))
+                        stats->source_match++;
+                    else
+                        stats->source_mismatch++;
+                    if (write->post_store_word == published)
+                        stats->post_match++;
+                    else
+                        stats->post_mismatch++;
+                }
+            }
+        }
+        for (int phase = 0; phase < g_n_pc_phase_log_origin; phase++) {
+            for (int class_id = 1; class_id <= 3; class_id++) {
+                struct published_word_stats *stats = &g_published_word_stats[phase][class_id];
+                if (stats->joined || stats->no_task)
+                    printf("[oracle] published-word phase=0x%08x:%u class=%s "
+                           "joined=%ld in_span=%ld unsupported=%ld source_match=%ld "
+                           "source_mismatch=%ld post_match=%ld post_mismatch=%ld no_task=%ld\n",
+                           g_pc_phase_log[phase].origin, g_pc_phase_log[phase].width,
+                           ordinal_writer_class_name(class_id), stats->joined,
+                           stats->in_span, stats->unsupported, stats->source_match,
+                           stats->source_mismatch, stats->post_match,
+                           stats->post_mismatch, stats->no_task);
             }
         }
         for (int wi = 0; wi < g_n_ordinal_writes; wi++) {

@@ -1,34 +1,34 @@
-# Next work unit (s4394): compare writer values with published task words
+# Next work unit (s4395): independent direction split for published-word matches
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
+The s4394 qualified retail capture favored H-maintenance, but is single-source
+evidence. The next unit is one bounded oracle instrument/run that splits the
+existing snapshotted task-word comparison by writer-before-task versus
+writer-after-task, retaining the same four exact fields, semantic/maintenance
+classes, scalar checks, whole-RDRAM control, and three VI buckets.
+
 Competing hypotheses:
 
-- H-semantic-value: semantic writer source values match the corresponding
-  published task-data words more often than maintenance values; this supplies
-  the second evidence line for semantic payload provenance.
-- H-maintenance-value: maintenance writers have the stronger published-word
-  match rate; the address-containment split mislabels the producer.
-- H-transform-or-gap: neither class has stable value matches, or the task
-  snapshot and store ordinal cannot be joined without overflow; the transform
-  boundary remains open.
+- H-maintenance-stable: maintenance remains the stronger source/post match in
+  both ordinal directions; this supplies an independent line for the bounded
+  value result.
+- H-directional: the match advantage exists only before or only after task
+  publication; the nearest-task comparison is mixing distinct lifecycle edges.
+- H-transform-gap: both classes remain mixed or absent after the direction
+  split, so the transform/publication boundary remains open.
 
-Discriminating measurement: one oracle build/run retaining the whole-RDRAM
-positive control, all three VI buckets, exact task ordinals, exact writer
-effective addresses/source values, scalar mismatch validation, and a bounded
-phase/watch/writer-class table. For each joined scalar store, read the
-corresponding guest word from the published task data span at the store's
-effective address and report exact source-value equality, post-store equality,
-and unavailable/unaligned cases separately. Semantic-versus-maintenance match
-rates decide the hypotheses; task overflow, no-task joins, or unsupported
-scalar stores make the result unevaluable rather than a null.
+Discriminating measurement: for every joined scalar writer, compare the
+snapshotted task word against the source lane and predicted post-store word,
+keyed by phase, writer class, and ordinal relation (`before`, `after`, `equal`).
+Controls are whole-RDRAM threshold >=10,000, title origins `0x00790400` and
+`0x00790800`, hangar `0x006AB400`, valid type-2 rows >=1,000, ordinal overflow
+0, and supported scalar mismatch 0. A missing control is invalid, not a null.
 
 Exact commands:
 
-    extend tools/oracle/rs64_oracle.c with the phase/task-ordinal value table
-    build with tools/oracle/build.sh
-    bash scratch/agent/run_s4394_m5_published_word_compare.sh
+    bash tools/oracle/build.sh
+    bash scratch/agent/run_s4395_m5_published_word_direction.sh
 
-Controls: whole-RDRAM positive control must fire and be removed at threshold;
-all title/hangar VI origins must be live; valid type-2 rows >= 1,000; ordinal
-overflow 0; supported scalar mismatch 0; no mitigation or value rewrite.
+The script must run one 75-second Rice/oracle capture from the repo root and
+write its log below `scratch/agent/s4395_m5_published_word_direction/`.

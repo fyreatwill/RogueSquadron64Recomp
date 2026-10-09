@@ -149915,3 +149915,24 @@ maintenance provenance for this table; it does not close the transform boundary.
 ORIGIN: retail task-publication PCs, exact writer PCs/effective addresses, task
 data spans, scalar value classes, and whole-RDRAM/VI controls; no value was
 skipped, rewritten, or guarded.
+
+## Session 4394 (2026-10-09) — compared writers with snapshotted task words
+
+The first published-word comparison was invalid because it read task words at
+shutdown after later task cycles reused the buffers. The corrected instrument
+snapshotted the four published words at each task-publication PC before joining
+the exact writer rows. The qualified run passed the whole-RDRAM positive
+control at 10,000 callbacks, reached 4,486 VI and all three phase buckets,
+retained 1,724 valid type-2 task rows (`invalid=0`, `overflow=0`), 22,901
+writer rows, and zero ordinal overflow. Supported post-store scalar checks had
+`mismatch=0`. Title source-value matches were semantic 482/7,291 and
+maintenance 130/629; post-store matches were semantic 482/7,291 and
+maintenance 20/629. Hangar source/post matches were semantic 0/4,660 and
+maintenance 56/467. This single-source retail result favors H-maintenance over
+H-semantic for the published-word discriminator, but does not supply the
+required independent evidence line. It rules out the earlier shutdown-read
+instrument, not the transform/publication boundary. No mitigation or value
+rewrite was added.
+ORIGIN: named retail writer PCs and task-publication PCs were observed; task
+words were snapshotted before later reuse; no value was skipped, rewritten, or
+guarded.
