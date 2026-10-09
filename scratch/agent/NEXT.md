@@ -1,38 +1,35 @@
-# Next work unit (s4327): classify descriptor/source divergence in the M5 join
+# Next work unit (s4328): carry the CPU caller object into the M5 descriptor join
 
 HYPOTHESIS-ID: m5-step9-mort-output
 
-State (s4326): the clean seeded matrix passed oracle_gate=1, oracle whole-RDRAM,
+State (s4327): two seeded matrix runs passed oracle_gate=1, oracle whole-RDRAM,
 VI-1024 and VI-512 route controls, the MORT reference, and both port VI
-controls. Each port arm emitted 128 filter calls at 0x8009D740 before the
-shared crash. The 17 common route-row keys all differed in source/output hash;
-rate stayed 22047 Hz, while route ordinals differed and a0/a1 differed on
-15/17 and 12/17 rows. H-output-join is rejected. Descriptor type/class is not
-recorded, so the selection boundary is unresolved.
+controls. Each port arm emitted 256 filter rows at 0x8009D740 before the shared
+crash. The RSP task and sp+0x114 descriptor candidates were invalid witnesses,
+not null descriptor results. The CPU caller probe already sees the original
+caller a0/a1/a2/a3; that object must be joined to the filter rows.
 
 Competing hypotheses:
 
-- H-same-descriptor-different-filter: descriptor identity/type matches, but
-  source bytes differ before the filter; this is unlikely unless source_hash
-  is not the descriptor payload.
-- H-descriptor-class-divergence: descriptor type/class or identity differs
-  before the filter, explaining the source and argument sequence.
-- H-pre-filter-route-divergence: descriptor metadata matches, but an earlier
-  producer/route selection changes the source span before the filter call.
+- H-same-descriptor-different-filter: CPU caller-object descriptor metadata
+  matches, but source bytes differ before the filter.
+- H-descriptor-class-divergence: CPU caller-object descriptor type/class or
+  identity differs before the filter.
+- H-pre-filter-route-divergence: caller-object metadata matches, but an earlier
+  producer/route selection changes the source span.
 
-Discriminator: extend the existing phase-scoped table in one batch with
-descriptor identity/type/class and the descriptor-to-source pointer, while
-retaining route ordinal/row, rate, a0/a1, table value, source/output spans and
-hashes, plus PCM source/consumer joins. Matching descriptor metadata with
-divergent source selects H-pre-filter-route-divergence; divergent descriptor
-metadata selects H-descriptor-class-divergence; matching metadata and source
-but a filter-only change supports H-same-descriptor-different-filter. A
-missing row is invalid unless the oracle positive control, oracle VI-1024 and
-VI-512, MORT verdict, both port VI controls, and both filter controls fire.
+Discriminator: make rs64_filter_voice_caller_probe retain the original CPU
+caller object for the current thread, then extend the existing phase-scoped
+table in one batch with caller object, its descriptor candidate/type/class,
+and descriptor-to-source pointer. Retain route ordinal/row, rate, a0/a1, table
+value, source/output spans and hashes, plus PCM joins. Matching caller metadata
+with divergent source selects H-pre-filter-route-divergence; divergent metadata
+selects H-descriptor-class-divergence; matching metadata and source but a
+filter-only change supports H-same-descriptor-different-filter.
 
 Before building, inspect the descriptor producer and existing join fields:
 
-`rg -n -C 5 'rs64_m5_descriptor_start|descriptor_type|route_snapshot|m5-filter-join' src/main/main.cpp src/main`
+`rg -n -C 5 'rs64_filter_voice_caller_probe|rs64_filter_voice_audit_row|m5-filter-join' src/main/main.cpp src/main`
 
 Add the complete descriptor-to-filter fields in one batch, then build once:
 

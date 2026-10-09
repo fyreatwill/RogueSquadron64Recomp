@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4326 (clean M5 filter/output join selected input-stream divergence). Previously 4325 (M5 filter-join instrument built; matrix retries not jointly interpretable). Previously 4324 (M5 filter matrix route-qualified; both arms hit the same active callsite). Previously 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4327 (M5 descriptor witness rejected; CPU caller object is next boundary). Previously 4326 (clean M5 filter/output join selected input-stream divergence). Previously 4325 (M5 filter-join instrument built; matrix retries not jointly interpretable). Previously 4324 (M5 filter matrix route-qualified; both arms hit the same active callsite). Previously 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -86,6 +86,15 @@ descriptor/filter payload and decoded-output join, not RSP dispatch or a game
 path guard. The route-qualified payload comparison is port-side evidence; the
 MORT reference and oracle are independent controls.
 
+**M5 Step 9 descriptor witness (s4327).** Two prescribed seeded matrix runs
+passed the oracle whole-RDRAM/title/hangar controls, MORT reference, and both
+port arm/filter controls; each arm produced 256 filter rows at `0x8009D740`.
+The RSP task `data_ptr+0x100` candidate was invalid (silent `data_ptr=0`,
+image non-RDRAM). A corrected `sp+0x114` candidate was `0xB2C71180` on call
+rows and zero on entry rows, also invalid. These are rejected witnesses, not
+descriptor nulls. The source/output divergence remains open and no runtime
+behavior changed.
+
 **M5 de-stubs landed.** A11 waitForAnyAudioSlot yield (default 2000), A12 countdown
 yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset=2; s4192), A15 spin-yield default
 on, A13 drain-tick gate (dormant on title+hangar), A14 status-03 wait (s4296 host yield, `ROGUESQ_A14_YIELD=0` rolls back; s4297: loop IS entered in the hangar, b0 stuck 0x03, exits after ~160-180k iterations only with the yield; yield-on reaches VI 640 and then the known do_rom_read crash at 0x80001b08, yield-off stays in hangar, no crash - 2 on / 1 off runs), A9/A10 voice-base/song-tick guards (0 fires). Declared-size staging
@@ -121,7 +130,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4326) The clean route-qualified join finds same-rate but different source/output hashes on every common route-row key, with differing route ordinals and frequent argument differences. H-output-join is rejected; descriptor type/class and the producer/route boundary remain open. Next: add descriptor type/class and descriptor identity to the existing phase-scoped table in one batch, rerun the same seeded matrix with all oracle/MORT/VI controls, and classify whether the source divergence begins at descriptor selection or before the filter call. Do not add a guard or alter decoder/RSP/AI behavior.
+00. (s4327) The route-qualified matrix still passes all controls and produces 256 filter rows per arm, but both descriptor witnesses were invalid: RSP task metadata is on the wrong path, and `sp+0x114` is not a valid guest pointer. Next: carry the original CPU caller object from `rs64_filter_voice_caller_probe` into the phase-scoped filter table, dump its descriptor candidate/type/class and source pointer in one batch, and rerun the same seeded matrix. Matching caller metadata with divergent source selects pre-filter route divergence; divergent metadata selects descriptor-class divergence. Do not add a guard or alter decoder/RSP/AI behavior.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 

@@ -148478,3 +148478,28 @@ was made. The next discriminator adds descriptor type/class/identity and the
 descriptor-to-source pointer to the same phase-scoped table.
 
 ORIGIN: none; diagnostic-only matrix, no mitigation.
+
+## Session 4327 (2026-10-08) — rejected M5 descriptor witnesses and isolated CPU caller boundary
+
+HYPOTHESIS-ID: m5-step9-mort-output
+
+Built the phase-scoped M5 descriptor/source join and ran the prescribed seeded
+matrix twice with the independent MORT reference, oracle whole-RDRAM positive
+control, title VI 1024, hangar VI 512, both port VI controls, and both filter
+controls. All controls passed; each silent and real-image arm emitted 256 rows
+at `0x8009D740` before the shared known crash.
+
+The first witness used the RSP task's `data_ptr+0x100`; it was invalid because
+the silent arm had `data_ptr=0` and the image arm had a non-RDRAM value. The
+fixed witness used the active caller's saved `sp+0x114`; call rows read
+`0xB2C71180` and entry rows read zero, so that slot is also not a valid guest
+descriptor. These are instrument-scope failures, not descriptor nulls. The
+payload comparison remains route-qualified but unresolved at descriptor class
+versus earlier CPU producer/route selection. The original CPU caller object
+observed by `rs64_filter_voice_caller_probe` is the next witness boundary.
+
+This rules out neither descriptor-class divergence nor pre-filter route
+divergence. It rules out the two attempted RSP/task and stack-slot witnesses.
+No guard, skip, decoder, RSP, or AI behavior changed.
+
+ORIGIN: none; diagnostic-only instrument and matrix, no mitigation.

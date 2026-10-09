@@ -137,6 +137,12 @@ extern "C" uint64_t rs64_m5_route_handoff_event(
 extern "C" uint64_t rs64_m5_latest_audio_generation();
 static uint32_t rs64_m5_identity_thread_id();
 
+static thread_local uint32_t s_pending_task_data_ptr  = 0;
+static thread_local uint32_t s_pending_task_data_size = 0;
+static thread_local uint32_t s_pending_task_ucode_data = 0;
+static thread_local uint32_t s_pending_task_ucode_data_size = 0;
+static std::atomic<uint32_t> s_pending_task_guest_ptr{0};
+
 extern "C" uint64_t rs64_m5_route_handoff_event(
     const char* edge, uint32_t site, uint32_t active, const char* arm,
     uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
@@ -2665,14 +2671,30 @@ static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
     const uint32_t source_hash = rs64_filter_voice_guest_hash(source, 26u);
     const uint32_t output_hash = rs64_filter_voice_guest_hash(output, 40u);
     const uint32_t table_value = table_used ? rs64_filter_voice_guest_word(table) : 0u;
+    const uint32_t voice_object = site == 0x8009D740u ?
+        rs64_filter_voice_guest_word(sp + 0x114u) : 0u;
+    const uint32_t voice_w0 = rs64_filter_voice_guest_word(voice_object + 0x00u);
+    const uint32_t voice_w1 = rs64_filter_voice_guest_word(voice_object + 0x04u);
+    const uint32_t voice_w2 = rs64_filter_voice_guest_word(voice_object + 0x08u);
+    const uint32_t voice_w3 = rs64_filter_voice_guest_word(voice_object + 0x0Cu);
+    const uint32_t voice_w4 = rs64_filter_voice_guest_word(voice_object + 0x10u);
+    const uint32_t voice_w5 = rs64_filter_voice_guest_word(voice_object + 0x14u);
+    const uint32_t voice_w6 = rs64_filter_voice_guest_word(voice_object + 0x18u);
+    const uint32_t voice_w7 = rs64_filter_voice_guest_word(voice_object + 0x1Cu);
     fprintf(stderr,
             "[m5-filter-join] edge=%s site=0x%08X arm=%s phase=%u width=%u origin=0x%06X "
             "route_ordinal=%u route_row=%u rate=%u a0=%d a1=%d a2=0x%08X a3=0x%08X "
             "source=0x%08X source_hash=0x%08X output=0x%08X output_hash=0x%08X "
-            "table=0x%08X table_value=0x%08X\n",
+            "table=0x%08X table_value=0x%08X voice_object=0x%08X "
+            "voice_w0=0x%08X voice_w1=0x%08X voice_w2=0x%08X voice_w3=0x%08X "
+            "voice_w4=0x%08X voice_w5=0x%08X voice_w6=0x%08X voice_w7=0x%08X "
+            "source_delta=%d\n",
             edge, site, arm ? arm : "n/a", phase, width, origin, route_ordinal,
             route_row, rs64_audio_rate_snapshot(), index, selector, source, output,
-            source, source_hash, output, output_hash, table, table_value);
+            source, source_hash, output, output_hash, table, table_value,
+            voice_object, voice_w0, voice_w1, voice_w2, voice_w3, voice_w4,
+            voice_w5, voice_w6, voice_w7,
+            static_cast<int32_t>(source - voice_object));
     fflush(stderr);
     fprintf(stderr,
             "[filter-voice-audit] edge=%s site=0x%08X caller=%s phase=%u width=%u origin=0x%06X row=%lu sp=0x%08X ra=0x%08X a0=%d a1=%d source=0x%08X source_span=26 output=0x%08X output_span=40 table_used=%u table=0x%08X table_span=1 source_ok=%u output_ok=%u table_ok=%u source_delta=%d output_delta=%d range=%s\n",
@@ -2869,14 +2891,6 @@ static const RS64LocalSymbol* rs64_lookup_local_symbol(uint64_t pc) {
 
 // Cached for the next ucode invocation. get_rsp_microcode is called with the
 // OSTask immediately before the ucode runs on the same thread.
-static thread_local uint32_t s_pending_task_data_ptr  = 0;
-static thread_local uint32_t s_pending_task_data_size = 0;
-static thread_local uint32_t s_pending_task_ucode_data = 0;
-static thread_local uint32_t s_pending_task_ucode_data_size = 0;
-// The task submitter and RSP dispatcher are different threads. Release/acquire
-// publishes the guest task address without making it part of audio behavior.
-static std::atomic<uint32_t> s_pending_task_guest_ptr{0};
-
 extern "C" uint32_t rs64_m5_pcm_task_data_ptr() {
     return g_rs64_pcm_task_data_ptr.load(std::memory_order_relaxed);
 }
