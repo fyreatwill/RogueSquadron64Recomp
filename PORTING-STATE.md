@@ -149765,3 +149765,23 @@ capture requests detail for only the two live writers. No mitigation or value
 rewrite was added. ORIGIN: retail writer PCs, exact effective destinations,
 task publication ordinals, scalar validation, and whole-RDRAM/VI controls; no
 value was skipped, rewritten, or guarded.
+
+## Session 4386 (2026-10-09) — separated named writers from hangar payload
+
+Ran the single batched retail-oracle work unit after adding a bounded
+`--post-value-pc-detail-phase ORIGIN:WIDTH` filter and requesting only
+`0x8008F7D4,0x80091374`. The qualified 75-second Rice capture passed the
+whole-RDRAM control with 125,701 writes, reached 4,487 VI, and retained 1,753
+valid type-2 tasks with `invalid=0` and `overflow=0`. The ordinal payload
+table retained 44,845 writes with zero overflow. Both requested writers were
+scalar-valid with 25,994 and 7,961 samples and `mismatch=0`.
+
+The hangar task and payload-range witnesses were live, but neither requested
+writer produced a phase-512 hangar detail row. This selects
+H-hangar-other-writer-or-range over the two named writers for this capture and
+rules out a detail-table overflow explanation. It remains single-source retail
+evidence and does not prove those PCs write no other hangar destination. The
+next work unit must census the actual phase-512 writer/destination set. No
+mitigation or value rewrite was added. ORIGIN: retail writer PCs, exact scalar
+post-store values, task publication, payload-range writes, and whole-RDRAM/VI
+observations; no value was skipped, rewritten, or guarded.

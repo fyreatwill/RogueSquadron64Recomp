@@ -193,6 +193,9 @@ static struct post_value_pc_detail_row
 static int g_n_post_value_pc_detail_rows;
 static long g_post_value_pc_detail_overflow;
 static int g_post_value_pc_detail;
+static int g_post_value_pc_detail_phase;
+static uint32_t g_post_value_pc_detail_origin;
+static uint32_t g_post_value_pc_detail_width;
 struct post_value_entry {
     uint32_t value;
     long n;
@@ -1935,6 +1938,10 @@ static void record_post_value_pc_detail(uint32_t pc, uint32_t value,
 
     if (!g_post_value_pc_detail)
         return;
+    if (g_post_value_pc_detail_phase &&
+        (width != g_post_value_pc_detail_width ||
+         origin != g_post_value_pc_detail_origin))
+        return;
     if (g_n_post_value_pc_detail_rows >= MAX_POST_VALUE_PC_DETAIL_ROWS) {
         g_post_value_pc_detail_overflow++;
         return;
@@ -3003,6 +3010,7 @@ static void usage(void)
         "  --phase-snapshot-watch N  capture exact nonzero bytes at target VI phases\n"
         "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
         "  --post-value-pc-detail  print every requested-writer post-store tuple\n"
+        "  --post-value-pc-detail-phase ORIGIN:WIDTH  limit detail tuples to one VI phase\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
         "  --rsp PATH            RSP plugin (default homebrew mupen64plus-rsp-hle)\n"
         "  --datadir PATH        dir holding mupen64plus.ini (default homebrew share dir)\n"
@@ -3176,6 +3184,22 @@ int main(int argc, char **argv)
             add_post_value_pcs(argv[++i]);
         else if (!strcmp(argv[i], "--post-value-pc-detail"))
             g_post_value_pc_detail = 1;
+        else if (!strcmp(argv[i], "--post-value-pc-detail-phase") && i + 1 < argc) {
+            char *spec = argv[++i];
+            char *colon = strchr(spec, ':');
+            if (!colon || colon == spec || !colon[1]) {
+                fprintf(stderr, "[oracle] bad --post-value-pc-detail-phase '%s' (want ORIGIN:WIDTH)\n", spec);
+                return 2;
+            }
+            *colon = 0;
+            g_post_value_pc_detail_origin = to_phys((uint32_t)strtoul(spec, NULL, 0));
+            g_post_value_pc_detail_width = (uint32_t)strtoul(colon + 1, NULL, 0);
+            if (!g_post_value_pc_detail_width) {
+                fprintf(stderr, "[oracle] bad --post-value-pc-detail-phase width\n");
+                return 2;
+            }
+            g_post_value_pc_detail_phase = 1;
+        }
         else if (!strcmp(argv[i], "--watch-write") && i + 1 < argc)
             add_watch(argv[++i], M64P_BKP_FLAG_WRITE, "write");
         else if (!strcmp(argv[i], "--watch-read") && i + 1 < argc)

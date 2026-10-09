@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4385 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4386 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -428,6 +428,20 @@ PCs, exact effective destinations, task publication ordinals, scalar
 validation, and whole-RDRAM/VI controls; no value was skipped, rewritten, or
 guarded.
 
+Session 4386 fixed the detail boundary with a phase filter and requested only
+`0x8008F7D4`/`0x80091374`. The qualified 75-second Rice run passed the
+whole-RDRAM control (125,701 writes), reached 4,487 VI, and retained 1,753
+valid type-2 tasks with `invalid=0`, `overflow=0`; the ordinal payload table
+retained 44,845 writes with `overflow=0`. Both requested writers were
+scalar-valid (`25,994` and `7,961` samples, `mismatch=0`), and the hangar
+payload range was live through task and ordinal rows. Neither requested writer
+produced a phase-512 hangar detail row, selecting
+H-hangar-other-writer-or-range over the two named writers for this capture.
+This is single-source retail evidence; it does not prove those PCs are absent
+from all hangar destinations. ORIGIN: retail writer PCs, exact scalar
+post-store values, task publication, payload-range writes, and whole-RDRAM/VI
+observations; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -468,19 +482,14 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4385 qualified the task and actual
-   writer controls but missed the discriminator: detail was requested for a
-   stale candidate list, not the live `0x8008F7D4`/`0x80091374` writers, and
-   overflowed. Rerun with `--post-value-pc-detail` and only those actual writer
-   PCs, retaining task event rows and the published payload range. Join each
-   writer post-value by phase/address/ordinal to the nearest type-2 payload
-   write in one capture. Nonzero payload equality supports a live
-   selector/decode writer; scalar-valid writers with zero equality support
-   maintenance/other-range traffic; absent/unsupported rows select a remaining
-   watch boundary. Require the whole-RDRAM control, both title buckets and
-   hangar, at least 1,000 valid type-2 rows, zero ordinal overflow, and
-   `mismatch=0`. Do not repeat the caller census, direct publication join,
-   closed first-eight comparison, or the `0x8009C904:0x8009DC3C` range.
+   `m5-selector-decode-boundary`. Session 4386 rules out the two named
+   `0x8008F7D4`/`0x80091374` PCs as hangar payload-range writers in the
+   qualified capture: both are scalar-valid, but neither has a phase-512
+   detail row while the payload/task watches are live. Identify the actual
+   hangar writer or destination range with one phase-keyed writer census, then
+   repeat the value comparison only for that live set. Do not treat the
+   absence of named-writer rows as proof that they write no other hangar
+   destination, and do not repeat the stale-PC detail capture.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
