@@ -149744,3 +149744,24 @@ the task payload. The next work unit must add that phase/task-keyed value join.
 No mitigation or value rewrite was added. ORIGIN: retail writer PCs, exact
 effective destinations, task publication ordinals, scalar validation, and
 whole-RDRAM/VI controls; no value was skipped, rewritten, or guarded.
+
+## Session 4385 (2026-10-09) — post-value detail missed live hangar writers
+
+Ran the single batched retail-oracle capture after rebuilding the oracle, with
+the existing title/hangar phase gates, whole-RDRAM watch, task watch, ordinal
+join, payload watches, and `--post-value-pc-detail`. The whole-RDRAM control
+produced 123,382 writes; the run reached title buckets with 628/628 valid
+type-2 rows and hangar with 482, retaining 1,738 valid type-2 rows overall.
+Task rows had `invalid=0` and `overflow=0`; the ordinal table retained 44,911
+writes with zero overflow.
+
+The actual high-volume hangar writers `0x8008F7D4` and `0x80091374` were live
+and scalar-valid with 121 and 36 samples, respectively, both with
+`mismatch=0`. They were absent from the requested detail-PC list, while that
+stale list overflowed its detail table by 43,546 rows. Therefore no writer
+value-to-payload equality conclusion is valid: this is an instrument-boundary
+result, not evidence for selector/decode or maintenance traffic. The next
+capture requests detail for only the two live writers. No mitigation or value
+rewrite was added. ORIGIN: retail writer PCs, exact effective destinations,
+task publication ordinals, scalar validation, and whole-RDRAM/VI controls; no
+value was skipped, rewritten, or guarded.

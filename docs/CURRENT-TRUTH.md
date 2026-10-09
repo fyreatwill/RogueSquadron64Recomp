@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4382 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4385 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -413,6 +413,21 @@ post-values against the published task payload. ORIGIN: retail writer PCs,
 exact effective destinations, task publication ordinals, scalar validation,
 and whole-RDRAM/VI controls; no value was skipped, rewritten, or guarded.
 
+Session 4385's post-value-detail capture passed the whole-RDRAM control
+(123,382 writes), reached all three phase buckets with 628/628/482 valid type-2
+rows, and retained 1,738 valid type-2 task rows with `invalid=0` and
+`overflow=0`. The ordinal table retained 44,911 writes with zero overflow. The
+actual high-volume hangar writers `0x8008F7D4` and `0x80091374` were scalar
+validated (`121` and `36` samples; `mismatch=0`), but they were not included in
+the requested detail-PC list. The requested detail table overflowed by 43,546
+rows, so it cannot compare actual writer values to task payload values. This is
+an instrument-boundary result, not evidence for selector-writer versus
+maintenance traffic; the next capture must request detail for the actual
+writers only and retain the same task/payload watches. ORIGIN: retail writer
+PCs, exact effective destinations, task publication ordinals, scalar
+validation, and whole-RDRAM/VI controls; no value was skipped, rewritten, or
+guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -453,19 +468,19 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4384 qualified the actual hangar
-   writer set and scalar validation, but did not compare writer values to task
-   payload values. Add `--post-value-pc-detail` to the qualified s4384 runner
-   and retain task event rows; join each requested writer's phase/ordinal
-   post-value to the nearest type-2 publication payload in one capture. A
-   nonzero task-payload equality rate after publication supports a live
-   selector/decode writer; live scalar-valid writers with no payload equality
-   support maintenance/other-range traffic; missing requested rows or
-   unsupported scalar rows select a remaining watch boundary. Require the
-   whole-RDRAM control, both title buckets and hangar, at least 1,000 valid
-   type-2 rows, zero ordinal overflow, and `mismatch=0`. Do not repeat the
-   caller census, direct publication join, closed first-eight comparison, or
-   the `0x8009C904:0x8009DC3C` range.
+   `m5-selector-decode-boundary`. Session 4385 qualified the task and actual
+   writer controls but missed the discriminator: detail was requested for a
+   stale candidate list, not the live `0x8008F7D4`/`0x80091374` writers, and
+   overflowed. Rerun with `--post-value-pc-detail` and only those actual writer
+   PCs, retaining task event rows and the published payload range. Join each
+   writer post-value by phase/address/ordinal to the nearest type-2 payload
+   write in one capture. Nonzero payload equality supports a live
+   selector/decode writer; scalar-valid writers with zero equality support
+   maintenance/other-range traffic; absent/unsupported rows select a remaining
+   watch boundary. Require the whole-RDRAM control, both title buckets and
+   hangar, at least 1,000 valid type-2 rows, zero ordinal overflow, and
+   `mismatch=0`. Do not repeat the caller census, direct publication join,
+   closed first-eight comparison, or the `0x8009C904:0x8009DC3C` range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

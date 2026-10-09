@@ -1,35 +1,40 @@
-# Next work unit (s4385): compare actual hangar writer values to task payload
+# Next work unit (s4386): detail the live hangar writers
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
 Competing hypotheses:
 
-- H-hangar-selector-writer: actual hangar range-1 writer values recur in the
-  phase-matched published task payload after publication.
-- H-hangar-maintenance: writers are live and scalar-valid but have no
-  phase/task-keyed payload equality.
-- H-hangar-value-watch-gap: requested writer rows are absent or scalar
-  validation is unsupported/mismatched.
+- H-hangar-selector-writer: post-values from live hangar writers
+  `0x8008F7D4` or `0x80091374` recur in the phase-matched published payload
+  after publication.
+- H-hangar-maintenance: both writers are live and scalar-valid, but their
+  post-values have zero equality with the phase/task-keyed payload writes.
+- H-hangar-value-watch-gap: the corrected writer rows are absent, unsupported,
+  mismatched, or still overflowed.
 
-Discriminating measurement: rerun the qualified s4384 oracle with
-`--post-value-pc-detail`, retain task publication event rows, and make one
-phase/task-keyed table joining each requested writer post-value to the nearest
-type-2 task payload. A nonzero exact payload equality after publication selects
-H-hangar-selector-writer; live scalar-valid rows with zero equality select
-H-hangar-maintenance; absent/unsupported/mismatched requested rows select
-H-hangar-value-watch-gap. Require the whole-RDRAM positive control, all three
-buckets, at least 1,000 valid type-2 rows, zero ordinal overflow, and
-`mismatch=0` for every retained scalar row.
+Discriminating measurement: run one retail-oracle capture with detail enabled
+for only `0x8008F7D4,0x80091374`, retain task publication ordinals and payload
+range writes, and join each writer post-value by phase/address/ordinal to the
+nearest type-2 payload write. Nonzero exact equality selects the selector
+writer; live scalar-valid rows with zero equality select maintenance; absent or
+unsupported rows select a remaining watch boundary. Do not interpret the
+ordinal `equal` field by itself as payload equality.
 
-Ground-truth preflight: use the independent retail oracle and preserve every
-s4383 physical watch and phase schedule. Extract candidates with:
+Ground-truth controls required in the same run: whole-RDRAM writes, title
+origins `0x00790400:1024` and `0x00790800:1024`, hangar origin
+`0x006AB400:512`, at least 1,000 valid type-2 rows, zero ordinal overflow, and
+`mismatch=0` for both requested writers. The s4385 positive controls passed;
+its detail table overflowed because it requested the stale large PC list.
 
-    rg 'ordinal-writer-join phase=0x006ab400:512 .*watch=1' scratch/agent/s4383_m5_writer_task_join_full/oracle.log | sort
-
-Then create one self-contained runner from
-`scratch/agent/run_s4384_m5_hangar_writer_qualification.sh`, changing only
-the output directory and adding `--post-value-pc-detail`, and run it after:
+Exact commands:
 
     bash tools/oracle/build.sh
+    apply the s4385 runner's output directory and replace its
+    --post-value-pc list with 0x8008F7D4,0x80091374
+    scratch/agent/run_s4386_m5_hangar_writer_payload.sh
 
-Do not repeat the caller census, first-eight comparison, or C904 range.
+Use `scratch/agent/s4385_m5_hangar_writer_payload/oracle.log` as the runner
+template, write the new runner with `apply_patch`, and keep the 75-second Rice
+route, phase schedule, task watch, `--ordinal-join`, both payload watches, and
+`--post-value-pc-detail` unchanged. Summarize controls and equality counts
+from bounded `rg`/`sed` windows; never read the full log.
