@@ -150920,3 +150920,13 @@ Open: the VI-1024 pool crossing of s4462 (needs a recipe reaching VI 1024; PROBE
 ## Session 4465 (2026-10-09) — VI-1024 crossing reproduced: 0xF7C table allocated OVER live smaller rs_malloc blocks
 Ran s4466_run.sh (3 concurrent, 300 s, PHASE_TIMEOUT=300). Only run 2 reached vi=1024 (runs 1,3: 0 lines at vi=1024; in_pool_range=0). Run 2: 40 `in_pool_range=1` inserts, all vi=1024. New replay scratch/agent/s4466_an3.py (live rs_malloc/rs_free tracker, covers each val). Result: every val is covered by a live 0xF7C block at 0x801931F0..0x8019416C (malloc line 435877, freed line 516341), AND by live 0x30/0x300/0xB00/0xAA blocks nested inside it (e.g. 0x80193E20 size 48 malloc'd line 6033, 0x80193FF0 size 768 line 26399, never freed in the log before the 0xF7C malloc). Selects hypothesis A over B/C: rs_malloc returned a 3964-byte block overlapping earlier live allocations. Caveat (single-source, 1 of 3 runs): only rs_free is logged; an unlogged free path (arena reset, other free entry) would make this a tracker artifact. ORIGIN: no code change; instrumentation reuse only.
 Next: grep guest/host for any other free path touching these blocks (log all allocator entry points), then name the allocator invariant violation.
+
+## Session 4466 (2026-10-09) — heap-header dump built; 0/4 runs reached the VI-1024 0xF7C malloc (null, control passed)
+
+HYPOTHESIS-ID: m5-ai-event-cadence
+Selects/refutes: none (A vs B for s4465's overlap stays open, single-source 1 of 3 earlier runs).
+What ran: tools/apply_s4466_hdrdump.py (patches funcs_0.c, idempotent, regen-fragile like apply_s4300) adds `[rs-hdr] ptr hflags hsize` after every `[rs-malloc]` and, when a 3964-byte block is returned, `[rs-hdr-nested]` for every earlier recorded block inside it with its CURRENT header flags. Build rc=0. scratch/agent/s4467_run.sh: 4 concurrent 300 s runs (soak_results/s4467_1..4).
+Result: positive control passed (5270-5386 `[rs-hdr]` lines per run, hflags=0x0002 = allocated). Each run did 2 size=3964 mallocs but both in the VI-640 phase with no nested live blocks (0 `[rs-hdr-nested]` lines); 0/4 runs reached VI 1024 (12 vi=1024 lines total, in_pool_range=1 count 0). The discriminating event did not occur; no A/B verdict.
+Facts gained: header flag 2 = allocated at ptr-0x10, readable from the malloc exit hook. coalesceFreeHeapBlocks is called from inside rs_malloc (0x80001430), so it is a candidate unlogged free path for the nested blocks (B) - unmeasured.
+ORIGIN: no mitigation landed; diagnostic hook only.
+Next: reach VI 1024 reliably (only 1 of 7 runs so far) - s4467 recipe queued as a soak; replay `[rs-hdr-nested]` when it hits; or log coalesce flag 2->1 transitions as the B discriminator.

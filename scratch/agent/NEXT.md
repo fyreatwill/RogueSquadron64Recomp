@@ -1,7 +1,8 @@
-# Next work unit (s4466): is the 0xF7C-over-live-blocks overlap real, or an unlogged free?
+# Next work unit (s4467): get a VI-1024 run with the header dump, replay [rs-hdr-nested]
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-State (s4465): in 1 of 3 runs reaching VI 1024, rs_malloc returned 0x801931F0 size 3964 over live (never rs_free'd) blocks 0x80193E20(48), 0x80193FF0(768).
-Hypotheses: (A) allocator returns overlapping block (free-list/size corruption); (B) another free path (not logged) released the nested blocks.
-Discriminator: log every allocator entry (rs_malloc/rs_free/realloc/heap-init/reset) in the same run + positive control, replay with scratch/agent/s4466_an3.py. A: nested blocks still live at the 0xF7C malloc; B: an unlogged free precedes it.
+State (s4466): hook built and control-validated; the VI-1024 0xF7C malloc (0x801931F0) did not occur in 0/4 runs.
+Hypotheses: (A) rs_malloc returned an overlapping block: nested headers show hflags=0x0002 (allocated) at the 0xF7C malloc. (B) a free (e.g. coalesceFreeHeapBlocks inside rs_malloc) released them: nested headers show flag 1.
+Step: read scratch/agent/SOAK-RESULTS.md for the queued s4467_hdr_nested soak; grep `rs-hdr-nested` in its logs. If none reached VI 1024, find what differs in the one earlier run (s4466_2) that did, rather than re-running blind.
+Outcomes: all nested hflags=2 -> A selected (second source); flag 1 -> B, close the lead as benign.
