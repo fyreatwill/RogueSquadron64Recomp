@@ -555,3 +555,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261008-020101 | s4255_ab_wave | rc=1 | 85s | scratch/agent/soak_results/s4255_ab_wave_20261008-020101.log
 20261008-122208 | s4296_a14_yield_title_hangar | rc=3 | 84s | scratch/agent/soak_results/s4296_a14_yield_title_hangar_20261008-122208.log
 20261009-s4365 | s4365_exact_task_family_writers | qualified title-only; Rice run passed whole-RDRAM control, exact writes fired at all four family addresses, title buckets live, hangar absent; writer selectors targeted execution watches 1-4 instead of exact memory watches 5-8; no hypothesis selected | scratch/agent/soak_results/s4365_exact_task_family_writers_rice.log
+20261009-144405 | s4450_ai_drain_event | rc=1 | 304s | scratch/agent/soak_results/s4450_ai_drain_event_20261009-144405.log

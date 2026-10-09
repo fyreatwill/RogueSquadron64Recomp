@@ -386,4 +386,4 @@ windows for the ledger; do not read it whole.
 
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
-- s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). Fold SOAK-RESULTS verdict next; if both arms still crash in fillSampleStreamRange+15116 the cadence is not the cause.
+- s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** Replicate queued (s4452_ai_drain_replicate.sh, 2x2); if all four clean, diff against the s4441 recipe.
