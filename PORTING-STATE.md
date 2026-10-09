@@ -149803,3 +149803,24 @@ histogram boundary. It does not identify the actual task data/output
 destination; that is the next probe. ORIGIN: retail phase-keyed writer
 histograms, exact effective stores, scalar validation, task publication, and
 whole-RDRAM/VI observations; no value was skipped, rewritten, or guarded.
+
+## Session 4388 (2026-10-09) — censused exact hangar task destinations
+
+Ran the batched retail-oracle task-destination census. The first corrected
+watch missed the live `0x80173CB0` data base; the fixed union watch covered
+both observed hangar bases and completed with a 10,000-callback whole-RDRAM
+positive control, 1,449 valid type-2 task rows (`invalid=0`, `overflow=0`),
+and 1,173,281 retained destination writes with zero ordinal overflow. The
+phase-512 task rows used `data=0x80171E70` in the qualified run, with
+`data_size=2`; a prior same-unit run used `0x80173CB0`. Every retained row
+had `output=0` and `output_size=0`. Both the union data span and the
+`+0x100` field union had substantial phase-512 writer traffic, while the
+null output span had no phase-512 writer rows. This selects H-task-data over
+H-task-output and H-watch-gap for the qualified retail route, but the
+physical watch was a union broader than one dynamic task block, so this is
+single-source destination evidence. The next work unit must split exact
+per-base spans and add an independent evidence line. The first run was
+invalid due to the missed base; the second was invalid for ordinal overflow;
+both were corrected in this iteration. ORIGIN: retail task fields, physical
+writer PCs, phase-gated destination watches, ordinal joins, and whole-RDRAM/VI
+controls; no value was skipped, rewritten, or guarded.

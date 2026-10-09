@@ -1,4 +1,4 @@
-# Next work unit (s4388): locate actual hangar task data/output destination
+# Next work unit (s4389): split exact hangar task data spans
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
@@ -13,12 +13,13 @@ Competing hypotheses:
   relevant hangar stores.
 
 Discriminating measurement: one retail-oracle run with the same whole-RDRAM,
-VI phase, task, and ordinal controls, plus phase-512 physical watches for the
-task `data_ptr` span, `data_ptr+0x100`, and the task output span, each with
-writer-PC histograms and bounded phase snapshots. A nonzero/high-volume
-hangar writer in the data span selects H-task-data; a live output/other-range
-writer with data-span clear-only traffic selects H-task-output; absent,
-unsupported, or overflowed target rows select H-watch-gap.
+VI phase, task, and ordinal controls, plus exact physical watches for both
+observed hangar data spans (`0x171E70:0x173290` and
+`0x173CB0:0x1750D0`), their exact `+0x100` four-byte fields, and the null
+output span. A nonzero/high-volume writer inside the task span, with no
+output writers, selects H-task-data; a live output/other-range writer with
+task spans clear selects H-task-output; absent, unsupported, or overflowed
+target rows select H-watch-gap.
 
 Controls required: whole-RDRAM positive control, title origins
 `0x00790400:1024` and `0x00790800:1024`, hangar origin `0x006AB400:512`, at
@@ -29,9 +30,9 @@ payload equality.
 Exact commands:
 
     bash tools/oracle/build.sh
-    create scratch/agent/run_s4388_m5_task_destination_census.sh from the s4387
-    runner, replacing the fixed range-2 watch with the task data/output spans
-    discovered from the retained hangar task rows
-    bash scratch/agent/run_s4388_m5_task_destination_census.sh
+    bash tools/oracle/build.sh
+    create scratch/agent/run_s4389_m5_exact_task_spans.sh from the s4388
+    runner, using separate exact watches for both data spans and both fields
+    bash scratch/agent/run_s4389_m5_exact_task_spans.sh
 
 Summarize only bounded `rg`/`sed` windows from the oracle log.

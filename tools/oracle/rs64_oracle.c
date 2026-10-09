@@ -566,7 +566,7 @@ static int g_pc_task_join_enabled;
 static int g_pc_phase_quiet;
 static int g_ordinal_join_enabled;
 static uint64_t g_event_ordinal;
-#define MAX_ORDINAL_WRITES 262144
+#define MAX_ORDINAL_WRITES 2097152
 struct ordinal_write_row {
     int watch;
     uint32_t pc;

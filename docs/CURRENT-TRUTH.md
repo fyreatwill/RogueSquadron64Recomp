@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4387 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4388 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -483,6 +483,23 @@ contents reached `0x801B4CE0` without carrying the family. The lattice store at
 `0x8009DB2C` is legitimate quantized output, not the semantic family writer.
 The next boundary is therefore the bounded selector/decode writer range.
 
+Session 4388's corrected retail task-destination census passed the positive
+control (10,000 whole-RDRAM callbacks), reached the title and phase-512 task
+route, and completed with 1,449 valid type-2 task rows (`invalid=0`,
+`overflow=0`) and 1,173,281 retained destination writes (`overflow=0`). The
+phase-512 task rows used `data=0x80171E70` in this run (the prior run used
+`0x80173CB0`), `data_size=2`, and always had `output=0`/`output_size=0`.
+The watched data-block union and its `+0x100` union both had substantial
+phase-512 writer traffic, while the null output span had no phase-512 writer
+rows. This selects H-task-data over H-task-output and H-watch-gap for the
+qualified retail route, but the union watch is broader than one dynamic task
+block and the result is single-source retail evidence. The next probe must
+split exact per-task data spans (including both observed hangar bases) and
+add an independent evidence line before promoting destination provenance.
+ORIGIN: retail task fields, physical writer PCs, phase-gated destination
+watches, ordinal joins, and whole-RDRAM/VI controls; no value was skipped,
+rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -498,13 +515,11 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4387 shows that the watched hangar
-   range is dominated by zero-fill from `0x800078EC`, while neither named
-   title writer reaches it in phase 512. Identify the actual hangar task
-   data/output destination by watching the phase-512 task pointers and their
-   bounded `+0x100` fields in one run, with the same payload-range census as a
-   stale-range control. Do not repeat the named-writer detail capture or treat
-   the clear writer as semantic payload provenance.
+   `m5-selector-decode-boundary`. Split exact phase-512 task data spans for
+   both observed hangar bases (`0x80171E70` and `0x80173CB0`) and their
+   `+0x100` fields in one oracle run, retaining the whole-RDRAM, VI, task, and
+   ordinal controls. Add an independent source/consumer witness; do not treat
+   the broad union-watch result as final provenance.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
