@@ -150843,3 +150843,7 @@ Meaning (two lines: range hits with positive control + bisect): retail DOES run 
 Rules out: "retail does not execute the voice renderer"; M5 hypothesis (b) as stated in s4449. Does NOT yet say whether port's call rate/path matches.
 ORIGIN: n/a (no mitigation added).
 Next: oracle per-PC histogram for a range (needs a small oracle feature) vs the port's same-PC counts; reconcile voice array base.
+
+## Session 4454 (2026-10-09) — retail per-PC histogram of MusyX range
+Added `pc-hist` shutdown table to tools/oracle/rs64_oracle.c (per-PC exec counts for any watched range, guest 0x80000000..0x80400000). Ran 20 s pre-title, target 0x80090768:0x80091B3C (scratch/agent/s4454_run.sh, logs s4454_target.log / s4454_ctl.log). Control range 0x8008E000:0x8008F000 fired 62,788x, [gpr-ctl] printed; target fired 1,650,902x over 1199 VI (matches s4453). 616 distinct PCs hit. The hot body is musyxMixActiveVoices (0x80090E04): loops at 0x80090E74-0x80090E90, 0x80090EB8-0x80090EC8, 0x80090F40-0x80090F54 each execute exactly 45,700x in 20 s (~2,285/s); 0x800913C0-0x80091410 (musyxBuildVoiceCommandList area) 23,900x (~1,195/s); 0x80091018-0x8009102C 2,285x. Identical counts across all instructions of each loop mean no early exits. Retail runs mix/cmdlist build continuously pre-title (confirms s4453; oracle source plus bisect).
+Not done: port-side rate for the same functions (needs a per-call counter in musyxMixActiveVoices; ROGUESQ_LOG_M5_CMDLIST logs per audio task only). ORIGIN: n/a, no mitigation added (oracle tool only).

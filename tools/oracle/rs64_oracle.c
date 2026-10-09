@@ -1649,6 +1649,9 @@ static void add_pc_phase_log_width(char *spec)
     g_n_pc_phase_log_origin++;
 }
 
+#define PC_HIST_WORDS 0x100000 /* guest 0x80000000..0x80400000 */
+static unsigned int g_pc_hist[PC_HIST_WORDS];
+
 struct exec_prev {
     uint32_t pc;
     uint32_t prev;
@@ -2620,6 +2623,8 @@ static void dbg_update(unsigned int pc)
             g_watch[i].hits++;
             g_pc_hits++;
             count_exec_prev(pc, (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC));
+            if (pc >= 0x80000000u && ((pc - 0x80000000u) >> 2) < PC_HIST_WORDS)
+                g_pc_hist[(pc - 0x80000000u) >> 2]++;
         }
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
             (access_flags & g_watch[i].flags &
@@ -4207,6 +4212,10 @@ int main(int argc, char **argv)
         }
     }
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
+    for (int i = 0; i < PC_HIST_WORDS; i++)
+        if (g_pc_hist[i])
+            printf("[oracle] pc-hist pc=0x%08x n=%u\n",
+                   0x80000000u + ((uint32_t)i << 2), g_pc_hist[i]);
     for (int i = 0; i < g_n_exec_prev; i++)
         printf("[oracle] exec-prev pc=0x%08x prev=0x%08x n=%ld\n",
                g_exec_prev[i].pc, g_exec_prev[i].prev, g_exec_prev[i].n);
