@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4372 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4373 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -226,6 +226,22 @@ phase-keyed join for the C950 selected word and the D790/publication fields.
 ORIGIN: retail execution, task, and C904 observations; no value was skipped,
 rewritten, or guarded.
 
+Session 4373's boundary-join instrument was first invalid because the task
+execution watch was omitted, then fixed in the same iteration. The qualified
+75-second Rice run passed the whole-RDRAM control (10,000 writes), reached
+4,480 VI and all three phase buckets, and recorded 1,959 valid type-2 task
+rows with no invalid pointers. C904/task joins were live in title and hangar
+(594 rows at `0x00790400`, 601 at `0x00790800`, and 341 retained at
+`0x006AB400`). The five intended boundary PCs produced 2,920 phase-keyed rows
+with zero missing-task joins, but every retained boundary row was hangar
+phase; no C950/C954/D78C/D790/DC38 execution row occurred in either title
+bucket. This selects H-phase-instrument-gap for the proposed boundary table:
+the title source/task path is live, while these presumed intermediate PCs are
+not the title path. It does not select transform-before-publication versus
+payload-overwrite and is single-source retail evidence. ORIGIN: retail
+execution, task, and C904 observations; no value was skipped, rewritten, or
+guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -266,12 +282,13 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Add a phase-keyed join for C950/C954's
-   selected table word, D78C/D790's cursor transition, and DC38's publication
-   stores. The s4372 generic field dump was live only in hangar, so it cannot
-   select transform-before-publication versus payload-overwrite. Preserve the
-   whole-RDRAM control, typed task join, C904 join, and all three VI buckets;
-   do not repeat the closed first-eight payload comparison.
+   `m5-selector-decode-boundary`. Locate the title-specific intermediate
+   execution path rather than repeating C950/C954/D78C/D790/DC38: use one
+   phase-gated PC-range census around the live C904-to-DC38 region, joined to
+   the typed task ordinal, with the whole-RDRAM control and all three VI
+   buckets. The s4373 five-PC table was live and task-joined only in hangar,
+   selecting an instrument/path gap for title. Do not repeat the closed
+   first-eight payload comparison.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

@@ -407,6 +407,32 @@ static struct pc_field_dump_bucket
     g_pc_field_dump[MAX_PC_FIELD_DUMP_PCS];
 static int g_n_pc_field_dump;
 static int g_pc_field_dump_any_phase;
+static int g_boundary_join_enabled;
+struct boundary_join_row {
+    uint32_t pc;
+    uint32_t width;
+    uint32_t origin;
+    long task_n;
+    uint32_t task_ptr;
+    uint32_t data_ptr;
+    uint32_t data_size;
+    uint64_t event_ordinal;
+    uint32_t object;
+    uint32_t cursor;
+    uint32_t selected_addr;
+    uint32_t selected_word;
+    uint32_t branch_state;
+    uint32_t instruction;
+    uint32_t source_reg;
+    uint32_t source_value;
+    long n;
+};
+#define MAX_BOUNDARY_JOIN_ROWS 2048
+static struct boundary_join_row g_boundary_join_rows[MAX_BOUNDARY_JOIN_ROWS];
+static int g_n_boundary_join_rows;
+static long g_boundary_join_hits;
+static long g_boundary_join_no_task;
+static long g_boundary_join_overflow;
 struct c904_witness_row {
     uint32_t pc;
     uint32_t width;
@@ -809,6 +835,68 @@ joined_done:
            row.source_word, row.source_byte, row.branch_selector,
            row.branch_state, row.object, row.cursor, row.base_198, row.selected_addr,
            row.selected_word, row.state_18a, row.state_18c);
+    fflush(stdout);
+}
+
+static void dump_boundary_join(uint32_t pc)
+{
+    struct boundary_join_row row;
+    struct pc_task_dump_row *task = NULL;
+    uint32_t width, origin;
+    int task_i;
+
+    if (!g_boundary_join_enabled ||
+        (pc != 0x8009C950u && pc != 0x8009C954u &&
+         pc != 0x8009D78Cu && pc != 0x8009D790u && pc != 0x8009DC38u) ||
+        !pc_phase_log_match())
+        return;
+    width = pDebugMemRead32(VI_WIDTH_ADDR);
+    origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    for (task_i = g_n_pc_task_dump_rows - 1; task_i >= 0; task_i--) {
+        if (g_pc_task_dump_rows[task_i].width == width &&
+            g_pc_task_dump_rows[task_i].origin == origin) {
+            task = &g_pc_task_dump_rows[task_i];
+            break;
+        }
+    }
+    g_boundary_join_hits++;
+    if (!task) {
+        g_boundary_join_no_task++;
+        return;
+    }
+    if (g_n_boundary_join_rows >= MAX_BOUNDARY_JOIN_ROWS) {
+        g_boundary_join_overflow++;
+        return;
+    }
+    row.pc = pc;
+    row.width = width;
+    row.origin = origin;
+    row.task_n = task->task_n;
+    row.task_ptr = task->task_ptr;
+    row.data_ptr = task->data_ptr;
+    row.data_size = task->data_size;
+    row.event_ordinal = g_event_ordinal;
+    row.object = gpr32(4);
+    row.cursor = pDebugMemRead32(debug_rdram_addr((row.object + 0x11C8u) & ~3u));
+    row.selected_addr = pc == 0x8009C950u
+        ? (gpr32(2) & 0x1FFFFFFFu) : 0;
+    row.selected_word = row.selected_addr
+        ? debug_mem_u32(row.selected_addr) : 0;
+    row.branch_state = debug_mem_u16(gpr32(17) + 0x22u);
+    row.instruction = pDebugMemRead32(pc);
+    row.source_reg = (row.instruction >> 16) & 31u;
+    row.source_value = gpr32((int)row.source_reg);
+    row.n = 1;
+    g_boundary_join_rows[g_n_boundary_join_rows++] = row;
+    printf("[boundary-join] pc=0x%08x width=%u origin=0x%08x task_n=%ld "
+           "task_ptr=0x%08x data_ptr=0x%08x data_size=0x%08x "
+           "event=%llu object=0x%08x cursor=0x%08x selected_addr=0x%08x "
+           "selected_word=0x%08x branch_state=0x%04x instruction=0x%08x "
+           "source_reg=%u source_value=0x%08x\n",
+           pc, width, origin, row.task_n, row.task_ptr, row.data_ptr,
+           row.data_size, (unsigned long long)row.event_ordinal, row.object,
+           row.cursor, row.selected_addr, row.selected_word, row.branch_state,
+           row.instruction, row.source_reg, row.source_value);
     fflush(stdout);
 }
 
@@ -2197,6 +2285,9 @@ static void dbg_update(unsigned int pc)
     if (flags & M64P_BKP_FLAG_EXEC)
         dump_pc_task(pc);
 
+    if (flags & M64P_BKP_FLAG_EXEC)
+        dump_boundary_join(pc);
+
     if ((flags & M64P_BKP_FLAG_EXEC) &&
         pc >= 0x80033C00u && pc < 0x80034100u)
         dump_pc_range_task(pc);
@@ -2856,6 +2947,7 @@ static void usage(void)
         "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
         "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
         "  --pc-field-dump-any-phase allow field rows before/after phase buckets\n"
+        "  --boundary-join     join C950/C954/D78C/D790/DC38 to latest phase task\n"
         "  --c904-witness       dump phase-gated C904 entry and selected-word reader rows\n"
         "  --c904-task-join    join C904/C950 witnesses to latest phase task row\n"
         "  --store-field-dump W:A[,B...] dump phase-gated fields at exact writes on watch W\n"
@@ -2965,6 +3057,10 @@ int main(int argc, char **argv)
             add_pc_field_dump_pcs(argv[++i]);
         else if (!strcmp(argv[i], "--pc-field-dump-any-phase"))
             g_pc_field_dump_any_phase = 1;
+        else if (!strcmp(argv[i], "--boundary-join")) {
+            g_boundary_join_enabled = 1;
+            add_pc_watches("0x8009C950,0x8009C954,0x8009D78C,0x8009D790,0x8009DC38");
+        }
         else if (!strcmp(argv[i], "--c904-witness")) {
             g_c904_witness_enabled = 1;
             add_pc_watches("0x8009C0E8,0x8009C904,0x8009C950");
@@ -3378,6 +3474,26 @@ int main(int argc, char **argv)
             for (int payload_i = 0; payload_i < 8; payload_i++)
                 printf("%08x%s", row->payload[payload_i], payload_i == 7 ? "" : ",");
             printf(" n=%ld\n", row->n);
+        }
+    }
+    if (g_boundary_join_enabled) {
+        printf("[oracle] boundary-join-summary hits=%ld no_task=%ld rows=%d/%d overflow=%ld\n",
+               g_boundary_join_hits, g_boundary_join_no_task,
+               g_n_boundary_join_rows, MAX_BOUNDARY_JOIN_ROWS,
+               g_boundary_join_overflow);
+        for (int i = 0; i < g_n_boundary_join_rows; i++) {
+            struct boundary_join_row *row = &g_boundary_join_rows[i];
+            printf("[oracle] boundary-join-row pc=0x%08x width=%u origin=0x%08x "
+                   "task_n=%ld task_ptr=0x%08x data_ptr=0x%08x data_size=0x%08x "
+                   "event=%llu object=0x%08x cursor=0x%08x selected_addr=0x%08x "
+                   "selected_word=0x%08x branch_state=0x%04x instruction=0x%08x "
+                   "source_reg=%u source_value=0x%08x n=%ld\n",
+                   row->pc, row->width, row->origin, row->task_n,
+                   row->task_ptr, row->data_ptr, row->data_size,
+                   (unsigned long long)row->event_ordinal, row->object,
+                   row->cursor, row->selected_addr, row->selected_word,
+                   row->branch_state, row->instruction, row->source_reg,
+                   row->source_value, row->n);
         }
     }
     if (g_n_store_field_dump_pc > 0) {

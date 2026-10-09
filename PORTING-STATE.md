@@ -149524,3 +149524,20 @@ join for the selected word, cursor transition, and publication source.
 
 ORIGIN: retail execution, task, and C904 observations; no value was skipped,
 rewritten, or guarded.
+
+## Session 4373 (2026-10-09) — phase-keyed boundary join isolated title path gap
+
+The first 75-second oracle launch was invalid because `0x80033FCC` was omitted
+from the execution watch list; the new boundary helper therefore had no task
+rows. The fixed Rice launch passed the whole-RDRAM positive control with
+10,000 writes, reached 4,480 VI and all three target buckets, and recorded
+1,959 valid type-2 task rows with no invalid pointers. C904/task joins were
+live in title and hangar: 594 rows at `0x00790400`, 601 at `0x00790800`, and
+341 retained at `0x006AB400`. The five intended boundary PCs generated 2,920
+phase-keyed rows with zero missing-task joins, but all were hangar rows; no
+C950/C954/D78C/D790/DC38 execution occurred in either title bucket. This
+selects H-phase-instrument-gap for those presumed intermediate PCs and rules
+out missing task/C904 coverage as the cause. It does not select
+transform-before-publication versus payload-overwrite. The evidence is
+single-source retail oracle evidence. ORIGIN: retail execution, task, and
+C904 observations; no value was skipped, rewritten, or guarded.
