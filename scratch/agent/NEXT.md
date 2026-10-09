@@ -1,29 +1,35 @@
-# Next work unit (s4358): repair M5 selector/decode consumer join
+# Next work unit (s4359): locate the retail task-consumer PC
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-Session 4357 passed the retail whole-RDRAM control and reached title/hangar, but
-the selected retail task/field join at `0x80033FCC` was empty. The port side
-was live: 2,817 ABI rows and 2,812 DMA joins, with title 1024 at 13.7 s and
-hangar 512 at 34.0 s and no crash/abort. Therefore the result is an
-instrument-boundary failure, not a stream-origin result.
+The s4358 oracle build repaired the join boundary: whole-RDRAM control fired,
+the hangar phase was reached, and 512 bounded C904/C950 witness rows were
+captured. The presumed `0x80033FCC` task watch still produced zero rows, so the
+new C904/C950-to-task join produced zero matches. The port arm remained live
+through hangar with task/ABI and image-DMA rows.
 
 Competing hypotheses:
 
-- H-selector-consumer: the repaired C904/C950 join matches the port's later
-  consumer layout while the selected source remains equivalent.
-- H-pre-filter-origin: the repaired retail source already differs before the
-  selector/decode consumer, independently of the port aftermath.
-- H-instrument-boundary: C904/C950 still cannot produce a phase-keyed row even
-  though whole-RDRAM, VI, and execution controls fire.
+- H-consumer-nearby: the retail task handoff is a nearby PC around
+  `0x80033FCC`, and a range census will find valid type-2 task rows that can be
+  joined to the C904/C950 phase rows.
+- H-consumer-other-overlay: the handoff is outside that presumed local range;
+  the local census is empty despite qualified C904/C950 and whole-RDRAM controls.
+- H-pre-filter-origin: a live nearby task row appears, but its source fields
+  already disagree with the C904/C950 input/selected fields before the consumer.
 
-Discriminating measurement: build one bounded phase-keyed table around the
-existing retail C904/C950 execution witnesses, selected words, and the port
-descriptor/consumer rows. Matching post-filter layout selects
-H-selector-consumer; mismatch already in the pre-filter source selects
-H-pre-filter-origin; absent C904/C950 rows despite the positive controls selects
-H-instrument-boundary.
+Discriminating measurement: build one bounded `--watch-pc-range` census for
+`0x80033C00:0x80034100`, with exact PC, type, task pointer, and task fields for
+every phase-gated execution, while retaining `--c904-witness`, the new
+`--c904-task-join`, whole-RDRAM, title/hangar VI controls, and the port ABI/DMA
+rows in the same capture. Nearby valid rows select H-consumer-nearby; no rows
+select H-consumer-other-overlay/instrument boundary; source disagreement in a
+joined row selects H-pre-filter-origin.
 
-Exact pre-build ground-truth check: run the existing oracle whole-RDRAM
-positive control plus C904/C950 execution watches first; do not add another
-oracle field until those witnesses fire in the same title/hangar capture.
+Exact pre-build ground-truth check: run the existing whole-RDRAM positive
+control and C904/C950 witness watches first; accept the range result only if
+the control and both title/hangar phase witnesses fire in that same capture.
+
+Expected commands: extend `tools/oracle/rs64_oracle.c` with one bounded task
+range option, run `./tools/oracle/build.sh`, then repeat the s4358 paired
+capture from `scratch/agent/s4358_m5_selector_join/` with SIGKILL watchdogs.

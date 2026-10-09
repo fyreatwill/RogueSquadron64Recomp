@@ -428,6 +428,28 @@ static struct c904_witness_row g_c904_witness_rows[MAX_C904_WITNESS_ROWS];
 static int g_c904_witness_enabled;
 static long g_c904_witness_hits;
 static long g_c904_witness_overflow;
+static int g_c904_task_join_enabled;
+static long g_c904_task_join_matched;
+static long g_c904_task_join_unmatched;
+static long g_c904_task_join_overflow;
+struct c904_task_join_row {
+    uint32_t pc;
+    uint32_t width;
+    uint32_t origin;
+    uint32_t task_ptr;
+    uint32_t data_ptr;
+    uint32_t data_size;
+    uint32_t input;
+    uint32_t input_w0;
+    uint32_t input_w1;
+    uint32_t selected_addr;
+    uint32_t selected_word;
+    long n;
+};
+#define MAX_C904_TASK_JOIN_ROWS 512
+static struct c904_task_join_row
+    g_c904_task_join_rows[MAX_C904_TASK_JOIN_ROWS];
+static int g_n_c904_task_join_rows;
 struct c904_input_span {
     uint32_t input;
     uint32_t width;
@@ -792,6 +814,71 @@ static void dump_c904_witness(uint32_t pc)
         row.object = gpr32(4);
     else
         row.object = object;
+
+    if (g_c904_task_join_enabled) {
+        uint32_t width = pDebugMemRead32(VI_WIDTH_ADDR);
+        uint32_t origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        int task_i = g_n_pc_task_dump_rows - 1;
+        struct pc_task_dump_row *task = NULL;
+        while (task_i >= 0) {
+            if (g_pc_task_dump_rows[task_i].width == width &&
+                g_pc_task_dump_rows[task_i].origin == origin) {
+                task = &g_pc_task_dump_rows[task_i];
+                break;
+            }
+            task_i--;
+        }
+        if (task == NULL) {
+            g_c904_task_join_unmatched++;
+        } else {
+            int join_i;
+            g_c904_task_join_matched++;
+            for (join_i = 0; join_i < g_n_c904_task_join_rows; join_i++) {
+                struct c904_task_join_row *joined =
+                    &g_c904_task_join_rows[join_i];
+                if (joined->pc == pc && joined->width == width &&
+                    joined->origin == origin &&
+                    joined->task_ptr == task->task_ptr &&
+                    joined->data_ptr == task->data_ptr &&
+                    joined->data_size == task->data_size &&
+                    joined->input == row.input &&
+                    joined->input_w0 == row.input_w0 &&
+                    joined->input_w1 == row.input_w1 &&
+                    joined->selected_addr == row.selected_addr &&
+                    joined->selected_word == row.selected_word) {
+                    joined->n++;
+                    goto c904_task_join_done;
+                }
+            }
+            if (g_n_c904_task_join_rows >= MAX_C904_TASK_JOIN_ROWS) {
+                g_c904_task_join_overflow++;
+            } else {
+                struct c904_task_join_row *joined =
+                    &g_c904_task_join_rows[g_n_c904_task_join_rows++];
+                joined->pc = pc;
+                joined->width = width;
+                joined->origin = origin;
+                joined->task_ptr = task->task_ptr;
+                joined->data_ptr = task->data_ptr;
+                joined->data_size = task->data_size;
+                joined->input = row.input;
+                joined->input_w0 = row.input_w0;
+                joined->input_w1 = row.input_w1;
+                joined->selected_addr = row.selected_addr;
+                joined->selected_word = row.selected_word;
+                joined->n = 1;
+                printf("[c904-task-join] pc=0x%08x width=%u origin=0x%08x "
+                       "task_ptr=0x%08x data_ptr=0x%08x data_size=0x%08x "
+                       "input=0x%08x input_w0=0x%08x input_w1=0x%08x "
+                       "selected_addr=0x%08x selected_word=0x%08x n=1\n",
+                       pc, width, origin, task->task_ptr, task->data_ptr,
+                       task->data_size, row.input, row.input_w0, row.input_w1,
+                       row.selected_addr, row.selected_word);
+                fflush(stdout);
+            }
+        }
+    }
+c904_task_join_done:
     for (i = 0; i < MAX_C904_WITNESS_ROWS; i++) {
         if (g_c904_witness_rows[i].pc == row.pc &&
             g_c904_witness_rows[i].prev_pc == row.prev_pc &&
@@ -2625,6 +2712,7 @@ static void usage(void)
         "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
         "  --pc-field-dump-any-phase allow field rows before/after phase buckets\n"
         "  --c904-witness       dump phase-gated C904 entry and selected-word reader rows\n"
+        "  --c904-task-join    join C904/C950 witnesses to latest phase task row\n"
         "  --store-field-dump W:A[,B...] dump phase-gated fields at exact writes on watch W\n"
         "  --store-field-dump-all W dump phase-gated fields at every write on watch W\n"
         "  --store-field-dump-any-phase allow store-field-dump rows in any VI phase\n"
@@ -2734,6 +2822,8 @@ int main(int argc, char **argv)
             g_c904_witness_enabled = 1;
             add_pc_watches("0x8009C0E8,0x8009C904,0x8009C950");
         }
+        else if (!strcmp(argv[i], "--c904-task-join"))
+            g_c904_task_join_enabled = 1;
         else if (!strcmp(argv[i], "--store-field-dump") && i + 1 < argc)
             add_store_field_dump(argv[++i]);
         else if (!strcmp(argv[i], "--store-field-dump-all") && i + 1 < argc)
@@ -3120,6 +3210,23 @@ int main(int argc, char **argv)
     if (g_c904_witness_enabled)
         printf("[oracle] c904-witness-summary hits=%ld overflow=%ld\n",
                g_c904_witness_hits, g_c904_witness_overflow);
+    if (g_c904_task_join_enabled) {
+        printf("[oracle] c904-task-join-summary matched=%ld unmatched=%ld "
+               "rows=%d/%d overflow=%ld\n", g_c904_task_join_matched,
+               g_c904_task_join_unmatched, g_n_c904_task_join_rows,
+               MAX_C904_TASK_JOIN_ROWS, g_c904_task_join_overflow);
+        for (int i = 0; i < g_n_c904_task_join_rows; i++) {
+            struct c904_task_join_row *row = &g_c904_task_join_rows[i];
+            printf("[oracle] c904-task-row pc=0x%08x width=%u origin=0x%08x "
+                   "task_ptr=0x%08x data_ptr=0x%08x data_size=0x%08x "
+                   "input=0x%08x input_w0=0x%08x input_w1=0x%08x "
+                   "selected_addr=0x%08x selected_word=0x%08x n=%ld\n",
+                   row->pc, row->width, row->origin, row->task_ptr,
+                   row->data_ptr, row->data_size, row->input, row->input_w0,
+                   row->input_w1, row->selected_addr, row->selected_word,
+                   row->n);
+        }
+    }
     if (g_n_store_field_dump_pc > 0) {
         printf("[oracle] store-field-summary pcs=%d callbacks=%ld phase_hits=%ld "
                "rows=%d/%d overflow=%ld\n", g_n_store_field_dump_pc,

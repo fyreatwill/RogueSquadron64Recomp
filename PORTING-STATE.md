@@ -149215,3 +149215,25 @@ out treating the missing retail join as evidence for either pre-filter origin
 or selector-consumer divergence. The next probe must repair the join at the
 already-qualified C904/C950 execution witnesses. No code behavior or
 mitigation changed.
+
+## Session 4358 (2026-10-09) — repaired C904/C950 task join exposes absent consumer PC
+
+The initial oracle preflight fired the whole-RDRAM positive control but was
+killed before C904/C950 coverage and was discarded as coverage-invalid. The
+paired qualified capture then ran the rebuilt oracle and port arms together.
+The oracle positive control fired, reached the hangar phase, and recorded 512
+bounded C904/C950 witness rows. The new phase-keyed C904/C950-to-task join
+recorded zero matches because the existing `0x80033FCC` task watch produced
+zero task rows. The port arm independently remained live through hangar and
+continued to emit task/ABI and image-DMA joins.
+
+This rules out the prior join implementation as the sole explanation for the
+empty retail table, but it does not distinguish an earlier stream origin from
+consumer divergence: the presumed retail consumer PC is absent while the
+C904/C950 source witnesses are live. The next work unit is a bounded execution
+range census around `0x80033FCC` to find the actual task handoff. The new
+`--c904-task-join` diagnostic is oracle-only; no guest or host behavior was
+changed.
+
+ORIGIN: diagnostic-only oracle join and phase-gated execution observations;
+no guest or host value was skipped, rewritten, or guarded.
