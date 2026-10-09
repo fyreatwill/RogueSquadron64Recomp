@@ -148113,6 +148113,27 @@ The first later-divergence hypothesis therefore remains open only after row
 4,096; the prior 256-row boundary is superseded. No guard or skip was added.
 ORIGIN: none; measurement/instrument only.
 
+### Archived duplicate of Session 4318 (relocated to ledger tail)
+
+HYPOTHESIS-ID: m5-step9-mort-boundary
+
+Ran the bounded M5 Step 9 matrix with the independent Rice-backed retail
+oracle, then reran the port arms after fixing the driver omission of
+`ROGUESQ_LOG_M5_ROUTE_TRANSITION`. The oracle whole-RDRAM positive control,
+title VI 1024, hangar VI 512, and retail PC controls all passed. Both port
+arms reached title/hangar and passed the host/route/filter controls, task/DMA,
+slot, route, and PCM source/consumer coverage. The real-image arm produced
+nonzero PCM; the silent arm remained zero as expected.
+
+Neither port arm emitted MORT descriptor-entry/payload rows or real
+`filter-voice-audit` rows. Therefore the CPU-MORT versus AI/SDL discriminator
+did not run: H-MORT and H-AI remain unevaluable, while H-route/coverage-
+incomplete is selected. This rules out a route failure for the observed task,
+PCM, and hangar rows, but does not identify the missing descriptor/filter
+callsite. No decoder, AI bridge, guard, or skip was changed.
+ORIGIN: none; measurement/instrument only. The next unit adds independent
+positive-controlled witnesses at the missing MORT/voice callsites.
+
 ## Session 4314 (2026-10-08) — extended port capture; retail detail stream not requalified
 
 HYPOTHESIS-ID: m5-audio-destub-sequence
@@ -148207,3 +148228,24 @@ retail `0x8008FADC,0x17DA1C,0xB035DC20`; port
 divergence and rules out the unresolved shortfall explanation. It does not
 name a writer or authorize a guard/skip.
 ORIGIN: none; measurement/instrument only.
+
+## Session 4318 (2026-10-08) — M5 matrix route-qualified; MORT boundary absent
+
+HYPOTHESIS-ID: m5-step9-mort-boundary
+
+Ran the bounded M5 Step 9 matrix with the independent Rice-backed retail
+oracle, then reran the port arms after fixing the driver omission of
+`ROGUESQ_LOG_M5_ROUTE_TRANSITION`. The oracle whole-RDRAM positive control,
+title VI 1024, hangar VI 512, and retail PC controls all passed. Both port
+arms reached title/hangar and passed the host/route/filter controls, task/DMA,
+slot, route, and PCM source/consumer coverage. The real-image arm produced
+nonzero PCM; the silent arm remained zero as expected.
+
+Neither port arm emitted MORT descriptor-entry/payload rows or real
+`filter-voice-audit` rows. Therefore the CPU-MORT versus AI/SDL discriminator
+did not run: H-MORT and H-AI remain unevaluable, while H-route/coverage-
+incomplete is selected. This rules out a route failure for the observed task,
+PCM, and hangar rows, but does not identify the missing descriptor/filter
+callsite. No decoder, AI bridge, guard, or skip was changed.
+ORIGIN: none; measurement/instrument only. The next unit adds independent
+positive-controlled witnesses at the missing MORT/voice callsites.

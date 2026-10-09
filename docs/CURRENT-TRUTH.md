@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4317) The Rice-backed oracle arm passed the whole-RDRAM control, reached hangar VI 512 at `0x006AB400` at 38.4 s, and captured exactly 16,384 hangar-gated target reads after extending the oracle detail cap to 65,536. The filtered retail stream contained 16,384 `0x8008Fxxx` consumer rows and diverged at ordinal 0: retail `0x8008FADC,0x17DA1C,0xB035DC20` versus port `0x8008FCE8,0x17D9E0,0x8017D9F8`. This selects H-layout-or-filter as a full two-arm comparison result; it does not name the writer or authorize a mitigation. Next: resume M5 plan Step 9/10 qualification, beginning with the complete task/voice matrix and only changing CPU MORT or AI/SDL if its independent joins select that boundary.
+00. (s4318) The corrected M5 matrix passed the independent retail whole-RDRAM/title/hangar controls and both port arms reached title 1024 and hangar 512. Both arms passed the host/route positive controls and emitted task/DMA, route, slot, and PCM source/consumer rows; the real-image arm produced nonzero PCM while the silent arm did not. Neither arm emitted MORT descriptor-entry/payload rows or real filter rows, so H-MORT and H-AI remain unevaluable and H-route/coverage-incomplete is selected. The first run's invalid verdict was a driver omission of `ROGUESQ_LOG_M5_ROUTE_TRANSITION`; the fixed rerun exposed the control. No decoder, AI bridge, guard, or skip changed. Next: add/qualify the missing MORT descriptor and voice/filter witnesses in one phase-gated matrix, with an independent positive control for each witness, before interpreting CPU-vs-AI ownership.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -122,6 +122,7 @@ Work only the first applicable item. One monotonic sequence.
 | Port synth-read/free join, extended route | s4312 requalified the route and captured 4,096 writer/read rows in one run; both controls fired at VI 512, the free was again at guest `0x80095D54`, and all 4,096 requested/post pairs matched. s4313 independently matched the first 4,096 retail keyed rows; comparison beyond that remains open. |
 | Retail synth-read value join | s4308/s4313: whole-RDRAM and VI-512 controls passed; the value-aware oracle captured 1.43M target reads, and the first 4,096 keyed retail rows exactly match the qualified port sequence. Later divergence remains open. |
 | Retail/port 16,384-row consumer comparison | s4317: whole-RDRAM control and hangar VI 512 passed; both arms supplied 16,384 rows, with an ordinal-0 tuple divergence (retail `0x8008FADC,0x17DA1C,0xB035DC20`; port `0x8008FCE8,0x17D9E0,0x8017D9F8`). This selects a retail/port layout-or-filter divergence; exact writer/consumer cause remains open. |
+| M5 Step 9 complete matrix | s4318: both port arms reached title/hangar and passed route/host controls; real-image PCM was nonzero and silent PCM was zero, but no MORT descriptor or real filter witness appeared in either arm. H-MORT/H-AI are unevaluable until those witnesses are independently armed. |
 
 ## Durable evidence boundary
 

@@ -33,6 +33,7 @@ COMMON=(
     ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_PCM_BOUNDARY=1
     ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_M5_B40_ROUTE=1
     ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1
+    ROGUESQ_LOG_M5_ROUTE_TRANSITION=1
     ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_FILTER_VOICE_AUDIT=1
     ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1
     ROGUESQ_LOG_INIT_VOICE_SAMPLE=1
@@ -256,7 +257,7 @@ def read_arm(path, arm):
                 counts["filter_control"] += 1
             if line.startswith("[m5-host-boundary-control]"):
                 counts["host_boundary_control"] += 1
-            if (line.startswith("[m5-port-vi-control]") and row.get("phase") == "4" and
+            if (line.startswith("[m5-port-vi-control]") and
                     num(row.get("requested_width")) == 640 and num(row.get("committed_width")) == 640 and
                     num(row.get("committed_origin")) == 0x66A500):
                 counts["vi_control"] += 1

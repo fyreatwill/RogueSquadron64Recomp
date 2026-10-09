@@ -1,37 +1,38 @@
-# Next work unit (s4318): qualify M5 Step 9 ground-truth boundary
+# Next work unit (s4319): qualify the missing MORT/voice witnesses
 
 HYPOTHESIS-ID: m5-step9-mort-boundary
 
-State (s4317): the retail/port consumer comparison is fully qualified. Both
-arms passed their route controls and supplied 16,384 hangar-gated rows; the
-first tuple diverges, selecting a retail/port layout-or-filter difference.
-No writer or mitigation is named. The oracle cap change is in
-`tools/oracle/rs64_oracle.c` and is bounded diagnostic infrastructure.
+State (s4318): the Rice-backed retail oracle and both port arms passed whole-
+RDRAM/title/hangar/route controls. The real-image arm emitted nonzero PCM and
+the silent arm did not. Task/DMA, slot, route, and PCM source/consumer rows were
+present, but neither arm emitted MORT descriptor-entry/payload rows or real
+filter rows. The previous invalid verdict was a driver omission of
+`ROGUESQ_LOG_M5_ROUTE_TRANSITION`, fixed and rerun in the same iteration.
 
 Competing hypotheses:
 
-- H-MORT: any remaining audio gap is owned by the CPU-side MORT descriptor/
-  decode/output path.
-- H-AI: MORT and guest PCM source are valid, but the AI/SDL source-to-consumer
-  representation or queue boundary is wrong.
-- H-route: neither boundary is implicated; the complete task/voice matrix is
-  still absent or the observed issue is route/consumer state elsewhere.
+- H-MORT: the MORT descriptor/decode/output boundary is the remaining owner,
+  but the current witness is not attached to the active call path.
+- H-AI: MORT/guest PCM is valid and the defect is at AI/SDL or PCM consumer;
+  the missing descriptor witness is instrumentation coverage, not behavior.
+- H-route: the selected task/voice path never reaches the intended descriptor
+  or filter callsites; current PCM rows belong to a different route.
 
-Discriminator: run one phase-gated M5 matrix containing the existing
-`audtask-dispatch`, task/DMA, service/status/slot, voice/reap, MORT descriptor,
-PCM-source, PCM-consumer, and route controls in both the default image and
-`ROGUESQ_AUDIO_UCODE=0` arms. Require whole-RDRAM positive control, title
-`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and nonzero source PCM. A
-MORT descriptor/output mismatch with valid source selects H-MORT; matching
-MORT/source with consumer or byte-count divergence selects H-AI; missing
-matrix controls or route phase leaves H-route unevaluable. Do not change a
-decoder or AI bridge in this unit.
+Discriminator: one build/run with both `ROGUESQ_AUDIO_UCODE=0` and `=1` arms,
+phase-gated at VI 1024 (`0x00790400`) and VI 512 (`0x006AB400`), adding the
+missing MORT descriptor-entry/payload and voice/filter callsite witnesses plus
+one positive control for each witness. Keep the existing oracle whole-RDRAM,
+title, hangar, host, route, task/DMA, slot, and PCM controls. A same-phase
+descriptor/payload witness with nonzero source but divergent output selects
+H-MORT; matching descriptor/source/output with consumer or byte-count
+divergence selects H-AI; absent descriptor/filter witnesses despite all route
+controls selects H-route and requires tracing the actual callsite before any
+decoder/AI change. No mitigation or decoder change is authorized.
 
 Exact preparation/checks:
 
-`rg -n "audtask-|pcm-|MORT|ROGUESQ_AUDIO_UCODE|PROBE_PHASE_WIDTH" src lib tools scratch/agent | head -200`
+`rg -n "init-voice-sample|init-desc|filter-voice-audit|MORT|pcm-boundary|ROGUESQ_LOG_INIT_VOICE_SAMPLE" src lib tools scratch/agent --glob '!*.log'`
 
-Then use the existing validated port driver from `scratch/agent/` with both
-audio env arms in one build/run, phase-gated on VI transitions. Record the
-complete row in a new bounded scratch result; do not add a diagnostic field or
-mitigation until the discriminator is present.
+Use the fixed driver `scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh`
+with `ROGUESQ_LOG_M5_ROUTE_TRANSITION=1`; batch both audio arms in one run and
+store the bounded result under `scratch/agent/s4319_m5_step9_witnesses`.
