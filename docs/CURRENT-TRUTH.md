@@ -288,6 +288,14 @@ available.
 
 ## Next steps
 
+0d. **s4438: retail dacrate 2207 (22047.9 Hz) == port; retail title ~0.96
+   submits/VI, 768 B each, AI idle (AI_LEN=0, status 0) at every submit.** The
+   port's starved SDL queue (s4435) matches retail's own stream, so it is not
+   a port defect on current evidence (AI_LEN=0 single-source, no nonzero
+   control). Remaining oddity: 192 frames/buffer vs 367 expected at 60 VI/s.
+   Next (`m5-sdl-consume-rate`, nearly closed): compare ucode frames-per-tick
+   retail vs port, else move to the next M5-AUDIO-PLAN step.
+
 0c. **s4437: retail title also submits ~1 AI buffer per VI swap** (oracle: 1210
    calls / 1052 vi_swaps; positive control pre-title 5882 / 464). The port's
    ~59 buffers/s is retail cadence, so the shortfall is host-side. Next

@@ -266,6 +266,8 @@ struct ai_output_bucket {
     long clipped, total;
     double sumsq;
     long vi_swaps;
+    long vi_first, vi_last;
+    long rem_sum, rem_zero;
 };
 static struct ai_output_bucket g_ai_output[] = {
     { "pre-title", 0, 0, 0, 0, 0 },
@@ -286,6 +288,23 @@ static void dump_ai_output(void)
     if (width == 1024u && origin == 0x00790400u) bucket = 1;
     else if (width == 512u && origin == 0x006AB400u) bucket = 2;
     g_ai_output[bucket].calls++;
+    if (!g_ai_output[bucket].vi_first) g_ai_output[bucket].vi_first = g_vis + 1;
+    g_ai_output[bucket].vi_last = g_vis + 1;
+    {   /* s4438: AI_LEN (0xA4500004) = bytes still to play at submit time; 0 => AI idle/underrun */
+        uint32_t rem = pDebugMemRead32(0xA4500004u) & 0x3FFF8u;
+        g_ai_output[bucket].rem_sum += rem;
+        g_ai_output[bucket].rem_zero += rem == 0;
+        if (g_ai_output[bucket].calls <= 12 && bucket) printf("[ai-rem] bucket=%s n=%ld rem=%u status=0x%08x\n", g_ai_output[bucket].name, g_ai_output[bucket].calls, rem, pDebugMemRead32(0xA450000Cu));
+    }
+    {   /* s4438: retail AI_DACRATE/BITRATE (0x04500010/14) on change; NTSC freq = 48681812/(dacrate+1) */
+        static uint32_t last_dac = 0xFFFFFFFFu, last_bit = 0xFFFFFFFFu;
+        uint32_t dac = pDebugMemRead32(0xA4500010u), bit = pDebugMemRead32(0xA4500014u);
+        if (dac != last_dac || bit != last_bit) {
+            printf("[ai-dacrate] bucket=%s dacrate=%u bitrate=%u freq=%.1f call=%ld\n", g_ai_output[bucket].name,
+                   dac, bit, 48681812.0 / ((double)dac + 1.0), g_ai_output[bucket].calls);
+            fflush(stdout); last_dac = dac; last_bit = bit;
+        }
+    }
     if (bucket == 0 || len == 0 || len > 0x40000u) return;
     for (i = 0; i < len; i++) {
         uint32_t byte = debug_mem_u8(addr + i);
@@ -3544,9 +3563,11 @@ int main(int argc, char **argv)
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",
            g_hits, now_s() - g_t0, g_vis, g_vis / 60.0);
     for (int i = 0; i < 3; i++)
-        printf("[oracle] ai-output-summary bucket=%s calls=%ld rows=%ld nonzero_rows=%ld vi_swaps=%ld\n",
+        printf("[oracle] ai-output-summary bucket=%s calls=%ld rows=%ld nonzero_rows=%ld vi_swaps=%ld vi_span=%ld rem_avg=%.1f rem_zero=%ld\n",
                g_ai_output[i].name, g_ai_output[i].calls, g_ai_output[i].rows,
-               g_ai_output[i].nonzero_rows, g_ai_output[i].vi_swaps);
+               g_ai_output[i].nonzero_rows, g_ai_output[i].vi_swaps,
+               g_ai_output[i].vi_last - g_ai_output[i].vi_first,
+               g_ai_output[i].calls ? (double)g_ai_output[i].rem_sum / g_ai_output[i].calls : 0.0, g_ai_output[i].rem_zero);
     if (g_post_value_watch_mask) {
         for (int watch = 0; watch < g_nwatch; watch++) {
             struct post_value_stats *stats;
