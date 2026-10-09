@@ -4740,6 +4740,28 @@ extern "C" void rs64_s4429_heap_probe(const char* kind, uint32_t pc,
 extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                                          uint32_t addr, uint32_t value) {
     if (pc == 0x80007670u) rs64_s4429_heap_probe("B", pc, addr, value);
+    {   // s4443: store watch on the pool-tail next word (and its +0x18 neighbour);
+        // 0x801F9CE0 (init-written) is the positive control. Observes only.
+        static const bool wen = [] {
+            const char* e = std::getenv("ROGUESQ_LOG_S4443_WATCH");
+            return e && e[0] && e[0] != '0';
+        }();
+        if (wen) {
+            const uint32_t len = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
+            static const uint32_t wa[3] = {0x801FB3F0u, 0x801FB408u, 0x801F9CE0u};
+            static uint32_t wn[3] = {0, 0, 0};
+            for (int i = 0; i < 3; ++i) {
+                if (addr < wa[i] + 4u && addr + len > wa[i] && wn[i] < 200u) {
+                    ++wn[i];
+                    std::fprintf(stderr,
+                        "[s4443-watch] %c%d n=%u w=%c pc=0x%08X addr=0x%08X value=0x%08X vi=%u\n",
+                        i == 2 ? 'C' : 'W', i, wn[i], width, pc, addr, value,
+                        rs64_vi_committed_width());
+                    std::fflush(stderr);
+                }
+            }
+        }
+    }
     static int enabled = -1;
     static uint32_t control = 0;
     static uint32_t rows = 0;

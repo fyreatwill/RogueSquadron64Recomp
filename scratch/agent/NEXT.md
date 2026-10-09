@@ -1,7 +1,8 @@
-# Next work unit (s4443): name the writer of 0x801FB3F0[0]=0x801FB408 (m5-ai-event-cadence)
+# Next work unit (s4444): re-derive the s4441 B1 crash without the 247-node assumption (m5-ai-event-cadence)
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-State (s4442, offline): the s4441 crash splits into A1 = s4279 wipe, B1 = pool overrun (last pool node 0x801FB3F0 has next 0x801FB408, but init writes 0 there).
-Hypotheses: (a) guest LRU/pool code writes it (off-by-one, retail too); (b) host/RT64 or a probe writes it; (c) init ran with a different n.
-Discriminator: one build with a store watch/poller on words 0x801FB3F0 and 0x801FB408 from heap init to first change, logging guest PC + value + ENTRY n; positive control: the same watch on 0x801F9CE0 must fire at init (0x8008F8DC). Run arms A (unset) and B (ROGUESQ_AI_EVENT_HZ=115) concurrently via scratch/agent/s4441/run.sh. Then oracle watch phys 0x1FB3F0 in retail for the same word. Note: lldb/otool need approval in headless mode; read the generated C instead.
+State (s4443): 0x801FB3F0 next=0x801FB408 is a legitimate init link (guest 0x8008F90C); no unnamed writer. Arm B (115 Hz) survived 150 s; arm A crashed (host bus error far=0x38000950e, guest x1=0x80091378).
+Hypotheses: (a) pool block is larger and the B1 crash has another cause (read s4441 B1 log, find the actual faulting node/addr); (b) crash rate is cadence-independent and noisy; (c) arm A's bus error is a new shape.
+Discriminator: offline re-read of scratch/agent/s4441 port_B logs and the s4443 port_A crash block (guest pc, node address vs the init chain end); then 4 repeats per arm via `zsh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s4443/run.sh <label> <none|115>` for crash rates.
+Note: shell cwd can drift; use absolute paths.
