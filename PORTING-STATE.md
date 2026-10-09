@@ -148249,3 +148249,33 @@ PCM, and hangar rows, but does not identify the missing descriptor/filter
 callsite. No decoder, AI bridge, guard, or skip was changed.
 ORIGIN: none; measurement/instrument only. The next unit adds independent
 positive-controlled witnesses at the missing MORT/voice callsites.
+## Session 4319 (2026-10-08) — M5 descriptor entry reached; payload/filter witnesses absent
+
+Ran the prescribed M5 Step 9 matrix after adding the missing descriptor and
+scheduler logging flags to `run_s2335_m5_descriptor_filter_boundary.sh`. The
+retail oracle passed the whole-RDRAM positive control, target memory watches,
+title/hangar VI controls, and all required watched PCs. The final fixed port
+matrix ran silent (`ROGUESQ_AUDIO_UCODE=0`) and real-image (`=1`) arms; both
+passed host/route controls and reached VI 1024/title and VI 512/hangar. PCM
+source/consumer rows and descriptor-start rows were present in both arms.
+
+The first run crashed inside the diagnostic at `rs64_m5_descriptor_start` when
+it treated non-descriptor task `0x80149470` as an audio descriptor. That was a
+probe defect, not game evidence. `src/main/main.cpp` was fixed to restrict this
+diagnostic to the established descriptor task pointer `0x800377C8`, rebuilt,
+and the matrix was rerun. The fixed run completed both arms' route window.
+
+The discriminating result was: descriptor-start fired, but no `init-desc`
+payload event and no real `filter-voice-audit` row fired in either arm. The
+descriptor fields differed: silent-arm rows carried garbage values, while the
+real-image arm consistently exposed `data_ptr=0x2CC`, `data_size=0x294`.
+This selects H-route/coverage-incomplete for the intended MORT/filter
+callsites; H-MORT and H-AI remain unevaluable. It rules out a conclusion based
+on the absent old hooks, but does not identify the active writer or decoder.
+The independent oracle is the second evidence line for route reach; descriptor
+field ownership is single-source port evidence.
+
+ORIGIN: the only guard-shaped diff restricts a diagnostic helper at
+`rs64_m5_descriptor_start`; `osSpTaskStartGo_recomp` legitimately submits many
+non-descriptor tasks, and `0x800377C8` is the established descriptor-task
+identity. No game-path value is skipped or altered.

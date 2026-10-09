@@ -3893,6 +3893,7 @@ extern "C" void rs64_m5_descriptor_start(uint8_t* rdram, uint32_t task_ptr) {
     uint32_t phase = 0, width = 0, origin = 0;
     const char* arm = nullptr;
     if (!rs64_m5_descriptor_phase(&phase, &width, &origin, &arm)) return;
+    if (task_ptr != 0x800377C8u) return;
     const OSTask* task = TO_PTR(OSTask, task_ptr);
     static std::atomic<uint32_t> rows{0};
     const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);

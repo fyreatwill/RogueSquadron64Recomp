@@ -1,38 +1,37 @@
-# Next work unit (s4319): qualify the missing MORT/voice witnesses
+# Next work unit (s4320): trace the missing MORT/filter callsites
 
 HYPOTHESIS-ID: m5-step9-mort-boundary
 
-State (s4318): the Rice-backed retail oracle and both port arms passed whole-
-RDRAM/title/hangar/route controls. The real-image arm emitted nonzero PCM and
-the silent arm did not. Task/DMA, slot, route, and PCM source/consumer rows were
-present, but neither arm emitted MORT descriptor-entry/payload rows or real
-filter rows. The previous invalid verdict was a driver omission of
-`ROGUESQ_LOG_M5_ROUTE_TRANSITION`, fixed and rerun in the same iteration.
+State (s4319): the independent retail oracle and both port arms passed all
+route/title/hangar controls. Descriptor-start fired in both arms, but no
+`init-desc` payload event or real `filter-voice-audit` row fired. The final
+probe was restricted to descriptor task `0x800377C8` after the initial run
+crashed on non-descriptor task `0x80149470`. No game-path behavior changed.
 
 Competing hypotheses:
 
-- H-MORT: the MORT descriptor/decode/output boundary is the remaining owner,
-  but the current witness is not attached to the active call path.
-- H-AI: MORT/guest PCM is valid and the defect is at AI/SDL or PCM consumer;
-  the missing descriptor witness is instrumentation coverage, not behavior.
-- H-route: the selected task/voice path never reaches the intended descriptor
-  or filter callsites; current PCM rows belong to a different route.
+- H-callsite: the existing generated hooks are attached to stale or wrong
+  callsites, so the active MORT payload/filter path is elsewhere.
+- H-route: the descriptor task reaches the host boundary but the selected
+  route never executes the payload/filter idioms.
+- H-data: the callsites execute, but their event predicates suppress rows
+  because the descriptor/voice fields are not in the expected shape.
 
-Discriminator: one build/run with both `ROGUESQ_AUDIO_UCODE=0` and `=1` arms,
-phase-gated at VI 1024 (`0x00790400`) and VI 512 (`0x006AB400`), adding the
-missing MORT descriptor-entry/payload and voice/filter callsite witnesses plus
-one positive control for each witness. Keep the existing oracle whole-RDRAM,
-title, hangar, host, route, task/DMA, slot, and PCM controls. A same-phase
-descriptor/payload witness with nonzero source but divergent output selects
-H-MORT; matching descriptor/source/output with consumer or byte-count
-divergence selects H-AI; absent descriptor/filter witnesses despite all route
-controls selects H-route and requires tracing the actual callsite before any
-decoder/AI change. No mitigation or decoder change is authorized.
+Discriminator: enumerate every generated callsite and branch predicate for
+`init-desc` and `filterVoiceSampleBlock`, then add one bounded entry witness at
+each candidate callsite plus a host-positive control for each witness in one
+build/run. Keep both `ROGUESQ_AUDIO_UCODE=0` and `=1` arms, the oracle controls,
+and phase gates at VI 1024 (`0x00790400`) and VI 512 (`0x006AB400`). A control
+and candidate entry at a different generated site selects H-callsite; entries
+absent with descriptor-start and route controls selects H-route; entries with
+valid arguments but no event rows selects H-data. Do not modify decoder, AI,
+or game behavior.
 
-Exact preparation/checks:
+Exact preparation/checks before building:
 
-`rg -n "init-voice-sample|init-desc|filter-voice-audit|MORT|pcm-boundary|ROGUESQ_LOG_INIT_VOICE_SAMPLE" src lib tools scratch/agent --glob '!*.log'`
+`rg -n 'init-desc|rs64_m5_audio_event|filterVoiceSampleBlock|filter-voice-audit|rs64_filter_voice' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs src tools --glob '*.{c,h,cpp,py}'`
 
-Use the fixed driver `scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh`
-with `ROGUESQ_LOG_M5_ROUTE_TRANSITION=1`; batch both audio arms in one run and
-store the bounded result under `scratch/agent/s4319_m5_step9_witnesses`.
+Read the matching generated windows, update the existing matrix driver with
+all candidate entry flags, build once, and run both arms into
+`scratch/agent/s4320_m5_callsite_trace`. Require positive controls for every
+new entry witness before interpreting any null.
