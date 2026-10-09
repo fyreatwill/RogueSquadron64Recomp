@@ -150605,11 +150605,17 @@ user bytes, plus the separate word copies at `0x171CE0` / `0x173B20`. At
 the publish `sw` rows (origin `0x00790500`) the headers read
 `0x0002/0x1E30` and `0x0001/0x21480`, then `0x0002/0x1E30`.
 
-Selects: none of H-write-into-free (header was not free-sized),
-H-previous-owner (no allocated small block, no free store in the window), or
-H-not-a-fresh-split (headers changed). A fourth outcome: the memory was
+This refutes H-write-into-free (header was zero, not free-sized),
+refutes H-previous-owner (no allocated small block, no free store in the
+window), and refutes H-not-a-fresh-split (headers changed between the copy and
+the publish). It selects a new hypothesis, H-pre-heap-stale: the memory was
 not yet heap when copied; the heap was carved over it later and malloc does
 not clear user bytes. ORIGIN: bytes written by guest `sb` `0x80007670`
 (copy `0x80007640` from `0x80022B44`); legitimate retail data, not a port
 guard. Nothing was rewritten or skipped. Single-source (one oracle run);
 the second line would be the port-side comparison queued in NEXT.md.
+
+Next discriminator (named in NEXT.md): one port run sampling the same two
+moments. Port user words equal to retail "mat_"/"ltex" selects H-port-same;
+zero or garbage with no copy selects H-port-no-copy; a copy landing on an
+already-carved block selects H-port-heap-first.
