@@ -4,7 +4,17 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4347: the fixed qualified retail caller/input witness passed
+Updated for session 4348: a bounded generated-MIPS census resolved the
+`0x8009DB2C` writer. `runVoiceLatticeFilter` reads each input halfword from
+`$t1`/`a1` at `0x8009D980`, applies fixed-point lattice arithmetic and
+`& 0xFFF8`, then writes the result to the separate `$t0`/`a2` output span at
+`0x8009DB2C`. `renderVoiceAudioBlock` invokes four input/output span pairs at
+offsets `0`, `0x1A`, `0x36`, and `0x50`, with distinct loop lengths. This
+selects H-lattice-input for the next boundary and rejects H-aliased-buffer;
+the arithmetic/output writer is legitimate filter work, not the semantic
+source of the retained C904 family. The static result is single-source
+generated-code evidence; no runtime or ground-truth claim was made.
+Previously 4347: the fixed qualified retail caller/input witness passed
 the whole-RDRAM, title, hangar, and C904 controls. It recorded 1,942
 phase-gated writes to captured C904 input spans; seven writer events carried
 exact family value `0x0010`, all from `0x8009DB2C`, while additional span writes
@@ -308,13 +318,21 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-1. (M5, HYPOTHESIS-ID `m5-step9-earlier-input-source`) Attribute the earlier
-   producer feeding the C904 input pointer. Use one phase-gated retail oracle
-   witness at caller `0x8009C0E4` plus the input-buffer source span identified
-   from the generated caller, recording input pointer, source registers, first
-   words, and writer PCs. Require whole-RDRAM, title, hangar, and C904 controls.
-   A retained `0x0010/0x3108` family at the caller/source selects this boundary;
-   absence moves one boundary earlier. Do not alter decoder/RSP/AI behavior.
+1. (M5, HYPOTHESIS-ID `m5-step9-input-writer-source`) Attribute the source
+   span read by `runVoiceLatticeFilter`: the caller constructs `a1` from the
+   voice object's `+0x11C8` base plus an index-derived `<<3` offset at
+   `0x8009C0E4`, then the lattice helper reads that span before writing its
+   separate output. Run one phase-gated retail oracle witness for this source
+   pointer and its writer PCs, with whole-RDRAM, title, hangar, and C904
+   controls. A retained family value in the source span selects its producer;
+   absence moves the boundary to the `+0x11C8` index/base writer. Do not alter
+   decoder/RSP/AI behavior.
+
+(s4348) Static census result: `runVoiceLatticeFilter` reads `$t1`/`a1` and
+writes `$t0`/`a2`; the quantized `0x8009DB2C` store is legitimate lattice
+output. The four caller span pairs prove distinct input/output geometry and
+reject buffer aliasing. The next source boundary is the caller's input span,
+whose base/index is formed at `0x8009C0E4`.
 
 00a. (s4344) The value-aware witness passed the whole-RDRAM control (13,107
 hits), title VI `0x00790400`, hangar VI `0x006AB400`, and C904 execution control

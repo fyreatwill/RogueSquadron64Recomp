@@ -149026,3 +149026,16 @@ retail evidence; whole-RDRAM, VI, and C904 execution controls independently
 qualify route and execution. It rules out the C904 reader and immediate input
 words as the first observed family source, but does not yet identify the
 semantic producer feeding `0x8009DB2C`.
+## Session 4348 (2026-10-08) — static census resolved C904 input writer
+
+Ran the prescribed no-build generated-MIPS census around
+`runVoiceLatticeFilter` (`0x8009D980..0x8009DB40`) and its
+`renderVoiceAudioBlock` caller. The helper reads each input halfword from
+`$t1`/`a1` at `0x8009D980`, applies fixed-point lattice arithmetic and
+`& 0xFFF8`, and stores the result through `$t0`/`a2` at `0x8009DB2C`.
+The caller invokes four distinct input/output span pairs at offsets
+`0`, `0x1A`, `0x36`, and `0x50`, with loop counts `0xC`, `0xD`, `0xC`, and
+`0x77`. This proves the family-valued writer is legitimate filter output and
+rejects the aliased-buffer hypothesis. It selects the input-span source
+boundary; the next witness must follow the caller's `+0x11C8` base/index
+construction at `0x8009C0E4`. No build or runtime behavior changed.
