@@ -150306,3 +150306,15 @@ evidence. The next probe is a phase-keyed port capture to corroborate the
 alternate entry or show port/retail path divergence. ORIGIN: the oracle
 observed guest PCs, predecessor PCs, task fields, VI origins, and physical
 whole-RDRAM callbacks; no value was skipped, rewritten, or guarded.
+
+## Session 4415 (2026-10-09) — compacted current truth after maintenance threshold
+
+The maintenance check measured `docs/CURRENT-TRUTH.md` at 60,638 bytes and
+891 lines, exceeding the 60 KB threshold. No build, run, or experiment was
+performed. The file was compacted to 137 lines while retaining the qualified
+route, the s4413/s4414 selector evidence, live hypotheses, operating rules,
+and the next port corroboration unit. Repeated historical narrative remains
+available in `docs/M5-CURRENT-TRUTH-ARCHIVE-s4269.md` and this ledger. This
+maintenance result advances the documentation state and does not alter any
+technical conclusion. ORIGIN: documentation-only compaction; no runtime
+value was skipped, rewritten, or guarded.

@@ -1,4 +1,4 @@
-# Next work unit (s4415): corroborate the title-side selector entry on the port
+# Next work unit (s4416): corroborate the title-side selector entry on the port
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
@@ -28,7 +28,7 @@ Exact commands:
 
 1. Run `zsh scratch/agent/run_s4402_m5_title_selector_witness.sh` after
    confirming the existing build and qualified route; retain its all-selector
-   logs under a new `s4415` directory, not the old result.
+   logs under a new `s4416` directory, not the old result.
 2. Count phase-keyed selector/caller rows and verify the input, task, title,
    and hangar controls before interpreting a null.
 
