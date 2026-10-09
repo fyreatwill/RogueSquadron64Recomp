@@ -1,8 +1,7 @@
-# Next work unit (s4461): identify 0x800853A8 and its consumers (lead D)
+# Next work unit (s4462): SND-pointer vs audio-node-pool overlap
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-State (s4460): the only 'W' store with value 0x80193C18 is pc 0x800853A8 (first 0x80085424) filling a 0xC-stride table at 0x8013B060.. at VI 1024; no C18 store into pool nodes/head (0/6 arms; no +5436 crash occurred). A refuted.
-Hypotheses: (D) the 0x8013B0xx table entries are read as pool/list nodes by some consumer (dangling ptr); (C) pool node reused/unlinked; (E) C18 table entries are legit (e.g. sentinel) and unrelated to +5436.
-Discriminator: grep the recompiled func containing 0x800853A8 (RecompiledFuncs), read it; then add a load-watch (rs64 load hook or s4457 style) on addresses 0x8013B060..0x8013B140 logging reader pcs; positive control = the 0x800853A8 stores themselves. D: a reader pc inside musyxSynthFrame/list walk or follows the C18 ptr; E: readers are unrelated gameplay code.
-Run: build, zsh scratch/agent/s4459_run.sh.
+State (s4461): 0x800853A8 is the shift loop in factor5SortedTableInsertWidePair; 0x80193C18 is a caller-supplied relocateSndPointer value (a1), first stored at pc 0x80085424. Not a corruption writer.
+Hypotheses: (F) registered SND ptr C18 points into memory later reused as audio node pool (overlap/freed buffer); (E) SND data legitimately there, pool mis-placed; (G) C18 is a benign base offset (pool_base-8 style) never dereferenced as a node.
+Discriminator: one run (reuse s4459_run.sh pattern) with a hook at entry of factor5SortedTableInsertWidePair logging a0,a1,a2,ra per call (VI-tagged), plus the ranges handed out by the allocator for the pool (0x8008F708) and the SND section base used by relocateSndPointer. Control: call count>0 and a1==C18 appears. F: pool range contains C18 while SND base range does not own it; E: SND range contains C18 and pool overlaps it; G: a1 is not in any range / never read.
