@@ -148644,3 +148644,43 @@ selects H-pre-filter-route, zero joins selects H-join-boundary (see
 scratch/agent/NEXT.md, s4332).
 ORIGIN: none; diagnostic-only sequence witness and probe-placement correction,
 no mitigation.
+
+## Session 4332 (2026-10-08) — joined C88C descriptors to D740 filter rows
+
+Added a phase-scoped C88C witness in `decodeAndFillVoiceBlock`. It retains the
+four entry arguments, sequence id, validity of each RDRAM-segment argument, and
+the first three words at each valid argument; D740 direct rows now report the
+joined C88C sequence and tuple. The generated diagnostic callsite and host
+probe were rebuilt successfully.
+
+The first matrix was route-invalid for comparison: the known
+`M4_Y8000_WIDTH=512` qualifier was missing, and concurrent `probe.sh` windows
+fought over frontmost input, so only one arm reached VI 512. The fixed recipe
+added the qualifier and removed port-side external key injection, leaving the
+in-process autopilot. A second run exposed a join-predicate bug (the retained
+tuple was marked valid only for D740); that was corrected and the matrix was
+rerun.
+
+The final qualified matrix passed the oracle whole-RDRAM positive control,
+title VI 1024, hangar VI 512, both port VI controls, and both filter controls.
+Both silent and real-image arms reached VI 512 with no crash or abort. They
+emitted 255-256 C88C descriptor rows and 256 D740 direct rows; every direct
+row had `caller_join=1`. The first descriptor prefix matched across arms,
+including `a1=0x801B2DA0` (type 4/class 42) and the following type 2/class 37
+descriptor. Later descriptor pointers and words diverged, and the joined
+descriptor type/class histograms differed between arms.
+
+This closes H-join-boundary and rejects stable post-descriptor selection. It
+selects pre-filter route/stream selection as the remaining port-side
+explanation. The descriptor comparison is single-source port evidence; the
+independent oracle and same-run VI controls establish that both arms traversed
+the intended target phase. No decoder, RSP, AI, game-path, guard, skip, or
+mitigation behavior changed.
+
+DISCRIMINATION: C88C-to-D740 joins are present in both arms, so the prior
+probe-boundary explanation is closed. Stable initial descriptors followed by
+divergent later descriptor/type-class sequences select H-pre-filter-route over
+H-post-descriptor and H-join-boundary.
+
+ORIGIN: none; this is diagnostic instrumentation and a recipe/input-race fix,
+not mitigation for a corruption or wild value.

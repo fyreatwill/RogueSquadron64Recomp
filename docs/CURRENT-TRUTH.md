@@ -4,8 +4,14 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4331: the co-located D740 sequence witness placed the
-active caller boundary in decodeAndFillVoiceBlock and rejected the prior
+Updated for session 4332: the C88C descriptor witness joined every valid D740
+row in a qualified two-arm matrix; early descriptors match but later pointer,
+word, and type/class sequences diverge, selecting pre-filter route/stream
+selection. The initial matrix was invalid because concurrent frontmost key
+injection drove only one arm; the fixed recipe uses the in-process autopilot
+and the known M4 width qualifier. Previously 4331: the co-located D740
+sequence witness placed the active caller boundary in decodeAndFillVoiceBlock
+and rejected the prior
 missing-entry interpretation. Previously 4330: static D740 census found no alternate generated
 transfer; the runtime caller-row absence is an instrumentation/state
 contradiction, not a named static bypass.
@@ -140,6 +146,19 @@ is the C88C entry helper, not a D740-site caller helper. This rejects
 H-helper-not-invoked and the previous entry-bypass reading. Descriptor class
 and silent/image payload ownership remain open.
 
+**M5 Step 9 C88C descriptor join (s4332).** The corrected seeded matrix passed
+the oracle whole-RDRAM positive control, title VI 1024, hangar VI 512, both
+port VI controls, and both filter controls; neither arm crashed or aborted.
+Silent and real-image arms emitted 255-256 C88C descriptor rows and 256 D740
+direct rows. Every direct row joined the retained C88C tuple (`caller_join=1`),
+closing the probe-boundary hypothesis. The first descriptor sequence was
+identical in both arms (including the initial `a1=0x801B2DA0`, type 4/class
+42 and the next type 2/class 37 descriptor), but later descriptor pointers and
+words diverged; the joined type/class histograms also differed. This rejects
+stable post-descriptor selection and selects pre-filter route/stream selection.
+The paired descriptor comparison is port-side evidence; the independent
+oracle and VI controls qualify that both arms traversed the same target phase.
+
 **M5 de-stubs landed.** A11 waitForAnyAudioSlot yield (default 2000), A12 countdown
 yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset=2; s4192), A15 spin-yield default
 on, A13 drain-tick gate (dormant on title+hangar), A14 status-03 wait (s4296 host yield, `ROGUESQ_A14_YIELD=0` rolls back; s4297: loop IS entered in the hangar, b0 stuck 0x03, exits after ~160-180k iterations only with the yield; yield-on reaches VI 640 and then the known do_rom_read crash at 0x80001b08, yield-off stays in hangar, no crash - 2 on / 1 off runs), A9/A10 voice-base/song-tick guards (0 fires). Declared-size staging
@@ -175,15 +194,15 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4331) The co-located witness shows the active D740 edge is inside
-`decodeAndFillVoiceBlock`, whose entry/helper sequence reaches the direct loop;
-`updateVoiceChannelParamsLarge` is not the containing wrapper. Next: retain the
-C88C entry-helper arguments and sequence id, read candidate descriptor words at
-that boundary, and join them to D740 direct rows in one seeded matrix.
-Competing outcomes: stable descriptor/type across both arms selects
-post-descriptor/output ownership; differing or invalid descriptor words select
-pre-filter route/stream selection; no C88C-to-D740 join selects a remaining
-generated/host state boundary. Keep decoder/RSP/AI behavior unchanged.
+00. (s4332) The C88C-to-D740 join is valid in both arms, but descriptor
+pointer/word/type-class sequences diverge after an identical initial prefix.
+Next: use the independent retail oracle at the C88C execution boundary to
+capture its phase-gated argument fields and compare the retail descriptor
+sequence against the two port arms. Competing outcomes: retail matches silent
+or image, selecting the corresponding port route/stream ownership; retail
+matches neither, selecting a shared descriptor-production divergence; an
+oracle route/control failure leaves the comparison unevaluable. Keep decoder,
+RSP, AI, and game-path behavior unchanged.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -251,6 +270,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 caller-object join | s4328: all controls passed and both arms emitted 256 rows, but the retained caller tuple joined zero rows; only the C88C caller bucket emitted. Descriptor class versus pre-filter route remains open; this is a probe-boundary result, not a descriptor null. |
 | M5 Step 9 direct D740 witness | s4329: the direct D740 callsite emitted 256 rows per arm and its scoped counter reached 256, while no D740 caller-entry bucket or retained tuple joined. Static census s4330 found no alternate generated transfer, so this is an unresolved instrumentation/state contradiction rather than proof of entry bypass; descriptor class versus pre-filter route remains open. |
 | M5 Step 9 co-located sequence witness | s4331: image-arm entry, post-helper, and D740 direct events share sequence ids inside `decodeAndFillVoiceBlock`; silent-arm target rows are absent. This rejects the entry-bypass/helper-not-invoked reading and identifies the prior D740 caller null as a probe-boundary error. Descriptor class and payload ownership remain open. |
+| M5 Step 9 C88C descriptor join | s4332: both arms reached VI 512, every D740 row joined a C88C tuple, and the initial descriptor prefix matched; later descriptor pointer/word/type-class sequences diverged. This rejects H-join-boundary and stable post-descriptor selection; pre-filter route/stream selection remains open. |
 
 ## Durable evidence boundary
 

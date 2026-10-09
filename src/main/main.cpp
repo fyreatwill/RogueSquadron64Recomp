@@ -2627,15 +2627,16 @@ struct Rs64FilterVoiceCallerObject {
     uint32_t descriptor = 0;
     uint32_t aux0 = 0;
     uint32_t aux1 = 0;
+    unsigned long sequence = 0;
     bool valid = false;
 };
 
 static Rs64FilterVoiceCallerObject g_rs64_filter_voice_caller;
+static unsigned long g_rs64_filter_voice_sequence = 0;
 
 extern "C" void rs64_filter_voice_sequence_probe(const char* edge,
                                                    uint32_t site) {
     static int enabled = -1;
-    static unsigned long sequence = 0;
     static unsigned long entry_count = 0;
     static unsigned long caller_count = 0;
     static unsigned long direct_count = 0;
@@ -2650,7 +2651,7 @@ extern "C" void rs64_filter_voice_sequence_probe(const char* edge,
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     if (std::strcmp(edge, "entry") == 0) {
-        ++sequence;
+        ++g_rs64_filter_voice_sequence;
         ++entry_count;
     } else if (std::strcmp(edge, "caller") == 0) {
         ++caller_count;
@@ -2670,7 +2671,7 @@ extern "C" void rs64_filter_voice_sequence_probe(const char* edge,
     std::fprintf(stderr,
                  "[m5-filter-seq] edge=%s site=0x%08X width=%u origin=0x%06X "
                  "seq=%lu entry_n=%lu caller_n=%lu direct_n=%lu\n",
-                 edge, site, width, origin, sequence, entry_count, caller_count,
+                 edge, site, width, origin, g_rs64_filter_voice_sequence, entry_count, caller_count,
                  direct_count);
     std::fflush(stderr);
 }
@@ -2736,7 +2737,7 @@ static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
     const uint32_t voice_w6 = rs64_filter_voice_guest_word(voice_object + 0x18u);
     const uint32_t voice_w7 = rs64_filter_voice_guest_word(voice_object + 0x1Cu);
     const bool caller_join = g_rs64_filter_voice_caller.valid &&
-                             g_rs64_filter_voice_caller.site == site;
+                             g_rs64_filter_voice_caller.site == 0x8009C88Cu;
     const uint32_t caller_object = caller_join ?
         g_rs64_filter_voice_caller.object : 0u;
     const uint32_t caller_descriptor = caller_join ?
@@ -2814,12 +2815,13 @@ extern "C" void rs64_filter_voice_caller_probe(const char* caller,
                    (own && *own && *own != '0')) ? 1 : 0;
     }
     if (!enabled) return;
-    if (site == 0x8009D740u) {
+    if (site == 0x8009C88Cu) {
         g_rs64_filter_voice_caller.site = site;
         g_rs64_filter_voice_caller.object = a0;
         g_rs64_filter_voice_caller.descriptor = a1;
         g_rs64_filter_voice_caller.aux0 = a2;
         g_rs64_filter_voice_caller.aux1 = a3;
+        g_rs64_filter_voice_caller.sequence = g_rs64_filter_voice_sequence;
         g_rs64_filter_voice_caller.valid = true;
     }
     const uint32_t width = rs64_vi_committed_width();
@@ -2842,6 +2844,47 @@ extern "C" void rs64_filter_voice_caller_probe(const char* caller,
         caller, site, rows[bucket]++, phase, width, origin,
         arm ? arm : "n/a", active ? 1u : 0u, ordinal, route_row,
         exit_reason, a0, a1, a2, a3);
+    std::fflush(stderr);
+}
+
+static bool rs64_filter_voice_guest_pointer(uint32_t value) {
+    const uint32_t segment = value & 0xE0000000u;
+    const uint32_t phys = value & 0x1FFFFFFFu;
+    return (segment == 0x80000000u || segment == 0xA0000000u) && phys <= 0x7FFFF4u;
+}
+
+extern "C" void rs64_filter_voice_c88c_descriptor_probe(uint32_t a0,
+                                                          uint32_t a1,
+                                                          uint32_t a2,
+                                                          uint32_t a3) {
+    static int enabled = -1;
+    static unsigned rows = 0;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+        enabled = ((all && *all && *all != '0') ||
+                   (own && *own && *own != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u) || rows >= 256u)
+        return;
+    const uint32_t args[4] = {a0, a1, a2, a3};
+    std::fprintf(stderr, "[m5-c88c-desc] seq=%lu row=%u phase=%u origin=0x%06X",
+                 g_rs64_filter_voice_sequence, rows++, rs64_phase_ord(), origin);
+    for (unsigned i = 0; i < 4; ++i) {
+        const uint32_t base = args[i];
+        std::fprintf(stderr, " a%u=0x%08X valid=%u", i, base,
+                     rs64_filter_voice_guest_pointer(base) ? 1u : 0u);
+        if (rs64_filter_voice_guest_pointer(base)) {
+            std::fprintf(stderr, " w0=0x%08X w1=0x%08X w2=0x%08X",
+                         rs64_filter_voice_guest_word(base),
+                         rs64_filter_voice_guest_word(base + 4u),
+                         rs64_filter_voice_guest_word(base + 8u));
+        }
+    }
+    std::fprintf(stderr, "\n");
     std::fflush(stderr);
 }
 
@@ -2880,12 +2923,14 @@ extern "C" void rs64_filter_voice_direct_probe(uint32_t site, uint32_t sp,
                  "[m5-filter-direct] site=0x%08X phase=%u origin=0x%06X "
                  "d740_store_n=%lu sp=0x%08X ra=0x%08X "
                  "actual_a0=0x%08X actual_a1=0x%08X actual_a2=0x%08X actual_a3=0x%08X "
+                 "caller_sequence=%lu "
                  "caller_join=%u caller_object=0x%08X caller_descriptor=0x%08X "
                  "caller_aux0=0x%08X caller_aux1=0x%08X\n",
                  site, rs64_phase_ord(), origin, d740_store_n, sp, ra,
                  a0, a1, a2, a3,
+                 g_rs64_filter_voice_caller.sequence,
                  (g_rs64_filter_voice_caller.valid &&
-                  g_rs64_filter_voice_caller.site == site) ? 1u : 0u,
+                  g_rs64_filter_voice_caller.site == 0x8009C88Cu) ? 1u : 0u,
                  g_rs64_filter_voice_caller.object,
                  g_rs64_filter_voice_caller.descriptor,
                  g_rs64_filter_voice_caller.aux0,
