@@ -150260,3 +150260,30 @@ from a phase-specific selector input. ORIGIN: the oracle observed guest PCs,
 VI origins, task pointers, and task fields; no value was skipped, rewritten,
 or guarded. Next: compare selector arguments/returns with phase-keyed task
 payload identities.
+## Session 4413 (2026-10-09) — qualified the retail selector title boundary
+
+The prescribed single retail-oracle selector/payload capture ran for 75
+seconds with Rice video, the whole-RDRAM positive control, VI phase buckets,
+source PCs `0x8009C904`/`0x8009C950`, selector `0x80029E78`, both generated
+direct edges, and task publication `0x80033FCC`. The positive control reached
+19,054 callbacks; the run completed 4,482 VI and retained 629, 628, and 691
+type-2 task rows in title `0x00790400`, title `0x00790800`, and hangar
+`0x006AB400`, respectively. The task witness was therefore live in every
+required bucket.
+
+The selector execution witness fired twice, both in hangar; its phase-gated
+field table retained one row with `branch_selector=0x561F` and
+`object=0x5622`. It retained no selector field row in either title bucket,
+despite live title task rows. Thus the planned shared-input versus
+phase-specific-input comparison is unevaluable at the exact selector PC. The
+capture rules out a global source/task route null and selects a title-side
+selector-path boundary for the next range probe; it does not select
+multiplexing or phase-split. This is single-source retail evidence only.
+ORIGIN: the oracle observed guest execution, task fields, VI origins, and
+physical whole-RDRAM callbacks; no value was skipped, rewritten, or guarded.
+
+The first handoff now uses a phase-gated execution range around
+`0x80029D20..0x80029F20` to distinguish an alternate title selector PC from a
+title-side bypass/absence, with the same source/task controls. Evidence:
+`scratch/agent/s4413_selector_payload/` and
+`scratch/agent/run_s4413_selector_payload.sh`.

@@ -4,9 +4,23 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4412 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4413 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
+
+Session 4413's single-source retail selector/payload capture passed the
+whole-RDRAM control (19,054 callbacks), completed 4,482 VI, and retained 629,
+628, and 691 type-2 task rows in title `0x00790400`, title `0x00790800`, and
+hangar `0x006AB400`. The task publication witness was live in all buckets, but
+selector `0x80029E78` executed only in the hangar bucket (two executions,
+one retained field row: branch selector `0x561F`, object/argument `0x5622`).
+The selector field did not fire in either title bucket, so the planned shared
+input-versus-phase-specific comparison is not yet evaluable. This rules out a
+global source/task route null, but selects neither multiplex nor phase-split;
+it identifies a title selector-path boundary requiring a wider execution
+range capture. ORIGIN: the retail oracle observed guest execution, task fields,
+VI origins, and physical whole-RDRAM callbacks; no value was skipped,
+rewritten, or guarded. This is single-source evidence only.
 
 Session 4412's retail-oracle selector-source capture passed the whole-RDRAM
 control (10,000 callbacks), reached title `0x00790400` and hangar
@@ -810,14 +824,14 @@ was skipped, rewritten, or guarded.
 ## Next steps
 
 1. **M5 pre-filter selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4412 established that the hangar
-   source and selector path are live. Next compare the selector's phase-keyed
-   arguments and return values with the source/task payload identities in one
-   retail-oracle run, retaining whole-RDRAM, VI, both source PCs,
-   `0x80029E78`, both direct edges, and `0x80033FCC` controls. A shared
-   selector input with divergent payloads selects multiplex/transform; a
-   phase-specific selector input selects an upstream phase split; missing
-   source/task rows invalidate the comparison.
+   `m5-selector-decode-boundary`. Session 4413 found the exact selector
+   `0x80029E78` only in hangar while title task publication remained live.
+   Next use one phase-gated retail execution-range capture over the selector
+   family around `0x80029D20..0x80029F20`, with whole-RDRAM, all three VI
+   buckets, source PCs, direct edges, and `0x80033FCC` controls. A title-range
+   hit at another PC identifies the alternate selector path; no title-range
+   hit with live title task rows selects a pre-range/title-side boundary; loss
+   of task/source controls invalidates the comparison.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
