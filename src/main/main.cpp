@@ -4682,8 +4682,64 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
     }
 }
 
+// s4429: port-side witness for the title heap bytes. Observes only; reads
+// guest RDRAM through the capture pointer and never writes it.
+extern "C" void rs64_s4429_heap_probe(const char* kind, uint32_t pc,
+                                      uint32_t addr, uint32_t value) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_S4429_HEAP");
+        return own && own[0] && own[0] != '0';
+    }();
+    if (!enabled) return;
+    volatile uint8_t* base = g_recomp_rdram_for_wp_raw;
+    if (!base) return;
+    auto rd8 = [&](uint32_t g) -> uint32_t {
+        return (g >= 0x80000000u && g < 0x80800000u) ? base[(g - 0x80000000u) ^ 3u] : 0xFFFFFFFFu;
+    };
+    auto rd32 = [&](uint32_t g) -> uint32_t {
+        return (rd8(g) << 24) | (rd8(g + 1) << 16) | (rd8(g + 2) << 8) | rd8(g + 3);
+    };
+    static uint32_t total_sb = 0, total_pub = 0, rows = 0;
+    static uint32_t seen_window[2] = {0, 0};
+    const uint32_t w = rs64_vi_committed_width();
+    const uint32_t o = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    auto dump = [&](const char* tag, uint32_t hdr) {
+        std::fprintf(stderr,
+            "[s4429-heap] %s kind=%s pc=0x%08X addr=0x%08X value=0x%08X width=%u origin=0x%06X "
+            "hdr=0x%08X[%08X %08X] user=0x%08X[%08X %08X %08X %08X]\n",
+            tag, kind, pc, addr, value, w, o, hdr, rd32(hdr), rd32(hdr + 4),
+            hdr + 16, rd32(hdr + 16), rd32(hdr + 20), rd32(hdr + 24), rd32(hdr + 28));
+        std::fflush(stderr);
+    };
+    if (kind[0] == 'B') {  // byte store at 0x80007670
+        ++total_sb;
+        const uint32_t hdrs[2] = {0x80171CD0u, 0x80173B10u};
+        for (uint32_t i = 0; i < 2; ++i) {
+            if (addr >= hdrs[i] && addr < hdrs[i] + 32u) {
+                if (!(seen_window[i] & 1u)) {  // pre-store state, first byte of the copy
+                    seen_window[i] |= 1u;
+                    dump(i ? "copy-pre-B" : "copy-pre-A", hdrs[i]);
+                }
+                if (rows < 400u) {
+                    ++rows;
+                    std::fprintf(stderr, "[s4429-heap] copy-sb idx=%u addr=0x%08X value=0x%02X origin=0x%06X\n",
+                                 i, addr, value & 0xFFu, o);
+                }
+            }
+        }
+        return;
+    }
+    // word store of a published title-table pointer
+    ++total_pub;
+    if (total_pub <= 64u) {
+        dump(addr == 0x80149758u ? "publish-A" : "publish-B", value - 16u);
+        std::fprintf(stderr, "[s4429-heap] counts sb_calls=%u publish_calls=%u\n", total_sb, total_pub);
+    }
+}
+
 extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                                          uint32_t addr, uint32_t value) {
+    if (pc == 0x80007670u) rs64_s4429_heap_probe("B", pc, addr, value);
     static int enabled = -1;
     static uint32_t control = 0;
     static uint32_t rows = 0;

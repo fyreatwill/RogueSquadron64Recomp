@@ -3604,12 +3604,15 @@ extern "C" void rs64_m5_selector_producer(uint8_t* rdram, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_s4429_heap_probe(const char* kind, uint32_t pc,
+                                      uint32_t addr, uint32_t value);
 extern "C" void rs64_m5_selector_table_store(uint32_t pc, uint32_t addr,
                                                  uint32_t value, uint32_t v0,
                                                  uint32_t s0, uint32_t s1,
                                                  uint32_t s2, uint32_t a0,
                                                  uint32_t a1, uint32_t a2,
                                                  uint32_t a3, uint32_t ra) {
+    rs64_s4429_heap_probe("W", pc, addr, value);
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_TABLE");

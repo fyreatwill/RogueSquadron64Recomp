@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4427 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4430 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -226,6 +226,13 @@ already free, is the open boundary. ORIGIN: retail store callbacks and
 paired memory samples; no heap or table value was rewritten, skipped, or
 guarded.
 
+Session 4430 (port arm of s4428): the port runs the same 16-byte name copy at
+`0x80007670` onto zeroed `0x80171CD0`/`0x80173B10` and publishes
+`0x80171CE0`/`0x80173B20` with headers `2/0x1E30` and user words
+`6D61745F`/`6C746578...` identical to retail. This selects H-port-same and
+refutes H-port-no-copy and H-port-heap-first; the table words are not the
+selector divergence. ORIGIN: read-only port RDRAM witness; nothing rewritten.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -272,20 +279,17 @@ available.
 
 ## Next steps
 
-1. **Compare the port's title heap to the retail pre-heap state** —
-   HYPOTHESIS-ID `m5-selector-copy-lifetime`. s4428 (retail, one run, Rice,
-   Start schedule, whole-RDRAM control fired) found the 16-byte name copy
-   (`sb` at `0x80007670`) writes strings *over the future malloc headers*
-   `0x80171CD0` / `0x80173B10` ("mat_9", "ltex_cac") as well as the user
-   words, at origin `0x00696600` while those headers were all zero. At the
-   pointer-publish `sw` (origin `0x00790500`) the headers read
-   `0x0002/0x1E30` and `0x0001/0x21480` (then `0x0002/0x1E30`): the heap was
-   carved over the string bytes afterward, and malloc's split does not clear
-   user bytes. So the title user words are stale pre-heap string data,
-   game-written (single-source). Next: run the port to the same two moments
-   (copy `sb`, publish `sw`) and compare header/user-word bytes; zero or
-   differing user bytes at the title load is the divergence to chase. Do not
-   rewrite or guard heap state.
+1. **Why does retail reach the selector via `0x8008EE84 -> 0x80029E80` while
+   the port enters exact `0x80029E78`?** HYPOTHESIS-ID
+   `m5-selector-entry-path`. s4430 (port, one run, ROGUESQ_LOG_ALL=1 needed to
+   avoid an early audio bus error) showed the same pre-heap name copy and the
+   same title user words (`mat_`/`ltex`) as retail s4428, so the table
+   contents are NOT the divergence (two lines: retail + port). Next: a single
+   paired capture of the caller chain into `0x80029D20`/`0x80029E78` --
+   retail's `0x8008EE84` caller vs the port's callers (generated caller
+   witnesses exist: s3500/s3501) -- including what selects between the
+   `0x80091CB8` and `0x8008EE84` entries (flag/state read before the branch).
+   Do not rewrite or guard state.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

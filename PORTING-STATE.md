@@ -150619,3 +150619,36 @@ Next discriminator (named in NEXT.md): one port run sampling the same two
 moments. Port user words equal to retail "mat_"/"ltex" selects H-port-same;
 zero or garbage with no copy selects H-port-no-copy; a copy landing on an
 already-carved block selects H-port-heap-first.
+
+## Session 4430 (2026-10-09) — port shows the same pre-heap name copy and the same title user words
+
+Added a read-only port witness `rs64_s4429_heap_probe` (src/main/main.cpp, called
+from the existing `rs64_m5_lowfield_store` sb site at `0x80007670` and from
+`rs64_m5_selector_table_store` at the publish `sw`; env `ROGUESQ_LOG_S4429_HEAP`).
+No regen, no guest value rewritten. Recipe: `scratch/agent/s4429_port/run.sh`
+(compact output: `extract.txt`). Runs 1-2 omitted `ROGUESQ_LOG_ALL=1` and both
+died in the known `fillSampleStreamRange` bus error right after the name copy
+(deterministic, before title); run 3 with `ROGUESQ_LOG_ALL=1` reached title
+1024 `0x00790400` at 48.5s and VI 640 again at 76s, then crashed (not selector
+evidence). Control: the copy-side and publish-side hooks fired (sb_calls 26,814,
+8 publishes); the pre-copy state was read live from RDRAM.
+
+Result (port, one run, same bytes in runs 1-3 for the copy): the 16-byte copy
+at origin `0x696100` lands on `0x80171CD0..` and `0x80173B10..` while both
+header words and user words read zero ("mat_9"/"mat_10" and "ltext_cache_328"
+strings written over header+user). The title publish `sw` (width 1024, origin
+`0x790400`) stores `0x80171CE0` / `0x80173B20` with headers `0002/00001E30` at
+`0x80171CD0` / `0x80173B10` and user words `6D61745F 31300000` /
+`6C746578 5F636163 68655F33 32380000` -- the same stale `mat_`/`ltex` words
+retail showed (s4427/s4428). This selects H-port-same; H-port-no-copy and
+H-port-heap-first are refuted. The earlier port publishes (`0x80169F10`,
+`0x80171DF0`, `0x8018DD30`) are other heap states and match retail's pre-title
+pointer `0x8018DD30` (s4425). Timing differs (port publishes after the 1024
+switch, retail before); content does not.
+
+Conclusion (two lines: retail s4427/s4428 + port s4430): the title table user
+words are NOT the retail/port divergence. The selector-path divergence
+(retail `0x8008EE84 -> 0x80029E80`, port exact `0x80029E78`) lies in how the
+selector is reached / its index, not in the table contents. ORIGIN: the stale
+bytes are game-written by the name copy over pre-heap memory in both arms;
+no mitigation added, nothing rewritten, skipped, or guarded.
