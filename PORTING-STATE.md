@@ -149600,3 +149600,21 @@ route; it does not yet rule out a later payload overwrite. The next work unit
 must attribute phase-specific payload writers after publication. ORIGIN: retail
 upstream execution, task joins, payload-range writes, and whole-RDRAM
 observations; no value was skipped, rewritten, or guarded.
+
+## Session 4378 (2026-10-09) — payload writer histogram moved beyond audited candidates
+
+The first 75-second Rice oracle launch was invalid for task attribution because
+the explicit `0x80033FCC` execution watch was omitted: the whole-RDRAM control
+and all three VI buckets were live, but task rows and C904/task joins were
+zero. The fixed launch passed the whole-RDRAM control, reached title VI rows
+632/632 and hangar 542, retained 1,793 valid type-2 task rows, and matched
+3,703 of 3,706 C904/task witnesses. Both watched payload ranges were live.
+None of the eight previously proposed post-publication PCs wrote either range;
+the observed writers included `0x8008F7D4` and `0x80091374`, plus
+phase-specific nearby sites. This selects H-post-publish-watch-gap for the
+single-source retail capture and rules out the audited candidate set, but does
+not establish that the observed writers occur after publication. The next
+work unit is an ordinal join of the actual writer PCs to `0x80033FCC`. Failed
+first launch: instrument boundary only; no value was skipped, rewritten, or
+guarded. ORIGIN: retail physical payload writes, writer-PC histograms, task
+execution, C904 joins, and whole-RDRAM observations.

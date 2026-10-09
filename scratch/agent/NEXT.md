@@ -1,36 +1,32 @@
-# Next work unit (s4378): bounded post-publication writer attribution
+# Next work unit (s4379): ordinal-join actual payload writers
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-Session 4377 qualified the live chain `0x80019D28/38/68 -> 0x80019DD8/E8/EC
--> 0x80033FCC`, with phase-specific source/object rows and task data pointers
-`0x80173B20` versus `0x80171CE0`. Do not repeat the caller census, direct
-publication join, or closed first-eight payload comparison.
+Session 4378 qualified both payload ranges and found writers outside the
+previous candidate set. Do one batched retail-oracle capture; do not build the
+port.
 
 Competing hypotheses:
 
-- H-upstream-selector: the phase-specific source/object is the selector input
-  for the published family.
-- H-payload-overwrite: direct publication is correct, but a later writer
-  changes the payload before consumption.
-- H-post-publish-watch-gap: payload writes exist, but the selected
-  post-publication PC set misses their writer.
+- H-writer-after-publication: an observed payload writer runs after the
+  `0x80033FCC` task publication and overwrites the published payload.
+- H-writer-before-publication: observed payload writes precede publication;
+  the payload difference is upstream selector/decode output.
+- H-writer-watch-boundary: the observed PCs are still not the complete writer
+  set, so the apparent ordering is an instrument boundary.
 
-Discriminating measurement: one batched oracle run must use the phase-specific
-payload ranges `0x178C80:0x179A48` and `0x1E2FC0:0x1E3300`, add writer-PC
-histograms for both ranges, and retain the already-qualified task join and all
-three phase buckets. A phase-matched writer after `0x80033FCC` selects
-H-payload-overwrite; no writer in the audited post-publication PCs with live
-payload writes selects H-post-publish-watch-gap; a matching source/object and
-payload writer sequence selects H-upstream-selector plus its writer. A null
-without the whole-RDRAM positive control, all three VI buckets, and at least
-1,000 valid type-2 rows is invalid.
+Discriminating measurement: watch physical ranges `0x178C80:0x179A48` and
+`0x1E2FC0:0x1E3300`, phase-gate writer PCs `0x8008F7D4`, `0x80091374`, and
+the nearby range-specific sites from s4378, and use `--ordinal-join` with the
+typed `0x80033FCC` task publication. A qualified after-publication count for
+an observed writer selects H-writer-after-publication; qualified before-only
+writes select H-writer-before-publication; live payload writes with no joined
+observed writer selects H-writer-watch-boundary. Require the whole-RDRAM
+positive control, all three VI buckets, at least 1,000 valid type-2 rows, and
+nonzero writer hits before interpreting a null.
 
-Use the existing generated-function audit as the PC source, then run exactly
-one batched capture from the repo root. Candidate post-publication writers are
-the phase-specific ranges' existing callsites from the prior writer census;
-start with `0x80090DE4`, `0x80090B68`, `0x80091078`, `0x80091198`,
-`0x80090948`, `0x80090958`, `0x80092164`, and `0x8009216C`. Include the whole
-RDRAM control, `0x80033FCC` typed task dump/join, `--pc-hist-watch` for both
-payload watches, all three `--pc-phase-log-width` buckets, Rice, and the
-established Start schedule. Use a 75-second run and do not build the port.
+Exact command: `zsh scratch/agent/run_s4379_m5_payload_writer_ordinal.sh`.
+The script must include both payload watches, `--watch-pc 0x80033FCC`,
+`--pc-task-dump 0x80033FCC --pc-task-type 2`, `--ordinal-join`, the three
+phase buckets, and `--pc-hist-watch 1 --pc-hist-watch 2`. Kill with SIGKILL
+after 75 seconds and capture from the repo root.
