@@ -284,6 +284,14 @@ available.
 
 ## Next steps
 
+0. **s4433: both `m5-selector-entry-path` and `m5-title-reapply-config` are
+   CLOSED.** Retail ALSO calls reapplyAudioConfig at the title->hangar mode
+   change (chain `0x8008EB5C`->`0x8008EBC0`->`0x80091C88`->`0x80091CB8` at
+   t=38.4s width 1024 and t=52.9s width 512; the port logs the first one VI
+   earlier by origin label). "Retail only does in hangar" had bucketed by
+   origin 0x6ab400/width 512 only. No port-vs-retail selector or reapply
+   divergence remains. Next: M5 plan Step 10 qualification (NEXT.md).
+   Historical item below kept for the s4432 evidence:
 1. **s4432: the port's title audio loop DOES reach the `0x8008EE84` submit**
    (stages 0-3 fire in phases 2-5 incl. title, >=1536 loop iterations; the port
    calls the `osAiSetNextBuffer_recomp` shim directly, so a guest-PC witness at

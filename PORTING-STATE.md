@@ -150687,3 +150687,15 @@ reapplyAudioConfig 0x80091CB8) hits in title vs retail only in hangar (s4414 vs
 s4416) -- the remaining real difference; how that port witness is implemented is
 unchecked. ORIGIN: observation only, no value rewritten, skipped or guarded; no
 mitigation added.
+
+## Session 4433 (2026-10-09) — retail ALSO calls reapplyAudioConfig at the title→hangar mode change; the "port-only title reapply" was a phase-label artifact
+
+HYPOTHESIS-ID: m5-title-reapply-config. Hypotheses: H-port-extra-call, H-retail-window-miss, H-witness-artifact.
+
+Static: `reapplyAudioConfig` (0x80091C88) has exactly ONE generated caller, the `jal` at 0x8008EBC0 inside `reapplyDisplayMode` (0x8008EB5C, funcs_23.c), itself called from funcs_0.c:2340 (guest 0x8000153C). So the port's s4432 title hit of 0x80091CB8 (`edge=ai-call`, phase 4, width 1024, origin 0x790400, one occurrence per edge in port.log) is a real guest arrival via a display-mode reapply, not a shim artifact (H-witness-artifact refuted).
+
+Retail oracle (scratch/agent/run_s4433_reapply_callers.sh, whole-RDRAM write control 200 hits): watch-pc on 0x8008EB5C/0x8008EBC0/0x80091C88/0x80091CB8 fires TWICE as the full chain (ra=0x80001544 -> 0x8008EBC8 -> 0x80091CB4): t=38.4s at width=1024 origin=0x006AB400, and t=52.9s at width=512 origin=0x006AB400. s4414/s4416 had bucketed by `origin=0x006ab400 width=512` and so only saw the second call (H-retail-window-miss confirmed as the explanation; "retail only does in hangar" is false). The retail title-to-hangar call lands one VI after the origin flips to the hangar buffer; the port logs it while origin is still 0x790400 — a one-frame timing label difference, not a missing/extra call.
+
+Rules out: port-extra reapply call in title; a config-state difference at the reapply caller. Not examined: whether the port also makes the second (width 512, hangar) call (port runs die pre-hangar often). Thread m5-title-reapply-config CLOSED; the `0x80029E78` "title divergence" no longer distinguishes port from retail.
+
+ORIGIN: no mitigation added; instrument-only (oracle recipe).
