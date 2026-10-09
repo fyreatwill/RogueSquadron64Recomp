@@ -148978,3 +148978,28 @@ changed and no mitigation was added.
 (HYPOTHESIS-ID m5-step9-retail-input-selector-boundary): the candidate object
 stores are not the semantic branch producer; reader versus immediate caller
 input attribution is next.
+
+## Session 4346 (2026-10-08) — C904 reader/input witness moves boundary earlier
+
+The first 180-second launch was route-invalid because it omitted Rice video and
+used only three late Start presses; it stayed at width 320. The fixed recipe
+used Rice and the standard repeated Start schedule. It completed 180.2 seconds
+and 10,779 VI, with 10,000 whole-RDRAM positive-control writes, title VI
+`0x00790400`, hangar VI `0x006AB400`, and 3,107 executions at both C904
+`0x8009C904` and its selected-word load `0x8009C950`.
+
+The batched witness recorded 253 distinct C904-entry rows and 259 distinct
+reader rows before its bounded table overflowed. The reader's selected words
+were not `0x0010` or `0x3108`, either as full words or low halfwords; the first
+two words at the C904 input pointer likewise contained neither retained family
+value. This rejects H-C904-reader and the captured immediate-input alternatives
+and selects H-earlier-source for the observed boundary. The value comparison is
+single-source retail evidence; same-run whole-RDRAM, title, hangar, and exact-PC
+execution controls independently qualify route and instrument coverage. No
+decoder, RSP, AI, or game behavior changed and no mitigation was added.
+
+The oracle source also gained the reusable `--c904-witness` option, which arms
+both PCs and phase-gates the combined reader/input rows. The initial route-invalid
+attempt is retained as a failed setup experiment, not evidence about the game.
+(HYPOTHESIS-ID m5-step9-earlier-input-source): attribute the producer feeding
+the C904 input pointer at caller `0x8009C0E4` and its source span next.

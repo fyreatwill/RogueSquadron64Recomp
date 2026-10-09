@@ -250,6 +250,7 @@ static int g_exec_watches_phase_armed;
 static int g_positive_watch_removed;
 static uint32_t gpr32(int idx);
 static uint32_t debug_mem_u8(uint32_t guest);
+static uint32_t debug_mem_u32(uint32_t guest);
 struct ai_output_bucket {
     const char *name;
     uint32_t width;
@@ -405,6 +406,27 @@ static struct pc_field_dump_bucket
     g_pc_field_dump[MAX_PC_FIELD_DUMP_PCS];
 static int g_n_pc_field_dump;
 static int g_pc_field_dump_any_phase;
+struct c904_witness_row {
+    uint32_t pc;
+    uint32_t prev_pc;
+    uint32_t object;
+    uint32_t input;
+    uint32_t input_w0;
+    uint32_t input_w1;
+    uint32_t v0;
+    uint32_t a2;
+    uint32_t a3;
+    uint32_t s1;
+    uint32_t selected_addr;
+    uint32_t selected_word;
+    int family;
+    long n;
+};
+#define MAX_C904_WITNESS_ROWS 512
+static struct c904_witness_row g_c904_witness_rows[MAX_C904_WITNESS_ROWS];
+static int g_c904_witness_enabled;
+static long g_c904_witness_hits;
+static long g_c904_witness_overflow;
 struct store_field_dump_pc {
     uint32_t pc;
     uint64_t watch_mask;
@@ -569,6 +591,11 @@ static uint32_t debug_mem_u8(uint32_t guest)
     return (value >> shift) & 0xFFu;
 }
 
+static uint32_t debug_mem_u32(uint32_t guest)
+{
+    return pDebugMemRead32(debug_rdram_addr(guest & ~3u));
+}
+
 static uint32_t debug_mem_u16(uint32_t guest)
 {
     uint32_t aligned = guest & ~3u;
@@ -705,6 +732,70 @@ joined_done:
            row.branch_state, row.object, row.cursor, row.selected_addr,
            row.selected_word, row.state_18a, row.state_18c);
     fflush(stdout);
+}
+
+static void dump_c904_witness(uint32_t pc)
+{
+    struct c904_witness_row row;
+    uint32_t object, selected_addr, selected_word;
+    int i;
+
+    if (!g_c904_witness_enabled || !pc_phase_log_match())
+        return;
+    g_c904_witness_hits++;
+    row.pc = pc;
+    row.prev_pc = (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC);
+    row.object = gpr32(4);
+    row.input = gpr32(5);
+    row.input_w0 = debug_mem_u32(row.input);
+    row.input_w1 = debug_mem_u32(row.input + 4u);
+    row.v0 = gpr32(2);
+    row.a2 = gpr32(6);
+    row.a3 = gpr32(7);
+    row.s1 = gpr32(17);
+    object = gpr32(30);
+    selected_addr = row.pc == 0x8009C950u ? (row.v0 & 0x1FFFFFFFu) : 0;
+    selected_word = selected_addr ? debug_mem_u32(selected_addr) : 0;
+    row.selected_addr = selected_addr;
+    row.selected_word = selected_word;
+    row.family = selected_word == 0x10u || selected_word == 0x3108u ||
+                 (selected_word & 0xFFFFu) == 0x10u ||
+                 (selected_word & 0xFFFFu) == 0x3108u;
+    if (pc == 0x8009C904u)
+        row.object = gpr32(4);
+    else
+        row.object = object;
+    for (i = 0; i < MAX_C904_WITNESS_ROWS; i++) {
+        if (g_c904_witness_rows[i].pc == row.pc &&
+            g_c904_witness_rows[i].prev_pc == row.prev_pc &&
+            g_c904_witness_rows[i].object == row.object &&
+            g_c904_witness_rows[i].input == row.input &&
+            g_c904_witness_rows[i].input_w0 == row.input_w0 &&
+            g_c904_witness_rows[i].input_w1 == row.input_w1 &&
+            g_c904_witness_rows[i].v0 == row.v0 &&
+            g_c904_witness_rows[i].a2 == row.a2 &&
+            g_c904_witness_rows[i].a3 == row.a3 &&
+            g_c904_witness_rows[i].s1 == row.s1 &&
+            g_c904_witness_rows[i].selected_addr == row.selected_addr &&
+            g_c904_witness_rows[i].selected_word == row.selected_word) {
+            g_c904_witness_rows[i].n++;
+            return;
+        }
+        if (g_c904_witness_rows[i].n == 0) {
+            row.n = 1;
+            g_c904_witness_rows[i] = row;
+            printf("[c904-witness] pc=0x%08x prev_pc=0x%08x object=0x%08x "
+                   "input=0x%08x input_w0=0x%08x input_w1=0x%08x "
+                   "v0=0x%08x a2=0x%08x a3=0x%08x s1=0x%08x "
+                   "selected_addr=0x%08x selected_word=0x%08x family=%d n=1\n",
+                   row.pc, row.prev_pc, row.object, row.input,
+                   row.input_w0, row.input_w1, row.v0, row.a2, row.a3,
+                   row.s1, row.selected_addr, row.selected_word, row.family);
+            fflush(stdout);
+            return;
+        }
+    }
+    g_c904_witness_overflow++;
 }
 
 static int store_field_dump_pc_index(uint32_t pc)
@@ -1832,6 +1923,9 @@ static void dbg_update(unsigned int pc)
         dump_pc_field(pc);
 
     if (flags & M64P_BKP_FLAG_EXEC)
+        dump_c904_witness(pc);
+
+    if (flags & M64P_BKP_FLAG_EXEC)
         dump_pc_task(pc);
 
     if ((flags & M64P_BKP_FLAG_EXEC) && g_mode_dump_enabled &&
@@ -2471,6 +2565,7 @@ static void usage(void)
         "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
         "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
         "  --pc-field-dump-any-phase allow field rows before/after phase buckets\n"
+        "  --c904-witness       dump phase-gated C904 entry and selected-word reader rows\n"
         "  --store-field-dump W:A[,B...] dump phase-gated fields at exact writes on watch W\n"
         "  --store-field-dump-any-phase allow store-field-dump rows in any VI phase\n"
         "  --pc-task-dump A   dump phase-gated OSTask fields at PC A\n"
@@ -2575,6 +2670,10 @@ int main(int argc, char **argv)
             add_pc_field_dump_pcs(argv[++i]);
         else if (!strcmp(argv[i], "--pc-field-dump-any-phase"))
             g_pc_field_dump_any_phase = 1;
+        else if (!strcmp(argv[i], "--c904-witness")) {
+            g_c904_witness_enabled = 1;
+            add_pc_watches("0x8009C904,0x8009C950");
+        }
         else if (!strcmp(argv[i], "--store-field-dump") && i + 1 < argc)
             add_store_field_dump(argv[++i]);
         else if (!strcmp(argv[i], "--store-field-dump-any-phase"))
@@ -2956,6 +3055,9 @@ int main(int argc, char **argv)
                    bucket->rows[j].selected_word, bucket->rows[j].state_18a,
                    bucket->rows[j].state_18c, bucket->rows[j].n);
     }
+    if (g_c904_witness_enabled)
+        printf("[oracle] c904-witness-summary hits=%ld overflow=%ld\n",
+               g_c904_witness_hits, g_c904_witness_overflow);
     if (g_n_store_field_dump_pc > 0) {
         printf("[oracle] store-field-summary pcs=%d callbacks=%ld phase_hits=%ld "
                "rows=%d/%d overflow=%ld\n", g_n_store_field_dump_pc,

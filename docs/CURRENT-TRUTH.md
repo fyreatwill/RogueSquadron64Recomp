@@ -4,7 +4,15 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4345: the qualified retail producer witness passed the
+Updated for session 4346: the qualified retail C904 reader/input witness passed
+the whole-RDRAM, title, hangar, and C904 controls. It recorded 259 distinct
+selected words at reader `0x8009C950`; none matched retained `0x0010/0x3108`
+exactly or in the low halfword, and none of 253 C904-entry rows had either
+family value in the captured first two input words. This rejects the reader and
+captured immediate-input alternatives and selects an earlier source boundary.
+The value comparison is single-source retail evidence; the same-run controls
+independently qualify route and execution. Previously 4345: the qualified
+retail producer witness passed the
 whole-RDRAM, title, hangar, and C904 controls. Phase-gated stores attributed to
 `0x8009C9EC` and `0x8009CB0C` were `sh` instructions writing small source
 values into object `0x80153420 + 0x18C` (`0x801535AC`), not the retained
@@ -290,26 +298,13 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4345) Attribute the C904 input/selector boundary after the candidate
-`0x8009C9EC`/`0x8009CB0C` stores were proven to be object `+0x18C` index
-stores, not `0x0010/0x3108` branch-state stores. Add one phase-gated reader
-attribution for the low `s1`-indexed field read and its immediate caller/input
-transformation, recording PC, `s1`, loaded value, and preceding `$v0/$a1`.
-Keep whole-RDRAM, title, hangar, and C904 controls. A matching `0x0010/0x3108`
-reader/input family selects the semantic selector; a different family selects
-an earlier caller/data-source boundary. No mitigation or decoder/RSP/AI change
-is authorised.
-
-00a. (s4345) The batched retail producer witness passed the whole-RDRAM control
-(20,986 writes), title VI `0x00790400`, hangar VI `0x006AB400`, and C904
-execution control (3,107 executions). The watched object range had 10,986
-writes; phase-gated candidate rows were 19 at `0x8009C9EC` and 184 at
-`0x8009CB0C`. Both used instruction `0xA7C2018C` (`sh v0,0x18C(s8)`) at
-`0x801535AC`, with small varied source values, so they do not write the
-retained `0x0010/0x3108` family. This rejects the named decode-state writer as
-the semantic producer and selects the C904 input/selector boundary. The
-writer attribution is one retail evidence line; same-run controls independently
-qualify route and execution.
+1. (M5, HYPOTHESIS-ID `m5-step9-earlier-input-source`) Attribute the earlier
+   producer feeding the C904 input pointer. Use one phase-gated retail oracle
+   witness at caller `0x8009C0E4` plus the input-buffer source span identified
+   from the generated caller, recording input pointer, source registers, first
+   words, and writer PCs. Require whole-RDRAM, title, hangar, and C904 controls.
+   A retained `0x0010/0x3108` family at the caller/source selects this boundary;
+   absence moves one boundary earlier. Do not alter decoder/RSP/AI behavior.
 
 00a. (s4344) The value-aware witness passed the whole-RDRAM control (13,107
 hits), title VI `0x00790400`, hangar VI `0x006AB400`, and C904 execution control
