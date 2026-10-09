@@ -1,31 +1,44 @@
-# Next work unit (s4338): qualified C904/C88C field join
+# Next work unit (s4339): C88C source/branch witness
 
 HYPOTHESIS-ID: m5-step9-retail-port-field-join
 
-The s4337 fixed A/B qualified the known in-process autopilot route: it reached
-VI 512 with 253 C88C rows and 256 direct rows. The external field-key arm was
-route-invalid despite the corrected from-boot schedule, so it is parked.
-Compare the retained retail C904 table against the qualified port C88C table.
-Use one run, phase-gated to origin `0x006AB400`/`0x006AB800`, and require the
-positive control plus VI 1024/512 and nonzero C88C/direct counts.
+The s4338 qualified in-process autopilot run passed the host positive control,
+title VI 1024, hangar VI 512, and both filter controls. It emitted 256 C88C
+descriptor rows and 256 joined direct rows. The retained retail C904 phase-512
+table and port C88C descriptor stream had no ordinal or stable address-offset
+payload match, selecting a pre-filter route/stream divergence. The external
+field-key arm remains parked as route-invalid.
 
 Competing hypotheses:
 
-- H-payload-parity: C904 and C88C fields correspond after the known address
-  mapping, so the earlier descriptor divergence was an instrumentation or arm
-  artifact.
-- H-descriptor-mapping: the retail C904 fields correspond to a different port
-  descriptor field/argument than C88C's retained tuple.
-- H-pre-filter-stream: the qualified port route reaches the helper, but its
-  source/branch sequence diverges from retail before or at descriptor choice.
+- H-descriptor-mapping: port C88C has the same retail source/branch sequence,
+  but its descriptor argument or words are mapped differently.
+- H-pre-filter-stream: the port C88C source/branch sequence itself diverges
+  before descriptor selection.
+- H-probe-semantic-mismatch: the existing C88C descriptor rows are not the
+  semantic counterpart of retail C904 despite the shared object boundary.
 
-Discriminator: a keyed same-phase table of retail C904 rows and qualified port
-C88C rows, including caller/object/source/branch fields and descriptor words.
-Matching field distributions select H-payload-parity; a stable retail-to-port
-field offset with different descriptor arguments selects H-descriptor-mapping;
-different source/branch sequence before descriptor choice selects
-H-pre-filter-stream. Keep decoder, RSP, AI, and game-path behavior unchanged.
+Discriminator: add one phase-gated port witness for the C88C helper's fields
+corresponding to retail C904 `s1`, `source_word`, `source_byte`, and
+`branch_state`; compare keyed source/branch sequences against the retained
+retail table in one run. Matching source/branch sequence with different
+descriptor words selects H-descriptor-mapping. Divergent source/branch sequence
+selects H-pre-filter-stream. A non-corresponding field shape selects
+H-probe-semantic-mismatch and requires a new boundary, not another join field.
 
-The retail C904 field table remains at
-`scratch/agent/oracle_s4335_c904_field.log`; defer comparison until the route
-control passes.
+Run requirements:
+
+1. Use the existing qualified in-process autopilot route only, with the
+   retained seeded save, `M4_Y8000_WIDTH=512`, LLE/solo/spin-yield, and real
+   audio.
+2. Build once with the new witness and run one phase-gated capture. Require
+   host positive control, title VI 1024, hangar VI 512, and nonzero joined
+   C88C/direct rows before interpreting the comparison.
+3. Do not use the external field-key arm, alter decoder/RSP/AI behavior, or
+   add a mitigation.
+
+Exact prior-run artifacts:
+
+- port capture: `scratch/agent/s4338_c904_c88c_join/run.log`
+- retail table: `scratch/agent/oracle_s4335_c904_field.log`
+- recipe: `scratch/agent/s4338_c904_c88c_join.sh`

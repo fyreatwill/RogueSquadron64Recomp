@@ -148780,3 +148780,25 @@ route controls remain independent qualification. No runtime behavior or
 mitigation changed.
 
 ORIGIN: none; route recipe and watchdog script only, no mitigation.
+
+## Session 4338 (2026-10-08) — C904/C88C join selects pre-filter stream divergence
+
+Built `RogueSquadron64Recomp` once and ran the new self-contained qualified
+autopilot capture with the retained seeded save. The host positive control
+fired; title VI 1024 and hangar VI 512 both fired; the run emitted 256
+phase-gated C88C descriptor rows and 256 direct-filter rows, with 256 joined
+caller tuples and no crash marker.
+
+Compared with the retained retail C904 phase-512 table, the port descriptor
+pointers and words had no ordinal match or stable address offset. Retail C904
+rows alternated `s1`, source-word/byte, and branch-state records, while the
+port C88C stream began at a different descriptor sequence and diverged in later
+pointer order. This rejects H-payload-parity and selects H-pre-filter-stream;
+it does not yet name the writer or establish the exact semantic field mapping.
+The exact comparison is single-source cross-run evidence; host/VI/filter
+controls and the retained oracle qualification independently establish that the
+routes reached the intended phase. The external field-key arm remains parked as
+route-invalid from s4337. No runtime behavior or mitigation changed.
+
+ORIGIN: none; diagnostic witness capture and comparison script only, no
+mitigation or runtime behavior change.

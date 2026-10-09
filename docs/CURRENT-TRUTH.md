@@ -4,7 +4,11 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4337: the fixed same-build route A/B selected the in-process
+Updated for session 4338: the qualified in-process C904/C88C field join reached
+both target phases and rejected ordinal/offset payload parity; retail C904 and
+port C88C diverge before the filter, selecting pre-filter route/stream
+selection. This is single-source comparative field evidence; the independent
+oracle controls qualify the routes. Previously 4337: the fixed same-build route A/B selected the in-process
 autopilot schedule: it reached VI 512 with 253 C88C and 256 direct rows, while
 the external field-key arm stopped before VI 512 and crashed at
 `rs64_m5_descriptor_start+460`. This refutes stale-save and universal synth
@@ -188,6 +192,18 @@ synth-lifetime blockers and selects input/route scheduling as the current
 blocker for the field recipe. Exact route selection is single-source port
 evidence; the existing oracle controls remain independent controls.
 
+**M5 Step 9 C904/C88C field join (s4338).** The qualified in-process autopilot
+run passed the host positive control, title VI 1024, hangar VI 512, and both
+port filter controls; it emitted 256 C88C descriptor rows and 256 direct rows,
+all joined to the retained caller tuple. Against the retained retail C904
+phase-512 table, the port descriptor pointers and words had no ordinal match or
+stable address offset: the retail rows alternated `s1`/source/branch-state
+records while the port stream began at a different descriptor sequence and
+later pointer order diverged. This rejects H-payload-parity and selects
+H-pre-filter-stream; it does not identify the writer or exact semantic mapping.
+The comparison is single-source cross-run field evidence; the host, VI, and
+retained oracle controls independently qualify the route.
+
 **M5 Step 9 retail boundary probe (s4333).** The required 180-second retail
 oracle run passed the whole-RDRAM positive control (10,000 writes), reached
 title VI 1024 and hangar VI 512 at origin `0x006AB400`, but recorded zero
@@ -234,13 +250,16 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4337) Repeat the bounded C904/C88C field join using only the qualified
-in-process autopilot route and the retained seeded save. Keep
-`M4_Y8000_WIDTH=512`, LLE/solo/spin-yield, real audio, and the existing
-descriptor/direct probes unchanged. Require the host positive control, title VI
-1024, hangar VI 512, and nonzero C88C/direct rows before comparing payloads.
-Do not use the external field-key arm or add a mitigation. Route scheduling is
-the blocker for that arm; exact payload parity is still open.
+00. (s4338) Name the pre-filter stream divergence behind the C904/C88C field
+mismatch. Keep the qualified in-process autopilot route, retained seeded save,
+`M4_Y8000_WIDTH=512`, LLE/solo/spin-yield, real audio, and existing probes.
+Add one phase-gated port witness for the C88C helper's source/branch selector
+fields corresponding to retail C904 `s1`, `source_word`, `source_byte`, and
+`branch_state`; compare it to the retained retail C904 rows in one run. Require
+the host positive control, title VI 1024, hangar VI 512, and nonzero joined
+C88C/direct rows. A matching source/branch sequence with different descriptor
+words selects descriptor mapping; a diverging source/branch sequence names the
+pre-filter stream. Do not use the external field-key arm or add a mitigation.
 
 00a. (s4335) The retail C904 field dump passed the whole-RDRAM positive
 control (10,000 writes), title VI 1024, and hangar VI 512 controls. C904
