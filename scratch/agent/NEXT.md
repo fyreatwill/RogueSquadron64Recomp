@@ -1,25 +1,27 @@
-# Next work unit (s4344): value-aware retail C904 witness
+# Next work unit (s4345): earlier retail producer boundary
 
-HYPOTHESIS-ID: m5-step9-retail-branch-boundary
+HYPOTHESIS-ID: m5-step9-retail-earlier-boundary
 
-s4343 qualified the retail route and rejected a phase-local writer to the
-backing table, but the range watch did not expose values. The next unit is one
-bounded oracle instrumentation change plus one run, all arms in that build.
+s4344 qualified the retail route and showed that C904's selected table words
+are varied compressed-data words, while object decode-state halfwords vary
+without the retained 0x0010/0x3108 family. The next unit is one bounded
+producer/selector-boundary measurement plus one run.
 
 Competing hypotheses:
 
-- H-retail-table-value: the selected object-backed word carries the retained
-  `0x0010/0x3108` family.
-- H-retail-selector-value: the table word does not carry the family, but the
-  decoded halfwords/state at C904 do.
-- H-retail-earlier-boundary: neither value family matches at C904; the
-  producer/semantic boundary is earlier.
+- H-retail-writer: an earlier writer produces the semantic branch values before
+  C904 and can be attributed by PC.
+- H-retail-selector: an earlier selector/transformation derives the values
+  from the compressed table stream without a direct family-valued store.
+- H-retail-unresolved: the existing C904 fields are not the retained branch
+  state, so the next boundary must be located from the caller/data-flow path.
 
-Discriminating measurement: at retail `0x8009C904`, phase-gated to
-`0x006AB400`, print `$s1`, `object+0x11C8`, the selected word at
-`object+0x1A0+((cursor>>3)&0xFFC)`, and the decoded halfwords/state used by the
-helper. A table-word family selects H-retail-table-value; a non-table decoded
-family selects H-retail-selector-value; neither selects H-retail-earlier-boundary.
+Discriminating measurement: phase-gated at retail C904, watch the earlier
+candidate stores/loads or the immediate caller transformation identified from
+the C904 body, recording PC, source register/value, destination/selected
+field, and the retained 0x0010/0x3108 comparison. A writer with the family
+selects H-retail-writer; a value-producing transformation without such a
+store selects H-retail-selector; neither selects H-retail-unresolved.
 
 Before building, re-read `tools/oracle/README.md`. Add the witness to
 `tools/oracle/rs64_oracle.c`, rebuild with `env CORE_SRC="$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core" bash tools/oracle/build.sh`, then run one 180-second oracle from the repo root with:

@@ -148931,3 +148931,27 @@ on the retail C904 object and table range; a retail accessor carrying the
 0x0010/0x3108 family selects retail-table vs retail-selector producer, and no
 access moves the boundary earlier than C904. ORIGIN: no mitigation added; the
 diff is instrumentation only.
+
+## Session 4344 (2026-10-08) — value-aware retail C904 witness selects earlier boundary
+
+The rebuilt oracle ran the prescribed single retail unit with a whole-RDRAM
+positive control, VI trace, title/hangar route controls, and a phase-gated
+execution watch at guest PC 0x8009C904. The whole-RDRAM control fired 13,107
+times, title VI 0x00790400 appeared at 17.3 seconds, hangar VI 0x006AB400
+appeared at 39.5 seconds, and C904 executed 3,107 times. The phase-gated C904
+dump recorded 987 unique rows with no overflow.
+
+The new witness captured object 0x80153420, its advancing +0x11C8 cursor, the
+selected word at object+0x1A0+((cursor>>3)&0xFFC), and object +0x18A/+0x18C
+decode state. Selected words were varied compressed-data values (for example
+0x39C6D424 and 0xABE73289), not the retained 0x0010/0x3108 family; the decode
+halfwords also varied and did not match that family. This selects an earlier
+semantic/producer boundary than the C904 table read. It does not identify the
+writer or prove which earlier selector derives the branch state.
+
+The result is qualified single-source retail value evidence. The independent
+line is the same-run whole-RDRAM, title, hangar, and C904 execution controls;
+no decoder, RSP, AI, or game behavior changed, and no mitigation was added.
+(HYPOTHESIS-ID m5-step9-retail-branch-boundary): the table-value and
+decoded-state-at-C904 alternatives were rejected; the earlier-boundary
+hypothesis is selected for the next bounded probe.

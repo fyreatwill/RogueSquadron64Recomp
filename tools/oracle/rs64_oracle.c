@@ -378,6 +378,7 @@ static long g_vi_context_joined;
 static long g_vi_context_dropped;
 static long g_vi_context_overflow;
 struct pc_field_dump_row {
+    uint32_t object;
     uint32_t s0;
     uint32_t s1;
     uint32_t prev_pc;
@@ -386,6 +387,11 @@ struct pc_field_dump_row {
     uint32_t source_byte;
     uint32_t branch_selector;
     uint32_t branch_state;
+    uint32_t cursor;
+    uint32_t selected_addr;
+    uint32_t selected_word;
+    uint32_t state_18a;
+    uint32_t state_18c;
     long n;
 };
 struct pc_field_dump_bucket {
@@ -589,6 +595,7 @@ static void dump_pc_field(uint32_t pc)
         return;
     bucket = &g_pc_field_dump[index];
     bucket->hits++;
+    row.object = gpr32(4);
     row.s0 = gpr32(16);
     row.s1 = gpr32(17);
     row.prev_pc = (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC);
@@ -597,6 +604,11 @@ static void dump_pc_field(uint32_t pc)
     row.source_byte = debug_mem_u8(row.s0 + 0x22u);
     row.branch_selector = gpr32(2);
     row.branch_state = debug_mem_u16(row.s1 + 0x22u);
+    row.cursor = pDebugMemRead32(debug_rdram_addr((row.object + 0x11C8u) & ~3u));
+    row.selected_addr = (row.object + 0x1A0u + ((row.cursor >> 3) & 0xFFCu)) & 0x1FFFFFFFu;
+    row.selected_word = pDebugMemRead32(debug_rdram_addr(row.selected_addr & ~3u));
+    row.state_18a = debug_mem_u16(row.object + 0x18Au);
+    row.state_18c = debug_mem_u16(row.object + 0x18Cu);
     if (g_pc_task_join_enabled && g_n_pc_task_dump_rows > 0) {
         uint32_t width = pDebugMemRead32(VI_WIDTH_ADDR);
         uint32_t origin = pDebugMemRead32(VI_ORIGIN_ADDR);
@@ -650,6 +662,7 @@ static void dump_pc_field(uint32_t pc)
 joined_done:
     for (i = 0; i < bucket->n_rows; i++) {
         if (bucket->rows[i].s0 == row.s0 &&
+            bucket->rows[i].object == row.object &&
             bucket->rows[i].s1 == row.s1 &&
             bucket->rows[i].prev_pc == row.prev_pc &&
             bucket->rows[i].ra == row.ra &&
@@ -657,8 +670,14 @@ joined_done:
             bucket->rows[i].source_byte == row.source_byte &&
             bucket->rows[i].branch_selector == row.branch_selector &&
             bucket->rows[i].branch_state == row.branch_state) {
+            if (bucket->rows[i].cursor == row.cursor &&
+                bucket->rows[i].selected_addr == row.selected_addr &&
+                bucket->rows[i].selected_word == row.selected_word &&
+                bucket->rows[i].state_18a == row.state_18a &&
+                bucket->rows[i].state_18c == row.state_18c) {
             bucket->rows[i].n++;
             return;
+            }
         }
     }
     if (bucket->n_rows >= MAX_PC_FIELD_DUMP_ROWS) {
@@ -670,12 +689,15 @@ joined_done:
     printf("[pc-field-dump] pc=0x%08x width=%u origin=0x%08x "
            "prev_pc=0x%08x ra=0x%08x s0=0x%08x s1=0x%08x source_word=0x%08x "
            "source_byte=0x%02x branch_selector=0x%08x "
-           "branch_state=0x%04x n=1\n",
+           "branch_state=0x%04x object=0x%08x cursor=0x%08x "
+           "selected_addr=0x%08x selected_word=0x%08x state_18a=0x%04x "
+           "state_18c=0x%04x n=1\n",
            pc, pDebugMemRead32(VI_WIDTH_ADDR),
            pDebugMemRead32(VI_ORIGIN_ADDR), row.prev_pc, row.ra,
            row.s0, row.s1,
            row.source_word, row.source_byte, row.branch_selector,
-           row.branch_state);
+           row.branch_state, row.object, row.cursor, row.selected_addr,
+           row.selected_word, row.state_18a, row.state_18c);
     fflush(stdout);
 }
 
@@ -2899,12 +2921,17 @@ int main(int argc, char **argv)
         for (int j = 0; j < bucket->n_rows; j++)
             printf("[oracle] pc-field-row pc=0x%08x s0=0x%08x s1=0x%08x "
                    "source_word=0x%08x branch_selector=0x%08x "
-                   "source_byte=0x%02x branch_state=0x%04x n=%ld\n",
+                   "source_byte=0x%02x branch_state=0x%04x object=0x%08x "
+                   "cursor=0x%08x selected_addr=0x%08x selected_word=0x%08x "
+                   "state_18a=0x%04x state_18c=0x%04x n=%ld\n",
                    bucket->pc, bucket->rows[j].s0, bucket->rows[j].s1,
                    bucket->rows[j].source_word,
                    bucket->rows[j].branch_selector,
                    bucket->rows[j].source_byte,
-                   bucket->rows[j].branch_state, bucket->rows[j].n);
+                   bucket->rows[j].branch_state, bucket->rows[j].object,
+                   bucket->rows[j].cursor, bucket->rows[j].selected_addr,
+                   bucket->rows[j].selected_word, bucket->rows[j].state_18a,
+                   bucket->rows[j].state_18c, bucket->rows[j].n);
     }
     if (g_n_store_field_dump_pc > 0) {
         printf("[oracle] store-field-summary pcs=%d callbacks=%ld phase_hits=%ld "

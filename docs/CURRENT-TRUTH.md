@@ -4,7 +4,12 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4343: the qualified retail oracle read/write census found
+Updated for session 4344: the qualified value-aware retail oracle witness found
+that C904's selected object-backed words are varied compressed-data words, not
+the retained `0x0010/0x3108` branch-state family; the object decode halfwords
+also vary independently. Whole-RDRAM, title, hangar, and C904 controls passed.
+This selects an earlier semantic/producer boundary than the C904 table read,
+without identifying that boundary. Previously 4343: the qualified retail oracle read/write census found
 the C904 backing table read 23,491 times and written zero times, while the
 cursor field was written by `0x8009D790` and decode-state bytes were written by
 `0x8009C9EC..0x8009CB0C`. The whole-RDRAM control fired, the retail target
@@ -277,7 +282,25 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4343) Add one value-aware retail C904 witness for object `0x80153420`:
+00. (s4344) Identify the earlier retail producer/semantic boundary selected by
+the value-aware C904 witness. Use the existing retained C904 rows plus the
+qualified object/cursor/table/state rows; do not infer that the selected words
+are branch selectors merely because they are read by C904. The next bounded
+measurement must capture the writer or selector transformation before C904,
+with the whole-RDRAM, title, hangar, and C904 controls. No mitigation or
+decoder/RSP/AI change is authorised.
+
+00a. (s4344) The value-aware witness passed the whole-RDRAM control (13,107
+hits), title VI `0x00790400`, hangar VI `0x006AB400`, and C904 execution control
+(3,107 executions; 987 phase-gated unique rows). Object `0x80153420` had
+advancing `+0x11C8` cursors and selected words such as `0x39C6D424` and
+`0xABE73289`, while `+0x18A/+0x18C` held varying decode state. Neither selected
+words nor state halfwords matched the retained `0x0010/0x3108` family. This
+selects an earlier boundary, but is qualified single-source value evidence;
+the independent line is the same-run retail execution/VI/watch controls, not
+an identification of the writer.
+
+00b. (s4343) Add one value-aware retail C904 witness for object `0x80153420`:
 record the cursor, selected `object+0x1A0+((cursor>>3)&0xFFC)` word, and the
 decoded halfwords/state at phase `0x006AB400`. Keep the whole-RDRAM, title, and
 hangar controls. A selected table word carrying `0x0010/0x3108` selects the
