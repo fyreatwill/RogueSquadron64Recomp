@@ -150287,3 +150287,22 @@ The first handoff now uses a phase-gated execution range around
 title-side bypass/absence, with the same source/task controls. Evidence:
 `scratch/agent/s4413_selector_payload/` and
 `scratch/agent/run_s4413_selector_payload.sh`.
+
+## Session 4414 (2026-10-09) — identified the retail title selector alternate entry
+
+Ran one 75-second Rice retail-oracle capture with the whole-RDRAM positive
+control, VI trace, phase buckets `0x00790400:1024`, `0x00790800:1024`, and
+`0x006AB400:512`, selector-family range `0x80029D20:0x80029F20`, source PCs,
+both generated direct edges, and task publication `0x80033FCC`. The control
+reported 198,459 hits, the run completed 4,476 VI, and task rows covered all
+three buckets: 629/628/538. The range executed in all three phases. Title
+range samples entered at `0x80029E80` from `0x8008EE84`; the exact
+`0x80029E78` field row and its `0x80091CB8` predecessor were hangar-only.
+
+This selects H-title-selector-alternate-entry over title bypass/absence for the
+qualified retail route. It rules out a global range/task watch failure, but it
+does not close the cross-source explanation: the result is single-source retail
+evidence. The next probe is a phase-keyed port capture to corroborate the
+alternate entry or show port/retail path divergence. ORIGIN: the oracle
+observed guest PCs, predecessor PCs, task fields, VI origins, and physical
+whole-RDRAM callbacks; no value was skipped, rewritten, or guarded.

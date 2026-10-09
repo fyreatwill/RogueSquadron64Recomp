@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4413 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4414 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -21,6 +21,18 @@ it identifies a title selector-path boundary requiring a wider execution
 range capture. ORIGIN: the retail oracle observed guest execution, task fields,
 VI origins, and physical whole-RDRAM callbacks; no value was skipped,
 rewritten, or guarded. This is single-source evidence only.
+
+Session 4414's phase-capable retail range capture passed the whole-RDRAM
+positive control (198,459 reported hits), completed 4,476 VI, and retained
+629/628/538 type-2 task rows in title `0x00790400`, title `0x00790800`, and
+hangar `0x006AB400`. The selector-family range executed in all three phases.
+Title execution entered at `0x80029E80` from `0x8008EE84`, while the exact
+`0x80029E78` field row and its `0x80091CB8` predecessor occurred only in
+hangar. This selects H-title-selector-alternate-entry over title bypass/absence
+for the qualified retail route. It remains single-source retail evidence;
+the next step is a port-side phase-keyed corroboration. ORIGIN: the oracle
+observed guest PCs, predecessor PCs, task fields, VI origins, and physical
+whole-RDRAM callbacks; no value was skipped, rewritten, or guarded.
 
 Session 4412's retail-oracle selector-source capture passed the whole-RDRAM
 control (10,000 callbacks), reached title `0x00790400` and hangar
@@ -824,14 +836,13 @@ was skipped, rewritten, or guarded.
 ## Next steps
 
 1. **M5 pre-filter selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4413 found the exact selector
-   `0x80029E78` only in hangar while title task publication remained live.
-   Next use one phase-gated retail execution-range capture over the selector
-   family around `0x80029D20..0x80029F20`, with whole-RDRAM, all three VI
-   buckets, source PCs, direct edges, and `0x80033FCC` controls. A title-range
-   hit at another PC identifies the alternate selector path; no title-range
-   hit with live title task rows selects a pre-range/title-side boundary; loss
-   of task/source controls invalidates the comparison.
+   `m5-selector-decode-boundary`. Session 4414 found title hits at
+   `0x80029E80` from `0x8008EE84`, while exact `0x80029E78` remained
+   hangar-only. Run the existing qualified port route with phase-keyed selector
+   entry/caller logs and the same task/input controls. Matching title
+   `0x80029E80` activity corroborates the alternate entry; title-only
+   `0x80029E78` activity selects port/retail path divergence; missing phase and
+   task controls invalidates the comparison.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -843,6 +854,7 @@ was skipped, rewritten, or guarded.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
+| M5 title selector entry | Session 4414 retail range evidence selects a title entry at `0x80029E80` from `0x8008EE84`, distinct from hangar's exact `0x80029E78` entry from `0x80091CB8`; single-source pending port corroboration. |
 | M5 title AI boundary | s4410 phase latch selected a title-phase `0x80091CB8` call consumed at the first hangar VI transition; later hangar boundary/input/source/store/task witnesses were live. This closes the phase-order ambiguity for the qualified port route and rules out an indirect/aliased caller there. |
 | M5 title caller path | s4375/s4376 qualify `0x80019DEC -> 0x80033FCC` as the direct publication chain; s4377 selects a phase-specific selector/object input; s4378 finds payload writers outside the prior candidate set; s4379 confirms some writer traffic after publication but leaves value provenance open. |
 | M5 consumer join | s4363 plus s4370/s4371 independent retail captures confirm distinct phase-specific task families and zero exact recurrence of nonzero selected words in the first eight published payload words (591/591, 601/601, 344/344). H-later-consumer-transform is confirmed for that boundary; the intermediate transform/publication stage remains open. |
