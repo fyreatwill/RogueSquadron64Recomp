@@ -4,7 +4,17 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4346: the qualified retail C904 reader/input witness passed
+Updated for session 4347: the fixed qualified retail caller/input witness passed
+the whole-RDRAM, title, hangar, and C904 controls. It recorded 1,942
+phase-gated writes to captured C904 input spans; seven writer events carried
+exact family value `0x0010`, all from `0x8009DB2C`, while additional span writes
+came from `0x8002A0B8/0x8002A0BC`. This selects H-input-producer and identifies
+the next writer boundary. The value attribution is single-source retail
+evidence; whole-RDRAM, VI, and C904 execution controls independently qualify
+route and execution. The first attempt is invalid as evidence because the
+delay-slot watch was never hit and the positive-control watch self-removed
+before hangar; the fixed run corrected both.
+Previously 4346: the qualified retail C904 reader/input witness passed
 the whole-RDRAM, title, hangar, and C904 controls. It recorded 259 distinct
 selected words at reader `0x8009C950`; none matched retained `0x0010/0x3108`
 exactly or in the low halfword, and none of 253 C904-entry rows had either

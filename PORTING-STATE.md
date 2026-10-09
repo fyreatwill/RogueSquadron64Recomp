@@ -149003,3 +149003,26 @@ both PCs and phase-gates the combined reader/input rows. The initial route-inval
 attempt is retained as a failed setup experiment, not evidence about the game.
 (HYPOTHESIS-ID m5-step9-earlier-input-source): attribute the producer feeding
 the C904 input pointer at caller `0x8009C0E4` and its source span next.
+## Session 4347 (2026-10-08) — retail C904 input-span writer attribution
+
+Ran the prescribed M5 Step 9 earlier-input-source oracle witness. The first
+build/run was invalid as evidence: the debugger never delivered the delay-slot
+PC watch at `0x8009C0E8`, and the whole-RDRAM positive-control watch removed
+itself at 10,000 writes before the hangar phase. Fixed the witness to capture
+the already-qualified `0x8009C904` entry arguments and added
+`RS64_KEEP_POSITIVE_CONTROL=1` so the positive control stayed armed; rebuilt
+once and reran the same 180-second recipe.
+
+The fixed run passed the positive control (299,724,871 whole-RDRAM writes),
+reached title and hangar VI buckets, and hit C904 and the selected-word reader
+3,107 times each. It captured 1,942 phase-gated writes into the derived
+`[input,input+8)` spans. Seven writer events supplied exact retained family
+value `0x0010`; all seven were at writer PC `0x8009DB2C`. Other writes to the
+same spans came from `0x8002A0B8`/`0x8002A0BC`, with zero source values in the
+reported samples. No conclusion was drawn from the invalid first run. This
+rejects H-caller and selects H-input-producer, moving the next boundary to the
+`0x8009DB2C` writer/source stream. The payload attribution is single-source
+retail evidence; whole-RDRAM, VI, and C904 execution controls independently
+qualify route and execution. It rules out the C904 reader and immediate input
+words as the first observed family source, but does not yet identify the
+semantic producer feeding `0x8009DB2C`.

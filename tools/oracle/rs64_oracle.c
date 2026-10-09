@@ -427,6 +427,16 @@ static struct c904_witness_row g_c904_witness_rows[MAX_C904_WITNESS_ROWS];
 static int g_c904_witness_enabled;
 static long g_c904_witness_hits;
 static long g_c904_witness_overflow;
+struct c904_input_span {
+    uint32_t input;
+    uint32_t width;
+    uint32_t origin;
+    long n;
+};
+#define MAX_C904_INPUT_SPANS 128
+static struct c904_input_span g_c904_input_spans[MAX_C904_INPUT_SPANS];
+static int g_n_c904_input_spans;
+static long g_c904_input_writer_hits;
 struct store_field_dump_pc {
     uint32_t pc;
     uint64_t watch_mask;
@@ -742,6 +752,19 @@ static void dump_c904_witness(uint32_t pc)
 
     if (!g_c904_witness_enabled || !pc_phase_log_match())
         return;
+    if ((pc == 0x8009C0E8u || pc == 0x8009C904u) &&
+        g_n_c904_input_spans < MAX_C904_INPUT_SPANS) {
+        struct c904_input_span *span =
+            &g_c904_input_spans[g_n_c904_input_spans++];
+        span->input = gpr32(5) & 0x1FFFFFFFu;
+        span->width = pDebugMemRead32(VI_WIDTH_ADDR);
+        span->origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        span->n = 1;
+        printf("[c904-input-span] pc=0x%08x input=0x%08x w0=0x%08x w1=0x%08x width=%u origin=0x%08x n=1\n",
+               pc, span->input, debug_mem_u32(span->input),
+               debug_mem_u32(span->input + 4u), span->width, span->origin);
+        fflush(stdout);
+    }
     g_c904_witness_hits++;
     row.pc = pc;
     row.prev_pc = (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC);
@@ -1909,6 +1932,25 @@ static void dbg_update(unsigned int pc)
     pDebugBreakpointTriggeredBy(&flags, &accessed);
     access_flags = flags & (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE);
 
+    if ((access_flags & M64P_BKP_FLAG_WRITE) && pc_phase_log_match()) {
+        int span_i;
+        uint32_t physical = accessed & 0x1FFFFFFFu;
+        for (span_i = 0; span_i < g_n_c904_input_spans; span_i++) {
+            struct c904_input_span *span = &g_c904_input_spans[span_i];
+            if (physical >= span->input && physical < span->input + 8u) {
+                uint32_t instruction =
+                    pDebugMemRead32(debug_rdram_addr(pc));
+                unsigned source_reg = (instruction >> 16) & 31u;
+                printf("[c904-input-writer] span=0x%08x..0x%08x width=%u origin=0x%08x addr=0x%08x pc=0x%08x source=0x%08x\n",
+                       span->input, span->input + 8u, span->width,
+                       span->origin, physical, pc, gpr32((int)source_reg));
+                fflush(stdout);
+                g_c904_input_writer_hits++;
+                break;
+            }
+        }
+    }
+
     if ((flags & M64P_BKP_FLAG_EXEC) && pc == VI_SWAP_PC &&
         pDebugMemRead32(VI_WIDTH_ADDR) == 640) {
         count_vi_swap_phase(pDebugMemRead32(VI_ORIGIN_ADDR),
@@ -2039,7 +2081,9 @@ static void dbg_update(unsigned int pc)
         char sb[24]; snprintf(sb, sizeof sb, "%08X", pc);
         if (strcasestr(getenv("RS64_STACK_DUMP_PCS"), sb)) detail_hit = 1;
     }
-    if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].write_hits == 10000) {
+    if (!getenv("RS64_KEEP_POSITIVE_CONTROL") &&
+        !g_positive_watch_removed && g_nwatch > 0 &&
+        g_watch[0].write_hits == 10000) {
         int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX,
                                           g_watch[0].breakpoint_idx, NULL);
         printf("[oracle] positive-control threshold reached: watch index 0 callbacks=%ld; removal rc=%d; watch index 1 remains armed\n",
@@ -2672,7 +2716,7 @@ int main(int argc, char **argv)
             g_pc_field_dump_any_phase = 1;
         else if (!strcmp(argv[i], "--c904-witness")) {
             g_c904_witness_enabled = 1;
-            add_pc_watches("0x8009C904,0x8009C950");
+            add_pc_watches("0x8009C0E8,0x8009C904,0x8009C950");
         }
         else if (!strcmp(argv[i], "--store-field-dump") && i + 1 < argc)
             add_store_field_dump(argv[++i]);

@@ -1,41 +1,42 @@
-# Next work unit (s4347): earlier C904 input-source attribution
+# Next work unit (s4348): static source census for the C904 family writer
 
-HYPOTHESIS-ID: m5-step9-earlier-input-source
+HYPOTHESIS-ID: m5-step9-input-writer-source
 
-The s4346 retail witness passed whole-RDRAM, title `0x00790400`, hangar
-`0x006AB400`, and exact C904/reader execution controls. Neither the selected
-word at `0x8009C950` nor the first two words at the C904 input pointer carried
-the retained `0x0010/0x3108` family. The next boundary is caller `0x8009C0E4`
-and the producer of its input pointer.
+Session 4347 selected the phase-gated input-span producer: retail writer
+`0x8009DB2C` supplied exact `0x0010` values to C904 input spans. The generated
+code shows this is a halfword store of `$t2` after clamping and `& 0xFFF8` in
+the loop at `0x8009D980`; `0x8002A0B8/0x8002A0BC` are separate zero-writing
+DMA/clear activity. The next unit is a bounded static census of the complete
+writer idiom feeding `$t2` in `runVoiceLatticeFilter`, not another reactive
+oracle run.
 
 Competing hypotheses:
 
-- H-caller: the caller transformation at `0x8009C0E4` carries the retained
-  family; phase-gated caller registers/input values will contain `0x0010` or
-  `0x3108`.
-- H-input-producer: the caller only forwards a non-family buffer; a writer to
-  the input-buffer span carries the family and identifies the producer.
-- H-earlier-source: neither caller nor watched input-buffer writer carries the
-  family, moving the boundary earlier again.
+- H-lattice-legitimate: `0x8009DB2C` is the semantic producer; its `$t2`
+  source is a legitimate lattice/filter result and the family value is an
+  expected quantized sample/state value.
+- H-lattice-input: `$t2` is derived from an earlier input field or table read;
+  the census identifies a stable source address/field whose writer is the next
+  boundary.
+- H-aliased-buffer: the C904 span is reused storage and `0x8009DB2C` writes a
+  later consumer buffer, so the apparent family match is a lifetime/alias
+  coincidence; the function's pointer setup will show a non-C904 buffer role.
 
-Discriminating measurement: one batched retail oracle witness for execution at
-`0x8009C0E4` plus a phase-gated writer watch over the exact input-buffer span
-derived from the generated caller. Record caller `$v0/$a1/$a2/$a3`, input
-pointer and first words, writer PC/source value, and family classification.
-Caller-family with no matching writer selects H-caller; writer-family selects
-H-input-producer; neither selects H-earlier-source. The whole-RDRAM watch must
-fire first, and title/hangar/C904 controls must all pass.
+Discriminating measurement: enumerate every loop iteration's pointer setup and
+all reads feeding `$t2` from the generated MIPS around `0x8009D980` through
+`0x8009DB2C`, then join those reads to the C904 span geometry and companion
+symbol names. A stable direct source field/table read selects H-lattice-input;
+a clamped arithmetic-only result with the destination proven to be the active
+voice output selects H-lattice-legitimate; a destination outside the active
+C904 buffer role selects H-aliased-buffer. If static dataflow cannot split the
+three, stop and design one batched retail witness before building.
 
-Before building, inspect `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`
-around `0x8009C0E4` and the input-buffer consumers. Add the batched witness to
-`tools/oracle/rs64_oracle.c`, then build once:
+Commands:
 
-`env CORE_SRC="/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core" bash tools/oracle/build.sh`
+`rg -n -C 80 '0x8009D980|0x8009DB2C|0x8002A0B8|0x8002A0BC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c`
 
-Run from the repo root for 180 seconds with the debug core, `build/rogue_squadron.z64`,
-Rice video, whole-RDRAM watch, title/hangar phase buckets, C904 execution
-control, and the standard schedule:
+`rg -n -C 12 'runVoiceLatticeFilter|0x8009D980|0x8009DB2C' docs scratch /Users/williambuckley/Documents/Tools/rogue_squadron64`
 
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom build/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 180 --watch-write 0x0:0x800000 --hit-cap 10000 --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150`
-
-Do not alter decoder/RSP/AI behavior or add a mitigation.
+Do not change decoder, RSP, AI, or runtime behavior. If the static census
+cannot discriminate, do not build an instrument; write the blocker and a new
+ground-truth measurement into NEXT.md instead.
