@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4416 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4417 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -80,6 +80,18 @@ pre-filter boundary remains open. ORIGIN: the port runtime recorded generated
 guest PCs and phase-keyed controls; no value was skipped, rewritten, or
 guarded.
 
+Session 4417's paired capture passed the retail whole-RDRAM control (10,000-hit
+threshold), retail VI/task controls, and the port input, VI, selector, and task
+controls. Retail again showed `0x8008EE84 -> 0x80029E80` and the
+`0x80091CB8 -> 0x80029D20` predecessor edge. The port selector fired twice in
+title and once in hangar, with matching `0x561F` input rows, but its existing
+caller and precall witnesses fired zero times. This rules out a global port
+route absence, but the caller/precall comparison is unevaluable: the missing
+port witness could be an instrumentation-path mismatch rather than a guest
+path divergence. ORIGIN: retail debugger execution/GPR/VI/task observations
+and port phase-keyed runtime observations; no selector, input, task, or output
+value was rewritten, skipped, or guarded.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -111,11 +123,11 @@ available.
 ## Next steps
 
 1. **M5 pre-filter selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Build one phase-keyed comparison of the
-   port exact `0x80029E78` entry against retail `0x80029E80`, retaining input,
-   VI, task, and image controls. The open discriminator is the first
-   divergent caller/input/state before the selector; missing controls make
-   the comparison unevaluable.
+   `m5-selector-decode-boundary`. Audit every generated port callsite and patch
+   marker for the caller/precall witnesses, then qualify the actual edge with
+   the existing selector/input, VI, task, and image controls. Do not interpret
+   the current caller/precall zero as a guest-path null until this witness is
+   proven live.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

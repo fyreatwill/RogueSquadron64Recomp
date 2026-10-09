@@ -73183,6 +73183,23 @@ inside the RSP. The oracle cannot watch `ACCH:ACCM:ACCL`. No mitigation.
 ORIGIN: observational oracle watches plus already-generated ucode; no guest
 value was skipped, rewritten, or guarded.
 
+## Session 4417 (2026-10-09) — paired selector boundary remained unevaluable
+
+Ran the paired retail/oracle and port capture from
+`scratch/agent/run_s4418_m5_selector_boundary_pair.sh`. The retail arm passed
+the whole-RDRAM positive control (10,000-hit threshold), completed 4,478 VI,
+and retained 1,942 task rows. It showed the expected `0x8008EE84` caller into
+`0x80029E80`, plus the `0x80091CB8` predecessor edge. The port arm passed its
+input, VI, selector, and task controls, with selector rows in title and hangar
+and `0x561F` input rows, but the existing port caller and precall witnesses
+were both zero; no crash or abort marker occurred. This rules out a global
+port-route absence but does not select before-selector divergence versus
+selector-entry divergence, because the port caller/precall comparison is not
+qualified. ORIGIN: retail debugger execution/GPR/VI/task observations and port
+phase-keyed runtime observations; no guest value was rewritten, skipped, or
+guarded. Evidence: `scratch/agent/s4418_m5_selector_boundary_pair/summary.txt`
+and its `retail.log`/`port.log` captures.
+
 ## Session 1513 (2026-08-15) — synchronized the compute-cutscene-screen-scale symbol
 
 Performed the bounded exact-name census over `0x800AD224..0x800AD690`.
