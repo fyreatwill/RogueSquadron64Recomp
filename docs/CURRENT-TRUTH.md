@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4422 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4423 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -154,6 +154,21 @@ H-init-route over H-writer-value and closes H-join-failure for this boundary.
 ORIGIN: retail physical write callbacks/post-store summaries and port
 phase-keyed generated hooks; no table value was rewritten, skipped, or guarded.
 
+Session 4423 reran the title-initializer capture with the required oracle
+emulator mode and widened execution-range witness after the first recipe lacked
+the hangar positive control. The corrected run passed whole-RDRAM, title and
+hangar VI, and selector-load controls: retail selector-load PC
+`0x80091060` executed 1,421 times and the widened range executed 20,063,244
+times. Retail performed zero stores to physical `0x00149758/0x0014975C` in
+both title buckets, but performed six stores to each in hangar at
+`0x8008F228/0x8008F264`, with values `0x80171E70/0x80173CB0`. The port arm
+independently emitted title and hangar stores and remained crash-free. This
+selects retail title preinitialization versus a title bypass of the table-store
+route; it does not select between those two. The initial uncorrected capture is
+invalid for this distinction because its retail hangar writer control was zero.
+ORIGIN: retail physical write callbacks, retail execution watches, and port
+phase-keyed generated hooks; no table value was rewritten, skipped, or guarded.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -187,14 +202,16 @@ available.
 
 ## Next steps
 
-1. **Identify the retail title initializer/store route** — HYPOTHESIS-ID
-   `m5-selector-title-init-route`. Use the known retail selector-load PCs and
-   title phase as the gate; enumerate the caller/preceding range and table-
-   address writer PCs in one oracle capture, with whole-RDRAM and VI/task
-   controls. A retail title writer row selects an earlier/different route; a
-   live title load with no writer in the widened range leaves preinitialization
-   versus bypass to the table value/index fields. Keep the matching hangar
-   writer as the positive control; do not rewrite or guard table state.
+1. **Split retail title preinitialization from table-route bypass** —
+   HYPOTHESIS-ID `m5-selector-title-init-route`. Use the live retail selector
+   load at `0x80091060` and title phase as the gate; capture the loaded table
+   value/index fields and all title-side selector caller/preceding execution
+   rows, while retaining the whole-RDRAM, VI, and hangar table-write controls.
+   A title load that consumes the same preexisting table value/index without a
+   title store selects H-retail-title-preinitialized; a title load with a
+   different selector field or caller path selects H-retail-title-bypass.
+   Failed controls leave the boundary unresolved. Do not rewrite or guard
+   table state.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

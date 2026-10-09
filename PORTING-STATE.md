@@ -150434,3 +150434,18 @@ hangar values and live controls rule out a watch/join failure and H-writer-value
 at the observed boundary. They select H-init-route: retail's title table state
 comes from a different earlier initializer/store route or bypass. No value was
 rewritten, skipped, or guarded. The next unit targets that retail title route.
+
+## Session 4423 (2026-10-09) — split retail title preinitialization from bypass
+
+The corrected s4423 paired capture passed whole-RDRAM, title/hangar VI,
+selector-load, and hangar writer controls. Retail selector load `0x80091060`
+executed 1,421 times and its widened range executed 20,063,244 times. Retail
+performed zero table stores in both title buckets, but six stores to each table
+word in hangar at `0x8008F228/0x8008F264`, with values
+`0x80171E70/0x80173CB0`. The port independently emitted title and hangar
+stores and no crash or abort markers. This leaves retail title
+preinitialization versus a title bypass of the table-store route. The initial
+uncorrected recipe was invalid because its hangar positive control was zero.
+No value was rewritten, skipped, or guarded. ORIGIN: retail physical write and
+execution callbacks plus port phase-keyed generated hooks; all observations
+were read-only.
