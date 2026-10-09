@@ -150238,3 +150238,25 @@ hangar task route, but does not identify the hangar selector caller. ORIGIN:
 the oracle observed guest PCs, VI origins, and task pointers; no value was
 skipped, rewritten, or guarded. Next: add the qualified `0x8009C904` and
 `0x8009C950` source witnesses in the same phase-gated capture.
+
+## Session 4412 (2026-10-09) — qualified the retail hangar selector path
+
+The first two launch attempts failed before the oracle started because of
+mistyped core paths (`RC=1` with no output); a direct `ls` check identified the
+actual core path, and the corrected run used the unchanged measurement. Ran
+one 75-second retail-oracle capture with Rice video, the whole-RDRAM positive
+control, VI trace, title/hangar phase buckets, source PCs `0x8009C904` and
+`0x8009C950`, selector `0x80029E78`, both generated direct edges, and task
+publication `0x80033FCC`. The positive control reached 10,000 callbacks;
+title `0x00790400` and hangar `0x006AB400` were live; the run completed 4,486
+VI and retained 1,776 task-witness executions, including 1,119 type-2 rows.
+The source PCs each had 768 lifetime executions. In hangar, selector
+`0x80029E78` and direct edge `0x80091CB8` both fired; `0x80091BAC` fired zero.
+This overturns session 4411's retail-watch-boundary interpretation and
+selects H-retail-hangar-selector-live: the source/task arm and selector path
+are both live. It rules out a missing selector watch boundary for this route,
+but does not yet distinguish shared selector input with multiplexed payload
+from a phase-specific selector input. ORIGIN: the oracle observed guest PCs,
+VI origins, task pointers, and task fields; no value was skipped, rewritten,
+or guarded. Next: compare selector arguments/returns with phase-keyed task
+payload identities.

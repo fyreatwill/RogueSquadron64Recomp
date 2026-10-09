@@ -4,20 +4,21 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4411 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4412 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
-Session 4411's retail-oracle selector/decode capture passed the whole-RDRAM
-positive control (10,000 callbacks), reached title `0x00790400` and hangar
-`0x006AB400`, and retained 5,135 task-publication executions. The two generated
-direct-edge watches split as `0x80091CB8=4`, `0x80091BAC=0`; the selected
-selector entry `0x80029E78` also fired 4 times, all before the hangar bucket.
-Task payload identities were phase-specific (`0x80173B20`, `0x80171CE0`,
-`0x80171E70`), but the hangar selector arm was absent while hangar task rows
-were live. This selects H-retail-watch-boundary and does not by itself promote
-H-retail-selector-multiplex. ORIGIN: the oracle observed guest PCs, phase
-origins, and task pointers; no value was skipped, rewritten, or guarded.
+Session 4412's retail-oracle selector-source capture passed the whole-RDRAM
+control (10,000 callbacks), reached title `0x00790400` and hangar
+`0x006AB400`, and retained 1,776 task-witness executions (1,119 type-2).
+Hangar source PCs `0x8009C904` and `0x8009C950` each had 768 lifetime hits;
+the selector `0x80029E78` and direct edge `0x80091CB8` both fired in hangar,
+while `0x80091BAC` remained absent. This overturns session 4411's
+retail-watch-boundary interpretation and selects H-retail-hangar-selector-live:
+the source/task arm and selector path are both live. It does not yet prove
+which selector input or payload transform supplies the hangar task family.
+ORIGIN: the oracle observed guest PCs, VI origins, and task pointers; no value
+was skipped, rewritten, or guarded.
 
 Session 4408's retail-oracle ground-truth attempt passed the whole-RDRAM
 positive control and reached title 1024, but its driven 85-second route did not
@@ -809,13 +810,14 @@ was skipped, rewritten, or guarded.
 ## Next steps
 
 1. **M5 pre-filter selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4411 qualified title and hangar but
-   found the direct/selector arm title-only. Map the live hangar source path
-   by adding the already-qualified `0x8009C904`/`0x8009C950` witnesses in the
-   same retail-oracle run as `0x80029E78` and `0x80033FCC`; retain the two
-   direct edges, whole-RDRAM and VI controls. Only a hangar selector row joined
-   to a live source/task row can distinguish a phase-specific selector from a
-   missing `0x80029E78` watch boundary.
+   `m5-selector-decode-boundary`. Session 4412 established that the hangar
+   source and selector path are live. Next compare the selector's phase-keyed
+   arguments and return values with the source/task payload identities in one
+   retail-oracle run, retaining whole-RDRAM, VI, both source PCs,
+   `0x80029E78`, both direct edges, and `0x80033FCC` controls. A shared
+   selector input with divergent payloads selects multiplex/transform; a
+   phase-specific selector input selects an upstream phase split; missing
+   source/task rows invalidate the comparison.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
