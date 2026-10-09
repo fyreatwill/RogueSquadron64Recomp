@@ -149961,3 +149961,24 @@ remains the next M5 work unit. No mitigation or value rewrite was added.
 ORIGIN: retail task-publication PCs, exact writer PCs/effective addresses,
 snapshotted task words, ordinal direction, and whole-RDRAM/VI controls were
 observed; no value was skipped, rewritten, or guarded.
+
+## Session 4396 (2026-10-09) — censused selector/decode boundary
+
+The first two 75-second oracle runs were invalid: the phase-local caller-range
+retention table overflowed at 1,403 rows after the total cap was raised. The
+corrected run raised both capacity limits and passed all gates: whole-RDRAM
+positive control, both title origins, hangar origin, 1,719 valid type-2 tasks,
+2,938 retained caller-range rows with zero overflow, 24,165 exact writes with
+zero ordinal overflow, and 4,484 VI. The range executed through
+`0x80019DEC -> 0x80033FCC`; no candidate-range PC appeared in the exact task
+payload writer set, which remained in the `0x80090...` family. Published-word
+matches remained before-task and phase-specific: semantic 481/7,276 and
+482/7,291 in title, 0/4,629 in hangar; maintenance 130/1,091, 130/1,091,
+and 51/854. This qualifies the retail no-writer/value-divergence result as
+H-later-transform, but it remains single-source evidence and requires a port
+corroboration before closure. The invalid capacity runs select no hypothesis.
+No game value was skipped, rewritten, or guarded.
+
+ORIGIN: retail execution-range PCs, task-publication PCs, exact payload writer
+PCs, source/post scalar validation, and whole-RDRAM/VI controls were observed;
+no value was skipped, rewritten, or guarded.

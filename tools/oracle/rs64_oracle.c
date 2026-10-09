@@ -666,8 +666,8 @@ static const char *ordinal_value_class_name(int class_id)
     if (class_id == 2) return "scalar-nonzero";
     return "unsupported";
 }
-#define MAX_PC_RANGE_TASK_ROWS 1536
-#define MAX_PC_RANGE_TASK_ROWS_PER_PHASE 512
+#define MAX_PC_RANGE_TASK_ROWS 16384
+#define MAX_PC_RANGE_TASK_ROWS_PER_PHASE 8192
 struct pc_range_task_row {
     uint32_t pc;
     uint32_t width;

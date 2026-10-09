@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4395 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4396 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -613,6 +613,23 @@ PCs/effective addresses, snapshotted task words, ordinal direction, and
 whole-RDRAM/VI controls are observed; no value was skipped, rewritten, or
 guarded.
 
+Session 4396's selector/decode boundary census had two invalid capacity runs,
+then a corrected 75-second Rice capture. The corrected run passed the
+whole-RDRAM control, reached both title origins and hangar, retained 1,719
+valid type-2 tasks (`invalid=0`, `overflow=0`), 2,938/2,938 phase-gated
+caller-range rows (`overflow=0`), and 24,165 exact payload writes with zero
+ordinal overflow. The range executed through the qualified
+`0x80019DEC -> 0x80033FCC` chain, but no candidate-range PC appeared as a
+semantic payload writer; exact writers remained in the `0x80090...` family.
+Published-word matches were before-task: semantic 481/7,276 and 482/7,291 in
+title and 0/4,629 in hangar; maintenance 130/1,091, 130/1,091, and 51/854.
+This qualifies H-later-transform over a missing range-watch explanation, but
+is single-source retail evidence and does not close the boundary. The two
+earlier capacity runs are invalid and select no hypothesis. ORIGIN: retail
+execution range, task publication, exact writer PCs, source/post scalar
+validation, and phase/VI controls were observed; no value was skipped,
+rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -628,14 +645,9 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Locate the remaining producer-to-publication
-   transform with one phase-gated boundary census around the qualified title
-   caller chain and task publication, retaining selected words, task ordinals,
-   effective destinations, and source/post scalar values in one table.
-   H-direct-prepublication predicts a same-value named intermediate writer;
-   H-later-transform predicts no such writer but a changed publication value;
-   H-maintenance-only predicts the existing maintenance matches without a
-   semantic intermediate. Do not repeat address-containment-only comparisons.
+   `m5-selector-decode-boundary`. Obtain the second, port-side evidence line
+   for s4396's qualified retail no-writer/value-divergence result. Do not
+   repeat the retail range census or address-containment-only comparisons.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
