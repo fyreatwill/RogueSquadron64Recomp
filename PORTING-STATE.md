@@ -149897,3 +149897,21 @@ mitigation or value rewrite was added.
 ORIGIN: retail task-publication PCs, exact writer PCs/effective addresses and
 source values, phase-keyed ordinal joins, and whole-RDRAM controls; no value
 was skipped, rewritten, or guarded.
+## Session 4393 (2026-10-09) — joined exact writers to published task spans
+
+The first containment build/run had a classification-order bug: `data_ptr+0x100`
+is inside the broad `data_ptr/data_size` span, so it reported zero `plus_100`
+rows. The corrected build/run passed the whole-RDRAM control (1,559,546
+callbacks), reached 4,484 VI and all three phase buckets, retained 1,731 valid
+type-2 tasks, and had zero ordinal overflow. Its bounded 32-key table had no
+key overflow and no missing task joins. Semantic writers `0x80090DE4` and
+`0x80090B68` were in the joined data span for 52,435/52,435 rows. Maintenance
+writers `0x80090CA4` and `0x80091078` were in-span for 31,194/31,997 rows,
+with 802 rows in the separate `data_ptr+0x100` field and one outside. This
+favors H-semantic-payload-span for the address-containment discriminator, but
+maintenance traffic is mixed rather than absent and containment is not payload
+value equality. The run rules out a missing task/span join and exclusive
+maintenance provenance for this table; it does not close the transform boundary.
+ORIGIN: retail task-publication PCs, exact writer PCs/effective addresses, task
+data spans, scalar value classes, and whole-RDRAM/VI controls; no value was
+skipped, rewritten, or guarded.

@@ -1,35 +1,34 @@
-# Next work unit (s4393): join exact writers to published task spans
+# Next work unit (s4394): compare writer values with published task words
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
 Competing hypotheses:
 
-- H-semantic-payload-span: semantic PCs write addresses contained in the
-  nearest task's published `data_ptr/data_size` span more often than the
-  maintenance PCs; this selects semantic payload provenance.
-- H-maintenance-payload-span: maintenance PCs have the stronger containment
-  rate, so the named semantic stores are setup/maintenance traffic.
-- H-transform-or-gap: neither named class is contained, or the task span is
-  too small/ambiguous to evaluate; the transform/publication boundary remains
-  open and the span model is not yet ground truth.
+- H-semantic-value: semantic writer source values match the corresponding
+  published task-data words more often than maintenance values; this supplies
+  the second evidence line for semantic payload provenance.
+- H-maintenance-value: maintenance writers have the stronger published-word
+  match rate; the address-containment split mislabels the producer.
+- H-transform-or-gap: neither class has stable value matches, or the task
+  snapshot and store ordinal cannot be joined without overflow; the transform
+  boundary remains open.
 
-Discriminating measurement: one oracle build/run retaining the existing
-positive control, three phase buckets, task rows, exact writer rows, scalar
-mismatch fields, and a bounded table keyed by phase/watch/writer class/value
-class that reports whether each writer effective address is in the joined
-task's `data_ptr/data_size` span, in its `data_ptr+0x100` field, or outside.
-Each possible result above is decided by comparing containment counts/rates for
-the semantic PCs (`0x80090DE4`/`0x80090B68`) and maintenance PCs
-(`0x80090CA4`/`0x80091078`); invalid pointers, task overflow, or unresolved
-size semantics select H-transform-or-gap.
+Discriminating measurement: one oracle build/run retaining the whole-RDRAM
+positive control, all three VI buckets, exact task ordinals, exact writer
+effective addresses/source values, scalar mismatch validation, and a bounded
+phase/watch/writer-class table. For each joined scalar store, read the
+corresponding guest word from the published task data span at the store's
+effective address and report exact source-value equality, post-store equality,
+and unavailable/unaligned cases separately. Semantic-versus-maintenance match
+rates decide the hypotheses; task overflow, no-task joins, or unsupported
+scalar stores make the result unevaluable rather than a null.
 
 Exact commands:
 
-    extend tools/oracle/rs64_oracle.c with the bounded containment table
+    extend tools/oracle/rs64_oracle.c with the phase/task-ordinal value table
     build with tools/oracle/build.sh
-    bash scratch/agent/run_s4393_m5_exact_span_containment.sh
+    bash scratch/agent/run_s4394_m5_published_word_compare.sh
 
 Controls: whole-RDRAM positive control must fire and be removed at threshold;
-all title/hangar VI origins must be live; valid type-2 rows >= 1,000;
-ordinal overflow 0; supported scalar mismatch 0; no mitigation or value
-rewrite.
+all title/hangar VI origins must be live; valid type-2 rows >= 1,000; ordinal
+overflow 0; supported scalar mismatch 0; no mitigation or value rewrite.

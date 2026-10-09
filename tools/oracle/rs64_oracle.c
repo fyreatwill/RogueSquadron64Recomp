@@ -599,6 +599,20 @@ struct ordinal_writer_key {
     long no_task;
 };
 
+#define MAX_SPAN_WRITER_KEYS 2048
+struct span_writer_key {
+    uint32_t width;
+    uint32_t origin;
+    int watch;
+    int writer_class;
+    int value_class;
+    long joined;
+    long in_data_span;
+    long in_plus_100;
+    long outside;
+    long no_task;
+};
+
 static int ordinal_writer_class(uint32_t pc)
 {
     if (pc == 0x80090DE4u || pc == 0x80090B68u)
@@ -3809,6 +3823,88 @@ int main(int argc, char **argv)
                        ordinal_value_class_name(key->value_class),
                        key->effective_addr, key->nearest, key->before,
                        key->after, key->equal, key->no_task);
+            }
+        }
+        {
+            static struct span_writer_key keys[MAX_SPAN_WRITER_KEYS];
+            int key_n = 0;
+            long key_overflow = 0;
+            memset(keys, 0, sizeof(keys));
+            for (int phase = 0; phase < g_n_pc_phase_log_origin; phase++) {
+                for (int wi = 0; wi < g_n_ordinal_writes; wi++) {
+                    struct ordinal_write_row *write = &g_ordinal_writes[wi];
+                    struct pc_task_dump_row *best = NULL;
+                    uint64_t best_distance = UINT64_MAX;
+                    int writer_class, value_class, key_i;
+                    if (write->width != g_pc_phase_log[phase].width ||
+                        write->origin != g_pc_phase_log[phase].origin)
+                        continue;
+                    for (int ti = 0; ti < g_n_pc_task_dump_rows; ti++) {
+                        struct pc_task_dump_row *task = &g_pc_task_dump_rows[ti];
+                        uint64_t distance;
+                        if (task->width != write->width || task->origin != write->origin)
+                            continue;
+                        distance = task->event_ordinal > write->event_ordinal
+                            ? task->event_ordinal - write->event_ordinal
+                            : write->event_ordinal - task->event_ordinal;
+                        if (distance < best_distance) {
+                            best_distance = distance;
+                            best = task;
+                        }
+                    }
+                    writer_class = ordinal_writer_class(write->pc);
+                    value_class = ordinal_value_class(write);
+                    for (key_i = 0; key_i < key_n; key_i++) {
+                        if (keys[key_i].width == write->width &&
+                            keys[key_i].origin == write->origin &&
+                            keys[key_i].watch == write->watch &&
+                            keys[key_i].writer_class == writer_class &&
+                            keys[key_i].value_class == value_class)
+                            break;
+                    }
+                    if (key_i == key_n) {
+                        if (key_n >= MAX_SPAN_WRITER_KEYS) {
+                            key_overflow++;
+                            continue;
+                        }
+                        keys[key_n].width = write->width;
+                        keys[key_n].origin = write->origin;
+                        keys[key_n].watch = write->watch;
+                        keys[key_n].writer_class = writer_class;
+                        keys[key_n].value_class = value_class;
+                        key_n++;
+                    }
+                    if (!best) {
+                        keys[key_i].no_task++;
+                        continue;
+                    }
+                    keys[key_i].joined++;
+                    {
+                        uint32_t addr = write->effective_addr & 0x1FFFFFFFu;
+                        uint32_t base = best->data_ptr & 0x1FFFFFFFu;
+                        uint64_t len = (uint64_t)best->data_size * 0xA10u;
+                        uint32_t field = (base + 0x100u) & 0x1FFFFFFFu;
+                        if (addr >= field && addr < field + 4u)
+                            keys[key_i].in_plus_100++;
+                        else if (len && addr >= base && (uint64_t)addr < (uint64_t)base + len)
+                            keys[key_i].in_data_span++;
+                        else
+                            keys[key_i].outside++;
+                    }
+                }
+            }
+            printf("[oracle] span-writer-join-summary keys=%d/%d overflow=%ld\n",
+                   key_n, MAX_SPAN_WRITER_KEYS, key_overflow);
+            for (int key_i = 0; key_i < key_n; key_i++) {
+                struct span_writer_key *key = &keys[key_i];
+                printf("[oracle] span-writer-join phase=0x%08x:%u watch=%d class=%s "
+                       "value_class=%s joined=%ld data_span=%ld plus_100=%ld "
+                       "outside=%ld no_task=%ld\n",
+                       key->origin, key->width, key->watch,
+                       ordinal_writer_class_name(key->writer_class),
+                       ordinal_value_class_name(key->value_class), key->joined,
+                       key->in_data_span, key->in_plus_100, key->outside,
+                       key->no_task);
             }
         }
         for (int wi = 0; wi < g_n_ordinal_writes; wi++) {
