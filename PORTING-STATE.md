@@ -150903,3 +150903,16 @@ Selects/refutes: SELECTS (R') the allocator-overlap reading: the SND blob region
 ORIGIN: no mitigation landed; diagnostic hooks only (src/main/main.cpp). The writer question is now: who allocated/loaded the SND blob (base ~0x801928E8) and does rs_malloc know about it.
 Next discriminator: log rs_malloc/free (0x80001ACC) args+returns overlapping 0x801928E8..0x8021E538 plus the relocateSndPointer base, in one run; oracle on retail: rs_malloc returns for the same call vs SND base.
 Gate-readable summary: this run selects the allocator-overlap hypothesis (node block inside SND pointer span), refutes the bad-bound hypothesis; next run logs rs_malloc ranges against the SND span.
+
+## Session 4464 (2026-10-09) — SND insert-pointer "span" is separate per-phase rs_malloc'd 0xF7C tables; allocator-overlap (R') refuted at VI 640
+
+HYPOTHESIS-ID: m5-ai-event-cadence
+Selects/refutes: refutes s4463's allocator-overlap reading (A); selects benign per-block table pointers (C-like) for the VI-640 window. B (SND blob never rs_malloc'd) refuted too: every insert cluster lies in a live rs_malloc block.
+What ran: 3 concurrent arms (scratch/agent/s4466_run.sh), ROGUESQ_LOG_RS_MALLOC=1 ROGUESQ_LOG_RS_FREE=1 (existing s139/s140 hooks, no rebuild needed for those) + new s4465-hdr store hook in rs64_m5_lowfield_store (heap header of block 0x801767E0). Offline replay: scratch/agent/s4466_an.py, s4466_an2.py.
+Findings (3/3 arms identical layout; hooks live: rs-malloc 3800+ lines, rs-free 11420, s4465-hdr fired):
+- Insert pointers at cnt=1..64 (0x801928E8..0x80193008) lie inside rs_malloc block 0x801920A0 size 0xF7C (alloc line 3863, before first insert at line 4694). That block is rs_free'd at line 26204; the audio pool node block 0x80193C20 is allocated at 26735, AFTER the free and outside the block (ends 0x8019301C). No overlap.
+- The max=0x8021E538 at cnt=128 is inside a different live rs_malloc block 0x8021D5D0 size 0xF7C (alloc line 29258). So the "0x8C000 span" was min/max across several separate 0xF7C tables, not one blob.
+- in_pool_range=1 fired 0 times in 4 runs (s4463_1 and s4466_1-3); no run reached VI 1024, so s4462's "crosses the pool at VI 1024" is NOT reproduced by this recipe (it came from a different, later-phase run).
+- Block 0x801767E0 (size 0x1E000) is never rs_free'd yet rs_malloc later returns blocks inside it. s4465-hdr: its header flag is set 2 (alloc) at 0x80001C18 then 1 (free) at pc 0x800023AC = coalesceFreeHeapBlocks, which bulk-frees blocks with flags&6 and no 0x80 lock bit in +2. Reading of the code (single-source): by design, not a corruption. ORIGIN: the writer of the free flag is the game's own coalesceFreeHeapBlocks; value legitimate.
+Rules out: allocator overlap with SND pointers in the VI-640 window.
+Open: the VI-1024 pool crossing of s4462 (needs a recipe reaching VI 1024; PROBE_PHASE_TIMEOUT/run length of 120 s did not).

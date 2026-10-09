@@ -1,8 +1,7 @@
-# Next work unit (s4464): does rs_malloc know the SND blob that spans 0x801928E8..0x8021E538?
+# Next work unit (s4465): reproduce s4462's VI-1024 pool crossing, or retire it
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-State (s4463): insert pointers span ~0x8C000 bytes from 0x801928E8; rs_malloc handed the audio node block 0x80193C20 and buffer 0x80196CC0 inside that span (VI 640). Port-only.
-Hypotheses: (A) SND blob allocated by rs_malloc at a base below 0x80193C20 with size covering it, then allocator overlaps = allocator/free bug; (B) SND blob never rs_malloc'd (DMA'd to a fixed or stale address) so heap is unaware = port load-path bug; (C) span is a pointer table over data the retail also overlaps (benign, pool nodes unlinked).
-Discriminator: one run logging every rs_malloc/free (0x80001ACC / its free) call with size+return+ra that intersects 0x801928E8..0x8021E538, plus relocateSndPointer arg/return. A: an alloc covering 0x801928E8+ exists and a later alloc overlaps it (or it was freed). B: no alloc covers the span. C: needs oracle retail comparison.
-Commands: hook rs_malloc return (fixup script for generated code, or store hook on its result), reuse scratch/agent/s4463_run.sh recipe.
+State (s4464): at VI 640 insert pointers are in per-phase rs_malloc'd 0xF7C tables; no pool overlap; in_pool_range=0 over 4 runs, none reached VI 1024.
+Hypotheses: (A) crossing at VI 1024 is real (tables/pool overlap later); (B) it was a tracker artifact of the s4462 recipe (min/max-style or stale alloc view); (C) 1024 phase just not reached by the 120s recipe.
+Discriminator: rerun scratch/agent/s4466_run.sh with longer length (arg 120 -> 300) and PROBE_PHASE_TIMEOUT=300 until vi=1024 lines appear; replay with scratch/agent/s4466_an.py extended to report live rs_malloc blocks covering each in_pool_range=1 insert val. A: a live block other than the pool covers val; B: val covered by its own table; C: no vi=1024 -> extend again.

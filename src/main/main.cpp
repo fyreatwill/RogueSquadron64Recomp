@@ -4791,6 +4791,13 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
             e.ppc = e.pc; e.pval = e.val; e.pc = pc; e.val = value; e.w = (uint16_t)width;
             ++g_s4457_stores;
         }
+        if (addr >= 0x801767C0u && addr < 0x801767E0u) {  // s4465: heap header of the 0x1E000 block (never rs_free'd, yet rs_malloc hands out inside it)
+            static uint32_t hn = 0;
+            if (hn++ < 60u) {
+                std::fprintf(stderr, "[s4465-hdr] w=%c addr=0x%08X pc=0x%08X val=0x%08X vi=%u\n", width, addr, pc, value, rs64_vi_committed_width());
+                std::fflush(stderr);
+            }
+        }
         if (pc == 0x80085424u && width == 'W') {  // s4462: every store of the caller-supplied SND pointer in the sorted-table insert
             static uint32_t n = 0, inpool = 0;
             ++n;
