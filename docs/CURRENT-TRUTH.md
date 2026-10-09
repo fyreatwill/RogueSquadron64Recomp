@@ -500,6 +500,23 @@ ORIGIN: retail task fields, physical writer PCs, phase-gated destination
 watches, ordinal joins, and whole-RDRAM/VI controls; no value was skipped,
 rewritten, or guarded.
 
+Session 4389's exact-span retail capture passed the whole-RDRAM control (10,000
+callbacks), reached title VI rows 631/632 and hangar VI 504, and retained 1,751
+valid type-2 tasks (`invalid=0`, `overflow=0`) with ordinal-write overflow 0.
+Hangar task rows split between `data=0x80171E70` (237 rows) and
+`data=0x80173CB0` (259 rows), with `data_size` 1 or 2. Separate watches for
+`0x171E70:0x173290` and `0x173CB0:0x1750D0` both had substantial phase-512
+writer traffic; their exact `+0x100` fields (`0x171F70` and `0x173DB0`) also
+had writers, while the null output span `0:0x20` had none. Exact-span writer
+rows joined to same-phase task ordinals with no missing task (`117,930` and
+`104,779` hangar rows; ordinal overflow 0). This selects H-task-data over
+H-task-output and H-watch-gap for the exact dynamic spans, using task-field
+rows and independent physical writer watches as two evidence lines. It remains
+single-source retail evidence and does not yet prove which stores are semantic
+payload versus maintenance. ORIGIN: retail task-field observations, exact
+physical writer PCs, phase/ordinal joins, and whole-RDRAM/VI controls; no value
+was skipped, rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -515,11 +532,11 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Split exact phase-512 task data spans for
-   both observed hangar bases (`0x80171E70` and `0x80173CB0`) and their
-   `+0x100` fields in one oracle run, retaining the whole-RDRAM, VI, task, and
-   ordinal controls. Add an independent source/consumer witness; do not treat
-   the broad union-watch result as final provenance.
+   `m5-selector-decode-boundary`. Identify which exact-span writer PCs and
+   scalar values are semantic task payload versus maintenance/zero-fill, using
+   one phase-gated oracle capture with the already-qualified task and ordinal
+   controls plus post-store scalar validation. Do not broaden the destination
+   ranges or treat writer presence alone as payload equality.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

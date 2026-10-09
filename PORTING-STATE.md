@@ -149824,3 +149824,22 @@ invalid due to the missed base; the second was invalid for ordinal overflow;
 both were corrected in this iteration. ORIGIN: retail task fields, physical
 writer PCs, phase-gated destination watches, ordinal joins, and whole-RDRAM/VI
 controls; no value was skipped, rewritten, or guarded.
+
+## Session 4389 (2026-10-09) — split exact hangar task data spans
+
+Ran the exact-span retail-oracle task-destination capture. The whole-RDRAM
+positive control reached 10,000 callbacks; title VI buckets reached 631/632
+rows and hangar reached 504 rows. The task watch retained 1,751 valid type-2
+rows (`invalid=0`, `overflow=0`), and the ordinal-write table had overflow 0.
+Hangar task rows split between `data=0x80171E70` (237 rows) and
+`data=0x80173CB0` (259 rows), with `data_size` 1 or 2. Separate exact watches
+for `0x171E70:0x173290` and `0x173CB0:0x1750D0` both had substantial phase-512
+writer traffic, and their exact `+0x100` fields had writers too; the null
+output span `0:0x20` had none. The exact-span writer joins had no missing task
+(`117,930` and `104,779` hangar rows; ordinal overflow 0). This selects
+H-task-data over H-task-output and H-watch-gap for the exact dynamic spans,
+using task fields and physical writer watches as two evidence lines. It remains
+single-source retail evidence and does not prove which stores are semantic
+payload versus maintenance. No mitigation or value rewrite was added.
+ORIGIN: retail task fields, exact physical writer PCs, phase/ordinal joins, and
+whole-RDRAM/VI controls; no value was skipped, rewritten, or guarded.
