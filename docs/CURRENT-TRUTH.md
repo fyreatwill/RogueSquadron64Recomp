@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4420 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4421 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -128,6 +128,22 @@ error family; that crash is not selector evidence. ORIGIN: phase-keyed host
 controls and a static script/artifact census; no table value was rewritten,
 skipped, or guarded.
 
+Session 4421 wired the existing table-store and store-context transforms into
+the durable regeneration helper, reapplied them to the live generated artifact,
+and rebuilt successfully. The static artifact contained four expected markers.
+A 90-second real-audio/LLE capture passed phase, task, image, filter, and
+no-crash controls: table-store and store-context emitted 4/4 rows, caller and
+pre-call emitted 1,007/2,014 rows, selector input emitted 2 rows, and the
+capture reached title phase 4 and hangar phase 5. Port stores were
+`0x80149758=0x80171CE0` and `0x8014975C=0x80173B20` in title, then
+`0x80149758=0x80171E70` and `0x8014975C=0x80173CB0` in hangar. This closes
+H-join-failure and proves the writer boundary is live; it does not yet select
+H-writer-value versus H-index-value because the paired retail store values and
+an explicit store-to-load join were not captured in this unit. ORIGIN: durable
+generated-marker census plus phase-keyed runtime witnesses; the probes only
+observed stores, contexts, inputs, and later loads, and no value was rewritten,
+skipped, or guarded.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -161,14 +177,13 @@ available.
 
 ## Next steps
 
-1. **Repair durable selector-table writer witnesses** — HYPOTHESIS-ID
-   `m5-selector-table-writer-boundary`. Wire the existing table-store and
-   store-context transforms into the durable regeneration path, rebuild, and
-   rerun the same phase-keyed capture. Require table-store/store-context rows
-   plus the already-live caller/precall, selector/input, VI, task, image, and
-   positive controls before interpreting writer or index values. Do not rewrite
-   differing values; determine whether the writer is legitimate and whether the
-   index differs before the table load.
+1. **Qualify selector-table writer parity** — HYPOTHESIS-ID
+   `m5-selector-table-writer-boundary`. Capture the same phase-keyed retail
+   writer/store-context fields and join them to the existing port writer and
+   later `0x80150000` loads. Require whole-RDRAM, VI, task/image, selector
+   input, caller/precall, and writer positive controls in each source. Do not
+   rewrite differing values; determine whether the writer values are legitimate
+   and whether the index differs before the load.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

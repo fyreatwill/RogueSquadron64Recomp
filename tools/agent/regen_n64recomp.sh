@@ -9,3 +9,5 @@ cd /Users/williambuckley/Documents/Tools/N64Recomp
 python3 fixup_game_funcs.py
 python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3500_m5_selector_caller.py
 python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3501_m5_selector_precall.py
+python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3509_m5_selector_table.py
+python3 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/apply_s3516_m5_selector_store_context.py

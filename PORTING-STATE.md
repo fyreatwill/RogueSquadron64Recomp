@@ -150399,3 +150399,23 @@ error family; that crash is not selector evidence. This closes the attempted
 writer qualification and makes durable hook wiring the next unit. ORIGIN:
 phase-keyed host controls plus static script/artifact census; no table value
 was rewritten, skipped, or guarded.
+
+## Session 4421 (2026-10-09) — qualified durable selector writer witnesses
+
+Wired `apply_s3509_m5_selector_table.py` and
+`apply_s3516_m5_selector_store_context.py` into the durable
+`tools/agent/regen_n64recomp.sh` helper, reapplied both transforms to the live
+generated artifact, and rebuilt `RogueSquadron64Recomp` successfully. The
+artifact contained four expected marker insertions. A 90-second real-audio,
+LLE, ungated, solo, spin-yield capture passed the phase, task, image, filter,
+and no-crash controls: table-store/store-context emitted 4/4 rows,
+caller/pre-call emitted 1,007/2,014 rows, selector input emitted 2 rows,
+audio-task rows numbered 2,454, task joins 3,913, and filter joins 256. It
+reached title phase 4 and hangar phase 5. The observed port stores were
+`0x80149758=0x80171CE0`, `0x8014975C=0x80173B20` in title, followed by
+`0x80149758=0x80171E70`, `0x8014975C=0x80173CB0` in hangar. This closes
+H-join-failure and proves the writer boundary is live, but does not distinguish
+H-writer-value from H-index-value because paired retail store values and an
+explicit store-to-load join were not captured. No value was rewritten, skipped,
+or guarded. The next unit is retail/port writer parity with the same positive
+controls.
