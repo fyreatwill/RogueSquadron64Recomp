@@ -1,42 +1,51 @@
-# Next work unit (s4324): requalify the real-image filter-path matrix
+# Next work unit (s4325): qualify descriptor/filter/output payload join
 
 HYPOTHESIS-ID: m5-step9-mort-output
 
-State (s4323): the independent MORT reference and oracle controls passed, but
-both corrected port arms crashed at `rs64_m5_descriptor_start+460` / guest
-`0x8000834C` before VI 512. The caller/entry witness produced no rows. The
-prior s4322 hangar result remains the route-valid baseline.
+State (s4324): the seeded-save matrix passed the independent MORT reference,
+oracle controls, and both VI-512 port controls. Silent and real-image arms
+each reached 128 calls at `0x8009D740` (256 call/entry rows total); early
+payloads matched but later `a0/a1` and table-used/value sequences diverged.
+Both arms then shared the known post-target `do_rom_read` crash.
 
 Competing hypotheses:
 
-- H-route-state: the current seeded-save/descriptor crash is a route or state
-  setup difference, and the prior qualified matrix can be restored.
-- H-real-eligibility: real-image descriptors fail an eligibility/status gate
-  before the enumerated filter callsites.
-- H-real-dispatch: real-image audio takes an alternate filter/decoder dispatch
-  path not covered by the three enumerated callsites.
+- H-same-descriptor-different-filter: both arms consume the same descriptor
+  class/rate and source bytes, but the filter table/arguments diverge before
+  output.
+- H-descriptor-class-divergence: the arms select different descriptor
+  type/rate or table classes before the filter call, explaining the payload
+  sequence.
+- H-output-join: filter inputs are equivalent, but post-filter PCM/output
+  bytes diverge at the generated or host boundary.
 
-Discriminator: copy the known seeded save into the active build, then run one
-batched silent/real matrix with the existing branch witness, MORT reference,
-oracle whole-RDRAM, VI title/hangar, filter, and PCM controls. Both VI 512
-markers with no descriptor crash refutes H-route-state and permits the branch
-comparison. Another pre-512 crash selects H-route-state. A real-arm eligibility
-failure selects H-real-eligibility; a real-arm branch to a named alternate
-selects H-real-dispatch. A run without both VI 512 markers is invalid.
+Discriminator: one phase-scoped table covering all 128 filter calls in each
+arm, keyed by ordinal and descriptor identity, with descriptor type/rate,
+`a0/a1`, table value, source/output spans and hashes before/after the filter,
+and PCM source/consumer hash/count joins. Matching descriptor/type/rate and
+source hashes with divergent output selects H-output-join; divergent
+descriptor/table rows select H-descriptor-class-divergence; matching rows and
+matching output but a consumer mismatch selects the host/PCM join. A missing
+row is invalid unless both VI-512 controls and the filter positive control
+fire.
 
-Before any build, inspect the relevant source and preserve the positive controls:
+Before building, inspect the independent controls and existing row writers:
 
-`rg -n '8009C540|8009C88C|8009D740|filter-voice-audit|init-desc|ROGUESQ_AUDIO_UCODE' src/main RecompiledFuncs scratch/agent/run_s4321_m5_mort_output.sh`
+`sed -n '1,220p' tools/oracle/README.md`
 
-If `build/saves` is not the known seeded 7F baseline, restore that baseline;
-then build once with:
+`rg -n 'filter-voice-audit|init-desc|pcm-boundary-(source|consumer)|8009D740|mort_probe' src/main tools scratch/agent/run_s4321_m5_mort_output.sh`
+
+Add the complete table in one batch, preserving the positive controls and
+phase budget. Build once:
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-Run the same matrix recipe:
+Run both arms in one matrix with the seeded `build/saves` and existing route
+recipe:
 
 `zsh scratch/agent/run_s4321_m5_mort_output.sh`
 
-Keep `M4_Y8000_WIDTH=512`, reference selection `--indices 0,1,59,90`, and all
-existing controls. No decoder, AI bridge, RSP dispatch, or game-path guard
-change is authorized.
+Require `oracle_gate=1`, the MORT reference verdict, one VI-1024 and one
+VI-512 marker in the oracle, and `[m5-port-vi-control]=1` in both arms before
+interpreting the payload table. Do not alter RSP dispatch, the decoder, AI
+bridge, or add a game-path guard.

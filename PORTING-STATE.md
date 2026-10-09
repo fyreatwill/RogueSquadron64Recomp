@@ -148385,3 +148385,30 @@ real-image eligibility or dispatch hypothesis. No runtime guard or game-path
 change landed.
 
 ORIGIN: none; the added witness is diagnostic-only and no mitigation was added.
+
+## Session 4324 (2026-10-08) — requalified M5 filter matrix and payload arms
+
+HYPOTHESIS-ID: m5-step9-mort-output
+
+Ran the rebuilt seeded-save M5 matrix with the independent MORT reference,
+retail oracle, and silent (`ROGUESQ_AUDIO_UCODE=0`) plus real-image
+(`=1`) port arms. The reference passed four nonzero rows spanning 8000 and
+16000 Hz. The oracle whole-RDRAM positive control, title VI 1024, and hangar
+VI 512 controls passed. Both port arms reached VI 512 and the per-arm route
+control; each emitted 256 filter rows (128 call/entry pairs), with all active
+calls at generated site `0x8009D740`. Site `0x8009C540` stayed at zero and
+`0x8009C88C` supplied the paired entry rows. Descriptor and PCM controls also
+fired in both arms. Both arms later shared the known post-target
+`do_rom_read` crash at guest `0x80001B08`.
+
+The first filter payload rows matched between arms, while later `a0/a1` and
+table-used/value sequences diverged; source/output buffer geometry stayed the
+same. This refutes s4323's pre-512 route blocker and rejects stable
+real-image eligibility or alternate-dispatch explanations for the s4322 null.
+It supersedes s4322's real-arm-zero result as route/run-state dependent. The
+next discriminator is a complete descriptor/type/rate, filter-payload, and
+post-filter PCM join; no RSP dispatch, decoder, AI bridge, or game-path guard
+changed.
+
+ORIGIN: none; this was a route-qualified diagnostic matrix and no mitigation
+was added.

@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4324 (M5 filter matrix route-qualified; both arms hit the same active callsite). Previously 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -54,6 +54,24 @@ MORT comparison is not: this selects an audio-arm path divergence, not
 H-MORT, H-layout, or H-AI. Positive controls were the oracle whole-RDRAM watch,
 title/hangar VI controls, and per-arm filter controls.
 
+**M5 Step 9 matrix requalification (s4324).** The seeded-save matrix passed
+the independent MORT reference, oracle whole-RDRAM/title/hangar controls, and
+both port VI-512 controls. Silent and real-image arms each emitted 256 filter
+rows: all active calls reached `0x8009D740` (`updateVoiceChannelParamsLarge`),
+with `0x8009C540` quiet and `0x8009C88C` contributing the paired entry rows.
+Both arms had 271-272 descriptor entries and 517-518 PCM-consumer rows. The
+first filter payload rows matched, while later `a0/a1` and table-used/value
+sequences diverged; source/output buffer geometry remained the same. Both
+arms then hit the known shared `do_rom_read` crash after the target phase.
+
+This refutes s4323's route/state blocker and rejects H-real-eligibility and
+H-real-dispatch as explanations for the previous real-arm null. It also
+supersedes s4322's real-arm-zero result, which was a route/run-state artifact,
+not a stable audio-arm divergence. The remaining M5 discriminator is the
+descriptor/filter payload and decoded-output join, not RSP dispatch or a game
+path guard. The route-qualified payload comparison is port-side evidence; the
+MORT reference and oracle are independent controls.
+
 **M5 de-stubs landed.** A11 waitForAnyAudioSlot yield (default 2000), A12 countdown
 yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset=2; s4192), A15 spin-yield default
 on, A13 drain-tick gate (dormant on title+hangar), A14 status-03 wait (s4296 host yield, `ROGUESQ_A14_YIELD=0` rolls back; s4297: loop IS entered in the hangar, b0 stuck 0x03, exits after ~160-180k iterations only with the yield; yield-on reaches VI 640 and then the known do_rom_read crash at 0x80001b08, yield-off stays in hangar, no crash - 2 on / 1 off runs), A9/A10 voice-base/song-tick guards (0 fires). Declared-size staging
@@ -89,7 +107,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4323) The new caller/entry witness built, but the first corrected matrix recipe was invalid because oracle/probe key syntax was coupled; after separating the syntaxes, both port arms still crashed at `rs64_m5_descriptor_start+460` / guest `0x8000834C` before VI 512. Oracle whole-RDRAM, title/hangar VI, and MORT-reference controls passed; no caller or entry row was observable. Next: requalify the same matrix with the known seeded save and isolate the pre-512 descriptor crash before interpreting the filter-path witness. The discriminator remains: real-image descriptors reaching a named alternate/eligibility branch versus the same eligible callsite as silent. Do not alter RSP dispatch, decoder, AI bridge, or add a guard.
+00. (s4324) The seeded-save matrix reached VI 512 in both arms and produced 256 filter rows in each. Every active filter call was at `0x8009D740`; the prior real-arm null and pre-512 crash were route/state artifacts. Next: use one phase-scoped payload/output join to compare the complete 128-call table per arm against descriptor class/rate and the independent MORT rows, including source/output hashes and post-filter PCM hashes. Keep the oracle and VI controls, and do not alter RSP dispatch, decoder, AI bridge, or add a guard. The discriminator is a matching descriptor/type/rate-to-filter/output row versus a missing or mismatched real-image join.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -151,6 +169,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 complete matrix | s4322: both port arms reached title/hangar and passed route/host controls; silent audio emitted 256 filter rows at `0x8009D740`, while real-image audio emitted none despite 1,095 descriptor entries and PCM source/consumer rows. The route blocker is closed; an audio-arm path divergence is selected. |
 | M5 Step 9 MORT/filter callsite | s4322: the silent arm reached `0x8009D740`; the real-image arm did not reach any enumerated filter callsite. MORT output/type/rate versus PCM remains open; do not treat the real-arm zero as a MORT null. |
 | M5 Step 9 MORT output | s4322: the independent reference decoder passed four rows covering both rates with nonzero output. Runtime comparison is now route-qualified but blocked on explaining why the real-image arm has no active filter rows. |
+| M5 Step 9 payload join | s4324: both arms reached `0x8009D740` for 128 calls and produced 256 call/entry rows; early payloads match but later arguments/table values diverge. Descriptor class/rate and decoded-output ownership remain open. |
 
 ## Durable evidence boundary
 
@@ -161,6 +180,17 @@ same-build declared/real, declared/silent and legacy/real arms. A route failure
 invalidates a null; it never proves absence.
 
 ## Superseded conclusions
+- s4322 "real-image filter path absent" (believable because the prior
+  route-qualified run had 1,095 descriptors and PCM activity but zero filter
+  rows): s4324 requalified the seeded-save route after the s4323 pre-512 crash;
+  both arms reached VI 512 and produced 256 filter rows at `0x8009D740`. The
+  null was run/state-dependent, not a stable eligibility or dispatch split.
+
+- s4323 "matrix route-invalid on descriptor crash" (believable because both
+  port arms crashed before VI 512): s4324 used the known seeded save and the
+  same controls, reached VI 512 in both arms, and captured the complete filter
+  row set. The crash remains after the target phase and is shared by both arms.
+
 - s4319 "MORT descriptor/filter witnesses absent" (believable because the
   route controls and descriptor-start were valid): s4320 reran the matrix with
   the generated `init-desc` gate `ROGUESQ_LOG_VI_CALLERS=1`; `init-desc` then
