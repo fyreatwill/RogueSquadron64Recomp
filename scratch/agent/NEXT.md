@@ -1,8 +1,7 @@
-# Next work unit (s4446): name the retire path that advances head
+# Next work unit (s4447): who calls fillSampleStreamRange (0x8008FAAC) in the port when retail never touches the allocator list?
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-State (s4445): port chain only fills; head advances 91x in first 1000 ENTRYs then ~0/1000 (A1/A2), tail ~1/ENTRY.
-Hypotheses: (a) retire needs audio-task completion the port lacks; (b) retail also drains little (cadence); (c) mis-executed guest path.
-Discriminator: oracle retail run (tools/oracle/README.md, positive control first): watch head word of the chain (phys of 0x801F9CE0-region head var) over title; count head advances/1000 inserts. Retail ~0 -> (b); retail >>0 -> (a)/(c), then PC-attribute the writers from the oracle.
-Also: PC of the 91 early head advances in the port (store watch on head var) gives the retire function name.
+State (s4446): retail writes head/tail/pool (0x801499E4/B4/CC) once at init over 60 s; port inserts ~1 per call.
+Hypotheses: (a) port-induced callers (a stream-playback path retail does not start in title, e.g. a sound the port triggers/loops); (b) retail uses the function but through a different allocator (exec-watch was unusable, so not excluded); (c) mis-executed guest path.
+Discriminator: histogram of ra= in [s4234-ENTRY] rows (scratch/agent/s4441/port_A1.log; rows are only printed for n<=30 / head==0 / ra==0, so first 30 only) -- if insufficient, add a compact ra histogram to tools/apply_s4234_entryprobe.py (fixup script, not RecompiledFuncs). Then map callers' guest function names and check in oracle with write-watch on their state (fix exec-watch control first: use --watch-pc with a function that must fire many times, or check hit-cap semantics).
