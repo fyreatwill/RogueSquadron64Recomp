@@ -554,3 +554,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261006-221410 | s4104_m5_status03_service_reaping_fixed | rc=1 | 2s | control=1 retail_title=0 retail_hangar=0 port_title=0 port_hangar=0; verdict=Hroute-invalid; port crash spTaskSchedulerThread+9632; scratch/agent/soak_results/s4104_m5_status03_service_reaping/port.log
 20261008-020101 | s4255_ab_wave | rc=1 | 85s | scratch/agent/soak_results/s4255_ab_wave_20261008-020101.log
 20261008-122208 | s4296_a14_yield_title_hangar | rc=3 | 84s | scratch/agent/soak_results/s4296_a14_yield_title_hangar_20261008-122208.log
+20261009-s4365 | s4365_exact_task_family_writers | qualified title-only; Rice run passed whole-RDRAM control, exact writes fired at all four family addresses, title buckets live, hangar absent; writer selectors targeted execution watches 1-4 instead of exact memory watches 5-8; no hypothesis selected | scratch/agent/soak_results/s4365_exact_task_family_writers_rice.log

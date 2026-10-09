@@ -149374,3 +149374,22 @@ qualified watch-boundary result and leaves the three hypotheses unresolved.
 The next work unit watches the four published addresses separately in the same
 run. ORIGIN: diagnostic-only oracle writer watch; no guest or host value was
 skipped, rewritten, or guarded.
+
+## Session 4365 (2026-10-09) — exact task-family watch exposes selector boundary
+
+I built the oracle and ran the planned exact-address writer capture. Two runs
+without the Rice video plugin were invalid: the whole-RDRAM control fired, but
+only dummy 320 VI was observed. The corrected Rice run passed the whole-RDRAM
+control, reached title origins `0x00790400` and `0x00790800`, and recorded
+11,018 writes each at `0x00171CE0` and `0x00173B20`, plus 668 each at
+`0x00171E70` and `0x00173CB0`. It did not reach the hangar origin during the
+qualified 75-second run; a 120-second extension was stopped after its wrapper
+hit the timeout without a final summary.
+
+The exact-address writer histogram was not collected: `--pc-hist-watch 1..4`
+selected execution watches, while the four exact memory watches were indices
+5..8. This is an instrument-boundary result and selects none of
+H-earlier-producer, H-post-task-transform, or H-watch-boundary. The next run
+must use indices 5..8, retain the Rice plugin, and reject missing hangar
+coverage. ORIGIN: diagnostic-only exact-address watch; no guest or host value
+was skipped, rewritten, or guarded.
