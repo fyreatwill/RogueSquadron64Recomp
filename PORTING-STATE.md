@@ -150037,3 +150037,18 @@ from the port runtime; no value was skipped, rewritten, or guarded.
 ## Session 4400 (2026-10-09) — checkpoint: s4400 port payload-route unit did not start
 
 The primary session died before producing any artifact: no `run_s4400_*` script, no run output, no code change (working tree clean at f6f33bf6 apart from the usual lib/ submodule patches). Nothing was measured, so no hypothesis moved and CURRENT-TRUTH is unchanged. NEXT.md (s4400 work unit, HYPOTHESIS-ID m5-selector-decode-boundary) remains valid as written and is the resume instruction: create `scratch/agent/run_s4400_m5_port_payload_route.sh` from the s4399 script, run it 85 s, SIGKILL the game. ORIGIN: n/a, no mitigation added.
+
+## Session 4401 (2026-10-09) — compared port payload families on the qualified route
+
+The bounded real-audio port capture passed the positive input-writer control,
+reached the qualified direct sequence `0x00790400 -> 0x006AB400`, and recorded
+2,323 audio-task rows with 2,323 joins, 1,064 input-DMA rows, and 256
+selector/decode joins. The title task families used data pointers
+`0x80171CE0`/`0x80173B20` and source hashes including `0x050C5D40`,
+`0x050C5D67`, and `0x59770940`; hangar used `0x80171E70` with distinct hashes
+including `0x050C5D3F` and `0x3176CAB5`. The selector/filter witness fired only
+in hangar, and `0x00790800` remained absent. No crash or abort occurred. This
+selects H-port-payload-divergence from phase-specific task payload families,
+but does not qualify direct selected-word equality in title or close the retail
+transform/publication boundary. ORIGIN: port phase, task, DMA, selector, and
+payload logs are observed; no value was skipped, rewritten, or guarded.

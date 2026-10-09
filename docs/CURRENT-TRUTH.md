@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4399 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4401 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -668,6 +668,20 @@ payload equivalence or explain the retail transform/publication boundary.
 ORIGIN: port phase transitions, action events, task/DMA witnesses, and the
 same-run control were observed; no value was skipped, rewritten, or guarded.
 
+Session 4401's bounded port payload capture passed the positive input-writer
+control, retained the qualified direct route (`0x00790400 -> 0x006AB400`),
+and recorded 2,323 audio-task rows with 2,323 joins, 1,064 input-DMA rows,
+and 256 selector/decode joins; there was no crash or abort. The title task
+families used `0x80171CE0`/`0x80173B20` with source hashes including
+`0x050C5D40`, `0x050C5D67`, and `0x59770940`, while hangar used
+`0x80171E70` with distinct hashes including `0x050C5D3F` and `0x3176CAB5`.
+The selector/filter witness fired only in hangar, and `0x00790800` remained
+absent, so direct selected-word equality was not qualified. This selects
+H-port-payload-divergence from phase-specific task payload families, while
+leaving the title selector witness and retail transform/publication boundary
+open. ORIGIN: port phase, task, DMA, selector, and payload logs are observed;
+no value was skipped, rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -683,9 +697,9 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Use the qualified port sequence
-   `0x00790400 -> 0x006AB400` as the phase gate for the next port/retail
-   payload comparison; do not repeat the resolved VI-origin census or retail
+   `m5-selector-decode-boundary`. Compare the qualified port phase families
+   against a same-phase retail capture, then locate the title-side selector
+   witness; do not repeat the resolved VI-origin census or retail
    range/address-containment work.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
