@@ -288,6 +288,7 @@ available.
 
 ## Next steps
 
+- **s4468 (newest):** the s4468 nested-header soak was valid (4/4 runs reached VI 1024) but s4465's 0xF7C malloc at 0x801931F0 did not recur (0/8 across s4466+s4468; `[rs-hdr-nested]` 0/4; hook live). s4465 stays single-source; lead PARKED after 3 iterations without a discriminator. No more heap-header instrumentation. Next: M5-AUDIO-PLAN step 5 (key-on early-return idiom audit).
 - **s4467 (newest):** the queued s4467_hdr_nested soak was INVALID (recipe `cd` resolved to scratch/, no game launched, false rc=0); no evidence either way. Recipe fixed (git rev-parse root) and requeued as s4468_hdr_nested; read its result first and confirm non-zero rs-malloc lines before trusting it. Soak recipes must not use dirname math for the root.
 - **s4466 (prior):** header-dump hook built (tools/apply_s4466_hdrdump.py; `[rs-hdr]`, `[rs-hdr-nested]`); 0/4 runs reached VI 1024, so s4465's A-vs-B is unresolved. Candidate unlogged free: coalesceFreeHeapBlocks, called inside rs_malloc.
 - **s4465 (single-source 1/3 runs):** VI-1024 crossing reproduced; rs_malloc(3964)=0x801931F0 overlaps live 0x30/0x300 blocks never rs_free'd in log -> allocator overlap (A) selected unless an unlogged free path exists. See PORTING-STATE s4465.
