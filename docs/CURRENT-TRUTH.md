@@ -3,11 +3,14 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
+
+Updated for session 4330: static D740 census found no alternate generated
+transfer; the runtime caller-row absence is an instrumentation/state
+contradiction, not a named static bypass.
 Updated for session 4327 (M5 descriptor witness rejected; CPU caller object is next boundary). Previously 4326 (clean M5 filter/output join selected input-stream divergence). Previously 4325 (M5 filter-join instrument built; matrix retries not jointly interpretable). Previously 4324 (M5 filter matrix route-qualified; both arms hit the same active callsite). Previously 4323 (caller/entry witness built; matrix route-invalid on descriptor crash). Previously 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
-Updated for session 4329: direct D740 witness proved the active callsite is
-reached without the probed D740 function entry; transfer-boundary census is
-next.
+Updated for session 4330: the generated-source census found no alternate D740
+transfer; the direct/caller probe contradiction remains unresolved.
 
 ## Current state (as of s4268)
 
@@ -157,7 +160,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4329) The route-qualified matrix still passes all controls and produces 256 direct D740 rows per arm; `d740_store_n` reaches 256, while the retained caller tuple never joins and the caller probe emits only the `0x8009C88C` bucket. This selects an entry/transfer bypass or probe-placement boundary, not descriptor equality. Next: run the bounded static transfer census in `scratch/agent/NEXT.md` across every generated reference to the D740 body/callsite, the wrapper symbol, and the overlay map. Name the transfer boundary before adding runtime instrumentation; keep decoder/RSP/AI behavior unchanged.
+00. (s4330) The bounded generated-source census found one `updateVoiceChannelParamsLarge` wrapper at `0x8009C5BC`, one in-function D740 edge at `0x8009D740`, no other generated references to that wrapper/body, and section-3 text ownership in `recomp_overlays.inl`. Static source therefore supplies no alternate transfer boundary. The s4329 direct-row/caller-row contradiction remains open as probe state, generated/host call behavior, or phase-budget behavior; do not call it descriptor evidence. Next: add one co-located sequence witness in the existing `updateVoiceChannelParamsLarge` entry and D740 probe path, with separate counters for entry-probe invocation, caller-helper invocation, and direct-probe invocation, then run the prescribed seeded matrix. Keep decoder/RSP/AI behavior unchanged.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -223,7 +226,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 filter join instrument | s4325: built a phase-scoped route-keyed table with rate, arguments, live sp-based table value, and source/output hashes. The reference/oracle controls passed, but corrected paired rows were not jointly valid; descriptor class/rate and decoded-output ownership remain open. |
 | M5 Step 9 clean filter/output join | s4326: both valid port arms emitted 128 calls at the same active site and rate, but all 17 common route-row keys differed in source and output hashes; H-output-join is rejected. Descriptor type/class is not yet recorded, so payload ownership remains open. |
 | M5 Step 9 caller-object join | s4328: all controls passed and both arms emitted 256 rows, but the retained caller tuple joined zero rows; only the C88C caller bucket emitted. Descriptor class versus pre-filter route remains open; this is a probe-boundary result, not a descriptor null. |
-| M5 Step 9 direct D740 witness | s4329: the direct D740 callsite emitted 256 rows per arm and its scoped counter reached 256, while no D740 caller-entry bucket or retained tuple joined. This selects entry/transfer bypass of the probed D740 entry; descriptor class versus pre-filter route remains open. |
+| M5 Step 9 direct D740 witness | s4329: the direct D740 callsite emitted 256 rows per arm and its scoped counter reached 256, while no D740 caller-entry bucket or retained tuple joined. Static census s4330 found no alternate generated transfer, so this is an unresolved instrumentation/state contradiction rather than proof of entry bypass; descriptor class versus pre-filter route remains open. |
 
 ## Durable evidence boundary
 
@@ -234,6 +237,8 @@ same-build declared/real, declared/silent and legacy/real arms. A route failure
 invalidates a null; it never proves absence.
 
 ## Superseded conclusions
+- s4329 "active D740 callsite is reached without the probed function entry" (believable because direct rows and `d740_store_n` reached 256 while the retained caller tuple never joined): s4330's complete generated-reference census found only the normal `updateVoiceChannelParamsLarge` wrapper and its in-function D740 edge, with no alternate body transfer; runtime caller-row absence remains unexplained.
+
 - s4322 "real-image filter path absent" (believable because the prior
   route-qualified run had 1,095 descriptors and PCM activity but zero filter
   rows): s4324 requalified the seeded-save route after the s4323 pre-512 crash;

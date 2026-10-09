@@ -1,38 +1,40 @@
-# Next work unit (s4330): D740 transfer-boundary census
+# Next work unit (s4331): co-located D740 sequence witness
 
-HYPOTHESIS-ID: m5-step9-mort-output
+HYPOTHESIS-ID: m5-step9-d740-witness-contradiction
 
-The s4329 matrix passed oracle whole-RDRAM/title/hangar, MORT reference, both
-port VI controls, and both filter controls. The direct witness immediately
-before the generated D740 filter call fired 256 times in each arm and its
-`d740_store_n` reached 256, but every row had `caller_join=0`; the caller probe
-had only the `0x8009C88C` bucket. Do not interpret this as descriptor equality.
+The s4330 static census found one generated `updateVoiceChannelParamsLarge`
+wrapper at `0x8009C5BC`, one D740 edge inside it, no other generated reference
+to the wrapper/body, and section-3 text ownership in `recomp_overlays.inl`.
+That rejects a static alternate-transfer explanation for s4329's missing D740
+caller rows. The next run must distinguish helper invocation/state loss from a
+phase budget artifact without changing audio behavior.
 
 Competing hypotheses:
 
-- H-entry-bypassed: a transfer targets the D740 body/callsite without entering
-  the generated function wrapper where the caller probe was inserted.
-- H-probe-placement: the generated wrapper is entered, but the active body is
-  reached through a label/overlay mapping whose instrumentation boundary is
-  not the real guest entry.
-- H-cross-thread-or-overwritten: a real D740 entry occurs, but its tuple is
-  lost before the direct call through a worker or overwrite.
+- H-helper-not-invoked: the generated entry marker and direct marker execute, but
+  the caller helper call is skipped or optimized/redirected in the host path.
+- H-state-cleared: the caller helper runs and stores the tuple, but its state is
+  cleared or replaced before the direct probe joins it.
+- H-budget/gate: the helper runs, but its row emission is suppressed by its
+  static bucket budget or phase gate while the direct probe remains visible.
 
-Discriminator: perform a bounded static transfer census before changing runtime
-behavior. Enumerate every generated reference to the D740 body/callsite and
-the `updateVoiceChannelParamsLarge` symbol, then inspect the complete enclosing
-labels and overlay map around each reference. A reference that targets the
-body/callsite without the wrapper selects H-entry-bypassed; a normal wrapper
-entry whose label map skips the probe selects H-probe-placement; a real entry
-plus a later overwrite requires one targeted witness at that transfer and
-selects H-cross-thread-or-overwritten.
+Discriminator: add one bounded co-located sequence witness in the existing
+`updateVoiceChannelParamsLarge` entry and D740 path. It must count/log, under
+the existing VI-512 gate, (1) immediately after the wrapper-entry helper,
+(2) immediately after `rs64_filter_voice_caller_probe`, and (3) immediately
+before/after `rs64_filter_voice_direct_probe`, using one sequence id and no
+new payload fields. Entry+post-helper absent selects H-helper-not-invoked;
+entry+post-helper present but direct join absent selects H-state-cleared;
+all three present with caller rows still absent selects H-budget/gate.
 
-Commands:
+Build/run all arms in one iteration using the existing seeded matrix recipe;
+do not run an A/B across separate animating scenes. Positive controls must be
+the oracle whole-RDRAM/title/hangar controls and both existing filter controls.
+Use the project's prescribed build and matrix commands from the latest M5
+recipe, and do not alter decoder, RSP, AI, or game-path behavior.
 
-`rg -n "8009D740|updateVoiceChannelParamsLarge|8009C5BC" ../N64Recomp/RecompiledFuncs ../N64Recomp/fixup_game_funcs.py`
+Static census commands already run:
+
+`rg -n --glob 'funcs_*.c' --glob '!*.s*' --glob '!scratch*' "8009D740|8009D7D0|updateVoiceChannelParamsLarge|filterVoiceSampleBlock" ../N64Recomp/RecompiledFuncs`
 
 `sed -n '1768,1810p;4768,4805p' ../N64Recomp/RecompiledFuncs/funcs_27.c`
-
-Do not build or alter RSP, decoder, AI, or game-path behavior until the census
-names the transfer boundary. If the census is insufficient, add only one
-targeted transfer witness in the next unit.

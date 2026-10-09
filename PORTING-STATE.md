@@ -148589,3 +148589,16 @@ the D740 body/callsite, wrapper symbol, and overlay mapping before any further
 runtime instrumentation.
 
 ORIGIN: none; diagnostic-only witness and matrix, no mitigation.
+## Session 4330 (2026-10-08) — static D740 transfer census rejected bypass
+
+Ran the prescribed bounded static census before building. In the generated
+tree, `updateVoiceChannelParamsLarge` has one wrapper at `0x8009C5BC`; its
+complete body contains the only `0x8009D740: jal 0x8009D7D0` edge, and there are
+no other generated references to the wrapper or filter body. The generated
+overlay table maps the wrapper to section-3 text (`rom 0x40`, `ram 0x80000440`),
+not an overlay. This rejects a static alternate-transfer explanation for the
+s4329 direct-row/caller-row contradiction. It does not prove descriptor
+equality or explain the runtime caller-row absence. Next unit is one
+co-located sequence witness for entry helper, caller helper, and direct probe;
+no runtime behavior changed. The oracle and MORT controls were not rerun in
+this static-only unit.
