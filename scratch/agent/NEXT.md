@@ -1,7 +1,8 @@
-# Next work unit (s4463): who bounds the 0x18-stride record run that walks into the audio pool?
+# Next work unit (s4464): does rs_malloc know the SND blob that spans 0x801928E8..0x8021E538?
 
 HYPOTHESIS-ID: m5-ai-event-cadence
 
-State (s4462): insert calls form a descending 0x18-stride a1 run crossing the pool (0x80193B00..0x80194C00) at VI 1024; overlap F supported in the port (6/6 arms, single-source).
-Hypotheses: (P) run count/base comes from a wrongly-read SND header word (port-induced); (Q) retail run also overlaps and the pool is allocated afterwards on consumed records (benign); (R) run legitimately larger and the pool allocator mis-places its block.
-Discriminator: log ra + a0/a2 at insert entry for first/last call of each run and the caller loop bound; then oracle (tools/oracle/README.md, physical read watch with whole-RDRAM control) on retail: max a1 of the run vs pool base. P: bound word differs from retail; Q: retail max a1 also above pool base; R: retail run ends below pool and port pool base differs.
+State (s4463): insert pointers span ~0x8C000 bytes from 0x801928E8; rs_malloc handed the audio node block 0x80193C20 and buffer 0x80196CC0 inside that span (VI 640). Port-only.
+Hypotheses: (A) SND blob allocated by rs_malloc at a base below 0x80193C20 with size covering it, then allocator overlaps = allocator/free bug; (B) SND blob never rs_malloc'd (DMA'd to a fixed or stale address) so heap is unaware = port load-path bug; (C) span is a pointer table over data the retail also overlaps (benign, pool nodes unlinked).
+Discriminator: one run logging every rs_malloc/free (0x80001ACC / its free) call with size+return+ra that intersects 0x801928E8..0x8021E538, plus relocateSndPointer arg/return. A: an alloc covering 0x801928E8+ exists and a later alloc overlaps it (or it was freed). B: no alloc covers the span. C: needs oracle retail comparison.
+Commands: hook rs_malloc return (fixup script for generated code, or store hook on its result), reuse scratch/agent/s4463_run.sh recipe.

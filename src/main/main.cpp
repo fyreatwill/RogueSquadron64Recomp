@@ -4804,6 +4804,25 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                 std::fflush(stderr);
             }
         }
+        if (pc == 0x8008F690u || pc == 0x8008F6A4u) {  // s4463: buildSongDecodeBufferRing rs_malloc results (node block / 0x100 buffer block)
+            std::fprintf(stderr, "[s4463-poolalloc] pc=0x%08X ptr=0x%08X vi=%u\n", pc, value, rs64_vi_committed_width());
+            std::fflush(stderr);
+        }
+        if (pc == 0x8008F6F4u) {  // s4463: one store per node after the first; count + addresses = pool node-block extent
+            static uint32_t nn = 0, firstA = 0;
+            if (nn++ == 0) firstA = addr;
+            if ((nn & 0x3Fu) == 0 || nn <= 2u) {
+                std::fprintf(stderr, "[s4463-poolnodes] n=%u first_store_addr=0x%08X last_store_addr=0x%08X vi=%u\n", nn, firstA, addr, rs64_vi_committed_width());
+                std::fflush(stderr);
+            }
+        }
+        if (pc == 0x80085424u && width == 'W') {  // s4463: min/max of the inserted pointers
+            static uint32_t mn = 0xFFFFFFFFu, mx = 0, cnt = 0;
+            if (value < mn) mn = value;
+            if (value > mx) mx = value;
+            if ((++cnt & 0x3Fu) == 0 || cnt == 1u)
+                std::fprintf(stderr, "[s4463-insrange] cnt=%u min=0x%08X max=0x%08X vi=%u\n", cnt, mn, mx, rs64_vi_committed_width());
+        }
         if (addr == 0x801499B0u && value != 0 && width == 'W') {  // s4459: head set non-zero -> who last wrote the pool-node words
             static uint32_t hn = 0;
             if (hn++ < 6u) {
