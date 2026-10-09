@@ -2632,6 +2632,49 @@ struct Rs64FilterVoiceCallerObject {
 
 static Rs64FilterVoiceCallerObject g_rs64_filter_voice_caller;
 
+extern "C" void rs64_filter_voice_sequence_probe(const char* edge,
+                                                   uint32_t site) {
+    static int enabled = -1;
+    static unsigned long sequence = 0;
+    static unsigned long entry_count = 0;
+    static unsigned long caller_count = 0;
+    static unsigned long direct_count = 0;
+    static uint32_t direct_phase_key = 0;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+        enabled = ((all && *all && *all != '0') ||
+                   (own && *own && *own != '0')) ? 1 : 0;
+    }
+    if (!enabled || site != 0x8009D740u) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (std::strcmp(edge, "entry") == 0) {
+        ++sequence;
+        ++entry_count;
+    } else if (std::strcmp(edge, "caller") == 0) {
+        ++caller_count;
+    } else if (std::strcmp(edge, "direct") == 0) {
+        if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
+        if (origin != direct_phase_key) {
+            direct_phase_key = origin;
+            direct_count = 0;
+        }
+        ++direct_count;
+    } else {
+        return;
+    }
+    if (std::strcmp(edge, "entry") == 0 && entry_count > 256ul) return;
+    if (std::strcmp(edge, "caller") == 0 && caller_count > 256ul) return;
+    if (std::strcmp(edge, "direct") == 0 && direct_count > 256ul) return;
+    std::fprintf(stderr,
+                 "[m5-filter-seq] edge=%s site=0x%08X width=%u origin=0x%06X "
+                 "seq=%lu entry_n=%lu caller_n=%lu direct_n=%lu\n",
+                 edge, site, width, origin, sequence, entry_count, caller_count,
+                 direct_count);
+    std::fflush(stderr);
+}
+
 static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
                                         uint32_t sp, uint32_t ra,
                                         uint32_t a0, uint32_t a1,
@@ -2830,6 +2873,7 @@ extern "C" void rs64_filter_voice_direct_probe(uint32_t site, uint32_t sp,
         phase_key = origin;
         d740_store_n = 0;
     }
+    rs64_filter_voice_sequence_probe("direct", site);
     ++d740_store_n;
     if (d740_store_n > 256ul) return;
     std::fprintf(stderr,

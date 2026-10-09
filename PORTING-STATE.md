@@ -148602,3 +148602,32 @@ equality or explain the runtime caller-row absence. Next unit is one
 co-located sequence witness for entry helper, caller helper, and direct probe;
 no runtime behavior changed. The oracle and MORT controls were not rerun in
 this static-only unit.
+
+## Session 4331 (2026-10-08) — co-located D740 sequence fixed the caller boundary
+
+Added a phase-scoped sequence witness to the existing M5 filter audit and ran
+the seeded silent/image matrix with the independent oracle in the same recipe.
+The first placement put entry/helper markers in `updateVoiceChannelParamsLarge`
+while D740 direct rows came from its containing generated region; that produced
+`seq=0` and was rejected as an instrumentation-boundary result. The corrected
+placement put the markers in `decodeAndFillVoiceBlock`, whose entry is
+`0x8009C904` and whose inner D740 edge is `0x8009D740`.
+
+The final build passed. The oracle gate passed whole-RDRAM, title VI 1024, and
+hangar VI 512; both port arms passed their VI controls and neither crashed or
+aborted. The image arm emitted shared sequence ids with entry, post-helper, and
+D740 direct events (sequences 1-3 all show entry/helper before direct rows).
+The silent arm emitted no target-phase sequence/direct rows. This rejects the
+entry-bypass and helper-not-invoked explanations for the prior missing D740
+caller rows. It identifies the active caller boundary as the C88C helper at the
+`decodeAndFillVoiceBlock` entry; there is no separate D740 caller bucket to
+join. Descriptor class and silent/image payload ownership remain open.
+
+The oracle-only preflight reached whole-RDRAM and title controls but not hangar
+within 65 seconds; it was not used as the target result. The same-run matrix
+provided the required independent hangar control. The next unit is a C88C
+entry-argument/descriptor-word join to the D740 sequence, with all arms built
+and run together.
+
+ORIGIN: none; diagnostic-only sequence witness and probe-placement correction,
+no mitigation.
