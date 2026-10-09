@@ -314,6 +314,23 @@ PCs to the task ordinal. ORIGIN: retail physical payload writes, writer-PC
 histograms, task execution, C904 joins, and whole-RDRAM observations; no value
 was skipped, rewritten, or guarded.
 
+Session 4379 first reproduced that boundary with a missing `--watch-pc` arm;
+the fixed capture passed the whole-RDRAM control, reached all three phase
+buckets, and retained 1,781 valid type-2 task rows. The oracle diagnostic was
+then extended to retain ordinal writes for non-control payload ranges (the
+previous implementation only retained <=4-byte watches); the final run
+retained 62,372 writes with zero overflow. For `0x178C80:0x179A48`, nearest
+task joins were before/after publication 21,308/585, 21,246/548, and 450/2
+for the two title buckets and hangar 512. For `0x1E2FC0:0x1E3300`, the joins
+were 0/17 and 181/225 in the two title buckets, with no hangar writes. This
+confirms that observed payload-range writers do execute after some task
+publications and rejects a complete writer-watch gap, while the dominant
+range-1 traffic is earlier and the capture does not establish which values
+are overwritten. It is single-source retail evidence; the next probe must
+join post-write values from `0x8008F7D4`/`0x80091374` to the published payload.
+ORIGIN: retail payload-range writes, writer PCs, task-publication PCs, and
+whole-RDRAM observations; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -354,13 +371,14 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4378 found live writers in both
-   payload ranges outside the previously audited candidate set. The next run
-   must phase-gate actual observed PCs `0x8008F7D4`, `0x80091374`, and the
-   nearby range-specific sites, then ordinal-join those writes to the typed
-   `0x80033FCC` task publication. Keep the whole-RDRAM, three-bucket, C904/task
-   controls. Do not repeat the caller census, direct publication join, closed
-   first-eight payload comparison, or the `0x8009C904:0x8009DC3C` range.
+   `m5-selector-decode-boundary`. Session 4379 established qualified
+   post-publication writes in both payload ranges, but not their values. The
+   next run must add phase-gated post-write value/scalar capture for writer PCs
+   `0x8008F7D4` and `0x80091374`, joined to the same typed `0x80033FCC` task
+   rows and payload snapshots. Keep the whole-RDRAM, three-bucket, and
+   nonzero-writer controls. Do not repeat the caller census, direct
+   publication join, closed first-eight payload comparison, or the
+   `0x8009C904:0x8009DC3C` range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -372,7 +390,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
-| M5 title caller path | s4375/s4376 qualify `0x80019DEC -> 0x80033FCC` as the direct publication chain; s4377 selects a phase-specific selector/object input; s4378 finds payload writers outside the prior candidate set, leaving writer timing open. |
+| M5 title caller path | s4375/s4376 qualify `0x80019DEC -> 0x80033FCC` as the direct publication chain; s4377 selects a phase-specific selector/object input; s4378 finds payload writers outside the prior candidate set; s4379 confirms some writer traffic after publication but leaves value provenance open. |
 | M5 consumer join | s4363 plus s4370/s4371 independent retail captures confirm distinct phase-specific task families and zero exact recurrence of nonzero selected words in the first eight published payload words (591/591, 601/601, 344/344). H-later-consumer-transform is confirmed for that boundary; the intermediate transform/publication stage remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |

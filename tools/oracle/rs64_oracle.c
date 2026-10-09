@@ -562,7 +562,7 @@ static int g_pc_task_join_enabled;
 static int g_pc_phase_quiet;
 static int g_ordinal_join_enabled;
 static uint64_t g_event_ordinal;
-#define MAX_ORDINAL_WRITES 32768
+#define MAX_ORDINAL_WRITES 262144
 struct ordinal_write_row {
     int watch;
     uint32_t pc;
@@ -2335,8 +2335,7 @@ static void dbg_update(unsigned int pc)
             }
             if (g_ordinal_join_enabled &&
                 (access_flags & M64P_BKP_FLAG_WRITE) &&
-                g_watch[i].end - g_watch[i].start <= 4u &&
-                pc_phase_log_match()) {
+                i > 0 && pc_phase_log_match()) {
                 if (g_n_ordinal_writes < MAX_ORDINAL_WRITES) {
                     struct ordinal_write_row *write =
                         &g_ordinal_writes[g_n_ordinal_writes++];

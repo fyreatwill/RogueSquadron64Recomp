@@ -149618,3 +149618,23 @@ work unit is an ordinal join of the actual writer PCs to `0x80033FCC`. Failed
 first launch: instrument boundary only; no value was skipped, rewritten, or
 guarded. ORIGIN: retail physical payload writes, writer-PC histograms, task
 execution, C904 joins, and whole-RDRAM observations.
+
+## Session 4379 (2026-10-09) — ordinal-joined actual payload writers
+
+The first ordinal capture passed whole-RDRAM and all three VI controls and
+found live `0x8008F7D4`/`0x80091374` writers, but the task watch was not armed
+as an execution breakpoint, so it retained zero task rows. Adding
+`--watch-pc 0x80033FCC` qualified the task stream at 1,959 rows, but exposed
+that the oracle's ordinal instrument only retained <=4-byte watches. The
+instrument was extended to retain non-control range writes and its table was
+grown to avoid overflow; the final 75-second Rice capture passed the positive
+control, reached title origins `0x00790400`/`0x00790800` and hangar origin
+`0x006AB400`, retained 1,781 valid type-2 rows, and recorded 62,372 ordinal
+writes with zero overflow. For `0x178C80:0x179A48`, nearest-task joins were
+before/after 21,308/585, 21,246/548, and 450/2 across the three buckets. For
+`0x1E2FC0:0x1E3300`, they were 0/17 and 181/225 in the two title buckets,
+with no hangar writes. This selects a real post-publication writer path over
+a complete writer-watch gap, while showing dominant earlier traffic and not
+proving which values are overwritten. Single-source retail evidence only.
+ORIGIN: retail payload-range writes, writer PCs, task-publication PCs, and
+whole-RDRAM observations; no value was skipped, rewritten, or guarded.
