@@ -4791,6 +4791,41 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
             e.ppc = e.pc; e.pval = e.val; e.pc = pc; e.val = value; e.w = (uint16_t)width;
             ++g_s4457_stores;
         }
+        if (addr == 0x801499B0u && value != 0 && width == 'W') {  // s4459: head set non-zero -> who last wrote the pool-node words
+            static uint32_t hn = 0;
+            if (hn++ < 6u) {
+                std::fprintf(stderr, "[s4459-headset] n=%u pc=0x%08X val=0x%08X vi=%u words:", hn, pc, value, rs64_vi_committed_width());
+                for (uint32_t a : {0x80193C18u, 0x80193C20u, 0x80193C34u, 0x80193C48u, 0x80193C5Cu, 0x80193C70u}) {
+                    const S4457W& e = g_s4457_tab[(a & 0x3FFFFFu) >> 2];
+                    std::fprintf(stderr, " [%X pc=%X w=%c]", a & 0xFFFFu, e.pc, e.w ? char(e.w) : '-');
+                }
+                std::fprintf(stderr, "\n"); std::fflush(stderr);
+            }
+        }
+        if (pc == 0x80061520u && width == 'B') {  // s4459: loadCharTextureSet 256-byte 0xFF-fill table loop
+            static uint32_t last = 0, tables = 0, lines = 0, overlap = 0;
+            if (addr != last + 1u) {
+                ++tables;
+                const bool ov = addr < 0x80194C00u && addr + 0x100u > 0x80193B00u;
+                if (ov) ++overlap;
+                if (lines < 80u && (ov || tables <= 12u)) {
+                    ++lines;
+                    const S4457W& h = g_s4457_tab[(0x801499B0u & 0x3FFFFFu) >> 2];
+                    std::fprintf(stderr, "[s4459-tbl] n=%u base=0x%08X overlap_pool=%d overlaps_total=%u stores=%llu head_val=0x%08X head_pc=0x%08X vi=%u\n",
+                                 tables, addr, ov ? 1 : 0, overlap, (unsigned long long)g_s4457_stores, h.val, h.pc, rs64_vi_committed_width());
+                    if (ov) {
+                        std::fprintf(stderr, "[s4459-tblpool] words:");
+                        for (uint32_t a : {0x80193C18u, 0x80193C20u, 0x80193C34u, 0x80193C48u, 0x80193C5Cu, 0x80193C70u}) {
+                            const S4457W& e = g_s4457_tab[(a & 0x3FFFFFu) >> 2];
+                            std::fprintf(stderr, " [%X pc=%X w=%c]", a & 0xFFFFu, e.pc, e.w ? char(e.w) : '-');
+                        }
+                        std::fprintf(stderr, "\n");
+                    }
+                    std::fflush(stderr);
+                }
+            }
+            last = addr;
+        }
     }
     if (pc == 0x80007670u) rs64_s4429_heap_probe("B", pc, addr, value);
     {   // s4443: store watch on the pool-tail next word (and its +0x18 neighbour);
