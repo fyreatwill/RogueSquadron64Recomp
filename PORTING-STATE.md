@@ -148741,3 +148741,22 @@ behavior changed.
 
 ORIGIN: none; diagnostic oracle probe only, no mitigation or runtime behavior
 change.
+
+## Session 4336 (2026-10-08) — port field join was blocked by pre-hangar synth crash
+
+Attempted the prescribed same-build port C88C field comparison against the
+retained retail C904 table. The initial arm, explicit `ROGUESQ_A14_YIELD=1`
+route-fix arm, and explicit `ROGUESQ_A14_YIELD=0` arm all reached VI 1024 and
+then crashed around 75-76 seconds at `musyxSynthFrame+4284`, before VI 512.
+All three had zero C88C, direct-filter, and object-field witness rows. The
+comparison was therefore unevaluable; no payload parity conclusion follows.
+
+The A14 retry was run immediately because the project qualification identifies
+yield-on as the route-recovery arm and yield-off as the hangar-staying arm. Its
+failure, plus the explicit yield-off failure, rules out A14 yield selection as
+the sufficient route fix in this recipe. A same-run route control remains
+required before the C904/C88C comparison. This is single-source port evidence;
+the independent retail C904 table and its controls remain unchanged.
+
+ORIGIN: none; diagnostic route probes only, no mitigation or runtime behavior
+change.

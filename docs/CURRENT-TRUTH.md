@@ -4,7 +4,10 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4335: the controlled retail C904 field dump passed
+Updated for session 4336: three port field-join route attempts all crashed at
+`musyxSynthFrame+4284` after VI 1024 and before VI 512, so the planned retail /
+port field comparison was unevaluable. The C904 retail table remains valid.
+Previously 4335: the controlled retail C904 field dump passed
 whole-RDRAM, title, and hangar controls and produced stable phase-gated
 object/source/branch rows. C904 is now the retail counterpart boundary for the
 port C88C descriptor helper; exact payload correspondence remains open.
@@ -212,7 +215,15 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4335) The retail C904 field dump passed the whole-RDRAM positive
+00. (s4336, substituted) Recover the qualified seeded-save port route to VI
+512 before repeating the C904/C88C field join. The initial arm, explicit
+A14-yield-on arm, and explicit A14-yield-off arm all reached VI 1024 then
+crashed at `musyxSynthFrame+4284` around 75-76 s, with zero C88C/direct/object
+witness rows. First distinguish stale save/config from the known synth lifetime
+crash; the positive control is VI 512 plus a nonzero C88C witness. Do not
+compare or add a mitigation until that control passes.
+
+00a. (s4335) The retail C904 field dump passed the whole-RDRAM positive
 control (10,000 writes), title VI 1024, and hangar VI 512 controls. C904
 executed 3,107 times; the phase-gated dump produced 461 rows at origin
 `0x006AB400` and 836 at `0x006AB800`. Rows consistently had caller

@@ -1,33 +1,29 @@
-# Next work unit (s4336): compare the retail C904 and port C88C field tables
+# Next work unit (s4337): recover the qualified port hangar route
 
-HYPOTHESIS-ID: m5-step9-retail-port-field-join
+HYPOTHESIS-ID: m5-step9-port-route-recovery
 
-The s4335 retail field dump passed all controls. C904 executed 3,107 times and
-produced 461 phase-gated rows at `0x006AB400` and 836 at `0x006AB800`, with
-caller `0x8009C0E4`, object `0x80153420`, and nonzero source/branch fields.
+The s4336 C904/C88C comparison was substituted: all three port arms crashed at
+`musyxSynthFrame+4284` after VI 1024 and before VI 512, so zero field rows were
+available. First reproduce or falsify the route failure with a bounded route
+probe using the same seeded save, then compare only if VI 512 and a C88C row
+both fire.
 
 Competing hypotheses:
 
-- H-port-retail-parity: port C88C and retail C904 expose the same descriptor
-  object-relative source and branch fields after phase normalization.
-- H-pre-route-divergence: the mapped boundaries are equivalent, but their
-  source/branch sequences differ before filtering, preserving the audio-route
-  divergence.
-- H-port-instrument-invalid: the port field witness cannot be joined or its
-  route controls fail, so the comparison is unevaluable.
+- H-stale-save-config: the direct probe used a stale or incomplete save/config;
+  restoring the known seeded matrix recipe reaches VI 512.
+- H-synth-lifetime: the current binary deterministically hits the known
+  `musyxSynthFrame+4284` lifetime defect before hangar regardless of A14 yield.
+- H-route-schedule: the field probe's key/phase schedule changes the route;
+  the known s4332 schedule reaches VI 512 when reproduced exactly.
 
-Discriminator: run one same-build port matrix with the existing C88C field
-witness, phase-gated to VI origin `0x006AB400`/`0x006AB800` width 512, and
-normalize the first bounded rows by object-relative offsets. Matching ordered
-fields select H-port-retail-parity; valid controls with a stable mismatch
-select H-pre-route-divergence; missing port controls or no joinable rows select
-H-port-instrument-invalid. Do not change decoder, RSP, AI, or game-path code.
+Discriminator: one bounded A/B run with the known s4332 seeded-save route and
+the current field-probe route, both phase-gated to VI 512, recording crash PC,
+VI phases, and C88C witness count. H-stale-save-config predicts only the
+seeded arm reaches VI 512; H-synth-lifetime predicts identical
+`musyxSynthFrame+4284` pre-512 failures; H-route-schedule predicts a VI-512
+control in the known route but not the field route. Do not add a guard.
 
-Suggested command shape:
-
-`env ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_M4=1 zsh tools/run-field-join.sh ...`
-
-The script must retain the independent oracle result at
-`scratch/agent/oracle_s4335_c904_field.log` as the retail arm and capture the
-port arm in a new non-dot path. Positive controls are port VI 512, the existing
-field-call witness, and the oracle whole-RDRAM/title/hangar controls.
+The retail C904 field table remains at
+`scratch/agent/oracle_s4335_c904_field.log`; defer comparison until the route
+control passes.
