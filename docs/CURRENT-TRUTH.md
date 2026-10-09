@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4388 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4390 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -517,6 +517,21 @@ payload versus maintenance. ORIGIN: retail task-field observations, exact
 physical writer PCs, phase/ordinal joins, and whole-RDRAM/VI controls; no value
 was skipped, rewritten, or guarded.
 
+Session 4390's batched exact-span scalar capture passed the whole-RDRAM control
+(1,559,513 callbacks), reached 4,486 VI, and retained 1,748 valid type-2 task
+rows with ordinal-write overflow 0. Post-store scalar validation found live
+nonzero stores in both exact task-data spans and their `+0x100` fields: watches
+1/2/3/4 had 176/257/130/251 nonzero samples, with `mismatch=0` throughout the
+supported scalar samples. The null output watch had zero writes. Watch 1 had 14
+unsupported samples from non-scalar store forms, so this is not a
+zero-unsupported instrument qualification; it does not invalidate the
+supported scalar evidence. Together with s4389's task-field and physical-writer
+witnesses, this selects H-semantic-data over pure maintenance/zero-fill for the
+exact spans. It remains single-source retail evidence and does not identify the
+semantic writer's full phase/ordinal mapping. ORIGIN: retail task fields, exact
+physical writes, post-store source-register validation, and whole-RDRAM/VI
+controls; no value was skipped, rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -531,12 +546,12 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Identify which exact-span writer PCs and
-   scalar values are semantic task payload versus maintenance/zero-fill, using
-   one phase-gated oracle capture with the already-qualified task and ordinal
-   controls plus post-store scalar validation. Do not broaden the destination
-   ranges or treat writer presence alone as payload equality.
+1. **M5 selector/decode semantic writer mapping** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Join the validated nonzero exact-span writer
+   PCs and source values to individual task publication ordinals, separating
+   semantic payload stores from remaining maintenance fields. Keep the same
+   phase-gated task, ordinal, and scalar controls; do not broaden the
+   destination ranges or treat writer presence alone as payload equality.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

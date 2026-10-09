@@ -149843,3 +149843,21 @@ single-source retail evidence and does not prove which stores are semantic
 payload versus maintenance. No mitigation or value rewrite was added.
 ORIGIN: retail task fields, exact physical writer PCs, phase/ordinal joins, and
 whole-RDRAM/VI controls; no value was skipped, rewritten, or guarded.
+
+## Session 4390 (2026-10-09) — classified exact task-span scalar writers
+
+Ran one batched exact-span retail-oracle capture with post-value and
+post-store-scalar arms for both observed hangar task-data spans and their
+`+0x100` fields. The whole-RDRAM positive control produced 1,559,513 callbacks;
+the run reached 4,486 VI, retained 1,748 valid type-2 tasks, and had ordinal
+overflow 0. Watches 1/2/3/4 recorded 176/257/130/251 nonzero scalar samples
+with mismatch 0 on supported stores. The null output watch had zero writes.
+Watch 1 had 14 unsupported non-scalar store samples, so the scalar arm is not a
+zero-unsupported qualification, but the supported samples are valid. This
+selects H-semantic-data over pure maintenance/zero-fill for the exact spans,
+corroborating s4389's task-field and physical-writer evidence. It does not yet
+map semantic values to individual task ordinals. No mitigation or value
+rewrite was added.
+ORIGIN: retail task fields, exact physical writes, post-store source-register
+validation, and whole-RDRAM/VI controls; no value was skipped, rewritten, or
+guarded.

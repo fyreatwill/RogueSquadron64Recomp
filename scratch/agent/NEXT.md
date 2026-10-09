@@ -1,35 +1,33 @@
-# Next work unit (s4390): classify exact-span writers
+# Next work unit (s4391): map semantic exact-span writers to task ordinals
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
 Competing hypotheses:
 
-- H-semantic-data: the exact task-span stores carry the semantic payload.
-- H-maintenance-data: the exact task-span stores are maintenance/zero-fill;
-  semantic values are written elsewhere.
-- H-source-gap: post-store scalar attribution or the phase/ordinal join is not
-  sufficient to classify the exact-span writers.
+- H-ordinal-semantic: validated nonzero exact-span stores occur in the task
+  publication interval and are semantic payload.
+- H-ordinal-maintenance: the nonzero stores are setup/maintenance traffic and
+  do not align with individual task publications.
+- H-source-gap: the current exact-span scalar/ordinal keys cannot separate the
+  two classes without a new bounded field.
 
-Discriminating measurement: one retail-oracle run with exact watches for both
-observed hangar data spans and their exact `+0x100` fields, plus
-`--post-value-watch` and post-store scalar validation for every target watch.
-Valid nonzero scalar writes from the publication-linked writer PCs select
-H-semantic-data; only zero-fill/maintenance writes with a live writer outside
-those spans select H-maintenance-data; mismatch, unsupported, missing-task, or
-overflow rows select H-source-gap.
+Discriminating measurement: one retail-oracle run retaining exact writer rows
+for the four target watches, task event ordinals, source values, and phase-keyed
+nearest-task joins. A bounded table showing the same writer PC/value class
+inside the publication interval selects H-ordinal-semantic; only rows outside
+that interval with zero/maintenance signatures select H-ordinal-maintenance;
+missing-task, overflow, or inability to retain the writer/value key selects
+H-source-gap.
 
-Controls required: whole-RDRAM positive control, title origins
-`0x00790400:1024` and `0x00790800:1024`, hangar origin `0x006AB400:512`, at
-least 1,000 valid type-2 rows, zero target-watch and ordinal overflow, and
-phase-scoped scalar mismatch/unsupported counts of zero.
+Controls: whole-RDRAM positive control, title origins `0x00790400:1024` and
+`0x00790800:1024`, hangar origin `0x006AB400:512`, at least 1,000 valid type-2
+rows, zero task/ordinal overflow, and mismatch 0 for supported scalar stores.
 
 Exact commands:
 
-    bash tools/oracle/build.sh
-    edit scratch/agent/run_s4390_m5_exact_span_scalar.sh from the s4389 runner,
-    adding post-value/post-store-scalar arms for watches 1-5
-    bash scratch/agent/run_s4390_m5_exact_span_scalar.sh
+    inspect the s4390 runner and extend the oracle's existing ordinal summary
+    only if the writer/value-to-task table is not already retained
+    bash scratch/agent/run_s4391_m5_exact_span_ordinal.sh
 
-Summarize only bounded `rg`/`sed` windows from the oracle log. Keep the s4389
-result as qualified single-source destination evidence; do not repeat the
-union watch.
+Summarize only bounded `rg`/`sed` windows from the oracle log. Keep s4389/s4390
+as qualified single-source destination evidence; do not repeat the union watch.
