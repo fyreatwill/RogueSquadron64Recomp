@@ -1,6 +1,10 @@
-# Next work unit (s4325): qualify descriptor/filter/output payload join
+# Next work unit (s4326): cleanly qualify descriptor/filter/output payload join
 
 HYPOTHESIS-ID: m5-step9-mort-output
+
+State (s4325): the corrected join instrument is built, but paired retries were
+not jointly valid: one arm crashed before VI 512 and a later retry overlapped
+orphaned processes. No payload conclusion is entered into truth.
 
 State (s4324): the seeded-save matrix passed the independent MORT reference,
 oracle controls, and both VI-512 port controls. Silent and real-image arms

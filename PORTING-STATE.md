@@ -148412,3 +148412,30 @@ changed.
 
 ORIGIN: none; this was a route-qualified diagnostic matrix and no mitigation
 was added.
+
+## Session 4325 (2026-10-08) — built M5 filter payload join instrument
+
+HYPOTHESIS-ID: m5-step9-mort-output
+
+Read the independent oracle contract, Factor 5 reference, and existing M5 row
+writers before instrumenting. Added one phase-scoped [m5-filter-join] table to
+the host filter witness. Each row carries arm, route ordinal/row, rate, all
+filter arguments, the live stack-based table address/value, and guest
+source/output FNV hashes. The build completed successfully; the existing
+JSON/macOS linker warnings remained.
+
+The MORT reference and oracle whole-RDRAM/title/hangar controls passed. The
+first matrix attempt reached both arms' VI-512 route controls and produced 256
+rows per arm, but inspection found the new printf fields misaligned and the
+table base using ra instead of the live sp. I fixed both and rebuilt. Corrected
+retries were not jointly interpretable: one arm crashed in the existing
+descriptor probe before VI 512, and a later retry overlapped orphaned processes
+after wrapper exit. All processes were SIGKILLed. No descriptor/filter/output
+hypothesis was selected.
+
+This rules out neither H-same-descriptor-different-filter,
+H-descriptor-class-divergence, nor H-output-join. It does establish the
+instrument and positive-control path; the next run must be clean and require
+both paired VI-512 controls before reading the table.
+
+ORIGIN: none; diagnostic-only instrumentation, no mitigation.

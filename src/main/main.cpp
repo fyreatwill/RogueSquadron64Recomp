@@ -118,6 +118,8 @@ extern "C" void rs64_audio_join_image_complete(const char* arm,
 extern "C" bool rs64_audio_current_route_snapshot(
     uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
     uint32_t* row, int* exit_reason, const char** arm);
+extern "C" uint32_t rs64_audio_rate_snapshot();
+extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;
 extern "C" void rs64_m5_audio_join_snapshot(
     const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
     uint32_t width, uint32_t origin, uint64_t* task_generation,
@@ -2561,6 +2563,37 @@ static bool rs64_filter_voice_guest_span_ok(uint32_t base, uint32_t span) {
     return rdram_segment && phys <= 0x800000u && span <= 0x800000u - phys;
 }
 
+static uint32_t rs64_filter_voice_guest_hash(uint32_t base, uint32_t span) {
+    const uint32_t segment = base & 0xE0000000u;
+    const uint32_t phys = base & 0x1FFFFFFFu;
+    if (segment != 0x80000000u && segment != 0xA0000000u)
+        return 0u;
+    if (phys > 0x800000u || span > 0x800000u - phys)
+        return 0u;
+    const volatile uint8_t* rdram = g_recomp_rdram_for_wp_raw;
+    if (!rdram)
+        return 0u;
+    uint32_t hash = 2166136261u;
+    for (uint32_t i = 0; i < span; ++i)
+        hash = (hash * 16777619u) ^ rdram[phys + i];
+    return hash;
+}
+
+static uint32_t rs64_filter_voice_guest_word(uint32_t base) {
+    const uint32_t segment = base & 0xE0000000u;
+    const uint32_t phys = base & 0x1FFFFFFFu;
+    if ((segment != 0x80000000u && segment != 0xA0000000u) ||
+        phys > 0x7FFFFCu)
+        return 0u;
+    const volatile uint8_t* rdram = g_recomp_rdram_for_wp_raw;
+    if (!rdram)
+        return 0u;
+    return (uint32_t(rdram[phys]) << 24) |
+           (uint32_t(rdram[phys + 1]) << 16) |
+           (uint32_t(rdram[phys + 2]) << 8) |
+           uint32_t(rdram[phys + 3]);
+}
+
 static const char* rs64_filter_voice_site_name(uint32_t site) {
     switch (site) {
     case 0x8009C540u: return "updateVoiceChannelParams";
@@ -2620,11 +2653,27 @@ static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
     const int32_t index = static_cast<int32_t>(a0);
     const int32_t selector = static_cast<int32_t>(static_cast<int16_t>(a1 & 0xFFFFu));
     const bool table_used = index <= 7;
-    const uint32_t table = table_used ? ra + 0xD4u + a0 : 0u;
+    const uint32_t table = table_used ? sp + 0xD4u + a0 : 0u;
     const bool source_ok = rs64_filter_voice_guest_span_ok(source, 26u);
     const bool output_ok = rs64_filter_voice_guest_span_ok(output, 40u);
     const bool table_ok = !table_used || rs64_filter_voice_guest_span_ok(table, 1u);
     const uint32_t phase = rs64_phase_ord();
+    uint32_t route_ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    const char* arm = "n/a";
+    rs64_audio_current_route_snapshot(nullptr, nullptr, nullptr, &route_ordinal,
+                                      &route_row, nullptr, &arm);
+    const uint32_t source_hash = rs64_filter_voice_guest_hash(source, 26u);
+    const uint32_t output_hash = rs64_filter_voice_guest_hash(output, 40u);
+    const uint32_t table_value = table_used ? rs64_filter_voice_guest_word(table) : 0u;
+    fprintf(stderr,
+            "[m5-filter-join] edge=%s site=0x%08X arm=%s phase=%u width=%u origin=0x%06X "
+            "route_ordinal=%u route_row=%u rate=%u a0=%d a1=%d a2=0x%08X a3=0x%08X "
+            "source=0x%08X source_hash=0x%08X output=0x%08X output_hash=0x%08X "
+            "table=0x%08X table_value=0x%08X\n",
+            edge, site, arm ? arm : "n/a", phase, width, origin, route_ordinal,
+            route_row, rs64_audio_rate_snapshot(), index, selector, source, output,
+            source, source_hash, output, output_hash, table, table_value);
+    fflush(stderr);
     fprintf(stderr,
             "[filter-voice-audit] edge=%s site=0x%08X caller=%s phase=%u width=%u origin=0x%06X row=%lu sp=0x%08X ra=0x%08X a0=%d a1=%d source=0x%08X source_span=26 output=0x%08X output_span=40 table_used=%u table=0x%08X table_span=1 source_ok=%u output_ok=%u table_ok=%u source_delta=%d output_delta=%d range=%s\n",
             edge, site, rs64_filter_voice_site_name(site), phase, width, origin,
@@ -5820,6 +5869,10 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
 // ---------------------------------------------------------------------------
 static SDL_AudioDeviceID audio_device = 0;
 static uint32_t audio_sample_rate = 48000;
+
+extern "C" uint32_t rs64_audio_rate_snapshot() {
+    return audio_sample_rate;
+}
 static std::atomic<uint32_t> g_rs64_pcm_consumer_count{0};
 static std::atomic<uint32_t> g_rs64_pcm_consumer_phase_key{0xFFFFFFFFu};
 

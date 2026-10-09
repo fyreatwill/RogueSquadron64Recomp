@@ -53,7 +53,7 @@ wait "$OPID" 2>/dev/null || true
 for f in silent image; do
     log="$OUT/$f/run.log"
     print -- "--- $f ---" >> "$OUT/driver.log"
-    for marker in '[phase]' '[m5-descriptor-start]' '[init-desc]' '[filter-voice-audit-control]' '[filter-voice-audit]' '[pcm-boundary-source]' '[pcm-boundary-consumer]' 'site=0x8009C540' 'site=0x8009C88C' 'site=0x8009D740' '[m5-port-vi-control]' '[m5-port-retail-target]' '[CRASH]' '[ABORT]'; do
+    for marker in '[phase]' '[m5-descriptor-start]' '[init-desc]' '[filter-voice-audit-control]' '[filter-voice-audit]' '[m5-filter-join]' '[pcm-boundary-source]' '[pcm-boundary-consumer]' 'site=0x8009C540' 'site=0x8009C88C' 'site=0x8009D740' '[m5-port-vi-control]' '[m5-port-retail-target]' '[CRASH]' '[ABORT]'; do
         print "$marker=$(grep -a -F -c "$marker" "$log" 2>/dev/null || true)" >> "$OUT/driver.log"
     done
 done
