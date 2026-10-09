@@ -288,6 +288,7 @@ available.
 
 ## Next steps
 
+- **s4462 (newest):** factor5SortedTableInsertWidePair is called once per 0x18-byte record in a descending run that, at VI 1024, crosses 0x80193B00..0x80194C00 - the audio node pool (head 0x801499B0, 0x14-stride, init pcs 0x8008F6F4-0x8008F818). 6/6 arms, hook control live; port-only (single-source). SND record array and pool overlap in the port (F). Next: find the caller supplying run base/count (ra of the insert) and compare with the oracle: does retail's run end below the pool?
 - **s4461 (newest):** pc 0x800853A8 = shift loop of factor5SortedTableInsertWidePair; C18 (a1, first stored at 0x80085424) is a caller-supplied relocated SND pointer, not a pool-link writer (code reading, single-source). Open: does that SND pointer overlap the later-built audio node pool (F) or not (E)? Next: log insert args+ra and pool/SND allocator ranges in one run.
 - **s4460:** only writer of a 0x80193C18 value is pc 0x800853A8 filling a 0xC-stride table at 0x8013B060 (VI 1024, 6/6 arms, ctl fired); no C18 store into the pool list => refutes stray-store (A); lead (D) = who consumes that table. Next: name 0x800853A8 and watch reads of 0x8013B0xx entries.
 

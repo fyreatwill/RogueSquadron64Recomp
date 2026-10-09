@@ -4791,6 +4791,19 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
             e.ppc = e.pc; e.pval = e.val; e.pc = pc; e.val = value; e.w = (uint16_t)width;
             ++g_s4457_stores;
         }
+        if (pc == 0x80085424u && width == 'W') {  // s4462: every store of the caller-supplied SND pointer in the sorted-table insert
+            static uint32_t n = 0, inpool = 0;
+            ++n;
+            const bool ip = value >= 0x80193B00u && value < 0x80194C00u;
+            if (ip) ++inpool;
+            if (n <= 40u || (ip && inpool <= 40u)) {
+                const S4457W& o = g_s4457_tab[(value & 0x3FFFFFu) >> 2];
+                const S4457W& h = g_s4457_tab[(0x801499B0u & 0x3FFFFFu) >> 2];
+                std::fprintf(stderr, "[s4462-ins] n=%u addr=0x%08X val=0x%08X in_pool_range=%d inpool_total=%u vi=%u val_target_lastwriter_pc=0x%08X head_val=0x%08X\n",
+                             n, addr, value, ip ? 1 : 0, inpool, rs64_vi_committed_width(), (value >= 0x80000000u && value < 0x80400000u) ? o.pc : 0u, h.val);
+                std::fflush(stderr);
+            }
+        }
         if (addr == 0x801499B0u && value != 0 && width == 'W') {  // s4459: head set non-zero -> who last wrote the pool-node words
             static uint32_t hn = 0;
             if (hn++ < 6u) {
