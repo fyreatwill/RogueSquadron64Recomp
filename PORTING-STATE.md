@@ -150699,3 +150699,12 @@ Retail oracle (scratch/agent/run_s4433_reapply_callers.sh, whole-RDRAM write con
 Rules out: port-extra reapply call in title; a config-state difference at the reapply caller. Not examined: whether the port also makes the second (width 512, hangar) call (port runs die pre-hangar often). Thread m5-title-reapply-config CLOSED; the `0x80029E78` "title divergence" no longer distinguishes port from retail.
 
 ORIGIN: no mitigation added; instrument-only (oracle recipe).
+
+## Session 4434 (2026-10-09) — nonzero PCM IS produced and reaches queue_samples in the port title phase (H-source-zero and H-silent-by-design refuted)
+
+Ran the s4432 recipe (scratch/agent/s4434_port/run.sh) with ROGUESQ_S4242_CTRL=1 and ROGUESQ_S4245=1 added; log 973k lines, run reached phase 4 (width 1024, title) from t=49.5s to 75.7s, no pre-title death.
+- Rates: phase 4 setnext ~60/s, queue_samples equal to setnext (4480 vs 4479 at t=75.7); task_enter==task_ok (4446). No buffer is lost between osAiSetNextBuffer and queue_samples.
+- queue_samples PCM, the [s4242-ctrl] line prints only when the buffer's RMS b>0 (every 16th nonzero): 251 lines; phase 3 fixed_rms 4606-13050, phase 4 (1024) fixed_rms 2275-6484 (n=3104..4448, 384 samples each). The word-swap-corrected RMS differs from the old order (~19000), so the instrument discriminates byte order.
+- Control: the gate b>0 is itself the mark-everything control (it fires 251 times); a zero-only result was not the question, the result is positive.
+Ruled out: H-source-zero, H-silent-by-design (title already outputs RMS 2-6k PCM), H-nonzero-lost-before-queue_samples. Remaining: SDL device (audio_device queue/underrun/format) and content correctness vs retail (oracle AI DMA source in title). Single-source for content; oracle arm not run (undriven past attract).
+ORIGIN: no mitigation added; instrumentation-only, no code change.

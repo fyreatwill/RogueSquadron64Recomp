@@ -284,6 +284,13 @@ available.
 
 ## Next steps
 
+0a. **s4434: Step 10 qualification result - nonzero PCM reaches
+   `queue_samples` in the port title phase** (phase 4 width 1024: 251 nonzero
+   buffer reports in run, fixed_rms 2275-6484, setnext==queue ~60/s,
+   task_enter==task_ok). H-source-zero / H-silent-by-design refuted. Next:
+   verify the SDL device end (queued size, underrun, format) and compare
+   content against retail via oracle AI DMA source. Single-source on content.
+
 0. **s4433: both `m5-selector-entry-path` and `m5-title-reapply-config` are
    CLOSED.** Retail ALSO calls reapplyAudioConfig at the title->hangar mode
    change (chain `0x8008EB5C`->`0x8008EBC0`->`0x80091C88`->`0x80091CB8` at

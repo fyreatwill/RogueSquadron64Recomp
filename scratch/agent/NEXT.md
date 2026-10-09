@@ -1,10 +1,10 @@
-# Next work unit (s4434): M5 plan Step 10 qualification - is any nonzero PCM produced in the port title phase?
+# Next work unit (s4435): does the queued title PCM reach the SDL device intact?
 
 HYPOTHESIS-ID: m5-pcm-nonzero-source
 
-s4433 closed m5-title-reapply-config (retail also calls reapply at title->hangar).
+s4434: nonzero PCM (rms 2-6k) reaches queue_samples in title; counts setnext==queue.
 Hypotheses:
-- H-source-zero: audio task output buffer is all zero at the AI submit (0x8008EE84).
-- H-source-nonzero-host-lost: nonzero at the AI source, zero/lost at queue_samples/SDL.
-- H-silent-by-design: title has no music scheduled yet on this route.
-Discriminator: one port run (scratch/agent/s4432_port/run.sh recipe; retry on pre-title death) hashing + nonzero-span of the AI buffer at the osAiSetNextBuffer_recomp shim AND at queue_samples, phase-gated to width 1024 (title); same-run positive control = marked buffer. Oracle arm: retail AI DMA source bytes nonzero in title (tools/oracle). Compare per phase.
+- H-sdl-drop: SDL_QueueAudio/device drops or underruns (queued size, device format/freq mismatch vs osAiSetFrequency).
+- H-content-wrong: PCM nonzero but differs from retail (wrong voice/instrument data).
+- H-audible-ok: device path fine; M5 title audio works.
+Discriminator: one run, same recipe as scratch/agent/s4434_port/run.sh, logging SDL_GetQueuedAudioSize before/after each queue, device spec (freq/format) vs ai freq, and dump 5 s of PCM via ROGUESQ_S4243_PCM for spectral sanity; oracle arm for content if driveable.
