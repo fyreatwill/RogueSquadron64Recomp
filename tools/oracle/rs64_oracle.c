@@ -55,6 +55,7 @@
 #define MAX_POST_VALUE_ROWS_PER_PC 16
 #define MAX_POST_VALUE_SEQUENCE_ROWS 16384
 #define MAX_POST_VALUE_PC_DETAIL_ROWS 16384
+#define MAX_DETAIL_HANGAR_READ_ROWS 65536u
 #define MAX_VI_SWAP_PHASE_ROWS 256
 #define MAX_MODE_DUMP_ROWS 4096
 #define MAX_VI_CONTEXT_ROWS 1024
@@ -1877,7 +1878,7 @@ static void dbg_update(unsigned int pc)
                  pDebugMemRead32(VI_ORIGIN_ADDR) == 0x006AB400u)) {
                 if (!(getenv("RS64_DETAIL_HANGAR_READ") &&
                       (access_flags & M64P_BKP_FLAG_READ) &&
-                      g_detail_hangar_read_rows >= 16384u)) {
+                      g_detail_hangar_read_rows >= MAX_DETAIL_HANGAR_READ_ROWS)) {
                     detail_hit = 1;
                     if (getenv("RS64_DETAIL_HANGAR_READ") &&
                         (access_flags & M64P_BKP_FLAG_READ))

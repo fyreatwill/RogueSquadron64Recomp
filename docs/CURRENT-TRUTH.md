@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -63,7 +63,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4316) The requalified retail log has only 14,140 consumer-chain rows after the hangar transition when filtered to the `0x8008Fxxx` chain; its first available tuple is `0x8008FADC,0x17DA1C,0xB035DC20`, versus port `0x8008FCE8,0x17D9E0,0x8017D9F8`. This is a partial single-source divergence only: the required 16,384-row retail arm was not captured. A fixed oracle arm with `RS64_DETAIL_HANGAR_READ=1` stalled before VI 512, so no full comparison is qualified. Next: rerun the fixed oracle detail arm with the proven s4315 route and no extra watch that can perturb it; require whole-RDRAM control, VI 512 `0x006AB400`, 16,384 hangar consumer rows, then compare all three fields. No guard/skip is authorised.
+00. (s4317) The Rice-backed oracle arm passed the whole-RDRAM control, reached hangar VI 512 at `0x006AB400` at 38.4 s, and captured exactly 16,384 hangar-gated target reads after extending the oracle detail cap to 65,536. The filtered retail stream contained 16,384 `0x8008Fxxx` consumer rows and diverged at ordinal 0: retail `0x8008FADC,0x17DA1C,0xB035DC20` versus port `0x8008FCE8,0x17D9E0,0x8017D9F8`. This selects H-layout-or-filter as a full two-arm comparison result; it does not name the writer or authorize a mitigation. Next: resume M5 plan Step 9/10 qualification, beginning with the complete task/voice matrix and only changing CPU MORT or AI/SDL if its independent joins select that boundary.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -121,7 +121,7 @@ Work only the first applicable item. One monotonic sequence.
 | Port synth-read/free join | s4307 captured 256 reads with a phase-gated control; s4310 additionally joined the shared free and captured 256 post-free writer rows. The first port read/value matches retail, and the free precedes it, ruling out port-only reuse before the first consumer read. Later traversal/layout divergence remains open; no mitigation is authorised. |
 | Port synth-read/free join, extended route | s4312 requalified the route and captured 4,096 writer/read rows in one run; both controls fired at VI 512, the free was again at guest `0x80095D54`, and all 4,096 requested/post pairs matched. s4313 independently matched the first 4,096 retail keyed rows; comparison beyond that remains open. |
 | Retail synth-read value join | s4308/s4313: whole-RDRAM and VI-512 controls passed; the value-aware oracle captured 1.43M target reads, and the first 4,096 keyed retail rows exactly match the qualified port sequence. Later divergence remains open. |
-| Retail/port 16,384-row consumer comparison | s4316 partial only: 14,140 retail consumer rows were available and diverged at the first tuple; the fixed hangar-detail retry stalled before VI 512. Full 16,384-row result remains unevaluable. |
+| Retail/port 16,384-row consumer comparison | s4317: whole-RDRAM control and hangar VI 512 passed; both arms supplied 16,384 rows, with an ordinal-0 tuple divergence (retail `0x8008FADC,0x17DA1C,0xB035DC20`; port `0x8008FCE8,0x17D9E0,0x8017D9F8`). This selects a retail/port layout-or-filter divergence; exact writer/consumer cause remains open. |
 
 ## Durable evidence boundary
 
@@ -132,6 +132,12 @@ same-build declared/real, declared/silent and legacy/real arms. A route failure
 invalidates a null; it never proves absence.
 
 ## Superseded conclusions
+- s4316 "full retail/port consumer comparison remains unevaluable" (believable:
+  the first fixed retry stalled before VI 512 and the earlier detail cap left
+  only 14,140 filtered rows); s4317 restored the Rice/`--vi-trace` route and
+  raised the bounded cap, qualifying 16,384 rows and selecting a first-row
+  retail/port layout-or-filter divergence.
+
 - (s4294 hypothesis) "SPIN_YIELD/Y8000 or seeded saves suppress the ODD condition" - superseded by s4295: a0 (neither env) still odd=0; b0 (seeded saves) odd=60. It was believable because s4294 was the first run changing those variables together with the key route.
 
 - s4280 hypothesis A "RDRAM changes between bump time and RT64's walk read" (believable: the walk saw E9 at 4E2910 while RDRAM showed FF2E0C68): s4281 snapshotted the list at walk entry and diffed it against live RDRAM at the event, 0 differing words over 9 runs (single-source, no DIFF positive control). The list is rewritten between walks, not within one.

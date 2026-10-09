@@ -148186,3 +148186,24 @@ divergence is single-source evidence only: it does not select H-layout or
 H-filter, and it does not qualify a port-vs-retail conclusion. No guard or skip
 was added. The next unit is a complete 16,384-row hangar-gated capture.
 ORIGIN: none; measurement/instrument only.
+
+## Session 4317 (2026-10-08) — qualified full retail consumer divergence
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+The first prescribed oracle command was invalid because it omitted the Rice
+video plugin: its whole-RDRAM positive control fired, but it remained at VI
+640. A Rice-backed retry without the execution watch still remained on the
+640/attract route. Reapplying the proven s4315 route qualifier
+(`--vi-trace`) reached title and hangar VI 512 at `0x006AB400` at 38.4 s.
+
+The oracle detail cap was extended from 16,384 total target-range reads to
+65,536 so the filtered `0x8008Fxxx` consumer chain could reach 16,384 rows.
+The final run passed the whole-RDRAM control (10,000 writes), reached the
+hangar transition, and captured 16,384 hangar-gated rows. Comparison with
+`scratch/agent/s4314_port_keys.csv` found an ordinal-0 mismatch:
+retail `0x8008FADC,0x17DA1C,0xB035DC20`; port
+`0x8008FCE8,0x17D9E0,0x8017D9F8`. This selects a retail/port layout-or-filter
+divergence and rules out the unresolved shortfall explanation. It does not
+name a writer or authorize a guard/skip.
+ORIGIN: none; measurement/instrument only.
