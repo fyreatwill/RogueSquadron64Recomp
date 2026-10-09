@@ -1,9 +1,8 @@
-# Next work unit (s4440): is 192 frames/tick constant or derived? (m5-sdl-consume-rate)
+# Next work unit (s4441): validate ROGUESQ_AI_EVENT_HZ=115 (m5-ai-event-cadence)
 
-HYPOTHESIS-ID: m5-sdl-consume-rate
+HYPOTHESIS-ID: m5-ai-event-cadence
 
-s4439: oracle AI_LEN reads valid; DAC ~99% busy with submits 0.96/VI @768 B => mupen plays 768 B in ~16.5 ms (expected 8.7 ms). Hypotheses:
-(a) mupen AI duration is ~2x slow (get_dma_duration cpu_counts estimate) and game is AI-completion-paced -> real hardware ~115 submits/s;
-(b) game derives frames/tick from osAiGetLength/status, so 192 is an adaptive result in both arms;
-(c) 192 is a constant in the mixer.
-Discriminators (ONE build): in oracle read CPU Count (or use dbg_vi count + AI sample) at each submit to get emulated cycles/submit (a: ~16.5ms => 2x of 8.7ms; confirms mupen timing); statically grep the guest audio task setup (sym for osAiGetLength callers, constant 0xC0/192 near the mixer-frames argument) to split b vs c. Positive control: cycles/VI must equal ~781k (46.875MHz/60).
+s4440 showed the guest loop submits a fixed 768 B per AI event and the port posts AI events at 60 Hz; the env knob ROGUESQ_AI_EVENT_HZ=115 gives 110.6 buffers/s. Open:
+(a) 115 Hz is stable (queue depth bounded, title+hangar reachable, no new crash family) vs (b) the 2x submit rate surfaces new guest races (e.g. fillSampleStreamRange Bus error appears sooner) vs (c) retail really runs ~60/s (mupen witness) and 115 over-feeds the mixer.
+Discriminator: mupen CPU Count per submit in oracle (emulated cycles/submit; 46.875 MHz /60 = 781k per VI as positive control) -> ~8.7 ms means retail is 115/s; ~16.5 ms means mupen artifact is NOT the explanation. Plus a soak of the 115 arm vs unset arm counting fillSampleStreamRange crashes in each (run both in one iteration, scratch/agent/s4440/run_A.sh / run_B.sh as templates).
+Note: arm A (env unset) crashed in fillSampleStreamRange+15116 twice before phase 4 — the crash family is live in the baseline.
