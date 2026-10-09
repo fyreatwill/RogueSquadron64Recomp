@@ -148166,3 +148166,23 @@ s4313 boundary and rules out the s4314 filter/route qualification failure.
 It does not yet compare the later rows against the port table, so it selects no
 retail/port layout hypothesis and authorizes no guard or skip.
 ORIGIN: none; measurement/instrument only.
+
+## Session 4316 (2026-10-08) — consumer stream comparison shortfall
+
+HYPOTHESIS-ID: m5-audio-destub-sequence
+
+Compared the requalified retail detail log against the qualified 16,384-row
+port table with `scratch/agent/s4316_compare_streams.py`. The retail log's
+run-lifetime detail cap left 14,140 rows after the VI-512 transition and the
+`0x8008Fxxx` consumer-chain filter. Its first available tuple was
+`0x8008FADC,0x17DA1C,0xB035DC20`; the port's first tuple was
+`0x8008FCE8,0x17D9E0,0x8017D9F8`. The whole-RDRAM positive control fired at
+10,000 writes, and the original retail log had the qualified 1024->512
+transition and 604 consumer-PC hits.
+
+The required fixed retry set `RS64_DETAIL_HANGAR_READ=1`, but that run stalled
+before VI 512 and produced no complete table. Therefore the partial first-row
+divergence is single-source evidence only: it does not select H-layout or
+H-filter, and it does not qualify a port-vs-retail conclusion. No guard or skip
+was added. The next unit is a complete 16,384-row hangar-gated capture.
+ORIGIN: none; measurement/instrument only.
