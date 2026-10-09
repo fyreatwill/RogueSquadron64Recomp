@@ -1,8 +1,7 @@
-# Next work unit (s4474): M5-AUDIO-PLAN Step 10 qualification (AI source -> callback -> SDL join)
+# Next work unit (s4475): M5-AUDIO-PLAN Step 9 matrix check (is there a MORT-owned gap?)
 
-HYPOTHESIS-ID: m5-ai-sdl-join
-
-Step 7 closed in s4473. Read docs/M5-AUDIO-PLAN.md Step 10 and A16.
-Hypotheses: H1 nonzero PCM at osAiSetNextBuffer reaches SDL intact (addr/count/hash); H2 source nonzero but consumer/SDL loses it; H3 source all zero (go to Step 8).
-Discriminator: one run logging per submit addr/len/hash/nonzero-span at AI source and SDL callback; positive control = a nonzero-span submit in title phase.
-If Step 10 already qualified (grep PORTING-STATE), do Step 8 voice-base guard class audit instead.
+HYPOTHESIS-ID: m5-mort-gap
+Read docs/M5-AUDIO-PLAN.md Step 9, A20. Steps 7, 8, 10 closed (s4473, s4474, s4434).
+H1: complete task/voice matrix shows a MORT-owned gap; H2: no gap (pipelines independent) -> close M5.
+Discriminator: tools/mort_probe.py reference output vs guest descriptor/type/rate for the live hangar speech path. Include a same-run positive control.
+Optional cheap add: force a guard to fire once (positive control for the s4474 census).
