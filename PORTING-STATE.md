@@ -150942,3 +150942,18 @@ Rules out: nothing. Lesson: soak recipes must derive the root via git, not dirna
 
 Read s4468_hdr_nested (4 runs, valid: rs-malloc lines 5380-5462 each, so the game ran). All 4 runs crossed VI 1024 (s4463-poolalloc lines at vi=1024). Every run logged exactly the two size=3964 mallocs seen at VI 640 (0x801920A0, 0x8021D5D0 - the benign per-phase tables of s4464) and NO 3964 malloc at 0x801931F0; `[rs-hdr-nested]` count 0/4. The hook is live (the 3964 mallocs reached its condition and walked the header list), but a nested-header line requires an overlap, so the zero is "no overlap at these two allocations", not a flag value. Together with s4466 (0/4) that is 0/8 runs reproducing s4465's 0x801931F0 allocation; s4465 stays single-source 1/3. Hypothesis A (allocator overlap) is not selected and not refuted; B (coalesce free) was never tested because the event did not recur. Third consecutive iteration on this lead without a discriminating result (iron rule 8): lead parked, no further heap-header instrumentation.
 No code changed; no mitigation added. Pivot: M5-AUDIO-PLAN step 5 (key-on early-return idiom class audit), see NEXT.md.
+
+## Session 4469 (2026-10-09) — M5 step 5 key-on early-return audit was already closed (s4101); NEXT.md was stale
+
+Planned unit: audit the eight key-on early returns and add per-site counters.
+Found instead: (1) N64Recomp/RecompiledFuncs/funcs_24.c already carries
+`rs64_s2122_m5_keyon_event` guard/witness hooks at all eight sites
+(0x80090CEC..0x80090DD0, lines ~5146-5300); (2) s4101 already ran the
+control-first retail/port census: port hangar entry=4383, normal_tail=4383,
+all eight guard counts 0, divisor 0xC0 (writer musyxRenderVoiceSamples
+0x80090768, s3220), retail oracle independently shows all eight PCs unreachable.
+Verdict Hreturns-dead/Hguard-valid: the class is closed, no removal authorized.
+A new counter build would repeat s4101. No experiment run this iteration.
+Next real M5 unit: step 7 (status-03 service reaping) - re-run the s4104
+recipe whose "_fixed" variant was Hroute-invalid (port crash
+spTaskSchedulerThread+9632, rc=1).

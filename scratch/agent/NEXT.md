@@ -1,7 +1,7 @@
-# Next work unit (s4469): M5-AUDIO-PLAN step 5 - audit the eight key-on early returns as one idiom class
+# Next work unit (s4470): M5-AUDIO-PLAN step 7 - status-03 service reaping
 
-HYPOTHESIS-ID: m5-keyon-early-return-audit
+HYPOTHESIS-ID: m5-status03-service-reaping
 
-Context: the s4465 heap-overlap lead is parked (unreproduced 0/8). Strategic priority 2 (M5) and rule 14 call for an engineering change, not another diagnostic field.
-Hypotheses: (A) the eight key-on early returns in the generated/fixup code are dead or only hit on invalid descriptors (safe to keep as guards, document); (B) some fire on valid hangar descriptors and drop real voices (candidate de-stub); (C) they are unreachable in current runs (needs a positive control).
-Step: read docs/M5-AUDIO-PLAN.md step 5 and its inventory row; grep-enumerate every key-on early-return site in tools/fixup_*.py; classify each (writer of the guarded value, legit range); add per-site hit counters in ONE build, with a "mark everything" control; one hangar run (phase-gated at VI 512). Outcome A -> close class with proof; B -> relax the firing sites in the fixup scripts with an ORIGIN: line; C -> note and queue a soak.
+Step 5 is closed (s4101). Start from soak s4104_m5_status03_service_reaping_fixed (Hroute-invalid: control=1 but retail/port title+hangar all 0; port crash spTaskSchedulerThread+9632). First find why the route never reached title (boring-first: stale recipe/ROM path/env), fix it, then run the retail-vs-port status-03 worker writer table in one run.
+Hypotheses: (A) recipe route/env bug; (B) a genuine port crash before title on this build; (C) valid route, reaping worker never enters in port.
+Discriminator: does port reach title 1024 with the fixed recipe? Y -> measure worker entry/store-zero; N -> crash is the unit.
