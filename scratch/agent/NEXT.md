@@ -1,37 +1,39 @@
-# Next work unit (s4408): join the hangar direct AI edge to selector state
+# Next work unit (s4409): latch the hangar direct edge across the VI transition
 
 HYPOTHESIS-ID: m5-selector-decode-boundary
 
-Session 4407 showed that hangar does execute the already-known direct edge
-`0x80091CB8`; the earlier zero was a readout/filter interpretation error.
+Session 4408 qualified title and hangar coverage, but the same-run direct-call
+join emitted title rows only. Hangar input and AI-boundary/return rows were
+live; session 4407 separately saw a hangar `0x80091CB8` row. The likely issue
+is that the call executes before the committed VI phase changes.
 
 Competing hypotheses:
 
-- H-same-input-different-return: the hangar direct edge consumes the same
-  selector input as title but returns a phase-specific frequency/state value.
-- H-adjacent-path: the direct edge is live, but the hangar selector source and
-  task payload are produced by a separate path and only happen nearby.
-- H-callsite-row-alias: the phase row is stale or mis-keyed rather than a live
-  hangar call; the existing setup/boundary controls would then disagree with a
-  fresh callsite/return/store join.
+- H-pre-phase-call: hangar `0x80091CB8` executes before VI phase 5 is committed;
+  a latch joined to the next phase will carry its input/call arguments into the
+  hangar return/task row.
+- H-no-hangar-call: the s4407 hangar row was a readout interpretation error;
+  a pre-phase latch still has no `0x80091CB8` event before hangar input/boundary.
+- H-phase-state-mismatch: the call is live but its input/return belongs to the
+  preceding phase, so the latch joins to title/640 rather than hangar.
 
-Discriminating measurement: in one phase-gated run retain the hangar and title
-rows for `ai-call`/`ai-return`, source store `0x80091CC8`, selector input
-`0x8009192C`, and the existing task/image join, keyed by phase ordinal. A
-same-input, directly joined return/store row selects H-same-input-different-
-return; live direct rows with no selector/task join selects H-adjacent-path;
-missing or phase-miskeyed callsite rows with live boundary rows selects
-H-callsite-row-alias.
+Discriminating measurement: add one bounded latch at the direct callsite that
+records the callsite, input, and current VI phase even outside target phases;
+consume it on the first hangar VI transition and print one joined row with the
+following hangar AI-boundary/return/store/task witness. H-pre-phase-call is
+selected by a pre-transition call plus a hangar return/task join; H-no-hangar-
+call by no call before the transition with positive controls live;
+H-phase-state-mismatch by a call whose phase/origin remains 640/title and has
+no hangar join. Build all latch and existing target-phase arms together.
 
 Exact commands:
 
-1. Add the single phase-keyed join witness through the regeneration-safe probe
-   script, then build:
+1. Patch the existing regeneration-safe host probe and build:
    `cmake --build build --config Debug --target RogueSquadron64Recomp`
-2. Run:
+2. Run the qualified route:
    `zsh scratch/agent/run_s4402_m5_title_selector_witness.sh`
-3. Compare only bounded rows:
-   `grep -a -E '\[m5-selector-(setup-contract|ai-callsite|ai-boundary|source|input)\]|\[audtask-join\]' scratch/agent/s4402_m5_title_selector_witness/port.log | head -160`
+3. Inspect only bounded evidence:
+   `grep -a -E '\[m5-selector-ai-(call-latch|call-join)|\[m5-selector-(ai-boundary|input|source)|\[audtask-join\]' scratch/agent/s4402_m5_title_selector_witness/port.log | head -200`
 
-Do not enumerate callers again or add another payload census. If the 85-second
-route is invalid, record the route failure rather than interpreting absence.
+Do not repeat caller enumeration. If the route does not reach both title and
+hangar buckets, record it as invalid rather than interpreting a null.

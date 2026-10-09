@@ -3714,6 +3714,25 @@ extern "C" void rs64_m5_selector_alloc_edge(const char* stage, uint32_t pc,
     std::fflush(stderr);
 }
 
+namespace {
+struct M5SelectorAiJoinState {
+    uint32_t phase = 0xFFFFFFFFu;
+    uint32_t input = 0;
+    uint32_t input_source = 0;
+    uint32_t callsite = 0;
+    uint32_t call_a0 = 0;
+    uint32_t call_a1 = 0;
+    uint32_t call_a2 = 0;
+    uint32_t call_s0 = 0;
+    uint32_t call_s1 = 0;
+    uint32_t call_v0 = 0;
+    bool have_input = false;
+    bool have_call = false;
+};
+
+M5SelectorAiJoinState g_m5_selector_ai_join;
+}
+
 extern "C" void rs64_m5_selector_input_load(uint32_t pc, uint32_t value,
                                                 uint32_t source, uint32_t s1,
                                                 uint32_t a0, uint32_t a2,
@@ -3727,6 +3746,10 @@ extern "C" void rs64_m5_selector_input_load(uint32_t pc, uint32_t value,
     if (!enabled) return;
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     const uint32_t width = rs64_vi_committed_width();
+    g_m5_selector_ai_join.phase = rs64_phase_ord();
+    g_m5_selector_ai_join.input = value;
+    g_m5_selector_ai_join.input_source = source;
+    g_m5_selector_ai_join.have_input = true;
     const bool target_phase =
         (width == 1024u && (origin == 0x00790400u || origin == 0x00790800u)) ||
         (width == 512u && (origin == 0x006AB400u || origin == 0x006AB800u));
@@ -3817,6 +3840,33 @@ extern "C" void rs64_m5_selector_setup_contract(const char* edge, uint32_t pc,
         (width == 1024u && (origin == 0x00790400u || origin == 0x00790800u)) ||
         (width == 512u && (origin == 0x006AB400u || origin == 0x006AB800u));
     if (!target_phase) return;
+    const bool ai_return = edge && edge[0] == 'a' && edge[1] == 'i' &&
+        edge[2] == '-' && edge[3] == 'r';
+    if (ai_return && g_m5_selector_ai_join.have_call &&
+        g_m5_selector_ai_join.phase == rs64_phase_ord()) {
+        static uint32_t join_phase = 0xFFFFFFFFu;
+        static uint32_t join_rows = 0;
+        const uint32_t join_phase_now = rs64_phase_ord();
+        if (join_phase_now != join_phase) {
+            join_phase = join_phase_now;
+            join_rows = 0;
+        }
+        if (join_rows < 256u) {
+            std::fprintf(stderr,
+                "[m5-selector-ai-join] ordinal=%u phase=%u width=%u origin=0x%06X "
+                "callsite=0x%08X input=0x%08X input_source=0x%08X "
+                "call_a0=0x%08X call_a1=0x%08X call_a2=0x%08X "
+                "call_s0=0x%08X call_s1=0x%08X call_v0=0x%08X result=0x%08X\n",
+                join_rows++, join_phase_now, width, origin,
+                g_m5_selector_ai_join.callsite,
+                g_m5_selector_ai_join.have_input ? g_m5_selector_ai_join.input : 0,
+                g_m5_selector_ai_join.have_input ? g_m5_selector_ai_join.input_source : 0,
+                g_m5_selector_ai_join.call_a0, g_m5_selector_ai_join.call_a1,
+                g_m5_selector_ai_join.call_a2, g_m5_selector_ai_join.call_s0,
+                g_m5_selector_ai_join.call_s1, g_m5_selector_ai_join.call_v0, v0);
+            std::fflush(stderr);
+        }
+    }
     static uint32_t phase_seen = 0xFFFFFFFFu;
     static uint32_t rows = 0;
     const uint32_t phase = rs64_phase_ord();
@@ -3998,6 +4048,36 @@ extern "C" void rs64_m5_selector_ai_callsite(uint32_t callsite,
     if (!enabled) return;
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     const uint32_t width = rs64_vi_committed_width();
+    g_m5_selector_ai_join.phase = rs64_phase_ord();
+    g_m5_selector_ai_join.callsite = callsite;
+    g_m5_selector_ai_join.call_a0 = a0;
+    g_m5_selector_ai_join.call_a1 = a1;
+    g_m5_selector_ai_join.call_a2 = a2;
+    g_m5_selector_ai_join.call_s0 = s0;
+    g_m5_selector_ai_join.call_s1 = s1;
+    g_m5_selector_ai_join.call_v0 = v0;
+    g_m5_selector_ai_join.have_call = true;
+    if (g_m5_selector_ai_join.have_input &&
+        g_m5_selector_ai_join.phase == rs64_phase_ord()) {
+        static uint32_t call_join_phase = 0xFFFFFFFFu;
+        static uint32_t call_join_rows = 0;
+        const uint32_t phase = rs64_phase_ord();
+        if (phase != call_join_phase) {
+            call_join_phase = phase;
+            call_join_rows = 0;
+        }
+        if (call_join_rows < 256u) {
+            std::fprintf(stderr,
+                "[m5-selector-ai-call-join] ordinal=%u phase=%u width=%u origin=0x%06X "
+                "callsite=0x%08X input=0x%08X input_source=0x%08X "
+                "call_a0=0x%08X call_a1=0x%08X call_a2=0x%08X "
+                "call_s0=0x%08X call_s1=0x%08X call_v0=0x%08X\n",
+                call_join_rows++, phase, width, origin, callsite,
+                g_m5_selector_ai_join.input, g_m5_selector_ai_join.input_source,
+                a0, a1, a2, s0, s1, v0);
+            std::fflush(stderr);
+        }
+    }
     static bool control_seen = false;
     if (!control_seen) {
         control_seen = true;

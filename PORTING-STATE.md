@@ -150155,3 +150155,25 @@ selects an indirect/aliased or otherwise uninstrumented call-chain boundary
 over a title-only boundary explanation. ORIGIN: generated static call edges
 and host phase-gated guest call/boundary witnesses were observed; no value was
 skipped, rewritten, or guarded.
+
+## Session 4408 (2026-10-09) — joined selector input to the direct AI edge
+
+The retail oracle ground-truth attempt passed its whole-RDRAM positive control
+and reached title 1024, but its driven 85-second route did not reach hangar;
+that arm is invalid for hangar interpretation. The port run first qualified
+the existing positive control, title `0x00790400` (2,667 rows), hangar
+`0x006AB400` (672 rows), 2,293 audio-task rows/joins, and no crash or abort.
+
+The initial post-store join was instrumented at the wrong ordering boundary:
+the source store row preceded the later selector input/direct call and
+produced zero joins. The fixed same-build witness at the direct callsite
+produced four phase-keyed rows, including title `0x80091CB8` with selector
+input `0x561F` and call argument `0x5622`; no hangar callsite row was emitted,
+while hangar input and AI-boundary/return witnesses remained live. This is a
+qualified phase-order/callsite boundary result, not proof of an indirect
+caller or selector-value divergence. It overturns neither session 4407's
+separate hangar callsite observation nor the live boundary conclusion; the
+next probe must latch the direct edge before the VI phase transition and join
+it to the hangar return/task row. ORIGIN: host probes observe guest call,
+input, boundary, and store arguments; no value was skipped, rewritten, or
+guarded.

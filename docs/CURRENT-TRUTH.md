@@ -4,9 +4,23 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4407 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4408 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
+
+Session 4408's retail-oracle ground-truth attempt passed the whole-RDRAM
+positive control and reached title 1024, but its driven 85-second route did not
+reach hangar, so that arm is invalid for hangar interpretation. The fixed port
+run qualified the positive control, title `0x00790400` (2,667 rows), hangar
+`0x006AB400` (672 rows), 2,293 task/image joins, and no crash or abort. The
+first post-store join design was invalid because the source-store row preceded
+the later input/direct call. The corrected direct-call join emitted four
+phase-keyed rows, including title `0x80091CB8` with input `0x561F` and call
+argument `0x5622`; no hangar callsite row appeared even though hangar input and
+AI-boundary/return witnesses were live. This is a qualified phase-order /
+callsite instrument boundary, not proof of an indirect caller or value
+divergence. ORIGIN: host probes observed guest arguments; no value was skipped,
+rewritten, or guarded.
 
 ## Current state
 
@@ -772,15 +786,13 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 hangar AI direct-edge join** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4407 showed a hangar
-   `0x80091CB8` direct-call row, so the alternate-caller branch is closed.
-   The next probe must join that callsite's input/return/store tuple to the
-   phase-keyed selector source and task rows in one capture, determining
-   whether the hangar direct edge consumes the same selector input with a
-   different return or only appears adjacent to the selector path. Retain the
-   positive control and title/hangar phase gates; do not add another caller
-   census.
+1. **M5 hangar AI direct-edge phase latch** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Session 4407 had a separate hangar
+   `0x80091CB8` direct-call row, while s4408's same-run join had no hangar
+   callsite row despite live hangar input and boundary/return rows. The next
+   probe must latch the direct call before the VI phase transition and join it
+   to the hangar return/store/task row. Retain the positive control; do not add
+   another caller census or payload census.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -792,7 +804,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
-| M5 title AI boundary | s4407's qualified phase readout finds `0x80091CB8` in both title and hangar; `0x80091BAC` remains absent. The prior hangar-zero result was a readout/filter interpretation error. No indirect/aliased caller is required on this route. |
+| M5 title AI boundary | s4407 separately observed `0x80091CB8` in title and hangar; s4408's same-run direct-call join observed title only while hangar input and boundary/return remained live. The discrepancy is now a phase-order/callsite latch boundary; no indirect/aliased caller is established. |
 | M5 title caller path | s4375/s4376 qualify `0x80019DEC -> 0x80033FCC` as the direct publication chain; s4377 selects a phase-specific selector/object input; s4378 finds payload writers outside the prior candidate set; s4379 confirms some writer traffic after publication but leaves value provenance open. |
 | M5 consumer join | s4363 plus s4370/s4371 independent retail captures confirm distinct phase-specific task families and zero exact recurrence of nonzero selected words in the first eight published payload words (591/591, 601/601, 344/344). H-later-consumer-transform is confirmed for that boundary; the intermediate transform/publication stage remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
