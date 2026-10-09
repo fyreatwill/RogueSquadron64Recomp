@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4374 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4375 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -253,6 +253,20 @@ single-source retail evidence; the next probe must census the title caller
 chain around `0x80019C00:0x80019E20`. ORIGIN: retail execution, task, and C904
 observations; no value was skipped, rewritten, or guarded.
 
+Session 4375's title-caller census passed the whole-RDRAM control (10,000
+writes), reached 4,482 VI and all three phase buckets, and recorded 1,958
+valid type-2 task rows with no invalid pointers or overflow. The range
+`0x80019C00:0x80019E20` produced 183,862 execution hits; its retained
+C904/task rows included title-phase callers in both `0x00790400` and
+`0x00790800`, while hangar coverage also remained live. The range's observed
+task-call chain includes `0x80019DEC -> 0x80033FCC`, and the typed task join
+was live (`matched=121,149`, `unmatched=51`) with title payload families
+present. This selects H-title-caller over H-title-predecessor-deeper and
+rules out the prior title execution-watch gap. It remains single-source retail
+evidence; the next probe must isolate the title caller's publication/transform
+boundary around `0x80019DEC` and `0x80033FCC`. ORIGIN: retail execution, task,
+and C904 observations; no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -293,13 +307,13 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 transform/publication boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Locate the title-specific intermediate
-   execution path rather than repeating C950/C954/D78C/D790/DC38: census the
-   title caller chain around `0x80019C00:0x80019E20`, joined to the typed task
-   ordinal, with the whole-RDRAM control and all three VI buckets. The s4374
-   decode-range table was live and task-joined only in hangar, selecting a
-   title predecessor path. Do not repeat the closed first-eight payload
-   comparison or the `0x8009C904:0x8009DC3C` range.
+   `m5-selector-decode-boundary`. Isolate the title caller's publication
+   boundary using the newly qualified `0x80019DEC -> 0x80033FCC` chain. The
+   next run must phase-key the caller and task ordinals together and compare
+   the task publication at `0x80033FCC` against the immediately preceding
+   caller-side execution rows; do not repeat the broad caller census, the
+   closed first-eight payload comparison, or the `0x8009C904:0x8009DC3C`
+   range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -311,6 +325,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
+| M5 title caller path | s4375's qualified retail range census observed title-phase execution and task joins in `0x80019C00..0x80019E20`, including the `0x80019DEC -> 0x80033FCC` chain; publication-side transform remains open. |
 | M5 consumer join | s4363 plus s4370/s4371 independent retail captures confirm distinct phase-specific task families and zero exact recurrence of nonzero selected words in the first eight published payload words (591/591, 601/601, 344/344). H-later-consumer-transform is confirmed for that boundary; the intermediate transform/publication stage remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |

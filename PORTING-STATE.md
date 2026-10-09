@@ -149557,3 +149557,8 @@ does not identify the predecessor caller or close the transform/publication
 boundary. The evidence is single-source retail oracle evidence. ORIGIN: retail
 execution, task, and C904 observations; no value was skipped, rewritten, or
 guarded.
+## Session 4375 (2026-10-09) — title caller census selected publication chain
+
+Ran the prescribed retail-oracle title-caller census over `0x80019C00:0x80019E20` with the whole-RDRAM positive control, `0x80033FCC` typed-task dump, C904/task join, all three phase buckets, Rice video, and the established start schedule. The 75-second run passed the control with 10,000 whole-RDRAM writes, reached 4,482 VI, and reached title origins `0x00790400` and `0x00790800` plus hangar origin `0x006AB400`. It recorded 1,958 valid type-2 task rows with invalid=0 and overflow=0; the caller range produced 183,862 execution hits and the C904/task join summary was matched=121,149, unmatched=51, rows=1,536/1,536, overflow=114,883. Retained rows included title-phase caller PCs, and the execution predecessor table showed `0x80019DEC -> 0x80033FCC` in the title path.
+
+This selects H-title-caller over H-title-predecessor-deeper and rules out a missing title execution-watch or task-join route. It does not yet establish whether the caller-side values are the values published at the task boundary; the next work unit must compare phase-keyed caller rows with the `0x80033FCC` publication. Failed/invalid setup: none. ORIGIN: retail execution, task, and C904 observations; no value was skipped, rewritten, or guarded.
