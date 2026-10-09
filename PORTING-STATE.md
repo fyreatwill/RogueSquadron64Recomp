@@ -149139,3 +149139,20 @@ physical writer watch from `scratch/agent/NEXT.md`; its competing hypotheses
 and positive-control discriminator are unchanged. This rules out no runtime
 hypothesis and records no new experiment result; it does close the stale
 historical duplication in CURRENT-TRUTH.
+## Session 4354 (2026-10-08) — retail physical writer watch selects pre-C904 stream
+
+Ran the prescribed qualified retail writer watch over physical
+`0x1535AC..0x1545C0`, retaining whole-RDRAM, VI, and C904 controls. The run
+reached the title VI 1024 phase and hangar VI 512 phase and completed cleanly.
+The whole-RDRAM control reached its 10,000-hit cap and was removed; the target
+watch remained armed. C904/C950 each executed 3,107 times and the witness
+summary reported 1,148 rows.
+
+The target watch emitted 150 store records. Every record was at
+`0x1535AC..0x1535BC`; there were no stores at all in the selected-address
+subrange `0x1535C4..0x1545C0`, and no family-valued selected-range write. This
+selects H-earlier-stream over H-post-C904-selector for this qualified retail
+run: the retained family is already present at C904 but is not published by a
+post-C904 selected-range store. This is single-source evidence; an independent
+static call-chain plus read/write witness is the next discriminator. No decoder,
+RSP, AI, or runtime behavior changed and no mitigation was added.
