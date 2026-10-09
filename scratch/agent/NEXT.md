@@ -53,3 +53,6 @@ Require `oracle_gate=1`, the MORT reference verdict, one VI-1024 and one
 VI-512 marker in the oracle, and `[m5-port-vi-control]=1` in both arms before
 interpreting the payload table. Do not alter RSP dispatch, the decoder, AI
 bridge, or add a game-path guard.
+
+RESUME (s4326 close-out): instrument is built; only the clean matrix run remains.
+Check `pgrep -fl RogueSquadron64Recomp` is empty (SIGKILL strays) before running.

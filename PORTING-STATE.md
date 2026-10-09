@@ -148439,3 +148439,13 @@ instrument and positive-control path; the next run must be clean and require
 both paired VI-512 controls before reading the table.
 
 ORIGIN: none; diagnostic-only instrumentation, no mitigation.
+
+Checkpoint close-out (retry): selects/refutes nothing yet. NEXT DISCRIMINATOR
+(named explicitly): in one clean matrix (no orphaned processes; one arm at a
+time if needed), compare the 128 [m5-filter-join] rows per arm keyed by ordinal.
+Same rate + same source hash + different table value/a0/a1 => selects
+H-same-descriptor-different-filter; different rate/class at the same ordinal =>
+H-descriptor-class-divergence; identical inputs + differing output hash =>
+H-output-join. Rows are valid only with oracle_gate=1, MORT verdict, and
+[m5-port-vi-control]=1 in both arms. Resume: `zsh scratch/agent/run_s4321_m5_mort_output.sh`
+(build already current with the aligned printf + live-sp table fix).
