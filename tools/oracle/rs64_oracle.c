@@ -590,12 +590,44 @@ struct ordinal_writer_key {
     int watch;
     uint32_t pc;
     uint32_t effective_addr;
+    int writer_class;
+    int value_class;
     long nearest;
     long before;
     long after;
     long equal;
     long no_task;
 };
+
+static int ordinal_writer_class(uint32_t pc)
+{
+    if (pc == 0x80090DE4u || pc == 0x80090B68u)
+        return 1;
+    if (pc == 0x80090CA4u || pc == 0x80091078u)
+        return 2;
+    return 3;
+}
+
+static const char *ordinal_writer_class_name(int class_id)
+{
+    if (class_id == 1) return "semantic";
+    if (class_id == 2) return "maintenance";
+    return "other";
+}
+
+static int ordinal_value_class(const struct ordinal_write_row *write)
+{
+    if (write->scalar_mask == 0)
+        return 3;
+    return (write->source_value & write->scalar_mask) == 0 ? 1 : 2;
+}
+
+static const char *ordinal_value_class_name(int class_id)
+{
+    if (class_id == 1) return "scalar-zero";
+    if (class_id == 2) return "scalar-nonzero";
+    return "unsupported";
+}
 #define MAX_PC_RANGE_TASK_ROWS 1536
 #define MAX_PC_RANGE_TASK_ROWS_PER_PHASE 512
 struct pc_range_task_row {
@@ -3733,7 +3765,9 @@ int main(int argc, char **argv)
                             keys[key_i].origin == write->origin &&
                             keys[key_i].watch == write->watch &&
                             keys[key_i].pc == write->pc &&
-                            keys[key_i].effective_addr == write->effective_addr)
+                            keys[key_i].effective_addr == write->effective_addr &&
+                            keys[key_i].writer_class == ordinal_writer_class(write->pc) &&
+                            keys[key_i].value_class == ordinal_value_class(write))
                             break;
                     }
                     if (key_i == key_n) {
@@ -3746,6 +3780,8 @@ int main(int argc, char **argv)
                         keys[key_n].watch = write->watch;
                         keys[key_n].pc = write->pc;
                         keys[key_n].effective_addr = write->effective_addr;
+                        keys[key_n].writer_class = ordinal_writer_class(write->pc);
+                        keys[key_n].value_class = ordinal_value_class(write);
                         key_n++;
                     }
                     if (!best) keys[key_i].no_task++;
@@ -3766,9 +3802,11 @@ int main(int argc, char **argv)
             for (int key_i = 0; key_i < key_n; key_i++) {
                 struct ordinal_writer_key *key = &keys[key_i];
                 printf("[oracle] ordinal-writer-join phase=0x%08x:%u watch=%d "
-                       "pc=0x%08x effective=0x%08x nearest=%ld before=%ld "
+                       "pc=0x%08x class=%s value_class=%s effective=0x%08x nearest=%ld before=%ld "
                        "after=%ld equal=%ld no_task=%ld\n",
                        key->origin, key->width, key->watch, key->pc,
+                       ordinal_writer_class_name(key->writer_class),
+                       ordinal_value_class_name(key->value_class),
                        key->effective_addr, key->nearest, key->before,
                        key->after, key->equal, key->no_task);
             }

@@ -149878,3 +149878,22 @@ evidence; no mitigation or value rewrite was added.
 ORIGIN: retail task-publication PCs, exact writer PCs/source values,
 phase-keyed ordinal joins, and whole-RDRAM controls; no value was skipped,
 rewritten, or guarded.
+
+## Session 4392 (2026-10-09) — split exact-span writers by class and value
+
+Ran one batched exact-span retail-oracle capture after extending the existing
+ordinal join table with named writer classes and scalar value classes. The
+whole-RDRAM positive control produced 1,555,836 writes; the run reached 4,489
+VI, retained 1,762 valid type-2 task rows, and recorded 725,451 exact-span
+writes with ordinal overflow 0. Both semantic PCs (`0x80090DE4`/
+`0x80090B68`) and maintenance PCs (`0x80090CA4`/`0x80091078`) produced both
+scalar-zero and scalar-nonzero stores in the phase buckets. Every retained
+class had `no_task=0`; both named classes had phase-specific after rows, while
+most stores were before the nearest task. This rejects exclusive semantic-PC,
+exclusive maintenance-PC, and source-gap explanations for this table. It does
+not identify which class writes the task payload; effective-address containment
+against the joined task `data_ptr/data_size` is the next discriminator. No
+mitigation or value rewrite was added.
+ORIGIN: retail task-publication PCs, exact writer PCs/effective addresses and
+source values, phase-keyed ordinal joins, and whole-RDRAM controls; no value
+was skipped, rewritten, or guarded.

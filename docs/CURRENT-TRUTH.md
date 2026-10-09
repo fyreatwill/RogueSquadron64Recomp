@@ -546,6 +546,22 @@ single-source retail evidence. ORIGIN: retail task-publication PCs, exact
 writer PCs/source values, phase-keyed ordinal joins, and whole-RDRAM controls;
 no value was skipped, rewritten, or guarded.
 
+Session 4392's batched exact-span writer-class capture passed the whole-RDRAM
+control (1,555,836 writes), reached 4,489 VI, retained 1,762 valid type-2 task
+rows, and recorded 725,451 exact-span writes with ordinal overflow 0. The
+new table split each phase/watch by named writer class and scalar value class:
+both semantic PCs (`0x80090DE4`/`0x80090B68`) and maintenance PCs
+(`0x80090CA4`/`0x80091078`) produced scalar-zero and scalar-nonzero stores.
+Every class had a task join (`no_task=0`); ordering was predominantly before
+the nearest task, with phase-specific after rows in both named classes. This
+rejects both exclusive semantic-PC and exclusive maintenance-PC explanations
+and rejects H-source-gap for this table. It does not establish which class
+writes the published task payload; the next discriminator must test each
+writer's effective address against the joined task's `data_ptr/data_size`.
+This is qualified single-source retail evidence. ORIGIN: retail task-publication
+PCs, exact writer PCs/effective addresses/source values, phase-keyed ordinal
+joins, and whole-RDRAM controls; no value was skipped, rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -561,12 +577,14 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode semantic writer mapping** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Replace the nearest-task aggregate with one
-   bounded writer-PC/value-class × task-ordinal table for all four exact target
-   fields. Require the table to classify `0x80090DE4`/`0x80090B68` against
-   `0x80090CA4`/`0x80091078` in every phase, retaining the same positive
-   controls and scalar mismatch checks. Do not broaden the destination ranges
-   or treat writer presence alone as payload equality.
+   `m5-selector-decode-boundary`. Add one bounded phase/watch/writer-class/value
+   table that tests each exact writer effective address for containment in the
+   nearest joined task's published `data_ptr/data_size` span (and separately
+   records the `+0x100` fields). Retain the whole-RDRAM, three VI-origin, task,
+   overflow, and scalar mismatch controls. A semantic-class containment split
+   selects payload provenance; equal containment or no containment in both
+   named classes leaves the transform boundary open. Do not broaden ranges or
+   treat writer presence alone as payload equality.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
