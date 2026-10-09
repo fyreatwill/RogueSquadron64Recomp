@@ -148802,3 +148802,28 @@ route-invalid from s4337. No runtime behavior or mitigation changed.
 
 ORIGIN: none; diagnostic witness capture and comparison script only, no
 mitigation or runtime behavior change.
+
+## Session 4339 (2026-10-08) — C88C source/branch witness selects stream-state divergence
+
+The prescribed s4339 C88C field witness was added to `main.cpp` and made
+regeneration-backed in `fixup_game_funcs.py`. The first capture passed the
+route and host controls but exposed an instrument error: the helper rejected
+the retail tuple's low physical `s1+0x22` address and reported `branch_state`
+as `0xFFFF`. The reader was corrected to match the oracle's physical address
+and aligned-halfword semantics, then the same qualified autopilot recipe was
+rebuilt and rerun.
+
+The fixed run passed title VI 1024, hangar VI 512, host positive control, both
+filter controls, and emitted 256 C88C field rows plus 256 direct rows. Port
+rows had `s0=0x80153420`, `branch_selector=0x801B2C60`, `s1=2` on 249 rows and
+`s1=1` on 7 rows, but `branch_state=0` on all 256. Retail C904 rows at the
+same hangar origin had 272 rows with `s1=2`/`branch_state=0x3108` and 189 with
+`s1=1`/`branch_state=0x0010`; source words/bytes and sequence order also
+diverged from the port prefix. This selects pre-filter stream/state
+divergence, rejecting descriptor-only mapping parity. It does not yet name
+the writer or prove whether the low field is stale, unpublished, or the wrong
+semantic counterpart. The comparison is single-source cross-runtime field
+evidence; route, phase, filter, and retained oracle controls are independent.
+
+ORIGIN: none; diagnostic witness capture only. The only fix was to make the
+instrument's physical low-address read semantics match the independent oracle.

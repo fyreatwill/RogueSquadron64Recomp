@@ -4,7 +4,12 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4338: the qualified in-process C904/C88C field join reached
+Updated for session 4339: the fixed, qualified C904/C88C field witness reached
+both target phases and rejected source/branch field parity; port C88C had
+branch_state=0 on all 256 rows while retail C904 used 0x3108/0x0010 by s1,
+selecting a pre-filter stream/state divergence. This is single-source
+cross-runtime field evidence; host, VI, filter, and retained oracle controls
+qualify the routes. Previously 4338: the qualified in-process C904/C88C field join reached
 both target phases and rejected ordinal/offset payload parity; retail C904 and
 port C88C diverge before the filter, selecting pre-filter route/stream
 selection. This is single-source comparative field evidence; the independent
@@ -250,7 +255,18 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4338) Name the pre-filter stream divergence behind the C904/C88C field
+00. (s4339) Name the branch-state writer behind the C904/C88C divergence. The
+fixed C88C-entry witness passed host/title/hangar/filter controls and emitted
+256 rows, but port `branch_state` was 0 for both `s1=1/2`, while retail C904
+phase-512 rows used `0x0010`/`0x3108`; source words/bytes and row order also
+diverged. Run one batched writer census for the physical low field at
+`s1+0x22`, with a positive-control write and phase-gated port/retail
+attribution. A matching writer/value family selects stale/late-read; a
+retail-only writer selects a missing publication boundary; no writer in either
+arm selects wrong field mapping/probe semantics. Do not add a guard or alter
+decoder/RSP/AI behavior.
+
+00a. (s4338) Name the pre-filter stream divergence behind the C904/C88C field
 mismatch. Keep the qualified in-process autopilot route, retained seeded save,
 `M4_Y8000_WIDTH=512`, LLE/solo/spin-yield, real audio, and existing probes.
 Add one phase-gated port witness for the C88C helper's source/branch selector
@@ -340,6 +356,7 @@ Work only the first applicable item. One monotonic sequence.
 | M5 Step 9 direct D740 witness | s4329: the direct D740 callsite emitted 256 rows per arm and its scoped counter reached 256, while no D740 caller-entry bucket or retained tuple joined. Static census s4330 found no alternate generated transfer, so this is an unresolved instrumentation/state contradiction rather than proof of entry bypass; descriptor class versus pre-filter route remains open. |
 | M5 Step 9 co-located sequence witness | s4331: image-arm entry, post-helper, and D740 direct events share sequence ids inside `decodeAndFillVoiceBlock`; silent-arm target rows are absent. This rejects the entry-bypass/helper-not-invoked reading and identifies the prior D740 caller null as a probe-boundary error. Descriptor class and payload ownership remain open. |
 | M5 Step 9 C88C descriptor join | s4332: both arms reached VI 512, every D740 row joined a C88C tuple, and the initial descriptor prefix matched; later descriptor pointer/word/type-class sequences diverged. This rejects H-join-boundary and stable post-descriptor selection; pre-filter route/stream selection remains open. |
+| M5 Step 9 C88C source/branch fields | s4339: the fixed port witness emitted 256 rows with retail-compatible `s0`, `s1`, and branch-selector shape, but port `branch_state` was 0 on every row versus retail `0x3108`/`0x0010`; source words/bytes and order also diverged. This selects pre-filter stream/state divergence; the writer/publication boundary remains open. Single-source cross-runtime field evidence, with independent route controls. |
 
 ## Durable evidence boundary
 

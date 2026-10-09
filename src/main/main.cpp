@@ -2888,6 +2888,65 @@ extern "C" void rs64_filter_voice_c88c_descriptor_probe(uint32_t a0,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_filter_voice_c88c_field_probe(uint8_t* rdram,
+                                                     uint32_t s0,
+                                                     uint32_t s1,
+                                                     uint32_t branch_selector) {
+    static int enabled = -1;
+    static unsigned rows = 0;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+        enabled = ((all && *all && *all != '0') ||
+                   (own && *own && *own != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u) ||
+        rows >= 256u) return;
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (!rdram) return 0xFFFFFFFFu;
+        const uint32_t segment = guest & 0xE0000000u;
+        const uint32_t phys = (segment == 0x80000000u || segment == 0xA0000000u)
+            ? (guest & 0x1FFFFFFFu) : guest;
+        if (phys > 0x7FFFF8u) return 0xFFFFFFFFu;
+        return (uint32_t(rdram[phys]) << 24) |
+               (uint32_t(rdram[phys + 1]) << 16) |
+               (uint32_t(rdram[phys + 2]) << 8) |
+               uint32_t(rdram[phys + 3]);
+    };
+    auto byte = [rdram](uint32_t guest) -> uint32_t {
+        if (!rdram) return 0xFFFFFFFFu;
+        const uint32_t segment = guest & 0xE0000000u;
+        const uint32_t phys = (segment == 0x80000000u || segment == 0xA0000000u)
+            ? (guest & 0x1FFFFFFFu) : guest;
+        if (phys >= 0x800000u) return 0xFFFFFFFFu;
+        return rdram[phys];
+    };
+    auto half = [rdram](uint32_t guest) -> uint32_t {
+        if (!rdram) return 0xFFFFFFFFu;
+        const uint32_t segment = guest & 0xE0000000u;
+        const uint32_t phys = (segment == 0x80000000u || segment == 0xA0000000u)
+            ? (guest & 0x1FFFFFFFu) : guest;
+        const uint32_t aligned = phys & ~3u;
+        if (aligned + 3u >= 0x800000u) return 0xFFFFFFFFu;
+        const uint32_t value = (uint32_t(rdram[aligned]) << 24) |
+                               (uint32_t(rdram[aligned + 1]) << 16) |
+                               (uint32_t(rdram[aligned + 2]) << 8) |
+                               uint32_t(rdram[aligned + 3]);
+        return (value >> ((phys & 2u) ? 0u : 16u)) & 0xFFFFu;
+    };
+    std::fprintf(stderr,
+        "[m5-c88c-fields] seq=%lu row=%u phase=%u origin=0x%06X "
+        "s0=0x%08X s1=0x%08X source_word=0x%08X source_byte=0x%02X "
+        "branch_selector=0x%08X branch_state=0x%04X\n",
+        g_rs64_filter_voice_sequence, rows++, rs64_phase_ord(), origin, s0, s1,
+        word(s0 + 0x60u), byte(s0 + 0x22u), branch_selector,
+        half(s1 + 0x22u));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_filter_voice_call_probe(uint32_t site, uint32_t sp,
                                                uint32_t ra, uint32_t a0,
                                                uint32_t a1, uint32_t a2,
