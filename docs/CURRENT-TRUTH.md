@@ -532,6 +532,20 @@ semantic writer's full phase/ordinal mapping. ORIGIN: retail task fields, exact
 physical writes, post-store source-register validation, and whole-RDRAM/VI
 controls; no value was skipped, rewritten, or guarded.
 
+Session 4391's exact-span ordinal capture passed the whole-RDRAM control
+(1,551,202 writes), reached all three phase buckets, retained 1,719 valid
+type-2 task rows, and had zero ordinal overflow. The four exact target fields
+had no missing nearest task: hangar watch 3 was 87,360 before versus 125 after,
+and hangar watch 4 was 160 before versus 0 after; title buckets were likewise
+predominantly before-task. Exact nonzero target stores were attributed to
+phase-specific PCs `0x80090DE4`/`0x80090B68`, while `0x80090CA4` and
+`0x80091078` also wrote the target fields. This supports H-ordinal-semantic
+for nonzero exact-span stores over an absent-task explanation, but the nearest
+task join does not yet separate semantic stores from maintenance stores and is
+single-source retail evidence. ORIGIN: retail task-publication PCs, exact
+writer PCs/source values, phase-keyed ordinal joins, and whole-RDRAM controls;
+no value was skipped, rewritten, or guarded.
+
 The RT64 framebuffer-set growth root is a bump-time DPC ring-lap placeholder
 drop; `ROGUESQ_WRAP_RESTORE` reproduced ODD-cimg reduction from 60 to 0 in
 three runs, but hangar impact remains unqualified. Do not broaden this line
@@ -547,11 +561,12 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode semantic writer mapping** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Join the validated nonzero exact-span writer
-   PCs and source values to individual task publication ordinals, separating
-   semantic payload stores from remaining maintenance fields. Keep the same
-   phase-gated task, ordinal, and scalar controls; do not broaden the
-   destination ranges or treat writer presence alone as payload equality.
+   `m5-selector-decode-boundary`. Replace the nearest-task aggregate with one
+   bounded writer-PC/value-class × task-ordinal table for all four exact target
+   fields. Require the table to classify `0x80090DE4`/`0x80090B68` against
+   `0x80090CA4`/`0x80091078` in every phase, retaining the same positive
+   controls and scalar mismatch checks. Do not broaden the destination ranges
+   or treat writer presence alone as payload equality.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

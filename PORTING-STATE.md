@@ -149861,3 +149861,20 @@ rewrite was added.
 ORIGIN: retail task fields, exact physical writes, post-store source-register
 validation, and whole-RDRAM/VI controls; no value was skipped, rewritten, or
 guarded.
+
+## Session 4391 (2026-10-09) — mapped exact-span writers to task ordinals
+
+Ran one exact-span retail-oracle ordinal capture with all four target fields,
+task publication rows, source values, and phase-keyed joins. The whole-RDRAM
+positive control produced 1,551,202 writes; all three phase buckets were live,
+1,719 valid type-2 task rows were retained, and ordinal overflow was zero.
+Every exact target watch had a nearest task (`no_task=0`); hangar watch 3 was
+87,360 before versus 125 after, and watch 4 was 160 before versus 0 after.
+Nonzero exact stores were attributed to `0x80090DE4`/`0x80090B68`, with
+`0x80090CA4` and `0x80091078` also active. This supports H-ordinal-semantic
+over an absent-task explanation, but nearest-task ordering does not yet
+separate semantic stores from maintenance traffic. It is single-source retail
+evidence; no mitigation or value rewrite was added.
+ORIGIN: retail task-publication PCs, exact writer PCs/source values,
+phase-keyed ordinal joins, and whole-RDRAM controls; no value was skipped,
+rewritten, or guarded.
