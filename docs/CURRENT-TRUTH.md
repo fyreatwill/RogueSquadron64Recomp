@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4378 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4380 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -331,6 +331,23 @@ join post-write values from `0x8008F7D4`/`0x80091374` to the published payload.
 ORIGIN: retail payload-range writes, writer PCs, task-publication PCs, and
 whole-RDRAM observations; no value was skipped, rewritten, or guarded.
 
+Session 4380's batched post-value capture passed the whole-RDRAM control
+(103,725 writes), reached title VI 632/633 and hangar VI 694, and retained
+1,948 valid type-2 task rows (`invalid=0`, `overflow=0`). The ordinal table
+retained 64,244 payload writes with zero overflow. Both named writers were
+live in the payload range: `0x80091374` produced 7,931 scalar samples and
+`0x8008F7D4` produced 25,960; every scalar sample had `mismatch=0`. The
+range-1 ordinal join still contained both pre- and post-publication traffic
+(title `21297/575`, `21271/539`; hangar `385/284` before/after), while range 2
+had title `0/17` and `176/220` before/after. This qualifies the writer/value
+instrument and rules out a missing named-writer or scalar-validation boundary,
+but it does not select overwrite versus maintenance: post-value detail
+overflowed and the scalar rows were not keyed to the task ordinal. The next
+probe must add that writer-PC-plus-ordinal join before interpreting payload
+semantics. ORIGIN: retail writer PCs, scalar source-register comparison, task
+publication, payload writes, and whole-RDRAM observations; no value was
+skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -371,14 +388,13 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 selector/decode publication writer** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Session 4379 established qualified
-   post-publication writes in both payload ranges, but not their values. The
-   next run must add phase-gated post-write value/scalar capture for writer PCs
-   `0x8008F7D4` and `0x80091374`, joined to the same typed `0x80033FCC` task
-   rows and payload snapshots. Keep the whole-RDRAM, three-bucket, and
-   nonzero-writer controls. Do not repeat the caller census, direct
-   publication join, closed first-eight payload comparison, or the
-   `0x8009C904:0x8009DC3C` range.
+   `m5-selector-decode-boundary`. Session 4380 qualified scalar values from
+   both named writers but left their task-relative ordering and target field
+   unresolved. Add a bounded writer-PC-plus-task-ordinal join for both payload
+   ranges, retaining scalar source values and exact destination addresses.
+   Keep the whole-RDRAM, three-bucket, valid-task, and zero-overflow controls.
+   Do not repeat the caller census, direct publication join, closed first-eight
+   payload comparison, or the `0x8009C904:0x8009DC3C` range.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,

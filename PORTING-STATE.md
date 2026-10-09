@@ -149638,3 +149638,22 @@ a complete writer-watch gap, while showing dominant earlier traffic and not
 proving which values are overwritten. Single-source retail evidence only.
 ORIGIN: retail payload-range writes, writer PCs, task-publication PCs, and
 whole-RDRAM observations; no value was skipped, rewritten, or guarded.
+## Session 4380 (2026-10-09) — qualified post-publication writer values
+
+Ran the single batched retail-oracle work unit from s4379 after recording the
+three competing hypotheses and the scalar-validation control in NEXT.md. The
+oracle build succeeded. The 75-second Rice capture passed the whole-RDRAM
+positive control with 103,725 writes, reached title VI 632/633 and hangar VI
+694, retained 1,948 valid type-2 rows (`invalid=0`, `overflow=0`), and retained
+64,244 ordinal payload writes with zero overflow. Both named payload writers
+were live: `0x80091374` had 7,931 scalar samples and `0x8008F7D4` had 25,960;
+all had `mismatch=0`. The range-1 joins were before/after publication
+21297/575, 21271/539, and 385/284 for the two title buckets and hangar; range
+2 was 0/17 and 176/220 in the two title buckets. This qualifies the writer and
+value instruments and rules out a missing named-writer or scalar-validation
+boundary, but does not distinguish payload overwrite from maintenance because
+the scalar rows were not keyed to task ordinal and the post-value detail table
+overflowed. The next experiment must add that writer-PC-plus-ordinal join.
+ORIGIN: retail writer PCs, scalar source-register comparison, task publication,
+payload writes, and whole-RDRAM observations; no value was skipped, rewritten,
+or guarded.
