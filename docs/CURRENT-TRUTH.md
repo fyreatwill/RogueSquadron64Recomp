@@ -3,7 +3,7 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
-Updated for session 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
+Updated for session 4322 (MORT reference qualified; hangar route requalified; real-image filter path absent). Previously 4321 (MORT reference qualified; runtime route did not reach hangar). Previously 4320 (MORT/filter callsites witnessed). Previously 4319 (descriptor entry reached; MORT payload/filter witnesses absent). Previously 4318 (M5 matrix route-qualified but MORT boundary absent). Previously 4317 (retail/port consumer stream diverges). Previously 4316 (retail/port consumer comparison shortfall). Previously 4315 (retail consumer boundary requalified). Previously 4314 (extended port capture valid; retail detail stream not requalified). Previously 4313 (retail/port consumer sequence matches through 4,096 rows). Previously 4312 (extended port free/read route qualified). Previously 4311 (extended port join route-invalid). Previously 4310 (port free/read join qualified).
 
 ## Current state (as of s4268)
 
@@ -43,6 +43,17 @@ decoder, AI bridge, or game-path guard changed. Callsite ownership is
 static-enumeration plus port runtime evidence; the oracle supplies the
 independent route control.
 
+**M5 Step 9 route-qualified result (s4322).** With the known
+`M4_Y8000_WIDTH=512` qualifier, the same-build oracle and both port arms reached
+VI 512 at `0x006AB400`; neither arm crashed or aborted. The independent MORT
+reference again passed four nonzero rows spanning 8000 and 16000 Hz. The silent
+arm (`ROGUESQ_AUDIO_UCODE=0`) emitted 256 active filter rows at `0x8009D740`;
+the real-image arm (`=1`) emitted none despite 1,095 descriptor entries and
+valid PCM source/consumer activity. The route blocker is closed, but the runtime
+MORT comparison is not: this selects an audio-arm path divergence, not
+H-MORT, H-layout, or H-AI. Positive controls were the oracle whole-RDRAM watch,
+title/hangar VI controls, and per-arm filter controls.
+
 **M5 de-stubs landed.** A11 waitForAnyAudioSlot yield (default 2000), A12 countdown
 yielding spin (`ROGUESQ_AUDIO_WAIT_NOPUMP` unset=2; s4192), A15 spin-yield default
 on, A13 drain-tick gate (dormant on title+hangar), A14 status-03 wait (s4296 host yield, `ROGUESQ_A14_YIELD=0` rolls back; s4297: loop IS entered in the hangar, b0 stuck 0x03, exits after ~160-180k iterations only with the yield; yield-on reaches VI 640 and then the known do_rom_read crash at 0x80001b08, yield-off stays in hangar, no crash - 2 on / 1 off runs), A9/A10 voice-base/song-tick guards (0 fires). Declared-size staging
@@ -78,7 +89,7 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-00. (s4321) `tools/mort_probe.py` independently validated four speech descriptors spanning 8 kHz and 16 kHz, with nonzero decoded output. The fresh matrix passed the oracle whole-RDRAM/title controls and both port title controls, and both arms produced PCM source/consumer joins at VI 1024; neither arm reached VI 512, so no active filter row could be joined to a reference descriptor. Runtime CPU-MORT versus descriptor-layout versus AI/host remains unevaluable. Next: requalify the hangar route in one batched matrix (retain the MORT reference rows and all controls); only compare runtime filter/source/output rows after VI 512 is reached. Do not alter RSP dispatch or add a guard.
+00. (s4322) The route-qualified matrix reached VI 512 in both arms and passed all controls. Silent audio produced 256 filter rows at `0x8009D740`; real-image audio produced zero despite 1,095 descriptor entries and PCM source/consumer rows. Next: audit the real-image filter eligibility path and run one batched arm comparison with branch-level eligibility evidence and the existing MORT/reference/route controls. The discriminator is whether real-image descriptors reach the same filter callsite with a nonzero eligible payload: same callsite plus matching descriptor class selects H-MORT; a real-image alternate/guard path selects arm-divergence; eligible rows with mismatched class selects H-layout. Do not alter RSP dispatch, decoder, AI bridge, or add a guard.
 
 00a. (s4311, superseded by s4312) The 4,096-row port free/read join was not interpretable: the first launch omitted the known `M4_Y8000_WIDTH=512` route qualifier, and both corrected seeded-save launches (including the `ROGUESQ_A14_YIELD=0` rollback) crashed at `fillSampleStreamRange+13572` / guest `0x8000834C` while still at VI 640. It was believable because those launches reproduced the prior crash, but s4312 replayed the qualified route and captured the full table.
 
@@ -137,9 +148,9 @@ Work only the first applicable item. One monotonic sequence.
 | Port synth-read/free join, extended route | s4312 requalified the route and captured 4,096 writer/read rows in one run; both controls fired at VI 512, the free was again at guest `0x80095D54`, and all 4,096 requested/post pairs matched. s4313 independently matched the first 4,096 retail keyed rows; comparison beyond that remains open. |
 | Retail synth-read value join | s4308/s4313: whole-RDRAM and VI-512 controls passed; the value-aware oracle captured 1.43M target reads, and the first 4,096 keyed retail rows exactly match the qualified port sequence. Later divergence remains open. |
 | Retail/port 16,384-row consumer comparison | s4317: whole-RDRAM control and hangar VI 512 passed; both arms supplied 16,384 rows, with an ordinal-0 tuple divergence (retail `0x8008FADC,0x17DA1C,0xB035DC20`; port `0x8008FCE8,0x17D9E0,0x8017D9F8`). This selects a retail/port layout-or-filter divergence; exact writer/consumer cause remains open. |
-| M5 Step 9 complete matrix | s4319: both port arms reached title/hangar and passed route/host controls; descriptor-start fired in both, but no `init-desc` payload or real filter witness appeared. Descriptor fields differed between silent and real arms. H-route/coverage-incomplete is selected; H-MORT/H-AI remain unevaluable until active callsites are independently witnessed. |
-| M5 Step 9 MORT/filter callsite | s4320: `init-desc` fired in both arms; real-image filter rows came from `0x8009D740`, while `0x8009C540` and `0x8009C88C` were quiet. MORT output/type/rate versus PCM remains open. |
-| M5 Step 9 MORT output | s4321: the independent reference decoder passed four rows covering both rates with nonzero output, but the fresh port arms stopped at title VI 1024 and supplied no active filter rows. Runtime MORT/layout/AI comparison remains route-invalid, not a null. |
+| M5 Step 9 complete matrix | s4322: both port arms reached title/hangar and passed route/host controls; silent audio emitted 256 filter rows at `0x8009D740`, while real-image audio emitted none despite 1,095 descriptor entries and PCM source/consumer rows. The route blocker is closed; an audio-arm path divergence is selected. |
+| M5 Step 9 MORT/filter callsite | s4322: the silent arm reached `0x8009D740`; the real-image arm did not reach any enumerated filter callsite. MORT output/type/rate versus PCM remains open; do not treat the real-arm zero as a MORT null. |
+| M5 Step 9 MORT output | s4322: the independent reference decoder passed four rows covering both rates with nonzero output. Runtime comparison is now route-qualified but blocked on explaining why the real-image arm has no active filter rows. |
 
 ## Durable evidence boundary
 

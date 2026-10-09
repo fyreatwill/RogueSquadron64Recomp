@@ -148336,3 +148336,29 @@ reached. The next discriminator is a route-qualified rerun retaining the
 reference rows and controls. No decoder, AI, RSP, or game-path behavior changed.
 
 ORIGIN: none; this was reference validation and route-gated diagnostic capture.
+
+## Session 4322 (2026-10-08) — requalified hangar; isolated real-image filter divergence
+
+HYPOTHESIS-ID: m5-step9-mort-output
+
+Ran one rebuilt s4321 M5 matrix after adding the known `M4_Y8000_WIDTH=512`
+route qualifier. The independent MORT reference passed again: 546 descriptors,
+four selected rows spanning 8000 and 16000 Hz, and nonzero decoded samples. The
+oracle whole-RDRAM positive control and title/hangar VI controls passed. Both
+port arms reached VI 512 at `0x006AB400`; neither emitted a crash or abort.
+
+The silent arm (`ROGUESQ_AUDIO_UCODE=0`) produced 256 active
+`filter-voice-audit` rows, all at `0x8009D740`, plus 371 descriptor entries and
+PCM source/consumer rows. The real-image arm (`=1`) produced zero filter rows
+despite 1,095 descriptor entries and PCM source/consumer rows; the two other
+enumerated callsites were also quiet. This is a positive-control-qualified,
+route-valid arm divergence. It does not select H-MORT, H-layout, or H-AI, and
+the real-arm zero is not evidence that MORT output is absent.
+
+This rules out the prior route-invalid explanation for the missing real-arm
+filter rows. It leaves the real-image filter eligibility/dispatch path as the
+next bounded M5 target. No decoder, AI bridge, RSP dispatch, or game-path guard
+changed.
+
+ORIGIN: none; this iteration changed only the known route qualifier in the
+diagnostic matrix script and documentation.
