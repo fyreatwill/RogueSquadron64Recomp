@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4421 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4422 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -144,6 +144,16 @@ generated-marker census plus phase-keyed runtime witnesses; the probes only
 observed stores, contexts, inputs, and later loads, and no value was rewritten,
 skipped, or guarded.
 
+Session 4422 paired the live port witnesses with the retail oracle's physical
+table-write watches and selector-load execution watch. Whole-RDRAM, title and
+hangar VI, and selector-load controls were live in both arms. Retail performed
+no `0x80149758/0x8014975C` stores in title phases, then performed the two
+hangar stores with values `0x80171E70/0x80173CB0`; the port performed title
+stores `0x80171CE0/0x80173B20` and the same hangar values. This selects
+H-init-route over H-writer-value and closes H-join-failure for this boundary.
+ORIGIN: retail physical write callbacks/post-store summaries and port
+phase-keyed generated hooks; no table value was rewritten, skipped, or guarded.
+
 ## Other live lines
 
 The graphics-side framebuffer-set growth root is a bump-time DPC ring-lap
@@ -177,13 +187,14 @@ available.
 
 ## Next steps
 
-1. **Qualify selector-table writer parity** — HYPOTHESIS-ID
-   `m5-selector-table-writer-boundary`. Capture the same phase-keyed retail
-   writer/store-context fields and join them to the existing port writer and
-   later `0x80150000` loads. Require whole-RDRAM, VI, task/image, selector
-   input, caller/precall, and writer positive controls in each source. Do not
-   rewrite differing values; determine whether the writer values are legitimate
-   and whether the index differs before the load.
+1. **Identify the retail title initializer/store route** — HYPOTHESIS-ID
+   `m5-selector-title-init-route`. Use the known retail selector-load PCs and
+   title phase as the gate; enumerate the caller/preceding range and table-
+   address writer PCs in one oracle capture, with whole-RDRAM and VI/task
+   controls. A retail title writer row selects an earlier/different route; a
+   live title load with no writer in the widened range leaves preinitialization
+   versus bypass to the table value/index fields. Keep the matching hangar
+   writer as the positive control; do not rewrite or guard table state.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug

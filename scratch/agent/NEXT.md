@@ -1,39 +1,42 @@
-# Next work unit (s4421): qualify selector-table writer parity
+# Next work unit (s4422): identify the retail title initializer/store route
 
-HYPOTHESIS-ID: m5-selector-table-writer-boundary
+HYPOTHESIS-ID: m5-selector-title-init-route
 
-The s4421 repair made both durable hooks live: the port capture emitted 4 table
-stores and 4 store-context rows, with 1,007 caller and 2,014 pre-call rows and
-all phase/task/image/filter controls live. The writer is now observable, but
-this run did not include paired retail writer values or an explicit
-store-to-load join.
+Session 4422 passed the paired positive controls. Retail reached the selector
+load 2,253 times and wrote the table only in hangar, with values matching the
+port's hangar stores. The port also wrote title values, so the next boundary is
+the retail title initializer/store route.
 
 Competing hypotheses:
 
-- H-writer-value: retail and port store different legitimate table values before the selector load.
-- H-index-value: paired stores agree, but the selector index differs at the later load.
-- H-init-route: retail and port still execute different initializer/store routes despite live port hooks.
-- H-join-failure: the retail writer arm or store-to-load join is not positively qualified.
+- H-retail-title-writer: a retail title writer exists in an earlier or different
+  address range than the observed table stores.
+- H-retail-title-preinitialized: retail reaches the title load with a table
+  value established before the phase-gated route.
+- H-retail-title-bypass: retail's title selector path bypasses the table-store
+  route entirely while still reaching the load PC.
+- H-join-failure: the widened retail writer census or phase join is still not
+  positively qualified.
 
-Discriminating measurement: one paired retail/port capture must pass its
-independent positive controls and retain writer/store-context rows plus the
-later `0x80150000` load. Different legitimate stores select H-writer-value;
-matching stores with different load indices select H-index-value; live controls
-with a missing retail writer selects H-init-route; failed controls select
-H-join-failure.
+Discriminating measurement: one retail oracle capture must pass whole-RDRAM,
+VI, task/image, and selector-load controls, retain the matching hangar writer
+as a positive control, and enumerate all title executions/writes in the known
+selector caller/preceding range plus the physical table addresses. A title
+writer row selects H-retail-title-writer; a live title load with no writer in
+the widened range leaves preinitialization versus bypass to the table value/
+index fields; failed controls select H-join-failure.
 
 Exact commands:
 
-1. Run the retail oracle writer arm with whole-RDRAM and VI/task positive
-   controls, then the qualified port arm with the same phase-keyed logging.
-2. Build: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
-3. Run the port from `build/` with `ROGUESQ_LLE_FORCE=1`,
-   `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`,
-   `ROGUESQ_AUDIO_UCODE=1`, the canonical autopilot,
-   `ROGUESQ_LOG_M5_SELECTOR_TABLE=1`,
-   `ROGUESQ_LOG_M5_SELECTOR_STORE_CONTEXT=1`,
-   `ROGUESQ_LOG_M5_SELECTOR_INPUT=1`, `ROGUESQ_LOG_M5_SELECTOR_CALLER=1`,
-   `ROGUESQ_LOG_M5_SELECTOR_PRECALL=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`,
-   `ROGUESQ_LOG_FILTER_VOICE_AUDIT=1`, and `ROGUESQ_LOG_ALL=1`.
+1. Build: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+2. Run the retail oracle from the repo root with `--watch-write 0x0:0x800000`,
+   physical table watches `0x00149758:0x0014975C` and
+   `0x0014975C:0x00149760`, `--watch-pc-range 0x8008E000:0x80091340`,
+   phase-gated title/hangar buckets, and the known selector-load PC.
+3. Run the qualified port arm concurrently from `build/` with
+   `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+   `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_AUDIO_UCODE=1`, the canonical autopilot,
+   and the existing selector table/store-context/caller/pre-call/task/filter
+   logging.
 4. Kill with SIGKILL. Require selector/table, caller/precall, VI, task, image,
    and positive-control markers in both arms before interpreting any null.

@@ -150419,3 +150419,18 @@ H-writer-value from H-index-value because paired retail store values and an
 explicit store-to-load join were not captured. No value was rewritten, skipped,
 or guarded. The next unit is retail/port writer parity with the same positive
 controls.
+
+## Session 4422 (2026-10-09) — selected the retail title initializer route
+
+Ran one paired retail/port selector-table writer capture. The retail oracle
+passed the whole-RDRAM positive control, title and hangar VI controls, and the
+selector-load execution control (2,253 rows). Its physical watches and
+post-store summaries showed no table writes in title phases; in hangar it wrote
+`0x80149758=0x80171E70` and `0x8014975C=0x80173CB0`, with writer PCs
+`0x8008F228/0x8008F264`. The port passed its input, title/hangar VI,
+task/image/filter, caller/pre-call, and no crash/abort controls; it emitted
+title stores `0x80171CE0/0x80173B20` and the same hangar stores. The matching
+hangar values and live controls rule out a watch/join failure and H-writer-value
+at the observed boundary. They select H-init-route: retail's title table state
+comes from a different earlier initializer/store route or bypass. No value was
+rewritten, skipped, or guarded. The next unit targets that retail title route.
