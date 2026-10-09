@@ -4,7 +4,21 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); audio inventory and
 de-stubbing contract: [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-Updated for session 4350: the qualified retail source-span witness reached
+Updated for session 4351: the qualified retail base-buffer witness reached
+title VI 1024 and hangar VI 512, with 554,396 whole-RDRAM control hits and
+3,107 C904 executions. The corrected watched span `0x801B2C60..0x801B4F60`
+contained every observed C904 input (`0x801B2C60..0x801B4CE0`), so the
+pointer/base geometry is qualified. Its post-store snapshot contained no
+exact `0x00000010` or `0x00003108` words; the 29 `0x10` source values from
+`0x8009DB2C` were halfword lattice output, not full branch-state words. This
+rejects H-route-alias and H-buffer-source for the stable base span and selects
+H-selector-decode: the remaining semantic divergence is after base/cursor
+construction. Writer attribution is single-source retail evidence; whole-RDRAM,
+VI, and C904 controls independently qualify route and coverage. The initial
+4-KiB run is retained only as an instrument-boundary failure because inputs
+extended past its end.
+
+Previously 4350: the qualified retail source-span witness reached
 hangar with 78,754,385 whole-RDRAM write-control hits, 535 C904 executions,
 and 128 phase-gated input spans. The observed span writers were `bzero` at
 `0x8002A0B8/0x8002A0BC` and lattice output at `0x8009DB2C`; no captured writer
@@ -337,15 +351,18 @@ Patch the live tree with `tools/apply_s*.py`; do not regen.
 
 ## Next steps
 
-1. (M5, HYPOTHESIS-ID `m5-step9-base-buffer-producer`) Attribute the stable
-   base buffer `0x801B2C60` selected by `+0x198` and the cursor-indexed C904
-   input pointer. Run one phase-gated retail oracle witness that joins C904
-   input pointers to the base-buffer source span and records writer PCs/source
-   values, retaining whole-RDRAM, title, hangar, and C904 controls. A
-   base-buffer writer carrying the retained family selects H-buffer-source;
-   stable ring data with no family selects H-selector/decode boundary; a
-   pointer/geometry mismatch selects H-route-alias. Do not alter decoder/RSP/AI
-   behavior.
+1. (M5, HYPOTHESIS-ID `m5-step9-selector-decode-boundary`) Identify the
+   post-base/cursor selector boundary that produces the retained retail
+   `0x0010/0x3108` family. Competing hypotheses are H-post-C904-selector
+   (the family is published by the immediate C904 output/selector path),
+   H-decoder-state (it is formed from decoded `+0x18A/+0x18C` or stack fields),
+   and H-earlier-stream (the family enters before C904 from an unjoined audio
+   stream). One phase-gated retail witness must join C904 input/base/cursor,
+   C904 output/selector values, decoded state, and writer PCs/source values;
+   a family-valued post-C904 writer selects H-post-C904-selector, a matching
+   decoded-state value selects H-decoder-state, and neither moves the boundary
+   to the earlier stream. Retain whole-RDRAM, title, hangar, and C904 controls;
+   do not alter decoder/RSP/AI behavior.
 
 (s4348) Static census result: `runVoiceLatticeFilter` reads `$t1`/`a1` and
 writes `$t0`/`a2`; the quantized `0x8009DB2C` store is legitimate lattice
@@ -366,6 +383,15 @@ written four times by `0x8009BE90` and settled on stable base `0x801B2C60`;
 `0x8009D790`. No sampled cursor source value matched the retained family.
 This rejects base/index as the family producer and selects ordinary ring-buffer
 scheduling; the next boundary is the stable base-buffer contents/producer.
+
+(s4351) The corrected qualified retail base-buffer witness passed 554,396
+whole-RDRAM callbacks, title VI 1024, hangar VI 512, and 3,107 C904
+executions. All observed C904 inputs fit `0x801B2C60..0x801B4F60`; the span's
+post-store snapshot had no exact `0x10`/`0x3108` words. The stable base span is
+ordinary ring/filter data, so H-route-alias and H-buffer-source are rejected
+and the next boundary is the post-base selector/decode path. The first 4-KiB
+attempt was invalid because it ended at `0x801B3C60` while C904 inputs reached
+`0x801B4CE0`.
 
 00a. (s4344) The value-aware witness passed the whole-RDRAM control (13,107
 hits), title VI `0x00790400`, hangar VI `0x006AB400`, and C904 execution control

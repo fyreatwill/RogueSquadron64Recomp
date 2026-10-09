@@ -149080,3 +149080,28 @@ whole-RDRAM, title/hangar VI, and C904 execution controls independently qualify
 route and coverage. The new oracle all-writer mode and base-field dump are
 regeneration-independent diagnostics; no decoder, RSP, AI, or runtime behavior
 changed.
+
+## Session 4351 (2026-10-08) — retail base-buffer witness moves boundary to selector/decode
+
+Ran the prescribed M5 stable-base witness with whole-RDRAM and C904 controls.
+The first capture was invalid because the command omitted the required Rice
+video plugin and remained at VI 320; its positive control fired, but it did
+not reach title or hangar. The corrected Rice run reached title VI 1024 at
+17.3 s and hangar VI 512 at 38.5 s, then ran for 120 s with 554,396
+whole-RDRAM control writes and 3,107 C904 executions.
+
+The corrected physical watch covered `0x001B2C60..0x001B4F60`; observed C904
+input spans ranged from `0x801B2C60` through `0x801B4CE0`, so the pointer/base
+geometry was fully covered. The span was written heavily. Its post-store
+snapshot contained 240 nonzero bytes but no exact `0x00000010` or
+`0x00003108` words. The 29 `source_value=0x10` rows attributed to
+`0x8009DB2C` were halfword lattice output stores, not full branch-state words;
+the writer is the legitimate filter output identified by the independent
+generated-code census in s4348. C904's retained family therefore does not
+come from the stable base buffer or its cursor geometry.
+
+This rejects H-route-alias and H-buffer-source and selects H-selector-decode:
+the remaining semantic boundary is after base/cursor construction. Retail
+writer/value attribution is single-source; whole-RDRAM, title/hangar VI, and
+C904 execution controls independently qualify route and coverage. No decoder,
+RSP, AI, or runtime behavior changed.
