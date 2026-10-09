@@ -2,7 +2,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT="$ROOT/scratch/agent/s4402_m5_title_selector_witness"
+OUT="$ROOT/scratch/agent/s4416_m5_title_selector_witness"
 mkdir -p "$OUT"
 cd "$ROOT/build" || exit 3
 

@@ -150318,3 +150318,18 @@ available in `docs/M5-CURRENT-TRUTH-ARCHIVE-s4269.md` and this ledger. This
 maintenance result advances the documentation state and does not alter any
 technical conclusion. ORIGIN: documentation-only compaction; no runtime
 value was skipped, rewritten, or guarded.
+
+## Session 4416 (2026-10-09) — resolved the port title selector divergence
+
+Ran the qualified port selector witness after correcting its output directory
+to `scratch/agent/s4416_m5_title_selector_witness/`. The input positive
+control fired; title `0x00790400` and hangar `0x006AB400` VI controls were
+live; the capture retained 1,502 audio-task rows, 1,502 task joins, and 256
+filter joins, with no crash or abort marker. Exact selector boundary
+`0x80029E78` fired 3 times in title phase 4 and 2 times in hangar phase 5;
+alternate entry `0x80029E80` fired zero times. Compared with s4414 retail,
+which entered `0x80029E80` in title, this selects port/retail selector-path
+divergence and rules out port corroboration of the retail alternate. The
+first divergent caller/input/state before the selector remains open. ORIGIN:
+the port runtime recorded generated guest PCs and phase-keyed controls; no
+value was skipped, rewritten, or guarded.

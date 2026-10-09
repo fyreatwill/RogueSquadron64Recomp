@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4415 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4416 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -46,8 +46,10 @@ type-2 task rows in title `0x00790400`, title `0x00790800`, and hangar
 execution entered at `0x80029E80` from `0x8008EE84`, while exact
 `0x80029E78` and its `0x80091CB8` predecessor occurred only in hangar. This
 selects H-title-selector-alternate-entry over title bypass/absence for the
-qualified retail route. It remains single-source retail evidence; port
-corroboration is the next discriminator. ORIGIN: the oracle observed guest
+qualified retail route. Session 4416's port witness instead entered exact
+`0x80029E78` in title and hangar, with no `0x80029E80` hits. This selects a
+port/retail selector-path divergence, not port corroboration. ORIGIN: the
+oracle observed guest
 PCs, predecessor PCs, task fields, VI origins, and physical whole-RDRAM
 callbacks; no value was skipped, rewritten, or guarded.
 
@@ -67,6 +69,16 @@ also identifies phase-specific earlier writers and later transforms, but the
 intermediate selector/decode transform remains open. These conclusions are
 qualified only when the positive control, phase markers, and task/image joins
 are live in the same run.
+
+Session 4416's qualified port witness passed the input control, title and
+hangar VI controls, and task/image joins; it retained 1,502 audio-task rows,
+1,502 task joins, and 256 filter joins, with no crash or abort marker. Exact
+selector `0x80029E78` fired 3 times in title phase 4 and 2 times in hangar
+phase 5; alternate entry `0x80029E80` fired zero times. This is the second
+evidence line selecting port/retail selector-path divergence. The title-side
+pre-filter boundary remains open. ORIGIN: the port runtime recorded generated
+guest PCs and phase-keyed controls; no value was skipped, rewritten, or
+guarded.
 
 ## Other live lines
 
@@ -99,11 +111,11 @@ available.
 ## Next steps
 
 1. **M5 pre-filter selector/decode boundary** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Run one qualified port capture with
-   phase-keyed selector entry/caller/precall logs and the input, title, hangar,
-   task, and image controls. Title `0x80029E80`-family activity selects port
-   corroboration; title exact `0x80029E78` activity selects port/retail path
-   divergence; missing controls makes the comparison unevaluable.
+   `m5-selector-decode-boundary`. Build one phase-keyed comparison of the
+   port exact `0x80029E78` entry against retail `0x80029E80`, retaining input,
+   VI, task, and image controls. The open discriminator is the first
+   divergent caller/input/state before the selector; missing controls make
+   the comparison unevaluable.
 2. **M3 pre-publication guard runtime qualification**, blocked until a host
    with the MIPS toolchain and `PatchesLib` is available.
 3. **Generated-symbol renaming sweep**, slug
