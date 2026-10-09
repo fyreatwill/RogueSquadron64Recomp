@@ -149489,3 +149489,21 @@ corroborate H-selector-multiplex and rules out an absent or misaligned watch.
 It does not prove direct selected-word equality or close pre-filter origin
 versus later consumer transform. ORIGIN: retail guest memory snapshots and
 task joins are observed; no value was skipped, rewritten, or guarded.
+
+## Session 4371 (2026-10-09) — closed direct selected-word payload recurrence
+
+Ran one 75-second Rice retail-oracle capture with the whole-RDRAM positive
+control, four 32-byte phase-latched payload watches, C904/C950 witnesses and
+task joins, and typed `0x80033FCC` task rows. The run passed the control with
+102,877 writes, reached 4,477 VI and all three required phase buckets, and
+retained 4,483 valid C904/task joins with three unmatched witnesses; typed
+task rows were valid with no invalid pointers or overflow. Among joined rows,
+every nonzero selected word was absent from the first eight published payload
+words: 591/591 at `0x00790400`, 601/601 at `0x00790800`, and 344/344 at
+`0x006AB400`. The phase-latched payload watches were live and distinct in
+title and hangar. This second independent retail evidence line selects
+H-later-consumer-transform and rules out the remaining watch-boundary
+explanation for this comparison. It rules out direct selected-word recurrence
+in the published payload, not the identity of the intermediate transform or
+its writer. ORIGIN: retail selector, task, and physical payload observations;
+no value was skipped, rewritten, or guarded.

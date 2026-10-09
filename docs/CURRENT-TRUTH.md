@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4370 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4371 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -198,6 +198,20 @@ oracle rejects ranges over 4 KiB; the corrected 32-byte watches are the only
 qualified measurement. ORIGIN: retail guest memory snapshots and task joins
 are observed; no value was skipped, rewritten, or guarded.
 
+Session 4371's direct selected-word comparison passed the whole-RDRAM control
+(102,877 writes), reached 4,477 VI and all three required phase buckets, and
+retained 4,483 valid C904/task joins (three unmatched) plus 1,947 typed
+`0x80033FCC` rows. Every joined row with a nonzero selected word had no exact
+match in the first eight published payload words: 591/591 at `0x00790400`,
+601/601 at `0x00790800`, and 344/344 at `0x006AB400`. The four independent
+32-byte payload watches also produced live, distinct title/hangar snapshots.
+This supplies the second retail evidence line for H-later-consumer-transform
+and rules out the remaining watch-boundary explanation for this comparison;
+pre-filter origin is not the first eight published payload words. The next
+probe must locate the transform/publication boundary rather than repeat this
+comparison. ORIGIN: retail selector, task, and physical payload observations;
+no value was skipped, rewritten, or guarded.
+
 The independent retail witness at `0x8009C904`/`0x8009C950` reached title and
 hangar, with 10,000 whole-RDRAM control writes and 3,107 C904 executions.
 Session 4352 retained `branch_state=0x3108` in 584 rows and `0x0010` in 405
@@ -237,15 +251,14 @@ is explicitly repaired.
 
 ## Next steps
 
-1. **M5 selected-word versus payload origin** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. Run one qualified retail oracle capture with
-   the same positive control and three VI buckets, retaining C904/C950 selected
-   addresses/words and the first eight words of each joined task payload. If
-   selected words recur exactly in the published payload, that supports
-   H-pre-filter-origin; if payload families vary while selected words are zero,
-   unrelated, or phase-stable, that supports H-later-consumer-transform. A
-   missing phase snapshot or fewer than 1,000 valid joins reopens the watch
-   boundary. Do not close producer provenance from this alone.
+1. **M5 transform/publication boundary** — HYPOTHESIS-ID
+   `m5-selector-decode-boundary`. Locate the first post-C904 consumer stage
+   that changes the selected word into the published payload. The s4371 run
+   closed the direct selected-word-to-first-eight-payload comparison with two
+   independent retail evidence lines. The next capture must join the selected
+   row to the intermediate writer/reader or post-C950 field, with the same
+   whole-RDRAM control and three VI buckets; do not repeat the closed payload
+   comparison.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -257,7 +270,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
-| M5 consumer join | s4363 phase-labelled source capture confirms distinct task data/payload families in both title buckets and hangar despite constant selector input; C904 decode rows were present in hangar only. This supports H-selector-multiplex at the task-family handoff, single-source retail evidence; pre-filter origin versus later consumer transform remains open. |
+| M5 consumer join | s4363 plus s4370/s4371 independent retail captures confirm distinct phase-specific task families and zero exact recurrence of nonzero selected words in the first eight published payload words (591/591, 601/601, 344/344). H-later-consumer-transform is confirmed for that boundary; the intermediate transform/publication stage remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |
 | M5 producer provenance | Port hangar source span is cleared by legitimate ROM-DMA/`rs_memset`; no mitigation. |
 | Retail/port post-free stream layout | Retail and port share the first qualified read/free boundary, then diverge in later layout/value/order; exact consumer cause open. |
