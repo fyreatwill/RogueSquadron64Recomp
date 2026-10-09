@@ -4,7 +4,7 @@ Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Historica
 detail from s4269 onward is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) and
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md).
 
-Updated for session 4405 (2026-10-09). The preceding maintenance pass reduced
+Updated for session 4406 (2026-10-09). The preceding maintenance pass reduced
 this file to durable state; session 4357 qualified phase coverage but exposed a
 retail task-join instrument boundary.
 
@@ -185,6 +185,21 @@ rejects a simple hangar callsite-filter or row-budget null. It does not locate
 the hangar caller that reaches the live AI boundary; the next probe must map
 that alternate call chain. ORIGIN: guest direct-edge, setup, and boundary PCs
 were observed; no value was skipped, rewritten, or guarded.
+
+Session 4406 exhaustively enumerated the generated tree and found exactly two
+materialized calls to `0x80029D20`, at `0x80091BAC` and `0x80091CB8`; there is
+no uninstrumented generated direct candidate for a new witness. The rebuilt
+qualified capture passed the positive control, reached title `0x00790400`
+(2,692 rows) and hangar `0x006AB400` (512 rows), and retained 2,313 task/image
+joins plus 256 filter joins without a crash or abort. The existing direct-edge
+witness fired once at `0x80091CB8` in title and zero times in hangar. Hangar
+still produced setup/AI-boundary return activity, so the boundary is live but
+neither generated direct edge is its hangar caller. This rules out a missing
+third generated direct caller and a simple direct-edge filter/row-budget
+explanation; it selects an indirect/aliased or otherwise uninstrumented
+call-chain boundary over H-title-only-boundary-path. ORIGIN: generated static
+call edges and host phase-gated guest call/boundary witnesses were observed; no
+value was skipped, rewritten, or guarded.
 
 Session 4368's fixed Rice capture added the oracle post-store scalar witness
 to the exact family watches and retained the ordinal join. The first launch
@@ -746,12 +761,13 @@ is explicitly repaired.
 ## Next steps
 
 1. **M5 hangar AI alternate-caller locator** — HYPOTHESIS-ID
-   `m5-selector-decode-boundary`. The qualified title/hangar comparison found
-   `0x80091CB8` only in title; hangar's AI boundary remains live without either
-   direct generated edge. Enumerate the generated callers of `0x80029D20` and
-   add one regeneration-safe witness for the alternate hangar caller, retaining
-   the positive control and phase/setup witnesses. Do not repeat the resolved
-   VI-origin census or payload-family comparison.
+   `m5-selector-decode-boundary`. Session 4406 found only the two already
+   instrumented generated direct edges, while hangar still reaches the live AI
+   boundary. The next probe must map the actual boundary entry/return chain:
+   enumerate the generated body/aliases for `0x80029D20` and add a
+   regeneration-safe witness at the first uninstrumented entry or indirect
+   dispatch, retaining the positive control and phase/setup witnesses. Do not
+   repeat the resolved direct-edge census.
 2. M3 pre-publication guard runtime qualification, blocked until a host with
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is available.
 3. Generated-symbol renaming sweep, slug `generated-symbol-renaming-sweep`,
@@ -763,7 +779,7 @@ is explicitly repaired.
 | Hypothesis | Status |
 |---|---|
 | M5 selector/decode family origin | H-earlier-stream remains confirmed for the prior selected-range audit: no direct post-C904 store reaches `0x1535C4..0x1545C0`; the s4364 family-address union watch was too broad to attribute the task families. |
-| M5 title AI boundary | s4405 supports a phase-specific direct edge: `0x80091CB8` fires in title only, while hangar has live boundary/setup/source witnesses but no direct edge. Alternate hangar caller remains open. |
+| M5 title AI boundary | s4406 confirms exactly two generated direct edges: `0x80091CB8` fires in title only and `0x80091BAC` is absent; hangar has live boundary/setup-return activity but no direct edge. The remaining caller is indirect/aliased or outside the generated direct-call enumeration. |
 | M5 title caller path | s4375/s4376 qualify `0x80019DEC -> 0x80033FCC` as the direct publication chain; s4377 selects a phase-specific selector/object input; s4378 finds payload writers outside the prior candidate set; s4379 confirms some writer traffic after publication but leaves value provenance open. |
 | M5 consumer join | s4363 plus s4370/s4371 independent retail captures confirm distinct phase-specific task families and zero exact recurrence of nonzero selected words in the first eight published payload words (591/591, 601/601, 344/344). H-later-consumer-transform is confirmed for that boundary; the intermediate transform/publication stage remains open. |
 | M5 audio-task-rate divergence | Single-source qualified port A/B shows no useful split: title/hangar phase transitions were both 15.0/24.2 s, and the first hangar sequence was 1064 image versus 1056 silent. Lifetime-row caps prevent an exact 18–28 s count, so this is qualified rate-equivalence evidence, not final cross-source closure. |

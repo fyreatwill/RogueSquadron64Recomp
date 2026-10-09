@@ -150124,3 +150124,20 @@ direct edge and rejects a simple hangar callsite-filter or row-budget null; it
 does not locate the alternate hangar caller. ORIGIN: guest direct-edge,
 setup, and boundary PCs were observed; no value was skipped, rewritten, or
 guarded.
+
+## Session 4406 (2026-10-09) — exhausted direct AI caller enumeration
+
+Enumerated the generated tree and found exactly two materialized calls to
+`0x80029D20`, at `0x80091BAC` and `0x80091CB8`; no uninstrumented generated
+direct candidate exists for a third callsite witness. Rebuilt the Debug target
+and ran the qualified 85-second real-audio/LLE/spin-yield/autopilot capture.
+The positive control fired, title `0x00790400` produced 2,692 phase rows,
+hangar `0x006AB400` produced 512, and the run retained 2,313 task/image joins
+and 256 filter joins with no crash or abort. The direct-edge witness fired once
+at `0x80091CB8` in title and zero times in hangar. Hangar still produced
+AI-boundary and `ai-return` setup activity. This rules out a missing third
+generated direct caller and a simple direct-edge filter/row-budget null; it
+selects an indirect/aliased or otherwise uninstrumented call-chain boundary
+over a title-only boundary explanation. ORIGIN: generated static call edges
+and host phase-gated guest call/boundary witnesses were observed; no value was
+skipped, rewritten, or guarded.
