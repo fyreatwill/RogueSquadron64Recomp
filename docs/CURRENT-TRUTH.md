@@ -288,6 +288,16 @@ available.
 
 ## Next steps
 
+0e. **s4439: oracle AI_LEN read is valid (control: nonzero on 98.7% of title VIs, avg 379 B) and the DAC is ~99% busy, yet retail submits 768 B at 0.96/VI exactly at drain.**
+   So mupen plays 768 B in ~16.5 ms, ~1.9x slower than dacrate 2207 implies
+   (suspect `get_dma_duration` cpu_counts estimate, ai_controller.c:62-69; not
+   confirmed). The oracle's "retail ~1 submit/VI" may be an emulator artifact,
+   so 0c/0d's "port starvation is retail-faithful" is downgraded. Next
+   (`m5-sdl-consume-rate`): (1) oracle emulated-time per submit via CPU Count to
+   confirm/refute the 2x; (2) find what sets 192 frames/tick in the guest mixer
+   (constant vs derived from osAiGetLength/status); if derived, feed the port
+   the real-hardware answer.
+
 0d. **s4438: retail dacrate 2207 (22047.9 Hz) == port; retail title ~0.96
    submits/VI, 768 B each, AI idle (AI_LEN=0, status 0) at every submit.** The
    port's starved SDL queue (s4435) matches retail's own stream, so it is not

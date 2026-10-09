@@ -2803,6 +2803,24 @@ static void dbg_vi(void)
 
     g_vis++;
 
+    {   /* s4439: AI_LEN/AI_STATUS sampled at every true VI = known-mid-buffer control for the submit-time AI_LEN=0 reading */
+        static long n, nz, busy, full;
+        uint32_t len = pDebugMemRead32(0xA4500004u) & 0x3FFF8u;
+        uint32_t st = pDebugMemRead32(0xA450000Cu);
+        n++; nz += len != 0; busy += (st >> 30) & 1; full += (st >> 31) & 1;
+        {   /* per-width-bucket duty: title(1024) / hangar(512) / pre-title(other) */
+            static long bn[3], bnz[3], bsum[3];
+            uint32_t w = pDebugMemRead32(VI_WIDTH_ADDR);
+            int b = w == 1024u ? 0 : w == 512u ? 1 : 2;
+            bn[b]++; bnz[b] += len != 0; bsum[b] += len;
+            if (g_vis % 300 == 0)
+                printf("[ai-vi-duty] vi=%ld title n=%ld nz=%ld avg=%.0f | hangar n=%ld nz=%ld avg=%.0f | other n=%ld nz=%ld avg=%.0f\n", g_vis,
+                       bn[0], bnz[0], bn[0] ? (double)bsum[0]/bn[0] : 0.0, bn[1], bnz[1], bn[1] ? (double)bsum[1]/bn[1] : 0.0, bn[2], bnz[2], bn[2] ? (double)bsum[2]/bn[2] : 0.0);
+        }
+        if (n <= 6 || (n % 500) == 0)
+            printf("[ai-vi-sample] vi=%ld len=%u status=0x%08x | n=%ld len_nonzero=%ld busy=%ld full=%ld\n", g_vis, len, st, n, nz, busy, full);
+    }
+
     if (g_checkpoint_requested) {
         g_checkpoint_requested = 0;
         emit_checkpoint();
