@@ -1,10 +1,10 @@
-# Next work unit (s4435): does the queued title PCM reach the SDL device intact?
+# Next work unit (s4436): AI buffers per VI, port vs retail
 
-HYPOTHESIS-ID: m5-pcm-nonzero-source
+HYPOTHESIS-ID: m5-ai-buffer-rate
 
-s4434: nonzero PCM (rms 2-6k) reaches queue_samples in title; counts setnext==queue.
+s4435: port title feeds ~59 x 768 B buffers/s; SDL queue never exceeds one buffer; 22047 Hz needs 115/s.
 Hypotheses:
-- H-sdl-drop: SDL_QueueAudio/device drops or underruns (queued size, device format/freq mismatch vs osAiSetFrequency).
-- H-content-wrong: PCM nonzero but differs from retail (wrong voice/instrument data).
-- H-audible-ok: device path fine; M5 title audio works.
-Discriminator: one run, same recipe as scratch/agent/s4434_port/run.sh, logging SDL_GetQueuedAudioSize before/after each queue, device spec (freq/format) vs ai freq, and dump 5 s of PCM via ROGUESQ_S4243_PCM for spectral sanity; oracle arm for content if driveable.
+- H-port-slow: port audio thread issues ~1 buffer/VI while retail issues ~2/VI (pacing defect in port).
+- H-retail-same: retail also ~1/VI; the DAC rate/real-time model differs, so port timing is correct and SDL freq/buffering is the issue.
+- H-port-throttled-by-host: port game loop runs below 60 VI/s (compute-bound), so buffer rate is a symptom of slow emulation.
+Discriminator: count AI set-next calls and VI swaps per second in each arm over the same title window. Oracle: extend dump_ai_output in tools/oracle/rs64_oracle.c to print a VI-swap count + wall clock with each summary; port: ratio of setnext to VI transitions from existing [s4245] ticks. Positive control: whole-RDRAM watch. If port VI/s < 60 -> H-port-throttled-by-host.

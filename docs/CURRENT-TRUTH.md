@@ -284,6 +284,12 @@ available.
 
 ## Next steps
 
+0b. **s4435: SDL end of title audio is starved.** Port feeds 59 buffers/s of 768 B
+   (queue depth <= one buffer, device 22047 Hz needs 115/s); retail buffers are
+   also 768 B. Next (`m5-ai-buffer-rate`): buffers per VI in port vs retail in
+   the same title window (oracle needs VI-stamped AI calls); then find what
+   paces the port's audio thread to ~1 buffer/VI.
+
 0a. **s4434: Step 10 qualification result - nonzero PCM reaches
    `queue_samples` in the port title phase** (phase 4 width 1024: 251 nonzero
    buffer reports in run, fixed_rms 2275-6484, setnext==queue ~60/s,
