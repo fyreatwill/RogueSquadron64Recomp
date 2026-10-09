@@ -150219,3 +150219,22 @@ actual VI-width-change phase publisher. ORIGIN: host probes observed guest
 call arguments and the RT64 phase transition; no value was skipped, rewritten,
 or guarded. Next: retail-oracle phase-keyed comparison of selector
 input/call arguments/task payload identity at the pre-filter boundary.
+
+## Session 4411 (2026-10-09) — qualified the retail selector watch boundary
+
+Ran one 75-second retail-oracle capture with Rice video, the whole-RDRAM
+positive control, VI trace, title/hangar phase buckets, both generated direct
+edges, selector entry `0x80029E78`, and task publication `0x80033FCC`. The
+positive control reached 10,000 callbacks; title `0x00790400` and hangar
+`0x006AB400` were live; the run completed 4,479 VI and retained 5,135 task
+executions. Direct `0x80091CB8` fired four times, `0x80091BAC` fired zero,
+and `0x80029E78` fired four times, all in the title-side route. Task rows were
+live in all required buckets, with data pointers `0x80173B20` and
+`0x80171CE0` in title and `0x80171E70` in hangar. This selects the
+retail-watch-boundary hypothesis over a selector multiplex conclusion: the
+hangar selector/source arm was not captured even though hangar task
+publication was live. It rules out whole-run coverage failure and a missing
+hangar task route, but does not identify the hangar selector caller. ORIGIN:
+the oracle observed guest PCs, VI origins, and task pointers; no value was
+skipped, rewritten, or guarded. Next: add the qualified `0x8009C904` and
+`0x8009C950` source witnesses in the same phase-gated capture.
