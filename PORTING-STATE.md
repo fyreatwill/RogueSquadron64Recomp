@@ -152117,3 +152117,99 @@ for the named model-animation asset.
 Next site is `freePlayerAuxBuffersIfActive` at `0x80100F84`. The
 delay is `nop` and does not write `$a0`. Evidence:
 `docs/M3-S4498-RESET-AND-FREE-MODEL-ANIMATIONS-RS-FREE-AUDIT.md`.
+
+## Session 4499 (2026-10-09) — audited freePlayerAuxBuffersIfActive rs_free of the craft animation index array
+
+Static census of the first `jal rs_free` in `freePlayerAuxBuffersIfActive`
+at `0x80100F84` (entry `0x80100F40`, size `0x68`). ROM bytes only. No
+build and no runtime run. The second jal in this function, at
+`0x80100F90`, was not classified. The soak tail has no verdict newer
+than s4468, and those lines are already in CURRENT-TRUTH.
+
+Positive control: `RecompiledFuncs/` is not on disk. Mission ROM words
+at closed `0x800F9F94`, `0x800EED50`, and `0x800EC564`, and the `.text`
+word at closed `0x8007BE50`, are `0x0C000726`, as is this jal. A scan
+that missed `0x800F9F94` or `0x800EC564` would have been invalid.
+
+The delay is `nop` at `0x80100F88` (word 0) and does not write `$a0`.
+`$a0` is written twice before the jal: `andi $a0, $a0, 0xFF` at
+`0x80100F4C`, then `lw $a0, 8($s0)` at `0x80100F80`. The `andi` is
+overwritten by the load. `beqz` at `0x80100F70` is not likely and its
+delay is `nop`, so a zero count byte skips both frees. No branch
+targets this jal. `$s0` is `0x8010CF20 + (index & 0xFF) * 0x18`.
+
+All nine callers are in `.ovl.mission` and each delay is
+`addu $a0, $zero, $zero`, so the live index is 0 and the word is
+`0x8010CF28`. There is no raw word `0x80100F40`, no `j` to that
+entry, and no code-image immediate `0x0F40`.
+
+The only `sw` of `0x8010CF28` is `allocateCraftAnimationStateForSlot`
+at `0x80100828`, `sw $v0, 8($s0)`, immediately after `jal rs_malloc`.
+Every caller of allocate passes index 0 and is one of the nine craft
+mode-1 blocks. The malloc size is the count object's first byte
+shifted left by 1, and `$a1` is 0. Those bytes are image constants:
+xwing 8, awing 6, ywing 2, vwing 4, t16 4, naboo 4, snow 0, falcon 0,
+tie 0. The one store whose immediate collides with a low half is
+`0x8008F6A4`, and its `lui` is `0x8015`, so the address is
+`0x801499BC`, not the tie object. Allocate stores the count object
+before testing the byte. A zero count branches to `0x80100924` and
+does not execute the `sw`. Free then takes the same `beqz`, so snow,
+falcon, and tie do not reach this jal.
+
+`rs_malloc` returns 0 or `block + 0x10` through `addu $v0, $s2` at
+`0x80001C74`. Size 0 and the failure branches at `0x80001B34` and
+`0x80001B9C` are taken before the `block + 0x10` write at
+`0x80001C10`. `$s2` is restored at `0x80001C80` only after `$v0` is
+written. Nothing writes `$v0` between the return and the store.
+A zero return is stored and then faults at `lw $v1, 8($v1)` in the
+fill loop (`0x80100894`). Allocate does not return, so 0 does not
+reach this jal.
+
+The other functions that form `0x8010CF20` do not store offset 8.
+The `swc1` pair at `0x8010091C` uses base `0x8010CF38` and is slot
+11, not index 0. The `.text` immediate `0xCF20` at `0x80072DC8` is
+`0x8003CF20`. `despawnCraftAnimationSlotNpcs` runs before this jal,
+reloads the array as NPC indices, and contains no `jal rs_free`.
+`destroyNpcSlotByIndex` increments byte +0x1A before its `jalr`, so
+a nested destroy returns without calling the handler. Those
+halfwords are other NPCs, not these nine callers.
+
+Mode 2 is the only `jalr` whose `$a1` is the immediate 2
+(`destroyNpcSlotByIndex` at `0x8003EDE0`). Of 127 direct callers of
+`slotDispatcherIter` in `.text` and `.ovl.mission`, none pass 2.
+The walk that stopped on a `j` in `dealDamagetoDatItem` is mode
+`0xB`. Each of xwing, awing, ywing, vwing, t16, and naboo has one
+mode-2 block within `0x90` bytes before this jal, and the previous
+mode `j`s to the epilogue, so it does not fall through. Each of
+those blocks calls this function once.
+`choosePlayerCraftAssets` runs once from `initMission` and spawns
+one handler with `$a1 = 1`, not mode 2. `endMissionCleanup` does
+not jal this free or `destroyNpcSlotByIndex`.
+`destroyTransientNpcSlots` returns when directory +0xE is
+`0xFFFF`, which `initNpcSlotList` writes at `0x8003E5DC`. No later
+`sh` of offset `0xE` follows a load of the directory pointer at
+`0x80130BB0`. The two readers of the saved craft index at
+`0x80137DB8 + 0x292` pass it to `getNpcContextByIndex`, not to
+destroy.
+
+Nothing clears slot +8 or the count byte, so a second destroy of
+the same index would reload the same word. No caller found by this
+census issues that second destroy. The uncleared directory is not
+a second free.
+
+This selects H-NextClassComplete. That refutes H-NextClassGap.
+H-NextClassUnevaluable is not selected: one memory identity reaches
+`$a0`, freed once, and the entry is not indirect. No guard was
+added.
+ORIGIN: `allocateCraftAnimationStateForSlot` writes slot +8 from
+the `rs_malloc` return at `0x80100828`; that value is the legitimate
+user pointer (`block + 0x10`). A zero return faults in the fill
+loop and does not return.
+
+Next site is the other jal in this function, at `0x80100F90`. The
+delay is `nop` at `0x80100F94` and does not write `$a0`. The
+`lw $a0, 0xC($s0)` at `0x80100F8C` was seen while reading this
+function and is not a classification. A scan from `0x80100F94` to
+the end of `.ovl.mission` found no later `jal rs_free`; re-verify
+that before calling the mission image exhausted. Evidence:
+`docs/M3-S4499-FREE-PLAYER-AUX-BUFFERS-RS-FREE-AUDIT.md`.
