@@ -152062,3 +152062,58 @@ user pointer for the mark array.
 Next site is `reset_and_free_model_animations` at `0x800F9F94`.
 The delay is `nop` and does not write `$a0`. Evidence:
 `docs/M3-S4497-PRELOAD-SCENE-REFERENCED-SONGS-MARK-ARRAY-RS-FREE-AUDIT.md`.
+
+## Session 4498 (2026-10-09) — audited reset_and_free_model_animations rs_free of one name-table slot
+
+Static census of the only `jal rs_free` in `reset_and_free_model_animations`
+at `0x800F9F94` (entry `0x800F9F6C`, size `0x64`). ROM bytes only. No
+build and no runtime run. The soak tail has no verdict newer than
+s4468, and those lines are already in CURRENT-TRUTH.
+
+Positive control: `RecompiledFuncs/` is not on disk. Mission ROM words
+at closed `0x800EED50`, `0x800EED48`, and `0x800EC564`, and the `.text`
+word at closed `0x8007BE50`, are `0x0C000726`, as is this jal. A scan
+that missed `0x800EED50` or `0x800EC564` would have been invalid.
+
+The delay is `nop` (word 0) and does not write `$a0`. The only `$a0`
+write before the jal is `lw $a0, 0($s0)` at `0x800F9F88`. `beql` at
+`0x800F9F8C` skips the jal when that word is 0; its delay store runs
+only on that skip. No branch targets the jal. The loop returns to the
+load, steps `$s0` by `0x24`, and stops after 16 slots at `0x8010C4A0`.
+The post-jal `sw $zero` clears the slot before the step, so one call
+frees each slot once. A second call sees zeros.
+
+The only nonzero writer is `load_model_animation`'s `sw` at
+`0x800F9EF8`, which stores `$v0` from `load_asset`. `load_asset` has
+no branch and returns the `rs_malloc(..., 0)` user pointer copied at
+`0x800648DC`. Nothing writes `$v0` between the malloc return and that
+copy. Its three later callees restore `$s2` before their only `jr`.
+`rs_malloc` returns 0 or `block + 0x10` through `addu $v0, $s2` at
+`0x80001C74`. Size 0 and the failure branches skip the `block + 0x10`
+write at `0x80001C10`. `osSendMesg` reloads `$s2` at `0x80033550`
+before its only `jr`. A zero return is stored and then faults at
+`lw $v0, 4($a0)` in `model_animation_offset_convert`, which has no
+jal and does not write the slot. The zero does not reach this jal.
+
+`reset_model_animations` writes 0 to the same 16 words and does not
+free them. That does not reach the jal. All 17 callers of
+`load_model_animation` pass literals of length 18–20, so `rs_strcpy`
+into `slot + 4` (21 bytes with the NUL) cannot reach the next slot's
+pointer 0x20 bytes later. The NPC copies of the return are not the
+`$a0` of any `jal rs_free` in those functions. `flattenAnimTreeAndAllocateSlot`
+and its malloc helpers contain no `jal rs_free`. The only caller of
+this function is `endMissionCleanup` at `0x800FBAC4` (delay `nop`).
+No `j`, no raw word `0x800F9F6C`, and no code-image immediate
+`0x9F6C`. The three ROM hits are past code end `0x142D90`.
+
+This selects H-NextClassComplete. That refutes H-NextClassGap.
+H-NextClassUnevaluable is not selected: one allocator return per
+reached slot, freed once, and the entry is not indirect. No guard
+was added.
+ORIGIN: `load_model_animation` writes the slot from the `load_asset`
+return at `0x800F9EF8`; that value is the legitimate user pointer
+for the named model-animation asset.
+
+Next site is `freePlayerAuxBuffersIfActive` at `0x80100F84`. The
+delay is `nop` and does not write `$a0`. Evidence:
+`docs/M3-S4498-RESET-AND-FREE-MODEL-ANIMATIONS-RS-FREE-AUDIT.md`.

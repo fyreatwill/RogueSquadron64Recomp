@@ -5083,7 +5083,7 @@ table words `0x80149758` / `0x8014975C`. What still matters:
   same-run fire control. s4475 closed step 9: no MORT-owned gap. Plan
   steps 1–10 are closed or conditional-unneeded.
 
-### `jal rs_free` classes s4477–s4497
+### `jal rs_free` classes s4477–s4498
 
 All Complete. No guard was added. s4476's "no unaudited class" is
 superseded: the s397 scan did not cover `funcs_16.c` upward. The audit
@@ -5112,9 +5112,10 @@ index.
 | 4494 | `freeAllObjectContextPoolNodes` `0x800EC564` | full-list head `0x8010C0D4` |
 | 4496 | `preloadSceneReferencedSongs` `0x800EED48` | `$s2`, `rs_malloc((marks + 1) << 3, 0)` index buffer |
 | 4497 | `preloadSceneReferencedSongs` `0x800EED50` | `$s3`, `rs_malloc(record count, 0)` mark array |
+| 4498 | `reset_and_free_model_animations` `0x800F9F94` | one `load_asset` return in the `0x8010C4A0` name table |
 
-The next unclassified site is `reset_and_free_model_animations`
-at `0x800F9F94` (entry `0x800F9F6C`). The delay is `nop`.
+The next unclassified site is `freePlayerAuxBuffersIfActive`
+at `0x80100F84` (entry `0x80100F40`). The delay is `nop`.
 The s3636
 `attachedMeshOverlayNpcHandler` `0x80054344` Gap in §56 stays open and is
 not this frontier.
