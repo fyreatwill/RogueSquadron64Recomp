@@ -1,7 +1,7 @@
-# NEXT: confirm the LUV/LFV/LHV unsigned-byte fix visually and triage the residual
+# NEXT: triage remaining hangar visual oddities after the RSP sign fix
 
 HYPOTHESIS-ID: hangar-artifact-triage
 
-s4518: rsp_vu_impl.hpp LFV/LHV/LUV now use unsigned DMEM bytes (RSP_MEM_BU). Entry-frame RDP diff vs retail: 588 -> 3 differing tris (34 shade words). Scripts: scratch/agent/s4518_port_rdp.sh (capture), s4518_shade_cmp.py <capture-dir> (diff), s4518_rsp_vu/run.sh (VU SIMD-vs-scalar differential).
-Work unit: (a) read scratch/agent/s4518_port_rdp/f_00*.png and compare against the pre-fix s4517_port_rdp/ pngs for the hangar rim/holo colour band; (b) dump the 3 residual tris (s4518_shade_cmp.py: print word indices/values) and decide whether they are low-order shade-derivative rounding (VRCP/VMACF family) or another load/store sign issue (audit SUV/SFV/SHV/SPV/LTV/STV vs ares in the same file; same idiom class, grep RSP_MEM_B( vs RSP_MEM_BU( everywhere); (c) grep the ledger for guards added against "wild colour"/shade-sign defects and list candidates to re-evaluate.
-Outcomes: pngs fixed + residual explained => close hangar-artifact-triage; residual in another idiom-class site => fix it the same way.
+s4519: s4518 fix visually confirmed; RSP load/store sign idiom class closed; residual 3 tris are scene-timing. Remaining visible: white pillar stubs left/right of the hangar and a thin glitch strip at the right edge (see scratch/agent/s4518_port_rdp/f_004_007.0.png).
+Work unit: (1) grep ledger/source for guards added against wild-colour/shade-sign defects and decide whether to remove them now; (2) for the white pillar stubs, dump the RDP tris covering that screen region from s4518_port_rdp/port_rdp.bin and compare shade words vs retail aligned frame (s4519_residual.py pattern) to see if they are RSP output or texture/combiner; (3) right-edge strip: VI width vs colour image width check.
+Outcomes: stubs' shade words match retail => raster/combiner issue; differ => another RSP op family (audit VMUDN/VMADH accumulators vs ares with scratch/agent/s4518_rsp_vu/run.sh).
