@@ -152645,3 +152645,23 @@ a3 is the call argument. All four callers are in `musyxRenderVoiceSamples`, and 
 This closes the FE98/FB64/FE04 question. It does not name which of the four jals ran, and it does not name who stored voice+0x34. s105/s111 called `musyxInitVoiceFromSample` at `0x800921E8` the sole writer of that offset; `musyxKeyOnVoice` also stores it at `0x80090C80`. Do not repeat the whole-tree grep.
 
 ORIGIN: `fillSampleStreamRange` at `0x8008FDC0` writes the DMA devAddr as a3 plus a multiple of `0x600`. a3 is the voice's `+0x34` word, plus `0x100` at two of the four calls. The value is not legitimate. Nothing was mitigated.
+
+## Session 4534 (2026-10-10) — odd DMA a3 is the raw voice word at jal 0x800903F0
+
+HYPOTHESIS-ID: odd-dma-voice-a3
+
+No new SOAK-RESULTS lines. The s4532 rows were already folded.
+
+`tools/apply_s4534_voice_a3.py` logs the four `musyxRenderVoiceSamples` jals to `fillSampleStreamRange` after the delay slot. One rebuild, one run, same route as the s4533 soak, gated on `ROGUESQ_LOG_S4534=1` with `ROGUESQ_LOG_S4533=1` still armed. Log: `scratch/s4534_voice_a3_20261010-030037/run.log`. VI 1024 at 48.9s (`0x00790400`), VI 512 at 59.7s (`0x006AB400`), VI 640 (was 512) at 170.2s (`0x006A2900`). Death is the odd-address assertion in `do_rom_read` (`pi.cpp:112`). Host stack is `do_rom_read`. Not `copyToRAM`. Not the parked `fillSampleStreamRange` bus error (`last-guest-pc` `0x80001b08`, not `0x8000834c`).
+
+Three `[s4534-jal]` lines, and no others:
+
+- `kind=arm site=800902CC` s1=`0x8018D4A0` raw34=`0xB0373B68` a3=`0xB0373C68`. a3 = raw34 + `0x100`, and that jal returned. This is the delay-slot control for the +0x100 sites. It is not the abort.
+- `kind=ctl site=800903F0` s1=`0x80172328` raw34=a3=a1=`0x00C80000`. The next line is `[s4532-fill] kind=ctl site=FE98 dev=0x00C80000`. The jal log and the FE98 join both pass a same-run sane control.
+- `kind=bad site=800903F0` s1=`0x801724C0` raw34=a3=`0x6C617465` a1=`0x6C63745D`. The next line is `[s4532-fill] kind=bad site=FE98 dev=0x6C637265 size=0x300 wC=0x6C617465 w14=0x801AE390`. Then `pi-start-dma raw_r7=0x6C637265 size=0x300 dram=0x801AE390` and the assertion.
+
+`0x6C637265 - 0x6C617465 = 0x1FE00 = 0x55 * 0x600`. This selects H-raw. It refutes H-plus100 for this abort: the bad a3 was not produced by `0x8009024C` or `0x800902CC`, and at `0x800903F0` the voice word equals a3. `0x8009024C` and `0x8009039C` printed no row; they are not required once the aborting jal is named. `0x6C617465` is not a legitimate cart offset. No skip was added.
+
+The two stores already named for this word are `musyxKeyOnVoice` at `0x80090C80` (`sw v1, 0x34(s1)`, v1 from s0+0x38) and `musyxInitVoiceFromSample` at `0x800921E8` (`sw v1, 0x34(a0)`, v1 from a1+4). Which of those wrote `0x6C617465` is the next measurement. Do not grep for a third writer.
+
+ORIGIN: `musyxRenderVoiceSamples` at `0x800903F0` passes voice+0x34 through as a3. The value is not legitimate. Nothing was mitigated.

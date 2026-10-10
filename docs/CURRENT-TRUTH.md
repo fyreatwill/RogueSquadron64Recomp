@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4533 (s4533: the odd DMA devAddr is `fillSampleStreamRange`'s own store at `0x8008FDC0`. It equals caller a3 `0x6C617465` plus `0x55*0x600`. a3 is the voice's `+0x34` word, plus `0x100` at two of four `musyxRenderVoiceSamples` calls. The callsite is not named. Not a string. Not `copyToRAM`. See NEXT.md). Prior: session 4532 (size-`0x300` DMA is not the `0x600` store; FE98 vs FB64 was still open). Session 4495 was the
+Updated for session 4534 (s4534: the aborting a3 is the raw voice word `0x6C617465` at `musyxRenderVoiceSamples` jal `0x800903F0`. The +0x100 jals are not this abort. The word is not a cart offset. Which named store wrote it is open. See NEXT.md). Prior: session 4533 (`0x8008FDC0` writes devAddr as a3 plus `0x55*0x600`). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -48,7 +48,7 @@ Complete. Index: PROJECT-OVERVIEW §58; notes `docs/M3-S4477-*.md`
 through `docs/M3-S4500-*.md`. Headless note: `.venv-splat` python is
 not allowlisted; use system `python3` with `scratch/agent/s4500_dis.py`.
 
-The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531) and stays parked: a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. The odd DMA's node field is also named (s4533): `0x8008FDC0` writes it from caller a3. The open question is which `musyxRenderVoiceSamples` jal loaded that a3 (Next steps #1). Hangar artifact triage stays behind a new discriminator.
+The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531) and stays parked: a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. The odd DMA's node field is named (s4533) and its jal is named (s4534): `0x800903F0` passes voice `+0x34` through as a3, and that word is `0x6C617465`. The open question is which of the two named stores wrote it (Next steps #1). Do not re-probe the four jals. Hangar artifact triage stays behind a new discriminator.
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -105,6 +105,7 @@ Kept here only when a later session would otherwise repeat them.
 The s4413–s4433 selector narrative and the s4434–s4475 audio narrative
 are in PROJECT-OVERVIEW §58.
 
+- "Which `musyxRenderVoiceSamples` jal passed a3, and whether that a3 was the raw voice word or the word plus `0x100`, is unnamed" (s4533) was believable because the callee's ra is 0 and both delay-slot shapes can produce a3 `0x6C617465`. s4534's only bad row is jal `0x800903F0` with raw34 == a3 == `0x6C617465`. The same run's `0x800902CC` row showed raw34+`0x100` == a3 on a different value and returned. The voice word is `0x6C617465`. Do not re-probe the four jals.
 - "The node field that supplied `0x6C637265` is an unnamed foreign writer, and the neighbouring word makes it the string `lcrelate`" (s4532, and the obvious reading of the s4533 bad row) was believable because FE98 only copies node+8 into the DMA slot and the two words are printable ASCII. The only edge into FE98 stores node+8 first, at `0x8008FDC0`, as `a3 + 0x600*k`, and stores node+0xC = a3 at `0x8008FDCC`. The soak words give k=`0x55` with remainder 0. Those bytes are not in the ROM. Do not watch the node for a string store.
 - "A VI-640 death before the odd `do_rom_read` is the parked `fillSampleStreamRange+15116` bus error" (s4529 NEXT, and that session's two signal-10 runs) was believable because `last-guest-pc` stays `0x8000834c` and those runs' faulting PC was that function. s4530 run b faults in `NativeTarget::copyToRAM`; the memcpy length is the `ALLOW_WILD_FL` range. Classify a VI-640 death as the bus error only when the faulting stack is `fillSampleStreamRange`. s4531 run B is that stack again; s4530 run b is not overturned.
 - "The s4298 scan's `hits=0` means the odd cart word is not in RDRAM" (s4532 soak, readable that way) was believable because the scan said so. It compared against physical `0x1C637265`. The guest word is raw_r7 `0x6C637265`. Do not read that zero as absence of the guest word.
@@ -140,7 +141,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Voice a3 callsite** (HYPOTHESIS-ID: odd-dma-voice-a3). s4533 selected H-FE98 and closed the node-field question. `0x8008FDC0` writes node+8 = a3 + `0x600*k` with k=`0x55`, and `0x8008FDCC` writes node+0xC = a3 (`0x6C617465`). Remainder 0, so node+8 equals t4. a3 is not a legitimate cart offset. All four callers are in `musyxRenderVoiceSamples` and load `lw a3, 0x34(s1)`: `0x8009024C` and `0x800902CC` then add `0x100` (voice word would be `0x6C617365`); `0x8009039C` and `0x800903F0` do not (voice word would be `0x6C617465`). Callee ra is 0, so it cannot name the site. One build. Log at the four jals: bad row plus one in-range control per site that fires. Do not add a skip. Do not re-grep writers of `+0x34` (s105/s111; a second store is `musyxKeyOnVoice` at `0x80090C80`). The wild-width SETCIMG (`0xFFFB0408`/`0x41130393`) stays parked. No `ROGUESQ_DROP_GARBAGE_CIMG`. No `ROGUESQ_LOG_RS_MALLOC`.
+1. **Voice +0x34 store** (HYPOTHESIS-ID: odd-dma-voice-store). s4534 selected H-raw and closed the jal question. `0x800903F0` loads a3 from voice `+0x34` and does not add `0x100`. The word is `0x6C617465`. It is not a legitimate cart offset. The two named stores are `musyxKeyOnVoice` `0x80090C80` (`sw v1, 0x34(s1)`, v1 from s0+0x38) and `musyxInitVoiceFromSample` `0x800921E8` (`sw v1, 0x34(a0)`, v1 from a1+4). One build. Log at those two stores: bad row when the stored word is `0x6C617465` or otherwise odd/ASCII-top, plus one in-range control per store. Keep the s4534 jal probe armed and match the store's destination to that run's bad jal s1. Do not add a skip. Do not grep for a third writer. The wild-width SETCIMG (`0xFFFB0408`/`0x41130393`) stays parked. No `ROGUESQ_DROP_GARBAGE_CIMG`. No `ROGUESQ_LOG_RS_MALLOC`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
@@ -150,7 +151,7 @@ unless Step 0 maintenance triggers again.
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib`.
 4. **Generated-symbol renaming sweep**, slug
    `generated-symbol-renaming-sweep`. Do this only when item 1 cannot
-   be run (the four-jal probe cannot be linked).
+   be run (the two-store probe cannot be linked).
    The last bounded lead was `0x8000A000..0x8000B000` (s3796).
    Mapping-only edits do not reset the engineering-change gate. If the
    last fifteen titles are all sweep titles, do item 2 or the M4
