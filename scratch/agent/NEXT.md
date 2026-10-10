@@ -1,8 +1,8 @@
-# NEXT: renderer-side check of hangar white pillar stubs / right-edge strip
+# NEXT: post-RSP-fix crash-family re-evaluation (passive soaks) then M3/M5 audit
 
-HYPOTHESIS-ID: hangar-artifact-triage
+HYPOTHESIS-ID: rsp-fix-dissolves-crash-families
 
-s4520: aligned port frame 910 == retail frame 0 for 1246/1249 tris (all words), so stubs and right-edge strip are NOT RSP/stream defects. Hypotheses: (A) genuine retail look; (B) RT64 combiner/texture-format/blend handling of those tris; (C) RT64 output scaler cropping at the right edge.
-Work unit: find the stub tris (screen x~85-155,y~585-650 of 1280x1024 window => N64 x~35-60, y~..) in port_rdp.bin frame 910, extract their combiner (setcombine) + texture tile state, and render with RT64 combiner override toggled/ compare against a hand-evaluated combine; for the strip, check RT64 VI crop/scale code path vs VI width 512.
-Discriminator: if hand-evaluated combine yields white too => A (stop, hangar considered fixed); if not => B, name the RT64 handler.
-If no discriminator emerges in one iteration, mark hangar triage closed and pivot to M5/M3 audits per ITERATION.md priority.
+s4521 parked hangar-artifact-triage (stubs/right-edge strip cosmetic; needs RT64 tri-index mask render to map pixels to tris, a renderer patch).
+Hypotheses: (A) the s4518 LUV/LFV/LHV fix dissolved some RSP-fed corruption crash families (waitForAnyAudioSlot, voice-array, +5436 pool links); (B) no effect on crash rates.
+Work unit: enqueue 2 soak recipes in scratch/agent/soak_queue/ from an existing recipe (e.g. s4467/s4468 hdr_nested style: self-contained, watchdog, SIGKILL, all passive breadcrumbs armed) on the current build, and compare crash/no-crash and phase reached against the pre-fix SOAK-RESULTS lines (s4450/s4452 rc=1 at 304s/217s). Need a positive control (a pre-fix-style crash signature check) before reading zeros.
+Discriminator: >=2 of 2 soaks reach hangar VI 512 and survive 600s => supports A (weak, n=2); crash with the known +5436/+9632 signatures => B.

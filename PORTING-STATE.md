@@ -152430,3 +152430,10 @@ ORIGIN: n/a, no mitigation added; the writer of the defect (signed DMEM byte rea
 - Guard re-evaluation: grep of tools/ and src/ for wild-colour/shade guards found none; nothing to remove.
 - Single-source caveat: one port run, one retail run.
 ORIGIN: n/a, no mitigation added; diagnostic script only.
+
+## Session 4521 (2026-10-10) — hangar stub triage: stub-region tris use the stock texture*shade combiner with shade <=165; no stream-side explanation; triage parked
+- HYPOTHESIS-ID: hangar-artifact-triage. Hypotheses: (A) genuine retail look, (B) RT64 combiner/texture/blend handling, (C) RT64 scaler crop. Discriminator tried: per-triangle RDP state walk of port frame 910 (scratch/agent/s4521_stub_state.py; control: 7 distinct combine/othermode groups, so the walker sees state changes).
+- Findings (single frame, stream-side only): 974 of 1249 tris use combine 0xfc127e24/0xffffffff (TEX0*SHADE, 1-cycle); 275 use 0xfcffffff/0xfffe793c. Tris overlapping the left-stub area (fb x~30-70, y~120-250; the window-px to fb-y mapping is a guess because fb height is unknown) all use the stock TEX0*SHADE combiner with shade RGB <=165 (e.g. tris 298/299 = 161,164,165; 472-475 = 110,124,143). An ordinary combiner gives at most ~0.65 grey there, while the window shows near-255 white. Tris 358-376 (shade 255,255,255, y 27-75) are the pale ceiling band, not the stubs.
+- Not established: which tris the stubs actually are (no pixel->tri map), so (B) vs (A) stays open; (C) not touched. Nothing here is two-source.
+- Closed per NEXT.md rule: no one-iteration discriminator emerged. The only cheap next probe (an RT64 tri-index mask render mapping pixels to tris) needs a renderer patch and is parked. The hangar scene is visually near-correct after s4518; stubs and right-edge strip are cosmetic.
+ORIGIN: n/a, no mitigation added; diagnostic script only.
