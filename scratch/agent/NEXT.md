@@ -1,13 +1,13 @@
-# Next work unit: hangar framebuffer pixel-diff, port vs oracle (RDRAM dump, not Rice pixels)
+# Next work unit: hangar entry-frame DL/source-data byte diff, retail vs port
 
 HYPOTHESIS-ID: hangar-artifact-triage
 
-s4505 finding: port hangar frame 1 is a nearly-correct scene (scratch/agent/s4505_port_hangar/f_001*.png);
-defects: rainbow rim band, blue holo spikes, right-edge column garbage; later frame black + right-edge garbage.
-Hypotheses: H1 colour/texture-format on specific materials; H2 bad geometry data (weakened);
-H3 LLE ucode divergence; H4 framebuffer width/stride mismatch (right-edge garbage).
-Discriminator: dump the 16bpp RDRAM framebuffer at VI origin 0x006AB400 at the first VI-512 transition from
-(a) oracle (mupen RDRAM read in rs64_oracle.c; Rice only needs to drive the game, the framebuffer is read from RDRAM
-    but Rice may not write RDRAM fb -> check; if it does not, this arm is invalid and the comparison must use
-    display-list/texture-source bytes instead), (b) port. Positive control: same procedure on title VI 1024 (0x790400).
-Run scripts: scratch/agent/s4505_port_hangar.sh as the port driver. One game run at a time. SIGKILL.
+s4506: retail+Rice never writes the RDRAM framebuffer (title control 0 words, hangar fb 0 px) -> no pixel diff.
+Hypotheses: H1 colour/texture-format on specific materials; H2 bad vertex/DL data; H3 LLE ucode divergence;
+H4 fb width/stride mismatch (right-edge column).
+Discriminator: at the hangar entry (VI 512, origin 0x6AB400) dump from BOTH retail (oracle --fb-dump raw RDRAM,
+or --pc-task-dump for the OSTask row) and port: the gfx OSTask data_ptr DL bytes + vertex/texture ranges it
+references; byte-diff. Identical source + bad pixels => H3/H1 in port renderer; differing source => H2 (guest state bug).
+Positive control: diff the same procedure on title (1024) task, expect identical.
+Cheap side item for H4: port-side log VI_WIDTH vs colour-image width at hangar.
+Tools: tools/oracle/rs64_oracle --fb-dump, --pc-task-dump; scratch/agent/s4506_oracle_fb.sh as template. One run at a time. SIGKILL.

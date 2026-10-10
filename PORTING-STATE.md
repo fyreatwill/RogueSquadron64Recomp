@@ -152290,3 +152290,23 @@ Ran scratch/agent/s4505_port_hangar.sh (probe.sh, PROBE_PHASE_WIDTH=512, eleven-
 NOT done: retail comparison. Oracle (Rice) cannot answer pixel questions per tools/oracle/README; no screenshot command exists in rs64_oracle. No positive control for the title VI 1024 frame was run, so nothing here is a null.
 Rules out: "hangar is wholly broken/black at entry". Does not rule out H1/H3. ORIGIN: n/a (no mitigation, no code change).
 Next: add framebuffer dump (RDRAM at VI origin 0x6AB400, 512x? 16bpp) to the oracle at the hangar VI plus an equivalent port dump, compare offline pixel-wise, with title 1024 as control.
+
+## Session 4506 (2026-10-09) — oracle --fb-dump added; retail-under-Rice RDRAM framebuffer arm is INVALID (all zeros)
+
+Work unit: s4505 NEXT (port-vs-oracle RDRAM framebuffer dump at VI 512, title 1024 as control).
+Added `--fb-dump WIDTH:DELAY_S:START:LEN:PATH` (repeatable, needs `--vi-poll`) to
+`tools/oracle/rs64_oracle.c`; rebuilt with `zsh tools/oracle/build.sh`. Recipe:
+`scratch/agent/s4506_oracle_fb.sh`; viewer `scratch/agent/s4506_fb_png.py`.
+Result (one retail run, Rice, presses 6..46 s): title VI 1024 (origin 0x790800) dump of
+0x790000+1 MB at t=19.3s: nonzero_words=0 — the CONTROL FAILS. Hangar VI 512 origin
+0x6ab400 at t=44.4s: the 512x240 16bpp framebuffer at 0x6AB400 is 122880/122880 zero pixels
+(the 1 MB window has 108k nonzero words, but those are other guest data, not the fb; the
+t=40.4s dump had origin 0x656800, a different phase). Conclusion (two lines: title control
+zero + hangar fb zero): Rice renders through GL and never writes the RDRAM colour image, so
+a retail RDRAM-framebuffer pixel diff is impossible with this oracle. The arm NEXT.md
+pre-declared as "invalid if Rice does not write RDRAM fb" is invalid. Rules out: any
+retail pixel comparison via mupen+Rice. Does not rule out comparing display-list/texture/
+vertex SOURCE bytes (guest memory is real in the oracle). Next: dump the hangar entry-frame
+OSTask DL + referenced vertex/texture source bytes from retail and port at the same VI
+phase and byte-diff; right-edge column (H4) can be checked on the port side alone by
+reading the VI width vs colour-image width at hangar.

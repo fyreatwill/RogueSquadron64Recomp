@@ -129,7 +129,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Hangar geometry/colour artifact triage** (`HYPOTHESIS-ID: hangar-artifact-triage`, s4504). Port vs oracle, one capture at the VI 512 transition, title VI 1024 as positive control; s4505 captured port frames only (no retail arm, no control); next is a port-vs-oracle RDRAM framebuffer dump at VI 512 with title 1024 as control, plus a stride hypothesis for the right-edge column. Detail in `scratch/agent/NEXT.md`.
+1. **Hangar geometry/colour artifact triage** (`HYPOTHESIS-ID: hangar-artifact-triage`, s4504). Port vs oracle, one capture at the VI 512 transition, title VI 1024 as positive control; s4505 captured port frames only. s4506: retail+Rice RDRAM fb arm is INVALID (title control and hangar fb both all-zero; Rice never writes the RDRAM colour image), so pixel diff vs oracle is impossible; next is a retail-vs-port byte diff of the hangar entry-frame DL + vertex/texture source bytes (oracle `--fb-dump` now exists for raw RDRAM dumps), plus a port-side VI-width vs colour-image-width check for the right-edge column. Detail in `scratch/agent/NEXT.md`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null

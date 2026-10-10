@@ -2795,6 +2795,37 @@ static unsigned g_last_pad = 0xFFFFFFFFu;
 static unsigned g_last_width = 0xFFFFFFFFu, g_last_origin = 0xFFFFFFFFu;
 static double g_last_origin_log = -1e9;
 static volatile int g_poll_running;
+/* --fb-dump WIDTH:DELAY_S:START:LEN:PATH (repeatable via --vi-poll): first time the
+ * polled VI width register equals WIDTH, wait DELAY_S then write LEN bytes of
+ * physical RDRAM at START (big-endian, raw) to PATH. */
+#define MAX_FB_DUMPS 4
+static struct { unsigned width; double delay; unsigned start, len; char path[512]; double armed_at; int done; } g_fbd[MAX_FB_DUMPS];
+static int g_nfbd;
+static void fb_dump_poll(double t, unsigned width)
+{
+    for (int k = 0; k < g_nfbd; k++) {
+        if (g_fbd[k].done) continue;
+        if (g_fbd[k].armed_at < 0) {
+            if (width != g_fbd[k].width) continue;
+            g_fbd[k].armed_at = t;
+        }
+        if (t - g_fbd[k].armed_at < g_fbd[k].delay) continue;
+        FILE *f = fopen(g_fbd[k].path, "wb");
+        g_fbd[k].done = 1;
+        if (!f) { printf("[fb-dump] cannot open %s\n", g_fbd[k].path); continue; }
+        unsigned nz = 0;
+        for (unsigned o = 0; o < g_fbd[k].len; o += 4) {
+            unsigned w = pDebugMemRead32(debug_rdram_addr(g_fbd[k].start + o));
+            unsigned char b[4] = { w >> 24, w >> 16, w >> 8, w };
+            if (w) nz++;
+            fwrite(b, 1, 4, f);
+        }
+        fclose(f);
+        printf("[fb-dump] t=%6.1fs vi=%ld width=%u origin=0x%08x start=0x%x len=0x%x nonzero_words=%u -> %s\n",
+               t, g_vis, width, (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR), g_fbd[k].start, g_fbd[k].len, nz, g_fbd[k].path);
+        fflush(stdout);
+    }
+}
 
 static void dbg_vi(void)
 {
@@ -3042,6 +3073,7 @@ static void *vi_poller(void *arg)
                 }
             }
         }
+        if (g_nfbd) fb_dump_poll(t, width);
         if ((t - last_raw_log) >= 1.0) {
             printf("[vi-poll-raw] t=%6.1fs width=%u origin=0x%08x\n", t, width, origin);
             fflush(stdout);
@@ -3460,6 +3492,12 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
         else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
+        else if (!strcmp(argv[i], "--fb-dump") && i + 1 < argc && g_nfbd < MAX_FB_DUMPS) {
+            unsigned w, st, ln; double dl; char pth[512];
+            if (sscanf(argv[++i], "%u:%lf:%x:%x:%511s", &w, &dl, &st, &ln, pth) != 5) { fprintf(stderr, "bad --fb-dump\n"); return 1; }
+            g_fbd[g_nfbd].width = w; g_fbd[g_nfbd].delay = dl; g_fbd[g_nfbd].start = st; g_fbd[g_nfbd].len = ln;
+            snprintf(g_fbd[g_nfbd].path, sizeof g_fbd[g_nfbd].path, "%s", pth); g_fbd[g_nfbd].armed_at = -1; g_nfbd++;
+        }
         else if (!strcmp(argv[i], "--status-poll"))                g_status_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
         else if (!strcmp(argv[i], "--debug-write") && i + 1 < argc) {
