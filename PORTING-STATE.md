@@ -152909,3 +152909,15 @@ Then `scratch/agent/s4544_flaky.sh` ran the unchanged recipe three times in sequ
 Selects against H-flaky: a run that reached VI 1024 in s4541 now fails 8/8 in the same recipe, and these three die at the first VI-640 intro frame, long before the 48 s title. What is left is H-patch: a build difference between the s4541 binary and the current one (the s4542 `funcs_23.c` print is excluded by the s4543 no-print control, so something else in the build changed, or the s4541 route depended on state not in the recipe). The control for the bus error itself is that it reproduces identically 3/3 (positive: the stack matches the parked family).
 
 ORIGIN: not a mitigation; no guard or skip added. The wild address `0x380000000` in `fillSampleStreamRange` still has no named writer.
+
+## Session 4545 (2026-10-10) — offline s4541-vs-s4544 diff: build differs by exactly 2 symbols; route change is timing, not code
+
+HYPOTHESIS-ID: odd-dma-alloc-pair
+
+Work unit: the NEXT.md offline diff (no game run). `git diff --stat 0b7f286e HEAD -- src build tools submodule-patches` shows one file, `tools/apply_s4542_alloc_pair.py` (+108). The binary (05:03) post-dates it. Diffing the first 3000 lines of the s4541 run.log against s4544_run1 (timestamps stripped): the only code-level difference is `[symtab] loaded 69843` vs `69845` code symbols, i.e. exactly the two helpers `rs64_s4542_enabled` / `rs64_s4542_alloc`. Everything else is timing: `[s4231-P] t=508` vs `t=675`, `[vi-fs-decision] #11` ordering vs rom-read lines, a different VI-320 `#21` decision block, and the first-seen `[s4542-alloc]` line. H-patch and H-stale-binary are therefore refuted (single-source: log diff; the s4543 no-print control is the independent second line that the print is not the cause). What remains is run-to-run thread timing, with the s4541 run the lucky one.
+
+Host: load 2.4-3.1 with REAPER at ~22% CPU (long-running audio host) and 10 users; weak candidate for the shifted schedule, not tested.
+
+Consequence: the VI-640 `fillSampleStreamRange+15156` death (sigtramp from the viRetraceHandlerThread -> musyxSynthFrame -> musyxMixActiveVoices -> musyxRenderVoiceSamples chain) is a race-sensitive baseline. Chasing the s4541 route is chasing luck. The wild 0x380000000 and the bad voice 0x801724C0 are both voice-array corruption symptoms in the same synth thread; the next unit should name the writer of the corrupted voice/stream pointer by a deterministic route, not wait for the lucky one.
+
+ORIGIN: not a mitigation; no guard or skip added.
