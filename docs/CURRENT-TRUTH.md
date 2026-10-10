@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4500 (2026-10-09). Session 4495 was the
+Updated for session 4505 (2026-10-09). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -17,7 +17,7 @@ is the sweep-revisit target the iteration contract calls "Next steps
 The qualified native route boots through attribution, N64 logo, intro
 cinematic, Factor 5 logo, title VI 1024 (`0x00790400`) and hangar VI 512
 (`0x006AB400`) on the real-audio/LLE/ungated/solo/spin-yield route.
-Hangar geometry and colour artifacts remain. `ROGUESQ_AUDIO_UCODE=0` is
+Hangar geometry and colour artifacts remain, localized (s4505): the entry frame is a nearly complete scene with a rim colour band, blue holo spikes and right-edge column garbage; a later frame is black with right-edge garbage. `ROGUESQ_AUDIO_UCODE=0` is
 the silent control. VI 640 is the intro, not a stuck state.
 
 Audio is no longer a zero-output stub on that route. Fresh 7F saves
@@ -101,6 +101,7 @@ Kept here only when a later session would otherwise repeat them.
 The s4413–s4433 selector narrative and the s4434–s4475 audio narrative
 are in PROJECT-OVERVIEW §58.
 
+- "Hangar is wholly broken" (implicit in the pre-s4505 wording "geometry/colour artifacts") was believable because old sessions chased a band and later frames are black. s4505 (single-source, visual) shows the entry frame is nearly correct; defects are local.
 - s4503 "priority ladder exhausted, human direction required" was believable because every ladder rung was closed. It conflated the ladder with the project: the hangar artifacts in Current state were never a rung. Re-scoped in s4504; BLOCKED.md removed.
 - s4476 "M3 has no unaudited `jal rs_free` class" was believable because
   the s397 frequency scan looked exhausted. It never covered `funcs_16.c`
@@ -128,7 +129,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Hangar geometry/colour artifact triage** (`HYPOTHESIS-ID: hangar-artifact-triage`, s4504). Port vs oracle, one capture at the VI 512 transition, title VI 1024 as positive control; detail in `scratch/agent/NEXT.md`.
+1. **Hangar geometry/colour artifact triage** (`HYPOTHESIS-ID: hangar-artifact-triage`, s4504). Port vs oracle, one capture at the VI 512 transition, title VI 1024 as positive control; s4505 captured port frames only (no retail arm, no control); next is a port-vs-oracle RDRAM framebuffer dump at VI 512 with title 1024 as control, plus a stride hypothesis for the right-edge column. Detail in `scratch/agent/NEXT.md`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
