@@ -151520,3 +151520,54 @@ write `$a0`). Two later jals in that function are separate sites.
 Evidence: `docs/M3-S4486-APPLY-CHEAT-CODE-FROM-INPUT-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4487 (2026-10-09) — audited releaseModelAnimSlot rs_free of the per-channel keyframe buffer
+
+SOAK-RESULTS tail had nothing newer than the s4467/s4468 lines already folded
+(s4450/s4452 also already folded). No game run. CURRENT-TRUTH was 50175 bytes,
+under the maintenance cap.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x80082430` and this site in `funcs_20.c`, still finds closed `0x8007A814`,
+closed `0x8007B23C`, and closed `0x8007BE50` in `funcs_19.c`, still finds
+`0x80072E40` in `funcs_18.c`, and still finds `0x8006F378` in `funcs_17.c`.
+The ROM word `0x0C000726` matches `0x80082430` and `0x80082D5C`.
+
+`releaseModelAnimSlot` (`0x80082CFC`, size `0x11C`) has three `jal rs_free`
+sites. This unit classified only the first, at `0x80082D5C`. ROM and the
+generated listing agree. `lw $a0, 0xC($v0)` at `0x80082D58` (ROM `0x8C44000C`)
+loads the freed word. The delay is `addiu $s1, $s1, 1` at `0x80082D60`
+(ROM `0x26310001`) and does not write `$a0`.
+
+`$a0` on entry is a 1-based slot id. `$s3 = $a0 - 1`. The slot stride is
+`0x14` from `D_8013A990`. `$s1` is set to 0 by `addu $s1, $zero, $zero` at
+`0x80082D38`, the delay of the count check. The loop loads the channel array
+from slot `+0x0C`, adds `$s1 << 4`, and frees the word at record `+0x0C`.
+The back-edge `bne` at `0x80082D78` repeats while `$s1` is below the word at
+0 of slot `+0x08`. `$s1` strictly increases. Each index is freed once per call.
+
+The only store of that record word is `sw $v0, 0xC($v1)` at `0x80082A18`
+(ROM `0xAC62000C`), the `rs_malloc($a2 << 3, 0)` return inside
+`allocateModelAnimSlot`. A NULL malloc faults on the following store of 0
+into that block before the slot is published. `findModelAnimKeyframeByPhase`
+and `parseModelAnimType2Entry` read the word and write inside the block or
+into a different tree node. Neither frees it. `0x80082D98` frees slot `+0x0C`
+itself, the `rs_malloc(count << 4, 0)` array from `0x80082968`, a different
+block. `0x80082DC0` frees slot `+0x00` when byte `+0x11` is nonzero, a third
+block. Neither was classified.
+
+Seven callers (jal word `0x0C020B3F`) pass a saved slot id. The raw pointer
+`0x80082CFC` occurs zero times. `playerAtStUpdate` and one unnamed caller
+store a slot id that no release argument reads. That is a leak of the same
+class of block, not a second free. An id of 0 computes a count pointer at
+`0x8013A984`, which no main-segment store writes, so the next load reads
+address 0. That path is not a second identity of the published channel word.
+No guard was added.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy stays
+unproven. Next site is still in `releaseModelAnimSlot`, at `0x80082D98`
+(`lw $a0, -0x5664($at)`; delay `nop`). `0x80082DC0` remains a separate site.
+Evidence: `docs/M3-S4487-RELEASE-MODEL-ANIM-SLOT-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.

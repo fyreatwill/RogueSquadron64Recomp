@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4486 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4487 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,6 +246,15 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4487 closed `releaseModelAnimSlot`'s first `jal rs_free`.
+The word at `0xC($v0)` at `0x80082D5C` is the per-channel
+`rs_malloc($a2 << 3, 0)` return stored at `0x80082A18`, freed
+once per index. No guard. `$v0` is `array + ($s1 << 4)`. The
+delay `addiu $s1, $s1, 1` does not write `$a0`. The later jal
+at `0x80082D98` frees the channel array from
+`rs_malloc(count << 4, 0)`, a different block. See the audit
+doc.
+
 Session 4486 closed `applyCheatCodeFromInput`'s `jal rs_free`.
 `$s5` at `0x80082430` is the `make_crc32_lut` return, which is
 `rs_malloc(0x400, 0)` of the reflected CRC-32 table, freed once
@@ -258,7 +267,7 @@ the epilogue and leaks that block; that path does not reach
 this jal, and `load_naboo_starfighter` frees a different
 block. The next site is `releaseModelAnimSlot` at
 `0x80082D5C` (delay `addiu $s1, $s1, 1` does not write `$a0`).
-See the audit doc.
+That next site was closed in s4487. See the audit doc.
 
 Session 4485 closed `heavyAttachedAudioEmitterNpcHandler`'s
 `jal rs_free`. The word at `0x38($s2)` at `0x8007BE50` is the
@@ -359,7 +368,23 @@ and does not reach the free.
 
 ## Next steps
 
-- **s4486 (newest):** `applyCheatCodeFromInput` `jal rs_free`
+- **s4487 (newest):** `releaseModelAnimSlot` `jal rs_free`
+  at `0x80082D5C` frees the word at `0xC` of
+  `array + ($s1 << 4)`, the per-channel
+  `rs_malloc($a2 << 3, 0)` return stored at `0x80082A18`,
+  once per index. H-NextClassComplete. No guard. The delay
+  `addiu $s1, $s1, 1` at `0x80082D60` does not write `$a0`.
+  `$s1` starts at 0. The only store of record `+0x0C` is
+  that malloc return. `0x80082D98` frees slot `+0x0C`, the
+  `rs_malloc(count << 4, 0)` array from `0x80082968`, not
+  this pointer. `0x80082DC0` frees slot `+0x00` and is a
+  separate site. Seven callers pass a slot id. An id of 0
+  reads address 0 through the unwritten gap word
+  `0x8013A984` and is not a second identity of this word.
+  ROM disassembly and the generated listing agree. Next:
+  `0x80082D98` (`lw $a0, -0x5664($at)`; delay `nop`). See
+  `docs/M3-S4487-RELEASE-MODEL-ANIM-SLOT-RS-FREE-AUDIT.md`.
+- **s4486:** `applyCheatCodeFromInput` `jal rs_free`
   at `0x80082430` frees `$s5`, the `make_crc32_lut` /
   `rs_malloc(0x400, 0)` reflected CRC-32 table, once on every
   path that reaches the jal. H-NextClassComplete. No guard.
@@ -611,7 +636,8 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4486 (newest):** applyCheatCodeFromInput rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082D5C.
+- **s4487 (newest):** releaseModelAnimSlot per-channel rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082D98.
+- **s4486:** applyCheatCodeFromInput rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082D5C.
 - **s4485:** heavyAttachedAudioEmitterNpcHandler rs_free class closed (H-NextClassComplete).
 - **s4484:** npcShieldUpdate rs_free class closed (H-NextClassComplete).
 - **s4483:** downscaleImageHalfResBoxFilter rs_free class closed (H-NextClassComplete).
