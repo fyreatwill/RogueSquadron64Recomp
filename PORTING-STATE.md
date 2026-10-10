@@ -152364,3 +152364,11 @@ Rules out: nothing. Narrows: texture load identical; the 6 static blobs are the 
 Controls: fd blob identical (positive for pointer/hook correctness); within-side t0-vs-t1 used to separate animating from static.
 ORIGIN: n/a (env-gated diagnostic hook, no mitigation).
 Next: derive the F5 Vtx/VertexColor record layout and length from the GLideN64 F5Rogue implementation (or rt64 GBI_F3DFACTOR5), then re-compare only the exact vertex byte range for c08/c09/c10 (offline, existing dumps if 0x400 B covers it).
+
+## Session 4512 (2026-10-09) — op04 "vertex" blobs c06-c12 are display-list working memory on both sides; byte-diff of them is void
+
+Ran: `tools/agent_blob_dlscan.py scratch/agent/s4511` (new) over the existing s4511 dumps. F5Rogue.cpp / F3DSWRS_Vtx is not on disk (lib/rt64 f3dfactor5 only HLE-stubs it), so record size/count encoding of op04 w0 `0x04000c1f` could not be derived; this is a real gap, not resolved.
+Showed: 7 of 11 op04 blobs per side (c06-c12; oracle 7/7, port 7/7) contain 7-22 embedded `e7 00..` RDP-sync + `06 00 00 00 80xxxxxx` DL-call sequences, at the same stride (+0x28/+0x40) but shifted between child indices differently on each side (oracle c06~c08~c11 start at offset 24; port c07~c10~c12). c02 is identical both sides and c03-c05 have none. So the 0x400 B window at those op04 targets is a reused DL/working buffer, not a static vertex array; its cross-side diffs (s4511's 174-298 B) are buffer-slot/phase differences plus pointer values, consistent with s4510 (only buffer pointers differ).
+Rules out: "static vertex blobs differ => H2' vertex-data defect" is NOT supported; s4511's STATIC-DIFF tag was an artifact of comparing DL scratch memory. Does not rule out a vertex-data difference elsewhere (the true vertex source is unlocated).
+ORIGIN: n/a (no mitigation added).
+Next: stop byte-comparing DL inputs (13 root+child DLs and texture identical). Compare the OUTPUT side: RDP command stream per hangar gfx task (triangle count by cmd 0x08-0x0F, SETCIMG/SETTIMG, fill/rect counts) retail-oracle vs port at the VI 512 first task.
