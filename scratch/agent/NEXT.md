@@ -1,7 +1,8 @@
-# NEXT: where does the post-free 128-record array sit relative to the node array, retail vs port?
+# NEXT: what gates the port synth's stream-node walk during 640 attract that retail's does not?
 
 HYPOTHESIS-ID: musyx-stale-stream-node-after-teardown
 
-Context: docs/M5-STREAM-NODE-LIFETIME.md (s4524). Hypotheses A/B refuted; D open: retail overlays the freed block too but its synth rebuilds nodes (0x8008FBB4) each frame.
-Work unit (one oracle run + one port run, both phase-gated to hangar VI 512 / post-free): record the first physical address written by retail PCs 0x8001FAE4/0x8001FAEC (the 128-record init; reuse the s4317 Rice + --vi-trace recipe, whole-RDRAM control first) and the port's loadLevelTextureCache array base (rs_malloc log, ptr/size) and the node array base 0x17DBE0.
-Outcomes: retail array disjoint from live nodes => port heap layout differs (chase earlier rs_malloc history). Retail array overlaps node romA/romB => port fails to run the 0x8008FBB4 rebuild (compare caller of that PC in port).
+Context: PORTING-STATE s4525. Retail overlays 0x17D004..0x17E1E0 at 9.5 s yet submits 0/2007 text DMA entries 10-55 s; node rebuild (0x8008FBB4) only from 38.7 s. Port walks nodes in the same window.
+Hypotheses: (A) retail's node list head (read in musyxSynthFrame) is 0/empty at 640 so no node DMAs; port head non-zero (some init the port runs or skips). (B) retail walks the same nodes but entries >4 of batch or the DMA size/ordering hide it (check entries 5+). (C) retail frees the list head's owner earlier and the list is relinked.
+Discriminating work unit: find the head-pointer load in musyxSynthFrame (grep funcs for the node walk, read via 0x8009123C region / s4298 notes), oracle --watch-pc on the load with RS64_ORACLE_A0WORDS and a read watch of the head word at 10-38 s: head value + node count retail vs port (port ROGUESQ log equivalent). Also dump entries beyond 4 by raising A0WORDS to 30 and rescanning (cheap, same script: scratch/agent/s4525_oracle_dma.sh).
+Outcomes: head empty in retail => chase the port writer that populates it (M5 de-stub step). Entries 5+ show text => A/B reversed, retail also issues them.

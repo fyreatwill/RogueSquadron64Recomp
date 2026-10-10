@@ -335,7 +335,7 @@ static void dump_ai_output(void)
 static long g_pc_hits;
 static int g_gpr_ctl_printed;
 static long g_exec_logged;
-#define EXEC_LOG_CAP 64
+#define EXEC_LOG_CAP 20000
 #define MAX_EXEC_PREV 128
 #define MAX_PC_PHASE_LOG_ORIGINS 8
 struct pc_phase_log_bucket {
@@ -759,6 +759,21 @@ static void print_gpr_fields(void)
     printf(" v0=0x%08x s1=0x%08x a0=0x%08x a1=0x%08x a2=0x%08x s0=0x%08x v1=0x%08x s2=0x%08x s3=0x%08x s4=0x%08x s5=0x%08x s6=0x%08x fp=0x%08x ra=0x%08x",
            gpr32(2), gpr32(17), gpr32(4), gpr32(5), gpr32(6), gpr32(16), gpr32(3),
            gpr32(18), gpr32(19), gpr32(20), gpr32(21), gpr32(22), gpr32(30), gpr32(31));
+    {
+        /* s4525: RS64_ORACLE_A0WORDS=N dumps N guest words at $a0 on every exec hit */
+        static int n = -1;
+        if (n < 0) {
+            const char *e = getenv("RS64_ORACLE_A0WORDS");
+            n = e ? atoi(e) : 0;
+        }
+        if (n > 0) {
+            uint32_t base = gpr32(4);
+            int k;
+            printf(" a0w:");
+            for (k = 0; k < n && k < 32; k++)
+                printf(" %08x", debug_mem_u32((base & 0x1FFFFFFFu) + 4u * (uint32_t)k));
+        }
+    }
 }
 
 static int pc_phase_log_match(void)
