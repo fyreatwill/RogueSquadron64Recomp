@@ -151673,3 +151673,41 @@ unproven. Next site is `audioSeqFree` at `0x80083C58` (incoming `$a0`; delay
 Evidence: `docs/M3-S4489-RELEASE-MODEL-ANIM-SLOT-TREE-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4490 (2026-10-09) — audited audioSeqFree rs_free
+
+SOAK-RESULTS tail had nothing newer than the s4467/s4468 lines already folded
+(s4450/s4452 also already folded). No game run. CURRENT-TRUTH was 55131 bytes,
+under the maintenance cap.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x80082430`, closed `0x80082D5C`, closed `0x80082D98`, closed `0x80082DC0`,
+and this site in `funcs_20.c`, still finds closed `0x8007A814`, closed
+`0x8007B23C`, and closed `0x8007BE50` in `funcs_19.c`, still finds `0x80072E40`
+in `funcs_18.c`, and still finds `0x8006F378` in `funcs_17.c`. The ROM word
+`0x0C000726` matches all of those PCs. The same whole-ROM byte search finds
+that word 204 times, all inside the four CPU sections.
+
+`audioSeqFree` (`0x80083C50`, size `0x20`) saves `$ra` and jals `rs_free` at
+`0x80083C58`. ROM and the generated listing agree. The delay is `nop` at
+`0x80083C5C` and does not write `$a0`. The prologue does not write `$a0`
+either, so the freed value would be the incoming argument. No caller exists.
+`jal 0x80083C50` (`0x0C020F14`), `j 0x80083C50`, and the pointer word
+`0x80083C50` each occur zero times, including every instruction address in the
+body. `audioSeqMallocZero` returns with `jr $ra` at `0x80083C48` and does not
+fall through. Its entry is also unreferenced. The only control transfer into
+`0x80083C28`–`0x80083C70` is its own `j 0x80083C38`. No `lui`/`addiu` pair
+materializes the free, and none of the 153 `jalr` instructions has a constant
+target there. The generated tree has no call to either function.
+
+This selects H-NextClassComplete: no path reaches the jal. That refutes
+H-NextClassGap. H-NextClassUnevaluable is not selected; the indirect forms
+this image can express were rejected by a search that still finds the 204 real
+`jal rs_free` words. No guard was added.
+
+The remaining `.text` `jal rs_free` sites are the destructor and speech frees
+closed in s3602–s3607. Eighteen jal PCs are not spelled in those docs because
+the docs cite the `lw $a0` immediately before the jal. Do not re-audit them.
+Next site is `handleHUD` at `0x800C1084` in `.ovl.mission` (`lw $a0, 0x230($s2)`;
+delay `nop`). That is a first scan, not a classification.
+Evidence: `docs/M3-S4490-AUDIO-SEQ-FREE-RS-FREE-AUDIT.md`.

@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4489 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4490 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,6 +246,16 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4490 closed `audioSeqFree`'s `jal rs_free`. Nothing
+reaches `0x80083C58`. The prologue does not write `$a0`,
+and the incoming argument has no caller. The ROM contains
+zero `jal`/`j`/pointer bytes for `0x80083C50` (and for
+`audioSeqMallocZero` at `0x80083C28`). The only control
+transfer into that range is malloc's own jump to its
+body, and that function returns at `0x80083C48`. The same
+byte search still finds all 204 `jal rs_free` words. No
+guard. See the audit doc.
+
 Session 4489 closed `releaseModelAnimSlot`'s third `jal rs_free`.
 The word at slot `+0x00` at `0x80082DC0` is the
 `rs_malloc(halfword << 2, 0)` return from
@@ -389,7 +399,17 @@ and does not reach the free.
 
 ## Next steps
 
-- **s4489 (newest):** `releaseModelAnimSlot` `jal rs_free`
+- **s4490 (newest):** `audioSeqFree` `jal rs_free` at
+  `0x80083C58` frees the incoming `$a0`. H-NextClassComplete
+  because no path reaches the jal. No guard. Delay `nop`.
+  Zero ROM references to the entry, and `audioSeqMallocZero`
+  returns before it. The remaining `.text` jal sites are the
+  s3602–s3607 destructor and speech frees (the jal is the
+  instruction after the documented `lw`). Next:
+  `handleHUD` at `0x800C1084` in `.ovl.mission`
+  (`lw $a0, 0x230($s2)`; delay `nop`). See
+  `docs/M3-S4490-AUDIO-SEQ-FREE-RS-FREE-AUDIT.md`.
+- **s4489:** `releaseModelAnimSlot` `jal rs_free`
   at `0x80082DC0` frees slot `+0x00`, the
   `rs_malloc(halfword << 2, 0)` return from
   `flattenAnimTreeAndAllocateSlot` (`0x80082B2C`), stored
@@ -410,7 +430,8 @@ and does not reach the free.
   function. ROM disassembly and the generated listing
   agree. Next: `audioSeqFree` at `0x80083C58` (incoming
   `$a0`; delay `nop`; jal word `0x0C020F14` and the
-  address constant occur zero times in the ROM). See
+  address constant occur zero times in the ROM). That
+  next site was closed in s4490. See
   `docs/M3-S4489-RELEASE-MODEL-ANIM-SLOT-TREE-RS-FREE-AUDIT.md`.
 - **s4488:** `releaseModelAnimSlot` `jal rs_free`
   at `0x80082D98` frees slot `+0x0C`, the
@@ -700,7 +721,8 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4489 (newest):** releaseModelAnimSlot flattened-tree rs_free class closed (H-NextClassComplete). Next: audioSeqFree 0x80083C58.
+- **s4490 (newest):** audioSeqFree rs_free class closed (H-NextClassComplete, no path). Next: handleHUD 0x800C1084.
+- **s4489:** releaseModelAnimSlot flattened-tree rs_free class closed (H-NextClassComplete). Next: audioSeqFree 0x80083C58, closed in s4490.
 - **s4488:** releaseModelAnimSlot channel-array rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082DC0, closed in s4489.
 - **s4487:** releaseModelAnimSlot per-channel rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082D98, closed in s4488.
 - **s4486:** applyCheatCodeFromInput rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082D5C.

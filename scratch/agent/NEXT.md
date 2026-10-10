@@ -1,44 +1,37 @@
-# Next work unit (s4490): M3 jal-rs_free class, audioSeqFree
+# Next work unit (s4491): M3 jal-rs_free class, handleHUD
 
 HYPOTHESIS-ID: m3-idiom-class-audit
 
-Classify `audioSeqFree`
-(`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_20.c`,
-entry `0x80083C50`, jal at `0x80083C58`). ROM delay is
-`nop` at `0x80083C5C`. The prologue saves `$ra` and
-does not write `$a0`, so the freed value is the
-incoming argument. Do not re-audit `0x80082DC0`
-(closed s4489), `0x80082D98` (closed s4488), or
-`0x80082D5C` (closed s4487). No runtime run unless a
-concrete invalid writer is named and a guard is the
-selected fix.
+Classify `handleHUD`
+(`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`,
+`.ovl.mission`, entry `0x800C0084`, size `0x1AE0`, jal at
+`0x800C1084`). ROM delay is `nop` at `0x800C1088`. The
+instruction before the jal is `lw $a0, 0x230($s2)`
+(`0x8E440230` at `0x800C1080`). The freed value is that
+word, not the incoming argument. Do not re-audit
+`audioSeqFree` (closed s4490) or the `.text` destructor
+and speech frees closed in s3602–s3607. Those docs cite
+the `lw` address; the jal is the next instruction. No
+runtime run unless a concrete invalid writer is named
+and a guard is the selected fix.
 
-Positive control, same scan: `rg -n "jal\\s+0x80001C98" funcs_20.c`
-must show closed `0x80082430`, closed `0x80082D5C`,
-closed `0x80082D98`, closed `0x80082DC0`, and this
-site. Also confirm closed `0x8007BE50`, closed
-`0x8007B23C`, and closed `0x8007A814` still match in
-`funcs_19.c`, `0x80072E40` still matches in
-`funcs_18.c`, and `0x8006F378` still matches in
-`funcs_17.c`. A scan that misses `0x80082DC0` or
-`0x8007BE50` is invalid. ROM word `0x0C000726` must
-match `0x80082DC0` and `0x80083C58`. Disassemble with
+Positive control, same scan: `rg -n "jal\\s+0x80001C98"`
+must show closed `0x80083C58` in `funcs_20.c`, closed
+`0x80082DC0` in `funcs_20.c`, and this site. Also confirm
+closed `0x8007BE50` still matches in `funcs_19.c`. A scan
+that misses `0x80083C58` or `0x8007BE50` is invalid. ROM
+word `0x0C000726` must match `0x800C1084` and
+`0x80083C58`. Disassemble with
 `scratch/agent/.venv-splat/bin/python` (rabbitizer).
 System python3 has no rabbitizer. ROM:
-`./rogue_squadron.z64`. `.text` rom = vram -
-`0x7FFFF400`.
+`./rogue_squadron.z64`. Mission ROM offset is
+`vram - 0x7FFFF400`. Menu and cinematic do not use that
+difference.
 
-A first scan, not a classification: jal word
-`0x0C020F14` occurs zero times in the ROM, and the
-32-bit constant `0x80083C50` occurs zero times.
-`audioSeqMallocZero` (`0x80083C28`) jumps to
-`0x80083C38`, calls `rs_malloc`, and returns at
-`0x80083C48`. It does not fall into `audioSeqFree`.
-Find every `jalr` or function-pointer path that can
-still enter `0x80083C50`, and name `$a0` on each one.
-If none exists, say whether an unreferenced free is
-H-NextClassComplete (no path reaches the jal) or
-unevaluable.
+A first scan, not a classification: `$a0` at the jal is
+`0x230($s2)`, and the next instruction is `j 0x800C1B20`.
+Name `$s2` and every store of that object's `+0x230`.
+Do not treat the symbol label as a caller.
 
 Hypotheses:
 - H-NextClassComplete: every path that reaches the
@@ -52,7 +45,7 @@ Hypotheses:
   identity can reach `$a0`, or a possible indirect
   entry cannot be accepted or rejected.
 
-Discriminator: every original assignment of `$a0`
-from the prologue through the free, every caller or
-indirect entry, and every callee `jal rs_free`. Write
-`docs/M3-S4490-AUDIO-SEQ-FREE-RS-FREE-AUDIT.md`.
+Discriminator: every original assignment of `$s2` and
+of the word at `+0x230` from the prologue through the
+free, every caller, and every callee `jal rs_free`.
+Write `docs/M3-S4491-HANDLE-HUD-RS-FREE-AUDIT.md`.
