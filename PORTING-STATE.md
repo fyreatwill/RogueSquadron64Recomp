@@ -152535,3 +152535,24 @@ This refutes H1 (odd or ASCII overlay bytes in the heads' rom words) and refutes
 ORIGIN: none. No guard added.
 
 Next discriminator: one run of the existing `[s4298-odd]` scan with the head snapshot still on. The odd phys equalling the successor's word 0 or 1 selects the successor as the bad ROM pair. An ASCII hit on a different node inside the freed block selects the s4298 name-text node. Hits only in the DMA ring or stack select a computed address.
+
+## Session 4530 (2026-10-10) — intro route dies on the first ALLOW_WILD_FL writeback, before the odd DMA
+
+HYPOTHESIS-ID: musyx-stale-stream-node-after-teardown
+
+SOAK-RESULTS tail through `s4527_stale_node_holder` was already folded in s4522–s4528. Nothing new to fold.
+
+Work unit was the s4529 odd-phys join: one run with `ROGUESQ_LOG_S4298=1` and `ROGUESQ_LOG_S4526=1`, phase-gated on VI 1024. Prescribed rerun once if the route died before VI 512.
+
+- `scratch/s4530_odd_phys_join/run.log`: VI 640 at 2.8 s, never 1024 in 180 s. Process stayed up; probe exit 5. Same-run controls fired: `[s4298-rtw] n=1` and `[s4526-P] chain` len 2, heads `0x801F9D10` / `0x801F9CE0`, at width 640. No `[s4298-odd]`. The only non-mode readback was `[ost-wb] ALLOW_WILD_FL #1 tag=color addr=0x14CEB9 w=913 siz=3 range=[0x14CEB9,0x21918D)`. VI origin then stayed on one 640 frame until SIGKILL.
+- `scratch/s4530_odd_phys_join_b/run.log`: process died at ~22 s, still VI 640, probe exit 4. `[s4298-rtw] n=1` fired (1742 rows). `[ost-wb] ALLOW_WILD_FL #1 tag=depth addr=0x150000 w=1185 siz=2 range=[0x19C608,0x214266)` is the line before the fault. SIGSEGV `si_addr=0x11E7C4608 si_code=2`. `memcpy` `x2=0x77C5E` equals that range; dest low bits are `0x19C608`. Stack: `NativeTarget::copyToRAM` <- `Framebuffer::copyNativeToRAM`. `last-guest-pc` `0x8000834c` is not the faulting frame.
+- `[cimg-oob-1]` count is 0 in both logs. The head-of-submission `G_SETCIMG` scan did not see either width.
+- Not a same-env A/B: `scratch/s4529_freed_block_heads_c/run.log` and `scratch/s4529_freed_block_nodes/run.log` reached VI 1024 with zero `ALLOW_WILD_FL`. `scratch/s4529_freed_block_heads/run.log` and `..._b/run.log` each have one ALLOW and then signal 10 inside `fillSampleStreamRange+15116`. That bus error stays parked. It is a different faulting PC from s4530 run b.
+
+Widths 913 and 1185 are not in {320,512,640,1024} and are not the same value, so the allowed width is not a legitimate mode. s659's `ALLOW_WILD_FL` path is what let them into `copyToRAM`. That function does not compare the request to `nativeReadbackBufferSize`. Whether the allocation is short is unmeasured. No guard added.
+
+This selects: the s4530 intro wall is the first `ALLOW_WILD_FL` writeback. It refutes "s4530 run b is the parked fillSampleStreamRange bus error". It does not select H-succ, H-ascii, H-computed, or H-head-later: `[s4298-odd]` never fired because `do_rom_read` was never reached. The absence is not an unarmed env; `[s4298-rtw] n=1` and `[rom-read]` both fired.
+
+ORIGIN: none. No skip, allow, or guard added.
+
+Next discriminator (s4531): one line at the allow site with `nativeReadbackBufferSize`, `bufferOffset`, `bufferSize`, fb width/height, and the `0xFF`/`0xFE` command whose width matches, or `none`. H-short vs H-dangling and H-cmd vs H-field. Do not change the allow policy in that run.
