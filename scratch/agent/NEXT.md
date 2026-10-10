@@ -1,6 +1,9 @@
-# Next work unit (s4495): M3 jal-rs_free class, preload songs
+# Next work unit (s4496): M3 jal-rs_free class, preload songs
 
 HYPOTHESIS-ID: m3-idiom-class-audit
+
+Session 4495 was maintenance (CURRENT-TRUTH over 60 KB). It did not
+classify this site. The work unit is unchanged.
 
 Classify the first `jal rs_free` in `preloadSceneReferencedSongs`
 (`.ovl.mission`, entry `0x800EEA54`, size `0x328`) at
@@ -49,7 +52,7 @@ Hypotheses:
 
 Discriminator: the assignments, callers, and callee frees
 above. Write
-`docs/M3-S4495-PRELOAD-SCENE-REFERENCED-SONGS-RS-FREE-AUDIT.md`.
+`docs/M3-S4496-PRELOAD-SCENE-REFERENCED-SONGS-RS-FREE-AUDIT.md`.
 The outcome that selects Complete is one allocator return
 freed once, or no path. The outcome that selects Gap is a
 named non-allocator or already-freed writer on a reached

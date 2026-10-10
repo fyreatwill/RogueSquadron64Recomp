@@ -151900,3 +151900,33 @@ Next site is `preloadSceneReferencedSongs` at `0x800EED48`. The delay
 `addu $a0, $s2, $zero` writes `$a0`. The jal at `0x800EED50` is a separate
 site. Evidence:
 `docs/M3-S4494-FREE-ALL-OBJECT-POOL-FULL-LIST-RS-FREE-AUDIT.md`.
+
+## Session 4495 (2026-10-09) — compacted current truth after the 60 KB threshold
+
+The maintenance check measured `docs/CURRENT-TRUTH.md` at 60,613 bytes and
+814 lines, over the 60 KB cap. No build, run, or experiment was performed.
+The soak tail has no verdict newer than s4468, and those lines were already
+in the pre-compaction file, so nothing new was folded.
+
+The live file carried the closed `jal rs_free` chain three times (the
+per-session narrative, the next-step list, and the evidence index) and two
+colliding `0g`–`0k` audio sequences beside the s4494-down list. Closed items
+were removed. The backlog is one sequence: (1) `preloadSceneReferencedSongs`
+at `0x800EED48`, (2) the parked external retail-entry boundary, (3) M3
+pre-publication guard qualification, blocked on the MIPS toolchain, and (4)
+the generated-symbol sweep. The M4 accumulator boundary stays under Durable
+boundaries. Item 2 is the sweep-revisit target the iteration contract names.
+
+The s4413–s4494 narrative moved to `docs/PROJECT-OVERVIEW.md` §58. The
+duplicate "## 39" snapshot was renumbered to §57 and marked historical,
+including the s4352 instruction to watch the C904 ranges again. That watch
+is not live. Subsection 4.0.1 is labeled as the s3649 snapshot. No technical
+conclusion changed. M5 plan steps 1–10 stay closed or conditional-unneeded,
+the selector and reapply split stays an instrument gap, and the s4477–s4494
+free classes stay Complete with no guard.
+
+The file is 186 lines and 9,564 bytes, 628 lines under the pre-compaction
+copy. The next work unit was not run.
+
+ORIGIN: documentation-only compaction; no runtime value was skipped,
+rewritten, or guarded.

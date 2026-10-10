@@ -125,9 +125,10 @@ catalog and day-to-day state: `CURRENT-TRUTH.md`.
 
 ## 4. The recurring hurdles
 
-### 4.0.1 Current M5 handoff archive
+### 4.0.1 M5 handoff snapshot at s3649 (not current)
 
-The compact live state is in `CURRENT-TRUTH.md`. At session 3649, M5 Step 3
+Live state is `CURRENT-TRUTH.md` as of s4495. This subsection is the
+s3649 snapshot and is not the handoff. At session 3649, M5 Step 3
 is still the image-task source-range boundary (`0x1797B0..0x179930`): the
 port deliberately zero-fills from `0x800078EC` (`rs_memset`,
 `dst=0x801797B0, fill=0, len=0x298`) before zero source-DMA payloads.
@@ -4949,7 +4950,11 @@ guard was added. Do not land a skip-path NULL store unless a later
 census identifies that same writer. See
 `docs/M3-S3636-ATTACHED-MESH-OVERLAY-RS-FREE-AUDIT.md`.
 
-## 39. M5 selector/decode boundary and late audio state (s4269–4352)
+## 57. M5 selector/decode boundary at s4352 (historical)
+
+Renumbered in the s4495 maintenance pass. This used to be a second
+"## 39", which collided with the s2050–s2078 section. It is the s4352
+snapshot, not the live boundary.
 
 The native route is qualified through title VI `0x00790400` and hangar VI
 `0x006AB400` on the real-audio/LLE/solo/spin-yield route. Fresh 7F saves
@@ -4957,24 +4962,27 @@ produce nonzero PCM; the prior zero-payload line was a stale-save artifact.
 AI byte order is fixed. M5 Step 9's seeded silent/real matrix reaches the
 active filter callsite at `0x8009D740`, and independent MORT, whole-RDRAM,
 and VI controls qualify the route. Later descriptor/payload streams diverge;
-this is an unresolved pre-filter selector/stream boundary, not a stable
-real-image eligibility or dispatch null.
+at s4352 that was read as an unresolved pre-filter selector/stream
+boundary, not a stable real-image eligibility or dispatch null. That
+reading is superseded: s4432–s4433 closed the selector and reapply split
+as an instrument gap, and s4475 closed M5 step 9. See §58.
 
-The retail oracle's C904 witness is the current independent boundary. It
-executed 3,107 times with qualified title/hangar phases and a 10,000-hit
-whole-RDRAM control. Session 4352 found the retained family at C904 itself:
-584 rows with `0x3108` and 405 with `0x0010`. Selected words and decoded
-`+0x18A/+0x18C` fields varied. The post-value watch was mis-scoped to
-`0x8009C0E8..0x8009C0EC` and fired zero times, so no writer conclusion follows.
-The observed selected physical range is about `0x1535C4..0x1545BC`, with
-decoded state near `0x1535AC`; the next run must watch those ranges with
-writer-PC/source attribution.
+At s4352 the retail oracle's C904 witness was treated as the independent
+boundary. It executed 3,107 times with qualified title/hangar phases and a
+10,000-hit whole-RDRAM control. Session 4352 found the retained family at
+C904 itself: 584 rows with `0x3108` and 405 with `0x0010`. Selected words
+and decoded `+0x18A/+0x18C` fields varied. The post-value watch was
+mis-scoped to `0x8009C0E8..0x8009C0EC` and fired zero times, so no writer
+conclusion followed. The observed selected physical range was about
+`0x1535C4..0x1545BC`, with decoded state near `0x1535AC`. Do not schedule
+that watch; §58 superseded this boundary.
 
 Earlier work rejected the source span, base/index, route alias, and stable
 base-buffer as the family producer. The base settled at `0x801B2C60`, the
 cursor advanced under `0x8009D790`, and the lattice store at `0x8009DB2C` is
-legitimate quantized output. The remaining discriminator is a bounded
-post-C904 selector/decode writer versus an earlier unjoined stream.
+legitimate quantized output. The discriminator this snapshot left open, a
+post-C904 selector/decode writer versus an earlier unjoined stream, was
+not the live split. See §58.
 
 The graphics-side framebuffer growth was traced to bump-time DPC ring-lap
 placeholder drops; wrap-shadow restoration reduced ODD colour-image events
@@ -4982,11 +4990,130 @@ from 60 to 0 in three runs, but hangar impact is not qualified. VI-640 crash
 and M3 guard families remain parked. Full regeneration remains unsafe since
 s4204; use the existing apply scripts unless the regen failure is repaired.
 
-**Next unit (live in CURRENT-TRUTH / NEXT.md):**
-`rs_zcfree` `rs_free` of incoming `$a0` at `0x80005268`
-(last remaining original `jal 0x80001C98` in `funcs_1.c`).
-`teardownAssetManifestService` `*0x80110D50` closed s3658.
-`funcs_2.c` / `funcs_4.c` / `funcs_6.c` / `funcs_7.c` are
-exhausted; `funcs_3.c` / `funcs_5.c` / `funcs_0.c` have
-zero sites. See
+**Next unit at this snapshot, not live.** `rs_zcfree`'s `rs_free` of
+incoming `$a0` at `0x80005268` was the frontier when this section was
+written (last original `jal 0x80001C98` then remaining in `funcs_1.c`).
+`teardownAssetManifestService` `*0x80110D50` had closed in s3658.
+`funcs_2.c` / `funcs_4.c` / `funcs_6.c` / `funcs_7.c` were exhausted;
+`funcs_3.c` / `funcs_5.c` / `funcs_0.c` have zero sites. See
 `docs/M3-S3658-TEARDOWN-ASSET-MANIFEST-SERVICE-RS-FREE-AUDIT.md`.
+The live frontier is CURRENT-TRUTH item 1.
+
+## 58. Maintenance archive s4413–s4494 (migrated s4495)
+
+Migrated from `CURRENT-TRUTH.md` when that file crossed 60 KB (814 lines,
+60,613 bytes). Session 4495 ran no experiment. The live frontier and the
+single next-step sequence are in `CURRENT-TRUTH.md`. Per-site `jal rs_free`
+notes remain `docs/M3-S44xx-*.md`.
+
+### Selector and title-table boundary (closed)
+
+Sessions 4413–4427 chased a port/retail selector split and the writers of
+table words `0x80149758` / `0x8014975C`. What still matters:
+
+- Retail title enters the selector family at `0x80029E80` from
+  `0x8008EE84`. The port calls `osAiSetNextBuffer_recomp` directly, so a
+  guest-PC watch at `0x80029E80` cannot fire. s4432 saw the generated
+  submit at `0x8008EE84` on every title loop iteration. s4433: retail also
+  calls `reapplyAudioConfig` (`0x8008EB5C` → `0x8008EBC0` → `0x80091C88` →
+  `0x80091CB8`) at the title-to-hangar change. Both
+  `m5-selector-entry-path` and `m5-title-reapply-config` are closed. The
+  earlier "retail only reapplies in hangar" reading had bucketed on origin
+  `0x006AB400` only.
+- s4417 caller/precall zeros were missing generated probes (s4418). s4419
+  put the s3500/s3501 witnesses into the durable fixup. Title pre-call
+  values included `0x801772F0`, matching the retail samples. That selected
+  a divergence before the selector, which the submit-shim finding then
+  superseded as an instrument gap. A witness zero counts only after the
+  generated artifact contains the call.
+- s4421–s4426: both table words are user pointers from one split free
+  block. Retail stores them from `0x8008F228` / `0x8008F264` on the last
+  640-wide frame before the 1024 title switch, via `addiu s2, a1, 16` at
+  `0x80001C10`. Not DMA, not the initial image, not a title-phase bypass.
+  s4427: the user words are already the 16-byte name copy
+  (`0x6D61745F` / `0x6C746578`) from `0x80007670` before the first title
+  load. s4430: the port does the same copy onto the same pointers. The
+  table words are not the selector divergence.
+- An empty title-phase writer bucket is not "no writer" without a
+  pre-title VI window (s4424 vs s4425). A breakpoint samples the register
+  before the instruction runs (s4426).
+
+### Audio cadence and pool corruption (parked, not explained)
+
+- s4434: nonzero PCM reaches `queue_samples` in title phase 4 (width
+  1024). H-source-zero is refuted. Content comparison is single-source.
+- s4435–s4439: the SDL queue at the end of title holds at most one 768 B
+  buffer at 22047 Hz. Retail also submits about one buffer per VI (1210
+  calls / 1052 VI swaps; pre-title control 5882/464). Dacrate 2207 matches
+  the port. 192 frames per submit is the guest immediate in
+  `runAiAudioStreamPlaybackLoop` at `0x8008EE08` / `0x8008EE84`, paced by
+  `OS_EVENT_AI`, which the port posts once per VI.
+  `ROGUESQ_AI_EVENT_HZ=115` lifts port submits from about 59/s to about
+  111/s and is not default-ready. mupen played 768 B in about 16.5 ms,
+  roughly 1.9× slower than dacrate 2207 implies; that timing is not
+  confirmed past s4439. "The port is half speed" is not a game-side defect.
+- s4441: a 2×2 soak crashed in every arm. 115 Hz is not the crash cause.
+  s4450–s4452: `ROGUESQ_AI_EVENT_DRAIN=768` does not prevent the crashes
+  either. Cadence is closed as a crash cause. Both variables stay
+  default-off.
+- s4455–s4456: the port mix rate is 60/s unset and about 115/s at HZ=115,
+  against a retail epilogue rate of 114.3/s. HZ=115 died sooner (3/4 at
+  about 15 s; the unset arm reached VI 1024). Single-source, n=4 per arm.
+  Same crash families.
+- s4457–s4459: `musyxSynthFrame+5436` is `lhu 0x10($v1)` at `0x80091368`
+  on a corrupt `next`. A rerun was 0/6; the cumulative `+5436` rate is
+  1/26. Do not re-run that harness. `0x80061520` is `loadCharTextureSet`'s
+  256-byte 0xFF font LUT, written before the audio node pool exists. A
+  `0x80193C18` value can be a stale LUT byte. That does not name the
+  writer of a C18-valued live link.
+- s4460–s4462: `0x800853A8` is the shift loop of
+  `factor5SortedTableInsertWidePair`. At VI 1024 the insert run crosses
+  the audio node pool. Port-only, single-source. s4463–s4464 corrected the
+  VI 640 reading: those insert clusters are per-phase `rs_malloc`'d 0xF7C
+  tables, not an overlap at 640. s4465 (1 of 3 runs): at VI 1024,
+  `rs_malloc(3964) = 0x801931F0` overlaps live 0x30/0x300 blocks. s4467's
+  soak was invalid (`cd` landed in `scratch/`). s4468 was valid (4/4
+  reached VI 1024) and the overlap did not recur (0/8 together with
+  s4466). Parked. No more heap-header instrumentation.
+- s4470's "retail never executes `0x8009B7CC`" was a capped or phase-gated
+  miss. s4472: retail writes the same slot-0 request bytes and executes
+  `0x8009B7CC` / `0x8009B7EC`. Status 03 is legitimate guest behaviour.
+  s4473 closed M5 step 7. s4474 (step 8): zero voice/songtempo/tick-reap
+  guard fires in one audio-on title-to-hangar run, single-source, with no
+  same-run fire control. s4475 closed step 9: no MORT-owned gap. Plan
+  steps 1–10 are closed or conditional-unneeded.
+
+### `jal rs_free` classes s4477–s4494
+
+All Complete. No guard was added. s4476's "no unaudited class" is
+superseded: the s397 scan did not cover `funcs_16.c` upward. The audit
+docs hold the writer, caller, and delay-slot detail. This table is the
+index.
+
+| Session | Site | What is freed |
+|---|---|---|
+| 4477 | `loadCraftShadowTextures` `0x8006B814` | `$s5`, `pl_crafts/shadows_TM` |
+| 4478 | `load_naboo_starfighter` `0x8006C8C4` | `$s2`, `pl_crafts/koelsch_HMT` |
+| 4479 | `runIdleFramesAndLoadSaveData` `0x8006DA28` | `$s0`, `gamesave` |
+| 4480 | `saveServiceWorker` `0x8006F378` | `$s0`, the `rs_malloc(0x14)` token |
+| 4481 | `walkDatTreeAndCollectSubtypes` `0x80072B8C` | `8($s0)`, `rs_malloc(0x2A0)` child array |
+| 4482 | `initWaterSprayParticles` `0x80072E40` | `$s3`, `gnrc_stuff/wtrspray_ANM` |
+| 4483 | `downscaleImageHalfResBoxFilter` `0x8007A814` | `$s5`, `width * height * 3` temp |
+| 4484 | `npcShieldUpdate` `0x8007B23C` | `0x38($s3)`, mesh vertex buffer |
+| 4485 | `heavyAttachedAudioEmitterNpcHandler` `0x8007BE50` | `0x38($s2)`, same allocator return |
+| 4486 | `applyCheatCodeFromInput` `0x80082430` | `$s5`, CRC-32 table from `rs_malloc(0x400)` |
+| 4487 | `releaseModelAnimSlot` `0x80082D5C` | per-channel `rs_malloc($a2 << 3)` |
+| 4488 | `releaseModelAnimSlot` `0x80082D98` | slot `+0x0C`, `rs_malloc(count << 4)` |
+| 4489 | `releaseModelAnimSlot` `0x80082DC0` | slot `+0x00`, flattened tree |
+| 4490 | `audioSeqFree` `0x80083C58` | incoming `$a0`; no path reaches the jal |
+| 4491 | `handleHUD` `0x800C1084` | body `+0x230`, `rs_malloc(0xDD4)` radar block |
+| 4492 | `unlinkAndFreeChildNpcNode` `0x800EC404` | object `+0`, `rs_malloc(0x6C0, 1)` slab |
+| 4493 | `freeAllObjectContextPoolNodes` `0x800EC538` | partial-list head `0x8010C0D0` |
+| 4494 | `freeAllObjectContextPoolNodes` `0x800EC564` | full-list head `0x8010C0D4` |
+
+The next unclassified site was not audited in s4495:
+`preloadSceneReferencedSongs` at `0x800EED48` (entry `0x800EEA54`). The
+jal at `0x800EED50` is a separate site. The s3636
+`attachedMeshOverlayNpcHandler` `0x80054344` Gap in §56 stays open and is
+not this frontier.
+
