@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4544 (s4544: three more runs of the s4541 recipe all died at the intro VI-640 bus error about 3 s in; 0/8 recent runs reach the bad call. H-env and saves are refuted; H-flaky is disfavoured; a build difference since s4541 is the open cause). Prior: session 4543 (s4543: a no-print control died the same way as the print runs, so the VI-640 `fillSampleStreamRange` bus error is baseline, not caused by the print; 0/4 recent runs reach the bad call, so count 32 / base `0x801714D0` is still unmeasured). Prior: session 4542 (s4542: the alloc-pair print's control fired, then both runs died in `fillSampleStreamRange` before VI 1024. That is not the bad-call edge. Count 32 with base `0x801714D0` is still unmeasured. See NEXT.md). Prior: session 4541 (H-index-30). Session 4495 was the
+Updated for session 4545 (s4545: offline diff shows the s4541 and current binaries differ by exactly 2 symbols, so the lost route to the bad call is thread timing, not code; pivot to the deterministic VI-640 death). Prior: session 4544 (s4544: three more runs of the s4541 recipe all died at the intro VI-640 bus error about 3 s in; 0/8 recent runs reach the bad call. H-env and saves are refuted; H-flaky is disfavoured; a build difference since s4541 is the open cause). Prior: session 4543 (s4543: a no-print control died the same way as the print runs, so the VI-640 `fillSampleStreamRange` bus error is baseline, not caused by the print; 0/4 recent runs reach the bad call, so count 32 / base `0x801714D0` is still unmeasured). Prior: session 4542 (s4542: the alloc-pair print's control fired, then both runs died in `fillSampleStreamRange` before VI 1024. That is not the bad-call edge. Count 32 with base `0x801714D0` is still unmeasured. See NEXT.md). Prior: session 4541 (H-index-30). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -111,6 +111,7 @@ Do not revive these by repeating a null measurement.
 
 ## Superseded conclusions
 
+- "A build difference since s4541 changed the route (H-patch / stale binary)" (s4544 open cause) was believable because 0/8 recent runs reached the bad call after the s4542 print landed. s4545 refuted it: the binaries differ by exactly two symbols (the print helpers), the s4543 no-print control died identically, and the log diffs differ only in thread timing. The s4541 route was a lucky schedule.
 Kept here only when a later session would otherwise repeat them.
 The s4413–s4433 selector narrative and the s4434–s4475 audio narrative
 are in PROJECT-OVERVIEW §58.
@@ -159,7 +160,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Count/base pair for voice index 30** (HYPOTHESIS-ID: odd-dma-alloc-pair). The print is already in `allocateSongChannelArray` after the `0x8008F0EC` store (`tools/apply_s4542_alloc_pair.py`). s4542 did not select: both runs died in `fillSampleStreamRange+15156` before VI 1024, and the bad jal did not fire. The pre-title lines (count 20 base `0x80169460`, count 17 base `0x801714D0`, count 16 base `0x8018D4A0`, then the arm) are not that jal. Do not move the print. Do not add a skip. Commands and outcomes are in NEXT.md.
+1. **Name the writer of the wild stream pointer `0x380000000`** (HYPOTHESIS-ID: odd-dma-alloc-pair). Stop chasing the s4541 route to the bad jal (count 32 / base `0x801714D0`): it is not reproducible and not a build difference (s4545). Use the VI-640 `fillSampleStreamRange+15156` death (8/8 reproducible in ~3 s) as the deterministic route: dump the voice struct feeding it, check whether the pointer field was ever stored and by which PC, with the arm voice `0x8018D4A0` idx 0 as same-run control. One build via `tools/apply_s4545_*.py`. Details in NEXT.md.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
