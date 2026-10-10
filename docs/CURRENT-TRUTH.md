@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4499 (2026-10-09). Session 4495 was the
+Updated for session 4500 (2026-10-09). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -37,27 +37,18 @@ unless that failure is explicitly repaired.
 ## Active frontier
 
 The live work is the M3 `jal rs_free` idiom-class audit
-(`HYPOTHESIS-ID: m3-idiom-class-audit`). Last closed site is s4499:
-`freePlayerAuxBuffersIfActive` at `0x80100F84` frees one
-`rs_malloc(count << 1, 0)` return from slot 0 of the table at
-`0x8010CF20` (word `0x8010CF28`), once. A zero count takes `beqz`
-and does not reach the jal. Snow, falcon, and tie are zero. No
-guard. The chain from `loadCraftShadowTextures` (`0x8006B814`,
-s4477) through s4499 is Complete. The index is PROJECT-OVERVIEW
-§58. The notes are `docs/M3-S4477-*.md` through
-`docs/M3-S4499-*.md`.
+(`HYPOTHESIS-ID: m3-idiom-class-audit`). Last closed site is s4500:
+`freePlayerAuxBuffersIfActive` at `0x80100F90` frees the slot +0xC
+`rs_malloc(count << 1, 0)` return (stored `0x80100854`), once; zero
+count skips it; no guard. With s4499 (`0x80100F84`) the function is
+closed, and a scan of `0x80100F98..0x8010B6D0` (control passed) found
+no later `jal rs_free` in `.ovl.mission`. The chain from
+`loadCraftShadowTextures` (`0x8006B814`, s4477) through s4500 is
+Complete. Index: PROJECT-OVERVIEW §58; notes `docs/M3-S4477-*.md`
+through `docs/M3-S4500-*.md`. Headless note: `.venv-splat` python is
+not allowlisted; use system `python3` with `scratch/agent/s4500_dis.py`.
 
-Next site, and the only one to classify next: the other jal in
-that function, at `0x80100F90` (entry `0x80100F40`, size `0x68`).
-The delay is `nop` and does not write `$a0`. The
-`lw $a0, 0xC($s0)` at `0x80100F8C` was seen while naming the
-site; it is not a classification. Do not reclassify `0x80100F84`.
-A scan from `0x80100F94` to the end of `.ovl.mission` found no
-later `jal rs_free`; re-verify before calling the mission image
-exhausted. No runtime run unless a concrete invalid writer is
-named and a guard is the selected fix. A guard still needs an
-`ORIGIN:` line. No path, or one allocator return freed once, is
-Complete.
+Next: a class-closure tally (see Next steps #1), not another site.
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -136,13 +127,13 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **M3 `jal rs_free` at `0x80100F90`** in
-   `freePlayerAuxBuffersIfActive` (entry `0x80100F40`, size
-   `0x68`). Slug `m3-idiom-class-audit`. Classify only this jal.
-   The delay is `nop` and does not write `$a0`. The jal at
-   `0x80100F84` was closed in s4499. Hypotheses and the scan
-   control are in `scratch/agent/NEXT.md`. The classifying session
-   writes `docs/M3-S4500-FREE-PLAYER-AUX-BUFFERS-SECOND-RS-FREE-AUDIT.md`.
+1. **M3 `jal rs_free` class-closure tally.** Slug
+   `m3-idiom-class-audit`. Enumerate every word `0x0C000726` in
+   `.text`, `.ovl.mission`, menu and cinematic overlay ranges (system
+   python3, control first), map each to its S44xx audit doc, and list
+   any site with no audit. Unaudited sites are the next units; if none,
+   close the class and pivot (item 4 or an M5 de-stub). Details in
+   `scratch/agent/NEXT.md`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null

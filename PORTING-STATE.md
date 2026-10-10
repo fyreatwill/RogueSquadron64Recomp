@@ -152213,3 +152213,20 @@ function and is not a classification. A scan from `0x80100F94` to
 the end of `.ovl.mission` found no later `jal rs_free`; re-verify
 that before calling the mission image exhausted. Evidence:
 `docs/M3-S4499-FREE-PLAYER-AUX-BUFFERS-RS-FREE-AUDIT.md`.
+
+## Session 4500 (2026-10-09) — audited freePlayerAuxBuffersIfActive rs_free of the slot +0xC array
+
+Static ROM census of `0x80100F90` (`lw $a0,0xC($s0)` + `jal rs_free`, nop
+delay). Control passed (`0x0C000726` at all six listed addresses, delay 0).
+Sole writer of slot+0xC (`0x8010CF2C`, index 0 from all nine callers):
+`sw $v0,0xC($t1)` at `0x80100854` after the second `rs_malloc` at
+`0x80100834`; null would fault in the fill loop at `0x801008A0`. No other
+store of offset 12 to the slot in `0x800FFE00..0x80101100`; `0x800FFEE8`
+is an object pointer; the `0x8010CF38` table starts after slot 0. No later
+`jal rs_free` in `0x80100F98..0x8010B6D0`. Verdict H-NextClassComplete; Gap
+and Unevaluable not selected. No guard. Evidence:
+`docs/M3-S4500-FREE-PLAYER-AUX-BUFFERS-SECOND-RS-FREE-AUDIT.md`.
+ORIGIN: `allocateCraftAnimationStateForSlot` writes slot +0xC from the
+`rs_malloc` return at `0x80100834`; the value is the legitimate user
+pointer. Note: `.venv-splat` python is not permitted headless (prefix not
+allowlisted); used system python3 plus `scratch/agent/s4500_dis.py`.
