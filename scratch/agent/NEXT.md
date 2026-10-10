@@ -1,4 +1,8 @@
-# Next work unit: RDP command-stream OUTPUT comparison, retail vs port, first VI-512 gfx task
+# NEXT: BLOCKED on retail RDP source (see scratch/agent/BLOCKED.md, s4513)
+
+HYPOTHESIS-ID: hangar-artifact-triage
+
+If a human supplies an LLE RSP+RDP plugin, run the oracle with --rsp and take the RDP histogram below. Otherwise do an M5/M3 item or port-only characterisation.
 
 HYPOTHESIS-ID: hangar-artifact-triage
 

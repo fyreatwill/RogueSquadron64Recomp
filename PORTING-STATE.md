@@ -152372,3 +152372,9 @@ Showed: 7 of 11 op04 blobs per side (c06-c12; oracle 7/7, port 7/7) contain 7-22
 Rules out: "static vertex blobs differ => H2' vertex-data defect" is NOT supported; s4511's STATIC-DIFF tag was an artifact of comparing DL scratch memory. Does not rule out a vertex-data difference elsewhere (the true vertex source is unlocated).
 ORIGIN: n/a (no mitigation added).
 Next: stop byte-comparing DL inputs (13 root+child DLs and texture identical). Compare the OUTPUT side: RDP command stream per hangar gfx task (triangle count by cmd 0x08-0x0F, SETCIMG/SETTIMG, fill/rect counts) retail-oracle vs port at the VI 512 first task.
+
+## Session 4513 (2026-10-09) — RDP-output comparison cannot run: oracle has HLE RSP only, no retail RDP stream
+
+HYPOTHESIS-ID: hangar-artifact-triage. Work unit: s4512 NEXT (retail vs port RDP command histogram, first VI-512 gfx task). Checked the oracle: README.md:229 and rs64_oracle.c:3363 default to mupen64plus-rsp-hle, which does not execute the Factor 5 ucode, so no RDP list is produced into RDRAM; Rice writes no colour image (s4506). A port-only histogram would not split H1/H3 and would be a diagnostic-only iteration (iron rule 14). No experiment was run; headless sandbox could not list the plugin directory, so absence of other plugins is unconfirmed.
+ORIGIN: n/a (no code change).
+Next: human decision in scratch/agent/BLOCKED.md (LLE RSP + RDP plugin for the oracle, or accept port-only).

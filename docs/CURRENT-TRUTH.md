@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4512 (s4512: op04 blobs are DL scratch, vertex diffs void). Prior: session 4511 (s4511: child-DL data blobs dumped on both sides; texture blob identical, 6 static vertex blobs differ but the dump window/layout is unqualified). Prior: session 4505 (2026-10-09). Session 4495 was the
+Updated for session 4513 (BLOCKED: retail RDP stream needs LLE RSP+RDP plugin, BLOCKED.md). Prior: session 4512 (s4512: op04 blobs are DL scratch, vertex diffs void). Prior: session 4511 (s4511: child-DL data blobs dumped on both sides; texture blob identical, 6 static vertex blobs differ but the dump window/layout is unqualified). Prior: session 4505 (2026-10-09). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
