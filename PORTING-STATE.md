@@ -152441,3 +152441,10 @@ ORIGIN: n/a, no mitigation added; diagnostic script only.
 ## Session 4522 (2026-10-10) — enqueued post-RSP-fix soak replay (s4522_postfix_replay)
 
 Work unit from NEXT.md (rsp-fix-dissolves-crash-families): wrote scratch/agent/soak_queue/s4522_postfix_replay.sh, a 4-arm concurrent replay of the s4452 baseline recipe (240 s each) on the current build (binary 00:06, includes the s4518 LUV/LFV/LHV fix). Positive control: the identical s4452 recipe pre-fix crashed in all 4 arms (36 [CRASH] lines each, pc 0x80001b08/0x8000834c). Verdict arrives in SOAK-RESULTS.md between iterations. Zero crashes in 4/4 arms supports hypothesis A (weak: same recipe, one scene path); 36-crash signature again means B. No game run this session; nothing concluded yet.
+
+## Session 4523 (2026-10-10) — consumed s4522 post-RSP-fix soak: RSP fix does not dissolve the do_rom_read crash family (hypothesis B)
+
+- Soak s4522_postfix_replay (4 concurrent arms, rc=1, 200 s): every arm reached VI 1024 at ~52 s, ran ~122 s, then aborted with the do_rom_read assertion (physical_addr & 1, pi.cpp:112); stack piDmaWorker -> osPiStartDma_recomp -> do_dma -> do_rom_read, last-guest-pc 0x80001b08; exactly 1 assertion per arm run.log. The wrapper's "crashes=36" per arm counts failed frame captures after process death, not 36 crashes, so matching s4452's 36 is by construction and is not a comparison.
+- Reading: this is the already-named s4297-s4299 family (musyxSynthFrame DMA batch walking freed stream nodes now overwritten by the level texture cache). Different from s4452's fillSampleStreamRange bus error and from +5436/+9632. The 4/4 identical signature is the same-run control. Hypothesis A (RSP fix dissolves crash families) is refuted for this family at n=4, single recipe; other families are masked because this one fires first at ~122 s.
+- Rules out: the RSP sign-idiom fix as a cure for the audio stale-node DMA. Does not rule out it helping fillSampleStreamRange (not reproduced in 4 arms).
+- ORIGIN: n/a, no mitigation added. Next: M5 teardown angle (why the synth frame keeps freed nodes); see NEXT.md.

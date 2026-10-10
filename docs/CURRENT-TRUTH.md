@@ -129,7 +129,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Post-RSP-fix crash-family re-evaluation** (`HYPOTHESIS-ID: rsp-fix-dissolves-crash-families`, s4522). The s4518 RSP LUV/LFV/LHV signed-load fix (lib patch, exported) cut hangar entry-frame shade diffs vs retail 588 -> 3 tris; s4520 showed the remaining white stubs are byte-identical to the retail RDP stream and s4521 parked hangar triage (stubs/right-edge strip need an RT64 tri-index mask render, a renderer patch). Soak `s4522_postfix_replay` (4 concurrent arms, 240 s) is queued; pre-fix control s4452 crashed 36x in every arm. 0 crashes => weak support (n=4, one recipe) that RSP-fed corruption families (waitForAnyAudioSlot, voice-array, +5436 pool links) dissolved, then re-audit which guards are dead; same signature => no effect. Detail in `scratch/agent/NEXT.md`.
+1. **Audio teardown use-after-free feeding do_rom_read** (HYPOTHESIS-ID: musyx-stale-stream-node-after-teardown, s4523). s4522 post-RSP-fix replay: 4/4 arms died ~122 s after VI 1024 on the s4297-s4299 do_rom_read odd-ROM-address assertion (piDmaWorker, guest 0x80001b08), so the RSP fix did NOT dissolve this family. Known mechanism (s4299): stream-node block freed by audio teardown, reallocated to the level texture cache, musyxSynthFrame keeps walking it. Next: name why the synth frame still holds the nodes (M5 teardown de-stub, docs/M5-AUDIO-PLAN.md).
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
