@@ -152509,3 +152509,29 @@ ORIGIN: none. No guard added.
 Verdict (s4528): refutes H-voice-entry-stale up to the first list hit, and selects H-list-link-stale. The tagged holder is list-0 node 0x80192C70 next=0x8017D030, below the freed block. The freed-block holders, same three arms, are the VI-512 list heads 0x8017DA10 and 0x8017D9E0 (then 0x8017D9F8). Their writer is unnamed.
 
 Next discriminator: one poller change and no `ROGUESQ_LOG_RS_MALLOC`. When a chain head or node lies in [0x8017D910, 0x80189340), log every node's address and words 0, 1 and 5 (romA, romB, next) under a separate cap, so 0x8017D030 cannot consume it. Odd or ASCII romA/romB at publish selects "the list is walking overlay bytes". Even in-range rom words select "the odd DMA address is computed later". A run that does not publish those heads refutes the chain-log reading. The alive line and the width-640 0x801F9CE0 chain stay the control.
+
+
+## Session 4529 (2026-10-10) — VI-512 freed-block list heads do not hold the odd ROM address
+
+HYPOTHESIS-ID: musyx-stale-stream-node-after-teardown
+
+Added a second snapshot to the `ROGUESQ_LOG_S4526` poller (`src/main/upstream_compat.cpp`, kept in `tools/apply_s4527_holder_poll.py` so a re-apply cannot restore the blind cap). A walked node or head in `[0x8017D910, 0x80189340)` dumps idx/addr/word0/word1/word5. Guest pc is not logged on those lines.
+
+Run 1, shared 30-snapshot cap, `scratch/s4529_freed_block_nodes/run.log`. Control passed: `[s4526-P] alive` reached len 2/2, and the width-640 chain is list 1 head `0x801F9CE0`. Width 512 then published `0x8017DA10` / `0x8017D9E0` and later `0x8017D9F8`. The cap did not see them. `[s4529-P] SNAP-CAP` fired at width 1024 (poll t=8231) on heads that were still `0x80192Cxx`, whose next word landed inside the block at stride `0x600` (`0x8017DC30`, `0x8017E230`, `0x8017E830`, `0x8017F430`, `0x8017FA30`). Those words are odd or outside the 16 MiB ROM and are not ASCII (`0x8017DC30` w0=`051FEDEF` w1=`0101FD10`). Crash was still `do_rom_read`, guest `0x80001b08`.
+
+Split a head-only cap, tag `[s4529-H]`, which title-phase next pointers cannot spend. Two runs (`scratch/s4529_freed_block_heads/run.log`, `scratch/s4529_freed_block_heads_b/run.log`) died at width 640 in `fillSampleStreamRange+15116`, guest `0x8000834c`. That is the parked bus error. They are not witnesses. The third run, `scratch/s4529_freed_block_heads_c/run.log`, reached width 1024 at 48.0 s, width 512 at 58.2 s, width 640 at 168.4 s, then the same odd `do_rom_read` assert, guest `0x80001b08`. Same-run control: width-640 chain head `0x801F9CE0`, and `[s4529-H] SNAP` at the same poll tick as the width-512 chain line.
+
+At that publish, stable across the next four polls:
+
+- `0x8017DA10` w0=`00000000` w1=`8017D9F8` w5=`80195D90`
+- `0x8017D9E0` w0=`8017D9F8` w1=`00000000` w5=`80195190`
+
+`0x8017D9F8` and `0x8017DA28` (one 0x18 slot each way) are the same shape: one of words 0/1 is 0, the other is the neighbour, and w5 points outside the freed block (`0x80195790`, `0x80196390`). Words 0 and 1 are even. They are not ASCII and not a ROM address (ROM file 16 MiB, `rom_base` `0x10000000`). An even word cannot be the value that fails `(physical_addr & 1) == 0`.
+
+The successor named by w5 is outside `0x8017D910..0x80189340` and does hold odd words: `0x80195190` w1=`DE040843`, `0x80195790` w1=`FF2BFF57`, `0x80196390` w0=`EF015FAD`. None of those are ASCII, so this is not s4298's `6C637265` / "lcre" node. `[s4529-H] SNAP-CAP` fired at t=9655, about 0.3 s after the first publish, so the later republish at t=11019 was not snapshotted. The measured words are the publish, not the bytes at the crash ~110 s later.
+
+This refutes H1 (odd or ASCII overlay bytes in the heads' rom words) and refutes H2 (those words even and inside the ROM). It does not select H3: the snapshot and the width-512 chain line both fired, and the alive line / width-640 `0x801F9CE0` chain were the control. It selects: the published heads are linked nodes whose first two words are sibling pointers, not the odd DMA address.
+
+ORIGIN: none. No guard added.
+
+Next discriminator: one run of the existing `[s4298-odd]` scan with the head snapshot still on. The odd phys equalling the successor's word 0 or 1 selects the successor as the bad ROM pair. An ASCII hit on a different node inside the freed block selects the s4298 name-text node. Hits only in the DMA ring or stack select a computed address.
