@@ -152767,3 +152767,39 @@ This selects H-index-absent. It refutes H-not-a-slot (`n_lattice=560`) and H-cen
 The first four lattice stores, lines 342370–343436, are consecutive calls and consecutive slots. Quote the first: voice `0x801714D0`, word `0xB03910A0`, exactly 30 slots below `0x801724C0`, `n_lattice=1` at `n_all=624`. The next three are `0x80171558` / `0xB03698D8` (29 below), `0x801715E0` / `0xB03910A0` (28 below), and `0x80171668` / `0xB03910A0` (27 below). The other 556 lattice addresses were not printed. Do not treat a contiguous continuation as measured. Do not grep for the skipped index. No skip was added.
 
 ORIGIN: not a mitigation. The writer of `0x6C617465` is still not `0x800921E8`. That word is not a legitimate cart offset.
+
+## Session 4539 (2026-10-10) — init's lattice index span is 0..17 and misses voice 0x801724C0
+
+HYPOTHESIS-ID: odd-dma-init-index-span
+
+No new SOAK-RESULTS lines since s4538. The s4532 rows were already folded.
+
+No rebuild. `build/RogueSquadron64Recomp` already contained `[init-voice-slot-ptr]` and `ROGUESQ_LOG_INIT_VOICE_SAMPLE`. `voiceIdx` is `a3`. The field labeled `slotBase` is the voice after the `addu`, not the array base. Same route as s4538, plus that gate.
+
+The first launch, `scratch/s4539_init_index_20261010-040634/run.log`, reached origin `0x006A2900` at 169.5s and aborted in `NAN_CHECK` (`assert(val == val)`) inside `advanceVolumeFadeEnvelope` at `sub.s` `0x8008F638`, five lines after the phase line. No `[s4534-jal] kind=bad`. Not a result about this voice. Not the parked `fillSampleStreamRange` bus error.
+
+The second launch is the result. Log: `scratch/s4539_init_index_20261010-041352/run.log`. Phase width 1024 at 47.3s. Origin `0x006A2900` at 169.3s, log line 565902. Death is the odd-address assertion in `do_rom_read` (`pi.cpp:112`). `last-guest-pc` is `0x80001b08`. Not `fillSampleStreamRange`.
+
+Controls fired before the bad jal:
+
+- `[s4538-init] kind=arm` line 19165, voice `0x8018D4A0`, word `0xB0373B68`, residue 128, `n_all=1`.
+- The four known lattice voices, indices +1 in order. Each index is the only one for that voice:
+  `[init-voice-slot-ptr] n=627 voiceIdx=0x00000000 slotBase=0x801714D0`
+  `n=628 voiceIdx=0x00000001 slotBase=0x80171558`
+  `n=629 voiceIdx=0x00000002 slotBase=0x801715E0`
+  `n=630 voiceIdx=0x00000003 slotBase=0x80171668`
+  The index field is `a3`.
+- `[s4534-jal] kind=bad site=800903F0` line 565907, s1 `0x801724C0`, raw34=a3=`0x6C617465`.
+- `[s4538-init] kind=jal` `n_all=1192 n_this=0 n_lattice=565`. `[s4537-init] kind=jal` `n_this=0`. 1192 `[init-voice-slot-ptr]` lines, all before the jal, n=0..1191. The print count equals `n_all`.
+
+Lattice test is `rs64_s4538_residue`: unsigned `(voice - 0x801724C0) % 0x88`, then subtract 120 mod `0x88` when the voice is below the target. 565 rows, zero of them voice `0x801724C0`. One recovered base, `B = voice - index*0x88`.
+
+- B=`0x801714D0`, k=30, min=0, max=17, n=565. k is outside [0, 17]. The indices present are exactly 0..17. Each occurs at least 11 times. No index is above 17. `B + 30*0x88` is `0x801724C0`.
+
+The other 627 rows are one non-lattice base, `0x8018D4A0` (the arm voice), indices 0..15. They are not this lattice. `n_lattice=565` and `n_this=0` on the jal match the offline counts. That is the second line.
+
+This selects H-outside. It refutes H-hole (k is not inside [min, max]) and H-census-wrong (no row is that voice).
+
+The ctl row just before the bad jal, same site, is s1 `0x80172328`, raw34 `0x00C80000`. That address is `B + 27*0x88`, also outside 0..17. Render already walks past the initialized indices. In `musyxRenderVoiceSamples` the only write of s1 before `0x800903F0` is `addu $s1, $a0, $zero` at `0x8008FFB4`, so that s1 is the entry a0. Do not grep for a skipped init index. There is no hole.
+
+ORIGIN: not a mitigation. `0x800921E8` does not write this slot. `0x6C617465` is not a legitimate cart offset.
