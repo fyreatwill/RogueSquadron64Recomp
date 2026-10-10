@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4432 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4477 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -248,6 +248,12 @@ available.
 
 ## Superseded and closed conclusions
 
+- s4476 "M3 has no unaudited idiom class" was believable because the s397
+  frequency scan for another `-0x25A4`-shaped family was exhausted and the
+  `jal rs_free` notes say not to re-audit a closed class. It was wrong: that
+  census never covered `funcs_16.c` upward, and s3620 had already named
+  `loadCraftShadowTextures` as a leftover. s4477 classified it. The census
+  is not exhausted.
 - s4414/s4416/s4417 "port/retail selector-path divergence at `0x80029E80`" was
   believable because the port witness sat on guest PCs, but the port routes
   osAiSetNextBuffer through a host shim. s4432 saw the generated submit call at
@@ -288,7 +294,16 @@ available.
 
 ## Next steps
 
-- **s4475 (newest):** M5 Step 9 CLOSED: no MORT-owned gap. MORT reference re-ran with controls (546 descriptors, rows 0/1/59/90 match, 8000/16000 Hz); all measured silent-vs-image divergence (s4329-s4416) is upstream of the MORT filter (selector/stream boundary), and the generated CPU decode path is unmodified. M5 plan Steps 1-10 are all closed or conditional-unneeded. Next: priority 3 (M3 idiom-class audit), not reactive crash chases. Evidence is reference-decoder fresh + ledger-derived (no new guest-vs-reference hash join this session).
+- **s4477 (newest):** `loadCraftShadowTextures` `jal rs_free` at `0x8006B814`
+  frees `$s5`, the `load_asset` / `rs_malloc` return of `pl_crafts/shadows_TM`,
+  once. H-NextClassComplete. No guard. s4476's "no unaudited class" is
+  superseded. Next class: `load_naboo_starfighter` `0x8006C8C4` (`$a0 = $s2`).
+  See `docs/M3-S4477-LOAD-CRAFT-SHADOW-TEXTURES-RS-FREE-AUDIT.md`.
+- **s4476 (superseded by s4477):** BLOCKED on "no unaudited idiom class" from
+  the s397 frequency-scan note. `BLOCKED.md` was not in the commit. Do not
+  repeat that stop while unaudited `jal rs_free` sites remain from `funcs_16.c`
+  upward.
+- **s4475:** M5 Step 9 CLOSED: no MORT-owned gap. MORT reference re-ran with controls (546 descriptors, rows 0/1/59/90 match, 8000/16000 Hz); all measured silent-vs-image divergence (s4329-s4416) is upstream of the MORT filter (selector/stream boundary), and the generated CPU decode path is unmodified. M5 plan Steps 1-10 are all closed or conditional-unneeded. Next: priority 3 (M3 idiom-class audit), not reactive crash chases. Evidence is reference-decoder fresh + ledger-derived (no new guest-vs-reference hash join this session).
 - **s4474:** Step 8 runtime census: 0 voice/songtempo/tick-reap guard fires in one audio-on title->hangar run (single-source, no same-run fire control); nothing to relax. Next: Step 9 (MORT gap check) or a guard-fire positive control.
 - **s4473:** port status word 0x80154620 runs the full 1->2->3->0 cycle at hangar (B214,B6F8,B7CC,B7EC) in one phase-gated run; M5 step 7 (status-03 reaping) CLOSED, no retail divergence. Next: step 10 AI/SDL join or step 8.
 - **s4472:** RETAIL EXECUTES THE SAME CHAIN. Oracle (two 75 s runs, watches on 0x1545FC word + status word + exec 8009C268/C2B0/B7CC) shows retail writing the slot-0 request byte 2 (C21C @43.3s), 3 (C2B0 @43.3s), 4 (C268 @48.7s) and then executing 0x8009B7CC (status->03) and B7EC at 48.7s, repeating the 2/3 steps at 65s. The port logs the identical writer sequence (BEC0=1, C21C=2, C2B0=3, C268=4; guest code, byte 0x801545FD = field +0x11DD of the 0x80153420 stream struct). So port status 03 is LEGITIMATE guest behaviour; the s4470/s4471 premise 'retail B7CC x0' is SUPERSEDED (s4470 recipe likely lost the hit under its phase gating/cap; not re-diagnosed). The status-03 'service reaping' lead (m5-status03-service-reaping) loses its retail-divergence basis. Whole-RDRAM control with hit-cap 10000 silences ALL later printed hits (consumed by 0.5s) - drop it for late-phase writer hunts; use a narrow-watch positive control (the range's own hits) instead. Tools: ROGUESQ_LOG_S4472=1 (main.cpp lowfield hook), scratch/agent/s4472_run.sh.
@@ -408,4 +423,5 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4476 (newest):** BLOCKED. M5 closed; M3 has no unaudited idiom class (PROJECT-OVERVIEW s397 note); human decision needed, see scratch/agent/BLOCKED.md.
+- **s4477 (newest):** loadCraftShadowTextures rs_free class closed (H-NextClassComplete). Next: load_naboo_starfighter 0x8006C8C4.
+- **s4476 (superseded):** BLOCKED on a stale "no unaudited class" reading of the s397 note. The jal rs_free frontier in funcs_16+ was still open.

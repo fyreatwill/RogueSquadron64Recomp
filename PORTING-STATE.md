@@ -150998,3 +150998,34 @@ ORIGIN: none; no mitigation added.
 
 ## Session 4476 (2026-10-09) — M3 idiom-class audit has no unaudited class; BLOCKED with a specific question
 Read CURRENT-TRUTH, NEXT.md, SOAK-RESULTS tail; grepped PROJECT-OVERVIEW closed-class notes (s397 "frequency-scan method exhausted ... needs human input"; s3586-s3658 "Do not re-audit a closed class"). No experiment run: no candidate class exists to attach a same-run positive control to, and the only live crash lead (s4457 +5436 pool-list writer) is a reactive chase the loop rules bar. Priority 4 sweep no longer resets the churn counter. Options offered in scratch/agent/BLOCKED.md.
+
+## Session 4477 (2026-10-09) — audited loadCraftShadowTextures rs_free of the shadows asset
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded in
+sessions 4467 and 4468. s4476 had blocked on "no unaudited idiom class."
+That reading is superseded. The s397 frequency scan only exhausted another
+`-0x25A4`-shaped family; the `jal rs_free` census still has unclassified
+sites from `funcs_16.c` upward, and s3620 had already named
+`loadCraftShadowTextures` as a leftover.
+
+Static census, no game run. The same `jal 0x80001C98` scan that finds
+`0x8006B814` also finds the closed controls `0x80005268` (s3790) and
+`0x800AEA94` (s3611). `loadCraftShadowTextures` has one free. `$s5` is
+assigned once, from `load_asset`'s return. `load_asset` mallocs, DMA-fills,
+and returns that block (`addu $v0, $s2` at `0x80064914`). The ROM name is
+`pl_crafts/shadows_TM`, and that immediate is unique to this function.
+`load_asset`, `full_header_image_offset_convert`, and
+`registerHmtTextureInTable` contain no `jal rs_free`. The three callers
+(`load_dat_file_assets` twice, `allocateAndInitCraftNpcContext` once) pass
+a craft index, not a pointer. The index-9..12 back-edges reuse the same
+`$s5` and the free runs once. This selects H-NextClassComplete and refutes
+a non-allocator or double-free gap at static scope. Runtime freelist
+legitimacy stays unproven. No guard was added. The pre-existing s613 range
+checks that skip this free were left unchanged.
+
+This rules out s4476's stop, and rules out treating `$s5` as a caller-owned
+or table-resident pointer. It does not rule out a bad `rs_malloc` return
+inside `load_asset`. Next class is `load_naboo_starfighter` at `0x8006C8C4`
+(`$a0 = $s2`). Evidence: `docs/M3-S4477-LOAD-CRAFT-SHADOW-TEXTURES-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
