@@ -1,8 +1,8 @@
-# Next work unit: structural DL comparison, retail vs port (hangar VI 512)
+# Next work unit: child-DL dump + structural compare (hangar VI 512)
 
 HYPOTHESIS-ID: hangar-artifact-triage
 
-s4508: raw byte diff of first VI-512 DL is uninformative (within-side variance 12k/16k bytes > cross-side 6k). Dumps in scratch/agent/s4508/ (oracle_w512_{0,1,2}.bin, port_w{320,512,640,1024}_{0,1,2}.bin), env RS64_GFX_DL_DUMP_DIR on both sides.
-Hypotheses: H1/H3 port renderer/ucode vs H2 guest data bug.
-Discriminator: parse DLs offline (python): command-class histogram, DL-call (06) targets, vertex-load (04) counts, texture (fd) address ranges, per frame; compare retail frames vs port frames. Differences in command classes/counts that persist across frames => H2; matching structure => H1/H3 (renderer). Control: port 1024 title DL vs itself across frames shows the natural variance band.
-Also consider dumping at task completion to exclude mid-write capture, and a retail 1024 control (oracle only gates 512 phase).
+s4509: root DL (0xD8 B) is identical retail vs port; 13 child-DL targets are listed in PORTING-STATE s4509.
+Hypotheses: H2 guest child-DL/vertex/texture data differs vs H1/H3 port renderer/ucode with identical data.
+Do: extend dump hooks (oracle dump_pc_task in tools/oracle/rs64_oracle.c; port osSpTaskStart hook in src/main/upstream_compat.cpp) to also dump 0x1000 B at each child target, env RS64_GFX_DL_DUMP_DIR. Parse with scratch/agent/s4509_dlparse.py. Compare command histograms and vertex(04)/texture(fd) pointer sets per child, retail vs port; within-side task0 vs task2 is the variance control.
+Outcomes: matching structure => H1/H3 (renderer); persistent child differences => H2.
