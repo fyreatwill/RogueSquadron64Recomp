@@ -1,13 +1,10 @@
-# Next work unit: hangar entry-frame DL/source-data byte diff, retail vs port
+# Next work unit: hangar entry-frame DL byte dump, retail vs port (first gfx task at VI 512)
 
 HYPOTHESIS-ID: hangar-artifact-triage
 
-s4506: retail+Rice never writes the RDRAM framebuffer (title control 0 words, hangar fb 0 px) -> no pixel diff.
-Hypotheses: H1 colour/texture-format on specific materials; H2 bad vertex/DL data; H3 LLE ucode divergence;
-H4 fb width/stride mismatch (right-edge column).
-Discriminator: at the hangar entry (VI 512, origin 0x6AB400) dump from BOTH retail (oracle --fb-dump raw RDRAM,
-or --pc-task-dump for the OSTask row) and port: the gfx OSTask data_ptr DL bytes + vertex/texture ranges it
-references; byte-diff. Identical source + bad pixels => H3/H1 in port renderer; differing source => H2 (guest state bug).
-Positive control: diff the same procedure on title (1024) task, expect identical.
-Cheap side item for H4: port-side log VI_WIDTH vs colour-image width at hangar.
-Tools: tools/oracle/rs64_oracle --fb-dump, --pc-task-dump; scratch/agent/s4506_oracle_fb.sh as template. One run at a time. SIGKILL.
+s4507: first gfx task at VI 512 is data_ptr 0x80738F18 on both retail (oracle) and port. Later buffer rotation differs (timing-dependent, unqualified).
+Hypotheses: H1/H3 port renderer/ucode (identical source bytes, bad pixels); H2 guest data bug (source bytes differ).
+Discriminator: dump phys 0x738F18..+0x4000 at the first VI-512 gfx task on both sides, byte-diff. Control: first VI-1024 gfx task, expect identical.
+Port: env-gated dump in the ROGUESQ_LOG_TASKSUBMIT hook (src/main/upstream_compat.cpp ~2520) for the first gfx task after vi_width=512 (and 1024 for control); rdram is byte-swapped (^3).
+Retail: PC-triggered memory dump in tools/oracle/rs64_oracle.c (extend the --pc-task-dump handler ~line 1572) writing bytes at data_ptr.
+Build both arms in one iteration, run one at a time. Recipes: scratch/agent/s4507_oracle_gfxtask.sh, s4507_port_hangar.sh. SIGKILL.

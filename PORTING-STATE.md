@@ -152322,3 +152322,11 @@ Next discriminator: identical source bytes + bad port pixels => H1/H3 (port side
 
 Summary (s4506): this refutes the retail-pixel-oracle arm and selects the DL/vertex/texture
 source-byte diff as the discriminate step between H2 (guest data) and H1/H3 (port renderer/ucode).
+
+## Session 4507 (2026-10-09) — hangar entry gfx task pointers: retail and port agree on the first DL buffer, differ in rotation
+
+HYPOTHESIS-ID: hangar-artifact-triage. Work unit: s4506 NEXT step 1 (locate the hangar-entry gfx OSTask DL on both sides before byte-diffing).
+Retail arm: scratch/agent/s4507_oracle_gfxtask.sh (oracle --pc-task-dump 0x80033FCC --pc-task-type 1, --pc-phase-log-width 0x6AB400:512, Rice). Port arm: scratch/agent/s4507_port_hangar.sh (s4505 recipe + ROGUESQ_LOG_TASKSUBMIT=1; phase 512 at 26.0 s; later native crash, known family).
+Result (one run per arm, single-source): the FIRST gfx task in the VI-512 phase has data_ptr=0x80738F18 on BOTH sides (retail data_size 0, output_buff 0x8075c000; port ucode 0x80024A10). After that the buffer sequence differs: retail reuses 0x80738F18 x6, then 0x8074C898 x5, 0x80756768 x25, 0x80732E28; port alternates 0x80738F18/0x80744078 for 9 pairs, then 0x8074ACC0/0x8074C898. NOT a conclusion: the oracle interpreter is far slower than real time, so cadence is timing-dependent (cross-run, animating scene), and no title-task positive control was run. The equal first pointer is weak agreement that the guest builds the entry DL at the same address.
+Not done: the DL byte diff (data_size is 0 for this ucode, so the length is unknown; needs a memory dump hook on both sides). Rules out nothing. ORIGIN: n/a (no mitigation, no code change).
+Next: dump phys 0x738F18..+0x4000 at the first VI-512 gfx task on both sides and byte-diff; first VI-1024 task as control.
