@@ -152944,3 +152944,15 @@ Gate note (s4546): the data above selects H-gpu/host-writeback and refutes H-voi
 
 Ran the s659 freeroll recipe (`s659_product_fl_restore_freeroll.sh`, BUDGET 700 s) as arm A (default) and arm B (`ROGUESQ_FL_HDR_HARD_SKIP=1` injected into GAME_EXTRA_ENV_BASE) back to back via `scratch/agent/s4547_run_ab.sh`. Both arms: attempts=3, pre_eng=3, engaged=0, recov_active=0, and every attempt had `allow_wfl=0 hit_wr=0 hsel=0` (the `ALLOW_WILD_FL` line never appeared, even in the default arm). The default arm was the planned positive control (it must show ALLOW_WILD_FL / the stall); it did not fire, so BOTH arms are an uncontrolled null: nothing is learned about whether HARD_SKIP reintroduces the thr11d post-exit fs stall. What it does show (6/6 attempts across two arms): the s659 engagement route (FORCE_STATE6 / case5 entry) no longer reaches the garbage-SETCIMG stage in the current build, consistent with s4541-s4544 "lost route is timing". H-allow-needed / H-allow-unneeded / H-restore-range remain unsplit.
 Next: score the stall from the s4546 intro-phase route (which does fire ALLOW_WILD_FL), default vs HARD_SKIP, or decide HARD_SKIP policy on the s4546 evidence alone (3/3 survival) with an ORIGIN line.
+
+## Session 4548 (2026-10-10) — HARD_SKIP of the wild-width freelist writeback is now the default; default 3/3 survive, forced-allow 0/2 (VI-640 death)
+
+HYPOTHESIS-ID: wild-setcimg-writeback
+
+Work unit: decide the s659 writeback policy. The thr11d stall A/B is unrunnable (s4547), so the decision rests on the s4546 route. Changed `lib/rt64/src/hle/rt64_state.cpp` and `rt64_framebuffer.cpp` so `ROGUESQ_FL_HDR_HARD_SKIP` defaults to 1 (set `=0` to restore the s659 allow). Patches re-exported (`submodule-patches/rt64.patch`). Rebuilt; recipes `scratch/agent/s4548_default.sh` (no env var) and `s4548_allow.sh` (`HARD_SKIP=0`), interleaved by arm, ZERO_ALWAYS watch armed in both.
+
+Result: default arm 3/3 reached the 180 s watchdog (vi1024 ~3100, bad=5, 0 to_zero). Allow arm 0/2 completed runs survived: both died at VI 640 about 2.7 s in with 19-20 `to_zero` watch events (the third allow run was still running at write time). Positive control: the allow arm reproduces the s4546 wipe in the same batch, `ALLOW_WILD_FL` logged 1/run in every run; `arm_always` fired.
+
+Selects: H-gpu/host-writeback as the VI-640 death cause (second independent A/B, now n=3 vs n=2 on top of s4546's 3 vs 3). Not tested: whether HARD_SKIP reintroduces the thr11d post-exit fs stall (route unreachable, s4547). Caveat: the thr11d benefit of the allow is unmeasured in either direction in this build.
+
+ORIGIN: the writer of the heap wipe is the RT64 `copyNativeToRAM` writeback of the garbage SETCIMG `addr=0x130393 w=1033 siz=3` (s4531, value NOT legitimate: this game uses only 320/512/640/1024 widths). The default skip only suppresses writebacks whose range covers phys 0x1F3CC0; the writer of the garbage SETCIMG itself stays unnamed and parked.

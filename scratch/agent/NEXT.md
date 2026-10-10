@@ -1,5 +1,5 @@
-# NEXT: score the thr11d post-exit stall from the s4546 intro-phase route, default vs HARD_SKIP
+# NEXT: find the writer of the garbage SETCIMG (addr=0x130393 w=1033 siz=3)
 
 HYPOTHESIS-ID: wild-setcimg-writeback
 
-s4547: the s659 freeroll recipe never engages in this build (6/6 pre-eng, no ALLOW_WILD_FL), so it cannot serve as the A/B. Use scratch/agent/s4546_wipe.sh / s4546b_skip.sh (these DO fire ALLOW_WILD_FL by default) extended past the intro, to see whether the fs stall appears with HARD_SKIP=1 vs default, interleaved, 3 each. Positive control: default arm shows ALLOW_WILD_FL in the same batch. If the stall is unreachable on this route too, decide HARD_SKIP policy with an ORIGIN line (writer of SETCIMG 0x130393 still unknown, s4531).
+s4548 made ROGUESQ_FL_HDR_HARD_SKIP default ON (default 3/3 survive 180 s; =0 dies at VI 640). The mitigation is in; the root cause (who emits SETCIMG 0x130393 w1033) is open (s4531 says a garbage-region SETCIMG). Next: capture the RDP/DL words preceding that SETCIMG once (dump flag, analyze offline) and compare against the F5 ucode reference's inline-data pointer advances; hypotheses: H-ucode-pointer-advance (port misparses a command length), H-DL-memory-corrupt (guest wrote garbage DL), H-retail-too (oracle rdplog shows it; unlikely). Positive control: dump must show the known good SETCIMG w512/1024 in the same run.
