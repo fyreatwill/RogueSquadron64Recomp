@@ -152842,3 +152842,25 @@ This selects H-one-caller. It refutes H-split-caller: the jal that passes the in
 The loop that produces a0 is static and was not printed at the bad call: `s0` from 0 while `s0` < the halfword at `0x80149700`, voice = the word at `0x801496F8` plus `s0*0x88`, jal if byte 0 is nonzero. `s0` is still the index at the jal. `a1` is not: the `beq` delay slot at `0x80090ECC` overwrites it. That index, base, and count are the next discriminator. Do not add them to this run.
 
 ORIGIN: not a mitigation. No skip was added. `0x6C617465` is not a legitimate cart offset. The caller is named; the loop index is not.
+
+## Session 4541 (2026-10-10) — mix loop reaches voice 0x801724C0 at index 30
+
+HYPOTHESIS-ID: odd-dma-mix-index
+
+No new SOAK-RESULTS lines since s4540. The last queued row is still the s4532 fill soak.
+
+The planned print extends the s4540 mix-call lines with `s0`, the word at `0x801496F8`, the halfword at `0x80149700`, and `base + s0*0x88`. `tools/apply_s4541_mix_index.py` patches the existing helper. Diagnostic only. It does not skip the call. `a1` is not read: the `beq` delay slot at `0x80090ECC` has overwritten it. Rebuild was `funcs_24.c` only. The binary contains all three `[s4540-call]` formats with `s0=%u base=`.
+
+One run, `scratch/s4541_mix_index_20261010-044733/run.log`. Phase 1024 at 48.5s, hangar 512 (`0x006AB400`) at 58.7s, origin `0x006A2900` at 169.1s. Death is the odd-address assertion in `do_rom_read` (`pi.cpp:112`). `last-guest-pc` is `0x80001b08`. `fillSampleStreamRange` count is 0. `NAN_CHECK` count is 0. Not the parked bus error. No retry.
+
+Controls, in order, every one with `sum==a0`:
+
+- `[s4540-call] kind=arm a0=0x8018D4A0 n_all=1 s0=0 base=0x8018D4A0 count=16 sum=0x8018D4A0`. a0 and base top byte `0x80`. This is not the init lattice. The formula holds on a second array.
+- Eighteen `kind=in` lines, indices 0..17 of base `0x801714D0`, `s0` equal to the printed index, `n_in` ending at 18. Count is 15 while indices 0..14 are first seen and 18 for indices 15..17. Index 17 prints before 15 and 16. First in-range line is index 0, `sum==a0`, before the bad line.
+- Bad triple, consecutive: `[s4540-call] kind=bad a0=0x801724C0 n_all=125746 n_in=18 s0=30 base=0x801714D0 count=32 sum=0x801724C0`, then the entry bad with `ra=0`, then `[s4534-jal] kind=bad site=800903F0` s1 `0x801724C0` raw34=a3=`0x6C617465`.
+
+`0x801714D0 + 30*0x88` is `0x801724C0`. Count 32 is greater than 30. This selects H-index-30. It refutes H-other-base: the bad base is the init lattice, not a different array. It refutes H-formula-wrong: `sum==a0` on the arm, on every in-range line, and on the bad line. The count on this base is not a constant. It was 15, then 18, then 32. Slot 30 is reached only after the halfword passes 30.
+
+The halfword's only original store is `allocateSongChannelArray` `sh $s0` at `0x8008F0CC`, and the base word is the following `sw` at `0x8008F0EC` (s3602, static, single-source until the pair is measured). Whether a stored count of 32 is paired with base `0x801714D0` is the next discriminator. Do not re-run this print.
+
+ORIGIN: not a mitigation. No skip was added. `0x6C617465` is not a legitimate cart offset. The loop index is 30 because the live count is 32. Whether that 32 is a legitimate slot count is not yet measured.

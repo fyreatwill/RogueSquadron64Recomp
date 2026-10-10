@@ -1,41 +1,42 @@
-# NEXT: what index and bound make musyxMixActiveVoices pass 0x801724C0
+# NEXT: does allocateSongChannelArray publish count 32 with base 0x801714D0
 
-HYPOTHESIS-ID: odd-dma-mix-index
+HYPOTHESIS-ID: odd-dma-alloc-pair
 
-s4540 selected H-one-caller. Do not re-read `ctx->r31`. Do not re-run the entry-only probe. Do not re-run the index span. Do not grep for a skipped init index. Do not add a skip. Do not re-probe `0x800921E8`.
+s4541 selected H-index-30. Do not re-run the mix-index print. Do not re-read `ctx->r31` at `musyxRenderVoiceSamples`. Do not read `r5` as the scaled offset. Do not grep for a skipped init index. Do not add a skip. Do not re-probe `0x800921E8`.
 
-Result log: `scratch/s4540_render_caller_retry_20261010-043550/run.log`. `musyxMixActiveVoices` jal `0x80090F00` is the only call of `musyxRenderVoiceSamples`. Its arm is a0 `0x8018D4A0` (`n_all=1`), immediately followed by the entry arm with the same a0 and `ra=0`. It then passes every index 0..17 of base `0x801714D0` (`n_in=18`; index 17 is printed before 15 and 16, and the set is complete). The bad line is `[s4540-call] kind=bad a0=0x801724C0 n_all=125625 n_in=18`, the next line is the entry bad with `ra=0`, and the next is `[s4534-jal] kind=bad site=800903F0` with raw34=a3=`0x6C617465`. Death is the odd `do_rom_read` assertion, `last-guest-pc` `0x80001b08`, after origin `0x006A2900`. Not `fillSampleStreamRange`.
+Result log: `scratch/s4541_mix_index_20261010-044733/run.log`. One run. Phase 1024 at 48.5s, hangar 512 at 58.7s, origin `0x006A2900` at 169.1s. Death is the odd `do_rom_read` assertion, `last-guest-pc` `0x80001b08`. Not `fillSampleStreamRange`. No `NAN_CHECK`.
 
-The loop, static, not yet measured at the bad call:
+Controls, all `sum==a0`:
 
-- `s0` is zeroed at `0x80090E2C` and incremented at `0x80090F48`, after the jal.
-- Head `0x80090E70` uses `s0 & 0xFFFF` as the index. Scale to `index*0x88` is `0x80090E7C..0x80090E84`.
-- Base is reloaded at `0x80090EBC`: `lw` from `0x801496F8` (`0x80150000-0x6908`). `a0 = base + a1` at `0x80090EC0`.
-- The jal is skipped when byte 0 of that voice is 0 (`0x80090EC8`).
-- The bound is the halfword at `0x80149700` (`0x80150000-0x6900`), compared at `0x80090F44..0x80090F54`: continue while `(s0 & 0xFFFF) < count`.
+- `[s4540-call] kind=arm a0=0x8018D4A0 n_all=1 s0=0 base=0x8018D4A0 count=16 sum=0x8018D4A0`
+- Eighteen `kind=in` lines, indices 0..17, base `0x801714D0`, `s0` equal to the index. Count is 15 on indices 0..14 and 18 on 15..17. Index 17 prints before 15 and 16.
+- `[s4540-call] kind=bad a0=0x801724C0 n_all=125746 n_in=18 s0=30 base=0x801714D0 count=32 sum=0x801724C0`
+- Next line is the entry bad. Next is `[s4534-jal] kind=bad site=800903F0` s1 `0x801724C0` raw34=a3=`0x6C617465`.
 
-At the jal, `s0` is still the index (`ctx->r16`). `a1` (`ctx->r5`) has been overwritten by the delay-slot-adjacent `andi` at `0x80090ECC`, so do not read `r5` as the scaled offset. Read the base from memory.
+`0x801714D0 + 30*0x88` is `0x801724C0`. Count 32 is greater than 30, and it is late: this base was 15, then 18, before 32.
 
-One new field on the existing bad call, plus the same fields on the arm and on the first in-range call. Extend `rs64_s4540_call` in `tools/apply_s4540_render_caller.py` (the script is already applied; a second script `tools/apply_s4541_mix_index.py` should patch the existing bad/arm/in prints, or edit the helper in place and keep it idempotent). Diagnostic only. Do not skip the call. Gate remains `ROGUESQ_LOG_S4539=1`.
+The count halfword `0x80149700` has one original store, `allocateSongChannelArray` `sh $s0` at `0x8008F0CC` (`funcs_23.c`, `MEM_H(-0X6900, ctx->r1) = ctx->r16`). `s0` was copied from `a0` at `0x8008F0B0`. The malloc pointer is stored twice after `rs_malloc` returns: `sw` at `0x8008F0E4` (`-0x6904`) and `sw` at `0x8008F0EC` (`-0x6908`, `MEM_W(-0X6908, ctx->r1) = ctx->r2`). s3602 is the static census. The jal to `rs_malloc` overwrites `r31` before the `sw`. Do not read `r31` there. The init loop after the `sw` writes `+0x0 = 0` for each slot below the reloaded count; that is not this measurement.
 
-On arm, on the first `kind=in`, and on `kind=bad`, add `s0=%u base=0x%08X count=%u sum=0x%08X`. `s0` is `(uint32_t)ctx->r16 & 0xFFFF`. `base` is the word at `0x801496F8`. `count` is the halfword at `0x80149700`. `sum` is `base + s0*0x88` computed in uint32. The function needs `rdram` only if `MEM_W` requires it; use the same absolute form as the recompiled `lw` (`MEM_W(-0x6908, S32(0x8015 << 16))` and `MEM_HU(-0x6900, S32(0x8015 << 16))`).
+One new print, after the `0x8008F0EC` store, before the zeroing loop. New script `tools/apply_s4542_alloc_pair.py`. Diagnostic only. Do not skip the store or the malloc. Gate `ROGUESQ_LOG_S4539=1`. Leave the s4541 fields in place.
 
-Competing hypotheses, judged on the bad line, and only if arm and the first in-range line both have `sum == a0`:
+On each call print `[s4542-alloc] n=%u count=%u s0=%u base=0x%08X` when any of these holds: it is the first call, `(count, base)` differs from the previous printed pair, or `count>=18`. Cap 48. `count` is the halfword reloaded with `MEM_HU(-0x6900, S32(0x8015 << 16))`. `s0` is `(uint32_t)ctx->r16 & 0xFFFF` after the `sw` (callee-saved; if it disagrees with `count`, quote both and judge on `count`). `base` is `(uint32_t)ctx->r2`, the pointer just stored. A pair with `count>=18` must not be dropped by the cap; if the cap would drop one, that run is not a result.
 
-- H-index-30: `s0==30`, `base==0x801714D0`, `count>30`. The bound admits slot 30 of the init lattice. Init's 0..17 is not this loop's span.
-- H-other-base: `base!=0x801714D0` and `sum==a0`. The voice is a slot of a different array. Quote `base`, `s0`, and `count`.
-- H-formula-wrong: `sum!=a0` on the bad line. `s0` at the jal is not the index the `addu` used. Stop. Do not guess another register.
+Competing hypotheses, judged only if a control pair with `count==16` and `base==0x8018D4A0` prints before the s4540 arm line, and the bad s4540 line is again `s0=30` `base=0x801714D0` `count=32` `sum==a0`:
 
-Positive control, same run: arm line before the bad line, a0 top byte `0x80`, `base` top byte `0x80`, `count>0`, and `sum==a0`; a `kind=in` line with index in 0..17, `sum==a0`, before the bad line; the bad call, the entry bad, and `[s4534-jal] kind=bad site=800903F0` with s1 `0x801724C0` and raw34 `0x6C617465`. A VI-640 death whose stack is `fillSampleStreamRange` is not this edge; retry the same binary once. A second such death is not a result. A `NAN_CHECK` in `advanceVolumeFadeEnvelope` before the bad jal is not a result; retry once.
+- H-paired-32: some printed pair has `count==32` and `base==0x801714D0` before the bad call. The named sh/sw published the pair the mix loop reads. Quote that line. Stop. Do not add a probe.
+- H-unpaired: the last printed pair with `base==0x801714D0` has `count!=32`, some pair has `count==32` with a different base, and the bad call still shows base `0x801714D0` count 32. Quote both pairs. Stop. Do not add a probe.
+- H-no-32: no printed pair has `count==32`, and no `count>=18` line was dropped. The halfword 32 was not this `sh`. Stop.
 
-Rebuild only `funcs_24.c` via the apply script and cmake. Do not run `N64Recomp`. Full regeneration is still unsafe.
+Positive control, same run: the `count==16` `base==0x8018D4A0` pair before `[s4540-call] kind=arm` with that same base and count; the bad call triple (s4540 bad, entry bad, `[s4534-jal] kind=bad site=800903F0` with s1 `0x801724C0` and raw34 `0x6C617465`). A VI-640 death whose stack is `fillSampleStreamRange` is not this edge; retry the same binary once. A second such death is not a result. A `NAN_CHECK` in `advanceVolumeFadeEnvelope` before the bad jal is not a result; retry once.
+
+Rebuild `funcs_23.c` via the apply script and cmake. `funcs_24.c` is already instrumented; do not regenerate it. Do not run `N64Recomp`. Full regeneration is still unsafe.
 
 ```
-python3 tools/apply_s4541_mix_index.py
+python3 tools/apply_s4542_alloc_pair.py
 env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --target RogueSquadron64Recomp
-# confirm the new binary contains s4540-call and the new field name; if not, do not run
+# confirm the new binary contains s4542-alloc and s4540-call; if not, do not run
 stamp=$(date +%Y%m%d-%H%M%S)
-out="$(pwd)/scratch/s4541_mix_index_${stamp}"
+out="$(pwd)/scratch/s4542_alloc_pair_${stamp}"
 mkdir -p "$out"
 cd build
 env \
@@ -56,7 +57,7 @@ Pass `probe.sh` an absolute `$out`. Run one game. SIGKILL if the probe wrapper d
 
 Outcomes:
 
-- Controls hold and the bad line is H-index-30: selects H-index-30. Quote `s0`, `base`, `count`. Stop. Do not add a probe.
-- Controls hold and the bad line is H-other-base: selects H-other-base. Quote `s0`, `base`, `count`, `sum`. Stop. Do not add a probe.
-- Bad line `sum!=a0`: selects H-formula-wrong. Quote the four numbers. Stop.
-- No bad call, or arm `sum!=a0`, or no in-range line before the bad call: not a result. Do not change the formula in that same run.
+- Controls hold and a pair is H-paired-32: selects H-paired-32. Quote `count` and `base`. Stop.
+- Controls hold and the pairs are H-unpaired: selects H-unpaired. Quote both pairs. Stop.
+- Controls hold and no pair has count 32: selects H-no-32. Quote the last pair whose base is `0x801714D0`. Stop.
+- No control pair before the arm, or no bad call: not a result. Do not move the print.
