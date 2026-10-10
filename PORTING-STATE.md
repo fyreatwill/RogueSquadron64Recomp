@@ -152281,3 +152281,12 @@ the ladder. Route 3 (re-scope): NEXT.md now targets hangar-artifact triage
 (port vs oracle, phase-gated on VI 512, positive control on title VI 1024).
 BLOCKED.md removed; details in scratch/agent/UNBLOCK.md. No game run, no code
 change. ORIGIN: n/a (no mitigation added).
+
+## Session 4505 (2026-10-09) — hangar artifact triage: port hangar frames captured; first frame is a nearly-complete scene
+
+HYPOTHESIS-ID: hangar-artifact-triage. Hypotheses: H1 RDP/texture-format (colour), H2 wrong geometry data, H3 LLE ucode divergence. Discriminator planned: port frame vs retail frame at VI 512, phase-gated.
+
+Ran scratch/agent/s4505_port_hangar.sh (probe.sh, PROBE_PHASE_WIDTH=512, eleven-Start route, spin-yield + LLE ungated/solo). Phase 512 reached at 25.0 s; 9 frames captured in scratch/agent/s4505_port_hangar/ before a native crash (pc in a host-symbol range, last guest pc 0x80001b08; known crash families, not chased). Observations (single run, single-source, visual): frame 1 (phase entry) shows the full hangar — walls, ring, console, holo-spires — recognisable and largely correct; visible defects are a rainbow colour band along the rim edge, solid-blue holo spikes, and a few stray pixels at the right edge. Frame 5 (9 s later, after more Start presses) is black with coloured garbage only at the right edge x~1278. So the "hangar geometry/colour artifacts" are localized defects on an otherwise correct scene, which weakens H2 as a whole-scene cause; H1 (colour/texture-format on specific materials) and edge-column garbage (framebuffer width/stride, VI 512 vs fb pitch) remain candidates.
+NOT done: retail comparison. Oracle (Rice) cannot answer pixel questions per tools/oracle/README; no screenshot command exists in rs64_oracle. No positive control for the title VI 1024 frame was run, so nothing here is a null.
+Rules out: "hangar is wholly broken/black at entry". Does not rule out H1/H3. ORIGIN: n/a (no mitigation, no code change).
+Next: add framebuffer dump (RDRAM at VI origin 0x6AB400, 512x? 16bpp) to the oracle at the hangar VI plus an equivalent port dump, compare offline pixel-wise, with title 1024 as control.
