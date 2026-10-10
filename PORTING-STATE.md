@@ -151798,3 +151798,51 @@ Next site is `freeAllObjectContextPoolNodes` at `0x800EC538` (entry
 `0x800EC514`). The delay `sw $v0, -0x3F30($s0)` does not write `$a0`. The jal
 at `0x800EC564` is a separate site. Evidence:
 `docs/M3-S4492-UNLINK-CHILD-NPC-RS-FREE-AUDIT.md`.
+
+## Session 4493 (2026-10-09) — audited freeAllObjectContextPoolNodes partial-list rs_free
+
+Static census of the first `jal rs_free` in `freeAllObjectContextPoolNodes`
+at `0x800EC538` (entry `0x800EC514`). ROM and `funcs_40.c` agree. No build
+and no runtime run. The queued soak tail did not add a result: s4467, s4468,
+s4450, and s4452 are already in CURRENT-TRUTH, and the s4365 soak repeats
+the instrument-boundary non-selection already recorded in session 4365 and
+superseded by session 4366.
+
+Positive control: the same scan still finds `jal 0x80001C98` at closed
+`0x800EC404` (`funcs_40.c`), closed `0x800C1084` (`funcs_33.c`), and closed
+`0x8007BE50` (`funcs_19.c`). The ROM word at those PCs and at `0x800EC538`
+is `0x0C000726`.
+
+`$a0` is loaded from the partial-list head `0x8010C0D0`. The incoming
+argument is not read. An empty head branches to `0x800EC54C` and does not
+reach the jal. The only instruction between the load and the jal reads
+`+0xC`. The delay `sw $v0, -0x3F30($s0)` publishes that next pointer as the
+new head and does not write `$a0`. `rs_free` saves and restores `$s0` and
+does not jal itself, so the loop base stays `0x80110000`.
+
+Every non-zero store of the head is an `rs_malloc(0x6C0, 1)` user pointer
+or that slab's `+0xC` link. The stores are `0x800EC148` (the malloc return),
+`0x800EC314` and `0x800EC400` (next, while unlinking), `0x800EC4C0` and
+`0x800EC4C4` (the slab pushed back from the full list), and this walk's own
+delay. Zero stores at `0x800EC4E8` and `0x800EC4F4` do not reach the jal.
+`rs_malloc` returns either 0 or `a1+0x10`. A slab is spliced off one list
+before it is pushed onto the other, so this jal and the full-list jal at
+`0x800EC564` do not free the same node. The emptying free at `0x800EC404`
+unlinks the slab before `rs_free`, so this walk does not free it again.
+One walk frees each still-linked node once.
+
+The only caller is `endMissionCleanup` at `0x800FBAD4` (delay `nop`), from
+`mainGameLoop` at `0x8003E2C4` and `0x8003E388`. No `j`, raw word, or
+`lui`/`addiu` materializes `0x800EC514`. `resetObjectPoolListHead` writes
+`0x8010C0C0`, not this head.
+
+This selects H-NextClassComplete. That refutes H-NextClassGap.
+H-NextClassUnevaluable is not selected: one allocator return, freed once
+per still-linked node, and the entry is not indirect. No guard was added.
+ORIGIN: `allocObjectPoolNode` and the list splice in
+`unlinkAndFreeChildNpcNode` write the `rs_malloc(0x6C0, 1)` user pointer;
+that value is the legitimate slab base.
+
+Next site is the full-list jal at `0x800EC564` in the same function. The
+delay `sw $v0, -0x3F2C($s0)` does not write `$a0`. Evidence:
+`docs/M3-S4493-FREE-ALL-OBJECT-POOL-RS-FREE-AUDIT.md`.
