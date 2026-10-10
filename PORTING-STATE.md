@@ -152421,3 +152421,12 @@ Rules out: sse2neon VU translation bugs for the 115 tested combos; raster/VI (al
 - Residual: scratch/agent/s4519_residual.py dumps the 3 differing tris of port frame 910 (indices 1244-1246 of 1249). They differ in edge/slope/depth words as well as shade (19-24 words each), so they are different triangles at the frame tail (scene-timing/animation order, the s4516 H1a effect), not a shade-rounding or load-sign defect. Single-source (one aligned frame); frame 911 (587 tris differ) is a later scene phase vs retail frame 1, same timing caveat.
 - Guard re-evaluation (item c) not done; deferred.
 ORIGIN: n/a, no mitigation added; the writer of the defect (signed DMEM byte read) was fixed in s4518.
+
+## Session 4520 (2026-10-10) — white pillar stubs are in the retail RDP stream too (aligned frame: 1246/1249 tris byte-identical); not an RSP defect
+- HYPOTHESIS-ID: hangar-artifact-triage. Discriminator for the white pillar stubs: RSP output (shade words differ from retail) vs downstream (raster/combiner/renderer). Re-ran s4518_shade_cmp.py on s4518_port_rdp (post-fix capture): port frame 910 vs retail frame 0, 1249 tris each, 1246 byte-identical across ALL words (edge, shade, texture, z); the 3 differing tris are indices 1244-1246 (op 0x0D, the animated tail; edge/slope words differ too, so scene timing, s4519). scratch/agent/s4520_stubs.py.
+- Result: the stubs' triangles are among the identical 1246, so the port's RSP feeds the RDP exactly what retail's RSP does for them. Remaining cause is downstream of the RDP command stream: RT64 combiner/texture/blend handling or the stubs are genuine retail appearance (no retail frame image exists - s4506 Rice fb arm invalid). Selects H3a-renderer for stubs; not RSP.
+- Right-edge strip: setcimg/VI state words identical to retail (s4517), so the strip is not a stream difference; renderer/scaler-side (single-source, not drilled further).
+- Frame 911 vs retail 1 shows 587 differing tris, but word histogram is dominated by shade words 8-15/20-23 with small deltas (e.g. 0x25b429ac vs 0x25b425b4, an animating lighting term, not 0xFFxx sign extension); unaligned animation frames, not a regression (no cross-run A/B on animating scenes).
+- Guard re-evaluation: grep of tools/ and src/ for wild-colour/shade guards found none; nothing to remove.
+- Single-source caveat: one port run, one retail run.
+ORIGIN: n/a, no mitigation added; diagnostic script only.
