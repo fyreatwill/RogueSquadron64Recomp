@@ -1,5 +1,5 @@
-# NEXT: what Start-in-hangar changes so the odd-DMA node field reads ASCII 0x6C637265
+# NEXT: name the writer of ASCII cart word 0x6C637265 in the odd-DMA node
 HYPOTHESIS-ID: m5-audio-destub
-Established (s4566, single run per arm): arm A (mash) reaches the hangar, then odd DMA phys=0x1C637265 (guest 0x6C637265) ram=0x8019CF90 len=0x300; arm B (mash stops at first 512) sits in the hangar with 0 crashes and 0 odd DMAs.
-Hypotheses: H-string-node (mission-load code reads a node whose cart field is a name string), H-heap-clobber (audio/heap corruption family), H-retail-same (retail issues it too; needs oracle).
-Discriminator: first fix the s4298 scan in lib/N64ModernRuntime/librecomp/src/pi.cpp to compare the GUEST word 0x6C637265 (it compares the physical word, so it always reports hits=0), then rerun with a single Start press vs mash and name the node and its writer. A lib edit needs submodule-patches/export.sh and a commit in the same session.
+Established (s4567): odd DMA node is {len=0x300, cart=0x6C637265, ram=0x8019C990}, 3 RDRAM copies (0x1120B0, 0x179A64, 0x17DBC8; last followed by ASCII 'late'). Single Start reaches hangar clean; mash triggers it.
+Hypotheses: H-string-node (lookup returns text bytes), H-heap-clobber, H-retail-same.
+Discriminator: rerun scratch/agent/s4567_guestscan.sh arm A with a write watch on 0x17DBC8/0x179A64 (pc attribution of first write of 0x6C637265), plus 'Start only inside hangar' arm to split mash count.
