@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4482 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4483 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,14 +246,22 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4483 closed `downscaleImageHalfResBoxFilter`'s `jal rs_free`.
+`$s5` at `0x8007A814` is the `rs_malloc(width * height * 3, 0)` temp,
+freed once. No guard. The only `$s5` assignment before the free is
+`addu $s5, $v0` at `0x8007A320`. The prologue `sw $s5` saves the
+incoming register. `zmemcpy` and `sampleRgbBoxFilter2x2AtSubpixel`
+are leaves and do not free it. The pointer is never stored. The
+next site is `npcShieldUpdate` at `0x8007B23C` (`lw $a0, 0x38($s3)`;
+delay `nop`). See the audit doc.
+
 Session 4482 closed `initWaterSprayParticles`'s `jal rs_free`.
 `$s3` at `0x80072E40` is the `load_asset` / `rs_malloc` return of
 `gnrc_stuff/wtrspray_ANM`, freed once. No guard. The only `$s3`
 assignment before the free is `addu $s3, $v0` at `0x80072DD4`.
 The prologue `sw $s3` saves the incoming register, not this
 pointer. No callee in the relocate/register tree frees it or
-returns with `$s3` changed. The next site is
-`downscaleImageHalfResBoxFilter` at `0x8007A814` (`$a0 = $s5`).
+returns with `$s3` changed. That next site was closed in s4483.
 See the audit doc.
 
 Session 4481 closed `walkDatTreeAndCollectSubtypes`'s `jal rs_free`.
@@ -321,7 +329,23 @@ and does not reach the free.
 
 ## Next steps
 
-- **s4482 (newest):** `initWaterSprayParticles` `jal rs_free` at
+- **s4483 (newest):** `downscaleImageHalfResBoxFilter` `jal rs_free`
+  at `0x8007A814` frees `$s5`, the `rs_malloc` temp of
+  `width * height * 3` bytes (flags 0), once. H-NextClassComplete.
+  No guard. The only `$s5` write before the free is `addu $s5, $v0`
+  at `0x8007A320`. `sw $s5, 0x44($sp)` at `0x8007A274` saves the
+  incoming register. The delay slot `sb $v1, 1($v0)` writes a
+  filtered byte through `$s2` and does not replace `$a0`. The free
+  is unreachable if that assignment is removed. `zmemcpy` and
+  `sampleRgbBoxFilter2x2AtSubpixel` are leaves with no `jal rs_free`
+  and no `$s5` write. The temp is never stored. Two direct callers,
+  both `load_hmt_and_hob`, pass the same interior image record, not
+  this temp. ROM disassembly and the generated listing agree. Next:
+  `npcShieldUpdate` `0x8007B23C` (`lw $a0, 0x38($s3)` at `0x8007B238`;
+  delay `nop`; `$s3` becomes an `rs_malloc` return at `0x8007AF70`;
+  no `sw` immediate `0x38` before the free). See
+  `docs/M3-S4483-DOWNSCALE-IMAGE-HALF-RES-BOX-FILTER-RS-FREE-AUDIT.md`.
+- **s4482:** `initWaterSprayParticles` `jal rs_free` at
   `0x80072E40` frees `$s3`, the `load_asset` / `rs_malloc` return
   of `gnrc_stuff/wtrspray_ANM`, once. H-NextClassComplete. No
   guard. The only `$s3` write before the free is `addu $s3, $v0`
@@ -332,11 +356,8 @@ and does not reach the free.
   contains `jal rs_free` or returns with `$s3` changed. One
   direct caller, `initWaterSprayEffectAndSfx`; no indirect call.
   ROM disassembly and the generated listing agree. `funcs_18.c`
-  has no unclassified `jal rs_free` left. Next:
-  `downscaleImageHalfResBoxFilter` `0x8007A814` (`addu $a0, $s5`
-  at `0x8007A7F8`; delay `sb $v1, 1($v0)` does not write `$a0`;
-  the only earlier `$s5` write is `addu $s5, $v0` at `0x8007A320`
-  after `jal rs_malloc`). See
+  has no unclassified `jal rs_free` left. That next site was
+  closed in s4483. See
   `docs/M3-S4482-INIT-WATER-SPRAY-PARTICLES-RS-FREE-AUDIT.md`.
 - **s4481:** `walkDatTreeAndCollectSubtypes` `jal rs_free`
   at `0x80072B8C` frees the word at `8($s0)`, the
@@ -505,7 +526,8 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4482 (newest):** initWaterSprayParticles rs_free class closed (H-NextClassComplete). Next: downscaleImageHalfResBoxFilter 0x8007A814.
+- **s4483 (newest):** downscaleImageHalfResBoxFilter rs_free class closed (H-NextClassComplete). Next: npcShieldUpdate 0x8007B23C.
+- **s4482:** initWaterSprayParticles rs_free class closed (H-NextClassComplete).
 - **s4481:** walkDatTreeAndCollectSubtypes rs_free class closed (H-NextClassComplete).
 - **s4480:** saveServiceWorker rs_free class closed (H-NextClassComplete).
 - **s4479:** runIdleFramesAndLoadSaveData rs_free class closed (H-NextClassComplete).

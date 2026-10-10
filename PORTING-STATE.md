@@ -151283,3 +151283,57 @@ stays unproven. No guard was added. `funcs_18.c` has no unclassified
 `docs/M3-S4482-INIT-WATER-SPRAY-PARTICLES-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4483 (2026-10-09) — audited downscaleImageHalfResBoxFilter rs_free of the half-res temp
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded.
+No game run.
+
+Positive control: the `jal 0x80001C98` comment scan still finds this
+site in `funcs_19.c` (and the later sites `0x8007B23C`, `0x8007BE50`),
+still finds closed `0x80072B8C` and `0x80072E40` in `funcs_18.c`, and
+still finds `0x8006DA28` and `0x8006F378` in `funcs_17.c`. The ROM word
+`0x0C000726` matches `0x80072E40`, `0x80072B8C`, `0x8006F378`, and
+`0x8007A814`.
+
+`downscaleImageHalfResBoxFilter` (`0x8007A260`) has one `jal rs_free`,
+at `0x8007A814`. ROM and the generated listing agree: `$a0` is `$s5`
+(`addu $a0, $s5` at `0x8007A7F8`). The delay slot `sb $v1, 1($v0)`
+stores a filtered byte through `$s2+$s0` and does not write `$a0`.
+The only `$s5` assignment before the free is `addu $s5, $v0` at
+`0x8007A320`, after `jal rs_malloc`. `sw $s5, 0x44($sp)` at
+`0x8007A274` saves the incoming register. `lw $s5, 0x44($sp)` at
+`0x8007A840` restores it after the free. The malloc pointer is never
+stored. Dropping `0x8007A320` from the CFG makes the free unreachable;
+its only predecessor is `0x8007A810`.
+
+The malloc size is `width * height * 3`. Width and height are the
+sign-extended halfwords at `0x28` and `0x2A` of the caller's image
+record. Flags are 0 (`addu $a1, $zero` at `0x8007A2F4`; the delay
+slot copies `$s0` into `$a0`). `$s2` is the original pixel pointer
+and is the in-place output, not this free. Three branches before the
+malloc return without reaching `rs_free` (both dimensions `< 3`,
+format nibble not 3, or format bit `0x8000`).
+
+`zmemcpy` and `sampleRgbBoxFilter2x2AtSubpixel` are leaves. Neither
+writes `$s5` or contains `jal rs_free`. The sampler is passed the
+temp in `$a1` and writes samples to a stack record. `rs_malloc` does
+not write `$s5` and returns before the assignment.
+
+Two direct callers, both in `load_hmt_and_hob` (`0x800566A4` and
+`0x800566B4`). Both pass `$s0 = $s6+4`, an interior image record
+(`$s6 = $s3 + lw 4($s3)`, `$s3` the HMT allocation), not this temp.
+The second call passes that same record again when bit 2 of `$s4`
+is set. Each entry frees only the temp it just allocated. The ROM
+has those two jal encodings, no pointer word, and no `lui`/`addiu`
+materialization. `rs_free` skips `$a0 == 0` (`beq` at `0x80001CA4`).
+A NULL malloc is the same unproven allocator-failure edge as
+s3604–s4482, not a second pointer. `zmemcpy` uses `$a0` first.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy
+stays unproven. No guard was added. Next site is `npcShieldUpdate`
+`0x8007B23C` (`$a0 = lw 0x38($s3)`; delay `nop`). Evidence:
+`docs/M3-S4483-DOWNSCALE-IMAGE-HALF-RES-BOX-FILTER-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
