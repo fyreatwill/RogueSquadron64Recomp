@@ -1,7 +1,7 @@
-# NEXT: why does musyxSynthFrame still walk stream nodes after audio teardown?
+# NEXT: where does the post-free 128-record array sit relative to the node array, retail vs port?
 
 HYPOTHESIS-ID: musyx-stale-stream-node-after-teardown
 
-Evidence: s4522 4/4 arms hit the do_rom_read odd-address assertion ~122 s after VI 1024 (RSP fix irrelevant). s4299: node block (~0x17D000..0x17E200) freed by audio teardown, reallocated to loadLevelTextureCache, synth frame still walks it.
-Hypotheses: (A) teardown never unlinks nodes from the synth-frame list because an audio stub/gate skips the unlink (M5 de-stub target); (B) retail walks the same list but its allocator does not reuse the block in that window; (C) a gated path resets the list head.
-Work unit: grep-enumerate writers/readers of the stream-node list head used by musyxSynthFrame and the teardown function that frees the block (free site from s4299); list every stub/gate on that path in docs/M5-AUDIO-PLAN.md. A gate skipping an unlink => A; no gate => B/C, then oracle-watch the list head in retail.
+Context: docs/M5-STREAM-NODE-LIFETIME.md (s4524). Hypotheses A/B refuted; D open: retail overlays the freed block too but its synth rebuilds nodes (0x8008FBB4) each frame.
+Work unit (one oracle run + one port run, both phase-gated to hangar VI 512 / post-free): record the first physical address written by retail PCs 0x8001FAE4/0x8001FAEC (the 128-record init; reuse the s4317 Rice + --vi-trace recipe, whole-RDRAM control first) and the port's loadLevelTextureCache array base (rs_malloc log, ptr/size) and the node array base 0x17DBE0.
+Outcomes: retail array disjoint from live nodes => port heap layout differs (chase earlier rs_malloc history). Retail array overlaps node romA/romB => port fails to run the 0x8008FBB4 rebuild (compare caller of that PC in port).

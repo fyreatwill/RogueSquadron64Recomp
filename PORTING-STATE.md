@@ -152448,3 +152448,9 @@ Work unit from NEXT.md (rsp-fix-dissolves-crash-families): wrote scratch/agent/s
 - Reading: this is the already-named s4297-s4299 family (musyxSynthFrame DMA batch walking freed stream nodes now overwritten by the level texture cache). Different from s4452's fillSampleStreamRange bus error and from +5436/+9632. The 4/4 identical signature is the same-run control. Hypothesis A (RSP fix dissolves crash families) is refuted for this family at n=4, single recipe; other families are masked because this one fires first at ~122 s.
 - Rules out: the RSP sign-idiom fix as a cure for the audio stale-node DMA. Does not rule out it helping fillSampleStreamRange (not reproduced in 4 arms).
 - ORIGIN: n/a, no mitigation added. Next: M5 teardown angle (why the synth frame keeps freed nodes); see NEXT.md.
+
+## Session 4524 (2026-10-10) — NEXT.md audio-gate question answered from existing evidence; new docs/M5-STREAM-NODE-LIFETIME.md
+
+HYPOTHESIS-ID: musyx-stale-stream-node-after-teardown
+
+Ran no game. Re-read s4298-s4317 and the s4303 retail oracle writer-PC list. The question (does a stub/gate skip the unlink) was already answered: s4301 shows waitForAnyAudioSlot has no unlink to skip; s4302/s4303 show retail does the identical free and keeps running the synth (2,820 calls; retail writers include a 128-record initialiser and the synth node rebuild 0x8008FBB4 n=12415). A and B refuted, C no evidence, D (post-free layout/order differs, s4306/s4317) open and single-source. Consolidated in docs/M5-STREAM-NODE-LIFETIME.md. Synthesis only, no measurement, no code change. ORIGIN: none.
