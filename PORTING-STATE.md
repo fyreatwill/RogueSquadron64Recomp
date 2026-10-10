@@ -151930,3 +151930,65 @@ copy. The next work unit was not run.
 
 ORIGIN: documentation-only compaction; no runtime value was skipped,
 rewritten, or guarded.
+
+
+## Session 4496 (2026-10-09) — audited preloadSceneReferencedSongs rs_free of the index buffer
+
+Static census of the first `jal rs_free` in `preloadSceneReferencedSongs`
+at `0x800EED48` (entry `0x800EEA54`). ROM and `funcs_40.c` agree. No build
+and no runtime run. The soak tail has no verdict newer than s4468, and
+those lines are already in CURRENT-TRUTH (s4467 never launched the game;
+s4468 did not recur the allocator overlap).
+
+Positive control: the same scan still finds `jal 0x80001C98` at closed
+`0x800EC564` and closed `0x800EC538` (`funcs_40.c`), closed `0x800C1084`
+(`funcs_33.c`), and closed `0x8007BE50` (`funcs_19.c`). The ROM word at
+those PCs and at `0x800EED48` is `0x0C000726`.
+
+The delay `addu $a0, $s2, $zero` is the argument. The only `$s2` register
+write before it is `addu $s2, $v0` at `0x800EEC08`, after `jal rs_malloc`
+at `0x800EEBF8` with flags 0 and size `(marks + 1) << 3` (at least 16).
+Nothing writes `$v0` between the return and that copy. A walk from the
+entry reaches this jal only after that assignment. `blez $a0, 0x800EED50`
+at `0x800EEBEC` skips the allocation and this jal. The jal is not in a
+cycle.
+
+`rs_malloc` returns 0 or `block + 0x10` through `addu $v0, $s2` at
+`0x80001C74`. The size-0 exit is not this call. Flags bits `0x4` and
+`0x10` are clear. A zero return faults at the unconditional `sh` at
+`0x800EEC10` and does not reach the jal. `rs_free` also skips a zero
+argument (`beqz $s0, 0x80001F78`). The completed value is the user
+pointer from this call.
+
+`$s2` is not stored after the copy. The prologue `sw $s2` saves the
+incoming register only. `parseLoadedSndSection` and `loadSongAssetByName`
+are not passed the pointer. The first does not use `$s2`. `parseSndFiles`
+saves `$s2` at `0x80097548` and restores it at `0x800978D4` before its
+only return. `loadSongAssetByName` saves it at `0x800665A0` and restores
+it at `0x800666C8` on its only return join. None of those functions, and
+none of their direct callees, contains `jal rs_free`. `relocateSndPointer`'s
+`jalr $v0` calls the word at `0x801499E0` with a sound pointer, not this
+buffer, and `$s2` is restored after it returns. `rs_free`'s own jals are
+`osRecvMesg` and `osSendMesg`; neither jals `rs_free`.
+
+The other free passes `$s3`, the still-live return of the earlier
+`rs_malloc`. No jal sits between that copy and this allocation, so the
+two non-zero returns are different blocks. This jal frees the second
+once.
+
+The only caller is `preloadSceneSongsWrapper` at `0x800EFB9C` (delay
+`nop`), from `initMission` at `0x800FA5E4` (delay `nop`, not in a back
+edge). No `j`, no raw word `0x800EEA54`, and the only `addiu`/`ori` of
+immediate `0xEA54` is an `ori` at ROM `0xA575F0`, outside the mission,
+menu, and cinematic images.
+
+This selects H-NextClassComplete. That refutes H-NextClassGap.
+H-NextClassUnevaluable is not selected: one allocator return, freed once,
+and the entry is not indirect. No guard was added.
+ORIGIN: `preloadSceneReferencedSongs` writes `$s2` from the `rs_malloc`
+return at `0x800EEC08`; that value is the legitimate user pointer for
+the index buffer.
+
+Next site is the second jal at `0x800EED50`. The delay `addu $a0, $s3,
+$zero` writes `$a0`. Evidence:
+`docs/M3-S4496-PRELOAD-SCENE-REFERENCED-SONGS-RS-FREE-AUDIT.md`.

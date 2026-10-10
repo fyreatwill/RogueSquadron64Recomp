@@ -3,15 +3,14 @@
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md).
 Do not read the ledger whole. Material moved out of this file in the
 s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
-(s4352 snapshot) and §58 (s4413–s4494). Older narrative is in
+(s4352 snapshot) and §58 (s4413–s4496). Older narrative is in
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4495 (2026-10-09). Session 4495 is a maintenance
-pass: the previous file was 814 lines and 60,613 bytes. No experiment
-was run. Closed next-step items were removed. The backlog below is one
-sequence. Item 2 is the sweep-revisit target the iteration contract
-calls "Next steps #2".
+Updated for session 4496 (2026-10-09). Session 4495 was the
+maintenance pass that left this file at one backlog sequence. Item 2
+is the sweep-revisit target the iteration contract calls "Next steps
+#2".
 
 ## Current state
 
@@ -38,22 +37,20 @@ unless that failure is explicitly repaired.
 ## Active frontier
 
 The live work is the M3 `jal rs_free` idiom-class audit
-(`HYPOTHESIS-ID: m3-idiom-class-audit`). Last closed site is s4494:
-`freeAllObjectContextPoolNodes` at `0x800EC564` frees the full-list head
-`0x8010C0D4`, one `rs_malloc(0x6C0, 1)` user pointer or that slab's
-`+0xC` link, once. No guard. The partial-list jal at `0x800EC538` was
-closed in s4493. The chain from `loadCraftShadowTextures`
-(`0x8006B814`, s4477) through s4494 is Complete. The index is
-PROJECT-OVERVIEW §58. The notes are `docs/M3-S4477-*.md` through
-`docs/M3-S4494-*.md`.
+(`HYPOTHESIS-ID: m3-idiom-class-audit`). Last closed site is s4496:
+`preloadSceneReferencedSongs` at `0x800EED48` frees the index buffer
+from `rs_malloc((marks + 1) << 3, 0)`, once. A zero return faults at
+the following store and does not reach the jal. No guard. The chain
+from `loadCraftShadowTextures` (`0x8006B814`, s4477) through s4496 is
+Complete. The index is PROJECT-OVERVIEW §58. The notes are
+`docs/M3-S4477-*.md` through `docs/M3-S4496-*.md`.
 
-Next site, and the only one to classify next:
-`preloadSceneReferencedSongs` (entry `0x800EEA54`) `jal rs_free` at
-`0x800EED48`. The delay `addu $a0, $s2, $zero` writes `$a0`. Do not
-classify the second jal at `0x800EED50` in the same unit. No runtime
-run unless a concrete invalid writer is named and a guard is the
-selected fix. A guard still needs an `ORIGIN:` line. No path, or one
-allocator return freed once, is Complete.
+Next site, and the only one to classify next: the second
+`jal rs_free` in that function, at `0x800EED50`. The delay
+`addu $a0, $s3, $zero` writes `$a0`. Do not reclassify `0x800EED48`.
+No runtime run unless a concrete invalid writer is named and a guard
+is the selected fix. A guard still needs an `ORIGIN:` line. No path,
+or one allocator return freed once, is Complete.
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -108,7 +105,7 @@ are in PROJECT-OVERVIEW §58.
 
 - s4476 "M3 has no unaudited `jal rs_free` class" was believable because
   the s397 frequency scan looked exhausted. It never covered `funcs_16.c`
-  upward. The frontier is `0x800EED48`. Do not stop while unaudited
+  upward. The frontier is now `0x800EED50`. Do not stop while unaudited
   sites remain.
 - s4414/s4416/s4417 "port enters `0x80029E78`, retail enters
   `0x80029E80`" was believable because both witnesses were guest PCs.
@@ -132,13 +129,12 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **M3 `jal rs_free` at `0x800EED48`** in `preloadSceneReferencedSongs`
+1. **M3 `jal rs_free` at `0x800EED50`** in `preloadSceneReferencedSongs`
    (entry `0x800EEA54`). Slug `m3-idiom-class-audit`. Classify only this
-   jal. The delay writes `$a0`. The second jal at `0x800EED50` is a
-   later site. Hypotheses and the scan control are in
+   jal. The delay writes `$a0` from `$s3`. The jal at `0x800EED48` was
+   closed in s4496. Hypotheses and the scan control are in
    `scratch/agent/NEXT.md`. The classifying session writes
-   `docs/M3-S4496-PRELOAD-SCENE-REFERENCED-SONGS-RS-FREE-AUDIT.md`.
-   This pass did not classify the site.
+   `docs/M3-S4497-PRELOAD-SCENE-REFERENCED-SONGS-MARK-ARRAY-RS-FREE-AUDIT.md`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
