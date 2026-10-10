@@ -210,3 +210,4 @@ whether the value is legitimate.
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md),
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57 and §58, and
 [PORTING-STATE.md](../PORTING-STATE.md).
+- **s4556 (2 arms, control present, crash not reproduced under heap logging): rs_malloc 0x801793F0 and 0x80179480 (covering audio node 0x80179510) are returned INSIDE the never-freed 120 KB block 0x801767E0. Writer of the nested free-list state unnamed (single-source: allocator log only).**
