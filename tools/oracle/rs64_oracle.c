@@ -1580,6 +1580,27 @@ static void dump_pc_task(uint32_t pc)
            row->output_buff_size, row->yield_data_ptr,
            row->yield_data_size, row->data_ptr_plus_100, row->field_phys);
     fflush(stdout);
+    {
+        /* s4508: raw DL bytes at data_ptr, first 3 tasks per VI width */
+        const char *dir = getenv("RS64_GFX_DL_DUMP_DIR");
+        static uint32_t seen_w[8]; static int seen_n[8]; static int nw;
+        int k, idx = -1;
+        if (dir && row->type == 1) {
+            for (k = 0; k < nw; k++) if (seen_w[k] == width) idx = k;
+            if (idx < 0 && nw < 8) { idx = nw++; seen_w[idx] = width; }
+            if (idx >= 0 && seen_n[idx] < 3) {
+                char path[512]; FILE *f; uint32_t b = row->data_ptr & 0x1FFFFFFFu, i;
+                snprintf(path, sizeof path, "%s/oracle_w%u_%d.bin", dir, width, seen_n[idx]++);
+                f = fopen(path, "wb");
+                if (f && b < RDRAM_SIZE && b + 0x4000u <= RDRAM_SIZE) {
+                    for (i = 0; i < 0x4000u; i++) fputc(debug_mem_u8(b + i), f);
+                }
+                if (f) fclose(f);
+                printf("[dl-dump] %s base=0x%06x\n", path, b);
+                fflush(stdout);
+            }
+        }
+    }
 }
 
 static void dump_pc_range_task(uint32_t pc)

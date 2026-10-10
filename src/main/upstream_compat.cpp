@@ -2550,6 +2550,32 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
             fflush(stderr);
         }
     }
+    {
+        // s4508: raw DL bytes at data_ptr, first 3 GFX tasks per VI width.
+        static const char* dir = std::getenv("RS64_GFX_DL_DUMP_DIR");
+        OSTask* task = TO_PTR(OSTask, ctx->r4);
+        uint32_t dp = (uint32_t)task->t.data_ptr;
+        if (dir && *dir && task->t.type == M_GFXTASK && dp >= 0x80000000u &&
+            dp + 0x4000u <= 0x80800000u) {
+            static uint32_t seen_w[8];
+            static int seen_n[8];
+            static int nw = 0;
+            const uint32_t width = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
+            int idx = -1;
+            for (int k = 0; k < nw; k++) if (seen_w[k] == width) idx = k;
+            if (idx < 0 && nw < 8) { idx = nw++; seen_w[idx] = width; }
+            if (idx >= 0 && seen_n[idx] < 3) {
+                char path[512];
+                std::snprintf(path, sizeof path, "%s/port_w%u_%d.bin", dir, width, seen_n[idx]++);
+                if (FILE* f = std::fopen(path, "wb")) {
+                    uint32_t off = dp - 0x80000000u;
+                    for (uint32_t i = 0; i < 0x4000u; ++i) std::fputc(rdram[(off + i) ^ 3], f);
+                    std::fclose(f);
+                }
+                std::fprintf(stderr, "[dl-dump] %s data_ptr=0x%08X\n", path, dp);
+            }
+        }
+    }
     ultramodern::submit_rsp_task(rdram, ctx->r4);
 }
 
