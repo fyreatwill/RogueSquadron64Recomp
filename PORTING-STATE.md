@@ -152889,3 +152889,11 @@ The lattice store (count 17, base `0x801714D0`) is the second call. The third ca
 Do not move the print. The next run is the same binary, judged only if the bad triple is back. A `fillSampleStreamRange` death before that triple is still not a result.
 
 ORIGIN: not a mitigation. No skip was added. The pre-title count 17 is a real store of the lattice base and is then overwritten by the arm store. Whether count 32 is later paired with `0x801714D0` is not yet measured.
+
+## Session 4543 (2026-10-10) — VI-640 bus error is baseline, not caused by the alloc-pair print
+
+Ran the s4542 binary once with the recipe (`scratch/agent/s4543_run.sh`, log `scratch/s4543_alloc_pair_20261010-074719/run.log`): print control fired (n=1 count=20, n=2 count=17 base 0x801714D0, n=3 count=16 base 0x8018D4A0, then the s4540 arm line and s4534 arm jal), then signal 10 (si_addr 0x380000000) before VI 1024 and before the bad jal. That is the 3rd consecutive run (s4542 x2 + this) dying on the parked `fillSampleStreamRange` bus error. Same-session control with `ROGUESQ_LOG_S4539` unset (`scratch/agent/s4543_noprint.sh`, `scratch/s4543_noprint_*`): the print is absent (0 `s4542-alloc` lines) and the run still dies the same way. So the print does not perturb the route; the death is baseline for this binary/route today (single run each; the s4540/s4541 runs that reached the bad call predate it). Not a result for H-paired-32 / H-unpaired / H-no-32.
+
+Rule 8: third non-selecting iteration on odd-dma-alloc-pair. Table: print perturbs? NO (control above). Route reaches bad call? 0/4 recent runs. Next probe must first explain why the route stopped reaching it (what changed after s4541: only the s4542 print patch in funcs_23.c, now excluded by the control), or take the pair from a different vantage.
+
+ORIGIN: not a mitigation; no guard or skip added. The wild address 0x380000000 in `fillSampleStreamRange` has no named writer yet.

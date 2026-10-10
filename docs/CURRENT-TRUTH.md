@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4542 (s4542: the alloc-pair print's control fired, then both runs died in `fillSampleStreamRange` before VI 1024. That is not the bad-call edge. Count 32 with base `0x801714D0` is still unmeasured. See NEXT.md). Prior: session 4541 (H-index-30). Session 4495 was the
+Updated for session 4543 (s4543: a no-print control died the same way as the print runs, so the VI-640 `fillSampleStreamRange` bus error is baseline, not caused by the print; 0/4 recent runs reach the bad call, so count 32 / base `0x801714D0` is still unmeasured). Prior: session 4542 (s4542: the alloc-pair print's control fired, then both runs died in `fillSampleStreamRange` before VI 1024. That is not the bad-call edge. Count 32 with base `0x801714D0` is still unmeasured. See NEXT.md). Prior: session 4541 (H-index-30). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
