@@ -17,7 +17,7 @@ is the sweep-revisit target the iteration contract calls "Next steps
 The qualified native route boots through attribution, N64 logo, intro
 cinematic, Factor 5 logo, title VI 1024 (`0x00790400`) and hangar VI 512
 (`0x006AB400`) on the real-audio/LLE/ungated/solo/spin-yield route.
-Hangar geometry and colour artifacts remain, localized (s4505): the entry frame is a nearly complete scene with a rim colour band, blue holo spikes and right-edge column garbage; a later frame is black with right-edge garbage. `ROGUESQ_AUDIO_UCODE=0` is
+(s4514) Retail RDP stream IS obtainable: `scratch/agent/s4514_cxd4.sh` (oracle --rsp cxd4 + tools/oracle/rdplog); retail hangar VI-512 frame ~1244 tris (0x0D x275, 0x0F x969), 2 setcimg w512, ~205 KB RDP; the s4513 BLOCK was false. Hangar geometry and colour artifacts remain, localized (s4505): the entry frame is a nearly complete scene with a rim colour band, blue holo spikes and right-edge column garbage; a later frame is black with right-edge garbage. `ROGUESQ_AUDIO_UCODE=0` is
 the silent control. VI 640 is the intro, not a stuck state.
 
 Audio is no longer a zero-output stub on that route. Fresh 7F saves
