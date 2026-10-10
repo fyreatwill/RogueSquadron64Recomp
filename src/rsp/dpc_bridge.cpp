@@ -2356,7 +2356,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         // ring laps (END < seen) has its lap-1 head overwritten by lap-2 before RT64 reads it, and
         // the lap-2 bumps were dropped here => lap-1 head commands are lost / replaced. Flush the
         // pending ranges to RT64 now (submit is synchronous), then restart the ring mark.
-        static const bool s_wrap_flush = []{ const char *e = std::getenv("ROGUESQ_DPC_WRAP_FLUSH"); return e && *e && *e != '0'; }();
+        static const bool s_wrap_flush = []{ const char *e = std::getenv("ROGUESQ_DPC_WRAP_FLUSH"); return !(e && *e == '0'); }(); /* s4549: default on (=0 disables) */
         static std::atomic<uint64_t> s_wf_n{0}, s_wf_bytes{0}, s_wf_dropped{0};
         if (!(s_wrap_flush && g_defer_active)) {
             ++s_wf_dropped;
@@ -3538,7 +3538,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     if (g_defer_active) {
         g_deferred_ranges.emplace_back(submit_lo, submit_hi);
         {
-            static const bool sh = std::getenv("ROGUESQ_S4272") != nullptr;
+            static const bool sh = []{ const char *e = std::getenv("ROGUESQ_S4272"); return !(e && *e == '0'); }(); /* s4549: default on (=0 disables) */
             static const uint32_t cap = []{ const char *e = std::getenv("ROGUESQ_S4272_CAP"); return e ? (uint32_t)strtoul(e, nullptr, 0) : 0x2000u; }(); /* s4286, s4287: default 0x2000 */
             if (sh && submit_hi - submit_lo <= cap) {
                 g_s4272_sh.push_back({submit_lo, submit_hi, g_s4272_shadow.size()});

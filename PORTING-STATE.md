@@ -152956,3 +152956,21 @@ Result: default arm 3/3 reached the 180 s watchdog (vi1024 ~3100, bad=5, 0 to_ze
 Selects: H-gpu/host-writeback as the VI-640 death cause (second independent A/B, now n=3 vs n=2 on top of s4546's 3 vs 3). Not tested: whether HARD_SKIP reintroduces the thr11d post-exit fs stall (route unreachable, s4547). Caveat: the thr11d benefit of the allow is unmeasured in either direction in this build.
 
 ORIGIN: the writer of the heap wipe is the RT64 `copyNativeToRAM` writeback of the garbage SETCIMG `addr=0x130393 w=1033 siz=3` (s4531, value NOT legitimate: this game uses only 320/512/640/1024 widths). The default skip only suppresses writebacks whose range covers phys 0x1F3CC0; the writer of the garbage SETCIMG itself stays unnamed and parked.
+
+## Session 4549 (2026-10-10) — the garbage SETCIMG's writer was already named (s4283-s4287 ring-lap overwrite); the ring-lap restore is now default and removes the odd cimgs and the VI-640 failure
+
+HYPOTHESIS-ID: wild-setcimg-writeback
+
+Work unit: s4548 NEXT asked who emits SETCIMG `0x130393 w=1033`. Reading the ledger first (boring-first) showed it was answered in s4283-s4287: the DL words RT64 parses at that point are a partially overwritten ring slot (the ucode's lap-2 stores overwrite lap-1 head bytes before the CPU-side bump is submitted), and `WRAP_FLUSH` + shadow + restore-from-shadow took ODD cimgs 60 -> 0 (3/3). That fix was env opt-in only, so the s4546/s4548 routes ran without it. So the real open item was whether the opt-in fix also removes the wild writeback / VI-640 failure on the s4546 route. No new dump flag was needed.
+
+Ran `scratch/agent/s4549_ring_vs_wild.sh` twice (3 concurrent arms, autopilot phase-matched, 100 s): A allow (`HARD_SKIP=0`) no fix; B allow + fix; C default skip + fix. Round 1: A odd=60, died with the `fillSampleStreamRange` bus error (36 crash lines), vi1024=0; B and C odd=0, restore ~1.9k ranges, vi1024 reached, no crash. Round 2: A odd=31, `ALLOW_WILD_FL` logged 1, stalled at VI 640 (vi1024=0, no crash); B and C odd=0, vi1024 reached, `ALLOW_WILD_FL` 0. Controls: A's odd>0 and B/C's restore counts show the instruments live; `to_zero` watch armed in all.
+
+Change: `src/rsp/dpc_bridge.cpp` `ROGUESQ_DPC_WRAP_FLUSH` and `ROGUESQ_S4272` (shadow) now default ON (`=0` disables); the restore already defaulted on (s4287). Rebuilt; validation `scratch/agent/s4549d_defaults.sh`: A pure defaults odd=0 restore=1672 vi1024 reached; C (`HARD_SKIP=0` only) odd=0 restore=1657; B control (flush/shadow off) odd=60.
+
+Selects: H-ring-lap as the origin of the wild SETCIMG (second independent line: ALLOW_WILD_FL 0/4 with the fix vs 1/2 without; odd cimgs 0 vs 31-60). Refutes H-ucode-pointer-advance (port misparse) and H-DL-memory-corrupt-by-guest for this event. Caveats: the no-fix arm failed 2/3 here (crash, stall) and survived once (s4549d B, odd=60 still), so the VI-640 failure is not deterministic without the fix; n is small (4 fix arms, 0 failures). In round 1 arm A died with ZERO wild writebacks, so not every VI-640 death is the writeback.
+
+ORIGIN: writer of the garbage SETCIMG is the ucode's lap-2 ring stores clobbering lap-1 bytes before submit (legitimate for lap 2, stale for lap 1); the restore feeds RT64 the bump-time bytes. Default-on change is that fix, not a mask on the symptom. HARD_SKIP (s4548) stays as a belt-and-braces guard.
+
+Next: hangar-length (>=150 s) run with default flags to see whether hangar-phase odd cimgs / the fb-set growth are gone (s4287 Q1, never measured).
+
+Verdict (s4549): this selects H-ring-lap (lap-2 ring stores clobber lap-1 bytes before submit) as the origin of the wild SETCIMG and refutes H-ucode-pointer-advance and H-DL-memory-corrupt-by-guest. The change is a behaviour default flip (the two getenv lines now default ON), not an instrument. Next discriminator: hangar-length default-flags run; odd>0 in hangar resolves toward a different hangar writer, odd=0 closes the class (scratch/agent/NEXT.md).
