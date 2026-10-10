@@ -152485,3 +152485,5 @@ ORIGIN: none; instrument + measurement only, no guard added.
 - Rules out only: a stale reference from the lists or voice array in the 6.5-20 s window. Does NOT test hypotheses A/B in the late window (a null without reaching the window). Chain length was 2, not the 20-40 NEXT expected, for this phase.
 - ORIGIN: no mitigation added; the rs_malloc bus error writer question is unchanged.
 - Queued `s4527_postfix_holder_poll.sh` (s4522 post-fix replay recipe, 200 s, with the new flags) so the loop can reach a later window.
+- Verdict (s4527): refutes H-stale-reference-in-early-window (no list link, node or voice word pointed into 0x8017D000..0x80188000 at any poll from 6.5 s to the 20 s crash, with chain length 2 and voice count 16 as same-run controls); selects nothing between A, B and C because the late window was not reached.
+- Next discriminator (s4527): the queued s4527_postfix_holder_poll.sh run; NODE/LINK-IN-RANGE selects H-list-link-stale, VOICE-IN-RANGE selects H-voice-entry-stale, neither with chain length > 0 across the late window selects H-global-cached-pointer. An early death selects the rs_malloc free-list writer audit instead.
