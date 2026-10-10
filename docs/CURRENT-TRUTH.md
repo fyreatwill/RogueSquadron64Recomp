@@ -36,8 +36,8 @@ unless that failure is explicitly repaired.
 
 ## Active frontier
 
-The live work is the M3 `jal rs_free` idiom-class audit
-(`HYPOTHESIS-ID: m3-idiom-class-audit`). Last closed site is s4500:
+The M3 `jal rs_free` idiom-class audit (`m3-idiom-class-audit`) is
+closed (s4502). Its last closed site is s4500:
 `freePlayerAuxBuffersIfActive` at `0x80100F90` frees the slot +0xC
 `rs_malloc(count << 1, 0)` return (stored `0x80100854`), once; zero
 count skips it; no guard. With s4499 (`0x80100F84`) the function is
@@ -48,7 +48,7 @@ Complete. Index: PROJECT-OVERVIEW §58; notes `docs/M3-S4477-*.md`
 through `docs/M3-S4500-*.md`. Headless note: `.venv-splat` python is
 not allowlisted; use system `python3` with `scratch/agent/s4500_dis.py`.
 
-Next: a class-closure tally (see Next steps #1), not another site.
+The rs_free class closed in s4502. The live work is hangar artifact triage (Next steps #1).
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -101,6 +101,7 @@ Kept here only when a later session would otherwise repeat them.
 The s4413–s4433 selector narrative and the s4434–s4475 audio narrative
 are in PROJECT-OVERVIEW §58.
 
+- s4503 "priority ladder exhausted, human direction required" was believable because every ladder rung was closed. It conflated the ladder with the project: the hangar artifacts in Current state were never a rung. Re-scoped in s4504; BLOCKED.md removed.
 - s4476 "M3 has no unaudited `jal rs_free` class" was believable because
   the s397 frequency scan looked exhausted. It never covered `funcs_16.c`
   upward. The walk continued through `0x800F9F94` (s4498). Do not
@@ -127,7 +128,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **BLOCKED (s4503): priority ladder exhausted.** M5 steps 1-10 closed/conditional; rs_free class closed (S4502); sweep has 6 deliberately-unnamed placeholders left of 2,643 (`syms/rogue_squadron.syms.toml`). Needs a human to choose a new thread (see scratch/agent/BLOCKED.md).
+1. **Hangar geometry/colour artifact triage** (`HYPOTHESIS-ID: hangar-artifact-triage`, s4504). Port vs oracle, one capture at the VI 512 transition, title VI 1024 as positive control; detail in `scratch/agent/NEXT.md`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
