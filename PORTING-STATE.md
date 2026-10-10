@@ -151626,3 +151626,50 @@ unproven. Next site is still in `releaseModelAnimSlot`, at `0x80082DC0`
 Evidence: `docs/M3-S4488-RELEASE-MODEL-ANIM-SLOT-ARRAY-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4489 (2026-10-09) — audited releaseModelAnimSlot rs_free of the flattened tree
+
+SOAK-RESULTS tail had nothing newer than the s4467/s4468 lines already folded
+(s4450/s4452 also already folded). No game run. CURRENT-TRUTH was 53240 bytes,
+under the maintenance cap.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x80082430`, closed `0x80082D5C`, closed `0x80082D98`, and this site in
+`funcs_20.c`, still finds closed `0x8007A814`, closed `0x8007B23C`, and closed
+`0x8007BE50` in `funcs_19.c`, still finds `0x80072E40` in `funcs_18.c`, and
+still finds `0x8006F378` in `funcs_17.c`. The ROM word `0x0C000726` matches
+`0x80082D98` and `0x80082DC0`.
+
+`releaseModelAnimSlot` (`0x80082CFC`, size `0x11C`) has three `jal rs_free`
+sites. This unit classified only the third, at `0x80082DC0`. ROM and the
+generated listing agree. `lw $a0, -0x5670($at)` at `0x80082DBC` (ROM
+`0x8C24A990`) loads slot `+0x00`. The delay is `nop` at `0x80082DC4` and does
+not write `$a0`. `beqz` at `0x80082DAC` (ROM `0x10400006`, target
+`0x80082DC8`) skips the jal when byte `+0x11` is 0. Its delay is `nop`.
+
+The only nonzero `lui $at, 0x8014` store of immediate `-0x5670` is
+`sw $a0, -0x5670($at)` at `0x80082944`. That `$a0` is allocate's incoming
+argument, and it is the `rs_malloc` return from `0x80082B2C` in
+`flattenAnimTreeAndAllocateSlot`. The size is the halfword at `+0xE` of
+`*($a1 + 4)`, shifted left by 2. Flags are 0. `appendAnimHandleAndDescendantsToBuffer`
+does not free it or replace `$s0`. The byte at `+0x11` is cleared at
+`0x800829A0` and set to 1 at `0x80082BA8` only when the returned id is
+nonzero. The other two stores of the word are `sw $zero` in
+`resetModelAnimSlotTable` (`0x80082898`) and the post-jal clear at
+`0x80082DD0`. `rs_free` skips 0 (`beq` at `0x80001CA4`). The jals at
+`0x80082D5C` and `0x80082D98` free different blocks. `parseModelAnimType2Entry`
+only loads the pointer.
+
+An id of 0 would load `0x8013A97C` and test the byte at `0x8013A98D`. Both
+are in the gap after the four button words at `0x8013A960`. Nothing in the
+main image stores them, so the gate stays 0 and the jal is not taken. Seven
+callers pass a slot id. `playerAtStUpdate` stores an id at `+0x80` and does
+not jal release. No guard was added.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy stays
+unproven. Next site is `audioSeqFree` at `0x80083C58` (incoming `$a0`; delay
+`nop`; no jal and no address constant in the ROM).
+Evidence: `docs/M3-S4489-RELEASE-MODEL-ANIM-SLOT-TREE-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
