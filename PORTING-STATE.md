@@ -151461,3 +151461,62 @@ stays unproven. No guard was added. Next site is
 `docs/M3-S4485-HEAVY-ATTACHED-AUDIO-EMITTER-NPC-HANDLER-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4486 (2026-10-09) — audited applyCheatCodeFromInput rs_free of the CRC32 lookup table
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded.
+No game run. CURRENT-TRUTH was 48329 bytes, under the maintenance cap.
+
+Positive control: the `jal 0x80001C98` comment scan still finds this site
+in `funcs_20.c`, still finds closed `0x8007A814`, closed `0x8007B23C`, and
+closed `0x8007BE50` in `funcs_19.c`, still finds `0x80072E40` in
+`funcs_18.c`, and still finds `0x8006F378` in `funcs_17.c`. The ROM word
+`0x0C000726` matches `0x8007BE50` and `0x80082430`.
+
+`applyCheatCodeFromInput` (`0x80082270`, size `0x248`) has one
+`jal rs_free`, at `0x80082430`. ROM and the generated listing agree. The
+delay slot is `addu $a0, $s5, $zero` at `0x80082434` (ROM `0x02A02021`).
+It writes `$a0`, so the freed value is `$s5`.
+
+`$s5` is assigned twice. `addu $s5, $v0` at `0x800822AC` reaches the free.
+The epilogue `lw $s5, 0x24($sp)` at `0x80082498` is after it. `sw $s5,
+0x24($sp)` at `0x800822A0` is the only store of `$s5` and saves the
+incoming register, before `jal make_crc32_lut`. That jal's delay is
+`sw $s1, 0x14($sp)` and does not write `$s5`. Nothing from `0x800822B0`
+through the free writes `$s5`.
+
+`make_crc32_lut` (`0x80082544`) calls `rs_malloc` with size `0x400` and
+flags 0, fills 256 reflected CRC-32 words (polynomial `0xEDB88320`), and
+returns that pointer. It contains no `jal rs_free`. Its only caller is
+this function. The pointer is never stored after the move into `$s5`.
+
+`rs_crc32` runs straight-line before any branch, with `$a0 = $s5` and
+length 8. It is a leaf and only loads the table. A NULL malloc faults on
+that `lw` at `0x80082524` before `rs_free`. `rs_free` still skips
+`$a0 == 0`; that edge does not reach this jal.
+
+Bit `0x10` of the cheat-flag word `0x80130B58` calls
+`load_naboo_starfighter` and `j 0x80082490`, skipping the free. That
+callee does not write `$s5`. Its free is the koelsch block from s4478,
+and its argument is the CRC, not the table. The compare path
+(`0x800823A8`, `0x800823B4`, `0x800823BC`, `0x80082418`, and the
+`$s0 >= 0x1D` fall-through) all reach the jal with `$s5` unchanged.
+`bnez` at `0x80082428` skips the jal only while entries remain. The jal
+delay replaces `$a0` with `$s5`. `isCheatCodeIndexAllowed` runs after
+the free and is a leaf.
+
+One caller: `applyMenuCheatCode` at `0x800C4E7C` (one ROM hit of jal word
+`0x0C02089C` at file `0x12C01C`). It passes the incoming buffer, not the
+table. Its caller is `menuControllerInput` at `0x800B56D8`
+(`lw $a0, 8($s4)`). The raw pointer `0x80082270` occurs zero times. The
+bit-`0x10` path leaks the `0x400` block. That is original control flow,
+not a second identity and not a sibling free.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy
+stays unproven. No guard was added. Next site is `releaseModelAnimSlot`
+`0x80082D5C` (`lw $a0, 0xC($v0)`; delay `addiu $s1, $s1, 1` does not
+write `$a0`). Two later jals in that function are separate sites.
+Evidence: `docs/M3-S4486-APPLY-CHEAT-CODE-FROM-INPUT-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
