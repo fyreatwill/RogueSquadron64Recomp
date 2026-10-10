@@ -1,7 +1,8 @@
-# NEXT: explain port-vs-retail hangar RDP stream difference (195 texrects vs 0; ~1125 vs 1244 tris)
+# NEXT: aligned hangar entry-frame comparison (H3: raster/VI/colour image) — counts already agree
 
 HYPOTHESIS-ID: hangar-artifact-triage
 
-s4515 result: port hangar sync = tris~1125, texrect 195; retail = tris 1244 (0x0D x275, 0x0F x969), texrect 0. Title control matched (161 texrects).
-H1a: scene-state difference (our route's Starts bring up a UI overlay retail lacks at VI-512 entry) vs H1b: ucode/DL path divergence.
-Discriminator: dump the port's first sync after VI 512 with a per-opcode histogram split by type (0x0D vs 0x0F, texrect), and run retail (oracle) with the same Start key schedule so scene state matches; diff the RDP bytes offline against rs64-oracle/s4514_rdp_hangar512.bin.
+s4516: retail with the port's 11-Start schedule shows entry frame texrect 0/tri 1244, then 195 texrects/tri 1103-1140 (sync 1618+); port s4515 (195/1120-1130) matches the later band. H1b unsupported.
+Hypotheses: H3a port draws the same RDP stream but raster/RT64 output wrong (rim band, spikes); H3b VI/colour-image width (right-edge column); H1c same counts but different vertex values (not visible in counts).
+Discriminator: in ONE port run, dump the raw RDP stream for the first VI-512 sync (the 0-texrect entry frame; use fewer Starts or phase-gate capture at the first sync after VI 512) and byte-diff the triangle edge-coeff words against retail's s4514 rdp.bin / s4516 rdp.bin (RS64_RDP_BIN, width 512 syncs 1515-1516). Equal bytes => H3a/H3b (rendering side); differing triangle words => H1c (vertex transform). Positive control: title 1024 sync byte-identical or texrect count 161 on both.
+Note: tools/oracle/rdplog/rdplog.c record format {RDPC,vi_origin,vi_width,nbytes,seq,words}; port needs an equivalent dump hook at the dpc_bridge.
