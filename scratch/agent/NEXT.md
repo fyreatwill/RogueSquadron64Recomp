@@ -1,6 +1,6 @@
-# NEXT: who owns 0x80179510 — rs_malloc overlap with the audio pool
+# NEXT: who makes 0x801793F0 allocatable inside the live 120 KB block 0x801767E0?
 HYPOTHESIS-ID: m5-audio-destub
-Context: s4555 named the +5436 writer (0x8001E2C0, initTextureLUTAndAllocBuffers clear loop, 36-byte entries) overlapping audio pool nodes at 0x80179510.
-Hypotheses: H-A audio pool sits in memory the game later frees, then re-mallocs; H-B rs_malloc/free-list state is corrupt (port-side) and returns an in-use block; H-C retail does the same and only the port timing breaks the walk.
-Discriminator (one build, one run): log every rs_malloc (0x80001ACC) / rs_free range (ROGUESQ_LOG_S4429_HEAP at main.cpp:4690 exists; check what it logs) in the s4555 recipe; find the malloc whose range contains 0x80179510 and the earlier alloc/free of the audio pool block. H-A: a free covers the pool. H-B: overlap with a never-freed live block. H-C: tools/oracle shows retail array does not cover 0x80179510. Control: any malloc return must log.
-Recipe: scratch/agent/s4555_list_writer.sh (3 arms, crash reproduces 3/3 at ~2 min).
+Facts (s4556, 2 arms): rs_malloc 0x801767E0 size 122880 is never rs_free'd; later rs_malloc 0x801793F0 (664) and 0x80179480 (73728) land inside it, the latter covering audio node 0x80179510.
+H-A: game/audio code carves the 120K block and rewrites its header/free list (legit retail behaviour). H-B: port-side free-list corruption. H-C: parent freed via a path that bypasses rs_free (inline header rewrite).
+Discriminator: one run with a store watch on header 0x801767D0..0x801767E0 and on the free-list link pointing at 0x801793E0; print writer pc for the first store after the parent malloc. Also oracle-check retail's rs_malloc return for the 664-byte request. Control: whole-RDRAM watch fires.
+Note: heap logging suppressed the crash repro; keep logs lean or use watches instead.
