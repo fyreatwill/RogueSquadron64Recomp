@@ -152803,3 +152803,42 @@ This selects H-outside. It refutes H-hole (k is not inside [min, max]) and H-cen
 The ctl row just before the bad jal, same site, is s1 `0x80172328`, raw34 `0x00C80000`. That address is `B + 27*0x88`, also outside 0..17. Render already walks past the initialized indices. In `musyxRenderVoiceSamples` the only write of s1 before `0x800903F0` is `addu $s1, $a0, $zero` at `0x8008FFB4`, so that s1 is the entry a0. Do not grep for a skipped init index. There is no hole.
 
 ORIGIN: not a mitigation. `0x800921E8` does not write this slot. `0x6C617465` is not a legitimate cart offset.
+
+## Session 4540 (2026-10-10) — musyxMixActiveVoices passes voice 0x801724C0
+
+HYPOTHESIS-ID: odd-dma-render-caller
+
+No new SOAK-RESULTS lines since s4539. The s4532 rows were already folded.
+
+The planned entry probe reads `ctx->r31` just after the `addu` at `0x8008FFB4`. `tools/apply_s4539_render_entry.py` inserts it. Diagnostic only. It does not skip the call. Rebuild was `funcs_24.c` only. The binary contains `[s4539-entry]`.
+
+First launch, `scratch/s4540_render_entry_20261010-042917/run.log`. Phase 1024 at 50.4s, hangar 512 at 60.7s, origin `0x006A2900` at 170.9s. Death is the odd-address assertion in `do_rom_read` (`pi.cpp:112`). `last-guest-pc` is `0x80001b08`. Not `fillSampleStreamRange`.
+
+Entry lines, in order:
+
+- `[s4539-entry] kind=arm a0=0x8018D4A0 ra=0x00000000`
+- `[s4539-entry] kind=in a0=0x801714D0 ra=0x00000000 index=0 n_in=1`
+- `[s4539-entry] kind=bad a0=0x801724C0 ra=0x00000000 in_match=1 n_in=1 overflow=0`
+- then `[s4534-jal] kind=bad site=800903F0` s1 `0x801724C0` raw34=a3=`0x6C617465`
+
+The arm a0 has top byte `0x80`. The ra top byte is `0x00`, so the planned ra control fails. `in_match=1` is vacuous: the only stored ra is 0. This does not select H-one-caller. It does refute H-census-wrong: the in-range a0 is index 0, and the bad a0 is a different line. `funcs_24.c` has no constant store to `ctx->r31`. A direct jal does not write the guest ra. Do not re-read it.
+
+The fixed probe is `tools/apply_s4540_render_caller.py`, on the only static call, `musyxMixActiveVoices` jal `0x80090F00`, reading `ctx->r4` after the delay slot. Same gate. The binary contains `[s4540-call]`.
+
+`scratch/s4540_render_caller_20261010-043453/run.log` died before VI 1024, last width 640, in `fillSampleStreamRange+15156`, guest pc `0x8000834c`. That is the parked bus error, not this edge. The arm did fire (`a0=0x8018D4A0`, next line the entry arm, same a0, ra 0), so the call probe is live. One retry of the same binary.
+
+The retry is the result. `scratch/s4540_render_caller_retry_20261010-043550/run.log`. Phase 1024 at 47.3s, hangar 512 (`0x006AB400`) at 58.3s, origin `0x006A2900` at 168.7s. Same `do_rom_read` assertion, `last-guest-pc` `0x80001b08`. Not `fillSampleStreamRange`.
+
+Controls, before the bad call:
+
+- `[s4540-call] kind=arm a0=0x8018D4A0 n_all=1`, next line the entry arm, same a0, `ra=0`. a0 top byte `0x80`.
+- Eighteen `kind=in` lines, indices 0..17 of base `0x801714D0`, `n_in` ending at 18. Index 17 is printed before 15 and 16. The set is complete. First is index 0, a0 `0x801714D0`, `n_all=34804`.
+- Bad triple, consecutive: `[s4540-call] kind=bad a0=0x801724C0 n_all=125625 n_in=18`, then the entry bad with `ra=0` `in_match=1` `overflow=0`, then `[s4534-jal] kind=bad site=800903F0` s1 `0x801724C0` raw34=a3=`0x6C617465`. `[s4538-init] kind=jal` on that line is `n_this=0` `n_lattice=569`. Init still does not store this voice.
+
+`0x801714D0 + 30*0x88` is `0x801724C0`. No in-range row has that a0.
+
+This selects H-one-caller. It refutes H-split-caller: the jal that passes the initialized indices also passes the bad voice, and the entry bad is the next line, so that entry is this jal. It refutes H-census-wrong again. The caller is `musyxMixActiveVoices` at jal `0x80090F00`. There is one C call. The first call's a0, `0x8018D4A0`, is not on the `0x801714D0` lattice, so this jal also walks another base. That is not a second caller.
+
+The loop that produces a0 is static and was not printed at the bad call: `s0` from 0 while `s0` < the halfword at `0x80149700`, voice = the word at `0x801496F8` plus `s0*0x88`, jal if byte 0 is nonzero. `s0` is still the index at the jal. `a1` is not: the `beq` delay slot at `0x80090ECC` overwrites it. That index, base, and count are the next discriminator. Do not add them to this run.
+
+ORIGIN: not a mitigation. No skip was added. `0x6C617465` is not a legitimate cart offset. The caller is named; the loop index is not.

@@ -1,39 +1,41 @@
-# NEXT: who calls musyxRenderVoiceSamples with voice 0x801724C0
+# NEXT: what index and bound make musyxMixActiveVoices pass 0x801724C0
 
-HYPOTHESIS-ID: odd-dma-render-caller
+HYPOTHESIS-ID: odd-dma-mix-index
 
-s4539 selected H-outside. Do not re-run the index span. Do not grep for a skipped init index. Do not re-probe `0x800921E8`. Do not add a skip. Do not re-run the retail watch.
+s4540 selected H-one-caller. Do not re-read `ctx->r31`. Do not re-run the entry-only probe. Do not re-run the index span. Do not grep for a skipped init index. Do not add a skip. Do not re-probe `0x800921E8`.
 
-Log: `scratch/s4539_init_index_20261010-041352/run.log`. Init base `B=0x801714D0` stored indices exactly 0..17 (n=565). k=30 is outside. `B + 30*0x88` is voice `0x801724C0`. The bad jal still has raw34=a3=`0x6C617465`. The ctl row immediately before it is s1=`0x80172328`, which is `B + 27*0x88`, also outside 0..17, raw34=`0x00C80000`.
+Result log: `scratch/s4540_render_caller_retry_20261010-043550/run.log`. `musyxMixActiveVoices` jal `0x80090F00` is the only call of `musyxRenderVoiceSamples`. Its arm is a0 `0x8018D4A0` (`n_all=1`), immediately followed by the entry arm with the same a0 and `ra=0`. It then passes every index 0..17 of base `0x801714D0` (`n_in=18`; index 17 is printed before 15 and 16, and the set is complete). The bad line is `[s4540-call] kind=bad a0=0x801724C0 n_all=125625 n_in=18`, the next line is the entry bad with `ra=0`, and the next is `[s4534-jal] kind=bad site=800903F0` with raw34=a3=`0x6C617465`. Death is the odd `do_rom_read` assertion, `last-guest-pc` `0x80001b08`, after origin `0x006A2900`. Not `fillSampleStreamRange`.
 
-In `musyxRenderVoiceSamples` (`funcs_24.c`, entry `0x8008FFAC`) the only write of s1 before the jal at `0x800903F0` is `addu $s1, $a0, $zero` at `0x8008FFB4`. The bad s1 is the entry a0. ra is still the caller there: the two instructions above it are `addiu sp, -0x60` and `sw s1`. Nothing prints that ra today.
+The loop, static, not yet measured at the bad call:
 
-One new probe, one rebuild, one run. Insert it in `tools/apply_s4539_render_entry.py` immediately after that `addu`, gated by `ROGUESQ_LOG_S4539=1`. Diagnostic only. Do not skip the call. Do not touch the four jals.
+- `s0` is zeroed at `0x80090E2C` and incremented at `0x80090F48`, after the jal.
+- Head `0x80090E70` uses `s0 & 0xFFFF` as the index. Scale to `index*0x88` is `0x80090E7C..0x80090E84`.
+- Base is reloaded at `0x80090EBC`: `lw` from `0x801496F8` (`0x80150000-0x6908`). `a0 = base + a1` at `0x80090EC0`.
+- The jal is skipped when byte 0 of that voice is 0 (`0x80090EC8`).
+- The bound is the halfword at `0x80149700` (`0x80150000-0x6900`), compared at `0x80090F44..0x80090F54`: continue while `(s0 & 0xFFFF) < count`.
 
-At entry, a0 is `ctx->r4` and ra is `ctx->r31`. Base `B=0x801714D0`, stride `0x88`. In-range: `(a0 - B)` is divisible by the stride and the quotient is in 0..17. Keep a set of in-range ras, capped at 32; a 33rd distinct ra sets `overflow=1` and is not stored.
+At the jal, `s0` is still the index (`ctx->r16`). `a1` (`ctx->r5`) has been overwritten by the delay-slot-adjacent `andi` at `0x80090ECC`, so do not read `r5` as the scaled offset. Read the base from memory.
 
-Prints, all flushed:
+One new field on the existing bad call, plus the same fields on the arm and on the first in-range call. Extend `rs64_s4540_call` in `tools/apply_s4540_render_caller.py` (the script is already applied; a second script `tools/apply_s4541_mix_index.py` should patch the existing bad/arm/in prints, or edit the helper in place and keep it idempotent). Diagnostic only. Do not skip the call. Gate remains `ROGUESQ_LOG_S4539=1`.
 
-- First entry, any a0: `[s4539-entry] kind=arm a0=0x%08X ra=0x%08X`.
-- Each new in-range ra, up to 32: `[s4539-entry] kind=in a0=0x%08X ra=0x%08X index=%d n_in=%u`.
-- a0 `0x801724C0`, cap 4: `[s4539-entry] kind=bad a0=0x%08X ra=0x%08X in_match=%d n_in=%u overflow=%d`. `in_match` is 1 when ra is already in the set.
+On arm, on the first `kind=in`, and on `kind=bad`, add `s0=%u base=0x%08X count=%u sum=0x%08X`. `s0` is `(uint32_t)ctx->r16 & 0xFFFF`. `base` is the word at `0x801496F8`. `count` is the halfword at `0x80149700`. `sum` is `base + s0*0x88` computed in uint32. The function needs `rdram` only if `MEM_W` requires it; use the same absolute form as the recompiled `lw` (`MEM_W(-0x6908, S32(0x8015 << 16))` and `MEM_HU(-0x6900, S32(0x8015 << 16))`).
 
-Competing hypotheses:
+Competing hypotheses, judged on the bad line, and only if arm and the first in-range line both have `sum == a0`:
 
-- H-one-caller: `overflow=0`, `n_in>=1`, `in_match=1`. The caller that passes an initialized slot also passes index 30.
-- H-split-caller: `overflow=0`, `n_in>=1`, `in_match=0`. No initialized-slot entry used the bad ra.
-- H-census-wrong: an in-range row has a0 `0x801724C0`. That contradicts s4539. Select only if the quotient is in 0..17.
+- H-index-30: `s0==30`, `base==0x801714D0`, `count>30`. The bound admits slot 30 of the init lattice. Init's 0..17 is not this loop's span.
+- H-other-base: `base!=0x801714D0` and `sum==a0`. The voice is a slot of a different array. Quote `base`, `s0`, and `count`.
+- H-formula-wrong: `sum!=a0` on the bad line. `s0` at the jal is not the index the `addu` used. Stop. Do not guess another register.
 
-Positive control, same run: the arm line, with ra's top byte `0x80`, before the bad entry; at least one `kind=in` with index in 0..17 before that bad entry; and the existing `[s4534-jal] kind=bad site=800903F0` with s1 `0x801724C0` and raw34 `0x6C617465` after it. A VI-640 death whose stack is `fillSampleStreamRange` is not this edge. A death in `advanceVolumeFadeEnvelope`'s `NAN_CHECK` before the bad jal is not a result; retry the same binary once. A second such death is still not a result. Do not chase the NaN.
+Positive control, same run: arm line before the bad line, a0 top byte `0x80`, `base` top byte `0x80`, `count>0`, and `sum==a0`; a `kind=in` line with index in 0..17, `sum==a0`, before the bad line; the bad call, the entry bad, and `[s4534-jal] kind=bad site=800903F0` with s1 `0x801724C0` and raw34 `0x6C617465`. A VI-640 death whose stack is `fillSampleStreamRange` is not this edge; retry the same binary once. A second such death is not a result. A `NAN_CHECK` in `advanceVolumeFadeEnvelope` before the bad jal is not a result; retry once.
 
 Rebuild only `funcs_24.c` via the apply script and cmake. Do not run `N64Recomp`. Full regeneration is still unsafe.
 
 ```
-python3 tools/apply_s4539_render_entry.py
+python3 tools/apply_s4541_mix_index.py
 env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --target RogueSquadron64Recomp
-# confirm the new binary contains s4539-entry; if not, do not run
+# confirm the new binary contains s4540-call and the new field name; if not, do not run
 stamp=$(date +%Y%m%d-%H%M%S)
-out="$(pwd)/scratch/s4540_render_entry_${stamp}"
+out="$(pwd)/scratch/s4541_mix_index_${stamp}"
 mkdir -p "$out"
 cd build
 env \
@@ -50,11 +52,11 @@ env \
   zsh ../tools/probe.sh "$out" 180 2
 ```
 
-Pass `probe.sh` an absolute `$out`. Run one game. SIGKILL if the probe wrapper does not reap it. The edge is the `[s4534-jal] kind=bad site=800903F0` line on the 512-to-640 transition (origin `0x006A2900`).
+Pass `probe.sh` an absolute `$out`. Run one game. SIGKILL if the probe wrapper does not reap it. The edge is the bad call on the 512-to-640 transition (origin `0x006A2900`).
 
 Outcomes:
 
-- Controls hold, `overflow=0`, `in_match=1`: selects H-one-caller. Quote bad ra, the in-range a0 and index that shared it, and `n_in`. Name the function that contains ra if a symbol already maps it. Stop. Do not add a probe.
-- Controls hold, `overflow=0`, `in_match=0`: selects H-split-caller. Quote the bad ra and the in-range ra set (cap 8). Stop. Do not add a probe.
-- An in-range row whose a0 is `0x801724C0`: selects H-census-wrong. Quote its index. Stop.
-- `overflow=1`, or no `kind=in` before the bad entry, or no bad entry, or no bad jal: not a result. Do not raise the cap in that same run.
+- Controls hold and the bad line is H-index-30: selects H-index-30. Quote `s0`, `base`, `count`. Stop. Do not add a probe.
+- Controls hold and the bad line is H-other-base: selects H-other-base. Quote `s0`, `base`, `count`, `sum`. Stop. Do not add a probe.
+- Bad line `sum!=a0`: selects H-formula-wrong. Quote the four numbers. Stop.
+- No bad call, or arm `sum!=a0`, or no in-range line before the bad call: not a result. Do not change the formula in that same run.
