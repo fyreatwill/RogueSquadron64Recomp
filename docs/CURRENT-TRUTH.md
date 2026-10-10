@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4479 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4480 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,11 +246,17 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4480 closed `saveServiceWorker`'s `jal rs_free`. `$s0` at
+`0x8006F378` is that iteration's `recvServiceMessage` return, which
+is the `rs_malloc(0x14)` token queued by `triggerSaveMessage`. The
+incoming `$a0` stays in `$s5` and does not reach the free. The next
+site is `walkDatTreeAndCollectSubtypes` at `0x80072B8C` (`$a0` loaded
+from `8($s0)`; delay slot `nop`). See the audit doc.
+
 Session 4479 closed `runIdleFramesAndLoadSaveData`'s `jal rs_free`.
 `$s0` at `0x8006DA28` is the `load_asset` / `rs_malloc` return of
 `gamesave`, freed once. The earlier `$s0` is the idle-frame counter
-and does not reach the free. The next site is `saveServiceWorker`
-at `0x8006F378`. See the audit doc.
+and does not reach the free.
 
 ## Superseded and closed conclusions
 
@@ -300,15 +306,27 @@ at `0x8006F378`. See the audit doc.
 
 ## Next steps
 
-- **s4479 (newest):** `runIdleFramesAndLoadSaveData` `jal rs_free` at
+- **s4480 (newest):** `saveServiceWorker` `jal rs_free` at `0x8006F378`
+  frees `$s0`, the `recvServiceMessage` return of the `0x14` token
+  from `triggerSaveMessage`'s `rs_malloc`, once per receive.
+  H-NextClassComplete. No guard. The only `$s0` write in the
+  function is `addu $s0, $v0` at `0x8006F334`. `$s5` (incoming
+  `$a0`) does not reach it. The back-edge `j 0x8006F318` rebinds
+  `$s0` before the next free. `saveLoadDispatcher` restores the
+  incoming `$s0` from `0x18($sp)` on its only return. The only
+  enqueue to `*0x800A0A60` is that malloc. ROM disassembly and the
+  generated listing agree. Next: `walkDatTreeAndCollectSubtypes`
+  `0x80072B8C` (`lw $a0, 8($s0)` at `0x80072B88`; delay slot `nop`;
+  `$s0` is the node, not the freed pointer). See
+  `docs/M3-S4480-SAVE-SERVICE-WORKER-RS-FREE-AUDIT.md`.
+- **s4479:** `runIdleFramesAndLoadSaveData` `jal rs_free` at
   `0x8006DA28` frees `$s0`, the `load_asset` / `rs_malloc` return of
   the `gamesave` asset, once. H-NextClassComplete. No guard. The
   `$s0` writes at `0x8006D924` and `0x8006D984` are the 32-iteration
   idle counter; `addu $s0, $v0` at `0x8006DA00` dominates the free.
   `initSaveData` copies 0x20 bytes from that pointer and frees its
   own `$s2` malloc, not this `$s0`. ROM disassembly and the generated
-  listing agree. Next: `saveServiceWorker` `0x8006F378` (`$a0 = $s0`,
-  rebound from `$v0` at `0x8006F334`). See
+  listing agree. That next site was closed in s4480. See
   `docs/M3-S4479-RUN-IDLE-FRAMES-AND-LOAD-SAVE-DATA-RS-FREE-AUDIT.md`.
 - **s4478:** `load_naboo_starfighter` `jal rs_free` at `0x8006C8C4`
   frees `$s2`, the `rs_malloc` return of `pl_crafts/koelsch_HMT`, once.
@@ -446,7 +464,8 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4479 (newest):** runIdleFramesAndLoadSaveData rs_free class closed (H-NextClassComplete). Next: saveServiceWorker 0x8006F378.
+- **s4480 (newest):** saveServiceWorker rs_free class closed (H-NextClassComplete). Next: walkDatTreeAndCollectSubtypes 0x80072B8C.
+- **s4479:** runIdleFramesAndLoadSaveData rs_free class closed (H-NextClassComplete).
 - **s4478:** load_naboo_starfighter rs_free class closed (H-NextClassComplete).
 - **s4477:** loadCraftShadowTextures rs_free class closed (H-NextClassComplete).
 - **s4476 (superseded):** BLOCKED on a stale "no unaudited class" reading of the s397 note. The jal rs_free frontier in funcs_16+ was still open.

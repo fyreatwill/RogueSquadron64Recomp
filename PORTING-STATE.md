@@ -151129,3 +151129,58 @@ stays unproven. No guard was added. Next site is `saveServiceWorker`
 `docs/M3-S4479-RUN-IDLE-FRAMES-AND-LOAD-SAVE-DATA-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4480 (2026-10-09) — audited saveServiceWorker rs_free of the 0x14 save token
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded.
+No game run.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x8006DA28` and this site in `funcs_17.c`, and still finds `0x8006C8C4`
+in `funcs_16.c`. The ROM word `0x0C000726` matches `0x8006B814`,
+`0x8006C8C4`, `0x80005268`, `0x8006DA28`, and `0x8006F378`.
+
+`saveServiceWorker` (`0x8006F2CC`) has one `jal rs_free`, at `0x8006F378`.
+ROM register-write scan and the generated listing agree on one `$s0`
+assignment: `addu $s0, $v0` at `0x8006F334`, after `recvServiceMessage`.
+`$s5` is the incoming thread argument and is not copied into `$s0`. The
+four instructions between the recv return and the rebind do not write
+`$v0`. Both `beql` delay slots are `sb $s1, 0x2C($s2)` and do not write
+`$s0`. There is no `jr`. The back-edge `j 0x8006F318` returns above the
+rebind, so the next trip frees the next recv return.
+
+That return is `lw` of `node+0x1E8` after `osRecvMesg`. `osSendMesg`
+stores its `$a1` into the queue array (`sw $t0, 0($t3)` at `0x800334D8`,
+`$t0` reloaded from the saved `$a1`). `osRecvMesg` writes the queued
+word through the caller's `$a1` (`sw $t9, 0($t3)` at `0x8003326C`).
+`sendServiceMessage` queues `$a2`.
+
+The only `lui 0x800A` / offset `0xA60` uses are the save-id word at
+`0x800A0A60`. The only sender is `triggerSaveMessage`, which is
+straight-line `rs_malloc(0x14)` then `sendServiceMessage` with that
+pointer as `$a2` and the save id as `$a1`. The whole ROM has two
+`jal`s to it (`0x8006E334`, `0x8006F254`), both with delay `nop`, and
+both only when the id is not `-1`. The id-absent path calls
+`saveLoadDispatcher` inline and does not enqueue. `saveServiceWorker`
+has zero direct calls; `registerSaveService` installs it as the thread
+entry. `postMessageToServiceWorker` does not reference this id.
+`signalServiceWorkerStop` has zero jal words. `unregisterServiceWorker`
+frees the registry node (s3654), not this token.
+
+`saveLoadDispatcher` saves the incoming `$s0` at `0x18($sp)` before
+using `$s0`, and its only `jr` reloads that slot. The worker passes
+`$a0 = 1`, so the EEPROM-write path is not taken. Direct callees
+`rs_memset`, `recvServiceMessage`, `waitForSerialIdle`,
+`releaseSerialLock`, `memcpy`, `adler32`, and `osEepromLongWrite`
+contain zero `jal rs_free`. `writeSaveBodyToEeprom` has zero
+`jal rs_free` and is not reached from these calls.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. A NULL malloc remains the
+same unproven allocator-failure edge as s3604–s4479, not a second
+pointer. Runtime allocator legitimacy stays unproven. No guard was
+added. Next site is `walkDatTreeAndCollectSubtypes` `0x80072B8C`
+(`lw $a0, 8($s0)`; delay slot `nop`). Evidence:
+`docs/M3-S4480-SAVE-SERVICE-WORKER-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
