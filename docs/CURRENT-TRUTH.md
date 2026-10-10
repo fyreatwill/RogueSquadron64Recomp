@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4493 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4494 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,6 +246,16 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4494 closed the second `jal rs_free` in
+`freeAllObjectContextPoolNodes`, at `0x800EC564`. The
+freed word is the full-list head `0x8010C0D4`. Each
+node is one `rs_malloc(0x6C0, 1)` user pointer, or that
+slab's `+0xC` link, freed once. The delay stores the next
+pointer and does not write `$a0`. The slab is unlinked
+from `0x8010C0D0` before this push, so the partial-list
+walk does not free it. The emptying free at `0x800EC404`
+unlinks first. No guard. See the audit doc.
+
 Session 4493 closed the first `jal rs_free` in
 `freeAllObjectContextPoolNodes`, at `0x800EC538`. The
 freed word is the partial-list head `0x8010C0D0`. Each
@@ -411,6 +421,21 @@ and does not reach the free.
 
 ## Next steps
 
+- **s4494 (newest):** `freeAllObjectContextPoolNodes`
+  `jal rs_free` at `0x800EC564` frees the full-list head
+  `0x8010C0D4`. H-NextClassComplete. No guard. Delay
+  `sw $v0, -0x3F2C($s0)` does not write `$a0`. Every
+  non-zero store of that head is an `rs_malloc(0x6C0, 1)`
+  user pointer or the slab's `+0xC` link. The walk
+  publishes next before the free, so each still-linked
+  node is freed once. Zero does not reach the jal. The
+  slab is unlinked from `0x8010C0D0` before it is pushed
+  here, and the emptying free at `0x800EC404` unlinks
+  first. Next: `preloadSceneReferencedSongs` at
+  `0x800EED48` (entry `0x800EEA54`; delay
+  `addu $a0, $s2, $zero` writes `$a0`). The jal at
+  `0x800EED50` is a separate site. See
+  `docs/M3-S4494-FREE-ALL-OBJECT-POOL-FULL-LIST-RS-FREE-AUDIT.md`.
 - **s4493 (newest):** `freeAllObjectContextPoolNodes`
   `jal rs_free` at `0x800EC538` frees the partial-list
   head `0x8010C0D0`. H-NextClassComplete. No guard.
@@ -421,9 +446,7 @@ and does not reach the free.
   so each still-linked node is freed once. Zero does not
   reach the jal. The emptying free at `0x800EC404`
   unlinks first. The full-list jal at `0x800EC564` is a
-  separate site. Next: that jal (`lw $a0` from
-  `0x8010C0D4` at `0x800EC55C`; delay
-  `sw $v0, -0x3F2C($s0)` does not write `$a0`). See
+  separate site. That next site was closed in s4494. See
   `docs/M3-S4493-FREE-ALL-OBJECT-POOL-RS-FREE-AUDIT.md`.
 - **s4492:** `unlinkAndFreeChildNpcNode` `jal rs_free`
   at `0x800EC404` frees object `+0`, the
@@ -770,7 +793,8 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4493 (newest):** freeAllObjectContextPoolNodes partial-list rs_free closed (H-NextClassComplete). Next: the same function's full-list jal at 0x800EC564.
+- **s4494 (newest):** freeAllObjectContextPoolNodes full-list rs_free closed (H-NextClassComplete). Next: preloadSceneReferencedSongs 0x800EED48.
+- **s4493 (newest):** freeAllObjectContextPoolNodes partial-list rs_free closed (H-NextClassComplete). Next: the same function's full-list jal at 0x800EC564, closed in s4494.
 - **s4492:** unlinkAndFreeChildNpcNode rs_free of the object slab closed (H-NextClassComplete). Next: freeAllObjectContextPoolNodes 0x800EC538, closed in s4493.
 - **s4491:** handleHUD rs_free of the radar block closed (H-NextClassComplete). Next: unlinkAndFreeChildNpcNode 0x800EC404, closed in s4492.
 - **s4490:** audioSeqFree rs_free class closed (H-NextClassComplete, no path). Next: handleHUD 0x800C1084, closed in s4491.
