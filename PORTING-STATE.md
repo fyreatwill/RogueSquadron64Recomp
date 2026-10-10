@@ -151992,3 +151992,73 @@ the index buffer.
 Next site is the second jal at `0x800EED50`. The delay `addu $a0, $s3,
 $zero` writes `$a0`. Evidence:
 `docs/M3-S4496-PRELOAD-SCENE-REFERENCED-SONGS-RS-FREE-AUDIT.md`.
+
+## Session 4497 (2026-10-09) — audited preloadSceneReferencedSongs rs_free of the mark array
+
+Static census of the second `jal rs_free` in `preloadSceneReferencedSongs`
+at `0x800EED50` (entry `0x800EEA54`). ROM bytes only. No build and no
+runtime run. The soak tail has no verdict newer than s4468, and those
+lines are already in CURRENT-TRUTH (s4467 never launched the game;
+s4468 did not recur the allocator overlap).
+
+Positive control: `RecompiledFuncs/` is not on disk. Mission ROM words
+at closed `0x800EED48`, `0x800EC564`, `0x800EC538`, `0x800EC404`, and
+`0x800C1084`, and the `.text` word at closed `0x8007BE50`, are
+`0x0C000726`, as is this jal. The menu image at VRAM `0x800C1084` is
+a different instruction and is not the closed site.
+
+The delay `addu $a0, $s3, $zero` is the argument. The only `$s3`
+register write before it is `addu $s3, $v0` at `0x800EEAAC`, after
+`jal rs_malloc` at `0x800EEAA4` with flags 0 and size equal to the
+count of 6-byte records before `0xFFFF` (0 when the first halfword
+is already the terminator). Nothing writes `$v0` between the return
+and that copy. Removing the copy makes this jal unreachable. The jal
+is not in a cycle.
+
+`rs_malloc` returns 0 or `block + 0x10` through `addu $v0, $s2` at
+`0x80001C74`. The size-0 exit takes that move with `$s2` still 0.
+Flags bits `0x4` and `0x10` are clear. A nonzero count with a zero
+return faults in `rs_memset` (`sb` at `0x800078EC`). A zero count
+returns from `rs_memset` without a store, then faults at the
+unavoidable `sb` at `0x800EEBBC` (`$s3 + index`). Neither reaches
+the jal. `rs_free` also skips a zero argument (`beqz $s0,
+0x80001F78`). The completed value is the user pointer from this call.
+
+`$s3` is not stored after the copy. The prologue `sw $s3` saves the
+incoming register only. `rs_memset` does not write `$s3` and does not
+jal `rs_free`. The second `rs_malloc` saves and restores `$s3`.
+`parseLoadedSndSection` does not write `$s3`; its argument is an
+index-buffer halfword. `parseSndFiles` saves `$s3` at `0x8009752C`
+and restores it at `0x800978D0` before its only return.
+`loadSongAssetByName` saves it at `0x80066580` and restores it at
+`0x800666C4`; its own `$s3` is the name pointer at `0x80138920`.
+None of those direct callees contains `jal rs_free`.
+`relocateSndPointer`'s `jalr $v0` calls the word at `0x801499E0`
+with a sound pointer, not this buffer, and `$s3` is restored after
+it returns. `rs_free` of the other block does not write `$s3`. Its
+jals are `osRecvMesg` and `osSendMesg`; neither writes `$s3` or jals
+`rs_free`. A blocking receive saves `$s3` at `__osEnqueueAndYield`
+`0x8002BC40` and reloads it at `__osDispatchThread` `0x8002BE18`.
+
+`blez $a0, 0x800EED50` at `0x800EEBEC` skips the second allocation
+and still frees this `$s3`. The fall-through path frees `$s2` first.
+That pointer is the second malloc return. The first block is marked
+with halfword 2, and the search requires bit 0, so the two nonzero
+returns differ. A zero `$s2` faults at `0x800EEC10` before this jal.
+
+The only caller is `preloadSceneSongsWrapper` at `0x800EFB9C` (delay
+`nop`), from `initMission` at `0x800FA5E4` (delay `nop`, not in a
+back edge). No `j`, no raw word `0x800EEA54`, and no code-image
+`addiu`/`ori`/`andi`/`xori` of immediate `0xEA54`. The two ROM hits
+are outside every code image.
+
+This selects H-NextClassComplete. That refutes H-NextClassGap.
+H-NextClassUnevaluable is not selected: one allocator return, freed
+once, and the entry is not indirect. No guard was added.
+ORIGIN: `preloadSceneReferencedSongs` writes `$s3` from the
+`rs_malloc` return at `0x800EEAAC`; that value is the legitimate
+user pointer for the mark array.
+
+Next site is `reset_and_free_model_animations` at `0x800F9F94`.
+The delay is `nop` and does not write `$a0`. Evidence:
+`docs/M3-S4497-PRELOAD-SCENE-REFERENCED-SONGS-MARK-ARRAY-RS-FREE-AUDIT.md`.

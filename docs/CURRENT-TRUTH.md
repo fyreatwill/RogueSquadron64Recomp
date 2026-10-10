@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4496 (2026-10-09). Session 4495 was the
+Updated for session 4497 (2026-10-09). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -37,20 +37,21 @@ unless that failure is explicitly repaired.
 ## Active frontier
 
 The live work is the M3 `jal rs_free` idiom-class audit
-(`HYPOTHESIS-ID: m3-idiom-class-audit`). Last closed site is s4496:
-`preloadSceneReferencedSongs` at `0x800EED48` frees the index buffer
-from `rs_malloc((marks + 1) << 3, 0)`, once. A zero return faults at
-the following store and does not reach the jal. No guard. The chain
-from `loadCraftShadowTextures` (`0x8006B814`, s4477) through s4496 is
-Complete. The index is PROJECT-OVERVIEW §58. The notes are
-`docs/M3-S4477-*.md` through `docs/M3-S4496-*.md`.
+(`HYPOTHESIS-ID: m3-idiom-class-audit`). Last closed site is s4497:
+`preloadSceneReferencedSongs` at `0x800EED50` frees the mark array
+from `rs_malloc(record count, 0)`, once. A zero return faults in
+`rs_memset` or at the mark-byte store and does not reach the jal.
+No guard. The chain from `loadCraftShadowTextures` (`0x8006B814`,
+s4477) through s4497 is Complete. The index is PROJECT-OVERVIEW §58.
+The notes are `docs/M3-S4477-*.md` through `docs/M3-S4497-*.md`.
 
-Next site, and the only one to classify next: the second
-`jal rs_free` in that function, at `0x800EED50`. The delay
-`addu $a0, $s3, $zero` writes `$a0`. Do not reclassify `0x800EED48`.
-No runtime run unless a concrete invalid writer is named and a guard
-is the selected fix. A guard still needs an `ORIGIN:` line. No path,
-or one allocator return freed once, is Complete.
+Next site, and the only one to classify next:
+`reset_and_free_model_animations` at `0x800F9F94` (entry
+`0x800F9F6C`, size `0x64`). The delay is `nop` and does not write
+`$a0`. Do not reclassify `0x800EED50`. No runtime run unless a
+concrete invalid writer is named and a guard is the selected fix.
+A guard still needs an `ORIGIN:` line. No path, or one allocator
+return freed once, is Complete.
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -129,12 +130,13 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **M3 `jal rs_free` at `0x800EED50`** in `preloadSceneReferencedSongs`
-   (entry `0x800EEA54`). Slug `m3-idiom-class-audit`. Classify only this
-   jal. The delay writes `$a0` from `$s3`. The jal at `0x800EED48` was
-   closed in s4496. Hypotheses and the scan control are in
-   `scratch/agent/NEXT.md`. The classifying session writes
-   `docs/M3-S4497-PRELOAD-SCENE-REFERENCED-SONGS-MARK-ARRAY-RS-FREE-AUDIT.md`.
+1. **M3 `jal rs_free` at `0x800F9F94`** in
+   `reset_and_free_model_animations` (entry `0x800F9F6C`, size
+   `0x64`). Slug `m3-idiom-class-audit`. Classify only this jal.
+   The delay is `nop` and does not write `$a0`. The jal at
+   `0x800EED50` was closed in s4497. Hypotheses and the scan
+   control are in `scratch/agent/NEXT.md`. The classifying session
+   writes `docs/M3-S4498-RESET-AND-FREE-MODEL-ANIMATIONS-RS-FREE-AUDIT.md`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
