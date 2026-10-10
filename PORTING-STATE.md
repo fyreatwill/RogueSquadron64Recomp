@@ -151337,3 +151337,64 @@ stays unproven. No guard was added. Next site is `npcShieldUpdate`
 `docs/M3-S4483-DOWNSCALE-IMAGE-HALF-RES-BOX-FILTER-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4484 (2026-10-09) — audited npcShieldUpdate rs_free of the shield vertex buffer
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded.
+No game run.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x8007A814` and this site in `funcs_19.c` (and the later site
+`0x8007BE50`), still finds `0x80072B8C` and `0x80072E40` in `funcs_18.c`,
+and still finds `0x8006DA28` and `0x8006F378` in `funcs_17.c`. The ROM
+word `0x0C000726` matches `0x8007A814` and `0x8007B23C`.
+
+`npcShieldUpdate` (`0x8007AEF8`, size `0xD20`) has one `jal rs_free`, at
+`0x8007B23C`. ROM and the generated listing agree: `$a0` is the word at
+`0x38($s3)` (`lw $a0, 0x38($s3)` at `0x8007B238`). The delay slot is
+`nop` at `0x8007B240`. It does not write `$a0`.
+
+`$s3` is assigned twice before that address. `lw $s3, 4($s4)` at
+`0x8007AF2C` reaches the free. `$s4` is the incoming NPC (`addu $s4, $a0`
+at `0x8007AF00`). `addu $s3, $v0` at `0x8007AF70` is mode 1 only and does
+not reach the free: `j 0x8007BBF0` at `0x8007B230` skips it. The epilogue
+`lw $s3, 0xA4($sp)` is after the free. `sw $s3, 0xA4($sp)` at `0x8007AF18`
+saves the incoming register.
+
+Mode 1's `rs_malloc` at `0x8007AF68` is size `0x180`, flags 0, stored at
+NPC+4. That block is not this free. `allocateNpcMeshVertexBuffer` at
+`0x8007AFF0` is passed shield+0x38. Its `rs_malloc` at `0x8007A8B4` has
+flags 0 (`addu $a1, $zero` at `0x8007A8A0`) and `sw $t0, 0($s2)` at
+`0x8007A8C0` stores the return at exactly that field. The callee has no
+`jal rs_free`. The only other caller, `0x8007BCDC`, writes its own
+object's `+0x38`.
+
+The function's immediate-`0x38` stores are `swc1` through `$s1` and land
+at `$s3+0x70+$a0`, not `$s3+0x38`. `npcDeformingMeshUpdate` and
+`transformMeshVerticesForNpc` take `$s3+0x38` and do not free it or store
+the field. After this free, `releaseMeshAsset` frees `0($s3)`, the mesh,
+not the vertex buffer. `reinsertNpcIntoSortedFreeList` later frees the
+`0x180` parent when NPC+0x14 bit 2 is set. Shields are registered with
+`$a2 = 4`, so that bit is set. That free is a different block.
+
+No direct `jal 0x8007AEF8`. The handler is registered by
+`setupNpcUpdateFunctions` and spawn calls `slotDispatcherIter` with
+`$a1 = 1`. Of 144 dispatcher calls, the nearest `$a1` immediate is never
+2. The only `jalr` reached from `addiu $a1, $zero, 2` is
+`destroyNpcSlotByIndex` when NPC+0x1A is 0. Update dispatch does not
+enter mode 2. A second destroy of the same index is not skipped (the
+refcount is written back to 0 and bit-2 reinsert does not clear NPC+4).
+That would re-enter this same jal. It is not a second pointer and not a
+sibling free. No caller in the census destroys one index twice.
+`rs_free` skips `$a0 == 0`. A NULL malloc is the same unproven
+allocator-failure edge as s3604–s4483. A destroy before mode 1 faults on
+the `lw` of the zero spawn wrote at NPC+4.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy
+stays unproven. No guard was added. Next site is
+`heavyAttachedAudioEmitterNpcHandler` `0x8007BE50` (`$a0 = lw 0x38($s2)`;
+delay `nop`). Evidence:
+`docs/M3-S4484-NPC-SHIELD-UPDATE-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.

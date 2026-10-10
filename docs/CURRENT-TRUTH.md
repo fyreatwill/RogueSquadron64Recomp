@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4483 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4484 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,14 +246,22 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4484 closed `npcShieldUpdate`'s `jal rs_free`. The word at
+`0x38($s3)` at `0x8007B23C` is the `allocateNpcMeshVertexBuffer`
+`rs_malloc` return stored at `0x8007A8C0`, freed once. `$s3` at the
+free is `*(npc+4)`, not the mode-1 malloc. No guard. The `0x180`
+parent is a different block, freed later by
+`reinsertNpcIntoSortedFreeList`. The next site is
+`heavyAttachedAudioEmitterNpcHandler` at `0x8007BE50`
+(`lw $a0, 0x38($s2)`; delay `nop`). See the audit doc.
+
 Session 4483 closed `downscaleImageHalfResBoxFilter`'s `jal rs_free`.
 `$s5` at `0x8007A814` is the `rs_malloc(width * height * 3, 0)` temp,
 freed once. No guard. The only `$s5` assignment before the free is
 `addu $s5, $v0` at `0x8007A320`. The prologue `sw $s5` saves the
 incoming register. `zmemcpy` and `sampleRgbBoxFilter2x2AtSubpixel`
-are leaves and do not free it. The pointer is never stored. The
-next site is `npcShieldUpdate` at `0x8007B23C` (`lw $a0, 0x38($s3)`;
-delay `nop`). See the audit doc.
+are leaves and do not free it. The pointer is never stored. That
+next site was closed in s4484. See the audit doc.
 
 Session 4482 closed `initWaterSprayParticles`'s `jal rs_free`.
 `$s3` at `0x80072E40` is the `load_asset` / `rs_malloc` return of
@@ -329,7 +337,27 @@ and does not reach the free.
 
 ## Next steps
 
-- **s4483 (newest):** `downscaleImageHalfResBoxFilter` `jal rs_free`
+- **s4484 (newest):** `npcShieldUpdate` `jal rs_free` at
+  `0x8007B23C` frees the word at `0x38($s3)`, the
+  `allocateNpcMeshVertexBuffer` `rs_malloc` return stored at
+  `0x8007A8C0`, once. H-NextClassComplete. No guard. `$s3` at
+  the free is `lw $s3, 4($s4)` at `0x8007AF2C` (the NPC's
+  shield object). Mode 1's `addu $s3, $v0` at `0x8007AF70`
+  does not reach the free: `j 0x8007BBF0` at `0x8007B230`
+  skips it. The delay slot is `nop`. The `0x180` `rs_malloc`
+  at `0x8007AF68` is the parent object, published at NPC+4,
+  and is freed later by `reinsertNpcIntoSortedFreeList` when
+  NPC+0x14 bit 2 is set. That is a different block. The only
+  other caller of `allocateNpcMeshVertexBuffer` writes its
+  own object's `+0x38`. Update modes never enter this jal.
+  The only mode-2 caller is `destroyNpcSlotByIndex` when
+  NPC+0x1A is 0. ROM disassembly and the generated listing
+  agree. Next: `heavyAttachedAudioEmitterNpcHandler`
+  `0x8007BE50` (`lw $a0, 0x38($s2)` at `0x8007BE4C`; delay
+  `nop`; `$s2` is loaded from `4($s3)`, then replaced by the
+  `rs_malloc(0x180)` return at `0x8007BC7C`). See
+  `docs/M3-S4484-NPC-SHIELD-UPDATE-RS-FREE-AUDIT.md`.
+- **s4483:** `downscaleImageHalfResBoxFilter` `jal rs_free`
   at `0x8007A814` frees `$s5`, the `rs_malloc` temp of
   `width * height * 3` bytes (flags 0), once. H-NextClassComplete.
   No guard. The only `$s5` write before the free is `addu $s5, $v0`
@@ -340,10 +368,8 @@ and does not reach the free.
   `sampleRgbBoxFilter2x2AtSubpixel` are leaves with no `jal rs_free`
   and no `$s5` write. The temp is never stored. Two direct callers,
   both `load_hmt_and_hob`, pass the same interior image record, not
-  this temp. ROM disassembly and the generated listing agree. Next:
-  `npcShieldUpdate` `0x8007B23C` (`lw $a0, 0x38($s3)` at `0x8007B238`;
-  delay `nop`; `$s3` becomes an `rs_malloc` return at `0x8007AF70`;
-  no `sw` immediate `0x38` before the free). See
+  this temp. ROM disassembly and the generated listing agree. That
+  next site was closed in s4484. See
   `docs/M3-S4483-DOWNSCALE-IMAGE-HALF-RES-BOX-FILTER-RS-FREE-AUDIT.md`.
 - **s4482:** `initWaterSprayParticles` `jal rs_free` at
   `0x80072E40` frees `$s3`, the `load_asset` / `rs_malloc` return
@@ -526,7 +552,8 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4483 (newest):** downscaleImageHalfResBoxFilter rs_free class closed (H-NextClassComplete). Next: npcShieldUpdate 0x8007B23C.
+- **s4484 (newest):** npcShieldUpdate rs_free class closed (H-NextClassComplete). Next: heavyAttachedAudioEmitterNpcHandler 0x8007BE50.
+- **s4483:** downscaleImageHalfResBoxFilter rs_free class closed (H-NextClassComplete).
 - **s4482:** initWaterSprayParticles rs_free class closed (H-NextClassComplete).
 - **s4481:** walkDatTreeAndCollectSubtypes rs_free class closed (H-NextClassComplete).
 - **s4480:** saveServiceWorker rs_free class closed (H-NextClassComplete).
