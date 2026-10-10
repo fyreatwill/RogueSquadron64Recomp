@@ -151571,3 +151571,58 @@ unproven. Next site is still in `releaseModelAnimSlot`, at `0x80082D98`
 Evidence: `docs/M3-S4487-RELEASE-MODEL-ANIM-SLOT-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4488 (2026-10-09) — audited releaseModelAnimSlot rs_free of the channel array
+
+SOAK-RESULTS tail had nothing newer than the s4467/s4468 lines already folded
+(s4450/s4452 also already folded). No game run. CURRENT-TRUTH was 51644 bytes,
+under the maintenance cap.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x80082430`, closed `0x80082D5C`, and this site in `funcs_20.c`, still finds
+closed `0x8007A814`, closed `0x8007B23C`, and closed `0x8007BE50` in
+`funcs_19.c`, still finds `0x80072E40` in `funcs_18.c`, and still finds
+`0x8006F378` in `funcs_17.c`. The ROM word `0x0C000726` matches `0x80082D5C`
+and `0x80082D98`.
+
+`releaseModelAnimSlot` (`0x80082CFC`, size `0x11C`) has three `jal rs_free`
+sites. This unit classified only the second, at `0x80082D98`. ROM and the
+generated listing agree. `lw $a0, -0x5664($at)` at `0x80082D94` (ROM
+`0x8C24A99C`) loads the freed word. The delay is `nop` at `0x80082D9C` and
+does not write `$a0`.
+
+`$a0` on entry is a 1-based slot id. `$s3 = $a0 - 1`. The slot stride is
+`0x14` from `D_8013A990`. The count check at `0x80082D34` skips the
+per-channel loop when the header count is 0; both arms reach this jal.
+
+The only `lui $at, 0x8014` store of immediate `-0x5664` in the ROM is
+`sw $v0, -0x5664($at)` at `0x80082984` (ROM `0xAC22A99C`). `$v0` is the
+`rs_malloc(count << 4, 0)` return from `0x80082968`. Nothing between the
+return and the store writes `$v0`. A zero count makes `rs_malloc` return 0
+(`beqz $s0` at `0x80001AF0`, target `0x80001C74`, `$v0 = $s2` and `$s2` was
+cleared). `rs_free` skips `$a0 == 0`. The per-channel jal at `0x80082D5C`
+frees record `+0x0C` of that array, the other malloc from `0x80082A18`, not
+the array pointer. No other function that loads this word contains
+`jal rs_free`. `setModelAnimSlotCycleDuration` loads it into `$a0` and writes
+a float at channel `+0x04`; it has no `jal`.
+
+An id of 0 computes this word at `0x8013A988` and the count word at
+`0x8013A984`. Neither address has a `lui $at, 0x8014` access or a 32-bit
+constant in the ROM. That is not a second identity of a published slot.
+The function zeros `+0x00`, `+0x04`, `+0x08`, and the occupied byte after
+the free. It does not clear `+0x0C`. A later call re-reads the same
+allocator return only after loading address 0 through the zeroed header.
+That word was not read. No guard was added.
+
+Seven callers (jal word `0x0C020B3F`) pass an object field. The raw pointer
+`0x80082CFC` occurs zero times. `allocateModelAnimSlot` returns the slot id,
+not this pointer. `npcAtPtUpdate`'s following `jal rs_free` loads `0x4C`, a
+different field.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy stays
+unproven. Next site is still in `releaseModelAnimSlot`, at `0x80082DC0`
+(`lw $a0, -0x5670($at)`; delay `nop`; gated by byte `+0x11`).
+Evidence: `docs/M3-S4488-RELEASE-MODEL-ANIM-SLOT-ARRAY-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.

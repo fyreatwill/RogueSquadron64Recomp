@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4487 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4488 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,6 +246,16 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4488 closed `releaseModelAnimSlot`'s second `jal rs_free`.
+The word at slot `+0x0C` at `0x80082D98` is the
+`rs_malloc(count << 4, 0)` return stored at `0x80082984`,
+freed once. No guard. The delay is `nop`. Count zero stores
+and frees the NULL that `rs_malloc` returns for a zero size.
+The per-channel jal at `0x80082D5C` frees a different block.
+id 0 addresses `0x8013A988`, which this idiom never stores.
+The function does not clear `+0x0C` afterwards. See the audit
+doc.
+
 Session 4487 closed `releaseModelAnimSlot`'s first `jal rs_free`.
 The word at `0xC($v0)` at `0x80082D5C` is the per-channel
 `rs_malloc($a2 << 3, 0)` return stored at `0x80082A18`, freed
@@ -368,7 +378,26 @@ and does not reach the free.
 
 ## Next steps
 
-- **s4487 (newest):** `releaseModelAnimSlot` `jal rs_free`
+- **s4488 (newest):** `releaseModelAnimSlot` `jal rs_free`
+  at `0x80082D98` frees slot `+0x0C`, the
+  `rs_malloc(count << 4, 0)` return stored at
+  `0x80082984`, once. H-NextClassComplete. No guard.
+  The delay at `0x80082D9C` is `nop`. That store is the
+  only `lui $at, 0x8014` / immediate `-0x5664` store in
+  the ROM. Count zero takes `rs_malloc`'s NULL return
+  (`beqz` at `0x80001AF0` to `0x80001C74`) and `rs_free`
+  skips 0. The per-channel jal at `0x80082D5C` frees
+  record `+0x0C`, a different block. No other function
+  that loads this word contains `jal rs_free`. id 0
+  loads `0x8013A988`; nothing with `lui $at, 0x8014`
+  stores that address. The function zeros `+0x00`,
+  `+0x04`, `+0x08`, and the occupied byte after the
+  free, not `+0x0C`. Seven callers pass a slot id.
+  ROM disassembly and the generated listing agree.
+  Next: `0x80082DC0` (`lw $a0, -0x5670($at)`; delay
+  `nop`; gated by byte `+0x11`). See
+  `docs/M3-S4488-RELEASE-MODEL-ANIM-SLOT-ARRAY-RS-FREE-AUDIT.md`.
+- **s4487:** `releaseModelAnimSlot` `jal rs_free`
   at `0x80082D5C` frees the word at `0xC` of
   `array + ($s1 << 4)`, the per-channel
   `rs_malloc($a2 << 3, 0)` return stored at `0x80082A18`,
@@ -381,8 +410,8 @@ and does not reach the free.
   separate site. Seven callers pass a slot id. An id of 0
   reads address 0 through the unwritten gap word
   `0x8013A984` and is not a second identity of this word.
-  ROM disassembly and the generated listing agree. Next:
-  `0x80082D98` (`lw $a0, -0x5664($at)`; delay `nop`). See
+  ROM disassembly and the generated listing agree. That
+  next site was closed in s4488. See
   `docs/M3-S4487-RELEASE-MODEL-ANIM-SLOT-RS-FREE-AUDIT.md`.
 - **s4486:** `applyCheatCodeFromInput` `jal rs_free`
   at `0x80082430` frees `$s5`, the `make_crc32_lut` /
@@ -636,7 +665,8 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4487 (newest):** releaseModelAnimSlot per-channel rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082D98.
+- **s4488 (newest):** releaseModelAnimSlot channel-array rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082DC0.
+- **s4487:** releaseModelAnimSlot per-channel rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082D98, closed in s4488.
 - **s4486:** applyCheatCodeFromInput rs_free class closed (H-NextClassComplete). Next: releaseModelAnimSlot 0x80082D5C.
 - **s4485:** heavyAttachedAudioEmitterNpcHandler rs_free class closed (H-NextClassComplete).
 - **s4484:** npcShieldUpdate rs_free class closed (H-NextClassComplete).
