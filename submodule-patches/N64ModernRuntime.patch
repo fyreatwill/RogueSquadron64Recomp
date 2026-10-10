@@ -279,9 +279,38 @@ index b0d6bef..ef2cb45 100644
  
  namespace recomp {
 diff --git a/librecomp/include/librecomp/rsp_vu_impl.hpp b/librecomp/include/librecomp/rsp_vu_impl.hpp
-index dbf46b2..60d1401 100644
+index dbf46b2..667ca69 100644
 --- a/librecomp/include/librecomp/rsp_vu_impl.hpp
 +++ b/librecomp/include/librecomp/rsp_vu_impl.hpp
+@@ -190,8 +190,8 @@ auto RSP::LFV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto end = std::min(start + 8, 16);
+     r128 tmp;
+     for (u32 offset = 0; offset < 4; offset++) {
+-        tmp.element(offset + 0) = RSP_MEM_B(0, address + (index + offset * 4 + 0 & 15)) << 7;
+-        tmp.element(offset + 4) = RSP_MEM_B(0, address + (index + offset * 4 + 8 & 15)) << 7;
++        tmp.element(offset + 0) = RSP_MEM_BU(0, address + (index + offset * 4 + 0 & 15)) << 7;
++        tmp.element(offset + 4) = RSP_MEM_BU(0, address + (index + offset * 4 + 8 & 15)) << 7;
+     }
+     for (u32 offset = start; offset < end; offset++) {
+         vt.byte(offset) = tmp.byte(offset);
+@@ -204,7 +204,7 @@ auto RSP::LHV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto index = (address & 7) - e;
+     address &= ~7;
+     for (u32 offset = 0; offset < 8; offset++) {
+-        vt.element(offset) = RSP_MEM_B(0, address + (index + offset * 2 & 15)) << 7;
++        vt.element(offset) = RSP_MEM_BU(0, address + (index + offset * 2 & 15)) << 7;
+     }
+ }
+ 
+@@ -281,7 +281,7 @@ auto RSP::LUV(r128& vt, cr32& rs, s8 imm) -> void {
+     auto index = (address & 7) - e;
+     address &= ~7;
+     for (u32 offset = 0; offset < 8; offset++) {
+-        vt.element(offset) = RSP_MEM_B(0, address + (index + offset & 15)) << 7;
++        vt.element(offset) = RSP_MEM_BU(0, address + (index + offset & 15)) << 7;
+     }
+ }
+ 
 @@ -313,6 +313,7 @@ template<u8 e>
  auto RSP::SBV(cr128& vt, cr32& rs, s8 imm) -> void {
      auto address = rs + imm;
