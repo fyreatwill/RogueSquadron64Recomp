@@ -152665,3 +152665,25 @@ Three `[s4534-jal]` lines, and no others:
 The two stores already named for this word are `musyxKeyOnVoice` at `0x80090C80` (`sw v1, 0x34(s1)`, v1 from s0+0x38) and `musyxInitVoiceFromSample` at `0x800921E8` (`sw v1, 0x34(a0)`, v1 from a1+4). Which of those wrote `0x6C617465` is the next measurement. Do not grep for a third writer.
 
 ORIGIN: `musyxRenderVoiceSamples` at `0x800903F0` passes voice+0x34 through as a3. The value is not legitimate. Nothing was mitigated.
+
+## Session 4535 (2026-10-10) — neither named voice+0x34 store wrote 0x6C617465
+
+HYPOTHESIS-ID: odd-dma-voice-store
+
+No new SOAK-RESULTS lines. The s4532 rows were already folded.
+
+`tools/apply_s4535_voice_store.py` logs the two named stores of voice+0x34. One rebuild, one run, same route as s4534, with `ROGUESQ_LOG_S4534=1` and `ROGUESQ_LOG_S4533=1` still armed. Log: `scratch/s4535_voice_store_20261010-031330/run.log`. VI 1024 at 47.8s (`0x00790400`), VI 512 at 58.2s (`0x006AB400`), VI 640 (was 512) at 169.2s (`0x006A2900`). Death is the odd-address assertion in `do_rom_read` (`pi.cpp:112`). Host stack is `do_rom_read`. `last-guest-pc` is `0x80001b08`, not `0x8000834c`. Not the parked bus error. Not `copyToRAM`.
+
+Two `[s4535-store]` lines, and no others. The word `0x6C617465` occurs twice in the log, both at the death, never as a stored word.
+
+- `kind=arm site=800921E8` n=1 voice=`0x8018D4A0` word=srcw=`0xB0373B68` src=`0x8013ACA0` off=`0x4`. The next line is `[s4534-jal] kind=arm site=800902CC` on that same voice with raw34=`0xB0373B68` and a3=raw34+`0x100`. The init probe reads the word the jal later consumes. That site stored no even word below `0x01000000`, so it printed no in-range control. The arm join is the control.
+- `kind=ctl site=80090C80` n=275 voice=`0x8018DF20` word=srcw=`0x00000000` src=`0x801954C0` off=`0x38`. Keyon's in-range control. The s4534 ctl word `0x00C80000` did not recur.
+
+The join, after both store lines:
+
+- `[s4534-jal] kind=ctl site=800903F0` s1=`0x801723B0` raw34=a3=`0x00000000`.
+- `[s4534-jal] kind=bad site=800903F0` s1=`0x801724C0` raw34=a3=`0x6C617465`. Then `[s4532-fill] kind=bad site=FE98` dev=`0x6C637265` wC=`0x6C617465`, then `pi-start-dma raw_r7=0x6C637265` and the assertion.
+
+This selects H-neither. It refutes H-keyon and H-init for this abort: an exact store would have printed (cap 8 per site, zero used), and the bad jal still fired. These two stores are not the producer. Do not grep for a third writer. The next discriminator is a retail watch of physical `0x1724F4` (that voice +0x34) through origin `0x6a2900`, asking whether the game writes `0x6C617465` and from which PC. `0x6C617465` is not a legitimate cart offset. No skip was added.
+
+ORIGIN: neither `musyxKeyOnVoice` `0x80090C80` nor `musyxInitVoiceFromSample` `0x800921E8` wrote `0x6C617465` in this run. The value is not legitimate. Nothing was mitigated.
