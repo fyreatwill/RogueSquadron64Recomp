@@ -152736,3 +152736,34 @@ This selects H-init-skipped. It refutes H-overwritten (no target-voice store, so
 Two addresses, not a lattice census: `0x8018D4A0 - 0x801724C0 = 0x1AFE0` and `0x1AFE0 % 0x88 = 128`, while `0x801724C0 - 0x80172328 = 3*0x88`. The store formula at `0x800921E4` is `base + index*0x88`. Whether the other 1177 stores share the bad voice's residue is the next measurement, not a conclusion from these two pointers.
 
 ORIGIN: the writer of the port's voice word is not `musyxInitVoiceFromSample` `0x800921E8`. `0x6C617465` is not a legitimate cart offset. Nothing was mitigated.
+
+## Session 4538 (2026-10-10) — init stores 560 voices on the 0x801724C0 lattice and skips that voice
+
+HYPOTHESIS-ID: odd-dma-init-lattice
+
+No new SOAK-RESULTS lines since s4537. The s4532 rows were already folded.
+
+`tools/apply_s4538_init_lattice.py` keeps the s4537 census and, at the same `0x800921E8` store, counts voices congruent to `0x801724C0` modulo `0x88` (`n_lattice`). A wrapped uint32 difference is not that modulus: `2^32 % 0x88 == 120`, which would report a voice an exact number of slots below the target as residue 120. The residue folds 120 back in when the voice is below the target. A host self-test of that function returned 128 for `0x8018D4A0`, 0 for `0x801724C0`, and 0 for `0x80172328` (the naive wrap of the third address is 120). The store is not skipped. One rebuild, one run, the s4532 route, with `ROGUESQ_LOG_S4534=1`, `ROGUESQ_LOG_S4535=1`, `ROGUESQ_LOG_S4537=1`, and `ROGUESQ_LOG_S4538=1`. Log: `scratch/s4538_init_lattice_20261010-035456/run.log`.
+
+VI 1024 at 48.8s (`0x00790400`), VI 512 at 59.3s (`0x006AB400`), VI 640 (was 512) at 169.6s (`0x006A2900`). Death is the odd-address assertion in `do_rom_read` (`pi.cpp:112`), signal 6. `last-guest-pc` is `0x80001b08`. Not the parked `fillSampleStreamRange` bus error (no `+15116` line).
+
+Control fired first, at log line 20870, before title:
+
+- `[s4538-init] kind=arm` voice `0x8018D4A0` word `0xB0373B68` residue `128`, `n_all=1 n_this=0 n_lattice=0`.
+- `[s4537-init] kind=arm` the same voice and word.
+
+The residue matches the host check. The classifier ran. s4537's jal `n_all=1183` is the same-run count control.
+
+At the edge, log lines 535360–535372:
+
+- phase origin `0x006A2900`.
+- `[s4534-jal] kind=bad site=800903F0` s1 `0x801724C0` raw34=a3=`0x6C617465`.
+- `[s4537-init] kind=jal` `n_all=1183 n_this=0 n_phys=0`. No `kind=voice` line.
+- `[s4538-init] kind=jal` `n_all=1183 n_this=0 n_lattice=560 last_this=0`.
+- `[s4532-fill] kind=bad` dev `0x6C637265` wC `0x6C617465`, then the assertion.
+
+This selects H-index-absent. It refutes H-not-a-slot (`n_lattice=560`) and H-census-wrong (`n_this=0`, and the s4537 counter agrees).
+
+The first four lattice stores, lines 342370–343436, are consecutive calls and consecutive slots. Quote the first: voice `0x801714D0`, word `0xB03910A0`, exactly 30 slots below `0x801724C0`, `n_lattice=1` at `n_all=624`. The next three are `0x80171558` / `0xB03698D8` (29 below), `0x801715E0` / `0xB03910A0` (28 below), and `0x80171668` / `0xB03910A0` (27 below). The other 556 lattice addresses were not printed. Do not treat a contiguous continuation as measured. Do not grep for the skipped index. No skip was added.
+
+ORIGIN: not a mitigation. The writer of `0x6C617465` is still not `0x800921E8`. That word is not a legitimate cart offset.
