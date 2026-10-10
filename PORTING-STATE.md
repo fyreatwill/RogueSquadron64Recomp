@@ -151750,3 +151750,51 @@ classified in s3617–s3620. Next site is `unlinkAndFreeChildNpcNode` at
 `0x800EC404` (entry `0x800EC388`, size `0x150`). The delay is `nop`. The
 instruction before the jal does not write `$a0`. s1814 only renamed it.
 Evidence: `docs/M3-S4491-HANDLE-HUD-RS-FREE-AUDIT.md`.
+
+## Session 4492 (2026-10-09) — audited unlinkAndFreeChildNpcNode rs_free of the object slab
+
+SOAK-RESULTS tail had nothing newer than the s4467/s4468 lines already folded.
+No game run. CURRENT-TRUTH was 56699 bytes, under the maintenance cap.
+
+Positive control: `funcs_20.c` still has `jal 0x80001C98` at closed `0x80083C58`,
+`funcs_19.c` still has it at closed `0x8007BE50`, and `funcs_33.c` still has it
+at closed `0x800C1084`. `funcs_40.c` has it at `0x800EC404`. The ROM word at all
+four PCs is `0x0C000726`. `0x800EC404` is past the menu and cinematic overlay
+ends, so those overlays do not alias this jal.
+
+`unlinkAndFreeChildNpcNode` (`0x800EC388`, size `0x150`) has one `jal rs_free`,
+at `0x800EC404`. ROM and the generated listing agree. The delay is `nop`. The
+prologue copies the incoming object to `$a2` and the only later `$a0` write on
+the free path is `lw $a0, 0($a2)` at `0x800EC394`. No instruction between that
+load and the jal writes `$a0`, and that path has no earlier `jal`. The arm
+`slab_free_count + object_slot_count != 4` does not reach the jal.
+
+The word at object `+0` is stored once, by `sw $a1, 0($v0)` at `0x800EC364` in
+`allocObjectPoolNode`. `$a1` is the current slab and `$v0` is
+`slab + 0x10 + index * 0x1AC`. Each slab is one `rs_malloc(0x6C0, 1)` user
+pointer (`0x10 + 4 * 0x1AC = 0x6C0`). Flag bit `0x1` is not one of the two flag
+tests inside `rs_malloc`; the return is still the user pointer at header+16.
+`createAndInitObject` is the only caller of the allocator. It publishes the
+object and does not store object `+0`. Its twenty callbacks and the callees
+that later receive the object do not `jal rs_free` and do not store through
+offset 0 of the object.
+
+The only `jal 0x800EC388` is `clearPendingAndDestroyChildNpc` at `0x800EC6A4`.
+There is no `j`, no address constant, and no `lui`/`addiu` materialization.
+All twenty callers pass the same parent slot `createAndInitObject` filled.
+Eighteen request one slot; `npcGroundTransportUpdate` and `npcTrainCarUpdate`
+request two. The free still runs only when this object empties the slab, and
+the slab is unlinked from `0x8010C0D0` or `0x8010C0D4` first.
+`freeAllObjectContextPoolNodes` frees slabs that are still on those lists, so
+it does not free a slab this path has already unlinked.
+
+This selects H-NextClassComplete. That refutes H-NextClassGap.
+H-NextClassUnevaluable is not selected: one allocator return, freed once on
+the emptying path, and the entry is not indirect. No guard was added.
+ORIGIN: `allocObjectPoolNode` writes the `rs_malloc(0x6C0, 1)` return at
+object `+0`; that value is the legitimate slab base.
+
+Next site is `freeAllObjectContextPoolNodes` at `0x800EC538` (entry
+`0x800EC514`). The delay `sw $v0, -0x3F30($s0)` does not write `$a0`. The jal
+at `0x800EC564` is a separate site. Evidence:
+`docs/M3-S4492-UNLINK-CHILD-NPC-RS-FREE-AUDIT.md`.
