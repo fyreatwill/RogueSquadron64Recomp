@@ -152437,3 +152437,7 @@ ORIGIN: n/a, no mitigation added; diagnostic script only.
 - Not established: which tris the stubs actually are (no pixel->tri map), so (B) vs (A) stays open; (C) not touched. Nothing here is two-source.
 - Closed per NEXT.md rule: no one-iteration discriminator emerged. The only cheap next probe (an RT64 tri-index mask render mapping pixels to tris) needs a renderer patch and is parked. The hangar scene is visually near-correct after s4518; stubs and right-edge strip are cosmetic.
 ORIGIN: n/a, no mitigation added; diagnostic script only.
+
+## Session 4522 (2026-10-10) — enqueued post-RSP-fix soak replay (s4522_postfix_replay)
+
+Work unit from NEXT.md (rsp-fix-dissolves-crash-families): wrote scratch/agent/soak_queue/s4522_postfix_replay.sh, a 4-arm concurrent replay of the s4452 baseline recipe (240 s each) on the current build (binary 00:06, includes the s4518 LUV/LFV/LHV fix). Positive control: the identical s4452 recipe pre-fix crashed in all 4 arms (36 [CRASH] lines each, pc 0x80001b08/0x8000834c). Verdict arrives in SOAK-RESULTS.md between iterations. Zero crashes in 4/4 arms supports hypothesis A (weak: same recipe, one scene path); 36-crash signature again means B. No game run this session; nothing concluded yet.
