@@ -221,3 +221,6 @@ The s4559 NULL-deref crash was our own `[rs-hdr]` print (guarded now). flags=4 m
 
 ## Update s4561 (refines s4560 hypothesis)
 Frees of 0x80179380/0x801714D0 come from the main thread (guest shutdown span inside `waitForMusyXAudioTaskDone`<-musyxNoopStub<-runVideoFrameTick); the crash is on viRetraceHandlerThread (`musyxSynthFrame+5800`). Synth ran 10610 entries across both teardowns with gate byte 0x800A0F50=1 at the free (use-after-free race: H-not-uaf refuted). Not yet split: retail-has-same-window vs port-missing-quiesce; H-stale-head open. Next: static order of gate write vs frees in that span. Single-source (s4561 armB).
+
+## Update s4562 (supersedes s4561 'next')
+Static: gate 0x800A0F50 is cleared AFTER the frees in musyxNoopStub (guest has no quiesce; H-quiesce-missing refuted). Pausing musyxSynthFrame across the wait (tools/apply_s4562_synth_pause.py, ROGUESQ_S4562_PAUSE=1, default off) leaves the crash unchanged in the A/B (both +5688 at ~180 lines after teardown 2) -> the stale link persists beyond the free window; H-stale-head is the lead. Next: log the list-head load at the crash site vs re-init (NEXT.md).
