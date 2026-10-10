@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4541 (s4541: H-index-30. The bad call is `s0=30`, base `0x801714D0`, count 32, `sum==a0`. Init's 0..17 is not this loop's span. Next is whether the allocator's count/base pair publishes that 32 with that base. See NEXT.md). Prior: session 4540 (one caller). Session 4495 was the
+Updated for session 4542 (s4542: the alloc-pair print's control fired, then both runs died in `fillSampleStreamRange` before VI 1024. That is not the bad-call edge. Count 32 with base `0x801714D0` is still unmeasured. See NEXT.md). Prior: session 4541 (H-index-30). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -48,7 +48,7 @@ Complete. Index: PROJECT-OVERVIEW §58; notes `docs/M3-S4477-*.md`
 through `docs/M3-S4500-*.md`. Headless note: `.venv-splat` python is
 not allowlisted; use system `python3` with `scratch/agent/s4500_dis.py`.
 
-The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531) and stays parked: a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. The odd DMA's node field is named (s4533), its jal is named (s4534), and s4535 selected H-neither for the two named stores. s4536 selected H-port-only: retail does not store `0x6C617465` at physical `0x1724F4` in the armed window. The only armed writer is `musyxInitVoiceFromSample` `0x800921E8`, and all 87 words are `0xB0` pointers. s4537 selected H-init-skipped (0 stores to that voice, `n_phys=0`). s4539 selected H-outside. The 565 lattice rows are one base, `0x801714D0`, indices exactly 0..17; k=30 is outside that span, and `B + 30*0x88` is the voice. The bad jal still reads `0x6C617465` (`n_this=0`). s1 at that jal is the entry a0 of `musyxRenderVoiceSamples` (`addu` at `0x8008FFB4`, no later write). s4540 selects H-one-caller. s4541 selects H-index-30 on that same jal. The bad line is `s0=30`, base `0x801714D0`, count `32`, `sum=0x801724C0` equal to a0. `0x801714D0 + 30*0x88` is that voice. The arm is a different array (`base=0x8018D4A0`, `s0=0`, count 16, `sum==a0`). All 18 indices 0..17 also have `sum==a0`. On this base the count was 15, then 18, then 32; 32 is late. The only original store of the count halfword is `allocateSongChannelArray` `sh` at `0x8008F0CC`, and the base word is the following `sw` at `0x8008F0EC` (s3602, static). Do not re-read ra. Do not re-run the index print. Do not grep for a skipped index. Do not add a skip. Next is whether a stored count of 32 is paired with base `0x801714D0`. Hangar artifact triage stays behind a new discriminator.
+The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531) and stays parked: a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. The odd DMA's node field is named (s4533), its jal is named (s4534), and s4535 selected H-neither for the two named stores. s4536 selected H-port-only: retail does not store `0x6C617465` at physical `0x1724F4` in the armed window. The only armed writer is `musyxInitVoiceFromSample` `0x800921E8`, and all 87 words are `0xB0` pointers. s4537 selected H-init-skipped (0 stores to that voice, `n_phys=0`). s4539 selected H-outside. The 565 lattice rows are one base, `0x801714D0`, indices exactly 0..17; k=30 is outside that span, and `B + 30*0x88` is the voice. The bad jal still reads `0x6C617465` (`n_this=0`). s1 at that jal is the entry a0 of `musyxRenderVoiceSamples` (`addu` at `0x8008FFB4`, no later write). s4540 selects H-one-caller. s4541 selects H-index-30 on that same jal. The bad line is `s0=30`, base `0x801714D0`, count `32`, `sum=0x801724C0` equal to a0. `0x801714D0 + 30*0x88` is that voice. The arm is a different array (`base=0x8018D4A0`, `s0=0`, count 16, `sum==a0`). All 18 indices 0..17 also have `sum==a0`. On this base the count was 15, then 18, then 32; 32 is late. The only original store of the count halfword is `allocateSongChannelArray` `sh` at `0x8008F0CC`, and the base word is the following `sw` at `0x8008F0EC` (s3602, static). Do not re-read ra. Do not re-run the index print. Do not grep for a skipped index. Do not add a skip. s4542 did not reach a bad call. Both runs died in the parked bus error before VI 1024. The print control passed: count 16, base `0x8018D4A0`, then the arm line reads that pair. The pre-title lattice store is count 17 and is overwritten by that arm store before mix. Do not read it as H-no-32. Next is still whether a later store publishes count 32 with base `0x801714D0` before the bad jal. Hangar artifact triage stays behind a new discriminator.
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -75,7 +75,10 @@ Do not revive these by repeating a null measurement.
   died there again (signal 10, guest pc `0x8000834c`) after the allow
   line. s4532 run B died the same way before VI 1024
   (`fillSampleStreamRange+15156`, guest pc `0x8000834c`, zero
-  `[s4532-fill]`). Still parked. Do not re-run it to catch the odd DMA.
+  `[s4532-fill]`). s4542 runs A and B died the same way before VI 1024
+  (2/2, `+15156`, guest pc `0x8000834c`). Still parked. Do not re-run it
+  to catch the odd DMA. A later alloc-pair attempt may still use the
+  qualified route; a death on this stack is not that pair.
 - **s4465 allocator overlap** at VI 1024
   (`rs_malloc(3964) = 0x801931F0`) is single-source. s4466 and s4468
   did not recur it (0/8). No more heap-header instrumentation. The
@@ -112,6 +115,7 @@ Kept here only when a later session would otherwise repeat them.
 The s4413–s4433 selector narrative and the s4434–s4475 audio narrative
 are in PROJECT-OVERVIEW §58.
 
+- "The pre-title lattice store, count 17 at base `0x801714D0`, is the halfword the bad jal reads" (the obvious reading of the s4542 early lines; believable because that base is the lattice and this `sh` is the only original store) was checked against the next lines in both s4542 runs. The following store is count 16 at base `0x8018D4A0`, and the arm line reads that pair. Count 17 is not live at the first mix call. The bad jal was not reached. Do not read those three lines as H-no-32.
 - "The index, base, and count at the bad `musyxMixActiveVoices` jal are unnamed, so the voice could be slot 30 of the init lattice, a slot of another array, or not `s0` at all" (s4540 next step; believable because the loop was only static and the entry ra was 0) was tested in s4541. The bad line is `s0=30`, base `0x801714D0`, count 32, `sum==a0`. The arm is base `0x8018D4A0` with `sum==a0`, and every index 0..17 of the lattice also has `sum==a0`. This is H-index-30. Not another base. Not a stale `s0`. Do not re-run that print.
 - "ra at the `0x8008FFB4` addu is the caller of `musyxRenderVoiceSamples`" (s4539 next step; believable because the MIPS prologue has not overwritten `$ra`) was tested in s4540. Both edge runs printed `ra=0x00000000`, including the arm whose a0 top byte is `0x80`. `funcs_24.c` has no constant store to `ctx->r31`. The call-site probe names the caller. Do not re-read ra.
 - "The unprinted lattice stores might be a hole inside a span that covers voice `0x801724C0`, or a span that never reaches it" (s4538 next step; believable because only four of 560 lattice addresses were printed, and those four were consecutive slots) was tested in s4539. All 565 lattice rows are indices 0..17 of base `0x801714D0`, each index repeated, none above 17. k=30 is outside. Not a hole. Do not re-run that span.
@@ -155,7 +159,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Count/base pair for voice index 30** (HYPOTHESIS-ID: odd-dma-alloc-pair). s4541 selected H-index-30: the bad jal is `s0=30` of base `0x801714D0` because the halfword at `0x80149700` is 32. That halfword's only original writer is `allocateSongChannelArray` `sh $s0` at `0x8008F0CC`; the base word is the `sw` at `0x8008F0EC` in the same function, after `rs_malloc`. One print of each allocation's reloaded count and stored pointer. Do not re-run the mix-index print. Do not read `r31` after the malloc jal. Do not add a skip. Commands and outcomes are in NEXT.md.
+1. **Count/base pair for voice index 30** (HYPOTHESIS-ID: odd-dma-alloc-pair). The print is already in `allocateSongChannelArray` after the `0x8008F0EC` store (`tools/apply_s4542_alloc_pair.py`). s4542 did not select: both runs died in `fillSampleStreamRange+15156` before VI 1024, and the bad jal did not fire. The pre-title lines (count 20 base `0x80169460`, count 17 base `0x801714D0`, count 16 base `0x8018D4A0`, then the arm) are not that jal. Do not move the print. Do not add a skip. Commands and outcomes are in NEXT.md.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null

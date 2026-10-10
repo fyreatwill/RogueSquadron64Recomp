@@ -152864,3 +152864,28 @@ Controls, in order, every one with `sum==a0`:
 The halfword's only original store is `allocateSongChannelArray` `sh $s0` at `0x8008F0CC`, and the base word is the following `sw` at `0x8008F0EC` (s3602, static, single-source until the pair is measured). Whether a stored count of 32 is paired with base `0x801714D0` is the next discriminator. Do not re-run this print.
 
 ORIGIN: not a mitigation. No skip was added. `0x6C617465` is not a legitimate cart offset. The loop index is 30 because the live count is 32. Whether that 32 is a legitimate slot count is not yet measured.
+
+## Session 4542 (2026-10-10) — alloc-pair runs die before the bad jal
+
+HYPOTHESIS-ID: odd-dma-alloc-pair
+
+No new SOAK-RESULTS lines since s4540. The last queued row is still the s4532 fill soak.
+
+The planned print sits in `allocateSongChannelArray` after the `0x8008F0EC` store and before the zeroing loop. `tools/apply_s4542_alloc_pair.py` reloads the halfword at `0x80149700`, reads `s0` from `ctx->r16`, and reads the pointer just stored in `ctx->r2`. Gate `ROGUESQ_LOG_S4539=1`. Diagnostic only. It does not skip the store or the malloc, and it does not read `r31`. Rebuild was `funcs_23.c` only. Before the run the binary contained `s4542-alloc` and `s4540-call`.
+
+Two runs of that binary. `scratch/s4542_alloc_pair_20261010-050340/run.log` and `scratch/s4542_alloc_pair_20261010-050428/run.log`. Both reach VI 640 (`0x0066A500`) and die before VI 1024. Both stacks are `fillSampleStreamRange+15156`, `last-guest-pc` `0x8000834c`, signal 10. `NAN_CHECK` count is 0 in both. No `[s4540-call] kind=bad`. No `kind=in`. This is the parked bus error, not the 512-to-640 odd DMA. The plan says a second such death is not this edge. No third run.
+
+The print control passed in both runs, in the same order, with `s0` equal to `count` and no gap in `n`:
+
+- `[s4542-alloc] n=1 count=20 s0=20 base=0x80169460`
+- `[s4542-alloc] n=2 count=17 s0=17 base=0x801714D0`
+- `[s4542-alloc] n=3 count=16 s0=16 base=0x8018D4A0`
+- `[s4540-call] kind=arm a0=0x8018D4A0 n_all=1 s0=0 base=0x8018D4A0 count=16 sum=0x8018D4A0`
+
+Three calls, three lines. Nothing was folded and the cap of 48 was not reached. The arm pair is printed before the arm line, and the arm line reads that same pair. That is the positive control for the print. It is not the bad-call pair.
+
+The lattice store (count 17, base `0x801714D0`) is the second call. The third call stores the arm pair over it, and the arm line reads the arm pair. Count 17 is not live at the first mix call. This refutes reading that lattice line as the halfword the bad jal reads. Neither run selects H-paired-32, H-unpaired, or H-no-32: the bad jal did not fire, so a missing count of 32 here is not absence at the edge. The early count-20 store at `0x80169460` is a different base and is also before the arm.
+
+Do not move the print. The next run is the same binary, judged only if the bad triple is back. A `fillSampleStreamRange` death before that triple is still not a result.
+
+ORIGIN: not a mitigation. No skip was added. The pre-title count 17 is a real store of the lattice base and is then overwritten by the arm store. Whether count 32 is later paired with `0x801714D0` is not yet measured.
