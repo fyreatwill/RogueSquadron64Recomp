@@ -4810,6 +4810,21 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                 std::fflush(stderr);
             }
         }
+        if (addr >= 0x80179360u && addr < 0x80179490u && pc >= 0x80001000u && pc < 0x80002800u) {  // allocator-code stores only  // s4558: headers/bodies around the 0x80179380(900) vs 0x80179480(73728) overlap
+            static uint32_t hn2 = 0;
+            if (hn2++ < 400u) {
+                std::fprintf(stderr, "[s4558-hdr] w=%c addr=0x%08X pc=0x%08X val=0x%08X vi=%u\n", width, addr, pc, value, rs64_vi_committed_width());
+                std::fflush(stderr);
+            }
+        }
+        if ((addr == 0x80128F08u || addr == 0x80128EF0u || addr == 0x80128F04u || addr == 0x80128F00u || addr == 0x80128EFCu) ||
+            (pc == 0x8001E2C0u && (addr == 0x80179480u || addr == 0x80179510u))) {  // s4558: LUT base/count globals + clear-loop writes into the audio range
+            static uint32_t hn3 = 0, hn3b = 0;
+            if (pc == 0x8001E2C0u ? hn3b++ < 12u : hn3++ < 80u) {
+                std::fprintf(stderr, "[s4558-lut] w=%c addr=0x%08X pc=0x%08X val=0x%08X vi=%u\n", width, addr, pc, value, rs64_vi_committed_width());
+                std::fflush(stderr);
+            }
+        }
         if (pc == 0x80085424u && width == 'W') {  // s4462: every store of the caller-supplied SND pointer in the sorted-table insert
             static uint32_t n = 0, inpool = 0;
             ++n;
