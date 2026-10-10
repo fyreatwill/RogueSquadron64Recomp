@@ -127,7 +127,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **M5 audio de-stub step 1 (docs/M5-AUDIO-PLAN.md).** Slug `m5-audio-destub`. The `jal rs_free` class is CLOSED (S4502: the 16 audio-shutdown sites map by offset to S3603-S3605 audits; docs/M3-S4502-AUDIO-SHUTDOWN-RS-FREE-CLOSURE.md). Run the plan's first un-executed step.
+1. **BLOCKED (s4503): priority ladder exhausted.** M5 steps 1-10 closed/conditional; rs_free class closed (S4502); sweep has 6 deliberately-unnamed placeholders left of 2,643 (`syms/rogue_squadron.syms.toml`). Needs a human to choose a new thread (see scratch/agent/BLOCKED.md).
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
