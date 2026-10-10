@@ -68,7 +68,8 @@ Do not revive these by repeating a null measurement.
 - **Named voice+0x34 stores are not the `0x6C617465` producer** (s4535). Do not re-probe `0x80090C80` or `0x800921E8` for this word. Do not grep for another `sw` of voice+0x34.
 - **s4553 (single-source): the +5436 crash fires identically with ROGUESQ_AUDIO_UCODE=0 (image off) and with defaults, 3/3 arms; not an audio-image artifact. Tick-on arm stalled in the intro (VI 640 only).**
 - **s4554 (static, single-source):** `musyxSynthFrame` 0x80091368..0x80091380 is an unbounded countdown-list walk (`lhu/sh 0x10(n)`, `n=*n`); generated code is in the sibling N64Recomp/RecompiledFuncs/funcs_24.c:7158. No guard exists, only the s4307 trace hook. See NEXT.md.
-- **Pool-link writer unnamed.** `musyxSynthFrame+5436` is
+- **s4555 (3/3 arms, control present): the +5436 corrupt link's writer is `sh $zero,0($a0)` at `0x8001E2C0`, the clear loop of `initTextureLUTAndAllocBuffers` (36-byte `rs_malloc` entries). It overlaps the live audio pool node `0x80179510` (link `0x801794FC` -> `0x000094FC`). The writer is named; open: why `rs_malloc` returned memory the audio pool owns (port heap/free bug vs retail). Supersedes "Pool-link writer unnamed" below.**
+- **Pool-link writer unnamed (SUPERSEDED by s4555 above).** `musyxSynthFrame+5436` is
   `lhu 0x10($v1)` at `0x80091368` after a corrupt `next`. s4459 refuted
   the `0x80061520` 0xFF font fill as a live-node clobber. The writer of
   a `0x80193C18`-valued link is still unnamed. The s4457 harness reran
