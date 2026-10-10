@@ -1,39 +1,46 @@
-# NEXT: does retail write 0x6C617465 at physical 0x1724F4
+# NEXT: does port init store anything to voice 0x801724C0
 
-HYPOTHESIS-ID: odd-dma-retail-voice-word
+HYPOTHESIS-ID: odd-dma-port-init-voice
 
-s4535 selected H-neither and closed the two named stores. Do not re-probe `0x80090C80` or `0x800921E8`. Do not re-read the four jals. Do not grep the tree for another writer of voice+0x34. Do not add a skip.
+s4536 selected H-port-only. Do not re-run the retail watch. Do not grep for a writer. Do not add a skip. Do not re-probe `0x80090C80`. Do not re-test "did init store `0x6C617465`" as the question: s4535 already printed that word if init stored it, and it did not.
 
-The port's bad voice is stable across s4534 and s4535: `0x801724C0`. The word at +0x34 is `0x6C617465` when `0x800903F0` runs, on the 512-to-640 edge (origin `0x006A2900`). Physical address of that word: `0x1724F4`. `0x6C617465` is not a legitimate cart offset.
+Retail, armed from title `0x00790400` through origin `0x6a2900`: the only writer of physical `0x1724F4` (voice `0x801724C0` + 0x34) is `musyxInitVoiceFromSample` `0x800921E8`. 87 stores, 23 unique values, all `0xB0xxxxxx`, scalar mismatch 0. 22 of them are at origin `0x6a2900`. `0x6C617465` is absent. The s4535 probe returns without printing a `0xB0` word (`tools/apply_s4535_voice_store.py`), so the port run did not say whether init writes this voice.
 
-One oracle run. The port cannot witness this. Rice is required; dummy video never leaves width 320. `--vi-trace` is the phase control. Watch 0 is the whole-RDRAM positive control and must print hits. Watch 1 is the one word. `--post-value-watch 1` arms at title `0x00790400` or hangar `0x006AB400` and stays armed, so the later 640 edge is inside the sample window (256 samples, 64 unique values). `--post-value-pc` forces samples for the two named store PCs past that budget. If `post-value` reports `overflow` nonzero and `0x6C617465` is absent, that absence is not a result.
+Competing hypotheses:
+
+- H-init-skipped: port `0x800921E8` never stores to voice `0x801724C0`. Retail does, 87 times. The jal still reads `0x6C617465` because init never replaced it.
+- H-overwritten: port init stores one or more `0xB0` pointers to that voice, and the jal still reads `0x6C617465`. A later store replaced the pointer. Init is not that later store.
+- H-init-ascii: port init stores `0x6C617465` to that voice. This contradicts s4535 (exact-word cap unused, arm line live). Select only if the new line prints that word.
+
+One new probe, one build, one run. Same route as `scratch/agent/soak_queue/done/s4532_fill_devaddr_20261010-023837.sh`, plus `ROGUESQ_LOG_S4534=1` and `ROGUESQ_LOG_S4535=1`. At `0x800921E8` only, count every store (`n_all`) and every store whose voice is `0x801724C0` (`n_this`). Print each target-voice store with its word, cap 16. Print `n_all` and `n_this` on the existing bad jal (`0x800903F0`, voice `0x801724C0`). Do not skip the store.
+
+Positive control, same run: the existing `[s4535-store] kind=arm` line, or a printed `n_all>=1`, before the bad jal. A counter that stays zero with no arm line is a dead instrument.
 
 ```
-tools/oracle/build/rs64_oracle \
-  --core "$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" \
-  --rom "$HOME/Documents/Tools/rogue_squadron64/rogue_squadron.z64" \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 180 --vi-trace --hit-cap 4 \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0x1724F4:0x1724F8 \
-  --first-watch 1 \
-  --pc-hist-watch 1 \
-  --pc-hist-phase 0x6ab400:512 \
-  --pc-hist-phase 0x6a2900:640 \
-  --post-value-watch 1 \
-  --post-value-pc 0x80090C80,0x800921E8 \
-  --post-value-pc-detail \
-  --post-value-pc-detail-phase 0x6a2900:640 \
-  --press '6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start,117:start,130:start'
+# after tools/apply_s4537_init_voice.py and a rebuild of RogueSquadron64Recomp
+stamp=$(date +%Y%m%d-%H%M%S)
+out="scratch/s4537_init_voice_${stamp}"
+mkdir -p "$out"
+cd build
+env \
+  ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_STUB_MISSING_FUNCS=1 \
+  ROGUESQ_LOG_RUNNER=1 ROGUESQ_LOG_S4222=1 ROGUESQ_LOG_S4526=1 \
+  ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_S4298=1 \
+  ROGUESQ_LOG_S4533=1 ROGUESQ_LOG_S4534=1 ROGUESQ_LOG_S4535=1 \
+  ROGUESQ_LOG_S4537=1 \
+  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
+  PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+  PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start" \
+  zsh ../tools/probe.sh "$out" 180 2
 ```
 
-Write stdout to `scratch/s4536_retail_voice_word_<stamp>.log`. Do not start a second game.
+Run from the repo root for the `cd build`. Do not start a second game. SIGKILL if the probe wrapper does not reap it. The edge is the `[s4534-jal] kind=bad site=800903F0` line with `s1=0x801724C0`, on the 512-to-640 transition (origin `0x006A2900`). A VI-640 death whose stack is `fillSampleStreamRange` is the parked bus error, not this edge.
 
 Outcomes:
 
-- `[vi]` shows origin `0x6a2900` at width 640, watch 0 printed hits, and a `post-value` row for watch 1 is `value=0x6C617465`: selects H-retail. Quote the `post-value-pc` line for that value, or the `post-target-class` `last_value` if the writer is `0x80090C80` or `0x800921E8`. The word is the game's. Stop. Do not add a skip. If that PC is one of the two named stores, the port's copy of that store diverged; say so and stop.
-- The same phase is reached, watch 0 fired, watch 1's `post-value` `overflow=0`, and no value is `0x6C617465`: selects H-port-only. Retail did not write that word to this address in the armed window. Stop. Do not grep. The writer on the port is still unnamed.
-- `post-target-summary` for `0x80090C80` or `0x800921E8` has `seen=0`, and some other watch-1 writer PC has the value: that other PC is the retail writer. Quote it. Stop. Do not grep.
-- No `[vi]` line with origin `0x6a2900`: the edge was missed. Not a result about the word. Do not conclude absence.
-- Watch 0 prints no hit: the instrument is dead. Not a result.
-- `post-value` `overflow` is nonzero and `0x6C617465` is absent: the sample budget filled. Not H-port-only. Do not re-run the same command hoping the value appears.
+- Arm or `n_all>=1` printed, bad jal present, `n_this=0`: selects H-init-skipped. Retail init writes this voice; port init does not. Stop. Do not grep. Do not add a skip.
+- Arm or `n_all>=1` printed, bad jal still `raw34=0x6C617465`, and at least one target-voice store is a `0xB0` pointer: selects H-overwritten. Quote the last such word and `n_this`. Stop. The replacement writer is still unnamed; do not grep for it in this session's conclusion.
+- A target-voice store word is `0x6C617465`: selects H-init-ascii. Quote it. This contradicts s4535. Stop. Do not add a skip.
+- No bad jal, or the run never reaches origin `0x006A2900`: not a result about this voice.
+- No arm line and `n_all` absent: the instrument is dead. Not a result.

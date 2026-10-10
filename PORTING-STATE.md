@@ -152687,3 +152687,23 @@ The join, after both store lines:
 This selects H-neither. It refutes H-keyon and H-init for this abort: an exact store would have printed (cap 8 per site, zero used), and the bad jal still fired. These two stores are not the producer. Do not grep for a third writer. The next discriminator is a retail watch of physical `0x1724F4` (that voice +0x34) through origin `0x6a2900`, asking whether the game writes `0x6C617465` and from which PC. `0x6C617465` is not a legitimate cart offset. No skip was added.
 
 ORIGIN: neither `musyxKeyOnVoice` `0x80090C80` nor `musyxInitVoiceFromSample` `0x800921E8` wrote `0x6C617465` in this run. The value is not legitimate. Nothing was mitigated.
+
+## Session 4536 (2026-10-10) — retail does not store 0x6C617465 at physical 0x1724F4
+
+HYPOTHESIS-ID: odd-dma-retail-voice-word
+
+No new SOAK-RESULTS lines. The s4532 rows were already folded.
+
+One oracle run, the command in the previous NEXT.md. Rice, `--vi-trace`, whole-RDRAM control watch, target watch on physical `0x1724F4:0x1724F8`. Log: `scratch/s4536_retail_voice_word_20261010-032600.log` (358 lines). 180.3s wall, 10778 VI (~179.6s emulated), exit 0.
+
+Phase: title origin `0x00790400` at 17.4s, hangar `0x006ab400` at 38.5s, width 512 to 640 at origin `0x006a2e00` at 131.1s, then origin `0x006a2900` width 640 from 132.2s through 176.9s. `pc-hist-phase` for that origin is 763 VI. The edge was reached.
+
+Control: watch 0 printed four writes, then `hit cap 4`, then `positive-control threshold reached` at 10000 callbacks, removal rc=0. Watch 1 stayed armed. Not a dead instrument.
+
+Watch 1: 91 writes. Lifetime writers are only `rs_strncpy` `0x80007670` (4) and `musyxInitVoiceFromSample` `0x800921E8` (87). `0x80090C80` is absent. The four `rs_strncpy` writes are pre-arm: the first printed hit is t=8.7s, title is t=17.4s, and post-value's 87 samples are all `0x800921E8`. A new post-arm PC would have been sampled (87 < 256). Their values were not captured. They are not the armed-window producer.
+
+Post-value, armed at title or hangar and held through the 640 edge: samples=87, unique=23, overflow=0. Every value is `0xB0xxxxxx`. `0x6C617465` occurs 0 times in the log. The only sampled PC is `0x800921E8`, samples=87, scalar mismatch=0, unsupported=0, so these are aligned `sw` of the whole word, not a byte lane hiding ASCII. The phase bucket origin `0x6a2900` width 640 is 22 of those stores, and the detail rows for that phase are the same 22 pointer words, including `0xB0373B68` (the port's s4535 init control word, there on a different voice). Hangar origin `0x6ab400` has a writer-phase header and no PC line: zero writes. `post-target-summary seen=0` for both named PCs is that hangar gate in `record_post_value_requested_row` (width 512 and origin `0x6ab400` only). It does not mean init never stored. The 87 samples are the stores.
+
+This selects H-port-only. Retail does not write `0x6C617465` to this address in the armed window. The port's bad jal still reads that word from voice `0x801724C0`. The s4535 probe does not print a `0xB0` store, so whether the port's init writes this voice is open. Do not grep. Do not re-run this oracle. No skip was added.
+
+ORIGIN: retail's armed-window writer of physical `0x1724F4` is `musyxInitVoiceFromSample` `0x800921E8`, and the value is a KSEG1 sample pointer, which is legitimate. The port's `0x6C617465` is not that value. Nothing was mitigated.
