@@ -8489,6 +8489,10 @@ static void start_fl_zero_poller() {
             return ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16)
                  | ((uint32_t)b[2] << 8) | (uint32_t)b[3];
         };
+        const bool flz_always = [] {
+            const char* e = std::getenv("ROGUESQ_FL_ZERO_ALWAYS");
+            return e && *e && *e != '0';
+        }();
         uint8_t prev[16];
         snap16(prev);
         fprintf(stderr,
@@ -8517,6 +8521,14 @@ static void start_fl_zero_poller() {
             fprintf(stderr,
                 "[fl-zero-fault] event=arm_boot_zero slot=0x%X page=%zu\n",
                 slot, fl_zero_page_size());
+            fflush(stderr);
+        }
+#endif
+#ifndef _WIN32
+        if (flz_always) {
+            g_flz_fault_want.store(2, std::memory_order_release);
+            fl_zero_fault_arm();
+            fprintf(stderr, "[fl-zero-fault] event=arm_always slot=0x%X\n", slot);
             fflush(stderr);
         }
 #endif
@@ -8601,7 +8613,7 @@ static void start_fl_zero_poller() {
                 // any other shape so boot/menu texture traffic is not trapped
                 // after the boot-zero posctrl has fired.
                 // want: 1=boot-zero, 2=freelist (s647 discriminates BT/SS rate).
-                if (cf == 0x2u && csz == 0x60u) {
+                if ((cf == 0x2u && csz == 0x60u) || (flz_always && kind[0] != 't')) {
                     if (g_flz_fault_want.load(std::memory_order_relaxed) != 2) {
                         fprintf(stderr,
                             "[fl-zero-fault] event=arm_freelist t_ms=%lld "
@@ -8614,7 +8626,7 @@ static void start_fl_zero_poller() {
                     if (g_flz_fault_want.load(std::memory_order_relaxed)) {
                         // s647: on freelist to_zero, emit last-fault correlate
                         // so even a missed in_hdr still names a suspect leaf.
-                        if (kind[0] == 't' && pf == 0x2u && psz == 0x60u) {
+                        if (kind[0] == 't' && ((pf == 0x2u && psz == 0x60u) || flz_always)) {
                             uint64_t ring_w = g_flz_fault_ring_w.load(
                                 std::memory_order_relaxed);
                             fprintf(stderr,
@@ -8687,7 +8699,7 @@ static void start_fl_zero_poller() {
                 !g_flz_fault_armed.load(std::memory_order_relaxed)) {
                 uint16_t cf = be_u16(prev);
                 uint32_t csz = be_u32(prev + 4);
-                if ((cf == 0x2u && csz == 0x60u) || (cf == 0 && csz == 0)) {
+                if ((cf == 0x2u && csz == 0x60u) || (cf == 0 && csz == 0) || flz_always) {
                     fl_zero_fault_arm();
                 } else {
                     g_flz_fault_want.store(0, std::memory_order_release);

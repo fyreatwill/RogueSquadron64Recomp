@@ -160,7 +160,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Name the writer of the wild stream pointer `0x380000000`** (HYPOTHESIS-ID: odd-dma-alloc-pair). Stop chasing the s4541 route to the bad jal (count 32 / base `0x801714D0`): it is not reproducible and not a build difference (s4545). Use the VI-640 `fillSampleStreamRange+15156` death (8/8 reproducible in ~3 s) as the deterministic route: dump the voice struct feeding it, check whether the pointer field was ever stored and by which PC, with the arm voice `0x8018D4A0` idx 0 as same-run control. One build via `tools/apply_s4545_*.py`. Details in NEXT.md.
+1. **Decide the s659 wild-width writeback policy** (HYPOTHESIS-ID: wild-setcimg-writeback). s4546 found the VI-640 `fillSampleStreamRange` death and the sample-heap wipe (`0x1F9CD0..0x1FB3F4`) are the `ALLOW_WILD_FL` writeback of the s4531 garbage SETCIMG (`addr=0x130393 w=1033 siz=3`, range `[0x1A742B,0x28633F)`): 2/2 wipes directly preceded by it, 0 wipes in the run without it, and `ROGUESQ_FL_HDR_HARD_SKIP=1` survives 3/3 to 180 s. Next: A/B the s659 reason for allowing it (thr11d post-exit fs stall) with HARD_SKIP on, and/or replace allow-everything with restoring the whole covered range except the true framebuffer; separately find who sets the garbage SETCIMG (s4531 parked). Tool: `tools/apply_s4546_flz_always.py`, recipes `scratch/agent/s4546_wipe.sh`, `s4546b_skip.sh`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
