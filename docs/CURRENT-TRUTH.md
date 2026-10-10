@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4532 (s4532: the s4532 soak's death is the odd `do_rom_read`, not `copyToRAM`. devAddr `0x6C637265` size `0x300` is a `fillSampleStreamRange` request field. The `0x600` store cannot be that DMA. FE98 vs FB64 is open until a `kind=bad` line. See NEXT.md). Prior: session 4531 (s4531: the firing `ALLOW_WILD_FL` is SETCIMG `0xFFFB0408`/`0x41130393`, width 1033, fmt 7, in a zero-padded slot; the readback allocation equals the copy; the death is the parked `fillSampleStreamRange+15116` bus error, not `copyToRAM`). Prior: session 4530 (VI-640 deaths on the first ALLOW, widths 913 and 1185; one stack was `copyToRAM`). Prior: session 4529 (VI-512 heads' words 0 and 1 are sibling pointers, not the odd ROM address). Prior: session 4528 (list-link holder; tagged 0x8017D030 is below the freed block; full rs-malloc logging is not a late-window witness). Prior: session 4527 (holder poller built; its own run died at 20 s, late window then measured by the queued soak). Prior: session 4526 (s4526 corrected s4525: retail's list is populated and relocates to 0x801F9CE0 on the same schedule; the text batch is the port's ~122 s phase). Prior: session 4525. Prior: session 4524 (s4524: stub-gate hypothesis for the stale stream-node crash refuted, see docs/M5-STREAM-NODE-LIFETIME.md). Prior: session 4521 (s4521: stub-region tris use the stock TEX0*SHADE combiner with shade <=165, no stream-side cause; hangar triage PARKED, a pixel->tri map via an RT64 tri-index mask render would be the next probe). Prior: session 4520 (s4520: white pillar stubs are in the retail RDP stream too - aligned frame 1246/1249 tris byte-identical - so they are renderer-side or genuine, not RSP). Prior: session 4518 (s4518: RSP LUV/LFV/LHV sign-extension bug fixed in lib rsp_vu_impl.hpp; hangar entry-frame shade diff vs retail 588 -> 3 tris). Prior: session 4517 (s4517: aligned port-vs-retail RDP byte diff of hangar entry frame: all state/edge/texture words identical, shade-colour words sign-extended in port (0xFFxx vs 0x00xx) in 588/1249 tris => RSP shade-output defect, not raster/VI; see NEXT.md). Prior: session 4516 (s4516: retail with the port's 11-Start schedule reaches the same 195-texrect/~1130-tri frame, so the s4515 count difference is scene timing, H1a; ucode counts agree, remaining suspect H3 raster/VI at an aligned scene point). Prior: session 4515 (port hangar sync: tris~1125, texrect 195 vs retail 1244/0, selects H1; see NEXT.md). Prior: session 4513 (BLOCKED: retail RDP stream needs LLE RSP+RDP plugin, BLOCKED.md). Prior: session 4512 (s4512: op04 blobs are DL scratch, vertex diffs void). Prior: session 4511 (s4511: child-DL data blobs dumped on both sides; texture blob identical, 6 static vertex blobs differ but the dump window/layout is unqualified). Prior: session 4505 (2026-10-09). Session 4495 was the
+Updated for session 4533 (s4533: the odd DMA devAddr is `fillSampleStreamRange`'s own store at `0x8008FDC0`. It equals caller a3 `0x6C617465` plus `0x55*0x600`. a3 is the voice's `+0x34` word, plus `0x100` at two of four `musyxRenderVoiceSamples` calls. The callsite is not named. Not a string. Not `copyToRAM`. See NEXT.md). Prior: session 4532 (size-`0x300` DMA is not the `0x600` store; FE98 vs FB64 was still open). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -48,7 +48,7 @@ Complete. Index: PROJECT-OVERVIEW §58; notes `docs/M3-S4477-*.md`
 through `docs/M3-S4500-*.md`. Headless note: `.venv-splat` python is
 not allowlisted; use system `python3` with `scratch/agent/s4500_dis.py`.
 
-The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531, Next steps #1): a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. Hangar artifact triage stays behind a new discriminator.
+The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531) and stays parked: a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. The odd DMA's node field is also named (s4533): `0x8008FDC0` writes it from caller a3. The open question is which `musyxRenderVoiceSamples` jal loaded that a3 (Next steps #1). Hangar artifact triage stays behind a new discriminator.
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -105,6 +105,7 @@ Kept here only when a later session would otherwise repeat them.
 The s4413–s4433 selector narrative and the s4434–s4475 audio narrative
 are in PROJECT-OVERVIEW §58.
 
+- "The node field that supplied `0x6C637265` is an unnamed foreign writer, and the neighbouring word makes it the string `lcrelate`" (s4532, and the obvious reading of the s4533 bad row) was believable because FE98 only copies node+8 into the DMA slot and the two words are printable ASCII. The only edge into FE98 stores node+8 first, at `0x8008FDC0`, as `a3 + 0x600*k`, and stores node+0xC = a3 at `0x8008FDCC`. The soak words give k=`0x55` with remainder 0. Those bytes are not in the ROM. Do not watch the node for a string store.
 - "A VI-640 death before the odd `do_rom_read` is the parked `fillSampleStreamRange+15116` bus error" (s4529 NEXT, and that session's two signal-10 runs) was believable because `last-guest-pc` stays `0x8000834c` and those runs' faulting PC was that function. s4530 run b faults in `NativeTarget::copyToRAM`; the memcpy length is the `ALLOW_WILD_FL` range. Classify a VI-640 death as the bus error only when the faulting stack is `fillSampleStreamRange`. s4531 run B is that stack again; s4530 run b is not overturned.
 - "The s4298 scan's `hits=0` means the odd cart word is not in RDRAM" (s4532 soak, readable that way) was believable because the scan said so. It compared against physical `0x1C637265`. The guest word is raw_r7 `0x6C637265`. Do not read that zero as absence of the guest word.
 - "A hangar run with `[s4298-odd] 0` has covered the odd DMA" (s4531 run A) was believable because the tag was armed through VI 512. The soak's only hit is the later 512-to-640 edge (`initVideoSubsystem`, 169.7s). A run that stays at 512 is not that edge.
@@ -139,7 +140,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Odd DMA node field** (HYPOTHESIS-ID: odd-dma-node-field). The s4532 soak died in `do_rom_read` on raw_r7 `0x6C637265`, size `0x300`, at the 512-to-640 edge. Not `copyToRAM` (no `ALLOW_WILD_FL`). The value is not a ROM offset (ROM is 16MB; those four bytes are not in the ROM) and is not legitimate. The request store is `fillSampleStreamRange`: `0x8008FE98` writes node+8 (size = node+0x10), `0x8008FB64` writes node+8+node+0x10, `0x8008FE04` writes node+8 with size constant `0x600`. Run A controls matched those formulas (`dev=0x00F00C00` then `dev=0x00F00D00` on node `0x80192F10`). The size-0x300 DMA cannot be FE04. FE98 vs FB64 is open. The node-field writer is not named. Do not add a skip. The probe is already linked (`ROGUESQ_LOG_S4533`, `[s4532-fill]`). A soak is queued. Read `kind=bad` if the log has one. No rebuild. If that soak misses the edge or dies in the parked bus error, do not re-run it; take item 4. The wild-width SETCIMG (`0xFFFB0408`/`0x41130393`) stays parked. No `ROGUESQ_DROP_GARBAGE_CIMG`. No `ROGUESQ_LOG_RS_MALLOC`.
+1. **Voice a3 callsite** (HYPOTHESIS-ID: odd-dma-voice-a3). s4533 selected H-FE98 and closed the node-field question. `0x8008FDC0` writes node+8 = a3 + `0x600*k` with k=`0x55`, and `0x8008FDCC` writes node+0xC = a3 (`0x6C617465`). Remainder 0, so node+8 equals t4. a3 is not a legitimate cart offset. All four callers are in `musyxRenderVoiceSamples` and load `lw a3, 0x34(s1)`: `0x8009024C` and `0x800902CC` then add `0x100` (voice word would be `0x6C617365`); `0x8009039C` and `0x800903F0` do not (voice word would be `0x6C617465`). Callee ra is 0, so it cannot name the site. One build. Log at the four jals: bad row plus one in-range control per site that fires. Do not add a skip. Do not re-grep writers of `+0x34` (s105/s111; a second store is `musyxKeyOnVoice` at `0x80090C80`). The wild-width SETCIMG (`0xFFFB0408`/`0x41130393`) stays parked. No `ROGUESQ_DROP_GARBAGE_CIMG`. No `ROGUESQ_LOG_RS_MALLOC`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
@@ -148,9 +149,9 @@ unless Step 0 maintenance triggers again.
 3. **M3 pre-publication guard runtime qualification.** Blocked on
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib`.
 4. **Generated-symbol renaming sweep**, slug
-   `generated-symbol-renaming-sweep`. Do this only when item 1's queued
-   soak did not produce a `kind=bad` line and did not die on the odd
-   `do_rom_read`. The last bounded lead was `0x8000A000..0x8000B000` (s3796).
+   `generated-symbol-renaming-sweep`. Do this only when item 1 cannot
+   be run (the four-jal probe cannot be linked).
+   The last bounded lead was `0x8000A000..0x8000B000` (s3796).
    Mapping-only edits do not reset the engineering-change gate. If the
    last fifteen titles are all sweep titles, do item 2 or the M4
    boundary below instead of another sweep step.

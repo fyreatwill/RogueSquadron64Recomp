@@ -152613,3 +152613,35 @@ This refutes H-FE04 for the size-`0x300` abort: the store's size operand is the 
 ORIGIN: none. The request-slot store is named; the node field that supplied `0x6C637265` is not, and nothing was mitigated.
 
 A soak is queued (`scratch/agent/soak_queue/s4532_fill_devaddr.sh`) with the probe already linked. Read `kind=bad` if it fires. Do not rebuild. If that soak misses the edge or dies in the parked bus error, do not re-run it.
+
+## Session 4533 (2026-10-10) — odd DMA devAddr is the caller's a3 plus 0x55 chunks of 0x600
+
+HYPOTHESIS-ID: odd-dma-node-field
+
+SOAK-RESULTS gained `20261010-023837 | s4532_fill_devaddr | rc=1 | 175s`. The earlier `s4532_allow_copytoram` line is session 4532's own crash, already folded. The recipe's game log is `scratch/s4532_fill_edge_20261010-023837/run.log`. Extract: `s4533_fe98_a3.txt`.
+
+The soak reached the 512-to-640 edge and died on the odd DMA. VI 1024 at the wrapper's 47.0 s, then `[phase] vi_width=640 (was 512) origin=0x006A2900 at 168.8s update_screen #10064`. `ALLOW_WILD_FL` count is 0. Death is signal 6: `do_rom_read` assertion at `pi.cpp:112`, host stack `do_rom_read` <- `do_dma` <- `osPiStartDma_recomp` <- `piDmaWorker`. Not `copyToRAM`. Not `fillSampleStreamRange+15116`.
+
+Three `[s4532-fill]` lines, and no others. Same-run controls:
+
+- `kind=ctl site=FE98 dev=0x00C80000 size=0x00000400 node=0x80192F10 w8=00C80000 w10=00000400` (dev equals node+8, size equals node+0x10)
+- `kind=ctl site=FB64 dev=0x00C80400 size=0x00000200` on that same node (`0x00C80000+0x400`)
+
+The bad row, immediately before the aborting DMA:
+
+- `kind=bad site=FE98 dev=0x6C637265 size=0x00000300 node=0x8017DF20 w4=8017E028 w8=6C637265 wC=6C617465 w10=00000300 w14=801AA190`
+
+dev equals w8 and size equals w10. The following `pi-start-dma` is `raw_r7=0x6C637265 size=0x300 dram=0x801AA190`, and w14 is that dram pointer. This selects H-FE98. It refutes H-FB64 and H-FE04 for this abort. The 16 MB ROM contains neither `6C637265` nor the 8-byte sequence `6C6372656C617465`.
+
+That is not a foreign string sitting in the node. The only edge into `0x8008FE98` is the branch at `0x8008FDC8`. On that edge `0x8008FDC0` has already stored node+8 = `t4 - ((t4-a3) % 0x600)`, which is `a3 + 0x600*k`, and the delay slot `0x8008FDCC` has stored node+0xC = a3. a3 is never written inside `fillSampleStreamRange`. `0x6C637265 - 0x6C617465 = 0x1FE00 = 0x55 * 0x600` exactly, so k=0x55 and the remainder is 0: node+8 equals t4 equals a3 plus `0x55` chunks of `0x600`. The control row is the same formula with k=0 (`w8==wC==0x00C80000`). The size `0x300` is this function's own store at `0x8008FE60` and it passed the `< 0x601` check. The size is not the defect.
+
+a3 is the call argument. All four callers are in `musyxRenderVoiceSamples`, and each does `lw a3, 0x34(s1)` with s1 the voice (the function's a0):
+
+- `0x8009024C` and `0x800902CC` then execute `addiu a3, a3, 0x100`. The voice word would be `0x6C617365`.
+- `0x8009039C` and `0x800903F0` leave a3 as the loaded word. The voice word would be `0x6C617465`.
+
+`[s4234-ENTRY]` prints ra=0, and `[s2084]` / `[m5-fill-range-source]` fired 0 times in this log, so the callsite is not named. `0x6C617465` is not a legitimate cart offset. No skip, allow, or guard was added.
+
+This closes the FE98/FB64/FE04 question. It does not name which of the four jals ran, and it does not name who stored voice+0x34. s105/s111 called `musyxInitVoiceFromSample` at `0x800921E8` the sole writer of that offset; `musyxKeyOnVoice` also stores it at `0x80090C80`. Do not repeat the whole-tree grep.
+
+ORIGIN: `fillSampleStreamRange` at `0x8008FDC0` writes the DMA devAddr as a3 plus a multiple of `0x600`. a3 is the voice's `+0x34` word, plus `0x100` at two of the four calls. The value is not legitimate. Nothing was mitigated.

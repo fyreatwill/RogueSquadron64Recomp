@@ -1,26 +1,25 @@
-# NEXT: classify [s4532-fill] kind=bad, else sweep
+# NEXT: name which musyxRenderVoiceSamples jal passed a3
 
-HYPOTHESIS-ID: odd-dma-node-field
+HYPOTHESIS-ID: odd-dma-voice-a3
 
-The probe is already linked. Do not rebuild. Before this unit, read new `scratch/agent/SOAK-RESULTS.md` lines. The queued recipe is `scratch/agent/soak_queue/s4532_fill_devaddr.sh`. Its game log is `scratch/s4532_fill_edge_*`.
+s4533 closed FE98 vs FB64. Do not rebuild that probe and do not re-read the node. The devAddr is `fillSampleStreamRange` at `0x8008FDC0`: node+8 = a3 + 0x600*k, k=0x55, remainder 0, so node+8 == t4 == `0x6C637265`. `0x8008FDCC` stored node+0xC = a3 = `0x6C617465`. a3 is not written inside that function. It is not a legitimate cart offset. Do not add a skip. Do not grep the tree for writers of voice+0x34.
 
-Context: PORTING-STATE s4532. The odd DMA is raw_r7 `0x6C637265`, size `0x300`, at the 512-to-640 edge. `fillSampleStreamRange` writes that devAddr. FE04 is not it (size constant `0x600`, confirmed by a same-run ctl). FE98 writes node+8 and sizes from node+0x10. FB64 writes node+8+node+0x10. Run A controls: FE98 `dev=0x00F00C00` `w8=00F00C00` `w10=00000100`, then FB64 `dev=0x00F00D00` on the same node `0x80192F10`. The value is not legitimate. Do not add a skip.
+The four jals are in `musyxRenderVoiceSamples` (`funcs_24.c`). Each does `lw a3, 0x34($s1)` and s1 is the voice (a0 of that function). Callee ra is 0, so the log has to sit on the jal, before the call.
 
-If the soak log contains `[s4532-fill] kind=bad`:
+- `0x8009024C` and `0x800902CC`: delay slot `addiu a3, a3, 0x100`. If this site is the bad call, the voice word is `0x6C617365`.
+- `0x8009039C` and `0x800903F0`: delay slot changes a1 only. If this site is the bad call, the voice word is `0x6C617465`.
 
-- site `FE98` and `dev=0x6C637265` and `w8` equals dev and `w10` equals size: selects H-FE98. node+8 is the garbage field. Stop. Do not add a skip.
-- site `FB64` and `dev=0x6C637265` and `w8+w10` equals dev: selects H-FB64. The addend that is not a small ROM offset or a small cursor is the garbage field. Stop. Do not add a skip.
-- site `FE04`: contradicts the size-constant result. Quote the size field and stop.
-- no such line, and the crash is the `do_rom_read` odd assert: selects H-other. The request was not this value at the three stores. Do not re-instrument in that iteration.
-- crash stack is `fillSampleStreamRange` and there is no `kind=bad`: the parked bus error. Do not treat it as this join.
+One instrument, one build, one run. Gate it on a new env (do not reuse `ROGUESQ_LOG_S4533`; that probe already did its job). At each jal print one bad row when a3 is odd or its top byte is ASCII, and one in-range control per site (`a3 < 0x01000000` and even). Include the guest PC, s1, the raw word at s1+0x34, a3, and a1. Phase-scope nothing: the death is the 512-to-640 edge, and the title/hangar gate on `[m5-fill-range-source]` fired 0 times on that edge.
 
-If the soak did not crash, or it died before VI 1024: the edge was not reached. Do not re-run the recipe. Take the generated-symbol sweep:
+A same-run control is mandatory. The s4533 ctl row had wC=`0x00C80000`, so a sane a3 does occur. If the bad row fires and no control row does, the log is not qualified.
 
-```
-python3 tools/rename_generated_symbols.py \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
-  --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x8000A000 --end-address 0x8000B000
-```
+Outcomes:
 
-Change `HYPOTHESIS-ID` to `generated-symbol-renaming-sweep` in that case. A row that renames is H2. Every row `already-synchronized` is H3 and the next lead is `0x8000B000..0x8000C000`. If the last fifteen session titles are all sweep titles, do CURRENT-TRUTH item 2 instead.
+- Bad row at `0x8009024C` or `0x800902CC`, and `(s1+0x34) + 0x100 == a3 == 0x6C617465`: selects H-plus100. The voice word is `0x6C617365`. Stop. Do not add a skip.
+- Bad row at `0x8009039C` or `0x800903F0`, and `(s1+0x34) == a3 == 0x6C617465`: selects H-raw. The voice word is `0x6C617465`. Stop. Do not add a skip.
+- Bad row whose a3 is `0x6C617465` but the field identity above fails: the delay-slot reading is wrong. Quote the four registers and stop.
+- Run dies in `do_rom_read` on `0x6C637265` with no bad row, and a control row did fire: the four jals are not the producer. Quote the last control site and stop. Do not add a fifth speculative callsite without a new static grep.
+- Run dies in `fillSampleStreamRange` with no bad row: the parked bus error. Not this join. Do not re-run.
+- Run never reaches VI 640: the edge was missed. Do not re-run the same recipe.
+
+Arm the existing passive breadcrumb envs in the run. Kill with SIGKILL. Run from `build/` with the ROM beside the binary.
