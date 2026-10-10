@@ -1596,6 +1596,20 @@ static void dump_pc_task(uint32_t pc)
                     for (i = 0; i < 0x4000u; i++) fputc(debug_mem_u8(b + i), f);
                 }
                 if (f) fclose(f);
+                {   /* s4510: child DLs (op 06 targets in first 0x100 B of root) */
+                    uint32_t o; int c = 0;
+                    for (o = 0; o < 0x100u && b + o + 8u <= RDRAM_SIZE; o += 8) {
+                        uint32_t w0 = (debug_mem_u8(b+o)<<24)|(debug_mem_u8(b+o+1)<<16)|(debug_mem_u8(b+o+2)<<8)|debug_mem_u8(b+o+3);
+                        uint32_t w1 = (debug_mem_u8(b+o+4)<<24)|(debug_mem_u8(b+o+5)<<16)|(debug_mem_u8(b+o+6)<<8)|debug_mem_u8(b+o+7);
+                        uint32_t cb = w1 & 0x1FFFFFFFu;
+                        if ((w0 >> 24) == 6 && (w1 >> 24) == 0x80 && cb + 0x1000u <= RDRAM_SIZE) {
+                            FILE *cf; char cp[512];
+                            snprintf(cp, sizeof cp, "%s/oracle_w%u_%d_c%02d.bin", dir, width, seen_n[idx]-1, c++);
+                            cf = fopen(cp, "wb");
+                            if (cf) { for (i = 0; i < 0x1000u; i++) fputc(debug_mem_u8(cb + i), cf); fclose(cf); }
+                        }
+                    }
+                }
                 printf("[dl-dump] %s base=0x%06x\n", path, b);
                 fflush(stdout);
             }

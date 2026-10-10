@@ -152346,3 +152346,11 @@ Result: the VI-512 root DL parses to 27 commands ending at 0xD8 with ENDDL (b8):
 Rules out: the guest building a different ROOT entry DL (H2 at root level), and raw byte diff as a method (now explained). Does NOT rule out H2 in the child DLs / vertex / texture data. Single-source (one run per arm).
 ORIGIN: n/a (offline script only, no mitigation).
 Next: dump the 13 child DLs (~0x1000 B each) at the same hook on both sides, parse with the same parser; control = root already matches; compare child command histograms + vertex/texture pointer sets.
+
+## Session 4510 (2026-10-09) — child DLs: all 13 are structurally identical retail vs port; only buffer addresses differ
+
+HYPOTHESIS-ID: hangar-artifact-triage. Work unit: s4509 NEXT. Extended both dump hooks (tools/oracle/rs64_oracle.c dump_pc_task; src/main/upstream_compat.cpp osSpTaskStart) to also write 0x1000 B at each op-06 target in the first 0x100 B of the root DL (files `*_w512_<task>_c<NN>.bin`). One oracle run (50 s) + one port run (VI 512 at 25.0 s; port crashed afterwards during frame capture, dumps already written). Scripts scratch/agent/s4510_{oracle,port}.sh, comparer s4510_cmp.py, diff s4510_diff.py, data scratch/agent/s4510/.
+Result: for all 13 children x 3 tasks, retail and port parse to the same end offset and the same command histogram (0 structural mismatches of 39). Byte diffs are confined to pointers into per-frame working buffers: retail task0 buffer 0x80738F18 vs tasks1/2 0x80752EB0 (retail double-buffers; port stays on one set, within-port t0==t2 for 13/13, within-retail t0!=t2 for 8/13), so byte equality is not the right test. Retail t0 vs port t0 (same buffer set): 12/13 children byte-identical; c05 differs in one word at +0xB0 (0x806F3A10 vs 0x80718A10, a data pointer). Controls: root already matched (s4509); within-side comparisons above.
+Rules out: H2 at the DL-command level (guest builds the same child command streams). Remaining: H2 in the data those pointers address (vertex/texture/matrix content, e.g. c05 +0xB0 target) vs H1/H3 (renderer/ucode). Single-source (one run per arm).
+ORIGIN: n/a (diagnostic hook only, env-gated, no mitigation).
+Next: dump the vertex (op 04) / texture-load (fd) / matrix targets referenced by the t0 children on both sides (c05 +0xB0 first) and compare content.

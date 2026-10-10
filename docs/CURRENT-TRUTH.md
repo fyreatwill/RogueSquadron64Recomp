@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4505 (2026-10-09). Session 4495 was the
+Updated for session 4510 (s4510: hangar child DLs structurally identical retail vs port; only vertex/texture/matrix data and renderer remain). Prior: session 4505 (2026-10-09). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".

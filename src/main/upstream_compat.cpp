@@ -2571,6 +2571,21 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
                     uint32_t off = dp - 0x80000000u;
                     for (uint32_t i = 0; i < 0x4000u; ++i) std::fputc(rdram[(off + i) ^ 3], f);
                     std::fclose(f);
+                    // s4510: child DLs (op 06 targets in first 0x100 B of root)
+                    int c = 0;
+                    for (uint32_t o = 0; o < 0x100u; o += 8) {
+                        uint32_t w0 = 0, w1 = 0;
+                        for (int j = 0; j < 4; ++j) { w0 = (w0 << 8) | rdram[(off + o + j) ^ 3]; w1 = (w1 << 8) | rdram[(off + o + 4 + j) ^ 3]; }
+                        if ((w0 >> 24) == 6 && (w1 >> 24) == 0x80 && (w1 & 0x1FFFFFFFu) + 0x1000u <= 0x800000u) {
+                            uint32_t co = w1 & 0x1FFFFFFFu;
+                            char cp[512];
+                            std::snprintf(cp, sizeof cp, "%s/port_w%u_%d_c%02d.bin", dir, width, seen_n[idx] - 1, c++);
+                            if (FILE* cf = std::fopen(cp, "wb")) {
+                                for (uint32_t i = 0; i < 0x1000u; ++i) std::fputc(rdram[(co + i) ^ 3], cf);
+                                std::fclose(cf);
+                            }
+                        }
+                    }
                 }
                 std::fprintf(stderr, "[dl-dump] %s data_ptr=0x%08X\n", path, dp);
             }
