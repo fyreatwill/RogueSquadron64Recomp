@@ -1157,6 +1157,16 @@ namespace ultramodern {
                 }
                 fflush(stderr);
             }
+            {   // s4517: raw RDP byte dump (RS64_RDP_BIN_PORT=path) for retail rdp.bin diff.
+                static FILE *s_bin = nullptr; static int s_bin_init = 0; static uint64_t s_bin_total = 0;
+                if (!s_bin_init) { s_bin_init = 1; const char *e = std::getenv("RS64_RDP_BIN_PORT"); if (e && *e) s_bin = fopen(e, "wb"); }
+                if (s_bin && app->core.RDRAM && s_bin_total < (600ull << 20)) {
+                    uint32_t hdr[4] = {0x50445250u, lo_phys, hi_phys - lo_phys, rs64_phase_ord()};
+                    fwrite(hdr, 4, 4, s_bin);
+                    fwrite(app->core.RDRAM + lo_phys, 1, hi_phys - lo_phys, s_bin);
+                    s_bin_total += 16 + (hi_phys - lo_phys);
+                }
+            }
             run_rdp_submission(app, lo_phys, hi_phys);
         }
     }
