@@ -153093,3 +153093,9 @@ Arm A end: 132.5 s phase back to 640 (origin 0x6A2900), then `Assertion failed: 
 Verdict: selects H-route (recipe); refutes H-stall-audio and H-gpu-path for the earlier "hangar=0 after 400 s". Single run per arm, so hangar reach is single-source.
 Open: (a) odd-address PI DMA after Start in the hangar (assert gives no address/caller); (b) the skip gate misses runs with 1 free.
 ORIGIN: no mitigation added; recipe/analysis scripts only (scratch/agent/s4565*.sh). The skip is unchanged from s4563.
+
+## Session 4566 (2026-10-10) — post-hangar odd PI DMA carries the known ASCII cart word 0x6C637265 and appears only under Start mash
+
+Ran s4565b with ROGUESQ_LOG_S4298=1 added to both arms, 300 s. Arm A (Start every 5 s through 245 s): hangar=1 in 296 summary lines, 7 autopilot fires at width 512, then the pi.cpp:112 assert; print `[s4298-odd] phys=0x1C637265 ram=0x8019CF90 bytes=0x300 hits=0`. 0x1C637265 is the physical form of guest word 0x6C637265 (ASCII "lcre"), the same value as the s4532/s4533 odd DMA. The hits=0 scan compares the physical form, so it is not evidence of absence. Arm B (mash stops at first width 512): hangar=1 in 2959 summary lines, 0 crashes, 0 odd DMAs.
+Selects: the odd DMA is triggered by Start presses in the hangar and its value is the ASCII word from the s4532-s4541 thread, so H-corrupt-arg (a node whose cart field holds string bytes) is favoured over an honest mission load. H-retail-odd untested (oracle reaches attract only). Single run per arm: single-source.
+ORIGIN: no mitigation added; only the recipe env changed (scratch/agent/s4565b_mash.sh). The writer of the ASCII word is still the open s4533-s4541 thread.
