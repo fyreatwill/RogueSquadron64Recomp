@@ -152977,3 +152977,13 @@ Verdict (s4549): this selects H-ring-lap (lap-2 ring stores clobber lap-1 bytes 
 
 ## Session 4550 (2026-10-10) — 175 s default-flags run: odd cimgs 0 with fix, 60 in control; hangar VI 512 not reached
 Ran scratch/agent/s4550_hangar.sh (s4549d recipe, 175 s, 3 concurrent arms, autopilot route). A=pure defaults: odd=0, restore=1924, crash=0. B=control (WRAP_FLUSH=0,S4272=0,HARD_SKIP=0): odd=60, restore=0, crash=0 (positive control fired). C=HARD_SKIP=0 only: odd=0, crash=0. Wild-FL ALLOW count 0 in all arms. Caveat: vi_width=512 appeared 0 times in all arms (vi_width=640 579x in A), so the hangar phase was NOT reached by this autopilot route; the result covers the pre-hangar phase only and does not close s4287 Q1 for the hangar. ORIGIN: unchanged (ring-lap overwrite, s4549); no new mitigation code this session.
+
+## Session 4551 (2026-10-10) — fast-route (3 s autopilot) 150 s default run: odd cimgs 0 with fix, 60 control; both fix arms die at the known musyxSynthFrame+5436 list-walk crash before VI 512
+
+HYPOTHESIS-ID: wild-setcimg-writeback
+
+Work unit: the s4550 NEXT asked for a key route that logs `vi_width=512`. Ran `scratch/agent/s4551_hangar.sh` (s4550 recipe with the early autopilot `3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a`, 150 s, 3 concurrent arms). A=pure defaults, B=control (HARD_SKIP=0, WRAP_FLUSH=0, S4272=0), C=HARD_SKIP=0 only.
+Result: A odd=0 restore=2007 vi1024=8626 allow_wfl=0; C odd=0 restore=1978 vi1024=8758 allow_wfl=0; B odd=60 restore=0 allow_wfl=2 vi1024=0 (never left the intro). Positive control: B's odd=60 and ALLOW_WILD_FL=2 fired in the same run, so the instruments are live. `vi_width=512` count 0 in all three arms. A and C each logged a Bus error (36 `[CRASH]` lines) at `musyxSynthFrame+5436`, last guest pc 0x80001b08, x9=0x8000950e (a KSEG0 guest address used as a host pointer), after the title (VI 1024 started at log line 207923, crash at 312270). That is the already-parked pool-link list-walk family (s4457, CURRENT-TRUTH line 69), not new.
+Selects: third independent confirmation that the ring-lap fix keeps odd cimgs at 0 through the title phase (A,C 0 vs B 60) and removes the intro stall in B (vi1024 0 vs ~8.7k). Does NOT answer s4287 Q1: hangar still unreached; the early-autopilot route reaches the title and then the musyx crash, the late route (s4550) never reaches 512 within 175 s.
+Rules out: the hangar-reach blocker is not the autopilot timing alone; both routes stop short of 512 for different reasons (crash vs. time).
+ORIGIN: no new mitigation or guard added; this iteration changed only a scratch recipe.
