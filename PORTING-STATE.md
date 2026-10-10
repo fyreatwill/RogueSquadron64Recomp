@@ -152897,3 +152897,15 @@ Ran the s4542 binary once with the recipe (`scratch/agent/s4543_run.sh`, log `sc
 Rule 8: third non-selecting iteration on odd-dma-alloc-pair. Table: print perturbs? NO (control above). Route reaches bad call? 0/4 recent runs. Next probe must first explain why the route stopped reaching it (what changed after s4541: only the s4542 print patch in funcs_23.c, now excluded by the control), or take the pair from a different vantage.
 
 ORIGIN: not a mitigation; no guard or skip added. The wild address 0x380000000 in `fillSampleStreamRange` has no named writer yet.
+
+## Session 4544 (2026-10-10) — 0/3 more runs reach the bad call; all die at the intro VI-640 bus error within 3 s
+
+HYPOTHESIS-ID: odd-dma-alloc-pair
+
+Work unit: the NEXT.md route-change discriminator. Checked the boring causes first. H-env is refuted: the s4541 recipe env list (git show 9e6fa017:scratch/agent/NEXT.md) is identical to `s4543_run.sh`, including `ROGUESQ_LOG_S4539=1`. `build/saves` is unchanged since Oct 9 14:47, so a save-state difference is not the cause either.
+
+Then `scratch/agent/s4544_flaky.sh` ran the unchanged recipe three times in sequence (`scratch/s4544_run{1,2,3}_*`, summary `scratch/s4544_summary.txt`). Result: 3/3 died with signal 10, `fillSampleStreamRange+15156`, guest pc `0x8000834c`, at `vi_width=640 origin=0x0066A500` about 2.7-2.9 s into the run. `vi1024=0 vi512=0 bad=0` in all three; the arm lines (6) and fill lines (2) were identical. With s4542 (2) and s4543 (2 print + 1 noprint) that is 0/8 recent runs reaching the bad call, against the s4540/s4541 runs that did.
+
+Selects against H-flaky: a run that reached VI 1024 in s4541 now fails 8/8 in the same recipe, and these three die at the first VI-640 intro frame, long before the 48 s title. What is left is H-patch: a build difference between the s4541 binary and the current one (the s4542 `funcs_23.c` print is excluded by the s4543 no-print control, so something else in the build changed, or the s4541 route depended on state not in the recipe). The control for the bus error itself is that it reproduces identically 3/3 (positive: the stack matches the parked family).
+
+ORIGIN: not a mitigation; no guard or skip added. The wild address `0x380000000` in `fillSampleStreamRange` still has no named writer.

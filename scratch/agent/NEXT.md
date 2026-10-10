@@ -1,12 +1,12 @@
-# NEXT: why do runs no longer reach the bad s4540 call (VI-640 bus error si_addr 0x380000000)
+# NEXT: what build difference since s4541 makes every run die at the intro VI-640 bus error
 
 HYPOTHESIS-ID: odd-dma-alloc-pair
 
-s4543: a no-print control (`scratch/agent/s4543_noprint.sh`) dies exactly like the print run (`scratch/agent/s4543_run.sh`). The print is innocent. 0/4 recent runs reach the bad call; s4540/s4541 did. Do not re-run the alloc-pair recipe unchanged (rule 8: 3 non-selecting iterations).
+s4544: H-env and saves refuted; 3/3 more runs die in `fillSampleStreamRange+15156` ~3 s in (0/8 recent reach the bad call). Do not re-run the recipe.
 
-Competing hypotheses for the route change:
-- H-flaky: the bus error is a nondeterministic race (thread timing); s4540/4541 were lucky. Discriminator: run the s4541-era recipe (ROGUESQ_LOG_S4539 unset, same env) 3 times concurrently in separate dirs; if ANY reaches the bad triple, flaky with rate p.
-- H-patch: one of the apply_s4541/s4542 patches changed state. Discriminator: compare the first divergent line of run.log between s4541's saved run log and s4543's.
-- H-env: an env var in the recipe (ROGUESQ_LOG_S4537/38) differs from the s4540 recipe. Check `git show` of the s4540 NEXT.md recipe.
+Hypotheses:
+- H-patch: a file in `git diff 0b7f286e..HEAD -- src build tools` (the s4542 apply script or the build itself) changed generated code that alters the route. Discriminator: `git diff --stat 0b7f286e HEAD`, then build the s4541 tree state in a SEPARATE copy (never git checkout over lib/), run the recipe once, check whether it reaches VI 1024.
+- H-stale-binary: the current `build/RogueSquadron64Recomp` is not the s4541 binary plus the print. Check binary mtime vs `libRecompiledFuncs.a` and the committed apply scripts applied order.
+- H-host: machine state (thermal/CPU load) changes thread timing. Weak; the crash is deterministic 3/3.
 
-Cheapest first: diff the env lists of the s4540 and s4541 recipes in PORTING-STATE against the current one, then run the 3-way concurrent batch (rule 13). Judge only by the bad triple. If the bad triple appears, read the count/base lines for count==32.
+First: offline diff of s4541 run.log vs s4544_run1 run.log at the first divergent non-timestamp line (cheap, no run).
