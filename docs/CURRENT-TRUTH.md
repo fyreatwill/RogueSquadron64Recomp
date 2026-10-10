@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4477 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4478 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,6 +246,11 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4478 closed the last unclassified `jal rs_free` in `funcs_16.c`.
+`load_naboo_starfighter` frees the `rs_malloc` return of
+`pl_crafts/koelsch_HMT` once. The next site is
+`runIdleFramesAndLoadSaveData` at `0x8006DA28`. See the audit doc.
+
 ## Superseded and closed conclusions
 
 - s4476 "M3 has no unaudited idiom class" was believable because the s397
@@ -294,11 +299,18 @@ available.
 
 ## Next steps
 
-- **s4477 (newest):** `loadCraftShadowTextures` `jal rs_free` at `0x8006B814`
+- **s4478 (newest):** `load_naboo_starfighter` `jal rs_free` at `0x8006C8C4`
+  frees `$s2`, the `rs_malloc` return of `pl_crafts/koelsch_HMT`, once.
+  H-NextClassComplete. No guard. ROM disassembly and the generated listing
+  agree; the `beql` at `0x8006C8BC` writes `$s0`, not `$s2`. `funcs_16.c` has
+  no unclassified `jal rs_free` left. Next: `runIdleFramesAndLoadSaveData`
+  `0x8006DA28` (`$a0 = $s0`; not classified by s3653/s3656, which only cite
+  that function as a caller). See
+  `docs/M3-S4478-LOAD-NABOO-STARFIGHTER-RS-FREE-AUDIT.md`.
+- **s4477:** `loadCraftShadowTextures` `jal rs_free` at `0x8006B814`
   frees `$s5`, the `load_asset` / `rs_malloc` return of `pl_crafts/shadows_TM`,
   once. H-NextClassComplete. No guard. s4476's "no unaudited class" is
-  superseded. Next class: `load_naboo_starfighter` `0x8006C8C4` (`$a0 = $s2`).
-  See `docs/M3-S4477-LOAD-CRAFT-SHADOW-TEXTURES-RS-FREE-AUDIT.md`.
+  superseded. Its next class was closed in s4478.
 - **s4476 (superseded by s4477):** BLOCKED on "no unaudited idiom class" from
   the s397 frequency-scan note. `BLOCKED.md` was not in the commit. Do not
   repeat that stop while unaudited `jal rs_free` sites remain from `funcs_16.c`
@@ -423,5 +435,6 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4477 (newest):** loadCraftShadowTextures rs_free class closed (H-NextClassComplete). Next: load_naboo_starfighter 0x8006C8C4.
+- **s4478 (newest):** load_naboo_starfighter rs_free class closed (H-NextClassComplete). Next: runIdleFramesAndLoadSaveData 0x8006DA28.
+- **s4477:** loadCraftShadowTextures rs_free class closed (H-NextClassComplete).
 - **s4476 (superseded):** BLOCKED on a stale "no unaudited class" reading of the s397 note. The jal rs_free frontier in funcs_16+ was still open.

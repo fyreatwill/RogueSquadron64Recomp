@@ -151029,3 +151029,49 @@ inside `load_asset`. Next class is `load_naboo_starfighter` at `0x8006C8C4`
 (`$a0 = $s2`). Evidence: `docs/M3-S4477-LOAD-CRAFT-SHADOW-TEXTURES-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4478 (2026-10-09) — audited load_naboo_starfighter rs_free of the koelsch HMT
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded.
+No game run.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x8006B814` in `funcs_16.c` and `0x80005268` in `funcs_1.c`, and the ROM
+word `0x0C000726` matches both `0x8006B814` and this site `0x8006C8C4`.
+The cart mapping that reads `pl_crafts/shadows_TM` at `0x8003C960` reads
+`pl_crafts/koelsch_HMT` at `0x8003C9B0`.
+
+`load_naboo_starfighter` (`0x8006C780`) has one `jal rs_free`. ROM
+disassembly and the generated listing agree on the `$s2` writers before
+that free: `lui $s2, 0x8013` at `0x8006C790`, then `addu $s2, $v0, $zero`
+at `0x8006C7DC`. There is no branch between them. `$v0` is the
+`rs_malloc` return (`jal 0x80001ACC` at `0x8006C7C0`); nothing writes
+`$v0` in between. The epilogue reload of `$s2` is at `0x8006C8DC`, after
+the free. The `beql` at `0x8006C8BC` writes `$s0` from `$s4` on the taken
+path only. The sanity-check loop does not write `$s2`. Every path reaches
+that one free.
+
+`get_asset_size_extra`, `rs_malloc`, `findAssetAcrossSegments`,
+`setupAssetDma`, `teardownAssetDma`, and `decrypt_ns_hmt` contain zero
+`jal rs_free` and zero `jalr`. `findAssetAcrossSegments` saves the
+incoming `$s2` and restores it at `0x80004C5C`. `setupAssetDma` copies
+the block to the DMA record at `0x24($a2)` and does not free it.
+`teardownAssetDma` does not read that field. `decrypt_ns_hmt` is an
+in-place XOR with no calls. A NULL malloc faults at `lw $a1, 4($s2)`
+(`0x8006C824`) before the free; no host guard skips that load.
+
+The only caller is `applyCheatCodeFromInput` `0x800822E0` (one generated
+call, one raw-ROM `jal` word). `$a0` is the `rs_crc32` of 8 input bytes,
+gated by bit `0x10` of `0x80130B58`. It is not a heap pointer. The
+function returns that CRC or zero, never the block.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy
+stays unproven. No guard was added. `funcs_16.c` now has no unclassified
+`jal rs_free`. Next site is `runIdleFramesAndLoadSaveData` `0x8006DA28`
+(`$a0 = $s0`). s3653 and s3656 cite that function only as a caller of
+`initSaveData` and `findManifestEntryByName`; they do not classify this
+free. Evidence: `docs/M3-S4478-LOAD-NABOO-STARFIGHTER-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
+
