@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4530 (s4530: the odd-phys join never reached VI 512. Both runs died at VI 640 on the first `ALLOW_WILD_FL` writeback, widths 913 and 1185. The SIGSEGV is `copyToRAM`, memcpy length equal to that range; `fillSampleStreamRange+15116` is a stale guest PC on that run. See NEXT.md). Prior: session 4529 (VI-512 heads' words 0 and 1 are sibling pointers, not the odd ROM address). Prior: session 4528 (list-link holder; tagged 0x8017D030 is below the freed block; full rs-malloc logging is not a late-window witness). Prior: session 4527 (holder poller built; its own run died at 20 s, late window then measured by the queued soak). Prior: session 4526 (s4526 corrected s4525: retail's list is populated and relocates to 0x801F9CE0 on the same schedule; the text batch is the port's ~122 s phase). Prior: session 4525. Prior: session 4524 (s4524: stub-gate hypothesis for the stale stream-node crash refuted, see docs/M5-STREAM-NODE-LIFETIME.md). Prior: session 4521 (s4521: stub-region tris use the stock TEX0*SHADE combiner with shade <=165, no stream-side cause; hangar triage PARKED, a pixel->tri map via an RT64 tri-index mask render would be the next probe). Prior: session 4520 (s4520: white pillar stubs are in the retail RDP stream too - aligned frame 1246/1249 tris byte-identical - so they are renderer-side or genuine, not RSP). Prior: session 4518 (s4518: RSP LUV/LFV/LHV sign-extension bug fixed in lib rsp_vu_impl.hpp; hangar entry-frame shade diff vs retail 588 -> 3 tris). Prior: session 4517 (s4517: aligned port-vs-retail RDP byte diff of hangar entry frame: all state/edge/texture words identical, shade-colour words sign-extended in port (0xFFxx vs 0x00xx) in 588/1249 tris => RSP shade-output defect, not raster/VI; see NEXT.md). Prior: session 4516 (s4516: retail with the port's 11-Start schedule reaches the same 195-texrect/~1130-tri frame, so the s4515 count difference is scene timing, H1a; ucode counts agree, remaining suspect H3 raster/VI at an aligned scene point). Prior: session 4515 (port hangar sync: tris~1125, texrect 195 vs retail 1244/0, selects H1; see NEXT.md). Prior: session 4513 (BLOCKED: retail RDP stream needs LLE RSP+RDP plugin, BLOCKED.md). Prior: session 4512 (s4512: op04 blobs are DL scratch, vertex diffs void). Prior: session 4511 (s4511: child-DL data blobs dumped on both sides; texture blob identical, 6 static vertex blobs differ but the dump window/layout is unqualified). Prior: session 4505 (2026-10-09). Session 4495 was the
+Updated for session 4531 (s4531: the firing `ALLOW_WILD_FL` is SETCIMG `0xFFFB0408`/`0x41130393`, width 1033, fmt 7, in a zero-padded slot; the readback allocation equals the copy; the death is the parked `fillSampleStreamRange+15116` bus error, not `copyToRAM`. See NEXT.md). Prior: session 4530 (VI-640 deaths on the first ALLOW, widths 913 and 1185; one stack was `copyToRAM`). Prior: session 4529 (VI-512 heads' words 0 and 1 are sibling pointers, not the odd ROM address). Prior: session 4528 (list-link holder; tagged 0x8017D030 is below the freed block; full rs-malloc logging is not a late-window witness). Prior: session 4527 (holder poller built; its own run died at 20 s, late window then measured by the queued soak). Prior: session 4526 (s4526 corrected s4525: retail's list is populated and relocates to 0x801F9CE0 on the same schedule; the text batch is the port's ~122 s phase). Prior: session 4525. Prior: session 4524 (s4524: stub-gate hypothesis for the stale stream-node crash refuted, see docs/M5-STREAM-NODE-LIFETIME.md). Prior: session 4521 (s4521: stub-region tris use the stock TEX0*SHADE combiner with shade <=165, no stream-side cause; hangar triage PARKED, a pixel->tri map via an RT64 tri-index mask render would be the next probe). Prior: session 4520 (s4520: white pillar stubs are in the retail RDP stream too - aligned frame 1246/1249 tris byte-identical - so they are renderer-side or genuine, not RSP). Prior: session 4518 (s4518: RSP LUV/LFV/LHV sign-extension bug fixed in lib rsp_vu_impl.hpp; hangar entry-frame shade diff vs retail 588 -> 3 tris). Prior: session 4517 (s4517: aligned port-vs-retail RDP byte diff of hangar entry frame: all state/edge/texture words identical, shade-colour words sign-extended in port (0xFFxx vs 0x00xx) in 588/1249 tris => RSP shade-output defect, not raster/VI; see NEXT.md). Prior: session 4516 (s4516: retail with the port's 11-Start schedule reaches the same 195-texrect/~1130-tri frame, so the s4515 count difference is scene timing, H1a; ucode counts agree, remaining suspect H3 raster/VI at an aligned scene point). Prior: session 4515 (port hangar sync: tris~1125, texrect 195 vs retail 1244/0, selects H1; see NEXT.md). Prior: session 4513 (BLOCKED: retail RDP stream needs LLE RSP+RDP plugin, BLOCKED.md). Prior: session 4512 (s4512: op04 blobs are DL scratch, vertex diffs void). Prior: session 4511 (s4511: child-DL data blobs dumped on both sides; texture blob identical, 6 static vertex blobs differ but the dump window/layout is unqualified). Prior: session 4505 (2026-10-09). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -48,7 +48,7 @@ Complete. Index: PROJECT-OVERVIEW §58; notes `docs/M3-S4477-*.md`
 through `docs/M3-S4500-*.md`. Headless note: `.venv-splat` python is
 not allowlisted; use system `python3` with `scratch/agent/s4500_dis.py`.
 
-The rs_free class closed in s4502. The live work is the intro `ALLOW_WILD_FL` writeback that blocks the odd-DMA join (Next steps #1). Hangar artifact triage stays behind that.
+The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531, Next steps #1): a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. Hangar artifact triage stays behind a new discriminator.
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -64,7 +64,9 @@ Do not revive these by repeating a null measurement.
   the `0x80061520` 0xFF font fill as a live-node clobber. The writer of
   a `0x80193C18`-valued link is still unnamed. The s4457 harness reran
   0/6 (cumulative `+5436` 1/26). Do not re-run it.
-  `fillSampleStreamRange+15116` is the same parked family.
+  `fillSampleStreamRange+15116` is the same parked family. s4531 run B
+  died there again (signal 10, guest pc `0x8000834c`) after the allow
+  line. Still parked.
 - **s4465 allocator overlap** at VI 1024
   (`rs_malloc(3964) = 0x801931F0`) is single-source. s4466 and s4468
   did not recur it (0/8). No more heap-header instrumentation. The
@@ -101,7 +103,8 @@ Kept here only when a later session would otherwise repeat them.
 The s4413–s4433 selector narrative and the s4434–s4475 audio narrative
 are in PROJECT-OVERVIEW §58.
 
-- "A VI-640 death before the odd `do_rom_read` is the parked `fillSampleStreamRange+15116` bus error" (s4529 NEXT, and that session's two signal-10 runs) was believable because `last-guest-pc` stays `0x8000834c` and those runs' faulting PC was that function. s4530 run b faults in `NativeTarget::copyToRAM`; the memcpy length is the `ALLOW_WILD_FL` range. Classify a VI-640 death as the bus error only when the faulting stack is `fillSampleStreamRange`.
+- "A VI-640 death before the odd `do_rom_read` is the parked `fillSampleStreamRange+15116` bus error" (s4529 NEXT, and that session's two signal-10 runs) was believable because `last-guest-pc` stays `0x8000834c` and those runs' faulting PC was that function. s4530 run b faults in `NativeTarget::copyToRAM`; the memcpy length is the `ALLOW_WILD_FL` range. Classify a VI-640 death as the bus error only when the faulting stack is `fillSampleStreamRange`. s4531 run B is that stack again; s4530 run b is not overturned.
+- "The first `ALLOW_WILD_FL` dies in `copyToRAM` because the readback buffer may be short" (s4530 NEXT) was believable because that run's faulting `x2` equaled the write range. s4531 run B's allow has `nativeReadbackBufferSize == bufferOffset+bufferSize` (1400748) and the fault is not `copyToRAM`. A short buffer is not required for the allow to fire. Do not treat a later allow death as a short memcpy unless the stack is `copyToRAM`.
 - s4528 "the next measurement is romA/romB of the VI-512 heads, and odd or ASCII there means the list is walking overlay bytes" was the right next read, and it was done (s4529). Those words are 0 or a pointer to the adjacent slot. Do not snapshot them again expecting ASCII or a ROM offset.
 - s4527 "the late window was not reached, so nothing is selected between a list link and a voice pointer" was true of that run, which died at 20 s. The queued s4522-recipe soak reached the window (s4528). Do not re-read the 20 s log as the late-window result.
 - "Hangar is wholly broken" (implicit in the pre-s4505 wording "geometry/colour artifacts") was believable because old sessions chased a band and later frames are black. s4505 (single-source, visual) shows the entry frame is nearly correct; defects are local.
@@ -132,7 +135,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Wild-width freelist writeback** (HYPOTHESIS-ID: allow-wild-fl-writeback). s4530: the odd-phys join did not reach VI 512. Both runs died at VI 640 on the first `[ost-wb] ALLOW_WILD_FL` (s659: a width outside {320,512,640,1024} whose range covers freelist `0x1F3CC0` is written anyway). Widths were 913 then 1185, so the value is not a stable legitimate mode. The SIGSEGV run's memcpy length equals that range and the stack is `copyToRAM`, which does not check `nativeReadbackBufferSize`. `[cimg-oob-1]` logged no WIDTH hit, so it is not a head-of-submission `G_SETCIMG`. Do not add another skip. The s4529 head snapshot still stands; resume the odd-phys join only after a run reaches VI 512 with `[s4298-odd]` armed. Next measurement is in NEXT.md. No `ROGUESQ_LOG_RS_MALLOC`.
+1. **Wild-width freelist writeback** (HYPOTHESIS-ID: allow-wild-fl-writeback). Parked after s4531. The firing event is SETCIMG `0xFFFB0408`/`0x41130393` (width 1033, fmt 7, addr `0x130393`) at RDRAM `0x4E2958`, in a zero-padded slot the head-only `[cimg-oob-1]` scan does not see. The readback allocation equals the copy (`hist=0/1`). The value is not legitimate. Do not add a skip and do not enable `ROGUESQ_DROP_GARBAGE_CIMG`: s666 already measured that dropping these freelist-covering writebacks removes the recovery co-factor. The s4530 `copyToRAM` SIGSEGV was not reproduced (0/2). A soak is queued for that shape only. s4531 run A reached VI 512 with the odd tag armed (`[rom-read]` 12450, `[s4298-odd]` 0); do not repeat that run. Resume the join only if a later log contains `[s4298-odd]`. No `ROGUESQ_LOG_RS_MALLOC`.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
@@ -141,11 +144,13 @@ unless Step 0 maintenance triggers again.
 3. **M3 pre-publication guard runtime qualification.** Blocked on
    `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib`.
 4. **Generated-symbol renaming sweep**, slug
-   `generated-symbol-renaming-sweep`. Only when item 1 is parked for
-   lack of a discriminator and item 3 is still blocked. Mapping-only
-   edits do not reset the engineering-change gate. If the last fifteen
-   titles are all sweep titles, do item 2 or the M4 boundary below
-   instead of another sweep step.
+   `generated-symbol-renaming-sweep`. Item 1 is parked. Do this next
+   unless the queued soak's crash stack is `copyToRAM` (then stay on
+   item 1 and only read that allow line; the instrument is already
+   linked). The last bounded lead was `0x8000A000..0x8000B000` (s3796).
+   Mapping-only edits do not reset the engineering-change gate. If the
+   last fifteen titles are all sweep titles, do item 2 or the M4
+   boundary below instead of another sweep step.
 
 ### Durable boundaries
 

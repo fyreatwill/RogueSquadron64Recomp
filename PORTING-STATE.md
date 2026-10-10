@@ -152556,3 +152556,26 @@ This selects: the s4530 intro wall is the first `ALLOW_WILD_FL` writeback. It re
 ORIGIN: none. No skip, allow, or guard added.
 
 Next discriminator (s4531): one line at the allow site with `nativeReadbackBufferSize`, `bufferOffset`, `bufferSize`, fb width/height, and the `0xFF`/`0xFE` command whose width matches, or `none`. H-short vs H-dangling and H-cmd vs H-field. Do not change the allow policy in that run.
+
+## Session 4531 (2026-10-10) — wild freelist writeback width is a garbage SETCIMG; the readback buffer is exact
+
+HYPOTHESIS-ID: allow-wild-fl-writeback
+
+SOAK-RESULTS tail through `s4527_stale_node_holder` was already folded. Nothing new to fold.
+
+Work unit was the s4530 discriminator: one build, then the s4529 recipe, logging at the first `ALLOW_WILD_FL` the readback size, the memcpy range, and the `0xFF`/`0xFE` word whose width matches. Policy was not changed. `ROGUESQ_DROP_GARBAGE_CIMG` stayed off (s666: dropping these freelist-covering writebacks removes the recovery co-factor). Instrument is in `lib/rt64` (`rs64_note_image_word` / `rs64_lookup_image_word`, fields on the existing allow line) and was exported to `submodule-patches/rt64.patch`.
+
+Same-run controls fired in both logs: `[s4531-img] control kind=fe n=1 w0=0xFE000000 w1=0x007DD000 w=1` and `[s4298-rtw] n=1` range `[0x7DD000,0x800000)`.
+
+- `scratch/s4531_wild_fl_fields/run.log` (565102 lines): `[s4298-rtw]` 16159, `ALLOW_WILD_FL` 0, `SKIP_WILD_W` 24, `SKIP_WIDTH` 0, `[cimg-oob-1]` 0. VI 640 at 2.8 s origin `0x0066A500`, VI 1024 at 49.6 s origin `0x00790400`, VI 512 at 60.4 s origin `0x006AB400`, then VI 640 at 203.0 s origin `0x006A2900`. `[rom-read]` 12450 and `[s4298-odd]` 0, so the odd ROM read did not occur on the route that reached hangar. Death is signal 6: `Assertion failed: (ctx->f0.fl == ctx->f0.fl), function advanceVolumeFadeEnvelope, file funcs_23.c, line 13748.` `last-guest-pc` `0x80001b08`. The `pc-symbol` is a host cold stub, not that function. Single-source. Not pursued.
+- `scratch/s4531_wild_fl_fields_b/run.log` (126025 lines): died at VI 640 (phase at 2.8 s, origin `0x0066A500`). `[s4298-rtw]` 1516. Exactly one allow, before the fault:
+
+`[ost-wb] ALLOW_WILD_FL #1 tag=color addr=0x130393 w=1033 siz=3 rows=118..339 fb=1033x339 range=[0x1a742b,0x28633f) hdr=0x1F3CC0 nativeReadbackBufferSize=1400748 bufferOffset=487576 bufferSize=913172 hist=0/1 img=ff img_w0=0xFFFB0408 img_w1=0x41130393 ff_w0=0xFFFB0408 ff_w1=0x41130393 fe_w0=0x00000000 fe_w1=0x00000000 lastff=0xFF10027F/0x8062B800 lastfe=0xFE000000/0x00795C00 ff_n=1724 fe_n=1151 (product restore path)`
+
+siz 3 gives 4132 bytes/row. `4132*118=487576`, `4132*221=913172`, `4132*339=1400748`, and offset plus size equals the allocation. `hist=0/1` is the slot just written. Decode of `0xFFFB0408`/`0x41130393`: fmt 7 (illegal; valid is 0–4), siz 3, width `(w0 & 0xFFF)+1` = 1033, address `w1 & 0xFFFFFF` = `0x130393` (odd). Width 1033 is a third wild value after s4530's 913 and 1185, not a stable mode. `[cimg-oob-1]` is 0, so the head-only scan missed it. `lastff` is a later width-640 command, so the match is not the newest image word. `ff_n=1724` `fe_n=1151` is inside the 8192 ring. Death is signal 10, `si_addr=0x380000000` `si_code=1`, `x2=0x120a8` (73896, not `bufferSize` 913172), `pc-symbol` `fillSampleStreamRange+15116`, `last-guest-pc` `0x8000834c`. That is the parked audio bus error. The allow line was flushed before `copyNativeToRAM`.
+
+This selects H-cmd. The same run's second witness is the RDP walker at that word: `[s4282] dl=4E2958` and `[s4280-cimg] ODD off=4E2958 addr=00130393 w=1033 commit=FFFB0408 41130393`. Neighbors are not a stable display list: five zero words precede it, and `[s4282-prev] +0` was `0000FFFC FFFCFFFC` and is marked CHANGED. This refutes H-short: the allocation equals the copy. This refutes H-field: a matching `0xFF` exists and `fb` is `1033x339`, the command's own width. H-dangling's size predicate is true here, but this run does not select it as the crash cause: the faulting stack is not `copyToRAM`. The s4530 run-b SIGSEGV in `copyToRAM` was not reproduced (0/2 this session, and run A never allowed). Do not treat a later allow death as a short memcpy unless the stack is `copyToRAM`.
+
+ORIGIN: the framebuffer width is the SETCIMG the RDP walker applied at RDRAM `0x4E2958` (`0xFFFB0408`/`0x41130393`). That value is not legitimate. The guest store that overwrote the previous `0000FFFC FFFCFFFC` is not named. No skip, allow, or guard was added.
+
+A soak is queued for the unreproduced `copyToRAM` shape only. The next work unit is the generated-symbol sweep at `0x8000A000..0x8000B000` unless that soak's `pc-symbol` is `copyToRAM`.

@@ -1,35 +1,24 @@
-# NEXT: at the first ALLOW_WILD_FL, record buffer size and the image command
+# NEXT: generated-symbol sweep 0x8000A000..0x8000B000, unless the queued soak faults in copyToRAM
 
-HYPOTHESIS-ID: allow-wild-fl-writeback
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Context: PORTING-STATE s4530. The odd-phys join did not run. Both runs of the s4529 recipe died at VI 640 on the first `[ost-wb] ALLOW_WILD_FL` (s659 policy in `lib/rt64/src/hle/rt64_state.cpp`: a width outside {320,512,640,1024} whose byte range covers freelist phys `0x1F3CC0` is written back anyway).
+Context: PORTING-STATE s4531. The wild-width allow is parked. The firing event is SETCIMG `0xFFFB0408`/`0x41130393` (width 1033, fmt 7, addr `0x130393`) at RDRAM `0x4E2958`. `nativeReadbackBufferSize` equals `bufferOffset+bufferSize` (1400748). The death on that run is `fillSampleStreamRange+15116`, not `copyToRAM`. Do not add a skip. Do not enable `ROGUESQ_DROP_GARBAGE_CIMG`. Do not repeat a VI-512 run to arm `[s4298-odd]`: s4531 run A already reached VI 512 with `[rom-read]` 12450 and `[s4298-odd]` 0.
 
-- `scratch/s4530_odd_phys_join/run.log`: color `w=913 siz=3 addr=0x14CEB9`. VI stayed 640 until the 180 s phase timeout. No signal. `[s4298-rtw] n=1` and the width-640 chain (`head=801F9CE0`) fired.
-- `scratch/s4530_odd_phys_join_b/run.log`: depth `w=1185 siz=2 addr=0x150000 range=[0x19C608,0x214266)`. SIGSEGV in `NativeTarget::copyToRAM`. `x2=0x77C5E` equals that range. Dest low bits are `0x19C608`. Source `0x11E7C4608` is unmapped (`si_code=2`). Stack is `copyToRAM` <- `copyNativeToRAM`. `last-guest-pc 0x8000834c` is the audio thread, not the fault.
-- `[cimg-oob-1]` logged zero WIDTH lines in both runs. Widths 913 and 1185 are not stable and are not legitimate modes. Do not add a skip and do not change the allow policy.
-- Not an A/B: `scratch/s4529_freed_block_heads_c/run.log` reached VI 1024 with zero `ALLOW_WILD_FL`. s4529's signal-10 deaths also each have one ALLOW, but their faulting PC is `fillSampleStreamRange`. Leave that bus error parked.
+Before this unit, read new `scratch/agent/SOAK-RESULTS.md` lines. The queued recipe is `scratch/agent/soak_queue/s4532_allow_copytoram.sh`. Its game log is under `scratch/s4532_allow_copytoram_*`, not under `scratch/agent/`.
 
-`copyToRAM` (`lib/rt64/src/render/rt64_native_target.cpp`) memcpy's `bufferSize` bytes from `contents()+bufferOffset` and does not compare that to `nativeReadbackBufferSize`. Whether the allocation is short is unmeasured.
+Exception, checked first: if that log's `[CRASH][pc-symbol]` contains `copyToRAM` AND the log has an `ALLOW_WILD_FL` line, do not sweep. Stay on `allow-wild-fl-writeback`. No rebuild. Read only that allow line and compare `nativeReadbackBufferSize` with `bufferOffset+bufferSize`.
 
-One build, one run. Before the memcpy, one log line carries every field below. If the DPC submission is no longer in scope at writeback, save the last `0xFF`/`0xFE` `w0`/`w1` at the set-image call (one static) and print it on this line. That is part of this instrument, not a later iteration. An edit under `lib/` requires `./submodule-patches/export.sh` in the same iteration.
+- Equal, and the stack is `copyToRAM`: refutes H-short for that event too. The source pointer is then the open question. Do not add a skip.
+- `nativeReadbackBufferSize` smaller than `bufferOffset+bufferSize`: selects H-short for that event. Still do not add a skip in that iteration; name the writer (already the s4531 SETCIMG unless the words differ) and stop.
+- No allow line, or `pc-symbol` is not `copyToRAM`: the exception does not apply. Do the sweep below.
 
-Fields: tag, addr, w, siz, row start, row end, fb width, fb height, `nativeReadbackBufferSize`, `bufferOffset`, `bufferSize`, and the saved or in-submission `0xFF`/`0xFE` word whose `(w0 & 0xFFF)+1` equals `w` (or `none`).
-
-Hypotheses:
-- H-short: `nativeReadbackBufferSize < bufferOffset+bufferSize`. Selects "the SIGSEGV reads past the readback allocation".
-- H-dangling: `nativeReadbackBufferSize >= bufferOffset+bufferSize`. Selects "the allocation is large enough; `contents()` is not a live base".
-- H-cmd: a `0xFF` or `0xFE` word has width == `w`. Selects "the width is a microcode image command the head-only `[cimg-oob-1]` scan missed".
-- H-field: no matching command, and fb width == `w`. Selects "the framebuffer width word changed after the last image command".
-
-H-short and H-cmd can both be true. Report each separately. Do not land a guard from this run.
-
-Control, same run: `[s4298-rtw] n=1`, and the `ALLOW_WILD_FL` line contains the new fields. If that line fires without them, the patch did not land; fix and rerun once. A run that reaches VI 1024 with zero ALLOW is the known surviving route, not a failed instrument; rerun once. No `ROGUESQ_LOG_RS_MALLOC`.
+Sweep: one bounded lead, `0x8000A000..0x8000B000` (exclusive end), the lead s3796 named. Confirm the companion directory exists before running. If the last fifteen `## Session` titles are all sweep titles (they contain "synchronized", "confirmed ... symbol", or are a sweep-scoped census), do not take this step: do CURRENT-TRUTH item 2 (external retail-entry boundary) or the M4 accumulator boundary instead.
 
 ```
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_RUNNER=1 ROGUESQ_LOG_S4222=1 ROGUESQ_LOG_S4526=1 ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_S4298=1 \
-  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
-  PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start" \
-  zsh tools/probe.sh scratch/s4531_wild_fl_fields 160 2
+python3 tools/rename_generated_symbols.py \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+  --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
+  --start-address 0x8000A000 --end-address 0x8000B000
 ```
 
-Write the log outside `scratch/agent/` so the stop gate can cite it.
+A row that renames is H2. Every row `already-synchronized` is H3 and the next lead is `0x8000B000..0x8000C000`. A tool failure or a missing companion file is not a census. A mapping-only edit does not reset the no-engineering gate; record the census, and do not chain another sweep in the same iteration.
