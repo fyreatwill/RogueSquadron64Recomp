@@ -127,7 +127,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **M3 `jal rs_free` class-closure tally.** Slug
+1. **M3 `jal rs_free` audio-shutdown cluster audit (0x80091DEC..F9C, 16 sites; S4501 tally: rest of class covered).** Slug
    `m3-idiom-class-audit`. Enumerate every word `0x0C000726` in
    `.text`, `.ovl.mission`, menu and cinematic overlay ranges (system
    python3, control first), map each to its S44xx audit doc, and list

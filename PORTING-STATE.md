@@ -152230,3 +152230,14 @@ ORIGIN: `allocateCraftAnimationStateForSlot` writes slot +0xC from the
 `rs_malloc` return at `0x80100834`; the value is the legitimate user
 pointer. Note: `.venv-splat` python is not permitted headless (prefix not
 allowlisted); used system python3 plus `scratch/agent/s4500_dis.py`.
+
+## Session 4501 (2026-10-09) — rs_free class-closure tally: 160 sites, 16 unaudited in one audio-shutdown cluster
+
+Static ROM scan for word 0x0C000726 over vram 0x80000400..0x8010B6D0: 160
+hits, all six named controls present. Mapped each by address text against
+docs: 40 cited in S44xx/S45xx, 104 more in other rs_free audit docs, 16 in no
+doc. The 16 are a single cluster in the audio shutdown function at 0x80091DA0
+(0x80091DEC..0x80091F9C). Verdict H-Residual, one function. Initial S44xx-only
+mapping gave 120 "unaudited" and was wrong (S36xx audits cover them); widened.
+Caveats: address-text matching (104 is an upper bound), overlays not scanned
+separately. Doc: docs/M3-S4501-RS-FREE-CLASS-CLOSURE-TALLY.md. No runtime run.
