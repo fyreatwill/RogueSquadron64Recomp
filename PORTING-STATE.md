@@ -152241,3 +152241,14 @@ doc. The 16 are a single cluster in the audio shutdown function at 0x80091DA0
 mapping gave 120 "unaudited" and was wrong (S36xx audits cover them); widened.
 Caveats: address-text matching (104 is an upper bound), overlays not scanned
 separately. Doc: docs/M3-S4501-RS-FREE-CLASS-CLOSURE-TALLY.md. No runtime run.
+
+## Session 4502 (2026-10-09) — closed the audio-shutdown rs_free cluster (16 sites)
+
+Disassembled 0x80091DA0..0x80092000. The 16 'unaudited' sites are two B40-gated
+functions (shutdownAudioEngine tail, waitForMusyXAudioTaskDone). All 12 freed
+globals map by $gp offset to S3603/S3604/S3605 audits; no new pointer. Neither
+function NULLs the words (double-free on re-entry), but the wait wrapper zeroes
+B40 and the shutdown wrapper has no generated caller; runtime B40 stays
+unproven. No guard added. Doc: docs/M3-S4502-AUDIO-SHUTDOWN-RS-FREE-CLOSURE.md.
+Limitation: generated code is gitignored, so caller absence rests on S3604/S3605,
+single-source. rs_free class closed; next is M5 de-stub.

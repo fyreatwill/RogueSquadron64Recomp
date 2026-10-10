@@ -127,13 +127,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **M3 `jal rs_free` audio-shutdown cluster audit (0x80091DEC..F9C, 16 sites; S4501 tally: rest of class covered).** Slug
-   `m3-idiom-class-audit`. Enumerate every word `0x0C000726` in
-   `.text`, `.ovl.mission`, menu and cinematic overlay ranges (system
-   python3, control first), map each to its S44xx audit doc, and list
-   any site with no audit. Unaudited sites are the next units; if none,
-   close the class and pivot (item 4 or an M5 de-stub). Details in
-   `scratch/agent/NEXT.md`.
+1. **M5 audio de-stub step 1 (docs/M5-AUDIO-PLAN.md).** Slug `m5-audio-destub`. The `jal rs_free` class is CLOSED (S4502: the 16 audio-shutdown sites map by offset to S3603-S3605 audits; docs/M3-S4502-AUDIO-SHUTDOWN-RS-FREE-CLOSURE.md). Run the plan's first un-executed step.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
