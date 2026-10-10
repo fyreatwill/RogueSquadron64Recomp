@@ -152579,3 +152579,37 @@ This selects H-cmd. The same run's second witness is the RDP walker at that word
 ORIGIN: the framebuffer width is the SETCIMG the RDP walker applied at RDRAM `0x4E2958` (`0xFFFB0408`/`0x41130393`). That value is not legitimate. The guest store that overwrote the previous `0000FFFC FFFCFFFC` is not named. No skip, allow, or guard was added.
 
 A soak is queued for the unreproduced `copyToRAM` shape only. The next work unit is the generated-symbol sweep at `0x8000A000..0x8000B000` unless that soak's `pc-symbol` is `copyToRAM`.
+
+## Session 4532 (2026-10-10) — size-0x300 odd DMA is not fillSampleStreamRange's 0x600 store
+
+HYPOTHESIS-ID: odd-dma-node-field
+
+SOAK-RESULTS gained one line: `20261010-020846 | s4532_allow_copytoram | rc=1 | 175s`. That is this session's crash, not a prior fold.
+
+The queued recipe reached the 512-to-640 edge and died there. `scratch/s4532_allow_copytoram_20261010-020846/run.log` (537895 lines): VI 1024 at 48.7 s (`#2856`, origin `0x00790400`), VI 512 at 59.5 s (`#3501`, origin `0x006AB400`), VI 640 at 169.7 s (`#10116`, origin `0x006A2900`). `menuOverlayInit` n=4 and n=5 fire while width is already 512. `ALLOW_WILD_FL` count is 0. The only `copyToRAM` line is the early control `[s4279-rtw-control] first copyToRAM seen range=[0x7DD000,0x800000)`. Death is signal 6: `Assertion failed: ((physical_addr & 0x1) == 0 ...), function do_rom_read, file pi.cpp, line 112`. Host stack is `do_rom_read` <- `do_dma` <- `osPiStartDma_recomp` <- `piDmaWorker`. `pc-symbol` is `__isPlatformOrVariantPlatformVersionAtLeast.cold.4`, the abort stub, not `copyToRAM`. `last-guest-pc` `0x80001b08` is the known unreliable witness.
+
+The aborting DMA, and the two `mb=0x80111270` `pri=1` reads immediately before it:
+
+- `raw_r7=0x00C80000` `devAddr=0x10C80000` `size=0x200` `dram=0x801AFB90`
+- `raw_r7=0x00000000` `devAddr=0x10000000` `size=0x600` `dram=0x801AE390`
+- `raw_r7=0x6C637265` `devAddr=0x7C637265` `size=0x300` `dram=0x801AA790`
+
+11349 `[pi-start-dma]` lines. Exactly one has an ASCII top byte and exactly one is odd: both are `0x6C637265` (`6C 63 72 65`, ASCII `lcre`). The 16 MB ROM contains those four bytes at no alignment. `[s4298-odd] phys=0x1C637265` then `hits=0`: that scan compares the post-translation physical address, which the guest never stored. A zero there is not absence of raw_r7.
+
+`fillSampleStreamRange` is the only writer of the DMA request devAddr. Its three stores are `0x8008FB64` (dev = node+8 + node+0x10), `0x8008FE98` (dev = node+8, size = node+0x10), and `0x8008FE04` (dev = node+8, size = the constant `0x600`). The aborting size is `0x300`, so FE04 cannot be that store. Instrument: `tools/apply_s4532_fill_devaddr.py`, gated on `ROGUESQ_LOG_S4533`, tag `[s4532-fill]`. One normal even offset under `0x01000000` per site is the control; odd or ASCII-top rows are `kind=bad`.
+
+`scratch/s4532_fill_devaddr_20261010-022527/run.log` (402439 lines, 87 frames, no `[CRASH]`): VI 1024 at 49.0 s, VI 512 at 59.6 s, and the log ends at width 512 (`update_screen #13824`, origin `0x006AB400`). The 512-to-640 edge did not recur. Same-run controls, the only three fill lines:
+
+- `kind=ctl site=FE04 dev=0x00F00000 size=0x00000600 node=0x80192FE8 w8=00F00000 w10=00000600`
+- `kind=ctl site=FE98 dev=0x00F00C00 size=0x00000100 node=0x80192F10 w8=00F00C00 w10=00000100`
+- `kind=ctl site=FB64 dev=0x00F00D00 size=0x00000500 node=0x80192F10 w8=00F00C00 w10=00000100`
+
+FE98's dev equals node+8 and its size equals node+0x10. FB64's dev equals that node's node+8 plus node+0x10 (`0x00F00C00+0x100`). FE04's size is `0x600`. No `6C637265`, no `do_rom_read` assert, no `ALLOW_WILD_FL`. Missing `kind=bad` does not select another writer: the edge was not reached.
+
+`scratch/s4532_fill_devaddr_b_20261010-023105/run.log` (126578 lines) died at VI 640 (2.8 s), before VI 1024. Signal 10, `si_addr=0x380000000`, `pc-symbol` `fillSampleStreamRange+15156`, stack frame `fillSampleStreamRange+15128`, `last-guest-pc` `0x8000834c`. Zero `[s4532-fill]`. That is the parked bus error. Not evidence about this DMA. Not re-run.
+
+This refutes H-FE04 for the size-`0x300` abort: the store's size operand is the constant `0x600`, and the same-run control emitted `0x600`. It does not select H-FE98 or H-FB64. The node-field writer is not named. `0x6C637265` is not a legitimate cart offset. No skip, allow, or guard was added.
+
+ORIGIN: none. The request-slot store is named; the node field that supplied `0x6C637265` is not, and nothing was mitigated.
+
+A soak is queued (`scratch/agent/soak_queue/s4532_fill_devaddr.sh`) with the probe already linked. Read `kind=bad` if it fires. Do not rebuild. If that soak misses the edge or dies in the parked bus error, do not re-run it.
