@@ -152707,3 +152707,32 @@ Post-value, armed at title or hangar and held through the 640 edge: samples=87, 
 This selects H-port-only. Retail does not write `0x6C617465` to this address in the armed window. The port's bad jal still reads that word from voice `0x801724C0`. The s4535 probe does not print a `0xB0` store, so whether the port's init writes this voice is open. Do not grep. Do not re-run this oracle. No skip was added.
 
 ORIGIN: retail's armed-window writer of physical `0x1724F4` is `musyxInitVoiceFromSample` `0x800921E8`, and the value is a KSEG1 sample pointer, which is legitimate. The port's `0x6C617465` is not that value. Nothing was mitigated.
+
+## Session 4537 (2026-10-10) — port init never stores to voice 0x801724C0
+
+HYPOTHESIS-ID: odd-dma-port-init-voice
+
+No new SOAK-RESULTS lines since s4536. The s4532 rows were already folded.
+
+`tools/apply_s4537_init_voice.py` counts every `musyxInitVoiceFromSample` store at `0x800921E8` (`n_all`) and every store whose voice is `0x801724C0` (`n_this`). A physical alias of that voice that is not the KSEG0 pointer is `n_phys`. Target-voice rows are capped at 16. The bad jal prints the snapshot. The store is not skipped. One rebuild, one run, the s4532 route, with `ROGUESQ_LOG_S4534=1` and `ROGUESQ_LOG_S4535=1`. Log: `scratch/s4537_init_voice_20261010-034056/run.log`. VI 1024 at 49.8s (`0x00790400`), VI 512 at 59.9s (`0x006AB400`), VI 640 (was 512) at 170.6s (`0x006A2900`). Death is the odd-address assertion in `do_rom_read` (`pi.cpp:112`). `last-guest-pc` is `0x80001b08`. Not the parked `fillSampleStreamRange` bus error. Not `copyToRAM`.
+
+The edge is the line after that phase change. Control fired first, at log line 20711, before title:
+
+- `[s4535-store] kind=arm site=800921E8` voice=`0x8018D4A0` word=srcw=`0xB0373B68`.
+- `[s4537-init] kind=arm` the same voice and word, `n_all=1 n_this=0 n_phys=0`.
+- `[s4534-jal] kind=arm site=800902CC` on that voice, raw34=`0xB0373B68`, a3=raw34+`0x100`.
+
+A `0xB0` store is visible. The instrument is not the s4535 filter.
+
+At the edge, log lines 534145–534183:
+
+- `[s4534-jal] kind=ctl site=800903F0` s1=`0x80172328` raw34=a3=`0x00C80000`.
+- `[s4534-jal] kind=bad site=800903F0` s1=`0x801724C0` raw34=a3=`0x6C617465`.
+- `[s4537-init] kind=jal` the same voice, raw34=`0x6C617465`, `n_all=1178 n_this=0 n_phys=0`. No `kind=voice` line exists. `last_this` stayed 0.
+- `[s4532-fill] kind=bad` dev=`0x6C637265` wC=`0x6C617465`, then the `do_rom_read` assertion.
+
+This selects H-init-skipped. It refutes H-overwritten (no target-voice store, so no `0xB0` pointer was written there and later replaced) and H-init-ascii (the exact word was not stored; the cap was unused). Retail's armed window writes this physical address from the same instruction, 87 times, all `0xB0` pointers (s4536). The port's instruction runs and writes other voices. It does not write this one. Do not grep for another store. No skip was added.
+
+Two addresses, not a lattice census: `0x8018D4A0 - 0x801724C0 = 0x1AFE0` and `0x1AFE0 % 0x88 = 128`, while `0x801724C0 - 0x80172328 = 3*0x88`. The store formula at `0x800921E4` is `base + index*0x88`. Whether the other 1177 stores share the bad voice's residue is the next measurement, not a conclusion from these two pointers.
+
+ORIGIN: the writer of the port's voice word is not `musyxInitVoiceFromSample` `0x800921E8`. `0x6C617465` is not a legitimate cart offset. Nothing was mitigated.

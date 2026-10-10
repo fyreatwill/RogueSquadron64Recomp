@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4536 (s4536: retail H-port-only. Armed-window stores at physical `0x1724F4` are 87 words from `0x800921E8`, all `0xB0` pointers, overflow 0. `0x6C617465` is absent. Do not re-run that watch. Next is whether the port's init writes voice `0x801724C0` at all. See NEXT.md). Prior: session 4535 (neither named store wrote the word). Session 4495 was the
+Updated for session 4537 (s4537: H-init-skipped. Port `0x800921E8` stored 1178 words and none to voice `0x801724C0`; `n_phys=0`. The bad jal still reads `0x6C617465`. Do not re-run that census. Next is whether that voice shares init's `0x88` slot lattice. See NEXT.md). Prior: session 4536 (retail does not store that word at physical `0x1724F4`). Session 4495 was the
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -48,7 +48,7 @@ Complete. Index: PROJECT-OVERVIEW §58; notes `docs/M3-S4477-*.md`
 through `docs/M3-S4500-*.md`. Headless note: `.venv-splat` python is
 not allowlisted; use system `python3` with `scratch/agent/s4500_dis.py`.
 
-The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531) and stays parked: a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. The odd DMA's node field is named (s4533), its jal is named (s4534), and s4535 selected H-neither for the two named stores. s4536 selected H-port-only: retail does not store `0x6C617465` at physical `0x1724F4` in the armed window. The only armed writer is `musyxInitVoiceFromSample` `0x800921E8`, and all 87 words are `0xB0` pointers. The port still reads `0x6C617465` from voice `0x801724C0` at that edge. The s4535 probe is blind to `0xB0` stores, so whether port init writes this voice is Next steps #1. Do not grep. Do not add a skip. Hangar artifact triage stays behind a new discriminator.
+The rs_free class closed in s4502. The wild-width writeback's writer is named (s4531) and stays parked: a garbage-region SETCIMG, not a short readback buffer. Do not add a skip. The odd DMA's node field is named (s4533), its jal is named (s4534), and s4535 selected H-neither for the two named stores. s4536 selected H-port-only: retail does not store `0x6C617465` at physical `0x1724F4` in the armed window. The only armed writer is `musyxInitVoiceFromSample` `0x800921E8`, and all 87 words are `0xB0` pointers. s4537 selected H-init-skipped: the port's same instruction stored 1178 words, zero of them to voice `0x801724C0` and zero to its physical alias, and the bad jal still reads `0x6C617465`. Whether that address is on the `0x88` lattice of those 1178 stores is Next steps #1. Do not grep. Do not add a skip. Hangar artifact triage stays behind a new discriminator.
 
 One older Gap stays open and is not this frontier. s3636
 `attachedMeshOverlayNpcHandler` at `0x80054344` can free `0x1C`/`0x20`
@@ -59,6 +59,7 @@ a census names that same writer. See §56.
 
 Do not revive these by repeating a null measurement.
 
+- **Port init does not store to voice `0x801724C0`** (s4537). At the bad jal, `n_all=1178`, `n_this=0`, `n_phys=0`. The arm store was `0xB0373B68` on voice `0x8018D4A0`, so a `0xB0` word would have been printed. Do not re-run that census. Do not add a skip.
 - **Retail does not store `0x6C617465` at physical `0x1724F4` in the armed window** (s4536). Do not re-run that oracle. The only armed writer is `0x800921E8`; every sampled word is a `0xB0` pointer (`mismatch=0`). `0x80090C80` wrote this address 0 times. The 4 pre-title `rs_strncpy` (`0x80007670`) writes are unsampled and are not the producer.
 - **Named voice+0x34 stores are not the `0x6C617465` producer** (s4535). Do not re-probe `0x80090C80` or `0x800921E8` for this word. Do not grep for another `sw` of voice+0x34.
 - **Pool-link writer unnamed.** `musyxSynthFrame+5436` is
@@ -107,6 +108,7 @@ Kept here only when a later session would otherwise repeat them.
 The s4413–s4433 selector narrative and the s4434–s4475 audio narrative
 are in PROJECT-OVERVIEW §58.
 
+- "The port's `0x800921E8` may still store to voice `0x801724C0`, and the s4535 probe would hide it because a `0xB0` word is not printed" (s4536 next step; believable because that probe returns on a non-ASCII, even, above-`0x01000000` word) was tested in s4537. The new counter prints every such store, cap 16, and snapshots `n_all`/`n_this` on the bad jal. `n_all=1178`, `n_this=0`, `n_phys=0`, no target-voice line. The arm word on a different voice was `0xB0373B68`, so a pointer store is visible. Init does not write this voice. Do not re-run that census.
 - "Retail writes `0x6C617465` at physical `0x1724F4` during the armed window, from a named store or some other PC" (s4535 next step; believable because the port reads that word from voice `0x801724C0` at the 512-to-640 edge) was tested in s4536. Origin `0x6a2900` was reached (763 VI). Watch 0 fired. Post-value overflow=0, 23 unique values, all `0xB0xxxxxx`, sole sampled PC `0x800921E8` (87/87, scalar mismatch 0). The word is absent. Do not re-run that watch. `post-target-summary seen=0` is the hangar gate (no writes at origin `0x6ab400`), not "init never stored".
 - "One of the two named voice+0x34 stores wrote `0x6C617465`" (s4534 next step; believable because those are the two `sw` instructions already named for that offset) was tested in s4535. Neither store printed the word. The same run's `0x800903F0` bad jal still had raw34=a3=`0x6C617465` on voice `0x801724C0`. Init's control is the arm word `0xB0373B68`, which the following `0x800902CC` jal reads back; that site stored no in-range even word. Keyon's in-range control is `0x00000000`. These two stores are not the producer. Do not re-probe them for that word. A `0xB0` store is invisible to that probe.
 - "Which `musyxRenderVoiceSamples` jal passed a3, and whether that a3 was the raw voice word or the word plus `0x100`, is unnamed" (s4533) was believable because the callee's ra is 0 and both delay-slot shapes can produce a3 `0x6C617465`. s4534's only bad row is jal `0x800903F0` with raw34 == a3 == `0x6C617465`. The same run's `0x800902CC` row showed raw34+`0x100` == a3 on a different value and returned. The voice word is `0x6C617465`. Do not re-probe the four jals.
@@ -145,7 +147,7 @@ are in PROJECT-OVERVIEW §58.
 One sequence. Closed audits are not items. Item 1 is the next iteration
 unless Step 0 maintenance triggers again.
 
-1. **Port init claim on voice `0x801724C0`** (HYPOTHESIS-ID: odd-dma-port-init-voice). s4536 closed the retail watch. Retail's only armed writer of physical `0x1724F4` is `0x800921E8`, 87 times, every word a `0xB0` pointer, 22 of them at origin `0x6a2900`. The s4535 probe does not print a `0xB0` word, so it cannot say whether the port's init writes this voice. One port run on the s4532 route. Log every `0x800921E8` store to voice `0x801724C0` (any word) and the totals `n_all` / `n_this`. The s4535 arm line, or `n_all>=1` before the jal, is the control. Keep `ROGUESQ_LOG_S4534=1` so the bad jal is the join. Reach that jal or the run is not the edge. Do not grep. Do not add a skip. Do not re-probe `0x80090C80`. Do not re-run the retail watch. Commands and outcomes are in NEXT.md.
+1. **Init slot lattice of voice `0x801724C0`** (HYPOTHESIS-ID: odd-dma-init-lattice). s4537 closed the exact-address census: 1178 stores, none to that voice, none to its physical alias, bad jal still `0x6C617465`. The store address is `base + index*0x88`. This run's arm voice `0x8018D4A0` is not on that voice's lattice (`0x1AFE0 % 0x88 = 128`); the same-edge ctl voice `0x80172328` is exactly 3 slots below it. Those two addresses do not say which lattice the other stores use. One port run. Count stores whose voice is congruent to `0x801724C0` mod `0x88` (`n_lattice`) and print up to 4 of them. Snapshot `n_all` / `n_this` / `n_lattice` on the bad jal. The arm line must show the first voice's residue. Do not grep. Do not add a skip. Do not re-run the s4537 census or the retail watch. Commands and outcomes are in NEXT.md.
 2. **External retail-entry boundary.** Parked. Revisit only when the
    last fifteen session titles are all generated-symbol sweep steps, or
    when a new attributable handoff exists. Do not repeat a null
