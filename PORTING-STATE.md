@@ -152310,3 +152310,12 @@ vertex SOURCE bytes (guest memory is real in the oracle). Next: dump the hangar 
 OSTask DL + referenced vertex/texture source bytes from retail and port at the same VI
 phase and byte-diff; right-edge column (H4) can be checked on the port side alone by
 reading the VI width vs colour-image width at hangar.
+
+Discrimination (s4506): REFUTES H-retail-pixel-oracle (hypothesis that a retail-under-Rice RDRAM
+framebuffer can serve as ground truth for hangar pixels): same-run positive control (title VI 1024
+window, 0/262144 nonzero words) and target (hangar fb, 0/122880 px) agree it is empty, so the null is
+a property of Rice, not of the hangar. This SELECTS the source-data comparison over the pixel
+comparison: H2 (bad guest DL/vertex data) vs H1/H3 (port renderer/ucode) is now split only by a
+retail-vs-port byte diff of the hangar entry-frame OSTask DL + referenced vertex/texture ranges.
+Next discriminator: identical source bytes + bad port pixels => H1/H3 (port side); differing bytes
+=> H2 (guest-state bug upstream). Title task diff is the positive control (must be identical).
