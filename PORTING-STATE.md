@@ -152999,3 +152999,10 @@ Result: A, B, C each logged 36 [CRASH] lines (Bus error) with exactly one musyxS
 Selects: the +5436 list-walk crash does not depend on the audio ucode image; audio-stub-artifact hypothesis refuted for this crash; the pool-link writer stays unnamed (CURRENT-TRUTH line 69). Single-source (n=1 for the image-off arm).
 Rules out: "enabling the real audio ucode image dissolves the +5436 crash".
 ORIGIN: no mitigation added; only a scratch recipe changed.
+
+## Session 4554 (2026-10-10) — read-only: the +5436 site is a plain singly-linked countdown walk; no experiment ran
+HYPOTHESIS-ID: m5-audio-destub
+Work unit planned: M3 idiom-class audit of the list-walk load pattern in musyxSynthFrame. Only the locate step completed. Generated code is in the sibling repo (/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c:7158), not in this repo's build dirs (a scout agent first reported it unfindable for that reason).
+Finding (single-source, static read): guest 0x80091368..0x80091380 is `do { if (n->u16@0x10) n->u16@0x10--; n = n->next@0; } while (n)`, head = word at 0x8014999C-ish (`lw -0x6650(0x8015)`). No bound, no pointer validity check; any non-null garbage `next` faults at the `lhu 0x10($v1)`. This is a countdown-list walk, consistent with the s4553 "corrupt next" reading. The only existing patch on these loads is the s4307 trace hook (tools/apply_s4307_synth_read_join.py), not a guard.
+Not done: classification of the other list-walk sites in musyxSynthFrame; no guard landed (writer of the corrupt link is still unnamed, so a guard would be a mitigation without ORIGIN, rule 11).
+ORIGIN: no mitigation added; docs only.

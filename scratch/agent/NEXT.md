@@ -1,5 +1,4 @@
-# NEXT: M5 audio de-stub (docs/M5-AUDIO-PLAN.md)
+# NEXT: M3 idiom audit of musyxSynthFrame list walks
 HYPOTHESIS-ID: m5-audio-destub
-s4553: the +5436 crash persists with ROGUESQ_AUDIO_UCODE=0 (3/3 arms crash), so it is not an audio-image artifact; do not re-run.
-Open oddity: the ROGUESQ_DRAIN_INLOOP_TICK=1 arm never left VI 640 in 150 s (early route). Candidate unit: phase-gated repeat (tick-on vs default plus a repeat) to see whether tick-on stalls deterministically.
-Alternative: M3 idiom-class audit of the list-walk load pattern in musyxSynthFrame (grep-enumerate all sites, classify).
+Generated code: /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c (musyxSynthFrame vram 0x8009123C size 0x660; walk at 0x80091368..0x80091380 is a countdown list, head lw -0x6650(0x8015)).
+Unit: grep-enumerate every `lw next` + deref loop in musyxSynthFrame/musyxMixActiveVoices, classify each, and add a log-only "next outside 0x80000000..0x80800000" probe at 0x80091378 (positive control: a probe with range 0..~0 must fire) that records the node address and the previous node, to name the corrupt-link writer. Do not re-run s4553 arms.

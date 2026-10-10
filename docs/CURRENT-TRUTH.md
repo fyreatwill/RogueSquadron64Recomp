@@ -67,6 +67,7 @@ Do not revive these by repeating a null measurement.
 - **Retail does not store `0x6C617465` at physical `0x1724F4` in the armed window** (s4536). Do not re-run that oracle. The only armed writer is `0x800921E8`; every sampled word is a `0xB0` pointer (`mismatch=0`). `0x80090C80` wrote this address 0 times. The 4 pre-title `rs_strncpy` (`0x80007670`) writes are unsampled and are not the producer.
 - **Named voice+0x34 stores are not the `0x6C617465` producer** (s4535). Do not re-probe `0x80090C80` or `0x800921E8` for this word. Do not grep for another `sw` of voice+0x34.
 - **s4553 (single-source): the +5436 crash fires identically with ROGUESQ_AUDIO_UCODE=0 (image off) and with defaults, 3/3 arms; not an audio-image artifact. Tick-on arm stalled in the intro (VI 640 only).**
+- **s4554 (static, single-source):** `musyxSynthFrame` 0x80091368..0x80091380 is an unbounded countdown-list walk (`lhu/sh 0x10(n)`, `n=*n`); generated code is in the sibling N64Recomp/RecompiledFuncs/funcs_24.c:7158. No guard exists, only the s4307 trace hook. See NEXT.md.
 - **Pool-link writer unnamed.** `musyxSynthFrame+5436` is
   `lhu 0x10($v1)` at `0x80091368` after a corrupt `next`. s4459 refuted
   the `0x80061520` 0xFF font fill as a live-node clobber. The writer of
