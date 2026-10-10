@@ -4825,6 +4825,13 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                 std::fflush(stderr);
             }
         }
+        if (addr >= 0x801794F0u && addr < 0x80179530u) {  // s4559: every store (any pc) into the audio list node range, vi-stamped, interleaved with rs-malloc/rs-free lines
+            static uint32_t hn4 = 0;
+            if (hn4++ < 300u) {
+                std::fprintf(stderr, "[s4559-node] w=%c addr=0x%08X pc=0x%08X val=0x%08X vi=%u\n", width, addr, pc, value, rs64_vi_committed_width());
+                std::fflush(stderr);
+            }
+        }
         if (pc == 0x80085424u && width == 'W') {  // s4462: every store of the caller-supplied SND pointer in the sorted-table insert
             static uint32_t n = 0, inpool = 0;
             ++n;
