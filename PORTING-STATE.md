@@ -152991,3 +152991,11 @@ ORIGIN: no new mitigation or guard added; this iteration changed only a scratch 
 ## Session 4552 (2026-10-10) — 420 s late-route run, arms A (defaults) and C (HARD_SKIP=0): odd=0, 0 crashes, VI 512 still never reached
 Ran scratch/agent/s4552_hangar.sh (s4550 late-route recipe, sleep 420, arms A and C). Results: armA odd=0 restore=2538 crash=0 vi512=0; armC odd=0 restore=2555 crash=0 vi512=0. VI width sequence in armA: 320 x110, 640 x597, then 1024 x110229 until SIGKILL; i.e. the game sits at VI 1024 (title/menu phase) for ~400 s with the late autopilot and never transitions to 512. Positive control: s4550 control arm B had odd=60 on the same recipe (earlier session). ORIGIN: no new mitigation added; odd-cimg origin is the s4283-s4287 ring-lap overwrite (s4549).
 Rules out: "the late route reaches the hangar if given more time" (420 s, two arms). The hangar is not reachable by these autopilot scripts under default flags; early route dies at musyxSynthFrame+5436 (s4551). The hangar-reach line is closed for now; s4287 Q1 (hangar-phase odd cimgs) stays unmeasured. Next: M5 audio de-stub per strategic priority.
+
+## Session 4553 (2026-10-10) — audio de-stub A/B on the early route: the musyxSynthFrame+5436 crash is identical with the audio ucode image off
+HYPOTHESIS-ID: m5-audio-destub
+Work unit: M5 plan discriminator from s4552 NEXT. Ran scratch/agent/s4553_audio_ab.sh (s4551 early-autopilot recipe, 150 s, 4 concurrent arms): A,B pure defaults (repeat = crash-rate control), C ROGUESQ_AUDIO_UCODE=0 (image off), D ROGUESQ_DRAIN_INLOOP_TICK=1.
+Result: A, B, C each logged 36 [CRASH] lines (Bus error) with exactly one musyxSynthFrame+5436 frame per arm, vi1024 ~8.5k each, odd=0. Positive control: A and B reproduce the s4551 crash in the same run. D (tick-on) never reached VI 1024 (553 VI-640 lines, 0 crashes), the old intro-stall shape, not analyzed.
+Selects: the +5436 list-walk crash does not depend on the audio ucode image; audio-stub-artifact hypothesis refuted for this crash; the pool-link writer stays unnamed (CURRENT-TRUTH line 69). Single-source (n=1 for the image-off arm).
+Rules out: "enabling the real audio ucode image dissolves the +5436 crash".
+ORIGIN: no mitigation added; only a scratch recipe changed.
