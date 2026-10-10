@@ -760,6 +760,27 @@ static void print_gpr_fields(void)
            gpr32(2), gpr32(17), gpr32(4), gpr32(5), gpr32(6), gpr32(16), gpr32(3),
            gpr32(18), gpr32(19), gpr32(20), gpr32(21), gpr32(22), gpr32(30), gpr32(31));
     {
+        /* s4526: RS64_ORACLE_PEEK=a,b,.. (physical, hex) prints those words on every exec hit */
+        static int np = -1;
+        static uint32_t pk[16];
+        if (np < 0) {
+            const char *e = getenv("RS64_ORACLE_PEEK");
+            np = 0;
+            while (e && *e && np < 16) {
+                char *end;
+                pk[np++] = (uint32_t)strtoul(e, &end, 16);
+                if (*end != ',') break;
+                e = end + 1;
+            }
+        }
+        if (np > 0) {
+            int k;
+            printf(" pk:");
+            for (k = 0; k < np; k++)
+                printf(" %08x", debug_mem_u32(pk[k]));
+        }
+    }
+    {
         /* s4525: RS64_ORACLE_A0WORDS=N dumps N guest words at $a0 on every exec hit */
         static int n = -1;
         if (n < 0) {
