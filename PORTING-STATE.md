@@ -152271,3 +152271,13 @@ REVISIT rule does not trigger. No experiment run; no code changed.
 ORIGIN: n/a (no mitigation added).
 Rules out: another sweep step (nothing nameable left), another M5 step (none
 selectable), another rs_free audit (class closed). Needs a human direction.
+
+## Session 4504 (2026-10-09) — UNBLOCK: s4503 "ladder exhausted" block refuted by re-scoping
+
+s4503 blocked asking a human to choose (a) retail-entry REVISIT, (b) a gameplay
+symptom, or (c) stop. Option (b) needs no human decision: CURRENT-TRUTH already
+lists "Hangar geometry and colour artifacts remain" as an open symptom outside
+the ladder. Route 3 (re-scope): NEXT.md now targets hangar-artifact triage
+(port vs oracle, phase-gated on VI 512, positive control on title VI 1024).
+BLOCKED.md removed; details in scratch/agent/UNBLOCK.md. No game run, no code
+change. ORIGIN: n/a (no mitigation added).
