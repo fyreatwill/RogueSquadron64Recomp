@@ -66,6 +66,7 @@ Do not revive these by repeating a null measurement.
 - **Port init does not store to voice `0x801724C0`** (s4537). At the bad jal, `n_all=1178`, `n_this=0`, `n_phys=0`. The arm store was `0xB0373B68` on voice `0x8018D4A0`, so a `0xB0` word would have been printed. Do not re-run that census. Do not add a skip.
 - **Retail does not store `0x6C617465` at physical `0x1724F4` in the armed window** (s4536). Do not re-run that oracle. The only armed writer is `0x800921E8`; every sampled word is a `0xB0` pointer (`mismatch=0`). `0x80090C80` wrote this address 0 times. The 4 pre-title `rs_strncpy` (`0x80007670`) writes are unsampled and are not the producer.
 - **Named voice+0x34 stores are not the `0x6C617465` producer** (s4535). Do not re-probe `0x80090C80` or `0x800921E8` for this word. Do not grep for another `sw` of voice+0x34.
+- **s4553 (single-source): the +5436 crash fires identically with ROGUESQ_AUDIO_UCODE=0 (image off) and with defaults, 3/3 arms; not an audio-image artifact. Tick-on arm stalled in the intro (VI 640 only).**
 - **Pool-link writer unnamed.** `musyxSynthFrame+5436` is
   `lhu 0x10($v1)` at `0x80091368` after a corrupt `next`. s4459 refuted
   the `0x80061520` 0xFF font fill as a live-node clobber. The writer of
