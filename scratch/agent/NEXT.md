@@ -1,5 +1,5 @@
-# NEXT: who makes 0x801793F0 allocatable inside the live 120 KB block 0x801767E0?
+# NEXT: does the initTextureLUTAndAllocBuffers clear loop (0x8001E2C0) write outside its own rs_malloc'd buffer?
 HYPOTHESIS-ID: m5-audio-destub
-Facts (s4556, 2 arms): rs_malloc 0x801767E0 size 122880 is never rs_free'd; later rs_malloc 0x801793F0 (664) and 0x80179480 (73728) land inside it, the latter covering audio node 0x80179510.
-H-A: game/audio code carves the 120K block and rewrites its header/free list (legit retail behaviour). H-B: port-side free-list corruption. H-C: parent freed via a path that bypasses rs_free (inline header rewrite).
-Discriminator: one run with a store watch on header 0x801767D0..0x801767E0 and on the free-list link pointing at 0x801793E0; print writer pc for the first store after the parent malloc. Also oracle-check retail's rs_malloc return for the 664-byte request. Control: whole-RDRAM watch fires.
+Facts (s4557): the 120 KB parent block was legitimately freed (coalesceFreeHeapBlocks pc 0x800023AC) before nested mallocs 0x801793F0/0x80179480/0x80179380, so nesting is not corruption. s4555: the +5436 corrupt link is written by the clear loop at 0x8001E2C0 over audio list nodes (node 0x80179510 lives in the 73728-byte block 0x80179480..0x8018B480).
+H-A: the clear loop's base/count come from a buffer rs_malloc returned but the 36-byte stride/count is wrong (port arithmetic or stale count global). H-B: the loop clears its own legitimate range and the audio block 0x80179480 was handed out overlapping it (two live mallocs overlap; allocator/coalesce defect). H-C: loop target pointer is stale from before the heap reset at 0x80001430.
+Discriminator: one run (s4556 recipe): log every rs_malloc/rs_free interval, and at loop entry log base, count, stride; check whether [base, base+count*36) lies in one malloc interval and whether any two live intervals overlap. Control: s4457-control plus a known-good interval check.
