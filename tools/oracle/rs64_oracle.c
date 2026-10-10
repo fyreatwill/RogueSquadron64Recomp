@@ -1607,6 +1607,24 @@ static void dump_pc_task(uint32_t pc)
                             snprintf(cp, sizeof cp, "%s/oracle_w%u_%d_c%02d.bin", dir, width, seen_n[idx]-1, c++);
                             cf = fopen(cp, "wb");
                             if (cf) { for (i = 0; i < 0x1000u; i++) fputc(debug_mem_u8(cb + i), cf); fclose(cf); }
+                            {   /* s4511: data blobs (ops 01/02/04/fd) referenced by this child */
+                                uint32_t q = 0, dn = 0;
+                                while (q + 8u <= 0x1000u) {
+                                    uint32_t v0 = (debug_mem_u8(cb+q)<<24)|(debug_mem_u8(cb+q+1)<<16)|(debug_mem_u8(cb+q+2)<<8)|debug_mem_u8(cb+q+3);
+                                    uint32_t v1 = (debug_mem_u8(cb+q+4)<<24)|(debug_mem_u8(cb+q+5)<<16)|(debug_mem_u8(cb+q+6)<<8)|debug_mem_u8(cb+q+7);
+                                    uint32_t op = v0 >> 24, db = v1 & 0x1FFFFFFFu;
+                                    q += 8;
+                                    if ((op==1||op==2||op==4||op==0xFD) && (v1>>24)==0x80 && db + 0x400u <= RDRAM_SIZE) {
+                                        FILE *df; char dp2[512]; uint32_t z;
+                                        snprintf(dp2, sizeof dp2, "%s/oracle_w%u_%d_c%02d_d%02u_op%02x.bin", dir, width, seen_n[idx]-1, c-1, dn++, op);
+                                        df = fopen(dp2, "wb");
+                                        if (df) { for (z = 0; z < 0x400u; z++) fputc(debug_mem_u8(db + z), df); fclose(df); }
+                                    }
+                                    if (op==3) q+=16; else if (op==5) q+=32; else if (op==0xBD) q+=16; else if (op==0xBE||op==0xB3) q+=8;
+                                    else if (op==0xB4||op==0xBF) { if (v0&2) q+=16; q+=8; }
+                                    if (op==0xB8||op==7||op==0xB5) break;
+                                }
+                            }
                         }
                     }
                 }

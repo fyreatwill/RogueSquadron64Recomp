@@ -2584,6 +2584,26 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
                                 for (uint32_t i = 0; i < 0x1000u; ++i) std::fputc(rdram[(co + i) ^ 3], cf);
                                 std::fclose(cf);
                             }
+                            {   // s4511: data blobs (ops 01/02/04/fd) referenced by this child
+                                auto rd32 = [&](uint32_t a) { uint32_t v = 0; for (int j = 0; j < 4; ++j) v = (v << 8) | rdram[(a + j) ^ 3]; return v; };
+                                uint32_t q = 0, dn = 0;
+                                while (q + 8u <= 0x1000u) {
+                                    uint32_t v0 = rd32(co + q), v1 = rd32(co + q + 4);
+                                    uint32_t op = v0 >> 24, db = v1 & 0x1FFFFFFFu;
+                                    q += 8;
+                                    if ((op == 1 || op == 2 || op == 4 || op == 0xFD) && (v1 >> 24) == 0x80 && db + 0x400u <= 0x800000u) {
+                                        char dp2[512];
+                                        std::snprintf(dp2, sizeof dp2, "%s/port_w%u_%d_c%02d_d%02u_op%02x.bin", dir, width, seen_n[idx] - 1, c - 1, dn++, op);
+                                        if (FILE* df = std::fopen(dp2, "wb")) {
+                                            for (uint32_t z = 0; z < 0x400u; ++z) std::fputc(rdram[(db + z) ^ 3], df);
+                                            std::fclose(df);
+                                        }
+                                    }
+                                    if (op == 3) q += 16; else if (op == 5) q += 32; else if (op == 0xBD) q += 16; else if (op == 0xBE || op == 0xB3) q += 8;
+                                    else if (op == 0xB4 || op == 0xBF) { if (v0 & 2) q += 16; q += 8; }
+                                    if (op == 0xB8 || op == 7 || op == 0xB5) break;
+                                }
+                            }
                         }
                     }
                 }
