@@ -151184,3 +151184,51 @@ added. Next site is `walkDatTreeAndCollectSubtypes` `0x80072B8C`
 `docs/M3-S4480-SAVE-SERVICE-WORKER-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4481 (2026-10-09) — audited walkDatTreeAndCollectSubtypes rs_free of the 0x2A0 child array
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded.
+No game run.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x8006DA28` and `0x8006F378` in `funcs_17.c`, and still finds
+`0x8006C8C4` in `funcs_16.c`. The ROM word `0x0C000726` matches
+`0x8006B814`, `0x8006C8C4`, `0x80005268`, `0x8006DA28`, `0x8006F378`,
+and `0x80072B8C`.
+
+`walkDatTreeAndCollectSubtypes` (`0x80072AF8`) has one `jal rs_free`,
+at `0x80072B8C`. ROM and the generated listing agree: `$s0` is the
+incoming node (`addu $s0, $a0` at `0x80072B00`), `$a0` is
+`lw $a0, 8($s0)`, and the delay slot is `nop`. The function does not
+store that word. The free runs only when byte 0 is not `255` and bit
+`0x80` is set. `sb` of `255` at `0($s0)` is the delay slot of the jump
+to the epilogue, so a second entry skips. The only jal in the function
+is `rs_free`.
+
+The only store to offset 8 in `walkDatTreeAndAllocSubtypeBuffers` is
+`sw $v0, 8($s0)` at `0x800710FC`. `$v0` is the `rs_malloc(0x2A0, 0)`
+return. `sb` of `0x80` at `0x800710F0` is in that same block, and only
+when byte 0 is `255` and the 5th argument is negative. The recursive
+call passes a nonnegative index and clears bit `0x80` of `$a3`, so it
+cannot malloc. `dispatchDatSubtypeByRandomIndex` is the only other
+caller of the allocator; its 24 calls pass the same node and `-1`.
+No other parent-byte store sets bit `0x80` without that malloc.
+Caller functions do not store the pointer word.
+
+Twelve direct callers. No instruction materializes `0x80072AF8`, so
+there is no indirect call. Each delay slot is `addiu` of the object
+register that the same function passes to dispatch. Two overlay
+dispatch sites (`0x8012AA90`, `0x801399EC`) do not jal this function.
+`rs_free` skips `$a0 == 0` (`beq` at `0x80001CA4`). A NULL malloc is
+the same unproven allocator-failure edge as s3604–s4480, not a second
+pointer. A name-lookup miss can abandon a previous array without
+reaching this jal.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy
+stays unproven. No guard was added. Next site is
+`initWaterSprayParticles` `0x80072E40` (`$a0 = $s3`; delay writes
+`$s0`, not `$a0`). Evidence:
+`docs/M3-S4481-WALK-DAT-TREE-AND-COLLECT-SUBTYPES-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
