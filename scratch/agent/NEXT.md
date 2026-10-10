@@ -1,5 +1,6 @@
-# NEXT: with the skip on, find why hangar is never reached (arm A alive at phase 9, hangar=0 after 400 s)
+# NEXT: name the odd-address PI DMA that kills the run right after the hangar (s4565b arm A)
 HYPOTHESIS-ID: m5-audio-destub
-Established (s4564): skip-on survives 400 s with 0 crashes; skip-off crashes 36x (first: zcfree <- inflate_trees_free).
-Hypotheses: H-stall-audio (a wait on audio slot/status never completes with synth skipping), H-route (autopilot recipe never reaches hangar, unrelated to audio), H-gpu-path (hangar gating in graphics).
-Discriminating step: re-run arm A only at 400 s and track VI count and phase over time (does VI advance or stall?); grep arm A for waitForAnyAudioSlot-style loops. Make the skip default-on only with an ORIGIN line.
+Established (s4565): the hangar IS reachable (VI 512 origin 0x6AB400, hangar=1 at ~125 s) once Start is pressed after the title; the earlier "never reached" was autopilot keys all spent by t=28 s at VI 640. Arm A then aborted: pi.cpp:112 `(physical_addr & 1)==0` assert in do_rom_read, ~7 s after entering the hangar while Start was still being mashed. Arm B died earlier in the synth-frame family because the s4563 skip only arms after a 5-free pattern.
+Hypotheses: H-mission-load (Start in hangar starts a mission load whose ROM address is odd in our port: bad cart-address calc), H-corrupt-arg (same DMA, arg clobbered by the heap/audio corruption family), H-retail-odd (retail issues it too and mupen tolerates it).
+Discriminating step: rerun scratch/agent/s4565b_mash.sh (arm A recipe; arm B has STOP_WIDTH=512 as the no-mash control: if B reaches the hangar and sits without abort, the DMA is a Start-in-hangar consequence), with a print in do_rom_read (lib/N64ModernRuntime pi.cpp) of physical_addr, dram_addr, len and guest pc before the assert. Editing lib/ requires submodule-patches/export.sh and a commit. Compare to retail through the oracle only if the port value looks like a corrupt pointer.
+Also: run several seeds to estimate how often the skip gate engages (arm B of s4565b died at 60 s without it).
