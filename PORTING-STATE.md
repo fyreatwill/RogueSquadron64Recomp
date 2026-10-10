@@ -152319,3 +152319,6 @@ comparison: H2 (bad guest DL/vertex data) vs H1/H3 (port renderer/ucode) is now 
 retail-vs-port byte diff of the hangar entry-frame OSTask DL + referenced vertex/texture ranges.
 Next discriminator: identical source bytes + bad port pixels => H1/H3 (port side); differing bytes
 => H2 (guest-state bug upstream). Title task diff is the positive control (must be identical).
+
+Summary (s4506): this refutes the retail-pixel-oracle arm and selects the DL/vertex/texture
+source-byte diff as the discriminate step between H2 (guest data) and H1/H3 (port renderer/ucode).
