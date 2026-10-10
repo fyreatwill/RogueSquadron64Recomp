@@ -151711,3 +151711,42 @@ the docs cite the `lw $a0` immediately before the jal. Do not re-audit them.
 Next site is `handleHUD` at `0x800C1084` in `.ovl.mission` (`lw $a0, 0x230($s2)`;
 delay `nop`). That is a first scan, not a classification.
 Evidence: `docs/M3-S4490-AUDIO-SEQ-FREE-RS-FREE-AUDIT.md`.
+
+## Session 4491 (2026-10-09) — audited handleHUD rs_free of the radar block
+
+SOAK-RESULTS tail had nothing newer than the s4467/s4468 lines already folded.
+No game run. CURRENT-TRUTH was 56309 bytes, under the maintenance cap.
+
+Positive control: `funcs_20.c` still has `jal 0x80001C98` at closed `0x80082DC0`
+and closed `0x80083C58`, `funcs_19.c` still has it at closed `0x8007BE50`, and
+`funcs_33.c` has it at `0x800C1084`. The ROM word at all four PCs is
+`0x0C000726`. Menu VRAM `0x800C1084` is a different instruction.
+
+`handleHUD` (`0x800C0084`, size `0x1AE0`) has one `jal rs_free`, at
+`0x800C1084`. ROM and the generated listing agree. The delay is `nop`. The
+freed word is `lw $a0, 0x230($s2)`. `$s2` on that arm is the prologue load of
+NPC `+0x4`, the mode-1 `rs_malloc(0xF80, 0)` body. The only store of offset
+`0x230` in the function is mode 1's `sw $v0, 0x230($s2)` at `0x800C05C8`.
+`$v0` is `initializeRadar`'s return. That function `rs_malloc`s `0xDD4` with
+`$a1 = 0` at `0x800C451C` and returns that pointer. Its one callee `jal rs_free`
+is `loadAndRelocateAsset` of a static address, not the radar block. The global
+copy at `0x8010BFE0` is only stored there and read once, and that reader does
+not free it. The other three loads of `+0x230` do not `jal rs_free`.
+
+Mode 2 is the straight-line arm. It is reached from `destroyNpcSlotByIndex`
+only when byte `+0x1A` is 0. A nested destroy sees the byte already incremented
+and does not `jalr`. Spawn passes flags `4`, so reinsert then frees the `0xF80`
+body, a different block. The saved index at `0x8010BFD0` is dispatched at modes
+12 and 5, neither of which frees. Destroy's child unlink removes the chain slot
+that points at this NPC, so the transient teardown walk does not select it
+again.
+
+This selects H-NextClassComplete. That refutes H-NextClassGap. H-NextClassUnevaluable
+is not selected: one malloc return, one free, and the handler entry is only
+`spawnHudNpc`. No guard was added.
+
+Mission `jal rs_free` sites from `0x800CABB0` through `0x800EAAE4` are already
+classified in s3617–s3620. Next site is `unlinkAndFreeChildNpcNode` at
+`0x800EC404` (entry `0x800EC388`, size `0x150`). The delay is `nop`. The
+instruction before the jal does not write `$a0`. s1814 only renamed it.
+Evidence: `docs/M3-S4491-HANDLE-HUD-RS-FREE-AUDIT.md`.
