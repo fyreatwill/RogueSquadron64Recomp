@@ -151075,3 +151075,57 @@ free. Evidence: `docs/M3-S4478-LOAD-NABOO-STARFIGHTER-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
 
+
+## Session 4479 (2026-10-09) — audited runIdleFramesAndLoadSaveData rs_free of the gamesave asset
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded.
+No game run.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x8006B814` and `0x8006C8C4` in `funcs_16.c` and `0x80005268` in
+`funcs_1.c`, and finds this site in `funcs_17.c`. The ROM word
+`0x0C000726` matches `0x8006B814`, `0x8006C8C4`, `0x80005268`, and
+`0x8006DA28`. The cart strings at `0x8003C960` and `0x8003C9B0` are
+still the s4478 asset names. This function's strings are `data` at
+`0x8003CAF0` and `gamesave` at `0x8003CAF8`.
+
+`runIdleFramesAndLoadSaveData` (`0x8006D900`) has one `jal rs_free`.
+ROM disassembly and the generated listing agree on six `$s0` writes.
+The writes at `0x8006D924` and `0x8006D984` are the 32-iteration idle
+counter. `addu $s0, $v0` at `0x8006DA00` is the value that reaches
+`0x8006DA28`. There is no `jr` before that free, and the only branch
+to it is the `bne` at `0x8006DA18`, whose delay slot writes `$v1`.
+Both paths are after the rebind. Later `$s0` writes are the second
+idle loop and the epilogue.
+
+`$v0` is the straight-line return of `load_asset("gamesave")`.
+That function's `$s2` is the `rs_malloc` return (`0x800648DC`) and
+is copied to `$v0` before `$s2` is restored. `get_asset_size_extra`,
+`findAssetAcrossSegments`, `setupAssetDma`, `teardownAssetDma`, and
+`memcpy` contain zero `jal rs_free`. `setupAssetDma` publishes the
+block at `0x24` of the findAsset record and does not free it.
+`teardownAssetDma` does not read that field. No `lw` of offset
+`0x24` in `0x80000400..0x80200000` moves into `$a0` and then
+`jal rs_free` within 14 instructions.
+
+`initSaveData` receives the pointer as `$a0`, copies 0x20 bytes into
+`0x801126C0`, and saves the caller's `$s0` at `0x30($sp)`. Its only
+`jr` (`0x8000675C`) reloads that slot. Its own frees (`0x8000671C`,
+`0x8000672C`) release the `$s2` malloc from `0x800065E8`, not this
+buffer. `classifySaveStateFromInput` is the callback in `$a1` and
+has no `jal`. `freeManifestSegmentAssets` at `0x8006DA84` frees
+`*0x80137CFC`, the earlier `findManifestEntryByName("data")`
+return, which is the s3657 object.
+
+The only caller is `mainGameLoop` `0x8003E010` (one generated call,
+one raw-ROM `jal` word `0x0C01B640`). The delay slot is `nop`. The
+callee restores the caller's `$s0`, so the gamesave pointer does
+not escape.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy
+stays unproven. No guard was added. Next site is `saveServiceWorker`
+`0x8006F378` (`$a0 = $s0`). Evidence:
+`docs/M3-S4479-RUN-IDLE-FRAMES-AND-LOAD-SAVE-DATA-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
