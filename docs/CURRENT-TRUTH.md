@@ -224,3 +224,6 @@ Frees of 0x80179380/0x801714D0 come from the main thread (guest shutdown span in
 
 ## Update s4562 (supersedes s4561 'next')
 Static: gate 0x800A0F50 is cleared AFTER the frees in musyxNoopStub (guest has no quiesce; H-quiesce-missing refuted). Pausing musyxSynthFrame across the wait (tools/apply_s4562_synth_pause.py, ROGUESQ_S4562_PAUSE=1, default off) leaves the crash unchanged in the A/B (both +5688 at ~180 lines after teardown 2) -> the stale link persists beyond the free window; H-stale-head is the lead. Next: log the list-head load at the crash site vs re-init (NEXT.md).
+
+## Update s4563 (supersedes s4562 'next')
+musyxSynthFrame+5688 crash = walk of stale audio-list head 0x801499B0 (still points into freed block 0x80179380..0x8017970C; guest realloc fill pc 0x8001E2C0 corrupts node next) for ~5 synth calls until guest init zeroes the head. tools/apply_s4563_stale_head_skip.py (default ON, ROGUESQ_S4563_SKIP=0 disables; re-apply after regen with the s4561/s4562 scripts) skips the frame in that window: same-run A/B, A 0 crashes in 150 s (x2), B crashes (x2). Next: longer soak with skip on to find the next death; arm B once crashed at viRetraceHandlerThread+9296 (unexamined).
