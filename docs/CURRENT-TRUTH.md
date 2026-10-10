@@ -215,3 +215,6 @@ whether the value is legitimate.
 
 ## Update s4559 (supersedes s4556-s4558 heap-corruption chain)
 The audio list at 0x80179510 is legitimate (built at vi=1024 in space freed by the LUT block coalesce); no corruption, no dangling node. The last allocator event before the 2/2 crash is rs_malloc size=24 flags=0x4 -> ptr=0, then a deref of the NULL result (si_addr 0x37ffffff2). Single-source (s4559 armA/armB). Next: why that malloc fails (free-list/heap-end state at the NULL return vs retail).
+
+## Update s4560 (supersedes s4559's "last malloc NULL -> deref" and "audio list legitimate" as complete accounts)
+The s4559 NULL-deref crash was our own `[rs-hdr]` print (guarded now). flags=4 mallocs return NULL 833x (2/2 arms) because the guest gate `[0x80037560+0x44] & 0x80` (word 0x2C0, writer 0x800C59B4) blocks the per-frame scratch-region rebuild; not heap exhaustion. After 0x800A9BD8 resets the word to 0x40 the guest frees the audio blocks (0x80179380 list nodes, 0x801714D0 voice lattice, ...) and reallocates over them; `musyxSynthFrame+5436` then walks the stale link. Hypothesis (ordering observed, thread liveness not yet measured): use-after-free by the audio thread. Next: who frees 0x80179380 (host backtrace) and what quiesces the audio thread in retail. Detail: PORTING-STATE s4560, NEXT.md.

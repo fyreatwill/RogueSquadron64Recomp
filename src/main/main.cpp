@@ -4832,6 +4832,13 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                 std::fflush(stderr);
             }
         }
+        if (addr == 0x800375A4u || addr == 0x8010FCB0u) {  // s4560b: every store (any pc) to the mode pointer 0x8010FCB0 and the +0x44 flag word of mode struct 0x80037560 (bit 0x80 blocks the flags=4 scratch heap; 0x140 at VI 640 -> 0x2C0 at VI 1024)
+            static uint32_t hn5 = 0;
+            if (hn5++ < 400u) {
+                std::fprintf(stderr, "[s4560-reg] w=%c addr=0x%08X pc=0x%08X val=0x%08X vi=%u\n", width, addr, pc, value, rs64_vi_committed_width());
+                std::fflush(stderr);
+            }
+        }
         if (pc == 0x80085424u && width == 'W') {  // s4462: every store of the caller-supplied SND pointer in the sorted-table insert
             static uint32_t n = 0, inpool = 0;
             ++n;
