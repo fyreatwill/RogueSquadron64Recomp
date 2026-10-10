@@ -151232,3 +151232,54 @@ stays unproven. No guard was added. Next site is
 `docs/M3-S4481-WALK-DAT-TREE-AND-COLLECT-SUBTYPES-RS-FREE-AUDIT.md`.
 
 ORIGIN: none; no mitigation added.
+
+## Session 4482 (2026-10-09) — audited initWaterSprayParticles rs_free of the wtrspray_ANM buffer
+
+SOAK-RESULTS tail had nothing newer than the s4468 lines already folded.
+No game run.
+
+Positive control: the `jal 0x80001C98` comment scan still finds closed
+`0x80072B8C` and this site in `funcs_18.c`, still finds `0x8006DA28` and
+`0x8006F378` in `funcs_17.c`, and still finds `0x8006C8C4` in `funcs_16.c`.
+The ROM word `0x0C000726` matches `0x8006B814`, `0x8006C8C4`, `0x80005268`,
+`0x8006DA28`, `0x8006F378`, `0x80072B8C`, and `0x80072E40`.
+
+`initWaterSprayParticles` (`0x80072CF0`) has one `jal rs_free`, at
+`0x80072E40`. ROM and the generated listing agree: `$a0` is `$s3`, and the
+delay slot `addu $s0, $v0` runs before the call, so `$s0` is
+`registerHmtTextureInTable`'s texture id. It does not write `$a0`. The
+function has no branch other than `jal` and the final `jr`. The only `$s3`
+assignment before the free is `addu $s3, $v0` at `0x80072DD4`, after
+`jal load_asset`. `sw $s3, 0x44($sp)` at `0x80072D50` saves the incoming
+register. The malloc pointer is never stored. Incoming `$a0` is overwritten
+before any use.
+
+`load_asset` is straight-line and returns the `rs_malloc` pointer (`$s2`)
+of `gnrc_stuff/wtrspray_ANM` (`0x8003CF20`). Flags are 0. It restores the
+caller's `$s3` before returning. Its four helpers contain no `jal rs_free`.
+
+While `$s3` holds that pointer, `full_header_image_offset_convert` and
+`registerHmtTextureInTable` do not write `$s3`. `parseHmtMaterials`,
+`loadTextureToMemory`, `parseImageFile`, and their leaves
+(`rs_strncpy`, `rs_strncmp`, `decodeRdpSizeFlags`,
+`packTlutEntriesRgba5551`, `swizzleTextureRowsToTmem`) contain no
+`jal rs_free`. The two functions that use `$s3` save and restore it.
+`releaseMeshAsset` later frees the mesh in `$s6`, a different pointer.
+`loadAssetIntoNewSlot` of the same name is a later, separate allocation.
+
+One direct caller, `initWaterSprayEffectAndSfx` at `0x80079A80`, delay
+`nop`. The ROM has that one jal encoding, no pointer word, and no
+`lui`/`addiu` materialization. `rs_free` skips `$a0 == 0` (`beq` at
+`0x80001CA4`). A NULL malloc is the same unproven allocator-failure edge
+as s3604–s4481, not a second pointer. `full_header` would fault on it
+first.
+
+This selects H-NextClassComplete and refutes H-NextClassGap and
+H-NextClassUnevaluable at static scope. Runtime allocator legitimacy
+stays unproven. No guard was added. `funcs_18.c` has no unclassified
+`jal rs_free` left. Next site is `downscaleImageHalfResBoxFilter`
+`0x8007A814` (`$a0 = $s5`; the only earlier `$s5` write is the
+`rs_malloc` return at `0x8007A320`). Evidence:
+`docs/M3-S4482-INIT-WATER-SPRAY-PARTICLES-RS-FREE-AUDIT.md`.
+
+ORIGIN: none; no mitigation added.
