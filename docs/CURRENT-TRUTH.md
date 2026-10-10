@@ -6,7 +6,7 @@ detail from s4269 onward is preserved in
 append-only ledger. This file is intentionally limited to live state,
 qualified evidence, open hypotheses, and the next bounded work unit.
 
-Updated for session 4484 (2026-10-09). Session 4415 was a maintenance pass:
+Updated for session 4485 (2026-10-09). Session 4415 was a maintenance pass:
 the prior 891-line version exceeded the 60 KB threshold and its repeated
 session narrative was compacted here; no experiment was run.
 
@@ -246,14 +246,23 @@ value is legitimate. M3 pre-publication guard runtime qualification is blocked
 until a host with `mips64-elf-gcc`, `mips64-elf-ld`, and `PatchesLib` is
 available.
 
+Session 4485 closed `heavyAttachedAudioEmitterNpcHandler`'s
+`jal rs_free`. The word at `0x38($s2)` at `0x8007BE50` is the
+`allocateNpcMeshVertexBuffer` `rs_malloc` return stored at
+`0x8007A8C0`, freed once. `$s2` at the free is `*(npc+4)`, the
+mode-1 `rs_malloc(0x180)` body, not that body pointer itself.
+No guard. The mesh at `0($s2)` and the `0x180` parent are
+different blocks. The next site is `applyCheatCodeFromInput`
+at `0x80082430` (delay `addu $a0, $s5` writes `$a0`). See the
+audit doc.
+
 Session 4484 closed `npcShieldUpdate`'s `jal rs_free`. The word at
 `0x38($s3)` at `0x8007B23C` is the `allocateNpcMeshVertexBuffer`
 `rs_malloc` return stored at `0x8007A8C0`, freed once. `$s3` at the
 free is `*(npc+4)`, not the mode-1 malloc. No guard. The `0x180`
 parent is a different block, freed later by
-`reinsertNpcIntoSortedFreeList`. The next site is
-`heavyAttachedAudioEmitterNpcHandler` at `0x8007BE50`
-(`lw $a0, 0x38($s2)`; delay `nop`). See the audit doc.
+`reinsertNpcIntoSortedFreeList`. That next site was closed in
+s4485. See the audit doc.
 
 Session 4483 closed `downscaleImageHalfResBoxFilter`'s `jal rs_free`.
 `$s5` at `0x8007A814` is the `rs_malloc(width * height * 3, 0)` temp,
@@ -337,7 +346,28 @@ and does not reach the free.
 
 ## Next steps
 
-- **s4484 (newest):** `npcShieldUpdate` `jal rs_free` at
+- **s4485 (newest):** `heavyAttachedAudioEmitterNpcHandler`
+  `jal rs_free` at `0x8007BE50` frees the word at `0x38($s2)`,
+  the `allocateNpcMeshVertexBuffer` `rs_malloc` return stored
+  at `0x8007A8C0`, once. H-NextClassComplete. No guard.
+  `$s2` at the free is `lw $s2, 4($s3)` at `0x8007BC48` (the
+  NPC's emitter object). Mode 1's `addu $s2, $v0` at
+  `0x8007BC7C` does not reach the free: `j 0x8007C240` at
+  `0x8007BE44` skips it. The delay slot is `nop`. The `0x180`
+  `rs_malloc` at `0x8007BC74` is the parent object, published
+  at NPC+4, and is freed later by
+  `reinsertNpcIntoSortedFreeList` when NPC+0x14 bit 2 is set.
+  That is a different block. `releaseMeshAsset` then frees
+  `0($s2)`, the mesh, not `+0x38`. The only other caller of
+  `allocateNpcMeshVertexBuffer` writes the shield object's
+  `+0x38`. Update modes never enter this jal. The only
+  mode-2 caller is `destroyNpcSlotByIndex` when NPC+0x1A is
+  0. ROM disassembly and the generated listing agree. Next:
+  `applyCheatCodeFromInput` `0x80082430` (delay
+  `addu $a0, $s5` writes `$a0`; `$s5` is `addu $s5, $v0` at
+  `0x800822AC` after `jal make_crc32_lut`). See
+  `docs/M3-S4485-HEAVY-ATTACHED-AUDIO-EMITTER-NPC-HANDLER-RS-FREE-AUDIT.md`.
+- **s4484:** `npcShieldUpdate` `jal rs_free` at
   `0x8007B23C` frees the word at `0x38($s3)`, the
   `allocateNpcMeshVertexBuffer` `rs_malloc` return stored at
   `0x8007A8C0`, once. H-NextClassComplete. No guard. `$s3` at
@@ -352,10 +382,7 @@ and does not reach the free.
   own object's `+0x38`. Update modes never enter this jal.
   The only mode-2 caller is `destroyNpcSlotByIndex` when
   NPC+0x1A is 0. ROM disassembly and the generated listing
-  agree. Next: `heavyAttachedAudioEmitterNpcHandler`
-  `0x8007BE50` (`lw $a0, 0x38($s2)` at `0x8007BE4C`; delay
-  `nop`; `$s2` is loaded from `4($s3)`, then replaced by the
-  `rs_malloc(0x180)` return at `0x8007BC7C`). See
+  agree. That next site was closed in s4485. See
   `docs/M3-S4484-NPC-SHIELD-UPDATE-RS-FREE-AUDIT.md`.
 - **s4483:** `downscaleImageHalfResBoxFilter` `jal rs_free`
   at `0x8007A814` frees `$s5`, the `rs_malloc` temp of
@@ -552,7 +579,8 @@ windows for the ledger; do not read it whole.
 - s4445 (single-source, port logs): the s4441 audio chain only fills — head advances 91x in first 1000 ENTRYs then ~0/1000 while tail inserts ~1/ENTRY; retire writer unnamed; next: oracle retail head-advance rate + PC of early advances (NEXT.md).
 
 - s4450: `ROGUESQ_AI_EVENT_DRAIN=768` (default off) posts AI event from host-queue drain; soak queued (s4450_ai_drain_event.sh). **s4451 result: both arms clean for 240 s (0 crashes, reached hangar); baseline did not crash, so no positive control — uninformative (N=1).** **s4452 replicate (2 drain + 2 vi, concurrent): 4/4 arms crashed.** The drain arm crashed with the s4441 signature (fillSampleStreamRange+15116, si_addr 0x380000000, last guest pc 0x8000834c); the other 3 arms (drain2, vi, vi2) crashed with a NEW shared signature, wild host jump to 0x1859645e8, last guest pc 0x80001b08. Baseline now reproduces (positive control OK) and drain-event pacing does not prevent either crash => **AI-event cadence is closed as a crash cause** (ROGUESQ_AI_EVENT_DRAIN stays default-off). Next: oracle PC-range probe (--watch-pc-range 0x8008F000:0x80092000 with a hot-PC control).
-- **s4484 (newest):** npcShieldUpdate rs_free class closed (H-NextClassComplete). Next: heavyAttachedAudioEmitterNpcHandler 0x8007BE50.
+- **s4485 (newest):** heavyAttachedAudioEmitterNpcHandler rs_free class closed (H-NextClassComplete). Next: applyCheatCodeFromInput 0x80082430.
+- **s4484:** npcShieldUpdate rs_free class closed (H-NextClassComplete).
 - **s4483:** downscaleImageHalfResBoxFilter rs_free class closed (H-NextClassComplete).
 - **s4482:** initWaterSprayParticles rs_free class closed (H-NextClassComplete).
 - **s4481:** walkDatTreeAndCollectSubtypes rs_free class closed (H-NextClassComplete).
