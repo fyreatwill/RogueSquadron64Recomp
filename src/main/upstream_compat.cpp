@@ -1796,20 +1796,20 @@ extern "C" void rs64_s4577_dump() {
                      e.w, e.pc, e.val, e.vi_w);
     }
 }
-static void rs64_s4569_note(const char* kind, char w, uint32_t pc, uint32_t addr) {
+static void rs64_s4569_note(const char* kind, char w, uint32_t pc, uint32_t addr, uint32_t value) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4569"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
     const uint32_t p = addr & 0x1FFFFFFFu;
     const bool tgt = (p >= 0x179A58u && p < 0x179A70u) || (p >= 0x1120A8u && p < 0x1120C0u) || (p >= 0x17DBC0u && p < 0x17DBD8u);
     static std::atomic<unsigned> ctl{0}, rows{0};
-    if (!tgt) { if (p >= 0x17C000u && p < 0x180000u && ctl.fetch_add(1) == 0) std::fprintf(stderr, "[s4569-control] first non-target store in 0x17C000..0x180000 %s %c pc=%08X addr=%08X vi_w=%u\n", kind, w, pc, addr, rs64_vi_committed_width()); return; }
+    if (!tgt) { if (p >= 0x17C000u && p < 0x180000u && ctl.fetch_add(1) == 0) std::fprintf(stderr, "[s4569-control] first non-target store in 0x17C000..0x180000 %s %c pc=%08X addr=%08X val=%08X vi_w=%u\n", kind, w, pc, addr, value, rs64_vi_committed_width()); return; }
     if (rows.fetch_add(1) > 4000) return;
-    std::fprintf(stderr, "[s4569-W] %s %c pc=%08X addr=%08X vi_w=%u\n", kind, w, pc, addr, rs64_vi_committed_width());
+    std::fprintf(stderr, "[s4569-W] %s %c pc=%08X addr=%08X val=%08X vi_w=%u\n", kind, w, pc, addr, value, rs64_vi_committed_width());
 }
 extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
-    rs64_s4569_note("st", width, pc, addr);
+    rs64_s4569_note("st", width, pc, addr, value);
     rs64_s4577_note(width, pc, addr, value);
     rs64_s4572_note("st", width, pc, addr, value);
     (void)value;
@@ -1917,7 +1917,7 @@ extern "C" void rs64_s4299_swlr(char w, const char* fn, uint32_t line, uint32_t 
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
     g_s4299_swlr_total++;
-    rs64_s4569_note(w == 'L' ? "swl" : "swr", w, line, addr);
+    rs64_s4569_note(w == 'L' ? "swl" : "swr", w, line, addr, 0);
     rs64_s4572_note(w == 'L' ? "swl" : "swr", w, line, addr, 0);
     uint32_t p = addr & 0x1FFFFFFFu;
     if (p < 0x17C000u || p >= 0x180000u) return;
