@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4618.
+archive sections. Updated for session 4619.
 
 ## Current state
 
@@ -42,15 +42,14 @@ caller input is the `0x800903F0` render path reading `late` from voice `+0x34`.
 The allocator/count-32 and audio-list ownership chain is open; the writer
 and legitimacy of any wild value must be named before a guard is considered.
 
-The s4618 M4 capture was not a valid accumulator discriminator. The retail
-whole-RDRAM control fired 10,000 times and ran 30 seconds, but stayed in
-attract at 320/640 and never reached title or hangar. The port reached a
-phase-gated 512 only at transient origin `0x00690400` (not hangar
-`0x006AB400`); the no-input and single-Start variants died in the known
-`musyxSynthFrame_s4562_impl+5808` family before that phase. The corrected
-stale-head recipe reached the transient phase and emitted 2,112 M4 rows, but
-no target hangar row. The paired arithmetic/VGE/source discriminator is
-therefore unevaluable, not a null result.
+The s4619 route qualification reached the required hangar origin on both
+arms: the port logged 512-wide `0x006AB400`, while retail independently logged
+the same origin and its whole-RDRAM positive control retained 10,000 hits.
+The port M4 instrument emitted origin-change summaries for both transient and
+hangar origins but zero accumulator rows, including zero rows at
+`0x006AB400`. Because the M4 instrument has no same-run positive control, this
+is an instrument-boundary null, not evidence for arithmetic, VGE/store, or
+source divergence. The paired discriminator remains unevaluable.
 
 ## Parked and closed
 
@@ -82,10 +81,11 @@ therefore unevaluable, not a null result.
 
 ## Next steps
 
-1. Revisit the M4 accumulator boundary with the existing paired port probe,
-   only after a route recipe reaches hangar origin `0x006AB400` in the same
-   run. The s4618 transient `0x00690400` phase is not sufficient; require the
-   complete `ACCH:ACCM:ACCL`/VMADH/VGE/store row and independent control.
+1. Qualify the M4 instrument at hangar origin `0x006AB400`: add or expose a
+   same-run positive control that must fire, then capture the complete
+   `ACCH:ACCM:ACCL`/VMADH/VGE/store row and changing non-M4 control. The route
+   now reaches hangar on both port and retail, so do not repeat a route-only
+   soak or interpret the current zero rows.
 2. Revisit the external retail-entry boundary only with a new attributable
    handoff; do not repeat the now-qualified all-phase name-copy null.
 3. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.

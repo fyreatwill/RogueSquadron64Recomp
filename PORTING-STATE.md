@@ -153683,3 +153683,23 @@ This rules out treating the transient 512 phase or the 2,112 rows as the M4
 discriminator. It does not select arithmetic, VGE/store, or source-divergence
 hypotheses. The retail arm is a qualified positive control but an unevaluable
 target-phase null. No mitigation or code change was added.
+
+## Session 4619 (2026-10-11) — qualified hangar route but not the M4 row instrument
+
+Built the Debug target successfully. The first paired launch used the wrong
+key phase setup and left the port wrapper unsupervised at title 1024; it was
+not used as evidence and the stale process was SIGKILLed. The corrected
+boot-relative Start-mash route, phase-gated at 512, reached the port's
+hangar origin `0x006AB400` before crashing at the known native abort family.
+Its M4 logger emitted origin-change summaries for both transient and hangar
+origins, but zero accumulator rows at hangar. The retail Rice oracle arm
+independently reached `0x006AB400` at 512 width and retained 10,000 hits on
+the whole-RDRAM positive control.
+
+This qualifies the route and rules out “the paired run cannot reach hangar,”
+but it does not qualify the M4 row instrument: the origin summary is only
+evidence that its phase branch ran, not a positive control for accumulator
+capture. Arithmetic, VGE/store, and source-divergence hypotheses remain
+unselected. No mitigation or code change was added. Artifacts:
+`scratch/agent/s4619_m4_fixed/run.log` and
+`scratch/agent/s4619_m4_hangar_run/retail_ground_truth.log`.
