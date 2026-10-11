@@ -1936,13 +1936,13 @@ extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, 
     const uint32_t phase = rs64_phase_ord();
     const uint32_t vi_width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
-    if (vi_width != 640u || origin != 0x006A2900u) return;
     const uint32_t phys = addr & 0x1FFFFFFFu;
     if (addr == 0xFFFFFFFFu) {
-        static std::atomic<bool> control{false};
-        if (!control.exchange(true, std::memory_order_relaxed)) {
+        static std::atomic<bool> control[64]{};
+        const uint32_t bucket = phase < 64u ? phase : 63u;
+        if (!control[bucket].exchange(true, std::memory_order_relaxed)) {
             std::fprintf(stderr,
-                "[s4597-control] rs_strncpy-entry phase=%u width=%u origin=0x%06X pc=0x%08X\n",
+                "[s4597-phase-control] kind=entry phase=%u width=%u origin=0x%06X pc=0x%08X\n",
                 phase, vi_width, origin, pc);
             std::fflush(stderr);
         }
@@ -1953,17 +1953,18 @@ extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, 
         const unsigned n = rows.fetch_add(1, std::memory_order_relaxed);
         if (n < 64u) {
             std::fprintf(stderr,
-                "[s4597-target] n=%u phase=%u width=%u origin=0x%06X pc=0x%08X width=%c addr=0x%08X value=0x%08X\n",
+                "[s4597-target] n=%u phase=%u width=%u origin=0x%06X pc=0x%08X store_width=%c addr=0x%08X value=0x%08X\n",
                 n, phase, vi_width, origin, pc, width, addr, value);
             std::fflush(stderr);
         }
         return;
     }
     if (phys >= 0x17C000u && phys < 0x17D000u) {
-        static std::atomic<bool> control{false};
-        if (!control.exchange(true, std::memory_order_relaxed)) {
+        static std::atomic<bool> control[64]{};
+        const uint32_t bucket = phase < 64u ? phase : 63u;
+        if (!control[bucket].exchange(true, std::memory_order_relaxed)) {
             std::fprintf(stderr,
-                "[s4597-control] phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%08X\n",
+                "[s4597-phase-control] kind=adjacent phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%08X\n",
                 phase, vi_width, origin, pc, addr);
             std::fflush(stderr);
         }

@@ -1,39 +1,42 @@
-# RESUME: phase-map the runtime writer of voice 0x801724C0 +0x34
+# Map the surrounding voice/name span that produces `late`
 HYPOTHESIS-ID: m5-audio-destub
 
-Checkpoint close-out for the interrupted s4598 work unit. Do not rerun
-s4598 artifacts. The independent retail oracle and the qualified port run
-completed; the port reached VI 640/origin 0x006A2900, the adjacent generated
-store control fired, and the target generated-store witness produced zero
-rows before the known odd-PI alignment abort. Artifacts:
-`scratch/agent/s4598_oracle.log` and `scratch/agent/s4598_port_run/run.log`.
+The s4600 run passed the generated-store controls and found three phase-3
+stores at physical `0x1724F4`, all from `rs_strncpy` (`0x80007670`) with
+byte values `0x6C,0,0`. The later `0x6C617465` read at the bad caller was
+not observed at that exact byte. Do not rerun the exact-byte census.
 
-Competing hypotheses and discriminator:
+Competing hypotheses and the discriminator:
 
-- H-prephase-guest: a generated guest store writes physical 0x1724F4 before
-  VI 640. A phase-bucketed row names its PC, value, width, and phase.
-- H-host-translation: no generated store writes the target in any phase;
-  the value enters through host/translation state or an uninstrumented path.
-- H-other-guest: an earlier generated writer outside the statically named
-  init/keyon sites writes the target. A row names that writer.
+- H-span-rsstrncpy: the surrounding record/name span is populated by
+  `rs_strncpy`; rows at offsets `0x34..0x37` show the `late` bytes and name
+  the writer.
+- H-span-other-guest: a different generated writer stores the `late` bytes
+  elsewhere in the span before the bad caller; its PC/phase/value row names
+  that writer.
+- H-span-host: no generated store touches the `late` bytes in the span while
+  the adjacent generated-store control fires; this leaves host/translation or
+  an uninstrumented write as the boundary.
 
-The discriminating measurement is one run with target rows bucketed from the
-first VI through VI 640, while retaining the adjacent generated-store control
-in every phase. Any earlier target row selects H-prephase-guest or H-other-
-guest by PC. Zero lifetime target rows with the control live selects
-H-host-translation at the generated-store boundary.
+Discriminating measurement: one build and one qualified run with the
+regeneration-preserved generated-store hook widened from exact physical
+`0x1724F4` to `0x1724C0..0x17250B`. Emit a bounded first-row-per-phase/PC
+table with offset, width, value, and phase; retain the entry and adjacent
+positive controls. Any row containing `late` selects its PC-bearing guest
+writer; lifetime absence with controls live selects the host/uninstrumented
+boundary.
 
-Resume commands from the repository root:
+Before building, extend `tools/apply_s4598_complete_store_census.py` and the
+host logger in `src/main/upstream_compat.cpp`; then run:
 
-1. Extend `tools/apply_s4598_complete_store_census.py` (or add the next
-   regeneration-preserved fixer) so `rs64_s4597_target_store` records a small
-   per-phase first-row table instead of filtering to width 640/origin
-   0x006A2900; retain the target and adjacent controls.
-2. Run `python3 tools/apply_s4598_complete_store_census.py`.
-3. Build with `cmake --build build --config Debug --target RogueSquadron64Recomp`.
-4. Run the qualified route from `build/` with the existing real-LLE flags,
-   phase/store logger, repeated Start input, and SIGKILL watchdog. Capture to
-   `scratch/agent/s4599_port_run/`.
+```sh
+python3 tools/apply_s4598_complete_store_census.py
+cmake --build build --config Debug --target RogueSquadron64Recomp
+```
 
-Do not add a mitigation. The s4598 target-phase result is already recorded in
-PORTING-STATE.md and docs/CURRENT-TRUTH.md.
+Run from `build/` with the qualified environment used in s4600:
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
+ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1
+ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_S4299=1 ROGUESQ_LOG_S4597=1`, repeated Start
+input, a SIGKILL watchdog, and capture under
+`scratch/agent/s4601_port_run/`.

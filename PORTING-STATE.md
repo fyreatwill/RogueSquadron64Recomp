@@ -153361,3 +153361,21 @@ the target phase: generated target writers there are ruled out, but an earlier
 generated writer versus a host/translation path is unresolved. `NEXT.md` now
 specifies the single phase-bucketed resume measurement and its three outcomes.
 No mitigation or code-path change was made.
+
+## Session 4600 (2026-10-11) — phase map names the generated target writer
+
+Ran the planned phase-bucketed generated-store census. The entry control
+fired in phases 2 and 3, and the adjacent generated-store control fired in
+phase 3. The target physical address `0x1724F4` received three generated
+byte stores in phase 3, all from `rs_strncpy` at `0x80007670`, with values
+`0x6C, 0, 0`. The run continued through phase 3 without another target
+writer row and was captured at `scratch/agent/s4599_port_run/run.log`.
+
+Result: the lifetime host/translation-only hypothesis is refuted at the
+generated-store boundary, and the immediate generated writer is named. The
+exact-byte rows do not explain the later `0x6C617465` (`late`) value read by
+the bad caller, so the surrounding record/name span remains open. The
+previous target-phase zero was a logger phase filter, not evidence of no
+generated writer. ORIGIN: diagnostic-only; no value was filtered, skipped,
+or guarded. Build completed successfully; the pre-existing dirty submodules
+were not changed.
