@@ -66,6 +66,7 @@
 #define MAX_PC_TASK_DUMP_ROWS 8192
 #define MAX_ORDINAL_WRITER_KEYS 4096
 #define MAX_PHASE_SNAPSHOTS 8
+#define MAX_PHASE_POINTER_TARGETS 8
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
 #define VI_CURRENT_ADDR 0xA4400010u
@@ -139,6 +140,12 @@ static int g_first_watch = -1;
 static uint64_t g_pc_hist_watch_mask;
 static uint64_t g_post_value_watch_mask;
 static uint64_t g_phase_snapshot_watch_mask;
+static int g_phase_pointer_source_watch = -1;
+static uint32_t g_phase_pointer_bytes;
+static int g_phase_pointer_discovered;
+static int g_phase_pointer_targets;
+static uint32_t g_phase_pointer_target[MAX_PHASE_POINTER_TARGETS];
+static char g_phase_pointer_label[MAX_PHASE_POINTER_TARGETS][32];
 static uint32_t g_post_value_requested_pc[32];
 static int g_post_value_requested_seen[32];
 static uint32_t g_post_value_requested_value[32];
@@ -2387,6 +2394,53 @@ static void emit_phase_snapshot(int watch, int phase)
                    watch, phase, addr - g_watch[watch].start, byte);
     }
 }
+
+static void discover_phase_pointer_targets(unsigned width, unsigned origin)
+{
+    uint32_t addr;
+    int i;
+
+    if (g_phase_pointer_discovered || g_phase_pointer_source_watch < 0 ||
+        width != 512u || origin != 0x006AB400u)
+        return;
+    g_phase_pointer_discovered = 1;
+    i = g_phase_pointer_source_watch;
+    if (i >= g_nwatch || g_phase_pointer_bytes == 0 ||
+        g_watch[i].end - g_watch[i].start > 4096u)
+        return;
+    for (addr = g_watch[i].start; addr + 4 <= g_watch[i].end &&
+         g_phase_pointer_targets < MAX_PHASE_POINTER_TARGETS; addr += 4) {
+        uint32_t value = pDebugMemRead32(debug_rdram_addr(addr));
+        uint32_t target;
+        int duplicate = 0;
+
+        if (value < 0x80000000u || value >= 0x80800000u)
+            continue;
+        target = to_phys(value);
+        if (target + g_phase_pointer_bytes > RDRAM_SIZE)
+            continue;
+        for (int j = 0; j < g_phase_pointer_targets; j++)
+            duplicate |= g_phase_pointer_target[j] == target;
+        if (duplicate)
+            continue;
+        g_phase_pointer_target[g_phase_pointer_targets] = target;
+        snprintf(g_phase_pointer_label[g_phase_pointer_targets],
+                 sizeof g_phase_pointer_label[0], "pointer-target-%d",
+                 g_phase_pointer_targets);
+        if (g_nwatch >= MAX_WATCHES)
+            break;
+        g_watch[g_nwatch].start = target;
+        g_watch[g_nwatch].end = target + g_phase_pointer_bytes;
+        g_watch[g_nwatch].flags = 0;
+        g_watch[g_nwatch].label = g_phase_pointer_label[g_phase_pointer_targets];
+        g_watch[g_nwatch].armed = 1;
+        g_phase_snapshot_watch_mask |= UINT64_C(1) << g_nwatch;
+        printf("[oracle] phase-pointer-target source_watch=%d source=0x%08x target=0x%08x bytes=0x%x watch=%d\n",
+               i, addr, target, g_phase_pointer_bytes, g_nwatch);
+        g_nwatch++;
+        g_phase_pointer_targets++;
+    }
+}
 static int g_voice_base_write_seen;
 static int g_voice_base_read_after_write_seen;
 static int g_voice_base_post_step_pending;
@@ -2955,6 +3009,8 @@ static void dbg_vi(void)
     g_latched_phase_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
     arm_deferred_exec_watches(g_latched_phase_width, g_latched_phase_origin);
 
+    discover_phase_pointer_targets(g_latched_phase_width,
+                                   g_latched_phase_origin);
     for (int watch = 0; watch < g_nwatch; watch++)
         capture_phase_snapshot(watch, g_latched_phase_width,
                                g_latched_phase_origin);
@@ -3362,6 +3418,7 @@ static void usage(void)
         "  --pc-hist-phase ORIGIN[:WIDTH]  add a writer histogram bucket (default WIDTH=640)\n"
         "  --post-value-watch N  sample post-store words and final range summary\n"
         "  --phase-snapshot-watch N  capture exact nonzero bytes at target VI phases\n"
+        "  --phase-pointer-watch N:BYTES  snapshot up to 8 KSEG0 RDRAM pointers from watch N\n"
         "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
         "  --post-value-pc-detail  print every requested-writer post-store tuple\n"
         "  --post-value-pc-detail-phase ORIGIN:WIDTH  limit detail tuples to one VI phase\n"
@@ -3535,6 +3592,22 @@ int main(int argc, char **argv)
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
                 g_phase_snapshot_watch_mask |= UINT64_C(1) << watch;
+        }
+        else if (!strcmp(argv[i], "--phase-pointer-watch") && i + 1 < argc) {
+            char *spec = argv[++i], *colon = strchr(spec, ':');
+            if (!colon || colon == spec || !colon[1]) {
+                fprintf(stderr, "[oracle] bad --phase-pointer-watch (want WATCH:BYTES)\n");
+                return 2;
+            }
+            *colon = 0;
+            g_phase_pointer_source_watch = atoi(spec);
+            g_phase_pointer_bytes = (uint32_t)strtoul(colon + 1, NULL, 0);
+            if (g_phase_pointer_source_watch < 0 ||
+                g_phase_pointer_source_watch >= MAX_WATCHES ||
+                g_phase_pointer_bytes == 0 || g_phase_pointer_bytes > 4096u) {
+                fprintf(stderr, "[oracle] bad --phase-pointer-watch bounds\n");
+                return 2;
+            }
         }
         else if (!strcmp(argv[i], "--post-value-pc") && i + 1 < argc)
             add_post_value_pcs(argv[++i]);

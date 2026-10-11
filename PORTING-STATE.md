@@ -153520,3 +153520,19 @@ refutes H-flat-table and leaves H-derived-records versus H-other-shared-table;
 the next probe follows the visible pointer targets. No mitigation was added.
 ORIGIN: observation-only oracle capture; no value was filtered, skipped, or
 guarded. Artifact: `scratch/agent/s4608_retail_source_table.log`.
+## Session 4609 (2026-10-11) — retail pointer targets lack copied name records
+
+Added bounded `--phase-pointer-watch N:BYTES` support to the independent retail
+oracle, rebuilt it, and ran one 90-second driven capture with whole-RDRAM,
+source-span, target-span, and `0x80007640` execution controls. The positive
+control fired 12,155,017 callbacks; the run reached VI 512 at origin
+`0x006AB400` (VI 2269), the caller watch fired 2,079 times, and the target
+span received 76 writes. The first eight KSEG0 pointers discovered in the
+`0x165D9C` table were snapshot in the same hangar phase. They contained
+code/control data and craft-name metadata, including the `0x0079C040` target's
+`box_HMT`/`snowspeeder_*` records, but none contained the five copied records
+or `late`. This is a partial negative only: the eight-target cap stopped before
+later pointer fields such as `0x80154B20`, so H-derived-records remains open.
+It rules out the first eight targets as the direct five-record source. No
+mitigation was added. ORIGIN: observation-only; no value was filtered, skipped,
+or guarded. Artifact: `scratch/agent/s4609_retail_pointer_targets.log`.
