@@ -153207,3 +153207,4 @@ Instrument: tools/apply_s4579_alloc_window.py (ROGUESQ_LOG_S4579=1), run scratch
 - Last guest PC at the abort dump is 0x80001b08 = delay slot of jal 0x800331D0 with a0=0x8010FEE0 a1=0 a2=1 at rs_malloc top, i.e. the blocking osRecvMessage on the allocator lock queue (single-source: last-guest-pc is one global; the missing exit line is independent support).
 Selects H-malloc-hang in lock-held form: some other thread holds 0x8010FEE0 and never returns it. Count 32 is stored before the lock, so any mixer tick during the block sees count 32 + stale 18-slot base. Next: log recv/send on 0x8010FEE0 to name the holder (NEXT.md).
 ORIGIN: no mitigation added; diagnostic only.
+This selects H-malloc-hang (lock-held form) and refutes H-same-thread-reentry; the next discriminator is a recv/send ring on 0x8010FEE0 naming the lock holder.
