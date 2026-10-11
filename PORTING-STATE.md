@@ -153198,3 +153198,12 @@ Ran `tools/apply_s4578_count_poll.py` (main.cpp: 100 us host poll of phys 0x1497
 - Mechanism (inferred, two lines: CB ring order + missing s4542 n=6): count is stored BEFORE `rs_malloc`, base AFTER. The mixer ran inside that window with count 32 and the 18-slot base, so index 30 is name-string memory. Open: which thread runs the mixer inside the window, and whether retail can interleave there (a guest interrupt-mask/lock around the alloc that our runtime's osSetIntMask/lock handling does not honour).
 No mitigation added (diagnostic only). Do not add a skip.
 Discrimination (s4578): this run selects H-unhooked-guest-store's neighbour "count published before base" (the allocator's own `sh`, hooked, is the writer) and refutes H-host-write and H-misread. Next discriminator: per-thread id + interrupt-mask + in-alloc flag at the `0x8008F0CC` store, at `rs_malloc` return, and at each mixer entry with count>18 (H-preempt vs H-same-thread-reentry vs H-malloc-hang), as written in scratch/agent/NEXT.md.
+
+## Session 4579 (2026-10-11) — mixer is a separate host thread during every allocateSongChannelArray window; the 7th rs_malloc(4352) blocks on the allocator lock queue
+
+Instrument: tools/apply_s4579_alloc_window.py (ROGUESQ_LOG_S4579=1), run scratch/agent/s4579_window.sh, 3 concurrent arms, identical results. Positive control passed: allocs #1-#6 print matched [s4579-A]/[s4579-P] pairs on one host tid (A=7, P=6 per arm).
+- Mixer entries run on host tid ...bf000 (sp 0x8011C880), alloc on ...463000 (sp 0x80165E48): same_tid=0 for all 18 logged entries, including during the successful allocs #2-#6 (inflight=1, cnt 17/16). H-same-thread-reentry refuted; concurrency is normal, not the differentiator.
+- Alloc #7 (a0=32, rs_malloc(4352)) prints A but never P, and no [rs-malloc] size=4352 exit line exists in 13614 others: rs_malloc entered and never reached its logging tail (0x80001C90).
+- Last guest PC at the abort dump is 0x80001b08 = delay slot of jal 0x800331D0 with a0=0x8010FEE0 a1=0 a2=1 at rs_malloc top, i.e. the blocking osRecvMessage on the allocator lock queue (single-source: last-guest-pc is one global; the missing exit line is independent support).
+Selects H-malloc-hang in lock-held form: some other thread holds 0x8010FEE0 and never returns it. Count 32 is stored before the lock, so any mixer tick during the block sees count 32 + stale 18-slot base. Next: log recv/send on 0x8010FEE0 to name the holder (NEXT.md).
+ORIGIN: no mitigation added; diagnostic only.
