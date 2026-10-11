@@ -5261,10 +5261,10 @@ index a22f747..9a72ebe 100644
              // Swap to the higher priority thread.
              swap_to_thread(PASS_RDRAM next_thread);
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..8aa61c6 100644
+index 812c556..25eba5d 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
-@@ -1,7 +1,15 @@
+@@ -1,7 +1,22 @@
  #include <cstdio>
 +#include <cstdlib>
  #include <thread>
@@ -5277,10 +5277,17 @@ index 812c556..8aa61c6 100644
 +#include <atomic>
 +#include <cstring>
 +#include <execinfo.h>
++#include <mach/mach.h>
++#include <mach-o/dyld.h>
++#include <pthread.h>
++#include <dlfcn.h>
++#include <algorithm>
++#include <vector>
++#include <chrono>
  
  #include "ultramodern/ultra64.h"
  #include "ultramodern/ultramodern.hpp"
-@@ -9,6 +17,51 @@
+@@ -9,6 +24,51 @@
  
  #include "ultramodern/threads.hpp"
  
@@ -5332,7 +5339,7 @@ index 812c556..8aa61c6 100644
  // Native APIs only used to set thread names for easier debugging
  #ifdef _WIN32
  #include <Windows.h>
-@@ -147,6 +200,18 @@ void ultramodern::set_native_thread_priority(ThreadPriority pri) {}
+@@ -147,6 +207,18 @@ void ultramodern::set_native_thread_priority(ThreadPriority pri) {}
  #endif
  
  void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
@@ -5351,7 +5358,7 @@ index 812c556..8aa61c6 100644
      thread_context->running.wait();
      // If this thread's context was replaced by another thread or deleted, destroy it again from its own context.
      // This will trigger thread cleanup instead.
-@@ -155,19 +220,216 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
+@@ -155,19 +227,263 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
      }
  }
  
@@ -5376,6 +5383,50 @@ index 812c556..8aa61c6 100644
 +    last_id = id; last_w = w; last_t = now; have_last = true;
 +}
 +static void on_t3_block(unsigned q) { std::lock_guard<std::mutex> lk(mu); t3_q_last = q; }
++// s4587: 1 kHz host-PC sampler of the thread that most recently received a handoff. Key = (window, pri, run_state, pc).
++static std::atomic<OSThread*> cur_thr{nullptr};
++static std::mutex smu; static std::map<std::tuple<int,int,int,uint64_t>, unsigned> shist; static std::map<uint64_t, uint64_t> scaller; static unsigned s_total = 0;
++static void sampler_loop() {
++    for (;;) {
++        std::this_thread::sleep_for(std::chrono::microseconds(1000));
++        OSThread* t = cur_thr.load(); if (!t) continue;
++        UltraThreadContext* c = t->context; if (!c || !thr_live_contains(c)) continue;
++        pthread_t pt = c->host_thread.native_handle(); mach_port_t mp = pthread_mach_thread_np(pt);
++        if (mp == MACH_PORT_NULL || mp == mach_thread_self()) continue;
++        const int w = (rs64_s4581_inflight && rs64_s4581_inflight()) ? 1 : 0; const int pri = (int)t->priority;
++        arm_thread_state64_t st; mach_msg_type_number_t cnt = ARM_THREAD_STATE64_COUNT; uint64_t pc = 0; int rs = -1;
++        if (thread_suspend(mp) != KERN_SUCCESS) continue;
++        if (thread_get_state(mp, ARM_THREAD_STATE64, (thread_state_t)&st, &cnt) == KERN_SUCCESS) pc = arm_thread_state64_get_pc(st);
++        thread_basic_info_data_t bi; mach_msg_type_number_t bc = THREAD_BASIC_INFO_COUNT;
++        if (thread_info(mp, THREAD_BASIC_INFO, (thread_info_t)&bi, &bc) == KERN_SUCCESS) rs = bi.run_state;
++        uint64_t caller = 0;
++        { uint64_t lo = (uint64_t)pthread_get_stackaddr_np(pt) - pthread_get_stacksize_np(pt), hi = (uint64_t)pthread_get_stackaddr_np(pt);
++          uint64_t fp = arm_thread_state64_get_fp(st);
++          for (int d = 0; d < 12 && fp >= lo && fp + 16 <= hi && (fp & 7) == 0; d++) {
++              uint64_t ret = ((uint64_t*)fp)[1]; if (ret < 0x180000000ull && ret >= 0x100000000ull) { caller = ret; break; }
++              fp = ((uint64_t*)fp)[0]; } }
++        thread_resume(mp);
++        if (!pc) continue;
++        std::lock_guard<std::mutex> lk(smu); shist[{w, pri, rs, pc}]++; s_total++; if (caller) scaller[pc] = caller;
++    }
++}
++static void start_sampler() { static std::once_flag f; std::call_once(f, [] { std::thread(sampler_loop).detach(); }); }
++static void sampler_dump(unsigned frame) {
++    std::lock_guard<std::mutex> lk(smu);
++    std::fprintf(stderr, "[s4587] vi=%u samples=%u slide=0x%lx\n", frame, s_total, (unsigned long)_dyld_get_image_vmaddr_slide(0));
++    for (int w = 1; w >= 0; w--) {
++        std::map<std::tuple<int,int,int>, unsigned> grp; for (auto& kv : shist) if (std::get<0>(kv.first) == w) grp[{std::get<1>(kv.first), std::get<2>(kv.first), 0}] += kv.second;
++        for (auto& g : grp) {
++            std::vector<std::pair<unsigned, uint64_t>> v; for (auto& kv : shist) if (std::get<0>(kv.first) == w && std::get<1>(kv.first) == std::get<0>(g.first) && std::get<2>(kv.first) == std::get<1>(g.first)) v.push_back({kv.second, std::get<3>(kv.first)});
++            std::sort(v.rbegin(), v.rend());
++            std::fprintf(stderr, "[s4587] %s pri=%d rstate=%d n=%u distinct_pcs=%zu top:", w ? "IN" : "OUT", std::get<0>(g.first), std::get<1>(g.first), g.second, v.size());
++            for (size_t i = 0; i < v.size() && i < 6; i++) { Dl_info di; const char* nm = (dladdr((void*)v[i].second, &di) && di.dli_sname) ? di.dli_sname : "?"; auto it = scaller.find(v[i].second); Dl_info dc; const char* cn = (it != scaller.end() && dladdr((void*)it->second, &dc) && dc.dli_sname) ? dc.dli_sname : "?";
++                std::fprintf(stderr, " %llx x%u [%s <- %llx %s]", (unsigned long long)v[i].second, v[i].first, nm, it != scaller.end() ? (unsigned long long)it->second : 0ull, cn); }
++            std::fprintf(stderr, "\n");
++        }
++    }
++    std::fflush(stderr); shist.clear(); scaller.clear(); s_total = 0;
++}
 +}
 +extern "C" void rs64_s4586_vi_flush(unsigned frame) {
 +    if (!s4586::enabled()) return;
@@ -5389,6 +5440,7 @@ index 812c556..8aa61c6 100644
 +        std::fprintf(stderr, "\n"); std::fflush(stderr);
 +    }
 +    s4586::acc = s4586::Acc();
++    if (frame % 1000 == 0 || frame == 300) s4586::sampler_dump(frame);
 +}
 +// s4581: log every handoff while allocateSongChannelArray is inside rs_malloc (ROGUESQ_LOG_S4581=1).
 +static void s4581_log_switch(OSThread* t, const char* tag) {
@@ -5402,13 +5454,15 @@ index 812c556..8aa61c6 100644
 +    if (!inflight && k > 20) return;
 +    std::fprintf(stderr, "[s4581-sw] n=%u inflight=%d tag=%s to_id=%d to_pri=%d to_thr=%p from_rdram=0x%08X\n",
 +        k, inflight ? 1 : 0, tag ? tag : "?", t ? (int)t->id : -1, t ? (int)t->priority : -1, (void*)t, (unsigned)thread_self);
-+    if (inflight) { void* bt[12]; int c = backtrace(bt, 12); backtrace_symbols_fd(bt, c, 2); }
++    { static int nobt = -1; if (nobt < 0) { const char* e = getenv("ROGUESQ_S4581_NOBT"); nobt = (e && e[0] && e[0] != '0') ? 1 : 0; }
++      if (inflight && !nobt) { void* bt[12]; int c = backtrace(bt, 12); backtrace_symbols_fd(bt, c, 2); } }
 +    std::fflush(stderr);
 +}
 +
 +static void resume_thread_tagged(OSThread* t, const char* tag) {
 +    s4581_log_switch(t, tag);
 +    s4586::on_handoff(t);
++    if (s4586::enabled()) { s4586::cur_thr.store(t); s4586::start_sampler(); }
      debug_printf("[Thread] Resuming execution of thread %d\n", t->id);
 +
 +    // Always-on UAF guard (s83/s70-72 class): a resume whose context was never
@@ -5570,7 +5624,7 @@ index 812c556..8aa61c6 100644
  }
  
  void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
-@@ -178,7 +440,7 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
+@@ -178,7 +494,7 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
  
  void ultramodern::resume_thread_and_wait(RDRAM_ARG OSThread *t) {
      UltraThreadContext* cur_context = TO_PTR(OSThread, thread_self)->context;
@@ -5579,7 +5633,7 @@ index 812c556..8aa61c6 100644
      wait_for_resumed(PASS_RDRAM cur_context);
  }
  
-@@ -239,7 +501,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -239,7 +555,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -5588,7 +5642,7 @@ index 812c556..8aa61c6 100644
          //throw ultramodern::thread_terminated{};
      }
  }
-@@ -259,6 +521,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+@@ -259,6 +575,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
@@ -5609,7 +5663,7 @@ index 812c556..8aa61c6 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,6 +562,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -286,6 +616,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -5621,7 +5675,7 @@ index 812c556..8aa61c6 100644
          throw ultramodern::thread_terminated{};
      }
      // Otherwise if the thread isn't stopped, remove it from its currrent queue., 
-@@ -294,9 +575,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -294,9 +629,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      }
      // Check if the thread has already been destroyed to prevent destroying it again.
      UltraThreadContext* cur_context = t->context;
@@ -5644,7 +5698,7 @@ index 812c556..8aa61c6 100644
          cur_context->running.signal();
      }
  }
-@@ -337,6 +631,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +685,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -5665,7 +5719,7 @@ index 812c556..8aa61c6 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +655,18 @@ void thread_cleaner_func() {
+@@ -347,8 +709,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -5684,7 +5738,7 @@ index 812c556..8aa61c6 100644
              delete to_delete;
          }
      }
-@@ -359,6 +677,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +731,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {
