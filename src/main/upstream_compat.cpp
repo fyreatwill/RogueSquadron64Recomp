@@ -1726,6 +1726,41 @@ static S4307Writer g_s4307_last_writer{};
 extern "C" void rs64_s4307_note_writer(uint32_t ordinal, uint32_t pc,
                                          uint32_t addr, uint32_t requested,
                                          uint32_t post);
+#include <map>
+#include <mutex>
+static std::atomic<uint32_t> g_s4572_t0{0}, g_s4572_t1{0}, g_s4572_cap{0}, g_s4572_cnt{0};
+extern "C" void rs64_s4572_publish(uint32_t t0, uint32_t t1, uint32_t cap, uint32_t cnt) {
+    g_s4572_t0 = t0; g_s4572_t1 = t1; g_s4572_cap = cap; g_s4572_cnt = cnt;
+    std::fprintf(stderr, "[s4572-pub] tbl0=%08X tbl1=%08X cap=%u count=%u\n", t0, t1, cap, cnt);
+}
+extern "C" void rs64_s4572_setcount(uint32_t cnt) { g_s4572_cnt = cnt; }
+static void rs64_s4572_note(const char* kind, char w, uint32_t pc, uint32_t addr, uint32_t value) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4572"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    const uint32_t p = addr & 0x1FFFFFFFu;
+    static std::atomic<unsigned> rows[3]{}, tot[3]{}, all{0};
+    static std::mutex mu; static std::map<uint64_t, unsigned> hist;
+    int cls = -1; uint32_t idx = 0, off = 0, buf = 0;
+    if (p >= 0x149700u && p < 0x149720u) { cls = 2; off = p - 0x149700u; }
+    else {
+        const uint32_t cap = g_s4572_cap, cnt = g_s4572_cnt;
+        for (int b = 0; b < 2 && cls < 0; b++) {
+            const uint32_t t = (b ? g_s4572_t1 : g_s4572_t0) & 0x1FFFFFFFu;
+            if (t && p >= t && p < t + cap * 0x88u) { idx = (p - t) / 0x88u; off = (p - t) % 0x88u; buf = b; cls = idx < cnt ? 0 : 1; }
+        }
+    }
+    if (cls < 0) return;
+    tot[cls]++;
+    { std::lock_guard<std::mutex> g(mu); hist[((uint64_t)cls << 32) | pc]++; }
+    if (rs64_vi_committed_width() >= 512u && rows[cls].fetch_add(1) < 60)
+        std::fprintf(stderr, "[s4572-W] %s %c cls=%s buf=%u idx=%u off=%u pc=%08X addr=%08X val=%08X vi_w=%u\n", kind, w,
+                     cls == 2 ? "cursor" : cls ? "chunk2+" : "inrange", buf, idx, off, pc, addr, value, rs64_vi_committed_width());
+    if ((++all % 20000u) == 0 && (all / 20000u) <= 20) {
+        std::lock_guard<std::mutex> g(mu);
+        std::fprintf(stderr, "[s4572-tot] stores inrange=%u chunk2+=%u cursor=%u\n", tot[0].load(), tot[1].load(), tot[2].load());
+        for (auto& kv : hist) std::fprintf(stderr, "[s4572-hist] cls=%u pc=%08X n=%u\n", (unsigned)(kv.first >> 32), (unsigned)kv.first, kv.second);
+    }
+}
 static void rs64_s4569_note(const char* kind, char w, uint32_t pc, uint32_t addr) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4569"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
@@ -1740,6 +1775,7 @@ extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, u
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
     rs64_s4569_note("st", width, pc, addr);
+    rs64_s4572_note("st", width, pc, addr, value);
     (void)value;
     const uint32_t phys = addr & 0x1FFFFFFFu;
     if (phys >= 0x17C000u && phys < 0x17D000u) {
@@ -1824,6 +1860,7 @@ extern "C" void rs64_s4299_swlr(char w, const char* fn, uint32_t line, uint32_t 
     if (!on) return;
     g_s4299_swlr_total++;
     rs64_s4569_note(w == 'L' ? "swl" : "swr", w, line, addr);
+    rs64_s4572_note(w == 'L' ? "swl" : "swr", w, line, addr, 0);
     uint32_t p = addr & 0x1FFFFFFFu;
     if (p < 0x17C000u || p >= 0x180000u) return;
     S4299Ent& e = g_s4299_ring[g_s4299_total & ((1u << 20) - 1)];
