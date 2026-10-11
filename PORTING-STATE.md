@@ -153570,3 +153570,23 @@ ORIGIN: observation-only; no value was filtered, skipped, or guarded. Artifacts:
 `scratch/agent/s4610_retail_pointer_targets.log`,
 `scratch/agent/s4610_retail_pointer_targets_retry.log`, and
 `scratch/agent/s4610_retail_pointer_targets_final.log`.
+
+## Session 4612 (2026-10-11) — qualified the retail writer control and source census
+
+Extended the oracle with bounded phase-origin write rows and write watches for
+dynamically discovered pointer targets. The first run passed controls but the
+row buffer was consumed by unrelated source-span writes, so the per-watch cap
+was fixed and the capture was rerun. The fixed Rice-qualified run passed the
+whole-RDRAM positive control (10,000 callbacks), reached VI 512/origin
+0x006AB400 at VI 2269, and retained source and target snapshots. The old
+0x80007640 execution watch remained zero, but the actual writer control
+0x80007670 fired 1,211 times. The target snapshot contains the five copied
+names; the 0x165D9C source snapshot begins d/proj_SND/ and contains
+pointer/control data; all 17 discovered pointer-target watches recorded zero
+writes. This rules out the visible pointer targets as the direct name-record
+source, while leaving another shared table versus the writer's alternate
+operand open. Build warnings were the existing missing-field initializers.
+No mitigation was added. ORIGIN: observation-only; no value was filtered,
+skipped, or guarded. Artifacts:
+scratch/agent/s4612_retail_source_origin.log and
+scratch/agent/s4612_retail_source_origin_fixed.log.

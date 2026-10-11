@@ -90,6 +90,10 @@ For a memory watch after the global `--hit-cap` has gone silent,
 `--first-watch N` prints the first hit for watch index N and
 `--pc-hist-watch N` prints a bounded writer-PC histogram for that watch at
 shutdown; repeat the option to collect multiple watch histograms in one run.
+`--phase-origin-watch N` retains bounded write rows for watch `N` during the
+512-wide hangar phase and propagates the setting to pointer targets created by
+`--phase-pointer-watch`. Use it with phase snapshots when identifying whether
+a pointer-backed table is also the source of a later copied record.
 `--pc-hist-phase ORIGIN[:WIDTH]` adds a repeatable phase bucket keyed by VI
 origin and width (default width is 640). It prints the matching VI-row count
 and one writer-PC histogram per selected watch at shutdown, allowing origin

@@ -1,43 +1,33 @@
-# RESUME: identify the retail source path after pointer-target exclusion
+# NEXT: phase-gate the retail writer operand
 HYPOTHESIS-ID: m5-audio-destub
 
-This is the next single work unit. s4611 expanded the retail pointer census
-to 17 targets and found no five copied name records or `late`. The run passed
-whole-RDRAM, VI-512, pointer-source, and target-span controls, but the
-`0x80007640` execution watch was 0, so the pointer result is explicitly
-single-source/caveated. Do not promote a stronger null until the caller
-control is live.
+Run one Rice-qualified 90-second retail oracle capture. s4612 passed the
+whole-RDRAM, VI-512, source-span, target-span, and pointer-target controls;
+`0x80007670` fired 1,211 times, while `0x80007640` stayed at zero. The
+512-phase target snapshot contains the five copied names, the source base
+`0x165D9C` is pointer/control data, and all 17 discovered pointer targets had
+zero writes.
 
 Competing hypotheses:
 
-- H-other-shared-table: the five target records come from another retail RDRAM
-  source/table; visible pointer targets remain metadata/control only.
-- H-pointer-no-records: the visible pointers are not record sources and the
-  caller uses a stable alternate operand/source outside those targets.
-- H-control-invalid: the source/target observations are phase-valid, but the
-  absent `0x80007640` execution hit means the caller attribution is not
-  qualified and the source path remains unevaluable.
+- H-other-shared-table: the phase-gated `rs_strncpy` writer receives a distinct
+  RDRAM source containing the five records; it is outside the visible pointer
+  targets.
+- H-pointer-no-records: the writer receives a stable non-RDRAM or alternate
+  source operand; the visible pointer table is metadata/control only.
+- H-control-invalid: the writer control is live only outside VI 512, so the
+  phase-gated operand remains unevaluable.
 
-Discriminating measurement: add one phase-scoped source-origin table to the
-oracle, retaining the expanded 17 pointer snapshots, that records (a) writes
-to `0x165D9C..0x165E9C`, (b) writes to every discovered pointer target, (c) the
-five target-record writes, and (d) a live caller-PC control (use the actual
-retail writer PC if the existing `0x80007640` range remains zero). A distinct
-source/write operand with no visible-target writes selects H-other-shared-table;
-a stable alternate operand with no visible-target records selects
-H-pointer-no-records; a zero caller control leaves H-control-invalid and
-requires fixing the control before interpreting nulls. Whole-RDRAM, VI-512,
-pointer-source, and target-span controls must all fire in the same run. Do not
-add a mitigation.
+Discriminator: phase-gate execution at `0x80007670` with
+`--pc-phase-log-width 0x6ab400:512`, while retaining snapshots and writes for
+the source span, target span, and all dynamically discovered pointer targets.
+A phase-512 writer hit with a distinct RDRAM operand selects
+H-other-shared-table; a phase-512 hit with a stable alternate/non-RDRAM
+operand selects H-pointer-no-records; zero phase-512 writer hits selects
+H-control-invalid. Whole-RDRAM, VI-512, source-span, target-span, and caller
+controls must all fire before interpreting nulls. Do not add a mitigation.
 
-Preparation and run:
+Build/run:
 
-1. Update the oracle instrumentation in `tools/oracle/rs64_oracle.c` and its
-   help text in the same change; keep the 64-target cap.
-2. Build with `tools/oracle/build.sh`.
-3. Run one Rice-qualified 90-second capture from the repo root, preserving:
-
-   `tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 90 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-write 0x1724c0:0x17250c --watch-write 0x165d9c:0x165e9c --watch-pc 0x80007640 --pc-phase-log 0x6ab400 --phase-pointer-watch 2:0x400 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150 > scratch/agent/s4612_retail_source_origin.log 2>&1`
-
-Check all controls before interpreting the source rows. Do not add a
-mitigation.
+    tools/oracle/build.sh
+    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 90 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-write 0x1724c0:0x17250c --watch-write 0x165d9c:0x165e9c --watch-pc 0x80007640,0x80007670 --pc-phase-log-width 0x6ab400:512 --phase-pointer-watch 2:0x400 --phase-snapshot-watch 1 --phase-snapshot-watch 2 --phase-origin-watch 1 --phase-origin-watch 2 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150 > scratch/agent/s4613_retail_writer_operand.log 2>&1
