@@ -153167,3 +153167,10 @@ Instrument defect to fix before reuse: pass the pre-load address (or skip dest==
 ORIGIN: diagnostic counter only, no mitigation added.
 Discrimination: this run selects H-inert and refutes H-read-wild for the four hooked functions (zero genuine loads of chunk-2+ words 0..7; positive control = word 18 loads fired 3199x). It does not refute H-other-reader.
 Next discriminator: fix the dest==base address capture in tools/apply_s4307_synth_read_join.py, extend to all funcs_24.c audio functions and LH/LB/LWL forms, rerun; zero loads of words 0..7 with the word-18 control firing closes the thread.
+
+## Session 4576 (2026-10-11) — widened read watch (all funcs_24.c loads, address captured pre-load): voice-record words 0..7 are never read; H-inert closed
+Change: `tools/apply_s4307_synth_read_join.py` now (a) captures `U32(ADD32(base,off))` BEFORE the load (the s4575 dest==base artifact), (b) hooks every load form (MEM_B/BU/H/HU/W, do_lwl/do_lwr), (c) covers every function in funcs_24.c (729 loads, idempotent on rerun) instead of the 4 synth functions. Rebuilt; reran the s4575 recipe as `scratch/agent/s4576_loadwatch.sh` (3 arms, ROGUESQ_LOG_S4575=1).
+Result: arm A final tally inrange=341971 loads, chunk2+=58029 loads. Histogram has woff 8..33 only; woff 0..7 has ZERO rows in both classes in all three arms (A/B/C). Positive control in the same run: chunk-2+ word 18 loads print (pc 80090270/80090B28/80090B44, n=1708 each), and the in-range class prints the same PCs.
+Selects/refutes: H-inert (nothing in funcs_24.c reads words 0..7) confirmed; H-other-reader refuted for funcs_24.c incl. LH/LB/LWL/LWR. Caveat: only funcs_24.c is hooked; a reader in another funcs_*.c or host C++ (RSP/ucode HLE) is not covered. The residue in words 0..7 of chunk-2+ records is therefore inert and not a crash source; stop chasing it.
+ORIGIN: no mitigation added; instrument only (the hook is env-gated, ROGUESQ_LOG_S4575).
+Next: return to docs/M5-AUDIO-PLAN.md step execution.
