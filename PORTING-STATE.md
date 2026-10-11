@@ -153330,3 +153330,11 @@ Ran `zsh scratch/agent/s4591_oracle_tag.sh` first. It completed with the whole-R
 The first bad caller row was `musyxRenderVoiceSamples` site `0x800903F0`: voice `0x801724C0` had `+0x34=0x6C617465` (`late`), constructed `a1=0x6C63745D`, and `a3=0x6C617465`; the FE98 row received the same malformed `a1/a3`. Sites `0x8009024C`, `0x800902CC`, and `0x8009039C` produced no bad row in the phase budget. The run ended at the known odd-PI alignment abort after the discriminator fired.
 
 Result: H-caller-input-source is selected over H-cache-node. The retail B0-pointer role is the independent second evidence line; the port-only ASCII caller operands are illegitimate. ORIGIN: no mitigation; the immediate FE98 store remains the legitimate `0x8008FE98` instruction, while the malformed data is already present at the `0x800903F0` caller boundary. A new static census must name the writer/translation that populates voice `+0x34` or constructs its `a1/a3`.
+
+## Session 4596 (2026-10-11) — static census selects the voice-field writer boundary
+
+Ran the prescribed bounded static census without building or running. `rg` across the preserved generated functions found the two relevant voice-record `+0x34` stores: `0x800921E8` in `musyxInitVoiceFromSample`, which copies sample descriptor `+0x4` into the indexed voice, and `0x80090C80` in `musyxKeyOnVoice`, which copies source voice `+0x38` into the destination voice. The `s0+0x34` stores inside `musyxRenderVoiceSamples` are output-record state and do not write the selected `s1` voice at `0x801724C0`.
+
+The four `fillSampleStreamRange` call sites load `s1+0x34` directly. At `0x800903F0`, `a3` is `lw 0x34(s1)` and `a1` is only that value plus the aligned sample offset; there is no static tag/resource/string translation. Result: H-writer/input is selected over H-builder. Together with the independent retail B0-pointer watch, the port's ASCII `late` remains illegitimate and the open boundary is runtime attribution of the write/input. See `docs/M5-S4596-VOICE34-CENSUS.md`.
+
+What it rules out: a statically generated caller-side conversion of `voice+0x34` into ASCII, and an unclassified relevant store in the preserved generated source. ORIGIN: no mitigation or value filtering was added; both named stores are legitimate pointer-copy operations in the retail model.
