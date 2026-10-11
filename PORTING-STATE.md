@@ -153349,3 +153349,15 @@ Result: the named `rs_strncpy` path is not an observed port writer at the target
 Ran the independent retail oracle first with whole-RDRAM and physical target controls. Whole-RDRAM activity reached 10,004 writes; physical `0x1724F4` had four writes, all from retail PC `0x80007670`, while the target 640 phase had zero rows because those writes occur in retail VI 512. Added the regeneration-preserved `tools/apply_s4598_complete_store_census.py`, which widened the existing writer-parity hook to call the phase-scoped target/control witness for all 51 generated function units. Built once successfully, then ran the qualified port route with real LLE flags and repeated Start input. The port reached VI width 640/origin `0x006A2900`; the adjacent generated-store control fired, but no generated target-store row occurred before the known odd-PI alignment abort (`last-guest-pc=0x80001B08`).
 
 Result: target-phase H-init/keyon and target-phase H-foreign are refuted. H-host is not yet selected globally because the field could have been written by generated code in an earlier phase; the next discriminator is a bounded per-phase target table from boot through VI 640. The retail target result is the independent second evidence line. ORIGIN: diagnostic-only; the target value was not filtered, skipped, or guarded, and no mitigation was added.
+
+## Session 4599 (2026-10-11) — checkpointed the s4598 result for phase-bucket resume
+
+This retry did not rerun the experiment, per the checkpoint close-out
+contract. Preserved artifacts are `scratch/agent/s4598_oracle.log` and
+`scratch/agent/s4598_port_run/run.log`; session 4598's adjacent control fired
+at VI 640 while its complete generated-store target witness stayed at zero
+before the known odd-PI alignment abort. The result remains discriminating at
+the target phase: generated target writers there are ruled out, but an earlier
+generated writer versus a host/translation path is unresolved. `NEXT.md` now
+specifies the single phase-bucketed resume measurement and its three outcomes.
+No mitigation or code-path change was made.
