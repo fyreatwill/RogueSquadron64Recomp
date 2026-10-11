@@ -153258,3 +153258,9 @@ Selects: H-legit (high threads genuinely block, then are re-readied at high rate
 Not separated: whether the Ai(0x80149670) event rate is retail-like or inflated by our AI drain/stub (the audio thread re-blocks on Ai ~6000 times per 10000 pops = Ai messages arriving far faster than a real 32 kHz DMA cadence would imply?). Next: count Ai-source enqueues per VI frame in the window vs the retail expectation (~1-2 per frame).
 ORIGIN: no mitigation landed (diagnostic only; instrumentation under lib/ exported via submodule-patches).
 Gate note (s4584): this run selects H-legit and refutes H-poll; the next discriminator is the per-VI-frame Ai-source enqueue count versus retail in NEXT.md.
+
+## Session 4585 (2026-10-11) — Ai-queue message rate is exactly 1 per VI frame; H-inflated and H-selfsend refuted
+Built s4585 counter (lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp, ROGUESQ_LOG_S4585=1): per-source enqueue deltas flushed at each Vi enqueue, plus do_send count to Ai queue 0x80149670. Recipe scratch/agent/s4585_rq.sh, two concurrent arms, 600 VI frames each, 0 crashes.
+Result (both arms, frames 6-600): d_ai=1.00/VI, d_aisend=1.00/VI (every do_send on the Ai queue is the host enqueue; guest self-sends = 0), d_si=0.82, d_sp=0.47, d_dp=0.07, d_pi=0.03. Positive control: the other sources fire non-zero with distinct rates.
+Selects: H-legit-rate (our Ai cadence matches retail's ~1/frame). Refutes: H-inflated, H-selfsend. Single-source (no retail comparison run); limitation: averaged over 600 frames, not gated to the rs_malloc window.
+ORIGIN: n/a (diagnostic only; no mitigation added). The audio thread's ~6000 re-blocks per 10000 in-window pops (s4584) are therefore not from message inflation; allocator tid 3 starvation comes from scheduling structure or handler cost.

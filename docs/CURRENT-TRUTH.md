@@ -253,3 +253,5 @@ musyxSynthFrame+5688 crash = walk of stale audio-list head 0x801499B0 (still poi
 
 ### s4581 addendum (m5-audio-destub)
 Allocator thread (gtid 3, pri 10) is preempted inside rs_malloc at the lock osRecvMesg->check_running_queue by the already-queued pri-122 audio thread (entry 0x8008ED70); alloc #1 window had 0 handoffs, alloc #2 has the first. Single-source (3 identical arms). Open: who readied it and why retail's audio thread isn't mixing during reapplyAudioConfig. Tool: tools/apply_s4581_switchlog.py + ROGUESQ_LOG_S4581=1.
+
+- s4585: Ai-source enqueue to queue 0x80149670 is exactly 1.00 per VI frame (guest self-sends 0; Si 0.82, Sp 0.47/VI). Message inflation is NOT the cause of allocator starvation; see scratch/agent/NEXT.md.

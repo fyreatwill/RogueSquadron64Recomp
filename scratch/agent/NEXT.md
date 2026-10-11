@@ -1,5 +1,4 @@
-# NEXT: is the Ai-source message rate to queue 0x80149670 (audio thread, pri 122) per VI frame inflated by our AI drain, vs retail's ~1-2/frame?
+# NEXT: why does tid 3 (allocator) starve in the rs_malloc window if Ai rate is legit (1/VI)? Measure per-thread run time/handoff count per VI frame inside the window.
 HYPOTHESIS-ID: m5-audio-destub
-Context (s4584): high threads genuinely block on mesgqueues (H-poll refuted); audio thread re-blocks on Ai ~6000 times per 10000 in-window pops, starving tid 3 (allocator).
-Hypotheses: H-inflated (our AI drain/enqueue_external_message_src(Ai) fires far faster than retail cadence); H-legit-rate (rate matches retail ~ per VI, starvation arises from handler cost); H-selfsend (the Ai queue is also fed by guest osSendMesg).
-Discriminator (ONE build): in enqueue_external_message_src count per-source enqueues per VI-frame bucket during the s4581 window, plus guest osSendMesg counts to 0x80149670; control = first 20 enqueues outside the window. Compare to ~1-2 Ai/frame. Recipe: copy scratch/agent/s4584_rq.sh.
+Context (s4585): Ai enqueue = 1.00/VI, no guest self-sends. H-inflated/H-selfsend refuted. Remaining: H-handler-cost (audio handler runs long per Ai msg), H-hostblock (tid 3 waits on something host-side, e.g. a Pi/DMA message never delivered), H-sched (non-preemptive scheduler lets pri 117-122 threads cycle on Sp/Si msgs, d_si=0.82/VI).
+Discriminator (ONE build): in the s4581 window log per-VI: time and switch count by thread id, and the queue addr tid 3 is blocked on at each Vi. Control: same table outside the window. Recipe: copy scratch/agent/s4585_rq.sh.
