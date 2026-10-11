@@ -153758,3 +153758,16 @@ not evidence that the earlier odd request is absent globally. It rules out
 does not select H-guest-dma, H-host-corruption, or H-stale-record. No DMA
 alignment, skip, or mitigation was added. Artifacts: `/tmp/rs64_s4622_oracle.log`,
 `/tmp/rs64_s4622_port_qualified.log`.
+
+## Session 4623 (2026-10-11) — checkpointed the incomplete hangar DMA audit
+
+This was a retry close-out after the preceding iteration stopped before its
+exit contract completed. No experiment was rerun. The durable s4622 record
+already contains the only qualified result: the corrected real-audio/LLE/
+ungated/solo/spin-yield port arm reached title VI 1024, retained 16 even
+`osPiStartDma`/`do_dma` pairs, saw no `osEPiStartDma` row or odd event, and
+did not reach hangar; the retail whole-RDRAM control reached 10,000 callbacks
+but remained at 320-wide boot. This remains a title-only, single-source
+qualification and selects none of H-guest-dma, H-host-corruption, or
+H-stale-record. The next run must repeat the same batched audit on the
+canonical hangar schedule; no alignment, skip, or mitigation is authorized.

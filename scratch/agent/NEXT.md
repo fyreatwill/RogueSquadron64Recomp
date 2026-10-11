@@ -1,38 +1,38 @@
-# NEXT: repeat the odd-physical-address PI-DMA producer audit on the hangar route
+# NEXT: resume the odd-physical-address PI-DMA producer audit on the hangar route
 HYPOTHESIS-ID: odd-pi-dma-origin-audit
 
-The s4622 trace covered both `osPiStartDma_recomp` and `osEPiStartDma_recomp`
-into `do_dma`. The real-audio/LLE route reached title 1024 but not hangar; 16
-bounded even control rows came from `osPiStartDma` with matching `do_dma` rows,
-zero `osEPiStartDma` rows, and zero odd events. The independent retail oracle
-passed its 10,000 whole-RDRAM control but stayed at 320-wide boot. No
-hypothesis was selected.
+RESUME: s4622's batched trace is already landed and qualified only through
+title VI 1024. Do not rerun a title-only recipe or interpret its zero odd
+events as global evidence. The prior retry stopped before this audit could be
+completed; this iteration only checkpointed that boundary.
 
-Competing hypotheses:
+Competing hypotheses remain:
 
 - H-guest-dma: a legitimate guest PI-DMA request supplies the odd physical
-  address; the caller and requested ROM record should be attributable and the
-  retail oracle should show the corresponding transition.
-- H-host-corruption: the guest request is even, but a host-side queue/ring or
+  address; caller and ROM metadata should match a live guest request.
+- H-host-corruption: the guest request is even, but a host queue/ring or
   address transformation changes it before `do_rom_read`.
-- H-stale-record: the odd request is a stale or corrupted DMA-ring record; the
-  producer identity or ROM metadata will not match a live guest request.
+- H-stale-record: the odd request is stale/corrupt DMA-ring state with no
+  matching live guest request or ROM record.
 
-Discriminator: one complete table of every odd-address assertion event,
-including guest caller/return address, `osPiStartDma` physical address and
-size, `do_dma` physical address and size, ring-slot identity, destination,
-ROM metadata, and nearest retail/oracle phase. A qualified whole-RDRAM oracle
-control and existing port VI/route control must be present. A matching
-guest-to-`do_dma` pair selects H-guest-dma; an altered host pair selects
-H-host-corruption; no live pair with a stale slot selects H-stale-record. No
-alignment, skip, or mitigation is authorized.
+Discriminator: one complete table for every odd event, joining guest caller
+and return PC, `osPiStartDma`/`osEPiStartDma` arguments, converged `do_dma`
+arguments, ring slot, destination, ROM metadata, and phase. A matching live
+guest-to-`do_dma` pair selects H-guest-dma; an altered pair selects
+H-host-corruption; an odd event with no live guest pair and stale slot selects
+H-stale-record. A whole-RDRAM retail watch and port VI/route controls must
+fire in the same capture. No alignment, skip, or mitigation is authorized.
 
-Before building, arm ground truth first with the existing oracle whole-RDRAM
-positive control and VI trace. Then use the canonical schedule
-`ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a'`
-with `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`, the real-audio/LLE controls, and
-`ROGUESQ_LOG_S4622=1`. One capture must retain the complete s4622 table and
-title/hangar controls. A guest-to-`do_dma` odd pair selects H-guest-dma; an
-altered pair selects H-host-corruption; no live pair with a stale slot selects
-H-stale-record. If hangar is missed again, report the result as unevaluable
-and do not return to M4.
+Exact next commands:
+
+1. `cmake --build build --config Debug --target RogueSquadron64Recomp`
+2. Arm the retail oracle's whole-RDRAM positive control and VI trace before
+   launching the port. Preserve the s4622 `s4622-dma` trace and use the
+   canonical schedule:
+   `ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a'`
+   with `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`, real audio, forced/ungated LLE,
+   LLE-solo, and spin-yield controls.
+3. Run from `build/` with the ROM present, capture every arm to a path whose
+   final component does not begin with `.`, and SIGKILL the game/process
+   group. If hangar is missed, record the result as unevaluable and do not
+   return to M4.
