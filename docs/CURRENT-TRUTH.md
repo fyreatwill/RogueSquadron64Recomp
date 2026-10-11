@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4616 (maintenance compaction).
+archive sections. Updated for session 4617.
 
 ## Current state
 
@@ -25,14 +25,15 @@ is explicitly repaired.
 
 ## Active frontier
 
-The current work unit is the retail five-name copy census. The target span
-contains five stable records in title and hangar snapshots, but the candidate
-source span and its 17 visible pointer targets do not. The live immediate
-writer is `0x80007670`; its phase-bucket rows were absent in the armed title
-and 512 buckets, while the `0x80007640` control fired. The names therefore
-predate those buckets or arrive through an earlier/alternate path. The next
-capture covers boot, intro, title, attract/demo, and hangar phase buckets in
-one run. This remains observation-only; no mitigation is authorized.
+The all-phase retail five-name census is complete. The target span contains
+five stable records in title and hangar snapshots, but the candidate source
+span and its 17 visible pointer targets do not. The live immediate writer is
+`0x80007670`; its 76 lifetime target-span writes produced zero rows in every
+requested 320, 640, title-1024, attract/demo-512, and hangar-512 bucket. The
+whole-RDRAM, target-span, `0x80007640`, and `0x80007670` controls all fired,
+so this is a qualified single-source oracle result selecting
+H-no-live-copy provisionally: the names predate the covered route or arrive
+through an unarmed earlier/alternate path. No mitigation is authorized.
 
 The recurring odd PI DMA remains an explanation problem, not a skip target.
 The port writes ASCII `lcre` into a cart record through the FE98 path, while
@@ -71,14 +72,12 @@ and legitimacy of any wild value must be named before a guard is considered.
 
 ## Next steps
 
-1. Run the exact all-phase retail oracle recipe in `scratch/agent/NEXT.md`,
-   with `--pc-hist-watch 1`, whole-RDRAM, target/source, pointer-target, and
-   `0x80007640` positive controls. A writer row in 320/640 selects an early
-   copy; a row only in another 512 bucket selects that phase; zero rows with
-   controls firing leaves H-no-live-copy/provisional earlier-path open.
-2. If the all-phase census is qualified but unresolved, revisit the external
-   retail-entry boundary or M4 accumulator boundary only with a genuinely new
-   attributable handoff; do not repeat a null measurement.
+1. Revisit the M4 accumulator boundary with the existing paired port probe,
+   using the retail all-RDRAM/VI reachability result as the independent line.
+   Capture the complete `ACCH:ACCM:ACCL`/VMADH/VGE/store row at the first live
+   512 shaded phase and require the independent non-M4 accumulator control.
+2. Revisit the external retail-entry boundary only with a new attributable
+   handoff; do not repeat the now-qualified all-phase name-copy null.
 3. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.
 
 ## Evidence and operating rules
@@ -95,5 +94,5 @@ export submodule patches in the same session. Never run submodule update,
 checkout, clean, or hard reset. Kill runs with SIGKILL and run from `build/`
 with the ROM present. Any mitigation-shaped change needs an `ORIGIN:` line.
 
-See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 for the s4590–s4615
+See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 for the s4590–s4617
 evidence archive and [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md) for the audio plan.

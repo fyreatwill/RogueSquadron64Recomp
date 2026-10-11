@@ -1,28 +1,32 @@
-# NEXT: locate the five-name copy across boot and intro phases (after s4616 maintenance)
-HYPOTHESIS-ID: m5-audio-destub
+# NEXT: paired M4 accumulator boundary capture after the retail name census
+HYPOTHESIS-ID: m4-accumulator-boundary
 
-The s4615 fixed capture passed whole-RDRAM, title VI 1024, hangar VI 512,
-target/source, and all 17 pointer-target controls. The title target snapshot
-already contained the five names (same FNV as hangar), but `0x80007670` had
-zero title-bucket target writer rows despite 1,211 lifetime executions; the
-`0x80007640` control fired.
+The s4617 capture passed whole-RDRAM, target-span, both PC controls, title VI
+1024, and both 512 hangar origins. The five names were present in the target
+snapshot, while `0x80007670` had zero target-span writer rows in every 320,
+640, 1024, and 512 bucket despite 76 lifetime target-span writes. All 17
+pointer-target controls were zero. This is single-source oracle evidence that
+the name copy is earlier or on an unarmed path; do not repeat it.
 
 Competing hypotheses:
 
-- H-intro-or-boot-copy: a writer row appears in the 320 boot or 640 intro
-  bucket, before title/hangar.
-- H-other-512-copy: a writer row appears only in one of the 512 buckets not
-  previously covered, such as attract/demo.
-- H-no-live-copy: all covered buckets are zero; the names predate this route
-  or arrive through a path not represented by the target writer watch.
+- H-arithmetic: the captured port `ACCH:ACCM:ACCL` tuple disagrees with the
+  local VMADH model before VGE, selecting accumulator/product semantics.
+- H-vge-store: VMADH matches the model but post-VGE or stored shade bytes do
+  not, selecting VGE/store semantics.
+- H-source-divergence: the port tuple/store agrees internally while the
+  independent retail phase or RDRAM writer transition differs, selecting
+  source-state/execution divergence.
 
-Discriminator: one run with `--pc-hist-watch 1` and phase buckets for every
-known route phase. A target writer row in 320/640 selects H-intro-or-boot-copy;
-a row only in 512 selects H-other-512-copy; zero rows in all buckets, with
-whole-RDRAM, target/source, and `0x80007640` controls firing, selects
-H-no-live-copy provisionally. Do not add a mitigation.
+Discriminator: one paired port/retail capture at the first live 512 shaded
+phase. The port row must include `r9`, `v4`, `v0`, all accumulator halves,
+post-VMADH `v6`, post-VGE `v6`, and the stored output record, plus a changing
+non-M4 accumulator control. A retail whole-RDRAM control and VI trace must
+prove the corresponding phase. The three outcomes above select exactly one
+hypothesis; without both controls the result is unevaluable.
 
-Build/run:
+Build/run (port arm, after any required existing-probe rebuild):
 
-    tools/oracle/build.sh
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 90 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-write 0x1724c0:0x17250c --watch-write 0x165d9c:0x165e9c --watch-pc 0x80007640,0x80007670 --pc-hist-watch 1 --pc-hist-phase 0x00000280:320 --pc-hist-phase 0x0066A500:640 --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x00690000:512 --pc-hist-phase 0x00690800:512 --pc-hist-phase 0x006AB400:512 --pc-hist-phase 0x006AB800:512 --pc-phase-log-width 0x6ab400:512 --phase-pointer-watch 2:0x400 --phase-snapshot-watch 1 --phase-snapshot-watch 2 --phase-origin-watch 1 --phase-origin-watch 2 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150 > scratch/agent/s4616_retail_writer_all_phases.log 2>&1
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
+    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_M4_ACCUM=1 ROGUESQ_M4_PHASE_FROM=1 ROGUESQ_LOG_PHASE=1 zsh tools/probe.sh scratch/agent/s4618_m4_paired 20 2
+    tools/oracle/build.sh && tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 30 --watch-write 0x0:0x800000 --vi-trace > scratch/agent/s4618_m4_retail_ground_truth.log 2>&1

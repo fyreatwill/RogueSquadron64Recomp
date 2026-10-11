@@ -5123,7 +5123,7 @@ The s3636
 `attachedMeshOverlayNpcHandler` `0x80054344` Gap in §56 stays open and is
 not this frontier.
 
-## 59. Current-truth maintenance archive s4590–s4615
+## 59. Current-truth maintenance archive s4590–s4617
 
 This section preserves the durable evidence removed from the compact
 operational snapshot during the s4616 maintenance pass.
@@ -5166,6 +5166,15 @@ already contains the records. Thus the names predate those buckets or are
 copied through an unarmed earlier/alternate path. The next discriminator
 is the all-phase writer histogram in `scratch/agent/NEXT.md`; no value was
 filtered or guarded.
+
+s4617 completed that histogram across 320 boot, 640 intro, title 1024,
+attract/demo 512, and both hangar 512 origins. The whole-RDRAM control fired
+12,168,663 times, the target-span control fired 76 times, and the two PC
+controls fired 2,079 and 1,211 times. The writer had 76 lifetime target-span
+writes but zero phase-bucket rows; all 17 pointer-target watches also stayed at
+zero. The target snapshots still contained the five names. This is qualified
+single-source oracle evidence for H-no-live-copy provisionally, not an origin
+proof and not permission for a mitigation.
 
 ### Other durable boundaries
 

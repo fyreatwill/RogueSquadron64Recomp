@@ -153651,3 +153651,17 @@ lines, so no experiment was run. Durable s4590–s4615 evidence was migrated to
 and 99 lines with one monotonic backlog and the all-phase retail writer census
 as the next work unit. This rules out no new runtime hypothesis; it preserves
 the prior evidence archive while keeping the operational state compact.
+
+## Session 4617 (2026-10-11) — completed the all-phase retail name-copy census
+
+Ran the planned retail oracle census with whole-RDRAM, target/source,
+pointer-target, and both PC positive controls. The run reached 320 boot, 640
+intro, title VI 1024, and both requested 512 origins. Whole-RDRAM recorded
+12,168,663 writes; the target span recorded 76; `0x80007640` and `0x80007670`
+executed 2,079 and 1,211 times. The `0x80007670` writer histogram had zero
+target-span rows in every phase bucket, while the target snapshots retained
+the five names and all 17 pointer-target watches were zero. This selects
+H-no-live-copy provisionally: the copy predates the covered route or uses an
+unarmed path. It is single-source oracle evidence, not an independent origin
+proof; no mitigation was added. Artifact:
+`scratch/agent/s4616_retail_writer_all_phases.log`.
