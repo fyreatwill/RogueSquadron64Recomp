@@ -153490,3 +153490,18 @@ but does not distinguish an alternate retail table from distinct call-site
 operands or a host-side translation before the same guest writer. No mitigation
 was added. ORIGIN: the compared bytes are legitimate name data; nothing was
 filtered, skipped, or guarded. Artifact: `scratch/agent/s4606_retail_source_snapshot.log`.
+
+## Session 4607 (2026-10-11) — retail source operand selects alternate table
+
+Ran the prescribed 90-second driven retail oracle after rebuilding the oracle
+front end. The whole-RDRAM positive control fired 10,076 callbacks and was
+removed at its 10,000 threshold; the VI-512 phase armed at origin
+`0x006AB400`. The phase-gated execution watch at `0x80007640` fired 2,079
+times, and the same target span received 76 writes. Rows from the relevant
+caller `0x80022B44` repeatedly passed `$a1=0x80165D9C`, an RDRAM pointer (105
+bounded rows), rather than five distinct literal/derived operands. This selects
+H-alt-source-table over H-direct-callsite and H-host-translation. It does not
+yet establish the five-record layout or map the retail table to the port's
+source records. No mitigation was added. ORIGIN: this was an observation-only
+oracle capture; no value was filtered, skipped, or guarded. Artifact:
+`scratch/agent/s4607_retail_source_operand.log`.
