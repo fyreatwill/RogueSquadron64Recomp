@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4594 (s4594: the bad derived value occurs in VI-640, not VI-512; a same-run operand census shows caller `a1/a3` already ASCII-shaped while cache `node+4` remains a list pointer, selecting caller/input). Prior: session 4593 (static census rules out a ROM/resource producer for `lcre`). Prior text follows.
+Updated for session 4595 (s4595: the first malformed caller is `musyxRenderVoiceSamples` site `0x800903F0`; its `voice+0x34`/`a3` is `late` and `a1` is `lct]` before FE98). Prior: session 4594 (the bad derived value occurs in VI-640, not VI-512; a same-run operand census shows caller `a1/a3` already ASCII-shaped while cache `node+4` remains a list pointer, selecting caller/input). Prior text follows.
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -196,6 +196,19 @@ ASCII input remains illegitimate. The run then hit the known odd-PI alignment
 abort; no mitigation was added. The exact upstream writer/translation of the
 caller inputs remains open.
 
+s4595 ran the required retail control first: whole-RDRAM activity and the
+VI-512 target watch fired, and the normal retail builder PCs stored only
+B0xxxxxx pointers. The single phase-gated port run reached VI-640/origin
+`0x006A2900`, fired four adjacent-range controls, and captured the first bad
+caller row at `0x800903F0`: voice `0x801724C0` had `+0x34=0x6C617465`
+(`late`), constructed `a1=0x6C63745D`, and `a3=0x6C617465`; the FE98 row
+received the same malformed `a1/a3`. Sites `0x8009024C`, `0x800902CC`, and
+`0x8009039C` produced no bad row in the phase budget. This selects
+H-caller-input-source over H-cache-node, with the retail pointer role as the
+independent second evidence line. The run ended at the known odd-PI abort;
+no mitigation was added. The remaining question is which writer/translation
+puts printable data into voice `+0x34` before `0x800903F0`.
+
 ## Next steps
 
 One sequence. Closed audits are not items. Item 1 is the next iteration
@@ -219,7 +232,7 @@ unless Step 0 maintenance triggers again.
 0b. **[s4573]** 0x80090FE8 decoded statically: post-increment record alloc (cursor=old+1, record addressed by old), a second legitimate bump path, NOT a phantom +1. H-fe8-phantom refuted; open: H-offset0-7-render, H-hostzero (per-offset table build).
 0. **[s4571, supersedes the s4570 item below]** The "bad voice index" is NOT bad: `lhu 0($s1)` (0x80090ED8) reads a per-buffer render-record cursor (0x80149710+2*buf), reset once per buffer at 0x8009135C; mix runs in 0xC0-sample chunks from 3 call sites, table cap=(count+1)*3 records, so idx>=count is the normal chunk-2+ case (3/3 arms, control present). Records idx<count read all-zero pre/post; chunk-2+ records hold deterministic non-zero words written by guest code AFTER allocation (zeroing tables at alloc leaves them unchanged and the s4534 bad jal/abort persist; single replicate, arm C died early). Next: dynamic guest-store watch on [tbl0, tbl0+cap*0x88) naming the writer PC of chunk-2+ records, and log words 8..33 for ASCII shape (see NEXT.md, HYPOTHESIS-ID m5-audio-destub).
 0. **[s4570, supersedes item 1's framing]** No (count>=30, base 0x801714D0) is ever published (3/3 arms: pairs 20,17,16,15,18 only), so voice 30 is a bad INDEX (single-source, one recipe), not a text-corrupted record. Index comes from `lhu 0($s1)` at 0x80090ED8 in `musyxMixActiveVoices`; next is to log that list entry when index >= count (see NEXT.md, HYPOTHESIS-ID m5-audio-destub).
-1. **[s4594] Name the upstream caller/input producer of the bad derived stream range.** The retail role is qualified and the port census selects H-caller-input: at VI-640 the caller-side `a1/a3` are ASCII-shaped before the `0x8008FDC0` subtraction, while cache `node+4` is a valid list pointer. Next: ground-truth the corresponding retail caller operands, then batch one port probe at all four `musyxRenderVoiceSamples` call sites plus `fillSampleStreamRange` to record voice `+0x34`, constructed `a1/a2/a3`, and the first ASCII-shaped source. Keep the VI-640 gate and same-run adjacent-range control; do not add a mitigation. HYPOTHESIS-ID: m5-audio-destub. See NEXT.md.
+1. **[s4595] Name the writer/translation that corrupts the `0x800903F0` caller input.** The retail role is qualified and the port census selects H-caller-input-source: at VI-640 the first bad caller is `0x800903F0`, with voice `0x801724C0+0x34=0x6C617465` and constructed `a1=0x6C63745D`, `a3=0x6C617465`; FE98 receives those values. Next: static-census every store to the selected voice `+0x34` and the immediate builders of `a1` on the `0x800903F0` path, then identify the first candidate writer/translation. Do not add a mitigation. HYPOTHESIS-ID: m5-audio-destub. See NEXT.md.
 1b. **[s4568, answered by s4569]** Poller on node copy 0x179A64 saw `B04319B8 8019BC90` -> `6C637265 801AB990` in one step at 141.7 s (pair written together; guest_pc 0x80001B08 is a stale wrapper PC, not an attribution). Arm C never mashed (no result). Real writer PC still unnamed: needs a guest-store hook, not the host poller.
 1. **[s4567] Name the writer of the ASCII cart word 0x6C637265 in the post-hangar odd-DMA node** (HYPOTHESIS-ID: m5-audio-destub). s4567 (scan fixed to match guest word): node is {len 0x300, cart 0x6C637265, ram 0x8019C990} in 3 RDRAM copies (0x1120B0, 0x179A64, 0x17DBC8, last followed by ASCII 'late'); Start-mash triggers it, a single Start reaches hangar clean (single-run per arm). Next: write watch on those copies for the first writer PC, plus a hangar-only Start-count arm. See NEXT.md.
 1b. **SUPERSEDED by s4565 (hangar IS reachable with a 5 s Start mash; s4552 blamed the route, the recipe fired all keys before the title)** [s4552: 420 s late-route, 2 arms, 0 crashes, odd=0, but VI 1024 for ~400 s and VI 512 never reached; hangar-reach via autopilot is CLOSED until the route/menu input is fixed. Move to M5 audio de-stub.]** Prior text: Hangar-length run with the ring-lap fix default (HYPOTHESIS-ID: wild-setcimg-writeback). s4549 made `ROGUESQ_DPC_WRAP_FLUSH` and `ROGUESQ_S4272` default ON (restore already was); the wild SETCIMG origin is the s4283-s4287 ring-lap overwrite, not a port misparse (supersedes the "writer unnamed" wording). s4550: pre-hangar 175 s run confirms odd=0 (control 60) but never reached VI 512, so the hangar question stays open; s4551: the early route (`3:start,6:start,...`, recipe `s4551_hangar.sh`) reaches the title in both fix arms but both then die at `musyxSynthFrame+5436`, so the hangar is blocked by the parked pool-link crash on that route and by time on the late route; next needs either a run with the +5436 walk guarded/avoided or a longer late-route run (>=300 s). Open: does a >=150 s default run show hangar-phase odd cimgs / fb-set growth gone (s4287 Q1, unmeasured). thr11d benefit of the old allow stays unmeasured (s4547). Recipe `scratch/agent/s4549d_defaults.sh`.
