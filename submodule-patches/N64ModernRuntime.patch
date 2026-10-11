@@ -5101,10 +5101,10 @@ index 9944a02..63e6a95 100644
 +
 +void s4261_note_timer(uint32_t mq) { s4260::timer_n++; s4260::timer_last_mq = mq; }
 diff --git a/ultramodern/src/scheduling.cpp b/ultramodern/src/scheduling.cpp
-index a22f747..f16953e 100644
+index a22f747..9a72ebe 100644
 --- a/ultramodern/src/scheduling.cpp
 +++ b/ultramodern/src/scheduling.cpp
-@@ -1,9 +1,72 @@
+@@ -1,12 +1,108 @@
 +#include <cstdio>
 +#include <cstdlib>
 +#include <atomic>
@@ -5143,6 +5143,38 @@ index a22f747..f16953e 100644
 +extern "C" int rs64_s4581_inflight(void) __attribute__((weak));
 +static int (*const rs64_s4581_inflight_sched)(void) = rs64_s4581_inflight;
 +
++
++// s4583: dump running_queue contents + tid-3 (allocator) state/queue (ROGUESQ_LOG_S4583=1).
++// Logs the first 20 calls unconditionally (control) and then every call while the s4581 window is open.
++static OSThread* g_s4583_t3 = nullptr;
++void s4583_dump(RDRAM_ARG const char* tag, OSThread* extra) {
++    static int en = -1;
++    if (en < 0) { const char* e = std::getenv("ROGUESQ_LOG_S4583"); en = (e && e[0] && e[0] != '0') ? 1 : 0; }
++    if (!en) return;
++    static std::atomic<unsigned> n{0};
++    OSThread* self = TO_PTR(OSThread, ultramodern::this_thread());
++    if (self && self->id == 3) g_s4583_t3 = self;
++    if (extra && extra->id == 3) g_s4583_t3 = extra;
++    const bool inflight = rs64_s4581_inflight_sched && rs64_s4581_inflight_sched();
++    unsigned k = ++n;
++    if (!inflight && k > 20) return;
++    char buf[512]; int o = 0;
++    PTR(OSThread) cur = ultramodern::thread_queue_peek(PASS_RDRAM ultramodern::running_queue);
++    int guard = 0; bool t3inq = false;
++    while (cur && guard++ < 24 && o < 440) {
++        OSThread* q = TO_PTR(OSThread, cur);
++        if (q->id == 3) { t3inq = true; g_s4583_t3 = q; }
++        o += std::snprintf(buf + o, sizeof(buf) - o, "%d/%d/s%d ", (int)q->id, (int)q->priority, (int)q->state);
++        cur = q->next;
++    }
++    std::fprintf(stderr, "[s4583] n=%u infl=%d tag=%s self=%d/%d/s%d extra=%d rq=[ %s] t3_in_rq=%d t3_known=%d",
++        k, inflight ? 1 : 0, tag, self ? (int)self->id : -1, self ? (int)self->priority : -1, self ? (int)self->state : -1,
++        extra ? (int)extra->id : -1, buf, t3inq ? 1 : 0, g_s4583_t3 ? 1 : 0);
++    if (g_s4583_t3) std::fprintf(stderr, " t3_state=%d t3_queue=0x%08X t3_pri=%d", (int)g_s4583_t3->state, (unsigned)g_s4583_t3->queue, (int)g_s4583_t3->priority);
++    std::fprintf(stderr, "\n");
++    std::fflush(stderr);
++}
++
  void ultramodern::schedule_running_thread(RDRAM_ARG PTR(OSThread) t_) {
      debug_printf("[Scheduling] Adding thread %d to the running queue\n", TO_PTR(OSThread, t_)->id);
 +    OSThread* t = TO_PTR(OSThread, t_);
@@ -5178,7 +5210,11 @@ index a22f747..f16953e 100644
  }
  
  void swap_to_thread(RDRAM_ARG OSThread *to) {
-@@ -21,7 +84,15 @@ void ultramodern::check_running_queue(RDRAM_ARG1) {
++    s4583_dump(PASS_RDRAM "swap", to);
+     debug_printf("[Scheduling] Thread %d giving execution to thread %d\n", TO_PTR(OSThread, ultramodern::this_thread())->id, to->id);
+     // Insert this thread in the running queue.
+     ultramodern::thread_queue_insert(PASS_RDRAM ultramodern::running_queue, ultramodern::this_thread());
+@@ -21,7 +117,16 @@ void ultramodern::check_running_queue(RDRAM_ARG1) {
          // Check if the highest priority thread in the queue is higher priority than the current thread.
          OSThread* next_thread = TO_PTR(OSThread, ultramodern::thread_queue_peek(PASS_RDRAM running_queue));
          OSThread* self = TO_PTR(OSThread, ultramodern::this_thread());
@@ -5191,12 +5227,13 @@ index a22f747..f16953e 100644
 +                (void*)next_thread, (int)next_thread->id, (int)next_thread->priority, swap ? 1 : 0);
 +            std::fflush(stderr);
 +        }
++        s4583_dump(PASS_RDRAM swap ? "check_swap" : "check_noswap", next_thread);
 +        if (swap) {
              ultramodern::thread_queue_pop(PASS_RDRAM running_queue);
              // Swap to the higher priority thread.
              swap_to_thread(PASS_RDRAM next_thread);
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..747bb2e 100644
+index 812c556..8f2cab1 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,13 @@
@@ -5284,7 +5321,7 @@ index 812c556..747bb2e 100644
      thread_context->running.wait();
      // If this thread's context was replaced by another thread or deleted, destroy it again from its own context.
      // This will trigger thread cleanup instead.
-@@ -155,19 +218,145 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
+@@ -155,19 +218,147 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
      }
  }
  
@@ -5392,6 +5429,7 @@ index 812c556..747bb2e 100644
 +                                              int *lastFireWasStalled, int *stalledNow);
 +extern "C" uint64_t rs64_get_sched_queue_count(void);
 +
++void s4583_dump(RDRAM_ARG const char* tag, OSThread* extra);
  void run_next_thread(RDRAM_ARG1) {
      if (ultramodern::thread_queue_empty(PASS_RDRAM ultramodern::running_queue)) {
          throw std::runtime_error("No threads left to run!\n");
@@ -5400,6 +5438,7 @@ index 812c556..747bb2e 100644
 +    // Priority-blind pop: the only way a thread queued via schedule_running_thread
 +    // (not swap_to_thread's self-requeue) escapes check_running_queue's strict
 +    // priority-greater-than gate is landing here when some thread fully blocks.
++    s4583_dump(PASS_RDRAM "run_next_pre", nullptr);
      OSThread* to_run = TO_PTR(OSThread, ultramodern::thread_queue_pop(PASS_RDRAM ultramodern::running_queue));
 +    if (sched_log_enabled()) {
 +        std::fprintf(stderr, "[sched-runnext] popped_thr=%p popped_id=%d popped_pri=%d\n",
@@ -5432,7 +5471,7 @@ index 812c556..747bb2e 100644
  }
  
  void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
-@@ -178,7 +367,7 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
+@@ -178,7 +369,7 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
  
  void ultramodern::resume_thread_and_wait(RDRAM_ARG OSThread *t) {
      UltraThreadContext* cur_context = TO_PTR(OSThread, thread_self)->context;
@@ -5441,7 +5480,7 @@ index 812c556..747bb2e 100644
      wait_for_resumed(PASS_RDRAM cur_context);
  }
  
-@@ -239,7 +428,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -239,7 +430,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -5450,7 +5489,7 @@ index 812c556..747bb2e 100644
          //throw ultramodern::thread_terminated{};
      }
  }
-@@ -259,6 +448,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+@@ -259,6 +450,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
@@ -5471,7 +5510,7 @@ index 812c556..747bb2e 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,6 +489,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -286,6 +491,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -5483,7 +5522,7 @@ index 812c556..747bb2e 100644
          throw ultramodern::thread_terminated{};
      }
      // Otherwise if the thread isn't stopped, remove it from its currrent queue., 
-@@ -294,9 +502,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -294,9 +504,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      }
      // Check if the thread has already been destroyed to prevent destroying it again.
      UltraThreadContext* cur_context = t->context;
@@ -5506,7 +5545,7 @@ index 812c556..747bb2e 100644
          cur_context->running.signal();
      }
  }
-@@ -337,6 +558,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +560,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -5527,7 +5566,7 @@ index 812c556..747bb2e 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +582,18 @@ void thread_cleaner_func() {
+@@ -347,8 +584,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -5546,7 +5585,7 @@ index 812c556..747bb2e 100644
              delete to_delete;
          }
      }
-@@ -359,6 +604,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +606,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {
