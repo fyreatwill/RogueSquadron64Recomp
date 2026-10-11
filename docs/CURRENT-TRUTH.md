@@ -245,3 +245,7 @@ Static: gate 0x800A0F50 is cleared AFTER the frees in musyxNoopStub (guest has n
 
 ## Update s4563 (supersedes s4562 'next')
 musyxSynthFrame+5688 crash = walk of stale audio-list head 0x801499B0 (still points into freed block 0x80179380..0x8017970C; guest realloc fill pc 0x8001E2C0 corrupts node next) for ~5 synth calls until guest init zeroes the head. tools/apply_s4563_stale_head_skip.py (default ON, ROGUESQ_S4563_SKIP=0 disables; re-apply after regen with the s4561/s4562 scripts) skips the frame in that window: same-run A/B, A 0 crashes in 150 s (x2), B crashes (x2). Next: longer soak with skip on to find the next death; arm B once crashed at viRetraceHandlerThread+9296 (unexamined).
+
+
+### s4581 addendum (m5-audio-destub)
+Allocator thread (gtid 3, pri 10) is preempted inside rs_malloc at the lock osRecvMesg->check_running_queue by the already-queued pri-122 audio thread (entry 0x8008ED70); alloc #1 window had 0 handoffs, alloc #2 has the first. Single-source (3 identical arms). Open: who readied it and why retail's audio thread isn't mixing during reapplyAudioConfig. Tool: tools/apply_s4581_switchlog.py + ROGUESQ_LOG_S4581=1.
