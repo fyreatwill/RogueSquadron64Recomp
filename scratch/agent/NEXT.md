@@ -1,10 +1,9 @@
-# NEXT: which thread runs musyxMixActiveVoices inside the allocateSongChannelArray window, and is the guest holding an interrupt mask/lock there?
+# NEXT: who holds the rs_malloc lock queue 0x8010FEE0 when the 7th allocateSongChannelArray (rs_malloc 4352) blocks?
 HYPOTHESIS-ID: m5-audio-destub
-Context (s4578): count 0x80149700 is stored (sh 0x8008F0CC) BEFORE rs_malloc(0x8008F0D0); base 0x801496FC/F8 stored AFTER (0x8008F0E4/EC). The 6th alloc (count 32) never completes (no 6th [s4542-alloc]); the mixer then runs with count 32 + stale 18-slot base -> bad voice. Host writes and misread refuted. Do not re-poll the count.
+Context (s4579): mixer is a separate host thread running during every alloc (not the differentiator). Alloc #7 blocks at 0x80001B04 (osRecvMessage a0=0x8010FEE0 a1=0 a2=1, BLOCK) - no rs-malloc exit line. Some thread holds the allocator mutex and never sends it back.
 Hypotheses:
- H-preempt: the mixer is a different host thread/guest thread that our scheduler lets run while the alloc thread is inside rs_malloc; retail masks interrupts or the thread priorities forbid it. Predicted: thread id at sh-time != thread id at bad mix call, and osSetIntMask/ lock state at sh time says "masked" in guest code that we ignore.
- H-same-thread-reentry: rs_malloc itself (or an audio callback inside it) calls the mixer on the same thread. Predicted: same thread id, mix call appears nested under the alloc (call depth/ra chain).
- H-malloc-hang: rs_malloc(0x1100) blocks/loops and the mixer is just another normal thread; then retail allocator would succeed -> inspect rs_malloc freelist for the 0x1100 request.
-Discriminator (ONE build, extend tools/apply_s4578 or new apply_s4579): at allocateSongChannelArray sh (pre-rs_malloc) and at rs_malloc return, and at every musyxMixActiveVoices entry once count>18, print host thread id, guest osGetThreadId/current thread ptr, interrupt-mask state, and an in-alloc flag; positive control: alloc #1..#5 print matched pre/post pairs.
-Outcomes: tid differs + in-alloc flag set at mix -> H-preempt (then find retail's protection: osSetIntMask/ hwDisableIrq in the caller of 0x8008F0A0); same tid nested -> H-same-thread-reentry; no mix while in-alloc but rs_malloc never returns -> H-malloc-hang.
-Recipe: copy scratch/agent/s4578_poll.sh.
+ H-holder-blocked: another thread is inside rs_malloc/rs_free (took the lock) and itself blocked on something (DMA/audio/event) - the lock is legitimately held; find that thread's last guest PC and what it waits on.
+ H-lost-send: a holder finished but the unlock osSendMessage was lost/dropped by our queue impl (full/empty-mq handling, or a guard/crash-recovery path that skipped the unlock).
+ H-skipped-unlock: an early-return/guard path in rs_malloc/rs_free (ours, e.g. a mitigation) exits without the osSendMessage, so the queue stays empty.
+Discriminator (ONE build): log every osRecvMessage/osSendMessage on mq 0x8010FEE0 (host tid, guest sp, last-guest-pc, queue validCount after) into a ring dumped when alloc #7 'A' prints and again ~2s later. Control: allocs #1-#6 show matched recv/send pairs. Outcomes: unmatched recv by a still-alive tid -> H-holder-blocked (dump that tid's PC/wait); holder's exit path lacks the send -> H-skipped-unlock (name the PC); send logged but validCount not restored -> H-lost-send (queue impl).
+Recipe: copy scratch/agent/s4579_window.sh (arms A/B/C, 200 s).
