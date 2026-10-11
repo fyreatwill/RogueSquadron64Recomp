@@ -153721,3 +153721,22 @@ arithmetic/VGE-store/source-divergence discriminator remains unevaluable. The
 run adds no writer or legitimacy evidence and authorizes no mitigation.
 Artifacts: `scratch/agent/s4620_m4_fixed/run.log` and
 `scratch/agent/s4620_m4_retail_ground_truth.log`.
+
+## Session 4621 (2026-10-11) — repeated M4 control and pivoted on odd PI DMA
+
+Built the Debug target once and ran the prescribed port/oracle pair
+concurrently. The port reached its 512 phase at 40.2 seconds and emitted the
+qualified stage-1 control plus 2,112 M4 target rows (519 each for stages
+10–12 and 491 for stage 13), but every row was phase 3/transient 640. The
+known `do_rom_read` assertion on an odd physical ROM address then aborted the
+port before a hangar-origin row could be captured. The retail oracle completed
+its 60-second arm, passed the whole-RDRAM positive control at 10,000 callbacks,
+and reached title 1024 but not hangar.
+
+This run adds no M4 discriminator: arithmetic, VGE/store, and
+source-divergence remain unevaluable. It rules out treating another transient
+M4 capture as progress and ends the four-run M4 retry streak. The next probe
+must audit the complete odd-PI DMA producer class and name the writer before
+any route mitigation or another M4 run. No code or mitigation change was
+added. Artifacts: `scratch/agent/s4621_m4_hangar/run.log` and
+`scratch/agent/s4621_m4_retail_ground_truth.log`.

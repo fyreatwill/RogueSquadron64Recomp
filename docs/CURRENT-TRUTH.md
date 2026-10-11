@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4620.
+archive sections. Updated for session 4621.
 
 ## Current state
 
@@ -56,8 +56,10 @@ rows fired with changing accumulator state. The target stages also fired (519
 rows each for stages 10–12 and 491 stage-13 rows), but all rows were phase 3
 (transient 640), with no hangar-phase row. The retail oracle independently
 passed its whole-RDRAM control (10,000 callbacks) but reached title 1024 and
-not hangar in its 60-second arm. Thus the logger is qualified, while the
-hangar arithmetic/VGE/store/source discriminator remains unevaluable.
+not hangar in its 60-second arm. The s4621 repeat emitted 2,112 target rows,
+but the known odd-physical-address PI abort occurred before a hangar row. The
+M4 arithmetic/VGE/store/source discriminator is therefore still unevaluable
+after four consecutive attempts; no arm selected a hypothesis.
 
 ## Parked and closed
 
@@ -69,7 +71,8 @@ hangar arithmetic/VGE/store/source discriminator remains unevaluable.
   needs an `ORIGIN:` line naming the writer and whether the value is
   legitimate.
 - External retail-entry and M4 accumulator-origin boundaries are parked until
-  a new attributable handoff or live target-phase control exists.
+  a new attributable handoff or live target-phase control exists. The M4
+  thread must pivot to the odd-PI origin before another target-phase run.
 - M3 patch-runtime qualification is blocked on `mips64-elf-gcc`,
   `mips64-elf-ld`, and `PatchesLib`.
 - Generated-symbol renaming is fallback work only after the active M5/M3
@@ -89,13 +92,16 @@ hangar arithmetic/VGE/store/source discriminator remains unevaluable.
 
 ## Next steps
 
-1. Capture the complete M4 row at hangar origin `0x006AB400` now that the
-   stage-1 positive control is qualified: keep the same control and target
-   stages, but use a paired route/oracle arm that produces a hangar-phase row.
-   Do not interpret the transient phase-3 rows as the discriminator.
-2. Revisit the external retail-entry boundary only with a new attributable
+1. Audit the complete odd-physical-address PI-DMA producer class: enumerate
+   every `osPiStartDma`/`do_dma` path that can issue the assertion, attribute
+   the guest caller and physical address, and compare it with a retail oracle
+   watch. This is an origin audit, not permission to skip or align the DMA.
+2. Re-run the M4 capture only after the odd-PI audit supplies a stable,
+   attributable route that reaches `0x006AB400`; retain the stage-1 positive
+   control and do not interpret transient phase-3 rows.
+3. Revisit the external retail-entry boundary only with a new attributable
    handoff; do not repeat the now-qualified all-phase name-copy null.
-3. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.
+4. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.
 
 ## Evidence and operating rules
 
