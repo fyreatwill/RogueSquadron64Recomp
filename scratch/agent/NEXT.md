@@ -1,4 +1,6 @@
-# NEXT: who writes the ASCII tag 'wing' (0x77696E67) into the cart slot at RDRAM 0x179A64, and does retail have it too?
+# NEXT: name the port writer of ASCII tag 'wing' (0x77696E67) at RDRAM 0x179A64
 HYPOTHESIS-ID: m5-audio-destub
-Hypotheses: H-key-unresolved (tag is a 4cc key never translated to a B0xxxxxx cart address by a lookup that did not run in our port), H-legit-retail (retail also holds the tag and its DMA path handles it), H-port-writer (a port stub writes the tag).
-Discriminator: tools/oracle watch (physical addr of RDRAM 0x179A64, positive control: whole-RDRAM watch) on retail, or in port a write-watch on 0x179A64 logging guest_pc. Retail has no tag/unresolved => H-key-unresolved/H-port-writer; retail has it => H-legit-retail.
+Hypotheses: H-legit-retail (retail also stores the 4cc tag and its DMA path handles it); H-key-unresolved (retail reaches the phase without the tag, so the port's tag reflects an unresolved lookup); H-port-writer (retail lacks it, while the port's named/unnamed writer creates it).
+Discriminator completed: the retail oracle used `--watch-write 0x0:0x800000` as the positive control and `--watch-write 0x179A60:0x179A68` as the target, plus `--vi-trace` and a driven Rice route. It reached VI origin `0x006AB400` at width 512, and post-store samples at `0x179A64` were B0xxxxxx pointers, never `0x77696E67`; target writes came from `0x8008FB64/68` and `0x8008FE98/A0`. H-legit-retail is refuted (single-source oracle).
+
+Run next: `zsh scratch/agent/s4569_storewatch.sh`. Keep the positive `[s4569b-control]` line, `ROGUESQ_LOG_S4298=1`, and the `0x179A64` poll/write-watch; require a VI>=512 hit before interpreting a null. H-port-writer predicts a guest store at the target carrying `0x77696E67`; H-key-unresolved predicts no port store of that value while the odd DMA still fires. If the route dies before VI>=512, do not classify it; redesign with the existing late-route recipe.
