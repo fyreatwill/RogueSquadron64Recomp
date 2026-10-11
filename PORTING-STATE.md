@@ -153165,3 +153165,5 @@ Result: every hit on words 0..7 (and all odd words in chunk2+ rows) comes from P
 Selects H-inert for the covered functions (single-source, coverage-limited: LH/LB/LWL loads and functions outside the four patched ones, e.g. musyxBuildVoiceCommandList and DMA consumers, are not watched). Refutes nothing else.
 Instrument defect to fix before reuse: pass the pre-load address (or skip dest==base) in tools/apply_s4307_synth_read_join.py.
 ORIGIN: diagnostic counter only, no mitigation added.
+Discrimination: this run selects H-inert and refutes H-read-wild for the four hooked functions (zero genuine loads of chunk-2+ words 0..7; positive control = word 18 loads fired 3199x). It does not refute H-other-reader.
+Next discriminator: fix the dest==base address capture in tools/apply_s4307_synth_read_join.py, extend to all funcs_24.c audio functions and LH/LB/LWL forms, rerun; zero loads of words 0..7 with the word-18 control firing closes the thread.
