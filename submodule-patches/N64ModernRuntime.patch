@@ -4434,7 +4434,7 @@ index 149e770..e6c1450 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..3c91fea 100644
+index 9944a02..f6b52f3 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
 @@ -1,18 +1,259 @@
@@ -4697,7 +4697,7 @@ index 9944a02..3c91fea 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -27,47 +268,167 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -27,47 +268,169 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
      requeue_enabled.set(static_cast<int>(EventMessageSource::Dp), mqc.requeue_dp);
  }
  
@@ -4721,6 +4721,7 @@ index 9944a02..3c91fea 100644
 +}
 +
 +// s4585: per-source enqueue counts and do_send(Ai mq) counts, flushed on every Vi enqueue (ROGUESQ_LOG_S4585=1).
++extern "C" void rs64_s4586_vi_flush(unsigned frame);
 +namespace s4585 {
 +std::atomic<uint64_t> enq[8]; std::atomic<uint64_t> ai_sends{0};
 +bool enabled() { static int en = -1; if (en < 0) { const char* e = std::getenv("ROGUESQ_LOG_S4585"); en = (e && e[0] && e[0] != '0') ? 1 : 0; } return en == 1; }
@@ -4732,6 +4733,7 @@ index 9944a02..3c91fea 100644
 +    uint64_t cur[8]; for (int i = 0; i < 8; i++) cur[i] = enq[i].load();
 +    uint64_t sends = ai_sends.load();
 +    frame++;
++    rs64_s4586_vi_flush(frame);
 +    if (frame <= 600) {
 +        std::fprintf(stderr, "[s4585] vi=%u d_timer=%llu d_sp=%llu d_si=%llu d_ai=%llu d_pi=%llu d_dp=%llu d_aisend=%llu\n", frame,
 +            (unsigned long long)(cur[0]-prev[0]), (unsigned long long)(cur[1]-prev[1]), (unsigned long long)(cur[2]-prev[2]),
@@ -4870,7 +4872,7 @@ index 9944a02..3c91fea 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      mq->blocked_on_recv = NULLPTR;
      mq->blocked_on_send = NULLPTR;
-@@ -75,6 +436,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
+@@ -75,6 +438,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
      mq->msg = msg;
      mq->validCount = 0;
      mq->first = 0;
@@ -4897,7 +4899,7 @@ index 9944a02..3c91fea 100644
  }
  
  s32 MQ_GET_COUNT(OSMesgQueue *mq) {
-@@ -90,6 +471,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +473,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -4909,7 +4911,7 @@ index 9944a02..3c91fea 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +492,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +494,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -4924,7 +4926,7 @@ index 9944a02..3c91fea 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +523,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +525,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -4935,7 +4937,7 @@ index 9944a02..3c91fea 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +543,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +545,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -4950,7 +4952,7 @@ index 9944a02..3c91fea 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -160,8 +564,76 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -160,8 +566,76 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      return true;
  }
  
@@ -5028,7 +5030,7 @@ index 9944a02..3c91fea 100644
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -173,8 +645,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,8 +647,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
      // Handle any messages that have been received from an external thread.
      dequeue_external_messages(PASS_RDRAM1);
  
@@ -5043,7 +5045,7 @@ index 9944a02..3c91fea 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
-@@ -183,7 +661,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,7 +663,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -5056,7 +5058,7 @@ index 9944a02..3c91fea 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +687,67 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +689,67 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
@@ -5259,7 +5261,7 @@ index a22f747..9a72ebe 100644
              // Swap to the higher priority thread.
              swap_to_thread(PASS_RDRAM next_thread);
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..4b16827 100644
+index 812c556..8aa61c6 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,15 @@
@@ -5349,12 +5351,45 @@ index 812c556..4b16827 100644
      thread_context->running.wait();
      // If this thread's context was replaced by another thread or deleted, destroy it again from its own context.
      // This will trigger thread cleanup instead.
-@@ -155,19 +220,181 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
+@@ -155,19 +220,216 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
      }
  }
  
 -void resume_thread(OSThread* t) {
 +extern "C" int rs64_s4581_inflight(void) __attribute__((weak));
++// s4586: per-VI, per-thread switch count and run time (us), split by the s4581 window. Flushed from the Vi enqueue.
++namespace s4586 {
++struct Acc { std::map<int, std::pair<unsigned, double>> m[2]; };
++static std::mutex mu; static Acc acc; static int last_id = -1; static int last_w = 0;
++static std::chrono::steady_clock::time_point last_t; static bool have_last = false;
++static unsigned t3_q_last = 0; static unsigned t3_pops = 0;
++static bool enabled() { static int en = -1; if (en < 0) { const char* e = std::getenv("ROGUESQ_LOG_S4586"); en = (e && e[0] && e[0] != '0') ? 1 : 0; } return en == 1; }
++static void on_handoff(OSThread* t) {
++    if (!enabled() || !t) return;
++    const int w = (rs64_s4581_inflight && rs64_s4581_inflight()) ? 1 : 0;
++    auto now = std::chrono::steady_clock::now();
++    std::lock_guard<std::mutex> lk(mu);
++    if (have_last && last_id >= 0) acc.m[last_w][last_id].second += std::chrono::duration<double, std::micro>(now - last_t).count();
++    const int id = (int)t->id * 1000 + (int)t->priority;
++    acc.m[w][id].first++;
++    if (t->id == 3) t3_pops++;
++    last_id = id; last_w = w; last_t = now; have_last = true;
++}
++static void on_t3_block(unsigned q) { std::lock_guard<std::mutex> lk(mu); t3_q_last = q; }
++}
++extern "C" void rs64_s4586_vi_flush(unsigned frame) {
++    if (!s4586::enabled()) return;
++    std::lock_guard<std::mutex> lk(s4586::mu);
++    const int w = (rs64_s4581_inflight && rs64_s4581_inflight()) ? 1 : 0;
++    unsigned tot[2] = {0, 0}; for (int k = 0; k < 2; k++) for (auto& kv : s4586::acc.m[k]) tot[k] += kv.second.first;
++    if (frame <= 1500 || tot[1]) {
++        std::fprintf(stderr, "[s4586] vi=%u w_now=%d sw_in=%u sw_out=%u t3pops=%u t3q=0x%08X", frame, w, tot[1], tot[0], s4586::t3_pops, s4586::t3_q_last);
++        for (int k = 1; k >= 0; k--) for (auto& kv : s4586::acc.m[k])
++            std::fprintf(stderr, " %s%dp%d:%u/%.0fus", k ? "IN-t" : "t", kv.first / 1000, kv.first % 1000, kv.second.first, kv.second.second);
++        std::fprintf(stderr, "\n"); std::fflush(stderr);
++    }
++    s4586::acc = s4586::Acc();
++}
 +// s4581: log every handoff while allocateSongChannelArray is inside rs_malloc (ROGUESQ_LOG_S4581=1).
 +static void s4581_log_switch(OSThread* t, const char* tag) {
 +    static int en = -1;
@@ -5373,6 +5408,7 @@ index 812c556..4b16827 100644
 +
 +static void resume_thread_tagged(OSThread* t, const char* tag) {
 +    s4581_log_switch(t, tag);
++    s4586::on_handoff(t);
      debug_printf("[Thread] Resuming execution of thread %d\n", t->id);
 +
 +    // Always-on UAF guard (s83/s70-72 class): a resume whose context was never
@@ -5502,6 +5538,7 @@ index 812c556..4b16827 100644
 +    s4583_dump(PASS_RDRAM "run_next_pre", nullptr);
      OSThread* to_run = TO_PTR(OSThread, ultramodern::thread_queue_pop(PASS_RDRAM ultramodern::running_queue));
 +    s4584_note(PASS_RDRAM to_run);
++    { OSThread* sf = TO_PTR(OSThread, ultramodern::this_thread()); if (sf && sf->id == 3) s4586::on_t3_block((unsigned)sf->queue); }
 +    if (sched_log_enabled()) {
 +        std::fprintf(stderr, "[sched-runnext] popped_thr=%p popped_id=%d popped_pri=%d\n",
 +            (void*)to_run, (int)to_run->id, (int)to_run->priority);
@@ -5533,7 +5570,7 @@ index 812c556..4b16827 100644
  }
  
  void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
-@@ -178,7 +405,7 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
+@@ -178,7 +440,7 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
  
  void ultramodern::resume_thread_and_wait(RDRAM_ARG OSThread *t) {
      UltraThreadContext* cur_context = TO_PTR(OSThread, thread_self)->context;
@@ -5542,7 +5579,7 @@ index 812c556..4b16827 100644
      wait_for_resumed(PASS_RDRAM cur_context);
  }
  
-@@ -239,7 +466,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -239,7 +501,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -5551,7 +5588,7 @@ index 812c556..4b16827 100644
          //throw ultramodern::thread_terminated{};
      }
  }
-@@ -259,6 +486,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+@@ -259,6 +521,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
@@ -5572,7 +5609,7 @@ index 812c556..4b16827 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,6 +527,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -286,6 +562,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -5584,7 +5621,7 @@ index 812c556..4b16827 100644
          throw ultramodern::thread_terminated{};
      }
      // Otherwise if the thread isn't stopped, remove it from its currrent queue., 
-@@ -294,9 +540,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -294,9 +575,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      }
      // Check if the thread has already been destroyed to prevent destroying it again.
      UltraThreadContext* cur_context = t->context;
@@ -5607,7 +5644,7 @@ index 812c556..4b16827 100644
          cur_context->running.signal();
      }
  }
-@@ -337,6 +596,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +631,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -5628,7 +5665,7 @@ index 812c556..4b16827 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +620,18 @@ void thread_cleaner_func() {
+@@ -347,8 +655,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -5647,7 +5684,7 @@ index 812c556..4b16827 100644
              delete to_delete;
          }
      }
-@@ -359,6 +642,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +677,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {
