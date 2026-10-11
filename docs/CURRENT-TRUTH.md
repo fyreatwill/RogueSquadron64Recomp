@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4621.
+archive sections. Updated for session 4622.
 
 ## Current state
 
@@ -61,6 +61,14 @@ but the known odd-physical-address PI abort occurred before a hangar row. The
 M4 arithmetic/VGE/store/source discriminator is therefore still unevaluable
 after four consecutive attempts; no arm selected a hypothesis.
 
+Session 4622 audited both PI guest entry arms and the converged `do_dma` path
+with one batched trace. The real-audio/LLE route reached title 1024 but not
+hangar in 75 seconds: all 16 retained rows were even, from `osPiStartDma` and
+matching `do_dma` calls; `osEPiStartDma` and odd events were absent. The retail
+oracle independently passed its whole-RDRAM control (10,000 callbacks) but
+stayed at 320-wide boot. This is a qualified single-source port result, not a
+global null for the earlier odd request.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -73,6 +81,8 @@ after four consecutive attempts; no arm selected a hypothesis.
 - External retail-entry and M4 accumulator-origin boundaries are parked until
   a new attributable handoff or live target-phase control exists. The M4
   thread must pivot to the odd-PI origin before another target-phase run.
+- The s4622 producer null is qualified only for its title-only route; repeat
+  the audit on the canonical hangar schedule before interpreting it.
 - M3 patch-runtime qualification is blocked on `mips64-elf-gcc`,
   `mips64-elf-ld`, and `PatchesLib`.
 - Generated-symbol renaming is fallback work only after the active M5/M3
@@ -92,9 +102,9 @@ after four consecutive attempts; no arm selected a hypothesis.
 
 ## Next steps
 
-1. Audit the complete odd-physical-address PI-DMA producer class: enumerate
-   every `osPiStartDma`/`do_dma` path that can issue the assertion, attribute
-   the guest caller and physical address, and compare it with a retail oracle
+1. Repeat the complete odd-physical-address PI-DMA producer audit on the
+   canonical autopilot route that reaches `0x006AB400`; retain the s4622
+   entry/convergence trace and compare any odd event with a retail physical
    watch. This is an origin audit, not permission to skip or align the DMA.
 2. Re-run the M4 capture only after the odd-PI audit supplies a stable,
    attributable route that reaches `0x006AB400`; retain the stage-1 positive

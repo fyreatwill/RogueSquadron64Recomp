@@ -153740,3 +153740,21 @@ must audit the complete odd-PI DMA producer class and name the writer before
 any route mitigation or another M4 run. No code or mitigation change was
 added. Artifacts: `scratch/agent/s4621_m4_hangar/run.log` and
 `scratch/agent/s4621_m4_retail_ground_truth.log`.
+
+## Session 4622 (2026-10-11) — audited PI DMA producer arms
+
+Ran the required retail oracle control first; its whole-RDRAM watch reached
+10,000 callbacks, but that 60-second recipe remained at 320-wide boot. Added
+one batched `s4622-dma` trace at `osPiStartDma_recomp`, `osEPiStartDma_recomp`,
+and converged `do_dma`, including guest PC, return address, raw device address,
+physical address, RDRAM destination, size, direction, queue, and thread.
+The first port attempt used the wrong title-only environment and stayed at
+640. The corrected real-audio/LLE/ungated/solo/spin-yield run built cleanly and
+reached title 1024 but not hangar in 75 seconds. It retained 16 even rows: 8
+`osPiStartDma` rows paired with 8 `do_dma` rows; `osEPiStartDma` produced no
+row and no odd event occurred. This is a qualified single-source port result,
+not evidence that the earlier odd request is absent globally. It rules out
+`osEPiStartDma` and host alteration for the captured title-only prefix, but
+does not select H-guest-dma, H-host-corruption, or H-stale-record. No DMA
+alignment, skip, or mitigation was added. Artifacts: `/tmp/rs64_s4622_oracle.log`,
+`/tmp/rs64_s4622_port_qualified.log`.

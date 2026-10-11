@@ -1,11 +1,12 @@
-# NEXT: audit the complete odd-physical-address PI-DMA producer class
+# NEXT: repeat the odd-physical-address PI-DMA producer audit on the hangar route
 HYPOTHESIS-ID: odd-pi-dma-origin-audit
 
-The s4621 repeat reached the same port phase and emitted 2,112 phase-3 target
-rows, but the known `do_rom_read` assertion for an odd physical ROM address
-stopped the port before any hangar row. The retail oracle passed its
-whole-RDRAM control at 10,000 callbacks but reached title only. Four M4
-attempts have not produced the discriminator, so this thread is pivoted.
+The s4622 trace covered both `osPiStartDma_recomp` and `osEPiStartDma_recomp`
+into `do_dma`. The real-audio/LLE route reached title 1024 but not hangar; 16
+bounded even control rows came from `osPiStartDma` with matching `do_dma` rows,
+zero `osEPiStartDma` rows, and zero odd events. The independent retail oracle
+passed its 10,000 whole-RDRAM control but stayed at 320-wide boot. No
+hypothesis was selected.
 
 Competing hypotheses:
 
@@ -27,6 +28,11 @@ H-host-corruption; no live pair with a stale slot selects H-stale-record. No
 alignment, skip, or mitigation is authorized.
 
 Before building, arm ground truth first with the existing oracle whole-RDRAM
-positive control and VI trace. Then instrument all producer arms in one
-build/run. The next work unit is one bounded source audit plus one batched
-capture; do not return to M4 until this table names the writer.
+positive control and VI trace. Then use the canonical schedule
+`ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a'`
+with `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`, the real-audio/LLE controls, and
+`ROGUESQ_LOG_S4622=1`. One capture must retain the complete s4622 table and
+title/hangar controls. A guest-to-`do_dma` odd pair selects H-guest-dma; an
+altered pair selects H-host-corruption; no live pair with a stale slot selects
+H-stale-record. If hangar is missed again, report the result as unevaluable
+and do not return to M4.
