@@ -1979,8 +1979,9 @@ extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, 
         }
     }
 }
-extern "C" void rs64_s4602_strncpy_caller(uint32_t caller, uint32_t a0,
-                                             uint32_t a1, uint32_t a2) {
+extern "C" void rs64_s4602_strncpy_caller(uint8_t* rdram, uint32_t caller,
+                                             uint32_t a0, uint32_t a1,
+                                             uint32_t a2) {
     static const bool on = [] {
         const char* e = std::getenv("ROGUESQ_LOG_S4602");
         return e && e[0] && e[0] != '0';
@@ -1994,9 +1995,28 @@ extern "C" void rs64_s4602_strncpy_caller(uint32_t caller, uint32_t a0,
     const uint64_t key = (static_cast<uint64_t>(phase) << 32) | caller;
     std::lock_guard<std::mutex> lock(mu);
     if (!target && (seen.size() >= 128u || !seen.insert(key).second)) return;
+    auto dump16 = [rdram](uint32_t guest, char* out) {
+        if (!rdram || guest < 0x80000000u || guest > 0x807FFFF0u) {
+            std::strcpy(out, "invalid");
+            return;
+        }
+        for (uint32_t i = 0; i < 16u; ++i)
+            std::snprintf(out + i * 2u, 3u, "%02X", rdram[(guest - 0x80000000u + i) ^ 3u]);
+        out[32] = '\0';
+    };
+    char source[33];
+    char destination[33];
+    if (caller == 0x80022B44u) {
+        dump16(a1, source);
+        dump16(a0, destination);
+    } else {
+        std::strcpy(source, "-");
+        std::strcpy(destination, "-");
+    }
     std::fprintf(stderr,
-        "[s4602-strncpy] phase=%u width=640 origin=0x%06X caller=0x%08X a0=%08X a1=%08X a2=%08X\n",
-        phase, rs64_vi_committed_origin() & 0x00FFFFFFu, caller, a0, a1, a2);
+        "[s4602-strncpy] phase=%u width=640 origin=0x%06X caller=0x%08X a0=%08X a1=%08X a2=%08X source16=%s dstpre16=%s\n",
+        phase, rs64_vi_committed_origin() & 0x00FFFFFFu, caller, a0, a1, a2,
+        source, destination);
     std::fflush(stderr);
 }
 extern "C" void rs64_s4299_dump(uint32_t lo, uint32_t hi) {

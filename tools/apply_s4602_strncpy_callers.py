@@ -11,37 +11,29 @@ CALLS = {
 }
 
 HOOK = (
-    '        { extern void rs64_s4602_strncpy_caller(uint32_t, uint32_t, uint32_t, uint32_t); '
-    'rs64_s4602_strncpy_caller(%s, U32(ctx->r4), U32(ctx->r5), U32(ctx->r6)); } '
+    '        { extern void rs64_s4602_strncpy_caller(uint8_t*, uint32_t, uint32_t, uint32_t, uint32_t); '
+    'rs64_s4602_strncpy_caller(rdram, %s, U32(ctx->r4), U32(ctx->r5), U32(ctx->r6)); } '
     '/* %s */\n'
 )
 
 files = {p: p.read_text(encoding="utf-8") for p in ROOT.glob("funcs_*.c")}
 if any(MARK in text for text in files.values()):
-    moved = 0
     for path, text in files.items():
         lines = text.splitlines(keepends=True)
-        hooks = [line.strip() for line in lines if MARK in line]
-        if not hooks:
-            continue
-        lines = [line for line in lines if MARK not in line]
         out = []
-        i = 0
-        while i < len(lines):
-            out.append(lines[i])
-            if "rs_strncpy(rdram, ctx);" in lines[i]:
-                if not hooks:
-                    raise SystemExit(f"too few hooks in {path}")
-                hook = hooks.pop(0)
-                out.insert(len(out) - 1, "        " + hook + "\n")
-                moved += 1
-            i += 1
-        if hooks:
-            raise SystemExit(f"too many hooks in {path}")
+        for line in lines:
+            if MARK in line:
+                import re
+                match = re.search(r'rs64_s4602_strncpy_caller\((0x[0-9A-Fa-f]+)u?,', line)
+                if not match:
+                    raise SystemExit(f"cannot decode existing hook in {path}: {line}")
+                out.append(HOOK % (match.group(1) + "u", MARK))
+            else:
+                out.append(line)
         files[path] = "".join(out)
     for path, text in files.items():
         path.write_text(text, encoding="utf-8")
-    print(f"relocated caller hooks after delay slots: {moved}")
+    print("updated existing caller hooks with RDRAM source access")
     raise SystemExit(0)
 
 patched = 0

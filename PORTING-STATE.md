@@ -153421,3 +153421,24 @@ open. No mitigation was added. ORIGIN: the copied bytes are legitimate name
 text; no value was filtered, skipped, or guarded. Build succeeded; final
 artifacts are under `scratch/agent/s4602_oracle/` and
 `scratch/agent/s4602_callers/`.
+
+## Session 4603 (2026-10-11) — source-byte witness classifies the late record as name-table data
+
+Extended `tools/apply_s4602_strncpy_callers.py` and its host helper so the
+regeneration-preserved caller hook reads the guest-endian 16-byte source and
+destination preimage. The first capture omitted `ROGUESQ_LOG_S4597=1`, so its
+missing controls were discarded. The fixed rerun passed the entry control in
+phases 2 and 3, the adjacent control in phase 3, and the 76-row target-span
+control. It reached VI 1024 and then crashed in the known
+`musyxSynthFrame_s4562_impl+5808` stale-head family after the measurement.
+
+Caller `0x80022B44` copied five stable records from `0x8062B9F8`,
+`0x8062BA1C`, `0x8062BA40`, `0x8062BA64`, and `0x8062BA88`. Their 16-byte
+payloads decode as printable name-like strings: `xengilight`, `xlaserbod`,
+`xtopbdydet`, `xbkplate`, and `newx_glw_15`. The fourth record supplies
+`late` at destination offset `0x34..0x37`. This selects H-name-table over an
+incidental generic record copy, but is single-source for semantic identity;
+retail source-table equivalence remains open. The source/destination dump was
+diagnostic-only. ORIGIN: the copied records are legitimate name data; no
+value was filtered, skipped, or guarded. Artifacts:
+`scratch/agent/s4603_source_records_fixed/`.
