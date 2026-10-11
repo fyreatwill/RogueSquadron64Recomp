@@ -153379,3 +153379,23 @@ previous target-phase zero was a logger phase filter, not evidence of no
 generated writer. ORIGIN: diagnostic-only; no value was filtered, skipped,
 or guarded. Build completed successfully; the pre-existing dirty submodules
 were not changed.
+
+## Session 4601 (2026-10-11) — widened span names rs_strncpy as the late writer
+
+Ran the planned phase-scoped generated-store census after first grounding the
+retail oracle. The oracle whole-RDRAM positive control reached 10,000 writes,
+but that run stopped near VI 1,000 before the target phase, so its zero target
+rows were not treated as a retail null. The first port implementation was
+corrected in-iteration from phase+PC to phase+PC+offset after it exposed only
+the first byte of the same `rs_strncpy` call.
+
+The corrected qualified port run passed the entry and adjacent controls and
+captured 76 bounded span rows in phase 3 (VI 640). `rs_strncpy` at
+`0x80007670` wrote physical offsets `0x34..0x37` as `0x6C,0x61,0x74,0x65`
+(`late`) at `0x801724F4..0x801724F7`. This selects the generated guest writer
+and rules out the span being filled only by a host/translation path. It does
+not yet identify which of the eight `rs_strncpy` callers supplied the source
+and destination pair. No mitigation was added. ORIGIN: the bytes are
+legitimate name text; no value was filtered, skipped, or guarded. Build
+completed successfully; artifacts are `scratch/agent/s4601_fixed_run/run.log`
+and `scratch/agent/s4601_oracle.log`.

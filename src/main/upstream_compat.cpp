@@ -11,6 +11,7 @@
 #include <cstring>
 #include <thread>
 #include <mutex>
+#include <set>
 #include <chrono>
 #include <pthread.h>
 #if !defined(_WIN32)
@@ -1948,13 +1949,21 @@ extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, 
         }
         return;
     }
-    if (phys == 0x1724F4u) {
-        static std::atomic<unsigned> rows{0};
-        const unsigned n = rows.fetch_add(1, std::memory_order_relaxed);
-        if (n < 64u) {
+    if (phys >= 0x1724C0u && phys < 0x17250Cu) {
+        static std::mutex mu;
+        static std::set<uint64_t> seen;
+        const uint64_t key = (static_cast<uint64_t>(phase) << 40) |
+                             (static_cast<uint64_t>(pc) << 8) |
+                             (phys - 0x1724C0u);
+        bool first = false;
+        {
+            std::lock_guard<std::mutex> lock(mu);
+            first = seen.size() < 256u && seen.insert(key).second;
+        }
+        if (first) {
             std::fprintf(stderr,
-                "[s4597-target] n=%u phase=%u width=%u origin=0x%06X pc=0x%08X store_width=%c addr=0x%08X value=0x%08X\n",
-                n, phase, vi_width, origin, pc, width, addr, value);
+                "[s4601-span] phase=%u width=%u origin=0x%06X pc=0x%08X store_width=%c offset=0x%02X addr=0x%08X value=0x%08X\n",
+                phase, vi_width, origin, pc, width, phys - 0x1724C0u, addr, value);
             std::fflush(stderr);
         }
         return;
