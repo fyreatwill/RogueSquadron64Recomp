@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4617.
+archive sections. Updated for session 4618.
 
 ## Current state
 
@@ -42,6 +42,16 @@ caller input is the `0x800903F0` render path reading `late` from voice `+0x34`.
 The allocator/count-32 and audio-list ownership chain is open; the writer
 and legitimacy of any wild value must be named before a guard is considered.
 
+The s4618 M4 capture was not a valid accumulator discriminator. The retail
+whole-RDRAM control fired 10,000 times and ran 30 seconds, but stayed in
+attract at 320/640 and never reached title or hangar. The port reached a
+phase-gated 512 only at transient origin `0x00690400` (not hangar
+`0x006AB400`); the no-input and single-Start variants died in the known
+`musyxSynthFrame_s4562_impl+5808` family before that phase. The corrected
+stale-head recipe reached the transient phase and emitted 2,112 M4 rows, but
+no target hangar row. The paired arithmetic/VGE/source discriminator is
+therefore unevaluable, not a null result.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -73,9 +83,9 @@ and legitimacy of any wild value must be named before a guard is considered.
 ## Next steps
 
 1. Revisit the M4 accumulator boundary with the existing paired port probe,
-   using the retail all-RDRAM/VI reachability result as the independent line.
-   Capture the complete `ACCH:ACCM:ACCL`/VMADH/VGE/store row at the first live
-   512 shaded phase and require the independent non-M4 accumulator control.
+   only after a route recipe reaches hangar origin `0x006AB400` in the same
+   run. The s4618 transient `0x00690400` phase is not sufficient; require the
+   complete `ACCH:ACCM:ACCL`/VMADH/VGE/store row and independent control.
 2. Revisit the external retail-entry boundary only with a new attributable
    handoff; do not repeat the now-qualified all-phase name-copy null.
 3. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.

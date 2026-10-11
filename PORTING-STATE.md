@@ -153665,3 +153665,21 @@ H-no-live-copy provisionally: the copy predates the covered route or uses an
 unarmed path. It is single-source oracle evidence, not an independent origin
 proof; no mitigation was added. Artifact:
 `scratch/agent/s4616_retail_writer_all_phases.log`.
+
+## Session 4618 (2026-10-11) — M4 accumulator capture stopped before the paired target phase
+
+What ran: one Debug build; a retail oracle arm with a whole-RDRAM write
+control and VI trace; and port M4 captures first without the phase gate, then
+with `PROBE_PHASE_WIDTH=512`, a single Start at 45 seconds, and finally the
+qualified stale-head recipe (`ROGUESQ_NODEFAULT=1` plus the S4457/RS_FREE/
+FL_ZERO setup). The retail control reached 10,000 writes and ran 30 seconds,
+but stayed at attract 320/640. The port no-input and single-Start arms died
+in `musyxSynthFrame_s4562_impl+5808` before target phase. The corrected arm
+reached 512 at transient origin `0x00690400` after 106.9 seconds and captured
+7 frames; it did not reach hangar origin `0x006AB400`. M4 logging emitted
+2,112 rows, but none were a paired hangar row.
+
+This rules out treating the transient 512 phase or the 2,112 rows as the M4
+discriminator. It does not select arithmetic, VGE/store, or source-divergence
+hypotheses. The retail arm is a qualified positive control but an unevaluable
+target-phase null. No mitigation or code change was added.
