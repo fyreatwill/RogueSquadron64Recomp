@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4623.
+archive sections. Updated for session 4624.
 
 ## Current state
 
@@ -69,6 +69,15 @@ oracle independently passed its whole-RDRAM control (10,000 callbacks) but
 stayed at 320-wide boot. This is a qualified single-source port result, not a
 global null for the earlier odd request.
 
+Session 4624 repeated the batched audit on the canonical hangar schedule. The
+retail oracle whole-RDRAM control reached 10,000 callbacks but stayed at title
+1024, while the port reached repeated hangar VI `0x006AB400` at width 512 and
+ran through the 100-second watchdog. The port emitted 16 even
+`osPiStartDma`/`do_dma` pairs and zero odd events, including in the hangar
+phase. This is a qualified hangar-route single-source null: it does not select
+the guest, host-corruption, or stale-record hypotheses, and does not explain
+the separate recurring odd request.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -81,8 +90,9 @@ global null for the earlier odd request.
 - External retail-entry and M4 accumulator-origin boundaries are parked until
   a new attributable handoff or live target-phase control exists. The M4
   thread must pivot to the odd-PI origin before another target-phase run.
-- The s4622 producer null is qualified only for its title-only route; repeat
-  the audit on the canonical hangar schedule before interpreting it.
+- The s4622 producer null was title-only until s4624. The canonical hangar
+  repeat also had no odd event; this remains a recurrence/trigger problem, not
+  evidence that the odd request is impossible.
 - M3 patch-runtime qualification is blocked on `mips64-elf-gcc`,
   `mips64-elf-ld`, and `PatchesLib`.
 - Generated-symbol renaming is fallback work only after the active M5/M3
@@ -102,10 +112,13 @@ global null for the earlier odd request.
 
 ## Next steps
 
-1. Repeat the complete odd-physical-address PI-DMA producer audit on the
-   canonical autopilot route that reaches `0x006AB400`; retain the s4622
-   entry/convergence trace and compare any odd event with a retail physical
-   watch. This is an origin audit, not permission to skip or align the DMA.
+1. Run a bounded post-hangar stimulus contrast with the same batched PI trace:
+   let the canonical autopilot continue past the first 512-wide hangar phase
+   (`ROGUESQ_AUTOPILOT_STOP_WIDTH=0`) and retain the VI phase controls. An odd
+   event only after continued input selects a post-hangar trigger hypothesis;
+   no odd event through the extended route selects a missing-trigger/alternate
+   route hypothesis. Keep the retail positive control and do not align, skip,
+   or mitigate the DMA.
 2. Re-run the M4 capture only after the odd-PI audit supplies a stable,
    attributable route that reaches `0x006AB400`; retain the stage-1 positive
    control and do not interpret transient phase-3 rows.

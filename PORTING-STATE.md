@@ -153771,3 +153771,17 @@ but remained at 320-wide boot. This remains a title-only, single-source
 qualification and selects none of H-guest-dma, H-host-corruption, or
 H-stale-record. The next run must repeat the same batched audit on the
 canonical hangar schedule; no alignment, skip, or mitigation is authorized.
+
+## Session 4624 (2026-10-11) — repeated PI DMA audit on the hangar route
+
+Built the existing batched `s4622-dma` trace and ran the independent retail
+oracle first. Retail passed its whole-RDRAM positive control at 10,000
+callbacks but stayed at title VI 1024 with no 512-wide hangar rows. The
+canonical real-audio/LLE/ungated/solo/spin-yield port schedule reached repeated
+hangar VI `0x006AB400` at width 512 and survived the 100-second SIGKILL
+watchdog. It emitted 16 even `osPiStartDma`/`do_dma` pairs and zero odd events,
+including during hangar. This qualifies the hangar route but selects none of
+H-post-hangar-trigger, H-missing-trigger, or H-host-or-stale; it does not prove
+the separate recurring odd request impossible. No alignment, skip, or
+mitigation was added. Artifacts: `scratch/agent/s4624_oracle/` and
+`scratch/agent/s4624_port/port.log`.
