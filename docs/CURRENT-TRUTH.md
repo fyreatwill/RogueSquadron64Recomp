@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4624.
+archive sections. Updated for session 4625.
 
 ## Current state
 
@@ -78,6 +78,16 @@ phase. This is a qualified hangar-route single-source null: it does not select
 the guest, host-corruption, or stale-record hypotheses, and does not explain
 the separate recurring odd request.
 
+Session 4625 extended the same canonical route past the first hangar phase for
+120 seconds. The port again reached hangar and retained 16 even
+`osPiStartDma`/`do_dma` pairs, with zero odd events anywhere in the extended
+route. The independent retail oracle passed its whole-RDRAM control at 10,000
+callbacks (but remained at 320-wide boot). This is a qualified port null for
+the post-hangar-trigger hypothesis and provisionally selects a missing-trigger
+or alternate-route explanation for the separate recurring odd request; it is
+not evidence that the odd request is globally impossible. Artifacts are in
+`scratch/agent/s4625_post_hangar/`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -87,12 +97,13 @@ the separate recurring odd request.
 - VI-640 crash families and broad M3 guard classes are parked. A mitigation
   needs an `ORIGIN:` line naming the writer and whether the value is
   legitimate.
-- External retail-entry and M4 accumulator-origin boundaries are parked until
-  a new attributable handoff or live target-phase control exists. The M4
-  thread must pivot to the odd-PI origin before another target-phase run.
-- The s4622 producer null was title-only until s4624. The canonical hangar
-  repeat also had no odd event; this remains a recurrence/trigger problem, not
-  evidence that the odd request is impossible.
+- External retail-entry remains parked until a new attributable handoff. The
+  M4 accumulator-origin boundary is eligible again because s4625 qualified a
+  stable hangar route and retained the stage-1 control.
+- The s4622 producer null was title-only until s4624. The extended s4625
+  canonical hangar route also had no odd event, so the post-hangar trigger is
+  ruled out for this route; the recurrence remains a missing-trigger or
+  alternate-route problem, not evidence that the odd request is impossible.
 - M3 patch-runtime qualification is blocked on `mips64-elf-gcc`,
   `mips64-elf-ld`, and `PatchesLib`.
 - Generated-symbol renaming is fallback work only after the active M5/M3
@@ -112,16 +123,12 @@ the separate recurring odd request.
 
 ## Next steps
 
-1. Run a bounded post-hangar stimulus contrast with the same batched PI trace:
-   let the canonical autopilot continue past the first 512-wide hangar phase
-   (`ROGUESQ_AUTOPILOT_STOP_WIDTH=0`) and retain the VI phase controls. An odd
-   event only after continued input selects a post-hangar trigger hypothesis;
-   no odd event through the extended route selects a missing-trigger/alternate
-   route hypothesis. Keep the retail positive control and do not align, skip,
-   or mitigate the DMA.
-2. Re-run the M4 capture only after the odd-PI audit supplies a stable,
-   attributable route that reaches `0x006AB400`; retain the stage-1 positive
-   control and do not interpret transient phase-3 rows.
+1. Re-run the M4 capture on the now-qualified route reaching
+   `0x006AB400`; retain the stage-1 positive control and do not interpret
+   transient phase-3 rows. Join arithmetic/VGE/store/source rows in the same
+   capture.
+2. Keep the odd-PI question parked as a missing-trigger/alternate-route
+   problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable
    handoff; do not repeat the now-qualified all-phase name-copy null.
 4. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.

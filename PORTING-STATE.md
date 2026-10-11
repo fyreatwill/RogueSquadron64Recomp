@@ -153785,3 +153785,16 @@ H-post-hangar-trigger, H-missing-trigger, or H-host-or-stale; it does not prove
 the separate recurring odd request impossible. No alignment, skip, or
 mitigation was added. Artifacts: `scratch/agent/s4624_oracle/` and
 `scratch/agent/s4624_port/port.log`.
+
+## Session 4625 (2026-10-11) — extended post-hangar PI DMA stimulus
+
+Built the existing batched `s4622-dma` trace and ran the independent retail
+oracle in parallel with the canonical real-audio/LLE/ungated/solo/spin-yield
+port arm for 120 seconds. The oracle whole-RDRAM positive control reached
+10,000 callbacks; its route remained at 320-wide boot. The port reached and
+continued through repeated hangar VI `0x006AB400` at width 512, retaining 16
+even `osPiStartDma`/`do_dma` pairs and zero odd events anywhere in the extended
+route. This rules out H-post-hangar-trigger for this route and provisionally
+selects H-missing-trigger/alternate-route; it does not prove the odd request
+impossible globally. No alignment, skip, or mitigation was added. Artifacts:
+`scratch/agent/s4625_post_hangar/`.
