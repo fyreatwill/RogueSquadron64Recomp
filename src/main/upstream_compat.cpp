@@ -1806,12 +1806,14 @@ static void rs64_s4569_note(const char* kind, char w, uint32_t pc, uint32_t addr
     if (rows.fetch_add(1) > 4000) return;
     std::fprintf(stderr, "[s4569-W] %s %c pc=%08X addr=%08X val=%08X vi_w=%u\n", kind, w, pc, addr, value, rs64_vi_committed_width());
 }
+extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, uint32_t value);
 extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
     rs64_s4569_note("st", width, pc, addr, value);
     rs64_s4577_note(width, pc, addr, value);
     rs64_s4572_note("st", width, pc, addr, value);
+    rs64_s4597_target_store(width, pc, addr, value);
     (void)value;
     const uint32_t phys = addr & 0x1FFFFFFFu;
     if (phys >= 0x17C000u && phys < 0x17D000u) {
@@ -1924,6 +1926,48 @@ extern "C" void rs64_s4299_swlr(char w, const char* fn, uint32_t line, uint32_t 
     S4299Ent& e = g_s4299_ring[g_s4299_total & ((1u << 20) - 1)];
     e.pc = line; e.addr = addr; e.seq = (uint32_t)g_s4299_total; e.w = w; e.fn = fn;
     g_s4299_total++;
+}
+extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, uint32_t value) {
+    static const bool on = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_S4597");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (!on) return;
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t vi_width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (vi_width != 640u || origin != 0x006A2900u) return;
+    const uint32_t phys = addr & 0x1FFFFFFFu;
+    if (addr == 0xFFFFFFFFu) {
+        static std::atomic<bool> control{false};
+        if (!control.exchange(true, std::memory_order_relaxed)) {
+            std::fprintf(stderr,
+                "[s4597-control] rs_strncpy-entry phase=%u width=%u origin=0x%06X pc=0x%08X\n",
+                phase, vi_width, origin, pc);
+            std::fflush(stderr);
+        }
+        return;
+    }
+    if (phys == 0x1724F4u) {
+        static std::atomic<unsigned> rows{0};
+        const unsigned n = rows.fetch_add(1, std::memory_order_relaxed);
+        if (n < 64u) {
+            std::fprintf(stderr,
+                "[s4597-target] n=%u phase=%u width=%u origin=0x%06X pc=0x%08X width=%c addr=0x%08X value=0x%08X\n",
+                n, phase, vi_width, origin, pc, width, addr, value);
+            std::fflush(stderr);
+        }
+        return;
+    }
+    if (phys >= 0x17C000u && phys < 0x17D000u) {
+        static std::atomic<bool> control{false};
+        if (!control.exchange(true, std::memory_order_relaxed)) {
+            std::fprintf(stderr,
+                "[s4597-control] phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%08X\n",
+                phase, vi_width, origin, pc, addr);
+            std::fflush(stderr);
+        }
+    }
 }
 extern "C" void rs64_s4299_dump(uint32_t lo, uint32_t hi) {
     unsigned long n = g_s4299_total < (1u << 20) ? g_s4299_total : (1u << 20);

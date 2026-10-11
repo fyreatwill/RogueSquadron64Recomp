@@ -22,6 +22,7 @@ extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial);
 extern "C" uint32_t rs64_e9prov_current_task();
 extern "C" uint32_t rs64_e9prov_current_scope();
 extern "C" int rs64_is_hangar_vi(void);
+extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, uint32_t value);
 extern "C" void rs64_m5_b40_route_title_transition(void);
 extern "C" void rs64_m5_route_fingerprint_phase(uint32_t width,
                                                   uint32_t origin);
@@ -941,6 +942,9 @@ public:
                     rs64_bump_phase_ord();
                     rs64_m5_selector_ai_call_latch_join(
                         w, pvi->VI_ORIGIN_REG & 0x00FFFFFFu, rs64_phase_ord());
+                    if (w == 640u && (pvi->VI_ORIGIN_REG & 0x00FFFFFFu) == 0x006A2900u) {
+                        rs64_s4597_target_store('C', 0xFFFFFFFFu, 0x8017C000u, 0u);
+                    }
                     if (w == 1024u && (pvi->VI_ORIGIN_REG & 0x00FFFFFFu) == 0x00790400u) {
                         rs64_m5_b40_route_title_transition();
                     }
