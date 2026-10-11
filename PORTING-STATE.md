@@ -153399,3 +153399,25 @@ and destination pair. No mitigation was added. ORIGIN: the bytes are
 legitimate name text; no value was filtered, skipped, or guarded. Build
 completed successfully; artifacts are `scratch/agent/s4601_fixed_run/run.log`
 and `scratch/agent/s4601_oracle.log`.
+
+## Session 4602 (2026-10-11) — caller table selects the late-name source
+
+Ground-truthed the retail span before adding the next generated diagnostic.
+Retail passed the whole-RDRAM control, reached the 512 hangar and later 640
+activity, and wrote the physical `0x1724C0..0x17250B` span 76 times from
+guest `0x80007670`. The first port run had an invalid exact-origin gate and
+produced no caller rows despite passing its controls; the corrected width-640
+run produced six caller controls, so the gate was fixed before interpretation.
+
+The final qualified port run passed the entry and adjacent controls and
+captured the existing 76-byte span census. Its regeneration-preserved table
+selected caller `0x80022B44`, which called `rs_strncpy` with 16-byte chunks at
+destinations `0x801724C0`, `0x801724D0`, `0x801724E0`, `0x801724F0`, and
+`0x80172500`; the fourth chunk's source `0x8062BA64` supplies destination
+offsets `0x34..0x37` as `late`. This rules out a host/translation-only source
+for the observed port value and selects the generated caller/source-table
+path. The source record's semantic identity and retail equivalence remain
+open. No mitigation was added. ORIGIN: the copied bytes are legitimate name
+text; no value was filtered, skipped, or guarded. Build succeeded; final
+artifacts are under `scratch/agent/s4602_oracle/` and
+`scratch/agent/s4602_callers/`.

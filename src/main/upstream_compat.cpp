@@ -1979,6 +1979,26 @@ extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, 
         }
     }
 }
+extern "C" void rs64_s4602_strncpy_caller(uint32_t caller, uint32_t a0,
+                                             uint32_t a1, uint32_t a2) {
+    static const bool on = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_S4602");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (!on || rs64_vi_committed_width() != 640u) return;
+    static std::mutex mu;
+    static std::set<uint64_t> seen;
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t a0_phys = a0 & 0x1FFFFFFFu;
+    const bool target = a0_phys >= 0x1724C0u && a0_phys < 0x17250Cu;
+    const uint64_t key = (static_cast<uint64_t>(phase) << 32) | caller;
+    std::lock_guard<std::mutex> lock(mu);
+    if (!target && (seen.size() >= 128u || !seen.insert(key).second)) return;
+    std::fprintf(stderr,
+        "[s4602-strncpy] phase=%u width=640 origin=0x%06X caller=0x%08X a0=%08X a1=%08X a2=%08X\n",
+        phase, rs64_vi_committed_origin() & 0x00FFFFFFu, caller, a0, a1, a2);
+    std::fflush(stderr);
+}
 extern "C" void rs64_s4299_dump(uint32_t lo, uint32_t hi) {
     unsigned long n = g_s4299_total < (1u << 20) ? g_s4299_total : (1u << 20);
     std::fprintf(stderr, "[s4299-D] dump [%08X,%08X) ring total=%lu held=%lu swlr_calls=%lu\n", lo, hi, g_s4299_total, n, g_s4299_swlr_total);
