@@ -153144,3 +153144,9 @@ Discrimination (s4572): SELECTS H-render-self (render writes both record classes
 ORIGIN: diagnostic only, no mitigation added. Writer of the chunk-2+ words 0..7 not yet named per offset.
 Next: ONE build adding a per-(PC,offset-word) table for cls=1 and decode of 0x80090FE8 (store to cursor) and the 0x80001C18 zero stores.
 Gate wording: s4572 selects H-render-self and refutes H-builder-writes and H-alias for the chunk-2+ record contents. Next discriminator: a per-(cls,PC,word-offset) write table plus a static decode of 0x80090FE8; a PC in 0x8008FF04..9C owning words 0..7 selects stream-scratch reuse, a bump+1 at 0x80090FE8 selects H-fe8-phantom.
+
+## Session 4573 (2026-10-11) — static decode of 0x80090FE8: it is a second legitimate cursor++ (record-alloc), H-fe8-phantom refuted
+Decoded N64Recomp/RecompiledFuncs/funcs_24.c:6440-6520. The block at 0x80090F84..0x80091000 addresses a record as cursor*0x88 + table base, stores sb 0x22, sw 0x7C ($s7), sh 0x80 ($s5), then `lhu $a0,0($s1)` (0x80090FE0), `addiu $v0,$a0,1` (0x80090FE4), `sh $v0,0($s1)` (0x80090FE8), and keeps addressing the same record with the OLD cursor ($a0) for further field stores (0x80090FF0..1000). That is a post-increment allocation: cursor = old+1, record addressed by old. It stores old+1 of a value loaded two instructions earlier, not a stale value and not a phantom +1; it is the same alloc idiom as the bump at 0x80090F24, in a second render path.
+Discrimination: this refutes H-fe8-phantom. It does not touch H-offset0-7-render or H-hostzero, which stay open and need the per-(cls,PC,off/4) count table (one build; positive control = in-range off 32..35 rows).
+ORIGIN: static decode only, no mitigation added, no code changed.
+Next: the single build extending rs64_s4572_note with the per-(cls,PC,off/4) table (NEXT.md, FE8 hypothesis marked closed).
