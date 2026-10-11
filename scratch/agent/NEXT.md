@@ -1,6 +1,6 @@
-# NEXT: who readies audio thread 0x3001494b0 (pri 122, entry 0x8008ED70) before alloc #2, and is it runnable in retail during reapplyAudioConfig?
+# NEXT: why is the displaced pri-10 allocator (guest tid 3) never re-popped after the VI-readied audio thread preempts it inside rs_malloc?
 HYPOTHESIS-ID: m5-audio-destub
-Context (s4581): allocator thread preempted at rs_malloc lock osRecvMesg by already-queued pri-122 audio thread (see PORTING-STATE s4581).
-Hypotheses: H-ai-event (our timer-driven AI/VI osSendMesg readies it; retail AI cadence would rarely land here); H-retail-same (retail also preempts, and its mixer tolerates the window via state we mis-initialise); H-stop (retail audio thread is stopped/blocked on a handshake during reapplyAudioConfig that we skip).
-Discriminator (ONE build): in schedule_running_thread + mesgqueue send paths log (when target==0x3001494b0) caller backtrace, queue ptr, ts relative to [s4579-A]; also log the audio thread's own blocking recv queue. Add oracle check: retail mupen run with exec watch at 0x8008ED70 across reapplyAudioConfig (positive control: whole-RDRAM watch). Outcome: readied by timer send -> H-ai-event; readied by guest send before A -> compare retail ordering.
-Recipe: scratch/agent/s4581_switch.sh.
+Context (s4582): VI retrace message drained at allocator's osRecvMesg readies audio thread (pri 122); allocator never regains control (P#2 never prints, ~30k in-window handoffs among pri 117-122 threads).
+Hypotheses: H-starve (allocator sits in running_queue but check_running_queue's strict-greater gate + run_next only on full block means higher threads never fully block); H-lost (allocator dropped from running_queue / state corrupted, e.g. enqueued twice or never re-queued); H-blocked (allocator is actually blocked on a mesgqueue that nothing sends to).
+Discriminator (ONE build): in swap_to_thread/run_next_thread/check_running_queue while inflight=1 log the running_queue contents (id,pri,state) and tid-3 state/queue membership every Nth decision (+ first 20 unconditionally as control); also log blocked_queue membership for tid 3. Outcome: tid 3 in running_queue -> H-starve; absent + state BLOCKED -> H-blocked (find the queue); absent + QUEUED -> H-lost.
+Recipe: copy scratch/agent/s4582_enq.sh (3 arms, 200 s).
