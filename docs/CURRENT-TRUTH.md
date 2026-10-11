@@ -162,6 +162,9 @@ are in PROJECT-OVERVIEW §58.
   (s4435) was believable from 59 vs 115 buffers/s. Retail also submits
   ~1 per VI (s4437). The gap is not the game-side submit rate.
 
+## s4590 finding (single-source)
+The odd DMA's cart word 'wing' is an ASCII 4cc tag in the cart slot of 12-byte {len,tag,ram} records (siblings wizg/witg/wiyg/lcre); not an overrun string. Open: writer of the tag, and whether retail has the same tag (oracle watch at the cart slot, RDRAM 0x179A64).
+
 ## Next steps
 
 One sequence. Closed audits are not items. Item 1 is the next iteration
