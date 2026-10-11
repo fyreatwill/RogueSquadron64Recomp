@@ -1,38 +1,28 @@
-# Attribute the retail target writer
+# Locate the alternate retail name-record source
 HYPOTHESIS-ID: m5-audio-destub
 
-s4604 refuted retail use of the port source span: in the driven retail
-hangar phase the candidate source range `0x62B9F8..0x62BA98` was all `0xFF`,
-while target `0x1724C0..0x17250C` contained the same five name-like records,
-including `late`. The alternate retail source location is not yet known.
+s4605 passed the whole-RDRAM positive control and the VI-512 phase gate. The
+target span `0x1724C0..0x17250C` received 76 writes, all from guest PC
+`0x80007670`; one immediate writer is selected. The source feeding that writer
+is still unknown because the port candidate span is `0xFF` in retail.
 
 Competing hypotheses:
 
-- H-one-writer: one retail guest writer publishes all five target records from
-  a different table or direct literals.
-- H-composed-writers: multiple retail guest writers compose the target span.
-- H-host-path: the target bytes are produced by a host/translation path with
-  no attributable guest writer.
+- H-alt-source-table: retail `rs_strncpy` receives the five records from a
+  different table or copied buffer.
+- H-direct-callsite: retail call sites provide direct literals or derived
+  pointers to the same writer.
+- H-host-translation: the bytes reach the writer through a host-side path with
+  no guest-readable source span.
 
-Discriminating measurement: phase-gated retail writer-PC histogram for target
-watch 0x1724C0..0x17250C, with whole-RDRAM positive control in the same run.
-One writer PC covering all 76 target writes selects H-one-writer; multiple
-writer PCs covering distinct target offsets select H-composed-writers; zero
-target writer callbacks despite target snapshot bytes selects H-host-path.
+Discriminating measurement: phase-gated retail watch/snapshot around the
+writer's source operands or likely source regions, with the whole-RDRAM
+positive control. A stable source range containing all five records selects
+H-alt-source-table; distinct call-site operands with no shared table select
+H-direct-callsite; target bytes with no guest-readable source or operand
+activity selects H-host-translation.
 
-Run from the repo root; no build is needed:
+Before building an instrument, inspect existing oracle watch options and the
+retail `rs_strncpy` call-site/static map. No mitigation.
 
-```sh
-mkdir -p scratch/agent/s4605_retail_target_writer
-env tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --watch-write 0x0:0x800000 --watch-write 0x1724C0:0x17250C \
-  --first-watch 1 --pc-hist-watch 1 --pc-hist-phase 0x006AB400:512 \
-  --hit-cap 200 --pc-phase-quiet --pc-phase-log-width 0x006AB400:512 --vi-trace \
-  > scratch/agent/s4605_retail_target_writer/retail.log 2>&1
-```
-
-Do not add a mitigation.
+Artifact: `scratch/agent/s4605_retail_target_writer/retail.log`.

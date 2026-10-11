@@ -153465,3 +153465,13 @@ nothing was filtered, skipped, or guarded. Artifacts are under
 `scratch/agent/s4604_retail_source_table/`,
 `scratch/agent/s4604_retail_source_table_driven/`, and
 `scratch/agent/s4604_retail_source_table_snapshot/`.
+## Session 4605 (2026-10-11) — retail target writes have one immediate writer
+
+Ran the phase-gated retail oracle with the whole-RDRAM positive control. The
+control reached 10,000 callbacks, and the VI-512 phase was reached at origin
+`0x006AB400`. Target span `0x1724C0..0x17250C` received 76 writes; the
+writer-PC histogram attributes all 76 to guest PC `0x80007670`. This selects
+H-one-writer and rules out composed target writers and a host-only target path
+for this span. It does not locate the alternate retail source feeding that
+writer; the port candidate source remains refuted. No build or mitigation was
+made. Artifact: `scratch/agent/s4605_retail_target_writer/retail.log`.
