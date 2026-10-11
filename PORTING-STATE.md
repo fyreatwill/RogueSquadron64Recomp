@@ -153545,5 +153545,8 @@ existing artifact confirms the positive whole-RDRAM control, VI-512 hangar
 phase, caller execution control, and target-span control all fired. The eight
 captured pointer targets lacked the five copied records, but the cap stopped
 before later fields, so no stronger conclusion is justified. NEXT.md now
-resumes with the expanded pointer census and its explicit discriminator. No
-mitigation was added and no conclusion in CURRENT-TRUTH changed.
+resumes with the expanded pointer census and its explicit discriminator. The
+result does select against “the first eight visible pointers contain the five
+records,” but does not select H-derived-records versus H-other-shared-table;
+that split requires the later-pointer census. No mitigation was added and no
+conclusion in CURRENT-TRUTH changed.

@@ -1,6 +1,11 @@
 # RESUME: cover the remaining pointer fields in the retail alternate source table
 HYPOTHESIS-ID: m5-audio-destub
 
+This is the next discriminating work unit, not a rerun of s4609. The partial
+result selected against the first eight visible pointers as the five-record
+source, but did not resolve whether later pointers contain the records or
+whether a different shared table supplies them.
+
 The s4609 oracle run passed the whole-RDRAM control (12,155,017 callbacks),
 reached VI-512 at VI 2269, saw 76 target-span writes, and fired the caller
 watch 2,079 times. The first eight discovered pointers from `$a1=0x80165D9C`
