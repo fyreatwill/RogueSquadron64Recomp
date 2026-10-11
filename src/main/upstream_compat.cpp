@@ -1751,14 +1751,14 @@ static void rs64_s4572_note(const char* kind, char w, uint32_t pc, uint32_t addr
     }
     if (cls < 0) return;
     tot[cls]++;
-    { std::lock_guard<std::mutex> g(mu); hist[((uint64_t)cls << 32) | pc]++; }
+    { std::lock_guard<std::mutex> g(mu); hist[((uint64_t)cls << 40) | ((uint64_t)(off >> 2) << 32) | pc]++; }
     if (rs64_vi_committed_width() >= 512u && rows[cls].fetch_add(1) < 60)
         std::fprintf(stderr, "[s4572-W] %s %c cls=%s buf=%u idx=%u off=%u pc=%08X addr=%08X val=%08X vi_w=%u\n", kind, w,
                      cls == 2 ? "cursor" : cls ? "chunk2+" : "inrange", buf, idx, off, pc, addr, value, rs64_vi_committed_width());
     if ((++all % 20000u) == 0 && (all / 20000u) <= 20) {
         std::lock_guard<std::mutex> g(mu);
         std::fprintf(stderr, "[s4572-tot] stores inrange=%u chunk2+=%u cursor=%u\n", tot[0].load(), tot[1].load(), tot[2].load());
-        for (auto& kv : hist) std::fprintf(stderr, "[s4572-hist] cls=%u pc=%08X n=%u\n", (unsigned)(kv.first >> 32), (unsigned)kv.first, kv.second);
+        for (auto& kv : hist) std::fprintf(stderr, "[s4572-hist] cls=%u woff=%u pc=%08X n=%u\n", (unsigned)(kv.first >> 40), (unsigned)((kv.first >> 32) & 0xFFu), (unsigned)kv.first, kv.second);
     }
 }
 static void rs64_s4569_note(const char* kind, char w, uint32_t pc, uint32_t addr) {
