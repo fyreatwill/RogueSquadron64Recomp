@@ -1761,6 +1761,40 @@ static void rs64_s4572_note(const char* kind, char w, uint32_t pc, uint32_t addr
         for (auto& kv : hist) std::fprintf(stderr, "[s4572-hist] cls=%u woff=%u pc=%08X n=%u\n", (unsigned)(kv.first >> 40), (unsigned)((kv.first >> 32) & 0xFFu), (unsigned)kv.first, kv.second);
     }
 }
+#include <mutex>
+struct rs64_s4577_ent { uint32_t seq, pc, addr, val, vi_w; char w; };
+static rs64_s4577_ent g_s4577_cb[64]; static unsigned g_s4577_ncb = 0;
+static rs64_s4577_ent g_s4577_ring[128]; static unsigned g_s4577_n = 0; static std::mutex g_s4577_mu;
+static void rs64_s4577_note(char w, uint32_t pc, uint32_t addr, uint32_t value) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4577"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    const uint32_t p = addr & 0x1FFFFFFFu;
+    if (p >= 0x1496F8u && p < 0x149704u) {
+        std::lock_guard<std::mutex> g(g_s4577_mu);
+        g_s4577_cb[g_s4577_ncb % 64] = {g_s4577_ncb, pc, addr, value, rs64_vi_committed_width(), w};
+        g_s4577_ncb++;
+        return;
+    }
+    if (p < 0x172438u || p >= 0x172548u) return;
+    std::lock_guard<std::mutex> g(g_s4577_mu);
+    g_s4577_ring[g_s4577_n % 128] = {g_s4577_n, pc, addr, value, rs64_vi_committed_width(), w};
+    g_s4577_n++;
+}
+extern "C" void rs64_s4577_dump() {
+    std::lock_guard<std::mutex> g(g_s4577_mu);
+    std::fprintf(stderr, "[s4577-dump] total_stores=%u (ring keeps last 128)\n", g_s4577_n);
+    for (unsigned i = g_s4577_ncb > 64 ? g_s4577_ncb - 64 : 0; i < g_s4577_ncb; i++) {
+        const auto& e = g_s4577_cb[i % 64];
+        std::fprintf(stderr, "[s4577-CB] seq=%u addr=%08X w=%c pc=%08X val=%08X vi_w=%u\n", e.seq, e.addr, e.w, e.pc, e.val, e.vi_w);
+    }
+    const unsigned n = g_s4577_n < 128 ? g_s4577_n : 128, start = g_s4577_n - n;
+    for (unsigned i = start; i < g_s4577_n; i++) {
+        const auto& e = g_s4577_ring[i % 128];
+        std::fprintf(stderr, "[s4577-W] seq=%u rec=%u off=0x%02X w=%c pc=%08X val=%08X vi_w=%u\n", e.seq,
+                     (unsigned)(((e.addr & 0x1FFFFFFFu) - 0x172438u) / 0x88u) + 29u, (unsigned)(((e.addr & 0x1FFFFFFFu) - 0x172438u) % 0x88u),
+                     e.w, e.pc, e.val, e.vi_w);
+    }
+}
 static void rs64_s4569_note(const char* kind, char w, uint32_t pc, uint32_t addr) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4569"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
@@ -1775,6 +1809,7 @@ extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, u
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
     rs64_s4569_note("st", width, pc, addr);
+    rs64_s4577_note(width, pc, addr, value);
     rs64_s4572_note("st", width, pc, addr, value);
     (void)value;
     const uint32_t phys = addr & 0x1FFFFFFFu;
