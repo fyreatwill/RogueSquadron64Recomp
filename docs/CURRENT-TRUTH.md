@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4619.
+archive sections. Updated for session 4620.
 
 ## Current state
 
@@ -51,6 +51,14 @@ hangar origins but zero accumulator rows, including zero rows at
 is an instrument-boundary null, not evidence for arithmetic, VGE/store, or
 source divergence. The paired discriminator remains unevaluable.
 
+The s4620 M4 capture qualified the instrument's stage-1 positive control: 64
+rows fired with changing accumulator state. The target stages also fired (519
+rows each for stages 10–12 and 491 stage-13 rows), but all rows were phase 3
+(transient 640), with no hangar-phase row. The retail oracle independently
+passed its whole-RDRAM control (10,000 callbacks) but reached title 1024 and
+not hangar in its 60-second arm. Thus the logger is qualified, while the
+hangar arithmetic/VGE/store/source discriminator remains unevaluable.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -81,11 +89,10 @@ source divergence. The paired discriminator remains unevaluable.
 
 ## Next steps
 
-1. Qualify the M4 instrument at hangar origin `0x006AB400`: add or expose a
-   same-run positive control that must fire, then capture the complete
-   `ACCH:ACCM:ACCL`/VMADH/VGE/store row and changing non-M4 control. The route
-   now reaches hangar on both port and retail, so do not repeat a route-only
-   soak or interpret the current zero rows.
+1. Capture the complete M4 row at hangar origin `0x006AB400` now that the
+   stage-1 positive control is qualified: keep the same control and target
+   stages, but use a paired route/oracle arm that produces a hangar-phase row.
+   Do not interpret the transient phase-3 rows as the discriminator.
 2. Revisit the external retail-entry boundary only with a new attributable
    handoff; do not repeat the now-qualified all-phase name-copy null.
 3. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.

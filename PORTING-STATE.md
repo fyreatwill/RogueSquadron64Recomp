@@ -153703,3 +153703,21 @@ capture. Arithmetic, VGE/store, and source-divergence hypotheses remain
 unselected. No mitigation or code change was added. Artifacts:
 `scratch/agent/s4619_m4_fixed/run.log` and
 `scratch/agent/s4619_m4_hangar_run/retail_ground_truth.log`.
+## Session 4620 (2026-10-11) — qualified M4 control but missed hangar row
+
+Built the Debug target once and ran the prescribed port/oracle pair
+concurrently. The port Start-mash route reached the 512 phase and crashed in
+the known `do_rom_read`/PI-DMA abort family. Its M4 logger emitted 64 stage-1
+positive-control rows, plus 519 rows each for target stages 10, 11, and 12 and
+491 stage-13 rows. The stage-1 rows had changing accumulator values, so this
+is a qualified same-run control rather than a branch counter. Every emitted
+M4 row was phase 3 (transient 640); no row was at hangar origin
+`0x006AB400`.
+
+The retail oracle completed its 60-second arm, passed the whole-RDRAM
+positive control at 10,000 callbacks, and reached title VI 1024, but did not
+reach hangar. Therefore the logger qualification is a result, but the
+arithmetic/VGE-store/source-divergence discriminator remains unevaluable. The
+run adds no writer or legitimacy evidence and authorizes no mitigation.
+Artifacts: `scratch/agent/s4620_m4_fixed/run.log` and
+`scratch/agent/s4620_m4_retail_ground_truth.log`.
