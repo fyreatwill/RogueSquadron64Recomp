@@ -1,30 +1,46 @@
-# NEXT: attribute the runtime writer of voice 0x801724C0 +0x34
+# NEXT: phase-map the runtime writer of voice 0x801724C0 +0x34
 HYPOTHESIS-ID: m5-audio-destub
 
-s4596 completed the static census; see docs/M5-S4596-VOICE34-CENSUS.md.
-The only relevant voice-field writers are 0x800921E8 (sample descriptor +4)
-and 0x80090C80 (source voice +0x38). At 0x800903F0, a3 is a direct load of
-voice +0x34 and a1 is only that value plus an aligned offset. This selects
-H-writer/input over H-builder. Retail independently showed B0xxxxxx pointer
-stores, so the port's ASCII value remains illegitimate.
+s4598 completed the target-phase generated-store census. The adjacent
+generated-store control fired at VI 640/origin 0x006A2900, but there was no
+generated store to physical 0x1724F4 before the known odd-PI alignment abort.
+The independent retail oracle had a positive whole-RDRAM control and four
+target writes from 0x80007670 during retail VI 512. This rules out a
+target-phase generated writer, but does not distinguish a pre-640 generated
+writer from a host/translation write.
 
-Next work unit: build a complete phase-scoped port store census for physical
-0x1724F4, covering every generated store site or the central RDRAM write path.
-The retail positive control is already recorded: whole-RDRAM 10,004 writes and
-four target writes from 0x80007670. Competing hypotheses: (H-init/keyon) the
-port target write is from 0x800921E8 or 0x80090C80; (H-foreign) it is from a
-different guest PC; (H-host) no guest store occurs and the value enters through
-host/translation state. The discriminating measurement is the first target
-write's PC, value, and phase, with an adjacent-range port store control firing
-in the same target phase. The s4597 phase control fired, but its direct
-rs_strncpy entry and target rows were zero; do not treat that as a complete
-no-store result until the new census has a store control. Do not add a
-mitigation. Exact work sequence: extend or replace
-`tools/apply_s4597_target_store.py` so the complete generated-store census is
-regeneration-preserved; run `cmake --build build --config Debug --target
-RogueSquadron64Recomp`; then run from `build/` with
-`ROGUESQ_NODEFAULT=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1
-ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1`, the repeated-Start late
-route, and phase/store logging enabled. Expected split: init/keyon PC,
-foreign guest PC, or host/no guest store, each valid only if the adjacent
-store control fires at `640/0x006A2900`.
+Next work unit: change the census to bounded per-phase target rows covering
+boot through the first target-phase edge. Keep the adjacent generated-store
+control in every phase. Do not add a mitigation.
+
+Competing hypotheses:
+
+- H-prephase-guest: a generated guest store writes 0x1724F4 before VI 640;
+  its first row will name the PC, value, width, and phase.
+- H-host-translation: no generated store writes the target in any phase, so
+  the field enters through host/translation state or an uninstrumented path.
+- H-other-guest: a generated writer outside the two statically named
+  init/keyon sites writes it in an earlier phase.
+
+Discriminating measurement: one run with phase-bucketed target rows from the
+first VI through VI 640, plus an adjacent-range generated-store control that
+fires in the same run. A target row at any earlier phase selects H-prephase-
+guest or H-other-guest by PC; zero lifetime target rows with the control live
+leaves H-host-translation as the remaining generated-store-boundary result.
+
+Exact sequence:
+
+1. Extend `tools/apply_s4598_complete_store_census.py` (or add the next
+   regeneration-preserved fixer) so `rs64_s4597_target_store` records a small
+   per-phase first-row table rather than filtering to width 640/origin
+   0x006A2900. Retain the target and adjacent control ranges.
+2. Run `python3 tools/apply_s4598_complete_store_census.py` and build with
+   `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+3. Run from `build/` with
+   `ROGUESQ_NODEFAULT=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1
+   ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1`, repeated Start input,
+   and the phase/store logger. Capture to `scratch/agent/s4599_port_run/` and
+   SIGKILL the game after the target route or the known PI abort.
+
+The previous run's artifacts are `scratch/agent/s4598_oracle.log` and
+`scratch/agent/s4598_port_run/run.log`; do not rerun them as the next unit.
