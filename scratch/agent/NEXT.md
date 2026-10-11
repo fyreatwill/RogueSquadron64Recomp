@@ -1,7 +1,13 @@
-# NEXT: phase-gate the retail writer operand
+# NEXT: RESUME — phase-gate the retail writer operand
 HYPOTHESIS-ID: m5-audio-destub
 
-Run one Rice-qualified 90-second retail oracle capture. s4612 passed the
+Checkpoint close-out: do not rerun the experiment in this retry. The prior
+s4612 fixed capture is complete and is the only result to interpret here.
+Artifacts:
+`scratch/agent/s4612_retail_source_origin.log` and
+`scratch/agent/s4612_retail_source_origin_fixed.log`.
+
+Resume by running one Rice-qualified 90-second retail oracle capture. s4612 passed the
 whole-RDRAM, VI-512, source-span, target-span, and pointer-target controls;
 `0x80007670` fired 1,211 times, while `0x80007640` stayed at zero. The
 512-phase target snapshot contains the five copied names, the source base

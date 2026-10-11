@@ -153590,3 +153590,19 @@ No mitigation was added. ORIGIN: observation-only; no value was filtered,
 skipped, or guarded. Artifacts:
 scratch/agent/s4612_retail_source_origin.log and
 scratch/agent/s4612_retail_source_origin_fixed.log.
+
+## Session 4613 (2026-10-11) — checkpointed the retail operand follow-up
+
+This was a retry close-out after the prior iteration stopped before running
+the planned s4613 oracle capture. No new experiment or build was run here.
+The retained s4612 fixed capture remains qualified: whole-RDRAM, VI-512,
+source-span, target-span, and pointer-target controls fired; writer
+0x80007670 fired 1,211 times; the target snapshot contained the five copied
+names; the 0x165D9C snapshot was pointer/control data; and all 17 discovered
+pointer-target watches recorded zero writes. Those observations continue to
+rule out the visible pointer targets as the direct source, but do not select
+between another shared table and an alternate writer operand. Artifacts are
+scratch/agent/s4612_retail_source_origin.log and
+scratch/agent/s4612_retail_source_origin_fixed.log. The next discriminator is
+the already specified phase-gated 0x80007670 operand capture, with the same
+positive controls retained. No mitigation was added.
