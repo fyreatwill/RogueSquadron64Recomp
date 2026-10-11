@@ -12,6 +12,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <pthread.h>
 #if !defined(_WIN32)
 #include <dlfcn.h>
 #endif
@@ -4819,7 +4820,40 @@ static void s4262_note_send(uint8_t* rdram, uint32_t mq, uint32_t ra) {
     }
 }
 
+
+// s4580: ring of recv/send events on the rs_malloc lock queue 0x8010FEE0. A recv that blocks and is still
+// blocked 1.5 s later dumps the ring plus the last unmatched holder. Env ROGUESQ_LOG_S4580=1. Diagnostic only.
+namespace s4580 {
+struct Ev { uint32_t seq; char k; uint64_t htid; int gtid; uint32_t sp, ra, c1, c2, pc; int vcb, vca; int flag; };
+static std::mutex m; static Ev ring[128]; static uint32_t n = 0, nr = 0, ns = 0;
+static uint64_t holder_h = 0; static int holder_g = -1; static uint32_t holder_seq = 0;
+static std::atomic<uint32_t> blk_pending{0}; static int dumps = 0;
+static bool on() { static const bool e = [] { const char* v = std::getenv("ROGUESQ_LOG_S4580"); return v && *v && *v != '0'; }(); return e; }
+static void dump(const char* why) {
+    std::lock_guard<std::mutex> lk(m);
+    if (dumps++ >= 8) return;
+    std::fprintf(stderr, "[s4580-dump] %s total=%u recvs=%u sends=%u holder_g=%d holder_h=%lx holder_seq=%u\n", why, n, nr, ns, holder_g, (unsigned long)holder_h, holder_seq);
+    uint32_t cnt = n < 128 ? n : 128;
+    for (uint32_t i = n - cnt; i < n; i++) { const Ev& e = ring[i & 127];
+        std::fprintf(stderr, "[s4580-ev] seq=%u %c htid=%lx gtid=%d sp=%08X ra=%08X [sp+14]=%08X [sp+30]=%08X pc=%08X vc %d->%d flag=%d\n", e.seq, e.k, (unsigned long)e.htid, e.gtid, e.sp, e.ra, e.c1, e.c2, e.pc, e.vcb, e.vca, e.flag); }
+    std::fflush(stderr);
+}
+static uint32_t rec(uint8_t* rdram, recomp_context* ctx, char k, int vcb, int vca, int flag) {
+    { static std::once_flag once; std::call_once(once, [] { std::thread([] { for (int t : {60, 40, 40, 40}) { std::this_thread::sleep_for(std::chrono::seconds(t)); dump("periodic"); } }).detach(); }); }
+    std::lock_guard<std::mutex> lk(m);
+    uint32_t sp = (uint32_t)ctx->r29;
+    Ev& e = ring[n & 127]; e.seq = n; e.k = k; e.htid = (uint64_t)(uintptr_t)pthread_self(); e.gtid = rogue_current_thread_id(rdram) & 63;
+    e.sp = sp; e.ra = (uint32_t)ctx->r31; e.c1 = (uint32_t)MEM_W(0x14, (gpr)(int32_t)sp); e.c2 = (uint32_t)MEM_W(0x30, (gpr)(int32_t)sp);
+    e.pc = (uint32_t)g_rs64_last_guest_pc; e.vcb = vcb; e.vca = vca; e.flag = flag;
+    if (k == 'R') { nr++; holder_h = e.htid; holder_g = e.gtid; holder_seq = n; }
+    if (k == 'S') { ns++; holder_g = -1; holder_h = 0; }
+    return n++;
+}
+static int vc(uint8_t* rdram, uint32_t q) { return (int)TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))q)->validCount; }
+}
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
+    const int s4580_vcb = s4580_q ? s4580::vc(rdram, (uint32_t)ctx->r4) : 0;
     const uint32_t mq_addr = (uint32_t)ctx->r4;
     s4262_note_send(rdram, mq_addr, (uint32_t)ctx->r31);
     rs64_m5_frequency_producer(rdram, ctx, mq_addr, (uint32_t)ctx->r5,
@@ -4842,6 +4876,7 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     } else {
         ctx->r2 = osSendMesg(rdram, (int32_t)ctx->r4, (OSMesg)ctx->r5, (s32)ctx->r6);
     }
+    if (s4580_q) s4580::rec(rdram, ctx, 'S', s4580_vcb, s4580::vc(rdram, (uint32_t)ctx->r4), (int)(s32)ctx->r6); /* PATCH: s4580 */
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_M5_DOWNSTREAM");
         return all && all[0] && all[0] != '0';
@@ -4958,6 +4993,11 @@ extern "C" void rs64_m5_frequency_caller(uint8_t* rdram, recomp_context* ctx,
 }
 
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
+    int s4580_vcb = 0; uint32_t s4580_id = 0;
+    if (s4580_q) { s4580_vcb = s4580::vc(rdram, (uint32_t)ctx->r4);
+        if (s4580_vcb == 0 && (s32)ctx->r6 != 0) { s4580_id = s4580::rec(rdram, ctx, 'B', 0, 0, (int)(s32)ctx->r6) + 1; s4580::blk_pending = s4580_id;
+            std::thread([s4580_id] { std::this_thread::sleep_for(std::chrono::milliseconds(1500)); if (s4580::blk_pending.load() == s4580_id) s4580::dump("recv still blocked 1.5s"); }).detach(); } }
     const uint32_t mq_addr = (uint32_t)ctx->r4;
     const int32_t flag = (s32)ctx->r6;
     const uint64_t tid = GetCurrentThreadId();
@@ -5006,6 +5046,8 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     { static const bool s4264_on = [] { const char* e = std::getenv("ROGUESQ_S4262"); return e && *e && *e != '0'; }();
       if (s4264_on) s4264_exit(rogue_current_thread_id(rdram) & 63); }
     recv_trace_exit(mq_addr, flag, tid, (int32_t)ctx->r2);
+    if (s4580_q) { if (s4580_id) { uint32_t exp = s4580_id; s4580::blk_pending.compare_exchange_strong(exp, 0); }
+        s4580::rec(rdram, ctx, 'R', s4580_vcb, s4580::vc(rdram, (uint32_t)ctx->r4), (int)(s32)ctx->r6); } /* PATCH: s4580 */
 }
 
 // Override upstream's osStopThread_recomp because upstream's osStopThread
