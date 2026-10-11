@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4605 (retail target writer histogram attributes all 76 target-range writes to `0x80007670` in VI 512; one writer is selected). Prior: session 4604 (retail hangar snapshots contain the same five name records in the target span, while the port source span is all `0xFF`; retail-equivalent source location is refuted). Prior: session 4603 (the source-byte witness shows caller `0x80022B44` copying five stable, printable name-like records; `0x8062BA64` supplies `late`). Prior: session 4602 (the caller table selected the five source/destination pairs but semantic identity and retail equivalence remained open). Prior: session 4601 (the widened phase-3 span census saw `rs_strncpy` write the complete `late` bytes at offsets `0x34..0x37` of physical `0x1724C0`; the immediate writer is now selected). Prior text follows.
+Updated for session 4606 (retail source-span snapshot is all `0xFF` in VI 512 while the target span contains the five name records; the alternate input remains unresolved). Prior: session 4605 (retail target writer histogram attributes all 76 target-range writes to `0x80007670` in VI 512; one writer is selected). Prior: session 4604 (retail hangar snapshots contain the same five name records in the target span, while the port source span is all `0xFF`; retail-equivalent source location is refuted). Prior: session 4603 (the source-byte witness shows caller `0x80022B44` copying five stable, printable name-like records; `0x8062BA64` supplies `late`). Prior: session 4602 (the caller table selected the five source/destination pairs but semantic identity and retail equivalence remained open). Prior: session 4601 (the widened phase-3 span census saw `rs_strncpy` write the complete `late` bytes at offsets `0x34..0x37` of physical `0x1724C0`; the immediate writer is now selected). Prior text follows.
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -288,6 +288,20 @@ are legitimate data; nothing was filtered, skipped, or guarded. Artifacts:
 `scratch/agent/s4604_retail_source_table_driven/`, and
 `scratch/agent/s4604_retail_source_table_snapshot/`.
 
+s4606 repeated the retail source/target comparison in one 90-second driven
+oracle run with the whole-RDRAM positive control. The control fired 21,009
+times and the run reached VI 512 at origin `0x006AB400`. The candidate source
+span `0x62B9F8..0x62BA98` was all `0xFF` at the hangar snapshot (160/160
+nonzero bytes), while the target span again received 76 writes, all from
+`0x80007670`; its snapshot retained the same name records. The candidate
+source watch had 10,933 lifetime writes, so this is a phase-local content
+result, not an absent-watch result. This independently refutes the candidate
+span as retail's live input, but does not distinguish an alternate retail
+table from distinct call-site operands or a host-side translation before the
+same guest writer. No mitigation was added. ORIGIN: the compared bytes are
+legitimate name data; nothing was filtered, skipped, or guarded. Artifact:
+`scratch/agent/s4606_retail_source_snapshot.log`.
+
 ## Next steps
 
 One sequence. Closed audits are not items. Item 1 is the next iteration
@@ -311,14 +325,18 @@ unless Step 0 maintenance triggers again.
 0b. **[s4573]** 0x80090FE8 decoded statically: post-increment record alloc (cursor=old+1, record addressed by old), a second legitimate bump path, NOT a phantom +1. H-fe8-phantom refuted; open: H-offset0-7-render, H-hostzero (per-offset table build).
 0. **[s4571, supersedes the s4570 item below]** The "bad voice index" is NOT bad: `lhu 0($s1)` (0x80090ED8) reads a per-buffer render-record cursor (0x80149710+2*buf), reset once per buffer at 0x8009135C; mix runs in 0xC0-sample chunks from 3 call sites, table cap=(count+1)*3 records, so idx>=count is the normal chunk-2+ case (3/3 arms, control present). Records idx<count read all-zero pre/post; chunk-2+ records hold deterministic non-zero words written by guest code AFTER allocation (zeroing tables at alloc leaves them unchanged and the s4534 bad jal/abort persist; single replicate, arm C died early). Next: dynamic guest-store watch on [tbl0, tbl0+cap*0x88) naming the writer PC of chunk-2+ records, and log words 8..33 for ASCII shape (see NEXT.md, HYPOTHESIS-ID m5-audio-destub).
 0. **[s4570, supersedes item 1's framing]** No (count>=30, base 0x801714D0) is ever published (3/3 arms: pairs 20,17,16,15,18 only), so voice 30 is a bad INDEX (single-source, one recipe), not a text-corrupted record. Index comes from `lhu 0($s1)` at 0x80090ED8 in `musyxMixActiveVoices`; next is to log that list entry when index >= count (see NEXT.md, HYPOTHESIS-ID m5-audio-destub).
-1. **[s4605] Identify the retail input to the target writer.** The retail
+1. **[s4606, extends s4605] Identify the retail input to the target writer.** The retail
 512 phase passed the whole-RDRAM control and recorded all 76 target-range
 writes from one guest PC, `0x80007670`; H-composed-writers and H-host-path are
 refuted for this target range. The immediate writer is the same
-`rs_strncpy`-family routine seen in the port, but retail's source span is not
-the port source span. Next: locate the alternate source feeding that writer
-using a phase-gated source/operand watch or static/oracle call-site census,
-with an independent positive control. Do not add a mitigation.
+`rs_strncpy`-family routine seen in the port, but the candidate source span is
+all `0xFF` at the hangar snapshot despite 10,933 lifetime writes. Next:
+capture the source operand (`$a1`) at the phase-gated `rs_strncpy` entry and
+compare it with the five port source addresses. A shared alternate operand
+selects H-alt-source-table; five distinct literal or derived operands select
+H-direct-callsite; a non-RDRAM or unstable operand keeps H-host-translation
+open. The whole-RDRAM control and target-span writer are required in the same
+run. Do not add a mitigation.
 HYPOTHESIS-ID: m5-audio-destub.
 1b. **[s4568, answered by s4569]** Poller on node copy 0x179A64 saw `B04319B8 8019BC90` -> `6C637265 801AB990` in one step at 141.7 s (pair written together; guest_pc 0x80001B08 is a stale wrapper PC, not an attribution). Arm C never mashed (no result). Real writer PC still unnamed: needs a guest-store hook, not the host poller.
 1. **[s4567] Name the writer of the ASCII cart word 0x6C637265 in the post-hangar odd-DMA node** (HYPOTHESIS-ID: m5-audio-destub). s4567 (scan fixed to match guest word): node is {len 0x300, cart 0x6C637265, ram 0x8019C990} in 3 RDRAM copies (0x1120B0, 0x179A64, 0x17DBC8, last followed by ASCII 'late'); Start-mash triggers it, a single Start reaches hangar clean (single-run per arm). Next: write watch on those copies for the first writer PC, plus a hangar-only Start-count arm. See NEXT.md.

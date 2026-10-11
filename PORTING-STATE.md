@@ -153475,3 +153475,18 @@ H-one-writer and rules out composed target writers and a host-only target path
 for this span. It does not locate the alternate retail source feeding that
 writer; the port candidate source remains refuted. No build or mitigation was
 made. Artifact: `scratch/agent/s4605_retail_target_writer/retail.log`.
+
+## Session 4606 (2026-10-11) — retail candidate source span is empty at hangar
+
+Ran one 90-second driven retail oracle capture with whole-RDRAM, candidate-source,
+and target-span controls plus phase snapshots. The whole-RDRAM positive control
+fired 21,009 times; the run reached VI 512 at origin `0x006AB400`. The candidate
+source span `0x62B9F8..0x62BA98` was all `0xFF` at the hangar snapshot (160/160
+nonzero bytes), while the target span received 76 writes, all from `0x80007670`,
+and its snapshot retained the same five name records. The candidate source watch
+had 10,933 lifetime writes, so the phase-local all-`FF` result is not an absent
+watch. This independently refutes the candidate span as retail's live input,
+but does not distinguish an alternate retail table from distinct call-site
+operands or a host-side translation before the same guest writer. No mitigation
+was added. ORIGIN: the compared bytes are legitimate name data; nothing was
+filtered, skipped, or guarded. Artifact: `scratch/agent/s4606_retail_source_snapshot.log`.
