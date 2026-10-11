@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4625.
+archive sections. Updated for session 4626.
 
 ## Current state
 
@@ -45,21 +45,17 @@ and legitimacy of any wild value must be named before a guard is considered.
 The s4619 route qualification reached the required hangar origin on both
 arms: the port logged 512-wide `0x006AB400`, while retail independently logged
 the same origin and its whole-RDRAM positive control retained 10,000 hits.
-The port M4 instrument emitted origin-change summaries for both transient and
-hangar origins but zero accumulator rows, including zero rows at
-`0x006AB400`. Because the M4 instrument has no same-run positive control, this
-is an instrument-boundary null, not evidence for arithmetic, VGE/store, or
-source divergence. The paired discriminator remains unevaluable.
-
-The s4620 M4 capture qualified the instrument's stage-1 positive control: 64
-rows fired with changing accumulator state. The target stages also fired (519
-rows each for stages 10–12 and 491 stage-13 rows), but all rows were phase 3
-(transient 640), with no hangar-phase row. The retail oracle independently
-passed its whole-RDRAM control (10,000 callbacks) but reached title 1024 and
-not hangar in its 60-second arm. The s4621 repeat emitted 2,112 target rows,
-but the known odd-physical-address PI abort occurred before a hangar row. The
-M4 arithmetic/VGE/store/source discriminator is therefore still unevaluable
-after four consecutive attempts; no arm selected a hypothesis.
+The s4620 M4 capture qualified the stage-1 control but exhausted its
+run-lifetime target cap in transient phase 3; that null was invalid for the
+hangar discriminator. The corrected s4626 capture set
+`ROGUESQ_M4_PHASE_FROM=5`: the stage-1 control fired 64 rows, hangar phase 5
+produced 517 rows each at stages 10–12 and 497 stage-13 rows, and the port
+remained crash/abort free. The independent retail oracle reached hangar and
+its whole-RDRAM control hit 10,000. A local reconstruction matched VMADH for
+all 4,128 paired lanes with zero mismatches; 31 lanes changed between
+post-VMADH and post-VGE. This is single-source port evidence selecting the
+VGE/store boundary arm, not a retail arithmetic proof. Artifacts are in
+`scratch/agent/s4626_m4_accumulator_boundary_fixed/`.
 
 Session 4622 audited both PI guest entry arms and the converged `do_dma` path
 with one batched trace. The real-audio/LLE route reached title 1024 but not
@@ -123,10 +119,11 @@ not evidence that the odd request is globally impossible. Artifacts are in
 
 ## Next steps
 
-1. Re-run the M4 capture on the now-qualified route reaching
-   `0x006AB400`; retain the stage-1 positive control and do not interpret
-   transient phase-3 rows. Join arithmetic/VGE/store/source rows in the same
-   capture.
+1. Ground-truth the selected M4 VGE/store boundary with one new batched
+   capture: retain the stage-1 control, phase-5 VMADH/VGE rows, and exact
+   record-store bytes, then compare the stored record against the post-VGE
+   lanes. Do not revisit arithmetic; the s4626 VMADH result matched 4,128/4,128
+   lanes.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

@@ -153798,3 +153798,25 @@ route. This rules out H-post-hangar-trigger for this route and provisionally
 selects H-missing-trigger/alternate-route; it does not prove the odd request
 impossible globally. No alignment, skip, or mitigation was added. Artifacts:
 `scratch/agent/s4625_post_hangar/`.
+
+## Session 4626 (2026-10-11) — qualified M4 VGE/store boundary
+
+Built the Debug target and ran the prescribed real-audio/LLE-ungated/LLE-solo/
+spin-yield port arm with the retail Rice oracle in parallel. The first capture
+was invalid for the M4 discriminator because its run-lifetime target cap was
+exhausted by phase-3 rows: the stage-1 control fired 64 rows, but all 2,048
+target rows preceded hangar. The fixed capture set `ROGUESQ_M4_PHASE_FROM=5`
+while retaining the same control and cap. It reached hangar
+`0x006AB400/512` without crash or abort and produced 517 rows each at stages
+10–12 and 497 stage-13 rows; the stage-1 control still fired 64 rows.
+
+A local VMADH reconstruction matched all 4,128 paired lanes with zero
+mismatches. Thirty-one lanes changed between post-VMADH and post-VGE, so the
+measured port boundary selects the VGE/store arm and closes arithmetic for
+this path. The retail oracle independently reached the hangar origin and its
+whole-RDRAM positive control reached 10,000 callbacks. This is single-source
+port evidence for the VGE/store selection, not retail arithmetic proof. It
+rules out the instrument-boundary null and active VMADH mismatch hypotheses
+for the qualified port route. Artifacts:
+`scratch/agent/s4626_m4_accumulator_boundary_fixed/`; the invalid cap run is
+in `scratch/agent/s4626_m4_accumulator_boundary_run2/`.
