@@ -1726,9 +1726,20 @@ static S4307Writer g_s4307_last_writer{};
 extern "C" void rs64_s4307_note_writer(uint32_t ordinal, uint32_t pc,
                                          uint32_t addr, uint32_t requested,
                                          uint32_t post);
+static void rs64_s4569_note(const char* kind, char w, uint32_t pc, uint32_t addr) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4569"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    const uint32_t p = addr & 0x1FFFFFFFu;
+    const bool tgt = (p >= 0x179A58u && p < 0x179A70u) || (p >= 0x1120A8u && p < 0x1120C0u) || (p >= 0x17DBC0u && p < 0x17DBD8u);
+    static std::atomic<unsigned> ctl{0}, rows{0};
+    if (!tgt) { if (p >= 0x17C000u && p < 0x180000u && ctl.fetch_add(1) == 0) std::fprintf(stderr, "[s4569-control] first non-target store in 0x17C000..0x180000 %s %c pc=%08X addr=%08X vi_w=%u\n", kind, w, pc, addr, rs64_vi_committed_width()); return; }
+    if (rows.fetch_add(1) > 4000) return;
+    std::fprintf(stderr, "[s4569-W] %s %c pc=%08X addr=%08X vi_w=%u\n", kind, w, pc, addr, rs64_vi_committed_width());
+}
 extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, uint32_t value) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
+    rs64_s4569_note("st", width, pc, addr);
     (void)value;
     const uint32_t phys = addr & 0x1FFFFFFFu;
     if (phys >= 0x17C000u && phys < 0x17D000u) {
@@ -1812,6 +1823,7 @@ extern "C" void rs64_s4299_swlr(char w, const char* fn, uint32_t line, uint32_t 
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4299"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
     g_s4299_swlr_total++;
+    rs64_s4569_note(w == 'L' ? "swl" : "swr", w, line, addr);
     uint32_t p = addr & 0x1FFFFFFFu;
     if (p < 0x17C000u || p >= 0x180000u) return;
     S4299Ent& e = g_s4299_ring[g_s4299_total & ((1u << 20) - 1)];

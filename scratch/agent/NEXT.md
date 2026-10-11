@@ -1,4 +1,5 @@
-# NEXT: name the real guest writer of the {cart=0x6C637265, ram=0x801AB990} pair at RDRAM 0x179A64
+# NEXT: find who writes ASCII text into the voice record read by musyxRenderVoiceSamples (a3 of fillSampleStreamRange)
 HYPOTHESIS-ID: m5-audio-destub
-Established (s4568): the pair is written as one coherent 8-byte group at ~141.7 s of a Start-mash run (host poller; its guest_pc is unreliable). Hypotheses: H-array-stomp (producer indexes past its list), H-bad-source (copy from an entry already holding ASCII), H-retail-same.
-Discriminator: guest-store hook (in the fixup scripts, not generated files) on stores of word 0x6C637265, logging true guest pc + ra + base register, one build, one mash run, plus a control hook on a known value.
+Established (s4569): node copies are written only by legit builder 0x8008FB64..78 / copier FE98; the source node's w8/wC are ASCII ('wing','lcre'/'late'), size+link intact. a3 = *(s1+0x34)+0x100 at one of 4 call sites in musyxRenderVoiceSamples (funcs_24.c lines ~2958/3046/3217/3285; the +0x100 site is 0x8009023C-50).
+Hypotheses: H-voice-record-reused (voice record memory freed/reused by a text allocation), H-bad-voice-index (s1 points past the voice array into a string table), H-other-callsite (ASCII a3 comes from one of the other three call sites).
+Discriminator: in a fixup/apply script (not by hand-editing funcs_24.c) hook before each of the 4 jal fillSampleStreamRange: log call-site id, s1, a3, 0x40 bytes at s1, only when a3 top byte in 0x20..0x7E (+ one normal control per site), env-gated, budget scoped to vi_w>=512. Then store-hook the s1 address (reuse tools/apply_s4569_nodecopy_watch.py ranges). Run 3 replicates via scratch/agent/s4569_storewatch.sh pattern.
