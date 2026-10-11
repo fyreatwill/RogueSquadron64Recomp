@@ -153606,3 +153606,22 @@ scratch/agent/s4612_retail_source_origin.log and
 scratch/agent/s4612_retail_source_origin_fixed.log. The next discriminator is
 the already specified phase-gated 0x80007670 operand capture, with the same
 positive controls retained. No mitigation was added.
+
+## Session 4614 (2026-10-11) — phase-gated the retail writer across both 512 origins
+
+Ran the planned Rice-qualified retail oracle capture, then repeated it with
+both 512-wide origins and finally with only the writer execution watch. Every
+run passed the whole-RDRAM positive control, reached VI 512, retained the
+source and target snapshots, and armed all 17 dynamically discovered pointer
+targets; those targets all recorded zero writes. The target snapshot still
+contained the five names and the `0x165D9C` source remained pointer/control
+data. `0x80007670` had 1,211 lifetime executions, but no phase-detail rows at
+either `0x006AB400` or `0x006AB800`. The companion `0x80007640` phase watch
+did emit rows in the same capture, so this is a qualified absence of the
+writer in the armed 512 phase, not an instrument-wide zero. It selects
+H-control-invalid provisionally: the name copy occurs before or outside the
+selected 512 bucket, so the writer operand remains unevaluated. It does not
+select an alternate operand source. No mitigation was added. Artifacts:
+`scratch/agent/s4613_retail_writer_operand.log`,
+`scratch/agent/s4613_retail_writer_operand_fixed.log`, and
+`scratch/agent/s4613_retail_writer_operand_final.log`.

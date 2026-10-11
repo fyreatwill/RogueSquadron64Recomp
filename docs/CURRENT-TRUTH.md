@@ -7,7 +7,7 @@ s4495 maintenance pass is [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §57
 [M5-CURRENT-TRUTH-ARCHIVE-s4269.md](M5-CURRENT-TRUTH-ARCHIVE-s4269.md)
 and the per-site `docs/M3-S*.md` notes.
 
-Updated for session 4612 (the live retail writer control is `0x80007670`; its 512-phase target snapshot contains the five names, while the 17 visible pointer targets have zero writes and the source base is a pointer/metadata table). Prior: session 4611 (the expanded retail base `0x165D9C` census found 17 later KSEG0 pointer targets; none contains the five copied records or `late`, though the caller-PC control was zero in this run). Prior: session 4609 (the first eight discovered pointers from retail base `0x165D9C` contain code/control data and craft-name metadata, not the five copied records; later pointer fields remain to be covered). Prior: session 4608 (the retail operand base `0x165D9C` snapshots as metadata and pointer-backed data, not five contiguous name records; flat-table layout is refuted and derived/pointer-backed sourcing remains open). Prior: session 4607 (retail `$a1` at the phase-gated `rs_strncpy` entry is a repeated shared RDRAM table operand, selecting the alternate-source-table hypothesis). Prior: session 4606 (retail source-span snapshot is all `0xFF` in VI 512 while the target span contains the five name records; the alternate input remains unresolved). Prior: session 4605 (retail target writer histogram attributes all 76 target-range writes to `0x80007670` in VI 512; one writer is selected). Prior: session 4604 (retail hangar snapshots contain the same five name records in the target span, while the port source span is all `0xFF`; retail-equivalent source location is refuted). Prior: session 4603 (the source-byte witness shows caller `0x80022B44` copying five stable, printable name-like records; `0x8062BA64` supplies `late`). Prior: session 4602 (the caller table selected the five source/destination pairs but semantic identity and retail equivalence remained open). Prior: session 4601 (the widened phase-3 span census saw `rs_strncpy` write the complete `late` bytes at offsets `0x34..0x37` of physical `0x1724C0`; the immediate writer is now selected). Prior text follows.
+Updated for session 4614 (retail phase-gated `0x80007670` detail emitted no writer rows even with both 512 origins; the same run's `0x80007640` control emitted rows, so the five-name copy is not live in the armed 512 phase and its operand was not observed). Prior: session 4612 (the live retail writer control is `0x80007670`; its 512-phase target snapshot contains the five names, while the 17 visible pointer targets have zero writes and the source base is a pointer/metadata table). Prior: session 4611 (the expanded retail base `0x165D9C` census found 17 later KSEG0 pointer targets; none contains the five copied records or `late`, though the caller-PC control was zero in this run). Prior: session 4609 (the first eight discovered pointers from retail base `0x165D9C` contain code/control data and craft-name metadata, not the five copied records; later pointer fields remain to be covered). Prior: session 4608 (the retail operand base `0x165D9C` snapshots as metadata and pointer-backed data, not five contiguous name records; flat-table layout is refuted and derived/pointer-backed sourcing remains open). Prior: session 4607 (retail `$a1` at the phase-gated `rs_strncpy` entry is a repeated shared RDRAM table operand, selecting the alternate-source-table hypothesis). Prior: session 4606 (retail source-span snapshot is all `0xFF` in VI 512 while the target span contains the five name records; the alternate input remains unresolved). Prior: session 4605 (retail target writer histogram attributes all 76 target-range writes to `0x80007670` in VI 512; one writer is selected). Prior: session 4604 (retail hangar snapshots contain the same five name records in the target span, while the port source span is all `0xFF`; retail-equivalent source location is refuted). Prior: session 4603 (the source-byte witness shows caller `0x80022B44` copying five stable, printable name-like records; `0x8062BA64` supplies `late`). Prior: session 4602 (the caller table selected the five source/destination pairs but semantic identity and retail equivalence remained open). Prior: session 4601 (the widened phase-3 span census saw `rs_strncpy` write the complete `late` bytes at offsets `0x34..0x37` of physical `0x1724C0`; the immediate writer is now selected). Prior text follows.
 maintenance pass that left this file at one backlog sequence. Item 2
 is the sweep-revisit target the iteration contract calls "Next steps
 #2".
@@ -351,6 +351,23 @@ table from the writer's alternate operand. No mitigation was added.
 ORIGIN: observation-only; no value was filtered, skipped, or guarded. Artifact:
 `scratch/agent/s4612_retail_source_origin_fixed.log`.
 
+## s4614 finding (single-source oracle; phase writer absent)
+
+The Rice-qualified capture passed whole-RDRAM, VI-512, source-span,
+target-span, and all 17 pointer-target controls. The source snapshot remained
+pointer/control data and the target snapshot contained the five names; every
+pointer-target watch was zero. `0x80007670` had 1,211 lifetime executions,
+but no phase-detail rows at either 512 origin (`0x006AB400` or
+`0x006AB800`). The companion `0x80007640` phase execution control did emit
+rows in the same capture, so this is a qualified zero for the writer in the
+armed 512 phase, selecting H-control-invalid: the copied names predate or sit
+outside this phase, and the writer operand was not observed. It does not
+select the alternate operand hypotheses. No mitigation was added. ORIGIN:
+observation-only; no value was filtered, skipped, or guarded. Artifacts:
+`scratch/agent/s4613_retail_writer_operand.log`,
+`scratch/agent/s4613_retail_writer_operand_fixed.log`, and
+`scratch/agent/s4613_retail_writer_operand_final.log`.
+
 ## Next steps
 
 One sequence. Closed audits are not items. Item 1 is the next iteration
@@ -374,14 +391,15 @@ unless Step 0 maintenance triggers again.
 0b. **[s4573]** 0x80090FE8 decoded statically: post-increment record alloc (cursor=old+1, record addressed by old), a second legitimate bump path, NOT a phantom +1. H-fe8-phantom refuted; open: H-offset0-7-render, H-hostzero (per-offset table build).
 0. **[s4571, supersedes the s4570 item below]** The "bad voice index" is NOT bad: `lhu 0($s1)` (0x80090ED8) reads a per-buffer render-record cursor (0x80149710+2*buf), reset once per buffer at 0x8009135C; mix runs in 0xC0-sample chunks from 3 call sites, table cap=(count+1)*3 records, so idx>=count is the normal chunk-2+ case (3/3 arms, control present). Records idx<count read all-zero pre/post; chunk-2+ records hold deterministic non-zero words written by guest code AFTER allocation (zeroing tables at alloc leaves them unchanged and the s4534 bad jal/abort persist; single replicate, arm C died early). Next: dynamic guest-store watch on [tbl0, tbl0+cap*0x88) naming the writer PC of chunk-2+ records, and log words 8..33 for ASCII shape (see NEXT.md, HYPOTHESIS-ID m5-audio-destub).
 0. **[s4570, supersedes item 1's framing]** No (count>=30, base 0x801714D0) is ever published (3/3 arms: pairs 20,17,16,15,18 only), so voice 30 is a bad INDEX (single-source, one recipe), not a text-corrupted record. Index comes from `lhu 0($s1)` at 0x80090ED8 in `musyxMixActiveVoices`; next is to log that list entry when index >= count (see NEXT.md, HYPOTHESIS-ID m5-audio-destub).
-1. **[s4612] Identify the retail writer operand after pointer-target exclusion.** The
+1. **[s4614] Locate the five-name copy before the 512 phase.** The
 same-run oracle controls passed; `0x80007670` is live (1,211 lifetime hits),
-the target snapshot contains the five names, and all 17 visible pointer
-targets have zero writes. H-other-shared-table predicts a distinct RDRAM
-source operand at the phase-gated writer; H-pointer-no-records predicts a
-stable alternate operand that is not one of the visible targets. Add
-`--pc-phase-log-width 0x6ab400:512` for `0x80007670` and retain the source,
-target, pointer-target, and whole-RDRAM controls. Do not add a mitigation.
+but no phase-detail rows appeared at either 512 origin; the same-run
+`0x80007640` control did emit rows. The target snapshot contains the five
+names and all 17 visible pointer targets have zero writes. Run one 90-second
+Rice capture adding `--pc-hist-phase 0x00790400:1024` while retaining the
+source, target, pointer-target, and whole-RDRAM controls. Title-phase writer
+rows select an earlier copy phase; zero title rows leaves the copy outside
+both selected buckets. Do not add a mitigation.
 HYPOTHESIS-ID: m5-audio-destub.
 1a. **[s4608, extends s4607] Resolve the retail table's pointer-backed records.** The retail
 512 phase passed the whole-RDRAM positive control and the target span received 76
