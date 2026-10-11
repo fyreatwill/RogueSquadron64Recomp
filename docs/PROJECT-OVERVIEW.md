@@ -5123,3 +5123,56 @@ The s3636
 `attachedMeshOverlayNpcHandler` `0x80054344` Gap in §56 stays open and is
 not this frontier.
 
+## 59. Current-truth maintenance archive s4590–s4615
+
+This section preserves the durable evidence removed from the compact
+operational snapshot during the s4616 maintenance pass.
+
+### Odd DMA and audio frontier
+
+s4590–s4595 established that the post-hangar odd PI DMA carries the ASCII
+tag `lcre`, stored in the cart field of a `{length, tag, ram}` record. The
+port writer is the FE98 path (`fillSampleStreamRange` -> `0x8008FDC0` ->
+`0x8008FE98`), and the malformed value is derived from caller input, not a
+resource-key lookup or stale cache node. Retail's corresponding target
+range contains B0xxxxxx pointers, providing the independent witness that
+the port ASCII value is illegitimate. The immediate port source is
+`musyxRenderVoiceSamples` call site `0x800903F0`, where voice `+0x34` is
+`late`; no mitigation was added.
+
+s4553–s4564 and s4570–s4588 narrowed the recurring audio failures. The
+render-record cursor legitimately permits chunk-2+ records; their words
+0..7 are inert for the hooked render readers, while later words are written
+by render code. The count-32 window is a sixth `allocateSongChannelArray`
+whose count is published before its base and whose allocation does not
+return before the mixer runs. The observed starvation was partly an
+instrument artifact (`ROGUESQ_LOG_S4581` backtrace symbolization). The
+instrument-free arms still die at the odd-DMA assertion, with the bad call
+issued by tid 1; the earlier “audio mixer thread issues the DMA” claim is
+unproven. The writer of the 0x8001E2C0 clear-loop store and the allocator
+ownership chain remain explanation work, not permission for a skip.
+
+### Retail five-name source investigation
+
+s4591–s4615 provide a qualified but single-source oracle trail. Retail
+reaches the VI-512 hangar phase and passes the whole-RDRAM positive control.
+The target span contains five stable name records, while the candidate
+source span at physical `0x165D9C` is pointer/control metadata. Seventeen
+visible KSEG0 pointer targets contain no copies of the five records. The
+live writer is `0x80007670` (`rs_strncpy`-family); its companion control
+`0x80007640` fires. Phase-bucketed target-writer rows are absent in the
+armed 512 buckets and in the title bucket, although the title snapshot
+already contains the records. Thus the names predate those buckets or are
+copied through an unarmed earlier/alternate path. The next discriminator
+is the all-phase writer histogram in `scratch/agent/NEXT.md`; no value was
+filtered or guarded.
+
+### Other durable boundaries
+
+The M3 `jal rs_free` idiom audit is closed through s4502, with the
+`attachedMeshOverlayNpcHandler` gap still separate. The wild-width
+writeback remains parked as a named garbage-region writer, not a mitigation
+target. M5 audio steps 1–10 are closed or conditionally unnecessary; do not
+reopen them without a new discriminator. The external retail-entry and M4
+accumulator boundaries remain parked. M3 patch-runtime qualification is
+blocked on the MIPS toolchain and PatchesLib.

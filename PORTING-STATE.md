@@ -153642,3 +153642,12 @@ copy in another VI bucket or before the watched route. No mitigation was
 added. Artifacts: scratch/agent/s4615_retail_writer_title_phase_fixed.log
 and scratch/agent/s4615_retail_writer_title_phase.log. The next work unit is
 a multi-origin 320/640/1024/512 writer census with --pc-hist-watch 1.
+
+## Session 4616 (2026-10-11) — compacted current truth and migrated durable evidence
+
+Maintenance iteration. `docs/CURRENT-TRUTH.md` was 60,587 bytes and 536
+lines, so no experiment was run. Durable s4590–s4615 evidence was migrated to
+`docs/PROJECT-OVERVIEW.md` §59, and CURRENT-TRUTH was reduced to 5,483 bytes
+and 99 lines with one monotonic backlog and the all-phase retail writer census
+as the next work unit. This rules out no new runtime hypothesis; it preserves
+the prior evidence archive while keeping the operational state compact.

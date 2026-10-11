@@ -1,4 +1,4 @@
-# NEXT: locate the five-name copy across boot and intro phases
+# NEXT: locate the five-name copy across boot and intro phases (after s4616 maintenance)
 HYPOTHESIS-ID: m5-audio-destub
 
 The s4615 fixed capture passed whole-RDRAM, title VI 1024, hangar VI 512,
