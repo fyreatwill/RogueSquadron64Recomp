@@ -153536,3 +153536,14 @@ later pointer fields such as `0x80154B20`, so H-derived-records remains open.
 It rules out the first eight targets as the direct five-record source. No
 mitigation was added. ORIGIN: observation-only; no value was filtered, skipped,
 or guarded. Artifact: `scratch/agent/s4609_retail_pointer_targets.log`.
+
+## Session 4610 (2026-10-11) — checkpointed the partial pointer-target result
+
+This was a retry close-out after the s4609 work unit had already run and
+stopped before the exit contract was refreshed. No experiment was rerun. The
+existing artifact confirms the positive whole-RDRAM control, VI-512 hangar
+phase, caller execution control, and target-span control all fired. The eight
+captured pointer targets lacked the five copied records, but the cap stopped
+before later fields, so no stronger conclusion is justified. NEXT.md now
+resumes with the expanded pointer census and its explicit discriminator. No
+mitigation was added and no conclusion in CURRENT-TRUTH changed.

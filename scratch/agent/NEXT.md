@@ -1,4 +1,4 @@
-# Cover the remaining pointer fields in the retail alternate source table
+# RESUME: cover the remaining pointer fields in the retail alternate source table
 HYPOTHESIS-ID: m5-audio-destub
 
 The s4609 oracle run passed the whole-RDRAM control (12,155,017 callbacks),
@@ -22,9 +22,24 @@ keeps H-other-shared-table open. The positive control, VI-512 phase,
 execution-hit count, and target-span writes must all be present. Do not add a
 mitigation.
 
-Exact preparation/run:
+Resume state: s4609's eight-target run is complete and must not be rerun. The
+artifact is `scratch/agent/s4609_retail_pointer_targets.log`; its positive
+control, VI-512 phase, caller execution control, and target-span control all
+passed. No failed run or missing artifact needs recovery.
 
-1. Build the oracle with `tools/oracle/build.sh`.
-2. Run one 90-second capture with the same whole-RDRAM, target-span, source
-   span, and `0x80007640` controls, plus the expanded pointer census; write to
-   `scratch/agent/s4610_retail_pointer_targets.log`.
+Exact preparation/run for the next iteration:
+
+1. In `tools/oracle/rs64_oracle.c`, raise
+   `MAX_PHASE_POINTER_TARGETS` from 8 to 64 with `apply_patch`; this is the
+   required bounded-cap change before rebuilding.
+2. Build the oracle with `tools/oracle/build.sh`.
+3. Run one 90-second capture, preserving the same controls and using the
+   expanded pointer census. Use:
+
+   `tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 90 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-write 0x1724c0:0x17250c --watch-write 0x165d9c:0x165e9c --watch-pc 0x80007640 --pc-phase-log 0x6ab400 --phase-pointer-watch 2:0x400 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150 > scratch/agent/s4610_retail_pointer_targets.log 2>&1`
+
+   Confirm the positive control, VI-512 phase, execution-hit count, and
+   target-span writes before interpreting pointer-target rows. A target with
+   the five copied records selects H-derived-records; all expanded targets
+   lacking them selects H-pointer-no-records and leaves H-other-shared-table.
+   Do not add a mitigation.
