@@ -153442,3 +153442,26 @@ retail source-table equivalence remains open. The source/destination dump was
 diagnostic-only. ORIGIN: the copied records are legitimate name data; no
 value was filtered, skipped, or guarded. Artifacts:
 `scratch/agent/s4603_source_records_fixed/`.
+
+## Session 4604 (2026-10-11) — retail target bytes use a different source location
+
+Ran the independent retail oracle with the whole-RDRAM positive control,
+candidate source span `0x62B9F8..0x62BA98`, and target span
+`0x1724C0..0x17250C`. The first undriven run was invalid because it stayed in
+the 640 intro/title path; the fixed driven run passed the positive control,
+reached VI 512 at origin `0x006AB400`, and ran 3,580 VI in 60 seconds.
+
+The phase-snapshot arm captured candidate source span as all `0xFF` in the
+512 hangar (160/160 nonzero bytes), while the target span contained the same
+five name-like records seen in the port, including `late` at offsets
+`0x34..0x37`. Target writes totaled 76 and candidate-source writes totaled
+10,933; the post-value arm also passed the control. This refutes
+H-retail-equivalent use of the port source span and selects
+H-retail-different-table as the working model over H-port-only-source: retail
+publishes the same records through another source or direct literals. It does
+not locate that alternate source or identify the retail target writer yet.
+No mitigation was added. ORIGIN: the compared bytes are legitimate name data;
+nothing was filtered, skipped, or guarded. Artifacts are under
+`scratch/agent/s4604_retail_source_table/`,
+`scratch/agent/s4604_retail_source_table_driven/`, and
+`scratch/agent/s4604_retail_source_table_snapshot/`.
