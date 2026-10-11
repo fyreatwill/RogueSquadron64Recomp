@@ -153820,3 +153820,24 @@ rules out the instrument-boundary null and active VMADH mismatch hypotheses
 for the qualified port route. Artifacts:
 `scratch/agent/s4626_m4_accumulator_boundary_fixed/`; the invalid cap run is
 in `scratch/agent/s4626_m4_accumulator_boundary_run2/`.
+
+## Session 4627 (2026-10-11) — rejected M4 RDRAM store witness
+
+Built the Debug target and ran the canonical real-audio/LLE-ungated/LLE-solo/
+spin-yield port arm with `ROGUESQ_LOG_M4_ACCUM=1`, the stage-1 control, and
+`ROGUESQ_M4_PHASE_FROM=5`. The positive control fired 64 rows and the phase-5
+target produced 517 stage-10, 517 stage-11, 517 stage-12, and 497 stage-13
+rows, with no crash or abort. A first retail arm was invalid because it had no
+input schedule; its whole-RDRAM control fired but it did not reach the target
+hangar origin. The fixed Rice oracle arm used the verified Start schedule,
+reached 512-wide `0x006AB400`, and its whole-RDRAM control reached 10,000
+callbacks.
+
+The stage-13 `record=` field did not provide the requested second boundary:
+the probe treats `r9` (`0x670..0x6C0`) as an RDRAM address, but this operand is
+the RSP DMEM record base. Therefore the apparent record mismatch/agreement is
+invalid and selects H-instrument-boundary; it does not select H-vge, H-store,
+or H-source. This rules out only the positive-control/phase-reachability null
+for the qualified route. The next probe must read the actual DMEM backing
+store with RSP byte-lane semantics. Artifacts:
+`scratch/agent/s4627_m4_vge_store_ground_truth/`.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4626.
+archive sections. Updated for session 4627.
 
 ## Current state
 
@@ -84,6 +84,16 @@ or alternate-route explanation for the separate recurring odd request; it is
 not evidence that the odd request is globally impossible. Artifacts are in
 `scratch/agent/s4625_post_hangar/`.
 
+Session 4627 requalified the M4 port arm with the stage-1 control and
+phase-5 target budget: 64 control rows and 517/517/517/497 rows at stages
+10/11/12/13. The corrected retail Rice oracle independently reached the
+512-wide `0x006AB400` hangar origin and its whole-RDRAM control reached 10,000
+callbacks. The apparent stage-13 `record=` bytes are not usable store
+evidence: `r9` is the DMEM record base (`0x670..0x6C0`), but the probe reads
+`rdram[r9+0x18]`. This selects H-instrument-boundary for the store
+discriminator; no VGE/store conclusion is advanced beyond s4626's
+single-source VGE-boundary selection.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -119,11 +129,12 @@ not evidence that the odd request is globally impossible. Artifacts are in
 
 ## Next steps
 
-1. Ground-truth the selected M4 VGE/store boundary with one new batched
-   capture: retain the stage-1 control, phase-5 VMADH/VGE rows, and exact
-   record-store bytes, then compare the stored record against the post-VGE
-   lanes. Do not revisit arithmetic; the s4626 VMADH result matched 4,128/4,128
-   lanes.
+1. Repair the M4 probe's store witness in one batched capture: read the
+   post-`sdv`/`ssv` bytes from the RSP DMEM backing store at `r9+0x18` (with
+   correct RSP byte lanes), retain the stage-1 control and phase-5 stages
+   10–13, and compare those bytes against stage-12 `v6`. Do not revisit
+   arithmetic; s4626 matched VMADH on 4,128/4,128 lanes and s4627's port
+   route requalified the same stage counts.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable
