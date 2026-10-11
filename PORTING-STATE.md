@@ -153157,3 +153157,11 @@ Result (arm A; B/C same row counts in the summary): in BOTH classes words 0..7 a
 This refutes H-offset0-7-render (no render PC writes words 0..7; 0x8008FF04..9C own words 10..12) and H-hostzero (6 scattered stores, not a sweep). It selects: words 0..7 of chunk-2+ records are heap residue nothing in the render path initializes, so the ASCII pointer source is stale file data in recycled heap. Not decided: whether any PC READS words 0..7 (store table cannot say).
 Next discriminator: a read-side watch (loads of words 0..7 of chunk2+ records by PC); if no render PC reads them the residue is inert and the thread closes.
 ORIGIN: diagnostic counter only, no mitigation added.
+
+## Session 4575 (2026-10-11) — read-side watch: no genuine load of chunk-2+ voice-record words 0..7 in the covered render functions
+Ran: added rs64_s4575_load (src/main/upstream_compat.cpp), called from the existing rs64_s4307_synth_read load hook (generated loads in musyxSynthFrame / MixActiveVoices / RenderVoiceSamples / fillSampleStreamRange; BU/HU/W only), keyed (cls, word, PC), env ROGUESQ_LOG_S4575=1. Scripts scratch/agent/s4575_build.sh, s4575_loadwatch.sh (3 arms), s4575_an.py. Per-arm totals: loads inrange~172k, chunk2+~48k (arms agree within 1%).
+Positive control: genuine record loads fire in both classes (chunk2+ word 18 via 0x80090270 x3199, word 13 via 0x80090330; in-range word 18 x77258).
+Result: every hit on words 0..7 (and all odd words in chunk2+ rows) comes from PCs 0x8008FABC/FB98/FBE0/FCDC/FD00/FD4C/FD54/FD9C and 0x80090F28/FEC. Source check: all are lw rX, off(rX) with destination == base register, so the hook (which evaluates ADD32(base, off) AFTER the load) reports loaded-value+off, not the real address. They are global/table-pointer loads (-0x664C($t0) etc.): an INSTRUMENT ARTIFACT, not record reads. Excluding dest==base loads, no covered PC loads words 0..7 of chunk-2+ records; real chunk-2+ loads begin at word 11 (0x34).
+Selects H-inert for the covered functions (single-source, coverage-limited: LH/LB/LWL loads and functions outside the four patched ones, e.g. musyxBuildVoiceCommandList and DMA consumers, are not watched). Refutes nothing else.
+Instrument defect to fix before reuse: pass the pre-load address (or skip dest==base) in tools/apply_s4307_synth_read_join.py.
+ORIGIN: diagnostic counter only, no mitigation added.

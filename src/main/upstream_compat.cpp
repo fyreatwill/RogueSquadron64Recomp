@@ -1828,10 +1828,32 @@ extern "C" void rs64_s4307_note_writer(uint32_t ordinal, uint32_t pc,
                                          uint32_t post) {
     g_s4307_last_writer = { ordinal, pc, addr, requested, post };
 }
+static void rs64_s4575_load(uint32_t pc, uint32_t addr) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4575"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    const uint32_t p = addr & 0x1FFFFFFFu;
+    static std::atomic<unsigned> tot[2]{}, all{0};
+    static std::mutex mu; static std::map<uint64_t, unsigned> hist;
+    int cls = -1; uint32_t off = 0;
+    const uint32_t cap = g_s4572_cap, cnt = g_s4572_cnt;
+    for (int b = 0; b < 2 && cls < 0; b++) {
+        const uint32_t tb = (b ? g_s4572_t1 : g_s4572_t0) & 0x1FFFFFFFu;
+        if (tb && p >= tb && p < tb + cap * 0x88u) { off = (p - tb) % 0x88u; cls = ((p - tb) / 0x88u) < cnt ? 0 : 1; }
+    }
+    if (cls < 0) return;
+    tot[cls]++;
+    { std::lock_guard<std::mutex> g(mu); hist[((uint64_t)cls << 40) | ((uint64_t)(off >> 2) << 32) | pc]++; }
+    if ((++all % 20000u) == 0 && (all / 20000u) <= 20) {
+        std::lock_guard<std::mutex> g(mu);
+        std::fprintf(stderr, "[s4575-tot] loads inrange=%u chunk2+=%u\n", tot[0].load(), tot[1].load());
+        for (auto& kv : hist) std::fprintf(stderr, "[s4575-hist] cls=%u woff=%u pc=%08X n=%u\n", (unsigned)(kv.first >> 40), (unsigned)((kv.first >> 32) & 0xFFu), (unsigned)kv.first, kv.second);
+    }
+}
 extern "C" void rs64_s4457_list_check(uint8_t* rdram, uint32_t value);
 extern "C" void rs64_s4307_synth_read(uint8_t* rdram, uint32_t pc,
                                         uint32_t addr, uint32_t value) {
     if (pc == 0x80091378u || pc == 0x8009133Cu) rs64_s4457_list_check(rdram, value);
+    rs64_s4575_load(pc, addr);
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4307"); return e && e[0] && e[0] != '0'; }();
     if (!on || !rdram) return;
     const uint32_t width = rs64_vi_committed_width();
