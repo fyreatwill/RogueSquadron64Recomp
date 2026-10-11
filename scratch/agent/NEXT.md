@@ -1,6 +1,5 @@
-# NEXT: what do the pri-117/118/122 threads block on (or poll) at each run_next while the allocator (tid 3, pri 10) waits in running_queue?
+# NEXT: is the Ai-source message rate to queue 0x80149670 (audio thread, pri 122) per VI frame inflated by our AI drain, vs retail's ~1-2/frame?
 HYPOTHESIS-ID: m5-audio-destub
-Context (s4583): tid 3 is queued in running_queue (91308/91316 in-window dumps) but 16251/16253 run_next pops take a 117-122 thread. H-starve selected.
-Hypotheses: H-poll (the high threads loop on yield_self/yield_self_1ms/pause_self or timed waits that never fully block, due to an audio/VI stub); H-legit (they genuinely block on mesgqueues but are re-readied immediately by Vi/AI/SP external messages at high rate); H-ping (two high threads wake each other via sends in a loop).
-Discriminator (ONE build): at every run_next_pre while inflight, record for the CALLING thread which blocking primitive led here (osRecvMesg blocked_on_recv queue addr / osSendMesg / yield_self / timed wait) plus who last readied each queue member; aggregate per (thread ptr, primitive, queue addr) counts at window end. Control: first 20 records fire outside the window. Outcomes: mostly yield/timed -> H-poll; mesgqueue addrs fed by external sources (0x80114388 Vi etc.) -> H-legit; addrs fed by guest sends from the other high thread -> H-ping.
-Recipe: copy scratch/agent/s4583_rq.sh (3 arms, 200 s).
+Context (s4584): high threads genuinely block on mesgqueues (H-poll refuted); audio thread re-blocks on Ai ~6000 times per 10000 in-window pops, starving tid 3 (allocator).
+Hypotheses: H-inflated (our AI drain/enqueue_external_message_src(Ai) fires far faster than retail cadence); H-legit-rate (rate matches retail ~ per VI, starvation arises from handler cost); H-selfsend (the Ai queue is also fed by guest osSendMesg).
+Discriminator (ONE build): in enqueue_external_message_src count per-source enqueues per VI-frame bucket during the s4581 window, plus guest osSendMesg counts to 0x80149670; control = first 20 enqueues outside the window. Compare to ~1-2 Ai/frame. Recipe: copy scratch/agent/s4584_rq.sh.
