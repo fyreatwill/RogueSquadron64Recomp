@@ -66,7 +66,7 @@
 #define MAX_PC_TASK_DUMP_ROWS 8192
 #define MAX_ORDINAL_WRITER_KEYS 4096
 #define MAX_PHASE_SNAPSHOTS 8
-#define MAX_PHASE_POINTER_TARGETS 8
+#define MAX_PHASE_POINTER_TARGETS 64
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
 #define VI_CURRENT_ADDR 0xA4400010u
@@ -3418,7 +3418,7 @@ static void usage(void)
         "  --pc-hist-phase ORIGIN[:WIDTH]  add a writer histogram bucket (default WIDTH=640)\n"
         "  --post-value-watch N  sample post-store words and final range summary\n"
         "  --phase-snapshot-watch N  capture exact nonzero bytes at target VI phases\n"
-        "  --phase-pointer-watch N:BYTES  snapshot up to 8 KSEG0 RDRAM pointers from watch N\n"
+        "  --phase-pointer-watch N:BYTES  snapshot up to 64 KSEG0 RDRAM pointers from watch N\n"
         "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
         "  --post-value-pc-detail  print every requested-writer post-store tuple\n"
         "  --post-value-pc-detail-phase ORIGIN:WIDTH  limit detail tuples to one VI phase\n"

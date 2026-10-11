@@ -153550,3 +153550,23 @@ result does select against “the first eight visible pointers contain the five
 records,” but does not select H-derived-records versus H-other-shared-table;
 that split requires the later-pointer census. No mitigation was added and no
 conclusion in CURRENT-TRUTH changed.
+
+## Session 4611 (2026-10-11) — expanded the retail pointer-target census
+
+Raised the oracle pointer-target cap from 8 to 64 and rebuilt it. Two
+headless captures without a video plugin stayed in the pre-title/640 route,
+so they were invalid and not interpreted. The Rice-qualified 90-second run
+passed the whole-RDRAM positive control (10,000 callbacks), reached VI 512 at
+origin `0x006AB400` (VI 2245), discovered 17 aligned KSEG0 targets through
+`0x165E98`, and recorded 76 target-span writes. The expanded snapshots contain
+code/control data, craft-name metadata (`box_HMT`, `snowspeeder_*`, and
+related records), and other binary structures; none contains the five copied
+name records or `late`. The caller execution watch at `0x80007640` was 0, so
+this is a phase-scoped single-source pointer result, not a fully qualified
+caller-control replicate. It rules out the expanded visible pointer targets
+as the direct five-record source, but does not yet distinguish an alternate
+shared table from the unresolved caller-input path. No mitigation was added.
+ORIGIN: observation-only; no value was filtered, skipped, or guarded. Artifacts:
+`scratch/agent/s4610_retail_pointer_targets.log`,
+`scratch/agent/s4610_retail_pointer_targets_retry.log`, and
+`scratch/agent/s4610_retail_pointer_targets_final.log`.
