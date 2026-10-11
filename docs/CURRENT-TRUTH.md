@@ -368,6 +368,24 @@ observation-only; no value was filtered, skipped, or guarded. Artifacts:
 `scratch/agent/s4613_retail_writer_operand_fixed.log`, and
 `scratch/agent/s4613_retail_writer_operand_final.log`.
 
+## s4615 finding (single-source oracle; title writer absent)
+
+The first capture omitted `--pc-hist-watch 1`, so it was invalid for the
+writer discriminator; its positive controls still fired. The fixed Rice
+capture passed whole-RDRAM (12,178,935 writes), reached title VI 1024 and
+hangar VI 512, recorded 76 target-span writes, and retained all 17 pointer
+target controls at zero. The target snapshot at title VI 1024 already held
+the five name records (48 nonzero bytes, FNV `0x7444cd42`), exactly matching
+the hangar snapshot. The live writer control `0x80007670` fired 1,211 times,
+but its title-bucket target writer histogram was empty; the same bucket
+covered 632 title VI frames. The companion `0x80007640` control fired 2,079
+times. This refutes H-title-copy and leaves H-other-phase/H-no-live-copy:
+the names predate both armed target phases, while the writer's lifetime hits
+remain outside them. No mitigation was added. ORIGIN: observation-only;
+legitimate name bytes were inspected, not filtered, skipped, or guarded.
+Artifacts: `scratch/agent/s4615_retail_writer_title_phase_fixed.log` and the
+invalid first attempt `scratch/agent/s4615_retail_writer_title_phase.log`.
+
 ## Next steps
 
 One sequence. Closed audits are not items. Item 1 is the next iteration
@@ -391,15 +409,17 @@ unless Step 0 maintenance triggers again.
 0b. **[s4573]** 0x80090FE8 decoded statically: post-increment record alloc (cursor=old+1, record addressed by old), a second legitimate bump path, NOT a phantom +1. H-fe8-phantom refuted; open: H-offset0-7-render, H-hostzero (per-offset table build).
 0. **[s4571, supersedes the s4570 item below]** The "bad voice index" is NOT bad: `lhu 0($s1)` (0x80090ED8) reads a per-buffer render-record cursor (0x80149710+2*buf), reset once per buffer at 0x8009135C; mix runs in 0xC0-sample chunks from 3 call sites, table cap=(count+1)*3 records, so idx>=count is the normal chunk-2+ case (3/3 arms, control present). Records idx<count read all-zero pre/post; chunk-2+ records hold deterministic non-zero words written by guest code AFTER allocation (zeroing tables at alloc leaves them unchanged and the s4534 bad jal/abort persist; single replicate, arm C died early). Next: dynamic guest-store watch on [tbl0, tbl0+cap*0x88) naming the writer PC of chunk-2+ records, and log words 8..33 for ASCII shape (see NEXT.md, HYPOTHESIS-ID m5-audio-destub).
 0. **[s4570, supersedes item 1's framing]** No (count>=30, base 0x801714D0) is ever published (3/3 arms: pairs 20,17,16,15,18 only), so voice 30 is a bad INDEX (single-source, one recipe), not a text-corrupted record. Index comes from `lhu 0($s1)` at 0x80090ED8 in `musyxMixActiveVoices`; next is to log that list entry when index >= count (see NEXT.md, HYPOTHESIS-ID m5-audio-destub).
-1. **[s4614] Locate the five-name copy before the 512 phase.** The
-same-run oracle controls passed; `0x80007670` is live (1,211 lifetime hits),
-but no phase-detail rows appeared at either 512 origin; the same-run
-`0x80007640` control did emit rows. The target snapshot contains the five
-names and all 17 visible pointer targets have zero writes. Run one 90-second
-Rice capture adding `--pc-hist-phase 0x00790400:1024` while retaining the
-source, target, pointer-target, and whole-RDRAM controls. Title-phase writer
-rows select an earlier copy phase; zero title rows leaves the copy outside
-both selected buckets. Do not add a mitigation.
+1. **[s4615] Locate the five-name copy across boot/intro buckets.** The
+capture passed whole-RDRAM, title VI 1024, hangar VI 512, target/source, and
+all 17 pointer-target controls. The title target snapshot already contains
+the five names (same FNV as hangar), but `0x80007670` has zero title-bucket
+target writer rows despite 1,211 lifetime executions; the `0x80007640`
+control fires. Run one 90-second Rice capture with `--pc-hist-watch 1` and
+phase buckets `0x00000280:320`, `0x0066A500:640`, `0x00790400:1024`,
+`0x00690000:512`, `0x00690800:512`, `0x006AB400:512`, and `0x006AB800:512`,
+retaining the whole-RDRAM and target/source controls. A writer row in 320 or
+640 selects an earlier copy phase; all pre-hangar buckets zero leaves a
+non-bucket/earlier-boot path open. Do not add a mitigation.
 HYPOTHESIS-ID: m5-audio-destub.
 1a. **[s4608, extends s4607] Resolve the retail table's pointer-backed records.** The retail
 512 phase passed the whole-RDRAM positive control and the target span received 76

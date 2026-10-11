@@ -153625,3 +153625,20 @@ select an alternate operand source. No mitigation was added. Artifacts:
 `scratch/agent/s4613_retail_writer_operand.log`,
 `scratch/agent/s4613_retail_writer_operand_fixed.log`, and
 `scratch/agent/s4613_retail_writer_operand_final.log`.
+
+## Session 4615 (2026-10-11) — extended the retail writer census to title
+
+The first oracle attempt omitted `--pc-hist-watch 1`, so it produced only a
+title VI count and no writer histogram; the positive controls fired, but that
+attempt was not used as evidence. The fixed Rice capture passed the
+whole-RDRAM control with 12,178,935 writes, reached title VI 1024 and hangar
+VI 512, recorded 76 target-span writes, and armed all 17 pointer-target
+controls, all zero. The title target snapshot already contained the five
+name records (48 nonzero bytes, FNV 0x7444cd42), exactly matching the hangar
+snapshot. The 0x80007670 writer control fired 1,211 times, but its title
+bucket target writer histogram was empty; the 0x80007640 control fired 2,079
+times in the same run. This refutes the title-copy hypothesis and leaves the
+copy in another VI bucket or before the watched route. No mitigation was
+added. Artifacts: scratch/agent/s4615_retail_writer_title_phase_fixed.log
+and scratch/agent/s4615_retail_writer_title_phase.log. The next work unit is
+a multi-origin 320/640/1024/512 writer census with --pc-hist-watch 1.
