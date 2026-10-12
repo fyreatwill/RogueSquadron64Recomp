@@ -154570,3 +154570,16 @@ agreement.
 
 ORIGIN: no mitigation; all observations are read-only generated-source and
 consumer classification evidence.
+## Session 4685 (2026-10-11) — audited backward non-self zero-offset `MEM_B` loads
+
+Ran the prescribed source scans before any build. Added and ran
+`tools/census_memb.py` against the external generated tree. Its parser and an
+independent broad-regex enumerator agreed on 35 direct zero-offset `MEM_B`
+loads in 9 files; 22 were inside backward edges, with 12 non-self sites. The
+complete classification is in `docs/M3-S4685-MEMB-CENSUS.md`. The 12 sites
+are scalar/table fields, packed render fields, terrain/input fields, or
+`bcopy_recomp` data bytes; the five copy sites advance pointers but never
+reconstruct one from the loaded byte. The allocator/free-list anchor scan did
+not implicate this class. This selects H-MEMB-bounded and rules out a named
+pointer-transition explanation for these sites. No build, runtime probe, guard,
+or mitigation was authorized.
