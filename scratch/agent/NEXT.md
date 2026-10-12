@@ -1,31 +1,32 @@
-# NEXT: audit the attached-mesh overlay NPC NULL/free idiom
-HYPOTHESIS-ID: m3-attached-mesh-null-free-audit
+# NEXT: audit load_full_header_image rs_free idiom
+HYPOTHESIS-ID: m3-load-full-header-rs-free-audit
 
-The regeneration/fixup harness is qualified in a fresh copy. Do not rerun it
-or mutate the live generated tree. M5 is conditionally closed in CURRENT-TRUTH;
-the remaining bounded M3 item is the `attachedMeshOverlayNpcHandler` gap at
-`0x80054344`.
+The attached-mesh gap is statically confirmed but runtime occupancy is
+unproven; do not add a guard. The next bounded M3 idiom unit is the remaining
+`funcs_11.c` `load_full_header_image` free at `0x800544D8`.
 
 Competing hypotheses and discriminator:
 
-- H1: the handler's NULL/free path is already proven safe by an earlier guard
-  or by a caller invariant; every reachable dereference/free has a proof.
-- H2: one or more reachable paths use the pointer without a proof, requiring
-  a regeneration-safe patch with an explicit writer/legitimacy analysis.
-- H3: the address/function attribution is stale or the site is not present in
-  the current generated source, so this item is not actionable.
+- H1: the free receives only the matching `get_asset_size_extra`/`rs_malloc`
+  result, with all NULL and early-return paths safe.
+- H2: a reachable path aliases another object, frees after a second release,
+  or passes an uninitialized/non-allocator value; if so, name its writer and
+  legitimacy before considering a regeneration-safe patch.
+- H3: the address/function attribution is stale or the site is absent from the
+  current fresh generated copy.
 
-The discriminating measurement is one whole-idiom census: locate the current
-generated function and every load, field dereference, `rs_free`, and caller
-edge around `0x80054344`; classify each site as guarded, caller-proven, dead,
-or unproven. H1 requires proof for all sites, H2 requires at least one
-reachable unproven site and a named writer, and H3 requires the function/site
-to be absent or misattributed.
+The discriminating measurement is one complete static census of the function's
+pointer loads/stores, allocator calls, all caller edges, and every nearby
+`rs_free` target. H1 requires a complete matching proof; H2 requires one
+reachable unproven source and a named writer; H3 requires absence or
+misattribution.
 
-Exact read-only commands before any edit:
+Read-only commands:
 
-    rg -n "80054344|attachedMeshOverlayNpcHandler|rs_free" ../N64Recomp/RecompiledFuncs funcs* src lib tools
-    grep -n "0x80054344" PORTING-STATE.md | tail -20
+    rg -n -C 8 "load_full_header_image|0x800544D8|800544D8|rs_malloc|rs_free" ../N64Recomp/RecompiledFuncs.s4204-fresh/funcs_11.c
+    rg -n -C 3 "load_full_header_image\(" ../N64Recomp/RecompiledFuncs.s4204-fresh --glob '*.c'
+    rg -n "load_full_header_image|800544D8" ../rogue_squadron64/symbol_files ../rogue_squadron64/build
+    grep -n "0x800544D8\|800544D8\|load_full_header_image" PORTING-STATE.md | tail -20
 
-If H2 is selected, write the origin/writer and legitimacy into the audit,
-then use the existing patches workflow; never hand-edit generated functions.
+No build or runtime run is needed unless the census selects H2 and a patch
+design can identify a legitimate writer.

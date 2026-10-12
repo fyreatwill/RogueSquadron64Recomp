@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4653.
+archive sections. Updated for session 4654.
 
 ## Current state
 
@@ -164,10 +164,22 @@ watches and contain no pixel capture. The M4 H-source thread is therefore
 closed as unevaluable: this does not establish whether the remaining white
 pillar stubs are a port defect. No runtime instrument or mitigation was added.
 
+Session 4654 revalidated the attached-mesh overlay NPC NULL/free census against
+the fresh s4204 generated copy and the independent `rogue_squadron64` symbol
+notes. `attachedMeshOverlayNpcHandler` is present at `0x8005427C`, its action-2
+loop frees `+0x1C` and `+0x20` without a NULL test, and the only matching
+pointer writer is the two-iteration `rs_malloc(0x80, 0)` in
+`dispatchOverlaySetupByParentAssetName`. Unmatched parent names and NULL parent
+mesh paths skip that writer but still reach action 2; the decomp notes confirm
+nine spawn sites and the same action contract. This reselects the static gap
+hypothesis, but runtime pool occupancy and value legitimacy are still unproven,
+so no guard or patch was added.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
-  `attachedMeshOverlayNpcHandler` NULL/free gap at `0x80054344` remains open.
+  `attachedMeshOverlayNpcHandler` NULL/free gap at `0x80054344` is statically
+  confirmed; runtime occupancy remains open and no mitigation is authorized.
 - The wild-width writeback is a named garbage-region SETCIMG writer; do not
   add a skip without a new origin proof.
 - VI-640 crash families and broad M3 guard classes are parked. A mitigation
@@ -243,12 +255,12 @@ pillar stubs are a port defect. No runtime instrument or mitigation was added.
 5. s4647/s4649/s4653: the safe fresh-copy fixer and tag comparison are
    qualified; do not regenerate over the live external tree until the normal
    generation workflow is intentionally repaired or a candidate build path is
-   specified. The next bounded unit is the open attached-mesh overlay NPC
-   NULL/free idiom audit.
+   specified. Session 4654 revalidated the attached-mesh gap; the next
+   bounded unit is the `load_full_header_image` `rs_free` idiom audit.
    s4651 refutes the port arithmetic arm of M4, while the separate-run matrix
    join is unavailable. s4652 found no retail hangar pixel reference, so H1 is
    closed as unevaluable; no runtime mitigation is authorized. The next
-   bounded unit is the qualified fresh-copy fixer/tag comparison.
+   bounded unit is the `load_full_header_image` `rs_free` idiom audit.
 
 ## Evidence and operating rules
 

@@ -154110,3 +154110,27 @@ live generated-tree mutation was made. Artifacts are
 
 ORIGIN: no mitigation or runtime behavior change; this work validates the
 regeneration/fixup machinery only.
+
+## Session 4654 (2026-10-11) — revalidated attached-mesh overlay NULL/free gap
+
+Ran the planned static whole-idiom census against the fresh
+`../N64Recomp/RecompiledFuncs.s4204-fresh` copy and cross-checked the independent
+`../rogue_squadron64/symbol_files/main_overlay.txt` notes. The generated
+`attachedMeshOverlayNpcHandler` at `0x8005427C` still has an action-2 loop at
+`0x80054344` that loads and frees `0x1C($s0)` and `0x20($s0)` with no NULL test.
+The only matching writer is the two-iteration `rs_malloc(0x80, 0)` at
+`0x80053DA0`/`0x80053DBC` in `dispatchOverlaySetupByParentAssetName`.
+Unmatched parent names take the type-`-1` skip before that loop, and NULL parent
+mesh references self-destruct without initializing the pair; both paths still
+reach opcode 2. The independent symbol notes confirm nine spawn sites and the
+same action contract.
+
+This reselects the static gap hypothesis and rules out stale attribution or
+absence from the fresh generated copy. It does not establish runtime pool
+occupancy or whether skipped slots contain legitimate NULL values, so no guard,
+build, or runtime run was performed. No mitigation was added.
+
+ORIGIN: the matching writer is `dispatchOverlaySetupByParentAssetName`'s
+`rs_malloc(0x80, 0)`; it is legitimate only on recognized parent-asset paths.
+The skip paths have no proven writer for the freed words, so legitimacy remains
+unproven.
