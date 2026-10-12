@@ -153915,3 +153915,10 @@ Result: port frame 771 (first 1249-tri/0-texrect frame) vs retail frame 0: all 1
 Rules out: that the M4 accumulator/VGE/matrix thread explains the hangar visual artifacts: edge, z, texture and state words equal retail, so the visible rim/spike/stub/edge defects are downstream of the RDP stream (renderer). Selects H-render over H-clip/H-rdp from NEXT.
 Open: the 3 -> 109 shade-LSB drift. A low-order rounding difference would be an RSP accumulator/rounding (VMACF/VMUDN round) question, the only live use of the M4 thread.
 ORIGIN: no mitigation; diagnostic script only.
+
+## Session 4634 (2026-10-11) — hangar shade-LSB drift is alignment, not rounding: 3 runs each differ from retail in only tris 1244-1246
+HYPOTHESIS-ID: m4-vge-store-boundary-ground-truth. Ran the s4633 recipe three times sequentially (scratch/agent/s4634_port_rdp.sh a|b|c, s4634_triple.sh), compared with new scratch/agent/s4634_pp_cmp.py, which takes each run's first 1249-tri/0-texrect frame (frames 814/797/815) against retail frame 0 and against each other.
+Result: every run differs from retail in exactly 3 tris (1244,1245,1246), the identical set in all three (symdiff 0). Port-vs-port, the same 3 tris differ between a/b/c, so they vary run to run (animation) while the other 1246 tris are bit-identical across runs and equal to retail. Control: the instrument visibly reports differences (the 3 animating tris); s4520 independently saw 3.
+Selects H-anim/alignment: s4633's 109-tri figure used a hard-coded frame index (pf[771]) that does not land on the same animation phase; it is not a deterministic RSP rounding difference. Rules out H-round (VMUDN/VMACF) as a cause of hangar artifacts. With s4517-s4521/s4633, the hangar entry RDP stream equals retail except 3 animating tris; the visible defects are renderer-side (RT64).
+Open: renderer-side triage (tri-index mask for rim/stubs/edge strip). The M4 RSP thread is closed.
+ORIGIN: no mitigation; diagnostic scripts only.

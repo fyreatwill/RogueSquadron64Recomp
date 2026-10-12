@@ -1,12 +1,12 @@
-# NEXT: classify hangar shade-LSB drift, or renderer-side triage
-HYPOTHESIS-ID: m4-vge-store-boundary-ground-truth
+# NEXT: renderer-side triage of hangar artifacts (RT64 tri-index mask)
+HYPOTHESIS-ID: hangar-renderer-artifacts
 
-RESUME: s4633 re-ran the aligned RDP diff (port frame 771 vs retail frame 0): edge/z/tex/state
-equal; 109/1249 tris differ only in shade words by +-1 LSB-ish (s4520 had 3).
-Hypotheses: H-anim (lighting term animates, alignment drift), H-round (RSP rounding in
-VMUDN/VMACF/pack differs), H-render (artifacts are renderer-side, stream is fine).
-Discriminator: capture 3 port runs and compare port-vs-port frame 771 shade words (if the
-109 vary run to run it is animation; if identical it is deterministic rounding); positive
-control: tris 850-1246 known differ. Then if deterministic, unit-test VMUDN/VMADN/VMACF
-rounding vs ares on those operands. Scripts: scratch/agent/s4633_port_rdp.sh,
-s4518_shade_cmp.py, s4633_shade_detail.py.
+RESUME: s4634 closed the M4 RSP/stream thread: port hangar entry RDP stream equals retail
+except 3 animating tris. Visible rim band / blue holo spikes / right-edge garbage are
+renderer-side.
+Hypotheses: H-tri (specific tris, e.g. range 850-1246, render wrong in RT64), H-state
+(an RDP state/combiner/texture-format path RT64 mishandles), H-fb (framebuffer/VI side).
+Discriminator: env-driven tri-index mask in the RT64 tri submit path (single run, bisect
+index ranges); hide ranges and see which removes the artifact. Positive control: masking
+all tris blanks the frame. Capture screenshots per mask. Any lib/ edit needs
+submodule-patches/export.sh + commit.
