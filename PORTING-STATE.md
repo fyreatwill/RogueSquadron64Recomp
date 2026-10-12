@@ -154081,3 +154081,15 @@ remains unevaluable. No runtime mitigation was added. See
 ORIGIN: no mitigation; the reconstruction identifies the arithmetic/store
 boundary as matching but does not identify a writer for the remaining H1
 operand possibility.
+## Session 4652 (2026-10-11) — found no retail hangar pixel reference
+
+Ran the prescribed bounded artifact check without building or adding runtime
+instrumentation. Enumerated image artifacts under `scratch/agent/soak_results`
+and searched the retail/oracle artifacts under `scratch/agent` and `docs`.
+The matching PNGs are port soak outputs, including `s4290b_hangar`,
+`s4291_hangar`, and `s4294_hangar_ab`; retail artifacts are logs, tables, and
+memory-watch output, with no retail hangar pixel capture. This selects the
+absence arm of the planned discriminator and closes the M4 H-source thread as
+unevaluable. It does not establish whether the remaining white pillar stubs
+are a port defect, and it authorizes no mitigation. Next is the already
+qualified fresh-copy regeneration fixer/tag comparison.

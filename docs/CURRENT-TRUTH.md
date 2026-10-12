@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4651.
+archive sections. Updated for session 4652.
 
 ## Current state
 
@@ -146,6 +146,13 @@ s4630 vertex comparison still disfavors H2, but H1 (dynamic matrix source)
 remains unevaluable. No mitigation is authorized. Details:
 `scratch/agent/s4649_m4_join.md`.
 
+Session 4652 checked the available image and oracle artifacts for a retail
+hangar pixel reference. Every matching PNG is a port soak output, including
+the late hangar AB directories; retail artifacts are logs, tables, or memory
+watches and contain no pixel capture. The M4 H-source thread is therefore
+closed as unevaluable: this does not establish whether the remaining white
+pillar stubs are a port defect. No runtime instrument or mitigation was added.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -224,8 +231,9 @@ remains unevaluable. No mitigation is authorized. Details:
 4. s4644: rim band and holo spikes are no longer visible in current hangar frames (single-source visual); residual candidate is white pillar stubs at x~200/430/865/1085/1130. Need a retail pixel reference before treating it as a defect (retail may light those edges by design). s4645: no reference obtainable; thread PARKED, craft-select frame renders clean.
 5. s4647/s4649: the loop block is cleared for the regen-repair question.
    s4651 refutes the port arithmetic arm of M4, while the separate-run matrix
-   join is unavailable. Next choice is only whether a retail hangar reference
-   can close H1 as unevaluable; no runtime mitigation is authorized.
+   join is unavailable. s4652 found no retail hangar pixel reference, so H1 is
+   closed as unevaluable; no runtime mitigation is authorized. The next
+   bounded unit is the qualified fresh-copy fixer/tag comparison.
 
 ## Evidence and operating rules
 
