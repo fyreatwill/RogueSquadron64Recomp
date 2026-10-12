@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4656.
+archive sections. Updated for session 4657.
 
 ## Current state
 
@@ -205,6 +205,16 @@ single-source evidence that the handler is not boot/title-only; it does not
 select H1/H2 for a mission and does not authorize a guard. Artifact:
 `scratch/agent/s4666_attached_mesh_mission/oracle.log`.
 
+Session 4657 ran the prescribed mission-capable retail sequence with the
+whole-RDRAM control, Rice video, VI tracing, and both execution watches. The
+control fired 25,543 hits and retail reached 1024-wide title followed by
+512-wide post-title origins, but those origins matched the previously seen
+hangar/attract route and did not establish a mission phase. The attached-mesh
+handler had zero executions in the qualified run. This is H4/unevaluable for
+the mission discriminator, not evidence that the handler is mission-absent;
+no guard, patch, or mitigation was added. Artifacts are in
+`scratch/agent/s4667_attached_mesh_mission/`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -296,9 +306,11 @@ select H1/H2 for a mission and does not authorize a guard. Artifact:
    s4655: the attached-mesh handler was absent from the driven retail
    boot/title route despite qualified oracle controls. s4656 extended the
    route and found the handler in 512-wide attract/demo origins, but still no
-   mission phase or action-2 free classification. Do not treat either result
-   as a NULL contract proof or add a guard; the next revisit must use the
-   verified post-title Start/A sequence to obtain a mission-capable route.
+   mission phase or action-2 free classification. s4657 repeated the
+   post-title Start/A sequence with the correct Rice-video setup and again
+   reached only the hangar/attract route. Do not treat these nulls as a
+   mission NULL contract proof or add a guard; the next revisit needs a new
+   mission-entry control, not another identical soak.
 
 ## Evidence and operating rules
 

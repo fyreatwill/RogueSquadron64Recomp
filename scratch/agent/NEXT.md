@@ -1,27 +1,26 @@
-# NEXT: obtain a mission-capable retail handoff for the attached-mesh gap
+# NEXT: qualify a distinct mission-entry input route for attached-mesh oracle
 HYPOTHESIS-ID: m3-attached-mesh-mission-route
 
-The s4666 oracle control was valid and reached the handler, but only in
-512-wide attract/demo origins; repeated Start presses did not produce a
-mission phase. The next single unit is one retail-oracle run using the
-verified post-title sequence from `scratch/s73_post_a_scene/run_mission_keys.sh`:
-after the 1024 phase, press Start at relative +3s, +25s, +40s, then A at
-+60s, followed by the same handler/`rs_free` watches and whole-RDRAM control.
-Do not add a NULL guard or repeat the Start-only route.
+The s4667 corrected oracle run was instrument-valid and reached title plus
+512-wide hangar/attract origins, but the prescribed Start/A schedule did not
+establish a mission phase and the handler stayed at zero. Do not repeat that
+schedule. The next single unit is one oracle run using the same boot presses,
+then a distinct post-512 input sequence with PIF tracing: Start at 80s, Start
+at 86s, A at 92s, and Start at 100s. Keep the whole-RDRAM control and both PC
+watches. Use Rice video and run 180s:
 
-Competing hypotheses and the discriminator are the same run's phase-qualified
-watch results:
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 180 --hit-cap 200 --watch-write 0x0:0x800000 --watch-pc 0x8005427C,0x80001ACC --press 6.2:start,11.2:start,16.1:start,80:start,86:start,92:a,100:start --hold-ms 150 --vi-trace --pif-trace > scratch/agent/s4668_attached_mesh_route/oracle.log 2>&1
 
-- H1: handler is reached in mission; handler rows plus `rs_free` predecessor
-  rows identify the two freed pointers and their retail writer/legitimacy.
-- H2: handler is reached but no matching `rs_free` predecessor appears; the
-  action-2 call-site mapping is wrong and must be remapped.
-- H3: whole-RDRAM control and mission phase qualify but handler is absent; the
-  NULL/free gap is route-absent for this covered mission and remains parked.
-- H4: whole-RDRAM control or mission phase is absent; the instrument is
-  invalid and no conclusion is allowed.
+Competing hypotheses and discriminator:
 
-Exact discriminator: whole-RDRAM control plus a mission VI/route transition,
-then the two watched-PC summaries. H1 is handler plus matching action-2 free
-rows; H2 is handler without matching frees; H3 is qualified mission with no
-handler; H4 is missing control or mission phase and is unevaluable.
+- H1: the distinct post-512 sequence reaches mission; handler executions and
+  same-phase `rs_free` predecessor rows classify the action-2 frees.
+- H2: it reaches mission but the handler remains absent; the static gap is
+  route-absent for this mission entry.
+- H3: it remains hangar/attract; the input route, not the handler contract,
+  is still the blocker.
+- H4: the whole-RDRAM control or VI trace fails; the run is invalid.
+
+The discriminator is whole-RDRAM control plus a new 512-to-mission route
+transition, followed by phase-qualified counts for `0x8005427C` and
+`0x80001ACC`. No guard or mitigation is authorized from a null result.

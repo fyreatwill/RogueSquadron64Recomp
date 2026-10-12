@@ -154192,3 +154192,22 @@ Artifact: `scratch/agent/s4666_attached_mesh_mission/oracle.log`.
 ORIGIN: no mitigation was added; the observed handler and `rs_free` executions
 were phase-unqualified for mission semantics, so no writer legitimacy claim is
 made for the attached-mesh fields.
+
+## Session 4657 (2026-10-11) — post-title oracle route remained unevaluable
+
+Ran the prescribed independent retail-oracle discriminator with a whole-RDRAM
+positive control, Rice video, VI tracing, and execution watches on
+`attachedMeshOverlayNpcHandler` (`0x8005427C`) and `rs_free` (`0x80001ACC`).
+The initial no-video attempts were setup-invalid: the control fired but only
+320-wide boot was observed. The corrected run reached 1024-wide title and
+512-wide post-title origins, with 25,543 whole-RDRAM control hits and no
+crash, but the origins matched the known hangar/attract route rather than a
+mission-confirmed phase. The attached-mesh handler had zero executions in
+that run. This is H4/unevaluable for the mission discriminator; it does not
+select route-absent for missions and does not classify the action-2 frees.
+No guard, patch, or mitigation was added. Artifacts:
+`scratch/agent/s4667_attached_mesh_mission/oracle.log` and
+`scratch/agent/s4667_attached_mesh_mission/oracle_video.log`.
+
+ORIGIN: no mitigation was added; the watched handler did not execute in the
+qualified route, so no writer legitimacy claim is available.
