@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4686.
+archive sections. Updated for session 4687.
 
 ## Current state
 
@@ -425,8 +425,15 @@ no guard, patch, or mitigation was added. Artifacts are in
    also with no pointer transition or named invalid writer. The s4686 `MEM_BU`
    census found 861 direct loads, 602 backward-loop sites, and 515 non-self
    unsigned-byte scalar/index/table consumers; its nine review rows were not
-   pointer transitions. Continue with the next complete M3 idiom census in
-   `NEXT.md`.
+   pointer transitions. Session 4687 completed the analogous backward
+   non-self zero-offset `MEM_W` census: two independent paths agreed on 3,592
+   direct loads, 1,596 backward-loop sites, and 1,161 non-self sites. The
+   complete table is reproducibly emitted by `tools/census_memw.py`; local
+   review classified 620 as scalar/record/table fields, 319 as derived
+   scalar/index consumers, and 222 as pointer-transition review sites. No
+   named invalid writer was found, so no guard or runtime probe is authorized.
+   The next complete class is the remaining one-site zero-offset `MEM_WU`
+   census.
 
 1. Step 7's complete status-table census selects H-status-writer for the
    covered route:

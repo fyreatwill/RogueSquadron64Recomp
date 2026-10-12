@@ -154550,6 +154550,22 @@ backward non-self zero-offset `MEM_HU` census.
 ORIGIN: no mitigation; all observations are read-only generated-source and
 consumer classification evidence.
 
+## Session 4687 (2026-10-11) — audited backward non-self zero-offset `MEM_W` loads
+
+Ran the prescribed source scans before any build. Added and ran
+`tools/census_memw.py` against the external generated tree. Its parsed scan and
+independent direct-regex count agreed on 3,592 zero-offset `MEM_W` loads; 1,596
+were inside backward edges, with 1,161 non-self sites. The complete
+classification is in `docs/M3-S4687-MEMW-CENSUS.md`. Local review classified
+620 as scalar/record/table fields, 319 as derived scalar/index consumers, and
+222 as pointer-transition review sites. No named invalid writer or legitimacy
+failure was established, so the pointer-shaped rows do not authorize a guard
+or runtime probe. This selects H-MEMW-bounded for the static class. No build,
+generated-code edit, guard, or mitigation was authorized.
+
+ORIGIN: no mitigation; all observations are read-only generated-source and
+consumer classification evidence.
+
 ## Session 4684 (2026-10-11) — audited backward non-self zero-offset `MEM_HU` loads
 
 The required source inspection showed that the old work-order regex was not a
