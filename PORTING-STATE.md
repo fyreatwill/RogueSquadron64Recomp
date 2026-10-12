@@ -154057,3 +154057,5 @@ inputs for the next attempt. No conclusion changed and no runtime or library
 file was modified. The next discriminator is still the positive-control
 reconstruction followed by the task/phase/lane join; if that key is absent,
 record the missing key and stop rather than extending instrumentation.
+
+ORIGIN: unattributed - this checkpoint did not rerun or inspect the mitigation-shaped machinery; the next reconstruction must identify the writer and legitimacy before any skip, allow, guard, or restore is retained. The attribution experiment is the queued positive-control reconstruction and task/phase/lane join.
