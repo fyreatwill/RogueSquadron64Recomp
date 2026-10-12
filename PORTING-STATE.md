@@ -154230,3 +154230,25 @@ patch, or mitigation was added. Artifact:
 ORIGIN: no mitigation was added; the observed handler and `rs_free` activity
 was confined to non-mission phases, so no writer legitimacy claim is made for
 the attached-mesh fields.
+
+## Session 4669 (2026-10-11) — corrected Rice route still stayed attract/demo
+
+Ran the prescribed independent retail-oracle route with whole-RDRAM, Rice,
+VI/PIF tracing, and execution watches on
+`attachedMeshOverlayNpcHandler` (`0x8005427C`) and `rs_free` (`0x80001ACC`).
+The first invocation used a nonexistent Cellar Rice path and was H4-invalid:
+the control fired but video stayed at 320-wide. The corrected invocation used
+`/opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`; its control
+reached 10,000 callbacks and VI reached 512-wide at 69.7s. The handler ran
+280 times, all in known attract/demo origins (`0x00620400`, `0x00620800`,
+`0x00690400`, `0x00690800`), with no mission origin. The process exited 138
+around 87s during Rice shader-compilation errors, before the 180s budget, but
+after the mission discriminator had resolved H3. This is qualified
+single-source evidence for route-absent mission entry on this arm, not proof
+that the handler is mission-absent and not authorization for a guard. No
+patch or mitigation was added. Artifacts:
+`scratch/agent/s4669_attached_mesh_route/`.
+
+ORIGIN: no mitigation was added; all observed attached-mesh executions were
+in known non-mission origins, so no writer legitimacy claim is made for the
+attached-mesh fields.

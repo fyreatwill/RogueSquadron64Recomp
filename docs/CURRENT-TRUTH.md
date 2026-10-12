@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4658.
+archive sections. Updated for session 4669.
 
 ## Current state
 
@@ -311,8 +311,10 @@ no guard, patch, or mitigation was added. Artifacts are in
    reached only the hangar/attract route. Do not treat these nulls as a
    mission NULL contract proof or add a guard; s4658's distinct post-512
    sequence still stayed on known attract/demo origins despite handler
-   activity. The next revisit needs a genuinely different mission-entry
-   control, not another timing variant.
+   activity. s4669 repeated the route with the installed Rice path and a
+   post-512 A/Start/A/Z sequence; it again stayed on known attract/demo
+   origins before a Rice shader failure ended the run. The next revisit needs
+   a genuinely different mission-entry control, not another timing variant.
 
 Session 4658 tried a distinct post-512 input sequence with PIF tracing. The
 whole-RDRAM control hit 10,000 and retail ran for 180 seconds through title,
@@ -323,6 +325,19 @@ known attract/demo origins (`0x00690400`, `0x00620400`, `0x00620800`, or
 route: it still did not reach a mission, so the handler's mission NULL/free
 contract remains unevaluable and no guard is authorized. Artifact:
 `scratch/agent/s4668_attached_mesh_route/oracle.log`.
+
+Session 4669 corrected the Rice plugin path in the prescribed mission-route
+oracle command after the first invocation proved H4: the Cellar path was
+absent and dummy video stayed at 320-wide. The corrected run passed the
+whole-RDRAM control at 10,000 callbacks, reached 512-wide at 69.7s, and
+executed `attachedMeshOverlayNpcHandler` 280 times. All retained handler rows
+were in the known attract/demo origins (`0x00620400`, `0x00620800`,
+`0x00690400`, `0x00690800`); no mission origin appeared. The process exited
+138 at about 87s during repeated Rice shader-compilation errors, before the
+180s budget, but after the discriminator had resolved H3. This is qualified
+single-source evidence that this new route still did not establish mission
+entry; it does not prove the handler is absent from missions and authorizes no
+guard. Artifacts: `scratch/agent/s4669_attached_mesh_route/`.
 
 ## Evidence and operating rules
 
