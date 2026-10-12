@@ -153866,3 +153866,21 @@ store. Combined with s4626 (VMADH 4,128/4,128 lanes, 31 lanes change at VGE)
 the surviving arms are H-vge and H-source (upstream v0/v4 operands). The run
 ended rc=134 (abort via the parked VI-640 crash family, ~93 s, after all M4
 rows were collected); not new. ORIGIN: no mitigation added; probe fix only.
+
+## Session 4629 (2026-10-11) — M4 VGE arm closed: VGE is a pure max(x,0) clamp
+
+Offline re-analysis of the s4628 port log (no new build/run). (1) Source audit:
+`RSP::VGE` in lib/N64ModernRuntime/librecomp/include/librecomp/rsp_vu_impl.hpp:798
+is the ares implementation; when vs==vte both select-arms give the same value, so
+VCO flags cannot change the output value: VGE == max_signed(vs, vte), a pure
+function of its operands. (2) Data (scratch/agent/s4629_vge_identity/vge_check2.py):
+pairing stage 11 -> stage 12 rows (4,112 lanes), only 29 lanes change, all negative
+(0xFD01, 0xFFFB) -> 0x0000, i.e. VGE against zero (clamp); the rest are identity.
+(A first check pairing stage-10 pre= with stage 12 was a wrong pairing and is discarded.)
+Result: H-vge refuted as an independent arm. With s4626 (VMADH 4,128/4,128) and
+s4628 (store clean), arithmetic and store are closed on the port; only H-source
+(upstream v0/v4 and pre-VMADH accumulator operands) survives. Single-source (port
+log + source reading); no retail arm run. ORIGIN: no mitigation added.
+Process note: a first commit was accidentally made inside the lib/N64ModernRuntime
+submodule repo (cwd drift); undone with a mixed reset of that own just-made commit;
+working tree and lib patches untouched.

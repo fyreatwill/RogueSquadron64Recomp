@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4628.
+archive sections. Updated for session 4629.
 
 ## Current state
 
@@ -102,6 +102,12 @@ store/writeback arm is refuted on the port (single-source; lanes 3/7 are
 overwritten by design). Surviving arms: VGE semantics vs. upstream operand
 (v0/v4) source. Artifacts: `scratch/agent/s4628_m4_dmem_store/`.
 
+Session 4629 closed the VGE arm offline: `RSP::VGE` is a pure `max_signed`
+(VCO cannot change the output value), and across 4,112 stage-11->12 lanes only
+29 change, all negative->0 clamps. Arithmetic (s4626), store (s4628) and VGE
+are all closed on the port; only H-source (upstream v0/v4 / pre-VMADH
+accumulator inputs) survives. Single-source.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -140,7 +146,7 @@ overwritten by design). Surviving arms: VGE semantics vs. upstream operand
 1. M4 operand-source discriminator: the store is clean (s4628), so compare
    what feeds stage 10 (v0/v4 operand source) between port and retail in
    hangar phase 5 via RDRAM-visible vertex input addresses, in one batched
-   capture with whole-RDRAM control. Do not revisit arithmetic or the store.
+   capture with whole-RDRAM control. Do not revisit arithmetic, VGE or the store (all closed, s4626-s4629).
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable
