@@ -154863,3 +154863,9 @@ from recipes that armed VOICE_TRIGGER_CHAIN (s4672, s4527-ish) are suspect.
 
 ORIGIN: diagnostic literal lacked sign extension (S32); not a mitigation.
 Artifacts: scratch/agent/s4696/, scratch/agent/run_s4696_vtc_crash.sh.
+
+## Session 4697 (2026-10-12) — fixed build: 4/4 title->hangar arms, 0 crashes, with VOICE_TRIGGER_CHAIN armed
+Ran `scratch/agent/run_s4697_vtc_fixed_recheck.sh` (s4695 recipe, SPIN_YIELD=0, ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1, 4 concurrent arms) on the S32()-fixed binary (built 00:43, after s4696). Result: all four arms reached VI 512 hangar origin 0x006AB400 (a1..a4 = 362/520/859/many rows in summary; 4152/4314/4382/4180 raw origin lines) and each logged a14-enter=a14-return=3; crash/SIGBUS/SIGSEGV/fatal grep = 0 in all four. Positive control: VI 1024 title rows and a14-enter present in every arm. Prior s4696 pre-fix arms (vtc1) crashed 3/3, so H-diag-was-all holds for that recipe. NOTE: summary.txt rows for a3/a4 are truncated (script SIGKILLed by me after hangar counts were read directly from logs); a2 alive-counts came from raw grep.
+s4672 overlay-route crash (scratch/agent/s4672_overlay_route/run.log) is NOT the 0x400149714 signature: far=0x38000950e (host base 0x300000000 + zero-extended 0x8000950e), x0=0x80091378 zero-extended, no voice-trigger log lines. Zero-extended guest pointer is the same idiom class as the s4696 bug but a different site; unresolved, single-source, not attributed to the diagnostic.
+ORIGIN: no mitigation landed this session (measurement only).
+Rules out: a residual musyxSynthFrame crash on the title->hangar recipe with the fixed build (0/4). Does not cover s4672's overlay route.
