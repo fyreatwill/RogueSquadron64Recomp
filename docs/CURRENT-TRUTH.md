@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4670.
+archive sections. Updated for session 4671.
 
 ## Current state
 
@@ -17,6 +17,12 @@ Audio is no longer a zero-output stub on that route. Fresh 7F saves produce
 nonzero PCM, AI byte order is fixed, and title AI buffers match ucode output.
 MusyX/MORT remains only partially de-stubbed and must not reach stock
 `aspMain`. M5 audio plan steps 1–10 are closed or conditionally unnecessary.
+
+Session 4671 restored the canonical full-section `load_overlays` registration
+call to every ROM-to-RDRAM DMA in addition to the existing chunk-start helper.
+This covers both complete overlay transfers and the game's fixed-size chunked
+loads; the Debug executable rebuilt successfully. Runtime route qualification
+is the next discriminator, so this change does not yet claim that H2 is proven.
 
 Full regeneration remains unsafe since s4204: the newer N64Recomp followed by
 `fixup_game_funcs.py` aborts at the E088 anchor and may clobber generated

@@ -154262,3 +154262,19 @@ and 1024 only, with no 512-wide hangar or attract origin. The attached-mesh
 handler fired zero times. This rules out only the validity of this route for
 the mission discriminator; it does not rule out mission execution or justify
 a NULL/free guard. Artifact: `scratch/agent/s4670_attached_mesh_hangar_action/`.
+## Session 4671 (2026-10-11) — restored full-range overlay registration on PI DMA
+
+The mandated no-churn pivot landed a runtime route change in
+`lib/N64ModernRuntime/librecomp/src/pi.cpp`: after each ROM-to-RDRAM DMA,
+`do_dma` now invokes the canonical `load_overlays` full-section matcher as
+well as the existing `load_overlays_by_start` matcher. This covers complete
+overlay transfers without losing the chunked-overlay behavior. The required
+submodule diff was re-exported to `submodule-patches/N64ModernRuntime.patch`.
+The Debug target rebuilt successfully through final executable linking.
+
+Competing hypotheses were H1 (chunk-start registration already sufficient),
+H2 (complete-section DMAs were missed and need the canonical matcher), and H3
+(overlay registration is not the route blocker). The build is positive
+implementation evidence but does not select H1/H2/H3; the next phase-gated
+route run must inspect overlay-match rows and VI progression. This rules out a
+compile/link regression from the change, not the remaining route hypotheses.

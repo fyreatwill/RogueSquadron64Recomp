@@ -1,25 +1,33 @@
-# NEXT: qualify the post-hangar mission transition with the verified route
-HYPOTHESIS-ID: m3-attached-mesh-mission-route
+# NEXT: validate per-DMA overlay registration on the boot/route path
+HYPOTHESIS-ID: overlay-dispatch-per-dma
 
-The previous three-Start route was invalid: it never reached 512. Run one
-oracle arm using the README's verified Rice schedule, then continue Start
-presses past the hangar hold so the route has a chance to leave the hangar.
-Keep the positive control and both execution watches; do not add a guard.
+Competing hypotheses and discriminator for this iteration:
 
-Exact command:
+- H1: the current chunk-start registration is sufficient; the overlay is
+  registered before its first call and the route change is not needed.
+- H2: some overlay DMA is wholly contained in a section and is missed by the
+  chunk-start-only helper; registering with the canonical full-range helper on
+  every ROM DMA makes the menu/cinematic dispatch path available.
+- H3: registration is not the route blocker; the runtime build will compile,
+  but the new helper call will produce no matching section and cannot alter
+  dispatch.
 
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 120 --hit-cap 200 --watch-write 0x0:0x800000 --watch-pc 0x8005427C,0x80001ACC --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start,61:start,66:start --hold-ms 150 --vi-trace --pif-trace > scratch/agent/s4671_attached_mesh_post_hangar/oracle.log 2>&1
+The discriminating change is to invoke both the canonical `load_overlays`
+full-range matcher and the existing chunk-start matcher after each ROM DMA.
+Build success plus overlay-match logs/route behavior distinguish H1/H2/H3;
+the full-range call is a no-op for partial asset DMAs.
 
-Competing hypotheses and discriminator:
+Run the rebuilt port from `build/` with `ROGUESQ_LOG_DMA=1` and the existing
+phase controls. Check whether the new canonical matcher logs menu/cinematic
+sections and whether the port reaches the known title/hangar VI origins. Keep
+the existing independent oracle schedule for route comparison; do not add a
+new diagnostic field.
 
-- H1: the verified schedule reaches the hangar and a post-hangar Start
-  transition reaches a distinct mission VI origin; the handler executes there.
-- H2: the schedule reaches the hangar and leaves it, but only into known
-  attract/demo or title origins; handler rows remain non-mission.
-- H3: the positive control fails or the route never reaches the known 512
-  hangar origin (`0x006AB400`/`0x00690800`), making the run invalid again.
+Expected discriminator:
 
-The result is valid only with a positive-control count in the thousands and a
-512-wide hangar origin. Select H1 only if a later, distinct VI origin follows
-the hangar and a handler row is attributable to that phase; otherwise record
-H2 or H3 as appropriate.
+- H1: menu/cinematic overlay match rows appear and the route advances beyond
+  the prior clear-only behavior.
+- H2: only chunk-start rows appear; the canonical matcher is a no-op on the
+  covered route, leaving the route unchanged.
+- H3: matcher rows appear but VI progression remains unchanged, selecting a
+  downstream route blocker.
