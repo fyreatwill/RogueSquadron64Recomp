@@ -1,15 +1,12 @@
-# NEXT: RDP triangle stream compare at hangar entry
+# NEXT: classify hangar shade-LSB drift, or renderer-side triage
 HYPOTHESIS-ID: m4-vge-store-boundary-ground-truth
 
-RESUME: s4632: port M4 operands (projection, vertices s4630, per-object matrices) are
-valid and the first matrix equals retail. Divergence is downstream.
-
-Hypotheses:
-- H-clip: clipping/vertex-output stage differs (screen coords or clip flags).
-- H-rdp: RDP triangle commands reaching the RDP differ in count/shape from retail.
-- H-render: commands equal; difference is in the renderer (Rice/GLideN64/Metal).
-
-Discriminator: dump the first N RDP triangle commands (0x08-0x0F) of the first hangar
-frame, port vs oracle (gliden64/rice plugin log), decode screen-space vertices and
-compare counts. Positive control: the title phase must show triangle commands in both.
-Use absolute paths and git -C. tools/m4_matrix_decode.py exists for the matrix side.
+RESUME: s4633 re-ran the aligned RDP diff (port frame 771 vs retail frame 0): edge/z/tex/state
+equal; 109/1249 tris differ only in shade words by +-1 LSB-ish (s4520 had 3).
+Hypotheses: H-anim (lighting term animates, alignment drift), H-round (RSP rounding in
+VMUDN/VMACF/pack differs), H-render (artifacts are renderer-side, stream is fine).
+Discriminator: capture 3 port runs and compare port-vs-port frame 771 shade words (if the
+109 vary run to run it is animation; if identical it is deterministic rounding); positive
+control: tris 850-1246 known differ. Then if deterministic, unit-test VMUDN/VMADN/VMACF
+rounding vs ares on those operands. Scripts: scratch/agent/s4633_port_rdp.sh,
+s4518_shade_cmp.py, s4633_shade_detail.py.

@@ -157,11 +157,12 @@ Artifacts: `scratch/agent/s4631_m4_matrix_span/`.
 
 ## Next steps
 
-1. M4 downstream split (s4632 closed the matrix arm: port per-object matrices
-   are orthogonal like retail's; the first object matrix 0x700040 equals retail
-   exactly, t=(0,21.5,11067.5)). Projection, vertices and matrices all match
-   retail, so the divergence is downstream: compare the RDP triangle stream
-   (command words reaching the RDP) at hangar entry, port vs oracle.
+1. M4 is downstream-closed by stream evidence: s4517-s4521 and s4633 show the
+   aligned hangar entry RDP stream equals retail in edge/z/texture/state words;
+   only low-order shade words differ (3 tris in s4520, 109 in s4633, both
+   single-run, rounding-sized). Pick one: (a) classify the s4633 shade-LSB
+   drift (rounding vs animation alignment) with same-run phase gating, or
+   (b) renderer-side work (RT64 tri-index mask) for rim/stubs/edge strip.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable
