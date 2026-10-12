@@ -166,6 +166,9 @@ Artifacts: `scratch/agent/s4631_m4_matrix_span/`.
    dumps not frame-synced to screenshots). Next: name the WRITER of
    0x656400 + 1022 + 1024*row (RT64 RDRAM writeback vs recomp CPU/RSP/RDP
    code); see scratch/agent/NEXT.md.
+   s4637: NOT RT64 colour writeback (ROGUESQ_NO_WB_W=512 zeroes buffer
+   0x6AB400 as control, yet 0x656400 col 511 stays noisy, 2/2 runs). Writer is
+   CPU/RSP/RDP/other host write; next = store watch (NEXT.md).
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

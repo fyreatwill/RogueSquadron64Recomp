@@ -153939,3 +153939,12 @@ Added `ROGUESQ_EDGE_DUMP=dir` (src/main/rt64_render_context.cpp, phase block): w
 - Control: dumps carry real image content (cols 480-510 non-zero in 240/240 rows) and zero-vs-noise differs by buffer, so the instrument discriminates.
 Selects H-rdram over H-rt64-fb/H-vi for the garbage content: the bad pixels exist in guest RDRAM; RT64 readback/VI scaling only display them. ORIGIN: unnamed writer of 0x656400+1022+1024*row; no mitigation landed.
 Discrimination: noise-in-RDRAM selects H-rdram; next split is which writer (RT64 RDRAM writeback vs recomp CPU/RSP/RDP code).
+
+## Session 4637 (2026-10-11) — column-511 noise in hangar buffer 0x656400 is NOT RT64 colour writeback (H-rt64-wb refuted)
+
+Added lib/rt64 diagnostic `ROGUESQ_NO_WB_W=<w>` (skips colour writeback to RDRAM at that width; rt64_state.cpp). Ran scratch/agent/s4637_wb.sh: nowb1, ctl1 (control), nowb2 with ROGUESQ_EDGE_DUMP; analysis s4637_an.py.
+Results (max over dumps; body_nz = sampled nonzero pixels cols<=510, col511 uniq = distinct values over 240 rows):
+- ctl1: buf 0x656400 body 17520, col511 uniq 128; buf 0x6AB400 body 17520, col511 uniq 1.
+- nowb1/nowb2: buf 0x6AB400 body 0 (positive control: skip works, this buffer is written only by RT64 writeback); buf 0x656400 body 14407 and col511 uniq 118 in BOTH runs.
+So with RT64 writeback off, 0x656400 still carries a noisy col 511 => its writer is not RT64 writeback (2/2 runs + control). Remaining: recomp CPU stores, RSP/RDP DMA, or other host writes. Caveat: body at 0x656400 dropped 17520->14407, so a minority of its content may come from writeback.
+ORIGIN: writer of 0x656400+1022+1024*row still unnamed; only a diagnostic env flag landed, no mitigation.

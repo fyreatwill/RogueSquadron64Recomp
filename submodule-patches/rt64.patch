@@ -5144,7 +5144,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..8bf7a8f 100644
+index 10f98af..9fd2b06 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -6434,11 +6434,16 @@ index 10f98af..8bf7a8f 100644
  
                  pairCursor = framebufferPairCursor;
                  while (pairCursor < maxFramebufferPair) {
-@@ -1462,11 +2539,55 @@ namespace RT64 {
+@@ -1461,12 +2538,59 @@ namespace RT64 {
+                         // RT64 sees the real fb address; until then this
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
-                         if (colorFb->addressStart >= 0x100000) {
+-                        if (colorFb->addressStart >= 0x100000) {
 -                            colorFb->copyNativeToRAM(&RDRAM[colorFb->addressStart], colorWriteWidth, colorRowStart, std::min(colorRowEnd, colorFb->height));
++                        // s4637 diagnostic: ROGUESQ_NO_WB_W=<width> skips colour writeback at that width.
++                        static const char *s_no_wb_w_env = std::getenv("ROGUESQ_NO_WB_W");
++                        static const uint32_t s_no_wb_w = s_no_wb_w_env ? (uint32_t)std::strtoul(s_no_wb_w_env, nullptr, 0) : 0u;
++                        if (colorFb->addressStart >= 0x100000 && !(s_no_wb_w != 0u && colorWriteWidth == s_no_wb_w)) {
 +                            const uint32_t cRowEnd = std::min(colorRowEnd, colorFb->height);
 +                            if (rs64_writeback_sane("color", colorFb->addressStart, colorWriteWidth,
 +                                    colorFb->siz, colorRowStart, cRowEnd, colorFb)) {
@@ -6492,7 +6497,7 @@ index 10f98af..8bf7a8f 100644
                          }
                      }
  
-@@ -1565,11 +2686,11 @@ namespace RT64 {
+@@ -1565,11 +2689,11 @@ namespace RT64 {
              ext.drawDataUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.transformsUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.framebufferGraphicsWorker->commandList->end();
@@ -6506,7 +6511,7 @@ index 10f98af..8bf7a8f 100644
          }
  
          // Evict from the texture cache that are too old and should no longer be maintained.
-@@ -1873,6 +2994,25 @@ namespace RT64 {
+@@ -1873,6 +2997,25 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -6532,7 +6537,7 @@ index 10f98af..8bf7a8f 100644
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
-@@ -1899,6 +3039,132 @@ namespace RT64 {
+@@ -1899,6 +3042,132 @@ namespace RT64 {
              }
          }
          
@@ -6665,7 +6670,7 @@ index 10f98af..8bf7a8f 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +3225,20 @@ namespace RT64 {
+@@ -1959,8 +3228,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -6688,7 +6693,7 @@ index 10f98af..8bf7a8f 100644
                  return;
              }
          }
-@@ -1972,7 +3250,11 @@ namespace RT64 {
+@@ -1972,7 +3253,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6701,7 +6706,7 @@ index 10f98af..8bf7a8f 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3315,51 @@ namespace RT64 {
+@@ -2033,26 +3318,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6771,7 +6776,7 @@ index 10f98af..8bf7a8f 100644
              }
          }
  
-@@ -2910,4 +4217,4 @@ namespace RT64 {
+@@ -2910,4 +4220,4 @@ namespace RT64 {
              break;
          }
      }
