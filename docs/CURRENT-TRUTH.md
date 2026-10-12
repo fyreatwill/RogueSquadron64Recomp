@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4676.
+archive sections. Updated for session 4677.
 
 ## Current state
 
@@ -17,9 +17,22 @@ Audio is no longer a zero-output stub on that route. Fresh 7F saves produce
 nonzero PCM, AI byte order is fixed, and title AI buffers match ucode output.
 MusyX/MORT remains only partially de-stubbed and must not reach stock
 `aspMain`. Session 4676 created the required live inventory and incremental
-plan in [docs/M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). The next discriminator is
-M5 plan Step 1: phase-gated task-contract and PCM qualification with
-private-DMEM vs shared-DMEM arms and independent positive controls.
+plan in [docs/M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Session 4677 qualified the
+Step 4 `0x80094648` boundary: both port arms reached title and hangar, matched
+the retail `0x7F` channel-byte writer shape, kept the MusyX gate at `0x01`,
+completed real-image tasks, and produced nonzero hangar PCM. This rejects gate
+suppression for the covered route; no gate change was made. The next M5 unit
+is Step 5's complete key-on early-return idiom audit.
+
+Session 4677 ran the corrected boot-relative Start-mash route after two shorter
+recipe attempts stopped before title. Both arms reached title 1024 and hangar
+512; the positive controls fired; each produced 30 `m5-94648` rows and 2
+control rows, with hangar rows storing `0x7F` at `0x80141AD8..0x80141B08`.
+Phase-5 gate rows showed gate `0x01`, real-image task rows showed exit/Broke,
+DMEM/DMA activity, and PCM sanity was nonzero. Independent retail writer
+evidence from sessions 4078/4166 supplies the second line. Both port processes
+later aborted after the target window while leaving the route; that does not
+invalidate the phase evidence. Artifact: `scratch/agent/soak_results/s4264_gate/`.
 
 Session 4676 was design-only: it inspected the current dispatch arms, task
 staging, DMEM ownership, wait gates, generated safety exits, and PCM handoff.

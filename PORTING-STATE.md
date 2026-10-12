@@ -154345,6 +154345,29 @@ authorize a guard or skip. Artifact: `scratch/agent/s4675_indexed_census.md`.
 
 ORIGIN: no mitigation was added; the only generated-tree evidence was read-only
 static analysis.
+### Session 4677 note (moved below) — qualified the M5 0x80094648 hangar boundary
+
+The first two short recipe attempts were invalid because they stopped before
+title; the recipe was corrected to use the qualified boot-relative Start-mash
+route and rerun from one Debug build. Both concurrent real-image arms reached
+title `0x00790400` at 1024 and hangar `0x006AB400` at 512. The positive route
+and PCM controls fired. Each arm recorded 30 indexed `0x80094648` writer rows
+and two phase-control rows; hangar rows stored `0x7F` at destinations spanning
+`0x80141AD8..0x80141B08`. Phase-5 gate rows showed `0x800A0F50 = 1`, and
+real-image tasks completed with `Broke`, nonzero DMEM/DMA activity, and
+nonzero hangar PCM sanity. Independent retail writer evidence from sessions
+4078/4166 supplies the second evidence line and matches the port value/dest
+family.
+
+This selects H-gate-legitimate and rejects H-gate-suppresses for the covered
+route. It does not authorize a gate or writer change; the next M5 unit is the
+complete Step 5 key-on early-return idiom audit. Both port processes later
+aborted after the target observation window while leaving the route, so that
+late failure is not used to invalidate the phase-qualified result. Artifact:
+`scratch/agent/soak_results/s4264_gate/`.
+
+ORIGIN: the legitimate writer is the guest `sb` at `0x80094648`; the host
+witness and gate probes are diagnostic-only, and no mitigation was added.
 ## Session 4676 (2026-10-11) — created the M5 audio de-stubbing plan
 
 Performed the required M5 design unit after confirming that the current-truth
@@ -154362,3 +154385,27 @@ correct, and selects Step 1 (task-contract plus private/shared-DMEM
 qualification with same-run positive controls) as the next work unit. The
 previous broad “M5 steps 1–10 closed” statement is superseded because these
 live boundaries remain. No writer/legitimacy claim was made for a mitigation.
+
+## Session 4677 (2026-10-11) — qualified the M5 0x80094648 hangar boundary
+
+The first two short recipe attempts were invalid because they stopped before
+title; the recipe was corrected to use the qualified boot-relative Start-mash
+route and rerun from one Debug build. Both concurrent real-image arms reached
+title `0x00790400` at 1024 and hangar `0x006AB400` at 512. The positive route
+and PCM controls fired. Each arm recorded 30 indexed `0x80094648` writer rows
+and two phase-control rows; hangar rows stored `0x7F` at destinations spanning
+`0x80141AD8..0x80141B08`. Phase-5 gate rows showed `0x800A0F50 = 1`, and
+real-image tasks completed with `Broke`, nonzero DMEM/DMA activity, and
+nonzero hangar PCM sanity. Independent retail writer evidence from sessions
+4078/4166 supplies the second evidence line and matches the port value/dest
+family.
+
+This selects H-gate-legitimate and rejects H-gate-suppresses for the covered
+route. It does not authorize a gate or writer change; the next M5 unit is the
+complete Step 5 key-on early-return idiom audit. Both port processes later
+aborted after the target observation window while leaving the route, so that
+late failure is not used to invalidate the phase-qualified result. Artifact:
+`scratch/agent/soak_results/s4264_gate/`.
+
+ORIGIN: the legitimate writer is the guest `sb` at `0x80094648`; the host
+witness and gate probes are diagnostic-only, and no mitigation was added.
