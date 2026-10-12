@@ -5144,7 +5144,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..8ff6515 100644
+index 10f98af..033190b 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -6310,7 +6310,15 @@ index 10f98af..8ff6515 100644
  
          if (renderToRDRAM) {
              const hlslpp::float2 resolutionScale(1.0f, 1.0f);
-@@ -1149,6 +2178,13 @@ namespace RT64 {
+@@ -1142,6 +2171,7 @@ namespace RT64 {
+             uint32_t rtHeight = 0;
+             uint32_t colorRowStart = 0;
+             uint32_t colorRowEnd = 0;
++            int32_t dbgRectL = 0, dbgRectR = 0;
+             uint32_t depthRowStart = 0;
+             uint32_t depthRowEnd = 0;
+             auto getFramebufferPairs = [&](uint32_t f) {
+@@ -1149,6 +2179,13 @@ namespace RT64 {
                  if (!fbPair.drawColorRect.isEmpty()) {
                      const auto &colorImg = fbPair.colorImage;
                      const auto &depthImg = fbPair.depthImage;
@@ -6324,7 +6332,16 @@ index 10f98af..8ff6515 100644
                      colorHeight = fbPair.drawColorRect.bottom(true);
                      colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
                      depthWriteWidth = 0;
-@@ -1282,7 +2318,7 @@ namespace RT64 {
+@@ -1165,6 +2202,8 @@ namespace RT64 {
+ 
+                     colorRowStart = fbPair.drawColorRect.top(false);
+                     colorRowEnd = fbPair.drawColorRect.bottom(true);
++                    dbgRectL = fbPair.drawColorRect.left(false);
++                    dbgRectR = fbPair.drawColorRect.right(true);
+                     depthRowStart = 0;
+                     depthRowEnd = 0;
+                     if (depthWriteWidth > 0) {
+@@ -1282,7 +2321,7 @@ namespace RT64 {
                  }
  
                  // Synchronize all texture uploads before filling out the GPU tiles and update the texture cache on the framebuffer renderer.
@@ -6333,7 +6350,7 @@ index 10f98af..8ff6515 100644
                  framebufferRenderer->updateTextureCache(ext.textureCache);
  
                  thread_local std::vector<BufferUploader *> bufferUploaders;
-@@ -1357,12 +2393,30 @@ namespace RT64 {
+@@ -1357,12 +2396,30 @@ namespace RT64 {
                              uint32_t readRowCount = colorFb->height - colorFb->readHeight;
                              uint32_t readFbBytes = readRowBytes * readRowCount;
                              uint32_t storageAddress = colorImg.address + readRowBytes * colorFb->readHeight;
@@ -6369,7 +6386,7 @@ index 10f98af..8ff6515 100644
                              }
  
                              colorFb->readHeight = colorFb->height;
-@@ -1401,6 +2455,18 @@ namespace RT64 {
+@@ -1401,6 +2458,18 @@ namespace RT64 {
                                  uint32_t readRowCount = depthFb->height - depthFb->readHeight;
                                  uint32_t readFbBytes = readRowBytes * readRowCount;
                                  uint32_t storageAddress = depthImg.address + readRowBytes * depthFb->readHeight;
@@ -6388,7 +6405,7 @@ index 10f98af..8ff6515 100644
                                  workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress], readFbBytes);
                                  FramebufferChange *depthFbChange = depthFb->readChangeFromStorage(ext.framebufferGraphicsWorker, workload.fbStorage, scratchFbChangePool, Framebuffer::Type::Depth,
                                      G_IM_FMT_DEPTH, pairCursor, depthFb->readHeight, readRowCount, ext.shaderLibrary);
-@@ -1409,6 +2475,7 @@ namespace RT64 {
+@@ -1409,6 +2478,7 @@ namespace RT64 {
                                      depthTarget->copyFromChanges(ext.framebufferGraphicsWorker, *depthFbChange, depthFb->width, readRowCount, depthFb->readHeight, ext.shaderLibrary);
                                      depthFbChanged = true;
                                  }
@@ -6396,7 +6413,7 @@ index 10f98af..8ff6515 100644
  
                                  depthFb->readHeight = depthFb->height;
                              }
-@@ -1426,11 +2493,21 @@ namespace RT64 {
+@@ -1426,11 +2496,21 @@ namespace RT64 {
                              depthFb->lastWriteType = Framebuffer::Type::Depth;
                          }
  
@@ -6422,7 +6439,7 @@ index 10f98af..8ff6515 100644
                          }
                      }
  
-@@ -1441,9 +2518,9 @@ namespace RT64 {
+@@ -1441,9 +2521,9 @@ namespace RT64 {
                  }
  
                  ext.framebufferGraphicsWorker->commandList->end();
@@ -6434,7 +6451,7 @@ index 10f98af..8ff6515 100644
  
                  pairCursor = framebufferPairCursor;
                  while (pairCursor < maxFramebufferPair) {
-@@ -1461,12 +2538,70 @@ namespace RT64 {
+@@ -1461,12 +2541,70 @@ namespace RT64 {
                          // RT64 sees the real fb address; until then this
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
@@ -6474,7 +6491,7 @@ index 10f98af..8ff6515 100644
 +                                    if (probe) {
 +                                        uint32_t c510 = 0, c511 = 0, i = 0;
 +                                        for (uint32_t r = colorRowStart; r < cRowEnd; r++, i += 2) { c510 += px(r, 510) != pre[i]; c511 += px(r, 511) != pre[i + 1]; }
-+                                        fprintf(stderr, "[wbcol] addr=0x%X ww=%u fbw=%u fbh=%u rows=%u-%u changed510=%u changed511=%u\n", colorFb->addressStart, colorWriteWidth, colorFb->width, colorFb->height, colorRowStart, cRowEnd, c510, c511);
++                                        fprintf(stderr, "[wbcol] addr=0x%X ww=%u fbw=%u fbh=%u rows=%u-%u changed510=%u changed511=%u rectL=%d rectR=%d\n", colorFb->addressStart, colorWriteWidth, colorFb->width, colorFb->height, colorRowStart, cRowEnd, c510, c511, dbgRectL, dbgRectR);
 +                                    }
 +                                    if (rs64_m5_host_write_census) {
 +                                        const uint32_t bpp = colorFb->siz == 0 ? 1u : (1u << (colorFb->siz - 1u));
@@ -6508,7 +6525,7 @@ index 10f98af..8ff6515 100644
                          }
                      }
  
-@@ -1565,11 +2700,11 @@ namespace RT64 {
+@@ -1565,11 +2703,11 @@ namespace RT64 {
              ext.drawDataUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.transformsUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.framebufferGraphicsWorker->commandList->end();
@@ -6522,7 +6539,7 @@ index 10f98af..8ff6515 100644
          }
  
          // Evict from the texture cache that are too old and should no longer be maintained.
-@@ -1873,6 +3008,25 @@ namespace RT64 {
+@@ -1873,6 +3011,25 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -6548,7 +6565,7 @@ index 10f98af..8ff6515 100644
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
-@@ -1899,6 +3053,132 @@ namespace RT64 {
+@@ -1899,6 +3056,132 @@ namespace RT64 {
              }
          }
          
@@ -6681,7 +6698,7 @@ index 10f98af..8ff6515 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +3239,20 @@ namespace RT64 {
+@@ -1959,8 +3242,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -6704,7 +6721,7 @@ index 10f98af..8ff6515 100644
                  return;
              }
          }
-@@ -1972,7 +3264,11 @@ namespace RT64 {
+@@ -1972,7 +3267,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6717,7 +6734,7 @@ index 10f98af..8ff6515 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3329,51 @@ namespace RT64 {
+@@ -2033,26 +3332,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6787,7 +6804,7 @@ index 10f98af..8ff6515 100644
              }
          }
  
-@@ -2910,4 +4231,4 @@ namespace RT64 {
+@@ -2910,4 +4234,4 @@ namespace RT64 {
              break;
          }
      }

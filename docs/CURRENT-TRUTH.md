@@ -184,6 +184,11 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
    first call; control 0x7AB000/0x795C00 do change col 511 -> not a generic loop
    bound. Selects H-native-unrendered: hangar draws never cover x=511. Next: log
    SETSCISSOR extents + draw-rect max x for target 0x656000 (single run).
+   s4641 DONE: 0x656000 draw rect is x=140..375 only (121/121 lines); control
+   0x7AB000 rectR=512 does change col 511. Col 511 = stale prior-stride RDRAM that
+   nothing ever rewrites (not an RT64 bug). Next: compare VI hstart/hend (crop of
+   col 511?) in the hangar; if VI shows col 511, check whether retail clears the
+   buffer (needs oracle hangar reach) -- else close the thread as stale/benign.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable
