@@ -154798,3 +154798,7 @@ controls live). Next discriminator (HYPOTHESIS-ID m5-a15-spin-yield-necessity,
 see NEXT.md): ROGUESQ_SPIN_YIELD=1 vs =0 in one build, concurrent, phase-gated
 on VI 1024/512 rows — H-A15-needed (=0 stalls) vs H-A15-redundant (=0 reaches
 hangar with matching VI counts).
+
+In plain terms: this run selects H-A14-yield-needed, refutes
+H-A14-route-absent, and resolves which PC is the 03->00 writer (0x8009B7EC).
+The A15 run will discriminate H-A15-needed from H-A15-redundant.
