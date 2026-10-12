@@ -1,6 +1,8 @@
-# NEXT: how wide is the hangar right-edge garbage band really? (col 511 explains <=1 px)
+# NEXT: hangar right-edge thread closed (s4643); pick the remaining hangar artifacts or fall back
 HYPOTHESIS-ID: hangar-renderer-artifacts
 
-s4642: VI shows 511.9 src cols; col 511 contributes <=1 of 640 output px.
-Hypotheses: H-band-1px (band is the col-511 sliver; close thread as benign), H-band-wide (band >1 px: separate cause), H-other-buffer.
-Discriminator: measure column-wise garbage extent at the right edge in hangar frame PNGs (scratch/agent/s4642_viext/) for frames at 0x656400 vs 0x6AB400. Control: variance of a known-good column vs edge columns.
+s4643: right-edge band is ~5 of 1280 px (col 511 + bilinear halo); benign. Thread closed.
+Remaining hangar artifacts from CURRENT-TRUTH: rim band and blue holo spikes. Next unit: pick ONE (rim band or holo spikes),
+list 2-4 hypotheses and the discriminating measurement in this file before building; reuse tools/edge_band_measure.py-style
+offline analysis of existing frame captures first (scratch/agent/s4642_viext/*.png) before any new build.
+If neither is tractable, M5/M3 items in CURRENT-TRUTH Next steps 2-4 apply; do not start the rename sweep while the engineering-change gate is near 6.

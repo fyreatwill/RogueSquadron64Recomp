@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4629.
+archive sections. Updated for session 4643.
 
 ## Current state
 
@@ -193,6 +193,7 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
    exact); both 0x656400/0x6AB400 are scanned out. Col 511 = <=1 output px, so it
    cannot explain a multi-pixel right-edge band. Next: measure the real band width
    in a hangar frame capture; if >1 px the cause is not col 511.
+   s4643 DONE: band ~5 of 1280 px (col 511 + bilinear halo), bimodal, benign; thread CLOSED.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable
