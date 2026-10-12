@@ -8279,7 +8279,7 @@ static void rs64_s2107_b40_writer(uint32_t writer_pc, uint32_t old_value,
             r"(// 0x8008EB40: sb          \$v0, 0xF50\(\$at\)\n"
             r"(?:    (?:rs64_probe_submit_gate_store|rs64_m5_writer_parity)\('B', 0x8008EB40u,[^\n]*\);[^\n]*\n)?"
             r"    MEM_B\(0XF50, ctx->r1\)) = ctx->r2;",
-            r'''\1 = (((getenv("ROGUESQ_M5_B40_VALUE") != NULL) && getenv("ROGUESQ_M5_B40_VALUE")[0] != '0') ? ctx->r2 : 0); // PATCH: B40 value arm; default remains audio-engine-disabled''',
+            r'''\1 = (((getenv("ROGUESQ_M5_B40_VALUE") != NULL) && getenv("ROGUESQ_M5_B40_VALUE")[0] == '0') ? 0 : ctx->r2); // PATCH: B40 value arm; s4701 default = pass-through (MusyX gate on), ROGUESQ_M5_B40_VALUE=0 rolls back''',
             text)
         if n != 1:
             # s2190 edits the file in a separate pass immediately before the
@@ -8291,7 +8291,7 @@ static void rs64_s2107_b40_writer(uint32_t writer_pc, uint32_t old_value,
                 r"(// 0x8008EB40: sb          \$v0, 0xF50\(\$at\)\n"
                 r"(?:    (?:rs64_probe_submit_gate_store|rs64_m5_writer_parity)\('B', 0x8008EB40u,[^\n]*\);[^\n]*\n)?"
                 r"    MEM_B\(0XF50, ctx->r1\)) = ctx->r2;",
-                r'''\1 = (((getenv("ROGUESQ_M5_B40_VALUE") != NULL) && getenv("ROGUESQ_M5_B40_VALUE")[0] != '0') ? ctx->r2 : 0); // PATCH: B40 value arm; default remains audio-engine-disabled''',
+                r'''\1 = (((getenv("ROGUESQ_M5_B40_VALUE") != NULL) && getenv("ROGUESQ_M5_B40_VALUE")[0] == '0') ? 0 : ctx->r2); // PATCH: B40 value arm; s4701 default = pass-through (MusyX gate on), ROGUESQ_M5_B40_VALUE=0 rolls back''',
                 text)
         if n != 1:
             raise RuntimeError(f"{p.name}: B40 audio gate anchor expected exactly one match, got {n}")

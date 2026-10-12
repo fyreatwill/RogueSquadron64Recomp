@@ -154899,3 +154899,15 @@ Rules out: concurrency noise, H-dereg in the sense "port dispatch ignores remova
 Process finding: my recipes (and run_s4698/s4699 scripts) left orphan `RogueSquadron64Recomp` children (cleanup killed only the subshell PID): 10 orphans were loading the machine and produced false early stalls/si_addr=0x58 crashes in the first two s4700 invocations. Fixed in the s4700 scripts with `pkill -KILL -x RogueSquadron64Recomp`; the clean rerun is the evidence above. s4698/s4699 recipe results used the same leaky cleanup; their crash/no-crash direction is consistent with this finding but the per-arm timing is load-contaminated.
 ORIGIN: the duplicate writer is the guest's own legit `initN64RspMixer` (0x800919D8/0x800919EC); the defect is OUR default-off gate stub (B40) skipping the shutdown the guest would run first. Value legitimacy: gate=1 is the guest's own value (retail runs the shutdown). No code mitigation landed this session; the fix candidate is flipping the B40 default to pass-through, pending route qualification (NEXT.md).
 Conclusion (gate wording): this selects H-removal-cond over H-dereg/H-stale-head and refutes the s4699 "retrace dispatch ignores removal" lead; same-run A/B 1/1 vs 0/3 plus independent retail oracle alternation.
+
+## Session 4701 (2026-10-12) — flipped the B40 (MusyX gate) default to pass-through; 0/7 crashes vs B40=0 rollback 1/2
+
+ORIGIN: the writer of the zero is our own fixup patch (`fixup_game_funcs_vendored.py` ~8282/8294, setDisplayMode/reapplyDisplayMode gate store, "default remains audio-engine-disabled"); the zero is not a legitimate retail value (retail stores r2, so shutdown+dereg run and synth registration alternates). Removing the zero removes the cause rather than adding a guard.
+
+Ran `scratch/agent/run_s4701_b40_qualify.sh` (Start-mash route, 4 concurrent arms: B40=0 control + B40=1 x3) and, after flipping the default, `run_s4701_b40_default.sh` (control = `ROGUESQ_M5_B40_VALUE=0`, 3 arms with the var empty = new default). Summaries in `scratch/agent/s4701_b40_{qualify,default}/`:
+- qualify: all 4 arms reached title VI 1024 (2.5-3.5k rows) and hangar 512 @0x006AB400 (322-382), 0 crashes, 0 abort/MORT, 0 A11-A14 timeouts, A13/A14 returns 3 each (control did not crash that time, so no discrimination there).
+- default-flip run: control B40=0 CRASHED (31 mcontext rows, 1 abort, the s4672 family); the 3 default arms had 0 crashes, same VI/wait/service-voice counts, register/dereg-enter 17-19 / 8-10 in all.
+- Pooled B40=0: 1 crash/2. Pass-through: 0/7 (including s4700's 0/3). Small n and the crash is intermittent, so this is single-mechanism plus A/B, not proof.
+- Change: expression is now `(env=="0") ? 0 : ctx->r2` in the vendored fixup; live `../N64Recomp/RecompiledFuncs/funcs_23.c` patched identically (2 sites) and rebuilt. The live text was the post-regex form, so after the next regen check `grep M5_B40_VALUE funcs_23.c` shows `== '0') ? 0`. Rollback: `ROGUESQ_M5_B40_VALUE=0`.
+- `[m5-b40-*]` log labels in upstream_compat.cpp still use the old control/treatment polarity (cosmetic).
+Next: long soak of the new default, then the next M5 de-stub step per docs/M5-AUDIO-PLAN.md.
