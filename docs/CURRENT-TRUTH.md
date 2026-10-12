@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4689.
+archive sections. Updated for session 4690.
 
 ## Current state
 
@@ -188,6 +188,20 @@ H-M4-unreachable as an instrument-boundary result, not a retail route null.
 The accumulator comparison remains unevaluable and no mitigation is
 authorized. Artifact: `docs/M4-S4689-RETAIL-WITNESS.md` and
 `scratch/agent/s4689_m4_retail_witness/`.
+
+Session 4690 ran the new external-retail-entry handoff capture. The oracle
+whole-RDRAM control, title, and hangar phase controls all fired; its exact
+voice-span writer buckets were empty in both requested title/hangar phases,
+while the full-run writer histogram only showed pre-target-route activity.
+The watched retail consumer `0x800903F0` had zero hits. The port reached title
+but not the qualified hangar origin before the known
+`musyxSynthFrame_s4562_impl` bus-error family; its exact-span rows were only
+phase 3 at `0x00696100`, and its phase-gated `0x800903F0` consumer had zero
+rows. Adjacent-range and writer controls were positive. This selects
+H-route-absent for the requested handoff phase, not a retail writer or
+FE98/PI bridge corruption. No mitigation is authorized. Artifact:
+`docs/M5-S4690-EXTERNAL-ENTRY.md` and
+`scratch/agent/s4690_external_entry_handoff/`.
 
 ## Active frontier
 
@@ -391,9 +405,11 @@ no guard, patch, or mitigation was added. Artifacts are in
 - VI-640 crash families and broad M3 guard classes are parked. A mitigation
   needs an `ORIGIN:` line naming the writer and whether the value is
   legitimate.
-- External retail-entry remains parked until a new attributable handoff. The
-  M4 accumulator-origin boundary is eligible again because s4625 qualified a
-  stable hangar route and retained the stage-1 control.
+- External retail-entry remains parked after s4690: the new handoff capture
+  had positive controls but no target writer/consumer in the requested
+  title/hangar phase. Do not repeat this route-null capture without a new route
+  discriminator. The M4 accumulator-origin boundary is eligible again because
+  s4625 qualified a stable hangar route and retained the stage-1 control.
 - The s4622 producer null was title-only until s4624. The extended s4625
   canonical hangar route also had no odd event, so the post-hangar trigger is
   ruled out for this route; the recurrence remains a missing-trigger or
@@ -509,9 +525,11 @@ no guard, patch, or mitigation was added. Artifacts are in
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. The M4 retail-internal comparison is unevaluable at the independent
    Rice/HLE boundary (s4689); do not repeat the same accumulator probe.
-   Revisit the external retail-entry boundary only with a new attributable
-   handoff, starting from the odd-PI/count-32 voice record chain; do not repeat
-   the qualified all-phase name-copy null.
+   Session 4690's new attributable odd-PI/count-32 voice handoff capture
+   selected H-route-absent: retail and port controls were positive, but neither
+   produced the target handoff plus `0x800903F0` consumer in the requested
+   title/hangar phase. Do not repeat the same route-null capture or add a guard;
+   a new route discriminator is required.
 4. s4644: rim band and holo spikes are no longer visible in current hangar frames (single-source visual); residual candidate is white pillar stubs at x~200/430/865/1085/1130. Need a retail pixel reference before treating it as a defect (retail may light those edges by design). s4645: no reference obtainable; thread PARKED, craft-select frame renders clean.
 5. s4647/s4649/s4653: the safe fresh-copy fixer and tag comparison are
    qualified; do not regenerate over the live external tree until the normal

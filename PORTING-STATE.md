@@ -154654,3 +154654,28 @@ authorized.
 
 ORIGIN: no mitigation; the new script was diagnostic-only, and the absent
 retail internal rows are caused by the independent oracle's HLE boundary.
+
+## Session 4690 (2026-10-11) — external retail-entry handoff was route-absent
+
+Built the target once after adding phase attribution to the generated
+`0x800903F0` voice consumer probe. Ran one concurrent Rice retail oracle and
+real-audio/LLE/ungated/solo/spin-yield port capture with whole-RDRAM, exact
+voice-span, adjacent-range, writer-PC, consumer-PC, post-store, and ordinal
+controls.
+
+The oracle whole-RDRAM control fired, and its title and hangar phase buckets
+were positive. The exact voice-span writer histograms were empty in both
+requested title/hangar buckets; the full-run histogram showed pre-target-route
+activity from named writers including `0x800921E8` and `0x80007670`. The
+watched `0x800903F0` consumer had zero hits. The port reached title but not
+the qualified hangar origin before the known `musyxSynthFrame_s4562_impl`
+bus-error family. Its 76 exact-span rows were all phase 3 at `0x00696100`,
+and its phase-gated `0x800903F0` consumer had zero rows. Adjacent-range and
+named-writer controls fired.
+
+This selects H-route-absent for the requested count-32 handoff phase. It
+rules out neither the retail writer nor the FE98/PI bridge globally, because
+the target handoff was not reached in the requested phase. No guard, skip,
+alignment change, or pointer mitigation was authorized.
+
+ORIGIN: no mitigation; the generated probe and driver were diagnostic-only.
