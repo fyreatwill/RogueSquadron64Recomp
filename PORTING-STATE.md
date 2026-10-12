@@ -154698,3 +154698,28 @@ wait. No mitigation was added. Artifacts: `docs/M5-S4691-A11-WAIT-BOUNDARY.md`
 and `scratch/agent/s4691_m5_a11_wait_boundary/`.
 
 ORIGIN: no mitigation; the change was a diagnostic-only capture script.
+
+## Session 4692 (2026-10-11) — A12 countdown wait returned through producer activity
+
+Rebuilt once and ran the self-contained A12 capture with the qualified
+real-audio/LLE/ungated/solo/spin-yield port concurrently with the Rice retail
+oracle. Port title and hangar controls were positive (2,421 and 208 rows).
+`waitForMusyXAudioTaskDone` entered five times; every default yielding wait
+observed countdown 16 -> 0 and returned. No pump cap, spin timeout, crash, or
+abort fired. The separate `0x8014974C` diagnostic saw flag zero on entry, so
+that spin was not reached in the target phase.
+
+Retail independently passed whole-RDRAM, title, and hangar controls and
+executed all four candidate countdown-writer PCs. The flag range wrote 24,219
+times and the adjacent state range wrote 425,205 times. The exact retail
+countdown watch `0x14998A..0x14998C` was zero-hit; phase rows placed
+`0x800916A4` at adjacent `0x149988`, so this establishes writer/state-family
+activity but not an exact retail write to the port field.
+
+This selects H-A12-countdown-writer-valid for the covered port route and
+rules out the separate flag spin as its blocker. It does not prove the exact
+retail field mapping or every mission path, and no wait/spin change was added.
+Artifacts: `docs/M5-S4692-A12-WAIT-BOUNDARY.md` and
+`scratch/agent/s4692_m5_a12_wait_boundary/`.
+
+ORIGIN: no mitigation; the change was a diagnostic-only capture script.

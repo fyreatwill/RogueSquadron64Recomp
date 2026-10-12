@@ -1,40 +1,44 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-a12-audio-task-done-boundary
+HYPOTHESIS-ID: m5-a13-drain-return-boundary
 
-Run one complete M5 A12 boundary capture for `waitForMusyXAudioTaskDone` and
-the remaining `0x8014974C` spin on the qualified real-audio/LLE route. A11 is
-closed for the covered route; do not repeat its wait/slot capture.
+Run one complete M5 A13 boundary capture for
+`drainAudioAndFinalizeSpeechBuffer`, comparing the default-off in-loop tick
+with the explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` control in one rebuilt binary.
+A12 is qualified for the covered route; do not repeat its wait capture.
 
 Competing hypotheses:
 
-- H-A12-countdown-writer-valid: `musyxSynthFrame` legitimately decrements the
-  task countdown to zero and the wait returns; the remaining spin is separate
-  and not reached in the target phase.
-- H-A12-port-pump-missing: the port reaches the wait with a live countdown,
-  but the producer is not scheduled or the wrong field is polled, so the wait
-  cap/spin persists without a matching terminal writer.
-- H-A12-route-absent: positive controls fire but neither wait arm reaches the
-  requested title/hangar phase, so the boundary is unevaluable.
+- H-A13-retail-status-reap: the drain returns because legitimate slot-status
+  writers clear the active slots; default-off and tick-on both show writer ->
+  terminal status -> clean drain return, with no timeout.
+- H-A13-port-tick-needed: the default port drain stalls or times out because
+  its in-loop producer is absent, while the tick-on arm returns and retail
+  independently shows the status writer in the same phase.
+- H-A13-route-absent: title/hangar controls fire but neither arm enters the
+  drain in the requested phase, so this boundary is unevaluable.
 
-Discriminating measurement: in one rebuilt binary, phase-gate entry, seed,
-countdown reads/writes, zero transition, return, cap, and the separate
-`0x8014974C` spin; retain whole-RDRAM and port title/hangar controls. In the
-retail oracle watch the corresponding countdown/status range and the named
-writer PC(s), with whole-RDRAM as its positive control. A named writer -> zero
-count -> wait return with no cap selects H-A12-countdown-writer-valid; a valid
-entry plus cap/spin and absent or late zero writer, with retail showing the
-writer, selects H-A12-port-pump-missing; fired controls with no wait entry
-select H-A12-route-absent.
+Discriminating measurement: one binary must log both arms' phase-gated drain
+entry, active-slot reads, status writes, return, and timeout, while retaining
+task/SP completion, slot `01/02/00`, and PCM controls. The retail oracle must
+watch the corresponding status range and named writer PCs, with whole-RDRAM,
+VI, and adjacent-range controls. Writer -> terminal status -> return in both
+arms selects H-A13-retail-status-reap; default timeout/absence with tick-on
+return plus retail writer activity selects H-A13-port-tick-needed; fired
+controls with no drain entry select H-A13-route-absent. A timeout or clean
+return alone is not a result.
 
 Preparation and run:
 
-1. Read the A12 inventory and current helpers:
-   `rg -n -C 8 'waitForMusyXAudioTaskDone|8014974C|WAIT_NOPUMP|countdown|musyxSynthFrame' docs/M5-AUDIO-PLAN.md docs/CURRENT-TRUTH.md src tools ../N64Recomp/RecompiledFuncs`.
-2. Add all port countdown/spin fields and all retail watches before building;
-   arm a same-run positive control for every instrument.
+1. Read the A13 inventory and helpers:
+   `rg -n -C 8 'drainAudioAndFinalizeSpeechBuffer|DRAIN_INLOOP_TICK|drain-inloop|anyAudioSlotActive|status' docs/M5-AUDIO-PLAN.md docs/CURRENT-TRUTH.md src tools ../N64Recomp/RecompiledFuncs`.
+2. Add all drain/slot/status fields and all retail watches before building;
+   arm same-run positive controls for every instrument. Any mitigation-shaped
+   change requires an `ORIGIN:` line naming the writer.
 3. Build once: `cmake --build build --target RogueSquadron64Recomp -j4`.
-4. Run one concurrent capture from `build/` using the canonical
-   real-audio/LLE/ungated/solo/spin-yield environment and the Rice oracle;
-   terminate with SIGKILL, phase-gate on VI transitions, and reject any null
+4. Run one concurrent capture from `build/` with the canonical
+   real-audio/LLE/ungated/solo/spin-yield environment, launching the default
+   and tick-on arms from the same binary if the existing arm mechanism allows;
+   otherwise use the existing same-run control toggle. Run the Rice oracle,
+   phase-gate on VI transitions, terminate with SIGKILL, and reject any null
    without title and hangar controls.

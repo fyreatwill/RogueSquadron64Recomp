@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4691.
+archive sections. Updated for session 4692.
 
 ## Current state
 
@@ -212,6 +212,21 @@ range, and executed the named `0x8009B7CC`/`0x8009B7EC` service writers six
 times each. This selects H-A11-slot-writer-valid for the covered route: keep
 the cap and make no wait change. Artifact: `docs/M5-S4691-A11-WAIT-BOUNDARY.md`
 and `scratch/agent/s4691_m5_a11_wait_boundary/`.
+
+Session 4692 completed the M5 A12 wait boundary. The rebuilt real-audio/LLE
+port reached title/hangar controls, entered `waitForMusyXAudioTaskDone` five
+times, and each default yielding wait observed countdown `16 -> 0` and
+returned; no pump cap, spin timeout, crash, or abort fired. The separate
+`0x8014974C` diagnostic saw flag zero on entry, so that spin was not reached
+in the target phase. Retail independently passed whole-RDRAM, title, and
+hangar controls and executed all four candidate countdown-writer PCs, with
+24,219 writes to the flag range and 425,205 writes to the adjacent state
+range. Its exact `0x14998A` countdown watch was zero-hit; phase rows placed
+`0x800916A4` at adjacent `0x149988`, so retail confirms the writer/state
+family but not the exact port field mapping. This selects H-A12-countdown-
+writer-valid for the covered port route and closes the separate-flag spin as
+a route blocker; no wait or spin change is authorized. Full evidence is in
+`docs/M5-S4692-A12-WAIT-BOUNDARY.md`.
 
 ## Active frontier
 
@@ -448,13 +463,16 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
-0. M5 audio de-stubbing is qualified through Step 10 on the covered route.
+0. M5 audio de-stubbing is qualified through A12 on the covered route.
    Session 4691 qualified A11 on the covered route: `waitForAnyAudioSlot`
    returned three hangar calls with active mask `0x11`, no cap fired, and
    retail independently executed the named `03` publish and `00` clear
-   writers. Keep the wait cap unchanged. The next M5 unit is A12's complete
-   `waitForMusyXAudioTaskDone` countdown/`0x8014974C` spin boundary capture;
-   use `scratch/agent/NEXT.md` for its hypotheses and exact run contract.
+   writers. Keep the wait cap unchanged. Session 4692 qualified A12's
+   countdown wait for the covered port route; retain the yielding default and
+   do not alter the separate flag spin. The next M5 unit is A13's complete
+   `drainAudioAndFinalizeSpeechBuffer` boundary, using default-off versus the
+   explicit in-loop tick control and the slot/status writer return contract.
+   Use `scratch/agent/NEXT.md` for its hypotheses and exact run contract.
    The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
    s4682; retain the silent arm as rollback. Do not change the AI status,
    PCM conversion, or SDL queue from this evidence. The `MEM_H` census is
