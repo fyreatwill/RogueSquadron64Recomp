@@ -1,7 +1,5 @@
-# NEXT: decide whether the hangar white pillar stubs are a defect
-HYPOTHESIS-ID: hangar-renderer-artifacts
+# NEXT: resume generated-symbol renaming sweep (hangar thread parked)
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s4644: rim band + holo spikes not visible in current frames; residual = white vertical stubs at x~200/430/865/1085/1130 (f_003 of scratch/agent/s4642_viext).
-Hypotheses: H-design (retail lights these pillar edges white), H-tex (a texture/combiner on pillar edge tris is wrong in RT64), H-shade (leftover vertex shade/clamp difference).
-Discriminator: need a retail pixel reference. Find a retail hangar screenshot (external, e.g. any emulator capture of "Available Craft" screen) and compare; or dump the RDP triangles covering x~430 (RT64 tri-index mask tools from s4635) and read their combiner/shade values.
-If H-design is confirmed, close the hangar-artifact thread and fall to M5/M3 items (Next steps 2-5). Do not start the rename sweep while the engineering-change gate is near 6.
+Hangar white-pillar-stub thread parked (s4645): no retail reference obtainable; craft-select frame renders clean. Reopen only if someone supplies a retail "Available Craft" screenshot (then tri-mask bisect, tools from s4635).
+Last 15 sessions were hangar work, not sweep, so the sweep resumes: `grep -c 'func_0x' ` over tools/rename* mappings, pick the next ranked batch per tools/rename_generated_symbols.py conventions. Do NOT stay on the sweep past the engineering-churn gate (6); prefer an M3 idiom-class audit that commits a guard if a new class is identifiable.
