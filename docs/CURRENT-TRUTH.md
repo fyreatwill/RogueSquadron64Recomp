@@ -27,9 +27,9 @@ is explicitly repaired.
 
 Session 4649 qualified a safe regeneration repair harness: the vendored fixer
 completed rc=0 against a clean `RecompiledFuncs.s4204-fresh` copy, and the five
-behavior-changing live-only arms (s4563, s4296, s4580, s4571c, s4572) matched
-the live tag census. The first four are behavior-changing when their arm is
-active; s4572 is diagnostic-only. Five residual tag-count differences are
+target live-only arms (s4563, s4296, s4580, s4571c, s4572) matched the live
+tag census. The first four are behavior-changing when their arm is active;
+s4572 is diagnostic-only. Five residual tag-count differences are
 diagnostic-only probe drift (s4079, s4084, s4323, s4329, and one s4560 gate),
 so exact textual equality is not required. The live tree was not touched.
 
