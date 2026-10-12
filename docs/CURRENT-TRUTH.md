@@ -486,6 +486,8 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
+**s4698 (top item): the `musyxSynthFrame_s4562_impl+5808` bus error (s4672 route) is deterministic 4/4 and is the synth walking audio blocks freed at shutdown.** Writer of the corrupt node = `initTextureLUTAndAllocBuffers` clear loop (guest 0x8001E2C0, legitimate for its own malloc'd table at 0x80179480 that reused the freed 900-B audio block 0x80179380). `ROGUESQ_S4562_PAUSE=1` is insufficient (pause cleared at wait-exit, crash follows); `=2` (hold) 0 crashes 2/2 but kills audio. Next: pause must persist until the guest clears gate 0x800A0F50 and re-open at audio re-init (see scratch/agent/NEXT.md). The s4696 unsigned-literal class audit found 0 further sites (closed).
+
 0. M5 audio de-stubbing is qualified through A13 on the covered route.
    Session 4691 qualified A11 on the covered route: `waitForAnyAudioSlot`
    returned three hangar calls with active mask `0x11`, no cap fired, and

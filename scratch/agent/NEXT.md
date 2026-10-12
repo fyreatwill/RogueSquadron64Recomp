@@ -1,17 +1,12 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-bus-error-reattribution
+HYPOTHESIS-ID: m5-synth-walk-after-free
 
-s4697: fixed build, 4/4 arms reach hangar with 0 crashes (VOICE_TRIGGER_CHAIN armed).
-Open: s4672 overlay-route crash (scratch/agent/s4672_overlay_route/run.log):
-fault far=0x38000950e = host base 0x300000000 + zero-extended 0x8000950e; x0=0x80091378
-(zero-extended), last-guest-pc 0x80001b08. Same idiom class as s4696 (unsigned literal
-instead of S32()), different site.
+s4698: s4672 crash = synth list walk over freed audio blocks (see PORTING-STATE s4698). PAUSE=2 (hold forever) fixes the crash but permanently skips synth.
 
-Unit: find the s4672 overlay-route recipe (grep PORTING-STATE.md "Session 4672"), replay
-it 4 concurrent on the fixed build and count crashes. Hypotheses:
-- H-fixed-by-s4696: 0 crashes -> s4672 was also the diagnostic; close bus-error family.
-- H-other-site: same fault recurs -> locate the zero-extended load (grep generated code /
-  diagnostics for unsigned 0x8xxxxxxx literals used as pointers: idiom-class audit, same
-  style as the -0x25A4 audit), fix with S32(), name the writer.
-Positive control: reaching VI 512 hangar in unaffected arms. Then proceed to M5 plan next step.
+Unit: replace "hold forever" with the right lifetime. Hypotheses:
+- H-gate: retail stops the walk because the guest clears gate 0x800A0F50 right after waitForMusyXAudioTaskDone/musyxNoopStub; the port's synth thread runs in the gap (or ignores the gate). Fix: keep g_s4562_pause until the guest store to 0x800A0F50 clears it.
+- H-reinit: pause must also end at audio re-init (rs_malloc 900 B at 0x80179380 / musyx init), else audio stays dead after the first shutdown.
+- H-other-reader: synth is not the only reader (then PAUSE=2 would not have been 2/2 clean — currently disfavoured).
+Steps: (1) grep funcs for stores to 0x800A0F50 (`-0X..($at)` with lui 0x800A) and the init that sets it; (2) add PAUSE=3 = clear pause on that gate store / on audio re-init; (3) in-run A/B arms: PAUSE=0 (control, must crash), 2, 3; positive control = PAUSE=0 crash; success = PAUSE=3 0 crashes AND [s4562] skipped count bounded AND synth entries resume after re-init (s4561-ctl rows).
+Script template: scratch/agent/run_s4698_pause_ab.sh. Then proceed with M5-AUDIO-PLAN next step.
