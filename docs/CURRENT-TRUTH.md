@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4671.
+archive sections. Updated for session 4672.
 
 ## Current state
 
@@ -23,6 +23,16 @@ call to every ROM-to-RDRAM DMA in addition to the existing chunk-start helper.
 This covers both complete overlay transfers and the game's fixed-size chunked
 loads; the Debug executable rebuilt successfully. Runtime route qualification
 is the next discriminator, so this change does not yet claim that H2 is proven.
+
+Session 4672 ran the rebuilt macOS target with the canonical real-audio/LLE
+configuration and `ROGUESQ_LOG_DMA=1`. The positive DMA control fired 6,853
+rows; menu and cinematic transfers produced the existing start-match rows at
+0x10C2D0 and 0x137580, but no full-range matcher row was observed. The run
+reached VI 1024 and then VI 640, never the qualified 512 hangar origin, and
+ended in `musyxSynthFrame_s4562_impl` with a bus error. The full-range matcher
+has no independent positive-control counter, so its missing row is a
+single-source, unqualified null: do not claim H1/H2 from it or remove the
+call yet. Artifact: `scratch/agent/s4672_overlay_route/`.
 
 Full regeneration remains unsafe since s4204: the newer N64Recomp followed by
 `fixup_game_funcs.py` aborts at the E088 anchor and may clobber generated
@@ -324,6 +334,9 @@ no guard, patch, or mitigation was added. Artifacts are in
    s4670's three-Start schedule was invalid because it never reached 512;
    the next run must use the README's verified six-plus Start schedule before
    testing a post-hangar transition.
+   s4672's overlay qualification did not reach the required 512 origin and
+   lacked a full-range positive control; the next overlay unit must instrument
+   both matcher arms in one run or park this thread without a dispatch claim.
 
 Session 4658 tried a distinct post-512 input sequence with PIF tracing. The
 whole-RDRAM control hit 10,000 and retail ran for 180 seconds through title,

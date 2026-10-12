@@ -154278,3 +154278,18 @@ H2 (complete-section DMAs were missed and need the canonical matcher), and H3
 implementation evidence but does not select H1/H2/H3; the next phase-gated
 route run must inspect overlay-match rows and VI progression. This rules out a
 compile/link regression from the change, not the remaining route hypotheses.
+## Session 4672 (2026-10-11) — full-range overlay matcher remained unqualified
+
+Ran the rebuilt macOS target with `ROGUESQ_LLE_FORCE=1`,
+`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_AUDIO_UCODE=1`,
+`ROGUESQ_LOG_DMA=1`, and `ROGUESQ_LOG_PHASE=1` for the prescribed overlay
+route qualification. The positive DMA stream produced 6,853 rows. The menu
+and cinematic ROM transfers at 0x10C2D0 and 0x137580 produced the existing
+chunk-start matches; no full-range matcher row appeared. VI reached 1024 and
+later 640, but not the qualified 512 hangar origin. The run ended with a bus
+error in `musyxSynthFrame_s4562_impl`.
+
+This is a single-source, unqualified null for the full-range matcher because
+that matcher has no positive-control counter in this run. It does not select
+H1, H2, or H3 and does not authorize removing the call. Build succeeded.
+Artifact: `scratch/agent/s4672_overlay_route/`.
