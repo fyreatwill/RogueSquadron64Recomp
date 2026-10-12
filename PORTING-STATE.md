@@ -154314,3 +154314,18 @@ canonical full-range call, which remains relevant to complete-section DMAs.
 Artifact: `scratch/agent/s4673_overlay_probe/`.
 
 ORIGIN: no mitigation was added; this was a registration-dispatch measurement.
+## Session 4674 (2026-10-11) — audited unguarded self-referential pointer walks
+
+The M3 work unit was a complete static census of the generated idiom in which
+a backward branch re-enters a label followed by `MEM_W(ctx->rN, 0X0)` using the
+same register as address and result. The candidate detector found 30 sites in
+14 functions across eight generated files. A separate exact scan independently
+reproduced all 30; the existing heap-list guard probes at `0x800079B8` supplied
+the source positive control. Classification found bounded table searches,
+sentinel-terminated song/audio lists, render-reference lists, and mesh-chain
+walks. No named writer was shown to publish a non-KSEG0 or otherwise invalid
+pointer, so H-safe-loop was selected provisionally and H-unguarded-invalid was
+not selected. This is static evidence only; no guard, skip, or mitigation was
+added. It rules out treating the idiom class itself as an explanation for a
+crash without a writer/legitimacy proof. Artifact: `docs/M3-S4674-UNGUARDED-
+SELF-REFERENTIAL-WALKS-AUDIT.md`.

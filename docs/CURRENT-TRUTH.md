@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4673.
+archive sections. Updated for session 4674.
 
 ## Current state
 
@@ -50,6 +50,14 @@ Full regeneration remains unsafe since s4204: the newer N64Recomp followed by
 `fixup_game_funcs.py` aborts at the E088 anchor and may clobber generated
 functions. Use the existing `tools/apply_s*.py` workflow unless that failure
 is explicitly repaired.
+
+Session 4674 completed the bounded M3 audit of every generated backward
+self-referential `MEM_W(p, 0)` walk: 30 sites in 14 functions, independently
+reproduced by a second exact scan. The sites are bounded table, sentinel list,
+render-reference, or audio-list walks; no named writer was shown to publish an
+invalid pointer. The existing heap-list guard probes supplied the positive
+control. This is static evidence only: no guard or mitigation is authorized,
+and the next M3 unit must be a different complete idiom class.
 
 ## Active frontier
 
@@ -386,6 +394,10 @@ completed normally at 120 seconds. This selects H3 route-invalid for the
 requested mission discriminator and does not establish mission absence or
 authorize a guard. Artifact:
 `scratch/agent/s4670_attached_mesh_hangar_action/`.
+
+The next M3 unit is a new complete indexed-dereference idiom census with an
+independent scan and a source positive control. Do not repeat s4674's
+self-referential-walk census or add a guard without a writer/legitimacy proof.
 
 ## Evidence and operating rules
 
