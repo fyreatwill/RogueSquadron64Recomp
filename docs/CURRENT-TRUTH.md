@@ -113,6 +113,15 @@ unrelated loads or byte indices; no named guest writer publishing a pointer
 was found. This selects H-MEMBU-bounded and authorizes no guard, mitigation,
 build, or runtime probe.
 
+Session 4699 (supersedes the A7 gate claim): `musyxSynthFrame`'s read of gate
+`0x800A0F50` (0x800912AC) skips only `update3DAudioFrame`; the voice-list walk
+is unconditional, so releasing the s4562 pause at the guest gate-clear store
+(PAUSE=3) still crashes 2/2 (control crashes, PAUSE=2 clean). The s4672 crash
+is a synth callback walking audio blocks freed at shutdown. Open lead: retail
+`shutdownAudioEngine` deregisters the synth from the 4-slot VI-retrace callback
+table via `findAndZeroTableSlotMatching(0x8009123C)`; check that the port's
+retrace dispatch honours it (see scratch/agent/NEXT.md).
+
 Session 4677 ran the corrected boot-relative Start-mash route after two shorter
 recipe attempts stopped before title. Both arms reached title 1024 and hangar
 512; the positive controls fired; each produced 30 `m5-94648` rows and 2
