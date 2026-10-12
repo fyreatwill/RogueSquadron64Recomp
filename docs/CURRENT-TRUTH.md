@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4654.
+archive sections. Updated for session 4655.
 
 ## Current state
 
@@ -175,6 +175,14 @@ nine spawn sites and the same action contract. This reselects the static gap
 hypothesis, but runtime pool occupancy and value legitimacy are still unproven,
 so no guard or patch was added.
 
+Session 4655 found that the queued `load_full_header_image` audit was already
+completed in Session 3637, and the proposed fallback `freeLevelDatBuffers`
+audit was already completed in Session 3638. Fresh-copy inspection reproduced
+both recorded attributions and classifications. The broader M3 `rs_free`
+campaign was closed at Session 4502, so no new M3 idiom unit was available;
+the stale queue was reconciled without a build, runtime run, guard, or
+mitigation.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -259,8 +267,10 @@ so no guard or patch was added.
    bounded unit is the `load_full_header_image` `rs_free` idiom audit.
    s4651 refutes the port arithmetic arm of M4, while the separate-run matrix
    join is unavailable. s4652 found no retail hangar pixel reference, so H1 is
-   closed as unevaluable; no runtime mitigation is authorized. The next
-   bounded unit is the `load_full_header_image` `rs_free` idiom audit.
+   closed as unevaluable; no runtime mitigation is authorized. s4655 found
+   the two queued M3 audits were historical duplicates (s3637/s3638), and the
+   full M3 `rs_free` campaign is already closed (s4502). Do not repeat them;
+   owner direction is required for a genuinely new discriminator.
 
 ## Evidence and operating rules
 

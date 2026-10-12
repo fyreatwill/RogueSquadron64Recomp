@@ -127056,6 +127056,25 @@ legitimate MusyX channel pointer. A future consumer guard must define the
 legitimate skip/recovery behavior; stale-after-free legitimacy remains
 unproven.
 
+## Session 4655 (2026-10-11) — reconciled stale M3 rs_free queue
+
+Read the planned `load_full_header_image` `rs_free` target in the fresh
+`../N64Recomp/RecompiledFuncs.s4204-fresh` copy. The function, its
+`0x800544D8` free, five callers, and matching `rs_malloc` source reproduce the
+already-recorded Session 3637 classification; no new result is available.
+The fallback `freeLevelDatBuffers` target was then checked because Session
+3637's audit artifact names it as the next class. Its `0x80047B0C`,
+`0x80047B20`, and `0x80047B2C` frees and the single caller reproduce Session
+3638's recorded classification and symbol attribution. The ledger also records
+the full M3 `rs_free` campaign closed at Session 4502.
+
+This iteration therefore did not run a new work unit. It rules out stale
+generated-copy attribution for both queued targets, but does not select a new
+hypothesis. No build, runtime run, guard, or mitigation was performed.
+
+ORIGIN: no runtime or mitigation change; this was stale-work-queue
+reconciliation only.
+
 ## Session 3240 (2026-08-29) — closed MusyX null-consumer patch contract
 
 Ran the bounded recovery-contract audit requested by Session 3239. The
