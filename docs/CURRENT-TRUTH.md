@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4688.
+archive sections. Updated for session 4689.
 
 ## Current state
 
@@ -177,6 +177,17 @@ located the existing `rs_malloc`, `buildHeapFreeList`, and
 `coalesceFreeHeapBlocks` guard controls. No new named writer-to-noncanonical
 path was found. This is static, single-source evidence only; no guard or
 mitigation is authorized. Artifact: `scratch/agent/s4675_indexed_census.md`.
+
+Session 4689 ran the prescribed same-phase M4 retail-witness capture. The port
+controls fired (stage 1 = 64; phase-5 stages 10/11/12/13 = 517/517/517/497)
+and reached hangar `0x006AB400`. Retail independently passed the whole-RDRAM
+control (197,474,334 writes), reached the same 512-wide origin, and wrote both
+watched colour-buffer regions. The Rice/HLE oracle has no RSP accumulator or
+DMEM witness, so no retail VMADH/VGE/store tuple exists; this selects
+H-M4-unreachable as an instrument-boundary result, not a retail route null.
+The accumulator comparison remains unevaluable and no mitigation is
+authorized. Artifact: `docs/M4-S4689-RETAIL-WITNESS.md` and
+`scratch/agent/s4689_m4_retail_witness/`.
 
 ## Active frontier
 
@@ -496,8 +507,11 @@ no guard, patch, or mitigation was added. Artifacts are in
    s4643 DONE: band ~5 of 1280 px (col 511 + bilinear halo), bimodal, benign; thread CLOSED.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
-3. Revisit the external retail-entry boundary only with a new attributable
-   handoff; do not repeat the now-qualified all-phase name-copy null.
+3. The M4 retail-internal comparison is unevaluable at the independent
+   Rice/HLE boundary (s4689); do not repeat the same accumulator probe.
+   Revisit the external retail-entry boundary only with a new attributable
+   handoff, starting from the odd-PI/count-32 voice record chain; do not repeat
+   the qualified all-phase name-copy null.
 4. s4644: rim band and holo spikes are no longer visible in current hangar frames (single-source visual); residual candidate is white pillar stubs at x~200/430/865/1085/1130. Need a retail pixel reference before treating it as a defect (retail may light those edges by design). s4645: no reference obtainable; thread PARKED, craft-select frame renders clean.
 5. s4647/s4649/s4653: the safe fresh-copy fixer and tag comparison are
    qualified; do not regenerate over the live external tree until the normal

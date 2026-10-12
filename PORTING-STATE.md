@@ -154632,3 +154632,25 @@ generated-code edit, guard, runtime probe, or mitigation was authorized.
 
 ORIGIN: no mitigation; all observations are read-only generated-source and
 consumer classification evidence.
+
+## Session 4689 (2026-10-11) — M4 retail internal witness was unavailable
+
+Built the Debug target once and ran the canonical phase-gated real-audio/LLE/
+ungated/solo/spin-yield port beside the independent Rice retail oracle for
+120 seconds. Port controls were positive: stage 1 = 64 rows and phase-5
+stages 10/11/12/13 = 517/517/517/497; the port reached repeated
+512-wide `0x006AB400` before the known VI-640 crash family occurred after the
+target rows were collected.
+
+Retail independently passed the whole-RDRAM positive control with 197,474,334
+writes, reached repeated 512-wide `0x006AB400`, wrote 80 rows at
+`0x006AB400..10` and 1,682 at `0x00656400..10`, and produced 1,556
+`osViSwapBuffer` execution hits. The retail Rice/HLE path exposes no RSP
+accumulator, VMADH/VGE register state, or RSP DMEM to the oracle, so it
+produced no equivalent internal stage rows. This selects H-M4-unreachable as
+an instrument-boundary result, not a route failure, and leaves retail-versus-
+port accumulator values unevaluable. No runtime change or mitigation was
+authorized.
+
+ORIGIN: no mitigation; the new script was diagnostic-only, and the absent
+retail internal rows are caused by the independent oracle's HLE boundary.
