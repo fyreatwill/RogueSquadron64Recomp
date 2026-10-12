@@ -154499,3 +154499,25 @@ offset `MEM_H` census (19 sites), not another A10 run. Artifact:
 ORIGIN: the only behavior toggle was the diagnostic guard-off arm; the
 legitimate pointer writer is the guest store at `0x80096D88`, and no
 mitigation or production guard change was landed.
+
+## Session 4682 (2026-10-11) — qualified the M5 AI/SDL boundary
+
+The independent retail oracle passed its whole-RDRAM positive control at
+10,000 callbacks and reached the 512-wide hangar family; its AI duty samples
+were nonzero in title and hangar buckets. The rebuilt port ran image and
+silent audio arms concurrently from one binary. Both reached title
+`0x00790400` and hangar `0x006AB400`, with zero crash and abort markers.
+
+In target phases, the image arm carried nonzero PCM from `ai-output` through
+`pcm-boundary-source` and `pcm-boundary-consumer` with matching source/
+consumer FNV and nonzero counts; SDL host rows showed 768-byte enqueues of
+384 samples on an active device. The silent arm exercised the same path with
+the known zero-output FNV and `nz=0`. This selects H-AI-bridge-valid and rules
+out a host AI/SDL loss on the covered route. No AI status, PCM conversion, or
+SDL queue change was made. The next unit is the complete 19-site backward
+non-self zero-offset `MEM_H` census. Artifact:
+`docs/M5-S4682-AI-SDL-BOUNDARY.md` and
+`scratch/agent/s4682_m5_ai_sdl_boundary/`.
+
+ORIGIN: diagnostic-only retail oracle and existing port boundary probes; no
+guest or host behavior was rewritten.

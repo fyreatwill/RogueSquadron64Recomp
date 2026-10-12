@@ -14,26 +14,26 @@ Competing hypotheses:
   pointer on the qualified route and has a named guest writer; that complete
   site class becomes the next guard candidate.
 - H-MEMH-unreached: the 19 sites are not reached in the target phase, so the
-  audit remains static and must not motivate a mitigation.
+  audit remains static and must not motivate mitigation.
 
 Discriminating measurement: enumerate all 19 sites and classify each by
 function, guest PC, source register, zero-offset target, loop/sentinel or
 count bound, and immediate consumers. For every site that executes in the
-qualified title/hangar route, batch one probe build/run with the pointer,
-writer PC/value, phase, and consumer entry, plus the existing allocator/free-
-list positive controls, title `0x00790400`, hangar `0x006AB400`, and retail
+qualified title/hangar route, batch one probe build/run with pointer, writer
+PC/value, phase, and consumer entry, plus allocator/free-list positive
+controls, title `0x00790400`, hangar `0x006AB400`, and the retail
 whole-RDRAM control. A valid bounded transition at every executed site selects
-H-MEMH-bounded; one invalid value with an independently named legitimate or
-illegitimate writer selects H-MEMH-invalid or its writer-specific explanation;
-zero target-phase entries selects H-MEMH-unreached. No guard is allowed from a
-single-source or unqualified null.
+H-MEMH-bounded; one invalid value with a named writer selects H-MEMH-invalid
+or its writer-specific explanation; zero target-phase entries selects
+H-MEMH-unreached. No guard is allowed from a single-source or unqualified
+null.
 
-Before building, run:
+Before any build, run:
 
     rg -n -C 8 'MEM_H\([^,]+,\s*0\)|MEM_H\(0X0,|MEM_H\(0x0,' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
     rg -n -C 5 'rs_malloc|buildHeapFreeList|coalesceFreeHeapBlocks' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 
 Then write the complete site table and hypotheses into the session artifact,
 add all counters in one regeneration-safe fixup/apply script, build once, and
-run both any required control arms concurrently. Use SIGKILL cleanup and keep
-the current A10 guards unchanged.
+run the required control arms concurrently. Use SIGKILL cleanup and keep the
+current A10 guards unchanged.

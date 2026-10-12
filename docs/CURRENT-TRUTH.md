@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4681.
+archive sections. Updated for session 4682.
 
 ## Current state
 
@@ -60,6 +60,18 @@ independently fired the whole-RDRAM control (13,001 writes), the target write
 (3,001 writes), and writer-PC execution watch (6,002 hits). This selects
 H-A10-valid for the covered route; no guard relaxation is authorized.
 Artifact: `scratch/agent/s4681_m5_a10/`.
+
+Session 4682 completed the conditional M5 Step 10 AI/SDL boundary audit. The
+independent retail run passed its whole-RDRAM control and showed nonzero AI
+activity in its title/hangar family. One rebuilt port binary ran image and
+silent arms concurrently; both reached title `0x00790400` and hangar
+`0x006AB400` without crash/abort. Image PCM remained nonzero and hash/length
+consistent from `ai-output` through source and consumer to SDL queueing; the
+silent arm supplied the same-run zero-output control. This selects
+H-AI-bridge-valid. No AI or SDL change is authorized, and M5 Steps 4–10 are
+now qualified or closed on the covered route. Artifact:
+`docs/M5-S4682-AI-SDL-BOUNDARY.md` and
+`scratch/agent/s4682_m5_ai_sdl_boundary/`.
 
 Session 4677 ran the corrected boot-relative Start-mash route after two shorter
 recipe attempts stopped before title. Both arms reached title 1024 and hangar
@@ -359,8 +371,14 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
-0. M5 audio de-stubbing is the strategic priority. Step 7's complete
-   status-table census selects H-status-writer for the covered route:
+0. M5 audio de-stubbing is qualified through Step 10 on the covered route.
+   The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
+   s4682; retain the silent arm as rollback. Do not change the AI status,
+   PCM conversion, or SDL queue from this evidence. The next M3 unit is the
+   complete MEM_H non-self zero-offset census in `scratch/agent/NEXT.md`.
+
+1. Step 7's complete status-table census selects H-status-writer for the
+   covered route:
    `serviceVoicePoolFrame` publishes `03` at `0x8009B7CC` and clears the same
    slot at `0x8009B7EC`, with independent retail PC attribution. Shutdown
    call-3 was not reached in the target phase, so it remains unevaluable.
@@ -379,7 +397,7 @@ no guard, patch, or mitigation was added. Artifacts are in
   behavioral tags using `scratch/s4648/classification.md`. Never regenerate
   over `../N64Recomp/RecompiledFuncs` until the external fixer is repaired.
 
-1. M4 RSP thread is closed (s4634); s4635 showed the right-edge garbage is not
+2. M4 RSP thread is closed (s4634); s4635 showed the right-edge garbage is not
    tri-submit. s4636 (`ROGUESQ_EDGE_DUMP=dir`, 4 runs, ~640 dumps) selects
    H-rdram: in the 512x16bpp hangar colour image, column 511 holds per-frame
    noise (110-126 distinct values over 240 rows) in buffer 0x00656400 in 4/4
