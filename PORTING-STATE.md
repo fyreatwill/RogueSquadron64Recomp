@@ -154252,3 +154252,13 @@ patch or mitigation was added. Artifacts:
 ORIGIN: no mitigation was added; all observed attached-mesh executions were
 in known non-mission origins, so no writer legitimacy claim is made for the
 attached-mesh fields.
+## Session 4670 (2026-10-11) — three-Start hangar action route never reached 512
+
+Ran the prescribed Rice oracle with Start at 6.2/11.2/16.1 seconds and A at
+40 seconds, plus whole-RDRAM, VI, PIF, `attachedMeshOverlayNpcHandler`, and
+`rs_free` watches. The positive control fired 33,429 times; `rs_free` fired
+20,129 times; the run completed at 120 seconds. VI transitions were 320, 640,
+and 1024 only, with no 512-wide hangar or attract origin. The attached-mesh
+handler fired zero times. This rules out only the validity of this route for
+the mission discriminator; it does not rule out mission execution or justify
+a NULL/free guard. Artifact: `scratch/agent/s4670_attached_mesh_hangar_action/`.

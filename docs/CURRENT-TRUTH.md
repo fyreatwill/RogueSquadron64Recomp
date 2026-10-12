@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4669.
+archive sections. Updated for session 4670.
 
 ## Current state
 
@@ -315,6 +315,9 @@ no guard, patch, or mitigation was added. Artifacts are in
    post-512 A/Start/A/Z sequence; it again stayed on known attract/demo
    origins before a Rice shader failure ended the run. The next revisit needs
    a genuinely different mission-entry control, not another timing variant.
+   s4670's three-Start schedule was invalid because it never reached 512;
+   the next run must use the README's verified six-plus Start schedule before
+   testing a post-hangar transition.
 
 Session 4658 tried a distinct post-512 input sequence with PIF tracing. The
 whole-RDRAM control hit 10,000 and retail ran for 180 seconds through title,
@@ -338,6 +341,17 @@ were in the known attract/demo origins (`0x00620400`, `0x00620800`,
 single-source evidence that this new route still did not establish mission
 entry; it does not prove the handler is absent from missions and authorizes no
 guard. Artifacts: `scratch/agent/s4669_attached_mesh_route/`.
+
+Session 4670 ran the prescribed hangar-origin A sequence with Rice, the
+whole-RDRAM positive control, VI tracing, PIF tracing, and both execution
+watches. The control fired 33,429 times and `rs_free` at `0x80001ACC` fired
+20,129 times, but the route only reached 320, 640, and 1024-wide phases; it
+never produced a 512-wide hangar or attract origin, and
+`attachedMeshOverlayNpcHandler` at `0x8005427C` fired zero times. The run
+completed normally at 120 seconds. This selects H3 route-invalid for the
+requested mission discriminator and does not establish mission absence or
+authorize a guard. Artifact:
+`scratch/agent/s4670_attached_mesh_hangar_action/`.
 
 ## Evidence and operating rules
 

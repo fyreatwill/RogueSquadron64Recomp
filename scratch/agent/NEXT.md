@@ -1,27 +1,25 @@
-# NEXT: qualify mission entry using a hangar-origin action sequence
+# NEXT: qualify the post-hangar mission transition with the verified route
 HYPOTHESIS-ID: m3-attached-mesh-mission-route
 
-Session 4669 selected H3 again: with the installed Rice plugin, the route
-reached 512-wide only at known attract/demo origins and the handler ran 280
-times there. The run later exited 138 during Rice shader compilation, so do
-not interpret its duration as a stability result. Use a genuinely different
-control: the oracle README says the verified boot presses reach a hangar at
-about 38s and that continued Start presses advance out of it. Run the verified
-boot presses, then press A once at 40s while the first 512 phase is active and
-do not send later Start/A/Z presses. Keep the installed Rice path, whole-RDRAM
-control, both PC watches, VI tracing, and PIF tracing:
+The previous three-Start route was invalid: it never reached 512. Run one
+oracle arm using the README's verified Rice schedule, then continue Start
+presses past the hangar hold so the route has a chance to leave the hangar.
+Keep the positive control and both execution watches; do not add a guard.
 
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 120 --hit-cap 200 --watch-write 0x0:0x800000 --watch-pc 0x8005427C,0x80001ACC --press 6.2:start,11.2:start,16.1:start,40:a --hold-ms 150 --vi-trace --pif-trace > scratch/agent/s4670_attached_mesh_hangar_action/oracle.log 2>&1
+Exact command:
+
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 120 --hit-cap 200 --watch-write 0x0:0x800000 --watch-pc 0x8005427C,0x80001ACC --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start,61:start,66:start --hold-ms 150 --vi-trace --pif-trace > scratch/agent/s4671_attached_mesh_post_hangar/oracle.log 2>&1
 
 Competing hypotheses and discriminator:
 
-- H1: the hangar-origin A action enters a mission phase and the handler
-  executes there; retain its origin and `rs_free` predecessor rows.
-- H2: a 512 hangar origin appears but A does not enter a mission; handler rows
-  remain attract/demo-only.
-- H3: the route never reaches the known hangar origin or the whole-RDRAM
-  control fails; the run is invalid.
+- H1: the verified schedule reaches the hangar and a post-hangar Start
+  transition reaches a distinct mission VI origin; the handler executes there.
+- H2: the schedule reaches the hangar and leaves it, but only into known
+  attract/demo or title origins; handler rows remain non-mission.
+- H3: the positive control fails or the route never reaches the known 512
+  hangar origin (`0x006AB400`/`0x00690800`), making the run invalid again.
 
-The discriminator is a 512 origin of `0x006AB400` or `0x00690800` followed by
-a distinct mission VI origin, with the positive control at 10,000 callbacks.
-No guard or mitigation is authorized.
+The result is valid only with a positive-control count in the thousands and a
+512-wide hangar origin. Select H1 only if a later, distinct VI origin follows
+the hangar and a handler row is attributable to that phase; otherwise record
+H2 or H3 as appropriate.
