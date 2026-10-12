@@ -154457,3 +154457,23 @@ late failure is not used to invalidate the phase-qualified result. Artifact:
 
 ORIGIN: the legitimate writer is the guest `sb` at `0x80094648`; the host
 witness and gate probes are diagnostic-only, and no mitigation was added.
+## Session 4680 (2026-10-11) — attributed the M5 status-03 zeroing writer
+
+Added the replayable `s4680` status-table probe to all seven generated
+`D_80154620` byte-store sites and built the target successfully after fixing a
+missing host declaration. The qualified batch reached title `0x00790400` and
+hangar `0x006AB400` on both arms; the retail whole-RDRAM control reached
+10,000 callbacks. The port store control fired, and hangar phase 5 recorded
+slot 0 at `0x8009B7CC` as `old=0x02 -> new=0x03`, immediately followed by
+`0x8009B7EC` as `old=0x03 -> new=0x00`. The port worker entry/exit probes also
+observed status `03`; retail independently attributed the same publish/reap
+PCs in hangar.
+
+This selects H-status-writer for the covered route: `serviceVoicePoolFrame`
+is the legitimate status-03 zeroing writer. Shutdown call-3 did not execute
+in the target phase, so that boundary remains unevaluable. No wait change or
+forced status clear was made. Artifact:
+`scratch/agent/s4117_m5_status03_silent/`.
+
+ORIGIN: the new rows observe guest-owned stores at `0x8009B7CC` and
+`0x8009B7EC`; no mitigation or behavior change was added.

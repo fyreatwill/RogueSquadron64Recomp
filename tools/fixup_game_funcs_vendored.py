@@ -40370,6 +40370,7 @@ RS64_REPLAY = [
     "apply_s4306_postfree_join.py",
     "apply_s4307_synth_read_join.py",
     "apply_s4340_m5_lowfield_writer.py",
+    "apply_s4680_m5_status_table.py",
     "apply_s4432_audioloop_witness.py",
     "apply_s4455_m5_call_rate.py",
     "apply_s4466_hdrdump.py",

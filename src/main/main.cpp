@@ -445,6 +445,7 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 // `extern` in recomp.h so any RECOMP_FUNC translation unit can write it by
 // name; defined once here.
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
+extern "C" int rogue_current_thread_id(uint8_t* rdram);
 static thread_local uint32_t g_rs64_m5_field348_static_callsite = 0;
 static thread_local uint32_t g_rs64_m5_pcm_callsite = 0;
 static thread_local uint32_t g_rs64_m5_static_rs_memset_callsite = 0;
@@ -5063,6 +5064,42 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
             logged_value);
         std::fflush(stderr);
     }
+}
+
+extern "C" void rs64_m5_status_table_store(uint8_t* rdram, uint32_t pc,
+                                               uint32_t addr, uint32_t old_value,
+                                               uint32_t new_value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_STATUS_TABLE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t phys = addr & 0x007FFFFFu;
+    if (phys < 0x154620u || phys >= 0x168DB0u || ((phys - 0x154620u) % 0x1228u) != 0u)
+        return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    static uint32_t control = 0;
+    static uint32_t rows = 0;
+    if (!control) {
+        std::fprintf(stderr,
+                     "[m5-status-store-control] phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%08X old=0x%02X new=0x%02X\n",
+                     rs64_phase_ord(), width, origin, pc, addr, old_value & 0xFFu, new_value & 0xFFu);
+        std::fflush(stderr);
+        control = 1;
+    }
+    if (!target || rows >= 2048u) return;
+    const uint32_t slot = (phys - 0x154620u) / 0x1228u;
+    std::fprintf(stderr,
+                 "[m5-status-store] row=%u phase=%u width=%u origin=0x%06X pc=0x%08X addr=0x%08X slot=%u old=0x%02X new=0x%02X thr=%d ra=0x%08X\n",
+                 rows++, rs64_phase_ord(), width, origin, pc, addr, slot,
+                 old_value & 0xFFu, new_value & 0xFFu,
+                 rogue_current_thread_id(rdram), g_rs64_last_guest_pc ? g_rs64_last_guest_pc : 0u);
+    std::fflush(stderr);
 }
 
 extern "C" void rs64_m5_field348_candidate_store(uint32_t writer_pc,
