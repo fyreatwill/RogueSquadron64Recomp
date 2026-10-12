@@ -154293,3 +154293,24 @@ This is a single-source, unqualified null for the full-range matcher because
 that matcher has no positive-control counter in this run. It does not select
 H1, H2, or H3 and does not authorize removing the call. Build succeeded.
 Artifact: `scratch/agent/s4672_overlay_route/`.
+
+## Session 4673 (2026-10-11) — qualified chunked overlay matcher arm
+
+Added a phase-scoped call/match probe to both `load_overlays` and
+`load_overlays_by_start`, exported the modified N64ModernRuntime patch, and
+rebuilt the Debug target. Ran the canonical real-audio/LLE/ungated/solo/
+spin-yield route for 100 seconds with `ROGUESQ_LOG_DMA=1`,
+`ROGUESQ_LOG_OVERLAY_MATCH=1`, and `ROGUESQ_LOG_PHASE=1`. The positive DMA
+control fired 6,871 rows; both matcher call arms fired. The full-range matcher
+matched only boot sections 0/1. The start matcher matched menu section 3
+(`0x10C2D0`) and cinematic section 4 (`0x137580`), each transferred in
+`0x4000`-sized chunks; the generated section table independently lists sizes
+`0x283F0` and `0xB810`. This selects H2 for the covered route: the overlay
+loads are chunked and the start matcher is operative. VI reached 1024 then 640,
+not the qualified 512 hangar origin, and the process crashed in
+`musyxSynthFrame_s4562_impl` before the SIGKILL cleanup window. The result does
+not explain the remaining route failure and does not authorize removing the
+canonical full-range call, which remains relevant to complete-section DMAs.
+Artifact: `scratch/agent/s4673_overlay_probe/`.
+
+ORIGIN: no mitigation was added; this was a registration-dispatch measurement.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4672.
+archive sections. Updated for session 4673.
 
 ## Current state
 
@@ -33,6 +33,18 @@ ended in `musyxSynthFrame_s4562_impl` with a bus error. The full-range matcher
 has no independent positive-control counter, so its missing row is a
 single-source, unqualified null: do not claim H1/H2 from it or remove the
 call yet. Artifact: `scratch/agent/s4672_overlay_route/`.
+
+Session 4673 added phase-scoped call/match probes to both overlay arms and ran
+the same route for 100 seconds. The DMA positive control fired 6,871 rows;
+both matcher arms were called. The full-range arm matched only boot sections
+0/1, while the start arm matched menu section 3 at 0x10C2D0 and cinematic
+section 4 at 0x137580. The section table independently gives those overlays
+sizes 0x283F0 and 0xB810, versus the observed 0x4000 chunk transfers, so H2
+is selected for the covered route: the loads are chunked and the start matcher
+is the operative registration path. VI still reached 1024 then 640, not the
+qualified 512 hangar origin, and the run crashed in `musyxSynthFrame`; this
+does not claim overlay dispatch is the remaining route blocker. Artifact:
+`scratch/agent/s4673_overlay_probe/`.
 
 Full regeneration remains unsafe since s4204: the newer N64Recomp followed by
 `fixup_game_funcs.py` aborts at the E088 anchor and may clobber generated
@@ -335,8 +347,11 @@ no guard, patch, or mitigation was added. Artifacts are in
    the next run must use the README's verified six-plus Start schedule before
    testing a post-hangar transition.
    s4672's overlay qualification did not reach the required 512 origin and
-   lacked a full-range positive control; the next overlay unit must instrument
-   both matcher arms in one run or park this thread without a dispatch claim.
+   lacked a full-range positive control. s4673 supplied both matcher controls
+   in one run and selected chunked-load H2; keep the canonical full-range call
+   for future complete-section DMAs, but do not treat it as the explanation
+   for the current 1024-to-640 route failure. Overlay registration is parked
+   pending a new dispatch-attribution discriminator.
 
 Session 4658 tried a distinct post-512 input sequence with PIF tracing. The
 whole-RDRAM control hit 10,000 and retail ran for 180 seconds through title,

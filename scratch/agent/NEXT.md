@@ -1,30 +1,19 @@
-# NEXT: qualify both overlay matcher arms with same-run controls
-HYPOTHESIS-ID: overlay-dispatch-per-dma
+# NEXT: choose the next bounded M3 idiom-class audit after overlay dispatch is parked
+HYPOTHESIS-ID: m3-idiom-class-audit
 
-Competing hypotheses and discriminator for the next iteration:
+The overlay probe is complete: DMA control fired, the full matcher was
+called and matched only boot sections, and the start matcher registered the
+chunked menu/cinematic loads. Do not rerun that route or remove the canonical
+full-range call.
 
-- H1: the full-range matcher is being called and can match a complete overlay
-  section; its missing rows in s4672 were an instrumentation blind spot.
-- H2: the covered overlay transfers are chunked, so only the start matcher can
-  match them and the canonical call is a harmless no-op.
-- H3: a full-range match occurs but overlay dispatch is not the route blocker;
-  the route still fails independently in the audio/VI path.
+Before building, enumerate one complete remaining M3 idiom class from the
+current generated tree and docs (not a single crash site), then write its
+competing hypotheses and one same-run discriminator here. The audit must name
+the writer and legitimacy of any wild value before adding a guard. If no
+complete class has an executable positive control, stop and surface the exact
+blocked question rather than adding another diagnostic field.
 
-Add one batched counter/log pair in the overlay runtime: count every call and
-every section match for `load_overlays` and `load_overlays_by_start`, with a
-whole-DMA positive control in the same run. Build once, then run the canonical
-route for 100 seconds with `ROGUESQ_LOG_DMA=1` and `ROGUESQ_LOG_PHASE=1`.
-Do not use a null from either matcher unless its positive control fires.
-
-Run from `build/` with the existing real-audio/LLE/ungated/solo/spin-yield
-configuration and phase controls. Check both matcher call/match counts and
-whether the port reaches the known title/hangar VI origins. Keep the
-independent oracle schedule for route comparison.
-
-Expected discriminator:
-
-- H1: full-range positive control and a real full-section match both fire.
-- H2: full-range positive control fires but has no overlay matches, while the
-  start matcher matches the chunked sections.
-- H3: a full-range match fires and VI progression still fails before the
-  qualified 512 origin, selecting a downstream blocker.
+Required evidence for the next unit: one independent ground-truth control
+where applicable, all A/B arms in one build/run, SIGKILL termination, and a
+new session entry plus artifact directory. Do not use a null without a live
+positive control.
