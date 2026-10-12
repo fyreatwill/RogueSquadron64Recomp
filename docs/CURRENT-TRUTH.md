@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4678.
+archive sections. Updated for session 4679.
 
 ## Current state
 
@@ -35,6 +35,17 @@ divisor `0xC0` at sites `0x80090CEC/0x80090D30/0x80090D74/0x80090DB8`;
 sites `0x80090D04/0x80090D48/0x80090D8C/0x80090DD0` had zero divide and guard
 rows. The run recorded 206 slot-`02` and 152 slot-`00` rows before SIGKILL
 cleanup. Artifact: `scratch/agent/s4678_m5_keyon_port/`.
+
+Session 4679 qualified the Step 7 route and controls: retail and port both
+reached title `0x00790400` and hangar `0x006AB400`, and the retail
+whole-RDRAM control reached 10,000 callbacks. Port phase 5 entered
+`serviceVoicePoolFrame` 9,181 times, including 10 entries with table status
+`03`; later reads of `D_80154620` observed status `00`. The worker therefore
+is reached and status-03 is not persistent on this route, but the batch had
+no exact status-zero writer attribution and no shutdown call-3 return marker.
+This refutes H-status-unreached without selecting H-status-writer or
+H-status-source; no wait change or forced clear is authorized. Artifact:
+`scratch/agent/s4117_m5_status03_silent/`.
 
 Session 4677 ran the corrected boot-relative Start-mash route after two shorter
 recipe attempts stopped before title. Both arms reached title 1024 and hangar
@@ -334,13 +345,18 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
-0. M5 audio de-stubbing is the strategic priority. Step 5's complete key-on
-   early-return audit is qualified on the covered title/hangar route: valid
-   divisor `0xC0`, zero guard fires, normal tails, and slot `02` then `00`.
-   Do not remove the returns from this result alone. Execute Step 7 from
-   `docs/M5-AUDIO-PLAN.md`: audit status-03 service reaping with a named
-   zeroing writer, worker entry/return, slot/status, task, PCM, VI, and
-   whole-RDRAM controls. Do not force-clear an unexplained status.
+0. M5 audio de-stubbing is the strategic priority. Step 7's first status-03
+   service-reaping run is qualified: the route and controls fired, and
+   `serviceVoicePoolFrame` entered with status `03`, but the exact zeroing
+   writer and shutdown call-3 return were not observed. H-status-unreached is
+   refuted; do not change the wait or force-clear status. Execute a complete
+   status-table writer attribution census next, including every generated
+   store to `D_80154620`, exact slot/address/value, worker entry/exit, and
+   call-3 boundaries in one build/run.
+
+   Step 5's complete key-on early-return audit is qualified on the covered
+   title/hangar route: valid divisor `0xC0`, zero guard fires, normal tails,
+   and slot `02` then `00`. Do not remove the returns from this result alone.
 
 - (s4649) Safe full-regen repair is qualified in scratch only; use
   `tools/fixup_game_funcs_vendored.py <scratch RecompiledFuncs>` and compare

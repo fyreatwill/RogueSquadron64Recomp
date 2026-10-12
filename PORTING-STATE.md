@@ -154369,6 +154369,27 @@ late failure is not used to invalidate the phase-qualified result. Artifact:
 ORIGIN: the legitimate writer is the guest `sb` at `0x80094648`; the host
 witness and gate probes are diagnostic-only, and no mitigation was added.
 
+## Session 4679 (2026-10-11) — qualified the M5 status-03 service route
+
+Ran the existing batched Step 7 status-03 recipe after a clean successful
+build. The independent retail oracle reached its whole-RDRAM positive-control
+threshold of 10,000 callbacks and observed the title and hangar route. The
+port also reached title `0x00790400` and hangar `0x006AB400`; phase 5 recorded
+9,181 `serviceVoicePoolFrame` entries, including 10 entries with
+`D_80154620` status `0x03`. Later phase-5 reads observed status `0x00`, so
+the worker is reached and status-03 is not persistent on this route.
+
+The run did not emit an exact status-zero writer attribution or a shutdown
+call-3 return marker. It therefore refutes H-status-unreached but does not
+select H-status-writer, H-status-source, or H-status-legitimate. No wait
+change or forced status clear was made. The next unit is a complete generated
+store census joined to worker and call-3 boundaries.
+
+Artifact: `scratch/agent/s4117_m5_status03_silent/`.
+
+ORIGIN: no mitigation or behavior change was added. The observed status
+transition is guest-owned but its exact writer remains un-attributed.
+
 ## Session 4678 (2026-10-11) — qualified the M5 key-on early-return class
 
 The static census confirmed one generated `musyxKeyOnVoice` idiom with eight
