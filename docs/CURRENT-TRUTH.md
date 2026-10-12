@@ -695,3 +695,5 @@ with the ROM present. Any mitigation-shaped change needs an `ORIGIN:` line.
 
 See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 for the s4590–s4617
 evidence archive and [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md) for the audio plan.
+
+- s4702 (single-source): default B40 pass-through 0/13 crashes cumulative, but a 6-way soak stalled 5/6 arms at VI 640 (origin 0x5D4000). Load (H2) vs B40 (H1) undecided; see scratch/agent/NEXT.md.
