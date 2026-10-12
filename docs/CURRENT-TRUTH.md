@@ -488,7 +488,7 @@ no guard, patch, or mitigation was added. Artifacts are in
    needs the yield (yield-on returns after ~1.0-1.2M scans; yield-off hits the
    10M-scan timeout, never returns). Retail's call-3 enter->return chain is not
    independently shown (retail only evidences B7EC runs). Keep
-   `ROGUESQ_A14_YIELD` default on. The next M5 unit is A15/A16 per
+   `ROGUESQ_A14_YIELD` default on. The next M5 unit is A15/A16 per s4695: A15 SPIN_YIELD redundant (hangar reached with 0 yields); next = early musyxSynthFrame race, see NEXT.md.
    docs/M5-AUDIO-PLAN.md; see `scratch/agent/NEXT.md`.
    The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
    s4682; retain the silent arm as rollback. Do not change the AI status,

@@ -154802,3 +154802,36 @@ hangar with matching VI counts).
 In plain terms: this run selects H-A14-yield-needed, refutes
 H-A14-route-absent, and resolves which PC is the 03->00 writer (0x8009B7EC).
 The A15 run will discriminate H-A15-needed from H-A15-redundant.
+
+## Session 4695 (2026-10-12) — A15 SPIN_YIELD is redundant for the hangar route; early musyxSynthFrame crash is a separate concurrency-sensitive family
+
+HYPOTHESIS-ID: m5-a15-spin-yield-necessity. Ran
+`scratch/agent/run_s4695_m5_a15_spin_yield.sh` three times (no rebuild; sites
+already log `[spin-yield] site=...` and serve as the per-site counter / positive
+control). Arms: ROGUESQ_SPIN_YIELD=1 vs 0, A14 yield on in both, concurrent;
+final run used 4 instances (on, off, on2, off2) because runs 1-2 crashed early.
+
+Result (arm-runs over 3 invocations): 8 SPIN_YIELD=1/0 pairs' worth of arms,
+5 of 8 crashed at ~3.3 s (VI 640 phase, before title) in
+`musyxSynthFrame_s4562_impl+9668` (fault addr 0x400149714), on=3/4... precisely:
+on crashed 3 of 4, off crashed 2 of 4, last-guest-pc differs per crash
+(0x800290d4 / 0x80001b08 / 0x80001c70) -> not SPIN_YIELD-dependent, racy.
+Surviving arms (final run): spin_on reached title (2391 rows) + hangar 512
+(279 rows) with only 2 yield rows (audioDrain n=1, cinematicInit n=1; positive
+control satisfied); spin_off2 reached title (2416) + hangar 512 (492 rows) with
+ZERO spin-yield rows and the same a14 enter/return counts. SELECTS
+H-A15-redundant: with A11-A14 in place SPIN_YIELD=0 reaches title+hangar; the
+flag fires only twice per run and can be retired as a default-off control.
+REFUTES H-A15-needed (a survivor with 0 yields reaches hangar). Caveat: n=1
+survivor per setting for hangar; single-run crash-rate difference (3/4 vs 2/4)
+is not significant.
+
+New lead (not chased): the early ~3.3 s musyxSynthFrame bus error occurred in
+5/8 arm-runs with 2-4 concurrent instances, vs 0 early crashes in s4694's
+two-instance runs — suggests a host-thread race (audio worker running while
+guest init mid-flight) exposed by CPU contention. Writer of the wild pointer
+(x9=0x100149714) unnamed -> next unit.
+
+ORIGIN: no mitigation added; scripts only.
+Artifacts: `scratch/agent/run_s4695_m5_a15_spin_yield.sh`,
+`scratch/agent/s4695_m5_a15_spin_yield/`.
