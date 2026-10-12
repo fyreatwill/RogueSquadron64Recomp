@@ -116,6 +116,12 @@ span (`0x700000/40/80`, dynamic in retail) is the remaining RDRAM-visible
 operand and is not yet compared byte-for-byte. Artifacts:
 `scratch/agent/s4630_m4_operand_source/`.
 
+Session 4631 compared the matrix span against retail: 0x700000..3C (DMEM 0x590)
+is byte-identical (retail 24 samples, 1 value; port 6 reads, same value). The
+per-object matrices at 0x700040+ animate in retail itself (35-67 distinct
+values), so cross-run equality is not a valid test; they stay unqualified.
+Artifacts: `scratch/agent/s4631_m4_matrix_span/`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -151,11 +157,12 @@ operand and is not yet compared byte-for-byte. Artifacts:
 
 ## Next steps
 
-1. M4 matrix-span discriminator: vertex input is equal (s4630), so compare
-   the matrix span `0x700000..0x7000C0` (and the 0x590/0x5D0 DMEM copy) between
-   port RDRAM and retail at the same hangar-entry phase, then trace the ucode
-   matrix-compose step that builds v8..v15. Do not revisit arithmetic, VGE,
-   store or vertex content (all closed, s4626-s4630).
+1. M4 per-object-matrix validity (offline, no run): decode the port's
+   `[m4-mat]` rows (s4631 port.log) and retail's pk rows into 16.16 matrices and
+   test rigid-transform sanity. Projection matrix and vertex content equal
+   retail (s4630-s4631); arithmetic, VGE, store are closed. Non-rigid port
+   matrices => trace the CPU writer of 0x700040+ (oracle write watch); rigid =>
+   divergence is downstream: compare the RDP triangle stream at hangar entry.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

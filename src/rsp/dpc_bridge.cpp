@@ -493,6 +493,20 @@ extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
     fprintf(stderr, "[m4-dma] task=%u phase=%u mem=0x%04X dram=0x%08X len=0x%X\n",
             g_e9prov.task, rs64_phase_ord(), mem, dram, len);
     fflush(stderr);
+    // s4631: matrix-span RDRAM words at DMA time (port side of the retail peek).
+    const uint32_t phys = dram & 0x1FFFFFFFu;
+    static uint32_t mlines = 0;
+    if (g_rdram_for_submit != nullptr && phys >= 0x700000u && phys < 0x700400u && mlines++ < 400u) {
+        fprintf(stderr, "[m4-mat] task=%u phase=%u mem=0x%04X dram=0x%08X w=", g_e9prov.task,
+                rs64_phase_ord(), mem, phys);
+        for (uint32_t i = 0; i < 16; ++i) {
+            const uint32_t a = phys + 4 * i;
+            fprintf(stderr, "%02x%02x%02x%02x%s", g_rdram_for_submit[a ^ 3], g_rdram_for_submit[(a + 1) ^ 3],
+                    g_rdram_for_submit[(a + 2) ^ 3], g_rdram_for_submit[(a + 3) ^ 3], i == 15 ? "" : ",");
+        }
+        fputc('\n', stderr);
+        fflush(stderr);
+    }
 }
 
 // s4630: operands feeding the vertex transform at the loop head: vertex v2,
