@@ -122,6 +122,12 @@ per-object matrices at 0x700040+ animate in retail itself (35-67 distinct
 values), so cross-run equality is not a valid test; they stay unqualified.
 Artifacts: `scratch/agent/s4631_m4_matrix_span/`.
 
+Session 4638 (single-source, controlled): CPU store watch on the hangar buffer
+0x656400 saw no nonzero-valued store to col 511 at width 512 (body stores and
+a zero-fill clear at pc 0x800078EC fired as controls) while the col-511 noise
+persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
+`tools/apply_s4638_edgewatch.py`, `scratch/agent/s4635_w38d/`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate

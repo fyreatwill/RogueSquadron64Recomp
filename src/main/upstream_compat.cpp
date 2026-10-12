@@ -1817,6 +1817,24 @@ extern "C" void rs64_s4299_store_watch(char width, uint32_t pc, uint32_t addr, u
     rs64_s4597_target_store(width, pc, addr, value);
     (void)value;
     const uint32_t phys = addr & 0x1FFFFFFFu;
+    // s4638: CPU-store watch on hangar colour buffer 0x656400 (512x16bpp):
+    // edge = col 511 (byte offset 1022/1023 in a 1024-byte row), body = any other col.
+    {
+        static std::atomic<uint32_t> all{0}, body{0}, edge{0}, eprint{0};
+        if (phys >= 0x656400u && phys < 0x656400u + 260u * 1024u) {
+            const uint32_t off = phys - 0x656400u, col = (off & 1023u) >> 1;
+            if (col == 511u) {
+                edge.fetch_add(1);
+                if (rs64_vi_committed_width() == 512u && (value & 0xFFu) && eprint.fetch_add(1) < 64)
+                    std::fprintf(stderr, "[s4638-EDGE] %c pc=%08X addr=%08X val=%08X row=%u vi_w=%u\n",
+                                 width, pc, addr, value, off >> 10, rs64_vi_committed_width());
+            } else if (body.fetch_add(1) < 8) {
+                std::fprintf(stderr, "[s4638-BODY-control] %c pc=%08X addr=%08X col=%u\n", width, pc, addr, col);
+            }
+        }
+        if ((all.fetch_add(1) & 0xFFFFFu) == 0)
+            std::fprintf(stderr, "[s4638-tally] stores=%u body=%u edge=%u\n", all.load(), body.load(), edge.load());
+    }
     if (phys >= 0x17C000u && phys < 0x17D000u) {
         static std::atomic<bool> control{false};
         if (!control.exchange(true)) {

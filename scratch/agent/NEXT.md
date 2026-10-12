@@ -1,8 +1,6 @@
-# NEXT: name the non-RT64-writeback writer of hangar colour-image column 511 (buffer 0x656400)
+# NEXT: find the non-CPU, non-RT64-writeback source of hangar col-511 noise (buffer 0x656400)
 HYPOTHESIS-ID: hangar-renderer-artifacts
 
-s4637 refuted RT64 colour writeback as writer (ROGUESQ_NO_WB_W=512; control zeroes 0x6AB400 body but 0x656400 col 511 stays noisy 2/2).
-Remaining: H-cpu (recomp stores), H-rdp (host RDP path other than writeback), H-dma (SP/PI DMA).
-Discriminator: arm a physical write-watch (recomp store path, src/main/upstream_compat.cpp) on 0x656400+1022+1024*r, r=0..239 plus positive control mid-row col 100; log PC/source once per frame in the same run as ROGUESQ_EDGE_DUMP and ROGUESQ_NO_WB_W=512. Check first whether rs64_m5_host_write_census already lists sources touching that range (cheap, existing).
-Outcomes: CPU PC fires => read that function; nothing fires but dump noisy => RDP/DMA host-side path.
-Tools: scratch/agent/s4637_wb.sh, s4637_an.py, s4636_edge.sh.
+s4638: CPU stores refuted (controlled). s4637: RT64 writeback refuted. Remaining: H-dma (RSP/PI DMA into RDRAM; use rs64_m5_host_write_census with ROGUESQ_LOG_M5_HOST_WRITE and an RSP DMEM->RDRAM hook), H-rdp-host (other RT64 RDRAM write sites in lib/rt64), H-stale (col 511 already nonzero at first 512-wide VI).
+Discriminator: one build with (a) a physical-range watch for 0x656400 col-511 offsets in the host census + RSP DMA-out path, (b) RDRAM col-511 snapshot at first 512-wide VI. Positive control: a whole-buffer write-census hit in the same run.
+Tools: scratch/agent/s4635_mask.sh (pass ROGUESQ_LOG_S4299=1 ROGUESQ_EDGE_DUMP=<abs dir>), s4637_an.py, tools/apply_s4638_edgewatch.py.

@@ -153948,3 +153948,10 @@ Results (max over dumps; body_nz = sampled nonzero pixels cols<=510, col511 uniq
 - nowb1/nowb2: buf 0x6AB400 body 0 (positive control: skip works, this buffer is written only by RT64 writeback); buf 0x656400 body 14407 and col511 uniq 118 in BOTH runs.
 So with RT64 writeback off, 0x656400 still carries a noisy col 511 => its writer is not RT64 writeback (2/2 runs + control). Remaining: recomp CPU stores, RSP/RDP DMA, or other host writes. Caveat: body at 0x656400 dropped 17520->14407, so a minority of its content may come from writeback.
 ORIGIN: writer of 0x656400+1022+1024*row still unnamed; only a diagnostic env flag landed, no mitigation.
+
+## Session 4638 (2026-10-11) — hangar col-511 noise has no CPU writer (controlled store watch)
+Ran: offline re-analysis of the s4635 dumps, then a CPU store watch on 0x656400..+260 rows (tools/apply_s4638_edgewatch.py widens the s4299 nodewatch filter in generated funcs_*.c; hook body in upstream_compat.cpp, ROGUESQ_LOG_S4299=1). The first run was invalid (the generated filter only covered 0x17C000-range addresses: zero hits, no control) and was discarded.
+Offline: col 511 of 0x656400 is stable across frames (67/72 identical), early frames toggle 0xd345/0xcb45 then freeze; 0x6AB400 col 511 is all zero.
+Watch (run w38d, vi_w=512): control fires (body stores 3.6M, edge stores 6637 total, including a byte-store clear loop at pc 0x800078EC writing 0 across the whole buffer). ZERO nonzero-valued CPU stores to col 511 at width 512, while the dumps still show 179-227 nonzero rows in col 511.
+Rules out: H-cpu (recomp scalar stores) as writer; with s4637 also RT64 writeback. Surviving: other RDP/RT64 host path, SP/PI DMA, or pre-existing stale data. Caveat: halfword/word stores with a zero low byte were filtered; single-source.
+ORIGIN: diagnostic only, no mitigation added.
