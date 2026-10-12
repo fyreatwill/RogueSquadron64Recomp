@@ -154046,3 +154046,14 @@ out a failed replay as the cause of the behavioral divergence and qualifies
 the vendored script as a safe scratch harness. It does not repair the external
 fixup source or authorize running it over the live generated tree. Details:
 `scratch/s4648/classification.md` and `scratch/s4648/tagcmp_full.tsv`.
+
+## Session 4650 (2026-10-11) — checkpointed before the M4 reconstruction
+
+This retry did not rerun the planned M4 experiment. Inspection found no
+`scratch/agent/s4649_m4_reconstruct.log` and no joined ledger, so there is no
+new reconstruction result or hypothesis selection to report. The qualified
+s4626/s4628 accumulator captures and s4630/s4631 operand captures remain the
+inputs for the next attempt. No conclusion changed and no runtime or library
+file was modified. The next discriminator is still the positive-control
+reconstruction followed by the task/phase/lane join; if that key is absent,
+record the missing key and stop rather than extending instrumentation.

@@ -1,30 +1,30 @@
-# NEXT: close the M4 upstream-operand boundary with a provenance reconstruction
+# NEXT: RESUME M4 upstream-operand provenance reconstruction
 HYPOTHESIS-ID: m4-accumulator-source
 
-Use the already qualified hangar capture, not a new mitigation. Competing
-hypotheses:
+The prior attempt was a checkpoint close-out before the reconstruction ran.
+No qualified result, joined ledger, or discriminator exists yet. Do not add
+instrumentation or rerun a game capture.
+
+Competing hypotheses:
 
 - H1: the remaining M4 mismatch is caused by the port's dynamic per-object
   matrix/operand source before VMADH.
-- H2: the paired vertex input is the source despite the sampled DMA blocks
-  matching retail.
-- H3: the RSP arithmetic/store path is still wrong even with matching inputs.
+- H2: the paired vertex input is the source despite sampled DMA blocks matching
+  retail.
+- H3: the RSP arithmetic/store path is still wrong with matching inputs.
 
-Discriminating measurement: run the positive-control reconstruction in
-`scratch/agent/m4_reconstruct.py` over the complete s4626/s4628 accumulator
-capture, then join its stage-10 operand rows to the s4630/s4631 matrix-span
-rows by task, phase, and lane. H1 predicts a nonzero port-vs-retail matrix or
-operand difference before VMADH; H2 predicts a vertex-input difference with
-matching matrix rows; H3 predicts identical paired inputs but a reconstructed
-post-VMADH mismatch. The synthetic controls must print PASS before any null is
-accepted.
+Discriminating measurement: run the positive-control reconstruction over the
+complete s4626 accumulator capture, then join stage-10 operands to the
+s4630/s4631 matrix-span rows by task, phase, and lane. H1 requires a nonzero
+port-vs-retail matrix/operand difference before VMADH; H2 requires a vertex
+input difference with matching matrix rows; H3 requires identical paired
+inputs but a reconstructed post-VMADH mismatch. Synthetic controls must print
+PASS before accepting any null.
 
-Exact commands:
+Resume command:
 
-1. `python3 scratch/agent/m4_reconstruct.py <qualified-s4626-capture>` and
-   retain stdout in `scratch/agent/s4649_m4_reconstruct.log`.
-2. Use the existing s4630/s4631 capture tables to produce one joined ledger;
-   do not compare animated rows across separate runs.
-3. If no complete join exists, stop and record the missing key rather than
-   adding another diagnostic field; the next choice is a retail-reference
-   request or closing M4 as unevaluable.
+`python3 scratch/agent/m4_reconstruct.py scratch/agent/s4626_m4_accumulator_boundary_fixed/port.log > scratch/agent/s4649_m4_reconstruct.log 2>&1`
+
+Then build one joined ledger from the existing s4630/s4631 tables. If no
+complete join key exists, record the missing key and choose a retail-reference
+request or close M4 as unevaluable; do not add another diagnostic field.
