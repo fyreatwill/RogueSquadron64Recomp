@@ -154788,3 +154788,13 @@ Artifacts: `scratch/agent/run_s4694_m5_a14_shutdown_boundary.sh`,
 ORIGIN: no mitigation; read-only logging. The 03->00 writer is the guest
 worker store at 0x8009B7EC (serviceVoicePoolFrame); the yield only gives it
 host time.
+
+Discrimination (s4694): SELECTS H-A14-yield-needed for the port (yield-on
+returns through the 0x8009B7EC zero store; yield-off times out at 10,000,000
+scans with retail showing the same writer PC active). REFUTES
+H-A14-retail-worker-return as stated for the port (yield-off does not return
+cleanly) and REFUTES H-A14-route-absent (call 3 entered with title/hangar
+controls live). Next discriminator (HYPOTHESIS-ID m5-a15-spin-yield-necessity,
+see NEXT.md): ROGUESQ_SPIN_YIELD=1 vs =0 in one build, concurrent, phase-gated
+on VI 1024/512 rows — H-A15-needed (=0 stalls) vs H-A15-redundant (=0 reaches
+hangar with matching VI counts).
