@@ -495,6 +495,8 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
+**s4706: BLOCKED awaiting owner direction** (all M5/M3/rename/M4/retail-entry threads closed or parked; see scratch/agent/BLOCKED.md).
+
 **s4700 (new top item, supersedes the s4698/s4699 leads below): the s4672/s4457-bad synth crash is caused by our B40 default.** `musyxNoopStub` (0x8008ED00) skips the shutdown+wait+dereg when gate 0x800A0F50 is 0, and the port's setDisplayMode/reapplyDisplayMode gate stores write 0 unless `ROGUESQ_M5_B40_VALUE` is set (`fixup_game_funcs_vendored.py:8282/8294`, "default remains audio-engine-disabled"). The guest's `reapplyAudioConfig -> initN64RspMixer` then registers the synth a 2nd time with no dereg in between (retail oracle strictly alternates dereg/register); `findAndZeroTableSlotMatching` removes only the first match, so a stale callback walks freed audio blocks. A/B: B40=0 crash 1/1, B40=1 0/3 with strict alternation. Next: qualify B40=1 as the default on the canonical Start-mash title->hangar route (see NEXT.md), then flip it in the fixup scripts. Process rule: every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup (killing the subshell PID leaves orphans that load the machine and fake boot stalls).
 **s4701: B40 default flipped to pass-through (done).** `fixup_game_funcs_vendored.py` and live `funcs_23.c` now store r2 unless `ROGUESQ_M5_B40_VALUE=0` (rollback). Start-mash route: new default 0/3 crashes, B40=0 control crashed 1/2 across both runs (pooled pass-through 0/7). No A11-A14 timeouts, no MORT. Next: long soak of the new default, then the next M5 de-stub. After any regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`.
 

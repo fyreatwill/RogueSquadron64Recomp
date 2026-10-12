@@ -154941,3 +154941,7 @@ Address-use check: 2 of 203 pairs had the dst textually inside a following store
 Positive control: the address regex fired on the 2 known store sites; counts reconcile (assert 2*pairs+orphans == 418).
 Result: no pointer-forming lwl/lwr site. M3 load-idiom classes (LD s4704, lwl/lwr s4705) are closed. ORIGIN: n/a (no mitigation added).
 Remaining: M3 idiom audits are exhausted; further M3 progress needs an owner-supplied mission-entry discriminator.
+
+## Session 4706 (2026-10-12) — priority scan: every strategic thread is closed or parked; going BLOCKED for an owner-supplied discriminator
+
+Checked Step 0 (CURRENT-TRUTH 47,980 B, under 60,000, no maintenance). Priority 2 (M5): docs/M5-AUDIO-PLAN.md has no unchecked steps (s4704); the s4672 overlay-route replay on the fixed build already ran in s4698; B40 default soaks done (s4701-s4703). Priority 3 (M3): LD and lwl/lwr idiom classes closed (s4704/s4705), rs_free class closed (s4502), VI-640 stall was load (s4703). Priority 4: the last 15 session titles are not sweep, but the sweep itself is exhausted (s4646, 6 non-batchable placeholders), so resuming it would be churn and trip the engineering-change pivot counter. Retail-entry (s4690) and M4 accumulator (s4689) are unevaluable at the Rice/HLE oracle boundary. No experiment run; no code changed. Rules out nothing new. See scratch/agent/BLOCKED.md for the question.
