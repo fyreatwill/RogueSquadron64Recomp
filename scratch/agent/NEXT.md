@@ -1,18 +1,15 @@
-# NEXT: M4 per-object matrix validity (offline) then downstream split
+# NEXT: RDP triangle stream compare at hangar entry
 HYPOTHESIS-ID: m4-vge-store-boundary-ground-truth
 
-RESUME: s4631: projection matrix 0x700000..3C equals retail (24 retail samples vs
-6 port reads, 1 value, controls passed). Per-object matrices 0x700040+ animate in
-retail (35-67 distinct values) and differ from port; cross-run equality invalid.
+RESUME: s4632: port M4 operands (projection, vertices s4630, per-object matrices) are
+valid and the first matrix equals retail. Divergence is downstream.
 
 Hypotheses:
-- H-matrix-compose: port per-object matrices are non-rigid/garbage.
-- H-no-diff: port matrices are valid rigid transforms; divergence is downstream
-  (clipping / RDP).
+- H-clip: clipping/vertex-output stage differs (screen coords or clip flags).
+- H-rdp: RDP triangle commands reaching the RDP differ in count/shape from retail.
+- H-render: commands equal; difference is in the renderer (Rice/GLideN64/Metal).
 
-Discriminator (offline; data in scratch/agent/s4631_m4_matrix_span/port.log
-`[m4-mat]` and oracle_arm2-4.log pk: rows): decode 16 words as interleaved
-int/frac 4x4, check row norms, orthogonality, translation range. Positive control:
-the projection block (0x700000) must decode sensibly. Non-rigid => oracle write
-watch on 0x700040 for PC attribution; rigid => RDP triangle stream compare.
-Use absolute paths and git -C (cwd drifts; relative script paths give rc=127).
+Discriminator: dump the first N RDP triangle commands (0x08-0x0F) of the first hangar
+frame, port vs oracle (gliden64/rice plugin log), decode screen-space vertices and
+compare counts. Positive control: the title phase must show triangle commands in both.
+Use absolute paths and git -C. tools/m4_matrix_decode.py exists for the matrix side.

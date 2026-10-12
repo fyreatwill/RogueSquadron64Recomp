@@ -157,12 +157,11 @@ Artifacts: `scratch/agent/s4631_m4_matrix_span/`.
 
 ## Next steps
 
-1. M4 per-object-matrix validity (offline, no run): decode the port's
-   `[m4-mat]` rows (s4631 port.log) and retail's pk rows into 16.16 matrices and
-   test rigid-transform sanity. Projection matrix and vertex content equal
-   retail (s4630-s4631); arithmetic, VGE, store are closed. Non-rigid port
-   matrices => trace the CPU writer of 0x700040+ (oracle write watch); rigid =>
-   divergence is downstream: compare the RDP triangle stream at hangar entry.
+1. M4 downstream split (s4632 closed the matrix arm: port per-object matrices
+   are orthogonal like retail's; the first object matrix 0x700040 equals retail
+   exactly, t=(0,21.5,11067.5)). Projection, vertices and matrices all match
+   retail, so the divergence is downstream: compare the RDP triangle stream
+   (command words reaching the RDP) at hangar entry, port vs oracle.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable
