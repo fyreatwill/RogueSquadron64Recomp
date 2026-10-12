@@ -154477,3 +154477,25 @@ forced status clear was made. Artifact:
 
 ORIGIN: the new rows observe guest-owned stores at `0x8009B7CC` and
 `0x8009B7EC`; no mitigation or behavior change was added.
+
+## Session 4681 (2026-10-11) — audited the M5 A10 voice/list/table guards
+
+Applied the bounded A10 audit to the generated audio readers: 43 song-tempo
+table guards in `funcs_25.c` and one voice-list-node guard in `funcs_26.c`.
+The single build carried guard-on and guard-off arms. The named guest writer
+at `0x80096D88` published `0x80149A00` to `0x801529C0`; every observed song
+table pointer and voice-list pointer was in KSEG0. Both arms reached title
+`0x00790400` and hangar `0x006AB400`, with real audio dispatch, service rows,
+nonzero PCM source/consumer joins, and no crash or abort. The retail oracle's
+whole-RDRAM control fired 13,001 writes, its target write watch fired 3,001
+times, and its writer-PC watch fired 6,002 times.
+
+This selects H-A10-valid for the covered route and rules out a guard-off
+improvement or an invalid pointer from the named writer. It does not authorize
+removing any guard. The next unit is the complete backward non-self zero-
+offset `MEM_H` census (19 sites), not another A10 run. Artifact:
+`scratch/agent/s4681_m5_a10/`.
+
+ORIGIN: the only behavior toggle was the diagnostic guard-off arm; the
+legitimate pointer writer is the guest store at `0x80096D88`, and no
+mitigation or production guard change was landed.

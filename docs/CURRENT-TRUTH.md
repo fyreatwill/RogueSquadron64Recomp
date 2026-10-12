@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4680.
+archive sections. Updated for session 4681.
 
 ## Current state
 
@@ -48,6 +48,18 @@ fired. This selects H-status-writer for the covered route: the named service
 worker is the legitimate zeroing writer. Shutdown call-3 did not execute in
 the target phase, so that boundary remains unevaluable; no wait change or
 forced clear is authorized. Artifact: `scratch/agent/s4117_m5_status03_silent/`.
+
+Session 4681 completed the Step 8 A10 audit. The generated census found 43
+song-tempo table guards in `funcs_25.c` and one voice-list-node guard in
+`funcs_26.c`. The named guest writer `0x80096D88` published the in-range
+pointer `0x80149A00`; all observed list pointers were also in KSEG0. Guard-on
+and guard-off arms from one build both reached title `0x00790400` and hangar
+`0x006AB400`, with real audio dispatch, service activity, and nonzero PCM at
+both source and consumer boundaries, and neither crashed or aborted. Retail
+independently fired the whole-RDRAM control (13,001 writes), the target write
+(3,001 writes), and writer-PC execution watch (6,002 hits). This selects
+H-A10-valid for the covered route; no guard relaxation is authorized.
+Artifact: `scratch/agent/s4681_m5_a10/`.
 
 Session 4677 ran the corrected boot-relative Start-mash route after two shorter
 recipe attempts stopped before title. Both arms reached title 1024 and hangar
@@ -352,9 +364,11 @@ no guard, patch, or mitigation was added. Artifacts are in
    `serviceVoicePoolFrame` publishes `03` at `0x8009B7CC` and clears the same
    slot at `0x8009B7EC`, with independent retail PC attribution. Shutdown
    call-3 was not reached in the target phase, so it remains unevaluable.
-   Do not change the wait or force-clear status. Proceed to Step 8's complete
-   A10 voice/list/table guard-class audit; any relaxation needs a named
-   legitimate writer and a same-run traversal control.
+   Do not change the wait or force-clear status. Step 8's complete A10
+   voice/list/table audit selected H-A10-valid: the named writer and all
+   observed pointers were legitimate, and relaxing all 44 guards changed no
+   qualified route outcome. Keep every guard in force and proceed to the next
+   complete M3 idiom census.
 
    Step 5's complete key-on early-return audit is qualified on the covered
    title/hangar route: valid divisor `0xC0`, zero guard fires, normal tails,
