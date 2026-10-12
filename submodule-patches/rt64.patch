@@ -3097,7 +3097,7 @@ index f17db9b..5087cef 100644
                      }
                  }
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..fc58833 100644
+index d1a9f4e..6f2fb5c 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -4052,7 +4052,7 @@ index d1a9f4e..fc58833 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1132,6 +1917,828 @@ namespace RT64 {
+@@ -1132,6 +1917,892 @@ namespace RT64 {
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
  
@@ -4120,6 +4120,70 @@ index d1a9f4e..fc58833 100644
 +                        }
 +                        else {
 +                            triPosFloats[i] = 0.0f;
++                        }
++                    }
++                }
++            }
++        }
++
++        // ROGUESQ_TRI_MASK=lo-hi[,lo-hi...] — s4635 tri-index bisect. Triangles are
++        // numbered per workload (index resets when the workload cursor changes) and
++        // those inside a listed range are collapsed so they do not rasterise.
++        // ROGUESQ_TRI_KEEP=lo-hi inverts it (collapse everything outside).
++        // ROGUESQ_TRI_MASK=0-99999999 is the positive control (blanks geometry).
++        // ROGUESQ_TRI_MASK_LOG=1 prints per-workload triangle totals (capped).
++        {
++            struct TriMask {
++                std::vector<std::pair<uint32_t, uint32_t>> ranges;
++                bool keep = false;
++                bool log = false;
++                bool any = false;
++            };
++            static const TriMask s_tm = []{
++                TriMask m;
++                const char *e = std::getenv("ROGUESQ_TRI_MASK");
++                const char *k = std::getenv("ROGUESQ_TRI_KEEP");
++                if (k && *k) { e = k; m.keep = true; }
++                if (e && *e) {
++                    const char *p = e;
++                    while (*p) {
++                        char *end = nullptr;
++                        uint32_t lo = uint32_t(std::strtoul(p, &end, 10));
++                        uint32_t hi = lo;
++                        if (end && *end == '-') { hi = uint32_t(std::strtoul(end + 1, &end, 10)); }
++                        m.ranges.emplace_back(lo, hi);
++                        if (!end || *end != ',') break;
++                        p = end + 1;
++                    }
++                    m.any = !m.ranges.empty();
++                }
++                const char *l = std::getenv("ROGUESQ_TRI_MASK_LOG");
++                m.log = l && *l && *l != '0';
++                return m;
++            }();
++            if (s_tm.any || s_tm.log) {
++                static int s_lastCursor = -1;
++                static uint32_t s_idx = 0;
++                static uint32_t s_logged = 0;
++                if (s_lastCursor != workloadCursor) {
++                    if (s_tm.log && s_idx >= 200 && s_logged < 400) {
++                        s_logged++;
++                        fprintf(stderr, "[tri-mask] workload tris=%u\n", s_idx);
++                        fflush(stderr);
++                    }
++                    s_lastCursor = workloadCursor;
++                    s_idx = 0;
++                }
++                for (uint32_t t = 0; t < triCount; t++, s_idx++) {
++                    if (!s_tm.any) continue;
++                    bool inRange = false;
++                    for (const auto &r : s_tm.ranges) {
++                        if (s_idx >= r.first && s_idx <= r.second) { inRange = true; break; }
++                    }
++                    if (inRange != s_tm.keep) {
++                        const size_t base = triPosFloats.size() - size_t(triCount - t) * PosFloatsPerTri;
++                        for (size_t i = 0; i < PosFloatsPerTri; i++) {
++                            triPosFloats[base + i] = 0.0f;
 +                        }
 +                    }
 +                }
@@ -4881,7 +4945,7 @@ index d1a9f4e..fc58833 100644
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
              fbPair.scissorRect.merge(scissorRect);
-@@ -1319,6 +2926,40 @@ namespace RT64 {
+@@ -1319,6 +2990,40 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  

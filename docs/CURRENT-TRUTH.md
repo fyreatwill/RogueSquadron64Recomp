@@ -157,10 +157,12 @@ Artifacts: `scratch/agent/s4631_m4_matrix_span/`.
 
 ## Next steps
 
-1. M4 RSP thread is closed (s4634): three port runs' hangar entry frames equal
-   retail except the same 3 animating tris (1244-1246); s4633's "109 tris" was
-   frame misalignment, not rounding. Next: renderer-side work (RT64 tri-index
-   mask) for rim/blue spikes/right-edge garbage.
+1. M4 RSP thread is closed (s4634). s4635 RT64 tri-index mask (`ROGUESQ_TRI_MASK`)
+   showed the right-edge garbage is bimodal across identical runs and survives
+   masking ALL triangles: it is framebuffer/VI-side, not tri submit. Next: dump
+   the hangar colour image (512-wide, 0x006AB400) and the VI-scaled frame in the
+   same run, check whether columns >=~510 are garbage in RDRAM (RDP/fill/copy
+   writer) or only in RT64's FB readback/scale; name the writer before any guard.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

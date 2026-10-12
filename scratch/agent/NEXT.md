@@ -1,12 +1,14 @@
-# NEXT: renderer-side triage of hangar artifacts (RT64 tri-index mask)
+# NEXT: right-edge hangar garbage is FB/VI-side — locate which layer
 HYPOTHESIS-ID: hangar-renderer-artifacts
 
-RESUME: s4634 closed the M4 RSP/stream thread: port hangar entry RDP stream equals retail
-except 3 animating tris. Visible rim band / blue holo spikes / right-edge garbage are
-renderer-side.
-Hypotheses: H-tri (specific tris, e.g. range 850-1246, render wrong in RT64), H-state
-(an RDP state/combiner/texture-format path RT64 mishandles), H-fb (framebuffer/VI side).
-Discriminator: env-driven tri-index mask in the RT64 tri submit path (single run, bisect
-index ranges); hide ranges and see which removes the artifact. Positive control: masking
-all tris blanks the frame. Capture screenshots per mask. Any lib/ edit needs
-submodule-patches/export.sh + commit.
+RESUME: s4635 showed right-edge garbage (x>=1276 of 1280 screenshot) is bimodal across
+identical runs and persists with every triangle masked (ROGUESQ_TRI_MASK=0-99999999).
+Hypotheses: H-rdram (columns >=~510 of the 512-wide colour image at 0x006AB400 are garbage
+in RDRAM: fill/copy/texrect writer), H-rt64-fb (RDRAM clean; RT64 FB readback/VI scale/crop
+reads past width), H-vi (VI h-start/x-scale makes the last column sample beyond the image).
+Discriminator: same run, dump RDRAM colour image columns 504-511 (rows 0-239) at hangar phase
+AND the screenshot edge; run until at least one bimodal garbage-present run and one absent run
+(compare same-config reruns). RDRAM garbage present+screenshot garbage => H-rdram (then find
+writer with the oracle/retail comparison); RDRAM clean+screenshot garbage => H-rt64-fb/H-vi.
+Positive control: ROGUESQ_TRI_MASK=0-99999999 still blanks geometry (verified s4635).
+Tools: scratch/agent/s4635_mask.sh TAG [ENV=..], s4635_strip.py.
