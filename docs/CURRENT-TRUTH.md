@@ -189,6 +189,10 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
    nothing ever rewrites (not an RT64 bug). Next: compare VI hstart/hend (crop of
    col 511?) in the hangar; if VI shows col 511, check whether retail clears the
    buffer (needs oracle hangar reach) -- else close the thread as stale/benign.
+   s4642 DONE: hangar VI xScale 0x333 -> 511.9 visible src cols (controls 320/640
+   exact); both 0x656400/0x6AB400 are scanned out. Col 511 = <=1 output px, so it
+   cannot explain a multi-pixel right-edge band. Next: measure the real band width
+   in a hangar frame capture; if >1 px the cause is not col 511.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

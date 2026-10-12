@@ -5144,7 +5144,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..033190b 100644
+index 10f98af..ee47673 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -6698,7 +6698,28 @@ index 10f98af..033190b 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +3242,20 @@ namespace RT64 {
+@@ -1915,6 +3198,20 @@ namespace RT64 {
+             viDifferent = (newVI != lastScreenVI);
+             lastScreenVI = newVI;
+ 
++            // s4642 diagnostic: ROGUESQ_VI_EXTENT_PROBE=1 logs VI horizontal extent on every VI change.
++            static const bool s_viext = std::getenv("ROGUESQ_VI_EXTENT_PROBE") != nullptr;
++            if (s_viext && viDifferent) {
++                static int s_viext_n = 0;
++                if (++s_viext_n <= 400) {
++                    const unsigned xs = newVI.xTransform.xScale, xo = newVI.xTransform.xOffset;
++                    const unsigned hs = newVI.hRegion.hStart, he = newVI.hRegion.hEnd;
++                    std::fprintf(stderr, "[viext #%d] origin=0x%08X width=%u type=%u hStart=%u hEnd=%u xScale=0x%X xOffset=0x%X visCols=%u\n",
++                        s_viext_n, newVI.origin, newVI.width, (unsigned)newVI.status.type, hs, he, xs, xo,
++                        (unsigned)(((he > hs ? he - hs : 0) * xs) / 1024));
++                    std::fflush(stderr);
++                }
++            }
++
+             // Diagnostic (ROGUESQ_LOG_PRESENT_EARLY=1) — track why viHistory stays empty.
+             // We reuse the same env flag the present-early matcher uses.
+             static const bool s_us_log_pe = [](){
+@@ -1959,8 +3256,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -6721,7 +6742,7 @@ index 10f98af..033190b 100644
                  return;
              }
          }
-@@ -1972,7 +3267,11 @@ namespace RT64 {
+@@ -1972,7 +3281,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6734,7 +6755,7 @@ index 10f98af..033190b 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3332,51 @@ namespace RT64 {
+@@ -2033,26 +3346,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6804,7 +6825,7 @@ index 10f98af..033190b 100644
              }
          }
  
-@@ -2910,4 +4234,4 @@ namespace RT64 {
+@@ -2910,4 +4248,4 @@ namespace RT64 {
              break;
          }
      }
