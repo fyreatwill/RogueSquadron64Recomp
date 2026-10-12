@@ -154616,3 +154616,19 @@ guard, or mitigation was authorized.
 
 ORIGIN: no mitigation; all observations are read-only generated-source and
 consumer classification evidence.
+
+## Session 4688 (2026-10-11) — audited backward non-self zero-offset `MEM_WU` loads
+
+Ran the prescribed source scans before any build. Added and ran
+`tools/census_memwu.py` against the external generated tree. Its parsed scan
+and independent direct-regex count agreed on one zero-offset `MEM_WU` load;
+it is the only backward-loop and non-self site. The complete classification is
+in `docs/M3-S4688-MEMWU-CENSUS.md`. The site is
+`swizzleTextureRowsToTmem` at `0x800249D8`: it combines the loaded low word
+with the adjacent high word into a packed 64-bit texture row and stores it
+with `SD` while bounded row counters advance. No pointer reconstruction or
+named invalid writer exists. This selects H-MEMWU-bounded. No build,
+generated-code edit, guard, runtime probe, or mitigation was authorized.
+
+ORIGIN: no mitigation; all observations are read-only generated-source and
+consumer classification evidence.

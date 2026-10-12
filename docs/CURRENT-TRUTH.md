@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4687.
+archive sections. Updated for session 4688.
 
 ## Current state
 
@@ -433,7 +433,15 @@ no guard, patch, or mitigation was added. Artifacts are in
    scalar/index consumers, and 222 as pointer-transition review sites. No
    named invalid writer was found, so no guard or runtime probe is authorized.
    The next complete class is the remaining one-site zero-offset `MEM_WU`
-   census.
+   census. Session 4688 completed it: two independent scans agreed on one
+   direct load, one backward-loop site, and one non-self site in
+   `swizzleTextureRowsToTmem`. The value is immediately combined with the
+   adjacent word into packed texture rows and written by `SD` under bounded
+   row counters; it is not pointer reconstruction and has no named invalid
+   writer. The reproducible table is emitted by `tools/census_memwu.py` and
+   documented in `docs/M3-S4688-MEMWU-CENSUS.md`. No guard or runtime probe is
+   authorized from this class; a new idiom or attributable M4 boundary is
+   required.
 
 1. Step 7's complete status-table census selects H-status-writer for the
    covered route:
