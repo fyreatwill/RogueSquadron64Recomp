@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4652.
+archive sections. Updated for session 4653.
 
 ## Current state
 
@@ -146,6 +146,17 @@ s4630 vertex comparison still disfavors H2, but H1 (dynamic matrix source)
 remains unevaluable. No mitigation is authorized. Details:
 `scratch/agent/s4649_m4_join.md`.
 
+Session 4653 reran the qualified regeneration repair harness against a fresh
+`RecompiledFuncs.s4204-fresh` copy outside the live external tree. The vendored
+fixer returned rc=0 with `failures=0`; the positive-control census reported
+`live=173`, `cand=174`, and exactly the five expected diagnostic-only
+differences (`s4079`, `s4084`, `s4323`, `s4329`, `s4560`). The four
+behavior-changing arms (`s4563`, `s4296`, `s4580`, `s4571c`) and diagnostic
+`s4572` matched the qualified classification. This supports H1 and rejects
+fresh-copy failure H3 and behavior-changing drift H2 for this copy. The live
+generated tree was not touched. Artifacts: `scratch/agent/s4653_fixup.log`,
+`scratch/agent/s4653_tagcmp.tsv`.
+
 Session 4652 checked the available image and oracle artifacts for a retail
 hangar pixel reference. Every matching PNG is a port soak output, including
 the late hangar AB directories; retail artifacts are logs, tables, or memory
@@ -229,7 +240,11 @@ pillar stubs are a port defect. No runtime instrument or mitigation was added.
 3. Revisit the external retail-entry boundary only with a new attributable
    handoff; do not repeat the now-qualified all-phase name-copy null.
 4. s4644: rim band and holo spikes are no longer visible in current hangar frames (single-source visual); residual candidate is white pillar stubs at x~200/430/865/1085/1130. Need a retail pixel reference before treating it as a defect (retail may light those edges by design). s4645: no reference obtainable; thread PARKED, craft-select frame renders clean.
-5. s4647/s4649: the loop block is cleared for the regen-repair question.
+5. s4647/s4649/s4653: the safe fresh-copy fixer and tag comparison are
+   qualified; do not regenerate over the live external tree until the normal
+   generation workflow is intentionally repaired or a candidate build path is
+   specified. The next bounded unit is the open attached-mesh overlay NPC
+   NULL/free idiom audit.
    s4651 refutes the port arithmetic arm of M4, while the separate-run matrix
    join is unavailable. s4652 found no retail hangar pixel reference, so H1 is
    closed as unevaluable; no runtime mitigation is authorized. The next

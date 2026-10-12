@@ -154093,3 +154093,20 @@ absence arm of the planned discriminator and closes the M4 H-source thread as
 unevaluable. It does not establish whether the remaining white pillar stubs
 are a port defect, and it authorizes no mitigation. Next is the already
 qualified fresh-copy regeneration fixer/tag comparison.
+
+## Session 4653 (2026-10-11) — qualified fresh-copy regeneration fixer and tag census
+
+Ran the vendored regeneration fixer against a fresh copy of
+`RecompiledFuncs.s4204-fresh` at `../N64Recomp/scratch_s4653_regen`, never the
+live external `RecompiledFuncs` tree. It returned rc=0 and reported
+`failures=0`. The positive-control tag census was nonzero (`live=173`,
+`cand=174`) and found exactly the five expected diagnostic-only differences:
+`s4079`, `s4084`, `s4323`, `s4329`, and `s4560`. The four behavior-changing
+arms (`s4563`, `s4296`, `s4580`, `s4571c`) and diagnostic `s4572` matched the
+qualified s4648 classification. This supports H1 and rejects fresh-copy
+failure H3 and behavior-changing drift H2 for this copy. No runtime change or
+live generated-tree mutation was made. Artifacts are
+`scratch/agent/s4653_fixup.log` and `scratch/agent/s4653_tagcmp.tsv`.
+
+ORIGIN: no mitigation or runtime behavior change; this work validates the
+regeneration/fixup machinery only.

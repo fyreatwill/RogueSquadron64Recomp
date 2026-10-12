@@ -1,26 +1,31 @@
-# NEXT: apply the qualified safe regeneration repair harness to a fresh copy
-HYPOTHESIS-ID: regen-repair-harness
+# NEXT: audit the attached-mesh overlay NPC NULL/free idiom
+HYPOTHESIS-ID: m3-attached-mesh-null-free-audit
 
-This iteration checked every available image artifact and found no retail
-hangar pixel/reference capture. The PNGs are port soak outputs (including the
-hangar AB directories); retail/oracle artifacts are logs, tables, or memory
-watches. Therefore the M4 H-source thread is closed as unevaluable, not as a
-port-vs-retail visual conclusion. The s4649 reconstruction remains valid:
-both controls pass and 515 complete triplets / 4,120 lanes have zero
-post-VMADH mismatches. See `scratch/agent/s4649_m4_join.md`.
+The regeneration/fixup harness is qualified in a fresh copy. Do not rerun it
+or mutate the live generated tree. M5 is conditionally closed in CURRENT-TRUTH;
+the remaining bounded M3 item is the `attachedMeshOverlayNpcHandler` gap at
+`0x80054344`.
 
-Next work unit: run the already-qualified fixer against a fresh generated
-copy, then compare the five behavioral arms and the five known diagnostic-only
-tag differences. Do not regenerate over the live external tree.
+Competing hypotheses and discriminator:
 
-Competing hypotheses and discriminator for the next unit:
+- H1: the handler's NULL/free path is already proven safe by an earlier guard
+  or by a caller invariant; every reachable dereference/free has a proof.
+- H2: one or more reachable paths use the pointer without a proof, requiring
+  a regeneration-safe patch with an explicit writer/legitimacy analysis.
+- H3: the address/function attribution is stale or the site is not present in
+  the current generated source, so this item is not actionable.
 
-- H1: the vendored fixer is behaviorally equivalent; all five live-only arms
-  and the expected diagnostic drift match the s4648 classification.
-- H2: the fixer repairs the E088 failure but changes a live arm; at least one
-  behavior-changing tag differs from the classification.
-- H3: the fresh generation itself is incomplete or malformed; the fixer
-  fails, or the target functions/tags are absent before comparison.
+The discriminating measurement is one whole-idiom census: locate the current
+generated function and every load, field dereference, `rs_free`, and caller
+edge around `0x80054344`; classify each site as guarded, caller-proven, dead,
+or unproven. H1 requires proof for all sites, H2 requires at least one
+reachable unproven site and a named writer, and H3 requires the function/site
+to be absent or misattributed.
 
-The discriminating measurement is one fresh-copy fixer return code plus the
-single five-arm tag comparison from `scratch/s4648/classification.md`.
+Exact read-only commands before any edit:
+
+    rg -n "80054344|attachedMeshOverlayNpcHandler|rs_free" ../N64Recomp/RecompiledFuncs funcs* src lib tools
+    grep -n "0x80054344" PORTING-STATE.md | tail -20
+
+If H2 is selected, write the origin/writer and legitimacy into the audit,
+then use the existing patches workflow; never hand-edit generated functions.
