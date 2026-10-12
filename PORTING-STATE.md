@@ -154521,3 +154521,31 @@ non-self zero-offset `MEM_H` census. Artifact:
 
 ORIGIN: diagnostic-only retail oracle and existing port boundary probes; no
 guest or host behavior was rewritten.
+
+## Session 4683 (2026-10-11) — audited backward non-self zero-offset `MEM_H` loads
+
+The M3 work unit was a complete static census of signed-halfword zero-offset
+loads in backward `goto` loops. The required pre-build scan showed that the
+work order's 19-site count was stale in the current external generated tree.
+Two independent interval scans found the same 97 non-self `MEM_H` load sites;
+one grouped them into 48 back-edge groups and the other into 39 because of
+nested intervals. A raw scan found 160 total non-self zero-offset `MEM_H`
+loads, with 63 outside backward loops.
+
+The complete consumer classification is in
+`docs/M3-S4683-MEMH-CENSUS.md`. Every candidate is used as scalar index,
+interpolation, animation, geometry, text, or audio-coefficient data. The
+eight cases that form an address expression do so after index scaling or
+offset addition; none is an unscaled guest-pointer load followed by a
+dereference, and no named invalid-pointer writer exists in this class. This
+selects H-MEMH-bounded and rejects H-MEMH-invalid as a guard candidate. The
+unreached hypothesis is not useful because the code is ordinary active game
+logic, but no runtime result was needed for the static discriminator.
+
+No build, runtime probe, guard, or mitigation was added. This is
+single-source evidence from generated-code analysis, with independent scans
+as the second line for candidate enumeration. The next unit is the analogous
+backward non-self zero-offset `MEM_HU` census.
+
+ORIGIN: no mitigation; all observations are read-only generated-source and
+consumer classification evidence.

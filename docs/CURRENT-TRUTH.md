@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4682.
+archive sections. Updated for session 4683.
 
 ## Current state
 
@@ -72,6 +72,18 @@ H-AI-bridge-valid. No AI or SDL change is authorized, and M5 Steps 4–10 are
 now qualified or closed on the covered route. Artifact:
 `docs/M5-S4682-AI-SDL-BOUNDARY.md` and
 `scratch/agent/s4682_m5_ai_sdl_boundary/`.
+
+Session 4683 completed the static backward non-self zero-offset `MEM_H` audit.
+The prior work order's 19-site count was stale for the current external
+generated snapshot: two independent interval scans found the same 97 signed
+halfword load sites (with different nested-loop grouping), out of 160 total
+non-self zero-offset loads. The complete table in
+`docs/M3-S4683-MEMH-CENSUS.md` shows scalar index, interpolation, animation,
+geometry, text, or audio-coefficient consumers at every site; none is an
+unscaled guest-pointer dereference or a named invalid-pointer writer. This
+selects H-MEMH-bounded and authorizes no guard or mitigation. Evidence is
+static/source-only; a runtime probe is not warranted without a new
+site-specific symptom.
 
 Session 4677 ran the corrected boot-relative Start-mash route after two shorter
 recipe attempts stopped before title. Both arms reached title 1024 and hangar
@@ -374,8 +386,10 @@ no guard, patch, or mitigation was added. Artifacts are in
 0. M5 audio de-stubbing is qualified through Step 10 on the covered route.
    The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
    s4682; retain the silent arm as rollback. Do not change the AI status,
-   PCM conversion, or SDL queue from this evidence. The next M3 unit is the
-   complete MEM_H non-self zero-offset census in `scratch/agent/NEXT.md`.
+   PCM conversion, or SDL queue from this evidence. The `MEM_H` census is
+   complete; its stale 19-site count was reconciled against the current
+   generated tree. The next M3 unit is the complete backward non-self
+   zero-offset `MEM_HU` census in `scratch/agent/NEXT.md`.
 
 1. Step 7's complete status-table census selects H-status-writer for the
    covered route:
