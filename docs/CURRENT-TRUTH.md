@@ -172,9 +172,13 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
    dumps not frame-synced to screenshots). Next: name the WRITER of
    0x656400 + 1022 + 1024*row (RT64 RDRAM writeback vs recomp CPU/RSP/RDP
    code); see scratch/agent/NEXT.md.
-   s4637: NOT RT64 colour writeback (ROGUESQ_NO_WB_W=512 zeroes buffer
-   0x6AB400 as control, yet 0x656400 col 511 stays noisy, 2/2 runs). Writer is
-   CPU/RSP/RDP/other host write; next = store watch (NEXT.md).
+   s4637/s4638: not RT64 wb-only, not CPU stores. s4639 (ROGUESQ_BUF_WATCH,
+   scratch/agent/s4639_bw.sh) selects H-stale: 0x656400 col 511 is already
+   non-zero 240/240 at the first 512-wide VI; later 512-wide RT64 writeback
+   (phys 0x656000 len 0x54C00) converges col 510 but never col 511 (stays
+   ~205/240; 0x6AB400 stays 0). Next: why copyNativeToRAM at width 512 omits
+   col 511 (native fb width/scissor/VI crop) -- read rt64 copyNativeToRAM and log
+   the native fb width + colorWriteWidth. No mitigation without ORIGIN.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

@@ -2075,6 +2075,37 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
         if (s_ < 0x149720u && s_ + len > 0x149700u)
             std::fprintf(stderr, "[s4578-HOSTWRITE-OVERLAP] phys=%06X len=%X api=%s vi_w=%u\n", s_, len, api ? api : "?", rs64_vi_committed_width());
     }
+    {
+        // s4639: host writes into the hangar colour buffers (0x656400 and
+        // 0x6AB400, 512x16bpp, 260 rows). "col511" = write touches bytes
+        // 1022..1023 of some row. Body hits are the same-run positive control.
+        static const bool bw_on = [] {
+            const char* v = std::getenv("ROGUESQ_BUF_WATCH");
+            return v && v[0] && v[0] != '0';
+        }();
+        if (bw_on && rdram && len) {
+            static const uint32_t bases[2] = {0x656400u, 0x6AB400u};
+            static std::atomic<uint32_t> cnt[2][2];  // [buf][0=any,1=col511]
+            static std::atomic<uint32_t> logged{0};
+            const uint32_t s = phys & 0x007FFFFFu;
+            for (int b = 0; b < 2; ++b) {
+                const uint32_t lo = bases[b], hi = lo + 512u * 2u * 260u;
+                if (s >= hi || s + len <= lo) continue;
+                const uint32_t a = s > lo ? s : lo;
+                const uint32_t e = (s + len) < hi ? (s + len) : hi;
+                bool c511 = (e - a) >= 1024u;
+                for (uint32_t o = a; !c511 && o < e; ++o)
+                    if (((o - lo) & 1023u) >= 1022u) c511 = true;
+                const uint32_t n_any = ++cnt[b][0];
+                const uint32_t n_c = c511 ? ++cnt[b][1] : cnt[b][1].load();
+                if (rs64_vi_committed_width() == 512u && logged++ < 200u)
+                    std::fprintf(stderr,
+                        "[s4639-bufwatch] buf=%06X api=%s phys=%06X len=%X c511=%d vi_w=%u n_any=%u n_c511=%u\n",
+                        lo, api ? api : "?", s, len, (int)c511,
+                        rs64_vi_committed_width(), n_any, n_c);
+            }
+        }
+    }
     if (!enabled || !rdram || len == 0u) return;
     static std::atomic<uint32_t> api_mask{0};
     uint32_t bit = 8u;

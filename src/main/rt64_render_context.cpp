@@ -955,6 +955,25 @@ public:
                 // columns can be compared offline against the screenshot edge.
                 static const char* s_edge_dir = std::getenv("ROGUESQ_EDGE_DUMP");
                 static int s_edge_files = 0;
+                // s4639: col-511 snapshot of both hangar buffers at each of the
+                // first 24 512-wide VI updates (H-stale discriminator).
+                static const char* s_bw = std::getenv("ROGUESQ_BUF_WATCH");
+                static int s_snap_n = 0;
+                if (s_bw && s_bw[0] != '0' && w == 512u && s_snap_n < 24 && app->core.RDRAM) {
+                    s_snap_n++;
+                    const uint8_t* rd = app->core.RDRAM;
+                    uint32_t nz[2] = {0, 0}, nzb[2] = {0, 0};
+                    static const uint32_t bases[2] = {0x656400u, 0x6AB400u};
+                    for (int b = 0; b < 2; ++b)
+                        for (uint32_t r = 0; r < 240; ++r) {
+                            const uint32_t o = bases[b] + r * 1024u;
+                            if (rd[(o + 1022u) ^ 3] | rd[(o + 1023u) ^ 3]) nz[b]++;
+                            if (rd[(o + 1020u) ^ 3] | rd[(o + 1021u) ^ 3]) nzb[b]++;
+                        }
+                    fprintf(stderr,
+                        "[s4639-snap] n=%d vi_n=%d org=%06X col511_nz 656400=%u 6AB400=%u col510_nz 656400=%u 6AB400=%u\n",
+                        s_snap_n, (int)s_n, pvi->VI_ORIGIN_REG & 0x00FFFFFFu, nz[0], nz[1], nzb[0], nzb[1]);
+                }
                 if (s_edge_dir && w == 512u && (s_n & 7) == 0 && s_edge_files < 400) {
                     const uint8_t* rd = app->core.RDRAM;
                     const uint32_t org = pvi->VI_ORIGIN_REG & 0x00FFFFFFu;
