@@ -154918,3 +154918,11 @@ Selection (s4701): this selects H-b40-safe and refutes H-b40-regress. With the g
 
 Ran scratch/agent/run_s4701_b40_long.sh (6 concurrent default-B40 arms, 230 s phase window, same recipe as the s4701 default arms). CRASH][mcontext] = 0 and abort/MORT = 0 in all 6 arms, so the s4457-bad / far=0x38000950e signature did not recur (cumulative default-B40 crash count 0/13 with s4701 0/7). BUT only b2 reached VI 1024 (44 s) and VI 512 (62 s); b1,b3,b4,b5,b6 sat at vi_width=640 origin=0x5D4000 until the window ended (total_vis=14643, rdpFs frozen at 157, vi-fs-decision SKIP pair=0 stalled=1, audioloop s0=0x801496B0 unchanged). Stalled arms logged s4700-cb register=5 / dereg-enter=1 (one dereg/register cycle) versus register=17 / dereg-enter=8 in the healthy arm and 8-10 dereg-enter in the three healthy s4701 default arms. Readings: H1 B40 pass-through causes a title-boot stall; H2 6-way concurrency (s4701 ran 4) starves boot; H3 pre-existing flaky 640-stage stall. No discriminator run this session; 6 arms at once confounds H1/H2. ORIGIN: no mitigation code landed (script only).
 Next: 4 concurrent arms, 2 default + 2 B40=0, same window; stalled fraction by arm type splits H1 from H2/H3.
+
+## Session 4703 (2026-10-12) — stall split: 4-way concurrent soak, no VI-640 stall in any arm; 6-way stall was load (H2)
+
+Ran scratch/agent/run_s4703_stall_split.sh: 4 concurrent arms (d1,d2 default B40 pass-through; z1,z2 ROGUESQ_M5_B40_VALUE=0), 120 s phase window.
+Result: all 4 arms reached vi_width=1024 origin=0x00790400 (2275-3398 hits) and vi_width=512 origin=0x006AB400; origin 0x5D4000 = 0 in every arm. Crashes: d1 0, d2 0, z1 31 mcontext lines, z2 0.
+Rules out H1 (B40 pass-through causing a boot stall): default arms were healthy and B40=0 arms were equally healthy. Supports H2 (6-way load starves boot) — two lines: s4701 3/3 healthy at 4-way, s4703 4/4 healthy at 4-way, vs s4702 5/6 stalled at 6-way. H3 (pre-existing flaky stall) not excluded but no instance seen at 4-way (7/7).
+Cumulative B40 evidence: default 0 crashes in 15 arms; B40=0 rollback control now 2 crashes in 4. Default flip stands.
+Not yet done: a sequential single-arm confirmation of the 6-way stall as load (would need another run with 6 arms of B40=0 to show it stalls too).

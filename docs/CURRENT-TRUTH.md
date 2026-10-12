@@ -696,4 +696,4 @@ with the ROM present. Any mitigation-shaped change needs an `ORIGIN:` line.
 See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 for the s4590–s4617
 evidence archive and [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md) for the audio plan.
 
-- s4702 (single-source): default B40 pass-through 0/13 crashes cumulative, but a 6-way soak stalled 5/6 arms at VI 640 (origin 0x5D4000). Load (H2) vs B40 (H1) undecided; see scratch/agent/NEXT.md.
+- s4702/s4703: default B40 pass-through 0 crashes in 15 arms; B40=0 rollback 2/4. The s4702 6-way VI-640 stall did NOT recur at 4-way (s4703 4/4 healthy, d and z arms alike) -> attributed to 6-way load, not B40. Keep soaks <=4 concurrent.
