@@ -950,6 +950,27 @@ public:
                     }
                 }
                 rs64_m5_route_fingerprint_snapshot(w, pvi->VI_ORIGIN_REG);
+                // s4636: dump the VI colour image (512 wide, 16bpp, 260 rows)
+                // every 8th update_screen while width==512, so the RDRAM edge
+                // columns can be compared offline against the screenshot edge.
+                static const char* s_edge_dir = std::getenv("ROGUESQ_EDGE_DUMP");
+                static int s_edge_files = 0;
+                if (s_edge_dir && w == 512u && (s_n & 7) == 0 && s_edge_files < 400) {
+                    const uint8_t* rd = app->core.RDRAM;
+                    const uint32_t org = pvi->VI_ORIGIN_REG & 0x00FFFFFFu;
+                    char path[512];
+                    snprintf(path, sizeof(path), "%s/edge_%05d_%08X.bin", s_edge_dir, s_n, org);
+                    if (FILE* f = fopen(path, "wb")) {
+                        std::vector<uint8_t> buf(512u * 2u * 260u);
+                        for (uint32_t i = 0; i < buf.size(); i++) {
+                            uint32_t off = org + i;
+                            buf[i] = (off < 0x800000u) ? rd[off ^ 3] : 0;
+                        }
+                        fwrite(buf.data(), 1, buf.size(), f);
+                        fclose(f);
+                        s_edge_files++;
+                    }
+                }
             }
 
             if (s_n <= 4 || (s_n & 63) == 0) {

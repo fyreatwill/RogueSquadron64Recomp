@@ -1,14 +1,10 @@
-# NEXT: right-edge hangar garbage is FB/VI-side — locate which layer
+# NEXT: name the writer of hangar colour-image column 511 (buffer 0x656400)
 HYPOTHESIS-ID: hangar-renderer-artifacts
 
-RESUME: s4635 showed right-edge garbage (x>=1276 of 1280 screenshot) is bimodal across
-identical runs and persists with every triangle masked (ROGUESQ_TRI_MASK=0-99999999).
-Hypotheses: H-rdram (columns >=~510 of the 512-wide colour image at 0x006AB400 are garbage
-in RDRAM: fill/copy/texrect writer), H-rt64-fb (RDRAM clean; RT64 FB readback/VI scale/crop
-reads past width), H-vi (VI h-start/x-scale makes the last column sample beyond the image).
-Discriminator: same run, dump RDRAM colour image columns 504-511 (rows 0-239) at hangar phase
-AND the screenshot edge; run until at least one bimodal garbage-present run and one absent run
-(compare same-config reruns). RDRAM garbage present+screenshot garbage => H-rdram (then find
-writer with the oracle/retail comparison); RDRAM clean+screenshot garbage => H-rt64-fb/H-vi.
-Positive control: ROGUESQ_TRI_MASK=0-99999999 still blanks geometry (verified s4635).
-Tools: scratch/agent/s4635_mask.sh TAG [ENV=..], s4635_strip.py.
+RESUME: s4636 found column 511 of the 512-wide colour image at 0x00656400 is per-frame noise (buffer 0x006AB400 col 511 is zero). Writer candidates:
+ H-rt64-wb: RT64 writes framebuffer back to RDRAM and spills one pixel past width.
+ H-cpu: recompiled game code (span/copy loop with width or stride error).
+ H-rdp: RDP primitives (rect/fill/scissor) from the display list reaching x=511.
+Discriminator (offline first): grep lib/rt64 for RDRAM writes (FB readback); if none, add a write-watch in the recomp store path (hooks in src/main/upstream_compat.cpp) for physical 0x656400+1022+1024*r (r=0..239), log PC once per frame, same run as ROGUESQ_EDGE_DUMP. Positive control: watch a mid-row address (col 100) that must fire.
+Outcomes: fires with CPU PC => H-cpu (read that function); no fire but dump noisy => RT64 / RSP / RDP DMA; then instrument RT64 writes.
+Tools: scratch/agent/s4636_edge.sh (4 runs), s4636_an.py, s4636_an2.py.
