@@ -2050,6 +2050,25 @@ extern "C" void rs64_s4299_dump(uint32_t lo, uint32_t hi) {
     }
     std::fprintf(stderr, "[s4299-D] matches shown=%d\n", shown);
 }
+
+extern "C" void rs64_s4694b_status_store(char width, uint32_t pc, uint32_t addr, uint32_t value) {
+    static const bool on = [] {
+        const char* a = std::getenv("ROGUESQ_LOG_ALL"); const char* e = std::getenv("ROGUESQ_LOG_S4694B");
+        return (a && a[0] && a[0] != '0') || (e && e[0] && e[0] != '0'); }();
+    if (!on) return;
+    if (rs64_phase_ord() < 4u) return;
+    static int rows = 0;
+    static uint32_t keys[256]; static uint32_t cnt[256]; static int nk = 0;
+    const uint32_t key = (pc & ~3u) ^ ((uint32_t)width << 28) ^ (uint32_t)width;
+    int k = 0; while (k < nk && keys[k] != key) k++;
+    if (k == nk) { if (nk >= 256) return; keys[nk] = key; cnt[nk] = 0; nk++; }
+    cnt[k]++;
+    if (cnt[k] > 8 && (cnt[k] % 1000) != 0) return;
+    if (rows >= 800) return;
+    rows++;
+    std::fprintf(stderr, "[s4694b-status] phase=%u pc=%08X %c addr=%08X val=%08X n=%u\n", rs64_phase_ord(), pc, width, addr, value, cnt[k]);
+    std::fflush(stderr);
+}
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,
                                                  uint32_t a1, uint32_t a2,

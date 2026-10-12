@@ -483,9 +483,13 @@ no guard, patch, or mitigation was added. Artifacts are in
    do not alter the separate flag spin. Session 4693 qualified A13's default
    drain return through live slot/status progress and showed the explicit
    in-loop tick control causes the timeout; retain default-off and the timeout
-   guard. The next M5 unit is A14's complete shutdown status-03 worker return
-   boundary.
-   Use `scratch/agent/NEXT.md` for its hypotheses and exact run contract.
+   guard. Session 4694 qualified A14 for the port: shutdown call 3 releases
+   only via the guest worker's byte store at PC 0x8009B7EC (not B7CC), which
+   needs the yield (yield-on returns after ~1.0-1.2M scans; yield-off hits the
+   10M-scan timeout, never returns). Retail's call-3 enter->return chain is not
+   independently shown (retail only evidences B7EC runs). Keep
+   `ROGUESQ_A14_YIELD` default on. The next M5 unit is A15/A16 per
+   docs/M5-AUDIO-PLAN.md; see `scratch/agent/NEXT.md`.
    The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
    s4682; retain the silent arm as rollback. Do not change the AI status,
    PCM conversion, or SDL queue from this evidence. The `MEM_H` census is

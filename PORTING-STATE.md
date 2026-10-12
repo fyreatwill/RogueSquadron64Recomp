@@ -154747,3 +154747,44 @@ Artifacts: `docs/M5-S4693-A13-DRAIN-BOUNDARY.md`,
 `scratch/agent/s4693_m5_a13_drain_boundary/`.
 
 ORIGIN: no mitigation; diagnostic-only capture driver.
+
+## Session 4694 (2026-10-12) — A14 shutdown spin returns only through the 0x8009B7EC zero store, and only with yield
+
+Built the s4694 patch (`tools/apply_s4694_a14_boundary.py`: phase>=3 rows
+`[a14-enter]`, `[a14-scan]`, `[a14-timeout]`, `[a14-return]`, observational
+only) and ran yield-on and yield-off (`ROGUESQ_A14_YIELD=1/0`) concurrently with
+the Rice retail oracle. Controls: both arms reached title (2255/2200 VI rows at
+1024) and hangar (189/71 rows at 512); calls 1,2 entered and returned with
+scans=0 in both arms (instrument positive control); retail passed whole-RDRAM
+and hit 0x8009B7CC/B7EC 6x each plus 0x8009BCC4 2x.
+
+Result: call 3 (phase 5, hangar) enters with slot0 status 02, the port's own
+stopVoiceSlotSynced stores 03 (PC 0x8009B30C), and the scan loop sees 03 with
+a0=0 a1=1. Yield-on returned after 1.0-1.2M scans (~50-60 yields) with slot0
+00; yield-off reached the 10,000,000-scan `[a14-timeout]` row and never
+returned (no call-4 entry). The first run's existing `[s4471-b7cc]`/
+`[m5-status-store]` hooks showed NO store for the 03->00 transition, so s4694b
+(`tools/apply_s4694b_status_census.py`, per-file `rs64_m5_writer_parity` hook,
+`ROGUESQ_LOG_S4694B=1`) censused every generated store covering a slot status
+byte; a rebuilt yield-on run (`port_census.log`) shows exactly one such store
+between `[a14-enter] call=3` (line 690575) and `[a14-return] call=3` (line
+690829): **PC 0x8009B7EC, line 690824** — the sibling of B7CC inside
+serviceVoicePoolFrame, i.e. the legitimate worker writer. B7CC never fired in
+the port, which is why the old hook missed it.
+
+Selects H-A14-yield-needed for the port: the clear is performed by the guest
+worker, and it only runs when the spin yields host time. Caveats (single-source
+where noted): retail executes B7EC (n=6) but its pc-hist showed 0x8009BD14 zero
+times, so retail's call-3 enter->return chain is NOT independently shown
+(retail only evidences that the writer PC runs); the yield-off arm's log shows
+no `[m5-status-store]` row for the 02->03 store though `[a14-scan]` read 03 —
+unexplained (likely target-width gating while VI starved). Keep
+`ROGUESQ_A14_YIELD` default on; no behaviour changed this session.
+
+Artifacts: `scratch/agent/run_s4694_m5_a14_shutdown_boundary.sh`,
+`scratch/agent/run_s4694b_a14_zero_writer.sh`,
+`scratch/agent/s4694_m5_a14_shutdown_boundary/`.
+
+ORIGIN: no mitigation; read-only logging. The 03->00 writer is the guest
+worker store at 0x8009B7EC (serviceVoicePoolFrame); the yield only gives it
+host time.
