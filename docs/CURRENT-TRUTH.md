@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4657.
+archive sections. Updated for session 4658.
 
 ## Current state
 
@@ -309,8 +309,20 @@ no guard, patch, or mitigation was added. Artifacts are in
    mission phase or action-2 free classification. s4657 repeated the
    post-title Start/A sequence with the correct Rice-video setup and again
    reached only the hangar/attract route. Do not treat these nulls as a
-   mission NULL contract proof or add a guard; the next revisit needs a new
-   mission-entry control, not another identical soak.
+   mission NULL contract proof or add a guard; s4658's distinct post-512
+   sequence still stayed on known attract/demo origins despite handler
+   activity. The next revisit needs a genuinely different mission-entry
+   control, not another timing variant.
+
+Session 4658 tried a distinct post-512 input sequence with PIF tracing. The
+whole-RDRAM control hit 10,000 and retail ran for 180 seconds through title,
+512-wide attract/demo, title, and hangar-like 512-wide origins. The watched
+attached-mesh handler executed 148 times, but every retained row was in the
+known attract/demo origins (`0x00690400`, `0x00620400`, `0x00620800`, or
+`0x00690800`); `rs_free` executed 24,465 times. This selects H3 for the new
+route: it still did not reach a mission, so the handler's mission NULL/free
+contract remains unevaluable and no guard is authorized. Artifact:
+`scratch/agent/s4668_attached_mesh_route/oracle.log`.
 
 ## Evidence and operating rules
 

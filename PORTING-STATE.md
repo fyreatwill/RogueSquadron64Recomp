@@ -154211,3 +154211,22 @@ No guard, patch, or mitigation was added. Artifacts:
 
 ORIGIN: no mitigation was added; the watched handler did not execute in the
 qualified route, so no writer legitimacy claim is available.
+
+## Session 4658 (2026-10-11) — distinct post-512 oracle route stayed attract/demo
+
+Ran the new independent retail-oracle route with the whole-RDRAM positive
+control, Rice video, VI and PIF tracing, and execution watches on
+`attachedMeshOverlayNpcHandler` (`0x8005427C`) and `rs_free` (`0x80001ACC`).
+The run was valid: it completed 180 seconds, the control reached 10,000
+hits, and VI tracing reached repeated 512-wide phases. The handler executed
+148 times and `rs_free` 24,465 times, but every retained handler row was in
+known 512-wide attract/demo origins (`0x00690400`, `0x00620400`, `0x00620800`,
+or `0x00690800`); no mission phase appeared. This selects H3 for this input
+route and leaves the mission NULL/free contract unevaluable. It rules out
+neither mission handler absence nor mission pointer corruption. No guard,
+patch, or mitigation was added. Artifact:
+`scratch/agent/s4668_attached_mesh_route/oracle.log`.
+
+ORIGIN: no mitigation was added; the observed handler and `rs_free` activity
+was confined to non-mission phases, so no writer legitimacy claim is made for
+the attached-mesh fields.
