@@ -1,34 +1,46 @@
-# NEXT: audit M5 Step 5 key-on early returns as one complete idiom class
+# Next work unit
+
 HYPOTHESIS-ID: m5-audio-destub
 
-Step 4 is qualified in s4677; do not repeat the `0x80094648` run. Before
-building, read the Step 5 row in `docs/M5-AUDIO-PLAN.md`, enumerate all eight
-key-on early-return sites in the fixup/generated pipeline, and identify the
-descriptor/divisor writers and invalid-input fallback.
+Audit M5 Step 7 status-03 service reaping as one complete class. Do not force
+clear status and do not change the wait yet. The current candidate writer is
+`serviceVoicePoolFrame` (`0x8009B5A8`); the status-03 producer is
+`stopVoiceSlotSynced`, and the target status table is `D_80154620`.
 
 Competing hypotheses:
 
-- H-keyon-valid: valid descriptors/divisors reach the normal key-on tail and
-  the early returns are stale port-only safety exits.
-- H-keyon-invalid: at least one descriptor/divisor is legitimately invalid and
-  the early return is required; removing it would expose a real trap.
-- H-keyon-upstream: descriptors/divisors are valid, but an upstream writer or
-  source differs and the returns are only a downstream symptom.
+- H-status-writer: `serviceVoicePoolFrame` enters during hangar status-03,
+  writes the zero transition, and the shutdown/drain returns normally.
+- H-status-unreached: the worker or its indirect dispatch is never entered in
+  the covered route; the spin is downstream of a missing producer trigger.
+- H-status-source: the worker enters but the status-zero writer is another
+  named path or receives a different slot/table address, so the current
+  candidate attribution is wrong.
+- H-status-legitimate: status 03 is a real persistent state for some slots and
+  the observed wait is not itself a port defect; any zero write must be tied to
+  the exact slot and caller before changing behavior.
 
-Discriminating measurement: one static census plus one batched hangar run with
-all eight sites instrumented in one build. Record descriptor validity, divisor,
-site, normal-tail entry, slot `02`/`00` transition, and invalid-input control;
-the whole-RDRAM/route controls must fire. Valid descriptors with normal tails
-select H-keyon-valid; a site-specific invalid descriptor with matching writer
-evidence selects H-keyon-invalid; valid inputs with a first upstream mismatch
-select H-keyon-upstream. No early return may be removed from this unit.
+Discriminating measurement: one fresh build with entry, status-03 producer,
+every status writer, exact slot/table address, worker exit, shutdown call-3
+entry/return, task/SP completion, slot transitions, PCM, VI, and whole-RDRAM
+controls. In hangar phase 5, worker-entry -> exact status-03 zero store ->
+call-3 return selects H-status-writer; no worker entry with live status-03
+producer selects H-status-unreached; a different exact writer/address selects
+H-status-source; persistent status 03 with no legitimate zero contract selects
+H-status-legitimate. A missing row is invalid unless the route and positive
+controls fire.
 
-Exact starting commands:
+Before building, inspect the existing Step 7 anchors:
 
-    rg -n -C 4 '0x80090CEC|0x80090D04|0x80090D30|0x80090D48|0x80090D74|0x80090D8C|0x80090DB8|0x80090DD0' tools/fixup_game_funcs_vendored.py docs/M5-AUDIO-PLAN.md
+    rg -n -C 8 'status-03|serviceVoicePoolFrame|ROGUESQ_A14' docs/M5-AUDIO-PLAN.md tools/fixup_game_funcs_vendored.py
+
+Build and run the established phase-gated route, adding the full status/writer
+table to the existing batch. Use SIGKILL for all cleanup:
+
     cmake --build build -j8
-    zsh scratch/agent/s4264_gate.sh
+    zsh scratch/agent/run_s4117_m5_status03_silent.sh
 
-Adapt the recipe only by adding the Step 4 writer/value controls and use
-SIGKILL for cleanup. Report the comparison in the session entry; do not spend
-a separate build on each counter.
+Require title `0x00790400`, hangar `0x006AB400`, the whole-RDRAM positive
+control, and a same-phase status-03 writer/worker/call-3 join before selecting
+an explanation. If the old recipe is route-invalid, repair the route in this
+iteration rather than interpreting status-03 nulls.

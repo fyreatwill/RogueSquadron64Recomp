@@ -154368,6 +154368,33 @@ late failure is not used to invalidate the phase-qualified result. Artifact:
 
 ORIGIN: the legitimate writer is the guest `sb` at `0x80094648`; the host
 witness and gate probes are diagnostic-only, and no mitigation was added.
+
+## Session 4678 (2026-10-11) — qualified the M5 key-on early-return class
+
+The static census confirmed one generated `musyxKeyOnVoice` idiom with eight
+defensive early returns at `0x80090CEC`, `0x80090D04`, `0x80090D30`,
+`0x80090D48`, `0x80090D74`, `0x80090D8C`, `0x80090DB8`, and `0x80090DD0`.
+The divisor writer remains the guest mix store at `0x80090768`, which supplies
+`0xC0` to the four executed divide arms; the other four `break 7` arms were
+not reached.
+
+One rebuilt binary carried the complete census, transfer, slot, and route
+instrumentation. It reached title `0x00790400` and hangar `0x006AB400`.
+Hangar phase 5 reached entry `12260`, normal tail `12259`, and the latest
+batched table showed `12259` divides with divisor `0xC0` at
+`0x80090CEC/0x80090D30/0x80090D74/0x80090DB8`; all eight guard counters were
+zero. It also recorded 206 slot-`02` and 152 slot-`00` transitions.
+
+The independent retail oracle wrapper in this iteration passed its whole-RDRAM
+control but its high-frequency watch set stalled at title. The already
+qualified s4092/s4094 retail route independently reached hangar and showed
+key-on entry/tail execution with no trap-PC hits. This selects H-keyon-valid
+for the covered route, but does not prove that removing the returns is
+behavior-preserving. No early return or mitigation was changed.
+
+ORIGIN: no mitigation or guard was added. The relevant legitimate value is
+the guest-written divisor `0xC0` from `musyxRenderVoiceSamples` at
+`0x80090768`; the eight early returns remained unchanged.
 ## Session 4676 (2026-10-11) — created the M5 audio de-stubbing plan
 
 Performed the required M5 design unit after confirming that the current-truth
