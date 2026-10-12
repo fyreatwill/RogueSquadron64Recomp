@@ -547,6 +547,7 @@ no guard, patch, or mitigation was added. Artifacts are in
    authorized from this class; a new idiom or attributable M4 boundary is
    required.
    s4704: `LD` census (`tools/census_ld.py`): 1,406 sites, 1,395 FPR (ldc1), 11 GPR, all scalar/copy/dead-decode; no pointer transition. Next complete class: `do_lwl/do_lwr` (212/206).
+   s4705: `lwl`/`lwr` census (`tools/census_lwl.py`): 203 pairs all unaligned copies, 12 orphans = bcmp probe or data-decoded-as-code; no pointer formation. Load-idiom classes closed.
 
 1. Step 7's complete status-table census selects H-status-writer for the
    covered route:
