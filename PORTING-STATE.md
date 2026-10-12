@@ -154911,3 +154911,5 @@ Ran `scratch/agent/run_s4701_b40_qualify.sh` (Start-mash route, 4 concurrent arm
 - Change: expression is now `(env=="0") ? 0 : ctx->r2` in the vendored fixup; live `../N64Recomp/RecompiledFuncs/funcs_23.c` patched identically (2 sites) and rebuilt. The live text was the post-regex form, so after the next regen check `grep M5_B40_VALUE funcs_23.c` shows `== '0') ? 0`. Rollback: `ROGUESQ_M5_B40_VALUE=0`.
 - `[m5-b40-*]` log labels in upstream_compat.cpp still use the old control/treatment polarity (cosmetic).
 Next: long soak of the new default, then the next M5 de-stub step per docs/M5-AUDIO-PLAN.md.
+
+Selection (s4701): this selects H-b40-safe and refutes H-b40-regress. With the gate on, 7/7 arm-runs reached VI 1024 and 512 with 0 A11-A14 timeouts and 0 MORT, so no stub path re-engaged. The change is a behaviour change (a default flipped in the fixup and live funcs_23.c), not an instrument. Next discriminator: a longer default-vs-`ROGUESQ_M5_B40_VALUE=0` soak; if a default arm shows the s4457-bad / far=0x38000950e signature, B40 is not the whole cause (the stale-callback path remains); a different signature means a new family.
