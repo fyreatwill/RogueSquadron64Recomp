@@ -179,6 +179,11 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
    ~205/240; 0x6AB400 stays 0). Next: why copyNativeToRAM at width 512 omits
    col 511 (native fb width/scissor/VI crop) -- read rt64 copyNativeToRAM and log
    the native fb width + colorWriteWidth. No mitigation without ORIGIN.
+   s4640 (ROGUESQ_WB_COL_PROBE, scratch/agent/s4640_wbcol.sh): 0x656000 ww=512
+   writeback changes col 510 until converged but col 511 changes 0 rows after the
+   first call; control 0x7AB000/0x795C00 do change col 511 -> not a generic loop
+   bound. Selects H-native-unrendered: hangar draws never cover x=511. Next: log
+   SETSCISSOR extents + draw-rect max x for target 0x656000 (single run).
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

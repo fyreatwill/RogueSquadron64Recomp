@@ -5144,7 +5144,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..9fd2b06 100644
+index 10f98af..8ff6515 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -6434,7 +6434,7 @@ index 10f98af..9fd2b06 100644
  
                  pairCursor = framebufferPairCursor;
                  while (pairCursor < maxFramebufferPair) {
-@@ -1461,12 +2538,59 @@ namespace RT64 {
+@@ -1461,12 +2538,70 @@ namespace RT64 {
                          // RT64 sees the real fb address; until then this
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
@@ -6464,7 +6464,18 @@ index 10f98af..9fd2b06 100644
 +                                    }
 +                                    ost_wb_after("color", RDRAM, ws, we, ov, ctxB, priB);
 +                                } else {
++                                    // s4640 diagnostic: ROGUESQ_WB_COL_PROBE=1 counts rows whose col 510 (control) / 511 changed across the writeback.
++                                    static const bool s_colprobe = std::getenv("ROGUESQ_WB_COL_PROBE") != nullptr;
++                                    const bool probe = s_colprobe && colorWriteWidth >= 512 && colorFb->siz == 2;
++                                    std::vector<uint16_t> pre;
++                                    auto px = [&](uint32_t r, uint32_t c) { return *reinterpret_cast<uint16_t *>(&RDRAM[(colorFb->addressStart + (r * colorWriteWidth + c) * 2) ^ 2]); };
++                                    if (probe) { for (uint32_t r = colorRowStart; r < cRowEnd; r++) { pre.push_back(px(r, 510)); pre.push_back(px(r, 511)); } }
 +                                    colorFb->copyNativeToRAM(&RDRAM[colorFb->addressStart], colorWriteWidth, colorRowStart, cRowEnd);
++                                    if (probe) {
++                                        uint32_t c510 = 0, c511 = 0, i = 0;
++                                        for (uint32_t r = colorRowStart; r < cRowEnd; r++, i += 2) { c510 += px(r, 510) != pre[i]; c511 += px(r, 511) != pre[i + 1]; }
++                                        fprintf(stderr, "[wbcol] addr=0x%X ww=%u fbw=%u fbh=%u rows=%u-%u changed510=%u changed511=%u\n", colorFb->addressStart, colorWriteWidth, colorFb->width, colorFb->height, colorRowStart, cRowEnd, c510, c511);
++                                    }
 +                                    if (rs64_m5_host_write_census) {
 +                                        const uint32_t bpp = colorFb->siz == 0 ? 1u : (1u << (colorFb->siz - 1u));
 +                                        rs64_m5_host_write_census(RDRAM,
@@ -6497,7 +6508,7 @@ index 10f98af..9fd2b06 100644
                          }
                      }
  
-@@ -1565,11 +2689,11 @@ namespace RT64 {
+@@ -1565,11 +2700,11 @@ namespace RT64 {
              ext.drawDataUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.transformsUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.framebufferGraphicsWorker->commandList->end();
@@ -6511,7 +6522,7 @@ index 10f98af..9fd2b06 100644
          }
  
          // Evict from the texture cache that are too old and should no longer be maintained.
-@@ -1873,6 +2997,25 @@ namespace RT64 {
+@@ -1873,6 +3008,25 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -6537,7 +6548,7 @@ index 10f98af..9fd2b06 100644
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
-@@ -1899,6 +3042,132 @@ namespace RT64 {
+@@ -1899,6 +3053,132 @@ namespace RT64 {
              }
          }
          
@@ -6670,7 +6681,7 @@ index 10f98af..9fd2b06 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +3228,20 @@ namespace RT64 {
+@@ -1959,8 +3239,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -6693,7 +6704,7 @@ index 10f98af..9fd2b06 100644
                  return;
              }
          }
-@@ -1972,7 +3253,11 @@ namespace RT64 {
+@@ -1972,7 +3264,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6706,7 +6717,7 @@ index 10f98af..9fd2b06 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3318,51 @@ namespace RT64 {
+@@ -2033,26 +3329,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6776,7 +6787,7 @@ index 10f98af..9fd2b06 100644
              }
          }
  
-@@ -2910,4 +4220,4 @@ namespace RT64 {
+@@ -2910,4 +4231,4 @@ namespace RT64 {
              break;
          }
      }
