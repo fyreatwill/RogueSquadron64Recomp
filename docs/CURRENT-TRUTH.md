@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4643.
+archive sections. Updated for session 4644.
 
 ## Current state
 
@@ -198,7 +198,8 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable
    handoff; do not repeat the now-qualified all-phase name-copy null.
-4. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.
+4. s4644: rim band and holo spikes are no longer visible in current hangar frames (single-source visual); residual candidate is white pillar stubs at x~200/430/865/1085/1130. Need a retail pixel reference before treating it as a defect (retail may light those edges by design).
+5. Keep M5 de-stubbing and M3 idiom audits ahead of generated-symbol naming.
 
 ## Evidence and operating rules
 

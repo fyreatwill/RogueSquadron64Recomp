@@ -1,8 +1,7 @@
-# NEXT: hangar right-edge thread closed (s4643); pick the remaining hangar artifacts or fall back
+# NEXT: decide whether the hangar white pillar stubs are a defect
 HYPOTHESIS-ID: hangar-renderer-artifacts
 
-s4643: right-edge band is ~5 of 1280 px (col 511 + bilinear halo); benign. Thread closed.
-Remaining hangar artifacts from CURRENT-TRUTH: rim band and blue holo spikes. Next unit: pick ONE (rim band or holo spikes),
-list 2-4 hypotheses and the discriminating measurement in this file before building; reuse tools/edge_band_measure.py-style
-offline analysis of existing frame captures first (scratch/agent/s4642_viext/*.png) before any new build.
-If neither is tractable, M5/M3 items in CURRENT-TRUTH Next steps 2-4 apply; do not start the rename sweep while the engineering-change gate is near 6.
+s4644: rim band + holo spikes not visible in current frames; residual = white vertical stubs at x~200/430/865/1085/1130 (f_003 of scratch/agent/s4642_viext).
+Hypotheses: H-design (retail lights these pillar edges white), H-tex (a texture/combiner on pillar edge tris is wrong in RT64), H-shade (leftover vertex shade/clamp difference).
+Discriminator: need a retail pixel reference. Find a retail hangar screenshot (external, e.g. any emulator capture of "Available Craft" screen) and compare; or dump the RDP triangles covering x~430 (RT64 tri-index mask tools from s4635) and read their combiner/shade values.
+If H-design is confirmed, close the hangar-artifact thread and fall to M5/M3 items (Next steps 2-5). Do not start the rename sweep while the engineering-change gate is near 6.
