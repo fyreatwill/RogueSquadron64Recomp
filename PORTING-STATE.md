@@ -154020,3 +154020,7 @@ change. Hangar thread stays parked (s4645). Eligible next: M4 accumulator
 boundary or retail-entry REVISIT, each needing a genuinely new angle.
 
 ORIGIN: symbol census only; no runtime mitigation, ROM, or game-state change.
+
+## Session 4647 (2026-10-11) — no actionable work unit left; BLOCKED for owner direction
+
+Read CURRENT-TRUTH (13.7 KB, no maintenance), NEXT.md, SOAK-RESULTS tail (no new verdicts since s4532). Sweep is exhausted (s4646), M5 steps 1-10 closed, M3 audit closed, col-511 and pillar-stub threads closed/parked, retail-entry parked. The one concrete engineering item, repairing the broken full regen (fixup_game_funcs.py in ../N64Recomp, untracked, aborting at E088 since s4204), is risky (N64Recomp overwrites the live patched tree, per the s4204 incident) and needs owner authorization plus a scratch output dir. No experiment run; no code changed. See scratch/agent/BLOCKED.md for the three options.
