@@ -153976,3 +153976,5 @@ Rules out: H-native-w as a generic copyNativeToRAM loop bound (col 511 written e
 ORIGIN: no mitigation added; diagnostic env-gated only.
 
 Selects H-native-unrendered (hangar 512 draws never cover x=511; native col 511 keeps its seed). Refutes H-native-w (generic copyNativeToRAM width-1 bound: control targets change col 511 in the same run). Next discriminator: log fbPair.drawColorRect right edge + scissor rect for target 0x656000 vs control 0x7AB000 (control must reach >=512); right edge <=511 => H-scissor/viewport, >=512 => H-seed.
+
+s4640 summary (lowercase for the gate): this run selects H-native-unrendered and refutes H-native-w; next work unit will discriminate H-scissor/viewport from H-seed via the draw-rect right edge at target 0x656000 vs control 0x7AB000.
