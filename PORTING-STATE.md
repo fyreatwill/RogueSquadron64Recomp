@@ -154345,3 +154345,20 @@ authorize a guard or skip. Artifact: `scratch/agent/s4675_indexed_census.md`.
 
 ORIGIN: no mitigation was added; the only generated-tree evidence was read-only
 static analysis.
+## Session 4676 (2026-10-11) — created the M5 audio de-stubbing plan
+
+Performed the required M5 design unit after confirming that the current-truth
+file was below the maintenance threshold. Surveyed the live audio dispatch
+arms (`musyx_stub` and `factor5_ucode_b`), the legacy `aspMain` stub, unknown
+task fallback, declared-size versus legacy task-image DMA, private versus
+shared DMEM, both MusyX wait gates, the `waitForAnyAudioSlot` timeout guard,
+generated Factor-5 safety exits, PCM/AI handoff, and the unintegrated MORT
+decoder tooling. Wrote the inventory and incremental validation sequence to
+`docs/M5-AUDIO-PLAN.md`.
+
+This was documentation-only: no build, runtime soak, or mitigation was run.
+It rules out treating “nonzero PCM” as proof that every audio boundary is
+correct, and selects Step 1 (task-contract plus private/shared-DMEM
+qualification with same-run positive controls) as the next work unit. The
+previous broad “M5 steps 1–10 closed” statement is superseded because these
+live boundaries remain. No writer/legitimacy claim was made for a mitigation.

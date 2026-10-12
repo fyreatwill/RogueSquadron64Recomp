@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4675.
+archive sections. Updated for session 4676.
 
 ## Current state
 
@@ -16,7 +16,14 @@ nearly complete, with a rim band, blue holo spikes, and right-edge garbage.
 Audio is no longer a zero-output stub on that route. Fresh 7F saves produce
 nonzero PCM, AI byte order is fixed, and title AI buffers match ucode output.
 MusyX/MORT remains only partially de-stubbed and must not reach stock
-`aspMain`. M5 audio plan steps 1–10 are closed or conditionally unnecessary.
+`aspMain`. Session 4676 created the required live inventory and incremental
+plan in [docs/M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). The next discriminator is
+M5 plan Step 1: phase-gated task-contract and PCM qualification with
+private-DMEM vs shared-DMEM arms and independent positive controls.
+
+Session 4676 was design-only: it inspected the current dispatch arms, task
+staging, DMEM ownership, wait gates, generated safety exits, and PCM handoff.
+No build or runtime result was claimed.
 
 Session 4671 restored the canonical full-section `load_overlays` registration
 call to every ROM-to-RDRAM DMA in addition to the existing chunk-start helper.
@@ -285,6 +292,11 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Superseded conclusions to avoid repeating
 
+- “M5 audio plan steps 1–10 are closed or conditionally unnecessary” was too
+  broad for the current code. Nonzero PCM proves route activity, not that the
+  remaining task-contract, state-ownership, wait-gate, safety-exit, and MORT
+  boundaries are correct; use `docs/M5-AUDIO-PLAN.md` as the active sequence.
+
 - `0x80007640` is not the live target writer; `0x80007670` is. The former is
   retained only as a same-run execution control.
 - The five records are not in the flat `0x165D9C` source span or its 17
@@ -296,6 +308,12 @@ no guard, patch, or mitigation was added. Artifacts are in
   inert chunk-2 record. Those interpretations were tested and closed.
 
 ## Next steps
+
+0. M5 audio de-stubbing is the strategic priority. Execute Step 1 from
+   `docs/M5-AUDIO-PLAN.md`: one batched, phase-gated qualification of declared
+   audio-task DMA sizing and private-vs-shared DMEM, with task-contract, PCM,
+   audio-return, VI, and whole-RDRAM positive controls. Do not remove the
+   silent arm or add a mitigation until this discriminator selects an arm.
 
 - (s4649) Safe full-regen repair is qualified in scratch only; use
   `tools/fixup_game_funcs_vendored.py <scratch RecompiledFuncs>` and compare

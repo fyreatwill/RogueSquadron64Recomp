@@ -1,33 +1,36 @@
-# NEXT: audit backward non-self zero-offset MEM_H pointer transitions
-HYPOTHESIS-ID: m3-idiom-class-audit
+# NEXT: execute M5 plan Step 4 at the remaining hangar gate boundary
+HYPOTHESIS-ID: m5-audio-destub
 
-The s4674 self-referential-walk class and s4675 `MEM_W` transition class are
-closed provisionally. Do not repeat either class.
-
-Before any build, enumerate every backward loop containing a non-self
-zero-offset `MEM_H(ctx->rN, 0X0)` transition in
-`../N64Recomp/RecompiledFuncs/`, using a fresh scan rather than
-`find_unguarded_walks.py`. Reconcile the count with the source positive
-controls in `funcs_0.c` (`rs_malloc`, `buildHeapFreeList`, and
-`coalesceFreeHeapBlocks`), then classify each site by bound/sentinel, pointer
-writer, and legitimacy. If no complete class and positive control can be
-named, write BLOCKED instead of adding instrumentation.
+The design inventory is complete. Step 1 and the declared-size staging change
+already have prior qualified evidence; do not repeat those runs. The next
+bounded M5 unit is Step 4's remaining hangar gate/value boundary, centered on
+the retail-live `0x80094648` consumer/writer family. Before building, read the
+Step 4 row in `docs/M5-AUDIO-PLAN.md` and arm all existing phase/PCM/task
+controls.
 
 Competing hypotheses:
 
-- H-safe: every site is a bounded table walk or sentinel-checked list walk
-  with a legitimate pointer writer.
-- H-gap: a site consumes an unbounded guest field or failed allocator without
-  a guard; its writer and reachable noncanonical path can be named.
-- H-scan-invalid: the fresh scan cannot reconcile its complete count with the
-  existing positive controls.
+- H-gate-suppresses: the port's gate/value at the `0x80094648` boundary
+  suppresses legitimate hangar audio service or slot progress.
+- H-gate-legitimate: retail also reaches this boundary with the observed value
+  and the missing hangar PCM/slot result has another downstream cause.
+- H-port-input-diverges: the gate consumer is equivalent, but an upstream
+  port input differs before the consumer; the writer and source field can be
+  named without changing behavior.
+
+Discriminating measurement: one batched build/run with phase-gated retail
+write/PC/value attribution for the `0x80094648` family and matching port entry,
+gate branch, task/slot, and PCM rows. The whole-RDRAM oracle and title/hangar VI
+transitions must fire. Retail value/order matching the port selects
+H-gate-legitimate; a retail-vs-port value/order mismatch at the named writer
+selects H-gate-suppresses or H-port-input-diverges; missing controls invalidate
+the run. No gate skip or force-value mitigation is authorized by a row count.
 
 Exact starting commands:
 
-    rg -n 'MEM_H\(ctx->r[0-9]+, 0X0\)' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    rg -n 'goto L_|MEM_H\(ctx->r[0-9]+, 0X0\)|sltiu|sltu|beq|bne' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    cmake --build build -j8
+    zsh scratch/agent/s4264_gate.sh
 
-Expected discriminator: zero sites with a reachable noncanonical pointer
-selects H-safe; one or more sites with a named writer that can publish an
-out-of-range pointer selects H-gap; a census mismatch or missing positive
-control selects H-scan-invalid.
+Adapt the recipe only by adding the Step 4 writer/value controls and use
+SIGKILL for cleanup. Report the comparison in the session entry; do not spend
+a separate build on each counter.

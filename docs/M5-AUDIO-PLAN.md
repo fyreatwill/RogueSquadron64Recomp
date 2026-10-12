@@ -1,6 +1,13 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 3977 (2026-10-04). This is the design gate for M5.
+Refreshed in session 4676 (2026-10-11). This is the design gate for M5.
+Session 4676 revalidated the inventory against the current checked-in
+dispatch, RSP-task, fixup, and host-audio code. The active boundaries remain
+the real-image/silent dispatch pair, declared-size versus legacy task staging,
+private versus shared DMEM ownership, the two MusyX wait gates,
+`waitForAnyAudioSlot`, generated safety exits, and the unintegrated MORT
+reference decoder. No behavior change or runtime result is claimed by this
+refresh; the next work unit remains the phase-gated Step 1 qualification below.
 Session 3303 supersedes the linked-runtime part of Session 2791's SP-yield
 conclusion. The weak task-start implementation clears stale request state, but
 the linked strong override shadows that function without clearing it. More
