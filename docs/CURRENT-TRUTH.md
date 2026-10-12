@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4655.
+archive sections. Updated for session 4656.
 
 ## Current state
 
@@ -193,6 +193,18 @@ the handler is globally dead or that its NULL/free gap is harmless in a
 mission. No guard or mitigation was added. Artifact:
 `scratch/agent/s4660_attached_mesh_oracle.log`.
 
+Session 4656 extended the independent retail oracle with repeated Start
+presses through 180 seconds and watches on `attachedMeshOverlayNpcHandler`
+(`0x8005427C`) and `rs_free` (`0x80001ACC`). The whole-RDRAM control fired
+(hit output capped at 200), and the handler executed, but its first observed
+rows were at 512-wide attract/demo origins (`0x00690800`, `0x00690400`, and
+`0x00620800`) after the hangar route, not in a mission phase. `rs_free`
+executed extensively, but this run did not provide a mission attachment
+contract or a usable action-2 free classification. This is qualified
+single-source evidence that the handler is not boot/title-only; it does not
+select H1/H2 for a mission and does not authorize a guard. Artifact:
+`scratch/agent/s4666_attached_mesh_mission/oracle.log`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -282,9 +294,11 @@ mission. No guard or mitigation was added. Artifact:
    full M3 `rs_free` campaign is already closed (s4502). Do not repeat them;
    owner direction is required for a genuinely new discriminator.
    s4655: the attached-mesh handler was absent from the driven retail
-   boot/title route despite qualified oracle controls. Do not treat this as a
-   NULL contract proof or add a guard; a future revisit needs a
-   mission/attachment-capable retail route or a new execution handoff.
+   boot/title route despite qualified oracle controls. s4656 extended the
+   route and found the handler in 512-wide attract/demo origins, but still no
+   mission phase or action-2 free classification. Do not treat either result
+   as a NULL contract proof or add a guard; the next revisit must use the
+   verified post-title Start/A sequence to obtain a mission-capable route.
 
 ## Evidence and operating rules
 

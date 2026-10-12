@@ -154172,3 +154172,23 @@ was added. Artifact: `scratch/agent/s4660_attached_mesh_oracle.log`.
 
 ORIGIN: no mitigation was added; the observed `rs_free` calls came from other
 callers, so no writer for the attached-mesh fields was observed.
+
+## Session 4656 (2026-10-11) — attached-mesh handler reached only in attract/demo
+
+Ran one extended independent retail-oracle capture with the whole-RDRAM
+positive control, Rice video, repeated Start presses through 180 seconds, and
+execution watches on `attachedMeshOverlayNpcHandler` (`0x8005427C`) and
+`rs_free` (`0x80001ACC`). The positive control fired (reported hit output was
+capped at 200). Retail reached 320, 640, 1024, hangar 512, and then repeated
+512-wide attract/demo origins. The attached-mesh handler executed, first at
+79.9 seconds with origin `0x00690800`, and continued at `0x00690400` and
+`0x00620800`; `rs_free` also executed extensively. The run did not reach a
+mission phase, so it cannot classify the handler's action-2 frees or select
+between the mission hypotheses. This is qualified single-source evidence that
+the handler is not boot/title-only, but it does not establish that its NULL/free
+gap is harmless or unsafe. No guard, patch, or mitigation was added.
+Artifact: `scratch/agent/s4666_attached_mesh_mission/oracle.log`.
+
+ORIGIN: no mitigation was added; the observed handler and `rs_free` executions
+were phase-unqualified for mission semantics, so no writer legitimacy claim is
+made for the attached-mesh fields.
