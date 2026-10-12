@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4683.
+archive sections. Updated for session 4684.
 
 ## Current state
 
@@ -84,6 +84,15 @@ unscaled guest-pointer dereference or a named invalid-pointer writer. This
 selects H-MEMH-bounded and authorizes no guard or mitigation. Evidence is
 static/source-only; a runtime probe is not warranted without a new
 site-specific symptom.
+
+Session 4684 completed the analogous `MEM_HU` census. Two independent direct
+load enumerators agreed on 1,104 zero-offset loads; backward-edge analysis
+found 521 loop sites and 440 non-self sites across 36 generated files. The
+complete reproducible TSV emitter is `tools/census_memhu.py`, with the scope
+and classification record in `docs/M3-S4684-MEMHU-CENSUS.md`. Every candidate
+is a halfword scalar/status/table read; no named writer plus pointer
+reconstruction was found. This selects H-MEMHU-bounded and authorizes no
+guard, mitigation, build, or runtime probe.
 
 Session 4677 ran the corrected boot-relative Start-mash route after two shorter
 recipe attempts stopped before title. Both arms reached title 1024 and hangar
@@ -389,7 +398,10 @@ no guard, patch, or mitigation was added. Artifacts are in
    PCM conversion, or SDL queue from this evidence. The `MEM_H` census is
    complete; its stale 19-site count was reconciled against the current
    generated tree. The next M3 unit is the complete backward non-self
-   zero-offset `MEM_HU` census in `scratch/agent/NEXT.md`.
+   zero-offset `MEM_HU` census is complete: 1,104 direct loads, 521 backward
+   loop sites, and 440 non-self sites were classified in s4684. No pointer
+   transition or named invalid writer was found; do not add a guard from this
+   class. Continue with the next complete M3 idiom census in `NEXT.md`.
 
 1. Step 7's complete status-table census selects H-status-writer for the
    covered route:
@@ -515,9 +527,8 @@ authorize a guard. Artifact:
 `scratch/agent/s4670_attached_mesh_hangar_action/`.
 
 The next M3 unit is a new complete census of backward non-self zero-offset
-`MEM_H` pointer transitions (the fresh scan reports 19 sites), with the same
-allocator/free-list controls. Do not repeat s4674 or s4675, and do not add a
-guard without a writer/legitimacy proof.
+`MEM_B` loads. Do not repeat the closed `MEM_H`/`MEM_HU` classes, and do not
+add a guard without a named writer and legitimacy proof.
 
 ## Evidence and operating rules
 

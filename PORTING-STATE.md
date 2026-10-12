@@ -154549,3 +154549,24 @@ backward non-self zero-offset `MEM_HU` census.
 
 ORIGIN: no mitigation; all observations are read-only generated-source and
 consumer classification evidence.
+
+## Session 4684 (2026-10-11) — audited backward non-self zero-offset `MEM_HU` loads
+
+The required source inspection showed that the old work-order regex was not a
+complete `MEM_HU` census: it primarily matched a zero base. A corrected
+enumeration and an independent broad direct-load enumeration agreed on 1,104
+`MEM_HU(ctx->rN, 0)` sites. Backward-label/goto interval analysis found 521
+loop sites and 440 non-self sites across 36 generated files. The complete
+reproducible table is emitted by `tools/census_memhu.py` and documented in
+`docs/M3-S4684-MEMHU-CENSUS.md`.
+
+Every candidate is a 16-bit scalar/status/table read; no candidate supplied a
+named 32-bit guest-pointer writer or a proven pointer reconstruction. The
+heap-family rows are header flags/status fields. This selects H-MEMHU-bounded,
+rules out H-MEMHU-invalid as a guard candidate, and makes a runtime route
+probe unnecessary. No build, generated-code edit, guard, or mitigation was
+added. The result is static/source-only evidence with independent scan
+agreement.
+
+ORIGIN: no mitigation; all observations are read-only generated-source and
+consumer classification evidence.
