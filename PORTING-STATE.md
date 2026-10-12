@@ -154723,3 +154723,27 @@ Artifacts: `docs/M5-S4692-A12-WAIT-BOUNDARY.md` and
 `scratch/agent/s4692_m5_a12_wait_boundary/`.
 
 ORIGIN: no mitigation; the change was a diagnostic-only capture script.
+
+## Session 4693 (2026-10-11) — A13 drain returned through slot status reap
+
+Built once and ran the default-off and explicit `ROGUESQ_DRAIN_INLOOP_TICK=1`
+arms concurrently from the same real-audio/LLE executable. Both arms passed
+title and hangar controls. Default-off entered the drain with active `0x02`
+slots, reached all-zero slots, and returned at 100,000 iterations without a
+timeout. Tick-on kept nine slots at `0x02`, reached 10,000,000 iterations,
+and fired the 10,000,001 iteration timeout before the forced-idle return.
+
+The independent retail oracle passed whole-RDRAM (6,671,911 writes), title and
+hangar VI controls, the target status range (6,646,657 writes), an adjacent
+range (15,254 writes), and six executions each of retail PCs `0x8009B7CC` and
+`0x8009B7EC`. The target route therefore has independent status-writer
+activity while the port's default path reaches terminal status. This selects
+H-A13-retail-status-reap for the covered route and rules out the in-loop tick
+as required producer activity; the tick-on timeout is a control failure, not
+a mitigation target. No runtime behavior changed.
+
+Artifacts: `docs/M5-S4693-A13-DRAIN-BOUNDARY.md`,
+`scratch/agent/run_s4693_m5_a13_drain_boundary.sh`, and
+`scratch/agent/s4693_m5_a13_drain_boundary/`.
+
+ORIGIN: no mitigation; diagnostic-only capture driver.

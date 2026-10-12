@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4692.
+archive sections. Updated for session 4693.
 
 ## Current state
 
@@ -227,6 +227,17 @@ family but not the exact port field mapping. This selects H-A12-countdown-
 writer-valid for the covered port route and closes the separate-flag spin as
 a route blocker; no wait or spin change is authorized. Full evidence is in
 `docs/M5-S4692-A12-WAIT-BOUNDARY.md`.
+
+Session 4693 completed the M5 A13 drain boundary. Both same-build port arms
+reached title and hangar. Default-off entered with active `0x02` slots,
+reached an all-zero slot snapshot, and returned at 100,000 iterations with
+no timeout; explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` kept nine slots at `0x02`
+and hit the 10,000,001-iteration timeout. Retail independently passed
+whole-RDRAM, title/hangar, target/adjacent status-range controls, and executed
+`0x8009B7CC`/`0x8009B7EC` six times each. This selects
+H-A13-retail-status-reap for the covered default route and rules out the
+in-loop tick as needed; the timeout guard and default-off policy remain
+unchanged. Evidence: `docs/M5-S4693-A13-DRAIN-BOUNDARY.md`.
 
 ## Active frontier
 
@@ -463,15 +474,17 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
-0. M5 audio de-stubbing is qualified through A12 on the covered route.
+0. M5 audio de-stubbing is qualified through A13 on the covered route.
    Session 4691 qualified A11 on the covered route: `waitForAnyAudioSlot`
    returned three hangar calls with active mask `0x11`, no cap fired, and
    retail independently executed the named `03` publish and `00` clear
    writers. Keep the wait cap unchanged. Session 4692 qualified A12's
    countdown wait for the covered port route; retain the yielding default and
-   do not alter the separate flag spin. The next M5 unit is A13's complete
-   `drainAudioAndFinalizeSpeechBuffer` boundary, using default-off versus the
-   explicit in-loop tick control and the slot/status writer return contract.
+   do not alter the separate flag spin. Session 4693 qualified A13's default
+   drain return through live slot/status progress and showed the explicit
+   in-loop tick control causes the timeout; retain default-off and the timeout
+   guard. The next M5 unit is A14's complete shutdown status-03 worker return
+   boundary.
    Use `scratch/agent/NEXT.md` for its hypotheses and exact run contract.
    The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
    s4682; retain the silent arm as rollback. Do not change the AI status,
