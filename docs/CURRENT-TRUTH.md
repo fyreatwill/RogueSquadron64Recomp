@@ -108,6 +108,14 @@ Session 4629 closed the VGE arm offline: `RSP::VGE` is a pure `max_signed`
 are all closed on the port; only H-source (upstream v0/v4 / pre-VMADH
 accumulator inputs) survives. Single-source.
 
+Session 4630 added DMA-source and loop-head operand probes (Fixup 22) and a
+four-arm retail peek. The stage-10 vertex input is RDRAM `0x720320`+ (DMA to
+DMEM 0x280, task 1169); 13 sampled blocks (56 words) equal retail at hangar
+with zero diffs. Vertex content is therefore not the divergence; the matrix
+span (`0x700000/40/80`, dynamic in retail) is the remaining RDRAM-visible
+operand and is not yet compared byte-for-byte. Artifacts:
+`scratch/agent/s4630_m4_operand_source/`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -143,10 +151,11 @@ accumulator inputs) survives. Single-source.
 
 ## Next steps
 
-1. M4 operand-source discriminator: the store is clean (s4628), so compare
-   what feeds stage 10 (v0/v4 operand source) between port and retail in
-   hangar phase 5 via RDRAM-visible vertex input addresses, in one batched
-   capture with whole-RDRAM control. Do not revisit arithmetic, VGE or the store (all closed, s4626-s4629).
+1. M4 matrix-span discriminator: vertex input is equal (s4630), so compare
+   the matrix span `0x700000..0x7000C0` (and the 0x590/0x5D0 DMEM copy) between
+   port RDRAM and retail at the same hangar-entry phase, then trace the ucode
+   matrix-compose step that builds v8..v15. Do not revisit arithmetic, VGE,
+   store or vertex content (all closed, s4626-s4630).
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

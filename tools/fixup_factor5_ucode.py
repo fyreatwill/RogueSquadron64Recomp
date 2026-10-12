@@ -3093,6 +3093,31 @@ if is_shade_ucode and M4_ACCUM_MARKER not in text and not m4_migrated:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 22: M4 operand-source probes (s4630): log every ucode SP DMA read
+# (dmem/dram/len) and, at the vertex-transform loop head (L_162C), the vertex
+# register v2, matrix registers v8..v15 and the DMEM vertex window.
+# ---------------------------------------------------------------------------
+M4_SRC_MARKER = "/* fixup: M4 operand source probe v1 */"
+if is_shade_ucode and M4_SRC_MARKER not in text:
+    decl_anchor = re.compile(r'(extern "C" void rs64_m4_accum_probe\([^\n]*\n)')
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len);  ' + M4_SRC_MARKER + "\n" +
+        'extern "C" void rs64_m4_src_probe(void *rsp, uint32_t r13);  ' + M4_SRC_MARKER + "\n",
+        text, count=1)
+    text, n_dma = re.subn(
+        r'(    DO_DMA_READ\((r[34])\);\n)',
+        lambda m: '    rs64_m4_dma_probe(dma_mem_address, dma_dram_address, ' + m.group(2) + ');  ' + M4_SRC_MARKER + "\n" + m.group(1),
+        text)
+    text, n_loop = re.subn(
+        r'(\nL_162C:\n)',
+        lambda m: m.group(1) + '    rs64_m4_src_probe(&rsp, r13);  ' + M4_SRC_MARKER + "\n",
+        text, count=1)
+    if (n_decl, n_dma, n_loop) != (1, 2, 1):
+        print(f"fixup_factor5_ucode: FIXUP 22 ANCHOR FAILED (decl={n_decl} dma={n_dma} loop={n_loop}).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 # Fixup 21: phase-gated M4 producer-slot / consumer-index join (s2560).
 # ---------------------------------------------------------------------------
 M4_INDEX_MARKER = "/* fixup: M4 producer consumer index join v1 */"

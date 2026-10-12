@@ -466,6 +466,56 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage,
     fflush(stderr);
 }
 
+static bool m4_src_enabled(uint32_t *cap_out) {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_M4_ACCUM");
+        return e && *e && *e != '0';
+    }();
+    static const uint32_t cap = [] {
+        const char *e = std::getenv("ROGUESQ_M4_SRC_CAP");
+        return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 4096u;
+    }();
+    static const uint32_t phase_from = [] {
+        const char *e = std::getenv("ROGUESQ_M4_PHASE_FROM");
+        return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 0u;
+    }();
+    *cap_out = cap;
+    return enabled && rs64_phase_ord() >= phase_from;
+}
+
+// s4630: every ucode SP DMA read in the M4 phase (dmem/dram/len), so the
+// RDRAM source of the vertex/matrix blocks can be compared with retail.
+extern "C" void rs64_m4_dma_probe(uint32_t mem, uint32_t dram, uint32_t len) {
+    uint32_t cap;
+    if (!m4_src_enabled(&cap)) return;
+    static uint32_t lines = 0;
+    if (lines++ >= cap) return;
+    fprintf(stderr, "[m4-dma] task=%u phase=%u mem=0x%04X dram=0x%08X len=0x%X\n",
+            g_e9prov.task, rs64_phase_ord(), mem, dram, len);
+    fflush(stderr);
+}
+
+// s4630: operands feeding the vertex transform at the loop head: vertex v2,
+// matrix v8..v15, and the DMEM vertex window at r13.
+extern "C" void rs64_m4_src_probe(void *opaque, uint32_t r13) {
+    uint32_t cap;
+    if (!m4_src_enabled(&cap)) return;
+    static uint32_t lines = 0;
+    if (lines++ >= cap) return;
+    auto *rsp = static_cast<RSP *>(opaque);
+    fprintf(stderr, "[m4-src] task=%u phase=%u r13=0x%04X", g_e9prov.task, rs64_phase_ord(), r13);
+    static const unsigned regs[] = {2, 8, 9, 10, 11, 12, 13, 14, 15, 30};
+    for (unsigned reg : regs) {
+        fprintf(stderr, " v%u=", reg);
+        for (unsigned lane = 0; lane < 8; ++lane) fprintf(stderr, "%04X", rsp->vpu.r[reg].u16(lane));
+    }
+    fprintf(stderr, " vtx=");
+    for (uint32_t i = 0; i < 0x20; ++i)
+        fprintf(stderr, "%02X", (unsigned)g_dmem_cur[(((r13 & 0xFFFu) + i) & 0xFFFu) ^ 3u]);
+    fputc('\n', stderr);
+    fflush(stderr);
+}
+
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" int rs64_is_hangar_vi(void);
