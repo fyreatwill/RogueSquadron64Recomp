@@ -1,0 +1,1 @@
+- (s4648) Full regen is NOT reproducible: ~168 live PATCH sNNNN tags have no source in fixup_game_funcs.py (incl. behavioral s4563/s4296/s4580/s4571c/s4572). Safe harness: scratch/s4648/. Never regen over ../N64Recomp/RecompiledFuncs. See scratch/agent/UNBLOCK.md.

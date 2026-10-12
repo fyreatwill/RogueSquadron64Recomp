@@ -1,0 +1,388 @@
+   1 PATCH: s1920 advanceVideoFrame swap-gate site=B0
+   1 PATCH: s1920 advanceVideoFrame swap-gate site=loop
+   1 PATCH: s1920 advanceVideoFrame swap-gate site=swap
+   1 PATCH: s1921 advanceVideoFrame site=entry
+   1 PATCH: s1921 advanceVideoFrame site=exit
+   1 PATCH: s1922 runVideoFrameTick site=tick-entry
+   1 PATCH: s1922 runVideoFrameTick site=tick-exit
+   1 PATCH: s1922 runVideoFrameTick site=tick-jal
+   1 PATCH: s1922/s1923 avf-gate tick counters (file-scope) 
+   6 PATCH: s1923 avf-gate tick counter externs 
+   1 PATCH: s1923 runVideoFrameTick caller site=menu-entry
+   1 PATCH: s1923 runVideoFrameTick caller site=menu-jal
+   1 PATCH: s1923 runVideoFrameTick caller site=mgl-jal-a
+   1 PATCH: s1923 runVideoFrameTick caller site=mgl-jal-b
+   1 PATCH: s1923 runVideoFrameTick caller site=mission-entry
+   1 PATCH: s1923 runVideoFrameTick caller site=mission-jal
+   1 PATCH: s1925 anyAudioSlotActive site=slot-ret
+   1 PATCH: s1926 isAudioSlotActive site=slot-byte
+   1 PATCH: s1927 site=slot-sb func=musyxInitVoiceFromSample
+   1 PATCH: s1927 site=slot-sb func=musyxRenderVoiceSamples
+   1 PATCH: s1927 site=slot-sb func=musyxTriggerVoiceAttack
+   1 PATCH: s1927 site=slot-sb func=stopVoiceMarkRetrigger
+   1 PATCH: s1928 site=render-stage
+   1 PATCH: s1929 site=attack-jal caller=stream
+   1 PATCH: s1929 site=attack-jal caller=tick
+   1 PATCH: s1929 site=cursor
+   1 PATCH: s1946 si-thr helper 
+   1 PATCH: s1946 si-thr site=after-read-recv
+   1 PATCH: s1946 si-thr site=exit
+   1 PATCH: s1946 si-thr site=get-read
+   1 PATCH: s1946 si-thr site=loop
+   1 PATCH: s1946 si-thr site=no-epilogue
+   1 PATCH: s1946 si-thr site=send
+   1 PATCH: s1946 si-thr site=start-read
+   1 PATCH: s1947 slot-ret-caller helper 
+   1 PATCH: s1947 slot-ret-caller site=drainAudioAndFinalizeSpeechB
+   1 PATCH: s1947 slot-ret-caller site=initCinematicSceneAssets
+   1 PATCH: s1947 slot-ret-caller site=menuControllerInput
+   1 PATCH: s1947 slot-ret-caller site=menuOverlayInit
+   1 PATCH: s1947 slot-ret-caller site=menuSubtype02Handler
+   1 PATCH: s1947 slot-ret-caller site=runMenuModelViewerScreen
+   1 PATCH: s1947 slot-ret-caller site=runMenuRandomBackdropScreen
+   1 PATCH: s1947 slot-ret-caller site=runMenuShipSelectScreen
+   1 PATCH: s1947 slot-ret-caller site=runModelViewerLoop
+   1 PATCH: s1947 slot-ret-caller site=waitForAnyAudioSlot
+   1 PATCH: s1949 spin-yield site=menuInput
+   1 PATCH: s1970 filterVoiceSampleBlock audit 
+   1 PATCH: s1971 bltzal-link at 0x8009D7E0 (filterVoiceSampleBlock
+   1 PATCH: s1971 bltzal-link at 0x8009D8EC (applyVoiceDelayFilter)
+   1 PATCH: s1971 bltzal-link at 0x8009DBA4 (renderVoiceAudioBlock)
+   1 PATCH: s1971 bltzal-link at 0x8009DBC8 (renderVoiceAudioBlock)
+   1 PATCH: s1971 bltzal-link at 0x8009DBEC (renderVoiceAudioBlock)
+   1 PATCH: s1971 bltzal-link at 0x8009DC10 (renderVoiceAudioBlock)
+   1 PATCH: s1972 spin-yield site=audioDrain
+   1 PATCH: s1974 spin-yield site=cinematicInit
+   1 PATCH: s1974 spin-yield site=menuBackdrop
+   1 PATCH: s1974 spin-yield site=menuModelViewer
+   1 PATCH: s1974 spin-yield site=menuShipSelect
+   1 PATCH: s1974 spin-yield site=menuSubtype02
+   1 PATCH: s1974 spin-yield site=modelViewerLoop
+   1 PATCH: s1976 drain spin tickMusyXIfActive
+   1 PATCH: s1976 drain-exit
+   1 PATCH: s1977 drain-slots
+   1 PATCH: s1978 drain-base/hdr
+   1 PATCH: s1979 drain-cross
+   1 PATCH: s1979 drain-cross dump
+   1 PATCH: s1979 drain-cross reset
+   1 PATCH: s1979 slot-sb new0
+   1 PATCH: s1980 drain-cursor dump
+   1 PATCH: s1980 drain-cursor record
+   1 PATCH: s1981 drain-path dump
+   1 PATCH: s1981 drain-path skip084
+   1 PATCH: s1981 drain-path to_0b8
+   1 PATCH: s1981 drain-path to_188
+   1 PATCH: s1981 drain-path to_cur_084
+   1 PATCH: s1981 drain-path to_cur_09c
+   1 PATCH: s1981 drain-path to_cur_0a4
+   1 PATCH: s1981 unmapped dest
+   1 PATCH: s1982 keyon-w40 site=init
+   1 PATCH: s1982 keyon-w40 site=sh
+   1 PATCH: s1982 keyon-w40 site=sw
+   1 PATCH: s1983 init-desc
+   1 PATCH: s1993 drain-inloop-tick gate
+   1 PATCH: s2020 direct service entry/caller witness
+   1 PATCH: s2020 direct service entry/caller witness exit
+   1 PATCH: s2031 m5 gate event helper 
+   1 PATCH: s2031 m5 gate writer site=0x8008E9F8
+   1 PATCH: s2031 m5 gate writer site=0x8008EA34
+   1 PATCH: s2031 m5 gate writer site=0x8008EB40
+   1 PATCH: s2031 m5 gate writer site=0x8008EB7C
+   1 PATCH: s2031 m5 gate writer site=0x8008EC88
+   1 PATCH: s2031 m5 gate writer site=0x8008ECEC
+   1 PATCH: s2031 m5 gate writer site=0x8008ED48
+   3 PATCH: s2045 m5 postwait declaration 
+   1 PATCH: s2045 m5 postwait helper 
+   1 PATCH: s2045 menuControllerInput entry
+   1 PATCH: s2045 menuControllerInput return
+   1 PATCH: s2045 postwait branch
+   1 PATCH: s2045 postwait loop
+   1 PATCH: s2045 postwait return
+   1 PATCH: s2045 runMenuModelViewerScreen entry
+   1 PATCH: s2045 runMenuModelViewerScreen return
+   1 PATCH: s2045 wait branch
+   1 PATCH: s2045 wait entry
+   1 PATCH: s2045 wait loop
+   1 PATCH: s2045 wait return
+   1 PATCH: s2046 m5 caller-edge helper 
+   1 PATCH: s2046 menuControllerInput call
+   1 PATCH: s2046 menuControllerInput return
+   1 PATCH: s2046 menuOverlayInit entry
+   1 PATCH: s2046 menuOverlayInit return
+   1 PATCH: s2046 postwait branch edge
+   1 PATCH: s2046 runMenuModelViewerScreen call
+   1 PATCH: s2046 runMenuModelViewerScreen return
+   1 PATCH: s2046 waitForAnyAudioSlot call
+   1 PATCH: s2046 waitForAnyAudioSlot return
+   4 PATCH: s2076 status-reader 
+   6 PATCH: s2076 tick-contract 
+   5 PATCH: s2076 wait-contract 
+   1 PATCH: s2076 wait-contract helper 
+   6 PATCH: s2084 fill-range reachability table 
+   1 PATCH: s2107 B40 writer helper 
+   1 PATCH: s2110 B40 return route
+  71 PATCH: s2111 B40 read census 
+   1 PATCH: s2112 route-state audio-return 
+   1 PATCH: s2112 route-state callsite 
+   1 PATCH: s2112 route-state entry 
+   1 PATCH: s2112 route-state exit 
+   1 PATCH: s2112 route-state route 
+   4 PATCH: s2122 key-on divide witness 
+   1 PATCH: s2122 key-on entry 
+   8 PATCH: s2122 key-on guard 
+   1 PATCH: s2122 key-on normal tail 
+   1 PATCH: s2122 key-on phase control 
+   4 PATCH: s2122 key-on slot transition 
+   1 PATCH: s2122 M5 key-on census helper 
+   1 PATCH: s2167 cutscene a2+0x50 entry 
+   1 PATCH: s2167 cutscene a2+0x50 helper 
+   1 PATCH: s2167 cutscene a2+0x50 load879c 
+   1 PATCH: s2167 cutscene a2+0x50 lwc87a8 
+   1 PATCH: s2167 cutscene a2+0x50 store80d4 
+   1 PATCH: s2167 cutscene a2+0x50 store8144 
+   1 PATCH: s2169 match-kw calleeF2CC 
+   1 PATCH: s2169 match-kw caller9244 
+   2 PATCH: s2169 match-kw helper 
+   1 PATCH: s2170 effectsEntry 
+   1 PATCH: s2170 effectsRet 
+   2 PATCH: s2170 match-kw-flow helper 
+   1 PATCH: s2170 matchEntry 
+   1 PATCH: s2170 matchRet330 
+   1 PATCH: s2170 matchRet358 
+   2 PATCH: s2173 heap-object word0 helper 
+   1 PATCH: s2173 heap0 load87a0 
+   1 PATCH: s2173 heap0 lwc87a8 
+   1 PATCH: s2173 heap0 store57100 
+   1 PATCH: s2175 hang-after-87a0 dispatchEntry 
+   1 PATCH: s2175 hang-after-87a0 dispatchRet 
+   1 PATCH: s2175 hang-after-87a0 xformEntry 
+   1 PATCH: s2175 hang-after-87a0 xformRet 
+   1 PATCH: s2179 cross w_a2p8 
+   1 PATCH: s2179 extract w_a1p20 
+   1 PATCH: s2179 first-cross jal 
+   1 PATCH: s2179 second-cross jal 
+   2 PATCH: s2179 vec3-word helper 
+   1 PATCH: s2181 f0 w_a1p0 
+   1 PATCH: s2181 f12 
+   1 PATCH: s2181 f12b 
+   1 PATCH: s2181 f14 
+   1 PATCH: s2181 f14b 
+   1 PATCH: s2181 f16 
+   1 PATCH: s2181 f18 
+   1 PATCH: s2181 f2 w_a1p4 
+   1 PATCH: s2181 f4 w_a1p8 
+   1 PATCH: s2181 f6 w_a2p0 
+   1 PATCH: s2181 f8 w_a2p4 
+   2 PATCH: s2181 vec3 f2+later 
+2691 PATCH: s2190 m5 double 
+46294 PATCH: s2190 m5 scalar 
+  51 PATCH: s2190 m5 writer parity helper 
+   1 PATCH: s2278 M5 key-on pointer/branch witness 
+   8 PATCH: s2278 pointer/branch witness 
+   8 PATCH: s2327 task ordinal join 
+   1 PATCH: s2336 descriptor-init callsite provenance
+   1 PATCH: s2336 init-voice callsite 0x8008A564 
+   1 PATCH: s2336 init-voice callsite 0x800980EC 
+   1 PATCH: s2337 init-voice caller entry 0x8008A38C 
+   1 PATCH: s2337 init-voice caller entry 0x80097FE8 
+   1 PATCH: s2337 init-voice pre-call 0x8008A564 
+   1 PATCH: s2337 init-voice pre-call 0x800980EC 
+   1 PATCH: s2338 parent entry 0x8008BC10 
+   1 PATCH: s2338 parent entry 0x8009B5A8 
+   1 PATCH: s2338 parent pre-call 0x8008C454 
+   1 PATCH: s2338 parent pre-call 0x8009B784 
+   1 PATCH: s2339 callback dispatcher 0x80019B74
+   1 PATCH: s2339 scheduler entry 0x8008C9AC
+   1 PATCH: s2339 scheduler pre-call 0x8008CA14
+   1 PATCH: s2340 sequencer helper positive control 0x80019B74 
+   1 PATCH: s2340 tickAudioSequencerFrame callsite 0x800914A4 
+   1 PATCH: s2340 tickAudioSequencerFrame callsite 0x80091564 
+   1 PATCH: s2340 tickAudioSequencerFrame callsite 0x80091618 
+   1 PATCH: s2340 tickAudioSequencerFrame entry 0x8008D960 
+   1 PATCH: s2342 musyxSynthFrame pre-gate branch 0x8009142C 
+   1 PATCH: s2342 musyxSynthFrame pre-gate branch 0x80091454 
+   1 PATCH: s2342 musyxSynthFrame pre-gate branch 0x80091468 
+  33 PATCH: s2469 setup caller boundary 
+   1 PATCH: s2470 model-viewer caller boundary 
+   8 PATCH: s2471 menu-init caller boundary 
+   1 PATCH: s2472 main-loop caller boundary 
+   1 PATCH: s2475 JAL link for convertMat3x4ToN64Mtx
+  53 PATCH: s2586 M5 writer branch 
+   1 PATCH: s2586 M5 writer call-path declaration 
+   1 PATCH: s2586 M5 writer call-path helper 
+   5 PATCH: s2586 M5 writer entry 
+   5 PATCH: s2586 M5 writer return 
+   1 PATCH: s2609 channel store 
+   1 PATCH: s2609 indexed channel-byte store declaration 
+   1 PATCH: s2609 indexed channel-byte store witness 
+   1 PATCH: s2946 route candidate 
+   1 PATCH: s2948 route prepare inputs 
+   1 PATCH: s2989 buffer-ready handoff 
+   1 PATCH: s2990 wait-on-video handoff 
+   1 PATCH: s2992 producer-mark handoff 
+   1 PATCH: s2993 producer-mark c628 handoff 
+   5 PATCH: s3092 producer-mark callsites 
+   1 PATCH: s3092 producer-mark entry 
+   1 PATCH: s3092 producer-mark exit 
+   1 PATCH: s3256 scheduler recv identity 
+   1 PATCH: s3277 — hardware executes this delay slot before the ja
+   1 PATCH: s3277 jal delay-slot $a0 before osViSetMode 
+   2 PATCH: s3285 freelist align+cycle 
+   1 PATCH: s3285 freelist align+cycle tail
+   5 PATCH: s3288 viewer fade 
+  14 PATCH: s3289 viewer stall 
+  30 PATCH: s3290 submit stall 
+   4 PATCH: s3293 scheduler send 
+   5 PATCH: s3294 scheduler stall 
+   5 PATCH: s3295 scheduler dispatch 
+   5 PATCH: s3299 type2 successor 
+   6 PATCH: s3300 sp busy writer 
+   4 PATCH: s3302 89f clear 
+   1 PATCH: s3305 cinematic postviewer table
+   1 PATCH: s3305 menu postviewer table
+   1 PATCH: s3305 postviewer helper 
+   2 PATCH: s3305 postviewer prototype 
+   8 PATCH: s3306 cine loop 
+   7 PATCH: s3308 stage adv 
+   5 PATCH: s3311 cine init jal 
+   1 PATCH: s3338 m5 callback entry 
+   1 PATCH: s3341 m5 callback pointer store 
+  54 PATCH: s3352 M5 consumer entry 
+  53 PATCH: s3438 frequency caller 
+   4 PATCH: s3451 output/state fields 
+   1 PATCH: s3456 producer input 
+  10 PATCH: s3477 M5 downstream store census 
+   1 PATCH: s3500 M5 selector caller 
+   1 PATCH: s3501 M5 selector pre-call a0 
+   1 PATCH: s3501 M5 selector pre-call a1 
+   2 PATCH: s3509 M5 selector-table store 
+   2 PATCH: s3516 M5 selector-store context 
+   8 PATCH: s3524 selector tick edge 
+   1 PATCH: s3525 selector store entry 
+   3 PATCH: s3527 selector mixer callsite 
+   6 PATCH: s3528 selector allocation edge 
+   1 PATCH: s3529 selector input load 
+   1 PATCH: s3530 selector source writer 
+   5 PATCH: s3531 selector setup contract 
+   1 PATCH: s3751 exact route load 0x80065854 
+   1 PATCH: s3751 exact route load 0x8007BEEC 
+   1 PATCH: s3751 exact route load 0x8008F548 
+   1 PATCH: s3751 exact route load 0x8008F5F0 
+   1 PATCH: s3751 exact route load 0x8008F640 
+   1 PATCH: s3751 exact route load 0x800A5E00 
+   1 PATCH: s3751 exact route load 0x800B4B08 
+   1 PATCH: s3751 exact route load 0x800D989C 
+   1 PATCH: s3751 exact route load 0x800E8064 
+   1 PATCH: s4009 M5 scheduler boundary 
+   1 PATCH: s4078 audio channel load 0x8008D5E4 
+   1 PATCH: s4079 voice modulation call 
+   1 PATCH: s4079 voice modulation setup 
+   1 PATCH: s4079 voice modulation state 
+   1 PATCH: s4140 M5 source context 
+   1 PATCH: s4159 M5 preclear span census 
+   2 PATCH: s4162 M5 non-scalar destination census 
+   1 PATCH: s4182 M5 object body witness 
+   1 PATCH: s4187 M5 object branch witness 
+   1 PATCH: s4188 M5 object successor witness 
+   3 PATCH: s4189 M5 object load witness 
+   2 PATCH: s4190 M5 object return witness 
+   1 PATCH: s4191 M5 caller continuation witness 
+   2 PATCH: s4192 wait-spin yield arm 
+   1 PATCH: s4197 waitforslot yield 
+   1 PATCH: s4204 voice sample-source census (ROGUESQ_LOG_M5_VOICE_
+   1 PATCH: s4204 voice source census 
+   1 PATCH: s4205 cmdlist census 
+   1 PATCH: s4205 cmdlist census (ROGUESQ_LOG_M5_CMDLIST) 
+   1 PATCH: s4206 cmdbuf 
+   1 PATCH: s4207 postaud 
+   1 PATCH: s4207 postaud push 
+   1 PATCH: s4208 dma intersect 
+   1 PATCH: s4209 read ring summary 
+   1 PATCH: s4221 coef 
+   1 PATCH: s4221 gain writer 
+   1 PATCH: s4221 pan 
+   2 PATCH: s4222 chain 
+   1 PATCH: s4222 cmd 
+  51 PATCH: s4222 storewatch 
+   5 PATCH: s4222 vol 
+  11 PATCH: s4222 wr 
+   1 PATCH: s4223 memcpy 
+   4 PATCH: s4223 stk 
+   1 PATCH: s4230 fd60 
+   1 PATCH: s4234 entry 
+   1 PATCH: s4254 chain 
+   1 PATCH: s4279 invariant 
+   1 PATCH: s4279-diff 
+   1 PATCH: s4296 A14 spin yield 
+  51 PATCH: s4299 nodewatch 
+  30 PATCH: s4299 swlr 
+   1 PATCH: s4300 rsfree bt 
+  14 PATCH: s4306 postfree join 
+   7 PATCH: s4306b postfree join 
+ 729 PATCH: s4307 synth read join 
+   2 PATCH: s4323 filter caller witness 
+   1 PATCH: s4332 C88C descriptor witness 
+   1 PATCH: s4339 C88C source/branch witness 
+46319 PATCH: s4340 lowfield writer 
+   1 PATCH: s4342 C88C branch candidates 
+   5 PATCH: s4432 audioloop 
+   1 PATCH: s4455 call rate (ROGUESQ_LOG_M5_RATE) 
+   1 PATCH: s4466 hdrdump 
+   1 PATCH: s4471 B7CC 
+   1 PATCH: s4471 shutdownMusyXVoices 
+   1 PATCH: s4471 stopVoiceByHandle 
+   1 PATCH: s4471 stopVoiceSlotSynced 
+   3 PATCH: s4532 
+   1 PATCH: s4532 fillSampleStreamRange devAddr node dump. Diagnost
+   4 PATCH: s4534 
+   1 PATCH: s4534 voice a3 callsite. Diagnostic only. 
+   2 PATCH: s4535 
+   1 PATCH: s4535 voice+0x34 store. Diagnostic only. Does not skip 
+   2 PATCH: s4537 
+   1 PATCH: s4537 init-voice store census. Diagnostic only. Does no
+   2 PATCH: s4538 
+   1 PATCH: s4538 init slot lattice. Diagnostic only. Does not skip
+   1 PATCH: s4539 
+   1 PATCH: s4539 render entry caller. Diagnostic only. Does not sk
+   1 PATCH: s4540 mix-call caller. Diagnostic only. Does not skip t
+   1 PATCH: s4541 
+   1 PATCH: s4542 
+   1 PATCH: s4542 alloc pair. Diagnostic only. Does not skip the st
+   1 PATCH: s4560 gates 
+   1 PATCH: s4560 null guard 
+   1 PATCH: s4560 nulldump 
+   2 PATCH: s4561 order 
+   3 PATCH: s4562 pause 
+   2 PATCH: s4563 stale head 
+   4 PATCH: s4571 
+   1 PATCH: s4571b 
+   1 PATCH: s4571c zero render-record tables (env ROGUESQ_S4571_ZER
+   1 PATCH: s4572 publish 
+   1 PATCH: s4577 
+   3 PATCH: s4579 
+   1 PATCH: s4580 holdmix 
+   1 PATCH: s4581 
+   1 PATCH: s4594 
+   1 PATCH: s4594 phase-gated operand census. Diagnostic only. 
+   5 PATCH: s4595 
+   1 PATCH: s4595 phase-gated caller/input census. Diagnostic only.
+   2 PATCH: s4597 
+   1 PATCH: s4597 entry control 
+  51 PATCH: s4601 voice34 span census 
+   8 PATCH: s4602 rs_strncpy caller table 
+   1 PATCH: s803 direct VI caller probe site=0x8001B720
+   1 PATCH: s803 direct VI caller probe site=0x8001B8DC
+   1 PATCH: s803 direct VI caller probe site=0x8001BB54
+   1 PATCH: s808 VI writer attribution kind=apply-mask
+   1 PATCH: s808 VI writer attribution kind=begin-mask
+   1 PATCH: s808 VI writer attribution kind=clear-mask
+   1 PATCH: s808 VI writer attribution kind=request-mask
+   1 PATCH: s808 VI writer attribution kind=selector-set-scale
+   1 PATCH: s808 VI writer attribution kind=selector-set-triplet
+   1 PATCH: s808 VI writer attribution kind=video-state-update
+  13 PATCH: s808 VI writer store attribution
+   1 PATCH: s857 slot dispatcher trace
+   1 PATCH: s857 slot dispatcher trace post-call
+   1 PATCH: s857 slot dispatcher trace pre-call
+   1 PATCH: s860 getNextSlotNpcTypeId trace
+   2 PATCH: s860 getNextSlotNpcTypeId trace emit

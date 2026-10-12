@@ -163,6 +163,8 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
 
 ## Next steps
 
+- (s4648) Full regen is NOT reproducible: ~168 live PATCH sNNNN tags have no source in fixup_game_funcs.py (incl. behavioral s4563/s4296/s4580/s4571c/s4572). Safe harness: scratch/s4648/. Never regen over ../N64Recomp/RecompiledFuncs. See scratch/agent/UNBLOCK.md.
+
 1. M4 RSP thread is closed (s4634); s4635 showed the right-edge garbage is not
    tri-submit. s4636 (`ROGUESQ_EDGE_DUMP=dir`, 4 runs, ~640 dumps) selects
    H-rdram: in the 512x16bpp hangar colour image, column 511 holds per-frame

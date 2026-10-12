@@ -154024,3 +154024,9 @@ ORIGIN: symbol census only; no runtime mitigation, ROM, or game-state change.
 ## Session 4647 (2026-10-11) — no actionable work unit left; BLOCKED for owner direction
 
 Read CURRENT-TRUTH (13.7 KB, no maintenance), NEXT.md, SOAK-RESULTS tail (no new verdicts since s4532). Sweep is exhausted (s4646), M5 steps 1-10 closed, M3 audit closed, col-511 and pillar-stub threads closed/parked, retail-entry parked. The one concrete engineering item, repairing the broken full regen (fixup_game_funcs.py in ../N64Recomp, untracked, aborting at E088 since s4204), is risky (N64Recomp overwrites the live patched tree, per the s4204 incident) and needs owner authorization plus a scratch output dir. No experiment run; no code changed. See scratch/agent/BLOCKED.md for the three options.
+
+## Session 4648 (2026-10-11) — UNBLOCK: s4647 block refuted (regen repair needs no authorization)
+
+s4647 blocked asking permission to repair the broken full regen. Refuted: fixup_game_funcs.py has one hard-coded output path (line 27); a repointed copy run on a copy of RecompiledFuncs.s4204-fresh in ../N64Recomp/scratch_s4648/ leaves the live tree untouched and reproduces the abort (rc=1, "s4339 C88C descriptor anchor count=0"). New root cause: that anchor is the s4332 probe, present only in the live hand-patched tree, not in the fixup script. 168 of 384 distinct PATCH sNNNN tags in live are absent from the fixup source (crude match); some are behavioral (s4563 stale-head skip default ON, s4296, s4580, s4571c, s4572), so a regen would silently change runtime behavior. Work unit re-scoped in NEXT.md (classify + backport + vendor script). Tooling in scratch/s4648/; details in scratch/agent/UNBLOCK.md.
+
+ORIGIN: tooling/census only; no runtime, ROM, or generated-code change.
