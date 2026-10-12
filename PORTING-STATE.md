@@ -154030,3 +154030,19 @@ Read CURRENT-TRUTH (13.7 KB, no maintenance), NEXT.md, SOAK-RESULTS tail (no new
 s4647 blocked asking permission to repair the broken full regen. Refuted: fixup_game_funcs.py has one hard-coded output path (line 27); a repointed copy run on a copy of RecompiledFuncs.s4204-fresh in ../N64Recomp/scratch_s4648/ leaves the live tree untouched and reproduces the abort (rc=1, "s4339 C88C descriptor anchor count=0"). New root cause: that anchor is the s4332 probe, present only in the live hand-patched tree, not in the fixup script. 168 of 384 distinct PATCH sNNNN tags in live are absent from the fixup source (crude match); some are behavioral (s4563 stale-head skip default ON, s4296, s4580, s4571c, s4572), so a regen would silently change runtime behavior. Work unit re-scoped in NEXT.md (classify + backport + vendor script). Tooling in scratch/s4648/; details in scratch/agent/UNBLOCK.md.
 
 ORIGIN: tooling/census only; no runtime, ROM, or generated-code change.
+
+## Session 4649 (2026-10-11) — qualified the safe full-regeneration repair harness
+
+Before the run, NEXT.md recorded three competing explanations: missing
+post-regeneration replay, generator/anchor drift, or only diagnostic and
+environment-gated residuals. Ran the vendored fixer against a fresh copy of
+`../N64Recomp/RecompiledFuncs.s4204-fresh`, writing only under
+`../N64Recomp/scratch_s4648/s4648_full/`; it completed rc=0. The behavioral
+arms s4563 stale-head skip, s4296 A14 yield, s4580 holdmix, and s4571c table
+zeroing matched the live tree; s4572 was classified diagnostic-only. The
+remaining five tag-count differences (s4079, s4084, s4323, s4329, and one
+s4560 line) are diagnostic probe drift, not behavior mismatches. This rules
+out a failed replay as the cause of the behavioral divergence and qualifies
+the vendored script as a safe scratch harness. It does not repair the external
+fixup source or authorize running it over the live generated tree. Details:
+`scratch/s4648/classification.md` and `scratch/s4648/tagcmp_full.tsv`.

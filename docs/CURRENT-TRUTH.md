@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4644.
+archive sections. Updated for session 4649.
 
 ## Current state
 
@@ -24,6 +24,14 @@ functions. Use the existing `tools/apply_s*.py` workflow unless that failure
 is explicitly repaired.
 
 ## Active frontier
+
+Session 4649 qualified a safe regeneration repair harness: the vendored fixer
+completed rc=0 against a clean `RecompiledFuncs.s4204-fresh` copy, and the five
+behavior-changing live-only arms (s4563, s4296, s4580, s4571c, s4572) matched
+the live tag census. The first four are behavior-changing when their arm is
+active; s4572 is diagnostic-only. Five residual tag-count differences are
+diagnostic-only probe drift (s4079, s4084, s4323, s4329, and one s4560 gate),
+so exact textual equality is not required. The live tree was not touched.
 
 The all-phase retail five-name census is complete. The target span contains
 five stable records in title and hangar snapshots, but the candidate source
@@ -163,7 +171,10 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
 
 ## Next steps
 
-- (s4648) Full regen is NOT reproducible: ~168 live PATCH sNNNN tags have no source in fixup_game_funcs.py (incl. behavioral s4563/s4296/s4580/s4571c/s4572). Safe harness: scratch/s4648/. Never regen over ../N64Recomp/RecompiledFuncs. See scratch/agent/UNBLOCK.md.
+- (s4649) Safe full-regen repair is qualified in scratch only; use
+  `tools/fixup_game_funcs_vendored.py <scratch RecompiledFuncs>` and compare
+  behavioral tags using `scratch/s4648/classification.md`. Never regenerate
+  over `../N64Recomp/RecompiledFuncs` until the external fixer is repaired.
 
 1. M4 RSP thread is closed (s4634); s4635 showed the right-edge garbage is not
    tri-submit. s4636 (`ROGUESQ_EDGE_DUMP=dir`, 4 runs, ~640 dumps) selects
@@ -201,7 +212,9 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
 3. Revisit the external retail-entry boundary only with a new attributable
    handoff; do not repeat the now-qualified all-phase name-copy null.
 4. s4644: rim band and holo spikes are no longer visible in current hangar frames (single-source visual); residual candidate is white pillar stubs at x~200/430/865/1085/1130. Need a retail pixel reference before treating it as a defect (retail may light those edges by design). s4645: no reference obtainable; thread PARKED, craft-select frame renders clean.
-5. s4647: loop BLOCKED pending owner choice (regen repair vs hangar retail reference vs close M4 H-source); see scratch/agent/BLOCKED.md.
+5. s4647/s4649: the loop block is cleared for the regen-repair question.
+   Remaining owner choice is only whether to pursue a retail hangar reference
+   or close the M4 H-source thread; no runtime mitigation is authorized.
 
 ## Evidence and operating rules
 
