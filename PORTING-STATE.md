@@ -154679,3 +154679,22 @@ the target handoff was not reached in the requested phase. No guard, skip,
 alignment change, or pointer mitigation was authorized.
 
 ORIGIN: no mitigation; the generated probe and driver were diagnostic-only.
+
+## Session 4691 (2026-10-11) — A11 wait returned through live slot state
+
+Rebuilt once and ran the self-contained A11 capture with the real-audio/LLE/
+ungated/solo/spin-yield port concurrently with the Rice retail oracle. Both
+whole-RDRAM and title/hangar phase controls were positive. The port entered
+`waitForAnyAudioSlot` three times in hangar phase and returned three times with
+active mask `0x11`; the normal post-slot edge fired and the 500,000-iteration
+guard fired zero times. Retail independently wrote the complete status-table
+range and executed `0x8009B7CC` and `0x8009B7EC` six times each in the
+qualified 512 route, while `0x8009B7A8` remained a zero-hit control.
+
+This selects H-A11-slot-writer-valid for the covered route and rules out a
+port wait-cap escape as the cause of this route's slot progress. It does not
+prove every mission audio path or authorize removing the cap or changing the
+wait. No mitigation was added. Artifacts: `docs/M5-S4691-A11-WAIT-BOUNDARY.md`
+and `scratch/agent/s4691_m5_a11_wait_boundary/`.
+
+ORIGIN: no mitigation; the change was a diagnostic-only capture script.

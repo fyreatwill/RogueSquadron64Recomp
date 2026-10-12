@@ -1,40 +1,40 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-a11-wait-for-any-audio-slot-boundary
+HYPOTHESIS-ID: m5-a12-audio-task-done-boundary
 
-Run one complete M5 A11 boundary capture for `waitForAnyAudioSlot` and
-`anyAudioSlotActive` on the qualified real-audio/LLE route. Do not repeat the
-s4690 retail-entry route-null capture or the closed AI/SDL boundary.
+Run one complete M5 A12 boundary capture for `waitForMusyXAudioTaskDone` and
+the remaining `0x8014974C` spin on the qualified real-audio/LLE route. A11 is
+closed for the covered route; do not repeat its wait/slot capture.
 
 Competing hypotheses:
 
-- H-A11-slot-writer-valid: a named guest status writer publishes the terminal
-  slot state (`01/02 -> 00`) before the wait returns; the existing cap is only
-  defensive.
-- H-A11-port-state-stuck: the port reaches the wait with a legitimate active
-  slot, but the producer/reaper or message progress needed to clear it is
-  missing, so the cap fires without a matching retail state transition.
-- H-A11-route-absent: positive controls fire but neither arm reaches the wait
-  in the requested title/hangar phase, making the boundary unevaluable.
+- H-A12-countdown-writer-valid: `musyxSynthFrame` legitimately decrements the
+  task countdown to zero and the wait returns; the remaining spin is separate
+  and not reached in the target phase.
+- H-A12-port-pump-missing: the port reaches the wait with a live countdown,
+  but the producer is not scheduled or the wrong field is polled, so the wait
+  cap/spin persists without a matching terminal writer.
+- H-A12-route-absent: positive controls fire but neither wait arm reaches the
+  requested title/hangar phase, so the boundary is unevaluable.
 
-Discriminating measurement: in one rebuilt binary, phase-gate both arms on
-title `0x00790400/1024` and hangar `0x006AB400/512`; retain whole-RDRAM and
-port route controls, wait entry/return/cap rows, slot byte reads, every named
-slot/status writer, service/reap entry, and the same-slot ordinal join. Retail
-must independently watch the corresponding slot/status bytes and writer PCs.
-Writer -> terminal store -> wait return with zero cap rows selects
-H-A11-slot-writer-valid; a valid entry plus cap and absent/late terminal store,
-with retail showing the terminal writer, selects H-A11-port-state-stuck; fired
-controls with no wait entry select H-A11-route-absent.
+Discriminating measurement: in one rebuilt binary, phase-gate entry, seed,
+countdown reads/writes, zero transition, return, cap, and the separate
+`0x8014974C` spin; retain whole-RDRAM and port title/hangar controls. In the
+retail oracle watch the corresponding countdown/status range and the named
+writer PC(s), with whole-RDRAM as its positive control. A named writer -> zero
+count -> wait return with no cap selects H-A12-countdown-writer-valid; a valid
+entry plus cap/spin and absent or late zero writer, with retail showing the
+writer, selects H-A12-port-pump-missing; fired controls with no wait entry
+select H-A12-route-absent.
 
 Preparation and run:
 
-1. Read the A11 inventory and current slot/status helpers:
-   `rg -n 'waitForAnyAudioSlot|anyAudioSlotActive|ROGUESQ_WAITFORSLOT|slot.*status|serviceVoicePoolFrame' docs/M5-AUDIO-PLAN.md docs CURRENT-TRUTH.md src tools`.
-2. Add all port entry/read/cap/writer fields and all retail watches before the
-   build; arm a same-run positive control for every instrument.
-3. Build once with `cmake --build build --target RogueSquadron64Recomp -j4`.
-4. Run the port from `build/` with the canonical real-audio/LLE/ungated/solo/
-   spin-yield environment and run the Rice retail oracle concurrently. Gate on
-   VI transitions, terminate both processes with SIGKILL, and reject any null
-   whose title/hangar controls are absent.
+1. Read the A12 inventory and current helpers:
+   `rg -n -C 8 'waitForMusyXAudioTaskDone|8014974C|WAIT_NOPUMP|countdown|musyxSynthFrame' docs/M5-AUDIO-PLAN.md docs/CURRENT-TRUTH.md src tools ../N64Recomp/RecompiledFuncs`.
+2. Add all port countdown/spin fields and all retail watches before building;
+   arm a same-run positive control for every instrument.
+3. Build once: `cmake --build build --target RogueSquadron64Recomp -j4`.
+4. Run one concurrent capture from `build/` using the canonical
+   real-audio/LLE/ungated/solo/spin-yield environment and the Rice oracle;
+   terminate with SIGKILL, phase-gate on VI transitions, and reject any null
+   without title and hangar controls.

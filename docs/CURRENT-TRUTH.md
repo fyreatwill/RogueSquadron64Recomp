@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4690.
+archive sections. Updated for session 4691.
 
 ## Current state
 
@@ -202,6 +202,16 @@ H-route-absent for the requested handoff phase, not a retail writer or
 FE98/PI bridge corruption. No mitigation is authorized. Artifact:
 `docs/M5-S4690-EXTERNAL-ENTRY.md` and
 `scratch/agent/s4690_external_entry_handoff/`.
+
+Session 4691 completed the M5 A11 wait/slot boundary capture. The rebuilt
+real-audio/LLE port reached title and hangar controls; in phase 5 it entered
+`waitForAnyAudioSlot` three times, returned three times with active mask
+`0x11`, and fired no 500,000-iteration cap. Retail independently passed the
+whole-RDRAM control, reached the same hangar origin, wrote the status-table
+range, and executed the named `0x8009B7CC`/`0x8009B7EC` service writers six
+times each. This selects H-A11-slot-writer-valid for the covered route: keep
+the cap and make no wait change. Artifact: `docs/M5-S4691-A11-WAIT-BOUNDARY.md`
+and `scratch/agent/s4691_m5_a11_wait_boundary/`.
 
 ## Active frontier
 
@@ -439,6 +449,12 @@ no guard, patch, or mitigation was added. Artifacts are in
 ## Next steps
 
 0. M5 audio de-stubbing is qualified through Step 10 on the covered route.
+   Session 4691 qualified A11 on the covered route: `waitForAnyAudioSlot`
+   returned three hangar calls with active mask `0x11`, no cap fired, and
+   retail independently executed the named `03` publish and `00` clear
+   writers. Keep the wait cap unchanged. The next M5 unit is A12's complete
+   `waitForMusyXAudioTaskDone` countdown/`0x8014974C` spin boundary capture;
+   use `scratch/agent/NEXT.md` for its hypotheses and exact run contract.
    The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
    s4682; retain the silent arm as rollback. Do not change the AI status,
    PCM conversion, or SDL queue from this evidence. The `MEM_H` census is
