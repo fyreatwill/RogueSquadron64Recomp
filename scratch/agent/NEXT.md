@@ -1,40 +1,21 @@
-# NEXT: repair the M4 DMEM store witness
+# NEXT: locate the M4 operand source (v0/v4) feeding stage 10
 HYPOTHESIS-ID: m4-vge-store-boundary-ground-truth
 
-RESUME: s4627 requalified the route: stage-1 control 64; phase-5 stages
-10/11/12/13 were 517/517/517/497. The corrected retail Rice oracle reached
-512-wide `0x006AB400` and its whole-RDRAM control reached 10,000 callbacks.
-The existing `record=` dump is invalid because `r9` is DMEM, not RDRAM.
+RESUME: s4628 refuted the store arm on the port (488/488 rows: DMEM record
+bytes == post-VGE v6 lanes 0-2,4-6). s4626: VMADH matches 4,128/4,128 lanes.
+Surviving hypotheses: H-vge (VGE semantics differ on 31 lanes) and H-source
+(operands v0/v4 differ upstream).
 
 Competing hypotheses:
+- H-vge: given identical v0/v4/v29 inputs retail would give different VGE out.
+- H-source: inputs differ; the load that fills v0/v4 reads different RDRAM.
+- H-instrument-boundary: no RDRAM-visible source address can be named.
 
-- H-vge: DMEM bytes after the store agree with post-VGE lanes, selecting VGE
-  semantics.
-- H-store: post-VGE lanes are correct but the DMEM store bytes diverge,
-  selecting store/writeback semantics.
-- H-source: DMEM bytes agree locally; only an independently attributed retail
-  source/input transition remains divergent.
-- H-instrument-boundary: the corrected DMEM witness or phase-5 join is absent,
-  selecting no runtime hypothesis.
-
-Discriminator: one batched phase-5 capture with the stage-1 control, all M4
-stages, and exact post-store bytes read from the RSP DMEM backing store at
-`r9+0x18` (including the `sdv`/`ssv` overwrite lanes); compare stage-12 `v6`
-to stage-13 DMEM bytes. Keep `ROGUESQ_M4_PHASE_FROM=5` so transient rows
-cannot consume the target budget. The retail arm must carry the whole-RDRAM
-positive control, verified Start schedule, and VI trace; a missing target
-phase invalidates the comparison.
-
-Exact commands:
-
-1. Patch the existing probe in `src/rsp/dpc_bridge.cpp` to dump the actual
-   RSP DMEM bytes, not `rdram[r9+...]`; rebuild once.
-2. Run the canonical real-audio/LLE-ungated/LLE-solo/spin-yield port route
-   from `build/` with `ROGUESQ_LOG_M4_ACCUM=1`, `ROGUESQ_M4_CONTROL_CAP=64`,
-   `ROGUESQ_M4_TARGET_CAP=2048`, `ROGUESQ_M4_PHASE_FROM=5`,
-   `ROGUESQ_AUTOPILOT_STOP_WIDTH=0`, and the established autopilot schedule.
-   Run the retail oracle with `--watch-write 0x0:0x800000`, `--vi-trace`, and
-   the verified `--press 6:start,11:start,...,71:start` schedule.
-3. Use a 120-second window, capture to non-dot final paths, SIGKILL both
-   processes, and report control count, stage counts, VGE deltas, and DMEM
-   store mismatches.
+Discriminator: from the stage-10 rows find the DMA/lqv source address that
+fills v0/v4 (record base r9 + the DMEM->RDRAM origin of the vertex block),
+log that RDRAM span in the port at stage 10, and read the same physical span
+via the oracle at hangar VI 512 with whole-RDRAM control. Equal spans =>
+H-vge (then write an RSP VGE unit test against known vectors); different =>
+H-source (trace the writer).
+Reuse scratch/agent/s4628_m4_dmem_store/run.sh for the port arm; retail arm:
+Rice oracle with verified Start schedule (see s4627 artifacts).

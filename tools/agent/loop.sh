@@ -22,6 +22,8 @@
 # runner is benched the loop sleeps until the soonest one reopens. Per-runner
 # models: RUNNER_MODEL_CLAUDE / _CODEX / _GROK (claude falls back to LOOP_MODEL).
 # Pass runner=X (or RUNNER=X) to pin one runner and disable rotation.
+# If the limit message states a reset time (claude "resets 9pm (tz)", codex "try again
+# at <date>"), that time is used instead of the fixed cooldowns (parse_reset.py).
 # Cooldown state lives in scratch/agent/runner-limits/<runner> (epoch seconds).
 #
 # Any of the above (or RUNNER, RUNNER_MODEL, ...) can also be passed as a
@@ -85,8 +87,10 @@ runner_ready() { [ "$(limit_until "$1")" -le "$(date +%s)" ]; }
 
 # Bench a runner that hit a limit. If its claude<->codex peer is already benched
 # too, both are limited "repeatedly": push both out to COOLDOWN_BOTH.
+# $2 (optional) = epoch the provider said the limit reopens (parse_reset.py);
+# when present it replaces the fixed cooldown, +60s of slack.
 mark_limited() {
-  local r="$1" now cd peer=""
+  local r="$1" reset="${2:-}" now cd peer=""
   now="$(date +%s)"
   case "$r" in
     claude) cd="$COOLDOWN_CLAUDE"; peer=codex ;;
@@ -94,10 +98,17 @@ mark_limited() {
     grok)   cd="$COOLDOWN_GROK" ;;
     *)      cd="$SLEEP_ON_LIMIT" ;;
   esac
-  echo $((now+cd)) > "$LIMDIR/$r"
+  if [ -n "$reset" ] && [ "$reset" -gt "$now" ] 2>/dev/null; then
+    echo $((reset+60)) > "$LIMDIR/$r"; touch "$LIMDIR/$r.exact"
+    log "$r limited - provider says it reopens $(date -r "$reset"); benched until then"
+    if [ -n "$peer" ] && [ "$(limit_until "$peer")" -gt "$now" ]; then log "claude and codex both benched - grok takes over"; fi
+    return
+  fi
+  echo $((now+cd)) > "$LIMDIR/$r"; rm -f "$LIMDIR/$r.exact"
   if [ -n "$peer" ] && [ "$(limit_until "$peer")" -gt "$now" ]; then
     echo $((now+COOLDOWN_BOTH)) > "$LIMDIR/$r"
-    echo $((now+COOLDOWN_BOTH)) > "$LIMDIR/$peer"
+    # a peer bench taken from the provider's own reset time is exact: leave it
+    [ -e "$LIMDIR/$peer.exact" ] || echo $((now+COOLDOWN_BOTH)) > "$LIMDIR/$peer"
     log "claude and codex both limited - benching both until $(date -r $((now+COOLDOWN_BOTH))), grok takes over"
   else
     log "$r limited - benched until $(date -r $((now+cd)))"
@@ -425,11 +436,11 @@ else:
   # stated reset time means the window reopens by itself: always transient.
   if printf '%s' "$errtxt" | grep -qiE 'resets? at|resets? in|resets? [0-9]|try again (later|at)|limit will reset'; then
     : # falls through to the transient handler below - sleep, do not stop
-  elif printf '%s' "$errtxt" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota|insufficient balance'; then
+  elif printf '%s' "$errtxt" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota|insufficient balance|balance exhausted|payment required'; then
     if [ "$RUNNER_ROTATE" = 1 ]; then
       # Providers word 5-hour windows as spend caps (see the probe note below);
       # rotating away and retrying after the cooldown is right either way.
-      mark_limited "$RUNNER"; n=$((n-1)); continue
+      mark_limited "$RUNNER" "$(printf '%s' "$errtxt" | tools/agent/parse_reset.py 2>/dev/null)"; n=$((n-1)); continue
     fi
     # 'insufficient balance' is DeepSeek's 402: a prepaid balance that ran out.
     # Genuinely a hard cap — it is not a window and no probe can talk it open.
@@ -471,7 +482,7 @@ else:
 
   if printf '%s' "$errtxt" | grep -qiE 'usage limit|session limit|rate.?limit|overloaded|resets at'; then
     if [ "$RUNNER_ROTATE" = 1 ]; then
-      mark_limited "$RUNNER"; n=$((n-1)); continue   # an unworked window burns no iteration
+      mark_limited "$RUNNER" "$(printf '%s' "$errtxt" | tools/agent/parse_reset.py 2>/dev/null)"; n=$((n-1)); continue   # an unworked window burns no iteration
     fi
     waits=$((waits+1))
     if [ "$waits" -gt "$MAX_LIMIT_WAITS" ]; then
@@ -491,6 +502,17 @@ else:
   # config, which should surface to the human fast).
   if [ $rc -ne 0 ]; then
     errs=$((errs+1))
+    if [ "$errs" -ge "$MAX_ERR_RETRIES" ] && [ "$RUNNER_ROTATE" = 1 ]; then
+      # Unrecognised failure wording must not kill a rotating run while another
+      # runner is available: bench this one for 30 min and move on.
+      for r in $ROTATE_ORDER; do
+        if [ "$r" != "$RUNNER" ] && runner_ready "$r"; then
+          echo $(( $(date +%s) + ${COOLDOWN_ERROR:-1800} )) > "$LIMDIR/$RUNNER"
+          log "$RUNNER failed $errs times with no limit wording - benched ${COOLDOWN_ERROR:-1800}s, rotating to $r"
+          errs=0; n=$((n-1)); continue 2
+        fi
+      done
+    fi
     if [ "$errs" -ge "$MAX_ERR_RETRIES" ]; then
       { echo "# $errs consecutive runner errors with no limit wording, $(date)"; echo;
         echo "Not sleeping on these: likely a crash, config, or network failure."
@@ -572,7 +594,7 @@ else:
     # retrying early, it does not put the loop to sleep.)
     if printf '%s' "$out" | grep -qiE 'usage limit|rate.?limit|spend limit|overloaded'; then
       log "retry $cr hit a provider limit; abandoning contract retries this iteration"
-      [ "$RUNNER_ROTATE" = 1 ] && mark_limited "$retry_runner"
+      [ "$RUNNER_ROTATE" = 1 ] && mark_limited "$retry_runner" "$(printf '%s' "$out" | tools/agent/parse_reset.py 2>/dev/null)"
       break
     fi
   done

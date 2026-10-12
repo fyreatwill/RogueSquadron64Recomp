@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4627.
+archive sections. Updated for session 4628.
 
 ## Current state
 
@@ -94,6 +94,14 @@ evidence: `r9` is the DMEM record base (`0x670..0x6C0`), but the probe reads
 discriminator; no VGE/store conclusion is advanced beyond s4626's
 single-source VGE-boundary selection.
 
+Session 4628 repaired the store witness (probe now reads RSP DMEM with `^3`
+byte lanes) and re-ran the same port route: counts 64 / 517 / 517 / 517 / 497
+reproduced. In 488/488 well-formed stage-13 rows v6 lanes 0-2 and 4-6 sit in
+the DMEM record at the expected offsets and equal the post-VGE lanes, so the
+store/writeback arm is refuted on the port (single-source; lanes 3/7 are
+overwritten by design). Surviving arms: VGE semantics vs. upstream operand
+(v0/v4) source. Artifacts: `scratch/agent/s4628_m4_dmem_store/`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -129,12 +137,10 @@ single-source VGE-boundary selection.
 
 ## Next steps
 
-1. Repair the M4 probe's store witness in one batched capture: read the
-   post-`sdv`/`ssv` bytes from the RSP DMEM backing store at `r9+0x18` (with
-   correct RSP byte lanes), retain the stage-1 control and phase-5 stages
-   10–13, and compare those bytes against stage-12 `v6`. Do not revisit
-   arithmetic; s4626 matched VMADH on 4,128/4,128 lanes and s4627's port
-   route requalified the same stage counts.
+1. M4 operand-source discriminator: the store is clean (s4628), so compare
+   what feeds stage 10 (v0/v4 operand source) between port and retail in
+   hangar phase 5 via RDRAM-visible vertex input addresses, in one batched
+   capture with whole-RDRAM control. Do not revisit arithmetic or the store.
 2. Keep the odd-PI question parked as a missing-trigger/alternate-route
    problem; do not align, skip, or mitigate the DMA without a new trigger.
 3. Revisit the external retail-entry boundary only with a new attributable

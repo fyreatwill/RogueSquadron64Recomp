@@ -454,10 +454,13 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage,
                 rsp->vpu.acch.u16(lane), rsp->vpu.accm.u16(lane),
                 rsp->vpu.accl.u16(lane));
     }
-    if (stage == 13 && rdram != nullptr) {
-        const uint32_t base = r9 & 0x7FFFFFu;
+    if (stage == 13) {
+        const uint32_t base = r9 & 0xFFFu;
         fprintf(stderr, " record=");
-        for (uint32_t i = 0; i < 0x38; ++i) fprintf(stderr, "%02X", rdram[(base + 0x18 + i) & 0x7FFFFF]);
+        for (uint32_t i = 0; i < 0x38; ++i) {
+            const uint32_t address = (base + 0x18u + i) & 0xFFFu;
+            fprintf(stderr, "%02X", (unsigned)g_dmem_cur[address ^ 3u]);
+        }
     }
     fputc('\n', stderr);
     fflush(stderr);

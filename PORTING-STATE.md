@@ -153841,3 +153841,28 @@ or H-source. This rules out only the positive-control/phase-reachability null
 for the qualified route. The next probe must read the actual DMEM backing
 store with RSP byte-lane semantics. Artifacts:
 `scratch/agent/s4627_m4_vge_store_ground_truth/`.
+
+## Session 4628 (2026-10-11) — M4 DMEM store witness: store faithfully writes post-VGE lanes
+
+Fixed the stage-13 `record=` witness in `rs64_m4_accum_probe`
+(`src/rsp/dpc_bridge.cpp`): it now reads the RSP DMEM backing store
+(`g_dmem_cur[((r9+0x18+i)&0xFFF)^3]`) instead of `rdram[r9+...]`. Rebuilt once
+and ran the canonical port route (stage-1 control cap 64, `PHASE_FROM=5`,
+autopilot schedule, 120 s window) via
+`scratch/agent/s4628_m4_dmem_store/run.sh`. Counts reproduced s4627 exactly:
+stage 1 = 64 (control), stages 10/11/12/13 = 517/517/517/497. Positive
+control: the stage-1 control fired and the DMEM bytes change per row (a stale
+or wrong-space read would not track v6). Offline analysis (`analyze.py`, 488
+well-formed stage-13 rows; 6 rows were interleaved-stderr garbage and were
+skipped): v6 lanes 0/1/2 sit at record bytes 0/2/4 and lanes 4/5/6 at bytes
+40/42/44 in 488/488 rows; stage-13 v6 equals the post-VGE (`vge=`) lanes in
+all rows. Lanes 3 and 7 are always zero in v6 and are overwritten by the
+following `sdv`/`ssv` lanes, so they carry no store test.
+Result: the store/writeback arm (H-store) is refuted for the six testable
+lanes on the port; DMEM bytes agree with post-VGE. This is single-source (port
+only; the oracle's RDRAM watches cannot observe retail DMEM), so it does not
+prove VGE semantics correct, only that the remaining divergence is not in the
+store. Combined with s4626 (VMADH 4,128/4,128 lanes, 31 lanes change at VGE)
+the surviving arms are H-vge and H-source (upstream v0/v4 operands). The run
+ended rc=134 (abort via the parked VI-640 crash family, ~93 s, after all M4
+rows were collected); not new. ORIGIN: no mitigation added; probe fix only.
