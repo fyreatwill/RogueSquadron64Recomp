@@ -153955,3 +153955,5 @@ Offline: col 511 of 0x656400 is stable across frames (67/72 identical), early fr
 Watch (run w38d, vi_w=512): control fires (body stores 3.6M, edge stores 6637 total, including a byte-store clear loop at pc 0x800078EC writing 0 across the whole buffer). ZERO nonzero-valued CPU stores to col 511 at width 512, while the dumps still show 179-227 nonzero rows in col 511.
 Rules out: H-cpu (recomp scalar stores) as writer; with s4637 also RT64 writeback. Surviving: other RDP/RT64 host path, SP/PI DMA, or pre-existing stale data. Caveat: halfword/word stores with a zero low byte were filtered; single-source.
 ORIGIN: diagnostic only, no mitigation added.
+
+Discrimination (s4638): REFUTES H-cpu (no CPU writer of nonzero col-511 values at width 512, controlled); selects H-dma/H-rdp-host/H-stale as the survivors. Next discriminator: one build with a host-write + RSP DMA-out watch on the 0x656400 col-511 offsets plus a col-511 snapshot at the first 512-wide VI (same-run positive control: whole-buffer census hit). Outcomes: DMA/host row fires => name the caller; nothing fires but nonzero at first 512 VI => H-stale selected.
