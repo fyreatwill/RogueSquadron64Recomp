@@ -154583,3 +154583,20 @@ reconstruct one from the loaded byte. The allocator/free-list anchor scan did
 not implicate this class. This selects H-MEMB-bounded and rules out a named
 pointer-transition explanation for these sites. No build, runtime probe, guard,
 or mitigation was authorized.
+
+## Session 4686 (2026-10-11) — audited backward non-self zero-offset `MEM_BU` loads
+
+Ran the prescribed source scans before any build. Added and ran
+`tools/census_membu.py` against the external generated tree. Its parsed scan
+and independent direct-regex count agreed on 861 zero-offset `MEM_BU` loads;
+602 were inside backward edges, with 515 non-self sites. The complete
+classification is in `docs/M3-S4686-MEMBU-CENSUS.md`. All candidates are
+unsigned-byte scalar, index, packed-field, table, flag, checksum, text,
+geometry, or audio-data consumers. Nine local review rows were manually
+resolved as nearby unrelated loads or byte indices; no named pointer writer
+or pointer reconstruction was found. This selects H-MEMBU-bounded and rules
+out a runtime probe or guard from this class. No build, generated-code edit,
+guard, or mitigation was authorized.
+
+ORIGIN: no mitigation; all observations are read-only generated-source and
+consumer classification evidence.

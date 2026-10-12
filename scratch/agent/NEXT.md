@@ -1,39 +1,40 @@
 # Next work unit
 
-HYPOTHESIS-ID: m3-membu-nonself
+HYPOTHESIS-ID: m3-memw-nonself
 
-Run one complete static census of backward-loop non-self zero-offset `MEM_BU`
-loads in the external generated tree. Reconcile the raw count and classify
-every candidate as an unsigned-byte scalar/table read or a genuine pointer
-transition. Do not add a guard until a named writer and value legitimacy are
-established.
+Run one complete static census of backward-loop non-self zero-offset `MEM_W`
+loads in the external generated tree. Reconcile the raw count with two
+independent source scans and classify every candidate as a bounded scalar,
+table/record field, or genuine pointer transition. Do not add a guard until a
+named writer and value legitimacy are established.
 
 Competing hypotheses:
 
-- H-MEMBU-bounded: every candidate is a byte flag, index, table field, or
-  other scalar read; no runtime change is authorized.
-- H-MEMBU-invalid: at least one candidate is part of a pointer reconstruction
-  with a named guest writer that can publish an invalid value; that site gets a
-  justified runtime probe candidate.
-- H-MEMBU-unreached: no candidate executes on the qualified title/hangar route;
+- H-MEMW-bounded: every candidate is a scalar, record field, table value, or
+  bounded list value; no runtime change is authorized.
+- H-MEMW-invalid: at least one candidate participates in pointer
+  reconstruction and has a named guest writer that can publish an invalid
+  value; that site becomes a justified probe candidate.
+- H-MEMW-unreached: no candidate executes on the qualified title/hangar route;
   the result remains static and cannot motivate mitigation.
 
-Discriminating measurement: two independent source scans must agree on the
-candidate-site count. For every site, record file, function, guest PC, source
-register/expression, destination register, back-edge, loop bound/sentinel, and
-the immediate consumer. A pointer reconstruction with a named writer selects
-H-MEMBU-invalid; scalar consumers at every site select H-MEMBU-bounded; a zero
-target-phase runtime result selects H-MEMBU-unreached. No build is needed
-unless the static census identifies a real pointer candidate; if it does,
-batch all candidate probes and controls in one regeneration-safe build/run.
+Discriminating measurement: two independent scans must agree on the direct
+zero-offset candidate count. For every backward-loop non-self site, emit file,
+function, guest PC, source/destination registers, back-edge, and immediate
+consumer. Scalar/field classification at every site selects H-MEMW-bounded; a
+named writer plus pointer reconstruction selects H-MEMW-invalid; only a
+runtime arm with the existing positive controls and zero target-phase rows can
+select H-MEMW-unreached. No build is needed unless the census identifies a
+real pointer candidate; if it does, batch all candidate probes and controls in
+one regeneration-safe build/run.
 
 Before any build, run:
 
-    rg -n -C 8 'MEM_BU\([^,]+,\s*0\)|MEM_BU\(0X0,|MEM_BU\(0x0,' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+    rg -n -C 8 'MEM_W\([^,]+,\s*0\)|MEM_W\(0X0,|MEM_W\(0x0,' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
     rg -n -C 5 'rs_malloc|buildHeapFreeList|coalesceFreeHeapBlocks' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 
-Then add the analogous reproducible `tools/census_membu.py` with two count
+Then add the analogous reproducible `tools/census_memw.py` with two count
 paths and run it. If a runtime arm is selected, require the existing
-allocator/free-list positive controls, title `0x00790400`, hangar `0x006AB400`,
-phase-gated budgets, and the retail whole-RDRAM control. Keep all M5 and A10
-guards unchanged. Use SIGKILL for cleanup.
+allocator/free-list positive controls, title `0x00790400`, hangar
+`0x006AB400`, phase-gated budgets, and the retail whole-RDRAM control. Keep all
+M5 and A10 guards unchanged. Use SIGKILL for cleanup.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4685.
+archive sections. Updated for session 4686.
 
 ## Current state
 
@@ -102,6 +102,16 @@ packed-field, or byte-copy data read; the five `bcopy_recomp` sites advance
 data pointers but do not reconstruct a pointer from the loaded byte. No named
 invalid writer was found. This selects H-MEMB-bounded and authorizes no guard,
 mitigation, build, or runtime probe.
+
+Session 4686 completed the analogous `MEM_BU` census. Two independent count
+paths agreed on 861 direct zero-offset loads; 602 were in backward loops and
+515 were non-self sites. The complete reproducible table in
+`docs/M3-S4686-MEMBU-CENSUS.md` classifies every candidate as an unsigned-byte
+scalar, index, packed field, table, flag, checksum, text, geometry, or audio
+data read. The nine local review rows were manually resolved as nearby
+unrelated loads or byte indices; no named guest writer publishing a pointer
+was found. This selects H-MEMBU-bounded and authorizes no guard, mitigation,
+build, or runtime probe.
 
 Session 4677 ran the corrected boot-relative Start-mash route after two shorter
 recipe attempts stopped before title. Both arms reached title 1024 and hangar
@@ -412,8 +422,11 @@ no guard, patch, or mitigation was added. Artifacts are in
    transition or named invalid writer was found; do not add a guard from this
    class. The subsequent s4685 `MEM_B` census found 35 direct loads, 22
    backward-loop sites, and 12 non-self scalar/packed/byte-copy consumers,
-   also with no pointer transition or named invalid writer. Continue with the
-   next complete M3 idiom census in `NEXT.md`.
+   also with no pointer transition or named invalid writer. The s4686 `MEM_BU`
+   census found 861 direct loads, 602 backward-loop sites, and 515 non-self
+   unsigned-byte scalar/index/table consumers; its nine review rows were not
+   pointer transitions. Continue with the next complete M3 idiom census in
+   `NEXT.md`.
 
 1. Step 7's complete status-table census selects H-status-writer for the
    covered route:
@@ -538,9 +551,9 @@ requested mission discriminator and does not establish mission absence or
 authorize a guard. Artifact:
 `scratch/agent/s4670_attached_mesh_hangar_action/`.
 
-The next M3 unit is a new complete census of backward non-self zero-offset
-`MEM_BU` loads. Do not repeat the closed `MEM_H`/`MEM_HU`/`MEM_B` classes, and
-do not add a guard without a named writer and legitimacy proof.
+The s4686 `MEM_BU` census is closed as H-MEMBU-bounded. Do not repeat the
+closed `MEM_H`/`MEM_HU`/`MEM_B`/`MEM_BU` classes, and do not add a guard without
+a named writer and legitimacy proof.
 
 ## Evidence and operating rules
 
