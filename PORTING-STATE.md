@@ -154329,3 +154329,19 @@ not selected. This is static evidence only; no guard, skip, or mitigation was
 added. It rules out treating the idiom class itself as an explanation for a
 crash without a writer/legitimacy proof. Artifact: `docs/M3-S4674-UNGUARDED-
 SELF-REFERENTIAL-WALKS-AUDIT.md`.
+
+## Session 4675 (2026-10-11) — audited backward non-self zero-offset pointer transitions
+
+The M3 work unit was a fresh static census of every backward label/goto loop
+containing a non-self `MEM_W(ctx->rN, 0X0)` pointer transition in the external
+generated tree. The scan found 399 sites in 22 files and 212 functions. 326
+sites were already in instrumented or guarded regions; the 73 untouched sites
+contained 71 explicit loop/sentinel or count-bound transitions and the two
+bounded word/byte comparison loops in `bcmp_recomp`. The same scan located the
+existing `rs_malloc`, `buildHeapFreeList`, and `coalesceFreeHeapBlocks` guard
+controls. No new named writer-to-noncanonical path was found. H-safe was
+selected provisionally; this is static, single-source evidence and does not
+authorize a guard or skip. Artifact: `scratch/agent/s4675_indexed_census.md`.
+
+ORIGIN: no mitigation was added; the only generated-tree evidence was read-only
+static analysis.

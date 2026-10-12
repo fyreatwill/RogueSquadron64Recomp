@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4674.
+archive sections. Updated for session 4675.
 
 ## Current state
 
@@ -58,6 +58,16 @@ render-reference, or audio-list walks; no named writer was shown to publish an
 invalid pointer. The existing heap-list guard probes supplied the positive
 control. This is static evidence only: no guard or mitigation is authorized,
 and the next M3 unit must be a different complete idiom class.
+
+Session 4675 completed a fresh M3 census of backward loops containing a
+non-self zero-offset pointer transition (`MEM_W(ctx->rN, 0)`). It found 399
+sites in 22 files and 212 functions; 326 are already instrumented/guarded
+regions, while the 73 untouched sites contain 71 explicit loop/sentinel or
+count-bound transitions and two bounded `bcmp_recomp` loops. The same scan
+located the existing `rs_malloc`, `buildHeapFreeList`, and
+`coalesceFreeHeapBlocks` guard controls. No new named writer-to-noncanonical
+path was found. This is static, single-source evidence only; no guard or
+mitigation is authorized. Artifact: `scratch/agent/s4675_indexed_census.md`.
 
 ## Active frontier
 
@@ -395,9 +405,10 @@ requested mission discriminator and does not establish mission absence or
 authorize a guard. Artifact:
 `scratch/agent/s4670_attached_mesh_hangar_action/`.
 
-The next M3 unit is a new complete indexed-dereference idiom census with an
-independent scan and a source positive control. Do not repeat s4674's
-self-referential-walk census or add a guard without a writer/legitimacy proof.
+The next M3 unit is a new complete census of backward non-self zero-offset
+`MEM_H` pointer transitions (the fresh scan reports 19 sites), with the same
+allocator/free-list controls. Do not repeat s4674 or s4675, and do not add a
+guard without a writer/legitimacy proof.
 
 ## Evidence and operating rules
 
