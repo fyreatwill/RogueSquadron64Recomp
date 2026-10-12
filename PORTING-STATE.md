@@ -154001,3 +154001,22 @@ Offline visual inspection of scratch/agent/s4642_viext/f_003_004.6.png (current 
 
 ## Session 4645 (2026-10-11) — hangar white pillar stubs: no retail reference available, thread parked
 Re-viewed s4642_viext frames: f_003 ("Available Craft") shows bright white vertical slabs on bench/pillar edges; f_007 (craft select) renders cleanly. Single-source visual only. RDP stream was near-identical to retail (s4633/s4634), oracle cannot reach the hangar, no retail capture in repo, so design-vs-renderer is undecidable here. No code changed. SUBSTITUTED (see scratch/agent/SUBSTITUTION.md). Next: resume rename sweep or M3 idiom audit (NEXT.md).
+
+## Session 4646 (2026-10-11) — renaming sweep is exhausted: 6 placeholder symbols remain in the TOML, none are sweep targets
+
+Planned unit was the next generated-symbol renaming batch. Measured instead:
+`grep -cE 'name = "(func|fake_func|static_[0-9]+)_[0-9A-F]{8}"'
+syms/rogue_squadron.syms.toml` = 6 (the s1487 figure of ~1,548 is stale; the
+mapping in `tools/rename_generated_symbols.py` already covers the rest).
+The six: `func_80018ED4` (cache-flush stub, plan-kseg-guard-migration.md:251),
+`func_8002BB34`, `func_80092F10` (TOML-only tail of
+`resampleVoiceLutSamplesPacked`, s1360), `func_8009D8BC` (8-byte data gap,
+already mapped to `data_gap_8009D8BC` via `static_3_`), `fake_func_800AE3E4`
+(mapped `data_gap_800AE3E4`), `static_5_800AF6AC` (mapped
+`handleCraftSelectInput`). Four have a mapping or deliberate stub role; only
+`func_8002BB34` (0xE8 bytes) and `func_80092F10` lack a companion name and
+neither is a bounded batch worth a session. Sweep thread closed; no code
+change. Hangar thread stays parked (s4645). Eligible next: M4 accumulator
+boundary or retail-entry REVISIT, each needing a genuinely new angle.
+
+ORIGIN: symbol census only; no runtime mitigation, ROM, or game-state change.

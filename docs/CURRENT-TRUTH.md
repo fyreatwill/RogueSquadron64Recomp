@@ -146,8 +146,8 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
   alternate-route problem, not evidence that the odd request is impossible.
 - M3 patch-runtime qualification is blocked on `mips64-elf-gcc`,
   `mips64-elf-ld`, and `PatchesLib`.
-- Generated-symbol renaming is fallback work only after the active M5/M3
-  frontier is inapplicable; it does not reset the engineering-change gate.
+- Generated-symbol renaming is exhausted (s4646): 6 placeholders remain in
+  the TOML, none a bounded batch. Do not schedule further sweep iterations.
 
 ## Superseded conclusions to avoid repeating
 
