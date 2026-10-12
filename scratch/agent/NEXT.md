@@ -1,23 +1,19 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-early-musyxsynthframe-race
+HYPOTHESIS-ID: m5-bus-error-reattribution
 
-s4695 closed A15 (SPIN_YIELD redundant for hangar route). New observation: in
-5/8 concurrent arm-runs the port dies at ~3.3 s (VI 640 phase) in
-musyxSynthFrame_s4562_impl+9668, fault addr 0x400149714 (x9=0x100149714: a
-guest-derived pointer > RDRAM), varying last-guest-pc. Artifacts in
-scratch/agent/s4695_m5_a15_spin_yield/ (port_*.log with [CRASH] blocks).
+s4696 found the early musyxSynthFrame crash was our own VOICE_TRIGGER_CHAIN
+diagnostic (unsigned 0x80150000 literal, now S32()). Any earlier crash
+attributed to the "musyxSynthFrame bus-error family" (s4672, s4527, etc.) in a
+recipe that armed ROGUESQ_LOG_VOICE_TRIGGER_CHAIN may be this bug.
 
-Hypotheses:
-- H-race: the audio host thread runs musyxSynthFrame while guest voice/state
-  setup is mid-write (contention exposes it); survivors are just lucky.
-- H-uninit: a voice-array/pointer field is legitimately uninitialised before
-  title for this config (ROGUESQ_AUDIO_UCODE=1 early-start), crash rate
-  independent of contention.
-- H-ctrl: crash rate depends on concurrency count only.
-Discriminator (ONE run): single-instance x4 sequential-start vs 4 concurrent,
-same recipe (run_s4695 minus SPIN_YIELD), count early crashes per mode; plus in
-the crashing frame dump the value of the faulting field and the guest address
-it was loaded from (CRASH block regs x9/x0) to name the writer (ORIGIN rule 11).
-Then decide guard-vs-fix. Read musyxSynthFrame_s4562_impl+9668 via the
-fixup source (grep s4562 in tools/*.py).
+Unit: re-run the canonical title->hangar recipe (run_s4695 style, SPIN_YIELD=0,
+VOICE_TRIGGER_CHAIN=1, 4 concurrent) on the fixed build and count (a) crashes,
+(b) arms reaching VI 512 hangar origin 0x006AB400. Hypotheses:
+- H-diag-was-all: no crashes, all arms reach hangar -> bus-error family closed,
+  proceed to M5 plan A16 (docs/M5-AUDIO-PLAN.md).
+- H-residual: some arms still crash -> map pc with
+  `python3 -I scratch/agent/s4696/map_pc.py <FUNC> <OFF>` (FUNC must live in
+  funcs_24.c; edit src path for other files) and name the writer.
+Also: check the s4672 `scratch/agent/s4672_overlay_route/` crash for the
+0x400149714 signature before reinterpreting it.

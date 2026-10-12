@@ -457,6 +457,18 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Superseded conclusions to avoid repeating
 
+- “The early (~3.3 s, VI 640) `musyxSynthFrame_s4562_impl+9668` bus error /
+  `0x400149714` family is a host-thread race or uninitialised voice state”
+  (s4672/s4695 and the line-141/198 notes above) was wrong. It was our own
+  `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN` diagnostic: `MEM_W(-0X68EC, 0X80150000)`
+  uses an unsigned literal, so address math yields 0x100149714 (not
+  sign-extended) = read past RDRAM. Believable because it was intermittent
+  (depends on what the host happens to have mapped there) and every recipe
+  armed the flag. s4696: vtc=1 3/3 crash, vtc=0 0/3; after S32() fix (fixup
+  source + `MEM_W(0X2038, 0X80140000)` in tickAudioSequencerFrame, same class)
+  vtc=1 0/3. Any older "bus-error family" attribution in recipes that armed the
+  flag is suspect.
+
 - “M5 audio plan steps 1–10 are closed or conditionally unnecessary” was too
   broad for the current code. Nonzero PCM proves route activity, not that the
   remaining task-contract, state-ownership, wait-gate, safety-exit, and MORT
@@ -488,7 +500,7 @@ no guard, patch, or mitigation was added. Artifacts are in
    needs the yield (yield-on returns after ~1.0-1.2M scans; yield-off hits the
    10M-scan timeout, never returns). Retail's call-3 enter->return chain is not
    independently shown (retail only evidences B7EC runs). Keep
-   `ROGUESQ_A14_YIELD` default on. The next M5 unit is A15/A16 per s4695: A15 SPIN_YIELD redundant (hangar reached with 0 yields); next = early musyxSynthFrame race, see NEXT.md.
+   `ROGUESQ_A14_YIELD` default on. The next M5 unit is A15/A16 per s4695: A15 SPIN_YIELD redundant (hangar reached with 0 yields); early musyxSynthFrame crash RESOLVED s4696 (diagnostic bug, not a race; see Superseded). Next = A16 / re-check older bus-error attributions, see NEXT.md.
    docs/M5-AUDIO-PLAN.md; see `scratch/agent/NEXT.md`.
    The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
    s4682; retain the silent arm as rollback. Do not change the AI status,

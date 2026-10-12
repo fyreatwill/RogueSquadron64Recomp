@@ -154835,3 +154835,31 @@ guest init mid-flight) exposed by CPU contention. Writer of the wild pointer
 ORIGIN: no mitigation added; scripts only.
 Artifacts: `scratch/agent/run_s4695_m5_a15_spin_yield.sh`,
 `scratch/agent/s4695_m5_a15_spin_yield/`.
+
+## Session 4696 (2026-10-12) — early musyxSynthFrame crash was our own diagnostic (unsigned 0x80150000 literal)
+
+HYPOTHESIS-ID: m5-early-musyxsynthframe-race (CLOSED -> m5-a16-next).
+Mapped musyxSynthFrame_s4562_impl+9668 to funcs_24.c:7362 via
+scratch/agent/s4696/map_pc.py (cc -c -g with build flags + atos):
+`MEM_W(-0X68EC, 0X80150000)` inside the ROGUESQ_LOG_VOICE_TRIGGER_CHAIN gate1
+diagnostic. MEM_W = rdram + ((reg+off) - 0xFFFFFFFF80000000); the unsigned-int
+literal wraps to 0x80149714 and loses sign extension => 0x100149714 => host
+fault at 0x400149714 (matches x9 exactly).
+
+Discriminator (6 concurrent arms, 30 s, run_s4696_vtc_crash.sh): pre-fix vtc=1
+crashed 3/3 (all musyx+9668), vtc=0 0/3. Fix (S32() on the literal; 7 sites in
+fixup_game_funcs_vendored.py + generated funcs_24.c): vtc=1 then crashed 3/3 in
+tickAudioSequencerFrame+320 (si_addr 0x400142038, same class,
+`MEM_W(0X2038, 0X80140000)` funcs_23.c:7912), also fixed. post2: vtc=1 0/3
+crashes, [musyx-gate1] rows 24/14/17 and tick-audio-seq rows (positive control:
+diagnostics now execute), vtc=0 0/3.
+
+Kills H-race, H-uninit, H-ctrl: the writer of the "wild pointer" is a host
+diagnostic; the value is illegitimate. Class audit: grep of generated *.c for
+MEM_*(.., 0X80xxxxxx) / MEM_*(0X80xxxxxx, ..) found no further sites. Caveat:
+fix applied by script to fixup source + generated C and rebuilt; the full regen
+pipeline was not re-run. Older "musyxSynthFrame bus-error family" attributions
+from recipes that armed VOICE_TRIGGER_CHAIN (s4672, s4527-ish) are suspect.
+
+ORIGIN: diagnostic literal lacked sign extension (S32); not a mitigation.
+Artifacts: scratch/agent/s4696/, scratch/agent/run_s4696_vtc_crash.sh.
