@@ -3,8 +3,8 @@ import re
 import sys
 
 HEX = r"[0-9A-Fa-f]+"
-ROW = re.compile(r"\[m4-accum\] task=(\d+) phase=(\d+) stage=(10|11|12)(.*)")
-LANE = re.compile(r"l(\d+):v4=(%s) v0=(%s) v6=(%s) v29=(%s) acch=(%s) accm=(%s) accl=(%s)" % (HEX, HEX, HEX, HEX, HEX, HEX, HEX))
+ROW = re.compile(r"\[m4-accum\] task=(\d+) phase=(\d+) stage=(10|11|12) r9=0x([0-9A-Fa-f]+)(.*)")
+LANE = re.compile(r"l(\d+):v4=(%s) v0=(%s) v6=(%s) pre=%s vge=%s v29=(%s) acch=(%s) accm=(%s) accl=(%s)" % (HEX, HEX, HEX, HEX, HEX, HEX, HEX, HEX, HEX))
 
 def s16(v):
     return v - 0x10000 if v & 0x8000 else v
@@ -46,9 +46,9 @@ def main(path):
             m = ROW.search(line)
             if not m:
                 continue
-            key = (int(m.group(1)), int(m.group(2)))
+            key = (int(m.group(1)), int(m.group(2)), int(m.group(4), 16))
             lanes = {}
-            for lm in LANE.finditer(m.group(4)):
+            for lm in LANE.finditer(m.group(5)):
                 vals = [int(x, 16) for x in lm.groups()]
                 lanes[vals[0]] = dict(zip(("v4", "v0", "v6", "v29", "acch", "accm", "accl"), vals[1:]))
             rows.setdefault(key, {}).setdefault(int(m.group(3)), []).append(lanes)
@@ -74,8 +74,8 @@ def main(path):
                 endpoints["post"] += int(out == 0x8000)
                 endpoints["vge"] += int(observed_vge == 0x8000)
                 if out != observed_post:
-                    print("MISMATCH task=%d phase=%d row=%d lane=%d predicted=%04X observed=%04X" %
-                          (key[0], key[1], i, lane, out, observed_post))
+                    print("MISMATCH task=%d phase=%d r9=%08X row=%d lane=%d predicted=%04X observed=%04X" %
+                          (key[0], key[1], key[2], i, lane, out, observed_post))
     synthetic()
     print("REAL triplets=%d lanes=%d saturated=%d pre_8000=%d post_8000=%d observed_vge_8000=%d" %
           (triplets, total, saturated, endpoints["pre"], endpoints["post"], endpoints["vge"]))

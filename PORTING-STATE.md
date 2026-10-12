@@ -154059,3 +154059,25 @@ reconstruction followed by the task/phase/lane join; if that key is absent,
 record the missing key and stop rather than extending instrumentation.
 
 ORIGIN: unattributed - this checkpoint did not rerun or inspect the mitigation-shaped machinery; the next reconstruction must identify the writer and legitimacy before any skip, allow, guard, or restore is retained. The attribution experiment is the queued positive-control reconstruction and task/phase/lane join.
+
+## Session 4651 (2026-10-11) — qualified the M4 arithmetic reconstruction and found no cross-run join key
+
+Ran the queued offline reconstruction against the s4626 accumulator capture.
+The initial script was corrected to group rows by `(task, phase, r9)` and to
+parse the current `pre/vge` fields; this was a capture-format/join repair, not
+runtime instrumentation. Both synthetic positive controls passed. The real
+capture produced 515 complete stage-10/11/12 triplets and 4,120 lanes, with
+zero reconstructed post-VMADH mismatches and zero saturation.
+
+Ran the existing s4631 matrix comparison as the requested join check. Its
+whole-RDRAM controls passed (200 hits per arm), but its separate-run task IDs
+(1155–1165) do not overlap the s4626 task IDs (65–658), and no shared
+frame/object/lane key exists. Thus H3, arithmetic mismatch with matching
+captured inputs, is refuted on the port; H2 remains disfavoured by the
+independent s4630 vertex comparison; H1, dynamic matrix-source divergence,
+remains unevaluable. No runtime mitigation was added. See
+`scratch/agent/s4649_m4_join.md` and `scratch/agent/s4649_m4_reconstruct.log`.
+
+ORIGIN: no mitigation; the reconstruction identifies the arithmetic/store
+boundary as matching but does not identify a writer for the remaining H1
+operand possibility.

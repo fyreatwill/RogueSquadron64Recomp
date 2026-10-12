@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4649.
+archive sections. Updated for session 4651.
 
 ## Current state
 
@@ -136,6 +136,16 @@ a zero-fill clear at pc 0x800078EC fired as controls) while the col-511 noise
 persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
 `tools/apply_s4638_edgewatch.py`, `scratch/agent/s4635_w38d/`.
 
+Session 4651 completed the queued M4 offline reconstruction. After grouping by
+task, phase, and `r9`, 515 complete stage-10/11/12 triplets (4,120 lanes)
+reconstruct with zero post-VMADH mismatches; both synthetic controls pass.
+This refutes the remaining arithmetic arm H3 on the port. The requested join
+to s4630/s4631 cannot be completed because those are separate animated runs
+with disjoint task IDs and no shared frame/object/lane key. The independent
+s4630 vertex comparison still disfavors H2, but H1 (dynamic matrix source)
+remains unevaluable. No mitigation is authorized. Details:
+`scratch/agent/s4649_m4_join.md`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -213,8 +223,9 @@ persisted. H-cpu is out; remaining H-rdp-host / H-dma / H-stale. See
    handoff; do not repeat the now-qualified all-phase name-copy null.
 4. s4644: rim band and holo spikes are no longer visible in current hangar frames (single-source visual); residual candidate is white pillar stubs at x~200/430/865/1085/1130. Need a retail pixel reference before treating it as a defect (retail may light those edges by design). s4645: no reference obtainable; thread PARKED, craft-select frame renders clean.
 5. s4647/s4649: the loop block is cleared for the regen-repair question.
-   Remaining owner choice is only whether to pursue a retail hangar reference
-   or close the M4 H-source thread; no runtime mitigation is authorized.
+   s4651 refutes the port arithmetic arm of M4, while the separate-run matrix
+   join is unavailable. Next choice is only whether a retail hangar reference
+   can close H1 as unevaluable; no runtime mitigation is authorized.
 
 ## Evidence and operating rules
 

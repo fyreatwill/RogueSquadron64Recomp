@@ -1,30 +1,14 @@
-# NEXT: RESUME M4 upstream-operand provenance reconstruction
+# NEXT: close M4 H-source as unevaluable, or obtain a retail hangar reference
 HYPOTHESIS-ID: m4-accumulator-source
 
-The prior attempt was a checkpoint close-out before the reconstruction ran.
-No qualified result, joined ledger, or discriminator exists yet. Do not add
-instrumentation or rerun a game capture.
+The s4649 reconstruction is complete. Both controls pass; 515 complete
+triplets / 4,120 lanes have zero reconstructed post-VMADH mismatches. H3 is
+refuted on the port. The existing s4630 vertex comparison disfavors H2, but
+the s4631 dynamic matrix capture cannot join to s4626: separate-run task IDs
+and no shared frame/object/lane key. See `scratch/agent/s4649_m4_join.md`.
 
-Competing hypotheses:
-
-- H1: the remaining M4 mismatch is caused by the port's dynamic per-object
-  matrix/operand source before VMADH.
-- H2: the paired vertex input is the source despite sampled DMA blocks matching
-  retail.
-- H3: the RSP arithmetic/store path is still wrong with matching inputs.
-
-Discriminating measurement: run the positive-control reconstruction over the
-complete s4626 accumulator capture, then join stage-10 operands to the
-s4630/s4631 matrix-span rows by task, phase, and lane. H1 requires a nonzero
-port-vs-retail matrix/operand difference before VMADH; H2 requires a vertex
-input difference with matching matrix rows; H3 requires identical paired
-inputs but a reconstructed post-VMADH mismatch. Synthetic controls must print
-PASS before accepting any null.
-
-Resume command:
-
-`python3 scratch/agent/m4_reconstruct.py scratch/agent/s4626_m4_accumulator_boundary_fixed/port.log > scratch/agent/s4649_m4_reconstruct.log 2>&1`
-
-Then build one joined ledger from the existing s4630/s4631 tables. If no
-complete join key exists, record the missing key and choose a retail-reference
-request or close M4 as unevaluable; do not add another diagnostic field.
+Next work unit: check whether a retail hangar pixel/reference artifact is now
+available without a new runtime instrument. If none exists, record that
+absence and close the M4 source thread; do not add another diagnostic field or
+rerun the same capture. If a reference exists, use one bounded visual
+comparison to decide whether the remaining port artifact is a real defect.
