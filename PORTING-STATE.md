@@ -154153,3 +154153,22 @@ ORIGIN: the matching writer is `dispatchOverlaySetupByParentAssetName`'s
 `rs_malloc(0x80, 0)`; it is legitimate only on recognized parent-asset paths.
 The skip paths have no proven writer for the freed words, so legitimacy remains
 unproven.
+
+## Session 4655 (2026-10-11) — attached-mesh handler absent on the qualified retail route
+
+Ran one independent retail-oracle capture with a whole-RDRAM positive control,
+execution watches on `attachedMeshOverlayNpcHandler` (`0x8005427C`) and
+`rs_free` (`0x80001ACC`), Rice video, verified Start presses, and VI tracing.
+The whole-RDRAM control reached 10,000 callbacks; retail reached 320-, 640-,
+and 1024-wide VI phases. `rs_free` executed extensively, but the attached-mesh
+handler never executed and no `rs_free` `prev_pc` fell inside
+`0x8005427C..0x800543F4`.
+
+This selects H3 route-absent for the covered boot/title route only. It rules out
+neither a mission-only attachment path nor the static NULL/free gap. The
+measurement is independent retail evidence with a qualified positive control,
+not a proof that the handler is globally dead. No guard, patch, or mitigation
+was added. Artifact: `scratch/agent/s4660_attached_mesh_oracle.log`.
+
+ORIGIN: no mitigation was added; the observed `rs_free` calls came from other
+callers, so no writer for the attached-mesh fields was observed.

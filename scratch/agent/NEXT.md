@@ -1,18 +1,20 @@
-# NEXT: obtain direction for a genuinely new discriminator
-HYPOTHESIS-ID: new-frontier-owner-direction
+# NEXT: obtain a mission-capable retail handoff for the attached-mesh gap
+HYPOTHESIS-ID: m3-attached-mesh-mission-route
 
-The queued `load_full_header_image` and fallback `freeLevelDatBuffers`
-audits are historical duplicates (Sessions 3637 and 3638). The complete M3
-`rs_free` idiom campaign is closed at Session 4502, M5 is conditionally
-closed, generated-symbol renaming is exhausted, and the remaining frontier
-threads are parked or require a new attributable handoff.
+The s4655 oracle capture qualified its whole-RDRAM control and reached
+boot/title, but the attached-mesh handler was absent. Do not repeat that
+route, add a NULL guard, or infer a global null. The next work unit is one
+bounded route-driving attempt that reaches a mission/attachment phase, with
+the same handler and `rs_free` execution watches plus the whole-RDRAM control.
 
-The next work unit is one owner decision selecting a new, bounded experiment
-from the parked frontier. Do not build or run until that choice supplies
-2–4 competing hypotheses and one measurement whose outcomes distinguish them.
-The stale-queue refutation this iteration is the evidence that the two queued
-M3 candidates cannot serve as that unit.
+Before any run, identify the exact verified input sequence or existing
+savestate path that reaches a mission. Competing outcomes for that run are:
 
-Requested direction: choose one of (a) a new external retail-entry handoff
-probe, (b) a new M4 accumulator-origin discriminator, (c) a named M5 audio
-de-stub step not already closed, or (d) another specific engineering unit.
+- handler plus `rs_free` caller rows: classify the two freed pointers and name
+  the retail writer/legitimacy;
+- handler rows but no matching `rs_free` caller: remap the action-2 call site;
+- qualified controls but no handler: route remains unevaluable and this M3
+  gap stays parked;
+- absent controls: instrument invalid and redesign before conclusion.
+
+The s4655 artifact is `scratch/agent/s4660_attached_mesh_oracle.log`.

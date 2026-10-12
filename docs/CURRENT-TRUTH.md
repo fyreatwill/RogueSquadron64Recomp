@@ -183,6 +183,16 @@ campaign was closed at Session 4502, so no new M3 idiom unit was available;
 the stale queue was reconciled without a build, runtime run, guard, or
 mitigation.
 
+Session 4655 ran the new attached-mesh runtime discriminator against retail.
+The independent oracle whole-RDRAM control reached 10,000 callbacks and the
+retail route reached 320, 640, and 1024-wide VI phases. `rs_free` executed
+extensively, but `attachedMeshOverlayNpcHandler` at `0x8005427C` never
+executed and no `rs_free` `prev_pc` fell inside its body. This selects H3
+route-absent for the covered boot/title route only; it does not establish that
+the handler is globally dead or that its NULL/free gap is harmless in a
+mission. No guard or mitigation was added. Artifact:
+`scratch/agent/s4660_attached_mesh_oracle.log`.
+
 ## Parked and closed
 
 - The M3 `jal rs_free` idiom audit is closed through s4502. The separate
@@ -271,6 +281,10 @@ mitigation.
    the two queued M3 audits were historical duplicates (s3637/s3638), and the
    full M3 `rs_free` campaign is already closed (s4502). Do not repeat them;
    owner direction is required for a genuinely new discriminator.
+   s4655: the attached-mesh handler was absent from the driven retail
+   boot/title route despite qualified oracle controls. Do not treat this as a
+   NULL contract proof or add a guard; a future revisit needs a
+   mission/attachment-capable retail route or a new execution handoff.
 
 ## Evidence and operating rules
 
