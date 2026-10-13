@@ -154979,3 +154979,4 @@ Rules out hypothesis B (port-only gate handling makes audio re-init): re-init is
 ORIGIN: no mitigation added; instrumentation only.
 Discrimination: this run REFUTES hypothesis B (port gate handling forces the audio re-init: retail's reapplyDisplayMode re-inits unconditionally) and C (repeat initAudioSubsystem: exactly one), and SELECTS A/the frame-tick mode-change branch as the sole source of the extra allocs for H-alloc-window-sched-switch.
 Next discriminator: print the three runVideoFrameTick guard values (0x800014F8/0x8000150C/0x80001518) on each taken branch in the port and compare with retail oracle hits of exec 0x8000153C (whole-RDRAM positive control first); retail hits at the same widths => A, none => port-only mode-record writer (name it).
+Summary: the census refutes hypotheses B and C and selects the runVideoFrameTick mode-change branch; the guard-value comparison against retail will discriminate A from a port-only writer.
