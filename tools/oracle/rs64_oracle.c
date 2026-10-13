@@ -3283,6 +3283,27 @@ static void *vi_poller(void *arg)
     return NULL;
 }
 
+/* --shot SEC[,SEC...]: ask the video plugin for a screenshot at each time
+ * (PNG into the Core ScreenshotPath, see --shot-dir). Gives a retail pixel
+ * reference for a phase the run reaches. */
+static double g_shot[64];
+static int g_nshot;
+static const char *g_shot_dir;
+
+static void *shooter(void *arg)
+{
+    double secs = *(double *)arg, t = 0;
+    int i;
+    for (i = 0; i < g_nshot && g_shot[i] < secs; i++) {
+        sleep_s(g_shot[i] - t);
+        t = g_shot[i];
+        pCoreDoCommand(M64CMD_TAKE_NEXT_SCREENSHOT, 0, NULL);
+        printf("[shot] t=%.1fs requested\n", t);
+        fflush(stdout);
+    }
+    return NULL;
+}
+
 /* Drives the run: fires the press schedule, then stops the emulator. */
 static void *director(void *arg)
 {
@@ -3707,6 +3728,12 @@ int main(int argc, char **argv)
                 g_npress++;
             }
         }
+        else if (!strcmp(argv[i], "--shot-dir") && i + 1 < argc)   g_shot_dir = argv[++i];
+        else if (!strcmp(argv[i], "--shot") && i + 1 < argc) {
+            char *spec = argv[++i], *tok, *save = NULL;
+            for (tok = strtok_r(spec, ",", &save); tok && g_nshot < 64; tok = strtok_r(NULL, ",", &save))
+                g_shot[g_nshot++] = atof(tok);
+        }
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
         else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
         else if (!strcmp(argv[i], "--fb-dump") && i + 1 < argc && g_nfbd < MAX_FB_DUMPS) {
@@ -3786,6 +3813,8 @@ int main(int argc, char **argv)
         if (pConfigOpenSection("Core", &core_section) == M64ERR_SUCCESS) {
             pConfigSetParameter(core_section, "EnableDebugger", M64TYPE_BOOL, &enable);
             pConfigSetParameter(core_section, "R4300Emulator", M64TYPE_INT, &interp);
+            if (g_shot_dir)
+                pConfigSetParameter(core_section, "ScreenshotPath", M64TYPE_STRING, g_shot_dir);
         } else {
             fprintf(stderr, "[oracle] WARNING: cannot open Core config section; "
                             "debugger will not activate\n");
@@ -3828,6 +3857,7 @@ int main(int argc, char **argv)
     if (g_poll_running)
         pthread_create(&poll_th, NULL, vi_poller, NULL);
     pthread_create(&th, NULL, director, &secs);
+    if (g_nshot) { pthread_t sh; pthread_create(&sh, NULL, shooter, &secs); }
 
     printf("[oracle] running %s for %.0fs with %d watch(es), debugger=%d emulator=%d\n",
            rom, secs, g_nwatch, oracle_debugger, oracle_emulator);

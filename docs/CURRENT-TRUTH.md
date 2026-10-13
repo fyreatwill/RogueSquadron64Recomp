@@ -497,7 +497,9 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
-**s4730 (top, unblock): the s4729 "BLOCKED awaiting owner target" line is overturned.** Next = `H-hangar-rdp-diff` (NEXT.md): diff the port's first hangar-512 RDP frame against the retail capture `rs64-oracle/s4514_rdp_hangar512.bin` (hypotheses: rdp-cmd / tex-upload / renderer). Mission-phase correctness (s4724 recipe) is queued behind it.
+**s4731 (top): the s4730 `H-hangar-rdp-diff` unit was already done (s4517-s4521: 1246/1249 tris byte-identical post-s4518; rim/spikes fixed). Oracle now has `--shot`/`--shot-dir` (retail screenshots), but Rice's retail hangar frames are wrong (white background, missing letters) so they are NOT a pixel reference; the pillar-stub question stays parked. Next = mission-phase correctness with the s4724 recipe (NEXT.md).
+
+**s4730 (unit choice superseded by s4731): the s4729 "BLOCKED awaiting owner target" line is overturned.** Next = `H-hangar-rdp-diff` (NEXT.md): diff the port's first hangar-512 RDP frame against the retail capture `rs64-oracle/s4514_rdp_hangar512.bin` (hypotheses: rdp-cmd / tex-upload / renderer). Mission-phase correctness (s4724 recipe) is queued behind it.
 
 
 **s4728 (top): 0x1F0D70..80 is not a stable image struct: window 0x1F0000..0x1F1000 changes by whole-page (0x1000) rewrites and sequential 0x200-byte chunks (17 events, control passed) — generic heap/DMA reuse; the width-1161 premise is retired for the current recipe (s4727+s4728, single-recipe). Do not chase 0x1F0D74 further. Next: re-pick from the priority list (M5 de-stub or renaming-sweep revisit).**
