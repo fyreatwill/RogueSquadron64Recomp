@@ -496,6 +496,8 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
+**s4724 (top): the oracle REACHES a retail mission with no owner input or poke.** `scratch/agent/s4724_run.sh` (Start+A alternating every 3 s from 6 s to 140 s): hangar 33 s, state-5 handler 0x800AC8B0 at 54 s, initMission 0x800FA250 at 73.4 s. Supersedes the s4719/s4722 mission-entry-needs-input lines below. Next = reuse this recipe with mission-phase watches (retail reference for the port's mission state).
+
 **s4722 (top, unblock): the s4719 "BLOCKED awaiting owner" line below is overturned.** Next = `oracle-poke-mission-entry` (NEXT.md): statically find the hangar/menu mode selector, add an oracle `--poke`, force mission entry at the 512 hangar phase; no owner input needed. The mission-entry dependency stays open until that runs.
 
 **s4719: loop BLOCKED awaiting an owner-supplied retail mission-entry route (rename sweep is exhausted per s4646, so the line below is stale).** **s4718 (top): ALL M3 idiom classes are closed** (MEM_*, LD, lwl/lwr, unaligned/64-bit stores, jalr/jr, and now FPR lwc1/swc1/ldc1/sdc1 + LL/SC via tools/census_fpr_llsc.py: FPR ops lower to the already-censused MEM_W/LD/SD macros, all 213 ll/lld/sc/scd sites are do_break). Next: resume the generated-symbol renaming sweep (priority 4; check the last 15 session titles first) unless the owner supplies a mission-entry discriminator.
