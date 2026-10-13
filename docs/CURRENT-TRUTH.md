@@ -1,5 +1,13 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4795: the final bounded mission-overlay rename audit found eight remaining
+placeholders, all deliberate `fake_func_*` entries whose companion comments
+identify adjacent real functions or decompiler split artifacts. No exact,
+duplicate-safe semantic mapping exists in `0x800AE000..0x800B9000`; the rename
+sweep is closed rather than inventing names. Durable table:
+`docs/RENAME-S4795-AUDIT.md`. Next is a new mission-route input discriminator
+for the resident overlay-0x2C splice.**
+
 **s4794: repaired five-run state-gated sampler: 2/5 stayed at VI 640 for the 200 s watchdog window with independent `vi-fs stalled=1` rows; 2/5 reached VI 1024 at 55/77 s; 1/5 crashed during startup. The VI-640 stall is nondeterministic and remains open. The prior s4793 “0/3 froze” verdict was invalid because its watchdog compared the advancing `update_screen` ordinal, not the `vi-fs` stall witness.**
 **s4793: the queued sampler initially failed at 2 s on a zsh nested-parameter-expansion error; no runtime verdict was valid until s4794 repaired and reran it.**
 
@@ -150,7 +158,7 @@ evidence for a dispatcher change.
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4794; old log archived in PROJECT-OVERVIEW.md.
+archive sections. Updated for session 4795; old log archived in PROJECT-OVERVIEW.md.
 
 ## Current state
 
@@ -669,13 +677,16 @@ Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed.
    (s4773), but the existing capture recipe reaches only hangar at VI 512.
    Build one new mission-route input/driver discriminator, retaining the
    resident splice and the same positive controls; do not infer splice effect
-   from the hangar-only run.
+   from the hangar-only run. This is now the active next unit after the
+   bounded rename sweep closed in s4795.
 3. **s4764 route blocker:** superseded for callback reachability by s4770, which reached both title and hangar without crash. The earlier VI-640 crash remains a recurring audio-route family, not evidence against callback cardinality.
 4. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
 5. **M5 audio:** de-stubbing qualified through A14 on the covered route (A11 wait cap, A12 countdown wait, A13 drain return default-off + timeout guard, A14 shutdown-call-3 needs `ROGUESQ_A14_YIELD` default on; B40 default flipped to pass-through s4701, rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`). A15 redundant, early synth crash resolved s4696. Per-scene audio re-allocs (initN64RspMixer via runVideoFrameTick->reapplyDisplayMode) are retail behaviour and benign (s4711-s4715, closed). Plan: docs/M5-AUDIO-PLAN.md. Keep soaks <=4 concurrent; every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup.
 5. **M3 idiom classes are ALL closed** (MEM_B/BU/H/HU/W/WU, LD, lwl/lwr, SDL/SDR/SWL/SWR, FPR lwc1/swc1/ldc1/sdc1, LL/SC; tools/census_*.py, docs/M3-S4688-MEMWU-CENSUS.md). No guard without a named writer and legitimacy proof. Attached-mesh `rs_free` NULL contract was unevaluable (no oracle route reached a mission s4655-s4670); the s4724 recipe now reaches one, so it could be revisited with mission-phase watches.
 5. **Parked / closed, do not repeat without a new discriminator:** M4 accumulator boundary (unevaluable at the Rice/HLE boundary, s4689); odd-PI DMA question (s4690 H-route-absent); right-edge column-511 noise (benign stale RDRAM, s4643); hangar pillar stubs (no pixel reference; Rice retail hangar frames are wrong, s4645/s4731); 0x1F0D74 width-1161 premise (generic heap/DMA reuse, s4728); overlay registration chunked-load H2 (s4673); safe fresh-copy fixer `tools/fixup_game_funcs_vendored.py <scratch RecompiledFuncs>` is qualified in scratch only - never regenerate over `../N64Recomp/RecompiledFuncs` until the external fixer is repaired (s4649).
-6. **Renaming sweep** (priority 4): resume only when 1-3 are inapplicable; check the last 15 session titles first.
+6. **Renaming sweep** (priority 4): closed for the remaining exact-address
+   placeholders by s4795; the eight audited entries are deliberate
+   `fake_func_*` boundaries. Reopen only with a new companion semantic source.
 
 ## Evidence and operating rules
 

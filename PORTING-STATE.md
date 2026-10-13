@@ -155737,3 +155737,18 @@ advancing in the stalled arms, so it is not a valid freeze discriminator. This
 rules out “the stall is gone” and “every VI-640 arm is permanently stuck,” but
 does not identify whether the producer wait, guest wait, or audio route owns the
 stall. No runtime mitigation or audio gate change is authorized.
+
+## Session 4795 (2026-10-13) — bounded mission-overlay rename audit closes exact-address sweep
+
+Audited `0x800AE000..0x800B9000` with the companion symbol files and the
+installed generated snapshot. The positive control enumerated all eight
+placeholders in the range from `RecompiledFuncs`. Every candidate was a
+deliberate `fake_func_*` entry whose companion file either names the following
+real function or documents a decompiler split/trampoline artifact; none has an
+exact semantic destination or a duplicate-safe rename. The full table is in
+`docs/RENAME-S4795-AUDIT.md`.
+
+Result: H3 (no unique identity) for all eight; no mapping or generated output
+changed. This rules out a safe exact-address rename in the audited range, not
+the possibility of future naming from a new semantic source. The rename sweep
+is closed and NEXT.md returns to the mission-route overlay-0x2C discriminator.

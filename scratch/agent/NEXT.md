@@ -1,13 +1,24 @@
-# Resume bounded generated-symbol renaming sweep
+# Build one new mission-route input discriminator for overlay 0x2C
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: overlay-0x2c-mission-route
 
-One work unit: select one bounded audio-adjacent address range in the companion `rogue_squadron64` symbols and rename only functions whose identity is supported by an exact symbol/reference match. Record the mapping in the existing rename tool/source; do not regenerate or hand-edit generated output.
+The generated-symbol sweep is closed for the remaining exact-address
+placeholders: session 4795 found only deliberate `fake_func_*` entries in the
+last bounded mission-overlay range, with no safe mapping. The next unit is one
+new mission-route input/driver discriminator, retaining the resident overlay
+0x2C splice and the existing phase/VI positive controls. Do not change the
+splice or infer its visual effect from hangar-only runs.
 
 Competing hypotheses and discriminator:
-- H1: the companion named symbol is an exact address match; the rename is safe.
-- H2: m2c/decomp semantics provide a unique match but no exact named symbol; defer until corroborated.
-- H3: neither source uniquely identifies the function; leave the placeholder unchanged.
-The discriminating measurement is one static cross-reference table for every candidate in the chosen range: exact address, companion symbol, call/string references, and duplicate-name check. Any candidate with conflicting or absent evidence stays `func_*`.
+- H1: the current input driver reaches the mission route but fails to emit
+  overlay-0x2C because the task family is not the triggering one.
+- H2: the driver reaches the route and emits `res=0x2C`, but the resident
+  splice does not alter the runaway/DL outcome.
+- H3: the driver reaches the route and emits `res=0x2C`; the splice removes the
+  runaway and produces bounded task completion.
+The discriminating measurement is one same-build, phase-gated capture of VI
+512 origin, `res=0x2C` dispatch count, overlay-0x2C arrival count, and per-task
+DL fetch/runaway classification, with the existing task/VI controls. Every
+arm needed for the comparison must be built before the run.
 
-Commands: inspect `tools/rename*`, enumerate the chosen range with `rg`, update the mapping using `apply_patch`, run the mapping's validator, and report the changed-count plus unresolved-count. No build is authorized unless the validator requires it.
+Commands: inspect the existing mission-route driver and `scratch/agent/s4788_drop1_mission_2c.sh`; verify the resident splice is present; make one bounded driver change with `apply_patch`; build the Debug target; run from `build/` with SIGKILL cleanup and capture under `scratch/agent/soak_results/`. No wall-clock-only verdicts.
