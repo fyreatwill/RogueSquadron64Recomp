@@ -1,5 +1,5 @@
-# Catch the VI 640 freeze with a STATE-gated sample (not wall-clock)
+# Consume queued gated-sampler soak, then resume strategic priority
 
 HYPOTHESIS-ID: vi640-stall-vs-512
 
-s4792: wall-clock sample at +65 s missed the freeze (run left 640 for 1024 at 62.7 s, update_screen kept advancing to #3558). Rewrite scratch/agent/s4792_sample.sh to poll game.log every 2 s (the `[phase]`/update_screen counter lines) and run `sample <pid> 5` only when the update_screen count has not advanced for 10 s while still VI 640; also sample once at 20 s as control. Loop up to 3 runs until one freezes (stop at first freeze; a run that exits 640 normally is a "pass", record time). Outcome: cvwait/semaphore frames on Gfx/SP Task/main => H-A (name primitive from caller frames); guest wait function frames => H-B; Metal/SDL present frames => H-C.
+s4793: 0/3 froze (640 -> 1024 at 49-55 s). A 5-run version is queued at scratch/agent/soak_queue/s4793_gated_sample_x5.sh (output in soak_results/s4793, shares dir; check summary.txt for FROZEN + run*_stall.txt). If FROZEN appears: read the sample's Gfx/SP Task/main frames (cvwait => H-A, guest wait fn => H-B, Metal/SDL => H-C). If none, close the thread as non-recurring and pick M5 plan step (docs/M5-AUDIO-PLAN.md) next.
