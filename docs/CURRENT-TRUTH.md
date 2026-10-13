@@ -675,3 +675,5 @@ Regeneration order is `make_elf.py -> N64Recomp -> fixup_game_funcs.py -> CMake`
 
 See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) section 59 for the s4590-s4617 evidence archive and [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md) for the audio plan.
 - s4789: DROP=1 mission-2c still unmeasured; startup crash at spTaskSchedulerThread+9632 recurred (load 7.6). SOAK-RESULTS s4788_drop1_mission_2c rc=0 line is a FALSE PASS (bash print broke the driver). Next: bisect DROP on/off (NEXT.md).
+
+- (s4790) spTaskSchedulerThread+9632 startup crash is intermittent and did NOT reproduce in matched DROP/no-DROP runs at load 7-20; do not treat it as DROP-caused or load-gated. Open issue: 150 s runs with the LLE_FORCE/UNGATED/SOLO env stay at VI 640 (no hangar, no 512); see NEXT.md.
