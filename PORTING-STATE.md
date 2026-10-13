@@ -155138,3 +155138,4 @@ ORIGIN: no mitigation added; diagnostic env-gated only.
 
 Discrimination (s4735): REFUTES H-stale-return (depth<=8, balanced pops, valid targets) and H-seg; SELECTS the root-restart family (H-root-reload / H-cyclic-data / H-iter-restart) over any child-level cause, because the period-43..48 call sequence restarts at root pc 0x180.
 Next discriminator: log root-level L_11B4 DMA source addresses and RS64_UCODE_ENTRY count per task (runaway vs task 41 control). Source repeats without re-entry => H-root-reload or H-cyclic-data (RDRAM word at the branch splits them); entry count>1 => H-iter-restart. Details in scratch/agent/NEXT.md.
+Net: this run refutes H-stale-return, selects the root-restart family, and the next run will discriminate H-root-reload vs H-cyclic-data vs H-iter-restart.
