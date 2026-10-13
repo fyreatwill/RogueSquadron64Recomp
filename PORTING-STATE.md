@@ -155497,3 +155497,14 @@ phase-scoped invocation ordinal in the actual VI-retrace dispatcher, plus
 registration/deregistration, synth-entry, title, hangar, and no-crash controls.
 The dispatcher positive control must fire before a zero-ordinal result is
 interpreted.
+
+## Session 4769 (2026-10-13) — finalized callback-dispatch checkpoint closeout
+
+No build or runtime was rerun in this checkpoint closeout. The existing
+s4767 artifact remains the only new evidence: both A12 arms reached title and
+hangar, the wait-copy witness fired with gate zero, and the shutdown-copy
+witness was absent. The callback-dispatch hypotheses therefore remain
+unevaluable; this does not authorize a dispatcher, gate, or writer change.
+The next discriminator is unchanged: instrument the actual VI-retrace
+dispatcher with bounded invocation ordinals, require that dispatcher marker
+as a positive control, then run the phase-gated default-B40 route.

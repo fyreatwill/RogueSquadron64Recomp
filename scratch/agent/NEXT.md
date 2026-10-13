@@ -1,9 +1,10 @@
-# Resume next work unit — measure VI-retrace callback dispatch cardinality
+# RESUME — next work unit: measure VI-retrace callback dispatch cardinality
 
 HYPOTHESIS-ID: m5-callback-dispatch-cardinality
 
 Checkpoint status: the s4768 retry did not rerun the experiment and produced no
-new runtime artifact. Resume from the existing s4767 evidence: the wait copy
+new runtime artifact. The existing evidence is in
+`scratch/agent/s4766_m5_a12_second_wait/`; resume from s4767: the wait copy
 was positively reached with gate 0, the shutdown copy was absent, and no A12
 writer or gate change was selected. The next M5 unit is the callback-dispatch
 question left open by s4764.

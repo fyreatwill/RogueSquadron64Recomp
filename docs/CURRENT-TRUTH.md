@@ -1,5 +1,21 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4769: the callback-dispatch ordinal experiment remains a checkpoint, not a
+result.** No new build or runtime was run in the retry. The durable s4767
+evidence remains: the A12 witness entered `waitForMusyXAudioTaskDone` at
+`0x80091F34` three times per arm with gate zero, while the
+`shutdownAudioEngine` copy at `0x80091DC4` did not fire; default and rollback
+arms reached title VI 1024 and hangar VI 512 without crash or abort. Therefore
+H-dispatch-all, H-first-live-slot, and H-stale-source are still unevaluable.
+The next discriminator is unchanged: instrument the actual VI-retrace
+dispatcher with invocation ordinals and require its positive control before
+interpreting zero ordinals. Artifact: `scratch/agent/s4766_m5_a12_second_wait/`
+and the s4768 ledger entry in `PORTING-STATE.md`.
+
+**s4768: the callback-dispatch ordinal experiment remains a checkpoint, not a
+result.** The prior retry did not rerun the experiment or create a runtime
+artifact; see the s4768 ledger entry for the same unevaluable hypotheses.
+
 **s4767: the A12 loop witness reached the wait copy but not the shutdown copy.**
 The rebuilt default and `ROGUESQ_AUDIO_SPIN2_YIELD=0` arms both reached title VI
 1024 and hangar VI 512 with no crash or abort. The new positive-control witness
