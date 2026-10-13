@@ -383,7 +383,7 @@ static uint32_t inline_probe_slot(uint32_t opcode) {
 struct DlWalkTrace {
     struct Ev { uint32_t kind, a, b, c, n; };  // 1 nonseq-fetch(prev,addr,prevop) 2 push 3 pop
     uint32_t task = 0, fetches = 0, nonseq = 0, back = 0, prev = 0xFFFFFFFFu, prev_op = 0;
-    uint32_t n2c = 0, njmp = 0;  // s4747: 0x1DB0 arrivals with d153==0x2C / all jump arrivals
+    uint32_t n2c = 0, njmp = 0, nbd = 0;  // s4747: 0x1DB0 arrivals with d153==0x2C / all jump arrivals
     std::vector<Ev> ev;
     // s4738: ring of the last 8 do_indirect_jump arrivals; snapshots at 0x30(r18) site-3 stores.
     struct Jmp { uint32_t target, r31, line, d153, prev_op, n; };
@@ -1485,7 +1485,7 @@ extern "C" void rs64_e9prov_source_fetch(uint32_t guest_addr, uint32_t w0) {
             if (a < g_dlw.prev) ++g_dlw.back;
             dlw_event(1, g_dlw.prev, a, g_dlw.prev_op);
         }
-        g_dlw.prev = a; g_dlw.prev_op = w0 >> 24;
+        g_dlw.prev = a; g_dlw.prev_op = w0 >> 24; if (g_dlw.prev_op == 0xBD) ++g_dlw.nbd;
     }
     if (!log_e9_provenance()) return;
     const uint32_t address = guest_addr & 0x7FFFFFu;
@@ -1804,7 +1804,7 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
             static int c2c_ph[16] = {0};
             if (c2c_ph[ph_ord] < 150 && (g_dlw.fetches > 3000 || c2c_ph[ph_ord] < 10)) {
                 ++c2c_ph[ph_ord];
-                fprintf(stderr, "[dlwalk-2c] task=%u phase=%u fetches=%u arrivals2c=%u jmps=%u\n", task, ph_ord, g_dlw.fetches, g_dlw.n2c, g_dlw.njmp);
+                fprintf(stderr, "[dlwalk-2c] task=%u phase=%u fetches=%u arrivals2c=%u jmps=%u nbd=%u\n", task, ph_ord, g_dlw.fetches, g_dlw.n2c, g_dlw.njmp, g_dlw.nbd);
             }
         }
         const bool runaway = g_dlw.fetches >= 16000, normal = g_dlw.fetches > 3000 && g_dlw.fetches < 4000;

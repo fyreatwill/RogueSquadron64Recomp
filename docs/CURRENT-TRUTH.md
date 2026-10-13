@@ -1,5 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4749: DL op 0xBD present <=> 0x2C arrival <=> runaway, 150/150 vs 0/550 non-runaway tasks (phases 2-7); phase-7 runaways have exactly one 0xBD and one arrival. No normal task contains 0xBD, so TexrectGen content (likely ship/HUD texrects) is exactly what the unspliced 0x2C overlay loses. Single run, agrees with s4747/s4748. Splice blocked on RSPRecomp allowlist (human).**
+
 **s4748: the first 0x2C dispatch is DL op 0xBD (TexrectGen): ring snapshots of 3/3 phase-7 runaway tasks end ...0x15A4 (d153=0x28, prevop 0xBD) -> 0x1298 -> 0x1DB0 (d153=0x2C, prevop 0xBD); normal task 41 ring has no 0xBD. Single run, ring depth 8; per-task 0xBD count for normal tasks NOT yet measured.**
 
 **s4747: a DMEM 0x153==0x2C arrival at 0x1DB0 occurs in 142/142 runaway tasks and 0 of 387 listed non-runaway tasks (phase-3 runaways ~13 arrivals each; phase-7 mission runaways exactly 1 each). One unrouted-0x2C dispatch starts the restart loop; it is not a per-object count. Phase-7 4-16k-fetch "mid" tasks have 0 arrivals, so they are slow for another reason. Single run; ship/HUD effect of a splice still untested (allowlist).**
