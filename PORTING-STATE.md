@@ -155121,3 +155121,11 @@ Verdict: H-stream-equal supported (single capture pair, one aligned frame, label
 New port-only anomaly: port frames 1846, 1849, 1851 are runaway (tri 102148/20049/79676, cmds 128K–574K, 100+ setcimg w512 in one "frame"); retail has none — likely sync-less accumulation or a looping DL. Unexplained.
 ORIGIN: no mitigation added; analysis scripts only.
 HYPOTHESIS-ID: mission-phase-correctness. Next = explain runaway frames 1846/1849/1851 (which sync is missing / which DL loops) and, in parallel, render port_rdp frame 1845 with a reference RDP to settle renderer-side.
+
+## Session 4734 (2026-10-13) — runaway mission frames are truncated-pass re-walks (H-loop), not missing-sync merging
+
+Ran the s4733 NEXT unit offline on s4733_port_rdp/port_rdp.bin (scripts `s4734_runaway.py`, `s4734_ranges.py`, `s4734_tail.py`; no game run). Positive control: normal frame 1845 splits into 8 setcimg blocks, all unique, 1 range of 234624 B at 0x720000 (phase 7).
+Result: runaway frames 1846/1849/1851 have 558/107/481 blocks but only 117/60/82 unique; the most common block repeats 74x byte-identically (loop, not progressing frames). Composition: 500360 / 98599 ranges of exactly 8 bytes at consecutive offsets in 0x720000.. (same (lo,len) up to 86x) — this is the s4273 wrap-flush path (dpc_bridge.cpp ~2443, unmerged per-range submit), ~960 ring wraps in the run, so the task wraps its ring ~70-86 times. Each pass = setup `3f 37 36 27` + scene blocks, ends at block 6 tail `3e 27` and restarts at `3f 37 36 27`; the HUD block (ends `24 29`, texrect + fullsync) is never reached until the end. Retail never does this.
+Verdict: H-loop (a DL walk jumps back after the 3rd scene block, e.g. stale return/branch target) supported; H-nosync-merge refuted (blocks repeat identically; per-pass missing HUD/sync is the symptom, not the cause); H-dump-artifact refuted (dump = actual submit_rdp_range args). Single capture, no ucode-level evidence of which jump yet.
+ORIGIN: no mitigation added; analysis scripts only.
+HYPOTHESIS-ID: mission-phase-correctness. Next = log DL-walk branch/return targets (F5 ucode DL stack) for a runaway task and name the stale target.

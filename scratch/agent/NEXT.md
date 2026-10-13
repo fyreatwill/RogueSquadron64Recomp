@@ -2,8 +2,10 @@
 
 HYPOTHESIS-ID: mission-phase-correctness
 
-s4733: port mission RDP ≈ retail on an aligned frame (see PORTING-STATE s4733). Remaining defect is renderer-side OR the port-only runaway frames (port_rdp frames 1846/1849/1851: 20K-102K tris, 100+ setcimg w512).
+s4734: runaway frames (port 1846/1849/1851) are a DL walk that, after the 3rd scene block, jumps back to the start-of-frame setup (`3f 37 36 27`) instead of continuing to the HUD block; blocks repeat byte-identical up to 74x, ~70-86 ring wraps per task.
 
-Work unit: explain the runaway frames. Using /tmp/s4733.pkl (regenerate with scratch/agent/s4733_cmp.py) or s4733_port_rdp/port_rdp.bin: for frame 1849, list ranges (lo,phase) that compose it, find where the repeating setcimg/DL pattern starts, and correlate with the run.log TASKSUBMIT lines (ROGUESQ_LOG_TASKSUBMIT) to name the task/DL that loops or the missing full-sync.
-Hypotheses: H-nosync (a task omits OP_FULLSYNC; frames just merge), H-loop (a DL walk repeats the same sub-DL), H-dump-artifact (RS64_RDP_BIN_PORT recording duplicates ranges at wrap).
-Discriminator: are the repeated setcimg blocks byte-identical copies (loop/dump dup) or progressing (nosync merging distinct frames)? Positive control: same check on a normal frame splits into 1 block.
+Work unit: in the port's F5 ucode DL walker (src/rsp / factor5_ucode), log every G_DL / G_BRANCH_DL / G_ENDDL (call/return/branch) with (task#, from_addr, target, stack depth) for tasks that wrap the ring >5 times; find the target that equals an earlier already-visited address.
+Hypotheses: H-stale-return (DL stack pop yields old address: stack overflow/underflow or missing push), H-cyclic-data (game-side DL linked list genuinely cyclic: check same in retail via oracle watch), H-seg (segment-table entry wrong at that branch → resolves to frame start).
+Discriminator: runaway task's jump target vs. address of the first block; if return stack depth is 0 at an ENDDL/pop => underflow (H-stale-return); if target comes from RDRAM DL data pointing back => H-cyclic-data (then compare that RDRAM word with retail).
+Positive control: same logging on normal frame 1845's task must show monotonically forward targets.
+Scripts: scratch/agent/s4734_*.py (offline), /tmp/s4733.pkl regen via s4733_cmp.py.
