@@ -155148,3 +155148,7 @@ Result: runaway tasks 241/242/243 each have kind 5 x1 => H-iter-restart REFUTED 
 Rules out: H-iter-restart. Selects (not proven): the wrap is an in-ucode refill whose source is the root/initial pointer (H-root-reload family: DMEM state+0x30 or a saved slot-0 frame reset to 740AD8), versus cyclic game data (H-cyclic-data) — the RDRAM chain words do not themselves link 744078 back to 740AD8, which weighs against pure cyclic data.
 ORIGIN: no mitigation added; env-gated diagnostic only.
 HYPOTHESIS-ID: mission-phase-correctness. Next = log DMEM[r18+0x30] and every store to it (generated code, same fixup) across the 744078 -> 740AD8 wrap in task 241 vs. task 41 control, and identify who writes 740AD8 into it.
+
+Discrimination (s4736): REFUTES H-iter-restart (runaway tasks 241-243 each have exactly 1 RS64_UCODE_ENTRY, same as control task 41, with the kind-4 refill instrument firing 971x in the same run); WEAKENS H-cyclic-data (chunk 0x744078 link word is 0, yet the next refill source is 0x740AD8); SELECTS the H-root-reload family (an in-ucode reset of the refill source 0x30(r18) or a saved slot-0 frame).
+Next discriminator: enumerate every `RSP_MEM_W_STORE(0X30, r18, ...)` site in the generated ucode, log site+value across the 744078 -> 740AD8 wrap in task 241 vs task 41 control; a store of 740AD8 at site X selects H-state30-reset, no store selects H-link-from-other-field. Details in scratch/agent/NEXT.md.
+Net: this run refutes H-iter-restart, weakens H-cyclic-data, selects the root-reload family; the next run discriminates among its members.
