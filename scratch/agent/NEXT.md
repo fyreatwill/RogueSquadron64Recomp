@@ -1,5 +1,13 @@
-# Consume queued gated-sampler soak, then resume strategic priority
+# Resume bounded generated-symbol renaming sweep
 
-HYPOTHESIS-ID: vi640-stall-vs-512
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s4793: 0/3 froze (640 -> 1024 at 49-55 s). A 5-run version is queued at scratch/agent/soak_queue/s4793_gated_sample_x5.sh (output in soak_results/s4793, shares dir; check summary.txt for FROZEN + run*_stall.txt). If FROZEN appears: read the sample's Gfx/SP Task/main frames (cvwait => H-A, guest wait fn => H-B, Metal/SDL => H-C). If none, close the thread as non-recurring and pick M5 plan step (docs/M5-AUDIO-PLAN.md) next.
+One work unit: select one bounded audio-adjacent address range in the companion `rogue_squadron64` symbols and rename only functions whose identity is supported by an exact symbol/reference match. Record the mapping in the existing rename tool/source; do not regenerate or hand-edit generated output.
+
+Competing hypotheses and discriminator:
+- H1: the companion named symbol is an exact address match; the rename is safe.
+- H2: m2c/decomp semantics provide a unique match but no exact named symbol; defer until corroborated.
+- H3: neither source uniquely identifies the function; leave the placeholder unchanged.
+The discriminating measurement is one static cross-reference table for every candidate in the chosen range: exact address, companion symbol, call/string references, and duplicate-name check. Any candidate with conflicting or absent evidence stays `func_*`.
+
+Commands: inspect `tools/rename*`, enumerate the chosen range with `rg`, update the mapping using `apply_patch`, run the mapping's validator, and report the changed-count plus unresolved-count. No build is authorized unless the validator requires it.

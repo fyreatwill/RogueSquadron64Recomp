@@ -566,3 +566,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261010-023837 | s4532_fill_devaddr | rc=1 | 175s | scratch/agent/soak_results/s4532_fill_devaddr_20261010-023837.log
 20261013-090139 | s4785_pause4_600s | rc=0 | 544s | scratch/agent/soak_results/s4785_pause4_600s_20261013-090139.log
 20261013-093511 | s4788_drop1_mission_2c | rc=0 | 208s | scratch/agent/soak_results/s4788_drop1_mission_2c_20261013-093511.log
+20261013-102256 | s4793_gated_sample_x5 | rc=0 | 2s | scratch/agent/soak_results/s4793_gated_sample_x5_20261013-102256.log
+20261013-103000 | s4794_gated_sample_x5_repaired | result=2/5 VI640 stalled with vi-fs stalled=1; 2/5 reached VI1024 at 55/77s; 1/5 startup crash; original queue rc=0 was a false pass from zsh bad substitution | scratch/agent/soak_results/s4793/summary.txt

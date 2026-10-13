@@ -1,6 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
-**s4793: state-gated sampler (scratch/agent/s4793_gated_sample.sh) 0/3 froze; all left VI 640 for 1024 at 49-55 s at load 9-13. The s4791 300 s stall did not recur in 4 runs (s4792 + 3); detector had no positive control. Plan: queue the sampler as a soak, move on.**
+**s4794: repaired five-run state-gated sampler: 2/5 stayed at VI 640 for the 200 s watchdog window with independent `vi-fs stalled=1` rows; 2/5 reached VI 1024 at 55/77 s; 1/5 crashed during startup. The VI-640 stall is nondeterministic and remains open. The prior s4793 “0/3 froze” verdict was invalid because its watchdog compared the advancing `update_screen` ordinal, not the `vi-fs` stall witness.**
+**s4793: the queued sampler initially failed at 2 s on a zsh nested-parameter-expansion error; no runtime verdict was valid until s4794 repaired and reran it.**
 
 **s4792: one default-recipe run at load 14 did NOT freeze: VI 640 lasted 57 s then went to 1024 (update_screen #179->#3558). A wall-clock `sample` missed the s4791 freeze; next is a state-gated sample (NEXT.md). 640-phase length looks load/race dependent.**
 **s4791: 3 sequential 300 s default-binary runs (s4786 recipe, same binary as s4787) ALL stalled at VI 640 (update_screen frozen ~#250, vi-fs `stalled=1`), 0 crashes, 0 VI 512; s4787 reached 512 2/2 on that binary, s4790 0/2. Stall is nondeterministic/load-sensitive (single-source), not a flag/binary difference. Next: one `sample <pid>` at +60 s to see what the frame producer is blocked on (NEXT.md).**
@@ -149,7 +150,7 @@ evidence for a dispatcher change.
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4772; old log archived in PROJECT-OVERVIEW.md.
+archive sections. Updated for session 4794; old log archived in PROJECT-OVERVIEW.md.
 
 ## Current state
 
@@ -652,6 +653,11 @@ no guard, patch, or mitigation was added. Artifacts are in
 ## Next steps
 
 Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed. OPEN DEPENDENCY (human, s4742/s4745; iterations must NOT retry, NEXT.md re-scoped to runaway-DL cost measurement): add RSPRecomp Bash allow rules to .claude/settings.json (see scratch/agent/UNBLOCK.md); meanwhile NEXT.md is the offline 0x2C analysis. Full pre-compaction history of this section: PROJECT-OVERVIEW.md, "Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738".
+
+0. **s4794 VI-640 stall result:** keep this as a nondeterministic route
+   symptom, not a selected cause. Two of five repaired sampler runs held VI
+   640 with independent `vi-fs stalled=1` evidence, while two reached title.
+   Do not add a guard or wait change without a new producer-vs-guest witness.
 
 1. **M5 callback teardown follow-up:** s4771 closes the shutdown-call branch as
    absent on the covered title/hangar route while independently confirming

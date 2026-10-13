@@ -155725,3 +155725,15 @@ Ran scratch/agent/s4792_sample.sh (s4791 recipe, one run, load 14, `sample` at 2
 
 Ran scratch/agent/s4793_gated_sample.sh (new): polls `[vi] update_screen` every 2 s, would `sample` the process once width=640 and the counter was static >=10 s. Default recipe, host load 8.7-12.6. Result: run1/2/3 all reached VI 640 at 6-8 s and left it for width 1024 at 49/55/51 s (counter 3008/3456/3072), froze=0, so no stall sample was taken. 20 s control samples exist (run*_20s.txt) but are healthy-state only. Together with s4791 (3/3 stalled) and s4792 (no stall), the 640 phase is a ~50-60 s transient whose "stall" in s4791 was likely just the unexited phase at the 300 s... unresolved: s4791 stalled 300 s, so a real freeze exists but did not recur in 0/4 recent runs (s4792 + 3 here). Caveats: single-source; the freeze detector had no positive control (never fired); the counter print is sparse, so a <10 s static window can be misread. No code change to the port.
 Next: stop chasing the freeze by sampling; either soak-queue the gated sampler for repeated unattended attempts, or return to strategic priority (M5/M3 audits).
+## Session 4794 (2026-10-13) — repaired state-gated VI-640 sampler: stall remains nondeterministic
+
+The queued s4793 sampler was a false pass: it exited after two seconds on a zsh
+nested-parameter-expansion error. I repaired the parser in the source and queued
+copy, then ran five bounded arms with the existing LLE/ungated/solo controls.
+Run 1 crashed during startup. Runs 2 and 3 remained at VI 640 for the 200-second
+watchdog window and independently emitted `vi-fs stalled=1`; runs 4 and 5 left
+VI 640 for VI 1024 at 55 and 77 seconds. The `update_screen` ordinal continued
+advancing in the stalled arms, so it is not a valid freeze discriminator. This
+rules out “the stall is gone” and “every VI-640 arm is permanently stuck,” but
+does not identify whether the producer wait, guest wait, or audio route owns the
+stall. No runtime mitigation or audio gate change is authorized.
