@@ -1,5 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4772: the shutdownAudioEngine caller census found one teardown-only caller.**
+The generated tree contains exactly one executable call to `shutdownAudioEngine`
+at `0x8008ECB8`, from `shutdownMusyXEngine` (`0x8008ECA4`), and it is guarded
+by `0x800A0F50 != 0`. The companion symbol/call metadata contains no other
+direct caller, address-taken reference, wrapper, or alias beyond the normal
+definition/overlay-registration entries. This selects H-shutdown-only-init for
+the covered title/hangar route: the surviving duplicate callback is not a
+shutdown artifact. No runtime change or deregistration change is authorized.
+Evidence is static/generated-source plus companion symbol metadata; a new
+shutdown-triggering route would require a separate target-PC witness.
+
 **s4771: the qualified title/hangar route never called shutdownAudioEngine.**
 The retail oracle first qualified the callback machinery with 10,002
 whole-RDRAM writes and two callback-table writes, including two
@@ -93,7 +104,7 @@ evidence for a dispatcher change.
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4770; old log archived in PROJECT-OVERVIEW.md.
+archive sections. Updated for session 4772; old log archived in PROJECT-OVERVIEW.md.
 
 ## Current state
 
@@ -603,6 +614,10 @@ Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed.
    The next discriminator is a new route or trigger that can reach
    `shutdownAudioEngine`; absent that, park this branch and continue the M5
    plan without treating the surviving duplicate as a shutdown artifact.
+2. **Overlay-0x2C splice:** the composite and fixup draft are landed, but the
+   RSPRecomp invocation remains blocked by the human Bash allow rule documented
+   in `scratch/agent/UNBLOCK.md`. Resume with the allowlisted compile, then run
+   the phase-gated mission validation; do not retry the blocked command.
 3. **s4764 route blocker:** superseded for callback reachability by s4770, which reached both title and hangar without crash. The earlier VI-640 crash remains a recurring audio-route family, not evidence against callback cardinality.
 4. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
 5. **M5 audio:** de-stubbing qualified through A14 on the covered route (A11 wait cap, A12 countdown wait, A13 drain return default-off + timeout guard, A14 shutdown-call-3 needs `ROGUESQ_A14_YIELD` default on; B40 default flipped to pass-through s4701, rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`). A15 redundant, early synth crash resolved s4696. Per-scene audio re-allocs (initN64RspMixer via runVideoFrameTick->reapplyDisplayMode) are retail behaviour and benign (s4711-s4715, closed). Plan: docs/M5-AUDIO-PLAN.md. Keep soaks <=4 concurrent; every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup.

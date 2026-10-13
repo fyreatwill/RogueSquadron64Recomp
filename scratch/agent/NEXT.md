@@ -1,39 +1,37 @@
-# RESUME — next work unit: census every shutdownAudioEngine caller
+# RESUME — next work unit: compile the already-landed Factor 5 overlay-0x2C image
 
-HYPOTHESIS-ID: m5-callback-teardown-duplicate-slot
+HYPOTHESIS-ID: factor5-overlay-0x2c-splice
 
-The s4771 qualified route reaches title and hangar, confirms first-match
-deregistration leaves a duplicate callback live, and never enters
-`shutdownAudioEngine`. Before another runtime instrument, perform one bounded
-static caller census to identify whether shutdown has an alternate reachable
-caller or is only a shutdown-state path.
+The s4772 static census closes the shutdown-only branch: one guarded caller
+exists and no alias/wrapper reference was found. The next actionable unit is
+the already-landed 0x2C RSP image splice, but its compiler invocation needs the
+human Bash allow rule in `scratch/agent/UNBLOCK.md`.
 
 Competing hypotheses and discriminating measurement:
 
-- H-shutdown-alt-caller: a generated direct caller or address-taken dispatch
-  can reach `shutdownAudioEngine` on a route not covered by the autopilot.
-- H-shutdown-only-init: all callers are initialization/shutdown-state paths;
-  the title/hangar route cannot reach this function without a distinct state
-  transition.
-- H-symbol-alias: the apparent shutdown function is aliased or wrapped, so a
-  name-only census misses the live call target.
+- H2C-real-image: compiling and splicing overlay `0x2C` supplies the missing
+  `TexrectGen` implementation and removes the mission DL restart loop.
+- H2C-route-unrelated: the image compiles and dispatches, but the runaway loop
+  persists, so the loop has another cause.
+- H2C-output-neutral: the loop ends but ship/HUD pixels do not change, so the
+  overlay is not the visible-content blocker.
 
-DISCRIMINATING MEASUREMENT: enumerate every direct call and every function
-pointer/address reference to guest PC `0x80091D40`, independently compare the
-generated tree with the companion decomp symbol/call graph, and classify each
-caller by its surrounding state gate. A direct target-phase caller selects
-H-shutdown-alt-caller and names the next phase-gated route; only init/shutdown
-state callers plus no address-taken alias selects H-shutdown-only-init and
-parks this teardown branch. Any address-taken or wrapper reference selects
-H-symbol-alias and requires a single target-PC witness before a new soak.
+DISCRIMINATING MEASUREMENT: an allowlisted RSPRecomp run must emit the 0x2C
+recompiled C, followed by one phase-gated mission run with the existing 0xBD,
+overlay-arrival, DL-restart, and ship/HUD controls. Compile failure leaves the
+unit blocked on the allow rule; compiled image plus no restart selects
+H2C-real-image; compiled image plus restart selects H2C-route-unrelated; a
+clean loop with unchanged output selects H2C-output-neutral.
 
 Commands:
 
 ```sh
-rg -n "80091D40|shutdownAudioEngine\(" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
-rg -n "shutdownAudioEngine|80091D40" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | sort
+# After the human allow rule is added, run the exact command in UNBLOCK.md.
+sed -n '1,220p' scratch/agent/UNBLOCK.md
+python3 tools/assemble_factor5_overlay_0x2c.py
+env PROBE_PHASE_WIDTH=1 PROBE_KEYS_FROM_PHASE=1 zsh scratch/agent/run_overlay_0x2c_validation.sh
 ```
 
-Do not build or change deregistration behavior in that census. If it selects a
-new caller, the following unit must batch a target-PC positive-control oracle
-watch and the corresponding port phase witness in one build/run.
+Do not change callback deregistration or add a shutdown mitigation. If the
+compiler remains blocked, write BLOCKED.md with the exact denied command and
+the one allow-rule change needed.

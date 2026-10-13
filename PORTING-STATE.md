@@ -155546,3 +155546,20 @@ discarded as an unqualified null. The witness was corrected in the same
 iteration to fire at registration as well, rebuilt, and rerun. Artifacts are
 `scratch/agent/s4771_oracle_groundtruth.log` and
 `scratch/agent/s4771_m5_callback_teardown_run3.log`.
+
+## Session 4772 (2026-10-13) — censused shutdownAudioEngine callers
+
+The bounded static census searched the generated functions, overlay table,
+companion symbol metadata, redefs, and project tooling for guest PC
+`0x80091D40`, `shutdownAudioEngine`, and address-taken/wrapper forms. It found
+one executable call: `shutdownMusyXEngine` at `0x8008ECA4` calls it at
+`0x8008ECB8`, only when the guest gate byte `0x800A0F50` is nonzero. No other
+direct caller, function-pointer reference, wrapper, or alias was found beyond
+the normal definition and overlay-registration entries.
+
+This selects H-shutdown-only-init for the qualified title/hangar route: the
+surviving duplicate callback is not explained by a shutdown path. It rules out
+an alternate generated caller or symbol-alias explanation in the searched
+trees, but does not rule out a distinct untested route. No runtime build or
+deregistration change was made. The next work unit is the already-landed
+overlay-0x2C compile/splice, pending the documented human allow rule.
