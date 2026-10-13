@@ -5185,3 +5185,258 @@ target. M5 audio steps 1–10 are closed or conditionally unnecessary; do not
 reopen them without a new discriminator. The external retail-entry and M4
 accumulator boundaries remain parked. M3 patch-runtime qualification is
 blocked on the MIPS toolchain and PatchesLib.
+
+
+## Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738 (migrated s4739 maintenance)
+
+Verbatim migration of the pre-compaction Next-steps section (newest-first). Check CURRENT-TRUTH's superseded section before acting on any item.
+
+## Next steps
+
+**s4738 (top): runaway restart mechanism found (single run, 3 tasks consistent): DL op 0xBD sets DMEM 0x153=0x2C, jump to window entry 0x1DB0, whose switch has no 0x2C case -> falls to task-entry L_1DB0 -> site-3 re-seed -> root DL re-walk.** Next = identify overlay 0x2C's image/loader and route or splice it (NEXT.md). Supersedes the s4737 "end-DL restart edge" reading.
+
+**s4736 (top): runaway mission tasks have exactly ONE RSP entry (positive control: normal tasks also 1; kind-4 refill instrument fires 971x) → H-iter-restart refuted. Their L_11B0 chunk-source sequence is a ~38-source cycle starting at 0x740AD8 that returns to 0x740AD8 even though the preceding chunk (0x744078) has link word 0 → restart source is not the RDRAM chain link; points at DMEM state+0x30 / saved slot-0 reset (H-root-reload family) over cyclic data. Single run. Next = log DMEM[r18+0x30] and its stores across the wrap (NEXT.md). Trace: ROGUESQ_DLWALK=1 + fixup 18.**
+**s4735 (top): runaway tasks' DL call stream is exactly periodic (period 43–48 calls, 100%) and restarts at the root's first call site (pc 0x180); stack depth ≤8 and balanced → H-stale-return refuted (single run, with normal-task control).** Remaining: root-chunk reload from an earlier address (port ring/DL-pointer wrap) vs genuinely cyclic root data. Next = NEXT.md (log root chunk-DMA sources, L_11B4 r2, on a runaway task; compare to ring contents). Trace: ROGUESQ_DLWALK=1, scratch/agent/s4735_run.sh.
+
+**s4733 (top): mission RDP stream ≈ retail (single aligned frame: 877/1054 tri headers, 12/12 texrects byte-identical) → defect is renderer/raster-side, not RSP/DL.** Port-only runaway frames (1846/1849/1851: 20K–102K tris, 100+ setcimg in one sync interval; retail none) are the new lead. Scripts s4733_*.py/.sh in scratch/agent. Next = NEXT.md.
+
+**s4734 (top): runaway frames = truncated-pass re-walk (H-loop supported, single capture).** Frames 1846/1849/1851 are composed of 100K–500K 8-byte ranges (wrap-flush path, dpc_bridge.cpp ~2443, ~960 wraps/run) over ring 0x720000; each pass is the normal 3-scene-block sequence but ends at block 6 (`...3e 27`) and restarts at `3f 37 36 27` instead of reaching the HUD block (`...24 29` fullsync). Blocks repeat byte-identically up to 74x (frame 1846: 117 unique of 558). Normal frame 1845: 8 unique blocks, one 234624-byte range. So some DL walk jumps back after the 3rd scene block (stale return/branch target), not missing-sync merging. Next = NEXT.md (log the F5 ucode DL jump/return targets on a runaway task).
+
+**s4732 (top): the port reaches and sustains the retail mission VI (512 @0x690400, 68.3 s) on the s4724 schedule; H-route refuted.** Mission frame draws sky + ground but terrain is detached ribbons, no ship/HUD. Next = retail-vs-port mission RDP histogram + first-diff (NEXT.md).
+
+**s4731: the s4730 `H-hangar-rdp-diff` unit was already done (s4517-s4521: 1246/1249 tris byte-identical post-s4518; rim/spikes fixed). Oracle now has `--shot`/`--shot-dir` (retail screenshots), but Rice's retail hangar frames are wrong (white background, missing letters) so they are NOT a pixel reference; the pillar-stub question stays parked. Next = mission-phase correctness with the s4724 recipe (NEXT.md).
+
+**s4730 (unit choice superseded by s4731): the s4729 "BLOCKED awaiting owner target" line is overturned.** Next = `H-hangar-rdp-diff` (NEXT.md): diff the port's first hangar-512 RDP frame against the retail capture `rs64-oracle/s4514_rdp_hangar512.bin` (hypotheses: rdp-cmd / tex-upload / renderer). Mission-phase correctness (s4724 recipe) is queued behind it.
+
+
+**s4728 (top): 0x1F0D70..80 is not a stable image struct: window 0x1F0000..0x1F1000 changes by whole-page (0x1000) rewrites and sequential 0x200-byte chunks (17 events, control passed) — generic heap/DMA reuse; the width-1161 premise is retired for the current recipe (s4727+s4728, single-recipe). Do not chase 0x1F0D74 further. Next: re-pick from the priority list (M5 de-stub or renaming-sweep revisit).**
+**s4727 (top): port poll of 0x1F0D70..80 (control 0xCC3E4 passed): no 1161 word in ~2914 frames through mission VI 512@0x690400; uniform-fill events (0xD7D7D7D7, 0x6A6A6A6A, 0x80808080 across all 16 bytes) at frames 268/457/458 unattributed. The width-1161 premise is stale for the current recipe (single run, frame-granular). Next: widen poll to 0x1F0000..0x1F1000 at fill frames. `scratch/agent/s4727_run.sh`, env ROGUESQ_LOG_S4727_IMG_WATCH.**
+
+**s4726 (top): retail values captured.** Retail stores at 0x1F0D70..80 are zeros (0x800078EC) and byte-packed data words (0x800C7F08..801C loop); none contain 0x489 (1161) (266 samples, single-source, unphased). So the port's width-1161 word at 0x1F0D74 is likely a port-side wild/stale write. Next: port-side write watch on 0x1F0D74 with PC attribution (see NEXT.md).
+
+**s4725: retail mission-phase reference.** After initMission (73.4 s) retail VI is 512 wide at origin 0x690400/0x690800 (hangar was 0x6AB800). Retail game code writes 0x1F0D70..80 (292 writes, ~30 distinct writer PCs: 0x800078EC, 0x800C7F08..801C, 0x800CAC44..74); values not yet captured (single-source). Next: `--post-value-watch 1` on that range to compare against the port's width-1161 colour image. `scratch/agent/s4725_run.sh`.
+**s4724 (top): the oracle REACHES a retail mission with no owner input or poke.** `scratch/agent/s4724_run.sh` (Start+A alternating every 3 s from 6 s to 140 s): hangar 33 s, state-5 handler 0x800AC8B0 at 54 s, initMission 0x800FA250 at 73.4 s. Supersedes the s4719/s4722 mission-entry-needs-input lines below. Next = reuse this recipe with mission-phase watches (retail reference for the port's mission state).
+
+**s4722 (top, unblock): the s4719 "BLOCKED awaiting owner" line below is overturned.** Next = `oracle-poke-mission-entry` (NEXT.md): statically find the hangar/menu mode selector, add an oracle `--poke`, force mission entry at the 512 hangar phase; no owner input needed. The mission-entry dependency stays open until that runs.
+
+**s4719: loop BLOCKED awaiting an owner-supplied retail mission-entry route (rename sweep is exhausted per s4646, so the line below is stale).** **s4718 (top): ALL M3 idiom classes are closed** (MEM_*, LD, lwl/lwr, unaligned/64-bit stores, jalr/jr, and now FPR lwc1/swc1/ldc1/sdc1 + LL/SC via tools/census_fpr_llsc.py: FPR ops lower to the already-censused MEM_W/LD/SD macros, all 213 ll/lld/sc/scd sites are do_break). Next: resume the generated-symbol renaming sweep (priority 4; check the last 15 session titles first) unless the owner supplies a mission-entry discriminator.
+
+**s4712: every port re-alloc after the first is preceded by `reapplyDisplayMode` (0x8008EB5C), whose only caller is `runVideoFrameTick` @0x8000153C; retail's `reapplyDisplayMode` has no skip (always `reapplyAudioConfig`).** 6 hits/150 s in the port (widths 320,640,640,1024,512,512,→640), 0 in retail 120 s boot/attract. So the question is how often the mode-change branch (guards at 0x800014F8/0x8000150C/0x80001518: flag byte 0x8010D211, `4($s2)`) fires, not an audio-side gate; hypothesis "port gate handling re-inits audio" (B) is ruled out. Next: trace the three guard values at each of the 6 port hits (and why 320->640 mode change occurs at boot), compare to retail oracle on the same scenes. Entry-hook ra prints 0 (single-source). Recipe/env unchanged (`ROGUESQ_LOG_ALLOC_CALLERS=1`).
+**s4713: the "display-mode" record applied by `reapplyDisplayMode` is really an AUDIO config record** — at each of the 6 taken `runVideoFrameTick` branches `lw 0(s2)` = 0x5622 (22050 Hz; 0x7D00 for the last), byte 4 = 17,16,15,18,18,32, byte 5 = 16,14,15,14,14,32, byte 6 = 1,7,2,5,8,6; flag 0x8010D211 = 1 every time; phases 2,3,3,4,5,5 (2 arms identical; log `[s4713-rdm-guard]`, `ROGUESQ_LOG_ALLOC_CALLERS=1`, helper inside `rs64_m5_route_state_callsite`, src/main/upstream_compat.cpp). Values vary per scene and are not port constants, so the re-alloc is the game requesting a per-scene audio config via the retail path (supports A; single-source: retail past attract unmeasured; record WRITER not yet named).
+
+**s4711: the port's 7 `allocateSongChannelArray` calls (counts 20,17,16,15,18,18,32; the 32 is 32 kHz, a1=0x7D06) all go through `initN64RspMixer`; retail boot/attract runs it once, from `initAudioSubsystem`, and never hits `reapplyAudioConfig` (0x80091C88) or `reapplyDisplayMode` (0x8008EB5C) in 120 s (positive control fired).** Static callers only (entry ra prints 0). Next: measure in the port which of `reapplyAudioConfig`/second `initAudioSubsystem` precedes each alloc and which game caller (funcs_0.c:781/2344) triggers `setDisplayMode`/`reapplyDisplayMode`, then ask whether retail's mode change in the hangar skips the audio re-init (gate bytes 0x80141AD0/1). Recipe: `scratch/agent/s4711_callers.sh`, env `ROGUESQ_LOG_ALLOC_CALLERS=1`.
+
+**s4707: unblocked by re-scope.** Open dependency (owner/external): a mission-entry discriminator or a retail hangar pixel reference; ~10 route variants s4657-s4670 never reached a mission. Meanwhile the port-only unit is naming the writer of `late`/`lcre` at voice +0x34 (NEXT.md, H-voice34-writer-port-only).
+
+**s4700 (new top item, supersedes the s4698/s4699 leads below): the s4672/s4457-bad synth crash is caused by our B40 default.** `musyxNoopStub` (0x8008ED00) skips the shutdown+wait+dereg when gate 0x800A0F50 is 0, and the port's setDisplayMode/reapplyDisplayMode gate stores write 0 unless `ROGUESQ_M5_B40_VALUE` is set (`fixup_game_funcs_vendored.py:8282/8294`, "default remains audio-engine-disabled"). The guest's `reapplyAudioConfig -> initN64RspMixer` then registers the synth a 2nd time with no dereg in between (retail oracle strictly alternates dereg/register); `findAndZeroTableSlotMatching` removes only the first match, so a stale callback walks freed audio blocks. A/B: B40=0 crash 1/1, B40=1 0/3 with strict alternation. Next: qualify B40=1 as the default on the canonical Start-mash title->hangar route (see NEXT.md), then flip it in the fixup scripts. Process rule: every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup (killing the subshell PID leaves orphans that load the machine and fake boot stalls).
+**s4701: B40 default flipped to pass-through (done).** `fixup_game_funcs_vendored.py` and live `funcs_23.c` now store r2 unless `ROGUESQ_M5_B40_VALUE=0` (rollback). Start-mash route: new default 0/3 crashes, B40=0 control crashed 1/2 across both runs (pooled pass-through 0/7). No A11-A14 timeouts, no MORT. Next: long soak of the new default, then the next M5 de-stub. After any regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`.
+
+**s4698 (top item): the `musyxSynthFrame_s4562_impl+5808` bus error (s4672 route) is deterministic 4/4 and is the synth walking audio blocks freed at shutdown.** Writer of the corrupt node = `initTextureLUTAndAllocBuffers` clear loop (guest 0x8001E2C0, legitimate for its own malloc'd table at 0x80179480 that reused the freed 900-B audio block 0x80179380). `ROGUESQ_S4562_PAUSE=1` is insufficient (pause cleared at wait-exit, crash follows); `=2` (hold) 0 crashes 2/2 but kills audio. Next: pause must persist until the guest clears gate 0x800A0F50 and re-open at audio re-init (see scratch/agent/NEXT.md). The s4696 unsigned-literal class audit found 0 further sites (closed).
+
+0. M5 audio de-stubbing is qualified through A13 on the covered route.
+   Session 4691 qualified A11 on the covered route: `waitForAnyAudioSlot`
+   returned three hangar calls with active mask `0x11`, no cap fired, and
+   retail independently executed the named `03` publish and `00` clear
+   writers. Keep the wait cap unchanged. Session 4692 qualified A12's
+   countdown wait for the covered port route; retain the yielding default and
+   do not alter the separate flag spin. Session 4693 qualified A13's default
+   drain return through live slot/status progress and showed the explicit
+   in-loop tick control causes the timeout; retain default-off and the timeout
+   guard. Session 4694 qualified A14 for the port: shutdown call 3 releases
+   only via the guest worker's byte store at PC 0x8009B7EC (not B7CC), which
+   needs the yield (yield-on returns after ~1.0-1.2M scans; yield-off hits the
+   10M-scan timeout, never returns). Retail's call-3 enter->return chain is not
+   independently shown (retail only evidences B7EC runs). Keep
+   `ROGUESQ_A14_YIELD` default on. The next M5 unit is A15/A16 per s4695: A15 SPIN_YIELD redundant (hangar reached with 0 yields); early musyxSynthFrame crash RESOLVED s4696 (diagnostic bug, not a race; see Superseded). s4697: fixed build 4/4 arms reach hangar, 0 crashes with VOICE_TRIGGER_CHAIN armed (bus-error family on this recipe closed). s4672 overlay-route crash (far=0x38000950e, zero-extended 0x8000950e ptr) is a different, unattributed site. Next = s4672 overlay-route replay on the fixed build, see NEXT.md.
+   docs/M5-AUDIO-PLAN.md; see `scratch/agent/NEXT.md`.
+   The AI/SDL boundary matched source-to-consumer hashes and queue lengths in
+   s4682; retain the silent arm as rollback. Do not change the AI status,
+   PCM conversion, or SDL queue from this evidence. The `MEM_H` census is
+   complete; its stale 19-site count was reconciled against the current
+   generated tree. The next M3 unit is the complete backward non-self
+   zero-offset `MEM_HU` census is complete: 1,104 direct loads, 521 backward
+   loop sites, and 440 non-self sites were classified in s4684. No pointer
+   transition or named invalid writer was found; do not add a guard from this
+   class. The subsequent s4685 `MEM_B` census found 35 direct loads, 22
+   backward-loop sites, and 12 non-self scalar/packed/byte-copy consumers,
+   also with no pointer transition or named invalid writer. The s4686 `MEM_BU`
+   census found 861 direct loads, 602 backward-loop sites, and 515 non-self
+   unsigned-byte scalar/index/table consumers; its nine review rows were not
+   pointer transitions. Session 4687 completed the analogous backward
+   non-self zero-offset `MEM_W` census: two independent paths agreed on 3,592
+   direct loads, 1,596 backward-loop sites, and 1,161 non-self sites. The
+   complete table is reproducibly emitted by `tools/census_memw.py`; local
+   review classified 620 as scalar/record/table fields, 319 as derived
+   scalar/index consumers, and 222 as pointer-transition review sites. No
+   named invalid writer was found, so no guard or runtime probe is authorized.
+   The next complete class is the remaining one-site zero-offset `MEM_WU`
+   census. Session 4688 completed it: two independent scans agreed on one
+   direct load, one backward-loop site, and one non-self site in
+   `swizzleTextureRowsToTmem`. The value is immediately combined with the
+   adjacent word into packed texture rows and written by `SD` under bounded
+   row counters; it is not pointer reconstruction and has no named invalid
+   writer. The reproducible table is emitted by `tools/census_memwu.py` and
+   documented in `docs/M3-S4688-MEMWU-CENSUS.md`. No guard or runtime probe is
+   authorized from this class; a new idiom or attributable M4 boundary is
+   required.
+   s4704: `LD` census (`tools/census_ld.py`): 1,406 sites, 1,395 FPR (ldc1), 11 GPR, all scalar/copy/dead-decode; no pointer transition. Next complete class: `do_lwl/do_lwr` (212/206).
+   s4705: `lwl`/`lwr` census (`tools/census_lwl.py`): 203 pairs all unaligned copies, 12 orphans = bcmp probe or data-decoded-as-code; no pointer formation. Load-idiom classes closed.
+
+1. Step 7's complete status-table census selects H-status-writer for the
+   covered route:
+   `serviceVoicePoolFrame` publishes `03` at `0x8009B7CC` and clears the same
+   slot at `0x8009B7EC`, with independent retail PC attribution. Shutdown
+   call-3 was not reached in the target phase, so it remains unevaluable.
+   Do not change the wait or force-clear status. Step 8's complete A10
+   voice/list/table audit selected H-A10-valid: the named writer and all
+   observed pointers were legitimate, and relaxing all 44 guards changed no
+   qualified route outcome. Keep every guard in force and proceed to the next
+   complete M3 idiom census.
+
+   Step 5's complete key-on early-return audit is qualified on the covered
+   title/hangar route: valid divisor `0xC0`, zero guard fires, normal tails,
+   and slot `02` then `00`. Do not remove the returns from this result alone.
+
+- (s4649) Safe full-regen repair is qualified in scratch only; use
+  `tools/fixup_game_funcs_vendored.py <scratch RecompiledFuncs>` and compare
+  behavioral tags using `scratch/s4648/classification.md`. Never regenerate
+  over `../N64Recomp/RecompiledFuncs` until the external fixer is repaired.
+
+2. M4 RSP thread is closed (s4634); s4635 showed the right-edge garbage is not
+   tri-submit. s4636 (`ROGUESQ_EDGE_DUMP=dir`, 4 runs, ~640 dumps) selects
+   H-rdram: in the 512x16bpp hangar colour image, column 511 holds per-frame
+   noise (110-126 distinct values over 240 rows) in buffer 0x00656400 in 4/4
+   runs, and is zero in buffer 0x006AB400; columns <=510 are normal. Screenshot
+   bimodality plausibly = which buffer is on screen (mapping single-source,
+   dumps not frame-synced to screenshots). Next: name the WRITER of
+   0x656400 + 1022 + 1024*row (RT64 RDRAM writeback vs recomp CPU/RSP/RDP
+   code); see scratch/agent/NEXT.md.
+   s4637/s4638: not RT64 wb-only, not CPU stores. s4639 (ROGUESQ_BUF_WATCH,
+   scratch/agent/s4639_bw.sh) selects H-stale: 0x656400 col 511 is already
+   non-zero 240/240 at the first 512-wide VI; later 512-wide RT64 writeback
+   (phys 0x656000 len 0x54C00) converges col 510 but never col 511 (stays
+   ~205/240; 0x6AB400 stays 0). Next: why copyNativeToRAM at width 512 omits
+   col 511 (native fb width/scissor/VI crop) -- read rt64 copyNativeToRAM and log
+   the native fb width + colorWriteWidth. No mitigation without ORIGIN.
+   s4640 (ROGUESQ_WB_COL_PROBE, scratch/agent/s4640_wbcol.sh): 0x656000 ww=512
+   writeback changes col 510 until converged but col 511 changes 0 rows after the
+   first call; control 0x7AB000/0x795C00 do change col 511 -> not a generic loop
+   bound. Selects H-native-unrendered: hangar draws never cover x=511. Next: log
+   SETSCISSOR extents + draw-rect max x for target 0x656000 (single run).
+   s4641 DONE: 0x656000 draw rect is x=140..375 only (121/121 lines); control
+   0x7AB000 rectR=512 does change col 511. Col 511 = stale prior-stride RDRAM that
+   nothing ever rewrites (not an RT64 bug). Next: compare VI hstart/hend (crop of
+   col 511?) in the hangar; if VI shows col 511, check whether retail clears the
+   buffer (needs oracle hangar reach) -- else close the thread as stale/benign.
+   s4642 DONE: hangar VI xScale 0x333 -> 511.9 visible src cols (controls 320/640
+   exact); both 0x656400/0x6AB400 are scanned out. Col 511 = <=1 output px, so it
+   cannot explain a multi-pixel right-edge band. Next: measure the real band width
+   in a hangar frame capture; if >1 px the cause is not col 511.
+   s4643 DONE: band ~5 of 1280 px (col 511 + bilinear halo), bimodal, benign; thread CLOSED.
+2. Keep the odd-PI question parked as a missing-trigger/alternate-route
+   problem; do not align, skip, or mitigate the DMA without a new trigger.
+3. The M4 retail-internal comparison is unevaluable at the independent
+   Rice/HLE boundary (s4689); do not repeat the same accumulator probe.
+   Session 4690's new attributable odd-PI/count-32 voice handoff capture
+   selected H-route-absent: retail and port controls were positive, but neither
+   produced the target handoff plus `0x800903F0` consumer in the requested
+   title/hangar phase. Do not repeat the same route-null capture or add a guard;
+   a new route discriminator is required.
+4. s4644: rim band and holo spikes are no longer visible in current hangar frames (single-source visual); residual candidate is white pillar stubs at x~200/430/865/1085/1130. Need a retail pixel reference before treating it as a defect (retail may light those edges by design). s4645: no reference obtainable; thread PARKED, craft-select frame renders clean.
+5. s4647/s4649/s4653: the safe fresh-copy fixer and tag comparison are
+   qualified; do not regenerate over the live external tree until the normal
+   generation workflow is intentionally repaired or a candidate build path is
+   specified. Session 4654 revalidated the attached-mesh gap; the next
+   bounded unit is the `load_full_header_image` `rs_free` idiom audit.
+   s4651 refutes the port arithmetic arm of M4, while the separate-run matrix
+   join is unavailable. s4652 found no retail hangar pixel reference, so H1 is
+   closed as unevaluable; no runtime mitigation is authorized. s4655 found
+   the two queued M3 audits were historical duplicates (s3637/s3638), and the
+   full M3 `rs_free` campaign is already closed (s4502). Do not repeat them;
+   owner direction is required for a genuinely new discriminator.
+   s4655: the attached-mesh handler was absent from the driven retail
+   boot/title route despite qualified oracle controls. s4656 extended the
+   route and found the handler in 512-wide attract/demo origins, but still no
+   mission phase or action-2 free classification. s4657 repeated the
+   post-title Start/A sequence with the correct Rice-video setup and again
+   reached only the hangar/attract route. Do not treat these nulls as a
+   mission NULL contract proof or add a guard; s4658's distinct post-512
+   sequence still stayed on known attract/demo origins despite handler
+   activity. s4669 repeated the route with the installed Rice path and a
+   post-512 A/Start/A/Z sequence; it again stayed on known attract/demo
+   origins before a Rice shader failure ended the run. The next revisit needs
+   a genuinely different mission-entry control, not another timing variant.
+   s4670's three-Start schedule was invalid because it never reached 512;
+   the next run must use the README's verified six-plus Start schedule before
+   testing a post-hangar transition.
+   s4672's overlay qualification did not reach the required 512 origin and
+   lacked a full-range positive control. s4673 supplied both matcher controls
+   in one run and selected chunked-load H2; keep the canonical full-range call
+   for future complete-section DMAs, but do not treat it as the explanation
+   for the current 1024-to-640 route failure. Overlay registration is parked
+   pending a new dispatch-attribution discriminator.
+
+Session 4658 tried a distinct post-512 input sequence with PIF tracing. The
+whole-RDRAM control hit 10,000 and retail ran for 180 seconds through title,
+512-wide attract/demo, title, and hangar-like 512-wide origins. The watched
+attached-mesh handler executed 148 times, but every retained row was in the
+known attract/demo origins (`0x00690400`, `0x00620400`, `0x00620800`, or
+`0x00690800`); `rs_free` executed 24,465 times. This selects H3 for the new
+route: it still did not reach a mission, so the handler's mission NULL/free
+contract remains unevaluable and no guard is authorized. Artifact:
+`scratch/agent/s4668_attached_mesh_route/oracle.log`.
+
+Session 4669 corrected the Rice plugin path in the prescribed mission-route
+oracle command after the first invocation proved H4: the Cellar path was
+absent and dummy video stayed at 320-wide. The corrected run passed the
+whole-RDRAM control at 10,000 callbacks, reached 512-wide at 69.7s, and
+executed `attachedMeshOverlayNpcHandler` 280 times. All retained handler rows
+were in the known attract/demo origins (`0x00620400`, `0x00620800`,
+`0x00690400`, `0x00690800`); no mission origin appeared. The process exited
+138 at about 87s during repeated Rice shader-compilation errors, before the
+180s budget, but after the discriminator had resolved H3. This is qualified
+single-source evidence that this new route still did not establish mission
+entry; it does not prove the handler is absent from missions and authorizes no
+guard. Artifacts: `scratch/agent/s4669_attached_mesh_route/`.
+
+Session 4670 ran the prescribed hangar-origin A sequence with Rice, the
+whole-RDRAM positive control, VI tracing, PIF tracing, and both execution
+watches. The control fired 33,429 times and `rs_free` at `0x80001ACC` fired
+20,129 times, but the route only reached 320, 640, and 1024-wide phases; it
+never produced a 512-wide hangar or attract origin, and
+`attachedMeshOverlayNpcHandler` at `0x8005427C` fired zero times. The run
+completed normally at 120 seconds. This selects H3 route-invalid for the
+requested mission discriminator and does not establish mission absence or
+authorize a guard. Artifact:
+`scratch/agent/s4670_attached_mesh_hangar_action/`.
+
+The s4686 `MEM_BU` census is closed as H-MEMBU-bounded. Do not repeat the
+closed `MEM_H`/`MEM_HU`/`MEM_B`/`MEM_BU` classes, and do not add a guard without
+a named writer and legitimacy proof.
+
+## Evidence and operating rules
+
+Retail oracle watches are physical-address ground truth. Whole-RDRAM, VI,
+target-PC, and adjacent-range controls must qualify every null. Phase-gate
+animated comparisons on VI transitions. Batch all counters and A/B arms in one
+build/run. Use [F5-UCODE-REFERENCE.md](F5-UCODE-REFERENCE.md), not standard
+F3DEX assumptions. Keep safety guards separate from explanations.
+
+Regeneration order is `make_elf.py -> N64Recomp -> fixup_game_funcs.py ->
+CMake`; never hand-edit generated functions for behavior. If `lib/` changes,
+export submodule patches in the same session. Never run submodule update,
+checkout, clean, or hard reset. Kill runs with SIGKILL and run from `build/`
+with the ROM present. Any mitigation-shaped change needs an `ORIGIN:` line.
+
+See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 for the s4590–s4617
+evidence archive and [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md) for the audio plan.
+
+- s4702/s4703: default B40 pass-through 0 crashes in 15 arms; B40=0 rollback 2/4. The s4702 6-way VI-640 stall did NOT recur at 4-way (s4703 4/4 healthy, d and z arms alike) -> attributed to 6-way load, not B40. Keep soaks <=4 concurrent.
+
+Session 4714: the runVideoFrameTick audio-config record (0x8003757C) is written by retail game code (0x800C59xx / 0x800A9Bxx); the per-scene audio re-allocs are retail behaviour (H-alloc-window-sched-switch hypothesis A, port-only single-source). Next: why allocation inside that window misbehaves in the port.
+
+### s4715 note
+Audio re-alloc window (initN64RspMixer re-entry via runVideoFrameTick->reapplyDisplayMode, 6 re-allocs) is retail behaviour and benign in the port: same tid, block reused with valid header, 0 crashes. Thread H-alloc-window-sched-switch closed. Next: M3 idiom-class census (SDL/SDR, SWL/SWR, LL/SC, LDC1/SDC1).
+
+Addendum s4723: hangar launch = state byte 0x800CC3E4 == 5 (updateHangarBayScene jump table 0x800A56B0) + A/Start edge + transition completion; no single mode global. Oracle reached state 3 and idled (presses had stopped); sustained-press rerun is NEXT.md. See PORTING-STATE Session 4723.
+

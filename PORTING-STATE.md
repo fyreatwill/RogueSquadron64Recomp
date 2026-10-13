@@ -155173,3 +155173,7 @@ Next: find overlay 0x2C's ROM image/loader (the 0xBD handler at 0x15A4 / 0x1298 
 Refutes: H-wrong-ra and H-1DB0-is-restart. Selects: H-overlay-byte (DMEM 0x153 = 0x2C reaching an unrouted `case 0x1DB0`). Evidence lines: (1) `[dlwalk-jmp]` site3last rings, tasks 240/241/242; (2) static switch at factor5_ucode_recompiled.c ~5486 has no 0x2C case.
 Next discriminator: dump the overlay-table entry and first 32 words at the RDRAM source for id 0x2C at the first site-3 hit with d153==0x2C, with id 0x28 as positive control. All-zero => H-2C-noop; code => H-2C-real; nonsense or absent => H-2C-misselect.
 This run refutes H-wrong-ra and H-1DB0-is-restart, and selects H-overlay-byte (id 0x2C at an unrouted `case 0x1DB0`); the next run will discriminate H-2C-noop / H-2C-real / H-2C-misselect via the overlay-table dump.
+
+## Session 4739 (2026-10-13) — maintenance: CURRENT-TRUTH compacted 60013 -> ~37.5 KB
+
+Step 0 triggered (60,013 bytes > 60,000). Migrated the entire "Next steps" log (s4649–s4738, ~220 lines, incl. M4 column-511 thread, M3 census chronicle, route-null sessions s4657–s4670, s4698–s4731 leads) verbatim to PROJECT-OVERVIEW.md under "Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738", and replaced it with a six-item monotonic backlog (top = identify overlay 0x2C per s4738). Refreshed the headline (as of s4739) and the stale s4737 top line. 747 -> 517 lines. No experiments run; script scratch/agent/s4739_compact.py. NEXT.md unchanged (overlay 0x2C unit).
