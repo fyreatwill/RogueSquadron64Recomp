@@ -1,29 +1,23 @@
 # Next work unit
 
-HYPOTHESIS-ID: mission-phase-correctness
+HYPOTHESIS-ID: ovl2c-real-splice
 
-Work unit: obtain an unpaused mission-frame capture after fixup 24, using one
-direct game process and a phase-gated VI control. The s4752 repeated-key recipe
-paused the scene before the ship/HUD comparison.
+Work unit: land the real overlay-0x2C RSPRecomp splice and validate it once.
+This is currently blocked on the human allow rule for the RSPRecomp command;
+do not retry the denied command in this iteration. If the allow rule is added,
+run the existing fixup-6r draft, rebuild, then use the s4753 direct mission
+driver with `ROGUESQ_OVL2C_DROP=0`.
 
-Before building anything, retain these competing hypotheses and discriminator:
+Competing hypotheses and discriminator:
 
-- H1: absent ship/HUD is entirely the dropped 0x2C billboard-sprite work.
-- H2: terrain ribbons or other non-0x2C geometry remain independently wrong.
-- H3: the capture is not in the mission phase.
+- H1: the real 0x2C image restores billboard/sprite content without reviving
+  the runaway DL loop.
+- H2: the splice has an ABI/table/extern mismatch and crashes or re-enters the
+  restart loop.
+- H3: the currently visible mission defects are unrelated to 0x2C.
 
-DISCRIMINATING MEASUREMENT: launch the rebuilt binary once, send the existing
-s4724 key schedule only through the mission-launch edge (stop before the next
-Start press), wait for and log VI origin `0x00690400` at width 512, then capture
-several unpaused frames. H1 predicts terrain/sky without ship/HUD and stable
-0x2C-drop activity; H2 predicts an additional terrain/non-sprite divergence;
-H3 predicts no `0x00690400` phase. Positive controls are the VI-512 transition,
-mission origin, and no-crash log. Do not add runaway counters or use the
-duplicating `tools/probe.sh` wrapper; use the direct one-process driver from
-s4752, with SIGKILL cleanup.
-
-Exact starting command shape:
-`env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_PHASE=1 ./build/RogueSquadron64Recomp`
-Drive Start at 6,12,18,24,30,36,42 seconds and A at 9,15,21,27,33,39,45
-seconds, then stop input; phase-gate on the log line containing
-`vi_width=512` and `origin=0x00690400` before capturing.
+DISCRIMINATING MEASUREMENT: one rebuilt binary, one mission capture, with
+positive controls for VI `512 @ 0x00690400`, no crash/abort, and runaway-task
+count. H1 predicts mission frames plus bounded 0x2C activity; H2 predicts a
+crash or runaway recurrence; H3 predicts the same bounded route and unchanged
+ship/HUD/terrain result as s4753.

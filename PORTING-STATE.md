@@ -155249,3 +155249,17 @@ This iteration selects H-missing-2c-case and refutes H-runaway-independent-of-2c
 ## Session 4752 (2026-10-13) — phase-gated post-fix mission capture reaches pause menu but does not select sprite-vs-terrain defect
 
 Built the current target successfully. The planned s4751 wrapper was absent, and the existing `tools/probe.sh` duplicated itself under the runner's long-lived PTY/continuation handling; those captures were discarded. A direct single-game driver then used the s4724 Start/A schedule, logged VI-512 controls, and captured eight frames. The port reached hangar origin `0x006AB400` and mission origin `0x00690400`, showed the Rebel pause menu and mission text over terrain, and recorded no `[CRASH]` or `[ABORT]`. The independent retail oracle concurrently reached 512-wide hangar and fired its route watches. This rules out a phase-control failure for the run and confirms the post-fix mission loop reaches the pause handler, but repeated Start presses made the frames unsuitable for deciding whether absent ship/HUD content is only dropped 0x2C sprites or an independent terrain/render defect. No code or mitigation was added. Next capture must stop input after mission launch and preserve the VI-512 positive control.
+## Session 4753 (2026-10-13) — unpaused mission capture refutes absent ship/HUD hypothesis
+
+The direct one-process driver `scratch/agent/s4753_unpaused_mission_capture.sh`
+sent the interleaved Start/A schedule only through 45 seconds, then stopped
+input and phase-gated capture on the mission VI. The positive controls fired:
+VI 512 hangar at 24.0 s (`0x006AB400`) and VI 512 mission at 52.5 s
+(`0x00690400`). Eight post-gate frames were captured, with no crash or abort.
+The frames show an unpaused ship, HUD, radar, target reticle, and terrain;
+there is no pause-menu overlay. This refutes the capture-phase hypothesis H3
+and the claim that the missing ship/HUD is entirely explained by absent 0x2C
+work (H1) for this covered route. Terrain-vs-retail pixel divergence remains
+unevaluable without a retail pixel reference (H2 open). The run log had no
+0x2C-drop diagnostic because the route was the default fixup-24 path; no splice
+was attempted. Artifact: `scratch/agent/s4753_unpaused_mission_capture/`.
