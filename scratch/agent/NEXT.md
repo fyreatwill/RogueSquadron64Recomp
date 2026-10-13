@@ -1,10 +1,12 @@
-# Next work unit — measure VI-retrace callback dispatch cardinality
+# Resume next work unit — measure VI-retrace callback dispatch cardinality
 
 HYPOTHESIS-ID: m5-callback-dispatch-cardinality
 
-The s4767 A12 witness positively reached the wait copy with gate 0 but did not
-reach the shutdown copy; no A12 writer or gate change is selected. The next
-M5 unit is the callback-dispatch question left open by s4764.
+Checkpoint status: the s4768 retry did not rerun the experiment and produced no
+new runtime artifact. Resume from the existing s4767 evidence: the wait copy
+was positively reached with gate 0, the shutdown copy was absent, and no A12
+writer or gate change was selected. The next M5 unit is the callback-dispatch
+question left open by s4764.
 
 Competing hypotheses and discriminating measurement:
 
@@ -30,4 +32,5 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --c
 Add the ordinal witness through the canonical fixer and generated output,
 rebuild once, then run the existing default-B40 phase-gated route from
 `build/`; kill the process with SIGKILL. Do not change first-match
-deregistration or add a guard.
+deregistration or add a guard. The prior retry did not add this witness, so
+the next iteration must do the instrumentation before running the command.

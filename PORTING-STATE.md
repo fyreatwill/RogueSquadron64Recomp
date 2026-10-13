@@ -155480,3 +155480,20 @@ reached with an already-clear gate and leaves the shutdown-copy route absent
 on the covered route. It does not select the legitimate writer or justify a
 gate/dispatcher change. Next unit: the callback-dispatch invocation ordinal
 probe from the backlog.
+## Session 4768 (2026-10-13) — checkpointed the incomplete callback-dispatch cardinality work
+
+This retry did not rerun the planned VI-retrace callback-dispatch ordinal
+experiment, per the checkpoint-closeout instruction. The durable evidence
+available at close remains Session 4767: the A12 witness positively entered
+the `waitForMusyXAudioTaskDone` copy at `0x80091F34` three times per arm with
+gate zero, while the `shutdownAudioEngine` copy at `0x80091DC4` did not fire;
+both default and rollback arms reached title VI 1024 and hangar VI 512 without
+crash or abort. That result leaves the callback-dispatch hypotheses
+H-dispatch-all, H-first-live-slot, and H-stale-source unevaluable; it neither
+authorizes a dispatcher change nor a gate/writer mitigation.
+
+The next discriminator remains one rebuilt default-B40 binary with a
+phase-scoped invocation ordinal in the actual VI-retrace dispatcher, plus
+registration/deregistration, synth-entry, title, hangar, and no-crash controls.
+The dispatcher positive control must fire before a zero-ordinal result is
+interpreted.
