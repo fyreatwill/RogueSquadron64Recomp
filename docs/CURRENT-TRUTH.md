@@ -1,5 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4761: the required hangar-gated key route never reached VI 512: the ordinary arm crashed at `musyxSynthFrame_s4562_impl+5808` while still at VI 640, and the documented `ROGUESQ_S4562_PAUSE=2` retry crashed at the same site. Both had phase/log positive controls and zero usable `res=0x2C` or mission-origin rows. The 0x2C splice remains unevaluable; this is an audio-route reachability blocker, not evidence against the splice.**
+
 **s4760: the prescribed long key-mash route-selection arm crashed at startup in `spTaskSchedulerThread+9632` (guest PC `0x8000834c`) before any VI 512 phase, with zero `res=0x2C` rows. The repaired direct-driver control completed cleanly but reached only hangar origin `0x006AB400`, not mission origin `0x00690400`, and also had zero `res=0x2C` rows. The 0x2C-producing input route remains unresolved; this is a route/input-timing blocker, not evidence against the splice.**
 
 **s4759: the repaired executable linked and the phase-gated direct mission driver reached VI 512 origin `0x00690400`, produced all eight requested captures, and had zero crash/abort or DL runaway rows. The compiled ucode contained `OVL2C_1DB0`, but the same run recorded zero `res=0x2C` overlay dispatches; only 0x0C/10/14/18/1C/20/24/28 routes appeared. This is a qualified positive-control run but leaves H1/H2/H3 unevaluable because the covered input did not exercise overlay 0x2C.**
@@ -270,6 +272,13 @@ unchanged. Evidence: `docs/M5-S4693-A13-DRAIN-BOUNDARY.md`.
 
 ## Active frontier
 
+Session 4761 adds a second, phase-gated failure to the overlay-0x2C route
+attempt. The normal arm crashed before the requested VI 512 gate in
+`musyxSynthFrame_s4562_impl+5808`; holding the documented S4562 pause did not
+change that outcome. Since the route never entered the discriminator phase,
+the absence of `res=0x2C` is unevaluable. Resume M5's open callback teardown
+boundary before attempting another overlay-route input recipe.
+
 Session 4649 qualified a safe regeneration repair harness: the vendored fixer
 completed rc=0 against a clean `RecompiledFuncs.s4204-fresh` copy, and the five
 target live-only arms (s4563, s4296, s4580, s4571c, s4572) matched the live
@@ -519,9 +528,10 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed. OPEN DEPENDENCY (human, s4742/s4745; iterations must NOT retry, NEXT.md re-scoped to runaway-DL cost measurement): add RSPRecomp Bash allow rules to .claude/settings.json (see scratch/agent/UNBLOCK.md); meanwhile NEXT.md is the offline 0x2C analysis. Full pre-compaction history of this section: PROJECT-OVERVIEW.md, "Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738".
 
-1. **s4760: isolate the 0x2C-producing input route without the boot-time crash.** The boot-relative long key-mash arm dies before phase entry, while the direct arm reaches hangar but not mission and neither emits `res=0x2C`. Phase-gate the same key sequence on the hangar VI 512 control, keep the batched route/task/DL logs, and classify only a mission-origin run or a reproducible post-gate crash. Do not infer splice output from either current null.
-2. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
-3. **M5 audio:** de-stubbing qualified through A14 on the covered route (A11 wait cap, A12 countdown wait, A13 drain return default-off + timeout guard, A14 shutdown-call-3 needs `ROGUESQ_A14_YIELD` default on; B40 default flipped to pass-through s4701, rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`). A15 redundant, early synth crash resolved s4696. Per-scene audio re-allocs (initN64RspMixer via runVideoFrameTick->reapplyDisplayMode) are retail behaviour and benign (s4711-s4715, closed). Plan: docs/M5-AUDIO-PLAN.md. Keep soaks <=4 concurrent; every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup.
+1. **M5 audio callback teardown boundary:** audit whether `shutdownAudioEngine`'s deregistration of `musyxSynthFrame` from the four-slot VI-retrace callback table is honored by the port dispatcher. Batch a source-side dispatch/deregistration witness with the existing phase controls, then run one real-audio title/hangar capture. Do not bypass the callback or add a guard without naming its writer and legitimacy.
+2. **s4761: the 0x2C-producing input route remains blocked before phase.** Both the ordinary hangar-gated key arm and the documented S4562-pause retry crashed at `musyxSynthFrame_s4562_impl+5808` while VI remained 640. Do not infer splice output from these nulls; resume only after the M5 callback boundary is addressed.
+3. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
+4. **M5 audio:** de-stubbing qualified through A14 on the covered route (A11 wait cap, A12 countdown wait, A13 drain return default-off + timeout guard, A14 shutdown-call-3 needs `ROGUESQ_A14_YIELD` default on; B40 default flipped to pass-through s4701, rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`). A15 redundant, early synth crash resolved s4696. Per-scene audio re-allocs (initN64RspMixer via runVideoFrameTick->reapplyDisplayMode) are retail behaviour and benign (s4711-s4715, closed). Plan: docs/M5-AUDIO-PLAN.md. Keep soaks <=4 concurrent; every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup.
 4. **M3 idiom classes are ALL closed** (MEM_B/BU/H/HU/W/WU, LD, lwl/lwr, SDL/SDR/SWL/SWR, FPR lwc1/swc1/ldc1/sdc1, LL/SC; tools/census_*.py, docs/M3-S4688-MEMWU-CENSUS.md). No guard without a named writer and legitimacy proof. Attached-mesh `rs_free` NULL contract was unevaluable (no oracle route reached a mission s4655-s4670); the s4724 recipe now reaches one, so it could be revisited with mission-phase watches.
 5. **Parked / closed, do not repeat without a new discriminator:** M4 accumulator boundary (unevaluable at the Rice/HLE boundary, s4689); odd-PI DMA question (s4690 H-route-absent); right-edge column-511 noise (benign stale RDRAM, s4643); hangar pillar stubs (no pixel reference; Rice retail hangar frames are wrong, s4645/s4731); 0x1F0D74 width-1161 premise (generic heap/DMA reuse, s4728); overlay registration chunked-load H2 (s4673); safe fresh-copy fixer `tools/fixup_game_funcs_vendored.py <scratch RecompiledFuncs>` is qualified in scratch only - never regenerate over `../N64Recomp/RecompiledFuncs` until the external fixer is repaired (s4649).
 6. **Renaming sweep** (priority 4): resume only when 1-3 are inapplicable; check the last 15 session titles first.

@@ -155356,3 +155356,17 @@ these runs rule out a link-time crash in the repaired binary and establish a
 reproducible input/timing blocker for the boot-relative key-mash recipe, but
 they do not select whether the 0x2C splice works. The next discriminator is
 the same key sequence phase-gated on hangar VI 512.
+
+## Session 4761 (2026-10-13) — hangar-gated 0x2C route remained unreachable
+
+Ran the prescribed hangar-gated key sequence with the repaired overlay-0x2C
+binary and batched phase, task-submit, DL-walk, and overlay-provenance logs.
+The ordinary arm had positive phase logging and reached VI 640, but crashed in
+`musyxSynthFrame_s4562_impl+5808` before VI 512; it produced no mission-origin
+or `res=0x2C` rows. The fixed-version retry with documented
+`ROGUESQ_S4562_PAUSE=2` also remained at VI 640 and crashed at the same synth
+site. Both runs used the required phase gate and had active diagnostic output,
+so this is a qualified pre-discriminator failure, not a null result for the
+overlay route. It rules out neither Hphase nor Habsent nor Hbad. It does rule
+out this input recipe as a usable route until the M5 callback teardown boundary
+is addressed. No mitigation or overlay conclusion was landed.
