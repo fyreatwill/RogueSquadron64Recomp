@@ -39,6 +39,10 @@ then jal L_17F0 / L_112C, exits j L_1268; ori $5, 0x28. Fixup 6q
 extracts L_12A0..0x13F7 and routes DMEM 0x153 == 0x20. Do not
 overwrite L_12A0; do not name this overlay ovl28.
 
+Overlay 0x2C is dest 0x1DB0 (ROM 0x27368, DMA len 0x23F -> 0x240 B):
+ends j 0x112C; ori ra, 0x10d8. Fixup 6r (s4741) extracts that window and
+routes DMEM 0x153 == 0x2C.
+
 Usage: python3 tools/make_clip_composite.py [4|10|12|14|16|18|24|0x1C|28|0x20|32]   (from the repo root; 16==10, 28==0x1C, 32==0x20)
 """
 import sys
@@ -59,6 +63,7 @@ OVERLAYS = {
     18: (0x26CD8, 0x220, "ovl18", WINDOW_ROM, WINDOW_END),
     0x1C: (0x26EF8, 0x20C, "ovl1c", WINDOW_ROM, WINDOW_END),
     0x20: (0x27108, 0x158, "ovl20", 0x25830, None),
+    0x2C: (0x27368, 0x240, "ovl2c", WINDOW_ROM, WINDOW_END),
     24: (0x27260, 0xE4, "ovl24", 0x25830, None),
 }
 
