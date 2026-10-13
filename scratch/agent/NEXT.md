@@ -1,9 +1,6 @@
-# Rerun s4788 DROP=1 at low host load, then read per-phase `res=0x2C` route counts at VI 512
+# Bisect the spTaskSchedulerThread+9632 startup crash: DROP=1 vs DROP unset
 
 HYPOTHESIS-ID: factor5-overlay-0x2c-splice
 
-s4788 produced no data: soak stalled in VI 640 (0 ovl-route rows, control failed) and a same-iteration rerun crashed at spTaskSchedulerThread+9632, both at host load 10-13 (Chrome/WindowServer, not ours).
-Work unit: `uptime`; only run when 1-min load < 4 (else go BLOCKED asking the human to quiet the host). Run `zsh scratch/agent/s4788_drop1.sh` from repo root (no `timeout` binary on this mac). Extract `res=0x2C` rows after `[phase] vi_width=512` vs title phase.
-Competing: (A) many phase-6 routes => stopgap drops real mission content; (B) ~0 routes while DL arrivals2c>0 => arrivals die before RSP routing; (C) still stalls at low load => not load, bisect vs previous binary.
-Control: title-phase `res=0x2C` rows (152 in s4787) and the VI 512 line must both be present, else the run is void.
-Then: in-run DROP toggle so DROP=1/0 compare within one phase.
+s4789: DROP=1 run crashed at startup again (3rd time at this PC, load 7-13). Work unit: `uptime`; run `zsh scratch/agent/s4788_drop1.sh` as-is, then again with `ROGUESQ_OVL2C_DROP=1` removed from the env line. Control: the no-DROP arm must reach `vi_width=512` (s4787 did).
+Outcomes: crash only with DROP => the flag causes it (guard/fix); crash in both => startup race/load, need a human to quiet the host; neither crashes => earlier crashes were load, proceed to the per-phase `res=0x2C` count after `vi_width=512`.

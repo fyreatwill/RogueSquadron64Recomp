@@ -674,3 +674,4 @@ Retail oracle watches are physical-address ground truth. Whole-RDRAM, VI, target
 Regeneration order is `make_elf.py -> N64Recomp -> fixup_game_funcs.py -> CMake`; never hand-edit generated functions for behavior. If `lib/` changes, export submodule patches in the same session. Never run submodule update, checkout, clean, or hard reset. Kill runs with SIGKILL and run from `build/` with the ROM present. Any mitigation-shaped change needs an `ORIGIN:` line.
 
 See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) section 59 for the s4590-s4617 evidence archive and [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md) for the audio plan.
+- s4789: DROP=1 mission-2c still unmeasured; startup crash at spTaskSchedulerThread+9632 recurred (load 7.6). SOAK-RESULTS s4788_drop1_mission_2c rc=0 line is a FALSE PASS (bash print broke the driver). Next: bisect DROP on/off (NEXT.md).
