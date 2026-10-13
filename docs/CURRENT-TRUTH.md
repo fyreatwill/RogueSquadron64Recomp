@@ -175,7 +175,7 @@ reproduced by a second exact scan. The sites are bounded table, sentinel list,
 render-reference, or audio-list walks; no named writer was shown to publish an
 invalid pointer. The existing heap-list guard probes supplied the positive
 control. This is static evidence only: no guard or mitigation is authorized,
-and the next M3 unit must be a different complete idiom class. (s4717: jalr/jr indirect-call class closed — all 113 register-target + 28,185 constant sites go through get_function, which fails loud; tools/census_indirect_calls.py.) (s4716: swl/swr/sdl/sdr/ldl/ldr census closed the unaligned-access classes; see PORTING-STATE s4716.)
+and the next M3 unit must be a different complete idiom class. (s4718: FPR/LL-SC census closed the last candidate class; tools/census_fpr_llsc.py.) (s4717: jalr/jr indirect-call class closed — all 113 register-target + 28,185 constant sites go through get_function, which fails loud; tools/census_indirect_calls.py.) (s4716: swl/swr/sdl/sdr/ldl/ldr census closed the unaligned-access classes; see PORTING-STATE s4716.)
 
 Session 4675 completed a fresh M3 census of backward loops containing a
 non-self zero-offset pointer transition (`MEM_W(ctx->rN, 0)`). It found 399
@@ -493,6 +493,8 @@ no guard, patch, or mitigation was added. Artifacts are in
   inert chunk-2 record. Those interpretations were tested and closed.
 
 ## Next steps
+
+**s4718 (top): ALL M3 idiom classes are closed** (MEM_*, LD, lwl/lwr, unaligned/64-bit stores, jalr/jr, and now FPR lwc1/swc1/ldc1/sdc1 + LL/SC via tools/census_fpr_llsc.py: FPR ops lower to the already-censused MEM_W/LD/SD macros, all 213 ll/lld/sc/scd sites are do_break). Next: resume the generated-symbol renaming sweep (priority 4; check the last 15 session titles first) unless the owner supplies a mission-entry discriminator.
 
 **s4712: every port re-alloc after the first is preceded by `reapplyDisplayMode` (0x8008EB5C), whose only caller is `runVideoFrameTick` @0x8000153C; retail's `reapplyDisplayMode` has no skip (always `reapplyAudioConfig`).** 6 hits/150 s in the port (widths 320,640,640,1024,512,512,→640), 0 in retail 120 s boot/attract. So the question is how often the mode-change branch (guards at 0x800014F8/0x8000150C/0x80001518: flag byte 0x8010D211, `4($s2)`) fires, not an audio-side gate; hypothesis "port gate handling re-inits audio" (B) is ruled out. Next: trace the three guard values at each of the 6 port hits (and why 320->640 mode change occurs at boot), compare to retail oracle on the same scenes. Entry-hook ra prints 0 (single-source). Recipe/env unchanged (`ROGUESQ_LOG_ALLOC_CALLERS=1`).
 **s4713: the "display-mode" record applied by `reapplyDisplayMode` is really an AUDIO config record** — at each of the 6 taken `runVideoFrameTick` branches `lw 0(s2)` = 0x5622 (22050 Hz; 0x7D00 for the last), byte 4 = 17,16,15,18,18,32, byte 5 = 16,14,15,14,14,32, byte 6 = 1,7,2,5,8,6; flag 0x8010D211 = 1 every time; phases 2,3,3,4,5,5 (2 arms identical; log `[s4713-rdm-guard]`, `ROGUESQ_LOG_ALLOC_CALLERS=1`, helper inside `rs64_m5_route_state_callsite`, src/main/upstream_compat.cpp). Values vary per scene and are not port constants, so the re-alloc is the game requesting a per-scene audio config via the retail path (supports A; single-source: retail past attract unmeasured; record WRITER not yet named).
