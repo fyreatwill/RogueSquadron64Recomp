@@ -1,5 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4776: 4th identical death (si_addr 0x38000950e = rdram base 0x300000000 + unmasked guest 0x8000950e in x9) at +5808, VI 640 0x696100, at load ~9; same si_addr across s4672/s4761/s4764/s4775/s4776, so Hload is unsupported (never tested at load<3). Next: identify the guest instruction/register at +5808 and the writer of 0x8000950e.**
+
 **s4775: the hangar-gated menu walk (scratch/agent/s4776_gated_menu_walk.sh) crashed 3/3 at `musyxSynthFrame_s4562_impl+5808` (VI 640 0x696100, ~77 s) before the hangar appeared, so no key was sent. Title arrived at ~50 s vs 15 s in fast runs, machine load ~8: the crash looks load/timing sensitive (single-source). Rerun on a quiet machine.**
 
 **s4774: 0 of 4 mission-route drivers on the spliced binary reached mission
