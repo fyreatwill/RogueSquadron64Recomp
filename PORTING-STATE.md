@@ -155103,3 +155103,11 @@ Change: tools/oracle/rs64_oracle.c gains --shot SEC,... and --shot-dir DIR (core
 Result: Rice retail hangar render is wrong as a reference: title/menu letters partly missing, flat white background, ship holograms present but no 3D bench/pillars. Rice cannot adjudicate whether the port stubs are design or defect. Selects: pixel reference via Rice is closed; the only remaining route is replaying the s4514 RDP capture through an accurate renderer (paraLLEl/angrylion), not built.
 Rules out: oracle + Rice gives a retail hangar frame to compare the stubs against.
 Single-source: one Rice run, two PNGs inspected visually. ORIGIN: n/a, tooling only.
+
+## Session 4732 (2026-10-13) — port reaches the mission VI on the retail schedule; H-route refuted, mission terrain renders as stray strips
+
+Ran: scratch/agent/s4732_run.sh (retail s4724 schedule: Start every 6 s, A offset 3 s, right at 62 s; the usual LLE env; PROBE_PHASE log). Single run, 150 s, port did not crash.
+Result: VI transitions 320 -> 640 (3.7 s) -> 1024 (16.9 s) -> 512 hangar @0x6AB400 (30.0 s) -> 640 (54.5 s) -> 512 @0x690400 (68.3 s, update_screen #4003). Retail reaches the same 0x690400/512 mission VI (initMission 73.4 s). Run ended at update_screen #9344 still on 0x690400/512, so the port reaches AND sustains the mission phase. Last frame (f_030): sky + desert ground drawn, terrain appears as detached curved ribbons over a flat tan plane, no ship/HUD visible.
+Rules out: H-route (port cannot reach mission); s4657-s4670 never reaching it was a route problem, not a wall. Does not yet select H-stream-equal vs H-rsp.
+Single-source: one run, one screenshot judged by eye. ORIGIN: n/a, no mitigation added.
+Next: per-sync RDP histogram of the port's mission VI vs retail (oracle rdplog on the s4724 recipe), then first differing command at an aligned mission frame (s4517_diff.py).
