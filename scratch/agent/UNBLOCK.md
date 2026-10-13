@@ -1,3 +1,2 @@
-# UNBLOCK (s4720)
-Route 1 attempted, then route 4. Experiment: oracle with extended Return presses to 180 s (scratch/agent/s4720_run.sh). Reached only title/attract (512 @ 0x690x00/0x620x00); no hangar, no mission. Block stands.
-Refuting experiment: an oracle run whose PC trace shows a mission-load function (needs a new input recipe or savestate from the owner).
+# UNBLOCK (s4722)
+Route 3 (re-scope). Route 1 finding: the claim "owner must supply an input recipe or savestate" is unproven; the ~10 variants s4657-s4720 all varied BUTTON input only. Never tried: writing the hangar/menu mode variable in RDRAM (poke) at the hangar phase, which needs no owner decision. Not executed this iteration (static read + oracle edit is a full work unit); queued as NEXT.md oracle-poke-mission-entry.

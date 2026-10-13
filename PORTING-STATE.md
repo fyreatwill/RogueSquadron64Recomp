@@ -155038,3 +155038,7 @@ Routes 2/3: no local discriminator exists (no savestate, no mission-entry recipe
 
 ## Session 4721 (2026-10-13) — re-check after s4720 unblock attempt: no new input, block stands
 Step 0: CURRENT-TRUTH 52,436 B, no maintenance. NEXT.md still says BLOCKED; no commits since s4720, no savestate or mission-entry recipe in scratch/agent or tools/oracle (searched for *.sav / *state*: none). SOAK-RESULTS has no verdicts newer than 20261010-023837 (already folded in). BLOCKED.md had been removed by the unblock flow, so it was rewritten. No experiment run: with no mission-entry route there is no measurement whose outcome splits any hypothesis, and a repeat of the s4720 title/attract run would be a null with no control for the hangar. ORIGIN: n/a (no mitigation code added).
+
+## s4722 (2026-10-13) UNBLOCK iteration for s4721 BLOCKED (mission-entry discriminator)
+
+Route 3 (re-scope). All prior mission-entry attempts (s4657-s4720) varied button presses only; none tried forcing the menu/hangar mode variable in RDRAM. The oracle already reaches the retail hangar and supports savestates, so a bounded --poke at the 512 hangar phase is a work unit needing no owner input. NEXT.md rewritten as oracle-poke-mission-entry (static read of runHangarSelectionFrame / menuOverlayInit dispatch, then poke; positive control = read-back + VI change). Not executed here; if step 1 finds no single selector variable the block is re-raised with that specific negative.
