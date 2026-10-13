@@ -155063,3 +155063,10 @@ Result: control fired (10,299 writes, global hit-cap limits the count; fired, no
 Rules out: "port-only divergence" for 0x1F0D74 being written at all (retail writes it too); does NOT yet show retail ever stores a 1161-wide colour-image there (values not captured, single-source, pc-hist only; no phase split because hit-cap saturates).
 ORIGIN: n/a (no mitigation added).
 Next: capture write VALUES for watch 1 phase-gated (post-value-watch 1) and compare to port's 1161-width word; one run.
+
+## Session 4726 (2026-10-13) — retail stored values at 0x1F0D70..80: byte-packed data and zeros, never width 1161
+What ran: scratch/agent/s4726_run.sh (s4725 recipe + --post-value-watch 1, --post-value-pc 0x800078EC/0x800C7F08, --pc-hist-phase 0x690400/0x690800/0x6AB800:512), 110 s, rc=0. Positive control (whole-RDRAM write watch 0) armed as in s4725.
+Result: 266 post-value samples (64 unique, 183 overflow), every post-store-scalar row mismatch=0. 0x800078EC (n=32) stores zero (a clear). 0x800C7F08..0x800C801C (n~27 each, sequential stride) store nonzero byte-packed words (e.g. 0xe1e2c725, 0xd6c02d2a) that look like pixel/array data, not a struct field. Zero samples contain 0x489 (1161). The post-target-* rows are empty (seen=0): the phase gate for the PC-forced samples never armed, so samples are NOT phase-split (mission-phase attribution unproven).
+Reading: retail uses 0x1F0D70..80 as general data memory; a colour-image struct with width 1161 there is not retail behaviour (single-source, unphased). The port's 1161 word at 0x1F0D74 is likely a port-side stale/wild writer, so the port guards mask real corruption. Does not name the port writer.
+ORIGIN: n/a (no mitigation added).
+Next: port-side write watch on 0x1F0D74 with PC attribution; compare to retail PCs 0x800078EC / 0x800C7F08 / 0x800CAC44..74.

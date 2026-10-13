@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: oracle-poke-mission-entry
 
-s4725: retail mission VI = 512 wide at 0x69xxxx; retail game code writes 0x1F0D70..80 (292 writes, PCs in PORTING-STATE s4725).
-Unit: rerun scratch/agent/s4725_run.sh adding `--post-value-watch 1` (and a post-value PC from the writer list e.g. --post-value-pc 0x800078EC) to capture the stored word values at 0x1F0D74; compare to the port's width-1161 colour-image word. Add a phase gate so hits are not exhausted by hit-cap.
-Outcomes: retail stores a 1161 width => legitimate, port-side guards are masking real behaviour; retail stores other values => port writer is wrong, trace the port's equivalent PC.
-Positive control: whole-RDRAM watch fires.
+s4726: retail stores at 0x1F0D70..80 are zeros (0x800078EC) and byte-packed data (0x800C7F08..801C loop); never 0x489/1161. Samples unphased (post-target-* seen=0), single-source.
+Unit: in the PORT, arm a write watch on 0x1F0D74 with PC attribution (find existing port write-watch env vars under tools/ or the runtime) and record writer and stored value when width 1161 appears. Compare writer with retail PCs (0x800078EC clear, 0x800C7F08 loop, 0x800CAC44..74).
+Outcomes: writer is a retail-equivalent function storing 1161 => upstream port-state divergence (trace its input); writer is non-game code (host/DMA/ucode) => wild write, name it.
+Positive control: a watch on a known-written address in the same run fires.
