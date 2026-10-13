@@ -716,3 +716,5 @@ Session 4714: the runVideoFrameTick audio-config record (0x8003757C) is written 
 
 ### s4715 note
 Audio re-alloc window (initN64RspMixer re-entry via runVideoFrameTick->reapplyDisplayMode, 6 re-allocs) is retail behaviour and benign in the port: same tid, block reused with valid header, 0 crashes. Thread H-alloc-window-sched-switch closed. Next: M3 idiom-class census (SDL/SDR, SWL/SWR, LL/SC, LDC1/SDC1).
+
+Addendum s4723: hangar launch = state byte 0x800CC3E4 == 5 (updateHangarBayScene jump table 0x800A56B0) + A/Start edge + transition completion; no single mode global. Oracle reached state 3 and idled (presses had stopped); sustained-press rerun is NEXT.md. See PORTING-STATE Session 4723.
