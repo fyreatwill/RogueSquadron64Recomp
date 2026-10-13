@@ -1785,9 +1785,15 @@ extern "C" void rs64_e9prov_frame_resume(uint32_t slot, uint32_t resumed_pc) {
 
 extern "C" void rs64_e9prov_task_end(uint32_t task) {
     if (dlwalk_on() && g_dlw.task == task) {
-        static int sums = 0, dets = 0, dets2 = 0;
-        if (sums < 400 && (g_dlw.fetches > 3000 || sums < 30)) {
-            ++sums;
+        static int sums_ph[16] = {0}, dets = 0, dets2 = 0;
+        const uint32_t ph_ord = rs64_phase_ord() & 15u;
+        static uint32_t tot_ph[16] = {0}, run_ph[16] = {0};
+        ++tot_ph[ph_ord];
+        if (g_dlw.fetches >= 16000) ++run_ph[ph_ord];
+        if (sums_ph[ph_ord] < 150 && (g_dlw.fetches > 3000 || sums_ph[ph_ord] < 10)) {
+            ++sums_ph[ph_ord];
+            if ((tot_ph[ph_ord] & 63u) == 1u)
+                fprintf(stderr, "[dlwalk-ph] phase=%u tasks=%u runaway=%u\n", ph_ord, tot_ph[ph_ord], run_ph[ph_ord]);
             fprintf(stderr, "[dlwalk-sum] task=%u phase=%u fetches=%u nonseq=%u back=%u events=%zu\n",
                     task, rs64_phase_ord(), g_dlw.fetches, g_dlw.nonseq, g_dlw.back, g_dlw.ev.size());
         }
