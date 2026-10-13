@@ -175,7 +175,7 @@ reproduced by a second exact scan. The sites are bounded table, sentinel list,
 render-reference, or audio-list walks; no named writer was shown to publish an
 invalid pointer. The existing heap-list guard probes supplied the positive
 control. This is static evidence only: no guard or mitigation is authorized,
-and the next M3 unit must be a different complete idiom class. (s4716: swl/swr/sdl/sdr/ldl/ldr census closed the unaligned-access classes; see PORTING-STATE s4716.)
+and the next M3 unit must be a different complete idiom class. (s4717: jalr/jr indirect-call class closed — all 113 register-target + 28,185 constant sites go through get_function, which fails loud; tools/census_indirect_calls.py.) (s4716: swl/swr/sdl/sdr/ldl/ldr census closed the unaligned-access classes; see PORTING-STATE s4716.)
 
 Session 4675 completed a fresh M3 census of backward loops containing a
 non-self zero-offset pointer transition (`MEM_W(ctx->rN, 0)`). It found 399
