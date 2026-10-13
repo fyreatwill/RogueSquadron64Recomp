@@ -2973,6 +2973,16 @@ if is_main_ucode and DLW_MARKER not in text:
     if _site[0] != 3:
         print("fixup_factor5_ucode: FIXUP 18 W30 SITE COUNT", _site[0], file=sys.stderr)
         sys.exit(1)
+    # s4738: ring-record every do_indirect_jump arrival (target, r31, debug_line, DMEM 0x153).
+    text, n4 = re.subn(r"(RspExitReason factor5_ucode\()",
+        lambda m: 'extern "C" void rs64_dlw_jump(uint32_t target, uint32_t r31, uint32_t line, uint32_t d153);  ' + DLW_MARKER + "\n" + m.group(1),
+        text, count=1)
+    text, n5 = re.subn(r"(^do_indirect_jump:\n)",
+        lambda m: m.group(1) + "    rs64_dlw_jump(jump_target, r31, (uint32_t)debug_line, RSP_MEM_BU(0X153, 0));  " + DLW_MARKER + "\n",
+        text, count=1, flags=re.MULTILINE)
+    if (n4, n5) != (1, 1):
+        print("fixup_factor5_ucode: FIXUP 18 JUMP ANCHOR FAILED", (n4, n5), file=sys.stderr)
+        sys.exit(1)
 
 # ---------------------------------------------------------------------------
 # Fixup 17: TriGen L_1DB0 DPC-branch trace (s726, item -421).

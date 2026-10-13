@@ -384,6 +384,10 @@ struct DlWalkTrace {
     struct Ev { uint32_t kind, a, b, c, n; };  // 1 nonseq-fetch(prev,addr,prevop) 2 push 3 pop
     uint32_t task = 0, fetches = 0, nonseq = 0, back = 0, prev = 0xFFFFFFFFu, prev_op = 0;
     std::vector<Ev> ev;
+    // s4738: ring of the last 8 do_indirect_jump arrivals; snapshots at 0x30(r18) site-3 stores.
+    struct Jmp { uint32_t target, r31, line, d153, prev_op, n; };
+    Jmp ring[8] = {}; uint32_t ring_n = 0;
+    Jmp snap_first[8] = {}, snap_last[8] = {}; uint32_t nsnap = 0;
 };
 static DlWalkTrace g_dlw;
 static bool dlwalk_on() {
@@ -1417,8 +1421,19 @@ static void dlw_dump_words(const char *tag, uint32_t task, uint32_t src) {
     }
     fprintf(stderr, "\n");
 }
+extern "C" void rs64_dlw_jump(uint32_t target, uint32_t r31, uint32_t line, uint32_t d153) {
+    if (!dlwalk_on() || g_dlw.task == 0) return;
+    g_dlw.ring[g_dlw.ring_n++ & 7] = {target & 0xFFFFu, r31 & 0xFFFFu, line, d153, g_dlw.prev_op, g_dlw.fetches};
+}
+
 extern "C" void rs64_dlw_root(uint32_t kind, uint32_t a, uint32_t b) {
     if (!dlwalk_on() || g_dlw.task == 0) return;
+    if (kind == 6 && a == 3) {
+        auto *dst = g_dlw.nsnap == 0 ? g_dlw.snap_first : g_dlw.snap_last;
+        for (uint32_t i = 0; i < 8; ++i) dst[i] = g_dlw.ring[(g_dlw.ring_n + i) & 7];
+        if (g_dlw.nsnap == 0) memcpy(g_dlw.snap_last, g_dlw.snap_first, sizeof g_dlw.snap_last);
+        ++g_dlw.nsnap;
+    }
     uint32_t w0 = 0;
     if (kind == 4 && g_rdram_for_submit != nullptr) {
         const uint32_t p = b & 0x7FFFF8u;
@@ -1761,6 +1776,14 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
         if (runaway && g_dlw_zero_task == task) { static int tz = 0; for (uint32_t i = 0; i < g_dlw_nzero && tz < 24; ++i, ++tz) dlw_dump_words("end", task, g_dlw_zero_src[i]); }
         if ((runaway && dets < 3) || (normal && dets2 < 2)) {
             if (runaway) ++dets; else ++dets2;
+            auto dump = [&](const char *tag, const DlWalkTrace::Jmp *r, bool ordered) {
+                for (uint32_t i = 0; i < 8; ++i) { const auto& j = ordered ? r[i] : r[(g_dlw.ring_n + i) & 7];
+                    fprintf(stderr, "[dlwalk-jmp] task=%u %s i=%u n=%u tgt=0x%04X r31=0x%04X line=%u d153=0x%02X prevop=0x%02X\n",
+                            task, tag, i, j.n, j.target, j.r31, j.line, j.d153, j.prev_op); }
+            };
+            fprintf(stderr, "[dlwalk-jmp] task=%u runaway=%d nsnap=%u ring_n=%u\n", task, runaway ? 1 : 0, g_dlw.nsnap, g_dlw.ring_n);
+            dump("end", g_dlw.ring, false);
+            if (g_dlw.nsnap) { dump("site3first", g_dlw.snap_first, true); dump("site3last", g_dlw.snap_last, true); }
             for (const auto& e : g_dlw.ev)
                 fprintf(stderr, "[dlwalk-ev] task=%u n=%u k=%u a=0x%06X b=0x%06X c=0x%06X\n", task, e.n, e.kind, e.a, e.b, e.c);
         }
