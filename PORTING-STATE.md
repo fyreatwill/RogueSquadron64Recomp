@@ -155577,3 +155577,9 @@ presence, and the phase control, but leaves the image's effect unevaluable and
 rules out no route or DL hypothesis. The next unit is a new mission-route
 driver, not another hangar-only replay. Artifact:
 `scratch/agent/s4753_unpaused_mission_capture/`.
+
+## Session 4774 (2026-10-13) — mission-route drivers on the spliced binary: 0 of 4 reached mission origin
+Ran the s4774 phase-gated probe.sh driver and the s4753 winctl Start/A recipe (copied to scratch/agent/s4775_spliced_s4753_route.sh, run twice) on the compiled-0x2C binary, no recompile.
+- probe.sh driver: first run (width-512 gate) died with a Bus error before any phase (single occurrence, unanalysed). Re-run gated on width 640, 180 s: VI 512 control fired (149 rows, hangar 0x006AB400 at 30.7 s); origin 0x00690400 0 rows; res=0x2C 0 rows; arrivals2c=0 on all 460 dlwalk rows; no CRASH/ABORT.
+- s4753 recipe x2: hangar VI 512 at 24.9 s and 20.7 s, never mission, res=0x2C 0 rows, no crash.
+Verdict: H2C-route-absent; splice effect still unevaluable. Mission entry reached once pre-splice (s4753) and once spliced (s4759), so wall-clock mashing is timing-sensitive. No runtime splice toggle exists, so no same-binary A/B. Next: derive the hangar->mission trigger.

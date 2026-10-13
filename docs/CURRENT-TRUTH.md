@@ -1,5 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4774: 0 of 4 mission-route drivers on the spliced binary reached mission
+origin `0x00690400`.** The phase-gated probe.sh driver (180 s, 149 VI-512 rows)
+and two runs of the s4753 winctl Start/A recipe all stopped at hangar
+`0x006AB400`; `res=0x2C` rows 0, `arrivals2c=0` on 460 dlwalk rows, no
+crash. One earlier width-512-gated attempt died with a Bus error before any
+phase (single occurrence, unanalysed). Splice effect remains unevaluable;
+wall-clock key mashing is not a reliable route (s4753 and s4759 each reached
+mission once). Next: derive the hangar->mission trigger instead of mashing.
+
 **s4773: the compiled overlay-0x2C splice passed build validation but the
 existing mission recipe did not reach the mission route.** The exact
 `../N64Recomp/build/RSPRecomp factor5_rsp_ovl2c.toml` command exited 0 and the
