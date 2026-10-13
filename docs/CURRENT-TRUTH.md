@@ -496,6 +496,8 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
+**s4729: every strategic thread (M5, M3 classes, rename sweep, 0x1F0D74) is closed; loop BLOCKED awaiting owner choice of target (hangar render artifacts vs mission-phase correctness) — see scratch/agent/BLOCKED.md.**
+
 **s4728 (top): 0x1F0D70..80 is not a stable image struct: window 0x1F0000..0x1F1000 changes by whole-page (0x1000) rewrites and sequential 0x200-byte chunks (17 events, control passed) — generic heap/DMA reuse; the width-1161 premise is retired for the current recipe (s4727+s4728, single-recipe). Do not chase 0x1F0D74 further. Next: re-pick from the priority list (M5 de-stub or renaming-sweep revisit).**
 **s4727 (top): port poll of 0x1F0D70..80 (control 0xCC3E4 passed): no 1161 word in ~2914 frames through mission VI 512@0x690400; uniform-fill events (0xD7D7D7D7, 0x6A6A6A6A, 0x80808080 across all 16 bytes) at frames 268/457/458 unattributed. The width-1161 premise is stale for the current recipe (single run, frame-granular). Next: widen poll to 0x1F0000..0x1F1000 at fill frames. `scratch/agent/s4727_run.sh`, env ROGUESQ_LOG_S4727_IMG_WATCH.**
 
