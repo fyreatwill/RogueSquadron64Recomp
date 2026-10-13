@@ -155391,3 +155391,22 @@ behavior. The legitimate duplicate writer remains the guest mixer reinit; no
 dispatcher bypass, guard, or deregistration change was made. The next unit is a
 single-arm default-B40 route requalification with the compiled witness and
 phase controls.
+
+## Session 4763 (2026-10-13) — requalified default-B40 callback route at target phases
+
+The rebuilt single-arm real-audio/LLE/solo/spin-yield capture used the
+compiled `s4700` callback witness and the validated title→hangar autopilot.
+Phase controls reached title VI 1024, origin `0x00790400`, at 15.1 seconds
+and hangar VI 512, origin `0x006AB400`, at 24.3 seconds. The run had no
+`[CRASH]` or abort markers. Registration, deregistration, and synth-entry
+controls fired: 14 register rows, 5 deregistration enter/exit pairs, and 20
+sampled synth entries. After first-match removal the target-phase table again
+contained the duplicate `0x8009123C` entries, and synth entries reported
+`has_entry=1`.
+
+This selects H-route-valid and rules out a VI-640-only reachability blocker
+for the default-B40 arm. It does not select whether the callback dispatcher
+invokes every duplicate slot, only the first live slot, or a stale source
+outside the table; the next unit adds the existing phase-gated callback
+census to measure that cardinality. No first-match change, guard, or other
+mitigation was made.

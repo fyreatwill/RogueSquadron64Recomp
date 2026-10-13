@@ -1,29 +1,28 @@
-# Next work unit — requalify the default-B40 callback route
+# Next work unit — measure target-phase callback dispatch cardinality
 
-HYPOTHESIS-ID: m5-callback-route-requalification
+HYPOTHESIS-ID: m5-callback-dispatch-cardinality
 
 Run one single-arm default-B40 real-audio capture from `build/` with the
-compiled `ROGUESQ_LOG_S4700_CB=1` callback witness, phase controls, and the
-validated LLE/solo/spin-yield configuration. Keep the existing title/hangar
-autopilot route, avoid `ROGUESQ_LOG_ALL` and unrelated high-volume probes, use
-SIGKILL cleanup, and retain callback registration/deregistration/synth-entry
-controls.
+compiled `ROGUESQ_LOG_S4700_CB=1` witness plus
+`ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M5_CALLBACK_CENSUS=1`. Keep the validated
+title/hangar autopilot and LLE/solo/spin-yield route; avoid `ROGUESQ_LOG_ALL`
+and unrelated high-volume probes. Use SIGKILL cleanup.
 
 Competing hypotheses and discriminator:
 
-- H-route-valid: the default-B40 route reaches title 1024 and hangar 512, so
-  callback-table rows can be interpreted in the target phases.
-- H-route-stall: the route remains at VI 640, making target-phase callback
-  parity unevaluable and leaving the audio-route blocker as the next issue.
-- H-crash: the route crashes before VI 1024; classify the crash signature and
-  do not attribute it to callback teardown without a deregistration row.
+- H-dispatch-all: duplicate `0x8009123C` slots cause two callback-census or
+  synth invocations per retrace while both slots are present.
+- H-dispatch-first/live-slot: only one live callback is invoked per retrace,
+  and first-match removal reduces the duplicate pair to one.
+- H-stale-entry: synth entries continue after the callback-table census no
+  longer contains `0x8009123C`, proving a separate stale dispatch source.
 
-DISCRIMINATING MEASUREMENT: phase transitions are the split: both
-`vi_width=1024 origin=0x00790400` and `vi_width=512 origin=0x006AB400`
-select H-route-valid; VI 640 without either selects H-route-stall; an
-unclean crash selects H-crash. Only after H-route-valid, compare each
-`dereg-exit` table with later `synth-enter` rows. Callback registration,
-deregistration, synth-entry, and phase logs are the positive controls.
+DISCRIMINATING MEASUREMENT: in title and hangar phases, compare the callback
+census invocation count and synth-entry count against each `s4700-cb`
+table snapshot. Two invocations while the duplicate pair is present selects
+H-dispatch-all; one selects H-dispatch-first/live-slot; any synth entry after
+the table has no `0x8009123C` selects H-stale-entry. The phase transition,
+registration, deregistration, and synth-entry rows are positive controls.
 
 Exact build command:
 
@@ -31,7 +30,8 @@ Exact build command:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-Exact route variables: `ROGUESQ_LOG_S4700_CB=1 ROGUESQ_A14_YIELD=1
+Exact route variables: `ROGUESQ_LOG_S4700_CB=1 ROGUESQ_LOG_PHASE=1
+ROGUESQ_LOG_M5_CALLBACK_CENSUS=1 ROGUESQ_A14_YIELD=1
 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1
 ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1 PROBE_PHASE_WIDTH=1024
 PROBE_PHASE_TIMEOUT=110 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1`.
