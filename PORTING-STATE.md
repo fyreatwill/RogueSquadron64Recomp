@@ -155334,3 +155334,7 @@ durable apply scripts that reconstruct those definitions are present
 (`tools/apply_s4207_m5_postaud.py` and `tools/apply_s4581_switchlog.py`), which
 narrows the resume action to restoring/reconstructing the generated tree; it does
 not validate either runtime hypothesis. No H1/H2/H3 selection is added.
+
+## Session 4759 (2026-10-13) — linked and phase-gated the real overlay-0x2C splice
+
+Restored `funcs_23.c` and `funcs_24.c` from `../N64Recomp/scratch_s4653_regen`, which supplied the two missing durable diagnostic exports, and built `RogueSquadron64Recomp` successfully. The repaired binary's ucode contains `OVL2C_1DB0`. The direct s4753 driver was run with `ROGUESQ_OVL2C_DROP=0`, then rerun with batched phase, task-submit, DL-walk, and overlay-provenance diagnostics. Both runs reached VI 512 origin `0x00690400`; the diagnostic run produced all eight requested mission captures, zero crash/abort markers, and zero DL runaway rows. Its overlay route histogram had no `res=0x2C` rows at all, so the covered input never exercised the resident 0x2C image. This rules out link-time failure and a runaway on the covered route, but selects none of H1/H2/H3. The next unit is a long key-mash route-selection capture.
