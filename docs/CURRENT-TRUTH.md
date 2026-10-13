@@ -1,5 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4781: retail oracle (85 s driven + 20 s undriven, controls fired) never calls shutdownAudioEngine or shutdownMusyXEngine; shutdownMusyXVoices runs at each of 5 scene transitions and the synth keeps firing every VI. So the port's phase-3 shutdownAudioEngine (s4780) is a port-only divergence, not a retail gap. Next: find the port caller chain into shutdownMusyXEngine 0x8008ECA4 at phase 3 (NEXT.md).**
+
 **s4777: iteration BLOCKED - the +5808 disassembly needs lldb/objdump allow rules (see scratch/agent/BLOCKED.md). Unit unchanged.**
 **s4776: 4th identical death (si_addr 0x38000950e = rdram base 0x300000000 + unmasked guest 0x8000950e in x9) at +5808, VI 640 0x696100, at load ~9; same si_addr across s4672/s4761/s4764/s4775/s4776, so Hload is unsupported (never tested at load<3). Next: identify the guest instruction/register at +5808 and the writer of 0x8000950e.**
 
