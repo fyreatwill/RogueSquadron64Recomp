@@ -155583,3 +155583,10 @@ Ran the s4774 phase-gated probe.sh driver and the s4753 winctl Start/A recipe (c
 - probe.sh driver: first run (width-512 gate) died with a Bus error before any phase (single occurrence, unanalysed). Re-run gated on width 640, 180 s: VI 512 control fired (149 rows, hangar 0x006AB400 at 30.7 s); origin 0x00690400 0 rows; res=0x2C 0 rows; arrivals2c=0 on all 460 dlwalk rows; no CRASH/ABORT.
 - s4753 recipe x2: hangar VI 512 at 24.9 s and 20.7 s, never mission, res=0x2C 0 rows, no crash.
 Verdict: H2C-route-absent; splice effect still unevaluable. Mission entry reached once pre-splice (s4753) and once spliced (s4759), so wall-clock mashing is timing-sensitive. No runtime splice toggle exists, so no same-binary A/B. Next: derive the hangar->mission trigger.
+
+## Session 4775 (2026-10-13) — hangar-gated menu walk never reached the hangar: 3/3 died in musyxSynthFrame_s4562_impl+5808
+Wrote scratch/agent/s4776_gated_menu_walk.sh (wait for `origin=0x006AB400` in the log, then one key per 4 s with a screenshot each). Ran it 3 ways on the compiled-0x2C binary: full logging, ROGUESQ_S4562_PAUSE=1, and lean env (no DLWALK/E9/TASKSUBMIT).
+- All three: title VI 1024 at 49.9-51.9 s (s4763 reached title at 15.1 s), then VI 640 origin 0x00696100 at 76-78 s, then Bus error at `musyxSynthFrame_s4562_impl+5808`, si_addr=0x38000950e (full-logging run), last guest pc 0x80001b08. Hangar never appeared, so zero keys were sent: the menu-walk discriminator did not run.
+- Machine load average was ~8 (loop.log tail + other sessions) during these runs. Title arriving 3x later than in the fast runs (s4763 15 s, s4774 probe 30.7 s hangar) suggests the +5808 crash is timing/load sensitive, not route-deterministic. Single-source (load average read once, no controlled load experiment); PAUSE=1 and logging-weight do not rescue it.
+- ORIGIN: not a mitigation iteration; no guard added. The wild pointer 0x38000950e inside the synth frame is still unexplained (writer unnamed).
+Verdict: Hroute-* unevaluated. Next: rerun the walk on a quiet machine (check `uptime` < 3 first), or attack the +5808 wild pointer at its writer as an M5 item.

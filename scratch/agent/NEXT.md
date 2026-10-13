@@ -1,15 +1,11 @@
-# RESUME — next work unit: make mission entry deterministic (stop mashing keys)
+# RESUME — run the hangar-gated menu walk on a quiet machine
 
 HYPOTHESIS-ID: factor5-overlay-0x2c-splice
 
-s4774: 0/4 drivers (probe.sh phase-gated, s4753 winctl x2) reached mission origin 0x00690400 on the spliced
-binary; all stopped at hangar 0x006AB400 with res=0x2C=0. Wall-clock Start/A mashing is not a route.
+s4775: scratch/agent/s4776_gated_menu_walk.sh (hangar-gated, one key/4 s, screenshot each) died 3/3 at
+musyxSynthFrame_s4562_impl+5808 at VI 640 0x696100 (~77 s) before hangar; title arrived at ~50 s vs 15 s in
+fast runs; load average was ~8. Hypothesis Hload: the crash/slowness is load-sensitive.
 
-Hypotheses:
-- Hroute-timing: mission entry needs a hangar-state-gated press (react to hangar origin, then press once, observe).
-- Hroute-splice: the splice changes hangar->mission flow (weak: s4759 reached mission once while spliced).
-- Hroute-menu: needs a specific menu selection (right/down), not Start/A only.
-
-DISCRIMINATOR: once VI-512 hangar origin is logged, send ONE key per 4 s with a screenshot after each and read the
-screens to learn the menu state; then script the true sequence. Alternative: grep for the hangar->mission transition
-in code and force it with a debug env. Do not recompile; do not repeat mashing.
+Next: check `uptime` (want load < 3; if not, run anyway and record load). Run `zsh scratch/agent/s4776_gated_menu_walk.sh`,
+read h0..h8 screenshots to learn the hangar menu, then script the true sequence. If still 3 more crashes at
+quiet load, Hload is refuted -> pivot to the +5808 wild pointer (si_addr 0x38000950e) writer as an M5 item.

@@ -1,5 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4775: the hangar-gated menu walk (scratch/agent/s4776_gated_menu_walk.sh) crashed 3/3 at `musyxSynthFrame_s4562_impl+5808` (VI 640 0x696100, ~77 s) before the hangar appeared, so no key was sent. Title arrived at ~50 s vs 15 s in fast runs, machine load ~8: the crash looks load/timing sensitive (single-source). Rerun on a quiet machine.**
+
 **s4774: 0 of 4 mission-route drivers on the spliced binary reached mission
 origin `0x00690400`.** The phase-gated probe.sh driver (180 s, 149 VI-512 rows)
 and two runs of the s4753 winctl Start/A recipe all stopped at hangar
