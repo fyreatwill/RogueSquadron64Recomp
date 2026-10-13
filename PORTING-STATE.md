@@ -19260,6 +19260,7 @@ diagnostic, this repo, committed). `scratch/agent/run_pcsymbolize1.sh`
    pattern, or build a `renderUnlitMeshFaces`-scoped internal-`MEM_W`-address
    tracer (Option A, now correctly narrowed to one function). Best next
    work unit.
+
 2. `runVideoFrameTick+1568`: still 2 clean soaks of 3 (1 uninformative), 0
    recurrence, 0 guard fires — unchanged this session, still lower priority
    than item 1.
@@ -155309,3 +155310,16 @@ available snapshot predates those exports. Therefore no mission run or H1/H2/H3
 selection is claimed. This rules out a splice-source or fixup syntax failure,
 not the ABI/runtime hypotheses. The generated-tree recovery is the next work
 unit.
+
+## Session 4757 (2026-10-13) — checkpointed the incomplete overlay-0x2C validation
+
+This retry did not rerun the splice build or mission capture. The existing
+s4756 artifacts remain the complete evidence: RSPRecomp emitted the 0x2C image,
+fixup 6r was wired with an ORIGIN tied to the guest `0x153==0x2C` writer, and
+the main ucode compiled; the unsafe full regeneration left an incomplete
+generated tree, while the available recovery snapshot linked as far as two
+missing later diagnostic exports (`rs64_s4207_after_audtask` and
+`rs64_s4581_inflight`). No runtime outcome or H1/H2/H3 selection is added.
+The next discriminator is the same repaired-binary mission capture, but only
+after restoring those two definitions from a snapshot or their durable apply
+scripts.
