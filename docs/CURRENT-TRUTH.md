@@ -496,6 +496,8 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
+**s4727 (top): port poll of 0x1F0D70..80 (control 0xCC3E4 passed): no 1161 word in ~2914 frames through mission VI 512@0x690400; uniform-fill events (0xD7D7D7D7, 0x6A6A6A6A, 0x80808080 across all 16 bytes) at frames 268/457/458 unattributed. The width-1161 premise is stale for the current recipe (single run, frame-granular). Next: widen poll to 0x1F0000..0x1F1000 at fill frames. `scratch/agent/s4727_run.sh`, env ROGUESQ_LOG_S4727_IMG_WATCH.**
+
 **s4726 (top): retail values captured.** Retail stores at 0x1F0D70..80 are zeros (0x800078EC) and byte-packed data words (0x800C7F08..801C loop); none contain 0x489 (1161) (266 samples, single-source, unphased). So the port's width-1161 word at 0x1F0D74 is likely a port-side wild/stale write. Next: port-side write watch on 0x1F0D74 with PC attribution (see NEXT.md).
 
 **s4725: retail mission-phase reference.** After initMission (73.4 s) retail VI is 512 wide at origin 0x690400/0x690800 (hangar was 0x6AB800). Retail game code writes 0x1F0D70..80 (292 writes, ~30 distinct writer PCs: 0x800078EC, 0x800C7F08..801C, 0x800CAC44..74); values not yet captured (single-source). Next: `--post-value-watch 1` on that range to compare against the port's width-1161 colour image. `scratch/agent/s4725_run.sh`.

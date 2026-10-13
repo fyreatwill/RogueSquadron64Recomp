@@ -233,9 +233,34 @@ extern "C" void osViBlack_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
 // Diagnostic: log osViSwapBuffer calls. The game tells VI which fb to display
 // via this call. If the address doesn't match any prior SET_COLOR_IMAGE
 // address, RT64 has no rendered content for it → black screen.
+extern "C" uint32_t rs64_vi_committed_width();
+extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_count = 0;
     int n = ++s_count;
+    {
+        // s4727: per-frame poll of the colour-image-struct site 0x1F0D70..80
+        // (+ control: hangar state word 0xCC3E4, which retail/port both move).
+        static const bool poll_on = [] {
+            const char* own = std::getenv("ROGUESQ_LOG_S4727_IMG_WATCH");
+            return own && own[0] && own[0] != '0';
+        }();
+        if (poll_on) {
+            static uint32_t last[5] = {~0u, ~0u, ~0u, ~0u, ~0u};
+            static const uint32_t offs[5] = {0x1F0D70u, 0x1F0D74u, 0x1F0D78u, 0x1F0D7Cu, 0xCC3E4u};
+            for (int i = 0; i < 5; i++) {
+                uint32_t v = 0;
+                for (uint32_t k = 0; k < 4; k++) v = (v << 8) | rdram[(offs[i] + k) ^ 3u];
+                if (v != last[i]) {
+                    std::fprintf(stderr, "[s4727-%s] frame=%d phase=%u vi_w=%u vi_org=0x%06X phys=0x%06X old=0x%08X new=0x%08X\n",
+                        i == 4 ? "ctl" : "img", n, rs64_phase_ord(), rs64_vi_committed_width(),
+                        rs64_vi_committed_origin() & 0xFFFFFFu, offs[i], last[i], v);
+                    std::fflush(stderr);
+                    last[i] = v;
+                }
+            }
+        }
+    }
     uint32_t fb = (uint32_t)ctx->r4;
 
     static int s_log_callers = -1;

@@ -155070,3 +155070,11 @@ Result: 266 post-value samples (64 unique, 183 overflow), every post-store-scala
 Reading: retail uses 0x1F0D70..80 as general data memory; a colour-image struct with width 1161 there is not retail behaviour (single-source, unphased). The port's 1161 word at 0x1F0D74 is likely a port-side stale/wild writer, so the port guards mask real corruption. Does not name the port writer.
 ORIGIN: n/a (no mitigation added).
 Next: port-side write watch on 0x1F0D74 with PC attribution; compare to retail PCs 0x800078EC / 0x800C7F08 / 0x800CAC44..74.
+
+## Session 4727 (2026-10-13) — port per-frame poll of 0x1F0D70..80: no width-1161 word in 2914 frames, uniform-fill events instead
+
+What ran: first attempt hooked rs64_m5_pointer_span_store (scratch/agent/s4727_run.sh, s1949 hangar recipe + ROGUESQ_LOG_S4727_IMG_WATCH) — control FAILED: 0 rows, because that hook is only reached from selected recompiled store sites, not every store. That null is void. Replaced with a per-frame poll in osViSwapBuffer_recomp (src/main/upstream_compat.cpp) of 0x1F0D70..7C plus control word 0xCC3E4 (hangar state). Control PASSED: 0xCC3E4 moved 0->1->3->5->8->0x0C007333 across phases (hangar phase 5, 512@0x6AB400).
+Result (single run, port reached phase 7 = 512@0x690400, same mission VI as retail s4725, ~2914 frames): 0x1F0D74 never held 0x489/1161 (0 of 32 change rows). Values: 0 (boot), 0xD7D7D7D7 (f268, title 1024), 0xB2919BFB (f357), 0x6A6A6A6A (f457), 0x80808080 (f458), 0x00000B00 (f1383), 0x132E0014 (f1951), 0xED1EF0DF (f2914). Several events set all four words (16 bytes) to one repeated byte, a fill with unattributed writer (frame-granularity poll has no PC).
+Rules out: the width-1161 colour image at 0x1F0D74 is NOT present in the current configuration/recipe (per-frame sampling; sub-frame transients not excluded) — the s640-s659 premise looks stale (mitigated or config-dependent). Does not name a writer for the uniform fills.
+ORIGIN: no mitigation added; diagnostic-only (env-gated poll).
+Next: widen the poll (0x1F0000..0x1F1000) at the fill frames to measure fill extent; decide host copyToRAM/clear vs game memset by extent and alignment.
