@@ -155338,3 +155338,21 @@ not validate either runtime hypothesis. No H1/H2/H3 selection is added.
 ## Session 4759 (2026-10-13) — linked and phase-gated the real overlay-0x2C splice
 
 Restored `funcs_23.c` and `funcs_24.c` from `../N64Recomp/scratch_s4653_regen`, which supplied the two missing durable diagnostic exports, and built `RogueSquadron64Recomp` successfully. The repaired binary's ucode contains `OVL2C_1DB0`. The direct s4753 driver was run with `ROGUESQ_OVL2C_DROP=0`, then rerun with batched phase, task-submit, DL-walk, and overlay-provenance diagnostics. Both runs reached VI 512 origin `0x00690400`; the diagnostic run produced all eight requested mission captures, zero crash/abort markers, and zero DL runaway rows. Its overlay route histogram had no `res=0x2C` rows at all, so the covered input never exercised the resident 0x2C image. This rules out link-time failure and a runaway on the covered route, but selects none of H1/H2/H3. The next unit is a long key-mash route-selection capture.
+
+## Session 4760 (2026-10-13) — route-selection key mash crashed before phase; hangar control stayed clean
+
+Ran the prescribed `scratch/agent/s4751_run.sh long 0` arm with the repaired
+binary and batched overlay-provenance, task-submit, DL-walk, and phase logs.
+It found a window but crashed at 0.0 seconds before any VI 512 phase:
+`[CRASH]` identified `spTaskSchedulerThread+9632`, guest PC `0x8000834c`,
+with zero `res=0x2C` rows and zero mission-origin rows. This is not a
+route-null result because the discriminator phase was never reached.
+
+Applied the required fixed-version retry using the known direct Start/A driver
+with the same diagnostics. It completed with eight captures, zero crash/abort
+markers, and zero `res=0x2C` rows, but reached only VI 512 hangar origin
+`0x006AB400`; the required mission origin `0x00690400` was absent. Together
+these runs rule out a link-time crash in the repaired binary and establish a
+reproducible input/timing blocker for the boot-relative key-mash recipe, but
+they do not select whether the 0x2C splice works. The next discriminator is
+the same key sequence phase-gated on hangar VI 512.
