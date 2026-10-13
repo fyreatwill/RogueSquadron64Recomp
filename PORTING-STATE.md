@@ -155430,3 +155430,19 @@ semantics. The run therefore rules out neither callback hypothesis and does
 not authorize a dispatcher change or mitigation. Next work unit: instrument
 the actual VI-retrace table walker with a per-slot dispatch ordinal and a
 same-run positive control.
+## Session 4765 (2026-10-13) — de-stubbed the second MusyX wait gate
+
+Implemented the next concrete M5 A12 edge in the regeneration path and the
+live generated `RecompiledFuncs/funcs_24.c`: both copies of the guest busy-spin
+on `0x8014974C` now call `yield_self_1ms` by default while the flag remains
+nonzero. `ROGUESQ_AUDIO_SPIN2_YIELD=0` restores the old spin as an explicit
+rollback. The canonical fixer and vendored fixer were updated together, and
+the Debug `RogueSquadron64Recomp` target rebuilt successfully.
+
+ORIGIN: `musyxSynthFrame` is the named guest producer that arms and clears this
+legitimate wait flag; the change restores host scheduling and does not force or
+skip the guest state. No runtime selection is claimed yet. The next phase-gated
+unit compares default and rollback arms with producer/clear, wait-return,
+task/SP, slot, PCM, and VI controls. This closes the observation-only streak
+with a real M5 runtime behavior change and does not authorize a callback
+dispatcher change.
