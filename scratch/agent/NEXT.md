@@ -1,8 +1,9 @@
-# Confirm PAUSE=4 and make it default; then resume the 0x2C splice route
+# Rerun the VI640->hangar->mission key route on the default (PAUSE=4) binary; look for res=0x2C rows
 
 HYPOTHESIS-ID: factor5-overlay-0x2c-splice
 
-s4785: PAUSE=4 survives where PAUSE=0/3 crash (+5808) and reaches VI 512 (n=1 per arm).
-Work unit: (1) read the SOAK-RESULTS line for s4785_pause4_600s (loop runs it); if no crash in 540 s, make PAUSE=4 behaviour default-on in tools/apply_s4562_synth_pause.py (s_on default 4 unless ROGUESQ_S4562_PAUSE=0), regen-safe, rebuild. (2) rerun the VI640->hangar key route (ROGUESQ_S4562_PAUSE unset) and look for res=0x2C rows (the original s4761 blocker). Competing: if soak crashes, the crash site differs from +5808 => a second freed-arena reader (check pc-symbol); if it passes, +5808 class is closed.
-Control: PAUSE=0 arm crashes +5808 at ~80 s (s4785_0).
+s4786: PAUSE=4 is default-on and soaked (544 s, 0 crashes). The +5808 crash that blocked the route (s4775/s4776) should no longer stop it.
+Work unit: run scratch/agent/s4776_gated_menu_walk.sh (or the s4753 winctl Start/A recipe) with ROGUESQ_S4562_PAUSE unset; record whether mission origin 0x00690400 is reached and count `res=0x2C` rows / arrivals2c in dlwalk output.
+Competing: (A) route reaches mission and 0x2C rows appear => splice evaluable, compare with ROGUESQ_OVL2C_DROP; (B) reaches mission, no 0x2C rows => splice ineffective, back to H2C-real-image; (C) still stalls at hangar 0x006AB400 => derive the hangar->mission trigger (s4774) instead of key mashing; (D) new crash => read pc-symbol, a different family.
+Control: a hangar VI 512 phase reached in the same run is the positive control for the route; dlwalk rows firing is the control for the counter.
 ORIGIN: retail ordering (s4783/s4785).

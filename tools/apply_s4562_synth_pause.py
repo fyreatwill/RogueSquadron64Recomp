@@ -76,4 +76,13 @@ if MARK4 not in t:
             '      if (s_p4 && __atomic_load_n(&g_s4562_pause, __ATOMIC_SEQ_CST)) { __atomic_store_n(&g_s4562_pause, 0, __ATOMIC_SEQ_CST); fprintf(stderr, "[s4562] pause RELEASED at reinit end 0x8008F958 skipped=%u\\n", g_s4562_skipped); } }\n')
     t = t.replace(c, rel4 + c, 1)
     f23.write_text(t)
+# s4786: PAUSE=4 is the default (s4785 600 s soak: 7 pause/release pairs, 0 crashes; baseline crashed +5808 at ~80 s).
+# ROGUESQ_S4562_PAUSE=0 restores the old behaviour. ORIGIN: retail never ticks the synth between teardown and re-init end (s4783).
+OLD_E = 'const char* e = getenv("ROGUESQ_S4562_PAUSE");'
+NEW_E = OLD_E + ' if (!e) e = "4"; /* s4786 default */'
+for _f in (f23, f24):
+    _t = _f.read_text()
+    if "s4786 default" not in _t:
+        assert OLD_E in _t
+        _f.write_text(_t.replace(OLD_E, NEW_E))
 print("ok")
