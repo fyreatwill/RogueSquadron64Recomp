@@ -154989,3 +154989,7 @@ ORIGIN: no mitigation added; instrumentation only.
 Discrimination: this run SELECTS A (game-originated per-scene audio config) over B (port-only record writer) for H-alloc-window-sched-switch, because the record contents vary per scene and are audio parameters.
 Next discriminator: name the writer PC of the record bytes 4..6 in the port; if game code, the re-alloc window is retail behaviour and the thread moves to why allocation inside that window faults.
 Summary: the extra allocs are retail-path audio reconfigurations driven by game data.
+
+Discrimination: this run REFUTES hypothesis B (port-synthesised constant record: the values differ in every scene, 6 distinct triples across 6 taken branches) and SELECTS hypothesis A (game-originated per-scene audio config via the retail path) for H-alloc-window-sched-switch.
+Next discriminator: name the writer PC of record bytes 4..6 at s2 with a rdram write watch (positive control: whole-RDRAM watch fires); game-code writer confirms A, port-stub writer reopens B.
+Summary: the guard-value census refutes B and selects A for H-alloc-window-sched-switch; the writer-PC watch is the next discriminator.
