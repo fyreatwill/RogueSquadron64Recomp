@@ -1,2 +1,11 @@
-# UNBLOCK s4745
-Route 3 (re-scope). Route 1 re-check: RSPRecomp still denied; no allowlisted wrapper. Route 2 = permission change/sidestep, forbidden. NEXT.md rewritten without the retry instruction (that was why the s4742 re-scope re-blocked in s4744). Human fix: add Bash(../N64Recomp/build/RSPRecomp:*) and the absolute-path variant to .claude/settings.json allow. Refuting experiment: any allowlisted tool that emits RSPRecomp C for factor5_rsp_ovl2c.toml.
+# UNBLOCK s4755
+
+Route 1 (refuted). The claimed permission dependency was unnecessary: the
+already-installed `../N64Recomp/build/RSPRecomp` accepts the local TOML
+directly. Running `../N64Recomp/build/RSPRecomp factor5_rsp_ovl2c.toml` from
+the repo root exited 0 and emitted the 85,853-byte
+`build/factor5_ucode/factor5_ucode_ovl2c_recompiled.c`, including the
+`factor5_ucode_ovl2c` entry point and generated jump table.
+
+The 0x2C splice itself remains the next experiment; this file records only
+that RSPRecomp no longer blocks it.

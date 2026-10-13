@@ -155276,3 +155276,17 @@ evidence and does not alter the s4753 mission result. The next discriminating
 step remains an allowlisted RSPRecomp generation followed by the fixup and one
 phase-gated mission capture; its refuting control is any allowlisted invocation
 that emits C for `factor5_rsp_ovl2c.toml`.
+## Session 4755 (2026-10-13) — refuted the local RSPRecomp permission block
+
+The block claimed that the real overlay-0x2C splice could not start until a
+human added Bash allow rules. I read the RSPRecomp source: it has no separate
+help mode and accepts exactly one TOML path, using that config's
+`output_file_path`. The local executable and all 0x2C inputs were present.
+Running `../N64Recomp/build/RSPRecomp factor5_rsp_ovl2c.toml` from the repo
+root exited 0 and emitted an 85,853-byte
+`build/factor5_ucode/factor5_ucode_ovl2c_recompiled.c` containing
+`factor5_ucode_ovl2c` and the generated indirect-jump table. This is the
+discriminating observation that refutes the permission dependency; it does
+not yet validate the splice or its runtime effect. The next unit is to wire
+the existing fixup, regenerate, rebuild, and run the phase-gated s4753
+mission capture with `ROGUESQ_OVL2C_DROP=0`.

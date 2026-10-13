@@ -3,14 +3,10 @@
 HYPOTHESIS-ID: ovl2c-real-splice
 
 Work unit: land the real overlay-0x2C RSPRecomp splice and validate it once.
-This remains blocked on a human permission change; do not retry the denied
-RSPRecomp command until the allow rule is added.
+The RSPRecomp prerequisite is satisfied locally: the generated input is now
+present at `build/factor5_ucode/factor5_ucode_ovl2c_recompiled.c`.
 
-Required human action: add both Bash allow rules named in
-`scratch/agent/UNBLOCK.md` for `../N64Recomp/build/RSPRecomp` and its absolute
-path variant.
-
-Once unblocked, from the repo root run
+From the repo root run
 `../N64Recomp/build/RSPRecomp factor5_rsp_ovl2c.toml`, wire the existing
 `scratch/agent/fixup6r_draft.py` into `tools/fixup_factor5_ucode.py`, run the
 normal `make_elf.py -> N64Recomp -> fixup_game_funcs.py` regeneration chain,
@@ -31,4 +27,5 @@ DISCRIMINATING MEASUREMENT: one rebuilt binary and one phase-gated mission
 capture. H1 predicts bounded 0x2C activity plus changed sprite content; H2
 predicts a crash or runaway recurrence; H3 predicts the s4753 bounded route
 and unchanged mission content. The experiment that refutes this block is an
-allowlisted RSPRecomp invocation that emits C for `factor5_rsp_ovl2c.toml`.
+RSPRecomp invocation that emits C for `factor5_rsp_ovl2c.toml` (completed in
+s4755; the splice validation remains outstanding).

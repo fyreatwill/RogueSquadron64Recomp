@@ -2,6 +2,8 @@
 
 **s4753: direct interleaved Start/A input reached VI 512 hangar at 24.0 s and mission origin 0x00690400 at 52.5 s; eight post-gate frames were unpaused and showed ship, HUD, radar, terrain, and reticle with no crash/abort. This refutes H1 (“ship/HUD entirely absent”) for the covered route; H2 (independent terrain divergence) remains unevaluable without retail pixels. Single-source port capture with independent phase and no-crash controls.**
 
+**s4755: the prior RSPRecomp block was false. The installed local tool accepted `factor5_rsp_ovl2c.toml` without a permission change and emitted the 85,853-byte `factor5_ucode_ovl2c_recompiled.c` with the expected entry point and jump table. The real splice and phase-gated validation remain the next work unit.**
+
 **s4754: the planned real overlay-0x2C splice did not run because the required RSPRecomp invocation remains blocked by the human allow rule. No command retry or experiment was performed. Resume only after adding the Bash allow rules named in `scratch/agent/UNBLOCK.md`; the refuting control is an allowlisted RSPRecomp run that emits C for `factor5_rsp_ovl2c.toml`.**
 
 **s4749: DL op 0xBD present <=> 0x2C arrival <=> runaway, 150/150 vs 0/550 non-runaway tasks (phases 2-7); phase-7 runaways have exactly one 0xBD and one arrival. No normal task contains 0xBD, so TexrectGen content (likely ship/HUD texrects) is exactly what the unspliced 0x2C overlay loses. Single run, agrees with s4747/s4748. Splice blocked on RSPRecomp allowlist (human).**
