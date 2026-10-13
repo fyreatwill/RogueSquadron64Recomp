@@ -155446,3 +155446,19 @@ unit compares default and rollback arms with producer/clear, wait-return,
 task/SP, slot, PCM, and VI controls. This closes the observation-only streak
 with a real M5 runtime behavior change and does not authorize a callback
 dispatcher change.
+
+## Session 4766 (2026-10-13) — A12 route qualified but second-wait branch remained unmarked
+
+Rebuilt the Debug target once and ran concurrent default and
+`ROGUESQ_AUDIO_SPIN2_YIELD=0` arms from the phase-gated route. Both arms reached
+title VI 1024 and hangar VI 512, and neither emitted a crash or abort. The
+existing `s2076-wait-contract` witness entered and completed its countdown,
+tick, and slot path in both arms; task and audio activity also continued.
+
+The run did not discriminate the A12 change. `[waitmusyx-spin2-arm]` is the
+named producer's flag-arm diagnostic, not execution of the `0x8014974C` loop;
+there were no second-loop clear/return rows in either arm. Thus the general
+route is valid, but H-A12-loop-reached, H-A12-route-absent, and
+H-A12-wrong-writer remain unevaluable. This rules out treating the missing
+branch rows as a producer or route null, and authorizes no gate or writer
+change. Artifact: `scratch/agent/s4766_m5_a12_second_wait/`.

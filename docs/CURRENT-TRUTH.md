@@ -1,5 +1,14 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4766: the A12 default/rollback validation reached title VI 1024 and hangar
+VI 512 in both arms with no crash or abort. The existing wait-contract witness
+returned from the countdown/tick path in both arms, but the second-wait loop's
+yield/clear/return branch was not independently marked: `[waitmusyx-spin2-arm]`
+is the producer arm site, not loop execution. Therefore the route is valid but
+H-A12-producer, H-A12-route-absent, and H-A12-wrong-writer remain unevaluable;
+no behavioral selection or further gate change is authorized. Artifact:
+`scratch/agent/s4766_m5_a12_second_wait/`.
+
 **s4765: the second MusyX wait gate was de-stubbed in the regeneration path and
 live generated `funcs_24.c`: both `0x8014974C` busy-spin copies now yield to the
 VI/audio producer by default, with `ROGUESQ_AUDIO_SPIN2_YIELD=0` as rollback.
@@ -550,7 +559,7 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed. OPEN DEPENDENCY (human, s4742/s4745; iterations must NOT retry, NEXT.md re-scoped to runaway-DL cost measurement): add RSPRecomp Bash allow rules to .claude/settings.json (see scratch/agent/UNBLOCK.md); meanwhile NEXT.md is the offline 0x2C analysis. Full pre-compaction history of this section: PROJECT-OVERVIEW.md, "Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738".
 
-1. **M5 A12 validation:** s4765 de-stubbed both `0x8014974C` MusyX wait copies to yield by default; validate default versus `ROGUESQ_AUDIO_SPIN2_YIELD=0` in one rebuilt, phase-gated title/hangar recipe. Join second-wait entry, producer arm/clear, wait return/timeout, task/SP, slot, PCM, and VI controls. Do not force the gate or change its writer.
+1. **M5 A12 branch witness:** s4766 qualified the general title/hangar route in both A12 arms but did not mark the actual `0x8014974C` loop branch. Add one phase-scoped branch/return witness to each generated copy, with a same-run control proving the witness fires, then rerun default versus `ROGUESQ_AUDIO_SPIN2_YIELD=0`. Do not force the gate or change its writer.
 2. **M5 callback dispatch semantics:** the s4764 census was not an invocation counter and the route crashed before hangar. Inspect the actual VI-retrace callback dispatcher and add one phase-scoped invocation ordinal per dispatched table slot, with a same-run positive control that proves the marked dispatcher path fires. Build one binary and run one default-B40 title/hangar capture; distinguish duplicate-slot dispatch (two ordinals), first-live-slot dispatch (one), and a stale source (synth activity after the table dispatch is empty). Do not change first-match deregistration or add a guard without this result.
 3. **s4764 route blocker:** the default-B40 capture reached title but crashed at `musyxSynthFrame_s4562_impl+5808` before hangar. Do not treat the missing target-phase cardinality as a null; the next dispatcher instrument must prove its own positive control and report the crash boundary.
 4. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
