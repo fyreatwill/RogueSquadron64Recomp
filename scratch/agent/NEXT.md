@@ -2,10 +2,13 @@
 
 HYPOTHESIS-ID: mission-phase-correctness
 
-s4734: runaway frames (port 1846/1849/1851) are a DL walk that, after the 3rd scene block, jumps back to the start-of-frame setup (`3f 37 36 27`) instead of continuing to the HUD block; blocks repeat byte-identical up to 74x, ~70-86 ring wraps per task.
+s4735: runaway tasks' call stream is exactly periodic (period ~45 pushes) and restarts at root pc 0x180; stack is fine. Question: why does the ROOT command stream restart?
 
-Work unit: in the port's F5 ucode DL walker (src/rsp / factor5_ucode), log every G_DL / G_BRANCH_DL / G_ENDDL (call/return/branch) with (task#, from_addr, target, stack depth) for tasks that wrap the ring >5 times; find the target that equals an earlier already-visited address.
-Hypotheses: H-stale-return (DL stack pop yields old address: stack overflow/underflow or missing push), H-cyclic-data (game-side DL linked list genuinely cyclic: check same in retail via oracle watch), H-seg (segment-table entry wrong at that branch → resolves to frame start).
-Discriminator: runaway task's jump target vs. address of the first block; if return stack depth is 0 at an ENDDL/pop => underflow (H-stale-return); if target comes from RDRAM DL data pointing back => H-cyclic-data (then compare that RDRAM word with retail).
-Positive control: same logging on normal frame 1845's task must show monotonically forward targets.
-Scripts: scratch/agent/s4734_*.py (offline), /tmp/s4733.pkl regen via s4733_cmp.py.
+Hypotheses:
+- H-root-reload: the root chunk DMA (generated L_11B4, r2 = RDRAM source) is re-issued from an earlier address (port ring / DL pointer wrap in src/main/main.cpp task submit or dpc_bridge wrap path).
+- H-cyclic-data: the root DL words in RDRAM themselves contain a 0x07 branch / 0x06 back to the start (game-side), would also happen in retail.
+- H-iter-restart: the self-restart label (RS64_UCODE_ENTRY) / fixup re-enters the ucode after a spurious exit mid-task with the same root_dl.
+
+Discriminator (one build, one run): extend ROGUESQ_DLWALK to log, for tasks with fetches>=16000 and the first normal tasks, every DMA source address passed to L_11B4 at root level (depth 0) and every RSP entry (RS64_UCODE_ENTRY) with root_dl; plus dump the 64 RDRAM words at the first repeated root source. Outcomes: source repeats w/o RSP re-entry => H-root-reload or cyclic data (then check RDRAM word at the branch: 0x07 present => H-cyclic-data); re-entry count>1 => H-iter-restart.
+Positive control: normal task 41 must show monotone increasing root sources and exactly 1 entry.
+Run: zsh scratch/agent/s4735_run.sh (build first; patch tool: tools/patch_s4735_dlwalk.py, already applied).
