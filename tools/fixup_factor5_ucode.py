@@ -3412,6 +3412,31 @@ if is_image_ucode and IMAGE_BREAK_MARKER not in text:
 
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Fixup 24 (s4751): overlay 0x2C (DL op 0xBD TexrectGen) cull-path route.
+# ORIGIN: the dispatch switch at IMEM 0x1DB0 has no 0x2C case, so op 0xBD falls
+# through to task-entry L_1DB0 and re-seeds the root DL walk (the runaway;
+# s4747-s4749: 0xBD <=> 0x2C arrival <=> runaway, 150/150 vs 0/550). Overlay
+# 0x2C's own cull path (docs/F5-OVL2C-TEXRECTGEN.md, 0x1DC8) is "r17 += 16 ->
+# 0x10D8" = the same 24-byte command advance as a drawn sprite, emitting
+# nothing. This routes every 0x2C arrival down that path: no sprites, but the
+# DL walk continues. Stopgap until the RSPRecomp splice (UNBLOCK.md) lands;
+# ROGUESQ_OVL2C_DROP=0 disables it.
+OVL2C_DROP_MARKER = "/* fixup: ovl2cdrop */"
+if OVL2C_DROP_MARKER not in text:
+    _a = ("            goto L_1DB0;\n        case 0x1504: goto L_1504;")
+    _n = text.count(_a)
+    if _n != 1:
+        print(f"fixup_factor5_ucode: FIXUP 24 ANCHOR FAILED ({_n}).", file=sys.stderr)
+        sys.exit(1)
+    text = text.replace(_a,
+        "            if (RSP_MEM_BU(0X153, 0) == 0x2C) {"
+        " static int rs64_2c_drop = -1;"
+        " if (rs64_2c_drop < 0) { const char *e = std::getenv(\"ROGUESQ_OVL2C_DROP\");"
+        " rs64_2c_drop = (e && *e == '0') ? 0 : 1; }"
+        " if (rs64_2c_drop) { rs64_e9prov_ovl_route(0x2C, 0x1DB0);"
+        " r17 = RSP_ADD32(r17, 0X10); goto L_10D8; } }  " + OVL2C_DROP_MARKER + "\n" + _a, 1)
+
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
     text = text.replace('#include "librecomp/rsp.hpp"',
