@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-**s4738 (top, supersedes s4737 edge reading): DMEM 0x153==0x2C reaches unrouted window entry 0x1DB0. s4737 detail: runaway DL tasks restart via L_1DB0.** The refill source 0x30(r18) is re-seeded to the task root (740AD8) by the store `sw 0x30(r18)` at L_1DB0 (site 3), after an end-DL at depth 0; chunk link 744078 is truly 0, so the cycle is not in the data (kind-6 probes, positive control task 41/42 passed; single run, 3 runaway tasks agree). Normal tasks hit site 3 once (entry); runaway 10-14 times. Next: which edge normal tasks use to terminate vs the runaway's jump to 0x1DB0 (see NEXT.md).
+**s4738 (top, supersedes s4737 edge reading): DMEM 0x153==0x2C reaches unrouted window entry 0x1DB0. s4737 detail: runaway DL tasks restart via L_1DB0.** The refill source 0x30(r18) is re-seeded to the task root (740AD8) by the store `sw 0x30(r18)` at L_1DB0 (site 3), after an end-DL at depth 0; chunk link 744078 is truly 0, so the cycle is not in the data (kind-6 probes, positive control task 41/42 passed; single run, 3 runaway tasks agree). Normal tasks hit site 3 once (entry); runaway 10-14 times. **s4740: overlay 0x2C = real 0x240-byte VU image, ROM 0x27368, dest 0x1DB0 (runtime table dump + ROM bytes; ovl24 control matched). Unspliced, so the window entry restarts the task. Next: splice it (NEXT.md).**
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier

@@ -1423,6 +1423,25 @@ static void dlw_dump_words(const char *tag, uint32_t task, uint32_t src) {
 }
 extern "C" void rs64_dlw_jump(uint32_t target, uint32_t r31, uint32_t line, uint32_t d153) {
     if (!dlwalk_on() || g_dlw.task == 0) return;
+    // s4740: overlay-table dump. Control = first arrival with resident 0x28 (known content);
+    // probe = first arrival at 0x1DB0 with resident 0x2C. DMEM table at 0x76 (idx) / 0x7A+id (idx<<12|len, rom off).
+    {
+        static bool done28 = false, done2c = false;
+        const bool c28 = !done28 && d153 == 0x28;
+        const bool c2c = !done2c && d153 == 0x2C && (target & 0xFFFFu) == 0x1DB0;
+        if ((c28 || c2c) && g_dmem_cur != nullptr) {
+            (c28 ? done28 : done2c) = true;
+            fprintf(stderr, "[ovl-tbl] %s task=%u tgt=%04X r31=%04X line=%u\n", c28 ? "ctl28" : "probe2C", g_dlw.task, target & 0xFFFFu, r31 & 0xFFFFu, line);
+            auto h = [](uint32_t a) { return (unsigned)(g_dmem_cur[a ^ 3u] << 8 | g_dmem_cur[(a + 1) ^ 3u]); };
+            fprintf(stderr, "[ovl-tbl] 0x76:");
+            for (uint32_t i = 0; i < 4; ++i) fprintf(stderr, " %04X", h(0x76 + 2 * i));
+            fprintf(stderr, "\n[ovl-tbl] 0x7A+id (id: a,b):");
+            for (uint32_t id = 0; id <= 0x34; id += 4) fprintf(stderr, " %02X:%04X,%04X", id, h(0x7A + id), h(0x7C + id));
+            fprintf(stderr, "\n[ovl-tbl] DMEM 0x00-0x40:");
+            for (uint32_t i = 0; i < 0x40; ++i) fprintf(stderr, " %02X", (unsigned)g_dmem_cur[i ^ 3u]);
+            fprintf(stderr, "\n");
+        }
+    }
     g_dlw.ring[g_dlw.ring_n++ & 7] = {target & 0xFFFFu, r31 & 0xFFFFu, line, d153, g_dlw.prev_op, g_dlw.fetches};
 }
 
