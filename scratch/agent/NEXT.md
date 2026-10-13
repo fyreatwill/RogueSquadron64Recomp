@@ -2,13 +2,8 @@
 
 HYPOTHESIS-ID: H-alloc-window-sched-switch
 
-Voice +0x34 "late" is closed (s4708). Question: in RETAIL, does the mixer run between the allocator's count store (0x8008F0CC, phys 0x149700) and base store (0x8008F0EC, phys 0x1496F8)?
+s4710: retail (boot/attract, 180 s) performs exactly ONE allocateSongChannelArray call (count 20, base 0x80169460, ra 0x8009193c); no count-32 alloc observed. Port's first alloc matches.
+Open: who calls allocateSongChannelArray with count 32 in the PORT, and when? Retail cannot answer past attract (oracle does not reach hangar).
 
-Hypotheses: (A) retail never switches threads inside the window; our scheduler preempts where retail doesn't -> fix is scheduling fidelity. (B) retail switches, but count<=capacity because retail never reaches a 6th alloc with a larger count -> upstream cause is the song-channel alloc sequence. (C) retail has the same race latently.
-
-Commands (from repo root, one game run at a time; positive control FIRST):
-1. Control: `tools/oracle/build/rs64_oracle --core ~/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 60 --watch-write 0x000000:0x7FFFFF` -> must report hits (instrument live).
-2. Real: same command with `--secs 180 --watch-write 0x1496F8:0x149704`, plus `--watch-pc` on mixer entry 0x800913xx (find exact entry via recomp symbol map) to see interleaving. Title -> hangar.
-3. Log order of count-store vs base-store hits and any mixer exec between them.
-
-Discriminating outcomes: a 6th count store of 32 in retail -> (A) or (C) (then check mixer interleave: none -> A, some -> C); only counts 20,17,16,15,18 -> (B). Zero hits on the real watch with control passing = wrong address; re-derive phys from KSEG0 (addr & 0x1FFFFFFF).
+Unit: regen with s1927 slot-alloc patch (fixup_game_funcs_vendored.py ~35322 is present in source but NOT in the current binary; check why: `grep -n "s1927" tools/fixup_game_funcs_vendored.py`), run port to hangar with ROGUESQ_LOG_VI_CALLERS=1 and log every slot-alloc (old/new/count + ra). Discriminator: ra of the count-32 call and whether it follows a song start that retail issues too.
+Scripts: scratch/agent/s4709/{run.sh,port.sh}. Avoid dumping oracle stdout into context (redirect to file via script).

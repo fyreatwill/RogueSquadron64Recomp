@@ -272,7 +272,7 @@ The recurring odd PI DMA remains an explanation problem, not a skip target.
 The port writes ASCII `lcre` into a cart record through the FE98 path, while
 retail writes B0xxxxxx pointers in the corresponding target range. The bad
 caller input is the `0x800903F0` render path reading `late` from voice `+0x34`.
-The writer is named (s4577/s4580, re-decoded s4708): `late` is the tail of the name string "xbkplate" written by rs_strncpy into a name table that voice index 30 (past the 18-slot array) lands in, because count 32 is published before the new base with the mixer running in between. Open: does retail's scheduler also switch inside that window?
+The writer is named (s4577/s4580, re-decoded s4708): `late` is the tail of the name string "xbkplate" written by rs_strncpy into a name table that voice index 30 (past the 18-slot array) lands in, because count 32 is published before the new base with the mixer running in between. s4710: retail boot/attract does ONE alloc (count 20) only; no second alloc observed, (C) ruled out for that window, hangar unobserved. Next: log port slot-alloc ra (NEXT.md).
 
 The s4619 route qualification reached the required hangar origin on both
 arms: the port logged 512-wide `0x006AB400`, while retail independently logged
