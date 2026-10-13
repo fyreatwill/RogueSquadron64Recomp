@@ -1,8 +1,8 @@
-# Hold synth quiesce past the gate clear until guest audio re-init ends
+# Confirm PAUSE=4 and make it default; then resume the 0x2C splice route
 
 HYPOTHESIS-ID: factor5-overlay-0x2c-splice
 
-s4784: port teardown ordering inside the noop window matches retail; the divergence is AFTER the gate clear: the synth host thread ticks 0 mallocs after the clear (retail: 32-44 rs_malloc first).
-Hypotheses: A) retail's post-clear protection is simply "re-init runs before the next tick" (single-threaded/cooperative); holding the s4562 pause until re-init end removes the crash. B) the crash survives a held pause (then the freed-arena hit is a stale pointer in the re-init itself, not a tick race). C) re-init never completes before the next noop window in the port.
-Discriminator: find the guest return/point after the 32-44 mallocs (analyze scratch/agent/s4783 oracle data with tools/s4783_noop_gap.py for the PC of the last malloc caller before the first post-clear synth tick; map to a funcs_*.c anchor), release g_s4562_pause there instead of at 0x8008ED48 (PAUSE=4, env-gated), run the VI640 phase-3 route (scratch/agent/s4784_run.sh with ROGUESQ_S4562_PAUSE=4), count crash + SYNTH-POST positions. Control: PAUSE=3 arm in the same iteration (expect crash). A: PAUSE=4 survives past old crash point; B: still crashes.
-ORIGIN: retail ordering (s4783 oracle, s4784 port).
+s4785: PAUSE=4 survives where PAUSE=0/3 crash (+5808) and reaches VI 512 (n=1 per arm).
+Work unit: (1) read the SOAK-RESULTS line for s4785_pause4_600s (loop runs it); if no crash in 540 s, make PAUSE=4 behaviour default-on in tools/apply_s4562_synth_pause.py (s_on default 4 unless ROGUESQ_S4562_PAUSE=0), regen-safe, rebuild. (2) rerun the VI640->hangar key route (ROGUESQ_S4562_PAUSE unset) and look for res=0x2C rows (the original s4761 blocker). Competing: if soak crashes, the crash site differs from +5808 => a second freed-arena reader (check pc-symbol); if it passes, +5808 class is closed.
+Control: PAUSE=0 arm crashes +5808 at ~80 s (s4785_0).
+ORIGIN: retail ordering (s4783/s4785).

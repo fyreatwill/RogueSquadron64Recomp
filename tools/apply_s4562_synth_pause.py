@@ -25,18 +25,31 @@ if MARK not in s:
     s = s.replace(a1, wrapper + a1.replace('musyxSynthFrame(', 'musyxSynthFrame_s4562_impl('), 1)
     a2 = '    // 0x80091EE4: lui         $v0, 0x8015\n'
     assert s.count(a2) == 1
-    pause = ('    { /* ' + MARK + ' */ static int s_on = -1; if (s_on < 0) { const char* e = getenv("ROGUESQ_S4562_PAUSE"); s_on = (e && (e[0] == 49 || e[0] == 50 || e[0] == 51)); }\n'
+    pause = ('    { /* ' + MARK + ' */ static int s_on = -1; if (s_on < 0) { const char* e = getenv("ROGUESQ_S4562_PAUSE"); s_on = (e && (e[0] == 49 || e[0] == 50 || e[0] == 51 || e[0] == 52)); }\n'
       '      if (s_on) { extern void yield_self_1ms(uint8_t* rdram); __atomic_store_n(&g_s4562_pause, 1, __ATOMIC_SEQ_CST);\n'
       '        int w = 0; while (__atomic_load_n(&g_s4562_in, __ATOMIC_SEQ_CST) > 0 && w < 2000) { yield_self_1ms(rdram); ++w; }\n'
       '        fprintf(stderr, "[s4562] pause set; waited %d ms for in-flight synth (in=%d skipped=%u)\\n", w, g_s4562_in, g_s4562_skipped); } }\n')
     s = s.replace(a2, pause + a2, 1)
     a3 = '    rs64_s2031_m5_gate_event(rdram, "wait-exit", "waitForMusyXAudioTaskDone",'
     assert s.count(a3) == 1
-    clr = ('    if (__atomic_load_n(&g_s4562_pause, __ATOMIC_SEQ_CST)) { static int s_hold = -1; if (s_hold < 0) { const char* e = getenv("ROGUESQ_S4562_PAUSE"); s_hold = (e && (e[0] == 50 || e[0] == 51)); } /* s4698: PAUSE=2 holds the pause past wait-exit (discriminator) */ if (s_hold) { fprintf(stderr, "[s4562] pause HELD past wait-exit\\n"); } else __atomic_store_n(&g_s4562_pause, 0, __ATOMIC_SEQ_CST); fprintf(stderr, "[s4562] pause cleared skipped=%u\\n", g_s4562_skipped); } /* ' + MARK + ' */\n')
+    clr = ('    if (__atomic_load_n(&g_s4562_pause, __ATOMIC_SEQ_CST)) { static int s_hold = -1; if (s_hold < 0) { const char* e = getenv("ROGUESQ_S4562_PAUSE"); s_hold = (e && (e[0] == 50 || e[0] == 51 || e[0] == 52)); } /* s4698: PAUSE=2 holds the pause past wait-exit (discriminator) */ if (s_hold) { fprintf(stderr, "[s4562] pause HELD past wait-exit\\n"); } else __atomic_store_n(&g_s4562_pause, 0, __ATOMIC_SEQ_CST); fprintf(stderr, "[s4562] pause cleared skipped=%u\\n", g_s4562_skipped); } /* ' + MARK + ' */\n')
     s = s.replace(a3, clr + a3, 1)
+clr_new = ('    if (__atomic_load_n(&g_s4562_pause, __ATOMIC_SEQ_CST)) { static int s_hold = -1; if (s_hold < 0) { const char* e = getenv("ROGUESQ_S4562_PAUSE"); s_hold = (e && (e[0] == 50 || e[0] == 51 || e[0] == 52)); } if (s_hold) { fprintf(stderr, "[s4562] pause HELD past wait-exit\\n"); } else __atomic_store_n(&g_s4562_pause, 0, __ATOMIC_SEQ_CST); fprintf(stderr, "[s4562] pause cleared skipped=%u\\n", g_s4562_skipped); } /* ' + MARK + ' */\n')
 # s4699 upgrade of already-patched files (idempotent): PAUSE=3 enables the pause and holds it like PAUSE=2
 s = s.replace("(e && (e[0] == 49 || e[0] == 50));", "(e && (e[0] == 49 || e[0] == 50 || e[0] == 51));")
 s = s.replace("s_hold = (e && e[0] == 50);", "s_hold = (e && (e[0] == 50 || e[0] == 51));")
+# s4785: the installed funcs_24.c carried the ORIGINAL PAUSE=1-only blocks (the s4698/s4699 hold upgrades had been lost at a regen,
+# so PAUSE=2/3 runs since then enabled nothing). Upgrade the original text in place.
+OLD_ON = 's_on = (e && e[0] == 49); }'
+if OLD_ON in s:
+    s = s.replace(OLD_ON, 's_on = (e && (e[0] == 49 || e[0] == 50 || e[0] == 51 || e[0] == 52)); }')
+OLD_CLR = ('    if (__atomic_load_n(&g_s4562_pause, __ATOMIC_SEQ_CST)) { __atomic_store_n(&g_s4562_pause, 0, __ATOMIC_SEQ_CST); '
+           'fprintf(stderr, "[s4562] pause cleared skipped=%u\\n", g_s4562_skipped); } /* ' + MARK + ' */\n')
+if OLD_CLR in s:
+    s = s.replace(OLD_CLR, clr_new)
+# s4785: PAUSE=4 upgrade of already-patched files
+s = s.replace("(e && (e[0] == 49 || e[0] == 50 || e[0] == 51)); }", "(e && (e[0] == 49 || e[0] == 50 || e[0] == 51 || e[0] == 52)); }")
+s = s.replace("s_hold = (e && (e[0] == 50 || e[0] == 51)); }", "s_hold = (e && (e[0] == 50 || e[0] == 51 || e[0] == 52)); }")
 f24.write_text(s)
 # s4699: PAUSE=3 -- the held pause ends at the guest's own gate-clear store (musyxNoopStub 0x8008ED48), after which
 # musyxSynthFrame's own gate check (0x800912AC) returns before the list walk, as in retail.
@@ -49,5 +62,18 @@ if MARK3 not in t:
     rel = ('        { /* ' + MARK3 + ' */ extern volatile int g_s4562_pause; extern volatile unsigned g_s4562_skipped; static int s_p3 = -1; if (s_p3 < 0) { const char* e = getenv("ROGUESQ_S4562_PAUSE"); s_p3 = (e && e[0] == 51); }\n'
            '          if (s_p3 && __atomic_load_n(&g_s4562_pause, __ATOMIC_SEQ_CST)) { __atomic_store_n(&g_s4562_pause, 0, __ATOMIC_SEQ_CST); fprintf(stderr, "[s4562] pause RELEASED at gate store 0x8008ED48 skipped=%u\\n", g_s4562_skipped); } }\n')
     t = t.replace(b, rel + b, 1)
+    f23.write_text(t)
+# s4785: PAUSE=4 -- keep the pause held past the gate clear and release it when the guest audio re-init ends
+# (initSampleStreamBlockCache return 0x8008F958; its malloc caller 0x8008F8A8 is the last MusyX-init rs_malloc in all 8 s4783
+# retail windows, and retail runs 32-44 rs_malloc before the first post-clear synth tick). PAUSE=3 releases at the gate clear
+# and still crashes.
+MARK4 = "PATCH: s4785 pause release reinit"
+t = f23.read_text()
+if MARK4 not in t:
+    c = '    { extern void rs64_m5_object_return_witness(uint8_t*, recomp_context*, unsigned); rs64_m5_object_return_witness(rdram, ctx, 0x8008F958u); }'
+    assert t.count(c) == 1
+    rel4 = ('    { /* ' + MARK4 + ' */ extern volatile int g_s4562_pause; extern volatile unsigned g_s4562_skipped; static int s_p4 = -1; if (s_p4 < 0) { const char* e = getenv("ROGUESQ_S4562_PAUSE"); s_p4 = (e && e[0] == 52); }\n'
+            '      if (s_p4 && __atomic_load_n(&g_s4562_pause, __ATOMIC_SEQ_CST)) { __atomic_store_n(&g_s4562_pause, 0, __ATOMIC_SEQ_CST); fprintf(stderr, "[s4562] pause RELEASED at reinit end 0x8008F958 skipped=%u\\n", g_s4562_skipped); } }\n')
+    t = t.replace(c, rel4 + c, 1)
     f23.write_text(t)
 print("ok")
