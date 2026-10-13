@@ -155078,3 +155078,5 @@ Result (single run, port reached phase 7 = 512@0x690400, same mission VI as reta
 Rules out: the width-1161 colour image at 0x1F0D74 is NOT present in the current configuration/recipe (per-frame sampling; sub-frame transients not excluded) — the s640-s659 premise looks stale (mitigated or config-dependent). Does not name a writer for the uniform fills.
 ORIGIN: no mitigation added; diagnostic-only (env-gated poll).
 Next: widen the poll (0x1F0000..0x1F1000) at the fill frames to measure fill extent; decide host copyToRAM/clear vs game memset by extent and alignment.
+
+Discrimination (s4727): H-port-wild-1161 (port-side stale/wild writer stores a width-1161 colour image at 0x1F0D74) REFUTED for the current recipe: control passed, 0 of 32 change rows hold 0x489 across 2914 frames incl. mission VI. H-premise-stale (the 1161 image belonged to older configs/mitigated paths) SELECTED, single-run. H-uniform-fill-host vs H-uniform-fill-game remain open. Next discriminator: fill EXTENT at frames 268/457/458 (>=0x1000 and 0x40-aligned => host/RT64 clear or copyToRAM; small => game memset, compare retail 0x800078EC clear).
