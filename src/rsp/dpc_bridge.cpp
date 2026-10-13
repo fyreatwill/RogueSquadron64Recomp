@@ -383,6 +383,7 @@ static uint32_t inline_probe_slot(uint32_t opcode) {
 struct DlWalkTrace {
     struct Ev { uint32_t kind, a, b, c, n; };  // 1 nonseq-fetch(prev,addr,prevop) 2 push 3 pop
     uint32_t task = 0, fetches = 0, nonseq = 0, back = 0, prev = 0xFFFFFFFFu, prev_op = 0;
+    uint32_t n2c = 0, njmp = 0;  // s4747: 0x1DB0 arrivals with d153==0x2C / all jump arrivals
     std::vector<Ev> ev;
     // s4738: ring of the last 8 do_indirect_jump arrivals; snapshots at 0x30(r18) site-3 stores.
     struct Jmp { uint32_t target, r31, line, d153, prev_op, n; };
@@ -1442,6 +1443,8 @@ extern "C" void rs64_dlw_jump(uint32_t target, uint32_t r31, uint32_t line, uint
             fprintf(stderr, "\n");
         }
     }
+    ++g_dlw.njmp;
+    if (d153 == 0x2C && (target & 0xFFFFu) == 0x1DB0) ++g_dlw.n2c;
     g_dlw.ring[g_dlw.ring_n++ & 7] = {target & 0xFFFFu, r31 & 0xFFFFu, line, d153, g_dlw.prev_op, g_dlw.fetches};
 }
 
@@ -1796,6 +1799,13 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 fprintf(stderr, "[dlwalk-ph] phase=%u tasks=%u runaway=%u\n", ph_ord, tot_ph[ph_ord], run_ph[ph_ord]);
             fprintf(stderr, "[dlwalk-sum] task=%u phase=%u fetches=%u nonseq=%u back=%u events=%zu\n",
                     task, rs64_phase_ord(), g_dlw.fetches, g_dlw.nonseq, g_dlw.back, g_dlw.ev.size());
+        }
+        {
+            static int c2c_ph[16] = {0};
+            if (c2c_ph[ph_ord] < 150 && (g_dlw.fetches > 3000 || c2c_ph[ph_ord] < 10)) {
+                ++c2c_ph[ph_ord];
+                fprintf(stderr, "[dlwalk-2c] task=%u phase=%u fetches=%u arrivals2c=%u jmps=%u\n", task, ph_ord, g_dlw.fetches, g_dlw.n2c, g_dlw.njmp);
+            }
         }
         const bool runaway = g_dlw.fetches >= 16000, normal = g_dlw.fetches > 3000 && g_dlw.fetches < 4000;
         if (runaway && g_dlw_zero_task == task) { static int tz = 0; for (uint32_t i = 0; i < g_dlw_nzero && tz < 24; ++i, ++tz) dlw_dump_words("end", task, g_dlw_zero_src[i]); }
