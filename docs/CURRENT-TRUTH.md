@@ -1,5 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4748: the first 0x2C dispatch is DL op 0xBD (TexrectGen): ring snapshots of 3/3 phase-7 runaway tasks end ...0x15A4 (d153=0x28, prevop 0xBD) -> 0x1298 -> 0x1DB0 (d153=0x2C, prevop 0xBD); normal task 41 ring has no 0xBD. Single run, ring depth 8; per-task 0xBD count for normal tasks NOT yet measured.**
+
 **s4747: a DMEM 0x153==0x2C arrival at 0x1DB0 occurs in 142/142 runaway tasks and 0 of 387 listed non-runaway tasks (phase-3 runaways ~13 arrivals each; phase-7 mission runaways exactly 1 each). One unrouted-0x2C dispatch starts the restart loop; it is not a per-object count. Phase-7 4-16k-fetch "mid" tasks have 0 arrivals, so they are slow for another reason. Single run; ship/HUD effect of a splice still untested (allowlist).**
 
 **s4746: runaway DL restarts (0xBD->ovl 0x2C->0x1DB0) are NOT mission-only, and s4737/s4738 mislabelled them "mission" (that log's tasks were phase 3, VI 640). Per phase (s4746_phase, single run, per-phase budgets): runaway tasks 0 in phases 2/4/5/6, 14 in phase 3, ~65% (105/150) in phase 7 mission (512 @0x690400), each costing >=4-5x a normal 3.0-3.5k-fetch task (16384 cap). Phase map: 2=320, 3=VI640, 4=title, 5=hangar, 6=VI640 0x6A2900, 7=mission.** Whether the splice restores ship/HUD stays untested (needs allowlist).
