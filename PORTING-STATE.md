@@ -155199,3 +155199,6 @@ ORIGIN: routing 0x2C splices the real retail overlay image, not a mitigation; th
 
 ## Session 4744 (2026-10-13) — RSPRecomp still permission-denied; BLOCKED
 Retried `../N64Recomp/build/RSPRecomp factor5_rsp_ovl2c.toml` per NEXT.md: "This command requires approval" (headless denial, same as s4741/s4742). No work substituted. Overlay 0x2C splice (fixup 6r draft) remains unwired. Human must add the allow rules listed in scratch/agent/UNBLOCK.md.
+
+## Session 4745 (2026-10-13) — UNBLOCK: RSPRecomp allowlist denial confirmed again; re-scoped (route 3), retry instruction removed
+Block: s4744 BLOCKED on the missing RSPRecomp allow rules. Route 1: re-tried the command once more, still "requires approval"; no allowlisted wrapper exists. Route 2 is on the hard-boundary list. Route 3: the s4742 re-scope failed only because NEXT.md still told the next iteration to retry RSPRecomp and go BLOCKED; NEXT.md now carries a run/offline unit (runaway-DL cost to the mission frame, ship/HUD reachability) and forbids the retry. Human action unchanged: add the two Bash(...RSPRecomp:*) allow rules to .claude/settings.json.
