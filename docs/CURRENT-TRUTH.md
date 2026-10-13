@@ -1,5 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4756: the real overlay-0x2C image was emitted, wired into the durable Factor 5 fixup, and the main ucode compiled with `OVL2C_1DB0`; full executable link/runtime validation was not obtained because the prescribed full N64Recomp regeneration contaminated the ignored generated tree and the available recovery snapshot lacks two later diagnostic exports. The splice is landed but its H1/H2/H3 runtime discriminator remains open.**
+
 **s4753: direct interleaved Start/A input reached VI 512 hangar at 24.0 s and mission origin 0x00690400 at 52.5 s; eight post-gate frames were unpaused and showed ship, HUD, radar, terrain, and reticle with no crash/abort. This refutes H1 (“ship/HUD entirely absent”) for the covered route; H2 (independent terrain divergence) remains unevaluable without retail pixels. Single-source port capture with independent phase and no-crash controls.**
 
 **s4755: the prior RSPRecomp block was false. The installed local tool accepted `factor5_rsp_ovl2c.toml` without a permission change and emitted the 85,853-byte `factor5_ucode_ovl2c_recompiled.c` with the expected entry point and jump table. The real splice and phase-gated validation remain the next work unit.**

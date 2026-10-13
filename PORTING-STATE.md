@@ -155290,3 +155290,22 @@ discriminating observation that refutes the permission dependency; it does
 not yet validate the splice or its runtime effect. The next unit is to wire
 the existing fixup, regenerate, rebuild, and run the phase-gated s4753
 mission capture with `ROGUESQ_OVL2C_DROP=0`.
+
+## Session 4756 (2026-10-13) — landed overlay-0x2C splice; link validation blocked by unsafe regen output
+
+Ran the now-available `../N64Recomp/build/RSPRecomp factor5_rsp_ovl2c.toml`; it
+emitted the 85,853-byte overlay C. Wired fixup 6r into
+`tools/fixup_factor5_ucode.py` with an ORIGIN tied to the guest DMEM `0x153==0x2C`
+writer and a route-only `OVL2C_1DB0` dispatch. The generated main ucode contains
+the renamed resident block and compiles successfully as part of the target.
+
+The prescribed full N64Recomp chain reproduced the documented regeneration
+hazard: it replaced ignored generated files with incomplete output, producing a
+dangling `after_0` label in `funcs_1.c`. Restoring the complete local
+`RecompiledFuncs.s4204-reconstructed` snapshot allowed all generated C and the
+0x2C ucode to compile, but executable linking then failed on missing later
+diagnostic exports `rs64_s4207_after_audtask` and `rs64_s4581_inflight`; the
+available snapshot predates those exports. Therefore no mission run or H1/H2/H3
+selection is claimed. This rules out a splice-source or fixup syntax failure,
+not the ABI/runtime hypotheses. The generated-tree recovery is the next work
+unit.

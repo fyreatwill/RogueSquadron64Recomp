@@ -1660,6 +1660,52 @@ if is_main_ucode and OVL1C_MARKER not in text:
         1, "case 0x1DB0 overlay-0x1C routing")
 
 # ---------------------------------------------------------------------------
+# Fixup 6r: splice resident overlay 0x2C at dest 0x1DB0 (s4756)
+# ORIGIN: DMEM 0x153==0x2C loads a real 0x240-byte image at IMEM 0x1DB0.
+# Without this route, main L_1DB0 re-seeds the root display-list pointer.
+OVL2C_MARKER = "/* fixup: ovl2csplice */"
+if is_main_ucode and OVL2C_MARKER not in text:
+    ovl2c_path = path.parent / "factor5_ucode_ovl2c_recompiled.c"
+    if not ovl2c_path.exists():
+        print("fixup_factor5_ucode: FIXUP 6r INPUT MISSING: run RSPRecomp on "
+              "factor5_rsp_ovl2c.toml first.", file=sys.stderr)
+        sys.exit(1)
+    ovl2c_text = ovl2c_path.read_text(encoding="utf-8")
+    m_start = re.search(r"^L_1DB0:\n", ovl2c_text, flags=re.MULTILINE)
+    m_end = re.search(r"^do_indirect_jump:\n", ovl2c_text, flags=re.MULTILINE)
+    if not m_start or not m_end or m_end.start() <= m_start.start():
+        print("fixup_factor5_ucode: FIXUP 6r EXTRACTION FAILED", file=sys.stderr)
+        sys.exit(1)
+    region = ovl2c_text[m_start.start():m_end.start()]
+    labels = set(re.findall(r"^(L_[0-9A-F]{4}):", region, flags=re.MULTILINE))
+    external = set(re.findall(r"goto (L_[0-9A-F]{4});", region)) - labels
+    if external != {"L_10D8", "L_112C"}:
+        print("fixup_factor5_ucode: FIXUP 6r SANITY FAILED: externals "
+              f"{sorted(external)} != ['L_10D8','L_112C']", file=sys.stderr)
+        sys.exit(1)
+    for label in labels:
+        region = re.sub(r"\b" + label + r"\b", "OVL2C_" + label[2:], region)
+    text, n = re.subn(r"(^do_indirect_jump:\n)",
+                      lambda m: OVL2C_MARKER + "\n" + region + m.group(1),
+                      text, count=1, flags=re.MULTILINE)
+    if n != 1:
+        print("fixup_factor5_ucode: FIXUP 6r SPLICE ANCHOR FAILED", file=sys.stderr)
+        sys.exit(1)
+    anchor = re.compile(
+        r"(            if \(RSP_MEM_BU\(0X153, 0\) == 0x28\) \{"
+        r" rs64_e9prov_ovl_route\(0x28, 0x1DB0\); "
+        r"r17 = RSP_ADD32\(r17, 0X20\); goto L_10D8; \}  "
+        r"/\* fixup: ovl24route \*/\n)"
+    )
+    text, n = anchor.subn(
+        lambda m: "            if (RSP_MEM_BU(0X153, 0) == 0x2C) {"
+                  " rs64_e9prov_ovl_route(0x2C, 0x1DB0); goto OVL2C_1DB0; }  "
+                  + OVL2C_MARKER + "\n" + m.group(1), text, count=1)
+    if n != 1:
+        print("fixup_factor5_ucode: FIXUP 6r ROUTE ANCHOR FAILED", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 # Fixup 6l: route ovl1c jal-return at 0x1E18 (s753)
 # ---------------------------------------------------------------------------
 # s752: dest-0x1DB0 / 153==0x1C is LIVE; stray 0x1F40/00 went to 0.
