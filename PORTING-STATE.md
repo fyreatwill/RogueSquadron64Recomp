@@ -155323,3 +155323,14 @@ missing later diagnostic exports (`rs64_s4207_after_audtask` and
 The next discriminator is the same repaired-binary mission capture, but only
 after restoring those two definitions from a snapshot or their durable apply
 scripts.
+
+## Session 4758 (2026-10-13) — verified retry checkpoint without rerunning splice validation
+
+This retry performed no build or runtime run, as required by the checkpoint-closeout
+contract. The existing s4756/s4757 record remains the complete result: the overlay
+0x2C RSP image was emitted and wired, but the recovered generated tree cannot link
+because `rs64_s4207_after_audtask` and `rs64_s4581_inflight` are absent. The two
+durable apply scripts that reconstruct those definitions are present
+(`tools/apply_s4207_m5_postaud.py` and `tools/apply_s4581_switchlog.py`), which
+narrows the resume action to restoring/reconstructing the generated tree; it does
+not validate either runtime hypothesis. No H1/H2/H3 selection is added.

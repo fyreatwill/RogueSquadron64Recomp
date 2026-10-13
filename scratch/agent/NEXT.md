@@ -3,7 +3,9 @@
 HYPOTHESIS-ID: ovl2c-real-splice
 
 Resume the incomplete s4756 work unit. Do not rerun the experiment until the
-generated tree is complete. Restore a snapshot containing both
+generated tree is complete. The retry checkpoint confirmed that the durable
+reconstruction scripts are present: `tools/apply_s4207_m5_postaud.py` and
+`tools/apply_s4581_switchlog.py`. Restore a snapshot containing both
 `rs64_s4207_after_audtask` and `rs64_s4581_inflight`, or reconstruct exactly
 those two durable definitions from their existing apply scripts. Do not invoke
 the newer full N64Recomp regeneration; it reproduced the `after_0` truncation
