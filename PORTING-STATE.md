@@ -155002,3 +155002,5 @@ ORIGIN: no mitigation added; instrumentation only. Writer is named and legitimat
 Discrimination: this run REFUTES hypothesis B (port stub/synthesised writer of the record) and SELECTS A (retail-game-originated per-scene audio-config request => re-alloc window is retail behaviour) for H-alloc-window-sched-switch, because every observed store PC lies in ROM game code and the neighbouring-store control fired. Caveat: single-source (port only; oracle reaches attract only) and DMA/memcpy writers would be invisible to the store hook, but every value change had a matching store row.
 Next discriminator: the thread moves to why allocateSongChannelArray inside that window faults/misbehaves in the port but not retail; compare retail vs port rs_malloc state at those allocs (counts 17,16,15,18,18,32) using the existing s4579/s4533 logs.
 Summary: the record's writers are retail code, so the extra audio re-allocs are retail behaviour and not port artifacts.
+
+This run refutes hypothesis B (port-stub writer) and selects A (retail-originated record) for H-alloc-window-sched-switch.
