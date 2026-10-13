@@ -497,6 +497,7 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
+**s4736 (top): runaway mission tasks have exactly ONE RSP entry (positive control: normal tasks also 1; kind-4 refill instrument fires 971x) → H-iter-restart refuted. Their L_11B0 chunk-source sequence is a ~38-source cycle starting at 0x740AD8 that returns to 0x740AD8 even though the preceding chunk (0x744078) has link word 0 → restart source is not the RDRAM chain link; points at DMEM state+0x30 / saved slot-0 reset (H-root-reload family) over cyclic data. Single run. Next = log DMEM[r18+0x30] and its stores across the wrap (NEXT.md). Trace: ROGUESQ_DLWALK=1 + fixup 18.**
 **s4735 (top): runaway tasks' DL call stream is exactly periodic (period 43–48 calls, 100%) and restarts at the root's first call site (pc 0x180); stack depth ≤8 and balanced → H-stale-return refuted (single run, with normal-task control).** Remaining: root-chunk reload from an earlier address (port ring/DL-pointer wrap) vs genuinely cyclic root data. Next = NEXT.md (log root chunk-DMA sources, L_11B4 r2, on a runaway task; compare to ring contents). Trace: ROGUESQ_DLWALK=1, scratch/agent/s4735_run.sh.
 
 **s4733 (top): mission RDP stream ≈ retail (single aligned frame: 877/1054 tri headers, 12/12 texrects byte-identical) → defect is renderer/raster-side, not RSP/DL.** Port-only runaway frames (1846/1849/1851: 20K–102K tris, 100+ setcimg in one sync interval; retail none) are the new lead. Scripts s4733_*.py/.sh in scratch/agent. Next = NEXT.md.

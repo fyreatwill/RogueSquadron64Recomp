@@ -1406,6 +1406,38 @@ extern "C" void rs64_e9prov_guest(uint32_t guest_addr, uint32_t) {
     if (g_e9prov.first_guest == 0xFFFFFFFFu) g_e9prov.first_guest = guest_addr & 0x7FFFFFu;
 }
 
+static uint32_t g_dlw_zero_src[4], g_dlw_zero_task = 0, g_dlw_nzero = 0;
+static void dlw_dump_words(const char *tag, uint32_t task, uint32_t src) {
+    if (g_rdram_for_submit == nullptr) return;
+    fprintf(stderr, "[dlwalk-zero] %s task=%u src=0x%06X:", tag, task, src);
+    for (uint32_t i = 0; i < 24; ++i) {
+        const uint32_t p = (src + i * 4) & 0x7FFFFFu;
+        fprintf(stderr, " %02x%02x%02x%02x", g_rdram_for_submit[p ^ 3], g_rdram_for_submit[(p + 1) ^ 3],
+                g_rdram_for_submit[(p + 2) ^ 3], g_rdram_for_submit[(p + 3) ^ 3]);
+    }
+    fprintf(stderr, "\n");
+}
+extern "C" void rs64_dlw_root(uint32_t kind, uint32_t a, uint32_t b) {
+    if (!dlwalk_on() || g_dlw.task == 0) return;
+    uint32_t w0 = 0;
+    if (kind == 4 && g_rdram_for_submit != nullptr) {
+        const uint32_t p = b & 0x7FFFF8u;
+        w0 = (uint32_t(g_rdram_for_submit[p ^ 3]) << 24) | (uint32_t(g_rdram_for_submit[(p + 1) ^ 3]) << 16) |
+             (uint32_t(g_rdram_for_submit[(p + 2) ^ 3]) << 8) | uint32_t(g_rdram_for_submit[(p + 3) ^ 3]);
+        b &= 0x7FFFFFu;
+    }
+    dlw_event(kind, a & 0xFFFFu, b, w0);
+    if (kind == 4 && w0 == 0 && g_rdram_for_submit != nullptr) {
+        if (g_dlw_zero_task != g_dlw.task) { g_dlw_zero_task = g_dlw.task; g_dlw_nzero = 0; memset(g_dlw_zero_src, 0, sizeof g_dlw_zero_src); }
+        bool known = false;
+        for (uint32_t i = 0; i < g_dlw_nzero; ++i) if (g_dlw_zero_src[i] == b) known = true;
+        if (!known && g_dlw_nzero < 4) {
+            g_dlw_zero_src[g_dlw_nzero++] = b;
+            if (g_dlw.fetches > 3000) dlw_dump_words("dma", g_dlw.task, b);
+        }
+    }
+}
+
 extern "C" void rs64_e9prov_source_fetch(uint32_t guest_addr, uint32_t w0) {
     if (dlwalk_on()) {
         const uint32_t a = guest_addr & 0x7FFFFFu;
@@ -1725,6 +1757,7 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                     task, rs64_phase_ord(), g_dlw.fetches, g_dlw.nonseq, g_dlw.back, g_dlw.ev.size());
         }
         const bool runaway = g_dlw.fetches >= 16000, normal = g_dlw.fetches > 3000 && g_dlw.fetches < 4000;
+        if (runaway && g_dlw_zero_task == task) { static int tz = 0; for (uint32_t i = 0; i < g_dlw_nzero && tz < 24; ++i, ++tz) dlw_dump_words("end", task, g_dlw_zero_src[i]); }
         if ((runaway && dets < 3) || (normal && dets2 < 2)) {
             if (runaway) ++dets; else ++dets2;
             for (const auto& e : g_dlw.ev)

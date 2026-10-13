@@ -2948,6 +2948,24 @@ if is_main_ucode and TRIGEN_CHUNK_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 18 (s4736): DL-walk root DMA-source + RSP-entry trace (ROGUESQ_DLWALK).
+# kind 4 = L_11B0 fall-through chunk source (r2), kind 5 = every entry at
+# RS64_UCODE_ENTRY (r17=root? a=r1). Passive: no-op unless ROGUESQ_DLWALK=1.
+# ---------------------------------------------------------------------------
+DLW_MARKER = "/* fixup: dlwalk root trace v1 */"
+if is_main_ucode and DLW_MARKER not in text:
+    text, n1 = re.subn(r"(RspExitReason factor5_ucode\()",
+        lambda m: 'extern "C" void rs64_dlw_root(uint32_t kind, uint32_t a, uint32_t b);  ' + DLW_MARKER + "\n" + m.group(1),
+        text, count=1)
+    text, n2 = re.subn(r"(RS64_UCODE_ENTRY:  /\* fixup: L_0000 self-restart \*/\n)",
+        lambda m: m.group(1) + "    rs64_dlw_root(5, r17, r18);  " + DLW_MARKER + "\n", text, count=1)
+    text, n3 = re.subn(r"(    r2 = RSP_MEM_W_LOAD\(0X30, r18\);\n(?:    rs64_inline_probe_trigen_chunk\(r17, r2\);[^\n]*\n)?)(L_11B4:)",
+        lambda m: m.group(1) + "    rs64_dlw_root(4, r17, r2);  " + DLW_MARKER + "\n" + m.group(2), text, count=1)
+    if (n1, n2, n3) != (1, 1, 1):
+        print("fixup_factor5_ucode: FIXUP 18 ANCHOR FAILED", (n1, n2, n3), file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 # Fixup 17: TriGen L_1DB0 DPC-branch trace (s726, item -421).
 #
 # The source is DMEM[r1+0x30] (0xFF0) copied to state[0x30]/0x130. Record
