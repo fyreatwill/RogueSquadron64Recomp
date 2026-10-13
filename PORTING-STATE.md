@@ -155370,3 +155370,24 @@ so this is a qualified pre-discriminator failure, not a null result for the
 overlay route. It rules out neither Hphase nor Habsent nor Hbad. It does rule
 out this input recipe as a usable route until the M5 callback teardown boundary
 is addressed. No mitigation or overlay conclusion was landed.
+
+## Session 4762 (2026-10-13) — qualified duplicate VI-retrace callback registration on the VI-640 route
+
+The first rebuilt capture exposed stale measurement setup: host callback probes
+fired, but the generated `s4700` register/deregister witness was absent from
+the executable. After applying the existing idempotent
+`tools/apply_s4700_cbtable_trace.py` probe and rebuilding, one real-audio run
+produced the positive controls and this source-side sequence:
+
+- registration of `0x8009123C` twice: table `3250 123C 123C 0`;
+- `findAndZeroTableSlotMatching(0x8009123C)` exited after one slot and left
+  `3250 0 123C 0`;
+- later `musyxSynthFrame` entries still reported `has_entry=1`.
+
+The run remained at VI 640 for the 120-second window and never reached title
+1024 or hangar 512. This qualifies the duplicate-registration/first-match
+mechanism on the covered boot route and does not qualify target-phase callback
+behavior. The legitimate duplicate writer remains the guest mixer reinit; no
+dispatcher bypass, guard, or deregistration change was made. The next unit is a
+single-arm default-B40 route requalification with the compiled witness and
+phase controls.
