@@ -1,9 +1,9 @@
-# Rerun the VI640->hangar->mission key route on the default (PAUSE=4) binary; look for res=0x2C rows
+# Read per-phase `res=0x2C` route counts at VI 512 (dlwalk phase 6), then compare DROP=1 vs DROP=0 in-run
 
 HYPOTHESIS-ID: factor5-overlay-0x2c-splice
 
-s4786: PAUSE=4 is default-on and soaked (544 s, 0 crashes). The +5808 crash that blocked the route (s4775/s4776) should no longer stop it.
-Work unit: run scratch/agent/s4776_gated_menu_walk.sh (or the s4753 winctl Start/A recipe) with ROGUESQ_S4562_PAUSE unset; record whether mission origin 0x00690400 is reached and count `res=0x2C` rows / arrivals2c in dlwalk output.
-Competing: (A) route reaches mission and 0x2C rows appear => splice evaluable, compare with ROGUESQ_OVL2C_DROP; (B) reaches mission, no 0x2C rows => splice ineffective, back to H2C-real-image; (C) still stalls at hangar 0x006AB400 => derive the hangar->mission trigger (s4774) instead of key mashing; (D) new crash => read pc-symbol, a different family.
-Control: a hangar VI 512 phase reached in the same run is the positive control for the route; dlwalk rows firing is the control for the counter.
-ORIGIN: retail ordering (s4783/s4785).
+s4787: VI 512 is reached unattended on the default binary; the `[ovl-route] res=0x2C` logger now exists (positive control: 152 rows, n=8704 in title phase). Mission-phase count not yet measured (new-binary runs stalled in VI 640 under host load 14).
+Work unit: read SOAK-RESULTS/soak_results for s4788_drop1_mission_2c (queued; same script as scratch/agent/s4788_drop1.sh). Check `uptime` load first; if load > 6 rerun later rather than trusting a stall. Extract: res=0x2C rows after the `vi_width=512` line (phase 6) vs title phase.
+Competing: (A) phase 6 has many 0x2C routes => stopgap drops real mission content, the real-image splice matters; (B) phase 6 has ~0 routes while DL arrivals2c>0 => arrivals die before RSP routing, look upstream; (C) still stalls in VI 640 => stall is not load, bisect vs previous binary (counter-only diff).
+Then: design an in-run toggle for DROP (not env-at-launch) so DROP=1/0 can be compared in the same phase.
+Control: res=0x2C rows in title phase (fires already); VI 512 line present.

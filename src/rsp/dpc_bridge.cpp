@@ -241,6 +241,7 @@ struct Rs64E9Provenance {
     uint32_t ovl18_route = 0;
     uint32_t ovl10_route = 0;
     uint32_t ovl1c_route = 0;
+    uint32_t ovl2c_route = 0;
     uint32_t l1298_12a0_res24 = 0;
     uint32_t l1298_12a0_other = 0;
     uint32_t last_ovl_res = 0;
@@ -1564,13 +1565,16 @@ extern "C" void rs64_e9prov_ovl_route(uint32_t resident, uint32_t target) {
         ++g_e9prov.ovl10_route;
     } else if (resident == 0x1C) {
         ++g_e9prov.ovl1c_route;
+    } else if (resident == 0x2C) {
+        ++g_e9prov.ovl2c_route;
     }
     if (!log_e9_provenance()) return;
-    static uint32_t n4 = 0, nC = 0, n24 = 0, n28 = 0, n14 = 0, n18 = 0, n10 = 0, n1c = 0;
+    static uint32_t n4 = 0, nC = 0, n24 = 0, n28 = 0, n14 = 0, n18 = 0, n10 = 0, n1c = 0, n2c = 0;
     uint32_t *n = resident == 4 ? &n4 : resident == 0xC ? &nC
                  : resident == 0x24 ? &n24 : resident == 0x28 ? &n28
                  : resident == 0x14 ? &n14 : resident == 0x18 ? &n18
-                 : resident == 0x10 ? &n10 : resident == 0x1C ? &n1c : nullptr;
+                 : resident == 0x10 ? &n10 : resident == 0x1C ? &n1c
+                 : resident == 0x2C ? &n2c : nullptr;
     if (!n) return;
     ++*n;
     if (*n <= 16 || (*n % 64) == 0) {
