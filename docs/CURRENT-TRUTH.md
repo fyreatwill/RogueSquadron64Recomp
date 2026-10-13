@@ -1,5 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4773: the compiled overlay-0x2C splice passed build validation but the
+existing mission recipe did not reach the mission route.** The exact
+`../N64Recomp/build/RSPRecomp factor5_rsp_ovl2c.toml` command exited 0 and the
+generated source contained both the resident `OVL2C_1DB0` body and its
+`0x153==0x2C` dispatch. The Debug port target also built successfully. The
+phase-gated run reached VI 512 at 23.6 s, but every observed 512-wide phase
+was hangar origin `0x006AB400`; mission origin `0x00690400` and direct
+`res=0x2C` rows were absent. No crash, abort, assertion, or unhandled marker
+occurred. This is a qualified build/phase positive control with the splice
+effect unevaluable, not evidence for or against H2C-real-image. Artifact:
+`scratch/agent/s4753_unpaused_mission_capture/`.
+
 **s4772: the shutdownAudioEngine caller census found one teardown-only caller.**
 The generated tree contains exactly one executable call to `shutdownAudioEngine`
 at `0x8008ECB8`, from `shutdownMusyXEngine` (`0x8008ECA4`), and it is guarded
@@ -352,12 +364,12 @@ unchanged. Evidence: `docs/M5-S4693-A13-DRAIN-BOUNDARY.md`.
 
 ## Active frontier
 
-Session 4761 adds a second, phase-gated failure to the overlay-0x2C route
-attempt. The normal arm crashed before the requested VI 512 gate in
-`musyxSynthFrame_s4562_impl+5808`; holding the documented S4562 pause did not
-change that outcome. Since the route never entered the discriminator phase,
-the absence of `res=0x2C` is unevaluable. Resume M5's open callback teardown
-boundary before attempting another overlay-route input recipe.
+Session 4773 adds a qualified build and hangar-phase control to the
+overlay-0x2C route attempt. The splice is present and the run is crash-free,
+but the existing input recipe stops at hangar origin `0x006AB400`; it never
+provides the mission-origin or direct `res=0x2C` discriminator. The splice
+effect remains unevaluable. A new mission-route recipe is required before
+claiming that the resident image changes the runaway or visible output.
 
 Session 4649 qualified a safe regeneration repair harness: the vendored fixer
 completed rc=0 against a clean `RecompiledFuncs.s4204-fresh` copy, and the five
@@ -614,10 +626,11 @@ Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed.
    The next discriminator is a new route or trigger that can reach
    `shutdownAudioEngine`; absent that, park this branch and continue the M5
    plan without treating the surviving duplicate as a shutdown artifact.
-2. **Overlay-0x2C splice:** the composite and fixup draft are landed, but the
-   RSPRecomp invocation remains blocked by the human Bash allow rule documented
-   in `scratch/agent/UNBLOCK.md`. Resume with the allowlisted compile, then run
-   the phase-gated mission validation; do not retry the blocked command.
+2. **Overlay-0x2C splice:** compilation and the Debug build are now qualified
+   (s4773), but the existing capture recipe reaches only hangar at VI 512.
+   Build one new mission-route input/driver discriminator, retaining the
+   resident splice and the same positive controls; do not infer splice effect
+   from the hangar-only run.
 3. **s4764 route blocker:** superseded for callback reachability by s4770, which reached both title and hangar without crash. The earlier VI-640 crash remains a recurring audio-route family, not evidence against callback cardinality.
 4. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
 5. **M5 audio:** de-stubbing qualified through A14 on the covered route (A11 wait cap, A12 countdown wait, A13 drain return default-off + timeout guard, A14 shutdown-call-3 needs `ROGUESQ_A14_YIELD` default on; B40 default flipped to pass-through s4701, rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`). A15 redundant, early synth crash resolved s4696. Per-scene audio re-allocs (initN64RspMixer via runVideoFrameTick->reapplyDisplayMode) are retail behaviour and benign (s4711-s4715, closed). Plan: docs/M5-AUDIO-PLAN.md. Keep soaks <=4 concurrent; every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup.

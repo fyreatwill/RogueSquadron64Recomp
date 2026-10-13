@@ -155563,3 +155563,17 @@ an alternate generated caller or symbol-alias explanation in the searched
 trees, but does not rule out a distinct untested route. No runtime build or
 deregistration change was made. The next work unit is the already-landed
 overlay-0x2C compile/splice, pending the documented human allow rule.
+
+## Session 4773 (2026-10-13) — qualified the overlay-0x2C build and hangar route
+
+The exact local RSPRecomp command for `factor5_rsp_ovl2c.toml` exited 0, and
+the generated main ucode contained both the resident `OVL2C_1DB0` body and the
+`0x153==0x2C` dispatch. The normal Debug `RogueSquadron64Recomp` target also
+built successfully. The existing phase-gated capture recipe then reached
+VI 512 at 23.6 seconds, but only at hangar origin `0x006AB400`; it produced no
+mission origin `0x00690400` or direct `res=0x2C` rows. The log had no crash,
+abort, assertion, or unhandled markers. This qualifies compilation, the splice
+presence, and the phase control, but leaves the image's effect unevaluable and
+rules out no route or DL hypothesis. The next unit is a new mission-route
+driver, not another hangar-only replay. Artifact:
+`scratch/agent/s4753_unpaused_mission_capture/`.
