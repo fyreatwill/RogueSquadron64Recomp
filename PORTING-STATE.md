@@ -155410,3 +155410,23 @@ invokes every duplicate slot, only the first live slot, or a stale source
 outside the table; the next unit adds the existing phase-gated callback
 census to measure that cardinality. No first-match change, guard, or other
 mitigation was made.
+## Session 4764 (2026-10-13) — callback cardinality probe remained unevaluable
+
+The rebuilt default-B40 real-audio/LLE/solo/spin-yield capture used
+`ROGUESQ_LOG_S4700_CB`, `ROGUESQ_LOG_PHASE`, and
+`ROGUESQ_LOG_M5_CALLBACK_CENSUS` with the phase-gated probe route. Build
+completed successfully. The run reached title VI 1024 at origin `0x00790400`
+after 50.4 seconds, then returned to VI 640 at origin `0x00696100` and
+crashed at 77.1 seconds in the known
+`musyxSynthFrame_s4562_impl+5808` family; it never reached hangar VI 512.
+
+The positive controls fired: phase transitions, callback registration and
+deregistration, duplicate `0x8009123C` table snapshots, and sampled synth
+entries. The callback census emitted only table-change samples `n=0,1,2`; it
+did not count callback-dispatch invocations. After first-match removal, the
+table still showed one live `0x8009123C`, and later synth entries continued,
+but that cannot distinguish dispatch-all, first-live-slot, or stale-source
+semantics. The run therefore rules out neither callback hypothesis and does
+not authorize a dispatcher change or mitigation. Next work unit: instrument
+the actual VI-retrace table walker with a per-slot dispatch ordinal and a
+same-run positive control.
