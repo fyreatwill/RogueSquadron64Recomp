@@ -2,8 +2,8 @@
 
 HYPOTHESIS-ID: mission-phase-correctness
 
-s4732: port reaches mission VI 512 @0x690400 at 68.3 s on the s4724 schedule (scratch/agent/s4732_run.sh) and sustains it to 150 s; H-route refuted. Mission frame shows terrain as detached ribbons, no ship/HUD.
+s4733: port mission RDP ≈ retail on an aligned frame (see PORTING-STATE s4733). Remaining defect is renderer-side OR the port-only runaway frames (port_rdp frames 1846/1849/1851: 20K-102K tris, 100+ setcimg w512).
 
-Work unit: capture retail mission RDP (oracle rdplog, s4724 recipe, gate on VI 512 @0x690400 after initMission) and port mission RDP (s4517_port_rdp.sh adapted to the s4732 key schedule). Per-sync tri/texrect histogram first, then first differing command at the first aligned mission frame (scratch/agent/s4517_diff.py).
-Hypotheses: H-stream-equal (streams match, renderer-side defect); H-rsp (geometry/vertex words differ, RSP idiom defect); H-dl (display-list/terrain mesh data differs upstream of RSP).
-Discriminator: first differing command + tri count ratio. Positive control: retail vs itself zero diff; hangar vs mission nonzero.
+Work unit: explain the runaway frames. Using /tmp/s4733.pkl (regenerate with scratch/agent/s4733_cmp.py) or s4733_port_rdp/port_rdp.bin: for frame 1849, list ranges (lo,phase) that compose it, find where the repeating setcimg/DL pattern starts, and correlate with the run.log TASKSUBMIT lines (ROGUESQ_LOG_TASKSUBMIT) to name the task/DL that loops or the missing full-sync.
+Hypotheses: H-nosync (a task omits OP_FULLSYNC; frames just merge), H-loop (a DL walk repeats the same sub-DL), H-dump-artifact (RS64_RDP_BIN_PORT recording duplicates ranges at wrap).
+Discriminator: are the repeated setcimg blocks byte-identical copies (loop/dump dup) or progressing (nosync merging distinct frames)? Positive control: same check on a normal frame splits into 1 block.

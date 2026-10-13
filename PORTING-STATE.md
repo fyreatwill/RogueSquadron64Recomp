@@ -155111,3 +155111,13 @@ Result: VI transitions 320 -> 640 (3.7 s) -> 1024 (16.9 s) -> 512 hangar @0x6AB4
 Rules out: H-route (port cannot reach mission); s4657-s4670 never reaching it was a route problem, not a wall. Does not yet select H-stream-equal vs H-rsp.
 Single-source: one run, one screenshot judged by eye. ORIGIN: n/a, no mitigation added.
 Next: per-sync RDP histogram of the port's mission VI vs retail (oracle rdplog on the s4724 recipe), then first differing command at an aligned mission frame (s4517_diff.py).
+
+## Session 4733 (2026-10-13) — mission RDP: port stream ≈ retail on aligned frame (H-stream-equal); port-only runaway frames found
+
+Ran NEXT.md unit. Retail: `scratch/agent/s4733_retail_mission.sh` (cxd4+rdplog, s4724 schedule) reached VI 512@0x690400 at 75.3 s (mission), killed at ~82 s; 734 w512 frames in rdp.bin. Port: `scratch/agent/s4733_port.sh` (s4732 schedule + RS64_RDP_BIN_PORT), 1855 frames, mission frames 1828+ (7 colour images, same count as retail mission frames). Analysis: `s4733_cmp.py`, `s4733_diff.py`, `s4733_diff2.py` (frames pickled to /tmp/s4733.pkl).
+Positive controls: retail frame vs itself zero diff / multiset-identical; port 1847 vs retail 726 nonzero (hangar-class vs mission frame differs). 
+Result: opcode histograms of port mission frames are within ±1–3% of retail's tri-count-matched frames (1845 vs retail 723: tri 1054/1059, every op within ±3, texrect 13/12). On that aligned pair 877/1054 triangle geometry headers (first 8 words) are byte-identical and 12/12 retail texrects are present identically (HUD sprites ARE emitted). Other pairs are camera-misaligned (8 hdr matches) so uninformative. First differing commands are only fill colour/cimg addresses (0x36 / 0x3f image addr 0x690000 vs 0x620000 = double-buffer phase).
+Verdict: H-stream-equal supported (single capture pair, one aligned frame, label single-source); H-rsp/H-dl not supported at the count/geometry level. The "detached ribbons, no ship/HUD" symptom therefore points at renderer/raster/texture side, not RSP/DL.
+New port-only anomaly: port frames 1846, 1849, 1851 are runaway (tri 102148/20049/79676, cmds 128K–574K, 100+ setcimg w512 in one "frame"); retail has none — likely sync-less accumulation or a looping DL. Unexplained.
+ORIGIN: no mitigation added; analysis scripts only.
+HYPOTHESIS-ID: mission-phase-correctness. Next = explain runaway frames 1846/1849/1851 (which sync is missing / which DL loops) and, in parallel, render port_rdp frame 1845 with a reference RDP to settle renderer-side.
