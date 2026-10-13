@@ -1,5 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4783: retail ordering inside all 8 musyxNoopStub windows: 6-9 synth ticks during the yielding wait, then the rs_free burst, then the gate clear; ZERO synth ticks between first free and clear, and 32-44 rs_malloc (full audio re-init) run before the next synth tick (8/8, controls: synth 5019, malloc 18901). Retail never ticks the synth on the freed arena; the port does (+5808 crash). Next: port-side ordering + quiesce synth dispatch across teardown->re-init (NEXT.md). Tools: tools/s4783_noop_window.py, s4783_noop_gap.py.**
+
 **s4782: CORRECTS s4780/s4781. The burst-free that recycles the audio arena is NOT shutdownAudioEngine: the `[audio-wait-spin-exit]` print has a twin in waitForMusyXAudioTaskDone (funcs_24.c:9584), called only from musyxNoopStub (0x8008ED00, via runVideoFrameTick). Port run: shutdownMusyXEngine and shutdownAudioEngine entry hooks fired 0 times (control shutdownMusyXVoices fired 2) while spin-exit fired 3. Retail oracle (85 s driven, control synth 5020 hits): musyxNoopStub runs 8 times and ALL 8 take the gate-nonzero path (0x8008ED14 -> 0x80091EB0 -> clear gate 0x8008ED44). So the free burst is retail-legitimate; the port divergence is what happens AFTER it (synth still running over the freed arena, 73728 alloc). Next: NEXT.md.**
 
 **s4777: iteration BLOCKED - the +5808 disassembly needs lldb/objdump allow rules (see scratch/agent/BLOCKED.md). Unit unchanged.**
