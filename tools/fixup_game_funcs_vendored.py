@@ -8793,6 +8793,7 @@ static void rs64_s2278_m5_keyon_transfer(uint8_t* rdram, uint32_t site,
                 lambda m: m.group(1) + (
                     "    { // PATCH: [reapplydisplaymode-entry] diagnostic (s333) -- see fixup_game_funcs.py\n"
                     "      // comment above (M5 step 4 / s333) and CURRENT-TRUTH item -189/NEXT.md.\n"
+                    "        rs64_m5_selector_store_entry(0x8008EB5Cu, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r7)); /* PATCH: s4712 reapplyDisplayMode census */\n"
                     "        static int s_rdm_entry_en = -1;\n"
                     "        if (s_rdm_entry_en < 0) { const char* e = getenv(\"ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH\"); s_rdm_entry_en = (e && e[0] && e[0] != '0') ? 1 : 0; }\n"
                     "        if (s_rdm_entry_en) {\n"

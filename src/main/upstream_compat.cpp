@@ -1094,6 +1094,18 @@ extern "C" void rs64_m5_selector_mixer_callsite(const char* name,
         return (all && all[0] && all[0] != '0') ||
                (own && own[0] && own[0] != '0');
     }();
+    {   // s4712: ungated census of initAudioSubsystem / reapplyAudioConfig initN64RspMixer call sites
+        static const bool census = [] {
+            const char* e = std::getenv("ROGUESQ_LOG_ALLOC_CALLERS");
+            return e && e[0] && e[0] != '0';
+        }();
+        static uint32_t cn = 0;
+        if (census && cn < 256u) {
+            std::fprintf(stderr, "[s4712-mixer-callsite] n=%u name=%s pc=0x%08X ra=0x%08X width=%u origin=0x%06X\n",
+                cn++, name ? name : "?", pc, ra, rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu);
+            std::fflush(stderr);
+        }
+    }
     if (!enabled) return;
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
@@ -4338,7 +4350,13 @@ extern "C" void rs64_m5_selector_store_entry(uint32_t pc, uint32_t ra,
             return e && e[0] && e[0] != '0';
         }();
         static uint32_t n = 0;
-        if (caller_log && pc == 0x8008F000u && n < 64u) {
+        if (caller_log && pc == 0x8008EB5Cu && n < 256u) {   // s4712: reapplyDisplayMode entry, ra valid here
+            std::fprintf(stderr,
+                "[s4712-reapplyDisplayMode] n=%u ra=0x%08X a0=0x%08X width=%u origin=0x%06X\n",
+                n++, ra, a0, rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu);
+            std::fflush(stderr);
+        }
+        if (caller_log && pc == 0x8008F000u && n < 256u) {
             std::fprintf(stderr,
                 "[s4711-alloc-caller] n=%u ra=0x%08X count=%u a1=0x%08X a2=0x%08X a3=0x%08X width=%u origin=0x%06X\n",
                 n++, ra, a0 & 0xFFFFu, a1, a2, a3,
