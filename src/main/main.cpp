@@ -358,6 +358,34 @@ extern "C" void rs64_m5_callback_entry_event(uint32_t value, uint32_t ra,
     ++rows;
 }
 
+extern "C" void rs64_m5_callback_teardown_event(uint32_t kind, uint32_t ra,
+                                                  uint32_t slot0, uint32_t slot1,
+                                                  uint32_t slot2, uint32_t slot3,
+                                                  uint32_t scanned, uint32_t unused) {
+    (void)unused;
+    static int enabled = -1;
+    static uint32_t rows = 0;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_S4700_CB");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target_phase =
+        (width == 1024u && origin == 0x00790400u) ||
+        (width == 512u && origin == 0x006AB400u);
+    if (!target_phase && rows >= 32u) return;
+    std::fprintf(stderr,
+        "[s4771-cb] n=%u kind=%u phase=%u width=%u origin=0x%06X ra=0x%08X "
+        "scanned=%u tbl=%08X %08X %08X %08X\n",
+        rows++, kind, rs64_phase_ord(), width, origin, ra, scanned,
+        slot0, slot1, slot2, slot3);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_callback_transfer_event(uint32_t pc,
                                                   uint32_t target,
                                                   uint32_t value) {

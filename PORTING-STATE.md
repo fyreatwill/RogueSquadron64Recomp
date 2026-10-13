@@ -155522,3 +155522,27 @@ H-first-live-slot and H-stale-source are ruled out for this route. It does not
 authorize a dispatcher or deregistration change. Next: instrument the complete
 registration/deregistration/shutdown/table sequence to determine whether
 first-match teardown leaves the duplicate live.
+## Session 4771 (2026-10-13) — qualified callback teardown route and shutdown absence
+
+Ground truth first: the retail oracle ran 20 seconds with a whole-RDRAM
+positive control and a callback-table watch. It recorded 10,002 whole-RDRAM
+writes, two writes in physical `0x11A8A4..0x11A8B4`, and two executions of
+`registerSiCallback`, including the `0x8009123C` registration. It recorded no
+`findAndZeroTableSlotMatching` or `shutdownAudioEngine` execution on that
+pre-title route, so the null was not treated as target-phase evidence.
+
+The rebuilt port route reached title VI 1024 and hangar VI 512 with no crash or
+abort. The corrected teardown witness fired nine registration positive-control
+rows, including target phases, and zero shutdown-entry rows. Existing
+s4700 rows independently showed target-phase first-match deregistration:
+`[3250,123C,123C,0] -> [3250,0,123C,0]`; later registrations repopulated the
+second slot. This selects H-no-shutdown-route for the covered route and
+confirms the duplicate survivor, while ruling out neither a different
+shutdown-triggering route nor a future route-specific teardown. No
+deregistration behavior was changed.
+
+The first capture had a shutdown-only witness with no positive control; it was
+discarded as an unqualified null. The witness was corrected in the same
+iteration to fire at registration as well, rebuilt, and rerun. Artifacts are
+`scratch/agent/s4771_oracle_groundtruth.log` and
+`scratch/agent/s4771_m5_callback_teardown_run3.log`.

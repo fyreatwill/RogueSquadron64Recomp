@@ -1,5 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4771: the qualified title/hangar route never called shutdownAudioEngine.**
+The retail oracle first qualified the callback machinery with 10,002
+whole-RDRAM writes and two callback-table writes, including two
+`registerSiCallback` executions. The rebuilt port then reached title VI 1024
+and hangar VI 512 with no crash/abort; the new teardown event fired nine
+registration controls but zero shutdown-entry rows. Independently, the
+existing table trace saw first-match deregistration at target phases,
+`[3250,123C,123C,0] -> [3250,0,123C,0]`, leaving the duplicate live. This
+selects H-no-shutdown-route for the covered route and confirms the duplicate
+survivor, but authorizes no deregistration change. Artifacts:
+`scratch/agent/s4771_oracle_groundtruth.log` and
+`scratch/agent/s4771_m5_callback_teardown_run3.log`.
+
 **s4770: VI-retrace callback dispatch is all-live-slot on the qualified route.**
 The rebuilt default-B40 phase-gated run reached title VI 1024 and hangar VI
 512, fired 3,593 VI-loop rows and 14,368 callback-slot rows, and had no crash
@@ -584,7 +597,12 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed. OPEN DEPENDENCY (human, s4742/s4745; iterations must NOT retry, NEXT.md re-scoped to runaway-DL cost measurement): add RSPRecomp Bash allow rules to .claude/settings.json (see scratch/agent/UNBLOCK.md); meanwhile NEXT.md is the offline 0x2C analysis. Full pre-compaction history of this section: PROJECT-OVERVIEW.md, "Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738".
 
-1. **M5 callback teardown:** s4770 selects all-live-slot dispatch: duplicate `0x8009123C` entries in slots 1 and 2 each produce synth entries on the qualified route. Determine whether shutdown deregistration clears only the first duplicate and leaves a live second slot, or whether the callback table is repopulated/never reaches shutdown. Instrument the complete registration, first-match deregistration, shutdown-call, and four-slot table sequence in one phase-gated run; require the VI-loop and target-phase controls. Do not change deregistration or add a guard without naming the writer and proving the post-shutdown slot state.
+1. **M5 callback teardown follow-up:** s4771 closes the shutdown-call branch as
+   absent on the covered title/hangar route while independently confirming
+   first-match deregistration leaves slot 2 live. Do not change deregistration.
+   The next discriminator is a new route or trigger that can reach
+   `shutdownAudioEngine`; absent that, park this branch and continue the M5
+   plan without treating the surviving duplicate as a shutdown artifact.
 3. **s4764 route blocker:** superseded for callback reachability by s4770, which reached both title and hangar without crash. The earlier VI-640 crash remains a recurring audio-route family, not evidence against callback cardinality.
 4. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
 5. **M5 audio:** de-stubbing qualified through A14 on the covered route (A11 wait cap, A12 countdown wait, A13 drain return default-off + timeout guard, A14 shutdown-call-3 needs `ROGUESQ_A14_YIELD` default on; B40 default flipped to pass-through s4701, rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`). A15 redundant, early synth crash resolved s4696. Per-scene audio re-allocs (initN64RspMixer via runVideoFrameTick->reapplyDisplayMode) are retail behaviour and benign (s4711-s4715, closed). Plan: docs/M5-AUDIO-PLAN.md. Keep soaks <=4 concurrent; every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup.

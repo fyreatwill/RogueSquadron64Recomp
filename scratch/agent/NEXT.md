@@ -1,39 +1,39 @@
-# RESUME — next work unit: qualify callback teardown after duplicate dispatch
+# RESUME — next work unit: census every shutdownAudioEngine caller
 
 HYPOTHESIS-ID: m5-callback-teardown-duplicate-slot
 
-The s4770 ordinal run selected all-live-slot dispatch: slots 1 and 2 both
-contained `0x8009123C`, and 7,076 target-slot rows matched 7,076 synth-entry
-rows. No dispatcher change is authorized. The next unit is one diagnostic
-capture of registration, first-match deregistration, shutdown-call identity,
-and the complete four-slot table state, using the existing qualified route.
+The s4771 qualified route reaches title and hangar, confirms first-match
+deregistration leaves a duplicate callback live, and never enters
+`shutdownAudioEngine`. Before another runtime instrument, perform one bounded
+static caller census to identify whether shutdown has an alternate reachable
+caller or is only a shutdown-state path.
 
 Competing hypotheses and discriminating measurement:
 
-- H-dereg-first-match: shutdown calls `findAndZeroTableSlotMatching` and
-  clears only the first duplicate, leaving slot 2 live afterward.
-- H-dereg-all-or-repopulated: shutdown clears both duplicates, or a later
-  registration repopulates the second slot.
-- H-no-shutdown-route: the target route never reaches the shutdown call, so
-  the post-shutdown table cannot explain later synth entries.
+- H-shutdown-alt-caller: a generated direct caller or address-taken dispatch
+  can reach `shutdownAudioEngine` on a route not covered by the autopilot.
+- H-shutdown-only-init: all callers are initialization/shutdown-state paths;
+  the title/hangar route cannot reach this function without a distinct state
+  transition.
+- H-symbol-alias: the apparent shutdown function is aliased or wrapped, so a
+  name-only census misses the live call target.
 
-DISCRIMINATING MEASUREMENT: one rebuilt default-B40 title/hangar capture with
-registration rows, deregistration entry/exit rows, shutdown call ordinals, and
-four-slot snapshots joined by phase. The VI-loop and title/hangar controls
-must fire. A post-deregistration snapshot showing slot 1 zero and slot 2
-`0x8009123C` selects H-dereg-first-match; both zero followed by a registration
-selects H-dereg-all-or-repopulated; no shutdown row in the target route
-selects H-no-shutdown-route. Do not change deregistration behavior.
+DISCRIMINATING MEASUREMENT: enumerate every direct call and every function
+pointer/address reference to guest PC `0x80091D40`, independently compare the
+generated tree with the companion decomp symbol/call graph, and classify each
+caller by its surrounding state gate. A direct target-phase caller selects
+H-shutdown-alt-caller and names the next phase-gated route; only init/shutdown
+state callers plus no address-taken alias selects H-shutdown-only-init and
+parks this teardown branch. Any address-taken or wrapper reference selects
+H-symbol-alias and requires a single target-PC witness before a new soak.
 
-Build:
-
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-```
-
-Add the complete teardown table witness through the canonical fixer and live
-generated output, rebuild once, then run from `build/` with SIGKILL cleanup:
+Commands:
 
 ```sh
-env ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_S4700_CB=1 ROGUESQ_A14_YIELD=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUTOPILOT='40:start,44:start,48:start,52:start,56:a,60:a,64:start,68:a' ROGUESQ_AUTOPILOT_STOP_WIDTH=0 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=110 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 ROGUESQ_LOG_ALL=1 ./RogueSquadron64Recomp
+rg -n "80091D40|shutdownAudioEngine\(" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
+rg -n "shutdownAudioEngine|80091D40" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | sort
 ```
+
+Do not build or change deregistration behavior in that census. If it selects a
+new caller, the following unit must batch a target-PC positive-control oracle
+watch and the corresponding port phase witness in one build/run.

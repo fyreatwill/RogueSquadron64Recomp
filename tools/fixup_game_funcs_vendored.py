@@ -6604,6 +6604,8 @@ def apply_s3338_m5_callback_entry_text(text):
         anchor +
         "    { extern void rs64_m5_callback_entry_event(unsigned, unsigned, unsigned); "
         "rs64_m5_callback_entry_event(U32(ctx->r4), U32(ctx->r31), 0u); } "
+        "{ extern void rs64_m5_callback_teardown_event(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned); "
+        "rs64_m5_callback_teardown_event(1u, U32(ctx->r31), U32(MEM_W(0, S32(0x8011A8A4u))), U32(MEM_W(4, S32(0x8011A8A4u))), U32(MEM_W(8, S32(0x8011A8A4u))), U32(MEM_W(12, S32(0x8011A8A4u))), 0u, 0u); } "
         "/* PATCH: s3338 m5 callback entry */\n"
     )
     return text.replace(anchor, insert, 1), ["funcs_2.c: s3338 callback entry patched x1"], True
@@ -6630,6 +6632,30 @@ def apply_s3341_m5_callback_pointer_store_text(text):
     )
     return text.replace(anchor, anchor + insert, 1), [
         "funcs_24.c: s3341 callback pointer store patched x1"
+    ], True
+
+
+def apply_s4771_m5_callback_teardown_text(text):
+    """Record the shutdown call identity alongside the existing callback table trace."""
+    marker = "PATCH: s4771 m5 callback teardown entry"
+    if marker in text:
+        return text, ["funcs_24.c: s4771 callback teardown already present"], False
+    anchor = (
+        "RECOMP_FUNC void shutdownAudioEngine(uint8_t* rdram, recomp_context* ctx) {\n"
+        "    uint64_t hi = 0, lo = 0, result = 0;\n"
+        "    int c1cs = 0;\n"
+    )
+    if text.count(anchor) != 1:
+        raise SystemExit(f"s4771 shutdownAudioEngine anchor count={text.count(anchor)}")
+    insert = (
+        "    { extern void rs64_m5_callback_teardown_event(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned); "
+        "rs64_m5_callback_teardown_event(0u, U32(ctx->r31), U32(MEM_W(0, S32(0x8011A8A4u))), "
+        "U32(MEM_W(4, S32(0x8011A8A4u))), U32(MEM_W(8, S32(0x8011A8A4u))), "
+        "U32(MEM_W(12, S32(0x8011A8A4u))), 0u, 0u); } "
+        f"/* {marker} */\n"
+    )
+    return text.replace(anchor, anchor + insert, 1), [
+        "funcs_24.c: s4771 callback teardown entry patched x1"
     ], True
 
 
@@ -23186,6 +23212,10 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         text, s3341_msgs, s3341_changed = apply_s3341_m5_callback_pointer_store_text(text)
         report.extend(s3341_msgs)
         if s3341_changed:
+            changed = True
+        text, s4771_msgs, s4771_changed = apply_s4771_m5_callback_teardown_text(text)
+        report.extend(s4771_msgs)
+        if s4771_changed:
             changed = True
 
     # [synth-rearm-ptr]: funcs_24.c, the DMEM-mixer re-arm callback pointer
