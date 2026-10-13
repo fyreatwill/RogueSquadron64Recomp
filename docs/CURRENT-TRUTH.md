@@ -465,6 +465,8 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Superseded conclusions to avoid repeating
 
+- **"Mission entry needs an owner-supplied recipe or savestate" (s4719-s4721).** Believable because ~10 button-press variants (s4657-s4720) never left the hangar/viewer/attract. Overturned s4722 as unproven: every variant varied button input only; forcing the mode variable in RDRAM was never tried, and the oracle reliably reaches the hangar unaided.
+
 - “The early (~3.3 s, VI 640) `musyxSynthFrame_s4562_impl+9668` bus error /
   `0x400149714` family is a host-thread race or uninitialised voice state”
   (s4672/s4695 and the line-141/198 notes above) was wrong. It was our own
@@ -493,6 +495,8 @@ no guard, patch, or mitigation was added. Artifacts are in
   inert chunk-2 record. Those interpretations were tested and closed.
 
 ## Next steps
+
+**s4722 (top, unblock): the s4719 "BLOCKED awaiting owner" line below is overturned.** Next = `oracle-poke-mission-entry` (NEXT.md): statically find the hangar/menu mode selector, add an oracle `--poke`, force mission entry at the 512 hangar phase; no owner input needed. The mission-entry dependency stays open until that runs.
 
 **s4719: loop BLOCKED awaiting an owner-supplied retail mission-entry route (rename sweep is exhausted per s4646, so the line below is stale).** **s4718 (top): ALL M3 idiom classes are closed** (MEM_*, LD, lwl/lwr, unaligned/64-bit stores, jalr/jr, and now FPR lwc1/swc1/ldc1/sdc1 + LL/SC via tools/census_fpr_llsc.py: FPR ops lower to the already-censused MEM_W/LD/SD macros, all 213 ll/lld/sc/scd sites are do_break). Next: resume the generated-symbol renaming sweep (priority 4; check the last 15 session titles first) unless the owner supplies a mission-entry discriminator.
 
