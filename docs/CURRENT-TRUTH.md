@@ -1,5 +1,12 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4796: the new hangar-gated mission driver was route-invalid: it never left
+VI 640, independently reported `vi-fs stalled=1`, and sent no keys; therefore
+no `res=0x2C` or mission-route null is usable. This reproduces the open
+nondeterministic 640-phase blocker in the same instrumented run, not an
+overlay result. The next discriminator is a producer-vs-guest witness taken
+while that state is live.**
+
 **s4795: the final bounded mission-overlay rename audit found eight remaining
 placeholders, all deliberate `fake_func_*` entries whose companion comments
 identify adjacent real functions or decompiler split artifacts. No exact,
@@ -662,10 +669,11 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed. OPEN DEPENDENCY (human, s4742/s4745; iterations must NOT retry, NEXT.md re-scoped to runaway-DL cost measurement): add RSPRecomp Bash allow rules to .claude/settings.json (see scratch/agent/UNBLOCK.md); meanwhile NEXT.md is the offline 0x2C analysis. Full pre-compaction history of this section: PROJECT-OVERVIEW.md, "Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738".
 
-0. **s4794 VI-640 stall result:** keep this as a nondeterministic route
-   symptom, not a selected cause. Two of five repaired sampler runs held VI
-   640 with independent `vi-fs stalled=1` evidence, while two reached title.
-   Do not add a guard or wait change without a new producer-vs-guest witness.
+0. **s4796 VI-640 route blocker:** the hangar-gated mission discriminator
+   reproduced VI 640 with independent `vi-fs stalled=1` and no hangar/key
+   phase, so its 0x2C null is invalid. Keep this as a symptom, not a cause.
+   The next unit is one state-gated producer-vs-guest witness; do not add a
+   guard or wait change from this run.
 
 1. **M5 callback teardown follow-up:** s4771 closes the shutdown-call branch as
    absent on the covered title/hangar route while independently confirming

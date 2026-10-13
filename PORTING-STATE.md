@@ -155752,3 +155752,19 @@ Result: H3 (no unique identity) for all eight; no mapping or generated output
 changed. This rules out a safe exact-address rename in the audited range, not
 the possibility of future naming from a new semantic source. The rename sweep
 is closed and NEXT.md returns to the mission-route overlay-0x2C discriminator.
+
+## Session 4796 (2026-10-13) — hangar-gated mission discriminator route-invalid at VI 640
+
+- Added and ran `scratch/agent/s4796_hangar_gated_mission_2c.sh`, which waits
+  for hangar VI 512 before sending six Start/A pairs and retains the resident
+  overlay-0x2C splice and route controls. The splice positive control remains
+  present in `tools/fixup_factor5_ucode.py` and `factor5_rsp_ovl2c.toml`.
+- Result: the run never reached hangar; it stayed in VI 640 and emitted
+  repeated `[vi-fs-decision] ... stalled=1` rows. No driver key rows,
+  `res=0x2C`, overlay-0x2C arrival, crash, or abort was observed. The wrapper
+  was SIGKILL-cleaned after the phase window.
+- This is a valid reproduction of the route blocker but an invalid null for
+  the overlay hypotheses. It rules out neither missing input nor splice
+  behavior. Next is a state-gated process sample while the VI-640 stall is
+  live, to distinguish producer blockage from a guest/audio wait.
+- ORIGIN: n/a; no mitigation or runtime behavior change was added.

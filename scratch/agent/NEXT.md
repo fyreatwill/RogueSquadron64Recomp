@@ -1,24 +1,28 @@
-# Build one new mission-route input discriminator for overlay 0x2C
+# Capture one producer-vs-guest witness for the VI-640 stall
 
-HYPOTHESIS-ID: overlay-0x2c-mission-route
+HYPOTHESIS-ID: vi640-producer-vs-guest
 
-The generated-symbol sweep is closed for the remaining exact-address
-placeholders: session 4795 found only deliberate `fake_func_*` entries in the
-last bounded mission-overlay range, with no safe mapping. The next unit is one
-new mission-route input/driver discriminator, retaining the resident overlay
-0x2C splice and the existing phase/VI positive controls. Do not change the
-splice or infer its visual effect from hangar-only runs.
+The s4796 hangar-gated mission driver never reached hangar: the run stayed in
+VI 640 and emitted `vi-fs stalled=1`, so no input or overlay-0x2C conclusion is
+valid. M5's current de-stubbing rows are qualified or route-blocked. The next
+unit is one state-gated sample of the live stall, with no runtime mitigation.
 
 Competing hypotheses and discriminator:
-- H1: the current input driver reaches the mission route but fails to emit
-  overlay-0x2C because the task family is not the triggering one.
-- H2: the driver reaches the route and emits `res=0x2C`, but the resident
-  splice does not alter the runaway/DL outcome.
-- H3: the driver reaches the route and emits `res=0x2C`; the splice removes the
-  runaway and produces bounded task completion.
-The discriminating measurement is one same-build, phase-gated capture of VI
-512 origin, `res=0x2C` dispatch count, overlay-0x2C arrival count, and per-task
-DL fetch/runaway classification, with the existing task/VI controls. Every
-arm needed for the comparison must be built before the run.
+- H1: the guest is blocked in an audio wait while the host VI loop continues.
+- H2: the guest advances, but the VI/RDP producer is stalled independently.
+- H3: `vi-fs stalled=1` is only a presentation-side symptom and the guest is
+  parked elsewhere.
 
-Commands: inspect the existing mission-route driver and `scratch/agent/s4788_drop1_mission_2c.sh`; verify the resident splice is present; make one bounded driver change with `apply_patch`; build the Debug target; run from `build/` with SIGKILL cleanup and capture under `scratch/agent/soak_results/`. No wall-clock-only verdicts.
+The discriminating measurement is one run that waits until VI 640 has emitted
+`vi-fs stalled=1` for at least 10 seconds, confirms whether `update_screen`
+advances, then samples the process at that state. H1 predicts the game-thread
+stack in the audio wait and a live VI producer; H2 predicts a live game thread
+with the producer/RDP path blocked; H3 predicts neither and is resolved by the
+sampled game-thread PC. A startup crash or failure to reach VI 640 is
+route-invalid and cannot select a hypothesis.
+
+Commands: use the existing state-gated sampler pattern, but arm the sample
+only after the `vi-fs stalled=1` and static-update-screen conditions in the
+same log; validate the sampler with its healthy 20-second control, run from
+`build/`, SIGKILL cleanup, and capture under `scratch/agent/soak_results/`.
+Do not use a stopwatch-only sample.
