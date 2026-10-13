@@ -155691,3 +155691,10 @@ Discrimination: this run selects hypothesis A (retail's post-clear protection is
 - Failures/noise: the new-binary DROP=0 run died at startup in `spTaskSchedulerThread+9632` (known startup family, 36 prior mentions; si_addr 0x400128d47); the two new-binary DROP=1 runs stalled in VI 640 phase 3 for the whole run (vi-fs-decision stalled=1) where the old-binary runs advanced at ~50 s. Host load average was 14 (another job), and the binary differs only by a counter, so this is read as load-sensitivity (single-source, unproven). Mission-phase 0x2C route count therefore NOT measured with the new counter.
 - ORIGIN: n/a (instrument + measurement only; no mitigation added).
 - Next: re-run scratch/agent/soak_queue/s4788_drop1_mission_2c.sh (queued; loop will run it) and read `res=0x2C` rows per dlwalk phase 6. Then compare DROP=1 vs DROP=0 downstream in-run (the DL-side counter cannot).
+
+## Session 4788 (2026-10-13) — s4788 DROP=1 mission-2c run could not be measured: soak stalled in VI 640, rerun startup-crashed at spTaskSchedulerThread+9632 under host load 10-12
+
+- Soak s4788_drop1_mission_2c (rc=0, 208 s wrapper): run.log never left VI 640 (stalled=1 at update_screen #9152), `res=0x2C`/`ovl-route` rows = 0 even in the title phase, where s4787's positive control gave 152 rows. Zero rows with a failed control is not a null.
+- Same-iteration rerun of scratch/agent/s4788_drop1.sh: game died before the hangar poll (driver exit 4): SIGSEGV pc=spTaskSchedulerThread+9632 far=0x400128d47, same site as s4787's load-14 startup crash.
+- Host load during both: 10-13 (Chrome helper 188% CPU, WindowServer, REAPER; not ours). Consistent with s4787's load-sensitivity note, but still single-source: no low-load run in this iteration.
+- Rules out nothing about hypotheses A/B/C of NEXT.md; (C) "stall is not load" is neither confirmed nor refuted. Next: rerun at load < 4 (refuting experiment for the load explanation: a clean run at load<4 reaches VI 512).
