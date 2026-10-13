@@ -272,8 +272,7 @@ The recurring odd PI DMA remains an explanation problem, not a skip target.
 The port writes ASCII `lcre` into a cart record through the FE98 path, while
 retail writes B0xxxxxx pointers in the corresponding target range. The bad
 caller input is the `0x800903F0` render path reading `late` from voice `+0x34`.
-The allocator/count-32 and audio-list ownership chain is open; the writer
-and legitimacy of any wild value must be named before a guard is considered.
+The writer is named (s4577/s4580, re-decoded s4708): `late` is the tail of the name string "xbkplate" written by rs_strncpy into a name table that voice index 30 (past the 18-slot array) lands in, because count 32 is published before the new base with the mixer running in between. Open: does retail's scheduler also switch inside that window?
 
 The s4619 route qualification reached the required hangar origin on both
 arms: the port logged 512-wide `0x006AB400`, while retail independently logged
@@ -495,7 +494,7 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
-**s4706: BLOCKED awaiting owner direction** (all M5/M3/rename/M4/retail-entry threads closed or parked; see scratch/agent/BLOCKED.md).
+**s4707: unblocked by re-scope.** Open dependency (owner/external): a mission-entry discriminator or a retail hangar pixel reference; ~10 route variants s4657-s4670 never reached a mission. Meanwhile the port-only unit is naming the writer of `late`/`lcre` at voice +0x34 (NEXT.md, H-voice34-writer-port-only).
 
 **s4700 (new top item, supersedes the s4698/s4699 leads below): the s4672/s4457-bad synth crash is caused by our B40 default.** `musyxNoopStub` (0x8008ED00) skips the shutdown+wait+dereg when gate 0x800A0F50 is 0, and the port's setDisplayMode/reapplyDisplayMode gate stores write 0 unless `ROGUESQ_M5_B40_VALUE` is set (`fixup_game_funcs_vendored.py:8282/8294`, "default remains audio-engine-disabled"). The guest's `reapplyAudioConfig -> initN64RspMixer` then registers the synth a 2nd time with no dereg in between (retail oracle strictly alternates dereg/register); `findAndZeroTableSlotMatching` removes only the first match, so a stale callback walks freed audio blocks. A/B: B40=0 crash 1/1, B40=1 0/3 with strict alternation. Next: qualify B40=1 as the default on the canonical Start-mash title->hangar route (see NEXT.md), then flip it in the fixup scripts. Process rule: every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup (killing the subshell PID leaves orphans that load the machine and fake boot stalls).
 **s4701: B40 default flipped to pass-through (done).** `fixup_game_funcs_vendored.py` and live `funcs_23.c` now store r2 unless `ROGUESQ_M5_B40_VALUE=0` (rollback). Start-mash route: new default 0/3 crashes, B40=0 control crashed 1/2 across both runs (pooled pass-through 0/7). No A11-A14 timeouts, no MORT. Next: long soak of the new default, then the next M5 de-stub. After any regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`.

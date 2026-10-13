@@ -67,6 +67,19 @@ LOOP_MODEL="${LOOP_MODEL:-claude-sonnet-5-5}"
 
 log() { echo "[loop] $*" | tee -a "$AG/loop.log"; }
 
+# A killed/denied git leaves an empty .git/index.lock that blocks every commit,
+# and the metered agent is denied deleting it (seen 2026-10-12: a 17h-old lock
+# BLOCKED an iteration). Only a lock with no live git process and no open handle
+# is removed, and only if it is older than 5 minutes.
+clear_stale_git_lock() {
+  local lock=".git/index.lock"
+  [ -e "$lock" ] || return 0
+  pgrep -x git >/dev/null 2>&1 && return 0
+  lsof "$lock" >/dev/null 2>&1 && return 0
+  [ -n "$(find "$lock" -mmin +5 2>/dev/null)" ] || return 0
+  rm -f "$lock" && log "removed stale .git/index.lock"
+}
+
 # ---- runner rotation (see header) ----
 if [ -z "${RUNNER_ROTATE:-}" ]; then
   if [ -n "${RUNNER:-}" ]; then RUNNER_ROTATE=0; else RUNNER_ROTATE=1; fi
@@ -321,6 +334,7 @@ while [ "$ITER_CAP" -eq 0 ] || [ "$n" -lt "$ITER_CAP" ]; do
   # flight never has its log compressed out from under it.
   tools/agent/prune-scratch.sh 2>&1 | tee -a "$AG/loop.log"
 
+  clear_stale_git_lock
   n=$((n+1))
   log "iteration $n starting $(date)"
   echo WORKING > "$AG/STATUS"
@@ -587,6 +601,7 @@ else:
     # a codex run pinned to a since-retired "gpt-5.6-luna" 404'd, and the
     # claude retry inherited that same string as --model and 404'd too,
     # silently reducing the automated retry tier to zero attempts).
+    clear_stale_git_lock
     out="$(RUNNER=$retry_runner RUNNER_MODEL= LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
     log_runner_output "$out"
     # A retry that itself hits a limit is not a contract failure - stop retrying.
