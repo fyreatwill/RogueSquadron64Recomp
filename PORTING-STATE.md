@@ -155004,3 +155004,9 @@ Next discriminator: the thread moves to why allocateSongChannelArray inside that
 Summary: the record's writers are retail code, so the extra audio re-allocs are retail behaviour and not port artifacts.
 
 This run refutes hypothesis B (port-stub writer) and selects A (retail-originated record) for H-alloc-window-sched-switch.
+
+## Session 4715 (2026-10-12) — alloc-window heap/thread audit on the s4714 log: no violation in any of the 6 re-allocs; thread H-alloc-window-sched-switch closed
+
+HYPOTHESIS-ID: H-alloc-window-sched-switch. No new run: re-analysed the existing s4714 armA log (381k lines, 0 CRASH) for the A/B/C discriminator from s4714's NEXT. Measurements: (1) all 6 `[s4579-A]/[s4579-P]` pairs share one tid (17186b000) with the first alloc, so a thread-switch race (B) is refuted; (2) allocations return 0x801714D0 on 5 of 6 re-allocs (0x801714D0, 0x8018D4A0 once at n=3) with a valid header (`rs-hdr` hflags=0x0002, hsize matching count*~136), i.e. the old array is freed and the block reused, no fragmentation/stale-freelist symptom (A refuted for the covered window); (3) the count-32/32 kHz alloc was not reached in this 100 s arm, so it remains unobserved here (s4711 saw it, no crash). No heap-invariant violation, no crash in 6 re-allocs => hypothesis C/"no fault in the window" stands. ORIGIN: no mitigation added. Caveat: single arm, port only; `rs-free` rows are not logged (count 0), so reuse of the same pointer is the evidence of the free.
+Discrimination: this audit REFUTES A (heap/freelist anomaly) and B (thread race) for the re-alloc window and leaves C (no fault in the window; any audio fault is downstream consumers). Thread closed: the re-allocs are retail behaviour (s4714) and benign in the port.
+Next: pivot to a bounded M3 idiom-class census/guard (next unexamined memory-access idiom class after LD/LWL).
