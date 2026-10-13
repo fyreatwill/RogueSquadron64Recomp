@@ -155263,3 +155263,16 @@ work (H1) for this covered route. Terrain-vs-retail pixel divergence remains
 unevaluable without a retail pixel reference (H2 open). The run log had no
 0x2C-drop diagnostic because the route was the default fixup-24 path; no splice
 was attempted. Artifact: `scratch/agent/s4753_unpaused_mission_capture/`.
+
+## Session 4754 (2026-10-13) — real overlay-0x2C splice blocked on RSPRecomp allow rule
+
+The prescribed work unit was the real overlay-0x2C RSPRecomp splice. It was not
+run: `scratch/agent/NEXT.md` explicitly says not to retry the denied command,
+and `scratch/agent/UNBLOCK.md` still identifies the missing Bash allow rules
+for `../N64Recomp/build/RSPRecomp` and its absolute-path variant. The current
+backlog independently retains the same human dependency. No build, runtime
+experiment, or code change was made, so this session adds no hypothesis
+evidence and does not alter the s4753 mission result. The next discriminating
+step remains an allowlisted RSPRecomp generation followed by the fixup and one
+phase-gated mission capture; its refuting control is any allowlisted invocation
+that emits C for `factor5_rsp_ovl2c.toml`.

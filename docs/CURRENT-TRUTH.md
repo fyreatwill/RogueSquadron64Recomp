@@ -2,6 +2,8 @@
 
 **s4753: direct interleaved Start/A input reached VI 512 hangar at 24.0 s and mission origin 0x00690400 at 52.5 s; eight post-gate frames were unpaused and showed ship, HUD, radar, terrain, and reticle with no crash/abort. This refutes H1 (“ship/HUD entirely absent”) for the covered route; H2 (independent terrain divergence) remains unevaluable without retail pixels. Single-source port capture with independent phase and no-crash controls.**
 
+**s4754: the planned real overlay-0x2C splice did not run because the required RSPRecomp invocation remains blocked by the human allow rule. No command retry or experiment was performed. Resume only after adding the Bash allow rules named in `scratch/agent/UNBLOCK.md`; the refuting control is an allowlisted RSPRecomp run that emits C for `factor5_rsp_ovl2c.toml`.**
+
 **s4749: DL op 0xBD present <=> 0x2C arrival <=> runaway, 150/150 vs 0/550 non-runaway tasks (phases 2-7); phase-7 runaways have exactly one 0xBD and one arrival. No normal task contains 0xBD, so TexrectGen content (likely ship/HUD texrects) is exactly what the unspliced 0x2C overlay loses. Single run, agrees with s4747/s4748. Splice blocked on RSPRecomp allowlist (human).**
 
 **s4748: the first 0x2C dispatch is DL op 0xBD (TexrectGen): ring snapshots of 3/3 phase-7 runaway tasks end ...0x15A4 (d153=0x28, prevop 0xBD) -> 0x1298 -> 0x1DB0 (d153=0x2C, prevop 0xBD); normal task 41 ring has no 0xBD. Single run, ring depth 8; per-task 0xBD count for normal tasks NOT yet measured.**
@@ -14,7 +16,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4752; old log archived in PROJECT-OVERVIEW.md.
+archive sections. Updated for session 4754; old log archived in PROJECT-OVERVIEW.md.
 
 ## Current state
 

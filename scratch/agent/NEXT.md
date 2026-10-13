@@ -3,21 +3,28 @@
 HYPOTHESIS-ID: ovl2c-real-splice
 
 Work unit: land the real overlay-0x2C RSPRecomp splice and validate it once.
-This is currently blocked on the human allow rule for the RSPRecomp command;
-do not retry the denied command in this iteration. If the allow rule is added,
-run the existing fixup-6r draft, rebuild, then use the s4753 direct mission
-driver with `ROGUESQ_OVL2C_DROP=0`.
+This remains blocked on a human permission change; do not retry the denied
+RSPRecomp command until the allow rule is added.
+
+Required human action: add both Bash allow rules named in
+`scratch/agent/UNBLOCK.md` for `../N64Recomp/build/RSPRecomp` and its absolute
+path variant.
+
+Once unblocked, run the existing `scratch/agent/fixup6r_draft.py` workflow,
+rebuild, and use the s4753 direct mission driver with
+`ROGUESQ_OVL2C_DROP=0`. Capture positive controls for VI 512 at
+`0x00690400`, no crash/abort, and per-task runaway count.
 
 Competing hypotheses and discriminator:
 
-- H1: the real 0x2C image restores billboard/sprite content without reviving
-  the runaway DL loop.
+- H1: the real 0x2C image emits the missing billboard/sprite content while
+  keeping the DL bounded.
 - H2: the splice has an ABI/table/extern mismatch and crashes or re-enters the
   restart loop.
-- H3: the currently visible mission defects are unrelated to 0x2C.
+- H3: the covered mission defects are unrelated to 0x2C.
 
-DISCRIMINATING MEASUREMENT: one rebuilt binary, one mission capture, with
-positive controls for VI `512 @ 0x00690400`, no crash/abort, and runaway-task
-count. H1 predicts mission frames plus bounded 0x2C activity; H2 predicts a
-crash or runaway recurrence; H3 predicts the same bounded route and unchanged
-ship/HUD/terrain result as s4753.
+DISCRIMINATING MEASUREMENT: one rebuilt binary and one phase-gated mission
+capture. H1 predicts bounded 0x2C activity plus changed sprite content; H2
+predicts a crash or runaway recurrence; H3 predicts the s4753 bounded route
+and unchanged mission content. The experiment that refutes this block is an
+allowlisted RSPRecomp invocation that emits C for `factor5_rsp_ovl2c.toml`.
