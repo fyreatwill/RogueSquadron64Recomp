@@ -1,27 +1,25 @@
-# Next work unit — add the missing A12 second-wait branch witness
+# Next work unit — measure VI-retrace callback dispatch cardinality
 
-HYPOTHESIS-ID: m5-a12-second-wait-witness
+HYPOTHESIS-ID: m5-callback-dispatch-cardinality
 
-The s4766 A/B run reached title and hangar in both arms, but its existing
-`[waitmusyx-spin2-arm]` rows are from the producer arm site, not the
-`0x8014974C` loop. The second-wait yield branch therefore has no positive
-control or return marker yet.
+The s4767 A12 witness positively reached the wait copy with gate 0 but did not
+reach the shutdown copy; no A12 writer or gate change is selected. The next
+M5 unit is the callback-dispatch question left open by s4764.
 
 Competing hypotheses and discriminating measurement:
 
-- H-A12-loop-reached: a branch witness fires in both copies; default records
-  yield iterations followed by flag-clear/return, while rollback records the
-  non-yield path.
-- H-A12-route-absent: the new witness is absent despite title/hangar controls,
-  so this copy is not reached on the covered route.
-- H-A12-wrong-writer: the witness fires, but default records no clear/return
-  and the gate remains set or times out.
+- H-dispatch-all: the marked VI-retrace walker emits two invocation ordinals
+  for the duplicate live callback slots.
+- H-first-live-slot: it emits exactly one ordinal for the first live slot.
+- H-stale-source: synth entries continue after the marked table dispatch is
+  empty, without a corresponding live-slot ordinal.
 
-DISCRIMINATING MEASUREMENT: one rebuilt binary, two same-run phase-gated arms,
-with one branch/return witness per `0x8014974C` copy plus existing producer,
-task/SP, slot, PCM, and VI controls. Positive controls must include title 1024,
-hangar 512, and the witness's own marked-dispatch control; absence of the new
-witness is route-unevaluable, not evidence against the de-stub.
+DISCRIMINATING MEASUREMENT: one rebuilt binary and one phase-gated default-B40
+title/hangar capture, with one bounded invocation ordinal per callback-table
+slot in the actual VI-retrace dispatcher, plus table registration/
+deregistration, synth-entry, title 1024, hangar 512, and no-crash controls.
+The marked dispatcher row must fire before interpreting zero ordinals; a
+missing target phase is route-invalid, not evidence for a dispatcher model.
 
 Build:
 
@@ -29,8 +27,7 @@ Build:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-Add the witness through the canonical fixer and generated output, rebuild once,
-then run the existing phase-gated route twice from `build/`, once with the
-default and once with `ROGUESQ_AUDIO_SPIN2_YIELD=0`; kill each process with
-SIGKILL. Do not change the writer, force the gate, or revisit callback
-cardinality until this A12 result is recorded.
+Add the ordinal witness through the canonical fixer and generated output,
+rebuild once, then run the existing default-B40 phase-gated route from
+`build/`; kill the process with SIGKILL. Do not change first-match
+deregistration or add a guard.

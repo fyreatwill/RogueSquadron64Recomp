@@ -1,5 +1,15 @@
 # Rogue Squadron 64 Recomp — current truth
 
+**s4767: the A12 loop witness reached the wait copy but not the shutdown copy.**
+The rebuilt default and `ROGUESQ_AUDIO_SPIN2_YIELD=0` arms both reached title VI
+1024 and hangar VI 512 with no crash or abort. The new positive-control witness
+fired in `waitForMusyXAudioTaskDone` at `0x80091F34` three times per arm, each
+time reading gate 0 and returning; it never observed a nonzero spin or yield.
+The `shutdownAudioEngine` copy at `0x80091DC4` never fired. Thus the covered
+route qualifies the wait-copy branch as reached with an already-clear gate and
+leaves the shutdown-copy route absent; no writer or gate hypothesis is
+selected. Artifact: `scratch/agent/s4766_m5_a12_second_wait/`.
+
 **s4766: the A12 default/rollback validation reached title VI 1024 and hangar
 VI 512 in both arms with no crash or abort. The existing wait-contract witness
 returned from the countdown/tick path in both arms, but the second-wait loop's
@@ -559,8 +569,7 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed. OPEN DEPENDENCY (human, s4742/s4745; iterations must NOT retry, NEXT.md re-scoped to runaway-DL cost measurement): add RSPRecomp Bash allow rules to .claude/settings.json (see scratch/agent/UNBLOCK.md); meanwhile NEXT.md is the offline 0x2C analysis. Full pre-compaction history of this section: PROJECT-OVERVIEW.md, "Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738".
 
-1. **M5 A12 branch witness:** s4766 qualified the general title/hangar route in both A12 arms but did not mark the actual `0x8014974C` loop branch. Add one phase-scoped branch/return witness to each generated copy, with a same-run control proving the witness fires, then rerun default versus `ROGUESQ_AUDIO_SPIN2_YIELD=0`. Do not force the gate or change its writer.
-2. **M5 callback dispatch semantics:** the s4764 census was not an invocation counter and the route crashed before hangar. Inspect the actual VI-retrace callback dispatcher and add one phase-scoped invocation ordinal per dispatched table slot, with a same-run positive control that proves the marked dispatcher path fires. Build one binary and run one default-B40 title/hangar capture; distinguish duplicate-slot dispatch (two ordinals), first-live-slot dispatch (one), and a stale source (synth activity after the table dispatch is empty). Do not change first-match deregistration or add a guard without this result.
+1. **M5 callback dispatch semantics:** s4767 positively reached the `waitForMusyXAudioTaskDone` copy but observed gate 0 and no `shutdownAudioEngine` copy on the qualified route; A12 does not select a writer or further gate change. The s4764 census was not an invocation counter and the route crashed before hangar. Inspect the actual VI-retrace callback dispatcher and add one phase-scoped invocation ordinal per dispatched table slot, with a same-run positive control that proves the marked dispatcher path fires. Build one binary and run one default-B40 title/hangar capture; distinguish duplicate-slot dispatch (two ordinals), first-live-slot dispatch (one), and a stale source (synth activity after the table dispatch is empty). Do not change first-match deregistration or add a guard without this result.
 3. **s4764 route blocker:** the default-B40 capture reached title but crashed at `musyxSynthFrame_s4562_impl+5808` before hangar. Do not treat the missing target-phase cardinality as a null; the next dispatcher instrument must prove its own positive control and report the crash boundary.
 4. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
 5. **M5 audio:** de-stubbing qualified through A14 on the covered route (A11 wait cap, A12 countdown wait, A13 drain return default-off + timeout guard, A14 shutdown-call-3 needs `ROGUESQ_A14_YIELD` default on; B40 default flipped to pass-through s4701, rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`). A15 redundant, early synth crash resolved s4696. Per-scene audio re-allocs (initN64RspMixer via runVideoFrameTick->reapplyDisplayMode) are retail behaviour and benign (s4711-s4715, closed). Plan: docs/M5-AUDIO-PLAN.md. Keep soaks <=4 concurrent; every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup.

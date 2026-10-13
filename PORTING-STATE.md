@@ -155462,3 +155462,21 @@ route is valid, but H-A12-loop-reached, H-A12-route-absent, and
 H-A12-wrong-writer remain unevaluable. This rules out treating the missing
 branch rows as a producer or route null, and authorizes no gate or writer
 change. Artifact: `scratch/agent/s4766_m5_a12_second_wait/`.
+
+## Session 4767 (2026-10-13) — marked both A12 second-wait copies
+
+Added bounded `ROGUESQ_LOG_WAITMUSYX_SPIN2` loop-entry, yield, and return
+witnesses to the canonical fixer, vendored fixer, and live generated
+`funcs_24.c`, then rebuilt the Debug target. The concurrent default and
+`ROGUESQ_AUDIO_SPIN2_YIELD=0` arms both reached title VI 1024 and hangar VI
+512 with no crash or abort. The witness fired three times in each arm in the
+`waitForMusyXAudioTaskDone` copy at `0x80091F34`; every entry read gate 0 and
+returned, with zero nonzero-value iterations and zero yields. The
+`shutdownAudioEngine` copy at `0x80091DC4` did not fire.
+
+The witness's own rows and the existing wait-contract/title/hangar controls
+are positive controls in the same run. This qualifies the wait-copy branch as
+reached with an already-clear gate and leaves the shutdown-copy route absent
+on the covered route. It does not select the legitimate writer or justify a
+gate/dispatcher change. Next unit: the callback-dispatch invocation ordinal
+probe from the backlog.
