@@ -154980,3 +154980,12 @@ ORIGIN: no mitigation added; instrumentation only.
 Discrimination: this run REFUTES hypothesis B (port gate handling forces the audio re-init: retail's reapplyDisplayMode re-inits unconditionally) and C (repeat initAudioSubsystem: exactly one), and SELECTS A/the frame-tick mode-change branch as the sole source of the extra allocs for H-alloc-window-sched-switch.
 Next discriminator: print the three runVideoFrameTick guard values (0x800014F8/0x8000150C/0x80001518) on each taken branch in the port and compare with retail oracle hits of exec 0x8000153C (whole-RDRAM positive control first); retail hits at the same widths => A, none => port-only mode-record writer (name it).
 Summary: the census refutes hypotheses B and C and selects the runVideoFrameTick mode-change branch; the guard-value comparison against retail will discriminate A from a port-only writer.
+
+## Session 4713 (2026-10-12) — runVideoFrameTick's "display mode" record is an audio config (freq/voice counts) that varies per scene
+
+HYPOTHESIS-ID: H-alloc-window-sched-switch. Added `[s4713-rdm-guard]` print (env `ROGUESQ_LOG_ALLOC_CALLERS=1`) inside `rs64_m5_route_state_callsite` (src/main/upstream_compat.cpp; no regen needed). Ran scratch/agent/s4713_guard.sh (a copy of s4711_callers.sh; the sed to retarget its output dir failed on macOS, so logs overwrote scratch/agent/soak_results/s4711/arm{A,B}.log), 2 concurrent arms, 150 s, 0 crashes, positive control A=7 P=7 pairs.
+Result: all 6 taken branches in both arms (identical): flag 0x8010D211=1; record w0=0x5622 x5 then 0x7D00; b4=17,16,15,18,18,32; b5=16,14,15,14,14,32; b6=1,7,2,5,8,6; phases 2,3,3,4,5,5. The record is an audio config (sample rate, voice counts), not video, so `reapplyDisplayMode` is misnamed and the re-alloc follows the game's own per-scene audio-config requests. Hypothesis B (port-synthesised record) is not supported: values vary per scene like game data. Caveats: single-source (port only; oracle reaches attract only); record writer not yet named.
+ORIGIN: no mitigation added; instrumentation only.
+Discrimination: this run SELECTS A (game-originated per-scene audio config) over B (port-only record writer) for H-alloc-window-sched-switch, because the record contents vary per scene and are audio parameters.
+Next discriminator: name the writer PC of the record bytes 4..6 in the port; if game code, the re-alloc window is retail behaviour and the thread moves to why allocation inside that window faults.
+Summary: the extra allocs are retail-path audio reconfigurations driven by game data.

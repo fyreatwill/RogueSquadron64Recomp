@@ -939,6 +939,18 @@ extern "C" uint32_t rs64_m5_route_state_callsite(uint8_t* rdram,
     }
     g_rs64_m5_route_state_call_ordinal = next_ordinal++;
     g_rs64_m5_route_state_entry_a1 = a1;
+    {
+        // s4713: guard census. a0..a3 are the mode record at s2: lw 0(s2), lbu 4/5/6(s2).
+        static int en = -1;
+        if (en < 0) { const char* e = std::getenv("ROGUESQ_LOG_ALLOC_CALLERS"); en = (e && e[0] && e[0] != '0') ? 1 : 0; }
+        if (en) {
+            static uint32_t n = 0;
+            const uint32_t flag = rdram[(0x8010D211u - 0x80000000u) ^ 3u];
+            std::fprintf(stderr, "[s4713-rdm-guard] n=%u phase=%u flag8010D211=%u rec_w0=0x%08X b4=%u b5=%u b6=%u\n",
+                         ++n, phase, flag, a0, a1, a2, a3);
+            std::fflush(stderr);
+        }
+    }
     g_rs64_m5_route_state_audio_nonzero = 2u;
     const char* all = std::getenv("ROGUESQ_LOG_ALL");
     const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_STATE");
