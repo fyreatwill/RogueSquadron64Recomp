@@ -259,6 +259,28 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
                     last[i] = v;
                 }
             }
+            // s4728: extent of change across 0x1F0000..0x1F1000 each frame.
+            static uint32_t snap[0x400];
+            static bool snap_init = false;
+            static int ext_events = 0;
+            uint32_t first = ~0u, lastw = 0, cnt = 0, firstval = 0;
+            for (uint32_t w = 0; w < 0x400; w++) {
+                uint32_t a = 0x1F0000u + w * 4u, v = 0;
+                for (uint32_t k = 0; k < 4; k++) v = (v << 8) | rdram[(a + k) ^ 3u];
+                if (snap_init && v != snap[w]) {
+                    if (first == ~0u) { first = w; firstval = v; }
+                    lastw = w; cnt++;
+                }
+                snap[w] = v;
+            }
+            snap_init = true;
+            if (cnt && ext_events < 400) {
+                ext_events++;
+                std::fprintf(stderr, "[s4728-extent] frame=%d phase=%u words=%u first=0x%06X last=0x%06X span=0x%X firstval=0x%08X\n",
+                    n, rs64_phase_ord(), cnt, 0x1F0000u + first * 4u, 0x1F0000u + lastw * 4u,
+                    (lastw - first + 1) * 4u, firstval);
+                std::fflush(stderr);
+            }
         }
     }
     uint32_t fb = (uint32_t)ctx->r4;
