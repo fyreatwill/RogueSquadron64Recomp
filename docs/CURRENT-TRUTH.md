@@ -1,16 +1,15 @@
 # Rogue Squadron 64 Recomp — current truth
 
-**s4769: the callback-dispatch ordinal experiment remains a checkpoint, not a
-result.** No new build or runtime was run in the retry. The durable s4767
-evidence remains: the A12 witness entered `waitForMusyXAudioTaskDone` at
-`0x80091F34` three times per arm with gate zero, while the
-`shutdownAudioEngine` copy at `0x80091DC4` did not fire; default and rollback
-arms reached title VI 1024 and hangar VI 512 without crash or abort. Therefore
-H-dispatch-all, H-first-live-slot, and H-stale-source are still unevaluable.
-The next discriminator is unchanged: instrument the actual VI-retrace
-dispatcher with invocation ordinals and require its positive control before
-interpreting zero ordinals. Artifact: `scratch/agent/s4766_m5_a12_second_wait/`
-and the s4768 ledger entry in `PORTING-STATE.md`.
+**s4770: VI-retrace callback dispatch is all-live-slot on the qualified route.**
+The rebuilt default-B40 phase-gated run reached title VI 1024 and hangar VI
+512, fired 3,593 VI-loop rows and 14,368 callback-slot rows, and had no crash
+or abort. The dispatcher read duplicate live `0x8009123C` entries in slots 1
+and 2 during target phases; its `target=1` rows totaled 7,076, exactly
+matching 7,076 independent `synth-entry` rows. The loop marker is the positive
+control, and the slot walker plus synth entry provide two lines of evidence:
+H-dispatch-all is selected for this route; H-first-live-slot and H-stale-source
+are rejected. No dispatcher or deregistration change is authorized. Artifact:
+`scratch/agent/s4769_m5_callback_dispatch_run/`.
 
 **s4768: the callback-dispatch ordinal experiment remains a checkpoint, not a
 result.** The prior retry did not rerun the experiment or create a runtime
@@ -81,7 +80,7 @@ evidence for a dispatcher change.
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 history migrated to [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 and earlier
-archive sections. Updated for session 4754; old log archived in PROJECT-OVERVIEW.md.
+archive sections. Updated for session 4770; old log archived in PROJECT-OVERVIEW.md.
 
 ## Current state
 
@@ -585,8 +584,8 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 Single monotonic backlog (renumbered s4739). s4741: ovl2c toml+composite landed. OPEN DEPENDENCY (human, s4742/s4745; iterations must NOT retry, NEXT.md re-scoped to runaway-DL cost measurement): add RSPRecomp Bash allow rules to .claude/settings.json (see scratch/agent/UNBLOCK.md); meanwhile NEXT.md is the offline 0x2C analysis. Full pre-compaction history of this section: PROJECT-OVERVIEW.md, "Archive: CURRENT-TRUTH 'Next steps' log s4649-s4738".
 
-1. **M5 callback dispatch semantics:** s4767 positively reached the `waitForMusyXAudioTaskDone` copy but observed gate 0 and no `shutdownAudioEngine` copy on the qualified route; A12 does not select a writer or further gate change. The s4764 census was not an invocation counter and the route crashed before hangar. Inspect the actual VI-retrace callback dispatcher and add one phase-scoped invocation ordinal per dispatched table slot, with a same-run positive control that proves the marked dispatcher path fires. Build one binary and run one default-B40 title/hangar capture; distinguish duplicate-slot dispatch (two ordinals), first-live-slot dispatch (one), and a stale source (synth activity after the table dispatch is empty). Do not change first-match deregistration or add a guard without this result.
-3. **s4764 route blocker:** the default-B40 capture reached title but crashed at `musyxSynthFrame_s4562_impl+5808` before hangar. Do not treat the missing target-phase cardinality as a null; the next dispatcher instrument must prove its own positive control and report the crash boundary.
+1. **M5 callback teardown:** s4770 selects all-live-slot dispatch: duplicate `0x8009123C` entries in slots 1 and 2 each produce synth entries on the qualified route. Determine whether shutdown deregistration clears only the first duplicate and leaves a live second slot, or whether the callback table is repopulated/never reaches shutdown. Instrument the complete registration, first-match deregistration, shutdown-call, and four-slot table sequence in one phase-gated run; require the VI-loop and target-phase controls. Do not change deregistration or add a guard without naming the writer and proving the post-shutdown slot state.
+3. **s4764 route blocker:** superseded for callback reachability by s4770, which reached both title and hangar without crash. The earlier VI-640 crash remains a recurring audio-route family, not evidence against callback cardinality.
 4. **Mission-phase correctness remains closed only for the covered frame route.** s4753/s4759 show the port can reach the 512 phase with ship/HUD/terrain and no runaway/crash. They do not select whether the real 0x2C image changes billboard/sprite output, because the 0x2C dispatch was absent in s4759.
 5. **M5 audio:** de-stubbing qualified through A14 on the covered route (A11 wait cap, A12 countdown wait, A13 drain return default-off + timeout guard, A14 shutdown-call-3 needs `ROGUESQ_A14_YIELD` default on; B40 default flipped to pass-through s4701, rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows `== '0') ? 0 : ctx->r2`). A15 redundant, early synth crash resolved s4696. Per-scene audio re-allocs (initN64RspMixer via runVideoFrameTick->reapplyDisplayMode) are retail behaviour and benign (s4711-s4715, closed). Plan: docs/M5-AUDIO-PLAN.md. Keep soaks <=4 concurrent; every game-launching recipe must `pkill -KILL -x RogueSquadron64Recomp` in cleanup.
 5. **M3 idiom classes are ALL closed** (MEM_B/BU/H/HU/W/WU, LD, lwl/lwr, SDL/SDR/SWL/SWR, FPR lwc1/swc1/ldc1/sdc1, LL/SC; tools/census_*.py, docs/M3-S4688-MEMWU-CENSUS.md). No guard without a named writer and legitimacy proof. Attached-mesh `rs_free` NULL contract was unevaluable (no oracle route reached a mission s4655-s4670); the s4724 recipe now reaches one, so it could be revisited with mission-phase watches.

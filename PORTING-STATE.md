@@ -155508,3 +155508,17 @@ unevaluable; this does not authorize a dispatcher, gate, or writer change.
 The next discriminator is unchanged: instrument the actual VI-retrace
 dispatcher with bounded invocation ordinals, require that dispatcher marker
 as a positive control, then run the phase-gated default-B40 route.
+
+## Session 4770 (2026-10-13) — selected all-live-slot VI callback dispatch
+
+The canonical fixer and generated `funcs_4.c` gained phase/slot/target fields
+on the existing VI-retrace callback-table witness. The rebuilt default-B40
+capture reached title VI 1024 and hangar VI 512, fired 3,593 VI-loop rows and
+14,368 slot rows, and had no crash or abort. Slots 1 and 2 both held the live
+`0x8009123C` callback in target phases. There were 7,076 `target=1` slot rows
+and 7,076 independent `synth-entry` rows. The VI-loop marker was the positive
+control, so this is a qualified two-source result: H-dispatch-all is selected;
+H-first-live-slot and H-stale-source are ruled out for this route. It does not
+authorize a dispatcher or deregistration change. Next: instrument the complete
+registration/deregistration/shutdown/table sequence to determine whether
+first-match teardown leaves the duplicate live.

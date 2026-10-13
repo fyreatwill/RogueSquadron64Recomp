@@ -23130,7 +23130,8 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 r"    ctx->r2 = MEM_W\(ctx->r16, 0X0\);\n)"
                 r"(    // 0x80019B6C: beq         \$v0, \$zero, L_80019B7C\n)",
                 lambda m: m.group(1) + _audiotick_block("vi-cb-slot", "s_vicbslot", 160, 512,
-                                                         " base=0x%08X ptr=0x%08X", ", ctx->r16, ctx->r2",
+                                                         " phase=%u slot=%u base=0x%08X ptr=0x%08X target=%u",
+                                                         ", rs64_phase_ord(), (unsigned)((U32(ctx->r16) - 0x8011A8A4u) / 4u), ctx->r16, ctx->r2, U32(ctx->r2) == 0x8009123Cu",
                                                          always=True) + m.group(2),
                 body)
             if n:
