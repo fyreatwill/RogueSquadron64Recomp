@@ -465,6 +465,7 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Superseded conclusions to avoid repeating
 
+- **"Loop must wait for the owner to choose a target / no retail framebuffer reference known" (s4729).** Believable because M5, M3, the rename sweep and 0x1F0D74 were all closed and the BLOCKED question was framed around a missing reference. Overturned s4730: the retail hangar RDP capture (`s4514_rdp_hangar512.bin`, 166 MB) and oracle video-plugin runs already existed, and choosing a target is in-scope prioritization.
 - **"Mission entry needs an owner-supplied recipe or savestate" (s4719-s4721).** Believable because ~10 button-press variants (s4657-s4720) never left the hangar/viewer/attract. Overturned s4722 as unproven: every variant varied button input only; forcing the mode variable in RDRAM was never tried, and the oracle reliably reaches the hangar unaided.
 
 - “The early (~3.3 s, VI 640) `musyxSynthFrame_s4562_impl+9668` bus error /
@@ -496,7 +497,8 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
-**s4729: every strategic thread (M5, M3 classes, rename sweep, 0x1F0D74) is closed; loop BLOCKED awaiting owner choice of target (hangar render artifacts vs mission-phase correctness) — see scratch/agent/BLOCKED.md.**
+**s4730 (top, unblock): the s4729 "BLOCKED awaiting owner target" line is overturned.** Next = `H-hangar-rdp-diff` (NEXT.md): diff the port's first hangar-512 RDP frame against the retail capture `rs64-oracle/s4514_rdp_hangar512.bin` (hypotheses: rdp-cmd / tex-upload / renderer). Mission-phase correctness (s4724 recipe) is queued behind it.
+
 
 **s4728 (top): 0x1F0D70..80 is not a stable image struct: window 0x1F0000..0x1F1000 changes by whole-page (0x1000) rewrites and sequential 0x200-byte chunks (17 events, control passed) — generic heap/DMA reuse; the width-1161 premise is retired for the current recipe (s4727+s4728, single-recipe). Do not chase 0x1F0D74 further. Next: re-pick from the priority list (M5 de-stub or renaming-sweep revisit).**
 **s4727 (top): port poll of 0x1F0D70..80 (control 0xCC3E4 passed): no 1161 word in ~2914 frames through mission VI 512@0x690400; uniform-fill events (0xD7D7D7D7, 0x6A6A6A6A, 0x80808080 across all 16 bytes) at frames 268/457/458 unattributed. The width-1161 premise is stale for the current recipe (single run, frame-granular). Next: widen poll to 0x1F0000..0x1F1000 at fill frames. `scratch/agent/s4727_run.sh`, env ROGUESQ_LOG_S4727_IMG_WATCH.**
