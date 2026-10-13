@@ -2,12 +2,12 @@
 
 HYPOTHESIS-ID: mission-phase-correctness
 
-s4736: runaway tasks have 1 RSP entry; their L_11B0 refill sources cycle 740AD8 -> ... -> 744078 (link word 0) -> 740AD8. Question: who puts 740AD8 into the refill source (DMEM state+0x30 = 0x30(r18)) after the 744078 chunk?
+s4737: runaway tasks (240-242) re-seed 0x30(r18) at L_1DB0 (site 3) after an end-DL (prevop 0xB8) at call depth 0; normal tasks 41/42 hit site 3 only at entry and terminate another way.
 
 Hypotheses:
-- H-state30-reset: some store to 0x30(r18) (or the saved frame slot) writes the task's initial data pointer (e.g. the end/b8 or zero-link path re-seeds it from OSTask data_ptr at DMEM).
-- H-link-from-other-field: the refill source comes from another DMEM field (e.g. slot-0 frame 0x650/0x654) that still holds 740AD8.
-- H-cyclic-data: chunk words themselves chain back (weighed against: 744078 link word is 0).
+- H-1DB0-is-restart: do_indirect_jump `case 0x1DB0` is the legit "DL ended -> re-run root" edge and normal tasks end earlier via a different edge (e.g. a 0xB8/0xB9 with a terminating flag/word we mis-evaluate in runaway).
+- H-wrong-ra: r31 at the end-DL is a stale/wrong value (0x1DB0) in runaway only.
+- H-overlay-byte: DMEM 0x153 overlay byte makes the dispatcher pick L_1DB0 vs a completion path.
 
-Discriminator (one build, one run): in fixup 18 add a probe at every `RSP_MEM_W_STORE(0X30, r18, ...)` in factor5_ucode_recompiled.c (grep enumerates) logging (site label, value, task, fetch count) via rs64_dlw_root kind 6, plus log r2 provenance at L_11B0 (value of 0x30(r18) vs w0 of previous chunk). Outcome: store of 740AD8 at site X on the wrap => H-state30-reset (inspect X's guard); no store but value present => H-link-from-other-field; positive control: normal task 41 must show its own stores with monotone sources.
-Run: zsh scratch/agent/s4735_run.sh (rebuild with DEVELOPER_DIR=... cmake --build build -j8; apply fixup to build/factor5_ucode/factor5_ucode_recompiled.c first).
+Discriminator (one build, one run): at the indirect-jump dispatcher log (task, fetch n, jump_target, r31, DMEM[0x153], call depth, last DL word w0/w1) for the last 8 jumps before every task end (normal) and before each site-3 hit (runaway). Positive control: task 41 must log its terminating jump. Outcome: differing target/ra => H-wrong-ra; same target but differing 0x153 or depth => H-overlay-byte; identical => H-1DB0-is-restart (then inspect what the DL word at the end says).
+Run: add to fixup 18, strip dlwalk lines from build/factor5_ucode/factor5_ucode_recompiled.c, rerun tools/fixup_factor5_ucode.py <file>, DEVELOPER_DIR=... cmake --build build -j8, zsh scratch/agent/s4737_run.sh.

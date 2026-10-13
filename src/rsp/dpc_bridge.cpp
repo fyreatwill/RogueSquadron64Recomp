@@ -1426,6 +1426,7 @@ extern "C" void rs64_dlw_root(uint32_t kind, uint32_t a, uint32_t b) {
              (uint32_t(g_rdram_for_submit[(p + 2) ^ 3]) << 8) | uint32_t(g_rdram_for_submit[(p + 3) ^ 3]);
         b &= 0x7FFFFFu;
     }
+    if (kind == 6) b &= 0x7FFFFFu;
     dlw_event(kind, a & 0xFFFFu, b, w0);
     if (kind == 4 && w0 == 0 && g_rdram_for_submit != nullptr) {
         if (g_dlw_zero_task != g_dlw.task) { g_dlw_zero_task = g_dlw.task; g_dlw_nzero = 0; memset(g_dlw_zero_src, 0, sizeof g_dlw_zero_src); }

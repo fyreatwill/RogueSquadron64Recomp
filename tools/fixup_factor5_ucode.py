@@ -2964,6 +2964,15 @@ if is_main_ucode and DLW_MARKER not in text:
     if (n1, n2, n3) != (1, 1, 1):
         print("fixup_factor5_ucode: FIXUP 18 ANCHOR FAILED", (n1, n2, n3), file=sys.stderr)
         sys.exit(1)
+    # s4737: log every store to the refill-source word 0x30(r18) (kind 6; a = site ordinal).
+    _site = [0]
+    def _w30(m):
+        _site[0] += 1
+        return (f"    rs64_dlw_root(6, {_site[0]}, r2);  " + DLW_MARKER + "\n" + m.group(0))
+    text = re.sub(r"    RSP_MEM_W_STORE\(0X30, r18, r2\);\n", _w30, text)
+    if _site[0] != 3:
+        print("fixup_factor5_ucode: FIXUP 18 W30 SITE COUNT", _site[0], file=sys.stderr)
+        sys.exit(1)
 
 # ---------------------------------------------------------------------------
 # Fixup 17: TriGen L_1DB0 DPC-branch trace (s726, item -421).
