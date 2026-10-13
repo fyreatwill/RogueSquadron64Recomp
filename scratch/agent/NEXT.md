@@ -1,8 +1,8 @@
-# Port-side ordering: does the port tick musyxSynthFrame between the teardown free burst and re-init completion?
+# Hold synth quiesce past the gate clear until guest audio re-init ends
 
 HYPOTHESIS-ID: factor5-overlay-0x2c-splice
 
-s4783 (retail, 8/8): wait -> 6-9 synth ticks -> rs_free burst -> gate clear -> 32-44 rs_malloc re-init -> next synth tick. Zero synth ticks in the free->re-init gap.
-Hypotheses for the port: A) a host thread / VI callback dispatch ticks synth inside the gap (port-only concurrency); B) port tick lands in the gap because the port re-init is deferred (alloc happens much later, s4780: ~215k lines); C) port re-init order differs (73728 alloc before the audio blocks are re-created).
-Discriminator: one port run (VI 640 phase 3 route, scratch/agent/s4782_run.sh recipe) with entry logs on musyxNoopStub, rs_free (burst), rs_malloc, musyxSynthFrame entry, tagged with thread id and a monotonic sequence number; compute synth ticks between first burst free and the next audio re-init alloc, and the dispatching thread. Control: synth-entry rows > 0 overall. A: ticks>0 in gap with other thread id; B/C: ticks>0 in gap same thread.
-Then (ORIGIN: retail ordering, s4783) quiesce synth dispatch from musyxNoopStub entry to re-init end behind an env rollback flag, and soak the crash route.
+s4784: port teardown ordering inside the noop window matches retail; the divergence is AFTER the gate clear: the synth host thread ticks 0 mallocs after the clear (retail: 32-44 rs_malloc first).
+Hypotheses: A) retail's post-clear protection is simply "re-init runs before the next tick" (single-threaded/cooperative); holding the s4562 pause until re-init end removes the crash. B) the crash survives a held pause (then the freed-arena hit is a stale pointer in the re-init itself, not a tick race). C) re-init never completes before the next noop window in the port.
+Discriminator: find the guest return/point after the 32-44 mallocs (analyze scratch/agent/s4783 oracle data with tools/s4783_noop_gap.py for the PC of the last malloc caller before the first post-clear synth tick; map to a funcs_*.c anchor), release g_s4562_pause there instead of at 0x8008ED48 (PAUSE=4, env-gated), run the VI640 phase-3 route (scratch/agent/s4784_run.sh with ROGUESQ_S4562_PAUSE=4), count crash + SYNTH-POST positions. Control: PAUSE=3 arm in the same iteration (expect crash). A: PAUSE=4 survives past old crash point; B: still crashes.
+ORIGIN: retail ordering (s4783 oracle, s4784 port).
