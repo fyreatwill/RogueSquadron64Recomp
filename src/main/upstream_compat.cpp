@@ -4332,6 +4332,20 @@ extern "C" void rs64_m5_selector_store_entry(uint32_t pc, uint32_t ra,
         return (all && all[0] && all[0] != '0') ||
                (own && own[0] && own[0] != '0');
     }();
+    {   // s4711: ungated allocateSongChannelArray (pc 0x8008F000) caller census, all phases
+        static const bool caller_log = [] {
+            const char* e = std::getenv("ROGUESQ_LOG_ALLOC_CALLERS");
+            return e && e[0] && e[0] != '0';
+        }();
+        static uint32_t n = 0;
+        if (caller_log && pc == 0x8008F000u && n < 64u) {
+            std::fprintf(stderr,
+                "[s4711-alloc-caller] n=%u ra=0x%08X count=%u a1=0x%08X a2=0x%08X a3=0x%08X width=%u origin=0x%06X\n",
+                n++, ra, a0 & 0xFFFFu, a1, a2, a3,
+                rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu);
+            std::fflush(stderr);
+        }
+    }
     if (!enabled) return;
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     const uint32_t width = rs64_vi_committed_width();
