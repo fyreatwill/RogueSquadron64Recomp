@@ -4886,6 +4886,18 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
             }
         }
     }
+    {   // s4714: who stores into the runVideoFrameTick audio-config record 0x8003757C..8B? Control: total store hook calls + stores to 0x80037590..9F neighbours.
+        static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_ALLOC_CALLERS"); return e && e[0] && e[0] != '0'; }();
+        if (on) {
+            static uint32_t tot = 0, nrec = 0, nnb = 0;
+            if ((++tot % 5000000u) == 0) { std::fprintf(stderr, "[s4714-ctl] hook calls=%u rec=%u neighbour=%u\n", tot, nrec, nnb); std::fflush(stderr); }
+            if (addr >= 0x8003757Cu && addr < 0x8003758Cu) {
+                if (nrec++ < 200u) { std::fprintf(stderr, "[s4714-w] w=%c addr=0x%08X pc=0x%08X val=0x%08X vi=%u\n", width, addr, pc, value, rs64_vi_committed_width()); std::fflush(stderr); }
+            } else if (addr >= 0x8003758Cu && addr < 0x8003759Cu) {
+                if (nnb++ < 20u) { std::fprintf(stderr, "[s4714-nb] w=%c addr=0x%08X pc=0x%08X val=0x%08X\n", width, addr, pc, value); std::fflush(stderr); }
+            }
+        }
+    }
     if (rs64_s4457_on()) {
         if (!g_s4457_tab) g_s4457_tab = (S4457W*)std::calloc(0x100000, sizeof(S4457W));
         if (addr >= 0x80000000u && addr < 0x80400000u) {

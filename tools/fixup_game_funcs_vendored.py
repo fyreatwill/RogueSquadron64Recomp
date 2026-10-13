@@ -38919,9 +38919,11 @@ static void rs64_s2084_fill_range_edge(const char* edge, uint32_t edge_pc,
         text = text.replace(
             _s2112_call,
             "    rs64_m5_route_state_callsite(rdram, 0x8000153Cu, U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r7)); /* PATCH: s2112 route-state callsite */\n"
+            + "    rs64_s4714_rec(rdram, U32(ctx->r18), U32(ctx->r29), U32(ctx->r6)); /* PATCH: s4714 record address */\n"
             + _s2112_call,
             1,
         )
+        text = text.replace(_s2112_anchor + _s2112_decl, _s2112_anchor + _s2112_decl + "extern void rs64_s4714_rec(uint8_t* rdram, uint32_t rec, uint32_t sp, uint32_t a2);\n", 1)
         changed = True
         report.append("funcs_0.c: s2112 route-state callsite patched x1")
 

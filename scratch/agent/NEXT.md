@@ -2,6 +2,7 @@
 
 HYPOTHESIS-ID: H-alloc-window-sched-switch
 
-s4713: runVideoFrameTick's mode record at s2 is an audio config (0x5622 Hz, voice counts 17/16/15/18/18/32), varies per scene, flag 0x8010D211=1 => re-allocs are the game-requested retail path (A). Open: name the WRITER of the record at s2 (add r18 to the print via a fixup patch of the funcs_0.c callsite, then arm a rdram write watch on it for the writer PC).
-Hypotheses: (A) writer is retail game code (scene-load audio setup) -> window is retail behaviour; next ask why allocation in that window faults. (B) writer is a port stub -> name and ORIGIN-justify.
-Discriminator: writer PC attribution for the record's bytes 4..6 in the port.
+s4714: record at 0x8003757C is written by retail game PCs (0x800C59xx, 0x800A9Bxx) => the 6 re-allocs (counts 17,16,15,18,18,32) are retail behaviour (A selected; B refuted).
+Next unit: determine why allocateSongChannelArray in that window misbehaves in the port.
+Hypotheses: (A) port rs_malloc/heap state differs from retail at those allocs (fragmentation, stale freelist); (B) concurrent audio/sched thread races the realloc window (port thread switching); (C) allocation is fine and the fault is downstream (voice array consumers using the old array).
+Discriminator: at each of the 6 allocs log heap free-list head/size before/after and old-array pointer lifetime (existing s4579/s4533/RS_MALLOC logs via scratch/agent/s4711_callers.sh); compare with the retail alloc #1; a changed freelist-invariant violation => A, tid differences => B, no violation => C.

@@ -926,6 +926,16 @@ static void rs64_m5_route_state_log(uint8_t* rdram, const char* edge,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_s4714_rec(uint8_t* rdram, uint32_t rec, uint32_t sp, uint32_t a2) {
+    static int en = -1;
+    if (en < 0) { const char* e = std::getenv("ROGUESQ_LOG_ALLOC_CALLERS"); en = (e && e[0] && e[0] != '0') ? 1 : 0; }
+    if (!en) return;
+    const uint32_t o = rec & 0x1FFFFFFFu;
+    std::fprintf(stderr, "[s4714-rec] rec=0x%08X sp=0x%08X a2=0x%08X w0..3=%08X %08X %08X %08X\n", rec, sp, a2,
+        *(uint32_t*)(rdram + o), *(uint32_t*)(rdram + o + 4), *(uint32_t*)(rdram + o + 8), *(uint32_t*)(rdram + o + 12));
+    std::fflush(stderr);
+}
+
 extern "C" uint32_t rs64_m5_route_state_callsite(uint8_t* rdram,
                                                    uint32_t pc, uint32_t a0,
                                                    uint32_t a1, uint32_t a2,

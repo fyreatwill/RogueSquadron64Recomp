@@ -705,3 +705,5 @@ See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) §59 for the s4590–s4617
 evidence archive and [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md) for the audio plan.
 
 - s4702/s4703: default B40 pass-through 0 crashes in 15 arms; B40=0 rollback 2/4. The s4702 6-way VI-640 stall did NOT recur at 4-way (s4703 4/4 healthy, d and z arms alike) -> attributed to 6-way load, not B40. Keep soaks <=4 concurrent.
+
+Session 4714: the runVideoFrameTick audio-config record (0x8003757C) is written by retail game code (0x800C59xx / 0x800A9Bxx); the per-scene audio re-allocs are retail behaviour (H-alloc-window-sched-switch hypothesis A, port-only single-source). Next: why allocation inside that window misbehaves in the port.
