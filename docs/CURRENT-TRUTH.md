@@ -3,6 +3,8 @@
 **s4777: iteration BLOCKED - the +5808 disassembly needs lldb/objdump allow rules (see scratch/agent/BLOCKED.md). Unit unchanged.**
 **s4776: 4th identical death (si_addr 0x38000950e = rdram base 0x300000000 + unmasked guest 0x8000950e in x9) at +5808, VI 640 0x696100, at load ~9; same si_addr across s4672/s4761/s4764/s4775/s4776, so Hload is unsupported (never tested at load<3). Next: identify the guest instruction/register at +5808 and the writer of 0x8000950e.**
 
+**s4779: the +5808 corrupt link is arena RECYCLING, not a stray writer: at VI 640 phase 3, ~18 pointer words of the audio node arena 0x80179400-0x8017B000 turn 0x8017xxxx->0x0000xxxx in one walk interval, then hold unrelated data (2 runs, `[s4779-unhooked]` shadow scan in rs64_s4457_list_check, single instrument). Callback table stayed [3250,123C,0,0] with no dereg, so duplicate-registration (s4762) is NOT the cause. Next: name the allocation/loader that takes 0x80179480 (s4558 heap-overlap lead). ROGUESQ_LOG_M5_CALLBACK_ENTRY+WRITER together crash boot.**
+
 **s4778: `musyxSynthFrame_s4562_impl+5808` = guest `0x80091368 lhu $v0,0x10($v1)` (funcs_24.c:7112) in a linked-list walk; $v1=0x94FC, a corrupt list link (not a codegen/mask bug). Asm for any TU: `cd build && make Users/.../RecompiledFuncs/funcs_24.c.s` (no lldb/objdump). Writer of the bad link still unknown.**
 
 **s4775: the hangar-gated menu walk (scratch/agent/s4776_gated_menu_walk.sh) crashed 3/3 at `musyxSynthFrame_s4562_impl+5808` (VI 640 0x696100, ~77 s) before the hangar appeared, so no key was sent. Title arrived at ~50 s vs 15 s in fast runs, machine load ~8: the crash looks load/timing sensitive (single-source). Rerun on a quiet machine.**

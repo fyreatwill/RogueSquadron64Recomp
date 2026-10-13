@@ -4874,6 +4874,28 @@ extern "C" void rs64_s4457_list_check(uint8_t* rdram, uint32_t value) {
         std::fprintf(stderr, "[s4457-control] stores=%llu head_writer pc=0x%08X val=0x%08X prev_pc=0x%08X\n",
                      (unsigned long long)g_s4457_stores, h.pc, h.val, h.ppc);
     }
+    {   // s4779: shadow scan of the audio node arena. A word whose LAST HOOKED store was a W but whose memory now differs was
+        // modified by an unhooked writer (DMA / host memcpy / unhooked store). Control: matched count must be >0 and a scan of
+        // the table-vs-memory for the LUT-agnostic 'matched' words proves the comparison works.
+        static uint64_t scans = 0, matched = 0, mism = 0; static uint32_t shown = 0;
+        static bool seen[0x1800] = {};
+        ++scans;
+        for (uint32_t a = 0x80179400u; a < 0x8017B000u; a += 4) {
+            const S4457W& e = g_s4457_tab[(a & 0x3FFFFFu) >> 2];
+            if (e.w != 'W') continue;
+            const uint32_t p = a & 0x7FFFFFu;
+            const uint32_t now = (uint32_t(rdram[(p) ^ 3]) << 24) | (uint32_t(rdram[(p + 1) ^ 3]) << 16) | (uint32_t(rdram[(p + 2) ^ 3]) << 8) | uint32_t(rdram[(p + 3) ^ 3]);
+            if (now == e.val) { ++matched; continue; }
+            ++mism;
+            const uint32_t idx = (a - 0x80179400u) >> 2;
+            if (!seen[idx] && shown < 64u) {
+                seen[idx] = true; ++shown;
+                std::fprintf(stderr, "[s4779-unhooked] scan=%llu at=0x%08X now=0x%08X lastw pc=0x%08X val=0x%08X prev pc=0x%08X val=0x%08X vi_w=%u phase=%u\n",
+                             (unsigned long long)scans, a, now, e.pc, e.val, e.ppc, e.pval, rs64_vi_committed_width(), rs64_phase_ord());
+            }
+        }
+        if ((scans & 0x3FFFu) == 1u) std::fprintf(stderr, "[s4779-ctl] scans=%llu matched=%llu mism=%llu shown=%u\n", (unsigned long long)scans, (unsigned long long)matched, (unsigned long long)mism, shown);
+    }
     ring[rn++ & 15u] = value;
     if (dumped || value == 0 || (value >> 24) == 0x80u) return;
     dumped = true;
