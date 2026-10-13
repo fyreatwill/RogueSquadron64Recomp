@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: oracle-poke-mission-entry
 
-s4724 result: oracle with alternating Start/A presses (scratch/agent/s4724_run.sh) reaches initMission 0x800FA250 at t=73.4 s on retail; no poke needed. The thread's entry question is closed.
-Unit: extend s4724_run.sh to --secs 120 with mission-phase watches: capture VI origin/width after t=73 s (--vi-trace is already on) plus --watch-write on the port's known mission-sensitive addresses (the heap freelist 64 KB region, README control) and compare against the port's mission-phase recipe. Collect everything in one run.
-Outcomes: retail mission origin/width differs from port's => points at the video path; freelist writes present on retail => a legitimate writer exists to match; both absent => port divergence is port-only.
-Positive control: a whole-RDRAM watch must fire ~1.6M times per 8 s (README).
+s4725: retail mission VI = 512 wide at 0x69xxxx; retail game code writes 0x1F0D70..80 (292 writes, PCs in PORTING-STATE s4725).
+Unit: rerun scratch/agent/s4725_run.sh adding `--post-value-watch 1` (and a post-value PC from the writer list e.g. --post-value-pc 0x800078EC) to capture the stored word values at 0x1F0D74; compare to the port's width-1161 colour-image word. Add a phase gate so hits are not exhausted by hit-cap.
+Outcomes: retail stores a 1161 width => legitimate, port-side guards are masking real behaviour; retail stores other values => port writer is wrong, trace the port's equivalent PC.
+Positive control: whole-RDRAM watch fires.

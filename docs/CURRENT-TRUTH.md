@@ -496,6 +496,7 @@ no guard, patch, or mitigation was added. Artifacts are in
 
 ## Next steps
 
+**s4725 (top): retail mission-phase reference.** After initMission (73.4 s) retail VI is 512 wide at origin 0x690400/0x690800 (hangar was 0x6AB800). Retail game code writes 0x1F0D70..80 (292 writes, ~30 distinct writer PCs: 0x800078EC, 0x800C7F08..801C, 0x800CAC44..74); values not yet captured (single-source). Next: `--post-value-watch 1` on that range to compare against the port's width-1161 colour image. `scratch/agent/s4725_run.sh`.
 **s4724 (top): the oracle REACHES a retail mission with no owner input or poke.** `scratch/agent/s4724_run.sh` (Start+A alternating every 3 s from 6 s to 140 s): hangar 33 s, state-5 handler 0x800AC8B0 at 54 s, initMission 0x800FA250 at 73.4 s. Supersedes the s4719/s4722 mission-entry-needs-input lines below. Next = reuse this recipe with mission-phase watches (retail reference for the port's mission state).
 
 **s4722 (top, unblock): the s4719 "BLOCKED awaiting owner" line below is overturned.** Next = `oracle-poke-mission-entry` (NEXT.md): statically find the hangar/menu mode selector, add an oracle `--poke`, force mission entry at the 512 hangar phase; no owner input needed. The mission-entry dependency stays open until that runs.
