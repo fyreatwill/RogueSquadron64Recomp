@@ -10,8 +10,12 @@ Required human action: add both Bash allow rules named in
 `scratch/agent/UNBLOCK.md` for `../N64Recomp/build/RSPRecomp` and its absolute
 path variant.
 
-Once unblocked, run the existing `scratch/agent/fixup6r_draft.py` workflow,
-rebuild, and use the s4753 direct mission driver with
+Once unblocked, from the repo root run
+`../N64Recomp/build/RSPRecomp factor5_rsp_ovl2c.toml`, wire the existing
+`scratch/agent/fixup6r_draft.py` into `tools/fixup_factor5_ucode.py`, run the
+normal `make_elf.py -> N64Recomp -> fixup_game_funcs.py` regeneration chain,
+then run `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+Use the s4753 direct mission driver with
 `ROGUESQ_OVL2C_DROP=0`. Capture positive controls for VI 512 at
 `0x00690400`, no crash/abort, and per-task runaway count.
 
