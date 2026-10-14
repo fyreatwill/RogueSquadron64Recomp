@@ -6,7 +6,18 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4840)
+## Headline (as of s4841)
+
+- **s4841 selected a live generated conditional-move site in static CFG.** The
+  independent reachability pass covered all 149 file/guest-PC sites: 2 are on
+  reachable generated guest paths, 16 are post-return/unreachable, and 131
+  are data-like/unreachable. One reachable site has a nonzero destination
+  (`funcs_49.c`, `0x800A2B64`, `$k0`), so the `do_break` lowering defect is not
+  latent-only. This is still static generated-C evidence, not proof that the
+  qualified runtime route reaches that site; audit the fixup/regeneration path
+  before changing behavior. Table and classifier:
+  `docs/M3-S4840-MOVZ-MOVN-REACHABILITY.md` and
+  `tools/classify_movz_movn.py`.
 
 - **s4840 found a generated conditional-move translation defect.** The complete
   census found 179 `movz`/`movn` annotations (95/84), 149 file/guest-PC sites,
@@ -231,8 +242,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 - **M3 conditional moves are statically mistranslated (s4840).** All 179
   generated `movz`/`movn` sites emit `do_break`, including 115 nonzero
   destinations; the raw decoder independently validates all 144 `.word`
-  encodings. Reachability and runtime impact remain open, so no fix is yet
-  authorised.
+  encodings. s4841's static CFG finds one reachable nonzero-destination site;
+  runtime impact remains open and no fix is yet authorised.
 - **Runaway-DL cause (s4746-s4749):** DL op `0xBD` (TexrectGen) → overlay `0x2C`
   (real 0x240-byte VU image, ROM `0x27368`, dest `0x1DB0`) is unrouted, so the
   window entry restarts the task. Present ⇔ arrival ⇔ runaway (150/150 vs 0/550).
@@ -322,7 +333,8 @@ discriminator.)
 (s4839: variable-shift census matched all 469 direct sites; do not repeat the
 class. Continue with the next complete M3 idiom census.)
 (s4840: conditional-move census found all 179 sites emitted as do_break;
-classify reachability before changing the fixup pipeline.)
+s4841's CFG found one reachable nonzero-destination site. Audit fixup path
+before changing generated behavior.)
 (s4833: route-stabilizing Step 11 A/B reached title/hangar in both arms, but
 the clear-site witness was absent in both. Do not repeat the same A/B; make the
 clear-site instrumentation itself discriminating.)
@@ -343,16 +355,15 @@ resolved (s4755: the tool ran; the old block was false).
 0. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
    and s4836. Reopen another M5 boundary only with a new discriminator and a
    same-build rollback/control; do not repeat the invalid request-only route.
-1. **M3 conditional-move reachability classification:** use the s4840 complete
-   table as the fixed input and classify every file/guest-PC site as post-return,
-   data-like/unreachable, or reachable from a generated entry/control-flow edge.
-   The discriminator is whether any nonzero-destination `movz`/`movn` site is on
-   a reachable path; reachable sites require a fixup-level implementation audit,
-   while an all-unreachable result parks the defect as latent. Do not patch or
-   build until all 149 file/PC sites are classified.
-2. **M3 next complete idiom census:** after the conditional-move classification,
-   select the next unclosed generated translation class and enumerate the whole
-   class before proposing any guard. Do not chase a single wild address.
+1. **M3 conditional-move fixup-level implementation audit:** trace the
+   generated source, fixup script, and regeneration input for the reachable
+   nonzero site `funcs_49.c:0x800A2B64`, plus its duplicate source context.
+   Determine whether the `do_break` comes from an unsupported instruction,
+   malformed source annotation, or a fixup regression. Do not patch generated
+   output or infer runtime causality from the static CFG alone.
+2. **M3 next complete idiom census:** after the conditional-move audit, select
+   the next unclosed generated translation class and enumerate the whole class
+   before proposing any guard. Do not chase a single wild address.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s
