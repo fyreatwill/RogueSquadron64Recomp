@@ -1,8 +1,5 @@
-# Next work unit (M5 task data_size writer)
+# Next work unit (awaiting human direction; see BLOCKED.md)
 
 HYPOTHESIS-ID: m5-task-family-retail-compare
 
-s4862: retail OSTask(0x80149470) data_size is 2 in ~90% of rows (title 572/625, hangar 188/210); port (s4860) is 1-dominant. Reproducible, same slots.
-
-Hypotheses: (a) timing only: port queues fewer audio frames per swap; (b) guest-side frame-count writer behaves differently in the port.
-WORK UNIT: oracle exact-memory write watch on phys(0x80149470+0x24) (data_size field; verify offset in tools/oracle README/OSTask layout) with whole-RDRAM control, title phase, to name writer PCs; then port-side same-field writer rows in one phase-gated run (reuse s4860 harness). Discriminator: same writer PC and a value derived from a different count => (b); same writer with values tracking per-swap producer cadence => (a).
+data_size is the frame-batch counter at 0x80149760 (musyxBuildVoiceCommandList resets 0x8009106C / increments 0x800911DC; musyxSynthFrame stores it at 0x80091784 -> OSTask+0x34). If authorized: one build carrying a phase-gated trace of those two writers plus musyxSynthFrame entry timestamps, ROGUESQ_S4562_PAUSE=0 vs 4 in the same run set, plus the oracle exec watch at 0x80091784 with whole-RDRAM control. Equal build-to-submit cadence with different counts => guest state differs; counts track cadence => cadence only, close the thread.
