@@ -155939,3 +155939,9 @@ Ran: new `tools/census_f2i.py` over RecompiledFuncs; table in `docs/M3-S4814-F2I
 Showed: the casts lower to saturating fcvtzs / non-trapping lrint on arm64, so no fault is possible; NaN/overflow inputs are already corrupted-state (retail R4300i traps on them).
 Rules out: float->int conversion as a crash family on this host. Caveats: single-source (ISA reasoning, no hit counter); x86 would differ.
 ORIGIN: no mitigation added; census only, no guard.
+
+## Session 4815 (2026-10-14) — M3 float-compare/NaN idiom census: 0 unordered-form compares in code, class closed
+
+Ran: new `tools/census_fcmp_unordered.py` over the ROM; table in `docs/M3-S4815-FCMP-CENSUS.md`. N64Recomp lowers unordered-bit compares (c.ult/ule/ueq/un/ngle/ngl/nge/ngt) to the ordered C operators, which would diverge on NaN. ROM scan: 0 code-shaped (bc1t/bc1f-adjacent) sites use them; game uses only c.lt/c.le/c.eq (+9 c.ole.s), whose C lowering matches MIPS on NaN (false).
+Rules out: NaN-compare lowering as a crash/divergence family. Caveats: single-source static scan; 3-word branch window.
+ORIGIN: no mitigation added; census only, no guard.
