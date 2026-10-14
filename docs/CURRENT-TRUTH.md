@@ -143,7 +143,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-1. **VI-640 post-swap acknowledgement queue correlation** (NEXT.md,
+1. **VI-640 post-swap acknowledgement queue correlation** (s4799: mqdiag does not exist; use ROGUESQ_LOG_SWAP_ACK_WAIT=1; 0/5 stalls at low load, repeat under load>=11; new H4 = flag 0x8011A8C8 never clears) (NEXT.md,
    HYPOTHESIS-ID `vi640-postswap-ack-queue`): at a live `vi-fs stalled=1`, split
    H1 (ack never produced) / H2 (produced, not delivered) / H3 (intentional
    frame-pair drop) by the existing `mqdiag` send/delivered/blocked/external/

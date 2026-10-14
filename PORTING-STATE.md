@@ -155805,3 +155805,26 @@ monotonic Next-steps backlog (#1 = post-swap ack queue correlation per NEXT.md).
 Stale "RSPRecomp allowlist blocked" text dropped (s4755 showed that block false).
 Net shrink 556 lines. The NEXT.md work unit (vi640-postswap-ack-queue) is
 unchanged for the next iteration.
+
+## Session 4799 (2026-10-14) — VI-640 ack-queue witness: instrument premise false, 0/5 stalls at low load
+
+- NEXT.md's "existing mqdiag snapshots" do not exist: mqdiag_dump lived in the
+  removed librecomp fork (src/main/main.cpp:7052 comment). The installed
+  queue-level instrument is `ROGUESQ_LOG_SWAP_ACK_WAIT=1` (enter / pre-recv /
+  post-recv per `waitForPostSwapAck` call, from the s177 fixup patch in
+  funcs_5.c). Its loop: while byte 0x8011A8C8 != 0, blocking osRecvMesg on queue
+  0x8012_8CF0 then osYieldThread — so a fourth hypothesis exists: H4 = messages
+  ARE delivered but flag A8C8 never clears (log would show repeated
+  enter/pre/post cycles, not a frozen pre-recv).
+- Ran `scratch/agent/soak_queue/done/s4799_swapack_gated.sh` (s4793 recipe +
+  swap-ack log, state-gated on `vi-fs`-style static update_screen counter at
+  width 640, sample + two log snapshots on stall). Results
+  (`scratch/agent/soak_results/s4799/summary.txt`): 5/5 runs left VI 640 for
+  1024 at 48-50 s (load 5-8); 0/5 stalled. No state gate reached -> no
+  H1/H2/H3/H4 discrimination; route-invalid for the stall, as the control
+  (stalled state) never occurred. Consistent with load-sensitivity (s4791/
+  s4792: stall appears at load 11-26); also an unrequested observation: at
+  low load the 640 phase is near-deterministic (~48-50 s).
+- ORIGIN: no mitigation added. No code changed.
+- Next: re-run the same script only when host load >= ~11 (s4794 conditions),
+  or drive load deliberately (parallel busy loops) to reproduce the stall.
