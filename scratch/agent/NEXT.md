@@ -1,7 +1,7 @@
-# Exercise the full regen chain on a pristine tree
+# M5 audio de-stub: next plan step
 
 HYPOTHESIS-ID: m5-audio-destub-mission-route
 
-s4810: A9 in RS64_REPLAY; ovl2c_mode is regen-safe via fixup_factor5_ucode. Remaining: the replay has never run end to end with A9/A10.
-Work unit: in a scratch dir, run make_elf.py -> N64Recomp into a fresh output dir (NOT the live RecompiledFuncs), then tools/fixup_game_funcs_vendored.py <dir>; check "[s4648-replay] failures=0" and that funcs_23/24/25/26 cmp identical to live.
-Discriminator: failures=0 + cmp identical => chain preserves A9/A10; any FAIL names the script to repair. If regen into a scratch dir is not possible, say so and move to M5 plan next step.
+s4811 closed the regen-chain check (A9/A10 survive; see PORTING-STATE s4811).
+Work unit: open docs/M5-AUDIO-PLAN.md, take the first de-stub step not yet marked qualified, write the competing hypotheses and discriminator here, then build+run one mission-route soak (env prefix `env`, SIGKILL game).
+Optional hygiene: backport s4700/s4784 probes into the vendored fixer if regen parity matters.
