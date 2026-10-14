@@ -448,7 +448,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   `spTaskSchedulerThread+9632` startup crash (guest PC `0x8000834c`) is
   intermittent, not DROP-caused, not load-gated (s4790).
 
-- **s4879:** synth-register dedup (tools/apply_s4878_synth_dedup.py) is now DEFAULT ON (`ROGUESQ_S4875_DEDUP=0` disables): 0.99 vs 1.97 synth entries/msg, 2/3 DEDUP=1 runs alive at 100 s, 1 startup SIGSEGV (known intermittent family, unattributed). Next: paired startup-crash sample.
+- **s4879:** synth-register dedup (tools/apply_s4878_synth_dedup.py) is now DEFAULT ON (`ROGUESQ_S4875_DEDUP=0` disables): 0.99 vs 1.97 synth entries/msg, 2/3 DEDUP=1 runs alive at 100 s, 1 startup SIGSEGV (known intermittent family, unattributed). s4880 RESULT: arm1(dedup on) 0/5 crashes vs arm0 2/5 -> dedup NOT the cause; crash = zero-extended guest ptr 0x80128d44 in MEM_BU base reg (x9=0x100128d47); writer still unnamed (s4881).
 
 ## Parked and closed
 
