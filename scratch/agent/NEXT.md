@@ -1,6 +1,7 @@
-# M5: A9 qualified at mission; A10 emitted 0 rows at mission — find why
+# M5: wire A10 apply into the regen chain, then relax one guard class
 
 HYPOTHESIS-ID: m5-audio-destub-mission-route
 
-s4807: A9 inert at mission (0 bad / 143 rows, forced control fires 152/152). A10 (ROGUESQ_LOG_M5_A10, tools/apply_s4681_m5_a10.py) printed 0 rows in the mission run (grep '^\[m5-a10').
-Work unit: read apply_s4681_m5_a10.py for its trigger and log tag. Hypotheses: H-A10-tag-mismatch (my grep tag wrong; boring check first: grep -a -i a10 scratch/agent/s4807/normal.log), H-A10-not-reached (site never hit at mission), H-A10-build-absent (patch not in the current build). Discriminator: a forced/positive arm for A10 in the same run.
+s4808: A10 guards live at mission, 265 evaluations all in range, writer legit (see PORTING-STATE s4808). tools/apply_s4681_m5_a10.py is not called by any fixup stage; its post-check aborts when run on an already-partially-patched tree.
+Work unit: (1) make the script idempotent/regen-safe and invoke it from the post-fixup stage; (2) build one arm with the songtempo guard class relaxed (ROGUESQ_A10_GUARD_OFF=1 already exists) and run it vs default at hangar then mission, phase-gated, in one iteration; record ORIGIN.
+Discriminator: GUARD_OFF arm crash=0 and identical VI progression => guards are dead code at these phases; any crash => guard still protecting something (name writer).
