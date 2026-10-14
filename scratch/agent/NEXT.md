@@ -2,6 +2,6 @@
 
 HYPOTHESIS-ID: m3-idiom-class-audit
 
-s4813 closed the integer-divide class (docs/M3-S4813-DIV-CENSUS.md). All M3 idiom classes are now closed.
-Next: pick one of (a) float-to-int conversion class (TRUNC_W_S 1171, TRUNC_W_D 28, CVT_W_S 13, CVT_W_D 2 sites in recomp.h macros): check NaN/overflow semantics vs MIPS (0x7FFFFFFF) and whether any site feeds an address/index; classify, guard or prove benign. (b) otherwise M5 passive items.
+s4814 closed the float-to-int class (docs/M3-S4814-F2I-CENSUS.md). Closed M3 classes: mem access, divide, float->int.
+Next: (a) float compare/NaN-branch class (C.cond.S/D sites: do NaN operands diverge from MIPS unordered semantics?) census with a tool; or (b) M5 passive items per docs/M5-AUDIO-PLAN.md.
 Must commit a tool/doc/guard with an ORIGIN line.

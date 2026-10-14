@@ -155932,3 +155932,10 @@ ORIGIN: no mitigation added; run-only. Step 11 now has title/hangar/mission rows
 Ran: new `tools/census_div.py` over RecompiledFuncs; table in `docs/M3-S4813-DIV-CENSUS.md`. 427 div/divu/ddiv/ddivu sites (335 register divisor, 92 literal-zero). The 92 literal-zero sites are all in four oversized symbols (audioCompandS16 44, __OSGlobalIntMask 33, static_3_800A2114 8, data_gap_800CC3D4 7) whose bodies are `.word 0x0000XXXX` / `$zero,$zero` data decoded as code. Register sites: arm64 sdiv/udiv by zero returns 0 without trapping; DDIV guards INT64_MIN/-1.
 Rules out: a divide-by-zero SIGFPE as a crash family on this host. Caveats: the dead-code proof is single-source (instruction-shape, no call-graph walk or hit counter); x86 build would differ.
 ORIGIN: no mitigation added; census only, no guard.
+
+## Session 4814 (2026-10-14) — M3 float-to-int idiom census: 1212 sites, class closed on arm64
+
+Ran: new `tools/census_f2i.py` over RecompiledFuncs; table in `docs/M3-S4814-F2I-CENSUS.md`. 1212 sites (TRUNC_W_S 1171, TRUNC_W_D 28, CVT_W_S 13, CVT_W_D 2; no 64-bit variants). ~526 feed an address/index expression by a loose heuristic, 21 store directly.
+Showed: the casts lower to saturating fcvtzs / non-trapping lrint on arm64, so no fault is possible; NaN/overflow inputs are already corrupted-state (retail R4300i traps on them).
+Rules out: float->int conversion as a crash family on this host. Caveats: single-source (ISA reasoning, no hit counter); x86 would differ.
+ORIGIN: no mitigation added; census only, no guard.
