@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4830)
+## Headline (as of s4831)
+
+- **s4831 M5 Step 1 is qualified on the corrected same-build pair.** The
+  corrected harness compared Factor 5 image (`ROGUESQ_AUDIO_UCODE=1`) against
+  the silent control (`=0`) using the documented multi-press autopilot. Both
+  arms reached title 1024 and hangar 512 with 64 SP completions and no
+  crash/abort. Phase-5 PCM source samples were nonzero in the image arm
+  (`nz=768`) and zero in the silent arm (`nz=0`), selecting image downstream
+  activity rather than a route-only explanation. The prior s4823/s4829
+  request-only pair remains invalid for Step 1; do not repeat it.
 
 - **s4830 A9/A10 replay passed its fixup discriminator but not whole-file
   identity:** the pristine generated copy replayed with `failures=0`, A10
@@ -103,7 +112,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   and colour artifacts remain localised (rim band, blue holo spikes, right-edge
   garbage = benign stale RDRAM, s4643).
 - **M5 audio:** no longer a zero-output stub; nonzero PCM, AI byte order fixed.
-  Steps 4-13 qualified or closed on the covered route (key-on early-return valid
+  Step 1 image-versus-silent qualification is closed on the corrected route
+  (s4831). Steps 4-13 qualified or closed on the covered route (key-on early-return valid
   s4678, status-03 writer legitimate s4680, A10 song-tempo guards valid s4681,
   AI/SDL bridge valid s4682, A11 wait cap s4691, A12 countdown wait s4692, A13
   drain default-off + timeout guard s4693). Plan: `docs/M5-AUDIO-PLAN.md`.
@@ -210,6 +220,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
+(s4831: corrected image-versus-silent pair reached title/hangar in both arms;
+image PCM was nonzero while silent PCM was zero. Step 1 is qualified; advance
+to the next M5 plan item.)
+
 (s4830: pristine replay had failures=0 and both A9/A10 reports, but selected generated files differed from the live tree due to later diagnostics; classify replay as behavior-valid but whole-file comparison drift.)
 (s4829: Step 11 reached title/hangar but lacked the producer-clear/seed and wait-return controls in both arms; pivot to the next M5 validation rather than repeating this route.)
 (s4821: M3 indirect-jump census closed the jr/jalr class; next M3 candidates: branch-likely delay slots, HI16/LO16 pairs.)
@@ -220,7 +234,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 Step 11 validation:** s4829 reached title/hangar and retained the task,
+0. **M5 next behavior validation:** Step 1 is qualified by s4831. Continue at
+   the next not-yet-qualified M5 plan row with a same-build rollback/control;
+   do not repeat the invalid request-only route.
+1. **M5 Step 11 validation:** s4829 reached title/hangar and retained the task,
    SP, slot, and PCM controls, but neither arm reached the producer-clear/seed
    and wait-return witnesses. Treat this route as invalid for Step 11; do not
    repeat it without a new route discriminator. Continue with the next M5

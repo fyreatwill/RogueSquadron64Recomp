@@ -1,31 +1,34 @@
 # Resume next work unit
 
-HYPOTHESIS-ID: m5-step1-new-route-discriminator
+HYPOTHESIS-ID: m5-step11-producer-witness
 
-Single bounded work unit: design and run one new route discriminator for the
-M5 Step 1 default-image versus silent-control qualification. The s4823/s4829
-routes are invalid when they stop before the required downstream phase, so do
-not repeat either recipe unchanged.
+Single bounded work unit: qualify M5 Step 11's second MusyX wait using a new
+producer-witness discriminator on the now-qualified real-image route. Run
+default `ROGUESQ_AUDIO_SPIN2_YIELD=1` and rollback `=0` concurrently from one
+build, with the documented autopilot and a phase gate through title/hangar.
+Arm `ROGUESQ_LOG_M5_GATE_CONTRACT=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`,
+`ROGUESQ_LOG_PCM_BOUNDARY=1`, and the existing task/SP controls. Do not rerun
+the s4829 pair unchanged.
 
 Competing hypotheses:
 
-* H-route-progress: the new route control reaches the target title/hangar
-  phase in both arms and permits the Step 1 task/service/PCM comparison.
-* H-route-common-gate: both arms still stop at the same pre-target gate while
-  retaining task/SP controls, proving only that the route discriminator did not
-  move the boundary.
-* H-route-arm-specific: the new control separates the arms before the target
-  phase, selecting an arm-specific route/lifecycle difference.
+* H-producer-clear: the real-image route reaches the named producer arm/clear
+  and wait return; yield-on returns safely while rollback retains the old spin
+  boundary.
+* H-route-invalid: both arms again reach title/hangar but no producer arm/clear
+  or wait-return witness occurs, so Step 11 remains unevaluable.
+* H-yield-causal: the producer witness exists, but only yield-on reaches the
+  wait return or downstream route while rollback stalls/crashes.
 
-Discriminating measurement: in one same-build concurrent run, the first
-phase-gated target-origin row for each arm, plus task dispatch, SP completion,
-service/slot, and nonzero PCM source/consumer controls. Target-origin in both
-arms selects H-route-progress; same pre-target gate selects H-route-common-gate;
-an arm-only target/crash/stop selects H-route-arm-specific. A missing whole-
-RDRAM/route control makes the run invalid.
+Discriminating measurement: phase-5 `[m5-gate]` rows must show producer arm,
+clear, and wait return in the same arm/route join, with task/SP and nonzero PCM
+source/consumer controls in both arms. Complete producer/clear/return in both
+arms selects H-producer-clear; absent producer/clear/return in both selects
+H-route-invalid; arm-separated return/route progress selects H-yield-causal.
 
-Before implementation, inspect the existing Step 1 harness and add one route
-control only after identifying a concrete state transition it can distinguish.
-Then build both arms together and run the harness phase-gated; enqueue any
-repeat soak rather than babysitting it. Do not rerun the A10 replay, s4828
-startup capture, or unchanged Step 11 A/B.
+Exact preparation and run: inspect the existing Step 11 controls in
+`tools/run_m5_yield_ab.sh`, create or adapt one bounded same-build driver for
+the two `ROGUESQ_AUDIO_SPIN2_YIELD` arms, build
+`cmake --build build --config Debug --target RogueSquadron64Recomp`, then run
+the driver from the repo root. Require title/hangar phase controls and SIGKILL
+cleanup; enqueue any repeat soak instead of babysitting it.

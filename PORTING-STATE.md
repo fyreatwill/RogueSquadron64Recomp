@@ -156088,3 +156088,20 @@ entry as the cause of the selected diffs; it does not authorize guard removal
 or select a new runtime behavior. The next unit is a new route discriminator
 for the invalid M5 Step 1 qualification.
 ORIGIN: replay validation only; no mitigation or runtime behavior change.
+
+## Session 4831 (2026-10-14) — qualified M5 Step 1 image versus silent route
+
+Corrected `tools/run_m5_yield_ab.sh` before the run: its two prior arms both
+selected the real image, and its one-press autopilot did not encode the
+documented title/hangar route. The corrected same-build concurrent pair used
+the multi-press autopilot and compared `ROGUESQ_AUDIO_UCODE=1` with the silent
+control `=0`. Both arms reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, each with 64 SP completions and no crash or abort. The
+phase-5 PCM source control recorded nonzero samples (`nz=768`) in the image
+arm and zero samples (`nz=0`) in the silent arm. This selects real-image
+downstream audio activity and qualifies M5 Step 1; it rules out the prior
+route-only explanation for this comparison, but does not qualify any later
+audio contract edge. The harness summary initially counted rows rather than
+nonzero bytes; that reporting bug was fixed from the captured logs.
+ORIGIN: no mitigation or runtime behavior change; this is a qualification
+control and harness correction.
