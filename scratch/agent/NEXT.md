@@ -1,7 +1,6 @@
-# Locate retail mission frames and compare to m0's extra splice sprites
+# M5 audio plan: pick the first non-closed step and execute it
 
-HYPOTHESIS-ID: ovl2c-splice-mission-effect
+HYPOTHESIS-ID: m5-audio-destub-next-step
 
-Done s4803: m0 (splice) phase-6 texrects strictly superset m1 (drop); extras ~6x8px glyphs at y~288/~411, up to +119/frame. Tool: scratch/agent/s4807_align.py (pickle /tmp/s4807.pkl).
-Hypotheses: H-splice-correct (extras match retail HUD/text sprite geometry), H-splice-garbage (extras do not appear in retail at any frame), H-other-writer (retail has a large sprite set neither arm reproduces).
-Discriminating measurement: in retail rdp.bin find frames with tri>1500 and texrect>=100 (mission-like); compare multiset of (w,h,tile) and y-band of m0-only extras against them. Offline only.
+s4804: splice-vs-retail comparison is unevaluable (retail rdp.bin has no mission frames); thread parked.
+Work unit: read docs/M5-AUDIO-PLAN.md, identify the first step not marked closed/qualified, write 2-3 hypotheses and the discriminating measurement here, build once, run once, record. Do not return to the 0x2C splice thread without a retail mission capture.

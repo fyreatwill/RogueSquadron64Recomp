@@ -26,7 +26,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 - **Rename sweep closed (s4795).** 8 remaining placeholders are deliberate
   `fake_func_*` boundaries; table in `docs/RENAME-S4795-AUDIT.md`.
 
-- **s4803: splice emits sprites.** Offline frame-split phase-6 diff: m1 (drop) texrects are a strict subset of m0 (splice); m0 adds up to ~119 small sprites/frame by frame 130. Retail mission frames not yet located, so correctness vs retail is open.
+- **s4803: splice emits sprites.** Offline frame-split phase-6 diff: m1 (drop) texrects are a strict subset of m0 (splice); m0 adds up to ~119 small sprites/frame by frame 130. s4804: retail s4733 rdp.bin contains NO mission frames (its >=100-texrect frames are menu text, 0 sprites <=8x10), so splice correctness vs retail is unevaluable until a retail mission capture exists.
 
 ## Current state (durable)
 
@@ -149,9 +149,7 @@ resolved (s4755: the tool ran; the old block was false).
 
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s
-   (s4802/s4806), no driver needed. Next: frame-align m0 (splice) vs m1 (drop)
-   phase-6 RDP against retail s4733 rdp.bin and diff texrect content; submission
-   counts do not discriminate.
+   (s4802/s4806), no driver needed. Frame-align done (s4803/s4804): no retail mission reference exists; parked pending oracle mission capture.
 3. **M5 callback teardown:** park unless a route that reaches
    `shutdownAudioEngine` appears; keep M5 plan going otherwise.
 4. **Attached-mesh mission watches:** the s4724 recipe reaches a mission; could
