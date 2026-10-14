@@ -156659,3 +156659,4 @@ Built three read-only port traces (`tools/apply_s4867_bound_trace.py`, `apply_s4
 ORIGIN: no mitigation added; read-only logging.
 Discrimination: REFUTES H1 (bound differs: 3 vs 3) and H3-as-"second caller of the build function" (resets == synth entries in the port; builds are not called from elsewhere). SELECTS H-extra-synth-entry (a second invocation per frame, with the AI producer byte already advanced) over H-build-early-out.
 Next discriminator: retail exec counts of 0x8008EE6C (producer write) and the runAiAudioStreamPlaybackLoop entry vs 703 synth entries; port count of the same per synth entry plus which guest thread (osGetThreadId / stack pointer) executes each entry.
+Summary (gate wording): this run refutes the port-loop-bound hypothesis (3 vs 3), selects the extra-synth-entry hypothesis over a build early-out, and the next discriminator is the retail-vs-port producer-write (0x8008EE6C) count per synth entry.
