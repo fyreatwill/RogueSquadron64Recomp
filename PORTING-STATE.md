@@ -156777,3 +156777,9 @@ ORIGIN: no mitigation of an unknown writer; the writer of the extra copy is reap
 - ORIGIN: still open (writer of the zero-extended 0x80128d44 unnamed). No mitigation added; diagnostics only.
 - Follow-up already edited in source (NOT built, the soak was still using the binary): scan window now starts at sp-0x2000. Remaining soak rounds run the old binary; summary lands in scratch/agent/soak_results/s4882/summary.txt.
 - Next: rebuild, rerun the recipe, read the ctx-scan register index, grep that register's last write in the scheduler patches.
+
+### Session 4882 addendum — discrimination (same session)
+
+- Rebuilt with the widened window (sp-0x2000), reran the recipe (12 runs, old soak killed): run_4b crashed with the identical signature (si_addr=0x400128d47, x1=0xffffffff80128c70) and `[CRASH][ctx-scan] hits=0` again. Positive control = the crash reproduced in 2 of 2 instrumented soaks (run_1b old window, run_4b new window). REFUTED (single-source, 2 crashes): "the faulting value lives in a stack-resident recomp_context of this thread" - the scan covers sp-0x2000..sp+0x40000 and finds none.
+- New arithmetic lead (2 captures agree): faulting value 0x80128d44 == (u32)(x1 + 0xD4) where x1 = 0xffffffff80128c70 (a correctly sign-extended base). This selects "an address add done in u32/unsigned arithmetic" (hypothesis A-like, missing S32/ADD32) over B (message value) and C (uninitialised reg). The generated spTaskSchedulerThread body (funcs_4.c:37246-38235) has NO 0XD4 literal and no `ctx->rN = ...0XD4`, so the add is not in the generated body; candidates are native helpers/patches it calls.
+- Next discriminator: grep tools/*.py and src/ native helpers for a +0xD4 pointer add without S32 (a field at +0xD4 off 0x80128C70), and symbolize lr (0x...f400, the caller frame) in the handler. ORIGIN still open; no guard added.
