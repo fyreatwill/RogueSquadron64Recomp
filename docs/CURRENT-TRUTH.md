@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4845)
+## Headline (as of s4846)
+
+- **s4846 closed the generated HI/LO move class.** The complete census found
+  989 annotated `mfhi`/`mflo`/`mthi`/`mtlo` rows. The independent retail ELF
+  decode and generated lowering agree at 916 rows; 47 remaining rows are
+  zero-destination/data-like sites, and 26 annotation/ELF mismatches are in
+  unreachable generated regions. The positive control at `0x80003444`
+  independently decodes as `mflo $v0` and lowers to `ctx->r2 = lo`. No live
+  HI/LO translation defect is selected. See
+  `docs/M3-S4846-HILO-MOVES-CENSUS.md` and
+  `tools/census_hilo_moves.py`.
 
 - **s4845 closed the external retail-entry boundary as route-absent.** The
   debugger-enabled oracle ran the documented Rice video plugin and Start
@@ -287,6 +297,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   tables, not altered by the fixup pass. A recompiler-side implementation and
   route qualification remain separate future work; do not hand-edit generated
   output.
+- **M3 HI/LO moves are closed (s4846).** The retail-ELF decode and generated
+  lowering agree at all nonzero-destination decoded sites; zero-destination
+  rows and 26 stale/unavailable annotations are confined to data-like or
+  unreachable generated regions. No guard or recompiler change is authorized.
 - **External retail-entry boundary (s4845):** the Rice/input oracle route is
   qualified through title and hangar, with whole-RDRAM control positive, but
   `0x800903F0` has zero execution hits. The retail handoff is absent on this
@@ -375,6 +389,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 on both arms after removing the observer crash; do not repeat the A/B.)
 (s4837: branch-likely census matched all 893 generated sites; do not repeat
 the class. Continue the next complete M3 idiom census.)
+(s4846: HI/LO move census matched all decoded nonzero-destination sites; do not
+repeat the class. Continue with the next complete M3 idiom census.)
 (s4838: HI16/LO16 census matched all 3,015 canonical pairs; do not repeat the
 class. Continue with the next complete M3 idiom census only when M5 has no new
 discriminator.)

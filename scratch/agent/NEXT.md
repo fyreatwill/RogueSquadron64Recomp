@@ -1,33 +1,35 @@
 # Next work unit
 
-HYPOTHESIS-ID: m3-hi-lo-move-census
+HYPOTHESIS-ID: m3-double-shift-census
 
-WORK UNIT: perform one complete static census of generated HI/LO move
-instructions (`mfhi`, `mflo`, `mthi`, `mtlo`) against the retail ELF, then
-classify every site as correctly lowered, unsupported/trapping, or data-like.
-Do not change generated output or runtime behavior.
+WORK UNIT: perform one complete static census of generated 64-bit shift
+instructions (`dsll`, `dsrl`, `dsra`, `dsll32`, `dsrl32`, `dsra32`, and their
+variable forms) against the retail ELF, then classify each site by raw decode,
+generated lowering, and conservative CFG reachability. Do not change runtime
+behavior or generated output.
 
 Competing hypotheses:
 
-* H-hilo-correct: every decoded HI/LO move has the expected generated register
-  transfer or HI/LO write, so this translation class needs no fix.
-* H-hilo-unsupported: one or more live-destination sites lower to `do_break`
-  or otherwise omit the HI/LO operation, identifying a recompiler defect.
-* H-hilo-data: all apparent mismatches are data-like/unreachable or write
+* H-dshift-correct: every decoded 64-bit shift has the expected width, count,
+  signedness, and destination lowering.
+* H-dshift-unsupported: a reachable nonzero-destination site traps or omits
+  the decoded shift, identifying a recompiler defect.
+* H-dshift-data: every apparent mismatch is data-like/unreachable or writes
   `$zero`, so no live translation defect is selected.
 
-DISCRIMINATING MEASUREMENT: one table must enumerate every generated
-`mfhi`/`mflo`/`mthi`/`mtlo` annotation, independently decode the raw ELF word,
-and record the generated lowering plus destination/source register. The
-outcome is H-hilo-correct if all live sites match; H-hilo-unsupported if any
-reachable live site omits or traps the operation; otherwise H-hilo-data if
-all mismatches are data-like/unreachable or zero-destination sites.
+DISCRIMINATING MEASUREMENT: one table must enumerate every generated annotation
+for the complete double-shift class, independently decode the raw ELF word,
+record the generated expression and destination/source registers, and include
+CFG reachability. Positive control: first choose a decoded nonzero-destination
+site from the table and require its raw word and generated expression to agree
+in the same run. H-dshift-unsupported requires at least one reachable live
+mismatch; otherwise select H-dshift-correct or H-dshift-data as applicable.
 
-Exact commands:
+Exact reconnaissance commands:
 
-    rg -n '\\b(mfhi|mflo|mthi|mtlo)\\b' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    python3 tools/census_unhandled_cpu.py --source ../N64Recomp/RecompiledFuncs --elf ../rogue_squadron64/build/roguesquadron.elf --output docs/M3-S4846-UNHANDLED-CPU-CENSUS.md
+    rg -n '\\b(dsll|dsrl|dsra|dsll32|dsrl32|dsra32|dsllv|dsrlv|dsrav)\\b' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n 'double|64-bit|dshift' docs tools
 
-If the generic census does not provide HI/LO lowering and reachability rows,
-write one bounded `tools/census_hilo_moves.py` that produces that complete
-table in the same work unit; do not split the census across iterations.
+If no existing census provides the full raw-decode/lowering/reachability table,
+write one bounded `tools/census_double_shifts.py` and run it once against
+`../rogue_squadron64/build/roguesquadron.elf`.

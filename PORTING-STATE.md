@@ -156353,3 +156353,19 @@ identify the writer or explain the port-side boundary value; no runtime,
 mitigation, or generated-output change was made.
 ORIGIN: independent whole-RDRAM, VI title/hangar, and target-PC controls from
 the same retail-oracle invocation; no mitigation or guest behavior change.
+
+## Session 4846 (2026-10-14) — closed generated HI/LO move class
+
+Ran one complete static census of generated `mfhi`, `mflo`, `mthi`, and `mtlo`
+annotations against the independent big-endian retail ELF, recording raw-word
+decode, generated lowering, destination/source register, and conservative
+generated-C CFG reachability. The census contains 989 rows: 916 matching rows
+with the expected lowering, 47 zero-destination/data-like rows, and 26
+annotation/ELF mismatches in unreachable generated regions. The positive
+control at `0x80003444` decoded as `mflo $v0` and found `ctx->r2 = lo`.
+
+This selects H-hilo-data/correct: no reachable live HI/LO translation defect
+was found. It rules out a missing HI/LO lowering as the explanation for the
+current runtime boundary, and authorizes no generated-output or runtime
+change. The full table is `docs/M3-S4846-HILO-MOVES-CENSUS.md`; the reusable
+auditor is `tools/census_hilo_moves.py`.
