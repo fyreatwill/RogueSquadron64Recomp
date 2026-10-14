@@ -6,7 +6,18 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4847)
+## Headline (as of s4848)
+
+- **s4848 closed the generated 32-bit multiplication class.** The complete
+  census found 670 `mult`/`multu` annotations (669 unique file/guest-PC sites).
+  The independent retail ELF decoded 643 rows, and every decoded row had the
+  expected signed/unsigned product lowering. The first decoded row at
+  `0x80000E04` was the positive control and passed. The remaining 27 rows are
+  annotation/ELF mismatches: their retail words are not multiplication
+  instructions and their generated bodies have no product lowering. No live
+  multiplication translation defect is selected; no runtime or generated
+  output change is authorized. See `docs/M3-S4848-MUL-CENSUS.md` and
+  `tools/census_mul.py`.
 
 - **s4847 closed the generated 64-bit shift class.** The complete census found
   720 annotations (678 unique file/guest-PC sites) across `dsll`/`dsrl`/`dsra`,
@@ -314,6 +325,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 - **M3 64-bit shifts are closed (s4847).** The complete retail-ELF/raw-decode
   and generated-lowering census found no reachable nonzero-destination defect;
   no guard or recompiler change is authorized.
+- **M3 32-bit multiplication is closed (s4848).** All decoded `mult`/`multu`
+  rows have the expected lowering; 27 stale annotation rows are not
+  multiplication words in the retail ELF. Do not repeat this census without a
+  new recompiler or annotation-provenance hypothesis.
 - **External retail-entry boundary (s4845):** the Rice/input oracle route is
   qualified through title and hangar, with whole-RDRAM control positive, but
   `0x800903F0` has zero execution hits. The retail handoff is absent on this
@@ -406,6 +421,9 @@ the class. Continue the next complete M3 idiom census.)
 repeat the class. Continue with the next complete M3 idiom census.)
 (s4847: 64-bit shift census matched all 162 reachable nonzero-destination rows;
 do not repeat the class. Continue with the next complete M3 idiom census.)
+(s4848: 32-bit multiplication census matched all 643 decoded rows; 27 stale
+annotation rows were raw-word mismatches, with the positive control passing.
+Do not repeat the class.)
 (s4838: HI16/LO16 census matched all 3,015 canonical pairs; do not repeat the
 class. Continue with the next complete M3 idiom census only when M5 has no new
 discriminator.)
@@ -432,15 +450,15 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M3 next complete idiom census:** audit the generated `mul` class against
-   independent retail-ELF decode, host lowering, and per-function CFG reachability
-   before proposing any guard. The 64-bit shift class is closed by s4847.
-   Conditional moves are now an identified N64Recomp operation gap, but no
-   generated-output patch or runtime claim is authorised by the static audit.
-   Do not chase a single wild address.
-1. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
-   and s4836. Reopen another M5 boundary only with a new discriminator and a
-   same-build rollback/control; do not repeat the invalid request-only route.
+0. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
+   and s4836. The next bounded unit is Step 8's remaining A10 pointer/table
+   guard class: first qualify the whole-RDRAM retail control and the named
+   writer/range/voice traversal controls, then change at most that one class
+   with a same-build rollback. Do not repeat the invalid request-only route.
+1. **M3 multiplication class:** closed s4848. The 643 decoded rows all have
+   expected signed/unsigned lowerings; 27 stale annotation/ELF mismatches are
+   not live multiplication instructions. Do not repeat without new provenance
+   evidence.
 1. **External retail-entry boundary:** closed s4845. The Rice/input oracle
    route reached title and hangar with whole-RDRAM control positive, but
    `0x800903F0` had zero hits. Revisit only with a new route or PC

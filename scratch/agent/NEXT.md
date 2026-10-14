@@ -1,35 +1,41 @@
 # Next work unit
 
-HYPOTHESIS-ID: m3-mul-census
+HYPOTHESIS-ID: m5-a10-guard-class
 
-WORK UNIT: perform one complete static census of generated `mul` annotations
-against the retail ELF, including raw decode, emitted host lowering, and
-per-function conservative CFG reachability. Do not change runtime behavior or
-generated output.
+WORK UNIT: execute one bounded M5 Step 8 A10 pointer/list/table guard-class
+qualification. First establish the independent retail whole-RDRAM control and
+the named writer/range/voice-traversal controls; then compare the current guard
+class with one same-build rollback arm. Do not relax a guard unless the writer
+and legitimate in-range value are both observed. If the controls do not reach
+the target phase, stop and report the route as unevaluable.
 
 Competing hypotheses:
 
-* H-mul-correct: every decoded `mul` has the expected signed 32-bit product
-  lowering and destination.
-* H-mul-unsupported: a reachable nonzero-destination `mul` is missing or has
-  the wrong signedness/width, identifying a recompiler defect.
-* H-mul-data: every apparent mismatch is data-like/unreachable or writes
-  `$zero`, so no live translation defect is selected.
+* H-A10-legitimate: the guarded pointer/list/table values are legitimate on
+  the qualified route, so the guards are dormant and not the audio defect.
+* H-A10-suppression: a guard fires after a legitimate writer publishes an
+  in-range value, and the guard suppresses required voice/reap work; the
+  rollback arm changes downstream traversal while retaining route controls.
+* H-A10-invalid: the writer publishes an out-of-range value or the route never
+  reaches the guard phase, so any null is invalid for a guard-removal decision.
 
-DISCRIMINATING MEASUREMENT: one table must enumerate every generated `mul`
-annotation, independently decode the raw ELF word, record the destination and
-source registers plus the generated expression, and include CFG reachability.
-Positive control: select the first decoded nonzero-destination row and require
-its raw word, annotation, and host lowering to agree in the same run. A live
-nonzero mismatch selects H-mul-unsupported; otherwise select H-mul-correct or
-H-mul-data as applicable.
+DISCRIMINATING MEASUREMENT: one phase-gated table must join, in the same run,
+the retail whole-RDRAM positive control, retail writer/range evidence, port
+writer and pointer values, guard-fire counts by site, valid traversal/slot
+transitions, PCM source/consumer rows, and title/hangar route controls. A guard
+fire after a named legitimate in-range write with downstream rollback
+divergence selects H-A10-suppression; no guard fire with valid traversal selects
+H-A10-legitimate; missing controls or invalid values selects H-A10-invalid.
 
-Exact commands:
+Ground-truth gate before building: use the documented retail-oracle route and
+positive controls from docs/M5-AUDIO-PLAN.md; do not add a narrow instrument
+until the whole-RDRAM watch and route phase controls are armed.
 
-    rg -n '\\bmul\\b' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    rg -n 'mult|mul|signed|32-bit' docs tools | head -100
+Exact preparation:
 
-Implement one bounded `tools/census_mul.py` if no complete raw-decode /
-lowering / reachability table exists, run it once against
-`../rogue_squadron64/build/roguesquadron.elf`, and write the result under
-`docs/`.
+    rg -n 'A10|voice-list|table|guard' docs/M5-AUDIO-PLAN.md docs/CURRENT-TRUTH.md
+    sed -n '118,153p' docs/M5-AUDIO-PLAN.md
+    sed -n '208,225p' docs/M5-AUDIO-PLAN.md
+
+Build every rollback arm in one build, run from build/ with the ROM present,
+phase-gate on VI transitions, and enqueue the soak rather than babysitting it.

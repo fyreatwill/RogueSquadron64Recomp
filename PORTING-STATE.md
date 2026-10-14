@@ -156387,3 +156387,21 @@ authorizes no guard or generated-output change. The first draft's file-wide CFG
 incorrectly marked later functions unreachable; it was corrected and rerun in
 the same iteration, producing the per-function result above. Report:
 `docs/M3-S4847-DOUBLE-SHIFT-CENSUS.md`; tool: `tools/census_double_shifts.py`.
+
+## Session 4848 (2026-10-14) — closed generated 32-bit multiplication class
+
+Ran one complete static census with `tools/census_mul.py` against the
+independent big-endian retail ELF. The applicable generated class is
+`mult`/`multu`; there are no integer `mul` annotations in the generated tree.
+The table covers 670 annotations (669 unique file/guest-PC sites), with 643
+independent ELF decodes and matching signed/unsigned product lowerings. The
+positive control at `0x80000E04` decoded as `mult $v1,$v0` and found the
+expected `S64(S32(...))` lowering. The other 27 rows are stale annotation/ELF
+mismatches: the retail words are not multiplication instructions and the
+generated bodies contain no product lowering.
+
+This selects H-mul-correct/data: no live multiplication translation defect is
+selected by the raw-word, lowering, and conservative CFG table. It rules out
+the multiplication class as the current runtime explanation and authorizes no
+runtime or generated-output change. Report:
+`docs/M3-S4848-MUL-CENSUS.md`; tool: `tools/census_mul.py`.
