@@ -62,7 +62,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 - **Early (~3.3 s) `+9668` bus error was our own `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`
   unsigned-literal bug (s4696)**, fixed via `S32()`; older recipes that armed it
   are suspect.
-- **M3 idiom classes are ALL closed** (integer div/divu/ddiv/ddivu s4813, float->int TRUNC/CVT s4814, float compare/NaN s4815, MEM_B/BU/H/HU/W/WU, LD, lwl/lwr,
+- **M3 idiom classes are ALL closed** (integer div/divu/ddiv/ddivu s4813, float->int TRUNC/CVT s4814, float compare/NaN s4815, ctc1/cfc1 FCSR s4816, MEM_B/BU/H/HU/W/WU, LD, lwl/lwr,
   SDL/SDR/SWL/SWR, FPR lwc1/swc1/ldc1/sdc1, LL/SC, jalr/jr indirect calls,
   backward self-referential walks, `rs_free` idiom to s4502). Tools
   `tools/census_*.py`; tables `docs/M3-S46xx-*-CENSUS.md`. No guard without a

@@ -155945,3 +155945,8 @@ ORIGIN: no mitigation added; census only, no guard.
 Ran: new `tools/census_fcmp_unordered.py` over the ROM; table in `docs/M3-S4815-FCMP-CENSUS.md`. N64Recomp lowers unordered-bit compares (c.ult/ule/ueq/un/ngle/ngl/nge/ngt) to the ordered C operators, which would diverge on NaN. ROM scan: 0 code-shaped (bc1t/bc1f-adjacent) sites use them; game uses only c.lt/c.le/c.eq (+9 c.ole.s), whose C lowering matches MIPS on NaN (false).
 Rules out: NaN-compare lowering as a crash/divergence family. Caveats: single-source static scan; 3-word branch window.
 ORIGIN: no mitigation added; census only, no guard.
+
+## Session 4816 (2026-10-14) — M3 ctc1/cfc1 FCSR idiom census: one reachable site (guPerspective), no divergence, class closed
+
+Ran tools/census_ctc1.py on the ROM and cross-checked generated funcs. Only guPerspective (funcs_8.c:1770-1861) uses get/set_cop1_cs; the port drops FCSR flag bits so its overflow-fixup branch is dead, but the input range (0,65536] never overflows and inf yields the same 0xFFFF. Rounding mode is set/restored inside the function with no yield. Details: docs/M3-S4816-CTC1-CENSUS.md. Closed M3 classes: mem access, divide, float->int, float compare, FCSR moves.
+ORIGIN: no mitigation added; census tool + doc only (no wild value involved).
