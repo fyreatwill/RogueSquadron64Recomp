@@ -155908,3 +155908,9 @@ Work unit from s4808 NEXT. (1) tools/apply_s4681_m5_a10.py aborted whenever it p
 Result: A10 guards are dead code on title/hangar/mission and the guard-off arm does not crash. Does not authorise removal: one run per arm, log cap 256 rows, no forced-bad A10 arm.
 ORIGIN: no mitigation added or removed; replay-list entry plus relaxed script assertion. Writer 0x80096D88 publishes in-range 0x80149A00 (s4808).
 Next: wire A9 and ovl2c_mode scripts into the replay list too.
+
+## Session 4810 (2026-10-14) — A9 script added to replay list; ovl2c_mode found already regen-safe
+
+Work unit from s4809 NEXT. (1) `tools/apply_s4805_ovl2c_mode.py` does NOT belong in `RS64_REPLAY`: it patches `build/factor5_ucode/factor5_ucode_recompiled.c`, which CMake regenerates through `tools/fixup_factor5_ucode.py`, and fix 6r there already emits the identical BLOCK (`rs64_2c_mode` count 5 in the fixup, 1 in the built .c). The script also needs argv[1], which the replay runner does not pass. s4809's claim that it was in no regen stage was wrong for this reason. (2) `apply_s4805_m5_a9.py` added to `RS64_REPLAY` after A10 (default ROOT is the live path, which the sandbox rewrites to the symlink). Second run on a copy of the live tree: 0 sites, 0 writer patches, funcs_23/24 cmp identical to live (guards at lines 66/82). The vendored fixer itself refuses an already-patched tree (RS64_FIXUP_APPLIED), so the end-to-end replay with failures=0 is NOT exercised; it needs a pristine make_elf -> N64Recomp regen. Forward application from unpatched text (13 sites) is single-source from s4805.
+ORIGIN: no mitigation added; replay-list entry only.
+Next: exercise full regen chain (pristine tree) and check `[s4648-replay] failures=0` incl. A9/A10.
