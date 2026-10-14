@@ -156162,3 +156162,14 @@ returns. The writer table had no valid phase-scoped rows. The route controls are
 therefore incomplete, so no clear-site, alternate-writer, or unreached-site
 hypothesis is selected; route instability is the only result established.
 ORIGIN: diagnostic-only writer table and clear-value logging; no mitigation or behavior change.
+
+## Session 4835 (2026-10-14) — checkpointed Step 11 discriminator resume
+
+This retry did not rerun the s4834 experiment. The retained evidence is two
+same-build default / `ROGUESQ_AUDIO_SPIN2_YIELD=0` attempts that reached VI 640,
+title 1024, and 64 SP completions per arm, then crashed before hangar with no
+PCM or phase-scoped gate controls. The writer-table null is therefore still
+unevaluable; no clear-site, alternate-writer, or unreached-site hypothesis is
+selected. `scratch/agent/NEXT.md` now explicitly resumes by selecting one new
+route discriminator or stabilizing change before another build/run.
+ORIGIN: checkpoint close-out of the existing diagnostic result; no mitigation or behavior change.

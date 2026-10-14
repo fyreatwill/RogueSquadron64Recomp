@@ -2,11 +2,12 @@
 
 HYPOTHESIS-ID: m5-step11-clear-discriminator
 
-Single bounded work unit: choose and implement one new route discriminator or
-stabilizing change for the Step 11 pair, then rebuild and rerun the same-build
-default / `ROGUESQ_AUDIO_SPIN2_YIELD=0` arms. The new phase-scoped writer table
-is present, but two attempts stopped before hangar with no PCM/gate controls;
-do not interpret its zero rows.
+RESUME: The prior Step 11 writer-table work already ran and was route-invalid;
+do not rerun it unchanged in this retry. The artifacts are the s4834 fixup
+diagnostic and its two captured arms. The next iteration must choose one new
+route discriminator or stabilizing change, then rebuild and rerun the
+same-build default / `ROGUESQ_AUDIO_SPIN2_YIELD=0` arms. Do not interpret the
+existing zero writer rows without phase, SP, PCM, and gate controls.
 
 Competing hypotheses:
 
@@ -31,7 +32,8 @@ no expected-PC execution but another writer's 1->0 selects H-clear-site-other-
 writer; no clear writer in either arm selects H-clear-site-unreached; missing
 phase controls selects H-route-regressed.
 
-Preparation: select the route discriminator before editing; build
+Preparation for the next iteration: select the route discriminator before
+editing; build
 `cmake --build build --config Debug --target RogueSquadron64Recomp`; run
 `zsh tools/run_m5_yield_ab.sh` from the repo root. Keep
 `ROGUESQ_STUB_MISSING_FUNCS=1`, LLE force/ungated/solo, host spin yield, and
