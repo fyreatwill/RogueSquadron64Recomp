@@ -6,7 +6,9 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4831)
+## Headline (as of s4832)
+
+- **s4832 Step 11 remains unevaluable after correcting the wait-witness driver.** The converted same-build default/rollback driver initially reached title and hangar with SP/PCM controls but had not armed `ROGUESQ_LOG_WAITMUSYX_SPIN2`, so its zero wait count is invalid. The fixed rerun stopped before VI 640 in default and crashed in rollback (36 rows); neither emitted phase/gate/wait witnesses. No Step 11 hypothesis is selected. The oracle precheck was blocked by a missing debugger-core dylib, so no new retail null is claimed.
 
 - **s4831 M5 Step 1 is qualified on the corrected same-build pair.** The
   corrected harness compared Factor 5 image (`ROGUESQ_AUDIO_UCODE=1`) against
@@ -220,6 +222,9 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
+(s4832: corrected Step 11 logger run was startup-route-invalid; the prior
+same-build pair had reached title/hangar but lacked the wait logger. Use a new
+route-stabilizing tuple before repeating the Step 11 discriminator.)
 (s4831: corrected image-versus-silent pair reached title/hangar in both arms;
 image PCM was nonzero while silent PCM was zero. Step 1 is qualified; advance
 to the next M5 plan item.)
@@ -234,14 +239,14 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 next behavior validation:** Step 1 is qualified by s4831. Continue at
+0. **M5 Step 11 validation:** s4832 corrected the logger but hit the known
+   startup-route instability before the phase gate. Run one new same-build
+   default/rollback capture using the route-stabilizing tuple from the prior
+   qualified wait recipe (`ROGUESQ_STUB_MISSING_FUNCS=1` and its phase-gated
+   autopilot), retaining exact producer-arm/clear/loop-return witnesses.
+1. **M5 next behavior validation:** Step 1 is qualified by s4831. Continue at
    the next not-yet-qualified M5 plan row with a same-build rollback/control;
    do not repeat the invalid request-only route.
-1. **M5 Step 11 validation:** s4829 reached title/hangar and retained the task,
-   SP, slot, and PCM controls, but neither arm reached the producer-clear/seed
-   and wait-return witnesses. Treat this route as invalid for Step 11; do not
-   repeat it without a new route discriminator. Continue with the next M5
-   behavior validation.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s

@@ -156105,3 +156105,24 @@ audio contract edge. The harness summary initially counted rows rather than
 nonzero bytes; that reporting bug was fixed from the captured logs.
 ORIGIN: no mitigation or runtime behavior change; this is a qualification
 control and harness correction.
+
+## Session 4832 (2026-10-14) — corrected Step 11 wait-witness driver remains route-unstable
+
+Converted `tools/run_m5_yield_ab.sh` from the obsolete Step 1 image/silent pair
+to a same-build default versus `ROGUESQ_AUDIO_SPIN2_YIELD=0` pair, and added
+the existing wait-specific logger (`ROGUESQ_LOG_WAITMUSYX_SPIN2`) plus gate,
+task/SP, PCM, and VI summaries. The Debug target rebuilt successfully.
+
+The first run reached VI 640, title 1024, and hangar 512 in both arms with
+64 SP completions, nonzero PCM source rows, and no crash/abort, but the
+wait-specific logger was accidentally not armed; its zero witness count is
+invalid. After fixing the driver and rerunning, the default arm stopped before
+VI 640 and the rollback arm emitted 36 crash rows; neither produced phase,
+gate, or wait witnesses. This selects no Step 11 hypothesis: the corrected
+producer/clear/return discriminator remains route-invalid in this capture.
+
+The independent oracle precheck also could not run because the requested
+debugger core dylib path was absent; no new retail null is claimed. The next
+capture must use a new route-stabilizing tuple and retain the exact wait logger.
+ORIGIN: diagnostic-only harness and logger changes; no mitigation or behavior
+change.
