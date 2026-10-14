@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4841)
+## Headline (as of s4842)
+
+- **s4842 traced the reachable conditional-move defect to N64Recomp itself.**
+  The source ELF contains the valid word `0x0022D34B` (`movn $k0,$at,$v0`) at
+  `0x800A2B64`; the pristine `RecompiledFuncs.s4204-fresh` output already emits
+  `do_break` there, and the current `fixup_game_funcs.py` has no `movn`/`movz`
+  rewrite. N64Recomp's `binary_ops`, `unary_ops`, and conditional-branch maps
+  omit both conditional moves, so `process_instruction` reaches its generic
+  unhandled-instruction trap. The duplicate `funcs_27.c` context agrees. This
+  selects H-cmov-unsupported, rules out fixup-loss and regeneration drift for
+  this site, and still authorizes no generated-output behavior change.
 
 - **s4841 selected a live generated conditional-move site in static CFG.** The
   independent reachability pass covered all 149 file/guest-PC sites: 2 are on
@@ -244,6 +254,11 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   destinations; the raw decoder independently validates all 144 `.word`
   encodings. s4841's static CFG finds one reachable nonzero-destination site;
   runtime impact remains open and no fix is yet authorised.
+- **M3 conditional-move provenance (s4842):** the reachable site is a valid
+  source instruction but is unsupported by the current N64Recomp operation
+  tables, not altered by the fixup pass. A recompiler-side implementation and
+  route qualification remain separate future work; do not hand-edit generated
+  output.
 - **Runaway-DL cause (s4746-s4749):** DL op `0xBD` (TexrectGen) → overlay `0x2C`
   (real 0x240-byte VU image, ROM `0x27368`, dest `0x1DB0`) is unrouted, so the
   window entry restarts the task. Present ⇔ arrival ⇔ runaway (150/150 vs 0/550).
@@ -333,8 +348,9 @@ discriminator.)
 (s4839: variable-shift census matched all 469 direct sites; do not repeat the
 class. Continue with the next complete M3 idiom census.)
 (s4840: conditional-move census found all 179 sites emitted as do_break;
-s4841's CFG found one reachable nonzero-destination site. Audit fixup path
-before changing generated behavior.)
+s4841's CFG found one reachable nonzero-destination site; s4842 traced it to
+N64Recomp's missing conditional-move operation support. Do not repeat the
+fixup audit.)
 (s4833: route-stabilizing Step 11 A/B reached title/hangar in both arms, but
 the clear-site witness was absent in both. Do not repeat the same A/B; make the
 clear-site instrumentation itself discriminating.)
@@ -355,15 +371,11 @@ resolved (s4755: the tool ran; the old block was false).
 0. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
    and s4836. Reopen another M5 boundary only with a new discriminator and a
    same-build rollback/control; do not repeat the invalid request-only route.
-1. **M3 conditional-move fixup-level implementation audit:** trace the
-   generated source, fixup script, and regeneration input for the reachable
-   nonzero site `funcs_49.c:0x800A2B64`, plus its duplicate source context.
-   Determine whether the `do_break` comes from an unsupported instruction,
-   malformed source annotation, or a fixup regression. Do not patch generated
-   output or infer runtime causality from the static CFG alone.
-2. **M3 next complete idiom census:** after the conditional-move audit, select
-   the next unclosed generated translation class and enumerate the whole class
-   before proposing any guard. Do not chase a single wild address.
+1. **M3 next complete idiom census:** select the next unclosed generated
+   translation class and enumerate the whole class before proposing any guard.
+   Conditional moves are now an identified N64Recomp operation gap, but no
+   generated-output patch or runtime claim is authorised by the static audit.
+   Do not chase a single wild address.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s

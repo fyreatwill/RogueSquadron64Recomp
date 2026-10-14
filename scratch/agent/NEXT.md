@@ -1,37 +1,40 @@
-# Resume next work unit
+# Next work unit
 
-HYPOTHESIS-ID: m3-conditional-move-fixup-audit
+HYPOTHESIS-ID: m3-next-complete-idiom-census
 
-WORK UNIT: audit the fixup/regeneration path for the statically reachable
-nonzero-destination conditional move at `funcs_49.c:0x800A2B64` (and its
-duplicate source context). Do not modify generated output or implement a fix
-in this iteration.
+WORK UNIT: perform one complete static census of the next unclosed generated
+translation class: valid CPU instructions that currently fall through
+N64Recomp's generic `do_break` path. Do not modify generated output or
+implement a recompiler fix in this iteration.
 
 Competing hypotheses:
 
-* H-cmov-unsupported: N64Recomp deliberately emits `do_break` because the
-  instruction is unsupported or intentionally treated as an invalid/data word.
-* H-cmov-fixup-loss: the source annotation is valid MIPS `movn`, but a fixup or
-  post-processing rule replaces the conditional assignment with `do_break`.
-* H-cmov-regeneration-drift: the current generated file is stale or differs
-  from the configured regeneration input, so the live output cannot identify
-  the responsible stage without a clean replay comparison.
+* H-unhandled-data: every generic-trap site in the selected opcode class is
+  data-like or unreachable, so no live translation defect is exposed.
+* H-unhandled-live: at least one valid nonzero-destination site is reachable
+  in the generated CFG, selecting a real missing lowering for follow-up.
+* H-decoder-disagreement: the generated annotation or raw word disagrees with
+  Rabbitizer/source decoding at one or more sites, selecting a decoder or
+  input-provenance issue instead.
+* H-fixup-interference: a valid site is lowered before the fixup pass and is
+  changed to `do_break` by a post-processing rule, selecting a fixup audit.
 
-DISCRIMINATING MEASUREMENT: trace this exact guest PC through the current
-generated comment, the source ELF/disassembly or N64Recomp input annotation,
-`fixup_game_funcs.py`, and the generated output. The origin is selected by a
-reproducible replay: unsupported selects if pristine N64Recomp already emits
-`do_break`; fixup-loss selects if pristine output has the assignment but the
-fixup changes it; regeneration-drift selects if the replay input/output does
-not contain the site or differs before fixup. If the stages cannot be aligned,
-record route-gap and do not patch.
+DISCRIMINATING MEASUREMENT: enumerate every selected-class source instruction
+and every corresponding generated `do_break`, independently decode the raw
+word, classify CFG reachability, and compare pristine output against the live
+output and `fixup_game_funcs.py`. H-unhandled-data yields zero reachable
+nonzero destinations; H-unhandled-live yields one or more; H-decoder-
+disagreement yields a raw/annotation mismatch; H-fixup-interference yields a
+pristine assignment replaced by fixup. Any missing stage alignment is a
+route-gap, not a conclusion.
 
 Exact commands:
 
-    sed -n '1,260p' docs/M3-S4840-MOVZ-MOVN-REACHABILITY.md
-    rg -n '0x800A2B64|movn|do_break|fixup_game_funcs' ../N64Recomp tools patches
-    sed -n '1,260p' tools/fixup_game_funcs.py
-    git diff -- ../N64Recomp/RecompiledFuncs/funcs_49.c tools/fixup_game_funcs.py
+    rg -n 'Unhandled instruction|emit_do_break|binary_ops|unary_ops|conditional_branch_ops' ../N64Recomp/src ../N64Recomp/include
+    python3 tools/census_unhandled_cpu.py --source ../N64Recomp/RecompiledFuncs --elf ../rogue_squadron64/build/roguesquadron.elf
+    python3 tools/classify_unhandled_cpu.py --source ../N64Recomp/RecompiledFuncs
+    git diff -- ../N64Recomp/src ../N64Recomp/RecompiledFuncs tools/fixup_game_funcs.py
 
-No game build/run is needed unless the replay itself requires it; this is a
-static provenance audit. Keep the no-behavior-change constraint explicit.
+No game build/run is needed. If the named census scripts do not exist, create
+them as the bounded engineering change before running the census; keep the
+no-behavior-change constraint explicit.
