@@ -156126,3 +156126,24 @@ debugger core dylib path was absent; no new retail null is claimed. The next
 capture must use a new route-stabilizing tuple and retain the exact wait logger.
 ORIGIN: diagnostic-only harness and logger changes; no mitigation or behavior
 change.
+
+## Session 4833 (2026-10-14) — stabilized Step 11 route lacks clear witness
+
+Updated `tools/run_m5_yield_ab.sh` with the route-stabilizing
+`ROGUESQ_STUB_MISSING_FUNCS=1` tuple and the phase-gated autopilot, then rebuilt
+`RogueSquadron64Recomp` once and ran default versus
+`ROGUESQ_AUDIO_SPIN2_YIELD=0` concurrently from that binary. Both arms reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, each with 64 SP
+completions, nonzero PCM source/consumer rows, 40 second-wait arm rows, and no
+crash or abort. Each arm emitted three wait-return rows, but neither emitted a
+`[waitmusyx-spin2-clear]` row. The route is therefore stable enough to reject a
+yield-dependent difference in this capture, but the documented
+producer-arm/clear/return positive control is incomplete and Step 11 remains
+unevaluable. The harness's broad `producer_wait_witness=43/43` summary is not
+evidence of a clear because it combines arm, loop, and return rows.
+
+This rules out only a pre-title/hangar route failure and a yield-arm-separated
+result in this run. It does not establish that the producer cleared the flag,
+nor authorize a wait or state mitigation. The next probe must discriminate the
+clear-site instrumentation rather than repeat this A/B unchanged.
+ORIGIN: diagnostic-only harness tuple and wait witnesses; no mitigation or behavior change.

@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4832)
+## Headline (as of s4833)
+
+- **s4833 stabilized the M5 Step 11 route but did not qualify the clear edge.**
+  The corrected same-build default/rollback pair used `STUB_MISSING_FUNCS=1`
+  and the phase-gated autopilot; both arms reached title 1024 and hangar 512,
+  with 64 SP completions, nonzero PCM source/consumer rows, and no crash or
+  abort. Both emitted 40 second-wait arm rows and three wait-return rows, but
+  neither emitted a `waitmusyx-spin2-clear` row. The two arms therefore show
+  no yield-dependent route difference, while the required producer-clear
+  discriminator remains unevaluable. The harness's broad witness label must
+  not be read as proof of a clear.
 
 - **s4832 Step 11 remains unevaluable after correcting the wait-witness driver.** The converted same-build default/rollback driver initially reached title and hangar with SP/PCM controls but had not armed `ROGUESQ_LOG_WAITMUSYX_SPIN2`, so its zero wait count is invalid. The fixed rerun stopped before VI 640 in default and crashed in rollback (36 rows); neither emitted phase/gate/wait witnesses. No Step 11 hypothesis is selected. The oracle precheck was blocked by a missing debugger-core dylib, so no new retail null is claimed.
 
@@ -123,6 +133,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   (s4701; rollback `ROGUESQ_M5_B40_VALUE=0`; after regen verify funcs_23.c shows
   `== '0') ? 0 : ctx->r2`). Second MusyX wait gate (`0x8014974C`) yields by
   default (s4765; rollback `ROGUESQ_AUDIO_SPIN2_YIELD=0`).
+- **M5 Step 11 s4833 route result:** the route-stabilizing tuple reaches the
+  qualified title/hangar phases in both yield arms. The wait logger records
+  arm and return activity but no clear-site row in either arm; do not repeat
+  the same A/B without a new clear-site discriminator.
 - **musyxSynthFrame `+5808` crash family: closed for idle title/hangar (s4786).**
   Cause: synth ticking over the audio arena freed by the retail-legitimate
   `musyxNoopStub` teardown (s4782/s4783: retail never ticks the synth between
@@ -222,9 +236,9 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-(s4832: corrected Step 11 logger run was startup-route-invalid; the prior
-same-build pair had reached title/hangar but lacked the wait logger. Use a new
-route-stabilizing tuple before repeating the Step 11 discriminator.)
+(s4833: route-stabilizing Step 11 A/B reached title/hangar in both arms, but
+the clear-site witness was absent in both. Do not repeat the same A/B; make the
+clear-site instrumentation itself discriminating.)
 (s4831: corrected image-versus-silent pair reached title/hangar in both arms;
 image PCM was nonzero while silent PCM was zero. Step 1 is qualified; advance
 to the next M5 plan item.)

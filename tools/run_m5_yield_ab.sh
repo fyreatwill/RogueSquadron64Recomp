@@ -8,12 +8,13 @@ mkdir -p "$OUT"
 rm -f "$OUT/default.log" "$OUT/rollback.log" "$OUT/driver.log"
 
 COMMON=(
-    ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a'
+    ROGUESQ_AUTOPILOT='40:start,44:start,48:start,52:start,56:a,60:a,64:start,68:a'
     ROGUESQ_AUTOPILOT_STOP_WIDTH=512
     ROGUESQ_LLE_FORCE=1
     ROGUESQ_LLE_UNGATED=1
     ROGUESQ_LLE_SOLO=1
     ROGUESQ_SPIN_YIELD=1
+    ROGUESQ_STUB_MISSING_FUNCS=1
     ROGUESQ_LOG_PHASE=1
     ROGUESQ_LOG_M5_POSTWAIT=1
     ROGUESQ_LOG_SUBMIT_GATE_STORES=1
