@@ -1,35 +1,35 @@
 # Next work unit
 
-HYPOTHESIS-ID: m3-double-shift-census
+HYPOTHESIS-ID: m3-mul-census
 
-WORK UNIT: perform one complete static census of generated 64-bit shift
-instructions (`dsll`, `dsrl`, `dsra`, `dsll32`, `dsrl32`, `dsra32`, and their
-variable forms) against the retail ELF, then classify each site by raw decode,
-generated lowering, and conservative CFG reachability. Do not change runtime
-behavior or generated output.
+WORK UNIT: perform one complete static census of generated `mul` annotations
+against the retail ELF, including raw decode, emitted host lowering, and
+per-function conservative CFG reachability. Do not change runtime behavior or
+generated output.
 
 Competing hypotheses:
 
-* H-dshift-correct: every decoded 64-bit shift has the expected width, count,
-  signedness, and destination lowering.
-* H-dshift-unsupported: a reachable nonzero-destination site traps or omits
-  the decoded shift, identifying a recompiler defect.
-* H-dshift-data: every apparent mismatch is data-like/unreachable or writes
+* H-mul-correct: every decoded `mul` has the expected signed 32-bit product
+  lowering and destination.
+* H-mul-unsupported: a reachable nonzero-destination `mul` is missing or has
+  the wrong signedness/width, identifying a recompiler defect.
+* H-mul-data: every apparent mismatch is data-like/unreachable or writes
   `$zero`, so no live translation defect is selected.
 
-DISCRIMINATING MEASUREMENT: one table must enumerate every generated annotation
-for the complete double-shift class, independently decode the raw ELF word,
-record the generated expression and destination/source registers, and include
-CFG reachability. Positive control: first choose a decoded nonzero-destination
-site from the table and require its raw word and generated expression to agree
-in the same run. H-dshift-unsupported requires at least one reachable live
-mismatch; otherwise select H-dshift-correct or H-dshift-data as applicable.
+DISCRIMINATING MEASUREMENT: one table must enumerate every generated `mul`
+annotation, independently decode the raw ELF word, record the destination and
+source registers plus the generated expression, and include CFG reachability.
+Positive control: select the first decoded nonzero-destination row and require
+its raw word, annotation, and host lowering to agree in the same run. A live
+nonzero mismatch selects H-mul-unsupported; otherwise select H-mul-correct or
+H-mul-data as applicable.
 
-Exact reconnaissance commands:
+Exact commands:
 
-    rg -n '\\b(dsll|dsrl|dsra|dsll32|dsrl32|dsra32|dsllv|dsrlv|dsrav)\\b' ../N64Recomp/RecompiledFuncs/funcs_*.c
-    rg -n 'double|64-bit|dshift' docs tools
+    rg -n '\\bmul\\b' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n 'mult|mul|signed|32-bit' docs tools | head -100
 
-If no existing census provides the full raw-decode/lowering/reachability table,
-write one bounded `tools/census_double_shifts.py` and run it once against
-`../rogue_squadron64/build/roguesquadron.elf`.
+Implement one bounded `tools/census_mul.py` if no complete raw-decode /
+lowering / reachability table exists, run it once against
+`../rogue_squadron64/build/roguesquadron.elf`, and write the result under
+`docs/`.

@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4846)
+## Headline (as of s4847)
+
+- **s4847 closed the generated 64-bit shift class.** The complete census found
+  720 annotations (678 unique file/guest-PC sites) across `dsll`/`dsrl`/`dsra`,
+  32-bit variants, and variable forms. All 720 raw words independently decoded
+  from the retail ELF; 529 generated lowerings matched, while the remaining 191
+  were unreachable or `$zero`-destination. The per-function CFG found 162
+  reachable rows, all 162 with nonzero destinations and correct lowerings. The
+  positive control at `0x800074E0` independently decoded as `dsll32 $v0,$a0,0`
+  and lowered correctly. No live translation defect is selected. See
+  `docs/M3-S4847-DOUBLE-SHIFT-CENSUS.md` and `tools/census_double_shifts.py`.
 
 - **s4846 closed the generated HI/LO move class.** The complete census found
   989 annotated `mfhi`/`mflo`/`mthi`/`mtlo` rows. The independent retail ELF
@@ -301,6 +311,9 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   lowering agree at all nonzero-destination decoded sites; zero-destination
   rows and 26 stale/unavailable annotations are confined to data-like or
   unreachable generated regions. No guard or recompiler change is authorized.
+- **M3 64-bit shifts are closed (s4847).** The complete retail-ELF/raw-decode
+  and generated-lowering census found no reachable nonzero-destination defect;
+  no guard or recompiler change is authorized.
 - **External retail-entry boundary (s4845):** the Rice/input oracle route is
   qualified through title and hangar, with whole-RDRAM control positive, but
   `0x800903F0` has zero execution hits. The retail handoff is absent on this
@@ -391,6 +404,8 @@ on both arms after removing the observer crash; do not repeat the A/B.)
 the class. Continue the next complete M3 idiom census.)
 (s4846: HI/LO move census matched all decoded nonzero-destination sites; do not
 repeat the class. Continue with the next complete M3 idiom census.)
+(s4847: 64-bit shift census matched all 162 reachable nonzero-destination rows;
+do not repeat the class. Continue with the next complete M3 idiom census.)
 (s4838: HI16/LO16 census matched all 3,015 canonical pairs; do not repeat the
 class. Continue with the next complete M3 idiom census only when M5 has no new
 discriminator.)
@@ -417,8 +432,9 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M3 next complete idiom census:** select the next unclosed generated
-   translation class and enumerate the whole class before proposing any guard.
+0. **M3 next complete idiom census:** audit the generated `mul` class against
+   independent retail-ELF decode, host lowering, and per-function CFG reachability
+   before proposing any guard. The 64-bit shift class is closed by s4847.
    Conditional moves are now an identified N64Recomp operation gap, but no
    generated-output patch or runtime claim is authorised by the static audit.
    Do not chase a single wild address.

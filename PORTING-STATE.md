@@ -156369,3 +156369,21 @@ was found. It rules out a missing HI/LO lowering as the explanation for the
 current runtime boundary, and authorizes no generated-output or runtime
 change. The full table is `docs/M3-S4846-HILO-MOVES-CENSUS.md`; the reusable
 auditor is `tools/census_hilo_moves.py`.
+## Session 4847 (2026-10-14) — closed generated 64-bit shift class
+
+Ran the complete static double-shift census from `tools/census_double_shifts.py`
+against the independent retail ELF at `../rogue_squadron64/build/roguesquadron.elf`.
+The table covers 720 annotations (678 unique file/guest-PC sites), all 720 raw
+ELF decodes, and all nine forms: `dsll`, `dsrl`, `dsra`, their 32-bit variants,
+and variable forms. The corrected per-function CFG found 162 reachable rows,
+all 162 with nonzero destinations; every one had the expected generated host
+lowering. The other 191 rows are unreachable or `$zero`-destination. The
+positive control at `0x800074E0` independently decodes as `dsll32 $v0,$a0,0`
+and has the expected lowering.
+
+This rules out a live generated 64-bit-shift translation defect on the static
+generated-C paths. It does not claim qualified-route runtime reachability and
+authorizes no guard or generated-output change. The first draft's file-wide CFG
+incorrectly marked later functions unreachable; it was corrected and rerun in
+the same iteration, producing the per-function result above. Report:
+`docs/M3-S4847-DOUBLE-SHIFT-CENSUS.md`; tool: `tools/census_double_shifts.py`.
