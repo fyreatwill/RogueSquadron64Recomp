@@ -156570,3 +156570,18 @@ the VI route reached title/hangar, and execution watches fired at
 counts were extracted directly. This selects H-A13-default-valid and rules out
 the in-loop tick as required producer activity on this route; it does not
 authorize a runtime change or a tick-related mitigation.
+
+## Session 4859 (2026-10-14) — closed M5 A16 AI-shim caller boundary
+
+Ran the required retail oracle precheck with the whole-RDRAM positive control,
+Rice video, Start schedule, VI trace, and AI samples. It reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; the whole-RDRAM watch hit
+10,000, while retail AI length was repeatedly nonzero and status was
+`0x40000000`. Rebuilt the DEBUG target and ran one phase-gated image-route
+port recipe. It reached both target phases, recorded 1,253 SP-complete enter
+and return rows, 77 nonzero PCM rows, and no crash or abort. The AI shim rows
+were 1,024 phase-scoped `set-next` calls, zero `get-status` calls, and zero
+`get-length` calls; the control row fired once. This selects H-A16-unreached:
+the status/length shims are not a covered-route PCM explanation. It rules out
+changing those shims based on this route and closes the caller probe; no runtime
+behavior change was made.

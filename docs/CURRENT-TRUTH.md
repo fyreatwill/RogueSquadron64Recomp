@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4858)
+## Headline (as of s4859)
+
+- **s4859 closed the M5 A16 AI-shim caller boundary.** The independent retail
+  oracle fired its whole-RDRAM positive control at 10,000 callbacks, reached
+  title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and repeatedly
+  sampled nonzero AI length with status `0x40000000`. The same-build image
+  port reached both phases, completed 1,253 SP enter/return pairs, and
+  produced 77 nonzero PCM rows; its AI shim rows were 1,024 `set-next`, zero
+  `get-status`, and zero `get-length`, with the shim control firing once.
+  This selects H-A16-unreached: the status/length shims are not a covered-route
+  PCM explanation. No shim behavior change is authorized.
 
 - **s4858 requalified the M5 A13 drain boundary.** The same-build default-off
   and `ROGUESQ_DRAIN_INLOOP_TICK=1` arms both reached title/hangar, completed
@@ -533,13 +543,13 @@ resolved (s4755: the tool ran; the old block was false).
   Step 10 boundary. **Closed s4857:** both arms had zero host errors and
   matching nonzero source/consumer PCM joins; do not repeat without a new
   host discriminator.
-0. **M5 A16 AI shim caller qualification:** A13 is qualified by s4858 as
-   default-valid; do not repeat its drain A/B. The next M5 boundary is to
-   identify and qualify a live `osAiGetStatus_recomp`/`osAiGetLength_recomp`
-   caller on the image route, using the retail whole-RDRAM/VI controls and
-   nonzero port PCM. A caller and matching busy/length transition are required
-   before any AI shim behavior change; a shim count or device-open message
-   alone is not sufficient.
+0. **M5 A16 AI shim caller qualification:** closed s4859 as
+   H-A16-unreached. The qualified image route reached title/hangar, completed
+   SP work, and produced nonzero PCM, but only `set-next` entered the AI shim
+   (`1024` phase rows); `get-status` and `get-length` were both zero. Retail
+   independently reached title/hangar and showed nonzero AI length plus busy
+   status. Do not change the status/length shims or repeat this caller probe.
+   Select the next M5 contract boundary with a fresh route discriminator.
 0. **M5 port-task-load contract:** s4854 found both the port-load control and
    rows absent despite positive title/hangar, SP, action, and PCM controls.
    This is a single-source route result; do not infer a task-contract defect
