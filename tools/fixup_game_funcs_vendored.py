@@ -40445,6 +40445,7 @@ RS64_REPLAY = [
     "apply_s4638_edgewatch.py",
     "apply_s4681_m5_a10.py",
     "apply_s4805_m5_a9.py",
+    "apply_s4878_synth_dedup.py",
 ]
 
 
