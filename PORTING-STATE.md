@@ -156606,3 +156606,11 @@ absent" was a control/route artifact, not an absence of audio tasks. Rules out
 H-task-load-unreached and H-task-route-invalid for this route. Not shown:
 whether data_size==1 and the data_ptr values match retail (single-source: port
 only). No runtime behavior change; no mitigation added.
+
+## Session 4861 (2026-10-14) — retail oracle audio OSTask comparison (hangar phase)
+
+Ran scratch/agent/s4861_oracle_audiotask.sh (oracle, Rice, 50 s, `--pc-task-dump 0x80033FCC --pc-task-type 2`, phase-gated to the 512-wide hangar origin 0x6AB400). Positive control passed in the same run: whole-RDRAM write watch 10000 hits (cap), exec watch 864 hits. 216 type-2 rows, invalid=0, overflow=0, one unique (task_ptr 0x80149470, output_buff 0, output_buff_size 0).
+
+Retail hangar: data_ptr is always 0x80173CB0; data_size=2 in 194 rows, =1 in 22 rows. Port hangar (s4860): data_ptr 0x80171E70, data_size=1 dominant (2 rare). So the task ABI class matches (same OSTask address, type 2, zero output/yield, data_size 1-2) but the data_ptr slot and the size distribution differ. The data_ptr slot is one of four ring addresses retail already shows (s-earlier: 0x173B20/0x171CE0/0x171E70/0x173CB0), so the slot is allocator-phase, not contract. The 1-vs-2 ratio is plausibly timing (how many audio frames are queued per swap) — NOT proven. Limits: hangar only (title 1024 phase not gated here), single run, only data_ptr/data_size dumped (not ucode/ucode_data words 0x80099FE0/0x800A4E00 — retail unchecked), no writer named for the ratio difference.
+
+Verdict: H-retail-match at class level; no task-contract defect found; ratio difference is an open, low-priority observation (single-source). ORIGIN: no mitigation landed; instrument-only run, new script scratch/agent/s4861_oracle_audiotask.sh.
