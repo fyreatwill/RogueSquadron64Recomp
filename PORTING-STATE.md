@@ -156462,3 +156462,19 @@ marker before repeating the A/B.
 ORIGIN: corrected retry logs at
 `scratch/agent/soak_results/s4849_m5_a10_guard_qualification_retry/`; no guard
 or runtime behavior was changed.
+
+## Session 4852 (2026-10-14) — qualified A10 guard class with SP control
+
+The planned work unit repaired the missing SP positive control by enabling the
+existing `ROGUESQ_LOG_M5_ROUTE_ORDER=1` host probe in both arms of the same-build
+A10 default versus `ROGUESQ_A10_GUARD_OFF=1` run. The probe's positive controls
+were present: each arm recorded 512 phase-5 `action-dequeue`, 512
+`sp-complete-enter`, and 512 `sp-complete-return` rows; title and hangar VI
+transitions also fired. Each arm recorded 32 named A10 writer rows, 262 A10
+audit/traversal rows, nonzero PCM, and no crash or abort. The guard-off arm did
+not change the qualified route or traversal counts. This selects
+H-A10-legitimate and rules out the missing-marker explanation and a qualifying
+guard-suppression effect on the covered route. It does not authorize removing
+the guards or generalize to unreached sites.
+ORIGIN: `scratch/agent/soak_results/s4849_m5_a10_guard_qualification_retry/`
+with the route-order probe enabled; no runtime or generated behavior changed.

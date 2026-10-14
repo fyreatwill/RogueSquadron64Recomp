@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4851)
+## Headline (as of s4852)
+
+- **s4852 qualified the A10 guard class as legitimate on the covered route.**
+  The corrected same-build default/`ROGUESQ_A10_GUARD_OFF=1` pair reached title
+  and hangar in both arms. The newly enabled route-order control recorded
+  phase-5 `action-dequeue`, `sp-complete-enter`, and `sp-complete-return` rows
+  (512 each per arm), proving the prior SP zero was an instrumentation omission.
+  Both arms had 32 named-writer rows, 262 identical A10 audit/traversal rows,
+  nonzero PCM, and no crash/abort; guard-off produced no qualifying downstream
+  route or traversal difference. This selects H-A10-legitimate and authorizes
+  no guard relaxation. The next M5 unit may move past A10.
 
 - **s4851 invalidated the queued A10 port A/B and its corrected retry.** The
   queued recipe failed before launch because its root calculation resolved to
@@ -468,17 +478,14 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 A10 guard-class qualification:** s4849 qualified the independent
-   retail writer/range control and queued the same-build port default versus
-   guard-off comparison. s4851 consumed the queue and ran a corrected retry:
-   title/hangar, writer, traversal, and PCM controls passed, but the required
-   SP control was zero in both arms. Repair and positive-control the SP marker
-   before repeating the A/B; no guard removal is authorized.
+0. **M5 A10 guard-class qualification:** closed s4852 as H-A10-legitimate.
+   The same-build default/guard-off pair had qualified route-order SP controls,
+   32 writers, 262 identical audit/traversal rows, title/hangar, and nonzero
+   PCM in both arms. No guard relaxation is authorized; do not repeat this A/B.
 1. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
-   and s4836. The next bounded unit is Step 8's remaining A10 pointer/table
-   guard class: first qualify the whole-RDRAM retail control and the named
-   writer/range/voice traversal controls, then change at most that one class
-   with a same-build rollback. Do not repeat the invalid request-only route.
+   and s4836, and the Step 8 A10 guard class is closed by s4852. Select the
+   next unqualified M5 contract boundary with a fresh positive control; do not
+   repeat the invalid request-only route or the A10 A/B.
 1. **M3 multiplication class:** closed s4848. The 643 decoded rows all have
    expected signed/unsigned lowerings; 27 stale annotation/ELF mismatches are
    not live multiplication instructions. Do not repeat without new provenance
