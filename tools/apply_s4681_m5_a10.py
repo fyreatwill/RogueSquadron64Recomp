@@ -102,8 +102,8 @@ def patch_file(path: Path) -> int:
 total = 0
 for name in ("funcs_25.c", "funcs_26.c"):
     total += patch_file(ROOT / name)
-if total not in (0, 1):
-    raise SystemExit(f"A10 patch count {total}, expected only the remaining voice-list site")
+# Fresh-regen trees patch every site (44), an already-patched tree patches 0:
+# the active==remaining check below is the real verification.
 remaining = sum(
     text.count("song-tick-table pointer guard") + text.count("voice-list-node pointer range guard")
     for text in (p.read_text() for p in (ROOT / "funcs_25.c", ROOT / "funcs_26.c"))

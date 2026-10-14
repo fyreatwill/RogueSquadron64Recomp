@@ -40438,6 +40438,7 @@ RS64_REPLAY = [
     "apply_s4598_complete_store_census.py",
     "apply_s4602_strncpy_callers.py",
     "apply_s4638_edgewatch.py",
+    "apply_s4681_m5_a10.py",
 ]
 
 
