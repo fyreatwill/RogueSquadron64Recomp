@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4848)
+## Headline (as of s4849)
+
+- **s4849 qualified the independent A10 writer route and queued the port A/B.**
+  The same retail-oracle run reached the whole-RDRAM 10,000-hit control, title
+  VI 1024, and hangar VI 512. The physical `0x801529C0` watch recorded 2,428
+  writes, including 469 title-phase and 331 hangar-phase writes from retail PC
+  `0x80096D88`. The shared port build passed; a concurrent default versus
+  `ROGUESQ_A10_GUARD_OFF=1` soak is queued with phase-gated guard, traversal,
+  PCM, SP, and route controls. No guard relaxation is authorized before its
+  verdict.
 
 - **s4848 closed the generated 32-bit multiplication class.** The complete
   census found 670 `mult`/`multu` annotations (669 unique file/guest-PC sites).
@@ -450,7 +459,13 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
+0. **M5 A10 guard-class qualification:** s4849 qualified the independent
+   retail writer/range control and queued the same-build port default versus
+   guard-off comparison. Consume the queued verdict; accept a guard-removal
+   conclusion only if a named legitimate writer, valid traversal, guard fire,
+   and downstream A/B divergence all join in target phase. Otherwise retain
+   the guards and classify the route or guard as unevaluable/legitimate.
+1. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
    and s4836. The next bounded unit is Step 8's remaining A10 pointer/table
    guard class: first qualify the whole-RDRAM retail control and the named
    writer/range/voice traversal controls, then change at most that one class

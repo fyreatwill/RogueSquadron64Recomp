@@ -156405,3 +156405,24 @@ selected by the raw-word, lowering, and conservative CFG table. It rules out
 the multiplication class as the current runtime explanation and authorizes no
 runtime or generated-output change. Report:
 `docs/M3-S4848-MUL-CENSUS.md`; tool: `tools/census_mul.py`.
+
+## Session 4849 (2026-10-14) — qualified A10 retail writer and queued port A/B
+
+Ran the independent retail oracle before rebuilding. The same 60-second Rice
+run reached the whole-RDRAM positive-control cap (10,000 callbacks), title VI
+1024 at origin `0x00790400`, and hangar VI 512 at origin `0x006AB400`. The
+physical watch for `0x801529C0` recorded 2,428 writes; the writer histogram
+attributed them to retail PC `0x80096D88`, with 469 title-phase and 331
+hangar-phase writes. This qualifies the named writer/range control and rules
+out an absent-retail-writer explanation for A10.
+
+Rebuilt the existing shared port target successfully. Added and syntax-checked
+`scratch/agent/soak_queue/s4849_m5_a10_guard_qualification.sh`, which launches
+the default and `ROGUESQ_A10_GUARD_OFF=1` arms concurrently, phase-gates on
+title/hangar VI transitions, and joins A10 writer, guard, traversal, PCM, SP,
+crash, abort, and route controls. The soak is queued rather than babysat; no
+port-side guard or traversal result is claimed in this session. This rules out
+only the missing ground-truth writer hypothesis and leaves A10 suppression,
+legitimate dormant guards, and route-invalid outcomes open.
+ORIGIN: independent retail physical write/VI controls and the existing guest
+writer anchor; no guard relaxation or other mitigation was landed.
