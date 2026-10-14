@@ -569,3 +569,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261013-102256 | s4793_gated_sample_x5 | rc=0 | 2s | scratch/agent/soak_results/s4793_gated_sample_x5_20261013-102256.log
 20261013-103000 | s4794_gated_sample_x5_repaired | result=2/5 VI640 stalled with vi-fs stalled=1; 2/5 reached VI1024 at 55/77s; 1/5 startup crash; original queue rc=0 was a false pass from zsh bad substitution | scratch/agent/soak_results/s4793/summary.txt
 20261014-s4844 | external_retail_entry_oracle_setup | rc=0 | whole-RDRAM control=10000; VI=10799 all 320-wide origin=0x006dd280; target_pc_0x800903f0=0; route-invalid pre-title | scratch/agent/soak_results/oracle_s4844.log
+20261014-122054 | s4849_m5_a10_guard_qualification | rc=2 | 0s | scratch/agent/soak_results/s4849_m5_a10_guard_qualification_20261014-122054.log
+20261014-s4851 | s4849_m5_a10_guard_qualification_retry | result=invalid; both arms title=1 hangar=1 writer=32 traversal/guards=262 pcm>0, sp=0, crash=0; corrected ROOT fixed launch but SP positive control absent, no A10 hypothesis selected | scratch/agent/soak_results/s4849_m5_a10_guard_qualification_retry/verdict.txt

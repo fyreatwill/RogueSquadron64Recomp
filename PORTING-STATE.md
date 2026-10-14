@@ -156444,3 +156444,21 @@ A10-legitimate nor A10-suppression nor A10-invalid. No runtime, generated
 output, or mitigation change was made.
 ORIGIN: workspace state check, existing s4849 ledger entry, queue listing, and
 absence of the expected verdict/result artifacts; no experiment was rerun.
+
+## Session 4851 (2026-10-14) — A10 retry lacked SP positive control
+
+The queued s4849 recipe was consumed and failed before launch because its
+`ROOT` calculation made it `.../scratch`, so it attempted `scratch/build`.
+The corrected same-build default versus `ROGUESQ_A10_GUARD_OFF=1` retry ran
+both arms for the watchdog interval. Each reached title and hangar, recorded
+32 named A10-writer rows, 262 traversal/guard rows, and nonzero phase-5 PCM;
+neither crashed or aborted. The intended `sp-complete` positive control was
+zero in both arms, so the required A10 discriminator is invalid and no
+legitimate-versus-suppressed guard conclusion is selected. The differing PCM
+row totals (11041 versus 11340) are not interpretable without the missing SP
+control. This rules out only a launch/path failure for the corrected retry, not
+either guard hypothesis. The next unit must repair and positive-control the SP
+marker before repeating the A/B.
+ORIGIN: corrected retry logs at
+`scratch/agent/soak_results/s4849_m5_a10_guard_qualification_retry/`; no guard
+or runtime behavior was changed.

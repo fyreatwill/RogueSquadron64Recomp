@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4849)
+## Headline (as of s4851)
+
+- **s4851 invalidated the queued A10 port A/B and its corrected retry.** The
+  queued recipe failed before launch because its root calculation resolved to
+  `scratch/build`; the fixed same-build retry reached title and hangar in both
+  arms, with 32 named-writer rows, 262 traversal/guard rows, and nonzero PCM
+  in each. However, the required SP positive control was zero in both arms, so
+  neither A10-legitimate nor A10-suppression is selected. No guard relaxation
+  is authorized. The next A10 unit must repair/qualify the SP control itself
+  before comparing guard behavior again.
 
 - **s4849 qualified the independent A10 writer route and queued the port A/B.**
   The same retail-oracle run reached the whole-RDRAM 10,000-hit control, title
@@ -461,10 +470,10 @@ resolved (s4755: the tool ran; the old block was false).
 
 0. **M5 A10 guard-class qualification:** s4849 qualified the independent
    retail writer/range control and queued the same-build port default versus
-   guard-off comparison. Consume the queued verdict; accept a guard-removal
-   conclusion only if a named legitimate writer, valid traversal, guard fire,
-   and downstream A/B divergence all join in target phase. Otherwise retain
-   the guards and classify the route or guard as unevaluable/legitimate.
+   guard-off comparison. s4851 consumed the queue and ran a corrected retry:
+   title/hangar, writer, traversal, and PCM controls passed, but the required
+   SP control was zero in both arms. Repair and positive-control the SP marker
+   before repeating the A/B; no guard removal is authorized.
 1. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
    and s4836. The next bounded unit is Step 8's remaining A10 pointer/table
    guard class: first qualify the whole-RDRAM retail control and the named
