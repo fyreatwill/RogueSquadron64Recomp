@@ -156555,3 +156555,18 @@ joins carried the matching source hash. This selects H-host-queue-valid and
 closes the SDL queue/consumer boundary. It rules out failed SDL queue calls
 being silently counted as consumer playback on this route. This is one
 runtime run with two same-build arms; retain the result as route-scoped.
+
+## Session 4858 (2026-10-14) — requalified M5 A13 default drain
+
+Built the existing DEBUG target and ran the phase-gated A13 default-off versus
+`ROGUESQ_DRAIN_INLOOP_TICK=1` recipe with the retail oracle concurrently. Both
+port arms reached title and hangar, completed SP work, and produced nonzero PCM.
+Default-off entered with active `0x02` slots, reached `nz=0`, and emitted
+`[drain-exit]` at 100,000 iterations with no timeout. Tick-on retained 13–16
+active `0x02` slots through 700,000+ iterations and emitted no drain return
+before the watchdog killed it. The oracle's whole-RDRAM positive control fired,
+the VI route reached title/hangar, and execution watches fired at
+`0x8009B7CC` and `0x8009B7EC`. The script summary was stale, so fresh-log
+counts were extracted directly. This selects H-A13-default-valid and rules out
+the in-loop tick as required producer activity on this route; it does not
+authorize a runtime change or a tick-related mitigation.

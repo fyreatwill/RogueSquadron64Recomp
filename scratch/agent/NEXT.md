@@ -1,33 +1,34 @@
-# Next work unit (M5 A13 drain boundary)
+# Next work unit (M5 A16 AI-shim caller qualification)
 
-HYPOTHESIS-ID: m5-a13-drain-boundary
+HYPOTHESIS-ID: m5-a16-ai-shim-caller
 
-WORK UNIT: run the existing phase-gated A13 default-versus-
-`ROGUESQ_DRAIN_INLOOP_TICK=1` validation, with the retail writer controls in
-the same invocation.
+WORK UNIT: qualify whether the live image-route port calls
+`osAiGetStatus_recomp` or `osAiGetLength_recomp`, with independent retail
+AI/VI controls in the same invocation. This is observational; do not change
+the shims.
 
 Competing hypotheses:
 
-* H-A13-default-valid: both port arms reach title/hangar, the default-off
-  drain returns cleanly with zero timeout rows, and the explicit tick arm does
-  not supply a missing terminal status transition; A13 needs no behavior change.
-* H-A13-tick-required: the default-off arm lacks a clean drain return or
-  times out while the tick-on arm has a named status/slot transition and clean
-  return; the in-loop tick remains a required control-path difference.
-* H-A13-route-invalid: title/hangar or the task/SP/PCM controls are absent in
-  either arm, so drain behavior cannot be evaluated.
+* H-A16-live-caller: a phase-gated port AI status/length caller fires, and its
+  result joins nonzero PCM plus a retail AI busy/length transition.
+* H-A16-unreached: title/hangar and PCM are positive but no AI shim caller is
+  reached; the shims are not a covered-route explanation.
+* H-A16-route-invalid: the port route or independent retail controls fail, so
+  caller absence is unevaluable.
 
-DISCRIMINATING MEASUREMENT: require title and hangar in both port logs, task/SP
-completion, nonzero PCM, `[drain-exit]`, `[drain-timeout]`, status/slot rows,
-and the retail whole-RDRAM/VI/writer controls. A clean default return with zero
-timeouts selects H-A13-default-valid; a tick-only clean return with a default
-timeout selects H-A13-tick-required; missing phase or positive controls selects
-H-A13-route-invalid.
+DISCRIMINATING MEASUREMENT: require title/hangar, task/SP completion, nonzero
+PCM, phase-gated `[ai-status]`/`[ai-length]` caller rows, and retail
+whole-RDRAM, title/hangar VI, and AI busy/length controls. Caller plus matching
+port/retail transitions selects H-A16-live-caller; a positive route with zero
+caller rows selects H-A16-unreached; missing controls selects
+H-A16-route-invalid.
 
 Exact commands:
 
     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s4693_m5_a13_drain_boundary.sh
+    rg -n "osAiGet(Status|Length)|ai-status|ai-length|AI_STATUS" src lib RecompiledFuncs tools/oracle
+    zsh scratch/agent/run_sXXXX_m5_a16_ai_caller.sh
 
-Do not infer A13 from a pre-title drain row or from a port-only null; consume
-the retail and phase-gated controls together.
+Before building any new probe, run the existing oracle with its whole-RDRAM
+positive control and inspect the current port AI-call sites; batch all caller,
+busy, length, PCM, and phase fields in one build/run.

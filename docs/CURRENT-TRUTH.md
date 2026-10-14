@@ -6,7 +6,19 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4857)
+## Headline (as of s4858)
+
+- **s4858 requalified the M5 A13 drain boundary.** The same-build default-off
+  and `ROGUESQ_DRAIN_INLOOP_TICK=1` arms both reached title/hangar, completed
+  SP work, and produced nonzero PCM. Default-off observed active `0x02` slots,
+  drained to `nz=0`, and returned at 100,000 iterations with no timeout. The
+  tick arm retained 13–16 active `0x02` slots through 700,000+ iterations and
+  did not return before the watchdog kill. The retail oracle independently
+  fired its whole-RDRAM control, title/hangar VI controls, and both status
+  writer PCs `0x8009B7CC`/`0x8009B7EC`. This selects H-A13-default-valid and
+  rules out the in-loop tick as required producer activity for this route; no
+  runtime change is authorized. The recipe summary was stale, so counts were
+  extracted directly from the fresh logs.
 
 - **s4857 qualified the M5 host queue edge.** The same-build default and
   rollback arms reached title and hangar, with 78/81 phase-5 PCM source rows
@@ -521,10 +533,13 @@ resolved (s4755: the tool ran; the old block was false).
   Step 10 boundary. **Closed s4857:** both arms had zero host errors and
   matching nonzero source/consumer PCM joins; do not repeat without a new
   host discriminator.
-0. **M5 A13 drain boundary:** the default-off `drainAudioAndFinalizeSpeechBuffer`
-  path and explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` control remain the next
-  unqualified M5 behavior boundary. Require title/hangar, task/SP, slot/status,
-  nonzero PCM, clean drain returns, and zero timeout rows in both arms.
+0. **M5 A16 AI shim caller qualification:** A13 is qualified by s4858 as
+   default-valid; do not repeat its drain A/B. The next M5 boundary is to
+   identify and qualify a live `osAiGetStatus_recomp`/`osAiGetLength_recomp`
+   caller on the image route, using the retail whole-RDRAM/VI controls and
+   nonzero port PCM. A caller and matching busy/length transition are required
+   before any AI shim behavior change; a shim count or device-open message
+   alone is not sufficient.
 0. **M5 port-task-load contract:** s4854 found both the port-load control and
    rows absent despite positive title/hangar, SP, action, and PCM controls.
    This is a single-source route result; do not infer a task-contract defect
