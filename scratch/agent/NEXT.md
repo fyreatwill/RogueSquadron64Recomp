@@ -2,6 +2,6 @@
 
 HYPOTHESIS-ID: m5-task-family-retail-compare
 
-s4865 result: port data_size is 1 in 99.9% of stores, identical with ROGUESQ_S4562_PAUSE 0 and 4; per store ~2 counter resets (0x8009106C) but only 1 increment (0x800911DC). Retail ~90% size 2.
-Hypotheses: (H1) port's musyxBuildVoiceCommandList takes an early-out path on every other call (guest state differs, e.g. empty voice list/gate); (H2) retail also resets twice but increments twice (cadence ratio differs); (H3) the second synth entry is a separate caller (not the frame-batch build).
-Discriminator: oracle exec watches at 0x8009106C and 0x800911DC (physical 0x0009106C/0x000911DC) plus 0x80091784, whole-RDRAM control first; compare reset:incr:store ratios to port 2:1:1. In the port, log the branch taken between 0x8009106C and 0x800911DC in the same helper (rs64_s4864_ev) with the early-out PC.
+s4866: retail reset:incr:store = 702:1343:702 (loop bound 2, ra 0x80091338 at reset, 0x800910b0 at incr); port 2:1:1.
+Hypotheses: (H1) loop-bound halfword 0x8014974E (read at 0x800911C8) is 1 in the port, 2 in retail (upstream writer differs); (H3) port's extra reset comes from a second caller not in retail.
+Discriminator: extend tools/apply_s4864_datasize_trace.py to log MEM_HU(0x8014974E) at each incr/reset and the caller ra at each reset (ROGUESQ_LOG_S4864=1); also oracle --pc-field-dump or a watch-write on physical 0x14974E to find the retail writer PC and value. Control: histogram total == store count.

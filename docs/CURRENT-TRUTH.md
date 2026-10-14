@@ -501,7 +501,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-1. (s4865) data_size trace done: pause 0 vs 4 identical (99.9% size 1); port has ~2 resets but 1 increment per store. Next: find why every other musyxBuildVoiceCommandList call skips the 0x800911DC increment (early-out branch) and compare with retail oracle reset/incr counts at 0x8009106C/0x800911DC (whole-RDRAM control first). Then close M5 and take the rename sweep / VI-640 route wall.
+1. (s4866) Retail oracle (control passed) shows reset:incr:store = 702:1343:702 (1:1.9:1, loop bound 2); port is 2:1:1. Next: port-side log of the loop-bound halfword 0x8014974E (read at 0x800911C8) and of reset callers' ra vs retail ra=0x8091338 (reset), 0x800910b0 (incr). Then close M5 and take the rename sweep / VI-640 route wall.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
 on both arms after removing the observer crash; do not repeat the A/B.)
