@@ -1,39 +1,39 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-step1-qualification
+HYPOTHESIS-ID: m5-qualified-route-startup-contract
 
-Closed M3 classes: mem access, divide, float->int, float compare, FCSR, mult/dmult, trap/break/syscall/cop0, unaligned/ll-sc/cache (s4820), indirect jr/jalr (s4821).
+The M5 Step 1 A/B is parked until the documented qualified route reaches its
+VI-640 positive control. s4824 changed the harness to launch the tuple and
+showed a new pre-control failure: default stops at VI 320 after 10 SP
+completions; request-only crashes in `spTaskSchedulerThread+8972` with
+`si_addr=0x400128d47` after one completion.
 
-Next iteration's single work unit is a route qualification for the existing M5
-Step 1 same-build phase-gated A/B, using the existing image arm and silent
-control. Do not interpret another target-absent A/B. First identify the route
-stop after VI 640 from the existing logs/build configuration, then make one
-bounded route-validating change or measurement before rerunning the A/B.
-Competing
-hypotheses and discriminator:
+Single bounded work unit: audit and symbolicate this startup boundary, without
+another Step 1 A/B or a mitigation. Competing hypotheses:
 
-* H-AudioDegeneracy: the silent path suppresses downstream service/slot/PCM
-  work. Select if the image arm reaches the target phase and adds service,
-  slot, voice, or PCM joins while the stub remains a valid no-DMA control.
-* H-ContractGap: the image runs but its task/DMEM/DMA/SP contract is
-  incomplete. Select if image DMEM/DMA and completion fire but downstream
-  task-field/service/slot/PCM joins do not close.
-* H-RequestOnlyLifecycle: one-shot SP request-only handling changes route
-  progress. Select only if request-only loses the target phase or scheduler
-  return while completion-wins reaches it in the same run pair.
+* H-common-route: LLE/real-audio startup fails in both arms before VI 640;
+  select if the default stop and request-only crash share the same guest task,
+  queue, or state transition.
+* H-request-state: request-only handling corrupts scheduler state; select only
+  if the request-only crash maps to a state/queue write absent from the default
+  arm at the same phase.
+* H-stale-route: the tuple is not actually the qualified route in this binary;
+  select if source/config inspection finds a missing or overridden flag, stale
+  generated function, or route gate before the first VI-640 transition.
 
-The discriminating measurement is the harness gate at VI 640 plus the paired
-rows for image/stub dispatch, task exit, SP completion, viewer return, E60/E70/
-E80F, title VI 1024, and hangar VI 512. The whole-RDRAM oracle control is
-already required by the plan; no new instrument is added.
+Discriminating measurement: symbolicate `spTaskSchedulerThread+8972`, map its
+guest PC and nearby generated function to source, then compare the bounded
+VI-320 rows and first-SP task/queue state in both saved logs. Outcomes must
+identify a shared common boundary, a request-only-only state mutation, or a
+configuration/build mismatch; otherwise remain blocked on the specific missing
+route evidence. Commands:
 
-Exact command after route qualification: `zsh tools/run_m5_yield_ab.sh` from the
-repository root. Expected outcomes: `H-RequestOnlyOneShotNotCausal` rejects the
-lifecycle hypothesis; `H-RequestOnlyLifecycleCausal` selects it;
-`H-CoverageInvalid` or `H-DiscriminatorIncomplete` means the target phase/control
-was absent and no audio conclusion is allowed.
+```sh
+atos -o build/RogueSquadron64Recomp -l 0x100000000 0x1056dc634
+rg -n -C 8 "spTaskSchedulerThread|0x8000834c|request.only|SP_YIELDED|LLE_FORCE|AUDIO_UCODE" src lib RecompiledFuncs tools
+grep -a -n -E "\[phase\]|\[event-wiring\] complete kind=SP|\[CRASH\]|spTaskSchedulerThread|\[sp-yielded-ab\]" scratch/agent/m5_yield_ab/default.log scratch/agent/m5_yield_ab/request-only.log
+```
 
-This iteration's same-build pair was route-invalid: both arms passed the VI-640
-and SP-completion controls but stopped before title/hangar. Default produced 4
-completion-wins rows; request-only produced 7 request-only rows and E70/E80F
-rows. No audio result was obtained.
+Do not rerun `tools/run_m5_yield_ab.sh` until this audit identifies a route
+qualification fix or confirms the tuple is correctly active and the failure is
+understood.

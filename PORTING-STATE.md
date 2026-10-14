@@ -155988,3 +155988,17 @@ arm reached title VI 1024, hangar VI 512, or viewer return, so the harness retur
 degeneracy nor request-only lifecycle causality because the target phase was absent;
 it does rule out treating this run as a valid A/B result. The next unit must qualify
 the route stop before another Step 1 interpretation.
+
+## Session 4824 (2026-10-14) — M5 qualified tuple fails before VI-640
+
+Added the documented route tuple to `tools/run_m5_yield_ab.sh`:
+`ROGUESQ_AUTOPILOT=1`, real audio, LLE force/ungated/solo, and
+`ROGUESQ_SPIN_YIELD=1`. Ran the same-build phase-gated default/request-only
+pair. Default stopped at VI 320 after 10 SP completions; request-only reached
+one SP completion and then hit the known `spTaskSchedulerThread+8972` startup
+segfault with `si_addr=0x400128d47` (36 crash rows in the log). Neither arm
+passed the VI-640 positive control, so the Step 1 A/B remains unevaluable.
+This does not select audio degeneracy, incomplete task contract, or request-only
+lifecycle causality; it does identify the qualified tuple's startup route as the
+next boundary to resolve. ORIGIN: no mitigation or behavior change; harness
+configuration and run-only qualification.

@@ -6,7 +6,7 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4823)
+## Headline (as of s4824)
 
 - **`ROGUESQ_OVL2C_DROP` was dead code since s4773 (s4802).** The splice route preceded the drop branch, so every DROP=0/1 A/B compared the splice with itself. Now `ROGUESQ_OVL2C_MODE` 0=splice (default) 1=drop 2=none (`tools/apply_s4805_ovl2c_mode.py`, fixup synced). s4806 three-arm run (single run each, cross-run caveat): routing 0x2C cuts phase-3 RDP submissions ~3x (513k vs 1.53M unrouted), but phases 5/6 are identical in all arms (~254k / ~955k) and the splice adds no measurable texrects at the mission origin. The old "0xBD arrival <=> runaway" claim does not extend to phase 6. VI-640 phase 3 lasts ~50 s in every run (s4803); transient `stalled=1` lines there are normal.
 
@@ -33,6 +33,13 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   completion-wins rows (`returned=0`, `pending_after=1`); request-only had 7
   request-only rows (`returned=1`, `pending_after=0`) and E70/E80F rows. No
   audio or request-only conclusion is selected.
+- **s4824: the documented qualified tuple is also route-invalid before VI 640.**
+  After adding `AUTOPILOT + real-audio + LLE / ungated / solo / spin-yield` to the
+  A/B harness, default stopped at VI 320 after 10 SP completions; request-only
+  hit the known `spTaskSchedulerThread+8972` startup segfault
+  (`si_addr=0x400128d47`) after one completion. Neither arm reached the VI-640
+  control, so Step 1 remains unevaluable and the request-only lifecycle is not
+  implicated. The harness now carries the documented tuple by default.
 - **s4822: M5 Step 1 qualification remains route-invalid.** The existing two-arm
   harness reached its VI-640 positive control with 64 SP completions per arm,
   but neither arm reached title/hangar; it returned `H-DiscriminatorIncomplete`.
@@ -163,18 +170,16 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 (s4821: M3 indirect-jump census closed the jr/jalr class; next M3 candidates: branch-likely delay slots, HI16/LO16 pairs.)
 (s4812: M5 Step 11 / A12 has a mission row: loop copies not entered (producer arm 40/40, loop rows 0), blind-spin rollback stalls at VI 640; M5 plan has no unqualified covered-route step. Next unit: M3 idiom-class audit.)
 (s4811: scratch regen via vendored fixer gives failures=0 and A9/A10 tag counts match live exactly 3/15/96/11; residual diffs are post-s4653 diagnostic probes s4700/s4784 + S32() spelling. Regen chain item closed.)
-(s4823: same-build A/B passed VI-640/SP controls but reached neither title nor hangar; next attempt needs a fresh route-valid qualification, not interpretation of these nulls.)
+(s4824: the documented tuple failed before VI 640; next attempt must identify the startup contract failure before another Step 1 A/B.)
 
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 Step 1 qualification (s4823):** rerun the existing
-  `tools/run_m5_yield_ab.sh` with a route-valid build/tuple. The unqualified
-  run passed VI-640/SP controls but no target phase. Do not infer audio or
-  request-only causality. Required result remains title/hangar rows for both
-  arms, or an independently controlled route failure with its startup cause
-  identified. Before another run, identify why this binary stops after the
-  positive control and qualify the route without changing the A/B discriminator.
+0. **M5 qualified-route startup contract (s4824):** identify the guest source
+  and request-only/default state difference behind the pre-VI-640 failure. Use
+  the recorded `spTaskSchedulerThread+8972` / `0x400128d47` crash and the
+  default arm's VI-320 stop as the discriminator; do not rerun Step 1 until
+  both arms pass the VI-640 control with the tuple now in the harness.
 1. **M5 A10 (s4809):** s4807's 0 rows was a build-absent patch (regen dropped it); s4808 mission run: 265 guard evaluations all in range, writer 0x80096D88 publishes 0x80149A00 32/32. s4809: apply script is now idempotent and in the `RS64_REPLAY` list of `tools/fixup_game_funcs_vendored.py` (unpatched scratch tree -> 44 sites, byte-identical to live tree, second run patches 0; replay not yet exercised end to end). Guard-off vs default at mission (sequential single runs, both VI512@0x690400 ~99.7 s): crash=0 both, 265 rows both, `off=0`/`off=1` visible in rows (positive control), writer 32/32 both. A10 guards are dead code at title/hangar/mission; no removal authorised (cap 256, no forced-bad A10 arm). s4810: A9 script added to the replay list (idempotent, 0 sites on re-run); ovl2c_mode needs no entry (fixup_factor5_ucode 6r emits it at CMake time). Open: end-to-end replay `failures=0` needs a pristine regen (vendored fixer refuses patched trees).
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s
