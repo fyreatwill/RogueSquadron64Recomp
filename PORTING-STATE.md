@@ -156496,3 +156496,20 @@ route discriminator. The next M5 unit moves to the broader port-task-load
 contract boundary.
 ORIGIN: `scratch/agent/soak_results/s4853_m5_descriptor/port.log` and
 `verdict.txt`; no runtime behavior change was made.
+
+## Session 4854 (2026-10-14) — M5 port-task-load control unreached
+
+The phase-gated M5 port-task-load run used the existing image route, title and
+hangar controls, route-order logging, PCM boundary logging, and the established
+autopilot. It reached title and hangar, recorded 1,255 phase-5
+`sp-complete-enter`, 1,255 `sp-complete-return`, 1,255 `action-dequeue`, and
+10,970 PCM rows, with no crash or abort. Both `m5-port-load-control` and
+`m5-port-load` were zero.
+
+This single-source run selects H-port-load-unreached and rules out neither a
+task-field mismatch nor a valid port-load contract. It rules out treating the
+missing rows as evidence of malformed fields because the route/SP/PCM positive
+controls fired. Do not repeat the same port-load target without a new route
+discriminator. No runtime behavior changed.
+ORIGIN: `scratch/agent/soak_results/s4854_m5_port_load/verdict.txt` and
+`port.log`.

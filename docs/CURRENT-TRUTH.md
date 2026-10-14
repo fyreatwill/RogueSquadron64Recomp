@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4853)
+## Headline (as of s4854)
+
+- **s4854 found the broader M5 port-task-load control unreached on the same
+  qualified image route.** The single-source run reached title and hangar with
+  1,255 phase-5 SP-complete enter/return rows, 1,255 action-dequeue rows, and
+  10,970 PCM rows, with no crash or abort. Both `m5-port-load-control` and
+  `m5-port-load` rows were absent. This selects H-port-load-unreached for this
+  instrument, not a task-field mismatch; do not repeat this control without a
+  new route discriminator.
 
 - **s4853 found the targeted M5 descriptor control unreached on a qualified
   image route.** The single-arm descriptor run reached title and hangar, with
@@ -486,6 +494,10 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
+0. **M5 port-task-load contract:** s4854 found both the port-load control and
+   rows absent despite positive title/hangar, SP, action, and PCM controls.
+   This is a single-source route result; do not infer a task-contract defect
+   or repeat the same control without a new route discriminator.
 0. **M5 descriptor target:** s4853 found the exact `0x800377C8` descriptor
    control unreached despite title/hangar, SP, action, and PCM positive
    controls. Do not repeat the same target; select the next M5 contract
