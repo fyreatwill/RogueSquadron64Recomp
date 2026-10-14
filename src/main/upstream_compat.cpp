@@ -2899,6 +2899,9 @@ extern void print_stack_with_symbols(void** frames, USHORT count);
 extern "C" void rs64_set_pending_task_guest_ptr(uint32_t guest_ptr);
 extern "C" void rs64_m5_descriptor_start(uint8_t* rdram, uint32_t task_ptr);
 extern "C" void rs64_sp_reset_yield_request();
+extern "C" void rs64_m5_raw_task_boundary(const char* edge,
+                                             uint8_t* rdram,
+                                             uint32_t raw_task_ptr);
 
 static bool rs64_guest_range_valid(uint64_t addr, uint64_t size) {
     constexpr uint64_t kseg0_base = 0xFFFFFFFF80000000ull;
@@ -2911,6 +2914,7 @@ static bool rs64_guest_range_valid(uint64_t addr, uint64_t size) {
 }
 
 extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+    rs64_m5_raw_task_boundary("start", rdram, static_cast<uint32_t>(ctx->r4));
     if (!rs64_guest_range_valid(static_cast<uint64_t>(ctx->r4), sizeof(OSTask))) {
         ctx->r2 = 0;
         return;

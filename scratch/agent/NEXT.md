@@ -2,40 +2,32 @@
 
 HYPOTHESIS-ID: m5-qualified-route-startup-contract
 
-The M5 Step 1 A/B is parked until the documented qualified route reaches its
-VI-640 positive control. s4825 showed that both arms share the first SP task
-and scheduler dispatch; request-only crashes after that completion, before
-any `osSpTaskYielded` A/B row, at `si_addr=0x400128d47`.
+The s4826 corrected boundary audit found valid, identical task state at both
+`osSpTaskStartGo` and pre-conversion enqueue in both arms, with positive
+controls firing and no rejected pointer. The intermittent `0x400128d47` crash
+was absent; the pair stopped at the VI-640 gate with 64 SP completions each.
 
-Single bounded work unit: add one batch of host-boundary witnesses and run the
-same phase-gated pair, without another Step 1 A/B or a mitigation. Competing
-hypotheses:
+Single bounded work unit: obtain one native crash-path capture while retaining
+the boundary witnesses. Competing hypotheses:
 
-* H-pointer-conversion: `TO_PTR`/task-field conversion produces the malformed
-  host address; select if the bad address first appears at conversion or task
-  field logging in both arms.
-* H-startgo/enqueue: the task is valid until `osSpTaskStartGo` or
-  `submit_rsp_task`; select if conversion is valid and the first bad address
-  appears in one of those boundaries in both arms.
-* H-request-state: request-only changes a scheduler/task field before the
-  fault; select only if the request-only arm diverges in the complete bounded
-  state table before the first bad address.
+* H-common-host-after-enqueue: the fault is in a host operation after the
+  validated enqueue boundary; select if a crash run shows the same boundary
+  rows followed by a native stack outside task conversion.
+* H-request-state: request-only changes scheduler state after the validated
+  boundaries; select only if a crash run shows an arm-specific state transition
+  before the fault.
+* H-route-instability: the crash is an intermittent startup condition that is
+  absent on qualified runs; retain if both arms reach the gate without a crash
+  and no boundary divergence appears.
 
-Discriminating measurement: in one build/run, log the task guest pointer and
-all task fields at `osSpTaskStartGo`, `TO_PTR`, and `submit_rsp_task`, plus the
-first host address rejected by the RDRAM accessor. A whole-RDRAM/task-validity
-control must fire in the same run. The first site to emit `0x400128d47` splits
-conversion from start/enqueue; any request-only-only field divergence selects
-the third hypothesis. If no site sees it, remain blocked on a native crash
-stack with symbols.
+Discriminating measurement: a single phase-gated pair with the boundary flag,
+crash handler output, and host thread stack capture enabled; require the task
+validity positive control in both arms. A native crash stack after matching
+start/enqueue rows selects H-common-host-after-enqueue; an arm-specific state
+row selects H-request-state; another clean gate-qualified pair selects
+H-route-instability. Do not rerun Step 1.
 
 ```sh
-rg -n -C 8 "TO_PTR|osSpTaskStartGo_recomp|submit_rsp_task|0x400128d47|SP_YIELDED_REQUEST_ONLY" src lib ../N64Recomp/RecompiledFuncs tools
-sed -n '1220,1265p' lib/N64ModernRuntime/ultramodern/src/events.cpp
-sed -n '44,112p' lib/N64ModernRuntime/librecomp/src/sp.cpp
-zsh tools/run_m5_yield_ab.sh
+env ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_TASKSUBMIT_STACK=1 zsh tools/run_m5_yield_ab.sh
+grep -a -E '\[m5-host-boundary|\[CRASH\]|si_addr|spTaskSchedulerThread' scratch/agent/m5_yield_ab/default.log scratch/agent/m5_yield_ab/request-only.log
 ```
-
-Do not rerun `tools/run_m5_yield_ab.sh` until this audit identifies a route
-qualification fix or confirms the tuple is correctly active and the failure is
-understood.

@@ -156016,3 +156016,19 @@ not execute. `0x8000834c` is the stale delay-slot breadcrumb after
 pre-control scheduler/host boundary and rules out request-only lifecycle
 causality for this capture; the malformed-pointer writer remains open.
 ORIGIN: diagnostic-only audit; no mitigation or behavior change.
+
+## Session 4826 (2026-10-14) — audited task conversion and enqueue boundaries
+
+Added bounded host-boundary witnesses before `TO_PTR` at `osSpTaskStartGo`
+and pre-conversion `submit_rsp_task`, with a task-validity positive marker and
+first-rejection marker. The corrected same-build phase-gated default/request-
+only pair qualified the positive control in both arms. Both arms showed the
+same in-range task pointers and task fields at both boundaries; neither emitted
+a rejected pointer or `0x400128d47`. The harness reached 64 SP completions per
+arm but stopped at its VI-640 gate (`H-DiscriminatorIncomplete`), so it did
+not select request-only lifecycle causality and did not reproduce the native
+crash. This rules out task-pointer conversion and the observed start/enqueue
+path as the source in this run, but leaves the intermittent post-boundary
+crash path open. The first build/run lacked the strong-wrapper start hook and
+was discarded; the corrected build was rebuilt and rerun in this session.
+ORIGIN: diagnostic-only witnesses; no mitigation or behavior change.

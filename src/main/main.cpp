@@ -4084,6 +4084,68 @@ extern "C" void rs64_m5_host_task_boundary(const char* edge,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_raw_task_boundary(const char* edge,
+                                            uint8_t* rdram,
+                                            uint32_t raw_task_ptr) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_HOST_BOUNDARY");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || !rdram) return;
+
+    static std::mutex mutex;
+    static uint32_t rows = 0;
+    static bool positive = false;
+    static bool rejected = false;
+    std::lock_guard<std::mutex> lock(mutex);
+    const bool valid = raw_task_ptr >= 0x80000000u &&
+                       raw_task_ptr <= 0x807FFFF0u;
+    if (valid && !positive) {
+        positive = true;
+        std::fprintf(stderr,
+            "[m5-host-boundary-positive] edge=%s raw_task=0x%08X\n",
+            edge ? edge : "?", raw_task_ptr);
+    }
+    if (!valid && !rejected) {
+        rejected = true;
+        const int64_t signed_raw = static_cast<int64_t>(
+            static_cast<int32_t>(raw_task_ptr));
+        const uint64_t macro_index = static_cast<uint64_t>(signed_raw) -
+                                     0xFFFFFFFF80000000ull;
+        std::fprintf(stderr,
+            "[m5-host-boundary-reject] edge=%s raw_task=0x%08X "
+            "signed=0x%016llX macro_index=0x%016llX\n",
+            edge ? edge : "?", raw_task_ptr,
+            static_cast<unsigned long long>(signed_raw),
+            static_cast<unsigned long long>(macro_index));
+    }
+    if (rows++ >= 128u) {
+        std::fflush(stderr);
+        return;
+    }
+    if (!valid) {
+        std::fflush(stderr);
+        return;
+    }
+    const OSTask* task = TO_PTR(OSTask, static_cast<int64_t>(
+        static_cast<int32_t>(raw_task_ptr)));
+    std::fprintf(stderr,
+        "[m5-host-boundary] row=%u edge=%s phase=%u width=%u origin=0x%06X "
+        "raw_task=0x%08X type=0x%08X flags=0x%08X "
+        "ucode=0x%08X ucode_size=0x%08X data_ptr=0x%08X data_size=0x%08X "
+        "output=0x%08X output_size=0x%08X yield=0x%08X yield_size=0x%08X\n",
+        rows - 1u, edge ? edge : "?", rs64_phase_ord(),
+        rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu,
+        raw_task_ptr, (uint32_t)task->t.type, (uint32_t)task->t.flags,
+        (uint32_t)task->t.ucode, (uint32_t)task->t.ucode_size,
+        (uint32_t)task->t.data_ptr, (uint32_t)task->t.data_size,
+        (uint32_t)task->t.output_buff, (uint32_t)task->t.output_buff_size,
+        (uint32_t)task->t.yield_data_ptr, (uint32_t)task->t.yield_data_size);
+    std::fflush(stderr);
+}
+
 static void rs64_m5_task_handoff(const OSTask* task) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
