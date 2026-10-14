@@ -26,6 +26,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 - **Rename sweep closed (s4795).** 8 remaining placeholders are deliberate
   `fake_func_*` boundaries; table in `docs/RENAME-S4795-AUDIT.md`.
 
+- **s4803: splice emits sprites.** Offline frame-split phase-6 diff: m1 (drop) texrects are a strict subset of m0 (splice); m0 adds up to ~119 small sprites/frame by frame 130. Retail mission frames not yet located, so correctness vs retail is open.
+
 ## Current state (durable)
 
 - Qualified native route: attribution, N64 logo, intro cinematic, Factor 5 logo,
