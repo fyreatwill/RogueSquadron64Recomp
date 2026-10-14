@@ -30,6 +30,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Current state (durable)
 
+- **M5 A9 voice-array base guards (s4805):** 0 bad of ~2.4M checks at 10/13 sites on title+hangar (forced-bad control fired in the same build); writer `0x8008F0EC` publishes in-range `rs_malloc` bases. Guards are inert here; 3 sites (`0x8009236C`, `0x800923C0`, `0x800924F4`) unreached. Tool `tools/apply_s4805_m5_a9.py`; env `ROGUESQ_LOG_M5_A9`, `ROGUESQ_A9_FORCE_BAD=N`.
+
 - Qualified native route: attribution, N64 logo, intro cinematic, Factor 5 logo,
   title VI 1024 (`0x00790400`), hangar VI 512 (`0x006AB400`) on the real-audio /
   LLE / ungated / solo / spin-yield route. Mission origin is `0x00690400` (512).
