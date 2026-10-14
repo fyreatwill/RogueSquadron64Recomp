@@ -1,28 +1,34 @@
-# Capture one producer-vs-guest witness for the VI-640 stall
+# Correlate the post-swap acknowledgement queue at a live VI-640 stall
 
-HYPOTHESIS-ID: vi640-producer-vs-guest
+HYPOTHESIS-ID: vi640-postswap-ack-queue
 
-The s4796 hangar-gated mission driver never reached hangar: the run stayed in
-VI 640 and emitted `vi-fs stalled=1`, so no input or overlay-0x2C conclusion is
-valid. M5's current de-stubbing rows are qualified or route-blocked. The next
-unit is one state-gated sample of the live stall, with no runtime mitigation.
+The corrected s4797 witness selected the presentation-side explanation: the
+Gfx thread remained active in RT64 display-list/update-screen work, while guest
+MAIN waited in `submitGfxFrame -> waitForPostSwapAck`; `vi-fs stalled=1` is not
+an audio-main wait. The next unit is one queue-counter correlation, with no
+runtime mitigation.
 
 Competing hypotheses and discriminator:
-- H1: the guest is blocked in an audio wait while the host VI loop continues.
-- H2: the guest advances, but the VI/RDP producer is stalled independently.
-- H3: `vi-fs stalled=1` is only a presentation-side symptom and the guest is
-  parked elsewhere.
+- H1: post-swap acknowledgements are never produced because the producer-side
+  frame-pair path is blocked. The ack queue's send/deliver counters stop while
+  MAIN's receive remains blocked.
+- H2: acknowledgements are produced but not delivered to MAIN because the
+  cooperative scheduler or queue handoff is blocked. Send/external counters
+  advance while the MAIN receive/deliver side does not.
+- H3: the observed wait is an intentional frame-pair drop with no pending ack;
+  queue counters remain quiet while the Gfx thread continues update-screen
+  processing and `vi-fs` keeps reporting `pair=0`.
 
-The discriminating measurement is one run that waits until VI 640 has emitted
-`vi-fs stalled=1` for at least 10 seconds, confirms whether `update_screen`
-advances, then samples the process at that state. H1 predicts the game-thread
-stack in the audio wait and a live VI producer; H2 predicts a live game thread
-with the producer/RDP path blocked; H3 predicts neither and is resolved by the
-sampled game-thread PC. A startup crash or failure to reach VI 640 is
-route-invalid and cannot select a hypothesis.
+The discriminating measurement is one run that reaches `vi-fs stalled=1` in
+VI 640, then captures the existing `mqdiag` snapshot(s) and one process sample
+at that state. H1/H2/H3 must be split by the queue's send, delivered, blocked,
+external, and requeued deltas; the Gfx-thread and MAIN stacks are controls for
+the state gate. A run that lacks the sample positive control or never reaches
+the stalled state is route-invalid.
 
-Commands: use the existing state-gated sampler pattern, but arm the sample
-only after the `vi-fs stalled=1` and static-update-screen conditions in the
-same log; validate the sampler with its healthy 20-second control, run from
-`build/`, SIGKILL cleanup, and capture under `scratch/agent/soak_results/`.
-Do not use a stopwatch-only sample.
+Commands: use the established s4797 launch environment from `build/`, arm the
+existing mqdiag watchdog and passive breadcrumbs, wait on the log condition
+`vi-fs stalled=1` rather than a stopwatch, run `sample <pid>` once the state
+has persisted for 10 seconds, copy the matching `mqdiag_NNN.txt` snapshots to
+`scratch/agent/soak_results/`, then SIGKILL the game and process group. Do not
+build or change queue/presentation behavior before this witness.

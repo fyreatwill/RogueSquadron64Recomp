@@ -155768,3 +155768,40 @@ is closed and NEXT.md returns to the mission-route overlay-0x2C discriminator.
   behavior. Next is a state-gated process sample while the VI-640 stall is
   live, to distinguish producer blockage from a guest/audio wait.
 - ORIGIN: n/a; no mitigation or runtime behavior change was added.
+
+## Session 4797 (2026-10-13) — state-gated VI-640 sample selects presentation-side wait
+
+Work unit: one corrected state-gated producer-vs-guest witness using
+`scratch/agent/s4797_vi640_producer_guest_sample.sh`. The first attempt was
+invalid because the stall trigger at 16 s preempted its planned positive
+control sample; it is retained only as an excluded artifact. The fixed rerun
+sampled a live process at 18 s after `vi-fs stalled=1` had been observed from
+8 s onward, and also produced a same-run `sample` control at 2 s.
+
+Result: the run remained at VI 640 while `update_screen` advanced from #832 to
+#1120. The Gfx thread was active in `RT64::State::updateScreen` and
+`processDisplayLists`; guest MAIN was blocked in
+`submitGfxFrame -> waitForPostSwapAck`, and the separate
+`viRetraceHandlerThread -> musyxSynthFrame` thread was in its message wait.
+This selects H-presentation-symptom for the covered route: `vi-fs stalled=1`
+is a frame-pair/presentation symptom while the guest waits for post-swap ack,
+not an audio wait in MAIN. It rejects H-audio-main-wait and
+H-producer-thread-stalled for this sample. Independent evidence is the sample
+stack and the advancing update-screen/log ordinals; the sample utility itself
+also passed its same-run control. No runtime change was made.
+
+Next: correlate post-swap acknowledgement queue counters at the live stall;
+do not change audio or presentation behavior from this result.
+
+## Session 4798 (2026-10-14) — maintenance: CURRENT-TRUTH compacted 730 -> 174 lines
+
+Step 0 triggered (CURRENT-TRUTH was 61,101 bytes > 60,000). No experiment run.
+The s4740-s4797 headline log, the old "Current state" and "Active frontier"
+sections were appended verbatim to docs/PROJECT-OVERVIEW.md ("Archive:
+CURRENT-TRUTH headline log s4740-s4797 ..."), and CURRENT-TRUTH was rewritten
+as a ~11.9 KB durable summary: headline (s4797 presentation-side VI-640 stall),
+durable state, parked list, the superseded section (kept verbatim), and one
+monotonic Next-steps backlog (#1 = post-swap ack queue correlation per NEXT.md).
+Stale "RSPRecomp allowlist blocked" text dropped (s4755 showed that block false).
+Net shrink 556 lines. The NEXT.md work unit (vi640-postswap-ack-queue) is
+unchanged for the next iteration.
