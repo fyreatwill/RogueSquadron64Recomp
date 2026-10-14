@@ -156316,3 +156316,22 @@ defect. The broader generic-trap census remains a diagnostic inventory only;
 no generated output, runtime behavior, or mitigation changed.
 ORIGIN: independent retail ELF words, generated annotations, per-function CFG,
 and N64Recomp/fixup source audit; no mitigation or guest behavior change.
+
+## Session 4844 (2026-10-14) — qualified oracle setup, route still undriven
+
+Rebuilt the retail oracle frontend against the DEBUGGER=1 mupen64plus core and
+ran one 180-second invocation with the whole-RDRAM write positive control, VI
+polling, and the target external-entry execution watch at `0x800903F0` in the
+same run. The positive control reached its 10,000-hit cap, VI polling stayed
+live for 10,799 VI callbacks, and the oracle exited normally. The target PC
+had zero hits, but the invocation had no Rice video plugin or input schedule:
+VI remained 320-wide at origin `0x006DD280` for the full run, with no title or
+hangar phase.
+
+This proves the debugger core, watch path, and VI instrument are live, and
+shows that this particular undriven route does not reach the target. It does
+not select a retail target null or refute the qualified route; the next
+discriminator is the same oracle command with Rice and the documented Start
+press schedule. No runtime or mitigation change was made.
+ORIGIN: whole-RDRAM positive control, VI poll, and target-PC watch all came
+from the independent retail oracle; no mitigation or guest behavior change.

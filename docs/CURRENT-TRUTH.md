@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4843)
+## Headline (as of s4844)
+
+- **s4844 qualified the retail-oracle setup but not the external handoff.**
+  The rebuilt DEBUGGER=1 core and frontend ran with a whole-RDRAM write
+  control, VI polling, and the target `0x800903F0` execution watch in one
+  180-second invocation. The control reached its 10,000-hit cap and VI
+  polling remained live, but the undriven Rice-less route stayed at 320-wide
+  pre-title (`0x006DD280`), with zero target-PC hits. This is a route/setup
+  result, not a retail null for the qualified title/hangar route; the next
+  attempt must add the known Rice video plugin and Start schedule.
 
 - **s4843 closed the next generic CPU-trap class: `sync`.** The new census
   found 7 generated occurrences at 6 file/guest-PC sites whose independent
@@ -386,10 +395,12 @@ resolved (s4755: the tool ran; the old block was false).
    Conditional moves are now an identified N64Recomp operation gap, but no
    generated-output patch or runtime claim is authorised by the static audit.
    Do not chase a single wild address.
-1. **External retail-entry boundary:** M5 has no unqualified covered-route
-   step after s4836, and the M3 `sync` class is now closed by s4843. Retry the
-   parked retail-entry handoff only with a fresh oracle setup/route control;
-   do not infer a null from the known missing debugger core.
+1. **External retail-entry boundary:** s4844 rebuilt the debugger-enabled
+   oracle and proved its whole-RDRAM/VI controls, but the no-video, no-input
+   invocation remained at 320-wide pre-title and therefore did not test the
+   qualified route. Retry once with Rice plus the documented Start schedule;
+   only a target-PC zero with title/hangar VI controls positive is a retail
+   route null.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s
