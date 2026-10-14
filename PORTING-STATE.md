@@ -155976,3 +155976,15 @@ Before interpretation, recorded three competing hypotheses in `scratch/agent/NEX
 Ran the fixed version immediately with the documented qualified tuple: `ROGUESQ_AUTOPILOT=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1`. This arm failed before the VI-640 control: default stopped at VI 320 after 15 SP completions; request-only produced 36 `[CRASH]` rows and `spTaskSchedulerThread+9632`, with no target phase. This independently confirms route coverage was not obtained, not an audio result. Rules out neither H-AudioDegeneracy nor H-ContractGap nor H-RequestOnlyLifecycle. Next: obtain a route-valid Step 1 pair before interpreting any downstream null.
 
 ORIGIN: no mitigation or behavior change; run-only qualification.
+## Session 4823 (2026-10-14) — M5 Step 1 same-build A/B remains route-invalid
+
+Ran the prescribed `zsh tools/run_m5_yield_ab.sh` same-build, phase-gated two-arm
+qualification. Both default and request-only arms passed the positive controls:
+VI 640, model-viewer entry, and 64 SP completions, with no crash or abort. Neither
+arm reached title VI 1024, hangar VI 512, or viewer return, so the harness returned
+`H-DiscriminatorIncomplete`. The default arm produced 4 completion-wins rows with
+`returned=0/pending_after=1`; request-only produced 7 request-only rows with
+`returned=1/pending_after=0`, plus E70/E80F rows. This rules out neither audio
+degeneracy nor request-only lifecycle causality because the target phase was absent;
+it does rule out treating this run as a valid A/B result. The next unit must qualify
+the route stop before another Step 1 interpretation.

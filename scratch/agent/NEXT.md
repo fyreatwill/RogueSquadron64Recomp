@@ -4,8 +4,12 @@ HYPOTHESIS-ID: m5-step1-qualification
 
 Closed M3 classes: mem access, divide, float->int, float compare, FCSR, mult/dmult, trap/break/syscall/cop0, unaligned/ll-sc/cache (s4820), indirect jr/jalr (s4821).
 
-Next iteration's single work unit is a fresh M5 Step 1 same-build phase-gated A/B
-qualification, using the existing image arm and silent control. Competing
+Next iteration's single work unit is a route qualification for the existing M5
+Step 1 same-build phase-gated A/B, using the existing image arm and silent
+control. Do not interpret another target-absent A/B. First identify the route
+stop after VI 640 from the existing logs/build configuration, then make one
+bounded route-validating change or measurement before rerunning the A/B.
+Competing
 hypotheses and discriminator:
 
 * H-AudioDegeneracy: the silent path suppresses downstream service/slot/PCM
@@ -23,16 +27,13 @@ rows for image/stub dispatch, task exit, SP completion, viewer return, E60/E70/
 E80F, title VI 1024, and hangar VI 512. The whole-RDRAM oracle control is
 already required by the plan; no new instrument is added.
 
-Exact command: `zsh tools/run_m5_yield_ab.sh` from the repository root. Expected
-outcomes: `H-RequestOnlyOneShotNotCausal` rejects the lifecycle hypothesis;
-`H-RequestOnlyLifecycleCausal` selects it; `H-CoverageInvalid` or
-`H-DiscriminatorIncomplete` means the target phase/control was absent and no
-audio conclusion is allowed.
+Exact command after route qualification: `zsh tools/run_m5_yield_ab.sh` from the
+repository root. Expected outcomes: `H-RequestOnlyOneShotNotCausal` rejects the
+lifecycle hypothesis; `H-RequestOnlyLifecycleCausal` selects it;
+`H-CoverageInvalid` or `H-DiscriminatorIncomplete` means the target phase/control
+was absent and no audio conclusion is allowed.
 
-This iteration's two attempts were route-invalid: the bare harness reached VI
-640 but not title/hangar, and the qualified tuple
-`ROGUESQ_AUTOPILOT=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LLE_FORCE=1
-ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1` stopped at VI
-320/default or crashed request-only at `spTaskSchedulerThread+9632`. Before
-rerunning, verify the binary/ROM and capture the startup crash context; do not
-interpret either attempt as an audio result.
+This iteration's same-build pair was route-invalid: both arms passed the VI-640
+and SP-completion controls but stopped before title/hangar. Default produced 4
+completion-wins rows; request-only produced 7 request-only rows and E70/E80F
+rows. No audio result was obtained.
