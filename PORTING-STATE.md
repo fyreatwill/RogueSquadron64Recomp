@@ -156173,3 +156173,28 @@ unevaluable; no clear-site, alternate-writer, or unreached-site hypothesis is
 selected. `scratch/agent/NEXT.md` now explicitly resumes by selecting one new
 route discriminator or stabilizing change before another build/run.
 ORIGIN: checkpoint close-out of the existing diagnostic result; no mitigation or behavior change.
+## Session 4836 (2026-10-14) — qualified Step 11 clear writer after observer crash
+
+The previous Step 11 writer-table capture was route-invalid because both arms
+crashed in `rogue_current_thread_id` while the diagnostic was printing the
+generic gate-writer row. Replaced only that diagnostic's unsafe guest-thread
+lookup in `src/main/main.cpp` with a host-thread hash, rebuilt
+`RogueSquadron64Recomp`, and reran the existing same-build default /
+`ROGUESQ_AUDIO_SPIN2_YIELD=0` pair with the full phase, SP, PCM, and wait
+controls.
+
+Both arms reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, completed 64 SP tasks, emitted nonzero PCM rows, and had
+zero crash/abort markers. The generic table emitted 256 bounded writer rows in
+each arm, including repeated exact transitions at physical `0x14974C`:
+`0x80091680` writes `1`, followed by `0x800912F8` writes `0`. The named
+`[waitmusyx-spin2-clear]` row remained absent because that generated helper
+does not contain the named fixup anchor; the generic PC/value table is the
+independent witness for the same clear instruction.
+
+This selects the diagnostic observer as the cause of the s4834 pre-hangar
+crash and qualifies the legitimate producer/clear route on both arms. It does
+not select a yield-causal difference. It rules out an unreached clear site and
+an alternate writer for this covered route, but does not repair the stale named
+logger anchor. ORIGIN: diagnostic-only observer replacement; guest behavior and
+the legitimate `0x80091680`/`0x800912F8` stores were not changed.

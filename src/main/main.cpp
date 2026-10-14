@@ -5243,9 +5243,11 @@ extern "C" void rs64_m5_spin2_gate_store(char width, uint32_t pc,
     if (!target) return;
     std::fprintf(stderr,
         "[waitmusyx-spin2-writer] row=%u phase=%u width=%u origin=0x%06X "
-        "pc=0x%08X addr=0x%08X phys=0x%06X value=0x%02X thr=%d\n",
+        "pc=0x%08X addr=0x%08X phys=0x%06X value=0x%02X host_thr=%llu\n",
         rows++, rs64_phase_ord(), vi, origin, pc, addr, addr & 0x1FFFFFFFu,
-        value & 0xFFu, rogue_current_thread_id(nullptr));
+        value & 0xFFu,
+        static_cast<unsigned long long>(std::hash<std::thread::id>{}(
+            std::this_thread::get_id())));
     std::fflush(stderr);
 }
 

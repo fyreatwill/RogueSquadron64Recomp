@@ -1,41 +1,41 @@
 # Resume next work unit
 
-HYPOTHESIS-ID: m5-step11-clear-discriminator
+HYPOTHESIS-ID: m3-branch-likely-delay-slots
 
-RESUME: The prior Step 11 writer-table work already ran and was route-invalid;
-do not rerun it unchanged in this retry. The artifacts are the s4834 fixup
-diagnostic and its two captured arms. The next iteration must choose one new
-route discriminator or stabilizing change, then rebuild and rerun the
-same-build default / `ROGUESQ_AUDIO_SPIN2_YIELD=0` arms. Do not interpret the
-existing zero writer rows without phase, SP, PCM, and gate controls.
+WORK UNIT: perform one complete census of generated branch-likely delay-slot
+idioms. Do not chase a single crash and do not add a guard before the whole
+class is enumerated.
 
 Competing hypotheses:
 
-* H-clear-site-unreached: the guest never executes the expected
-  `0x800912F4`/`0x8014974C` clear store on the qualified title/hangar route.
-* H-clear-site-anchor-drift: the clear store executes, but the fixup anchor no
-  longer matches generated code, so the logger is absent while the gate still
-  changes.
-* H-clear-site-other-writer: a different instruction or thread clears the
-  legitimate `0x8014974C` gate, so the current named-site logger is incomplete.
-* H-route-regressed: the route-stabilizing tuple no longer reaches the same
-  phase-5 wait, disproving the positive controls needed to interpret a null.
+* H-blikely-valid: every branch-likely delay slot is represented correctly by
+  the generated C control flow, and no runtime change is needed.
+* H-blikely-unreachable: any suspicious branch-likely site is dead on the
+  qualified title/hangar route, so it needs documentation only.
+* H-blikely-unsafe: at least one reachable site has a missing/incorrect
+  annulled delay-slot effect and requires a named fix or guard.
+* H-blikely-route-gap: the static class cannot be qualified because the
+  existing positive-control route does not execute the candidate sites; retain
+  the census as single-source and do not infer a runtime defect.
 
-Discriminating measurement: in each arm and phase-5 route join, record one
-bounded table containing (1) execution of the expected guest-PC clear store,
-(2) gate-byte value immediately before and after that store, (3) all observed
-writes to physical/RDRAM `0x8014974C` with guest PC and thread, and (4) the
-existing arm/loop/return rows. A positive task/SP + nonzero PCM + title/hangar
-control is mandatory. Expected outcomes: expected-PC execution with a 1->0
-transition selects H-clear-site-anchor drift only if the old logger is absent;
-no expected-PC execution but another writer's 1->0 selects H-clear-site-other-
-writer; no clear writer in either arm selects H-clear-site-unreached; missing
-phase controls selects H-route-regressed.
+DISCRIMINATING MEASUREMENT: enumerate all branch-likely instructions and their
+delay-slot translations from the generated files, map each site to its guest
+PC/function and reachable route evidence, and compare the generated control
+flow against the MIPS annulled-delay-slot rule. Outcomes prove H-blikely-valid
+if all sites are faithful; H-blikely-unreachable if all suspicious sites lack
+route execution; H-blikely-unsafe if one reachable site demonstrably executes
+the delay slot when the branch is not taken or omits it when taken; and
+H-blikely-route-gap if no runtime join can be made. A positive control is the
+existing title/hangar phase/SP/PCM route evidence, not merely a nonempty grep.
 
-Preparation for the next iteration: select the route discriminator before
-editing; build
-`cmake --build build --config Debug --target RogueSquadron64Recomp`; run
-`zsh tools/run_m5_yield_ab.sh` from the repo root. Keep
-`ROGUESQ_STUB_MISSING_FUNCS=1`, LLE force/ungated/solo, host spin yield, and
-SIGKILL cleanup. Do not interpret any clear null without the `[m5-gate]`, VI,
-SP, and nonzero PCM controls.
+Exact commands:
+
+    rg -n -i -C 4 'branch[- ]likely|beqzl|bnezl|bc1[tf]l|bltzl|bgezl|blezl|bgtzl' ../N64Recomp/RecompiledFuncs tools docs
+    rg -n -C 3 'likely|annul|delay slot' tools docs/M3-* 2>/dev/null
+    grep -n '^## Session ' PORTING-STATE.md | tail -15
+
+Write the bounded census table to a new `docs/M3-S4837-BLIKELY-CENSUS.md` only
+if the class is found and classified. If a real runtime defect is proven, land
+the smallest durable fix through the appropriate fixup script; otherwise the
+census itself is the work result. Append the session to PORTING-STATE.md and
+update CURRENT-TRUTH before committing.

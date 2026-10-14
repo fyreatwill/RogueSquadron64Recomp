@@ -6,7 +6,18 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4834)
+## Headline (as of s4836)
+
+- **s4836 qualified the Step 11 producer/clear route with the generic writer
+  table.** After replacing the table's unsafe `rogue_current_thread_id(nullptr)`
+  observer with a host-thread hash, both same-build arms reached title 1024 and
+  hangar 512, completed 64 SP tasks, produced nonzero PCM, and had no crash or
+  abort. Both recorded repeated `0x80091680` arm writes of `1` followed by the
+  exact `0x800912F8` clear writes of `0` to `0x8014974C`; the named
+  `[waitmusyx-spin2-clear]` row remained absent because its fixup anchor is not
+  present in the generated live helper. The prior s4834 crash was therefore
+  observer-induced, while the generic table independently proves the legitimate
+  clear writer and value transition. No yield-causal difference is selected.
 
 - **s4834 clear-site discriminator was route-invalid twice.** Both same-build
   default/rollback attempts reached VI 640, title 1024, 64 SP completions, and
@@ -146,6 +157,11 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   phase-scoped byte store overlapping physical `0x14974C` with guest PC, value,
   and thread, and the named clear row records pre/post values. Two captures
   were route-invalid before hangar; no writer-origin conclusion is selected.
+- **M5 Step 11 s4836 writer result:** the phase-scoped generic writer table is
+  qualified on both default and `ROGUESQ_AUDIO_SPIN2_YIELD=0` arms. The exact
+  producer/clear PCs are `0x80091680`/`0x800912F8`; the named clear logger is a
+  stale/missing generated anchor, not evidence that the clear is absent. The
+  observer crash was diagnostic-only and is fixed by host-thread identification.
 - **musyxSynthFrame `+5808` crash family: closed for idle title/hangar (s4786).**
   Cause: synth ticking over the audio arena freed by the retail-legitimate
   `musyxNoopStub` teardown (s4782/s4783: retail never ticks the synth between
@@ -245,8 +261,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-(s4834: the writer table was built, but two attempts reached only title before
-crashing; retry after a new route discriminator.)
+(s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
+on both arms after removing the observer crash; do not repeat the A/B.)
 (s4833: route-stabilizing Step 11 A/B reached title/hangar in both arms, but
 the clear-site witness was absent in both. Do not repeat the same A/B; make the
 clear-site instrumentation itself discriminating.)
@@ -264,13 +280,14 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 Step 11 validation:** s4834's writer table is complete, but two
-   same-build captures stopped before hangar with no PCM/gate controls. Do not
-   interpret the writer null. Find one new route discriminator or stabilizing
-   change, then rerun the same-build pair.
-1. **M5 next behavior validation:** Step 1 is qualified by s4831. Continue at
-   the next not-yet-qualified M5 plan row with a same-build rollback/control;
-   do not repeat the invalid request-only route.
+0. **M3 branch-likely delay-slot census:** with M5 Step 11 now qualified,
+   enumerate every branch-likely delay-slot idiom in generated code, classify
+   each as reachable/valid or dead/unsafe, and land only a named, evidenced
+   guard if the complete class requires one. Use one census and one qualified
+   route control; do not chase an individual crash.
+1. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
+   and s4836. Reopen another M5 boundary only with a new discriminator and a
+   same-build rollback/control; do not repeat the invalid request-only route.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s
