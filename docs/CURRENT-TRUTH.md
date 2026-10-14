@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4837)
+## Headline (as of s4838)
+
+- **s4838 closed the generated HI16/LO16 construction class.** The complete
+  source census found 24,276 `lui` sites and 3,015 canonical same-register
+  immediate low-half pairs (2,479 `addiu`, 536 `ori`). An independent raw
+  adjacency pass found no destination/source-register mismatch; 1,174 adjacent
+  low-half-looking operations were independent operations with different
+  registers, not pairs. No intervening-write or relocation defect was found.
+  Route reachability was not claimed. Full table:
+  `docs/M3-S4838-HILO-CENSUS.md`.
 
 - **s4837 closed the generated branch-likely idiom class.** The complete
   census found 893 sites across 44 generated files: 197 `bc1fl`, 597 `bc1tl`,
@@ -279,6 +288,9 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 on both arms after removing the observer crash; do not repeat the A/B.)
 (s4837: branch-likely census matched all 893 generated sites; do not repeat
 the class. Continue the next complete M3 idiom census.)
+(s4838: HI16/LO16 census matched all 3,015 canonical pairs; do not repeat the
+class. Continue with the next complete M3 idiom census only when M5 has no new
+discriminator.)
 (s4833: route-stabilizing Step 11 A/B reached title/hangar in both arms, but
 the clear-site witness was absent in both. Do not repeat the same A/B; make the
 clear-site instrumentation itself discriminating.)
@@ -296,14 +308,12 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M3 HI16/LO16 pair census:** enumerate every generated HI16/LO16 address
-   construction, classify whether the pair is preserved across intervening
-   instructions and whether its derived address is legitimate on the covered
-   route. Use one complete static census and the existing title/hangar route
-   positive control; do not chase a single wild address.
-1. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
+0. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
    and s4836. Reopen another M5 boundary only with a new discriminator and a
    same-build rollback/control; do not repeat the invalid request-only route.
+1. **M3 next complete idiom census:** select the next unclosed generated
+   translation class after branch-likely and HI16/LO16, and enumerate the whole
+   class before proposing any guard. Do not chase a single wild address.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s

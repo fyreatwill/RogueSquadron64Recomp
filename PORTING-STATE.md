@@ -156216,3 +156216,20 @@ class as the current crash/rendering explanation. It does not claim every site
 is reached on the qualified title/hangar route; reachability remains
 single-source/unmeasured. No runtime fix, guard, build, or soak was warranted.
 ORIGIN: static generated-code census; no mitigation or guest behavior change.
+## Session 4838 (2026-10-14) — closed generated HI16/LO16 construction class
+
+Performed the complete HI16/LO16 census requested by `scratch/agent/NEXT.md`
+over the current generated `funcs_*.c` files. It found 24,276 `lui` source
+occurrences and 3,015 canonical same-register immediate low-half pairs: 2,479
+`addiu` pairs and 536 `ori` pairs. A second raw adjacency pass found no
+destination/source-register mismatch. The 1,174 adjacent low-half-looking
+operations with different registers are independent operations, not HI16/LO16
+pairs; the remaining `lui` sites are standalone bases, constants, or
+control-flow-generated code.
+
+This selects faithful generated HI16/LO16 lowering and rules out a generated
+wrong-register or intervening-write explanation for the current crash/rendering
+work. It does not claim site-level reachability on the qualified route, and no
+runtime fix or guard was warranted. The bounded census is recorded in
+`docs/M3-S4838-HILO-CENSUS.md`.
+ORIGIN: static generated-code census; no mitigation or guest behavior change.
