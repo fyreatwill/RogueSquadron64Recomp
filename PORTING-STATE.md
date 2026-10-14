@@ -156032,3 +156032,17 @@ path as the source in this run, but leaves the intermittent post-boundary
 crash path open. The first build/run lacked the strong-wrapper start hook and
 was discarded; the corrected build was rebuilt and rerun in this session.
 ORIGIN: diagnostic-only witnesses; no mitigation or behavior change.
+
+## Session 4827 (2026-10-14) — checkpointed incomplete native crash capture
+
+This was a checkpoint close-out, not a new experiment. The s4826 corrected
+same-build boundary audit remains the only result available: task-validity
+positive controls fired in default and request-only, both arms showed matching
+in-range task state at `osSpTaskStartGo` and pre-conversion enqueue, neither
+emitted a rejected pointer or `0x400128d47`, and both stopped at the VI-640
+gate after 64 SP completions. No native crash-path stack was captured, so no
+hypothesis was selected beyond ruling out the observed conversion/start/enqueue
+path in that run. The next discriminator is one crash-path capture retaining
+those witnesses; its exact command and competing outcomes are in
+`scratch/agent/NEXT.md`.
+ORIGIN: checkpoint only; no mitigation or behavior change.
