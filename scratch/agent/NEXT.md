@@ -2,4 +2,5 @@
 
 HYPOTHESIS-ID: m5-task-family-retail-compare
 
-s4878 result: DEDUP=1 gives 0.99 synth entries/message vs 1.97 (DEDUP=0). Unit: run DEDUP=1 three times to PHASE VI1024 (scratch/agent/run_s4878_dedup.sh 1, but use PROBE_PHASE_TIMEOUT run longer than the 100 s sleep; look for PHASE lines/crash), compare with the s4870 AI-ring delta per synth entry (apply_s4870_producer.py; retail +2 per chunk). If stable and AI delta moves toward retail, make dedup default-on (flip the getenv default in tools/apply_s4878_synth_dedup.py, rebuild). Do NOT flip gate-write force-zero stubs (hung boot 4x). Beware: launcher env edits must be verified by grepping the log for the s4700 control rows.
+s4879: dedup is default-on (0.99 synth entries/msg; AI-ring producer 1 per entry). Open question: does dedup change the startup-crash rate (1/3 DEDUP=1 vs 0/1 DEDUP=0, tiny sample)?
+Unit: enqueue a soak recipe in scratch/agent/soak_queue/ that runs scratch/agent/run_s4878_dedup.sh with arm 1 and 0 x5 each sequentially (zsh, per-run copy of run.log, count SIGSEGV at spTaskSchedulerThread startup) and compare crash counts. Hypotheses: H-dedup-causes-crash (arm1 crashes >> arm0) vs H-known-intermittent (equal rates). Then pick next M5 de-stub step from docs/M5-AUDIO-PLAN.md.
