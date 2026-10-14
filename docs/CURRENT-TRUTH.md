@@ -6,7 +6,14 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4829)
+## Headline (as of s4830)
+
+- **s4830 A9/A10 replay passed its fixup discriminator but not whole-file
+  identity:** the pristine generated copy replayed with `failures=0`, A10
+  reported 44/44 sites, and A9 reported 13 sites plus its writer. All four
+  selected files differed from the live tree because the live files retain
+  later diagnostic patches (for example s4784/s4700 and s4597/s4601); this is
+  replay drift, not evidence that either A9 or A10 failed to replay.
 
 - **s4829 M5 Step 11 A/B is route-invalid at the wait discriminator:** the
   corrected same-build default/rollback pair reached title and hangar, with
@@ -203,6 +210,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
+(s4830: pristine replay had failures=0 and both A9/A10 reports, but selected generated files differed from the live tree due to later diagnostics; classify replay as behavior-valid but whole-file comparison drift.)
 (s4829: Step 11 reached title/hangar but lacked the producer-clear/seed and wait-return controls in both arms; pivot to the next M5 validation rather than repeating this route.)
 (s4821: M3 indirect-jump census closed the jr/jalr class; next M3 candidates: branch-likely delay slots, HI16/LO16 pairs.)
 (s4812: M5 Step 11 / A12 has a mission row: loop copies not entered (producer arm 40/40, loop rows 0), blind-spin rollback stalls at VI 640; M5 plan has no unqualified covered-route step. Next unit: M3 idiom-class audit.)
@@ -217,7 +225,7 @@ resolved (s4755: the tool ran; the old block was false).
    and wait-return witnesses. Treat this route as invalid for Step 11; do not
    repeat it without a new route discriminator. Continue with the next M5
    behavior validation.
-1. **M5 A10 (s4809):** s4807's 0 rows was a build-absent patch (regen dropped it); s4808 mission run: 265 guard evaluations all in range, writer 0x80096D88 publishes 0x80149A00 32/32. s4809: apply script is now idempotent and in the `RS64_REPLAY` list of `tools/fixup_game_funcs_vendored.py` (unpatched scratch tree -> 44 sites, byte-identical to live tree, second run patches 0; replay not yet exercised end to end). Guard-off vs default at mission (sequential single runs, both VI512@0x690400 ~99.7 s): crash=0 both, 265 rows both, `off=0`/`off=1` visible in rows (positive control), writer 32/32 both. A10 guards are dead code at title/hangar/mission; no removal authorised (cap 256, no forced-bad A10 arm). s4810: A9 script added to the replay list (idempotent, 0 sites on re-run); ovl2c_mode needs no entry (fixup_factor5_ucode 6r emits it at CMake time). Open: end-to-end replay `failures=0` needs a pristine regen (vendored fixer refuses patched trees).
+1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s
    (s4802/s4806), no driver needed. Frame-align done (s4803/s4804): no retail mission reference exists; parked pending oracle mission capture.

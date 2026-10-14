@@ -156073,3 +156073,18 @@ returns reported `yields=0`. This makes the route invalid for selecting
 yield-safe versus yield-causal behavior and rules out only a pre-title/hangar
 route failure. The next unit is the pristine A9/A10 regeneration replay.
 ORIGIN: diagnostic-only witnesses; no mitigation or behavior change.
+## Session 4830 (2026-10-14) — validated A9/A10 replay with later-diagnostic drift
+
+Ran `zsh scratch/agent/s4814_regen.sh` on the pristine generated-function
+copy. The fixer returned zero failures; its replay reported A10 `44` remaining
+guard sites and A9 `13` guard sites plus the writer patch. The four selected
+whole-file comparisons (`funcs_23.c` through `funcs_26.c`) differed from the
+live tree. Bounded diffs attribute those differences to later diagnostic
+patches retained by the live tree but absent from the s4648-fresh input,
+including s4784/s4700 and s4597/s4601 families. Thus the A9/A10 replay
+survives regeneration, while whole-file identity is not a valid replay
+criterion for this accumulated tree. This rules out a missing A9/A10 replay
+entry as the cause of the selected diffs; it does not authorize guard removal
+or select a new runtime behavior. The next unit is a new route discriminator
+for the invalid M5 Step 1 qualification.
+ORIGIN: replay validation only; no mitigation or runtime behavior change.
