@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4836)
+## Headline (as of s4837)
+
+- **s4837 closed the generated branch-likely idiom class.** The complete
+  census found 893 sites across 44 generated files: 197 `bc1fl`, 597 `bc1tl`,
+  36 `bgezl`, 10 `bgtzl`, 13 `blezl`, and 40 `bltzl`, with no `beqzl`/`bnezl`.
+  Every site matched the annulled-delay-slot shape: conditional delay-slot
+  body, taken target, untaken skip, and fall-through duplicate. The 24 apparent
+  shape exceptions were existing guest-PC breadcrumbs (23) and one viewer-fade
+  observer; neither changes the predicate or control flow. This selects
+  generated translation validity and authorizes no guard or behavior change.
+  Full table: `docs/M3-S4837-BLIKELY-CENSUS.md`.
 
 - **s4836 qualified the Step 11 producer/clear route with the generic writer
   table.** After replacing the table's unsafe `rogue_current_thread_id(nullptr)`
@@ -182,6 +192,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   backward self-referential walks, `rs_free` idiom to s4502). Tools
   `tools/census_*.py`; tables `docs/M3-S46xx-*-CENSUS.md`. No guard without a
   named writer plus legitimacy proof.
+- **M3 branch-likely delay slots are closed (s4837).** Static census and
+  control-shape pass cover all 893 sites; no annulment defect was found. See
+  `docs/M3-S4837-BLIKELY-CENSUS.md`. Reachability of every site on the
+  qualified route was not claimed.
 - **Runaway-DL cause (s4746-s4749):** DL op `0xBD` (TexrectGen) → overlay `0x2C`
   (real 0x240-byte VU image, ROM `0x27368`, dest `0x1DB0`) is unrouted, so the
   window entry restarts the task. Present ⇔ arrival ⇔ runaway (150/150 vs 0/550).
@@ -263,6 +277,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
 on both arms after removing the observer crash; do not repeat the A/B.)
+(s4837: branch-likely census matched all 893 generated sites; do not repeat
+the class. Continue the next complete M3 idiom census.)
 (s4833: route-stabilizing Step 11 A/B reached title/hangar in both arms, but
 the clear-site witness was absent in both. Do not repeat the same A/B; make the
 clear-site instrumentation itself discriminating.)
@@ -280,11 +296,11 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M3 branch-likely delay-slot census:** with M5 Step 11 now qualified,
-   enumerate every branch-likely delay-slot idiom in generated code, classify
-   each as reachable/valid or dead/unsafe, and land only a named, evidenced
-   guard if the complete class requires one. Use one census and one qualified
-   route control; do not chase an individual crash.
+0. **M3 HI16/LO16 pair census:** enumerate every generated HI16/LO16 address
+   construction, classify whether the pair is preserved across intervening
+   instructions and whether its derived address is legitimate on the covered
+   route. Use one complete static census and the existing title/hangar route
+   positive control; do not chase a single wild address.
 1. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
    and s4836. Reopen another M5 boundary only with a new discriminator and a
    same-build rollback/control; do not repeat the invalid request-only route.

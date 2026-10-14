@@ -156198,3 +156198,21 @@ not select a yield-causal difference. It rules out an unreached clear site and
 an alternate writer for this covered route, but does not repair the stale named
 logger anchor. ORIGIN: diagnostic-only observer replacement; guest behavior and
 the legitimate `0x80091680`/`0x800912F8` stores were not changed.
+## Session 4837 (2026-10-14) — closed generated branch-likely delay-slot class
+
+Performed the complete branch-likely census requested by `scratch/agent/NEXT.md`
+over the current generated `funcs_*.c` files. It found 893 sites across 44
+files and 286 functions: 197 `bc1fl`, 597 `bc1tl`, 36 `bgezl`, 10 `bgtzl`, 13
+`blezl`, and 40 `bltzl`; `beqzl` and `bnezl` were absent. A structural pass
+matched every site to the recompiler's annulled-delay-slot form: conditional
+delay-slot body, taken target, untaken skip, and duplicated fall-through body.
+The 24 apparent first-pass exceptions were 23 existing guest-PC breadcrumb
+assignments and one existing viewer-fade observer; inspecting them showed no
+predicate or control-flow change. The bounded census is recorded in
+`docs/M3-S4837-BLIKELY-CENSUS.md`.
+
+This selects faithful generated branch-likely translation and rules out the
+class as the current crash/rendering explanation. It does not claim every site
+is reached on the qualified title/hangar route; reachability remains
+single-source/unmeasured. No runtime fix, guard, build, or soak was warranted.
+ORIGIN: static generated-code census; no mitigation or guest behavior change.

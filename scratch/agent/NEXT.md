@@ -1,41 +1,42 @@
 # Resume next work unit
 
-HYPOTHESIS-ID: m3-branch-likely-delay-slots
+HYPOTHESIS-ID: m3-hi16-lo16-pairs
 
-WORK UNIT: perform one complete census of generated branch-likely delay-slot
-idioms. Do not chase a single crash and do not add a guard before the whole
-class is enumerated.
+WORK UNIT: perform one complete census of generated HI16/LO16 address-pair
+idioms. Do not chase a single wild address and do not add a guard before the
+whole class is enumerated.
 
 Competing hypotheses:
 
-* H-blikely-valid: every branch-likely delay slot is represented correctly by
-  the generated C control flow, and no runtime change is needed.
-* H-blikely-unreachable: any suspicious branch-likely site is dead on the
-  qualified title/hangar route, so it needs documentation only.
-* H-blikely-unsafe: at least one reachable site has a missing/incorrect
-  annulled delay-slot effect and requires a named fix or guard.
-* H-blikely-route-gap: the static class cannot be qualified because the
-  existing positive-control route does not execute the candidate sites; retain
-  the census as single-source and do not infer a runtime defect.
+* H-hi-lo-faithful: every generated HI16/LO16 pair preserves the MIPS
+  relocation/rounding contract and uses the intended paired low half.
+* H-hi-lo-mismatch: at least one generated pair combines the wrong HI16 and
+  LO16 or loses the carry-adjusted high half, producing a wrong address.
+* H-hi-lo-intervening-write: at least one pair is separated by a register
+  overwrite or memory operation that changes the value before the low-half
+  merge, making the construction unsafe.
+* H-hi-lo-route-gap: all suspicious candidates are outside the qualified
+  title/hangar route, so static evidence cannot select a runtime defect.
 
-DISCRIMINATING MEASUREMENT: enumerate all branch-likely instructions and their
-delay-slot translations from the generated files, map each site to its guest
-PC/function and reachable route evidence, and compare the generated control
-flow against the MIPS annulled-delay-slot rule. Outcomes prove H-blikely-valid
-if all sites are faithful; H-blikely-unreachable if all suspicious sites lack
-route execution; H-blikely-unsafe if one reachable site demonstrably executes
-the delay slot when the branch is not taken or omits it when taken; and
-H-blikely-route-gap if no runtime join can be made. A positive control is the
-existing title/hangar phase/SP/PCM route evidence, not merely a nonempty grep.
+DISCRIMINATING MEASUREMENT: enumerate every `lui`/high-half and low-half
+address construction in generated `funcs_*.c`, map each to its guest PC and
+function, and classify the intervening instruction sequence, destination
+register, low-half merge, and derived address use. H-hi-lo-faithful is selected
+if every pair has the expected preserved register and merge semantics;
+H-hi-lo-mismatch if a pair demonstrably uses a wrong high/low relationship;
+H-hi-lo-intervening-write if a pair is clobbered before its merge; and
+H-hi-lo-route-gap if the remaining suspicious candidates lack route evidence.
+The qualified title/hangar phase/SP/PCM route is the positive control, but no
+site-level reachability claim may be made from it alone.
 
 Exact commands:
 
-    rg -n -i -C 4 'branch[- ]likely|beqzl|bnezl|bc1[tf]l|bltzl|bgezl|blezl|bgtzl' ../N64Recomp/RecompiledFuncs tools docs
-    rg -n -C 3 'likely|annul|delay slot' tools docs/M3-* 2>/dev/null
+    rg -n -i -C 4 'lui|addiu|ori|lui.*0x801|0x[0-9A-Fa-f]+.*(lui|addiu|ori)' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n -i -C 4 'HI16|LO16|hi16|lo16|high half|low half|reloc' tools docs ../N64Recomp 2>/dev/null
     grep -n '^## Session ' PORTING-STATE.md | tail -15
 
-Write the bounded census table to a new `docs/M3-S4837-BLIKELY-CENSUS.md` only
-if the class is found and classified. If a real runtime defect is proven, land
-the smallest durable fix through the appropriate fixup script; otherwise the
-census itself is the work result. Append the session to PORTING-STATE.md and
-update CURRENT-TRUTH before committing.
+Write the bounded census to a new `docs/M3-S4838-HILO-CENSUS.md` only if the
+class is found and classified. If a real runtime defect is proven, land the
+smallest durable fix through the appropriate fixup script; otherwise the
+census itself is the work result. Do not build or run until the hypotheses and
+the discriminator above are still sufficient for every possible outcome.
