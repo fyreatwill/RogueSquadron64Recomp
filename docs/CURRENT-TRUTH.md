@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4838)
+## Headline (as of s4839)
+
+- **s4839 closed the generated variable-shift class.** The complete source
+  census found 721 textual `sllv`/`srlv`/`srav` mentions: 469 direct
+  instruction comments and 252 `.word` data-as-code annotations. All 403
+  live-destination sites use the expected 32-bit, masked-count, signedness
+  lowering; the other 66 write `$zero`. No mismatch or intervening-write
+  defect was found. Runtime reachability was not claimed. Full table:
+  `docs/M3-S4839-VARIABLE-SHIFT-CENSUS.md`.
 
 - **s4838 closed the generated HI16/LO16 construction class.** The complete
   source census found 24,276 `lui` sites and 3,015 canonical same-register
@@ -205,6 +213,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   control-shape pass cover all 893 sites; no annulment defect was found. See
   `docs/M3-S4837-BLIKELY-CENSUS.md`. Reachability of every site on the
   qualified route was not claimed.
+- **M3 variable shifts are closed (s4839).** Static source census and
+  register-aware semantic pass cover all 469 direct sites; no width, count-mask,
+  signedness, or intervening-write defect was found. See
+  `docs/M3-S4839-VARIABLE-SHIFT-CENSUS.md`.
 - **Runaway-DL cause (s4746-s4749):** DL op `0xBD` (TexrectGen) → overlay `0x2C`
   (real 0x240-byte VU image, ROM `0x27368`, dest `0x1DB0`) is unrouted, so the
   window entry restarts the task. Present ⇔ arrival ⇔ runaway (150/150 vs 0/550).
@@ -291,6 +303,8 @@ the class. Continue the next complete M3 idiom census.)
 (s4838: HI16/LO16 census matched all 3,015 canonical pairs; do not repeat the
 class. Continue with the next complete M3 idiom census only when M5 has no new
 discriminator.)
+(s4839: variable-shift census matched all 469 direct sites; do not repeat the
+class. Continue with the next complete M3 idiom census.)
 (s4833: route-stabilizing Step 11 A/B reached title/hangar in both arms, but
 the clear-site witness was absent in both. Do not repeat the same A/B; make the
 clear-site instrumentation itself discriminating.)
@@ -312,8 +326,9 @@ resolved (s4755: the tool ran; the old block was false).
    and s4836. Reopen another M5 boundary only with a new discriminator and a
    same-build rollback/control; do not repeat the invalid request-only route.
 1. **M3 next complete idiom census:** select the next unclosed generated
-   translation class after branch-likely and HI16/LO16, and enumerate the whole
-   class before proposing any guard. Do not chase a single wild address.
+   translation class after branch-likely, HI16/LO16, and variable shifts, and
+   enumerate the whole class before proposing any guard. Do not chase a single
+   wild address.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s

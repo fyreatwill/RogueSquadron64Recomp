@@ -156216,6 +156216,23 @@ class as the current crash/rendering explanation. It does not claim every site
 is reached on the qualified title/hangar route; reachability remains
 single-source/unmeasured. No runtime fix, guard, build, or soak was warranted.
 ORIGIN: static generated-code census; no mitigation or guest behavior change.
+## Session 4839 (2026-10-14) — closed generated variable-shift class
+
+Performed the complete variable-shift census requested by `scratch/agent/NEXT.md`
+over the current generated `funcs_*.c` files. A raw textual pass found 721
+mentions: 469 direct `sllv`/`srlv`/`srav` instruction comments and 252
+`.word` data-as-code annotations. A register-aware semantic pass checked all
+469 direct sites, skipping diagnostic lines and normalizing register zero. It
+found 403 expected live-destination lowerings (272/61/70 for `sllv`/`srlv`/
+`srav`) and 66 intentional writes to `$zero` (37/12/17); there were no
+mismatches, missing assignments, or intervening-write defects.
+
+This selects faithful generated variable-shift translation and rules out the
+class as the current crash/rendering explanation. The qualified title/hangar
+route does not establish site-level reachability, so no route claim is made.
+The bounded census is recorded in
+`docs/M3-S4839-VARIABLE-SHIFT-CENSUS.md`; no runtime fix or guard was warranted.
+ORIGIN: static generated-code census; no mitigation or guest behavior change.
 ## Session 4838 (2026-10-14) — closed generated HI16/LO16 construction class
 
 Performed the complete HI16/LO16 census requested by `scratch/agent/NEXT.md`

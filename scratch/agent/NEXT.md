@@ -1,38 +1,40 @@
 # Resume next work unit
 
-HYPOTHESIS-ID: m3-next-idiom-census
+HYPOTHESIS-ID: m3-conditional-move-census
 
-WORK UNIT: choose the next unclosed generated M3 translation idiom after the
-completed branch-likely and HI16/LO16 censuses, then perform one complete
-static census of that whole class. Do not chase a single wild address and do
-not add a guard before the whole class is enumerated.
+WORK UNIT: perform one complete static census of the next unclosed generated
+conditional-move class (`movz`, `movn`) in
+`../N64Recomp/RecompiledFuncs/funcs_*.c`. Do not chase a single wild address
+and do not add a guard before the whole class is enumerated.
 
 Competing hypotheses:
 
-* H-next-faithful: the next idiom is lowered consistently across the generated
-  tree and is not the current defect.
-* H-next-mismatch: at least one site has a semantically wrong generated
-  lowering.
-* H-next-intervening-write: at least one site is clobbered before its merge or
-  use.
-* H-next-route-gap: suspicious candidates exist but lack qualified-route
-  reachability evidence.
+* H-conditional-move-faithful: every site has the expected conditional
+  assignment or preserved destination.
+* H-conditional-move-mismatch: at least one site assigns on the wrong
+  predicate or writes an incorrect source/destination.
+* H-conditional-move-intervening-write: a source, destination, or predicate
+  register is clobbered before the generated conditional operation.
+* H-conditional-move-route-gap: the class is faithful, but suspicious sites
+  (if any) lack qualified-route reachability evidence.
 
-DISCRIMINATING MEASUREMENT: enumerate every site in the selected idiom,
-mapping guest PC, function, operands, intervening instructions, and derived
-use. H-next-faithful is selected if every site has the expected lowering;
-H-next-mismatch if a site demonstrably differs; H-next-intervening-write if a
-site is clobbered before its merge/use; and H-next-route-gap if only suspicious
-sites without route evidence remain.
+DISCRIMINATING MEASUREMENT: enumerate every `movz`/`movn` site twice, mapping
+guest PC, function, operands, generated branch/assignment shape, and the next
+three guest instructions. The expected form preserves the destination for a
+false predicate and assigns the source only for the true zero/nonzero
+predicate. H-conditional-move-faithful is selected if both passes agree and
+every site matches; mismatch or intervening write is selected by a concrete
+exception; route-gap remains only if static evidence is clean but reachability
+is absent.
 The qualified title/hangar phase/SP/PCM route is the positive control, but no
 site-level reachability claim may be made from it alone.
 
 Exact commands:
 
     grep -n '^## Session ' PORTING-STATE.md | tail -15
-    rg -n '<selected idiom>' ../N64Recomp/RecompiledFuncs/funcs_*.c tools docs
+    rg -n '\b(movz|movn)\b' ../N64Recomp/RecompiledFuncs/funcs_*.c
 
-Write the bounded census to a new `docs/M3-S4838-HILO-CENSUS.md` only if the
+Write the bounded census to a new `docs/M3-S4839-*.md` only if the
 class is found and classified. If a real runtime defect is proven, land the
 smallest durable fix through the appropriate fixup script; otherwise the
 census itself is the work result. Do not build or run until the hypotheses and
