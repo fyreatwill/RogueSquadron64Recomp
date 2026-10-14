@@ -155953,3 +155953,9 @@ ORIGIN: no mitigation added; census tool + doc only (no wild value involved).
 
 ## Session 4817 (2026-10-14) — M3 mult/multu/dmult/dmultu lowering census: all exact, class closed
 Ran tools/census_mult.py (mult 566, multu 104, dmult 50, dmultu 64 sites) and inspected the lowerings; all are exact MIPS semantics via 64/128-bit widening, no UB. See docs/M3-S4817-MULT-CENSUS.md. ORIGIN: no mitigation added (nothing wrong found). Static, single-source.
+
+## Session 4818 (2026-10-14) — M3 trap/break/syscall/cop0 census: class closed, non-data sites are compiler div checks or FR toggles
+
+Ran new tools/census_trap.py; table in docs/M3-S4818-TRAP-CENSUS.md. 5635 do_break sites: ~5420 in data-as-code symbols (audioCompandS16 1762 alone), 213 real-code break 6/7 compiler overflow/div-zero checks (guarded by a preceding branch; retail also faults; port exits with vram printed), 45 non-break traps in 8 functions all data/gap/RSP-boot or a dead j-into-next-symbol stub (steerOrientationTowardTargetPreamble, no references). 81 syscall sites, 79 in data symbols. 23 cop0 Status sites = FR=1 toggles in matrix helpers, correctly modelled by cop0_status_write.
+Rules out: trap instructions / Status writes as an unmodelled crash family on this host. Caveats: static single-source; one real-function syscall (lvj_checkComplexObjectives) not proven dead.
+ORIGIN: no mitigation added; census only, no guard.
