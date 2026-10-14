@@ -156530,3 +156530,18 @@ this run as evidence of a contract defect. The next unit uses an image-versus-
 silent A/B as a new route discriminator; no runtime behavior changed.
 ORIGIN: `scratch/agent/soak_results/s4855_task_contract/port.log` and
 `verdict.txt`; crash address and route rows are from the same run.
+
+## Session 4856 (2026-10-14) — made M5 host queue joins truthful
+
+The mandated no-churn pivot landed a real M5 host-boundary change in
+`src/main/main.cpp`. `queue_samples` now captures `SDL_QueueAudio`'s return,
+logs bounded phase/route context for queue failures, and suppresses the PCM
+consumer count/join unless a device accepted the buffer. Previously a missing
+device or failed SDL queue could still be reported as a consumer edge. The
+DEBUG `RogueSquadron64Recomp` target built successfully; no game soak was run
+in this iteration, so this selects no host hypothesis and does not claim a
+route result. The next unit must require title/hangar and nonzero source PCM,
+then compare host-error rows, queue deltas, and consumer joins.
+ORIGIN: `src/main/main.cpp` queue_samples host bridge; build completed with
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
+build --config Debug --target RogueSquadron64Recomp`.

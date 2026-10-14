@@ -8,6 +8,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Headline (as of s4855)
 
+- **s4856 made the M5 host queue edge truthful.** `queue_samples` now records
+  the `SDL_QueueAudio` return, reports phase-scoped host failures, and only
+  emits the PCM consumer join after a successful queue. The DEBUG target builds
+  successfully. No runtime route result is claimed yet; the next unit is the
+  phase-gated host/source/consumer validation with this binary.
+
 - **s4855 found the task-contract qualification route-invalid.** The existing
   image-route harness crashed at `spTaskSchedulerThread+9632` with
   `si_addr=0x400128d47` during the first 320-wide phase. Title and hangar
@@ -502,6 +508,10 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
+0. **M5 host queue validation:** s4856 changed the host bridge to reject failed
+   SDL queue calls from the PCM consumer join. Run the phase-gated source,
+   host-error, queue-delta, and consumer controls before interpreting the
+   Step 10 boundary.
 0. **M5 port-task-load contract:** s4854 found both the port-load control and
    rows absent despite positive title/hangar, SP, action, and PCM controls.
    This is a single-source route result; do not infer a task-contract defect

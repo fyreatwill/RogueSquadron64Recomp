@@ -1,38 +1,30 @@
-# Next work unit (M5 task-contract audio-route A/B)
+# Next work unit (M5 host-queue validation)
 
-HYPOTHESIS-ID: m5-task-contract-audio-route
+HYPOTHESIS-ID: m5-host-queue-result
 
-WORK UNIT: run the existing same-build image-versus-silent A/B with the task
-contract/lifetime, route-order, and PCM controls enabled. This is a new route
-discriminator after s4855's image-route startup crash; do not treat either
-single-arm absence as a contract result.
+WORK UNIT: run the existing phase-gated audio route after the host bridge
+change that makes SDL queue success a prerequisite for PCM consumer joins.
 
 Competing hypotheses:
 
-* H-task-contract-audio-dependent: both arms qualify title/hangar and route,
-  but task-contract/lifetime rows or their joins differ with audio enabled.
-* H-task-contract-route-common: both qualified arms have coherent matching
-  task-contract/lifetime rows, so the boundary is not audio-route specific.
-* H-task-contract-unreached: both arms have positive route/SP/PCM controls but
-  no task-contract/lifetime rows.
-* H-route-invalid: either arm lacks title/hangar or the required phase-gated
-  route/SP/PCM positive controls.
+* H-host-queue-valid: title/hangar source and consumer rows remain paired and
+  no host-error rows occur; the SDL boundary is not the missing edge.
+* H-host-queue-failed: source rows continue but host-error rows appear and
+  consumer joins are suppressed; the prior consumer evidence was false.
+* H-route-invalid: title/hangar or source controls are absent, so the host
+  boundary cannot be evaluated.
 
-DISCRIMINATING MEASUREMENT: for each arm, require title and hangar VI gates,
-phase-5 `sp-complete-enter/return` and `action-dequeue`, and nonzero PCM source
-and consumer rows. Only then compare task-contract/lifetime row counts and
-their task identity/route joins between `ROGUESQ_AUDIO_UCODE=1` and `=0`.
-Audio-dependent rows select H-task-contract-audio-dependent; matching coherent
-rows select H-task-contract-route-common; absent rows in both qualified arms
-select H-task-contract-unreached; missing controls select H-route-invalid.
+DISCRIMINATING MEASUREMENT: run the same-build image arm with phase-gated
+source, host, and consumer controls. Require title/hangar and nonzero source
+PCM. Compare `[m5-audio-host-error]`, queue return/byte deltas, and consumer
+join counts. Success with no errors selects H-host-queue-valid; errors plus
+suppressed joins select H-host-queue-failed; missing route/source controls
+select H-route-invalid.
 
 Exact commands:
 
-    zsh tools/run_m5_yield_ab.sh
-    grep -aE '^\[(m5-task|m5-route-order|phase|pcm|CRASH|ABORT)' \
-      scratch/agent/m5_yield_ab/*.log | tail -300
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
+    env ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_M5_AUDIO_HOST=1 zsh tools/run_m5_yield_ab.sh
 
-The script launches both arms from `build/`, uses SIGKILL cleanup, and already
-contains the title/hangar phase gates and task-contract/lifetime logging. If
-either arm is route-invalid, record the missing control and pivot; do not infer
-a task-contract defect.
+Do not infer a host result from a pre-title run; consume the queued soak
+verdict before changing this unit.

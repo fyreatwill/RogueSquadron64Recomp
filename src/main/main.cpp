@@ -6941,11 +6941,26 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
     }
 
     const uint32_t queued_before = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
+    int queue_result = -1;
     if (audio_device) {
-        SDL_QueueAudio(audio_device, native_samples.data(),
-                       (Uint32)(num_samples * sizeof(int16_t)));
+        queue_result = SDL_QueueAudio(audio_device, native_samples.data(),
+                                      (Uint32)(num_samples * sizeof(int16_t)));
     }
     const uint32_t queued_after = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
+    if (queue_result != 0) {
+        static uint32_t failures = 0;
+        const uint32_t n = failures++;
+        if (n < 8u || (n % 256u) == 0u) {
+            fprintf(stderr,
+                    "[m5-audio-host-error] n=%u phase=%u width=%u origin=0x%06X"
+                    " result=%d device=%u samples=%zu bytes=%zu error=%s\n",
+                    n, rs64_phase_ord(), rs64_vi_committed_width(),
+                    rs64_vi_committed_origin() & 0x00FFFFFFu, queue_result,
+                    (unsigned)audio_device, num_samples,
+                    num_samples * sizeof(int16_t), SDL_GetError());
+            fflush(stderr);
+        }
+    }
     rs64_m5_audio_host_row("queue", queued_before, queued_after,
                            static_cast<uint32_t>(num_samples * sizeof(int16_t)),
                            static_cast<uint32_t>(num_samples));
@@ -6984,7 +6999,7 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
         const bool own_enabled = own && own[0] && own[0] != '0';
         s_log_pcm_boundary = (all_enabled || own_enabled) ? 1 : 0;
     }
-    if (s_log_pcm_boundary) {
+    if (s_log_pcm_boundary && queue_result == 0) {
         const uint32_t width = rs64_vi_committed_width();
         const uint32_t origin = rs64_vi_committed_origin();
         const bool phase_allowed =
