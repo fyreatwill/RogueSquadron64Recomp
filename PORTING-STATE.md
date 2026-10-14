@@ -156670,3 +156670,11 @@ Built `tools/apply_s4870_producer.py` (live-tree funcs_23/24 hooks at 0x8008EE6C
 - Build note: helper defined in only one funcs file; a second copy gives a duplicate-symbol link error.
 ORIGIN: no mitigation added; read-only logging.
 Discrimination: this run refutes H-A (port producer 2x per entry) and selects the voice-count hypothesis (a1 = 2 retail vs 1 port) over the extra-producer hypothesis; the next discriminator is retail vs port $v0 at 0x80091084 (=a1) histogram and the voice-array population at 0x80090E04.
+
+## Session 4869 (2026-10-14) — walks per synth entry: retail 1.91 vs port 1.01; per-voice work identical
+Built `tools/apply_s4871_voices.py` (funcs_24 events at walk entry 0x80090E04, per-voice jal 0x80090F00, build call 0x80091330 with a1; gate ROGUESQ_LOG_S4864=1; `scratch/agent/run_s4871_voices.sh`) and ran the retail oracle (`scratch/agent/s4871_oracle_voices.sh`, hangar 512 phase gate; control: whole-RDRAM write watch hit the 10000 cap in-run).
+- Retail: builds 701, walks 1341 (exec-prev call sites 0x800914C8:1177, 0x80091588:124, 0x8009163C:40), per-voice jals 15820 = 11.80/walk, 22.6/build, walks/build 1.91 (equals the producer and incr ratio of s4866/s4868).
+- Port (last SUMMARY): builds 11264, walks 5693 (0.505/build), jals 66835 = 11.74/walk. a1 histogram is bimodal: 0 on 5588 builds (the spurious entries; first build a1=0), 7+ on 5141; jals/walk 5+ in 5153 of 5693.
+- Discrimination: REFUTES H-V (port voice list smaller) and H-W (per-voice add drops): 11.74 vs 11.80 jals per walk. SELECTS chunks-per-synth-entry: the entry loop calls the walk per 0xC0-sample chunk and retail does ~2 per entry vs port 1. Explains the data_size 1-vs-2 and the producer 1.91-vs-0.51 as one quantity (chunk count), not independent defects. The bound feeding that chunk loop (AI/ring drain state) is the next suspect and ties back to the AI-drain thread.
+- Instrument failure noted: oracle exec watch on 0x80091084 (a branch delay slot) = 0 hits in a run whose control fired; blind PC, a1 retail value unmeasured. Retail a1 is inferred only via ratios (single-source).
+ORIGIN: no mitigation added; read-only logging.
