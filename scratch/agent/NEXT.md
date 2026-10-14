@@ -1,9 +1,10 @@
-# Next work unit
+# Next work unit (RESUME after interrupted close-out)
 
 HYPOTHESIS-ID: m5-a10-guard-class
 
 WORK UNIT: consume the queued s4849 A10 default-versus-guard-off soak and
-classify the complete pointer/list/table guard class. Do not repeat the retail
+classify the complete pointer/list/table guard class. This retry did not rerun
+the soak: no verdict or result directory exists yet. Do not repeat the retail
 oracle or rebuild unless the queue verdict exposes a specific missing control.
 
 Competing hypotheses:
@@ -30,6 +31,11 @@ Exact commands if the loop has not consumed the recipe:
     tail -20 scratch/agent/SOAK-RESULTS.md
     sed -n '1,160p' scratch/agent/soak_results/s4849_m5_a10_guard_qualification/verdict.txt
     for arm in default rollback; do grep -aE '^\\[(m5-a10|phase|pcm|CRASH|ABORT)' scratch/agent/soak_results/s4849_m5_a10_guard_qualification/$arm.summary | tail -240; done
+
+Resume condition: first verify whether the queue recipe has moved to
+`scratch/agent/soak_queue/done/` and whether the result directory now exists;
+if neither is true, let the queue run the existing recipe. Do not launch a
+second copy from this iteration.
 
 Do not remove or relax an A10 guard from this result alone. If the queue
 recipe is absent or failed before its watchdog, document the exact missing

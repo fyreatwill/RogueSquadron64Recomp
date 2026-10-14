@@ -156426,3 +156426,21 @@ only the missing ground-truth writer hypothesis and leaves A10 suppression,
 legitimate dormant guards, and route-invalid outcomes open.
 ORIGIN: independent retail physical write/VI controls and the existing guest
 writer anchor; no guard relaxation or other mitigation was landed.
+
+## Session 4850 (2026-10-14) — checkpointed interrupted A10 soak close-out
+
+This was a retry after the prior work unit stopped before the exit contract.
+The required state check measured `docs/CURRENT-TRUTH.md` at 37,136 bytes, so
+the maintenance threshold did not trigger. The existing s4849 ledger entry
+shows the independent retail writer qualification and the queued default versus
+`ROGUESQ_A10_GUARD_OFF=1` port soak. This retry found no A10 verdict file and
+no `s4849_m5_a10_guard_qualification` result directory, so the queued soak was
+not rerun and no port-side guard, traversal, or downstream conclusion is
+selected. The next work unit remains the queued soak consumption with its
+existing positive-control and phase-gated discriminator.
+
+This records only a partial/absent artifact state; it rules out neither
+A10-legitimate nor A10-suppression nor A10-invalid. No runtime, generated
+output, or mitigation change was made.
+ORIGIN: workspace state check, existing s4849 ledger entry, queue listing, and
+absence of the expected verdict/result artifacts; no experiment was rerun.
