@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4842)
+## Headline (as of s4843)
+
+- **s4843 closed the next generic CPU-trap class: `sync`.** The new census
+  found 7 generated occurrences at 6 file/guest-PC sites whose independent
+  big-endian retail-ELF words decode as valid SPECIAL funct `0x0F` encodings.
+  The generated-C CFG classified all 6 unique sites as data-like/unreachable;
+  raw words and annotations agree, and neither N64Recomp's operation maps nor
+  `fixup_game_funcs_vendored.py` contains a `sync` lowering. This selects
+  H-unhandled-data for this class, not a live translation defect; no runtime
+  change is authorized. Tables: `docs/M3-S4843-UNHANDLED-CPU-CENSUS.md` and
+  `docs/M3-S4843-UNHANDLED-CPU-REACHABILITY.md`.
 
 - **s4842 traced the reachable conditional-move defect to N64Recomp itself.**
   The source ELF contains the valid word `0x0022D34B` (`movn $k0,$at,$v0`) at
@@ -376,6 +386,10 @@ resolved (s4755: the tool ran; the old block was false).
    Conditional moves are now an identified N64Recomp operation gap, but no
    generated-output patch or runtime claim is authorised by the static audit.
    Do not chase a single wild address.
+1. **External retail-entry boundary:** M5 has no unqualified covered-route
+   step after s4836, and the M3 `sync` class is now closed by s4843. Retry the
+   parked retail-entry handoff only with a fresh oracle setup/route control;
+   do not infer a null from the known missing debugger core.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s

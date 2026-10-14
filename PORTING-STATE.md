@@ -156301,3 +156301,18 @@ fixup-loss and regeneration-drift for this site. No generated output, runtime
 behavior, or mitigation was changed.
 ORIGIN: source ELF plus pristine/generated output plus N64Recomp operation-map
 audit; no mitigation or guest behavior change.
+
+## Session 4843 (2026-10-14) — closed generated sync instruction class
+
+Ran one complete static census of generated `do_break` sites using the retail
+big-endian ELF as an independent raw-word source. The selected valid MIPS
+`sync` class (SPECIAL funct `0x0F`, reserved fields clear) contained 7
+occurrences at 6 unique file/guest-PC sites; all raw words agreed with the
+generated annotations. A per-function generated-C CFG classified all 6 unique
+sites as data-like/unreachable, with zero reachable sites. N64Recomp's
+operation maps and the vendored fixup contain no `sync` lowering, so this
+selects H-unhandled-data for the class and rules out a live `sync` translation
+defect. The broader generic-trap census remains a diagnostic inventory only;
+no generated output, runtime behavior, or mitigation changed.
+ORIGIN: independent retail ELF words, generated annotations, per-function CFG,
+and N64Recomp/fixup source audit; no mitigation or guest behavior change.
