@@ -143,12 +143,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-1. **VI-640 post-swap acknowledgement queue correlation** (s4799: mqdiag does not exist; use ROGUESQ_LOG_SWAP_ACK_WAIT=1; 0/5 stalls at low load, repeat under load>=11; new H4 = flag 0x8011A8C8 never clears) (NEXT.md,
-   HYPOTHESIS-ID `vi640-postswap-ack-queue`): at a live `vi-fs stalled=1`, split
-   H1 (ack never produced) / H2 (produced, not delivered) / H3 (intentional
-   frame-pair drop) by the existing `mqdiag` send/delivered/blocked/external/
-   requeued deltas plus one `sample <pid>`. Runtime change is not authorised
-   before this witness.
+1. **VI-640 stall trigger unknown (s4800):** 0/16 stalls across s4799+s4800 (load 5-12, swap-ack log on/off), vs 2/5 in s4794. Park the ack-queue witness until a stall is reproduced; first compare the s4794 recipe/binary against now (boring-first). Do not spend more runs under load.
 2. **Overlay-0x2C splice evaluation:** needs a mission-route driver that reaches
    `0x00690400` past the VI-640 stall (depends on #1), retaining the resident
    splice and positive controls. Do not infer splice effect from hangar-only runs.

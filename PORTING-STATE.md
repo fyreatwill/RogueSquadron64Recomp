@@ -155828,3 +155828,18 @@ unchanged for the next iteration.
 - ORIGIN: no mitigation added. No code changed.
 - Next: re-run the same script only when host load >= ~11 (s4794 conditions),
   or drive load deliberately (parallel busy loops) to reproduce the stall.
+
+## Session 4800 (2026-10-14) — VI-640 stall not reproducible under load or with swap-ack log toggled (0/16)
+
+Ran the s4799 gated swap-ack witness under 5 `yes` busy loops (load 5-8 at start,
+`scratch/agent/s4800_loaded_swapack.sh`): 0/5 stalled, all left VI 640 for 1024 at 48-50 s.
+Then a 6-pair interleaved A/B of `ROGUESQ_LOG_SWAP_ACK_WAIT` on/off at load 10-12
+(`scratch/agent/s4800_ab_flag.sh`, results `soak_results/s4800/summary.txt`): on 5/6 VI 1024 +
+1 startup death at t=2 s (the known intermittent startup crash), off 6/6 VI 1024 at 50-52 s.
+First A/B attempt was void (my gate treated the VI 320 boot frame as "left 640"; fixed, rerun).
+Result: 0 stalls in 16 runs, so neither host load nor the log flag explains why s4794 stalled 2/5.
+Positive control for the stall: none in-run (s4794 is cross-session). No swap-ack H1-H4 split was
+possible because no stall occurred. Rules out: log-flag perturbation as the cause of 0/5 in s4799;
+load >= 11 alone as sufficient. Stall trigger is therefore unknown (candidate: a build/binary change
+between s4794 and s4799, or a variable of the s4794 recipe not in this one). Third iteration on
+this slug without a discriminating result: pivot per iron rule 8.

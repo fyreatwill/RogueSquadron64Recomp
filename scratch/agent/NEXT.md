@@ -1,16 +1,11 @@
-# Reproduce the VI-640 stall under load, then read the swap-ack log
+# Find what differed between s4794 (stalled 2/5) and s4799/s4800 (0/16)
 
-HYPOTHESIS-ID: vi640-postswap-ack-queue
+HYPOTHESIS-ID: vi640-stall-trigger-delta
 
-s4799: mqdiag does not exist; the installed instrument is ROGUESQ_LOG_SWAP_ACK_WAIT=1
-(enter/pre-recv/post-recv). 5/5 low-load (5-8) runs left VI 640 at ~48-50 s; no
-stall, so no discrimination. Hypotheses: H1 ack never produced (frozen after last
-pre-recv, no post-recv), H2 produced but not delivered (same log; need the
-queue-side view), H3 intentional drop, H4 delivered but flag 0x8011A8C8 never
-clears (repeating enter/pre/post cycles in the log).
-
-Unit: run `zsh scratch/agent/soak_queue/done/s4799_swapack_gated.sh` (copy back
-to soak_queue or run directly from repo root, no `timeout` on macOS) while 4+
-busy loops (`yes >/dev/null`) push load >= 11; keep stalled runs. Compare
-run*_pre.log vs run*_post.log swap-ack line counts: frozen -> H1/H2, growing ->
-H4. A run that never stalls is route-invalid. Do not change runtime behavior.
+s4800: load 5-12 and ROGUESQ_LOG_SWAP_ACK_WAIT on/off are both ruled out as the sole trigger.
+Hypotheses: H1 binary changed between s4794 and s4799 (rebuild/apply script); H2 s4794 recipe had
+an env/arg or the `sample` call itself that perturbs; H3 stall depends on something outside the
+recipe (ROM/save state, window focus, display). Discriminator: diff `scratch/agent/soak_results/s4793/`
+recipe+env vs s4800, `git log --since=2026-10-13 -- tools lib submodule-patches build` and binary mtime
+vs s4794 run time; then rerun the s4794 recipe verbatim 5x. If it still shows 0/5, the stall is not
+currently reproducible: park the VI-640 thread and switch to M5-AUDIO-PLAN next step.
