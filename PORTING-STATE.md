@@ -156060,3 +156060,16 @@ instability as the selected explanation for the absent crash. The next unit is
 the existing M5 Step 11 second-MusyX-wait phase-gated A/B; no startup capture
 should be repeated without a new discriminator.
 ORIGIN: diagnostic-only witnesses; no mitigation or behavior change.
+
+## Session 4829 (2026-10-14) — qualified M5 Step 11 route lacks wait witness
+
+Ran the corrected same-build phase-gated A/B for the second MusyX wait, with
+default `ROGUESQ_AUDIO_SPIN2_YIELD` and the explicit zero rollback arm running
+concurrently. Both arms reached title and hangar, produced SP completions and
+nonzero PCM source/consumer joins, and emitted no crash marker. Both also
+showed second-spin arm and loop-return activity, but neither produced the
+required producer-clear/seed or wait-contract return witness; both loop
+returns reported `yields=0`. This makes the route invalid for selecting
+yield-safe versus yield-causal behavior and rules out only a pre-title/hangar
+route failure. The next unit is the pristine A9/A10 regeneration replay.
+ORIGIN: diagnostic-only witnesses; no mitigation or behavior change.
