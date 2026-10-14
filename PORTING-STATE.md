@@ -156753,3 +156753,9 @@ ORIGIN: no mitigation of an unknown writer; the writer of the extra copy is reap
 - ORIGIN: unchanged from s4875/s4878 - unmatched register (gate 0x800A0F50==0 at first teardown, retail 1); dedup reproduces retail's net dereg->register state. Gate-write force-zero stubs not touched (hung boot 4x).
 - Landed: default flipped ON in tools/apply_s4878_synth_dedup.py (getenv unset -> 1; ROGUESQ_S4875_DEDUP=0 disables) and patched the generated funcs_2.c in place (apply script is marker-idempotent); rebuilt; verified with env unset: 5760/5796.
 - Open: startup-crash rate with dedup vs without needs a larger paired sample (queue soak).
+
+## Session 4880 (2026-10-14) — queued paired dedup startup-crash soak (5 rounds x arms 1/0)
+- Wrote scratch/agent/soak_queue/s4880_dedup_crash_rate.sh: 5 rounds, each runs run_s4878_dedup.sh arm 1 and arm 0 concurrently (~100 s), copies per-run logs to soak_results/s4880/run_<arm>_<i>.log, greps SIGSEGV, writes summary.txt (crashes=N/5 per arm, reached_summary=N/5). Exits 1 if any crash.
+- Hypotheses: H-dedup-causes-crash (arm1 crashes >> arm0) vs H-known-intermittent (similar rates; s4879 saw 1/3 vs 0/1, too small). Discriminator: crash counts per arm, with reached_summary as the liveness control (an arm with 0 summaries is invalid, not clean).
+- No game run this iteration (one-run-at-a-time rule; the loop runs the queue). Verdict lands in SOAK-RESULTS.md. If crash rates match, the startup crash is orthogonal to dedup and gets its own origin question (writer of the bad si_addr/x1 value); if arm1 >> arm0, dedup stays default-on only with a documented gate.
+- ORIGIN: no new mitigation machinery; no behavior change.
