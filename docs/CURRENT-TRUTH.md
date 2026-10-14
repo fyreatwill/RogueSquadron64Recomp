@@ -468,6 +468,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Superseded conclusions to avoid repeating
 
+- **"M5 needs human authorization for the data_size writer trace; no de-stub step remains" (s4863).** Believable because every M5-AUDIO-PLAN step was closed and the trace looked like a new build+run. Overturned s4864: builds/runs are already permitted by ITERATION.md, and the data_size 1-vs-2 question is still an open, cheap discriminating experiment.
 - **"Loop must wait for the owner to choose a target / no retail framebuffer reference known" (s4729).** Believable because M5, M3, the rename sweep and 0x1F0D74 were all closed and the BLOCKED question was framed around a missing reference. Overturned s4730: the retail hangar RDP capture (`s4514_rdp_hangar512.bin`, 166 MB) and oracle video-plugin runs already existed, and choosing a target is in-scope prioritization.
 - **"Mission entry needs an owner-supplied recipe or savestate" (s4719-s4721).** Believable because ~10 button-press variants (s4657-s4720) never left the hangar/viewer/attract. Overturned s4722 as unproven: every variant varied button input only; forcing the mode variable in RDRAM was never tried, and the oracle reliably reaches the hangar unaided.
 
@@ -499,6 +500,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   inert chunk-2 record. Those interpretations were tested and closed.
 
 ## Next steps
+
+1. (s4864, authorized) Run `m5-task-family-retail-compare`: one build tracing data_size writers 0x8009106C/0x800911DC and musyxSynthFrame entry cadence, ROGUESQ_S4562_PAUSE 0 vs 4, plus oracle watch at 0x80091784 with whole-RDRAM control. Then close M5 and move to the rename sweep / VI-640 route wall.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
 on both arms after removing the observer crash; do not repeat the A/B.)
