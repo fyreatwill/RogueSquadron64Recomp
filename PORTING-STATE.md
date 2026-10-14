@@ -156478,3 +156478,21 @@ guard-suppression effect on the covered route. It does not authorize removing
 the guards or generalize to unreached sites.
 ORIGIN: `scratch/agent/soak_results/s4849_m5_a10_guard_qualification_retry/`
 with the route-order probe enabled; no runtime or generated behavior changed.
+
+## Session 4853 (2026-10-14) — qualified M5 route but descriptor target unreached
+
+The planned M5 descriptor/task-contract run used the existing image route,
+phase-gated title/hangar controls, route-order controls, PCM boundary logging,
+and the established autopilot. The DEBUG build succeeded. The run reached
+title and hangar, recorded 1,273 phase-5 `sp-complete-enter` and 1,273
+`sp-complete-return` rows, 1,273 `action-dequeue` rows, and 11,027 PCM rows;
+it had no crash or abort. The descriptor control, start, compare, and yield
+rows for target `0x800377C8` were all zero.
+
+This selects H-descriptor-unreached and rules out a route-invalid or missing
+positive-control explanation for this run. It does not establish a descriptor
+layout mismatch, and the exact target should not be repeated without a new
+route discriminator. The next M5 unit moves to the broader port-task-load
+contract boundary.
+ORIGIN: `scratch/agent/soak_results/s4853_m5_descriptor/port.log` and
+`verdict.txt`; no runtime behavior change was made.

@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4852)
+## Headline (as of s4853)
+
+- **s4853 found the targeted M5 descriptor control unreached on a qualified
+  image route.** The single-arm descriptor run reached title and hangar, with
+  1,273 phase-5 SP-complete enter/return rows, 1,273 action-dequeue rows, and
+  11,027 PCM rows; it had no crash or abort. The target
+  `0x800377C8` descriptor control, start, compare, and yield rows were all
+  absent. This selects H-descriptor-unreached, not a descriptor-layout defect;
+  do not repeat this exact target without a new route discriminator.
 
 - **s4852 qualified the A10 guard class as legitimate on the covered route.**
   The corrected same-build default/`ROGUESQ_A10_GUARD_OFF=1` pair reached title
@@ -478,6 +486,10 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
+0. **M5 descriptor target:** s4853 found the exact `0x800377C8` descriptor
+   control unreached despite title/hangar, SP, action, and PCM positive
+   controls. Do not repeat the same target; select the next M5 contract
+   boundary with a route-specific control.
 0. **M5 A10 guard-class qualification:** closed s4852 as H-A10-legitimate.
    The same-build default/guard-off pair had qualified route-order SP controls,
    32 writers, 262 identical audit/traversal rows, title/hangar, and nonzero
