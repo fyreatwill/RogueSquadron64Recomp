@@ -6,7 +6,14 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4855)
+## Headline (as of s4857)
+
+- **s4857 qualified the M5 host queue edge.** The same-build default and
+  rollback arms reached title and hangar, with 78/81 phase-5 PCM source rows
+  and 60/62 nonzero rows. Both had zero `[m5-audio-host-error]` rows, 546/549
+  successful queue edges, and consumer joins carrying the matching source
+  hash. This selects H-host-queue-valid and closes the SDL queue boundary;
+  no host-error suppression or consumer-join defect is selected.
 
 - **s4856 made the M5 host queue edge truthful.** `queue_samples` now records
   the `SDL_QueueAudio` return, reports phase-scoped host failures, and only
@@ -509,9 +516,15 @@ Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
 0. **M5 host queue validation:** s4856 changed the host bridge to reject failed
-   SDL queue calls from the PCM consumer join. Run the phase-gated source,
-   host-error, queue-delta, and consumer controls before interpreting the
-   Step 10 boundary.
+  SDL queue calls from the PCM consumer join. Run the phase-gated source,
+  host-error, queue-delta, and consumer controls before interpreting the
+  Step 10 boundary. **Closed s4857:** both arms had zero host errors and
+  matching nonzero source/consumer PCM joins; do not repeat without a new
+  host discriminator.
+0. **M5 A13 drain boundary:** the default-off `drainAudioAndFinalizeSpeechBuffer`
+  path and explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` control remain the next
+  unqualified M5 behavior boundary. Require title/hangar, task/SP, slot/status,
+  nonzero PCM, clean drain returns, and zero timeout rows in both arms.
 0. **M5 port-task-load contract:** s4854 found both the port-load control and
    rows absent despite positive title/hangar, SP, action, and PCM controls.
    This is a single-source route result; do not infer a task-contract defect

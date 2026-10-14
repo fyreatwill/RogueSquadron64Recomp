@@ -156545,3 +156545,13 @@ then compare host-error rows, queue deltas, and consumer joins.
 ORIGIN: `src/main/main.cpp` queue_samples host bridge; build completed with
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build
 build --config Debug --target RogueSquadron64Recomp`.
+## Session 4857 (2026-10-14) — qualified M5 host queue boundary
+
+The rebuilt DEBUG target passed. The prescribed phase-gated same-build audio
+run reached title and hangar in both image arms. Default/rollback recorded
+78/81 phase-5 PCM source rows, 60/62 nonzero source rows, zero
+`[m5-audio-host-error]` rows, and 546/549 successful queue edges; consumer
+joins carried the matching source hash. This selects H-host-queue-valid and
+closes the SDL queue/consumer boundary. It rules out failed SDL queue calls
+being silently counted as consumer playback on this route. This is one
+runtime run with two same-build arms; retain the result as route-scoped.
