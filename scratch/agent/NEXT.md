@@ -2,6 +2,7 @@
 
 HYPOTHESIS-ID: m5-task-family-retail-compare
 
-s4866: retail reset:incr:store = 702:1343:702 (loop bound 2, ra 0x80091338 at reset, 0x800910b0 at incr); port 2:1:1.
-Hypotheses: (H1) loop-bound halfword 0x8014974E (read at 0x800911C8) is 1 in the port, 2 in retail (upstream writer differs); (H3) port's extra reset comes from a second caller not in retail.
-Discriminator: extend tools/apply_s4864_datasize_trace.py to log MEM_HU(0x8014974E) at each incr/reset and the caller ra at each reset (ROGUESQ_LOG_S4864=1); also oracle --pc-field-dump or a watch-write on physical 0x14974E to find the retail writer PC and value. Control: histogram total == store count.
+s4867: loop bound is 3 in both (refuted). Retail 703 entries:703 builds:702 stores, branch 0x80091390 always taken. Port has ~2 synth entries per store; the extra one takes FALL (ring byte 0x801496F0 advanced), counter 0, no store.
+Hypotheses: (H-A) the port runs runAiAudioStreamPlaybackLoop's producer write 0x8008EE6C twice per synth entry, retail once; (H-B) producer writes match but the port invokes synth twice per frame (second host/guest trigger); (H-C) timing only (port audio frames shorter).
+Discriminator: retail oracle --watch-pc 0x8008EE6C,0x8008EE04,0x8009123C (control whole-RDRAM) vs port count of 0x8008EE6C (add kind to tools/apply_s4869_join.py style helper) over the same hangar window. Equal producer:entry ratio 1:1 in retail and 2:1 in port -> H-A; 1:1 in both -> H-B (then log thread id/sp at each entry). Also record why retail TAKEN builds see 1.9 incrs.
+Do not retry ra logging (r31 = 0 in the port).

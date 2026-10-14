@@ -501,7 +501,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-1. (s4866) Retail oracle (control passed) shows reset:incr:store = 702:1343:702 (1:1.9:1, loop bound 2); port is 2:1:1. Next: port-side log of the loop-bound halfword 0x8014974E (read at 0x800911C8) and of reset callers' ra vs retail ra=0x8091338 (reset), 0x800910b0 (incr). Then close M5 and take the rename sweep / VI-640 route wall.
+1. (s4867) Loop bound 0x8014974E is 3 in retail AND port (writer 0x8008F20C, 5 writes each) - the s4866 "bound 2" was wrong. Retail = 703 synth entries : 703 builds : 702 stores, branch 0x80091390 always taken. Port: ~2 synth entries per store; the extra entry takes the FALL path (ring byte 0x801496F0 already advanced by runAiAudioStreamPlaybackLoop 0x8008EE6C), has counter 0 and stores nothing. Next: retail vs port counts of the 0x8008EE6C producer write per synth entry, and which guest thread runs each port entry (r31 is 0 in the port, no ra logging). Residual: retail TAKEN builds average 1.9 incrs, port TAKEN builds 1. Then close M5 and take the rename sweep / VI-640 route wall.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
 on both arms after removing the observer crash; do not repeat the A/B.)
