@@ -1,35 +1,19 @@
-# Next work unit (M5 task-contract route discriminator)
+# Next work unit (M5 task-family retail comparison)
 
-HYPOTHESIS-ID: m5-task-contract-route-discriminator
+HYPOTHESIS-ID: m5-task-family-retail-compare
 
-WORK UNIT: build one phase-gated task-family provenance table on the qualified
-image route. Correlate every phase-5 image `M_AUDTASK` publication with its
-guest task pointer, declared data/output fields, image completion, SP
-completion, and PCM source row. This must be a new route discriminator for the
-s4854 port-load null; do not repeat the old target control unchanged.
+s4860 showed the port publishes one stable audio task family (task 0x80149470,
+type 2, ucode 0x80099FE0/0x1000, ucode_data 0x800A4E00/0x800, data_ptr
+0x80171CE0 title / 0x80171E70 hangar, data_size mostly 1). Port-only evidence.
 
-Competing hypotheses:
+WORK UNIT: use tools/oracle (retail ROM, mupen64plus) to read the same OSTask
+at physical 0x00149470 (+words) and the data_ptr/data_size at title and hangar
+VI phases, after the whole-RDRAM positive control (~10000 hits). Compare with
+the port table.
 
-* H-task-load-live: phase-5 image tasks publish a stable task family and the
-  task-field row joins image completion, SP completion, and nonzero PCM.
-* H-task-load-unreached: the qualified route reaches title/hangar and PCM but
-  never publishes the target task family in phase 5.
-* H-task-route-invalid: the new task-family control or title/hangar/SP/PCM
-  controls fail, so task-load absence is unevaluable.
-
-DISCRIMINATING MEASUREMENT: one build/run must include the task-family table,
-publication ordinal, completion/SP joins, title/hangar controls, and nonzero
-PCM control. A valid phase-5 task row joined to completion and PCM selects
-H-task-load-live; a positive route with zero target-family rows selects
-H-task-load-unreached; missing phase or completion/PCM controls selects
-H-task-route-invalid. The table must include all candidate image task fields
-in one run, not one field per iteration.
-
-Exact commands:
-
-    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s4860_m5_task_family.sh
-
-Before building, inspect the existing task publication/route-order helpers and
-run the retail oracle with its whole-RDRAM positive control plus title/hangar
-VI controls. Keep the qualified image route and use SIGKILL in the recipe.
+Hypotheses: H-retail-match (same ptr/fields/data_size=1 -> task contract
+cleared, drop it from M5 backlog); H-retail-differs (data_size or ucode_data
+differ -> name the writer before any fix, rule 11); H-oracle-invalid (control
+or VI phases missing -> unevaluable).
+Discriminator: retail field words vs the s4860 table in
+scratch/agent/soak_results/s4860_m5_task_family/verdict.txt.

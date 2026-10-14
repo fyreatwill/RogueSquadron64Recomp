@@ -550,6 +550,7 @@ resolved (s4755: the tool ran; the old block was false).
    independently reached title/hangar and showed nonzero AI length plus busy
    status. Do not change the status/length shims or repeat this caller probe.
    Select the next M5 contract boundary with a fresh route discriminator.
+0. **M5 task family (s4860):** the qualified route publishes one stable audio task family (0x80149470, type 2, ucode 0x80099FE0, data_ptr 0x80171CE0 title / 0x80171E70 hangar, data_size mostly 1), joined to 2104 SP completions and 79 nonzero PCM rows; s4854's "rows absent" was a control artifact. Port-only; next: compare with retail via oracle (NEXT.md).
 0. **M5 port-task-load contract:** s4854 found both the port-load control and
    rows absent despite positive title/hangar, SP, action, and PCM controls.
    This is a single-source route result; do not infer a task-contract defect

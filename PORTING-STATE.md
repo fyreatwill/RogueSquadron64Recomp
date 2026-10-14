@@ -156585,3 +156585,24 @@ were 1,024 phase-scoped `set-next` calls, zero `get-status` calls, and zero
 the status/length shims are not a covered-route PCM explanation. It rules out
 changing those shims based on this route and closes the caller probe; no runtime
 behavior change was made.
+
+## Session 4860 (2026-10-14) — M5 task-family provenance table: task contract is live
+
+Added `scratch/agent/run_s4860_m5_task_family.sh` (the qualified s4859 image
+route with `ROGUESQ_LOG_M5_TASK_LIFETIME`, `_TASK_CONTRACT`, `_DOWNSTREAM`
+armed, plus offline family aggregation) and ran it on the existing DEBUG build
+(no source change; the s4855 crash at 0x400128d47 did not recur). Controls:
+title=1, hangar=1, sp_enter=sp_return=2104, nonzero PCM rows=79, crash=0,
+abort=0. Result: the phase-5/phase-4 audio task is ONE stable family: task
+0x80149470 (consume rows print 0x80149473 because events.cpp logs `offset ^ 3`,
+a byte-swap artifact, not a different task), type 2, boot 0x800825D0/0xD0,
+ucode 0x80099FE0/0x1000, ucode_data 0x800A4E00/0x800, data_ptr alternating
+0x80171CE0 (title, width 1024) and 0x80171E70 (hangar, width 512), with rare
+0x80173B20; data_size is 1 in ~97% of rows (2 or 3 occasionally); output/yield
+fields zero. ~250 enqueue and ~240 consume rows per phase (512-row cap per
+phase). `[m5-task-contract]` rows = 0 (that logger did not fire on this route;
+not interpreted). Selects H-task-load-live and shows s4854's "port-load rows
+absent" was a control/route artifact, not an absence of audio tasks. Rules out
+H-task-load-unreached and H-task-route-invalid for this route. Not shown:
+whether data_size==1 and the data_ptr values match retail (single-source: port
+only). No runtime behavior change; no mitigation added.
