@@ -1,41 +1,36 @@
 # Resume next work unit
 
-HYPOTHESIS-ID: m3-conditional-move-census
+HYPOTHESIS-ID: m3-conditional-move-reachability
 
-WORK UNIT: perform one complete static census of the next unclosed generated
-conditional-move class (`movz`, `movn`) in
-`../N64Recomp/RecompiledFuncs/funcs_*.c`. Do not chase a single wild address
-and do not add a guard before the whole class is enumerated.
+WORK UNIT: classify every one of the 149 file/guest-PC `movz`/`movn` sites in
+`docs/M3-S4840-MOVZ-MOVN-CENSUS.md` as (a) post-return/unreachable, (b)
+data-like/unreachable by generated control flow, or (c) reachable from a
+generated entry/control-flow edge. Do not implement a fix yet.
 
 Competing hypotheses:
 
-* H-conditional-move-faithful: every site has the expected conditional
-  assignment or preserved destination.
-* H-conditional-move-mismatch: at least one site assigns on the wrong
-  predicate or writes an incorrect source/destination.
-* H-conditional-move-intervening-write: a source, destination, or predicate
-  register is clobbered before the generated conditional operation.
-* H-conditional-move-route-gap: the class is faithful, but suspicious sites
-  (if any) lack qualified-route reachability evidence.
+* H-movz-movn-reachable: at least one nonzero-destination site is reachable;
+  the `do_break` lowering is a live translation defect and needs a fixup-level
+  implementation audit.
+* H-movz-movn-latent: all sites are post-return or data-like/unreachable;
+  the defect is latent on the generated control-flow graph and is not the
+  current runtime explanation.
+* H-movz-movn-route-gap: static CFG classification cannot prove reachability
+  for the qualified route; no runtime conclusion is authorised.
 
-DISCRIMINATING MEASUREMENT: enumerate every `movz`/`movn` site twice, mapping
-guest PC, function, operands, generated branch/assignment shape, and the next
-three guest instructions. The expected form preserves the destination for a
-false predicate and assigns the source only for the true zero/nonzero
-predicate. H-conditional-move-faithful is selected if both passes agree and
-every site matches; mismatch or intervening write is selected by a concrete
-exception; route-gap remains only if static evidence is clean but reachability
-is absent.
-The qualified title/hangar phase/SP/PCM route is the positive control, but no
-site-level reachability claim may be made from it alone.
+DISCRIMINATING MEASUREMENT: for all 149 file/PC sites, independently inspect
+the containing generated function's entry, labels, unconditional returns,
+indirect-return blocks, and incoming generated gotos. Record one classification
+and the exact predecessor evidence per site. H-movz-movn-reachable is selected
+by any nonzero-destination site with a reachable predecessor; H-movz-movn-latent
+by an all-unreachable table; H-movz-movn-route-gap only if the generated CFG
+cannot decide a site. A runtime soak is not needed for this static discriminator.
 
 Exact commands:
 
-    grep -n '^## Session ' PORTING-STATE.md | tail -15
-    rg -n '\b(movz|movn)\b' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    python3 tools/census_movz_movn.py --output docs/M3-S4840-MOVZ-MOVN-CENSUS.md
+    rg -n 'RECOMP_FUNC|return;|LOOKUP_FUNC|goto |L_[0-9A-F]+' ../N64Recomp/RecompiledFuncs/funcs_27.c ../N64Recomp/RecompiledFuncs/funcs_37.c ../N64Recomp/RecompiledFuncs/funcs_49.c
 
-Write the bounded census to a new `docs/M3-S4839-*.md` only if the
-class is found and classified. If a real runtime defect is proven, land the
-smallest durable fix through the appropriate fixup script; otherwise the
-census itself is the work result. Do not build or run until the hypotheses and
-the discriminator above are still sufficient for every possible outcome.
+The s4840 table and parser are the fixed input. If a live site is proven,
+inspect the fixup/regeneration path before changing generated output; if all
+sites are latent, park this class and choose the next complete M3 census.

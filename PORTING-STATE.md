@@ -156250,3 +156250,21 @@ route does not establish site-level reachability, so no route claim is made.
 The bounded census is recorded in
 `docs/M3-S4839-VARIABLE-SHIFT-CENSUS.md`; no runtime fix or guard was warranted.
 ORIGIN: static generated-code census; no mitigation or guest behavior change.
+## Session 4840 (2026-10-14) — found generated conditional-move translation defect
+
+Performed the complete generated `movz`/`movn` census requested by
+`scratch/agent/NEXT.md` over `../N64Recomp/RecompiledFuncs/funcs_*.c`. The
+textual pass found 179 occurrences: 95 `movz` and 84 `movn`, across 149
+file/guest-PC sites after retaining duplicate emitted copies. There were 35
+direct annotations and 144 `.word` annotations. An independent SPECIAL-field
+decoder agreed with the annotated opcode and register operands for all 144
+`.word` sites. Every occurrence's generated host body is `do_break`; 115 have
+nonzero destination registers and therefore are not harmless `$zero` writes.
+
+This does not select faithful conditional-move lowering. It also does not yet
+select runtime causality: the sites cluster in data-like/obfuscated regions,
+and several follow generated indirect-return paths, so site reachability is
+still unmeasured. No runtime fix or guard was landed. The complete occurrence
+table and reproducible two-pass parser are in
+`docs/M3-S4840-MOVZ-MOVN-CENSUS.md` and `tools/census_movz_movn.py`.
+ORIGIN: static generated-code census; no mitigation or guest behavior change.
