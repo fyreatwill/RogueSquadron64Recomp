@@ -3,35 +3,37 @@
 HYPOTHESIS-ID: m5-qualified-route-startup-contract
 
 The M5 Step 1 A/B is parked until the documented qualified route reaches its
-VI-640 positive control. s4824 changed the harness to launch the tuple and
-showed a new pre-control failure: default stops at VI 320 after 10 SP
-completions; request-only crashes in `spTaskSchedulerThread+8972` with
-`si_addr=0x400128d47` after one completion.
+VI-640 positive control. s4825 showed that both arms share the first SP task
+and scheduler dispatch; request-only crashes after that completion, before
+any `osSpTaskYielded` A/B row, at `si_addr=0x400128d47`.
 
-Single bounded work unit: audit and symbolicate this startup boundary, without
-another Step 1 A/B or a mitigation. Competing hypotheses:
+Single bounded work unit: add one batch of host-boundary witnesses and run the
+same phase-gated pair, without another Step 1 A/B or a mitigation. Competing
+hypotheses:
 
-* H-common-route: LLE/real-audio startup fails in both arms before VI 640;
-  select if the default stop and request-only crash share the same guest task,
-  queue, or state transition.
-* H-request-state: request-only handling corrupts scheduler state; select only
-  if the request-only crash maps to a state/queue write absent from the default
-  arm at the same phase.
-* H-stale-route: the tuple is not actually the qualified route in this binary;
-  select if source/config inspection finds a missing or overridden flag, stale
-  generated function, or route gate before the first VI-640 transition.
+* H-pointer-conversion: `TO_PTR`/task-field conversion produces the malformed
+  host address; select if the bad address first appears at conversion or task
+  field logging in both arms.
+* H-startgo/enqueue: the task is valid until `osSpTaskStartGo` or
+  `submit_rsp_task`; select if conversion is valid and the first bad address
+  appears in one of those boundaries in both arms.
+* H-request-state: request-only changes a scheduler/task field before the
+  fault; select only if the request-only arm diverges in the complete bounded
+  state table before the first bad address.
 
-Discriminating measurement: symbolicate `spTaskSchedulerThread+8972`, map its
-guest PC and nearby generated function to source, then compare the bounded
-VI-320 rows and first-SP task/queue state in both saved logs. Outcomes must
-identify a shared common boundary, a request-only-only state mutation, or a
-configuration/build mismatch; otherwise remain blocked on the specific missing
-route evidence. Commands:
+Discriminating measurement: in one build/run, log the task guest pointer and
+all task fields at `osSpTaskStartGo`, `TO_PTR`, and `submit_rsp_task`, plus the
+first host address rejected by the RDRAM accessor. A whole-RDRAM/task-validity
+control must fire in the same run. The first site to emit `0x400128d47` splits
+conversion from start/enqueue; any request-only-only field divergence selects
+the third hypothesis. If no site sees it, remain blocked on a native crash
+stack with symbols.
 
 ```sh
-atos -o build/RogueSquadron64Recomp -l 0x100000000 0x1056dc634
-rg -n -C 8 "spTaskSchedulerThread|0x8000834c|request.only|SP_YIELDED|LLE_FORCE|AUDIO_UCODE" src lib RecompiledFuncs tools
-grep -a -n -E "\[phase\]|\[event-wiring\] complete kind=SP|\[CRASH\]|spTaskSchedulerThread|\[sp-yielded-ab\]" scratch/agent/m5_yield_ab/default.log scratch/agent/m5_yield_ab/request-only.log
+rg -n -C 8 "TO_PTR|osSpTaskStartGo_recomp|submit_rsp_task|0x400128d47|SP_YIELDED_REQUEST_ONLY" src lib ../N64Recomp/RecompiledFuncs tools
+sed -n '1220,1265p' lib/N64ModernRuntime/ultramodern/src/events.cpp
+sed -n '44,112p' lib/N64ModernRuntime/librecomp/src/sp.cpp
+zsh tools/run_m5_yield_ab.sh
 ```
 
 Do not rerun `tools/run_m5_yield_ab.sh` until this audit identifies a route

@@ -156002,3 +156002,17 @@ This does not select audio degeneracy, incomplete task contract, or request-only
 lifecycle causality; it does identify the qualified tuple's startup route as the
 next boundary to resolve. ORIGIN: no mitigation or behavior change; harness
 configuration and run-only qualification.
+## Session 4825 (2026-10-14) — audited qualified-route startup boundary
+
+Audited the existing s4824 same-build A/B logs and current generated/runtime
+sources without rebuilding or rerunning. Both arms shared the first SP task,
+queue `0x8011A420`, message `0x80128C70`, type-0x81 dispatch, LLE task
+`0x80720108`, and one completion. Default reached ten completions and stopped
+at VI 320; request-only crashed after one completion at host
+`spTaskSchedulerThread+8972`, `si_addr=0x400128d47`. The request-only log had
+zero `[sp-yielded-ab]` rows, so `osSpTaskYielded`'s request-only exchange did
+not execute. `0x8000834c` is the stale delay-slot breadcrumb after
+`drainMeshReleaseQueue`, not a faulting instruction. This selects a common
+pre-control scheduler/host boundary and rules out request-only lifecycle
+causality for this capture; the malformed-pointer writer remains open.
+ORIGIN: diagnostic-only audit; no mitigation or behavior change.
