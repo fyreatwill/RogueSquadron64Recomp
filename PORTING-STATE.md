@@ -155950,3 +155950,6 @@ ORIGIN: no mitigation added; census only, no guard.
 
 Ran tools/census_ctc1.py on the ROM and cross-checked generated funcs. Only guPerspective (funcs_8.c:1770-1861) uses get/set_cop1_cs; the port drops FCSR flag bits so its overflow-fixup branch is dead, but the input range (0,65536] never overflows and inf yields the same 0xFFFF. Rounding mode is set/restored inside the function with no yield. Details: docs/M3-S4816-CTC1-CENSUS.md. Closed M3 classes: mem access, divide, float->int, float compare, FCSR moves.
 ORIGIN: no mitigation added; census tool + doc only (no wild value involved).
+
+## Session 4817 (2026-10-14) — M3 mult/multu/dmult/dmultu lowering census: all exact, class closed
+Ran tools/census_mult.py (mult 566, multu 104, dmult 50, dmultu 64 sites) and inspected the lowerings; all are exact MIPS semantics via 64/128-bit widening, no UB. See docs/M3-S4817-MULT-CENSUS.md. ORIGIN: no mitigation added (nothing wrong found). Static, single-source.
