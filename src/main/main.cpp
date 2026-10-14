@@ -5226,6 +5226,29 @@ extern "C" void rs64_m5_status_table_store(uint8_t* rdram, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_spin2_gate_store(char width, uint32_t pc,
+                                           uint32_t addr, uint32_t value) {
+    static int enabled = -1;
+    static uint32_t rows = 0;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_WAITMUSYX_SPIN2");
+        enabled = (e && e[0] && e[0] != '0') ? 1 : 0;
+    }
+    if (!enabled || width != 'B') return;
+    if ((addr & 0x1FFFFFFCu) != 0x0014974Cu || rows >= 256u) return;
+    const uint32_t vi = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = (vi == 1024u && origin == 0x00790400u) ||
+                        (vi == 512u && origin == 0x006AB400u);
+    if (!target) return;
+    std::fprintf(stderr,
+        "[waitmusyx-spin2-writer] row=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X addr=0x%08X phys=0x%06X value=0x%02X thr=%d\n",
+        rows++, rs64_phase_ord(), vi, origin, pc, addr, addr & 0x1FFFFFFFu,
+        value & 0xFFu, rogue_current_thread_id(nullptr));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_field348_candidate_store(uint32_t writer_pc,
                                                      char width,
                                                      uint32_t store_pc,

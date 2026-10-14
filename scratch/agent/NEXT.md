@@ -2,11 +2,11 @@
 
 HYPOTHESIS-ID: m5-step11-clear-discriminator
 
-Single bounded work unit: add one independent, phase-scoped clear-site
-discriminator for the second MusyX wait, rebuild once, and run the same-build
-default / `ROGUESQ_AUDIO_SPIN2_YIELD=0` pair. The current logger's arm and loop
-rows fire, but its expected `waitmusyx-spin2-clear` row is absent in both arms;
-do not repeat the prior A/B unchanged.
+Single bounded work unit: choose and implement one new route discriminator or
+stabilizing change for the Step 11 pair, then rebuild and rerun the same-build
+default / `ROGUESQ_AUDIO_SPIN2_YIELD=0` arms. The new phase-scoped writer table
+is present, but two attempts stopped before hangar with no PCM/gate controls;
+do not interpret its zero rows.
 
 Competing hypotheses:
 
@@ -31,8 +31,7 @@ no expected-PC execution but another writer's 1->0 selects H-clear-site-other-
 writer; no clear writer in either arm selects H-clear-site-unreached; missing
 phase controls selects H-route-regressed.
 
-Preparation: update the vendored fixup source (not generated output) with the
-single table above, keeping all rows phase-scoped; build
+Preparation: select the route discriminator before editing; build
 `cmake --build build --config Debug --target RogueSquadron64Recomp`; run
 `zsh tools/run_m5_yield_ab.sh` from the repo root. Keep
 `ROGUESQ_STUB_MISSING_FUNCS=1`, LLE force/ungated/solo, host spin yield, and

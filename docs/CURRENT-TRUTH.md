@@ -6,7 +6,12 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4833)
+## Headline (as of s4834)
+
+- **s4834 clear-site discriminator was route-invalid twice.** Both same-build
+  default/rollback attempts reached VI 640, title 1024, 64 SP completions, and
+  the existing second-wait arm/return rows, but crashed before hangar. PCM and
+  phase-scoped gate controls were absent, so no Step 11 hypothesis is selected.
 
 - **s4833 stabilized the M5 Step 11 route but did not qualify the clear edge.**
   The corrected same-build default/rollback pair used `STUB_MISSING_FUNCS=1`
@@ -137,6 +142,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   qualified title/hangar phases in both yield arms. The wait logger records
   arm and return activity but no clear-site row in either arm; do not repeat
   the same A/B without a new clear-site discriminator.
+- **M5 Step 11 s4834 discriminator:** the fixup source now logs every
+  phase-scoped byte store overlapping physical `0x14974C` with guest PC, value,
+  and thread, and the named clear row records pre/post values. Two captures
+  were route-invalid before hangar; no writer-origin conclusion is selected.
 - **musyxSynthFrame `+5808` crash family: closed for idle title/hangar (s4786).**
   Cause: synth ticking over the audio arena freed by the retail-legitimate
   `musyxNoopStub` teardown (s4782/s4783: retail never ticks the synth between
@@ -236,6 +245,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
+(s4834: the writer table was built, but two attempts reached only title before
+crashing; retry after a new route discriminator.)
 (s4833: route-stabilizing Step 11 A/B reached title/hangar in both arms, but
 the clear-site witness was absent in both. Do not repeat the same A/B; make the
 clear-site instrumentation itself discriminating.)
@@ -253,11 +264,10 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 Step 11 validation:** s4832 corrected the logger but hit the known
-   startup-route instability before the phase gate. Run one new same-build
-   default/rollback capture using the route-stabilizing tuple from the prior
-   qualified wait recipe (`ROGUESQ_STUB_MISSING_FUNCS=1` and its phase-gated
-   autopilot), retaining exact producer-arm/clear/loop-return witnesses.
+0. **M5 Step 11 validation:** s4834's writer table is complete, but two
+   same-build captures stopped before hangar with no PCM/gate controls. Do not
+   interpret the writer null. Find one new route discriminator or stabilizing
+   change, then rerun the same-build pair.
 1. **M5 next behavior validation:** Step 1 is qualified by s4831. Continue at
    the next not-yet-qualified M5 plan row with a same-build rollback/control;
    do not repeat the invalid request-only route.

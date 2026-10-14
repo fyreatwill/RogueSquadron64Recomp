@@ -5921,6 +5921,9 @@ def apply_s2238_field348_writer():
                                            uint32_t addr, uint32_t value);
         rs64_m5_field348_store(width, pc, addr, value);
     }
+    extern void rs64_m5_spin2_gate_store(char width, uint32_t pc,
+                                          uint32_t addr, uint32_t value);
+    rs64_m5_spin2_gate_store(width, pc, addr, value);
 '''
     changed = 0
     anchor = 'static void rs64_probe_submit_gate_store(char width, uint32_t pc, uint32_t addr, uint32_t value) {\n'
@@ -8682,7 +8685,9 @@ static void rs64_s2278_m5_keyon_transfer(uint8_t* rdram, uint32_t site,
                     "            extern int rogue_current_thread_id(uint8_t* rdram);\n"
                     "            static int s_wspin2clr_n = 0;\n"
                     "            if (s_wspin2clr_n < 40) {\n"
-                    "                fprintf(stderr, \"[waitmusyx-spin2-clear] n=%d thr=%d\\n\", s_wspin2clr_n, rogue_current_thread_id(rdram));\n"
+                    "                uint32_t gate_addr = U32(ADD32(ctx->r1, -0X68B4));\n"
+                    "                uint32_t gate_before = U32(MEM_BU(ctx->r1, -0X68B4));\n"
+                    "                fprintf(stderr, \"[waitmusyx-spin2-clear] n=%d thr=%d pc=0x800912F8 addr=0x%08X before=0x%02X after=0x00\\n\", s_wspin2clr_n, rogue_current_thread_id(rdram), gate_addr, gate_before);\n"
                     "                s_wspin2clr_n++;\n"
                     "            }\n"
                     "        }\n"
