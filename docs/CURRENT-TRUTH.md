@@ -6,7 +6,9 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4797)
+## Headline (as of s4802)
+
+- **`ROGUESQ_OVL2C_DROP` was dead code since s4773 (s4802).** The splice route preceded the drop branch, so every DROP=0/1 A/B compared the splice with itself. Now `ROGUESQ_OVL2C_MODE` 0=splice (default) 1=drop 2=none (`tools/apply_s4805_ovl2c_mode.py`, fixup synced). s4806 three-arm run (single run each, cross-run caveat): routing 0x2C cuts phase-3 RDP submissions ~3x (513k vs 1.53M unrouted), but phases 5/6 are identical in all arms (~254k / ~955k) and the splice adds no measurable texrects at the mission origin. The old "0xBD arrival <=> runaway" claim does not extend to phase 6. VI-640 phase 3 lasts ~50 s in every run (s4803); transient `stalled=1` lines there are normal.
 
 - **VI-640 stall = presentation-side symptom (s4797, same-run `sample` control).**
   At a live `vi-fs stalled=1`, `update_screen` ordinals advance and the Gfx
@@ -144,9 +146,10 @@ Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
-2. **Overlay-0x2C splice evaluation:** needs a mission-route driver that reaches
-   `0x00690400` past the VI-640 stall (depends on #1), retaining the resident
-   splice and positive controls. Do not infer splice effect from hangar-only runs.
+2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s
+   (s4802/s4806), no driver needed. Next: frame-align m0 (splice) vs m1 (drop)
+   phase-6 RDP against retail s4733 rdp.bin and diff texrect content; submission
+   counts do not discriminate.
 3. **M5 callback teardown:** park unless a route that reaches
    `shutdownAudioEngine` appears; keep M5 plan going otherwise.
 4. **Attached-mesh mission watches:** the s4724 recipe reaches a mission; could

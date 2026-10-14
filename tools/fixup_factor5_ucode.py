@@ -1698,8 +1698,17 @@ if is_main_ucode and OVL2C_MARKER not in text:
         r"/\* fixup: ovl24route \*/\n)"
     )
     text, n = anchor.subn(
+        # s4805: one switch (ROGUESQ_OVL2C_MODE 0=splice 1=drop 2=none); keep in sync
+        # with tools/apply_s4805_ovl2c_mode.py BLOCK. Fixup 24's drop branch used to sit
+        # after this test and was dead code.
         lambda m: "            if (RSP_MEM_BU(0X153, 0) == 0x2C) {"
-                  " rs64_e9prov_ovl_route(0x2C, 0x1DB0); goto OVL2C_1DB0; }  "
+                  " static int rs64_2c_mode = -1;"
+                  " if (rs64_2c_mode < 0) { const char *m = std::getenv(\"ROGUESQ_OVL2C_MODE\");"
+                  " const char *d = std::getenv(\"ROGUESQ_OVL2C_DROP\");"
+                  " rs64_2c_mode = (m && *m) ? (*m - '0') : ((d && *d == '1') ? 1 : 0); }"
+                  " if (rs64_2c_mode == 0) { rs64_e9prov_ovl_route(0x2C, 0x1DB0); goto OVL2C_1DB0; }"
+                  " if (rs64_2c_mode == 1) { rs64_e9prov_ovl_route(0x2C, 0x1DB0);"
+                  " r17 = RSP_ADD32(r17, 0X10); goto L_10D8; } }  "
                   + OVL2C_MARKER + "\n" + m.group(1), text, count=1)
     if n != 1:
         print("fixup_factor5_ucode: FIXUP 6r ROUTE ANCHOR FAILED", file=sys.stderr)
@@ -3469,7 +3478,7 @@ if is_image_ucode and IMAGE_BREAK_MARKER not in text:
 # DL walk continues. Stopgap until the RSPRecomp splice (UNBLOCK.md) lands;
 # ROGUESQ_OVL2C_DROP=0 disables it.
 OVL2C_DROP_MARKER = "/* fixup: ovl2cdrop */"
-if OVL2C_DROP_MARKER not in text:
+if OVL2C_DROP_MARKER not in text and OVL2C_MARKER not in text:  # s4805: drop is folded into the 6r mode switch
     _a = ("            goto L_1DB0;\n        case 0x1504: goto L_1504;")
     _n = text.count(_a)
     if _n != 1:
