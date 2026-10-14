@@ -6,7 +6,9 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4880)
+## Headline (as of s4882)
+
+- **s4882:** startup SIGSEGV (si_addr 0x400128d47) reproduced with a new crash-handler ctx-scan; first scan window (from sp) found no ctx (hits=0, null; ctx likely below sp). Window widened to sp-0x2000 in source, needs rebuild + rerun. Writer still unnamed.
 
 - **s4859 closed the M5 A16 AI-shim caller boundary.** The independent retail
   oracle fired its whole-RDRAM positive control at 10,000 callbacks, reached

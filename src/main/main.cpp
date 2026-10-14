@@ -9944,6 +9944,37 @@ int main(int argc, char* argv[]) {
                         "[CRASH][mcontext] fp=0x%016llx lr=0x%016llx sp=0x%016llx cpsr=0x%08x\n",
                         (unsigned long long)ss.__fp, (unsigned long long)ss.__lr,
                         (unsigned long long)ss.__sp, (unsigned)ss.__cpsr);
+                    // s4882: name the zero-extended guest register. The faulting
+                    // address is rdram + 0x80000000 + (u32 guest), so a ctx slot
+                    // holding a ZERO-extended 0x8xxxxxxx value is the writer's
+                    // victim. Scan this thread's stack for recomp_context-shaped
+                    // blocks (r0==0) and print every slot that matches far.
+                    {
+                        const uintptr_t stk_top = (uintptr_t)pthread_get_stackaddr_np(pthread_self());
+                        // s4882b: x5 sat 0x170 BELOW sp in the first capture, so start
+                        // below sp (dead frames) -- the s4882a scan from sp found 0 hits.
+                        const uintptr_t lo = ((uintptr_t)ss.__sp - 0x2000) & ~(uintptr_t)7;
+                        const uint64_t far_ = (uint64_t)es.__far;
+                        int hits = 0;
+                        for (uintptr_t p = lo; p + 32 * 8 <= stk_top && p < lo + 0x40000 && hits < 8; p += 8) {
+                            const volatile uint64_t* c = (const volatile uint64_t*)p;
+                            if (c[0] != 0) continue;
+                            for (int r = 1; r < 32; r++) {
+                                const uint64_t v = c[r];
+                                if ((v >> 32) == 0 && (uint32_t)v >= 0x80000000u &&
+                                    (uint32_t)(far_ - v) - 0x80000000u < 0x10u) {
+                                    fprintf(stderr, "[CRASH][ctx-scan] ctx=0x%llx r%d=0x%llx (stack+0x%llx)\n",
+                                        (unsigned long long)p, r, (unsigned long long)v,
+                                        (unsigned long long)(p - lo));
+                                    for (int q = 1; q < 32; q++)
+                                        fprintf(stderr, "[CRASH][ctx-scan]   r%-2d=0x%016llx\n", q, (unsigned long long)c[q]);
+                                    hits++;
+                                    break;
+                                }
+                            }
+                        }
+                        fprintf(stderr, "[CRASH][ctx-scan] hits=%d\n", hits);
+                    }
                     // s206: symbolize the raw faulting pc directly via dladdr,
                     // bypassing backtrace()'s frame-pointer walk entirely. s194/
                     // s199 showed backtrace_symbols_fd duplicating "processSceneNode

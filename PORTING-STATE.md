@@ -156768,3 +156768,12 @@ ORIGIN: no mitigation of an unknown writer; the writer of the extra copy is reap
 - Ruled out (generated code only): spTaskSchedulerThread's generated body (funcs_4.c:37246+) has no ctx->rN assignment lacking S32/ADD32/MEM_ wrapping, so the zero-extended value is NOT produced by the generated function itself; it must enter through a native helper or argument (rs64_s3293/s3295 scheduler patches take U32() args but only as logging args) or a host-side write to a ctx register.
 - NOT done: could not disassemble the faulting instruction (objdump/lldb need approval in this headless mode), so the exact register and its writer are unnamed. ORIGIN is therefore still open; no guard landed.
 - Next: name the writer. Cheapest discriminator: in the crash handler, also dump ctx->r16..r23 (or ctx pointer) and last rs64 helper called; or run the crash recipe under a build with MEM_BU-based assert on (reg>>32)==0 in the scheduler patches. No second soak of the same recipe is needed.
+
+## Session 4882 (2026-10-14) — crash-handler ctx-scan instrument; startup SIGSEGV reproduced, scan window missed the ctx
+
+- Added a `[CRASH][ctx-scan]` block to the SIGSEGV handler in src/main/main.cpp: scans this thread's stack for recomp_context-shaped blocks (r0==0) and prints any slot that is a zero-extended 0x8xxxxxxx matching the fault address, plus all r1..r31. Build OK.
+- Recipe scratch/agent/run_s4882_ctxscan.sh (dedup off, 6 rounds x 2 concurrent, 60 s). Positive control: round 1 run_1b reproduced the identical crash (si_addr=0x400128d47, spTaskSchedulerThread+9632, last-guest-pc 0x8000834c, x9=0x100128d47), so the crash path was live.
+- Result: `[CRASH][ctx-scan] hits=0` - NULL. The scan started at sp, but x5 (0x16f80e700) sits 0x170 BELOW sp, so the ctx is plausibly in dead frames. This null says nothing about the writer.
+- ORIGIN: still open (writer of the zero-extended 0x80128d44 unnamed). No mitigation added; diagnostics only.
+- Follow-up already edited in source (NOT built, the soak was still using the binary): scan window now starts at sp-0x2000. Remaining soak rounds run the old binary; summary lands in scratch/agent/soak_results/s4882/summary.txt.
+- Next: rebuild, rerun the recipe, read the ctx-scan register index, grep that register's last write in the scheduler patches.
