@@ -501,7 +501,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-1. (s4864, authorized) Run `m5-task-family-retail-compare`: one build tracing data_size writers 0x8009106C/0x800911DC and musyxSynthFrame entry cadence, ROGUESQ_S4562_PAUSE 0 vs 4, plus oracle watch at 0x80091784 with whole-RDRAM control. Then close M5 and move to the rename sweep / VI-640 route wall.
+1. (s4865) data_size trace done: pause 0 vs 4 identical (99.9% size 1); port has ~2 resets but 1 increment per store. Next: find why every other musyxBuildVoiceCommandList call skips the 0x800911DC increment (early-out branch) and compare with retail oracle reset/incr counts at 0x8009106C/0x800911DC (whole-RDRAM control first). Then close M5 and take the rename sweep / VI-640 route wall.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
 on both arms after removing the observer crash; do not repeat the A/B.)

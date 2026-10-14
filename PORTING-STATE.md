@@ -156631,3 +156631,12 @@ Outcome: BLOCKED. Every M5-AUDIO-PLAN step is qualified or closed, so mandatory 
 ## Session 4864 (2026-10-14) — UNBLOCK: s4863 block refuted (route 1)
 
 Block: s4863 asked for human authorization of one build+run tracing the data_size writers (0x8009106C/0x800911DC/musyxSynthFrame). Refutation: builds and game runs are already permitted by ITERATION.md; the hard-boundary list (installs, money, system settings, disabling gates) does not apply. The block was a permission request, not a missing resource. Action: BLOCKED.md archived as BLOCKED.resolved.s4863-direction.md; NEXT.md rewritten as the self-authorized experiment (hypothesis m5-task-family-retail-compare). No game run or code change this iteration. Outcome: ADVANCED (block false).
+
+## Session 4865 (2026-10-14) — data_size writer trace built and run: pause 0 vs 4 identical, port stays 1-dominant
+
+Landed `tools/apply_s4864_datasize_trace.py` (live-tree funcs_24.c patch, gate ROGUESQ_LOG_S4864=1; rebuilt OK) tracing synth-wrapper entry, counter reset (0x8009106C), counter incr (0x800911DC) and the OSTask+0x34 store (0x80091784). Ran `scratch/agent/run_s4864_datasize.sh` (100 s per arm, ROGUESQ_S4562_PAUSE=0 then 4, title/hangar autopilot). Results (soak_results/s4864_datasize/verdict.txt):
+- Positive control: histogram total = 5632 = store count in both arms.
+- pause=0: 5628 of 5632 stores data_size=1, 2x size 2, 2x size 3; pause=4: 5627 size 1, 1x size 2, 4x size 3. Arms indistinguishable; the s4561/s4562 pause patches do NOT change batching (alternative closed).
+- Cadence: per store there are ~2 synth entries, ~2 counter resets, but only 1 increment (11186 synth / 11181 resets / 5638 incs over 5632 stores). So the counter is reset on every synth entry yet incremented on only every other build; stores therefore see 1. Retail shows ~90% size 2 (s4860-s4862).
+- Rules out: pause patches as source of the 1-vs-2 ratio. Leaves: why half the port's builds skip the 0x800911DC increment (guest state / early-out in musyxBuildVoiceCommandList) vs retail. Single-source (port only); retail-side increment/reset counts not yet measured.
+ORIGIN: no mitigation added; read-only logging.
