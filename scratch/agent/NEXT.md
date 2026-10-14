@@ -1,42 +1,34 @@
 # Resume next work unit
 
-HYPOTHESIS-ID: m5-qualified-route-startup-contract
+HYPOTHESIS-ID: m5-step11-spin2-validation
 
-Checkpoint close-out: the s4826 corrected boundary audit found valid, identical task state at both
-`osSpTaskStartGo` and pre-conversion enqueue in both arms, with positive
-controls firing and no rejected pointer. The intermittent `0x400128d47` crash
-was absent; the pair stopped at the VI-640 gate with 64 SP completions each.
+Single bounded work unit: validate the already-qualified second MusyX wait
+de-stub on the title/hangar route with both behavior arms in one build/run
+wave: default `ROGUESQ_AUDIO_SPIN2_YIELD=1` and rollback
+`ROGUESQ_AUDIO_SPIN2_YIELD=0`. Use the existing phase-gated recipe and retain
+all passive breadcrumb controls.
 
-No experiment is to be rerun in this checkpoint iteration. The instrument and
-its s4826 result are already committed in `439e38f9`; resume by running the
-single capture below in the next iteration and preserve both logs.
+Competing hypotheses:
 
-Single bounded work unit: obtain one native crash-path capture while retaining
-the boundary witnesses. Competing hypotheses:
+* H-yield-safe: yielding lets the producer clear the flag and the wait returns
+  without changing task/SP, slot, PCM, or route behavior.
+* H-yield-causal: yielding changes a downstream audio/task/route outcome;
+  select only if the arms diverge after both have valid producer/clear controls.
+* H-route-invalid: either arm fails to reach title/hangar or lacks a positive
+  producer/clear control, so the comparison cannot select an audio hypothesis.
 
-* H-common-host-after-enqueue: the fault is in a host operation after the
-  validated enqueue boundary; select if a crash run shows the same boundary
-  rows followed by a native stack outside task conversion.
-* H-request-state: request-only changes scheduler state after the validated
-  boundaries; select only if a crash run shows an arm-specific state transition
-  before the fault.
-* H-route-instability: the crash is an intermittent startup condition that is
-  absent on qualified runs; retain if both arms reach the gate without a crash
-  and no boundary divergence appears.
+Discriminating measurement: one phase-gated A/B with producer entry, flag-clear,
+wait-return, task/SP completion, slot/status, nonzero PCM source/consumer, and
+VI title/hangar controls. Matching complete rows select H-yield-safe; a
+post-control arm divergence selects H-yield-causal; missing target phase or
+missing positive control selects H-route-invalid.
 
-Discriminating measurement: a single phase-gated pair with the boundary flag,
-crash handler output, and host thread stack capture enabled; require the task
-validity positive control in both arms. A native crash stack after matching
-start/enqueue rows selects H-common-host-after-enqueue; an arm-specific state
-row selects H-request-state; another clean gate-qualified pair selects
-H-route-instability. Do not rerun Step 1.
+Exact command:
 
 ```sh
-env ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_TASKSUBMIT_STACK=1 zsh tools/run_m5_yield_ab.sh
-grep -a -E '\[m5-host-boundary|\[CRASH\]|si_addr|spTaskSchedulerThread' scratch/agent/m5_yield_ab/default.log scratch/agent/m5_yield_ab/request-only.log
+env ROGUESQ_LOG_WAITMUSYX_SPIN2=1 zsh scratch/run_s4766_m5_a12_second_wait.sh
 ```
 
-Expected discriminator: matching start/enqueue rows followed by a native
-post-boundary stack selects H-common-host-after-enqueue; an arm-specific state
-transition selects H-request-state; another clean gate-qualified pair with no
-boundary divergence retains H-route-instability.
+Do not rerun the s4828 startup crash capture or Step 1. If the recipe is
+route-invalid, record that result and pivot to the next M5 behavior change;
+do not add another diagnostic field.

@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4826)
+## Headline (as of s4828)
+
+- **s4828 crash-path capture:** the corrected same-build default/request-only
+  pair again produced the task-validity positive control: 64 matching start
+  and 64 pre-conversion enqueue rows per arm, all in-range, with no rejected
+  pointer or `0x400128d47`. Both arms reached phase 3 / VI-640 and stopped at
+  the same gate; neither emitted a native crash marker. This retains
+  intermittent route instability as the only selected explanation for the
+  absent crash and rules out the validated conversion/start/enqueue path in
+  this run. Do not repeat this capture without a new discriminator.
 
 - **s4826 host-boundary audit:** a corrected same-build default/request-only
   pair qualified the task-validity positive control. Both arms showed the same
@@ -185,6 +194,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
+(s4828: same-build crash-path capture was clean in both arms; no native stack or arm-specific transition was observed. Pivot to the remaining M5 Step 11 validation.)
 (s4821: M3 indirect-jump census closed the jr/jalr class; next M3 candidates: branch-likely delay slots, HI16/LO16 pairs.)
 (s4812: M5 Step 11 / A12 has a mission row: loop copies not entered (producer arm 40/40, loop rows 0), blind-spin rollback stalls at VI 640; M5 plan has no unqualified covered-route step. Next unit: M3 idiom-class audit.)
 (s4811: scratch regen via vendored fixer gives failures=0 and A9/A10 tag counts match live exactly 3/15/96/11; residual diffs are post-s4653 diagnostic probes s4700/s4784 + S32() spelling. Regen chain item closed.)
@@ -193,11 +203,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 qualified-route startup contract (s4826):** capture the intermittent
-  native crash while retaining the new start/enqueue witnesses. The corrected
-  pair found valid, identical task state at both boundaries and no rejected
-  pointer, but did not reproduce `0x400128d47` before the VI-640 gate. Do not
-  rerun Step 1 until a crash-path stack or a new boundary discriminator exists.
+0. **M5 Step 11 validation:** run the phase-gated second MusyX wait A/B on the
+   qualified title/hangar route with default yield and `ROGUESQ_AUDIO_SPIN2_YIELD=0`
+   rollback arms in one build. Require producer/clear/wait-return positive
+   controls plus task/SP, slot, PCM, and VI controls; a pre-title/hangar stop
+   is route-invalid, not evidence against the de-stub. Do not repeat the
+   s4828 startup capture without a new discriminator.
 1. **M5 A10 (s4809):** s4807's 0 rows was a build-absent patch (regen dropped it); s4808 mission run: 265 guard evaluations all in range, writer 0x80096D88 publishes 0x80149A00 32/32. s4809: apply script is now idempotent and in the `RS64_REPLAY` list of `tools/fixup_game_funcs_vendored.py` (unpatched scratch tree -> 44 sites, byte-identical to live tree, second run patches 0; replay not yet exercised end to end). Guard-off vs default at mission (sequential single runs, both VI512@0x690400 ~99.7 s): crash=0 both, 265 rows both, `off=0`/`off=1` visible in rows (positive control), writer 32/32 both. A10 guards are dead code at title/hangar/mission; no removal authorised (cap 256, no forced-bad A10 arm). s4810: A9 script added to the replay list (idempotent, 0 sites on re-run); ovl2c_mode needs no entry (fixup_factor5_ucode 6r emits it at CMake time). Open: end-to-end replay `failures=0` needs a pristine regen (vendored fixer refuses patched trees).
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s

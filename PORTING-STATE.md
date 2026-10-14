@@ -156046,3 +156046,17 @@ path in that run. The next discriminator is one crash-path capture retaining
 those witnesses; its exact command and competing outcomes are in
 `scratch/agent/NEXT.md`.
 ORIGIN: checkpoint only; no mitigation or behavior change.
+## Session 4828 (2026-10-14) — captured clean qualified-route startup pair
+
+Ran the prescribed same-build crash-path capture with the corrected host-boundary
+witnesses enabled in both default and request-only arms. Both arms fired the
+task-validity positive control and produced 64 `osSpTaskStartGo` start rows plus
+64 pre-conversion enqueue rows, all with matching in-range task fields. Neither
+arm emitted a rejected pointer, `0x400128d47`, or a native crash marker; both
+reached phase 3 / VI-640 and stopped at the same gate. This rules out the
+validated conversion/start/enqueue path as the source in this run and does not
+select request-only lifecycle causality. It retains intermittent route
+instability as the selected explanation for the absent crash. The next unit is
+the existing M5 Step 11 second-MusyX-wait phase-gated A/B; no startup capture
+should be repeated without a new discriminator.
+ORIGIN: diagnostic-only witnesses; no mitigation or behavior change.
