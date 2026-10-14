@@ -143,7 +143,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-1. **VI-640 stall trigger unknown (s4800):** 0/16 stalls across s4799+s4800 (load 5-12, swap-ack log on/off), vs 2/5 in s4794. Park the ack-queue witness until a stall is reproduced; first compare the s4794 recipe/binary against now (boring-first). Do not spend more runs under load.
+1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** needs a mission-route driver that reaches
    `0x00690400` past the VI-640 stall (depends on #1), retaining the resident
    splice and positive controls. Do not infer splice effect from hangar-only runs.

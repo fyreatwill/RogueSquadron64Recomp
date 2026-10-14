@@ -155843,3 +155843,10 @@ possible because no stall occurred. Rules out: log-flag perturbation as the caus
 load >= 11 alone as sufficient. Stall trigger is therefore unknown (candidate: a build/binary change
 between s4794 and s4799, or a variable of the s4794 recipe not in this one). Third iteration on
 this slug without a discriminating result: pivot per iron rule 8.
+
+## Session 4801 (2026-10-14) — VI-640 stall trigger delta: binary and `sample` call ruled out (0/8, 4+4 arms)
+
+Boring-first diff of the s4793/4794 recipe against s4799/s4800: env vars are identical apart from `ROGUESQ_LOG_SWAP_ACK_WAIT`; the s4793 recipe additionally takes a `sample` at t=20 s on every run (suspends the process), which s4799/s4800 did not. Binary `build/RogueSquadron64Recomp` mtime is Oct 13 09:25, i.e. BEFORE the s4794 runs (10:20) and unchanged since, so H1 (rebuild between s4794 and now) is false.
+Ran `scratch/agent/s4801_ab.sh` (s4793 recipe verbatim, 8 runs alternating SAMPLE=1/0, load 4-7): 0/8 stalls; every run left VI 640 and reached VI 1024 at 47-51 s (sample arm 4/4, no-sample arm 4/4). So the 20 s `sample` is not the trigger either (H2 false). Total since s4794: 0/24 stalls on the same binary.
+Remaining: H3, an unrecorded external condition present during s4794 (display/focus/sleep state, concurrent processes, OS state) — unobservable from the recipe. Positive control: the sampled arm shows the 640 phase was reached and `cnt` advanced each run, so the detector was live; but no stalling run exists in this session to prove the detector fires (s4794 summary.txt is that prior positive).
+ORIGIN: no mitigation landed. Nothing ruled in; stall is a presentation-side symptom (s4797) with unknown environmental trigger.
