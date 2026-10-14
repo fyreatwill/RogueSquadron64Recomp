@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4854)
+## Headline (as of s4855)
+
+- **s4855 found the task-contract qualification route-invalid.** The existing
+  image-route harness crashed at `spTaskSchedulerThread+9632` with
+  `si_addr=0x400128d47` during the first 320-wide phase. Title and hangar
+  transitions, task-contract/lifetime rows, and PCM controls were absent; the
+  single early route-order row is not a positive control for the planned
+  phase-5 measurement. This selects neither task-contract legitimacy nor a
+  mismatch. Do not infer a contract defect or repeat the same route unchanged.
 
 - **s4854 found the broader M5 port-task-load control unreached on the same
   qualified image route.** The single-source run reached title and hangar with
@@ -498,6 +506,10 @@ resolved (s4755: the tool ran; the old block was false).
    rows absent despite positive title/hangar, SP, action, and PCM controls.
    This is a single-source route result; do not infer a task-contract defect
    or repeat the same control without a new route discriminator.
+0. **M5 task-contract qualification:** s4855 was route-invalid: the image
+   harness crashed at `0x400128d47` before title/hangar, so task-contract,
+   lifetime, and PCM controls were absent. Revisit only with a new route
+   discriminator; do not classify the absent rows as a contract mismatch.
 0. **M5 descriptor target:** s4853 found the exact `0x800377C8` descriptor
    control unreached despite title/hangar, SP, action, and PCM positive
    controls. Do not repeat the same target; select the next M5 contract

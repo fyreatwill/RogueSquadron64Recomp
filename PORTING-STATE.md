@@ -156513,3 +156513,20 @@ controls fired. Do not repeat the same port-load target without a new route
 discriminator. No runtime behavior changed.
 ORIGIN: `scratch/agent/soak_results/s4854_m5_port_load/verdict.txt` and
 `port.log`.
+
+## Session 4855 (2026-10-14) — M5 task-contract route invalid
+
+The planned phase-gated M5 task-contract/lifetime qualification used the
+existing image route, route-order and PCM controls, and the established
+autopilot. The harness crashed during the first 320-wide phase in
+`spTaskSchedulerThread+9632` with `si_addr=0x400128d47`; it did not reach title
+or hangar. Task-contract, task-lifetime, and PCM rows were zero. A single early
+`action-dequeue`/SP-complete route row was present, but it was not the planned
+phase-5 positive control and cannot qualify the boundary.
+
+This selects H-route-invalid and rules out neither a legitimate task contract
+nor a task-field mismatch. It rules out interpreting absent contract rows from
+this run as evidence of a contract defect. The next unit uses an image-versus-
+silent A/B as a new route discriminator; no runtime behavior changed.
+ORIGIN: `scratch/agent/soak_results/s4855_task_contract/port.log` and
+`verdict.txt`; crash address and route rows are from the same run.
