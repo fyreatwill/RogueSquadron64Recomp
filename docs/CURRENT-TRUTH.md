@@ -177,4 +177,4 @@ Regeneration order is `make_elf.py -> N64Recomp -> fixup_game_funcs.py -> CMake`
 
 See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) for the evidence archives and [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md) for the audio plan.
 - s4817: mult/dmult lowering census closed (docs/M3-S4817-MULT-CENSUS.md)
-- s4818: trap/break/syscall/cop0 census closed (docs/M3-S4818-TRAP-CENSUS.md); remaining: prove lvj_checkComplexObjectives syscall dead, M5 passive items
+- s4818: trap/break/syscall/cop0 census closed (docs/M3-S4818-TRAP-CENSUS.md); lvj_checkComplexObjectives syscall proven dead s4819 (data after an immediate return); remaining: M5 passive items
