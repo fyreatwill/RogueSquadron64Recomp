@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4844)
+## Headline (as of s4845)
+
+- **s4845 closed the external retail-entry boundary as route-absent.** The
+  debugger-enabled oracle ran the documented Rice video plugin and Start
+  schedule in one 180-second invocation. The whole-RDRAM control reached its
+  10,000-hit cap; title reached VI 1024 at `0x00790400` and hangar reached VI
+  512 at `0x006AB400`. The execution watch at `0x800903F0` recorded zero hits
+  on this qualified retail route. This selects H-retail-route-absent and
+  rules out the prior undriven-route explanation; it does not establish why
+  the port still observes the boundary input.
 
 - **s4844 qualified the retail-oracle setup but not the external handoff.**
   The rebuilt DEBUGGER=1 core and frontend ran with a whole-RDRAM write
@@ -278,6 +287,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   tables, not altered by the fixup pass. A recompiler-side implementation and
   route qualification remain separate future work; do not hand-edit generated
   output.
+- **External retail-entry boundary (s4845):** the Rice/input oracle route is
+  qualified through title and hangar, with whole-RDRAM control positive, but
+  `0x800903F0` has zero execution hits. The retail handoff is absent on this
+  route; do not repeat the setup without a new route or PC discriminator.
 - **Runaway-DL cause (s4746-s4749):** DL op `0xBD` (TexrectGen) → overlay `0x2C`
   (real 0x240-byte VU image, ROM `0x27368`, dest `0x1DB0`) is unrouted, so the
   window entry restarts the task. Present ⇔ arrival ⇔ runaway (150/150 vs 0/550).
@@ -312,8 +325,9 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   garbage-region SETCIMG writer — no skip without an origin proof.
 - VI-640 crash families and broad M3 guard classes parked; a mitigation needs an
   `ORIGIN:` line naming the writer and whether the value is legitimate.
-- External retail-entry parked (s4690); do not repeat without a new route
-  discriminator.
+- External retail-entry parked (s4845): Rice/input route is qualified through
+  title and hangar but has zero `0x800903F0` hits; do not repeat without a new
+  route or PC discriminator.
 - Hangar pillar stubs (no pixel reference; Rice retail hangar frames are wrong,
   s4645/s4731); 0x1F0D74 width-1161 premise (generic heap/DMA reuse, s4728);
   overlay-registration chunked-load H2 (s4673); right-edge col-511 noise.
@@ -387,20 +401,18 @@ to the next M5 plan item.)
 Single monotonic backlog (renumbered s4798). RSPRecomp allow-rule dependency is
 resolved (s4755: the tool ran; the old block was false).
 
-0. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
-   and s4836. Reopen another M5 boundary only with a new discriminator and a
-   same-build rollback/control; do not repeat the invalid request-only route.
-1. **M3 next complete idiom census:** select the next unclosed generated
+0. **M3 next complete idiom census:** select the next unclosed generated
    translation class and enumerate the whole class before proposing any guard.
    Conditional moves are now an identified N64Recomp operation gap, but no
    generated-output patch or runtime claim is authorised by the static audit.
    Do not chase a single wild address.
-1. **External retail-entry boundary:** s4844 rebuilt the debugger-enabled
-   oracle and proved its whole-RDRAM/VI controls, but the no-video, no-input
-   invocation remained at 320-wide pre-title and therefore did not test the
-   qualified route. Retry once with Rice plus the documented Start schedule;
-   only a target-PC zero with title/hangar VI controls positive is a retail
-   route null.
+1. **M5 next behavior validation:** Step 1 and Step 11 are qualified by s4831
+   and s4836. Reopen another M5 boundary only with a new discriminator and a
+   same-build rollback/control; do not repeat the invalid request-only route.
+1. **External retail-entry boundary:** closed s4845. The Rice/input oracle
+   route reached title and hangar with whole-RDRAM control positive, but
+   `0x800903F0` had zero hits. Revisit only with a new route or PC
+   discriminator.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s

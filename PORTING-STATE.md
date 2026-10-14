@@ -156335,3 +156335,21 @@ discriminator is the same oracle command with Rice and the documented Start
 press schedule. No runtime or mitigation change was made.
 ORIGIN: whole-RDRAM positive control, VI poll, and target-PC watch all came
 from the independent retail oracle; no mitigation or guest behavior change.
+
+## Session 4845 (2026-10-14) — closed external retail-entry boundary
+
+Ran the prescribed debugger-enabled retail oracle with the Rice video plugin
+and the documented repeated Start schedule for 180 seconds. The independent
+whole-RDRAM write watch reached its 10,000-hit positive-control cap. VI polling
+then showed the qualified title phase at 1024-wide, origin `0x00790400`, and
+the qualified hangar phase at 512-wide, origin `0x006AB400`. The execution
+watch at `0x800903F0` recorded zero hits, and the oracle exited normally after
+10,778 VI callbacks.
+
+This selects H-retail-route-absent: the target handoff is absent on the
+qualified Rice/input route. It rules out the previous s4844 explanation that
+the zero was caused only by an undriven 320-wide pre-title route. It does not
+identify the writer or explain the port-side boundary value; no runtime,
+mitigation, or generated-output change was made.
+ORIGIN: independent whole-RDRAM, VI title/hangar, and target-PC controls from
+the same retail-oracle invocation; no mitigation or guest behavior change.

@@ -1,32 +1,33 @@
 # Next work unit
 
-HYPOTHESIS-ID: external-retail-entry-boundary
+HYPOTHESIS-ID: m3-hi-lo-move-census
 
-WORK UNIT: retry the external retail-entry boundary on the qualified retail
-route using the known Rice video plugin and documented Start schedule. Do not
-modify runtime behavior.
+WORK UNIT: perform one complete static census of generated HI/LO move
+instructions (`mfhi`, `mflo`, `mthi`, `mtlo`) against the retail ELF, then
+classify every site as correctly lowered, unsupported/trapping, or data-like.
+Do not change generated output or runtime behavior.
 
 Competing hypotheses:
 
-* H-retail-entry: title/hangar VI controls become positive and the retail run
-  reaches `0x800903F0`, supplying a PC/VI/route witness for the handoff.
-* H-retail-route-absent: title/hangar VI controls are positive, but
-  `0x800903F0` remains zero; the handoff is absent on the driven retail route.
-* H-oracle-route: Rice/input setup fails to leave 320-wide pre-title, so a
-  zero target count remains route-invalid and the setup recipe needs repair.
+* H-hilo-correct: every decoded HI/LO move has the expected generated register
+  transfer or HI/LO write, so this translation class needs no fix.
+* H-hilo-unsupported: one or more live-destination sites lower to `do_break`
+  or otherwise omit the HI/LO operation, identifying a recompiler defect.
+* H-hilo-data: all apparent mismatches are data-like/unreachable or write
+  `$zero`, so no live translation defect is selected.
 
-DISCRIMINATING MEASUREMENT: one invocation must show the whole-RDRAM control,
-VI transitions through title `1024 @ 0x00790400` and hangar
-`512 @ 0x006AB400`, and the target-PC count. A target hit joined to its
-previous PC and VI origin selects H-retail-entry. Zero target hits are usable
-only when both title and hangar controls are positive. Remaining at 320 is
-H-oracle-route, not a retail null.
+DISCRIMINATING MEASUREMENT: one table must enumerate every generated
+`mfhi`/`mflo`/`mthi`/`mtlo` annotation, independently decode the raw ELF word,
+and record the generated lowering plus destination/source register. The
+outcome is H-hilo-correct if all live sites match; H-hilo-unsupported if any
+reachable live site omits or traps the operation; otherwise H-hilo-data if
+all mismatches are data-like/unreachable or zero-destination sites.
 
 Exact commands:
 
-    ./tools/oracle/build_core.sh
-    ./tools/oracle/build.sh
-    ./tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150 --secs 180 --watch-write 0x0:0x800000 --vi-poll --vi-trace --watch-pc 0x800903F0
+    rg -n '\\b(mfhi|mflo|mthi|mtlo)\\b' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    python3 tools/census_unhandled_cpu.py --source ../N64Recomp/RecompiledFuncs --elf ../rogue_squadron64/build/roguesquadron.elf --output docs/M3-S4846-UNHANDLED-CPU-CENSUS.md
 
-Capture to `scratch/agent/soak_results/oracle_s4845.log`; interpret only the
-positive controls and phase rows from that same file.
+If the generic census does not provide HI/LO lowering and reachability rows,
+write one bounded `tools/census_hilo_moves.py` that produces that complete
+table in the same work unit; do not split the census across iterations.
