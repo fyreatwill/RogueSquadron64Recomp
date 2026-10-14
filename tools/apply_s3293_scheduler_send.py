@@ -113,6 +113,13 @@ SEND_NEW = (
 
 def apply_s3293_scheduler_send_text(text: str):
     if MARK in text:
+        # s4229 fixed the probe base to S32(), but this early return left the
+        # old zero-extended form in already-patched output (s4883: startup
+        # SIGSEGV at MEM_BU(-0X72BC, 0x80130000u) -> 0x100128d47).
+        stale = "MEM_BU(-0X72BC, 0x80130000u)"
+        if stale in text:
+            text = text.replace(stale, "MEM_BU(-0X72BC, S32(0x80130000u))")
+            return text, ["funcs_4.c: s3293 probe base upgraded to S32"], True
         return text, ["funcs_4.c: s3293 scheduler send already present"], False
     replacements = (
         (DECL_ANCHOR, DECL_ANCHOR + HELPER + "\n"),

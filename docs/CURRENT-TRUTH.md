@@ -6,9 +6,9 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4882)
+## Headline (as of s4883)
 
-- **s4882:** startup SIGSEGV (si_addr 0x400128d47) reproduced with a new crash-handler ctx-scan; first scan window (from sp) found no ctx (hits=0, null; ctx likely below sp). Window widened to sp-0x2000 in source, needs rebuild + rerun. Writer still unnamed.
+- **s4883:** startup SIGSEGV `spTaskSchedulerThread+9632` (si_addr 0x400128d47) NAMED and FIXED. Writer: our own s3293 scheduler-send probe. Generated funcs_4.c:37949 held `MEM_BU(-0X72BC, 0x80130000u)` (zero-extended base); s4229 had fixed the script to `S32(0x80130000u)` but `apply_s3293_scheduler_send_text` returned early on the already-patched marker, so the stale unsafe probe survived every fixup run. Evidence: (1) lldb disassembly shows the constant 0x100128d47 baked into the faulting `ldrb`, line funcs_4.c:37949; (2) generated text lacked S32 while the script had it. Fix: the script now upgrades stale text in place; applied to RecompiledFuncs, rebuilt. Soak (dedup off, 16 runs x 60 s): 0/16 of the old signature (was 1/12 s4882, 2/5 s4880 arm0); 1/16 NEW crash si_addr=0x380000004 guest pc 0x80001b08 (unexplored). Lesson: idempotence markers in fixup scripts must upgrade, not skip.
 
 - **s4859 closed the M5 A16 AI-shim caller boundary.** The independent retail
   oracle fired its whole-RDRAM positive control at 10,000 callbacks, reached
