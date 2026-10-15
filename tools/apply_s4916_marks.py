@@ -6,6 +6,7 @@ Idempotent. Usage: apply_s4916_marks.py <RecompiledFuncs dir>."""
 import re, sys, pathlib
 
 DECL = 'extern void rs64_s4916_sb(uint8_t* rdram, uint32_t pc, uint32_t addr, uint32_t val);\n'
+DECL2 = 'extern void rs64_s4913_mark(uint8_t* rdram, const char* tag);\n'
 STORE = re.compile(r'^(\s*)MEM_B\((-?0[xX][0-9A-Fa-f]+|0), (ctx->r\d+)\) = ([^;]+);\n', re.M)
 PC = re.compile(r'// (0x[0-9A-Fa-f]{8}): sb ')
 
@@ -23,6 +24,8 @@ def patch_func(t, name):
     i, j, e = func_span(t, name)
     body = t[j:e]
     if "s4916 sb mark" in body:
+        if name == "bufferArbiterProducerMark" and "bProd-entry" not in body:   # s4918 add-on to an s4916-patched body
+            return t[:j] + '    rs64_s4913_mark(rdram, "bProd-entry"); // PATCH: s4916 sb mark\n' + t[j:]
         return t
     out, last = [], 0
     for m in STORE.finditer(body):
@@ -34,15 +37,20 @@ def patch_func(t, name):
         out.append(m.group(0))
         last = m.end()
     out.append(body[last:])
-    return t[:j] + "".join(out) + t[e:]
+    pre = ""
+    if name == "bufferArbiterProducerMark":   # s4918: slot bytes +0..+15 at producer entry (host dumps tags starting 'b')
+        pre = '    rs64_s4913_mark(rdram, "bProd-entry"); // PATCH: s4916 sb mark\n'
+    return t[:j] + pre + "".join(out) + t[e:]
 
 
 def patch_text(t):
     n = t
     for nm in ("viRetraceHandlerThread", "bufferArbiterProducerMark"):
         n = patch_func(n, nm)
-    if "s4916 sb mark" in n and DECL not in n:
-        n = n.replace('#include "recomp.h"\n', '#include "recomp.h"\n' + DECL, 1)
+    if "s4916 sb mark" in n:
+        for d in (DECL, DECL2):
+            if d not in n:
+                n = n.replace('#include "recomp.h"\n', '#include "recomp.h"\n' + d, 1)
     return n
 
 

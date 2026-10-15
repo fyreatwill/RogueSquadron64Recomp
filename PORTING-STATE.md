@@ -157264,3 +157264,12 @@ Selects: H-producer-sees-slot-5 (the producer commits while the prior frame is s
 No mitigation added (diagnostic only); no ORIGIN needed.
 Next: why is slot state 5 still held at commit time in the port (retail: 5->0 retire happens before next producer commit)? Mark the 5->0 store timing vs gfx-thread commit per frame, and decode the counter bytes +0/+1 at 0x80128EA8/9 in the BDD0 test.
 Discrimination (s4917): selects H-producer-sees-slot-5; refutes H-ordering (0 of 2,422 two-recv iterations contain a foreign state-4 store before psrr-entry) and H-handler-late.
+
+## Session 4918 (2026-10-14) — producer park branch decoded: parks iff slot 5 present and counter +6 < limit +7 - 1; port has +6=0 at producer entry in 2,424/2,424 parks
+
+What ran: one build (tools/apply_s4916_marks.py now also emits a `bProd-entry` mark with all 16 arbiter bytes at bufferArbiterProducerMark entry) and one 100 s run (scratch/agent/run_s4918.sh, ROGUESQ_S4913_MAX=400000), plus one retail oracle run (scratch/agent/s4918r_oracle_producer_peek.sh, peek at 0x8001BCE4). Table: tools/s4918_table.py.
+Positive control (same run): 3,138 bProd-entry marks paired to 2,424 park (pc 0x8001BDFC) and 706 commit (0x8001BE30) outcomes; oracle whole-RDRAM watch hit 10,000.
+Result: (1) Decode of 0x8001BDD0..BDFC: with a state-5 slot present, park iff byte[0x80128EAE] < byte[0x80128EAF]-1. (2) Port: slot 5 present in every row; park rows (2,424) all have +7=02, +6=00; commit rows (706) have +7=01. +7 runs of 01/02 alternate with game phase (title/loading 01, hangar 02). (3) Handler writers: 0x80019948 increments +6 per retrace, 0x800199E4 zeroes it right after the 4->5 flip (0x800199DC). (4) Retail (single-source, weak): 48 producer-entry peeks, all with slot 5 present, +7=02, +6>=2 (47 at 02/0x74/0x78). BUT the oracle peek caps at the first 48 hits and was not hangar-phase-gated (phase-origin rows 0/512), so it is not a like-for-like sample.
+Selects: H-counter-zero (port producer re-enters <1 retrace after the display flip). Refutes: s4917 'slot-5 presence alone explains the park' (slot 5 also present in the 706 commits). Not shown: why port re-enters sooner than retail, nor that retail in hangar has +6>=1.
+Next: phase-gated retail peek (gate the 48-hit cap on the hangar phase, raise cap) of +6 at producer entry, and the retail retrace count between 0x800199DC and the next 0x8001BCE4.
+Discrimination (s4918): selects H-counter-zero (port +6=0 in 2,424/2,424 parks); refutes H-slot-5-alone (slot 5 present in 706/706 commits); retail side single-source.
