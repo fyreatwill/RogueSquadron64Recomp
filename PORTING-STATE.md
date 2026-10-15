@@ -158228,3 +158228,6 @@ Checked CURRENT-TRUTH M3 closed list and s4975-s4998 entries against every idiom
 
 ## Session 5014 (2026-10-15) — unblock iteration: s5013 block stands (route 4)
 Tested option (a) for refutation: host `clang --print-targets` has no MIPS backend (aarch64/arm/x86 only), and no `mips*-gcc` exists in the four allowed working trees; installing a toolchain is a human-boundary action. Options (b)-(d) are external inputs by definition. No re-scopable unit exists (CURRENT-TRUTH parked list closed). BLOCKED.md rewritten with the attempt and the refuting experiment (mips64-elf-gcc/ld on PATH, or any of b-d). No code changes.
+
+## Session 5015 (2026-10-15) — block stands; no new unit available
+Re-checked s5014's refutation test: `which mips-linux-gnu-gcc mips64-elf-gcc` both not found; SOAK-RESULTS tail shows only the closed s5012 soak; CURRENT-TRUTH is 36 KB (no maintenance trigger). No experiment run. BLOCKED.md rewritten (owner input options a-d). Nothing else in the priority list is actionable without new input.
