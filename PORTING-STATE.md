@@ -157923,3 +157923,21 @@ unevaluable; it does not select H-lock-required or refute a narrower
 publication/observation lock. The result rules out no legitimate data and no
 PI-DMA hypothesis. ORIGIN: writer = guest `allocateSongChannelArray`; count
 and base are legitimate, so this is synchronization work, not mitigation.
+
+## Session 4987 (2026-10-15) — narrow voice publication lock does not close stale pair
+
+Implemented `tools/apply_s4986_narrow_voice_lock.py`, registering it in the
+vendored fixup replay. It removes the route-blocking whole-function mutex and
+holds the existing host lock only across allocator base/count publication and
+the mixer's count-to-base observation. The Debug build completed successfully.
+
+The one phase-gated armed mission soak reached title, hangar, and mission at
+180 seconds. Positive controls passed: `ctl_arm=1`, `s4579-A=9`, and PCM
+was nonzero in 146 rows. The result was `kind=bad=8`, `pidma=0`,
+`crash=0`, and `abort=0`. This single-source result refutes the tested
+narrow-lock placement as the missing handoff and rules out route blocking for
+this arm. It does not identify the stale-pair writer or reader, so the next
+unit is a whole-table provenance capture. No guard, skip, filter, or value
+rewrite was added. ORIGIN: writer = guest `allocateSongChannelArray`;
+count 32 and base are legitimate, so this remains provenance work rather
+than mitigation.

@@ -1,10 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4985; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4987; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s4987:** The narrow publication/observation lock preserved the qualified
+  route (title, hangar, mission onset 180 s, s4579-A=9, PCM 146 rows,
+  crash=0, abort=0) but left kind=bad=8 and pidma=0. This is a
+  single-source refutation of this lock implementation as the missing
+  handoff; it does not identify the writer of the stale diagnostic pair.
 
 - **s4985:** The host-lock exclusion variant serialized the complete
   `allocateSongChannelArray` and `musyxMixActiveVoices` functions, but the
@@ -164,6 +170,15 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Superseded conclusions
 
+- **s4985 “a narrower publication/observation lock will close the stale-base
+  calls”** - believable because it preserves exclusion only over the writer's
+  base/count stores and the mixer's paired count/base loads, avoiding the
+  route-blocking span of the whole-function mutex. Overturned by the
+  same-run armed soak: title, hangar, mission, allocator, PCM, and no-crash
+  controls all passed, but kind=bad=8 remained. This is single-source
+  evidence against this lock placement; it does not prove which reader or
+  writer produces the rows. No guard or value rewrite was added.
+
 - **s4982 “a reader acquire fence will close the stale-base calls”** - believable because the writer now has a release fence after both base stores and before the legitimate count publication. Overturned by the clean same-route soak: allocator and mission controls passed, but the four `s4540` bad rows remained. The ordinary `MEM_HU` load plus fence is not an effective pair handoff; no guard or value rewrite was added.
 - **s4983 “explicit atomic guest-memory observation will close the stale-base calls”** - believable because both publication sites and both mixer reads were changed to host acquire/release atomics at the exact guest locations. Overturned by the same-route armed soak: controls passed, but 8 stale rows remained. This leaves a lock-compatible handoff as the next discriminator; no guard or value rewrite was added.
 
@@ -201,7 +216,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4985 (top):** The whole-function host mutex arm was route-blocking/unevaluable: `s4579-A=1`, title=0, mission=0, PCM=0, crash=0 in the 150-second gate. Next: replace it with a narrow lock held only over allocator publication (base plus count) and the mixer’s paired count/base observation, then repeat the same armed mission discriminator. ORIGIN: writer is `allocateSongChannelArray`; count 32 and base are legitimate, and stale index 30 is a synchronization defect, not a value guard.
+**s4987 (top):** The narrow lock arm preserved the route but returned bad=8 with s4579-A=9, mission onset 180 s, PCM=146, pidma=0, crash=0, abort=0. The lock-placement hypothesis is refuted by this single-source run. Do not repeat the same lock family; next is a whole-table provenance discriminator for the kind=bad rows: capture the exact count/base pair at the allocator's two publication sites, the mixer's count/base loads, and the s4540 argument in one run, with title/allocator/mission/PCM controls. Expected outcomes: publication and loads are paired but s4540 is stale => diagnostic/caller propagation defect; publication itself is stale => writer/allocator source; all pairs are current but bad persists => s4540 classification or an uninstrumented reader. ORIGIN: legitimate writer is allocateSongChannelArray; this is provenance instrumentation, not a guard.
 
 **s4984 (prior):** The explicit atomic count/base loads and release stores reached mission (onset 176 s) with `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0, abort=0, and PCM positive control 147. H-atomic-observation is refuted for this implementation; H-lock-required remains.
 
