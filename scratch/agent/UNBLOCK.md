@@ -1,2 +1,4 @@
-# UNBLOCK s5010
-Route 3 (re-scope), after route 1: the block's option (d) is not a human decision. The s4994 instrumented binary is already built, the mission route recipe exists (s4981), so the soak was merely un-enqueued. Evidence: strings build/RogueSquadron64Recomp | grep s4994-s4540 -> 2 hits; funcs_24.c has the patch. Enqueued s5010 soak; no run this session. Refuting experiment: if the soak shows mission_onset_t=-1 again, the route (not authorization) is the blocker.
+# UNBLOCK s5014: route 4 (escalate)
+Routes 1-2: clang has no MIPS backend (`clang --print-targets`); no mips*-gcc in allowed trees; installing a toolchain is a hard-boundary action.
+Route 3: s5013 and prior audits found no unblocked highest-information unit (CURRENT-TRUTH 170-180, 205-216 closed/parked); nothing to re-scope to.
+Block stands. Refutation: a MIPS gcc/ld on PATH, or any of options (b)-(d) in BLOCKED.md.

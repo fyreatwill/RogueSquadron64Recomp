@@ -158225,3 +158225,6 @@ Consumed the loop-run soak s5012_s4540_mission_sample_retry (rc=0, 444 s). keys1
 
 ## Session 5013 (2026-10-15) — no unaudited M3 idiom class remains; BLOCKED with specific inputs question
 Checked CURRENT-TRUTH M3 closed list and s4975-s4998 entries against every idiom class nameable (including the s4977 "~14 LOOKUP_FUNC uninspected" leftover, which s4998's complete register-target audit superseded). Nothing unaudited; soak queue empty. No experiment run. Wrote BLOCKED.md asking which of: MIPS toolchain, new generated snapshot, driven oracle route, or fresh crash report can be supplied.
+
+## Session 5014 (2026-10-15) — unblock iteration: s5013 block stands (route 4)
+Tested option (a) for refutation: host `clang --print-targets` has no MIPS backend (aarch64/arm/x86 only), and no `mips*-gcc` exists in the four allowed working trees; installing a toolchain is a human-boundary action. Options (b)-(d) are external inputs by definition. No re-scopable unit exists (CURRENT-TRUTH parked list closed). BLOCKED.md rewritten with the attempt and the refuting experiment (mips64-elf-gcc/ld on PATH, or any of b-d). No code changes.
