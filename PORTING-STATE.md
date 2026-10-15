@@ -158137,3 +158137,9 @@ hangar phase. No guest value was changed or guarded. Evidence:
 `scratch/agent/s5000_external_boundary/`.
 ORIGIN: diagnostic-only independent retail/port boundary capture; no
 mitigation or behavior change.
+
+## Session 5001 (2026-10-15) — M4 accumulator-origin unit is not runnable on the HLE oracle
+
+Preflight only, no build or run. The planned unit needs a retail-side "accumulator writer PC". The accumulator is RSP vector-unit state (VMADH/VSAR), not RDRAM or CPU state, so no CPU PC watch can see it. `tools/oracle/README.md:233` records that the oracle's RSP is `mupen64plus-rsp-hle`, and s4689 already measured that retail exposes no accumulator, VGE register or DMEM rows while the port stage rows were positive. s5000 additionally showed the port arm failing to reach qualified hangar `0x006AB400`. Hypothesis outcome: H-accumulator-route-mismatch/instrument-boundary; H-retail-writer and H-port-only are unevaluable by construction. No mitigation authorized.
+The single experiment that would refute this: an oracle RSP plugin (cxd4/parallel-RSP LLE) that exposes DMEM/accumulator reads, driven to hangar 0x006AB400 with a whole-RDRAM control. That is a new instrument/plugin install, needing a human decision.
+ORIGIN: no mitigation; documentation of an instrument boundary only.

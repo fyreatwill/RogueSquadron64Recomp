@@ -352,7 +352,7 @@ preflight.
 3. **Completed — s4944/s4964:** run the A1 image/silent auxiliary-store A/B concurrently with
    title + mission origins as controls (route qualified by s4943); relaunch any
    arm that stalls at VI-640 rather than reading it as a null.
-4. **Next:** perform one bounded M4 accumulator-origin witness with the
+4. **BLOCKED (s5001):** the M4 accumulator-origin witness cannot run on the HLE-RSP oracle (README:233, s4689); needs an LLE RSP plugin exposing DMEM/accumulator. Original text: perform one bounded M4 accumulator-origin witness with the
    independent retail oracle and a same-build port capture. Name exact writer
    PCs, pass whole-RDRAM/VI/hangar controls, and compare the first accumulator
    publication at `0x006AB400`; do not rewrite or guard any value.
