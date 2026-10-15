@@ -157067,3 +157067,17 @@ repeated unchanged.
 ORIGIN: static census of the companion symbol/m2c tree, generated function
 definitions/calls, local rename table, and exact generated spans. No runtime
 or generated output was changed.
+## Session 4897 (2026-10-14) — qualified retail voice-render range boundary
+
+Ran one independent debugger-enabled retail-oracle capture with the Rice video
+plugin, validated eleven-Start schedule, whole-RDRAM positive control, title
+and hangar VI controls, the full `0x8008FFAC:0x80090640` execution range,
+writer PCs `0x80090C80` and `0x800921E8`, and exact consumer PC
+`0x800903F0`. Whole-RDRAM reached 24,235,022 writes; the run reached title
+origin `0x00790400`, hangar origin `0x006AB400`, and 10,777 VI frames. The
+range produced 1,278,314 title and 3,780,858 hangar rows; the writers fired in
+both phases (155/96 and 155/169). The exact consumer produced zero rows in
+both phases. This selects an internal boundary before the exact consumer,
+rejects route absence and a single-PC watch artifact, and rules out no writer
+or runtime behavior. Raw output and command are recorded in
+`docs/M5-S4897-RETAIL-VOICE-RANGE.md`.

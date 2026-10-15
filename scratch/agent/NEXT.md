@@ -1,32 +1,39 @@
 # Next work unit
 
-HYPOTHESIS-ID: external-retail-entry-new-pc-discriminator
+HYPOTHESIS-ID: m5-retrace-audio-cadence-boundary
 
-Run one independent retail-oracle capture that keeps the qualified
-whole-RDRAM, title, and hangar controls but watches the complete
-`musyxRenderVoiceSamples` execution range `0x8008FFAC:0x80090640`, plus the
-two statically identified voice `+0x34` writers `0x80090C80` and `0x800921E8`.
-Use phase-gated rows for title `0x00790400:1024` and hangar
-`0x006AB400:512`; do not repeat the old `0x800903F0`-only watch.
-
-Before building any instrument, read `tools/oracle/README.md` and reuse the
-existing qualified Rice/input launch recipe. Capture the exact command and
-output under `scratch/agent/soak_results/` (or a self-contained queued script
-if the run exceeds the iteration window). Positive control: whole-RDRAM watch
-must reach 10,000, and both title and hangar VI controls must fire.
+Instrument one same-build port run at the two `osRecvMesg` callsites named by
+s4873 (`0x800198F4` and `0x80019928`) and join every phase-gated return to the
+retrace queue `0x80114388`, the audio-done queue `0x80149670`, and the next
+`musyxSynthFrame` entry. Keep title and hangar route controls, SP and PCM
+controls, and the existing passive crash breadcrumbs. Build once, then run
+one qualified capture; do not add a counter without putting it in this table.
 
 Competing hypotheses and discriminator:
 
-* H1: the retail route reaches the voice-render function but not the selected
-  consumer instruction; range hits plus phase writer activity prove an
-  internal consumer/branch boundary.
-* H2: the route reaches the voice-render range and selected consumer, but the
-  prior single-PC watch missed due to breakpoint/PC attribution; range hits and
-  a `0x800903F0` hit select a watch artifact.
-* H3: the qualified retail route has no phase-gated voice-render range hits;
-  the external handoff is genuinely route-absent and this thread closes.
+* H1: the port retrace handler receives two retrace-queue messages per VI;
+  the joined return table shows two `0x80114388` returns per VI while the
+  audio-done queue remains one per VI.
+* H2: retrace delivery is one per VI, but one retrace return causes two synth
+  entries; the table shows one retrace return and two synth entries with no
+  second audio-done message.
+* H3: the extra synth cadence is driven by audio-done delivery; the table
+  shows the extra `0x80149670` return/message immediately before the extra
+  synth entry.
 
-The result must include the positive controls and phase-gated counts for all
-three arms (range, writers, exact consumer). Do not infer a writer or land a
-mitigation from a null. If the launch is unavailable, record the concrete
-failure and do not substitute another diagnostic.
+The discriminating measurement is the complete per-VI ordered join table
+`queue -> osRecvMesg return -> synth entry`, with counts for each queue and
+the delta from the preceding VI. A route/control failure is invalid, not a
+hypothesis result.
+
+Commands:
+
+```text
+cmake --build build --config Debug --target RogueSquadron64Recomp
+```
+
+Run the existing qualified image-route recipe from `build/` with the new
+phase-gated callsite/queue join enabled, capture stdout/stderr to
+`scratch/agent/soak_results/s4898_m5_retrace_audio_cadence.log`, and kill the
+process group with SIGKILL at the watchdog limit. Positive controls are title
+and hangar VI transitions, nonzero PCM, and SP enter/return rows.

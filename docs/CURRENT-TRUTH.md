@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4896)
+## Headline (as of s4897)
+
+- **s4897:** the independent Rice retail oracle passed the whole-RDRAM,
+  title, and hangar controls and watched the complete
+  `musyxRenderVoiceSamples` range in one run. The range fired in both title
+  and hangar; the two selected voice `+0x34` writer PCs also fired in both
+  phases, while exact `0x800903F0` remained absent. This selects an internal
+  boundary before the old exact consumer, rejects route absence and a single
+  PC-watch artifact, and authorizes no runtime mitigation. See
+  `docs/M5-S4897-RETAIL-VOICE-RANGE.md`.
 
 - **s4896:** the required generated-symbol sweep preflight found the only two
   real placeholders again. `func_8000040C` has no companion semantic mapping
@@ -436,6 +445,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Current state (durable)
 
+- **M5 retail voice-render boundary (s4897):** the independent qualified
+  route reached title and hangar, and the full execution range
+  `0x8008FFAC:0x80090640` plus writers `0x80090C80` and `0x800921E8` fired in
+  both phases. The exact `0x800903F0` consumer remained absent. The old
+  single-PC null is therefore refined to an internal pre-consumer boundary;
+  do not add a skip or guard from this result. See
+  `docs/M5-S4897-RETAIL-VOICE-RANGE.md`.
+
 - **M5 callback teardown reachability (s4894 correction):** the qualified
   route passed title/hangar, 758 SP returns, 44 PCM sources, 259 PCM consumers
   and audio returns, and no crash/abort. Its seven `[s4771-cb]` rows were all
@@ -643,6 +660,15 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
+0. **M5 retrace/audio cadence boundary (s4898 next):** s4897 closes the
+   external retail route question at the voice-render range but leaves the
+   port's one-versus-two wake cadence unresolved. Join both `osRecvMesg`
+   callsites (`0x800198F4`, `0x80019928`) to retrace queue `0x80114388`,
+   audio-done queue `0x80149670`, and synth entries in one phase-gated table.
+   Select whether the extra synth entry follows a duplicate retrace delivery,
+   a single retrace return, or an audio-done message. Do not add a mitigation
+   from the s4897 retail null.
+
 0. **M5 callback teardown boundary (s4894):** the qualified route does not
    reach `shutdownAudioEngine`; s4894's generated entry/return marker and the
    callback-registration kind control distinguish this from a non-return. Do
@@ -663,7 +689,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
    source supplies a candidate with companion mapping, live callers/body, and
    exact span agreement. Next take the external retail-entry boundary with a
    genuinely new discriminator; do not repeat the prior `0x800903F0` watch.
-2. (s4887) The qualified same-build port capture closes the OSTask `data_size` boundary as H-port-cadence: writer/ABI values agree, while port is 1-dominant and retail is 2-dominant. The blind retail `0x80091084` watch remains unusable; do not repeat it. M5 task-family work is closed; next take the generated-symbol renaming sweep / VI-640 route wall.
+2. (s4887) The qualified same-build port capture closes the OSTask `data_size` boundary as H-port-cadence: writer/ABI values agree, while port is 1-dominant and retail is 2-dominant. The blind retail `0x80091084` watch remains unusable; do not repeat it. M5 task-family work is closed; continue the M5 retrace/audio cadence boundary before the generated-symbol renaming sweep.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
 on both arms after removing the observer crash; do not repeat the A/B.)
@@ -750,10 +776,10 @@ resolved (s4755: the tool ran; the old block was false).
    expected signed/unsigned lowerings; 27 stale annotation/ELF mismatches are
    not live multiplication instructions. Do not repeat without new provenance
    evidence.
-1. **External retail-entry boundary:** closed s4845. The Rice/input oracle
-   route reached title and hangar with whole-RDRAM control positive, but
-   `0x800903F0` had zero hits. Revisit only with a new route or PC
-   discriminator.
+1. **External retail-entry boundary:** s4845's single-PC null is superseded
+   by s4897's qualified range capture. The route reaches the voice-render
+   range and both selected writers, but not `0x800903F0`; the remaining work
+   is an M5 internal boundary/cadence discriminator, not route qualification.
 1. **M5 A10 replay (s4830):** the pristine-copy replay ran end to end with `failures=0`; A10 reports 44/44 and A9 reports 13 sites plus the writer. The four whole-file comparisons differ because the live tree contains later diagnostic patches absent from the s4648-fresh replay input, so the replay is valid for these two fixes but not byte-identical to the accumulated live tree. Do not repeat the replay without a new comparison target. A10 guards remain dead on covered routes; no removal is authorised.
 1. **VI-640 stall: not reproducible (s4801):** 0/24 stalls since s4794 on the SAME binary (mtime predates s4794); the s4793 recipe's t=20 `sample` call is not the trigger (4+4 A/B, all reach VI 1024 at ~50 s). Cause is an unrecorded external condition. Park; if it recurs in any run, immediately capture `vi-fs stalled=1` state plus `ps`/display/load context. Meanwhile advance M5 plan.
 2. **Overlay-0x2C splice evaluation:** mission origin is reached unattended at ~98 s
