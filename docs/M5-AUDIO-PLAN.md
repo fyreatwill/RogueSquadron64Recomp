@@ -228,3 +228,24 @@ required order is `make_elf.py`, N64Recomp, `fixup_game_funcs.py` or
 `aspMain`, remove a safety guard without an `ORIGIN:` line, force a slot/gate
 value, or treat a `Broke` return without downstream joins as proof of working
 audio.
+
+## Mission-phase qualification row (s4953)
+
+Phase control: the s4950 solo route soak (`scratch/agent/s4950_route_soak/`,
+N=5), measured with `tools/vi_progress.py` (VI-progress, not `stalled=1`).
+
+| Phase (viW / origin) | Entered (update_screen #) | Status |
+|---|---|---|
+| title 1024 / 0x790400 | ~#2900-2990, 5/5 | live |
+| 640 / 0x696100 | ~#4470-4565, 5/5 | live |
+| mission 512 / 0x690400 | ~#5720-5830, 5/5 | live, but only ~150-260 update_screens long |
+| return to title 1024 | ~#5900-6080, 5/5 | live; 3/5 then re-enter 640 at ~#7550-7650 |
+
+Positive control: phase transitions themselves (5/5 identical sequence to
++-1.5 s) and `threadPresent` ordinals advancing to #6960-#8000 at kill. No run
+shows VI progress halting after mission entry (last origin change had >=37 rows
+after it in every run; the 640-ending runs were killed ~55 s after re-entry).
+Open caveat: the 512 phase lasts ~3-4 s before the game returns to title, so it
+may be an attract/demo segment rather than a player mission. Audio (pcm) rows
+exist in all runs (471 matching lines in run1) but no per-phase M5 contract
+claim is made here.
