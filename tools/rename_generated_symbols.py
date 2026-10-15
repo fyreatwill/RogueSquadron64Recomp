@@ -16,6 +16,7 @@ RENAMES = {
     "func_800C63C0": "getAvailableShipsForLevel",
     "func_800B2630": "buildFormatMessageGlyphBuffer",
     "func_800B3824": "buildLevelSelectTextTextures",
+    "func_800B3AFC": "buildScaledFormatTextElement",
     "static_5_800AF6AC": "handleCraftSelectInput",
     "static_4_800E9B10": "initObjectAnimAndDetail",
     "fake_func_800AA6CC": "npcPredictedRangeCheckPreamble",

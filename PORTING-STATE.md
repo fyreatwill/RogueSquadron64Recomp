@@ -158365,3 +158365,15 @@ was already synchronized, so the helper verification renamed zero generated
 references. This rules out stale-address, split/data-record, and no-caller
 explanations for this candidate, but changes no generated code or runtime
 behavior. The missing MIPS GCC patch qualification remains parked.
+
+## Session 5027 (2026-10-15) — preserved next menu-overlay symbol mapping
+
+The bounded generated-symbol unit inspected `buildScaledFormatTextElement` at
+`0x800B3AFC`. The companion address, generated body start, and
+`recomp_overlays.inl` exact `0x174` span agree; `funcs_29.c` and `funcs_31.c`
+provide live callers, with an independent companion decomp call from
+`menuControllerInput`. Added the mapping to
+`tools/rename_generated_symbols.py` and recorded the gates in
+`docs/RENAME-S5027-AUDIT.md`. This rules out stale-address, split/data-record,
+and no-caller explanations for this candidate, but changes no generated code
+or runtime behavior. The missing MIPS GCC patch qualification remains parked.

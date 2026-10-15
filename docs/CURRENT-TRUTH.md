@@ -1,10 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5026; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5027; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5027:** The next menu-overlay candidate, `0x800B3AFC`, passes the
+  companion-address, exact `0x174` overlay-span, generated-body, and live-caller
+  gates for `buildScaledFormatTextElement`. The regeneration helper now
+  preserves `func_800B3AFC -> buildScaledFormatTextElement`. Evidence:
+  `docs/RENAME-S5027-AUDIT.md`.
 
 - **s5026:** The next menu-overlay candidate, `0x800B2630`, passes the
   companion-address, exact-span, and live-caller gates for
@@ -341,7 +347,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s5026 (top):** The next bounded rename candidate is the next newly mapped
+**s5027 (top):** The next bounded rename candidate is the next newly mapped
 menu-overlay symbol. Apply the same independent companion-address, exact-span,
 and live-caller gates before adding it to
 `tools/rename_generated_symbols.py`; reject stale, split, or callerless
