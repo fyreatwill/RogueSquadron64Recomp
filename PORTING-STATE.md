@@ -158234,3 +158234,6 @@ Re-checked s5014's refutation test: `which mips-linux-gnu-gcc mips64-elf-gcc` bo
 
 ## Session 5016 (2026-10-15) — unblock iteration: block stands (route 4)
 Re-tested: MIPS gcc/ld still absent; the s5011 hangar crash is the already-documented post-hangar crash, not a new witness. No re-scopable unit. BLOCKED.md kept; no experiment run.
+
+## Session 5017 (2026-10-15) — s5015 block re-checked, still stands
+No new input since s5016: MIPS gcc/ld still absent (clang has no MIPS target), soak queue empty, newest SOAK-RESULTS line (s5012) already folded in. No experiment run. Needs owner choice among BLOCKED.md options (a)-(d).
