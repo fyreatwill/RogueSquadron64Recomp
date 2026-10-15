@@ -1,8 +1,5 @@
-# Next work unit: select the next M5 contract boundary after A9/A10 (docs/M5-AUDIO-PLAN.md)
+# Next work unit: await owner decision (see scratch/agent/BLOCKED.md)
 
 HYPOTHESIS-ID: m5-next-contract-boundary
 
-M4 accumulator thread closed in s5006 (ordinary values). Return to M5: read docs/M5-AUDIO-PLAN.md table rows (A-series,
-lines ~125-145 and sequence ~197-203), pick the highest-information unaudited row, state 2-4 hypotheses and the
-discriminating measurement here before building. Land a de-stub or guard-class audit that commits an engineering change;
-do not run another diagnostic-only iteration (streak rule 14).
+If the owner picks (b): re-run scratch/agent/s4984 whole-voice-lock recipe with a title-reaching keyed route; positive control = ctl_arm=1 and title=1, discriminator = bad count 4 (lock off) vs 0 (lock on) in mission. Otherwise follow the owner's new target.

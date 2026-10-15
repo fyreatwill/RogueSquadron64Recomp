@@ -268,6 +268,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+**s5007 (top):** All priority threads are closed or parked; loop is BLOCKED on an owner decision (scratch/agent/BLOCKED.md). Only live defect: mission-phase `kind=bad` voice-index reads (H-lock-required); s4985 lock attempt was route-unevaluable.
+
 **s5000 (top):** The external-retail retry is route-mismatched: retail reached
 the qualified phases and remained absent at `0x800903F0`, but the port did not
 reach qualified hangar. Keep this question parked until a new port route

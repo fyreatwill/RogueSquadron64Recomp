@@ -158175,3 +158175,10 @@ Offline only, on the s5005 log (`scratch/agent/soak_results/s5005_port_end_acc/r
 ORIGIN: analysis only; no mitigation or behavior change.
 Discrimination: SELECTS H-ordinary-48bit-values; REFUTES H-640-phase-ucode-divergence (no clamp-shaped row). Single-source (port log; retail arm is the s5004 count). M4 accumulator thread closed.
 Next: M5 audio plan (docs/M5-AUDIO-PLAN.md) — select the next contract boundary after A9/A10.
+
+## Session 5007 (2026-10-15) — M5 plan exhausted; no runnable work unit remains, BLOCKED
+
+Preflight only, no build or run. Walked the priority list against the ledger: (1) CURRENT-TRUTH is 34,484 B, no maintenance; (2) M5-AUDIO-PLAN execution Steps 0-11 are all qualified/closed (Step 8 s4852 A9/A10, Step 10 s4857, Step 11 s4836, mission long-hold s4968), inventory rows A1-A20 each carry "keep / do not repeat" with no unaudited row left; (3) M3 idiom classes exhausted (s4975-s4998); (4) rename sweep closed pending a new mapping source (s4999); M4 accumulator closed (s5005/s5006); retail-entry boundary parked (s4979 design-dead, s5000 route-mismatched). Last-15 titles are not all sweep, so no REVISIT is mandated, but the REVISIT targets are the same parked threads.
+Only live engineering defect: port mission-phase reader still logs 4 `kind=bad` voice-index calls (s4981/s4982/s4984: bad=4-8 after count-after-base and atomic loads); H-lock-required remains, writer `allocateSongChannelArray`. The whole-voice-lock attempt (s4985) was route-unevaluable (title=0). Re-running it is a repeat soak with no new idea, so not done here (iron rule 14).
+Outcome: BLOCKED with a specific question in scratch/agent/BLOCKED.md.
+ORIGIN: no mitigation or behavior change.
