@@ -367,6 +367,7 @@ preflight.
    recipe `scratch/agent/s5003_cxd4_dump.sh`; capture `scratch/agent/s5003/rsp.dump`
    passed all controls (6536 records = 2089 gfx + 4447 audio; gfx count equals
    2089 rdp rows; VACC non-zero in 5603; VI 1024 and 512@0x6ab800 reached).
+   s5004 retail baseline: 0/576 hangar gfx tasks end with any VACC lane == 0x8000 (also 0 in every other phase); refutes retail-also-saturates, single-source until the port side is compared.
    **NEXT: offline compare** of gfx-task VACC/DMEM records against the port's
    accumulator/stage rows (phase-gated on the VI 1024->512 transition).
 5. Revisit M3 only as a complete idiom-class audit with a new discriminator;
