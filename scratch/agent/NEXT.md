@@ -1,5 +1,5 @@
 # Next work unit
 HYPOTHESIS-ID: keyed-mission-image-vs-silent-ab
-s4964: keyed mission route 3/3 valid (crash=0, PCM live). M5 steps 0-11 closed.
-Unit: copy scratch/agent/soak_queue/done/s4959_mission_run1.sh to s4964_mission_image.sh and s4964_mission_silent.sh (silent sets ROGUESQ_AUDIO_UCODE=0), enqueue both, consume verdicts.
-Hypotheses: H-stable-both (mission onset/crash identical -> audio is not the mission-time stability factor); H-image-regresses (image crashes/stalls, silent does not -> audio de-stub a mission hazard); H-silent-regresses (silent crashes -> degenerate path was the hazard). Discriminator: onset time, crash/abort, VI flip count per arm. Positive control: silent arm must show pcm_nz_rows=0, image arm >0.
+s4964_mission_image and s4964_mission_silent are enqueued (s4965). Unit: read the two new SOAK-RESULTS.md lines (logs in scratch/agent/soak_results/s4964_mission_{image,silent}/), compare onset t, crash/abort, vi_origin_rows. Controls: silent pcm_nz_rows=0, image >0 (else arm invalid, re-enqueue).
+H-stable-both: audio not the mission stability factor. H-image-regresses: image crashes/stalls, silent not. H-silent-regresses: silent crashes.
+If a recipe did not run, check soak_queue/ and the loop log before re-enqueuing.

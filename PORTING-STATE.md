@@ -157766,3 +157766,6 @@ Consumed the re-queued s4959_mission_run1/run2 (rc=0, 325 s/324 s; no "No such f
 
 ## Session 4964 (2026-10-15) — s4959 run3 consumed: keyed mission route 3/3 valid, crash=0, PCM live
 Consumed SOAK-RESULTS s4959_mission_run3 (rc=0, 319 s). keys3.log: mission_onset_t=182, crash=0 abort=0, pcm_rows=164, pcm_nz_rows=128, sample_nonflat=8455; run3.log shows origins 0x690400 and 0x620400 (2089/2081 rows), 0 crash/abort grep hits, 24298 nonzero-PCM lines. Together with runs 1/2 (s4963): 3/3 reach the mission, no audio-induced fault. Rules out: audio-enabled path destabilizing the keyed mission in the 300 s window (n=3, single recipe). M5 plan steps 0-11 are all closed; plan mission row updated. Next unit: mission-phase image-vs-silent A/B on the keyed route (see NEXT.md).
+
+## Session 4965 (2026-10-15) — enqueued mission image-vs-silent A/B soaks (no verdict yet)
+Built both arms of the s4964 A/B in one iteration: scratch/agent/soak_queue/s4964_mission_image.sh (ROGUESQ_AUDIO_UCODE=1) and s4964_mission_silent.sh (=0), copies of the s4959 keyed mission route plus a vi_origin_rows / m690400 count in the verdict line. Neither has run; the loop runs queued recipes between iterations, so this session produced no measurement. Positive control per arm: silent must show pcm_nz_rows=0, image >0. Next iteration compares onset time, crash/abort and VI row count.
