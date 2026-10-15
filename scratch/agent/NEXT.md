@@ -1,33 +1,32 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-first-teardown-deregistration
+HYPOTHESIS-ID: m5-retire-synth-dedup
 
-Implement one bounded behavior change: when the first gate-zero teardown is
-about to reapply audio configuration and callback table slot 1 already holds
-`0x8009123C`, deregister that existing synth callback once, preserving the
-gate value and all later balanced teardown behavior. Keep the existing dedup
-control available for rollback.
+Change the default of the existing `s4878` synth-registration deduplication
+arm to off. Keep `ROGUESQ_S4875_DEDUP=1` as the rollback arm and keep the
+s4890 one-shot first-teardown deregistration enabled. This tests whether the
+named origin fix makes the mitigation redundant.
 
 Competing hypotheses:
-- H1: the gate-zero first-teardown skip is the duplicate source; one-shot
-  deregistration leaves one synth callback per retrace walk and preserves the
-  qualified route controls.
-- H2: another registration source or table-order defect remains; the callback
-  table still has two live synth entries after the change.
-- H3: the change is causally correct but route-invalid or destabilizing; the
-  positive callback controls fail before phase qualification.
 
-Discriminator: one build containing the default one-shot change and the
-rollback arm, with callback-table slot snapshots, synth entries per retrace,
-SP completion, PCM, title/hangar, and crash/abort controls in the same run.
-H1 authorizes the bounded default change; H2 pivots to the remaining
-registration source; H3 reverts the change and does not generalize the result.
+- H1: after s4890, dedup can be retired; default-off has one synth callback per
+  retrace and preserves SP/PCM/title/hangar controls.
+- H2: another duplicate source remains; default-off shows two synth callbacks
+  or a route divergence while rollback remains qualified.
+- H3: dedup is not the duplicate source but is a stability guard; default-off
+  crashes or loses the qualified route despite one callback entry.
+
+Discriminator: one build containing default dedup-off and rollback dedup-on,
+run concurrently with `ROGUESQ_S4889_FIRST_DEREG=1`, callback-table snapshots,
+synth entries/deregistrations, `[m5-route-order]` SP completion, PCM boundary,
+title/hangar, and crash/abort controls. H1 authorizes removing the default
+mitigation; H2 keeps it and audits the remaining registration source; H3 keeps
+it and treats the one-shot fix as insufficient for retirement.
 
 Exact commands:
 
-    rg -n "reapplyAudioConfig|musyxNoopStub|8009123C|800A0F50" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c tools
-    python3 tools/apply_s4889_first_dereg.py
+    python3 tools/apply_s4891_retire_synth_dedup.py
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env ROGUESQ_LOG_S4700_CB=1 zsh tools/run_s4889_first_dereg_ab.sh
+    zsh tools/run_s4891_retire_synth_dedup_ab.sh
 
-Do not run the generated-symbol sweep until this M5 unit is closed.
+Do not start the generated-symbol sweep while this M5 unit is applicable.

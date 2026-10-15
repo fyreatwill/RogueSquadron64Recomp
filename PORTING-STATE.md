@@ -156899,3 +156899,29 @@ the callback value `0x8009123C` is legitimate, and the skipped deregistration
 is the defect under test, not a wild-value mitigation.
 Next: implement and qualify the one-shot first-teardown deregistration with a
 same-build rollback and callback/route controls.
+
+## Session 4890 (2026-10-14) — qualified one-shot first-teardown synth deregistration
+
+Work unit: implement the named gate-zero first-teardown deregistration and
+compare it with a rollback arm in one same-build phase-gated run. The missing
+prescribed helper was reconstructed as `tools/apply_s4889_first_dereg.py` and
+`tools/run_s4889_first_dereg_ab.sh`; the behavior patch is replayable from the
+fixup script list and has rollback `ROGUESQ_S4889_FIRST_DEREG=0`.
+
+The default arm deregistered the existing legitimate `0x8009123C` once before
+the first gate-zero reapply; the rollback arm did not. Callback snapshots show
+default `80003250,0,0,0` after that deregistration, while rollback retained
+`80003250,8009123C,0,0` until the normal teardown. Default and rollback both
+reached title/hangar, recorded 670/676 `[m5-route-order]` SP-complete-enter
+rows and 329 PCM boundary rows, and recorded no crash or abort marker. The
+positive callback control fired in both arms; the first-dereg marker fired only
+in default.
+
+This selects H1: the gate-zero first-teardown skip is the source of the extra
+synth registration. It rules out route loss or an immediate stability failure
+from the bounded change, and does not authorize a callback-table rewrite.
+ORIGIN: the deliberate gate check in `musyxNoopStub` skips the legitimate
+deregistration; the callback value is legitimate, and the one-shot call uses
+the existing named `findAndZeroTableSlotMatching` writer.
+Next: test retiring the now-redundant s4878 synth-registration dedup default,
+with dedup-on as rollback.
