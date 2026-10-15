@@ -6639,10 +6639,11 @@ def apply_s3341_m5_callback_pointer_store_text(text):
 
 
 def apply_s4771_m5_callback_teardown_text(text):
-    """Record the shutdown call identity alongside the existing callback table trace."""
+    """Record shutdown entry and the post-body return boundary."""
     marker = "PATCH: s4771 m5 callback teardown entry"
-    if marker in text:
-        return text, ["funcs_24.c: s4771 callback teardown already present"], False
+    return_marker = "PATCH: s4894 m5 callback teardown return"
+    changed = False
+    messages = []
     anchor = (
         "RECOMP_FUNC void shutdownAudioEngine(uint8_t* rdram, recomp_context* ctx) {\n"
         "    uint64_t hi = 0, lo = 0, result = 0;\n"
@@ -6657,9 +6658,32 @@ def apply_s4771_m5_callback_teardown_text(text):
         "U32(MEM_W(12, S32(0x8011A8A4u))), 0u, 0u); } "
         f"/* {marker} */\n"
     )
-    return text.replace(anchor, anchor + insert, 1), [
-        "funcs_24.c: s4771 callback teardown entry patched x1"
-    ], True
+    if marker not in text:
+        if text.count(anchor) != 1:
+            raise SystemExit(f"s4771 shutdownAudioEngine anchor count={text.count(anchor)}")
+        text = text.replace(anchor, anchor + insert, 1)
+        messages.append("funcs_24.c: s4771 callback teardown entry patched x1")
+        changed = True
+    return_anchor = (
+        "    // 0x80091EAC: nop\n\n"
+        "    return;\n"
+    )
+    if return_marker not in text:
+        if text.count(return_anchor) != 1:
+            raise SystemExit(f"s4894 shutdownAudioEngine return anchor count={text.count(return_anchor)}")
+        return_insert = (
+            "    { extern void rs64_m5_callback_teardown_event(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned); "
+            "rs64_m5_callback_teardown_event(2u, U32(ctx->r31), U32(MEM_W(0, S32(0x8011A8A4u))), "
+            "U32(MEM_W(4, S32(0x8011A8A4u))), U32(MEM_W(8, S32(0x8011A8A4u))), "
+            "U32(MEM_W(12, S32(0x8011A8A4u))), 0u, 0u); } "
+            f"/* {return_marker} */\n"
+        )
+        text = text.replace(return_anchor, return_insert + return_anchor, 1)
+        messages.append("funcs_24.c: s4894 callback teardown return patched x1")
+        changed = True
+    elif not messages:
+        messages.append("funcs_24.c: s4771 callback teardown entry and s4894 return already present")
+    return text, messages, changed
 
 
 def apply_s3277_swapbuffer_delay_slot_text(text):

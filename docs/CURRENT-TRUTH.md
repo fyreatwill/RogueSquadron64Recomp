@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4893)
+## Headline (as of s4894)
+
+- **s4894:** the shutdown-return marker capture corrected s4893's callback
+  identity. The qualified route passed title/hangar, 758 SP returns, 44 PCM
+  sources, 259 PCM consumers/audio returns, and no crash/abort, but all seven
+  `[s4771-cb]` rows were `kind=1` callback-registration rows: zero `kind=0`
+  `shutdownAudioEngine` entries and zero `kind=2` returns. The marker is in the
+  generated function and compiled, so H3 is selected: the route does not reach
+  `shutdownAudioEngine`; the callback-table deregistration and downstream work
+  do not prove that function ran. See `docs/M5-S4894-SHUTDOWN-RETURN-MARKER.md`.
 
 - **s4893:** the fresh callback-teardown reachability capture selected H1 at
   route level. `shutdownAudioEngine` entry fired 9 times across phases 2–5;
@@ -418,13 +427,15 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Current state (durable)
 
-- **M5 callback teardown reachability (s4893):** the qualified route reached
-  `shutdownAudioEngine` 9 times and recorded 12 callback-table deregistration
-  pairs, then continued through title/hangar with phase-5 SP, nonzero PCM,
-  consumer, and audio-return controls and no crash/abort. This selects H1 at
-  route level and rejects H2/H3. The `s4782-shut` helper did not emit the
-  expected `shutdownAudioEngine` row even though its `s4771-cb` entry probe
-  did, so a direct function-return marker is still needed.
+- **M5 callback teardown reachability (s4894 correction):** the qualified
+  route passed title/hangar, 758 SP returns, 44 PCM sources, 259 PCM consumers
+  and audio returns, and no crash/abort. Its seven `[s4771-cb]` rows were all
+  `kind=1` callback-registration rows; there were zero `kind=0`
+  `shutdownAudioEngine` entries and zero `kind=2` returns. The generated
+  return marker compiled and remained absent, selecting route-level H3: this
+  route does not reach `shutdownAudioEngine`. Six callback-table deregistration
+  pairs and downstream audio work remain independently real, but do not prove
+  that function ran.
 
 - **M5 first-teardown deregistration (s4890):** a same-build default/rollback
   capture selected the bounded one-shot change. When gate `0` reapply saw an
@@ -580,6 +591,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Superseded conclusions to avoid repeating
 
+- **s4893's claim that the qualified route reached `shutdownAudioEngine`** is
+  superseded by s4894. It was believable because the shared `[s4771-cb]`
+  helper emitted seven/nine rows alongside deregistration and downstream
+  controls, but s4894 decoded the discriminator: those rows were `kind=1`
+  registration events, not the `kind=0` shutdown-entry event. The generated
+  function contained the new `kind=2` return marker and emitted none. Do not
+  treat callback-table activity as shutdownAudioEngine execution.
+
 ## Superseded conclusions to avoid repeating
 
 - **"M5 needs human authorization for the data_size writer trace; no de-stub step remains" (s4863).** Believable because every M5-AUDIO-PLAN step was closed and the trace looked like a new build+run. Overturned s4864: builds/runs are already permitted by ITERATION.md, and the data_size 1-vs-2 question is still an open, cheap discriminating experiment.
@@ -615,17 +634,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-0. **M5 shutdown return boundary:** add a regeneration-replayable,
-   phase-scoped post-body/return marker for `shutdownAudioEngine`, preserving
-   the existing `s4771-cb` entry and `s4700-cb` table probes. Run one qualified
-   capture with title/hangar, SP, PCM, audio-return, and crash/abort controls.
-   Competing hypotheses are: H1 the helper is only misbound and a direct return
-   row appears after teardown; H2 the function reaches an internal non-return
-   path and no return row appears despite downstream work; H3 the marker is
-   placed on an unreachable/generated path and remains absent while the
-   positive controls pass. The discriminator is ordered entry -> table
-   deregistration -> direct return rows in the same phase-gated run. Keep
-   `HYPOTHESIS-ID: m5-shutdownaudio-return-boundary`.
+0. **M5 callback teardown boundary (s4894):** the qualified route does not
+   reach `shutdownAudioEngine`; s4894's generated entry/return marker and the
+   callback-registration kind control distinguish this from a non-return. Do
+   not repeat the same route or add more return fields. Revisit only with a
+   genuinely new callsite/route discriminator; otherwise proceed to the
+   generated-symbol sweep after its required last-15-session preflight.
 
 1. **M5 double synth walk (s4874-s4875, closed by s4890):** the port's
    duplicate callback origin was the gate-zero first-teardown gap. s4890's

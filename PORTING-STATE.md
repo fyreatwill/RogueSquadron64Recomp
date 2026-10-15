@@ -156998,3 +156998,29 @@ next unit adds a regeneration-replayable return marker. See
 
 ORIGIN: diagnostic-only generated entry/table/PCM probes and existing route
 controls. No callback-table, teardown, or audio behavior changed.
+
+## Session 4894 (2026-10-14) — corrected shutdownAudioEngine callback identity
+
+Work unit: add the regeneration-replayable `s4894` post-body return marker to
+`shutdownAudioEngine`, build once, and run the qualified real-audio/LLE/
+ungated/solo/spin-yield route with the existing callback-table, SP, PCM,
+audio-return, title/hangar, and crash/abort controls.
+
+The Debug target built successfully. The run reached title VI 1024 and hangar
+VI 512, with 758 phase-gated SP completion-return rows, 44 PCM-source rows,
+259 PCM-consumer rows, and 259 audio-return rows; it had no crash or abort
+marker. The new marker is present immediately before the generated
+`shutdownAudioEngine` return and compiled into `funcs_24.c`.
+
+The discriminator corrected the prior attribution: all seven `[s4771-cb]`
+rows were `kind=1` callback-registration events. There were zero `kind=0`
+shutdown-entry rows and zero `kind=2` return rows. The independent table trace
+still recorded six deregistration pairs, but that does not establish that
+`shutdownAudioEngine` ran. H3 is selected: this qualified route does not reach
+the generated shutdown function. This rules out interpreting the callback
+registration rows as shutdown entry and rules out a non-return conclusion from
+the absent return marker. See `docs/M5-S4894-SHUTDOWN-RETURN-MARKER.md`.
+
+ORIGIN: diagnostic-only generated entry/return and existing callback-table,
+SP, PCM, audio-return, and VI controls. No callback table, teardown, or audio
+behavior changed.
