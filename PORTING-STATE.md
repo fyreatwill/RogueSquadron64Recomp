@@ -157769,3 +157769,8 @@ Consumed SOAK-RESULTS s4959_mission_run3 (rc=0, 319 s). keys3.log: mission_onset
 
 ## Session 4965 (2026-10-15) — enqueued mission image-vs-silent A/B soaks (no verdict yet)
 Built both arms of the s4964 A/B in one iteration: scratch/agent/soak_queue/s4964_mission_image.sh (ROGUESQ_AUDIO_UCODE=1) and s4964_mission_silent.sh (=0), copies of the s4959 keyed mission route plus a vi_origin_rows / m690400 count in the verdict line. Neither has run; the loop runs queued recipes between iterations, so this session produced no measurement. Positive control per arm: silent must show pcm_nz_rows=0, image >0. Next iteration compares onset time, crash/abort and VI row count.
+
+## Session 4966 (2026-10-15) — mission image-vs-silent A/B consumed: H-stable-both
+Consumed the two queued soaks (same build, same keyed route, differing only in ROGUESQ_AUDIO_UCODE=1/0). Image arm: mission scanout 0x690400 onset t=183 s, held to t=257+ s (m690400=2361 rows), vi_origin_rows=534526, crash=0 abort=0, pcm_rows=165, pcm_nz_rows=131, sample_nonflat=8433 (positive control: PCM live). Silent arm: onset t=186 s, m690400=2246, vi_origin_rows=564434, crash=0 abort=0, pcm_nz_rows=0, sample_nonflat=0 (negative control: silent really silent). Both arms reached hangar (t=80/90) and 0x6A2900 (t=113/115) before mission.
+Result: H-stable-both. Audio de-stubbing neither causes nor cures mission-phase stability on the covered route (n=1 per arm, within-recipe controls valid; consistent with the 3/3 image-arm runs of s4964). Rules out H-image-regresses and H-silent-regresses for this route and window (~320 s). Caveat: one run per arm; the 3 s onset difference is within run-to-run spread (181-186 s).
+No code change this session; the unit was consumption of queued evidence.

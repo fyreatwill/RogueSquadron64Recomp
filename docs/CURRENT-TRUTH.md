@@ -170,7 +170,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4965 (top):** recipes s4964_mission_image.sh / s4964_mission_silent.sh are BUILT and ENQUEUED (differ only in ROGUESQ_AUDIO_UCODE=1/0; verdict line adds vi_origin_rows and m690400). Not yet run. Next: consume their two SOAK-RESULTS lines; compare mission onset, crash, VI row count; controls silent pcm_nz_rows=0, image >0 (NEXT.md).
+**s4966 result (top):** mission image-vs-silent A/B (s4964_mission_{image,silent}) both crash=0 abort=0 over ~320 s, onset t=183 vs 186 s; image pcm_nz_rows=131, silent 0 (controls valid, n=1/arm). H-stable-both: the audio image is not the mission-stability factor on the keyed route. Next: take the next unqualified row of M5-AUDIO-PLAN's execution sequence (Step 10 host PCM consumer / longer mission hold); see NEXT.md.
+
+**s4965 (superseded by s4966):** recipes enqueued; now consumed.
 
 **s4963 result (superseded by s4964):** s4959 run1/run2 VALID: mission (0x690400) at t=186/185 s held to 314 s, crash=0 abort=0, pcm_nz_rows 151/153 of 168 (n=2, keyed route). Run3 still queued: consume its SOAK-RESULTS line, then take the next unfinished step of M5-AUDIO-PLAN's execution sequence.
 

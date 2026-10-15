@@ -1,5 +1,4 @@
 # Next work unit
-HYPOTHESIS-ID: keyed-mission-image-vs-silent-ab
-s4964_mission_image and s4964_mission_silent are enqueued (s4965). Unit: read the two new SOAK-RESULTS.md lines (logs in scratch/agent/soak_results/s4964_mission_{image,silent}/), compare onset t, crash/abort, vi_origin_rows. Controls: silent pcm_nz_rows=0, image >0 (else arm invalid, re-enqueue).
-H-stable-both: audio not the mission stability factor. H-image-regresses: image crashes/stalls, silent not. H-silent-regresses: silent crashes.
-If a recipe did not run, check soak_queue/ and the loop log before re-enqueuing.
+HYPOTHESIS-ID: m5-audio-destub-sequence
+s4966 closed the mission image-vs-silent A/B (H-stable-both, crash=0 both arms). Unit: pick the next unqualified step in docs/M5-AUDIO-PLAN.md execution table (Step 10 host PCM consumer, or a >=600 s mission hold with the image arm; copy scratch/agent/soak_queue/done/s4964_mission_image_*.sh with longer timeouts and enqueue). Record the plan row first, then enqueue; do not babysit.
+Outcomes: crash/stall in a long image hold => name the writer (rule 11); clean => mark the step qualified in the M5 plan.
