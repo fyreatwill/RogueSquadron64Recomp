@@ -1,16 +1,4 @@
-# UNBLOCK s4949
-
-Route taken: 1 (refute) + 3 (re-scope). Not escalated.
-
-Block claimed every tier is closed and asked for a human choice among (a) conditional-move recompiler support,
-(b) an oracle mission-entry recipe, (c) stop.
-Evidence the dependency is unnecessary:
-- (a): docs/M3-S4840-MOVZ-MOVN-REACHABILITY.md classifies 149 movz/movn sites: 2 reachable, 16 post-return, 131
-  data-like. Both "reachable" ones (funcs_49.c 0x800A2B64 movn $k0; 0x801096F4 movz $zero) follow `.word` junk /
-  `sll $zero` in data-as-code. movz $zero is a no-op. do_break (lib/N64ModernRuntime/librecomp/src/recomp.cpp:454)
-  prints "Encountered break at original vram" and exits, so any live hit would be loud; none recorded. N64Recomp
-  src/include contain no movz/movn lowering (grep), so the gap is real but dormant. Not worth gating the loop on.
-- (b): not needed for a work unit; mission entry is reached by the port route (s4946, 96.8s).
-Work not needing a human exists: SOAK-RESULTS has no completed verdict since s4794 (s4921 rc=137), so a fresh
-mission-route soak is the highest-information unit. NEXT.md rewritten accordingly.
-Refutation experiment for this conclusion: a soak run printing "Encountered break at original vram 0x800A2B64".
+# UNBLOCK (s4952)
+Route taken: 3 (re-scope). Route 1 inapplicable: the s4951 block is a scope question ("which goal next / stop?"), not a missing resource. Declaring the milestone done stays a human call, so it is NOT chosen; the other two options are reversible engineering choices the loop can make itself.
+Evidence: s4950 left the VI640 stall rate undetermined (grep too coarse). Offline phase split of its 5 logs (vi-fs-decision stalled=1 lines by vi=): 0x5D4000:62, 0x620000:1, 0x62B800:4, 0x66A000:105, 0x690000:6, 0x695C00:110, 0x78FC00:14. stalled=1 occurs at title, hangar and mission VIs alike, so it is not a VI640 indicator; a real stall rate needs per-run VI-progress, not this field.
+New unit written to NEXT.md: (a) VI-progress metric from the s4950 logs, then (b) mission-phase M5 qualification row.
