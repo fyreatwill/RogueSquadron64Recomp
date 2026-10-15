@@ -171,6 +171,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+**s4977 (top):** M3 idiom census EXHAUSTED: mfc1/dmfc1 width (4 dmfc1/dmtc1 sites, all $zero), sltiu sign (2 negative-imm sites, data-as-code, semantics correct), jr non-ra (176 $v0 jump tables; 12 $zero data-as-code; ~14 LOOKUP_FUNC uninspected) all benign. Next: REVISIT external retail-entry with a new angle (see NEXT.md).
+
 **s4976 (top):** ldc1/sdc1 alignment class closed: 12/2644 misaligned-offset sites, all data-as-code; LD/SD are 32-bit pairs so arm64 cannot fault. Remaining M3 candidates: mfc1/dmfc1 width, sltiu, jr non-ra.
 
 **s4975 (prior):** 64-bit mul/div class closed (see M3 list). Remaining unexamined M3 candidates: ldc1/sdc1 alignment, cvt rounding modes, mfc1/dmfc1 width, sltiu, jr non-ra. Then resume backlog item 3/4.

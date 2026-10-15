@@ -157817,3 +157817,8 @@ Ran: new tools/census_fpmem_sites.py over generated RecompiledFuncs. Result: 264
 Rules out: ldc1/sdc1 alignment as a crash family. Caveat: the other 7 of 12 sites were not individually inspected (data-as-code judgement is single-source; the host-safety argument is independent).
 ORIGIN: n/a (no mitigation added).
 Remaining M3 classes: mfc1/dmfc1 width, sltiu, jr non-ra (cvt/FCSR already closed).
+
+## Session 4977 (2026-10-15) — M3 census: mfc1/dmfc1 width, sltiu sign, jr non-ra classes closed
+Ran: new tools/census_s4977.py + tools/census_s4977b.py over generated RecompiledFuncs (one pass, all three classes). Results: (a) mfc1 2914 unique sites all emit `(int32_t)f.u32l` (sign-extending, correct); mtc1 writes `.u32l`/`f_odd`; dmfc1/dmtc1 total 4 sites, all with $zero as GPR (discarded/zero, data-as-code). (b) sltiu 845 sites; 843 non-negative immediates; the 2 negative ones (0x800A4ECC/ED4, `r9 < -0X118`) sit in a run of `sd ..., 0x540D($ra)` / `0x50C7($k1)` = data-as-code; in any case int->uint64 promotion of a negative constant sign-extends, matching MIPS. (c) jr non-$ra 194 sites: $v0 176 emitted as `switch (jr_addend>>2)` jump tables; $t7 1 same; $zero 12 and $s0 4 are data-as-code (`LOOKUP_FUNC(0)`, `SIGNED(0)<0`); $a3/$fp/$t0/$v1/$t9 ~14 are `LOOKUP_FUNC(reg)` indirect calls in odd neighbourhoods (do_break, MEM_B(0,..)) - not individually inspected (single-source judgement; the runtime LOOKUP_FUNC path is the existing guarded one).
+Rules out: mfc1/dmfc1 width, sltiu sign-extension, and jr-register dispatch as unguarded crash families. M3 idiom census list is now exhausted.
+ORIGIN: n/a (no mitigation added).
