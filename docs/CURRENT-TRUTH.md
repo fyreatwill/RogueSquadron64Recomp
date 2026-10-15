@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4930; compacted s4898)
+## Headline (as of s4931; compacted s4898)
+
+- **Latest (s4931):** the bounded retail/port route-parity join passed the
+  oracle controls (11,629 whole-RDRAM writes, 3,570 VI) and found 359 type-2
+  audio tasks in retail's qualified `0x006AB400` hangar bucket, but retail did
+  not reach the selected mission origins `0x00690400`/`0x00620400`. The port
+  reached `0x00690400`, advanced 6,720 -> 13,824 over 120 seconds, and had
+  zero crash/abort markers. The parity discriminator is therefore
+  **H-unresolved**, not a retail publication null; no mitigation is authorized.
+  See `docs/M5-S4931-RETAIL-PARITY.md`.
 
 - **Latest (s4930):** the complete route-identity census found one identity
   constructor and two direct prepare callers; the qualified mission capture
@@ -108,6 +117,15 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
     `ROGUESQ_OVL2C_DROP` was dead code since s4773; splice emits sprites.
 
 ## Current state (durable)
+
+- **M5 retail parity join (s4931):** the independent oracle was instrumented
+  correctly and reached the 512-wide hangar route, with 11,629 whole-RDRAM
+  writes, 3,570 VI, and 359 type-2 audio-task rows at `0x006AB400`. It did not
+  reach the mission handoff origins. The concurrent port capture reached
+  `0x00690400`, advanced its counter 6,720 -> 13,824 for 120 seconds, and had
+  zero crashes; origin-specific route/task/PCM rows were zero. Treat the
+  retail comparison as unresolved route qualification, not as evidence that
+  retail lacks the publication. See `docs/M5-S4931-RETAIL-PARITY.md`.
 
 - **M5 retail voice-render boundary (s4897):** the independent qualified
   route reached title and hangar, and the full execution range
@@ -373,12 +391,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4930) Establish retail parity for the selected route reprepare:** use one
-  bounded oracle/port publication join, with a whole-RDRAM positive control,
-  to compare the first post-handoff audio-task publication and its source/PCM
-  cadence. The port-side writer is already identified as
-  `factor5_ucode_b`; do not add a guard, skip, or another host-only route
-  census.
+- **(s4931 unresolved) Qualify a retail mission-entry route for the selected
+  reprepare parity test:** use a new bounded oracle driving/phase capture with
+  the whole-RDRAM control and VI trace, and determine whether the oracle can
+  reach `0x00690400`/`0x00620400`. If it still cannot, leave parity
+  unresolved; do not treat the null as a publication result or add a
+  mitigation.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 

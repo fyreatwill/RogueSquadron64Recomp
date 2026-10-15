@@ -157379,3 +157379,25 @@ the script reached the qualified mission phase; no null was used as evidence.
 
 ORIGIN: no mitigation or game-behavior change; the result is static census plus
 existing phase-scoped transition/route/PCM diagnostics.
+
+## Session 4931 (2026-10-14) — retail route-parity join remained unresolved
+
+Ran the planned bounded retail/port publication join after a successful
+current-binary rebuild. The retail oracle positive controls passed: the
+whole-RDRAM watch recorded 11,629 writes and VI polling reached 3,570 VI. Its
+qualified 512-wide hangar bucket at origin `0x006AB400` recorded 359 type-2
+audio-task rows from 463 phase task hits, with 104 non-type-2 rows and no
+invalid pointers.
+
+The oracle never reached the selected mission origins `0x00690400` or
+`0x00620400`, so it did not provide a retail post-handoff publication sample.
+The concurrent port capture did reach `0x00690400`, advanced `update_screen`
+6720 -> 13824 over 120 seconds, and had zero crash/abort markers. It recorded
+885 mission-origin rows, 862 transition controls, and 4663 transition events;
+the origin-specific route/task/PCM counters were zero while global route/PCM
+controls remained positive. This leaves the retail parity discriminator
+H-unresolved: the oracle null is route qualification failure, not evidence of
+absent retail publication. No guard, skip, or behavior change was authorized.
+
+ORIGIN: no mitigation or game-behavior change; this iteration used only the
+existing phase-scoped port diagnostics and independent oracle watches.
