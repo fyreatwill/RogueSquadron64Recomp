@@ -2,7 +2,5 @@
 
 HYPOTHESIS-ID: m5-aux-store-ab
 
-s4945: the s4944 "11x synth frames per VI" was a witness artifact (the cap resets per origin flip; rows/flip 32.8 image vs 30.8 silent).
-Aux-store arms are equivalent per flip, so this A/B line is closed.
-Next: take the next unfinished step in docs/M5-AUDIO-PLAN.md (de-stub sequence) and run it with a validation soak.
-If none is unblocked, run one solo image-arm flips/sec counter (solo vs 2-concurrent) to separate CPU-bound from AI-drain gating.
+s4946: solo vs duo image-arm VI pacing identical (mission entry #5738/#5744/#5735 at ~96.8s), so concurrency/CPU contention does not explain fewer image-arm origin flips in s4944. M5 plan steps 0-11 are all closed.
+Next: count per-arm `[phase]` origin transitions (not `origin=` lines, which match ~370k lines) offline from scratch/agent/s4944_aux_ab/*.log to see whether the 49-vs-512 flip gap is real; if not resolvable, pick an M5 A-table row without a Qualified marker in docs/M5-AUDIO-PLAN.md, or follow the REVISIT rules.

@@ -6,6 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4946:** solo vs duo image-arm VI pacing identical (mission entry #5738/#5744/#5735 at ~96.8s); concurrency does not explain the s4944 flip-count gap. M5 plan steps 0-11 all closed.
+
 - **s4944:** Image-vs-silent aux-store A/B qualified (title+mission in both arms, crash=0, same final VI #9600). All four aux stores fire in both arms with identical value structure — H-contract-gap refuted, H-route-only supported. The silent arm emits ~11x more mission synth-frame rows at equal VI count (single run; AI-drain pacing suspected, untested). Recipe: `scratch/agent/s4944_aux_ab.sh`.
 
 - **s4943:** One production image arm reached title (`0x00790400`) and both
