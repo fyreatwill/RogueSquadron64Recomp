@@ -191,3 +191,6 @@ and the tail of `scratch/agent/SOAK-RESULTS.md` before acting.
 
 - s4947: aux-store A/B thread closed; arms identical on [phase] transitions (6 each), pacing, rows/flip. Not a lead.
 - s4948: all tiers closed or unevaluable; BLOCKED for owner decision (see scratch/agent/BLOCKED.md).
+
+### s4950 update
+Mission-route soak (solo, N=5): 5/5 reached origin 0x690400, 0 do_break hits, 0 crashes (single-source, small N). VI640-stall rate still undetermined: vi-fs-decision lines carry stalled=1 late in every run, needs a phase-gated count, not a raw grep.

@@ -157682,3 +157682,13 @@ Step 0: CURRENT-TRUTH 12,337 B, no maintenance. M5 plan steps 0-11 closed (s4947
 ## Session 4949 (2026-10-14) — unblock: s4948 "owner decision needed" block refuted by existing evidence; re-scoped to a mission-route soak
 
 Block asked for a choice among conditional-move recompiler support, an oracle mission-entry recipe, or stopping. Route 1: the M3-S4840 reachability table has 2 reachable of 149 movz/movn sites, both in data-as-code (movz $zero is a no-op); do_break exits loudly with the vram and no hit is recorded, so (a) is dormant, not a blocker. (b) is unnecessary: the port reaches mission entry (s4946). SOAK-RESULTS has no completed verdict since s4794 (s4921 rc=137), so NEXT.md is now a 5-run mission-route soak with do_break/stall/positive-control capture. Details: scratch/agent/UNBLOCK.md. No code change.
+
+## Session 4950 (2026-10-14) — mission-route soak x5 solo: 5/5 reached mission entry, 0 breaks, 0 crashes
+
+Ran scratch/agent/s4950_route_soak.sh (s4946 route env, solo, one game at a time, SIGKILL after ~180s each).
+Positive control (origin=0x00690400 line) present in every run, so all five are route-valid.
+Per run: reached_origin lines 45/48/51/26/58; "Encountered break" 0/5; crash/abort/SIGSEGV 0/5; process still alive at end 5/5.
+Rules out: do_break (movz/movn) hits and startup crashes on this route in 5 runs (s4794 had 1/5 startup crash; s4921 had no verdict).
+NOT resolved: the "stalled" grep counts ~458/run are the vi-fs-decision field (stalled=1 lines at vi=0x00695C00, lastCimg=0 appear late
+in run1), so this soak did not discriminate the VI640 stall rate from s4794 - the grep was too coarse. Single-source, N=5.
+Logs: scratch/agent/s4950_route_soak/.
