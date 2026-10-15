@@ -6,6 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4964:** s4959 run3 valid (mission onset t=182 s, crash=0, pcm_nz 128/164). Keyed mission route now 3/3 valid, crash=0, PCM live. M5 plan steps 0-11 all closed; next is a mission-phase image-vs-silent (`ROGUESQ_AUDIO_UCODE=1/0`) A/B soak pair on the keyed route.
+
 - **s4958:** first keyed route to a real mission: title (36,6) -> hangar 0x6AB400 -> ~5 A -> 0x6A2900 is a ~70 s LOADING phase (0x644D00, 0x62BD00, 0x696100) -> mission 0x620400/0x690400 at t=181, sustained 140 s, crash=0 (N=1). s4957's "model viewer" was this load. Recipe `scratch/agent/s4958_after_6a2900.sh`.
 
 - **s4956:** keys sent from the title phase (36,6 x8/run, N=3) reach the hangar `0x006AB400` in 3/3 at ~58-66 s with VI advancing and crash=0, but never any mission origin. Hangar control passed; (36,6) does not launch a mission. The s4943 "mission" origins are probably the attract demo. Recipe: `scratch/agent/s4956_keyed_title.sh`.
@@ -168,7 +170,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4963 result (top):** s4959 run1/run2 VALID: mission (0x690400) at t=186/185 s held to 314 s, crash=0 abort=0, pcm_nz_rows 151/153 of 168 (n=2, keyed route). Run3 still queued: consume its SOAK-RESULTS line, then take the next unfinished step of M5-AUDIO-PLAN's execution sequence.
+**s4964 (top):** build soak_queue recipes s4964_mission_image.sh / s4964_mission_silent.sh from s4959_mission_run1.sh differing only in ROGUESQ_AUDIO_UCODE; compare mission onset, crash, and VI flip count (NEXT.md).
+
+**s4963 result (superseded by s4964):** s4959 run1/run2 VALID: mission (0x690400) at t=186/185 s held to 314 s, crash=0 abort=0, pcm_nz_rows 151/153 of 168 (n=2, keyed route). Run3 still queued: consume its SOAK-RESULTS line, then take the next unfinished step of M5-AUDIO-PLAN's execution sequence.
 
 **s4962 note:** s4959 run1/run2 verdicts (rc=1) are INVALID — recipes ran under /bin/bash with zsh-only `${0:A:h}`, empty ROOT; fixed by zsh self-re-exec, all three re-queued.
 **s4960 next (top; still unrun at s4961):** consume the verdicts of the three queued soaks scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh (SOAK-RESULTS.md, soak_results/s4959_mission_run*/keys*.log); do not babysit or rerun. rc=137 = timeout, not a result. Then add the mission-phase row to docs/M5-AUDIO-PLAN.md.

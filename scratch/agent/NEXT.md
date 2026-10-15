@@ -1,3 +1,5 @@
 # Next work unit
-HYPOTHESIS-ID: keyed-mission-route-m5-validation
-s4963: s4959 run1/run2 valid: mission at t~186s, crash=0, PCM nz. Consume s4959_mission_run3 line in SOAK-RESULTS.md (still queued) as 3rd sample; fold into M5-AUDIO-PLAN mission row. Then pick next M5 de-stub step from docs/M5-AUDIO-PLAN.md "Incremental execution sequence" (first step not yet marked done).
+HYPOTHESIS-ID: keyed-mission-image-vs-silent-ab
+s4964: keyed mission route 3/3 valid (crash=0, PCM live). M5 steps 0-11 closed.
+Unit: copy scratch/agent/soak_queue/done/s4959_mission_run1.sh to s4964_mission_image.sh and s4964_mission_silent.sh (silent sets ROGUESQ_AUDIO_UCODE=0), enqueue both, consume verdicts.
+Hypotheses: H-stable-both (mission onset/crash identical -> audio is not the mission-time stability factor); H-image-regresses (image crashes/stalls, silent does not -> audio de-stub a mission hazard); H-silent-regresses (silent crashes -> degenerate path was the hazard). Discriminator: onset time, crash/abort, VI flip count per arm. Positive control: silent arm must show pcm_nz_rows=0, image arm >0.
