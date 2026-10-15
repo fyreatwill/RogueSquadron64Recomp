@@ -25819,7 +25819,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 f'                fprintf(stderr, "[texdata-table-guard] site={addr2} n=%d bad_base=0x%08X ra=0x%08X\\n", s_texdata_table_guard_n, texdata_table_base_{addr2}, U32(ctx->r31));\n'
                 f"                s_texdata_table_guard_n++;\n"
                 f"            }}\n"
-                f"            ctx->r{rload} = 0x80000000u; // substitute a validly-mapped RDRAM base -- 0 would put downstream index*stride+offset arithmetic at a guaranteed-invalid tiny address\n"
+                f"            ctx->r{rload} = (gpr)(int32_t)0x80000000u; // substitute a validly-mapped RDRAM base -- 0 would put downstream index*stride+offset arithmetic at a guaranteed-invalid tiny address\n"
                 f"        }}\n"
                 f"    }}\n"
                 f"{bc2}"
@@ -25910,7 +25910,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 f'                fprintf(stderr, "[texdata-ptr-array-guard] site={addr2} n=%d bad_base=0x%08X ra=0x%08X\\n", s_texdata_ptr_array_guard_n, texdata_ptr_array_base_{addr2}, U32(ctx->r31));\n'
                 f"                s_texdata_ptr_array_guard_n++;\n"
                 f"            }}\n"
-                f"            ctx->r{rload} = 0x80000000u; // substitute a validly-mapped RDRAM base -- 0 would be actively wrong for the idx*4-arithmetic sites and merely lucky for the immediate-deref/free sites\n"
+                f"            ctx->r{rload} = (gpr)(int32_t)0x80000000u; // substitute a validly-mapped RDRAM base -- 0 would be actively wrong for the idx*4-arithmetic sites and merely lucky for the immediate-deref/free sites\n"
                 f"        }}\n"
                 f"    }}\n"
                 f"{bc2}"
@@ -25993,7 +25993,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 f'                fprintf(stderr, "[material-array-ptr-guard] site={addr2} n=%d bad_base=0x%08X ra=0x%08X\\n", s_material_array_ptr_guard_n, material_array_ptr_base_{addr2}, U32(ctx->r31));\n'
                 f"                s_material_array_ptr_guard_n++;\n"
                 f"            }}\n"
-                f"            ctx->r{rload} = 0x80000000u; // substitute a validly-mapped RDRAM base -- 0 would be actively wrong for the idx*4-arithmetic sites and merely lucky for the immediate-deref/free/loop-base sites\n"
+                f"            ctx->r{rload} = (gpr)(int32_t)0x80000000u; // substitute a validly-mapped RDRAM base -- 0 would be actively wrong for the idx*4-arithmetic sites and merely lucky for the immediate-deref/free/loop-base sites\n"
                 f"        }}\n"
                 f"    }}\n"
                 f"{bc2}"

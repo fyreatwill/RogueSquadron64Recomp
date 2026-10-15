@@ -2,6 +2,5 @@
 
 HYPOTHESIS-ID: m5-task-family-retail-compare
 
-s4883 closed the 0x400128d47 startup SIGSEGV (stale u32 probe, see CURRENT-TRUTH headline). One new crash seen 1/16: si_addr=0x380000004, last-guest-pc 0x80001b08, pc 0x101b40938 (scratch/agent/soak_results/s4883/run_1b.log).
-Do: symbolize that pc with lldb (`image lookup -a`), check whether it is another stale/zero-extended probe (grep generated text for non-S32 constant bases), as an idiom-class audit: `rg 'MEM_[A-Z]+\(-?0X[0-9A-F]+, 0x[0-9a-f]{8}u\)' ../N64Recomp/RecompiledFuncs`.
+s4884 sign-extended the 90 `ctx->rN = 0x80000000u` substitution sites. First: read scratch/agent/soak_results/s4884/summary.txt (16 runs; s4883 baseline 1/16 crashes) and fold the number into CURRENT-TRUTH/PORTING-STATE. If any crash has si_addr = rdram_base + 0x1_0000_0000-ish, repeat the audit for other zero-extended register writers (grep `ctx->r[0-9]+ = U32(` / `= 0x[0-9a-f]{8}u;` outside funcs).
 Then resume M5 contract boundary (step 12) in docs/M5-AUDIO-PLAN.md.

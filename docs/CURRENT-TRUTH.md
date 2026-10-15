@@ -8,6 +8,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Headline (as of s4883)
 
+- **s4884:** zero-extended `ctx->rN = 0x80000000u` substitution idiom (90 generated sites from 3 f-strings in tools/fixup_game_funcs_vendored.py) changed to sign-extended `(gpr)(int32_t)0x80000000u`; matches the s4883 run_1b crash register pattern (base 0x80000000 zero-extended, +4 -> 4 GiB past rdram). Faulting instruction not pinned (lldb denied) = single-source. Soak: scratch/agent/soak_results/s4884/summary.txt (s4883 baseline 1/16).
 - **s4883:** startup SIGSEGV `spTaskSchedulerThread+9632` (si_addr 0x400128d47) NAMED and FIXED. Writer: our own s3293 scheduler-send probe. Generated funcs_4.c:37949 held `MEM_BU(-0X72BC, 0x80130000u)` (zero-extended base); s4229 had fixed the script to `S32(0x80130000u)` but `apply_s3293_scheduler_send_text` returned early on the already-patched marker, so the stale unsafe probe survived every fixup run. Evidence: (1) lldb disassembly shows the constant 0x100128d47 baked into the faulting `ldrb`, line funcs_4.c:37949; (2) generated text lacked S32 while the script had it. Fix: the script now upgrades stale text in place; applied to RecompiledFuncs, rebuilt. Soak (dedup off, 16 runs x 60 s): 0/16 of the old signature (was 1/12 s4882, 2/5 s4880 arm0); 1/16 NEW crash si_addr=0x380000004 guest pc 0x80001b08 (unexplored). Lesson: idempotence markers in fixup scripts must upgrade, not skip.
 
 - **s4859 closed the M5 A16 AI-shim caller boundary.** The independent retail
