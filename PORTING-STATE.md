@@ -157941,3 +157941,11 @@ unit is a whole-table provenance capture. No guard, skip, filter, or value
 rewrite was added. ORIGIN: writer = guest `allocateSongChannelArray`;
 count 32 and base are legitimate, so this remains provenance work rather
 than mitigation.
+
+## Session 4988 (2026-10-15) — provenance separates mixer pair from stale s4540 rows
+
+See the Session 4988 entry above: the phase-scoped provenance arm reached the
+qualified mission route and separated current allocator/mixer state
+(`20/0x8018C720`) from stale `s4540` bad rows (`32/0x801714D0`). No guard or
+rewrite was added. ORIGIN: `allocateSongChannelArray` is the legitimate
+writer; this is provenance instrumentation only.

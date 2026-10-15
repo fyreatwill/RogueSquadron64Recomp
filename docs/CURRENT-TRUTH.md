@@ -1,10 +1,20 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4987; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4988; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s4988:** Independent retail ground truth passed its whole-RDRAM positive
+  control and wrote the voice pair at `0x801496F8/0x80149700` (dominant writer
+  `0x800917C4`). The corrected, phase-scoped port provenance soak reached
+  title, hangar, both mission origins, and PCM with crash=0/abort=0. In mission,
+  allocator publication and mixer count/base observation both agreed on
+  `count=20`, `base=0x8018C720`, while the four `s4540` bad rows still saw
+  `count=32`, `base=0x801714D0`, `a0=0x801724C0`. This selects a stale/unjoined
+  `s4540` path or caller propagation outside the instrumented mixer pair;
+  it does not authorize a guard or rewrite.
 
 - **s4987:** The narrow publication/observation lock preserved the qualified
   route (title, hangar, mission onset 180 s, s4579-A=9, PCM 146 rows,
@@ -216,7 +226,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4987 (top):** The narrow lock arm preserved the route but returned bad=8 with s4579-A=9, mission onset 180 s, PCM=146, pidma=0, crash=0, abort=0. The lock-placement hypothesis is refuted by this single-source run. Do not repeat the same lock family; next is a whole-table provenance discriminator for the kind=bad rows: capture the exact count/base pair at the allocator's two publication sites, the mixer's count/base loads, and the s4540 argument in one run, with title/allocator/mission/PCM controls. Expected outcomes: publication and loads are paired but s4540 is stale => diagnostic/caller propagation defect; publication itself is stale => writer/allocator source; all pairs are current but bad persists => s4540 classification or an uninstrumented reader. ORIGIN: legitimate writer is allocateSongChannelArray; this is provenance instrumentation, not a guard.
+**s4988 (top):** The whole-table provenance arm was route-qualified (title, hangar, both mission origins, PCM=129, crash=0, abort=0). Retail ground truth independently passed whole-RDRAM control and showed the pair is legitimate. In mission, publication and mixer observations agree at `20/0x8018C720`, but `s4540` bad rows report `32/0x801714D0` and `a0=0x801724C0`. Next: add phase/origin and caller-register capture at the `s4540` call boundary, plus a same-phase join to the nearest mixer/publication row; do not repeat locks or add a value filter. ORIGIN: legitimate writer is `allocateSongChannelArray`; the defect is an observation/propagation boundary, not yet explained.
 
 **s4984 (prior):** The explicit atomic count/base loads and release stores reached mission (onset 176 s) with `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0, abort=0, and PCM positive control 147. H-atomic-observation is refuted for this implementation; H-lock-required remains.
 
