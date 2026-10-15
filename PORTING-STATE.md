@@ -157664,3 +157664,10 @@ a witness row budget; no new code until that discriminates.
 
 ## Session 4945 (2026-10-14) — the "11x synth frames per VI" in s4944 is a witness-budget artifact (per-flip rows equal)
 Boring check first: rs64_s4938_aux_store (src/main/main.cpp ~5290) resets its 256-row cap whenever the (vi_width, origin) key changes, so row counts measure origin FLIPS x <=256, not synth frames per VI. Offline re-analysis of the existing s4944 logs (no new run): row==0 restarts (flips) image=49, silent=512 (10.4x); rows/flip image=1605/49=32.8, silent=15769/512=30.8. Per-flip aux-store volume is identical across arms; the whole gap is the number of mission origin flips in the same wall window (si-thr origin lines 117 vs 692). Title cap control: both arms hit 256. Rules out a hidden per-flip synth-rate difference. Still open: why image presents ~10x fewer flips (CPU-bound under 2 concurrent instances vs AI-drain gating); needs a solo flips/sec counter. Single-source (offline). ORIGIN: no mitigation added; no code changed.
+
+## Session 4946 (2026-10-14) — solo vs 2-concurrent image-arm VI pacing: concurrency does not gate pacing
+
+All docs/M5-AUDIO-PLAN.md steps (0-11) are closed, so ran the NEXT.md fallback: scratch/agent/s4946_flip_rate.sh (image arm solo, then two image instances concurrently, same route driver).
+Result: mission entry (origin=0x00690400) at 96.8s/#5738 solo vs 96.9s/#5744 and 96.7s/#5735 in the duo run, so VI pacing is identical; end-of-run VI counts 10176 (solo) vs 10624 (both duo) with unequal run lengths (single-source, not a rate measurement past mission entry).
+Rules out: CPU contention from the 2-concurrent A/B as the cause of the image arm presenting fewer origin flips in s4944. The residual image-vs-silent flip-count cause stays undiscriminated. My first origin= line count was invalid (pattern matches ~370k log lines) and was discarded.
+No behavior change. ORIGIN: n/a (no mitigation).
