@@ -171,7 +171,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4977 (top):** M3 idiom census EXHAUSTED: mfc1/dmfc1 width (4 dmfc1/dmtc1 sites, all $zero), sltiu sign (2 negative-imm sites, data-as-code, semantics correct), jr non-ra (176 $v0 jump tables; 12 $zero data-as-code; ~14 LOOKUP_FUNC uninspected) all benign. Next: REVISIT external retail-entry with a new angle (see NEXT.md).
+**s4978 (top):** Retail branch census: 0x800903F0 is design-dead in retail. Flagged voices always have `+0x6D==3` (241,308 hits); the `+0x6D==0` branch at 0x80090358 has 0 hits. The port reaches it, so port voice records carry kind 0 with the flag set, a state retail never makes. Next: port-side histogram of `+0x6D` and its writers (NEXT.md).
+
+**s4977 (prior):** M3 idiom census EXHAUSTED: mfc1/dmfc1 width (4 dmfc1/dmtc1 sites, all $zero), sltiu sign (2 negative-imm sites, data-as-code, semantics correct), jr non-ra (176 $v0 jump tables; 12 $zero data-as-code; ~14 LOOKUP_FUNC uninspected) all benign. Next: REVISIT external retail-entry with a new angle (see NEXT.md).
 
 **s4976 (top):** ldc1/sdc1 alignment class closed: 12/2644 misaligned-offset sites, all data-as-code; LD/SD are 32-bit pairs so arm64 cannot fault. Remaining M3 candidates: mfc1/dmfc1 width, sltiu, jr non-ra.
 
