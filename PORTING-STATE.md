@@ -157701,3 +157701,7 @@ Mandatory pivot demanded (a) an M5 de-stub or (b) an M3 guard-class audit / VI-6
 - Next-steps #3 (A1 aux-store A/B) was already closed by s4947.
 ORIGIN: none added; no mitigation machinery in this diff.
 Outcome: BLOCKED. Question for the human is in scratch/agent/BLOCKED.md.
+
+## Session 4952 (2026-10-14) — unblock: s4951 scope-question block re-scoped (route 3)
+
+s4951 asked the owner to choose between mission-phase M5 qualification, a gameplay goal, or stopping. No resource was missing, so the loop picks the reversible engineering option itself; "declare done" is left to the owner. Offline re-read of s4950 logs: stalled=1 vi-fs-decision lines occur at title (0x5D4000), 0x66A000 and mission (0x690000/0x695C00) VIs alike (62/105/6/110 over 5 runs), so it is not a VI640 stall indicator. Next unit: derive a real VI-progress metric offline, then a mission-phase M5 row. No behavior change; no game run.
