@@ -141,8 +141,10 @@ else()
     set(_MIPS_LD_NAME  mips64-elf-ld)
     set(_N64RECOMP_NAME N64Recomp)
 endif()
-set(MIPS_GCC           "${MIPS_TOOLCHAIN_DIR}/bin/${_MIPS_GCC_NAME}")
-set(MIPS_LD            "${MIPS_TOOLCHAIN_DIR}/bin/${_MIPS_LD_NAME}")
+set(MIPS_GCC           "${MIPS_TOOLCHAIN_DIR}/bin/${_MIPS_GCC_NAME}" CACHE FILEPATH
+    "MIPS C compiler used to build the patch ELF")
+set(MIPS_LD            "${MIPS_TOOLCHAIN_DIR}/bin/${_MIPS_LD_NAME}" CACHE FILEPATH
+    "MIPS linker used to build the patch ELF")
 if (NOT EXISTS "${MIPS_GCC}" OR NOT EXISTS "${MIPS_LD}")
     find_program(_MIPS_GCC_ON_PATH NAMES mips64-elf-gcc)
     find_program(_MIPS_LD_ON_PATH  NAMES mips64-elf-ld)

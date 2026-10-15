@@ -17,10 +17,12 @@ relocation/symbol failure selects H3. Keep the runtime override disabled.
 
 Exact commands:
 
-    cmake -S . -B build -DMIPS_TOOLCHAIN_DIR=<toolchain>
+    cmake -S . -B build -DMIPS_GCC=<toolchain>/bin/mips64-elf-gcc -DMIPS_LD=<toolchain>/bin/mips64-elf-ld
     cmake --build build --target PatchesLib -j2
     rg -n 'allocateDisplayListBuffer|findAndUnlinkSmallestEntry' RecompiledPatches/patches.c
 
 Current blocker: this host has `/opt/homebrew/bin/mips-linux-gnu-as` and `ld`,
-but no `mips64-elf-gcc`; CMake consequently omits `PatchesLib`. Do not rerun
-the same command until the compiler is supplied.
+but no `mips64-elf-gcc` or `mips-linux-gnu-gcc`; CMake consequently omits
+`PatchesLib`. `MIPS_GCC` and `MIPS_LD` are now explicit cache overrides, so use
+those exact paths when the compiler is supplied. Do not rerun the same command
+until then.

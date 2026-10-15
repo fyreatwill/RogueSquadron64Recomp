@@ -158329,3 +158329,16 @@ relocation or symbol failure. It does not invalidate the s5022 ELF-reader fix,
 which remains qualified by the assembly-only path, and no runtime override was
 enabled. The normal artifact test now requires a compatible MIPS GCC
 toolchain; repeating the same build without it cannot discriminate further.
+## Session 5024 (2026-10-15) — exposed exact MIPS patch-toolchain overrides
+
+The planned normal patch-artifact qualification could not run: this host has
+`mips-linux-gnu-as`/`ld`, but neither `mips64-elf-gcc` nor
+`mips-linux-gnu-gcc` (`command -v` positive only for the assembler and linker).
+The bounded substitute made `MIPS_GCC` and `MIPS_LD` explicit CMake `FILEPATH`
+cache variables, matching the documented exact-path override. A fresh
+configure with deliberately missing override paths recorded those values in
+`CMakeCache.txt`, preserved the skipped-patches diagnostic, and correctly
+reported no `PatchesLib` target. This validates configuration behavior only;
+the compiler-generation, relocation, and runtime hypotheses remain open.
+No runtime override was enabled. The blocker is falsifiable by supplying a
+working MIPS GCC and running the explicit-path `PatchesLib` build.

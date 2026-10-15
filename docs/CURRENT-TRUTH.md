@@ -1,10 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5022; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5024; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5024:** The normal patch qualification remains unavailable because this
+  host has only `mips-linux-gnu-as`; neither `mips64-elf-gcc` nor
+  `mips-linux-gnu-gcc` is installed. A bounded build-system fix made
+  `MIPS_GCC` and `MIPS_LD` explicit CMake cache overrides, so a future supplied
+  compiler can be selected by exact path. Configure validation preserved the
+  intended skipped-target behavior with missing paths; `PatchesLib` was not
+  built and the runtime override remains disabled.
 
 - **s5023:** Reconfiguring with the available macOS tools confirmed the normal
   patch path is omitted because `mips64-elf-gcc` is unavailable; only the MIPS
@@ -480,6 +488,10 @@ preflight.
    port hangar phase; otherwise keep it parked.
 7. Resume symbol renaming only after the required last-15-session preflight
    shows it is not a REVISIT and a new mapping source exists.
+8. **Next:** when a MIPS GCC compiler is supplied, configure with explicit
+   `-DMIPS_GCC=... -DMIPS_LD=...` paths and build `PatchesLib`; classify
+   generation/compile success, target omission, or relocation/symbol failure.
+   Until then, do not repeat the blocked qualification command.
 
 ## Evidence index
 
