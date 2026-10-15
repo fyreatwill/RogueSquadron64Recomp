@@ -170,7 +170,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4966 result (top):** mission image-vs-silent A/B (s4964_mission_{image,silent}) both crash=0 abort=0 over ~320 s, onset t=183 vs 186 s; image pcm_nz_rows=131, silent 0 (controls valid, n=1/arm). H-stable-both: the audio image is not the mission-stability factor on the keyed route. Next: take the next unqualified row of M5-AUDIO-PLAN's execution sequence (Step 10 host PCM consumer / longer mission hold); see NEXT.md.
+**s4967 (top):** Step 10 was already qualified at s4857, so the only open M5 item is a long mission hold. `soak_queue/s4967_mission_image_long.sh` is enqueued (image arm, ~310 s hold, cap 600 s); no verdict yet. Clean => long-hold qualified, then pick an M3 idiom-class audit; crash/stall => name the writer (rule 11). See NEXT.md.
+
+**s4966 result (prior):** mission image-vs-silent A/B (s4964_mission_{image,silent}) both crash=0 abort=0 over ~320 s, onset t=183 vs 186 s; image pcm_nz_rows=131, silent 0 (controls valid, n=1/arm). H-stable-both: the audio image is not the mission-stability factor on the keyed route. Next: take the next unqualified row of M5-AUDIO-PLAN's execution sequence (Step 10 host PCM consumer / longer mission hold); see NEXT.md.
 
 **s4965 (superseded by s4966):** recipes enqueued; now consumed.
 
