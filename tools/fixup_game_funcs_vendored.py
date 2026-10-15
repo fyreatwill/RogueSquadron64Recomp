@@ -18431,6 +18431,21 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
                 if "#include <stdlib.h>" not in text:
                     text = text.replace('#include "recomp.h"\n', '#include "recomp.h"\n#include <stdlib.h>\n', 1)
 
+    # s4913: per-frame ordering table for the 30 Hz swap thread. Entry marks on the five
+    # swap-handshake functions; host rs64_s4913_mark (upstream_compat.cpp) logs host-ns, tid and
+    # flag bytes 0x8011A8C8/9 under ROGUESQ_S4913=1. Inert otherwise.
+    _s4913_names = ("advanceVideoFrame", "signalFrameSyncMesgNonblock", "waitOnVideoQueue",
+                    "waitForPostSwapAck", "clearPostSwapPendingFlags")
+    for _nm in _s4913_names:
+        _m = re.search(r"RECOMP_FUNC void " + _nm + r"\(uint8_t\* rdram, recomp_context\* ctx\) \{\n", text)
+        if _m and "rs64_s4913_mark(rdram, \"" + _nm + "\")" not in text:
+            if "rs64_s4913_mark(uint8_t" not in text:
+                text = text.replace('#include "recomp.h"\n', '#include "recomp.h"\nextern void rs64_s4913_mark(uint8_t* rdram, const char* tag);\n', 1)
+                _m = re.search(r"RECOMP_FUNC void " + _nm + r"\(uint8_t\* rdram, recomp_context\* ctx\) \{\n", text)
+            text = text[:_m.end()] + "    rs64_s4913_mark(rdram, \"" + _nm + "\"); // PATCH: s4913 ordering mark\n" + text[_m.end():]
+            changed = True
+            report.append(f"{p.name}: s4913 mark patched into {_nm}")
+
     # waitForPostSwapAck entry/block diagnostic (s177). NEXT.md's s176 stall
     # hypothesis assumed the [vi-fs-decision] "stalled" field hides a hidden
     # tick/resource-count threshold -- source read of rt64_state.cpp shows

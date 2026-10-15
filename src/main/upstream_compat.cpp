@@ -5231,7 +5231,27 @@ extern "C" void rs64_m5_frequency_caller(uint8_t* rdram, recomp_context* ctx,
 }
 
 extern thread_local uint32_t g_s4911_guest_ra; extern thread_local void* g_s4911_host_ra;
+// s4913: ordering table for the swap handshake (ROGUESQ_S4913=1, ROGUESQ_S4913_SKIP=n events skipped, 12000 logged).
+extern "C" void rs64_s4913_mark(uint8_t* rdram, const char* tag) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4913"); return e && *e && *e != '0'; }();
+    if (!on) return;
+    static std::atomic<uint32_t> n{0}; static const auto t0 = std::chrono::steady_clock::now();
+    static const uint32_t skip = [] { const char* e = std::getenv("ROGUESQ_S4913_SKIP"); return e ? (uint32_t)std::atoi(e) : 0u; }();
+    const uint32_t k = n.fetch_add(1);
+    if (k < skip || k >= skip + 12000) return;
+    const uint8_t a = rdram[((uint64_t)(int64_t)(int32_t)0x8011A8C8u - 0xFFFFFFFF80000000ull) ^ 3u];
+    const uint8_t b = rdram[((uint64_t)(int64_t)(int32_t)0x8011A8C9u - 0xFFFFFFFF80000000ull) ^ 3u];
+    std::fprintf(stderr, "[s4913] k=%u t=%.3f tid=%d %s A=%u B=%u\n", k,
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(),
+        (int)rogue_current_thread_id(rdram), tag, a, b);
+}
+struct S4913RecvScope {
+    uint8_t* rdram; const char* tag;
+    S4913RecvScope(uint8_t* r, uint32_t mq) : rdram(r), tag(mq == 0x80128CF0u ? "recv-ack" : mq == 0x8010FEE0u ? "recv-vi" : nullptr) { if (tag) rs64_s4913_mark(rdram, tag); }
+    ~S4913RecvScope() { if (tag) rs64_s4913_mark(rdram, tag[5] == 'a' ? "recv-ack-ret" : "recv-vi-ret"); }
+};
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    S4913RecvScope s4913_scope(rdram, (uint32_t)ctx->r4);
     g_s4911_host_ra = __builtin_return_address(0); g_s4911_guest_ra = (uint32_t)ctx->r31; /* PATCH: s4911 guest call site of VI recv */
     const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
     int s4580_vcb = 0; uint32_t s4580_id = 0;
