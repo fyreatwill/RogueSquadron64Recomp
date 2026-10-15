@@ -157152,3 +157152,14 @@ REFUTED: H-fullsync-gpuwait (pipeline/tex/dd waits 0 ms, fbwait 0.8 ms of 11 ms)
 SELECTED: H-fullsync-cpu-render — the cost is CPU work in the renderToRDRAM fb-pair loop (5.2 ms), post-advance tail (3.5 ms) and texture evict/profiler step (1.9 ms). H-resolution stays undecided (no positive control).
 NEXT DISCRIMINATOR: one build adding S4267Seg marks inside the fb-pair render loop (per-pair encode vs tile load/texture sample), around textureCache->evict, and around the present-early block; run default arm with a same-run control that a deliberately sleeping mark (e.g. 2 ms sleep in the loop) shows up in fsRender. Outcome splits: encode-dominated => per-draw CPU cost in RT64 (reducible only by fewer fb pairs/draws); evict/present-early dominated => cheap local fix. Then park 30 Hz and resume M5.
 s4905 conclusion: this run refutes H-fullsync-gpuwait and H-fullsync-upload, and selects H-fullsync-cpu-render; the next probe will discriminate encode-dominated vs evict/present-early-dominated cost inside it.
+
+## Session 4906 (2026-10-14) — fullSync 12.9 ms split to tile loads 3.1 / render-sync 3.2 / post-evict 2.3 / updateScreen 3.9; 30 Hz parked
+
+Work unit: last batched split of State::fullSync (lib/rt64 rt64_state.cpp S4267 phases 19-26, labels in src/main/rt64_render_context.cpp; patch refreshed via export.sh; edit script scratch/agent/s4906_edit.py; run scratch/agent/run_s4906_split.sh, logs soak_results/s4906_split/). Two concurrent arms: A default, B with ROGUESQ_S4267_SLEEP=1 (2 ms sleep inside the fsTiles scope on fb pair 0).
+Positive control PASSED in the same run: B ctlSleep 2.2-2.5 ms/frame (27 calls/s, 56-74 ms/s), fsTiles rose 87->~140 ms/s, fsRender 176->~220 ms/s; A ctlSleep=0.
+Result (A, last 4 s, ~28 frames/s, per-frame): fullSync ~12.9 = fsTiles 3.1 + fsRenderSync 3.2 (renderAndSynchronize) + fsPostEvict 2.3 (hashTracking + advanceFramebufferRenderer) + fsUpdScreen 3.9 (present-early updateScreen, all of fsTail 4.0) + misc ~0.4. fsRsz ~0.04, fsEvictOnly ~0, fsScript ~0.
+Rules out: H-evict-dominant (evict ~0; s4905's "fsEvict 1.9" was hashTracking/advanceFramebufferRenderer), H-render-target-resize (0.04 ms). Leaves cost spread over four CPU buckets; no single cheap local fix. updateScreen 3.9 ms is the largest single item and may be a swapchain acquire/present wait (untested; single-source).
+ORIGIN: n/a (diagnostics only, no mitigation).
+HYPOTHESIS-ID: m5-audio-destub
+REFUTED: H-evict-dominant, H-resize-dominant.
+SELECTED: none further; 30 Hz parked as host-bound (RT64 CPU cost >16.4 ms retrace). Next: M5 audio de-stub per docs/M5-AUDIO-PLAN.md.
