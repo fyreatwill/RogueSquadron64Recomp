@@ -170,7 +170,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4964 (top):** build soak_queue recipes s4964_mission_image.sh / s4964_mission_silent.sh from s4959_mission_run1.sh differing only in ROGUESQ_AUDIO_UCODE; compare mission onset, crash, and VI flip count (NEXT.md).
+**s4965 (top):** recipes s4964_mission_image.sh / s4964_mission_silent.sh are BUILT and ENQUEUED (differ only in ROGUESQ_AUDIO_UCODE=1/0; verdict line adds vi_origin_rows and m690400). Not yet run. Next: consume their two SOAK-RESULTS lines; compare mission onset, crash, VI row count; controls silent pcm_nz_rows=0, image >0 (NEXT.md).
 
 **s4963 result (superseded by s4964):** s4959 run1/run2 VALID: mission (0x690400) at t=186/185 s held to 314 s, crash=0 abort=0, pcm_nz_rows 151/153 of 168 (n=2, keyed route). Run3 still queued: consume its SOAK-RESULTS line, then take the next unfinished step of M5-AUDIO-PLAN's execution sequence.
 
