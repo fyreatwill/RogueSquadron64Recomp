@@ -235,6 +235,7 @@ extern "C" void osViBlack_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
 // address, RT64 has no rendered content for it → black screen.
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
+extern "C" void rs64_s4899_swap(uint32_t fb, uint32_t width);
 extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_count = 0;
     int n = ++s_count;
@@ -397,6 +398,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         }
     }
 
+    rs64_s4899_swap(fb, rs64_vi_committed_width()); // s4900
     if (n <= 16 || (n & 63) == 0) {
         fprintf(stderr, "[osViSwapBuffer #%d] fb=0x%08X\n", n, fb);
         fflush(stderr);
@@ -5316,7 +5318,7 @@ extern "C" void osStopThread_recomp(uint8_t* rdram, recomp_context* ctx) {
 #include <mutex>
 #include <string>
 namespace {
-struct S4899 { std::mutex m; unsigned cnt[128] = {}; std::string order; };
+struct S4899 { std::mutex m; unsigned cnt[128] = {}; std::string order; unsigned swR = 0, swS = 0, swn = 0; uint32_t lastfb = ~0u; };
 S4899& s4899() { static S4899 s; return s; }
 bool s4899_on() { static const bool e = [] { const char* v = std::getenv("ROGUESQ_LOG_S4899"); return v && v[0] && v[0] != '0'; }(); return e; }
 }
@@ -5324,7 +5326,18 @@ extern "C" void rs64_s4899_ev(char kind) {
     if (!s4899_on()) return;
     auto& s = s4899(); std::lock_guard<std::mutex> g(s.m);
     s.cnt[(unsigned char)kind & 127]++;
+    if (kind == 'R') s.swR++; else if (kind == 'S') s.swS++;
     if (s.order.size() < 40) s.order.push_back(kind);
+}
+// s4900: one row per osViSwapBuffer that CHANGES the framebuffer (true origin change).
+extern "C" void rs64_s4899_swap(uint32_t fb, uint32_t width) {
+    if (!s4899_on()) return;
+    auto& s = s4899(); std::lock_guard<std::mutex> g(s.m);
+    s.swn++;
+    if (fb != s.lastfb) {
+        std::fprintf(stderr, "[s4899-sw] n=%u width=%u fb=0x%08X R=%u S=%u\n", s.swn, width, fb, s.swR, s.swS);
+        s.swR = 0; s.swS = 0; s.lastfb = fb;
+    }
 }
 extern "C" void rs64_s4899_vi(uint32_t vi, uint32_t width) {
     if (!s4899_on()) return;
