@@ -158007,3 +158007,20 @@ of H-propagation, H-uninstrumented-reader, or H-classifier is selected. The
 next work unit remains a per-origin bad-row budget reset, with no guard,
 rewrite, lock, or other mitigation. ORIGIN: `allocateSongChannelArray` is the
 legitimate writer; the caller-boundary defect remains unexplained.
+
+## Session 4993 (2026-10-15) — per-origin caller budget remains pre-mission only
+
+Applied the regeneration-preserved s4991 diagnostic change, resetting the
+s4540 bad-row budget whenever `rs64_vi_committed_origin()` changes, then built
+and ran the preserved mission recipe. The route controls passed: mission onset
+181 s, allocator control 9, PCM-positive rows 149, crash=0, abort=0. The
+positive control fired and the run recorded 2,602 bad rows, but every one was
+at pre-mission origins `0x006A2900` or `0x00644D00` (about 1,300 each); none
+occurred at mission origins `0x00690400` or `0x00620400`. The independent
+s4987 observation control fired 20 times at `0x00690400`, consistently
+observing `count=20`, `base=0x8018C720`. This rules out neither propagation nor
+an uninstrumented reader because the requested same-origin bad boundary never
+executed. Next is a bounded sample of ordinary s4540 caller rows at mission
+origins, with no guard, rewrite, lock, or mitigation. ORIGIN:
+`allocateSongChannelArray` remains the legitimate writer; the defect is still
+an unexplained observation/propagation boundary.

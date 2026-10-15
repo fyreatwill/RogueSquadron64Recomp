@@ -1,10 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4990; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4993; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s4993:** The per-origin bad-row budget passed title, hangar, both mission
+  origins, allocator and PCM controls (mission onset 181 s, PCM=149,
+  crash=0, abort=0). It produced 2,602 bad rows, but only at pre-mission
+  origins `0x006A2900` and `0x00644D00`; none occurred at mission origins
+  `0x00690400` or `0x00620400`. The s4987 observation control fired 20 times
+  at `0x00690400` with current `20/0x8018C720`. The same-origin bad-row join
+  remains unevaluable, so no hypothesis or mitigation is selected.
 
 - **s4990:** The caller-boundary instrument passed all route controls and
   recorded `r31=0`, `r4=0x801724C0`, and guest `32/0x801714D0` on four bad rows,
@@ -234,7 +242,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4990 (top):** The caller-boundary arm was route-qualified (title, hangar, both mission origins, PCM=149, crash=0, abort=0) and its positive controls fired. Four capped bad rows all occurred before the mission origins, so the requested same-origin join was unevaluable. Next: change only the bad-row diagnostic budget from run-lifetime to per-origin (reset on `rs64_vi_committed_origin()`), preserving phase/origin, `r31`, `r4`, guest count/base, and the s4987 publication/observation rows. A mission-origin bad row plus current `20/0x8018C720` selects H-propagation; a stale same-origin caller selects H-uninstrumented-reader; current same-origin values select H-classifier. ORIGIN: legitimate writer is `allocateSongChannelArray`; the defect is an observation/propagation boundary, not yet explained.
+**s4993 (top):** The per-origin budget exposed 2,602 bad rows only at pre-mission origins `0x006A2900` and `0x00644D00`; mission origins had no bad rows, while s4987 observed the current `20/0x8018C720` pair. Next: retain the per-origin budget and add a phase-scoped sample of ordinary s4540 caller rows at the mission origins, recording caller `a0`, `r4`, guest count/base, and whether each row is current or stale. A mission-origin stale sample selects an uninstrumented reader/propagation path; only-current samples select the bad predicate's phase limitation; no mission-origin sample is unevaluable. ORIGIN: legitimate writer is `allocateSongChannelArray`; this remains an observation/propagation boundary, not a value-rewrite target.
 
 **s4984 (prior):** The explicit atomic count/base loads and release stores reached mission (onset 176 s) with `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0, abort=0, and PCM positive control 147. H-atomic-observation is refuted for this implementation; H-lock-required remains.
 
