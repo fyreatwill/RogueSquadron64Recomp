@@ -157582,3 +157582,23 @@ instrument was added.
 
 ORIGIN: read-only oracle watches; the observed retail stores are legitimate
 state writes, and no corruption mitigation was added.
+
+## Session 4941 (2026-10-14) — aligned retail watch selects odd-byte boundary
+
+Ran the prescribed phase-gated retail oracle command with the qualified Rice
+video plugin, verified Start presses, whole-RDRAM control, `0x000A1778`, aligned
+`0x00149700:0x00149704`, and `0x00149988:0x0014998C` controls. The whole-RDRAM
+control and all three target ranges fired. VI polling reached title at width
+1024/origin `0x00790400` and hangar at width 512/origin `0x006AB400`.
+
+The aligned watch produced repeated field-aware rows at `pc=0x800917C4` with
+instruction `0xA0229702`, effective address `0x80149702`, in title and hangar
+phase buckets. This selects H-alignment-boundary: the exact odd-byte null is a
+watch-boundary artifact, while the retail writer is real and phase-reachable.
+It rules out H-no-retail-write and H-phase-route-mismatch for the qualified
+route. This is single-source oracle evidence; no mitigation, rewrite, filter,
+or port instrument was added.
+
+ORIGIN: the retail guest store at `0x800917C4` writes the legitimate MusyX
+double-buffer toggle byte; the observed value is legitimate state, not a
+corruption defect.

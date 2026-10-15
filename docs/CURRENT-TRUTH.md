@@ -1,17 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4940; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4941; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
-- **s4940:** The aligned retail watch `0x00149700:0x00149704` fired 4,498
-  times, while whole-RDRAM and the other two target controls also fired. The
-  oracle remained at the undriven 320-wide boot origin (`0x006DD280`) for all
-  4,500 VI, so the aligned hits are pre-target-route activity and cannot
-  resolve the title-phase byte boundary. This selects phase-route mismatch,
-  single-source oracle evidence; no rewrite or filter was added.
+- **s4941:** The qualified Rice oracle reached title (`0x00790400`, VI 1024)
+  and hangar (`0x006AB400`, VI 512), with whole-RDRAM and all three target
+  controls firing. The aligned `0x00149700:0x00149704` watch produced repeated
+  field rows at `pc=0x800917C4`, effective address `0x80149702`, in both title
+  and hangar buckets. This selects H-alignment-boundary over no retail write or
+  phase-route mismatch; it is single-source oracle evidence, and no rewrite or
+  filter was added.
 - **s4939:** The phase-gated retail/port join reached the title phase on both
   sides and the port witness recorded all four `musyxSynthFrame` stores in the
   retail order. Retail controls fired for whole RDRAM and the other target
@@ -69,6 +70,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   template and records the four store sites with phase, order, value, and
   `s0/s1`; its title controls passed, while the requested hangar phase was not
   reached by the driven port capture.
+- The s4941 retail watch-boundary run confirms that the odd byte is written by
+  the retail store at `0x800917C4`; exact one-byte watch nulls are therefore a
+  watch-boundary artifact, not evidence that the field is unwritten.
 
 ### M3 and rendering
 
@@ -119,6 +123,10 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 - s4934's “writer attribution” was refined by s4935–s4937: `0x80091784` is
   real mission-phase auxiliary activity, not yet an OSTask publisher.
+- s4940's phase-route-mismatch selection was overturned by s4941: the same
+  aligned watch with the qualified Rice route reached title and hangar and
+  captured the target store. The earlier null remained valid only for its
+  pre-route run.
 - s4893's claim that the route reached `shutdownAudioEngine` was overturned by
   s4894's kind-0 entry and kind-2 return markers; only kind-1 registration rows
   occurred.
@@ -138,17 +146,21 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
    store order, values, and cadence in one table. The title-phase arm is
    unresolved because retail `0x80149702` was absent and the port did not reach
    hangar. No rewrite or filter was added.
-2. **Next:** repeat the aligned retail watch with the qualified Rice video
-   plugin and verified Start presses so the oracle reaches the title/hangar
-   route before interpreting `0x00149700:0x00149704`. Retain whole-RDRAM,
-   `0x000A1778`, and `0x00149988:0x0014998C` controls in the same run. Select
-   aligned-range title rows at `0x800917C4` versus a target-phase null; do not
-   add a port instrument or mitigation.
-3. Revisit M3 only as a complete idiom-class audit with a new discriminator;
+2. **Completed — s4941:** repeat the aligned retail watch with the qualified
+   Rice route and verified Start presses. The aligned watch and field-aware
+   rows identified the legitimate `0x800917C4` store in title and hangar;
+   exact odd-byte watch nulls are closed as a boundary artifact. Do not add a
+   rewrite, filter, or port instrument for this field.
+3. **Next:** execute the next named M5 contract edge from
+   `docs/M5-AUDIO-PLAN.md` with one same-build validation arm and its rollback
+   arm. Before changing behavior, choose a writer/consumer boundary whose
+   positive control can reach title and hangar and whose outcome distinguishes
+   a real contract gap from route-only progress.
+4. Revisit M3 only as a complete idiom-class audit with a new discriminator;
    conditional-move recompiler support is a separate engineering task.
-4. Revisit external retail-entry or M4 only with a genuinely new oracle route,
+5. Revisit external retail-entry or M4 only with a genuinely new oracle route,
    PC, or RSP witness; otherwise keep them parked.
-5. Resume symbol renaming only after the required last-15-session preflight
+6. Resume symbol renaming only after the required last-15-session preflight
    shows it is not a REVISIT and a new mapping source exists.
 
 ## Evidence index
