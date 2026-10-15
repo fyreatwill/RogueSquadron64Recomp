@@ -158231,3 +158231,6 @@ Tested option (a) for refutation: host `clang --print-targets` has no MIPS backe
 
 ## Session 5015 (2026-10-15) — block stands; no new unit available
 Re-checked s5014's refutation test: `which mips-linux-gnu-gcc mips64-elf-gcc` both not found; SOAK-RESULTS tail shows only the closed s5012 soak; CURRENT-TRUTH is 36 KB (no maintenance trigger). No experiment run. BLOCKED.md rewritten (owner input options a-d). Nothing else in the priority list is actionable without new input.
+
+## Session 5016 (2026-10-15) — unblock iteration: block stands (route 4)
+Re-tested: MIPS gcc/ld still absent; the s5011 hangar crash is the already-documented post-hangar crash, not a new witness. No re-scopable unit. BLOCKED.md kept; no experiment run.
