@@ -1,28 +1,25 @@
-# Next work unit: resume normal patch-artifact qualification after MIPS GCC is available
-HYPOTHESIS-ID: m3-assembly-patch-pipeline
+# Next work unit: audit and preserve the next newly mapped menu-overlay symbol
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Competing hypotheses:
 
-1. A supplied MIPS GCC toolchain will enable the normal patch-generation path;
-   the generated host artifact will then compile.
-2. The normal path will remain configuration-blocked despite a toolchain
-   override.
-3. The generated artifact will expose a relocation or symbol mismatch not
-   covered by the assembly-only result.
+1. `func_800B2630` has a safe companion mapping to
+   `buildFormatMessageGlyphBuffer`, and the mapping should be preserved in the
+   regeneration helper.
+2. The companion name is stale or belongs to a different address, so changing
+   the helper would mislabel generated code.
+3. The address is mapped correctly but the generated record is a split/data
+   fragment or has no live caller, so it fails the rename gates.
 
-Discriminating measurement: with a real `mips64-elf-gcc` available, reconfigure
-and run the normal `PatchesLib` target. Successful generation/compilation
-selects H1; CMake still omitting the target selects H2; a generated
-relocation/symbol failure selects H3. Keep the runtime override disabled.
+Discriminating measurement: independently compare the companion address,
+generated overlay span, generated body start, and generated caller set. Exact
+agreement on `0x800B2630`, `0x468`, and a caller selects H1; any disagreement
+selects H2/H3 and forbids the mapping change.
 
 Exact commands:
 
-    cmake -S . -B build -DMIPS_GCC=<toolchain>/bin/mips64-elf-gcc -DMIPS_LD=<toolchain>/bin/mips64-elf-ld
-    cmake --build build --target PatchesLib -j2
-    rg -n 'allocateDisplayListBuffer|findAndUnlinkSmallestEntry' RecompiledPatches/patches.c
+    rg -n -C 3 'buildFormatMessageGlyphBuffer' ../rogue_squadron64/symbol_files/menu_overlay.txt ../N64Recomp/RecompiledFuncs
+    git -C ../rogue_squadron64 diff -- symbol_files/menu_overlay.txt
 
-Current blocker: this host has `/opt/homebrew/bin/mips-linux-gnu-as` and `ld`,
-but no `mips64-elf-gcc` or `mips-linux-gnu-gcc`; CMake consequently omits
-`PatchesLib`. `MIPS_GCC` and `MIPS_LD` are now explicit cache overrides, so use
-those exact paths when the compiler is supplied. Do not rerun the same command
-until then.
+The normal MIPS patch qualification remains parked until a GCC toolchain is
+supplied; do not rerun it in this unit.

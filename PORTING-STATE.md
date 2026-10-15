@@ -158342,3 +158342,15 @@ reported no `PatchesLib` target. This validates configuration behavior only;
 the compiler-generation, relocation, and runtime hypotheses remain open.
 No runtime override was enabled. The blocker is falsifiable by supplying a
 working MIPS GCC and running the explicit-path `PatchesLib` build.
+## Session 5025 (2026-10-15) — preserved newly mapped menu-overlay symbol
+
+The generated-symbol preflight was eligible: the last 15 session titles were
+not a sweep-only sequence, M5 was closed, and M3 was parked. Inspected the
+companion `menu_overlay.txt` mapping and the current generated snapshot for
+`0x800B3824`. The companion names it `buildLevelSelectTextTextures`; the
+generated body starts at the same address, `recomp_overlays.inl` records an
+exact `0x2D8` span, and `funcs_31.c` has a live caller. Added this mapping to
+`tools/rename_generated_symbols.py` and recorded the gates in
+`docs/RENAME-S5025-AUDIT.md`. The result rules out stale-address, split-record,
+and no-caller explanations for this candidate, but changes no generated code
+or runtime behavior. The missing MIPS GCC patch qualification remains parked.

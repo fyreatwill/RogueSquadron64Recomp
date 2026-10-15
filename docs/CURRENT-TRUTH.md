@@ -1,10 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5024; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5025; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5025:** The generated-symbol sweep reopened when the companion added a
+  semantic menu-overlay mapping for `0x800B3824`. The generated record has the
+  same start address, exact `0x2D8` span, and a live caller, so
+  `tools/rename_generated_symbols.py` now preserves
+  `func_800B3824 -> buildLevelSelectTextTextures` across regeneration. No
+  generated files or runtime behavior changed. Detailed evidence:
+  `docs/RENAME-S5025-AUDIT.md`.
 
 - **s5024:** The normal patch qualification remains unavailable because this
   host has only `mips-linux-gnu-as`; neither `mips64-elf-gcc` nor
@@ -261,10 +269,11 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   old exact PC is absent; do not repeat without a new route or PC discriminator.
 - M4 accumulator boundary (closed s5006: hangar 0/1955 = retail 0/576; the 8 port 640-phase 0x8000 rows are ordinary values, no clamp shape), attached-mesh mission contract, hangar pillars,
   col-511 noise, `0x1F0D74`, and overlay-registration chunking are parked.
-- Generated-symbol renaming is exhausted at the available snapshot: the s4999
-  audit found no remaining candidate satisfying semantic companion mapping,
-  live caller, and exact-span gates. Reopen only with a new generated snapshot
-  or companion mapping source.
+- Generated-symbol renaming is active again because the companion now supplies
+  additional semantic mappings. s5025 qualified and preserved
+  `func_800B3824 -> buildLevelSelectTextTextures`; continue one candidate at a
+  time with the semantic-name, exact-span, and live-caller gates. The older
+  s4999 no-safe-map result still applies to `0x8000040C` and `0x800E9AE0`.
 - M3 patch-runtime qualification remains blocked on the MIPS GCC toolchain.
   s5023 independently confirmed that CMake omits `PatchesLib` when GCC is
   absent; the available assembler/linker are sufficient only for the
@@ -324,6 +333,12 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   task-contract, ownership, wait-gate, safety-exit, or MORT correctness.
 
 ## Next steps (single monotonic backlog)
+
+**s5025 (top):** The next bounded rename candidate is
+`func_800B2630 -> buildFormatMessageGlyphBuffer` from the companion menu
+overlay. Validate its exact generated span and at least one live caller before
+editing the regeneration helper; reject it if the address, span, or callsite
+does not agree. Keep runtime and patch qualification unchanged.
 
 **s5023 (top):** The normal `PatchesLib` target is not present after a clean
 reconfigure because `mips64-elf-gcc` is unavailable on this host; only
