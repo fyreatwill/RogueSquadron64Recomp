@@ -156870,3 +156870,32 @@ rename candidate exists. The bounded audit is recorded in
 ORIGIN: no mitigation or behavior change; diagnostic/documentation-only work.
 Next: wait for a new generated snapshot or mapping source before revisiting the
 parked rename sweep.
+
+## Session 4889 (2026-10-14) — retail and port teardown order identify the first gate-zero deregistration gap
+
+Work unit: M5 double-synth teardown-order discriminator. The independent retail
+oracle passed its whole-RDRAM positive control at 10,000 writes, reached the
+qualified title and hangar phases, and watched four cycles of
+`waitForMusyXAudioTaskDone` -> synth `findAndZeroTableSlotMatching` for
+`0x8009123C` -> `reapplyAudioConfig`; two additional deregistration hits were
+for non-synth callbacks. This is independent retail ordering evidence.
+
+The same-build port probe passed its positive control: `[s4877]` fired for the
+boot teardown, wait, synth deregistration, and reapply paths. Its first
+`musyxNoopStub` entered with gate `0`, then reapply ran with no wait/dereg;
+the next teardown entered with gate `1`, waited, deregistered the synth slot,
+and re-applied. The port capture stalled at VI 640 before title/hangar, so no
+port route conclusion is claimed from that run. Retail supplies the independent
+title/hangar qualification for the ordering comparison.
+
+This selects the named cause: the gate-zero first teardown skips the existing
+synth callback deregistration, leaving the later reapply registration
+unmatched. It rules out unexplained callback-table corruption as the required
+explanation. No runtime behavior change was landed. The first launch attempt
+was path-invalid (`build/Debug` does not exist here); the corrected launch used
+`build/RogueSquadron64Recomp` and was SIGKILLed after 90 seconds.
+ORIGIN: the writer/branch is the deliberate gate check in the teardown path;
+the callback value `0x8009123C` is legitimate, and the skipped deregistration
+is the defect under test, not a wild-value mitigation.
+Next: implement and qualify the one-shot first-teardown deregistration with a
+same-build rollback and callback/route controls.

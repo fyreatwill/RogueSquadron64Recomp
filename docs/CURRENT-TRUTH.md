@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4888)
+## Headline (as of s4889)
+
+- **s4889:** the M5 double-synth teardown-order discriminator passed both
+  independent controls. Retail passed the 10,000-write whole-RDRAM control,
+  reached title/hangar, and showed wait -> synth deregistration -> reapply in
+  four cycles. The same-build port probe showed the boot teardown at gate `0`
+  skipped synth deregistration, while the next teardown at gate `1` performed
+  it before reapply; the port stalled at VI 640 before title/hangar. This
+  selects the gate-zero first-teardown explanation for the duplicate callback
+  copy, with retail as independent ordering evidence. No behavior change is
+  landed.
 
 - **s4888:** the bounded generated-symbol rename audit found only two remaining
   placeholder function identifiers. `func_8000040C` has one caller but no
@@ -370,6 +380,15 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Current state (durable)
 
+- **M5 double synth teardown order (s4889):** retail independently shows
+  `waitForMusyXAudioTaskDone` -> `findAndZeroTableSlotMatching` for
+  `0x8009123C` -> `reapplyAudioConfig` in four cycles. The port probe shows
+  its first `musyxNoopStub` at gate `0` followed directly by reapply; the next
+  teardown at gate `1` waits, deregisters the synth callback, and re-applies.
+  The gate-zero branch is the named cause of the unmatched first registration.
+  This authorizes a bounded one-shot first-teardown deregistration experiment,
+  not a general callback-table mitigation.
+
 - **M5 A9 voice-array base guards (s4805):** 0 bad of ~2.4M checks at 10/13 sites on title+hangar (forced-bad control fired in the same build); writer `0x8008F0EC` publishes in-range `rs_malloc` bases. Guards are inert here; 3 sites (`0x8009236C`, `0x800923C0`, `0x800924F4`) unreached. Tool `tools/apply_s4805_m5_a9.py`; env `ROGUESQ_LOG_M5_A9`, `ROGUESQ_A9_FORCE_BAD=N`.
 
 - Qualified native route: attribution, N64 logo, intro cinematic, Factor 5 logo,
@@ -536,6 +555,13 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   inert chunk-2 record. Those interpretations were tested and closed.
 
 ## Next steps
+
+0. **M5 first-teardown deregistration (s4889):** implement one bounded change
+   that deregisters an already-present `0x8009123C` once before the first
+   gate-zero reapply. Validate callback-table cardinality, synth entries per
+   retrace, SP, PCM, title/hangar, and crash/abort controls in one same-build
+   default/rollback capture. Preserve the gate semantics; do not force a
+   callback-table value or generalize the dedup control.
 
 0. **M5 double synth walk (s4874-s4875):** port synth runs 2/VI because callback-table slots 1 and 2 both hold `0x8009123C`; retail holds one. NAMED (s4875, two sources: port rows + retail oracle): the dereg comes from the teardown function at 0x8008ECxx (generated name `musyxNoopStub`, jal wait at 0x8008ED14), which branches over the wait/dereg when gate byte `0x800A0F50`==0. Retail: that teardown runs at t=1.8 s with gate=1 (before any reapply) -> dereg -> reapply -> register, balanced, 1 copy. Port: the FIRST teardown (boot) sees gate=0, skips the dereg, so cycle 1's reapply register is unmatched (+1 copy); every later cycle is balanced (dereg+register) so 2 copies persist. Root = the deliberate gate-write force-zero stubs (setDisplayMode 0x8008EB40 / reapplyDisplayMode 0x8008EC88 / initMusyXEngine never called, see fixup comments ~l.8105; reversing them hung boot 4x). Next: a bounded fix that keeps gate semantics but makes the first-teardown dereg happen (e.g. one-shot dereg of 0x8009123C when reapplyAudioConfig registers and the table already holds it) - ORIGIN named, not a mitigation of unknown writer. **s4878 RESULT: tools/apply_s4878_synth_dedup.py (env ROGUESQ_S4875_DEDUP; DEFAULT ON since s4879, =0 disables) drops the 2nd register; A/B same recipe: synth entries per message 1.97 -> 0.99. s4879: stability 2/3 + AI-ring producer now 1 per entry -> flipped default-on. s4880: paired 5x arm1/arm0 startup-crash soak QUEUED (scratch/agent/soak_queue/s4880_dedup_crash_rate.sh; verdict in soak_results/s4880/summary.txt) - decides whether the startup SIGSEGV is dedup-caused (arm1>>arm0) or pre-existing (then trace the writer of the bad si_addr/x1, no guard).** Instrument: tools/apply_s4877_dereg_order.py (ROGUESQ_LOG_S4700_CB=1), oracle recipe scratch/agent/s4877_oracle_order.sh.
 

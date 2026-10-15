@@ -1,31 +1,33 @@
 # Next work unit
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-first-teardown-deregistration
 
-Revisit the generated-symbol sweep only after a new generated snapshot or
-companion mapping source is available. The s4888 audit found no safe candidate:
-`func_8000040C` has no companion semantic mapping, and `func_800E9AE0` is an
-intentional companion placeholder with no generated caller because of a
-documented false split reference. Do not rename either one.
+Implement one bounded behavior change: when the first gate-zero teardown is
+about to reapply audio configuration and callback table slot 1 already holds
+`0x8009123C`, deregister that existing synth callback once, preserving the
+gate value and all later balanced teardown behavior. Keep the existing dedup
+control available for rollback.
 
 Competing hypotheses:
-- H1: a future placeholder has companion mapping, live body/callers, and exact
-  adjacent/TOML span agreement; one rename is safe.
-- H2: candidates exist but fail one of those gates; leave them unchanged.
-- H3: the external generated snapshot or companion mapping remains unavailable;
-  record the concrete path/tool blocker.
+- H1: the gate-zero first-teardown skip is the duplicate source; one-shot
+  deregistration leaves one synth callback per retrace walk and preserves the
+  qualified route controls.
+- H2: another registration source or table-order defect remains; the callback
+  table still has two live synth entries after the change.
+- H3: the change is causally correct but route-invalid or destabilizing; the
+  positive callback controls fail before phase qualification.
 
-Discriminator: independently verify all three H1 gates for one candidate. H1
-authorizes one bounded mapping edit; H2 parks the candidate; H3 records the
-falsifiable availability failure.
+Discriminator: one build containing the default one-shot change and the
+rollback arm, with callback-table slot snapshots, synth entries per retrace,
+SP completion, PCM, title/hangar, and crash/abort controls in the same run.
+H1 authorizes the bounded default change; H2 pivots to the remaining
+registration source; H3 reverts the change and does not generalize the result.
 
 Exact commands:
 
-    env RSR_FUNCS_DIR=/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs python3 tools/rename/find_state_machines.py
-    env RSR_FUNCS_DIR=/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs python3 tools/rename/find_callers.py <candidate>
-    rg -n '<candidate-address>|<candidate-name>' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+    rg -n "reapplyAudioConfig|musyxNoopStub|8009123C|800A0F50" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c tools
+    python3 tools/apply_s4889_first_dereg.py
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    env ROGUESQ_LOG_S4700_CB=1 zsh tools/run_s4889_first_dereg_ab.sh
 
-Expected outcomes: one candidate passes all three gates and receives one
-mapping edit; candidates fail a gate and remain unchanged; or the required
-external source/tool is unavailable and the blocker is recorded. Do not build
-or regenerate for this unit.
+Do not run the generated-symbol sweep until this M5 unit is closed.
