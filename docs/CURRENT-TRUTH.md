@@ -277,6 +277,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
    does retail run synth at ~1 per retrace with the SAME retrace:update_screen
    ratio, or does the port deliver/handle retraces at half the retail VI rate?
    Measure in one unit (retrace returns per VI-origin change) on both sides.
+   **s4900 answer:** retail (oracle, control passed) = 1,302 hits / 1,301 origin changes, 94% of intervals exactly 1 (steady). Mean agrees with port; shape differs (port 0/2 bimodal per update_screen). Open: port's true VI origin-change count per retrace return.
 
 0. **M5 callback teardown boundary (s4894):** the qualified route does not
    reach `shutdownAudioEngine`; s4894's generated entry/return marker and the

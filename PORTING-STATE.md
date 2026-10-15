@@ -157102,3 +157102,11 @@ ORIGIN: read-only counters; no runtime behavior changed. Writer of the extra syn
 
 
 Discrimination (s4899): selects H-retrace-driven-1to1 (synth entry follows each retrace-queue return); refutes H-double-synth-per-retrace and H-audio-done-extra-delivery. Next discriminator: retrace returns per VI-origin change, retail (oracle watch-pc 0x8009123C) vs port, same unit, hangar phase; selects between H-retail-also-1 / H-port-half-rate / H-port-burst-pacing (see scratch/agent/NEXT.md).
+
+## Session 4900 (2026-10-14) — retail retrace-entry rate per VI origin change: steady 1/VI, port is bimodal 0/2
+
+Ran `scratch/agent/s4900_oracle_retrace_rate.sh` (s4873 twin, retail ROM under mupen64plus/Rice, 60 s, `--watch-pc 0x8009123C`, hangar phase-armed at 512-wide origin 0x006AB400). Positive control: whole-RDRAM watch hit its 10,000 threshold. Hangar phase: 1,301 origin changes (vi-poll rows at width 512) and 1,302 exec hits of 0x8009123C (=0.999/VI). Hits per origin-change interval: 1 hit in 1,223 intervals, 0 in 38, 2 in 38, 4 in 1 — i.e. retail is STEADY at 1 per VI (94%), not bimodal. Port (s4899): 9,216 synth entries over 9,237 update_screens (~1.0 average) but R=0 in 4,341 and R=2 in 4,294 — bimodal 0/2.
+
+Discrimination: rates agree on average (H1 true for the mean; H2 port-half-rate refuted — retail is not 2/VI). Per-VI shape differs: retail 1/1/1, port 0/2/0/2. That selects H3 (port retrace delivery/update_screen pacing is bursty or the port's per-update_screen unit is not one VI) over "port matches retail". Single-source on each side; the unmeasured piece is the port's TRUE VI origin-change count (not update_screen count), which decides whether the port's 0/2 is bursty retrace delivery or just update_screen aliasing at 30 fps swaps with 60 Hz retraces.
+
+ORIGIN: read-only oracle run; no runtime behavior changed.
