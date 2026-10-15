@@ -22,6 +22,7 @@ extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial);
 extern "C" uint32_t rs64_e9prov_current_task();
 extern "C" uint32_t rs64_e9prov_current_scope();
 extern "C" int rs64_is_hangar_vi(void);
+extern "C" void rs64_s4899_vi(uint32_t vi, uint32_t width);
 extern "C" void rs64_s4597_target_store(char width, uint32_t pc, uint32_t addr, uint32_t value);
 extern "C" void rs64_m5_b40_route_title_transition(void);
 extern "C" void rs64_m5_route_fingerprint_phase(uint32_t width,
@@ -797,6 +798,7 @@ public:
             static int s_n = 0;
             static bool s_filter_logged = false;
             ++s_n;
+            { rs64_s4899_vi((uint32_t)s_n, ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG); } // s4899
 
             // Watchdog moved to its own thread (rs64_cine_start_watchdog_thread)
             // because the gfx_thread can itself be deadlocked on the same mutex

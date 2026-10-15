@@ -40471,6 +40471,7 @@ RS64_REPLAY = [
     "apply_s4805_m5_a9.py",
     "apply_s4878_synth_dedup.py",
     "apply_s4889_first_dereg.py",
+    "apply_s4899_cadence_join.py",
 ]
 
 

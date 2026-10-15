@@ -157093,3 +157093,10 @@ classes, retail-entry closure, M5 qualification history, VI-640 stall).
 CURRENT-TRUTH is now 418 lines / 33,409 bytes (-392 lines). Next steps section
 untouched; the s4898 retrace/audio-done/synth cadence join in
 scratch/agent/NEXT.md remains the next work unit (HYPOTHESIS-ID unchanged).
+
+## Session 4899 (2026-10-14) — retrace/audio-done/synth cadence join: synth is 1:1 with retrace returns
+
+Built one instrument (`tools/apply_s4899_cadence_join.py`, registered in the vendored fixup replay list; helper `rs64_s4899_ev/vi` in upstream_compat.cpp, per-VI flush in rt64_render_context.cpp) and ran one same-build qualified port capture (title w1024 and hangar w512 phase lines present, pcm>0, sp_enter=sp_return=1263, crash=0, abort=0). Hangar phase: 9,237 update_screen VIs carried R=9217, T=9217, A=9224, S=9216 — synth entries equal retrace-queue returns to within 1, and the audio-done message (A) count matches too. Dominant ordered chain per retrace return is `R A W T S`; no VI had S without a preceding R chain and no chain contained two S (H2 rejected). The audio-done queue has no independent extra delivery: A tracks R one-for-one (H3 rejected). Per-VI buckets are bimodal (hangar: R=0 in 4341 VIs, R=2 in 4294, R=1 in 590), so the "one vs two" per VI figure is update_screen-vs-retrace aliasing (two retraces land between two back-to-back update_screens), average 0.998 chains/VI. Title w1024: 556 VIs, mostly 1 (367), 0 (110), 2 (78). Selects H1-variant: the synth cadence is driven by retrace-handler returns, 1:1; the port/retail difference lives in retrace delivery pacing relative to update_screen, not in audio. Single-source for the pacing claim (one run); the 1:1 counts are two lines (R/T/S/A totals + ordered patterns). Full table: docs/M5-S4899-CADENCE-JOIN.md.
+
+ORIGIN: read-only counters; no runtime behavior changed. Writer of the extra synth entry = the viRetraceHandler chain (recv1 return), legitimately delivered.
+

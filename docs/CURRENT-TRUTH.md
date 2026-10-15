@@ -268,14 +268,15 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-0. **M5 retrace/audio cadence boundary (s4898 next):** s4897 closes the
-   external retail route question at the voice-render range but leaves the
-   port's one-versus-two wake cadence unresolved. Join both `osRecvMesg`
-   callsites (`0x800198F4`, `0x80019928`) to retrace queue `0x80114388`,
-   audio-done queue `0x80149670`, and synth entries in one phase-gated table.
-   Select whether the extra synth entry follows a duplicate retrace delivery,
-   a single retrace return, or an audio-done message. Do not add a mitigation
-   from the s4897 retail null.
+0. **M5 retrace pacing vs update_screen (s4899 result, next):** s4899's joined
+   per-VI table (docs/M5-S4899-CADENCE-JOIN.md) closed the cadence join: synth
+   entries == retrace-queue returns == audio-done messages (hangar R=9217 T=9217
+   A=9224 S=9216 over 9237 update_screens); chain `R A W T S`; no double synth
+   per retrace, no independent audio-done delivery. The visible "1 vs 2 per VI"
+   is bimodal aliasing (R=0 in 4341 VIs, R=2 in 4294). Remaining question:
+   does retail run synth at ~1 per retrace with the SAME retrace:update_screen
+   ratio, or does the port deliver/handle retraces at half the retail VI rate?
+   Measure in one unit (retrace returns per VI-origin change) on both sides.
 
 0. **M5 callback teardown boundary (s4894):** the qualified route does not
    reach `shutdownAudioEngine`; s4894's generated entry/return marker and the

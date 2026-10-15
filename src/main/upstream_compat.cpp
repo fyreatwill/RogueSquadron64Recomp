@@ -5308,6 +5308,33 @@ extern "C" void osStopThread_recomp(uint8_t* rdram, recomp_context* ctx) {
     }
 }
 
+// s4899: per-VI ordered join of retrace-queue returns, audio-done queue returns and
+// musyxSynthFrame entries. Kinds: 'R' recv1 return (0x80114388), 'T' recv2 return
+// (0x80128D10), 'W' audio-loop recv enter (0x80149670), 'A' audio-loop recv return with
+// message byte 1, 'a' other message byte, 'S' synth entry. Gate ROGUESQ_LOG_S4899=1.
+// One [s4899-vi] row is flushed per update_screen with counts and the ordered event string.
+#include <mutex>
+#include <string>
+namespace {
+struct S4899 { std::mutex m; unsigned cnt[128] = {}; std::string order; };
+S4899& s4899() { static S4899 s; return s; }
+bool s4899_on() { static const bool e = [] { const char* v = std::getenv("ROGUESQ_LOG_S4899"); return v && v[0] && v[0] != '0'; }(); return e; }
+}
+extern "C" void rs64_s4899_ev(char kind) {
+    if (!s4899_on()) return;
+    auto& s = s4899(); std::lock_guard<std::mutex> g(s.m);
+    s.cnt[(unsigned char)kind & 127]++;
+    if (s.order.size() < 40) s.order.push_back(kind);
+}
+extern "C" void rs64_s4899_vi(uint32_t vi, uint32_t width) {
+    if (!s4899_on()) return;
+    auto& s = s4899(); std::lock_guard<std::mutex> g(s.m);
+    std::fprintf(stderr, "[s4899-vi] vi=%u width=%u R=%u T=%u W=%u A=%u a=%u S=%u order=%s\n", vi, width,
+        s.cnt['R'], s.cnt['T'], s.cnt['W'], s.cnt['A'], s.cnt['a'], s.cnt['S'], s.order.c_str());
+    for (auto& c : s.cnt) c = 0;
+    s.order.clear();
+}
+
 // s4432: read-only witness for the title audio loop 0x8008EE10..0x8008EE9C.
 // Per (stage, phase) the first 12 hits print, then every 256th with a count.
 extern "C" void rs64_audioloop_witness(uint8_t* rdram, recomp_context* ctx,
