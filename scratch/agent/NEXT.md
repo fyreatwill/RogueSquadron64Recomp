@@ -1,23 +1,14 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-route-qualification-hle
+HYPOTHESIS-ID: m5-aux-store-ab
 
-Run one production image arm with the verified window-controlled Rice/HLE
-driver and qualify the positive route before repeating the deferred A1
-image/silent auxiliary-store A/B. Use the existing single-arm recipe:
+Run the same-build image vs `musyx_stub` auxiliary-store A/B (recipe:
+`scratch/agent/s4942_m5_aux_ab.sh`, built in s4942), both arms concurrently,
+using the s4923-style driver that qualified title+mission in s4943. Controls:
+title `0x00790400` and mission `0x00690400` must fire in BOTH arms; relaunch an
+arm that stalls at VI-640 (intermittent), do not read it as a null.
 
-`env ROGUESQ_LOG_S4938_AUX_JOIN=1 zsh scratch/agent/s4923_mission_longevity.sh`
-
-Competing hypotheses and discriminator:
-
-1. H-driver-mismatch: the local build/driver combination is what prevents
-   title/hangar; the single arm will stop at VI-640 again.
-2. H-image-route: the production image reaches title `1024 @ 0x00790400`
-   and hangar `512 @ 0x006AB400`, establishing the positive control needed for
-   the deferred A1 A/B.
-3. H-image-failure: the image arm reaches neither target and records a crash,
-   abort, or task/SP failure that identifies a route-independent blocker.
-
-The discriminating measurement is the phase sequence plus task/SP completion,
-PCM source/consumer, and crash/abort markers in that one run. Do not interpret
-the s4938 auxiliary-store nulls until both title and hangar controls fire.
+Hypotheses: H-contract-gap (silent arm diverges in aux-store rows/task cadence),
+H-route-only (rows identical across arms), H-rollback-specific (silent arm
+changes route progress). Discriminator: per-phase `s4938-aux-store` row
+counts/values, image vs silent.

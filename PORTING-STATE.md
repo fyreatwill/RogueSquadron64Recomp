@@ -157618,3 +157618,24 @@ This rules out interpreting the A1 table from this run as a contract result. It
 does not rule out H-contract-gap, H-route-only, or H-rollback-specific. The
 next work unit is a single-arm route qualification with the verified driver;
 repeat the A/B only after title and hangar controls fire.
+
+## Session 4943 (2026-10-14) — production image arm qualifies title and mission route
+
+Ran the single production image arm (`env ROGUESQ_LOG_S4938_AUX_JOIN=1 zsh
+scratch/agent/s4923_mission_longevity.sh`). The route was NOT stuck at VI-640
+this time. Title origin `0x00790400` (VI 1024) fired on 7802 log lines; mission
+origins `0x00690400` (37 VI-512 lines) and `0x00620400` (26) were reached; the
+driver reported mission after pair 1; crash=0, no crash/abort markers,
+transition_events=2148. The s4938 auxiliary-store witness emitted 256 title rows
+(phase=4) plus 585/592 rows at the two mission origins (phase=6). Hangar
+`0x006AB400` was never seen: the driver keys on the first `vi_width=512` line,
+which here was a mission origin, so the hangar control is absent. The summary's
+`mission_audio_*`/`mission_pcm_*` counters were 0 despite 12849 pcm log lines,
+so those greps look stale against current log formats (single-source; not
+investigated).
+
+H-driver-mismatch (VI-640 again) refuted for this run; H-image-route supported
+for title+mission, not hangar; H-image-failure refuted. The s4942 VI-640 stall is
+therefore intermittent (cf. s4794: 2/5 stalled), not a build defect. No A1
+contract result is claimed. Next: image vs silent A/B with title and mission as
+controls, relaunching any arm that stalls at VI-640.

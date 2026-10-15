@@ -6,6 +6,10 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4943:** One production image arm reached title (`0x00790400`) and both
+  mission origins (`0x00690400`, `0x00620400`) with crash=0 and aux-store rows
+  in both phases; hangar control absent (driver keyed on first VI-512). The
+  s4942 VI-640 stall is intermittent, not a build defect (cf. s4794 2/5).
 - **s4941:** The qualified Rice oracle reached title (`0x00790400`, VI 1024)
   and hangar (`0x006AB400`, VI 512), with whole-RDRAM and all three target
   controls firing. The aligned `0x00149700:0x00149704` watch produced repeated
@@ -156,10 +160,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
    rows identified the legitimate `0x800917C4` store in title and hangar;
    exact odd-byte watch nulls are closed as a boundary artifact. Do not add a
    rewrite, filter, or port instrument for this field.
-3. **Next:** qualify the local port route with one production image arm using
-   the verified window-controlled Rice/HLE driver, recording title/hangar
-   controls before attempting the A1 auxiliary-store image/silent A/B again.
-   The s4942 A/B is unevaluable until that positive control fires.
+3. **Next:** run the A1 image/silent auxiliary-store A/B concurrently with
+   title + mission origins as controls (route qualified by s4943); relaunch any
+   arm that stalls at VI-640 rather than reading it as a null.
 4. Execute the next named M5 contract edge from `docs/M5-AUDIO-PLAN.md` with
    one same-build validation arm and its rollback arm. Before changing
    behavior, choose a writer/consumer boundary whose positive control can
