@@ -158186,3 +158186,22 @@ ORIGIN: no mitigation or behavior change.
 ## Session 5008 (2026-10-15) - unblock: s5007 owner-decision block re-scoped
 
 s5007 declared the plan exhausted and BLOCKED asking for (a)/(b)/(c). Not a resource block: (b) was already run as s4987 (narrow lock, bad=8, refuted) and s4990/s4991 left an unrun per-origin bad-row budget step. NEXT.md now carries it (HYPOTHESIS-ID m5-s4540-per-origin-budget). No code changed. Owner options (a) new target and (c) symbol-mapping source stay open.
+
+## Session 5009 (2026-10-15) — s5008's "unrun" per-origin budget was already run (s4993); BLOCKED again with corrected evidence
+
+No experiment run. Reading NEXT.md (written by s5008) against the ledger showed
+its premise is false: the per-origin bad-row budget (`tools/apply_s4991_per_origin_bad_budget.py`,
+commit 18531c74) was applied, built and run in Session 4993 with all route
+controls passing (mission onset 181 s, allocator 9, PCM rows 149, crash=0,
+abort=0). Same-run positive control: the budget-reset instrument recorded 2,602
+bad rows (about 1,300 each at origins 0x006A2900 and 0x00644D00) while recording
+zero at mission origins 0x00690400/0x00620400, where the independent s4987
+observation fired 20 times with current `20/0x8018C720`. So the NEXT.md
+discriminator is answered as far as this instrument can: bad (stale
+`32/0x801714D0`, a0=0x801724C0) rows are a pre-mission phenomenon; mission
+origins show none. Session 4995 then tried a mission-origin ordinary-caller
+sample, but its recipe never reached a mission origin (mission_onset_t=-1) and
+carried crash markers, so that arm is unevaluable. No new idea or runnable unit
+exists beyond re-running a mission-qualified recipe for the 4994 sample; that
+is a soak-queue item, not a session. ORIGIN: `allocateSongChannelArray` remains
+the legitimate writer; no guard/rewrite/mitigation added.

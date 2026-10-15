@@ -1,6 +1,8 @@
-# Next work unit: per-origin bad-row budget in the s4988 s4540 boundary instrument
+# Next work unit: mission-qualified run of the s4994 mission-origin s4540 caller sample
 
-HYPOTHESIS-ID: m5-s4540-per-origin-budget
+HYPOTHESIS-ID: m5-s4540-mission-sample
 
-Context: s5007 BLOCKED asked the owner to pick (a)/(b)/(c). Option (b) was already run as s4987 (narrow lock; title reached; bad=8; refuted) and the s4990/s4991 next step was never run.
-Do: in tools/apply_s4988_s4540_boundary.py replace the global 4-row cap on bad s4540 rows with a per-origin budget so mission-origin rows are captured. Keep route controls (title, hangar, both mission origins, ctl_arm=1, s4579A>=9, PCM>0, crash=0, abort=0). Discriminator: do bad rows at a mission origin carry current 20/0x8018C720 (H-propagation) or stale 32/0x801714D0 with a stale caller (H-uninstrumented-reader / H-classifier-phase)? No guard, rewrite, or mitigation.
+Premise correction (s5009): the per-origin bad-row budget was already run in s4993 (0 bad rows at mission origins, 2,602 pre-mission). Do NOT redo it.
+Do: enqueue a soak recipe (soak_queue/) using the already-qualified mission route (s4993/s4959 recipe that reached origin 0x690400 at ~181 s) with tools/apply_s4994_s4540_mission_sample.py built in. Success = mission sample rows appear at 0x00690400/0x00620400 with crash=0.
+Outcomes: rows show current 20/0x8018C720 -> mission path is current, stale pair is pre-mission-only (close thread). Rows show stale 32/0x801714D0 -> uninstrumented reader/propagation. Zero rows with route controls passed -> no ordinary caller in mission.
+No guard, rewrite, or mitigation. Owner question pending in BLOCKED.md.
