@@ -5231,6 +5231,7 @@ extern "C" void rs64_m5_frequency_caller(uint8_t* rdram, recomp_context* ctx,
 }
 
 extern thread_local uint32_t g_s4911_guest_ra; extern thread_local void* g_s4911_host_ra;
+static std::atomic<const char*> g_s4913_last_tag{"none"}; static std::atomic<int> g_s4913_last_tid{-1}; static std::atomic<uint32_t> g_s4913_last_k{0};
 // s4913: ordering table for the swap handshake (ROGUESQ_S4913=1, ROGUESQ_S4913_SKIP=n events skipped, 12000 logged).
 extern "C" void rs64_s4913_mark(uint8_t* rdram, const char* tag) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4913"); return e && *e && *e != '0'; }();
@@ -5238,6 +5239,25 @@ extern "C" void rs64_s4913_mark(uint8_t* rdram, const char* tag) {
     static std::atomic<uint32_t> n{0}; static const auto t0 = std::chrono::steady_clock::now();
     static const uint32_t skip = [] { const char* e = std::getenv("ROGUESQ_S4913_SKIP"); return e ? (uint32_t)std::atoi(e) : 0u; }();
     const uint32_t k = n.fetch_add(1);
+    g_s4913_last_tag.store(tag); g_s4913_last_tid.store((int)rogue_current_thread_id(rdram)); g_s4913_last_k.store(k);
+    static std::once_flag poll_once;
+    std::call_once(poll_once, [&] { std::thread([rdram] {
+        // s4913 poll thread: logs every transition of byte 0x8011A8C8 with the last guest mark seen before it.
+        auto addr = [&](uint32_t g) { return (volatile uint8_t*)&rdram[((uint64_t)(int64_t)(int32_t)g - 0xFFFFFFFF80000000ull) ^ 3u]; };
+        volatile uint8_t* pa = addr(0x8011A8C8u); volatile uint8_t* pb = addr(0x8011A8C9u);
+        uint8_t la = *pa, lb = *pb; uint32_t logged = 0, trans = 0;
+        while (true) {
+            const uint8_t ca = *pa, cb = *pb;
+            if (ca != la || cb != lb) {
+                const uint32_t kk = g_s4913_last_k.load(); ++trans;
+                if (kk >= skip && logged < 12000) { ++logged;
+                    std::fprintf(stderr, "[s4913p] t=%.3f A %u->%u B %u->%u last_k=%u last=%s last_tid=%d trans=%u\n",
+                        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(),
+                        la, ca, lb, cb, kk, g_s4913_last_tag.load(), g_s4913_last_tid.load(), trans); }
+                la = ca; lb = cb;
+            }
+        }
+    }).detach(); });
     if (k < skip || k >= skip + 12000) return;
     const uint8_t a = rdram[((uint64_t)(int64_t)(int32_t)0x8011A8C8u - 0xFFFFFFFF80000000ull) ^ 3u];
     const uint8_t b = rdram[((uint64_t)(int64_t)(int32_t)0x8011A8C9u - 0xFFFFFFFF80000000ull) ^ 3u];
