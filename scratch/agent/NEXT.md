@@ -2,10 +2,7 @@
 
 HYPOTHESIS-ID: m5-aux-store-ab
 
-s4944 showed the image and silent arms emit structurally identical aux-store rows but the silent arm runs ~11x more
-mission synth frames per VI (~15.5k vs ~1.3k rows at VI #9600 each). Discriminate WHY: (H-ai-drain-pacing) image
-arm's `musyxSynthFrame` rate is gated by AI DMA drain; (H-log-budget) the witness has a per-phase row cap hit
-differently; (H-slow-synth) image synth is CPU-bound under 2 concurrent instances.
-Boring check FIRST: `grep -n s4938 tools/fixup_game_funcs.py` for the witness budget. Then re-run
-`scratch/agent/s4944_aux_ab.sh` with a per-origin count of `musyxSynthFrame` entries and AI-drain events per VI
-(one build). Positive control: title rows must equal the 256 cap. Also fix stale `m5-task-contract` grep (0 in both).
+s4945: the s4944 "11x synth frames per VI" was a witness artifact (the cap resets per origin flip; rows/flip 32.8 image vs 30.8 silent).
+Aux-store arms are equivalent per flip, so this A/B line is closed.
+Next: take the next unfinished step in docs/M5-AUDIO-PLAN.md (de-stub sequence) and run it with a validation soak.
+If none is unblocked, run one solo image-arm flips/sec counter (solo vs 2-concurrent) to separate CPU-bound from AI-drain gating.

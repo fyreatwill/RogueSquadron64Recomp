@@ -157661,3 +157661,6 @@ investigated). ORIGIN: no mitigation added; the aux fields are legitimate retail
 
 Next: normalize synth-frame cadence per VI per phase and check whether the image-arm throttle is the AI-drain gate or
 a witness row budget; no new code until that discriminates.
+
+## Session 4945 (2026-10-14) — the "11x synth frames per VI" in s4944 is a witness-budget artifact (per-flip rows equal)
+Boring check first: rs64_s4938_aux_store (src/main/main.cpp ~5290) resets its 256-row cap whenever the (vi_width, origin) key changes, so row counts measure origin FLIPS x <=256, not synth frames per VI. Offline re-analysis of the existing s4944 logs (no new run): row==0 restarts (flips) image=49, silent=512 (10.4x); rows/flip image=1605/49=32.8, silent=15769/512=30.8. Per-flip aux-store volume is identical across arms; the whole gap is the number of mission origin flips in the same wall window (si-thr origin lines 117 vs 692). Title cap control: both arms hit 256. Rules out a hidden per-flip synth-rate difference. Still open: why image presents ~10x fewer flips (CPU-bound under 2 concurrent instances vs AI-drain gating); needs a solo flips/sec counter. Single-source (offline). ORIGIN: no mitigation added; no code changed.

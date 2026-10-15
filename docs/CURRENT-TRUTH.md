@@ -151,6 +151,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+0. **s4945 note:** s4944's "~11x more synth frames per VI" is a witness artifact (aux-store row cap resets per origin flip; rows/flip 32.8 image vs 30.8 silent; flips 49 vs 512). The arms are equivalent per flip; the image arm just presents fewer flips (cause undiscriminated, single-source offline).
+
 1. **Completed — s4939:** perform the phase-gated retail/port join for
    `0x800A1778`, `0x80149702`, and `0x80149988/8A`, using whole-RDRAM and VI
    controls plus port `musyxSynthFrame`/`aspTask=0x80149470` controls. Match
