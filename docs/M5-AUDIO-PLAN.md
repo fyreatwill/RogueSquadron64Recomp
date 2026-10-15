@@ -252,3 +252,6 @@ claim is made here.
 
 ## Mission-phase row (s4963, keyed route s4959, n=2)
 Runs 1/2: mission scanout 0x690400 at t=186/185 s, held to t=314 s, crash=0 abort=0, pcm_rows 168, pcm_nz_rows 151/153, sample_nonflat 8641/8611. Audio non-silent in mission; no audio-induced fault. Run3 (s4964): mission onset t=182 s, held to t=307 s (0x690400 -> 0x620400 handoff seen), crash=0 abort=0, pcm_rows 164, pcm_nz_rows 128, sample_nonflat 8455. **n=3/3 valid keyed mission runs, 0 crashes, audio non-silent: H-stable on the keyed route. Steps 0-11 closed; no further de-stub step is open.**
+
+## Long mission hold row (s4967, enqueued)
+Plan row: image arm, keyed route, hold ~310 s after route reaches 0x6A2900 (cap 600 s) via soak_queue/s4967_mission_image_long.sh. Clean (crash=0, mission onset reached, PCM nz>0) => long-hold qualified; crash/stall => name the writer (rule 11).
