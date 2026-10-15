@@ -158354,3 +158354,14 @@ exact `0x2D8` span, and `funcs_31.c` has a live caller. Added this mapping to
 `docs/RENAME-S5025-AUDIT.md`. The result rules out stale-address, split-record,
 and no-caller explanations for this candidate, but changes no generated code
 or runtime behavior. The missing MIPS GCC patch qualification remains parked.
+## Session 5026 (2026-10-15) — preserved next menu-overlay symbol mapping
+
+The bounded generated-symbol unit inspected the next companion menu-overlay
+candidate, `buildFormatMessageGlyphBuffer` at `0x800B2630`. The companion
+address, generated body start, `recomp_overlays.inl` span (`0x468`, ending at
+the next body `0x800B2A98`), and three live callers all agree. Added the
+mapping to `tools/rename_generated_symbols.py`; the current generated snapshot
+was already synchronized, so the helper verification renamed zero generated
+references. This rules out stale-address, split/data-record, and no-caller
+explanations for this candidate, but changes no generated code or runtime
+behavior. The missing MIPS GCC patch qualification remains parked.

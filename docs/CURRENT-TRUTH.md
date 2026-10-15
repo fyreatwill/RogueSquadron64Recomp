@@ -1,10 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5025; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5026; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5026:** The next menu-overlay candidate, `0x800B2630`, passes the
+  companion-address, exact-span, and live-caller gates for
+  `buildFormatMessageGlyphBuffer`. The generated snapshot was already named,
+  so the only change was adding the regeneration-preserving entry to
+  `tools/rename_generated_symbols.py`. Evidence:
+  `docs/RENAME-S5026-AUDIT.md`.
 
 - **s5025:** The generated-symbol sweep reopened when the companion added a
   semantic menu-overlay mapping for `0x800B3824`. The generated record has the
@@ -334,11 +341,15 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s5025 (top):** The next bounded rename candidate is
-`func_800B2630 -> buildFormatMessageGlyphBuffer` from the companion menu
-overlay. Validate its exact generated span and at least one live caller before
-editing the regeneration helper; reject it if the address, span, or callsite
-does not agree. Keep runtime and patch qualification unchanged.
+**s5026 (top):** The next bounded rename candidate is the next newly mapped
+menu-overlay symbol. Apply the same independent companion-address, exact-span,
+and live-caller gates before adding it to
+`tools/rename_generated_symbols.py`; reject stale, split, or callerless
+records. Keep runtime and patch qualification unchanged.
+
+**s5025 (completed):** `func_800B2630 -> buildFormatMessageGlyphBuffer` passed
+all gates and is now explicit in the regeneration helper. The snapshot was
+already synchronized, so no generated code or runtime behavior changed.
 
 **s5023 (top):** The normal `PatchesLib` target is not present after a clean
 reconfigure because `mips64-elf-gcc` is unavailable on this host; only
