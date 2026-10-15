@@ -1,10 +1,13 @@
 # Resume checkpoint
 
-The s4990 caller-boundary run was route-qualified: title, hangar, both mission
-origins, `ctl_arm=1`, `s4579A=9`, PCM-positive rows=149, crash=0, abort=0.
-The new fields fired on four bad rows, but all four were at origins
-`0x644D00`/`0x6A2900`; the mission-origin s4987 rows remained current at
-`20/0x8018C720`. The run-lifetime bad-row cap prevented the required join.
+The s4990 caller-boundary work unit already ran; do not rerun it in this
+checkpoint. The build succeeded and the phase-gated recipe was route-qualified:
+title, hangar, both mission origins, `ctl_arm=1`, `s4579A=9`, PCM-positive
+rows=149, crash=0, and abort=0. The new fields fired on four bad rows, but all
+four were at origins `0x644D00`/`0x6A2900`; the mission-origin s4987 rows stayed
+current at `20/0x8018C720`. The run-lifetime cap therefore prevented the
+required same-origin join. No hypothesis was selected and no mitigation was
+added.
 
 # Next work unit
 
@@ -39,3 +42,8 @@ Exact commands:
     python3 tools/apply_s4988_s4540_boundary.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
     cmake --build build --config Debug --target RogueSquadron64Recomp
     zsh scratch/agent/s4984_atomic_voice_pair_mission.sh
+
+The discriminating result requires a mission-origin bad row joined to a
+same-origin s4987 row: stale caller state selects H-propagation or an
+uninstrumented reader; current caller state selects H-classifier; no such row
+is unevaluable.

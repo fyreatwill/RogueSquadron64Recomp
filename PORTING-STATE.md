@@ -157979,3 +157979,17 @@ discriminated: this is an unevaluable same-origin join, not evidence for a
 guard, rewrite, or lock. Next is a per-origin bad-row budget in the same
 instrument, with the route controls preserved. ORIGIN: `allocateSongChannelArray`
 is the legitimate writer; no mitigation was added.
+
+## Session 4991 (2026-10-15) — checkpointed the incomplete caller-boundary discriminator
+
+This retry did not rerun s4990. The existing artifact is sufficient to preserve
+the partial result: the build and route controls passed, the positive control
+showed the caller-boundary fields were live, and four capped bad rows occurred
+only at pre-mission origins `0x644D00`/`0x6A2900`. Mission-origin publication
+and observation rows remained current at `20/0x8018C720`, so the run did not
+produce the required same-origin join and selected none of
+H-propagation, H-uninstrumented-reader, or H-classifier. The next discriminator
+is unchanged: reset only the bad-row budget on each committed origin and rerun
+the preserved route recipe. No guard, rewrite, lock, or other mitigation was
+added. ORIGIN: `allocateSongChannelArray` is the legitimate writer; the
+caller-boundary defect remains unexplained.
