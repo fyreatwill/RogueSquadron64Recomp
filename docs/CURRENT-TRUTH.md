@@ -171,7 +171,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4975 (top):** 64-bit mul/div class closed (see M3 list). Remaining unexamined M3 candidates: ldc1/sdc1 alignment, cvt rounding modes, mfc1/dmfc1 width, sltiu, jr non-ra. Then resume backlog item 3/4.
+**s4976 (top):** ldc1/sdc1 alignment class closed: 12/2644 misaligned-offset sites, all data-as-code; LD/SD are 32-bit pairs so arm64 cannot fault. Remaining M3 candidates: mfc1/dmfc1 width, sltiu, jr non-ra.
+
+**s4975 (prior):** 64-bit mul/div class closed (see M3 list). Remaining unexamined M3 candidates: ldc1/sdc1 alignment, cvt rounding modes, mfc1/dmfc1 width, sltiu, jr non-ra. Then resume backlog item 3/4.
 
 **s4974 (top):** s4972r soak consumed: 5/5 runs seen640=1 (positive control) and exit640@48s, bad=0. With s4971 (4/4) that is 0/9 VI-640 stalls vs s4794's 2/5; Fisher p~0.1, so not proven gone but not reproducible. VI-640 route wall CLOSED as non-observable (re-open only on a stay640 line in any future soak, since all recipes now arm seen640). Next: M3 census of idiom classes NOT in the closed list (see NEXT.md).
 
