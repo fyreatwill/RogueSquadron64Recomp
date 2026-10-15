@@ -249,7 +249,18 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4995 (top):** The new ordinary s4540 caller sample is live and regeneration-preserved, but the s4984 retry reached hangar and pre-mission origins only (`mission_onset_t=-1`), with no mission-origin rows. The s4540 arm and s4987 observations fired, proving the instrument, but their pre-mission phase cannot discriminate the hypotheses. Retry the same sample with the route-qualified s4958 hangar-to-mission driver; retain the per-origin budget and all controls. A mission-origin stale row selects an uninstrumented reader/propagation path; only-current rows select a phase-limited bad predicate; no mission-origin sample remains unevaluable. ORIGIN: legitimate writer is `allocateSongChannelArray`; this remains an observation/propagation boundary, not a value-rewrite target.
+**s4998 (top):** The complete register-target indirect-call audit closed the
+remaining non-`$ra` M3 dispatch class: 113 `LOOKUP_FUNC(ctx->rN)` sites split
+into 42 memory-derived, 3 arithmetic-derived, 11 other, and 57 locally
+unresolved callback/data-as-code sites; the independent census found 177/177
+jump-table `switch_error` defaults and 114 `$zero` sites in known data regions.
+No silent lowering or reachable malformed dispatch was found, and the runtime
+log search found no CPU missing-function marker. No guard or recompiler change
+is authorized. M3 is parked pending a new class or witness; the next eligible
+unit is the generated-symbol-renaming sweep after its required last-15-session
+preflight.
+
+**s4995 (prior):** The new ordinary s4540 caller sample is live and regeneration-preserved, but the s4984 retry reached hangar and pre-mission origins only (`mission_onset_t=-1`), with no mission-origin rows. The s4540 arm and s4987 observations fired, proving the instrument, but their pre-mission phase cannot discriminate the hypotheses. This thread is parked after the mandatory pivot; its mission-origin zero remains unevaluable. ORIGIN: legitimate writer is `allocateSongChannelArray`; this remains an observation/propagation boundary, not a value-rewrite target.
 
 **s4984 (prior):** The explicit atomic count/base loads and release stores reached mission (onset 176 s) with `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0, abort=0, and PCM positive control 147. H-atomic-observation is refuted for this implementation; H-lock-required remains.
 

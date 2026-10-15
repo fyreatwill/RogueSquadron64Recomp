@@ -158091,3 +158091,14 @@ The next iteration must run the exact s4958 driver once, with no diagnostic
 changes, and classify the first mission-origin sample outcome. ORIGIN:
 `allocateSongChannelArray` remains the legitimate writer; no mitigation or
 value rewrite is authorized.
+## Session 4998 (2026-10-15) — closed register-target indirect-call audit
+
+Pivoted from `voice-count-before-base-race` after its mandated three stalled
+iterations. Audited every generated register-target `LOOKUP_FUNC(ctx->rN)`
+site: 113 total, classified as 42 memory-derived, 3 arithmetic-derived, 11
+other, and 57 locally unresolved. The independent indirect-jump census found
+177/177 jump-table `switch_error` defaults and 114 `$zero` sites in known
+data-as-code regions. A runtime-log search found no CPU `Failed to find
+function` marker; the matching `Unhandled jump target` hits were Factor 5 RSP
+messages. This closes the CPU indirect-call lowering class without a guard or
+rewrite. Detailed evidence: `docs/M3-S4998-INDIRECT-CALL-SOURCE-AUDIT.md`.
