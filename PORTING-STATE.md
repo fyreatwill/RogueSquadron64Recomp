@@ -158182,3 +158182,7 @@ Preflight only, no build or run. Walked the priority list against the ledger: (1
 Only live engineering defect: port mission-phase reader still logs 4 `kind=bad` voice-index calls (s4981/s4982/s4984: bad=4-8 after count-after-base and atomic loads); H-lock-required remains, writer `allocateSongChannelArray`. The whole-voice-lock attempt (s4985) was route-unevaluable (title=0). Re-running it is a repeat soak with no new idea, so not done here (iron rule 14).
 Outcome: BLOCKED with a specific question in scratch/agent/BLOCKED.md.
 ORIGIN: no mitigation or behavior change.
+
+## Session 5008 (2026-10-15) - unblock: s5007 owner-decision block re-scoped
+
+s5007 declared the plan exhausted and BLOCKED asking for (a)/(b)/(c). Not a resource block: (b) was already run as s4987 (narrow lock, bad=8, refuted) and s4990/s4991 left an unrun per-origin bad-row budget step. NEXT.md now carries it (HYPOTHESIS-ID m5-s4540-per-origin-budget). No code changed. Owner options (a) new target and (c) symbol-mapping source stay open.

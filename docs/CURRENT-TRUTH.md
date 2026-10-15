@@ -396,3 +396,5 @@ and the tail of `scratch/agent/SOAK-RESULTS.md` before acting.
 
 ### s4950 update
 Mission-route soak (solo, N=5): 5/5 reached origin 0x690400, 0 do_break hits, 0 crashes (single-source, small N). VI640-stall rate still undetermined: vi-fs-decision lines carry stalled=1 late in every run, needs a phase-gated count, not a raw grep.
+
+- Open owner-level options (not blockers, s5008): (a) declare M5 done, set new target; (c) supply symbol-mapping source for rename sweep. Live thread: mission-phase kind=bad voice reads; next = per-origin bad-row budget (s4990/s4991).
