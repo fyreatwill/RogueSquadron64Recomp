@@ -1,8 +1,11 @@
-# UNBLOCK (s4969) — route 3 (re-scope); the block was not an owner decision
-Block (s4968): "pivot targets exhausted; owner must pick (1) movz/movn in N64Recomp, (2) declare M5 done/new goal, (3) resume parked."
+# UNBLOCK s5002 — route 1 (refuted)
 
-Route 1 (refute): option (1) is not a human decision. docs/CURRENT-TRUTH.md Next-steps item 5 already calls conditional-move support "a separate engineering task". N64Recomp is a maintained local tree; grep of its src/ and include/ finds no movz/movn handling (only rabbitizer decodes the opcode). No install/spend/security boundary is involved. Declaring M5 done stays the owner's call and is not needed.
-Route 2: not applicable (nothing missing).
-Route 3 taken: NEXT.md rewritten to implement movz/movn in N64Recomp, validated in a scratch regen first.
-Route 4 not needed: a loop-continuable unit exists.
-Caveat: the defect is dormant (2 of 149 reachable sites are data-as-code), so no runtime change is expected; the unit closes the last recompiler defect with a census-verified result.
+Block claim: a cxd4/parallel-rsp LLE RSP plugin must be installed (human decision) for M4 accumulator work.
+Refutation: no install needed. A built cxd4 LLE RSP already exists in the project-maintained source tree:
+  ~/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib (built Aug 10)
+It was used in s4514 (scratch/agent/s4514_cxd4.sh, tools/oracle/rdplog) and reached hangar 0x6ab400 (PORTING-STATE ~152404).
+Accumulator state is a plain global in that source: `i16 VACC[3][N]` (vu/vu.h:62; ACC_L/M/H macros). DMEM is
+handed to the plugin via RSP_INFO. So "expose DMEM/accumulator reads" is a small source patch to a tree we own
+(build-from-local-source, not an internet install), not a human decision.
+Not done this iteration: the patch/build/run itself (that is the next work unit, see NEXT.md).
+Caveat: s4514 showed cxd4+Rice stalls at VI 640 without tools/oracle/rdplog (raises MI_INTR_DP); use the rdplog video plugin.
