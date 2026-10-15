@@ -1,10 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4999; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5000; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5000:** The independent retail/port boundary retry passed retail
+  whole-RDRAM, title, and hangar controls and recorded 0 exact
+  `0x800903F0` executions after 24,195,957 surrounding-range executions.
+  The port reached title and `0x00620400` but not qualified hangar
+  `0x006AB400`, so the join selects `H-route-mismatch`; no mitigation was
+  added. See `docs/M5-S5000-EXTERNAL-BOUNDARY.md`.
 
 - **s4999:** The bounded residual-symbol audit found no safe rename. `func_8000040C`
   has an exact `0x34` span and live callers but no semantic companion name;
@@ -256,7 +263,12 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4999 (top):** The residual generated-symbol audit found no safe rename. The
+**s5000 (top):** The external-retail retry is route-mismatched: retail reached
+the qualified phases and remained absent at `0x800903F0`, but the port did not
+reach qualified hangar. Keep this question parked until a new port route
+reaches `0x006AB400`; no mitigation was added.
+
+**s4999 (prior):** The residual generated-symbol audit found no safe rename. The
 `0x8000040C` entry has a live caller and exact span but no semantic companion
 name; `0x800E9AE0` has an exact span but no semantic companion name or
 generated live caller. The local inferred/mechanical rename entries do not
@@ -337,18 +349,17 @@ preflight.
    rows identified the legitimate `0x800917C4` store in title and hangar;
    exact odd-byte watch nulls are closed as a boundary artifact. Do not add a
    rewrite, filter, or port instrument for this field.
-3. **Next:** run the A1 image/silent auxiliary-store A/B concurrently with
+3. **Completed — s4944/s4964:** run the A1 image/silent auxiliary-store A/B concurrently with
    title + mission origins as controls (route qualified by s4943); relaunch any
    arm that stalls at VI-640 rather than reading it as a null.
-4. Execute the next named M5 contract edge from `docs/M5-AUDIO-PLAN.md` with
-   one same-build validation arm and its rollback arm. Before changing
-   behavior, choose a writer/consumer boundary whose positive control can
-   reach title and hangar and whose outcome distinguishes a real contract gap
-   from route-only progress.
+4. **Next:** perform one bounded M4 accumulator-origin witness with the
+   independent retail oracle and a same-build port capture. Name exact writer
+   PCs, pass whole-RDRAM/VI/hangar controls, and compare the first accumulator
+   publication at `0x006AB400`; do not rewrite or guard any value.
 5. Revisit M3 only as a complete idiom-class audit with a new discriminator;
    conditional-move recompiler support is a separate engineering task.
-6. Revisit external retail-entry or M4 only with a genuinely new oracle route,
-   PC, or RSP witness; otherwise keep them parked.
+6. Revisit external retail-entry only with a recipe that reaches the qualified
+   port hangar phase; otherwise keep it parked.
 7. Resume symbol renaming only after the required last-15-session preflight
    shows it is not a REVISIT and a new mapping source exists.
 

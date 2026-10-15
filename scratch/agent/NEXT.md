@@ -1,41 +1,42 @@
-# Next work unit: new external-retail boundary discriminator
+# Next work unit: M4 accumulator-origin witness
 
-HYPOTHESIS-ID: external-retail-entry-new-witness
+HYPOTHESIS-ID: m4-accumulator-origin-new-witness
 
-The generated-symbol sweep is closed at the available snapshot. M5 is closed,
-and the M3 indirect-call class is closed. Do not repeat either audit.
+M5 is closed, the generated-symbol sweep is closed at the available snapshot,
+and the external-retail retry was route-mismatched. Do not repeat those units.
 
-Run one bounded, read-only design/ground-truth experiment for the parked
-external-retail boundary: use an independent retail PC watch at the first
-port-side `0x800903F0` consumer boundary, with whole-RDRAM and VI controls,
-then compare it to the qualified Rice port route. The instrument must include
-the positive controls in the same run before a null is interpreted.
+Run one bounded read-only M4 accumulator-origin experiment. Use the
+independent retail oracle to watch the statically identified accumulator
+writer/consumer PC range and the qualified hangar origin, with whole-RDRAM and
+VI controls. In the same iteration run the existing port binary with the
+matching phase-scoped accumulator witness and the same route controls. No
+guest value rewrite or guard is allowed.
 
 Competing hypotheses:
 
-1. H-retail-boundary-live: retail reaches the consumer with the same route
-   family, but the prior watch missed the exact boundary.
-2. H-retail-design-dead: retail legitimately never reaches that consumer for
-   the relevant voice kind, while the port-only hit is an invalid port state.
-3. H-route-mismatch: the retail and port arms do not reach the same phase,
-   making the consumer comparison unevaluable.
+1. H-accumulator-retail-writer: retail writes the accumulator at the selected
+   PC in qualified hangar and the port has a matching writer/order.
+2. H-accumulator-port-only: retail reaches the phase but the selected writer
+   is absent while the port witness fires, identifying a port-side origin gap.
+3. H-accumulator-route-mismatch: either arm lacks whole-RDRAM, VI, hangar, or
+   writer controls, so the origin comparison is unevaluable.
 
 Discriminator:
 
-- whole-RDRAM and VI controls fire, the route reaches title/hangar, and a
-  phase-qualified retail PC row at the consumer selects H-retail-boundary-live;
-- controls and route fire but the retail PC row remains absent while the
-  independent kind/flag controls match selects H-retail-design-dead;
-- any missing control, title/hangar phase, or kind/flag join selects
-  H-route-mismatch and authorizes no mitigation.
+- both arms pass controls and reach `0x006AB400`; matching writer PC/order
+  selects H-accumulator-retail-writer;
+- both arms pass controls and reach `0x006AB400`, but only the port writer
+  fires, selects H-accumulator-port-only;
+- any missing control or phase-qualified writer join selects
+  H-accumulator-route-mismatch and authorizes no mitigation.
 
 Exact preflight commands:
 
-    rg -n '800903F0|retail.*watch|whole-RDRAM|VI control|oracle' tools/oracle docs scratch/agent
+    rg -n 'accumulator|M4|writer.*PC|hangar|006AB400' docs tools scratch/agent
     sed -n '1,240p' tools/oracle/README.md
     grep -n '^## Session ' PORTING-STATE.md | tail -15
 
-Before any build, verify the oracle recipe and positive-control watch. Build
-all controls in one arm, run one phase-gated comparison, and do not rewrite or
-filter any port value. If the oracle cannot reach the qualified route, record
-the exact missing control and leave the boundary parked.
+Before any build, identify the exact accumulator symbol/PC from existing
+evidence and verify the oracle positive-control watch. Build all controls in
+one arm, run one phase-gated comparison, and record the exact missing control
+if either route fails. Do not rewrite or filter any port value.

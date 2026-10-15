@@ -158118,3 +158118,22 @@ that pass all gates. No generated file, mapping, or behavior was changed; no
 build was required. This rules out a safe rename from the available snapshot,
 not future mappings. Detailed evidence: `docs/RENAME-S4999-AUDIT.md`.
 ORIGIN: no mitigation or behavior change; diagnostic-only symbol audit.
+
+## Session 5000 (2026-10-15) — external retail boundary retry was route-mismatched
+
+Ran one batched independent-retail/port boundary witness. The oracle passed
+the whole-RDRAM positive control, reached title `0x00790400` and qualified
+hangar `0x006AB400`, and recorded 24,195,957 executions in
+`0x8008FFAC..0x80090640`. The exact `0x800903F0` consumer had 0 executions;
+the surrounding `0x800901C0` control had 244,691 and named writer PCs
+`0x80090C80`/`0x800921E8` had 593/1,280. The port arm reached title and
+`0x00620400` but not qualified hangar, so its consumer join was unevaluable.
+
+This selects `H-route-mismatch` for the retry. It rules out a missing oracle
+instrument and a retail route failure, but does not distinguish a retail
+design-dead consumer from a port-only state because the port arm lacked the
+hangar phase. No guest value was changed or guarded. Evidence:
+`docs/M5-S5000-EXTERNAL-BOUNDARY.md` and
+`scratch/agent/s5000_external_boundary/`.
+ORIGIN: diagnostic-only independent retail/port boundary capture; no
+mitigation or behavior change.
