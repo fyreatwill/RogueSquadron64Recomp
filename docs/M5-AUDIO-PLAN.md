@@ -249,3 +249,6 @@ Open caveat: the 512 phase lasts ~3-4 s before the game returns to title, so it
 may be an attract/demo segment rather than a player mission. Audio (pcm) rows
 exist in all runs (471 matching lines in run1) but no per-phase M5 contract
 claim is made here.
+
+## Mission-phase row (s4963, keyed route s4959, n=2)
+Runs 1/2: mission scanout 0x690400 at t=186/185 s, held to t=314 s, crash=0 abort=0, pcm_rows 168, pcm_nz_rows 151/153, sample_nonflat 8641/8611. Audio non-silent in mission; no audio-induced fault. Run3 pending in soak queue.
