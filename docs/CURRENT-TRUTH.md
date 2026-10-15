@@ -207,7 +207,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   failure; any recurrence needs phase state plus process/display/load context.
 - External retail-entry: Rice route is qualified through title/hangar but the
   old exact PC is absent; do not repeat without a new route or PC discriminator.
-- M4 accumulator boundary, attached-mesh mission contract, hangar pillars,
+- M4 accumulator boundary (closed s5006: hangar 0/1955 = retail 0/576; the 8 port 640-phase 0x8000 rows are ordinary values, no clamp shape), attached-mesh mission contract, hangar pillars,
   col-511 noise, `0x1F0D74`, and overlay-registration chunking are parked.
 - Generated-symbol renaming is exhausted at the available snapshot: the s4999
   audit found no remaining candidate satisfying semantic companion mapping,

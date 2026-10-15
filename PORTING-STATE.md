@@ -158168,3 +158168,10 @@ Discrimination (s5004 NEXT): port has no 0x8000 lane at hangar task end, same as
 ORIGIN: instrument only; no mitigation or behavior change.
 Discrimination: REFUTES H-port-only-divergence-in-accumulator (port hangar 0/1955 = retail 0/576) and SELECTS H-accumulator-not-the-carrier (single run for the port arm, two-source with the s5004 retail arm). H-mid-task-saturation stays unexamined.
 Next discriminator: classify the 8 port 640-phase (ord 3) task-end accl==0x8000 rows against retail 640 0/425 — clamp-shaped acch/accm pattern selects a real 640-phase ucode divergence; ordinary 48-bit value closes the thread (see scratch/agent/NEXT.md).
+
+## Session 5006 (2026-10-15) — classified the 8 port 640-phase accl 0x8000 rows: ordinary values, thread closed
+
+Offline only, on the s5005 log (`scratch/agent/soak_results/s5005_port_end_acc/run1.log`, 1281 phase-3 rows; positive control: same-run nz>0 rows and 8 rows with sat8000=1). Read the probe (`src/rsp/dpc_bridge.cpp:501`): `sat8000` counts any of acch/accm/accl lanes equal to 0x8000, not accl only. The 8 rows: tasks 623 and 764 hold sign-extended -0x8000 (FFFF.FFFF.8000); 295 holds FFFF.FA8E.8000 beside neighbouring lanes with ordinary sign-extended products; 548/557/560 are accm/accl-structured values (0000.178D.8000 with accl steps of 0x200 matching neighbours); 507 and 731 are sparse (nz=3, nz=2) with acch.accm = DDBE.8000 / 3EF3.8000 in a mostly zero accumulator, i.e. leftover data, not a clamp. None shows the saturation signature (acch/accm = 7FFF/FFFF with accl clamped); every one is an arithmetically reachable 48-bit value. Retail 640 0/425 vs port 8/1281 is not a significant difference (expected ~2.4 at the same rate), and retail would need a same-content task to compare.
+ORIGIN: analysis only; no mitigation or behavior change.
+Discrimination: SELECTS H-ordinary-48bit-values; REFUTES H-640-phase-ucode-divergence (no clamp-shaped row). Single-source (port log; retail arm is the s5004 count). M4 accumulator thread closed.
+Next: M5 audio plan (docs/M5-AUDIO-PLAN.md) — select the next contract boundary after A9/A10.
