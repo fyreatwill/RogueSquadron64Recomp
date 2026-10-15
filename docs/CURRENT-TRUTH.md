@@ -402,3 +402,5 @@ and the tail of `scratch/agent/SOAK-RESULTS.md` before acting.
 Mission-route soak (solo, N=5): 5/5 reached origin 0x690400, 0 do_break hits, 0 crashes (single-source, small N). VI640-stall rate still undetermined: vi-fs-decision lines carry stalled=1 late in every run, needs a phase-gated count, not a raw grep.
 
 - Open owner-level options (not blockers, s5008): (a) declare M5 done, set new target; (c) supply symbol-mapping source for rename sweep. Mission-phase kind=bad voice reads: per-origin budget ALREADY RUN (s4993): 0 bad rows at mission origins vs 2,602 pre-mission, same-run control passed; only open arm is the s4994 mission-origin caller sample, which needs a mission-qualified recipe (s4995 never reached mission).
+
+- s5011: s5010 mission-sample soak route-unevaluable (mission_onset_t=-1; updateHangarBayScene crash). Retry queued as s5012; no conclusion on stale32/cur20.

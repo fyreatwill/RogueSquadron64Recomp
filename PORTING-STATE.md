@@ -158216,3 +158216,6 @@ carries the patch). Enqueued `scratch/agent/soak_queue/s5010_s4540_mission_sampl
 Interpretation table is in NEXT.md. BLOCKED.md moved to BLOCKED.resolved.s5009-owner-decision.md.
 Declaring M5 done remains an owner decision but does not gate this work. Nothing was run
 this session; the result arrives in SOAK-RESULTS.md.
+
+## Session 5011 (2026-10-15) — s5010 mission-sample soak ran: route-unevaluable (hangar crash before mission)
+Ran soak_queue/s5010_s4540_mission_sample.sh by hand (loop had not yet run it). keys1.log: hangar t=80, 6a2900 t=193, mission_onset_t=-1, s4994arm=1, s4994rows=1, cur20=0, stale32=0, crash=37 lines (fault si_addr=0x4000cd6d3, pc updateHangarBayScene+76424, log line 317214 of 317267). Validity needs mission_onset_t>=0, so NO conclusion on cur20/stale32 (a null without a reached route is not a result). Rules out nothing about the s4540 caller question. Hangar crash is a known family, not chased (reactive M3 chase out of scope). No code changed. Retry queued as s5012; second unevaluable run => BLOCKED.
