@@ -270,6 +270,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+**s5012 (top):** The mission-qualified s4994 sample ran validly (mission_onset_t=173, arm=1, crash=0): 32 of 32 mission-origin s4540 caller rows were current-base `0x8018C720`, 0 stale `0x801714D0`; with s4993 (0 bad rows at mission origins) this closes the mission-phase `kind=bad` thread. No runnable M5 unit remains; next eligible work is a genuinely new M3 idiom class or a new witness for the parked retail/M4 boundaries. Declaring M5 done stays an owner call, non-gating.
+
 **s5010 (top):** The s5007/s5009 "BLOCKED on owner decision" was refuted: running the queued mission-sample soak needs no human decision (the s4994-instrumented binary is already built). Enqueued `soak_queue/s5010_s4540_mission_sample.sh`; next unit is consuming its verdict (NEXT.md). Declaring M5 done stays an owner question but is non-gating.
 
 **s5007 (top):** All priority threads are closed or parked; loop is BLOCKED on an owner decision (scratch/agent/BLOCKED.md). Only live defect: mission-phase `kind=bad` voice-index reads (H-lock-required); s4985 lock attempt was route-unevaluable.
@@ -404,3 +406,4 @@ Mission-route soak (solo, N=5): 5/5 reached origin 0x690400, 0 do_break hits, 0 
 - Open owner-level options (not blockers, s5008): (a) declare M5 done, set new target; (c) supply symbol-mapping source for rename sweep. Mission-phase kind=bad voice reads: per-origin budget ALREADY RUN (s4993): 0 bad rows at mission origins vs 2,602 pre-mission, same-run control passed; only open arm is the s4994 mission-origin caller sample, which needs a mission-qualified recipe (s4995 never reached mission).
 
 - s5011: s5010 mission-sample soak route-unevaluable (mission_onset_t=-1; updateHangarBayScene crash). Retry queued as s5012; no conclusion on stale32/cur20.
+

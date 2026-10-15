@@ -1,7 +1,7 @@
-# Next work unit: read s5012 retry verdict (s5010 route crashed before mission in s5011)
+# Next work unit: choose a new M3 idiom-class audit (all prior M5/s4540 threads closed by s5012)
 
-HYPOTHESIS-ID: m5-s4540-mission-sample
+HYPOTHESIS-ID: m3-new-idiom-class-audit
 
-s5010 was run by hand in s5011: mission_onset_t=-1, crash in updateHangarBayScene. A copy (s5012_s4540_mission_sample_retry.sh) is queued for the loop. Read SOAK-RESULTS.md / soak_results/s5012_s4540_mission_sample_retry/keys1.log. Valid only if mission_onset_t>=0 and crash=0.
-If it crashes again the same way: the route is flaky; go BLOCKED with that specific question rather than a third try.
-Outcomes: cur20>0 & stale32=0 -> close thread; stale32>0 -> audit that reader. No guard/mitigation.
+s5012 closed the mission-sample thread (32/32 current-base, 0 stale, crash=0; plus s4993). Nothing else is queued.
+Step 1: `grep -n 'Parked and closed' -A15 docs/CURRENT-TRUTH.md` to list already-audited classes; grep-enumerate generated code for one NOT listed (e.g. a stack/array-index idiom family akin to -0x25A4), classify every site, guard or prove dead.
+If no unaudited class can be named after ~15 min of grep, go BLOCKED with that specific question (not a repeat of the owner-decision block refuted in s5010).
