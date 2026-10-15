@@ -157716,3 +157716,10 @@ Question: is the 0x690400 VI-512 phase a player mission, the attract demo, or a 
 Verdict: H-demo (two lines: script ordering + 5/5 deterministic timing). H-real-abort and H-timeout-after-play are unsupported: no player input ever reached the phase. Single caveat: no same-run positive control that keys DO reach the game in this script (hangar was reached by keyed runs elsewhere, s4941/s4943).
 Consequence: the s4950 "5/5 reached mission" and the mission-phase soak rows are attract-demo evidence, not player-mission evidence; real mission entry needs hangar (0x6AB400) + keys, as in s4943.
 ORIGIN: no mitigation added; no code changed.
+
+## Session 4955 (2026-10-14) — solo keyed N=3 run: keys-after-512 recipe never reaches the hangar; 512 phase is the demo (confirmed by run)
+Ran scratch/agent/s4955_keyed_solo.sh (new; solo, 3 sequential runs, timestamped key log, tools/vi_progress.py). Result 3/3 identical: title 1024/0x790400 at ~49.5 s, 640/0x696100 at ~75.7 s, 512/0x690400 at 96.5-97.1 s, back to title 1024 3.2-4.7 s later; keys first sent at t=98-102 s (AFTER 512 had already begun, by construction); hangar 0x6AB400 rows = 0 in all 3; crash=0. Run 1/2 returned to 640 at ~127 s again (clock cycle); run 3 killed at 157 s while in title.
+Verdict: H-keyed-mission-stable / H-keyed-bounce are both UNTESTED: positive control (hangar 0x6AB400 before keys) failed 3/3, so the recipe cannot produce a keyed mission. Independently confirms s4954 H-demo (second line: the bounce occurs ~3-5 s after 512 onset irrespective of key time; 3/3).
+Rules out: reading the 512 phase as a mission with this driver. Does NOT show a port defect.
+Next: keys must go in at the title phase (~t=50 s, 1024/0x790400) as in s4943, gated on that phase, with hangar 0x6AB400 as the control before any mission claim.
+ORIGIN: no mitigation added; no runtime code changed.
