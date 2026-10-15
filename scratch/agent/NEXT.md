@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: m5-audio-destub
 
-s4925: the width-gated driver reached the mission phase after the first
+s4926: the width-gated driver reached the mission phase after the first
 Start/A pair and remained alive for 120 s of counter samples (6656 -> 13760),
 with zero crash/abort markers. This is a longevity result, not an audio-path
 qualification.
@@ -25,9 +25,14 @@ controls. A missing phase or dead counter invalidates the run. The audio
 discriminator is the phase-scoped M5 task/SP/PCM join; each possible result
 selects one of the three hypotheses above.
 
-Next work unit: add one phase-scoped M5 audio/task/PCM control bundle to the
-width-gated driver, then run `zsh scratch/agent/s4923_mission_longevity.sh`
-once. Keep the first-512 gate and one-pair input schedule. Record the joined
-mission-phase controls and inspect `summary.txt` plus the phase rows. Do not
-interpret an audio null unless the post-key origin and advancing counter are
-present.
+Result s4926: the bundle was positive globally but produced zero rows at
+`0x00690400`; the post-key origin and counter controls were positive. The
+remaining ambiguity is whether audio tasks execute after the origin changes to
+`0x00620400`.
+
+Next work unit: add one origin-transition latch or include `0x00620400` in the
+phase-scoped M5 task/PCM join, then run `zsh
+scratch/agent/s4923_mission_longevity.sh` once. Keep the first-512 gate and
+one-pair input schedule. Discriminator: rows only at `0x00620400` select phase
+attribution; rows absent at both origins with global controls positive select
+an internal mission audio boundary. Do not add a guard or skip.

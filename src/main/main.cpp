@@ -7004,7 +7004,8 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
         const uint32_t origin = rs64_vi_committed_origin();
         const bool phase_allowed =
             (width == 1024u && origin == 0x00790400u) ||
-            (width == 512u && origin == 0x006AB400u);
+            (width == 512u && (origin == 0x006AB400u ||
+                               origin == 0x00690400u));
         static uint32_t s_phase_key = 0xFFFFFFFFu;
         static uint32_t s_phase_n = 0;
         if (phase_allowed) {
