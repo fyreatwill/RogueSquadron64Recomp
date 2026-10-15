@@ -2,8 +2,8 @@
 
 HYPOTHESIS-ID: guest-2vi-wait
 
-s4914 result: flag A (0x8011A8C8) is cleared by postSwapRdpReset (0x8001C12C, called from viRetraceHandlerThread 0x80019B1C) at 0x8001C15C, only if A!=0 and 0x8001BF20(1) returns nonzero. Two-recv frames = clear skipped at the first retrace (A=1 at first gfx wake), landing one retrace later.
-Hypotheses: H-slot-not-free (BF20(1) returns 0 at first retrace because a buffer slot is still busy), H-state-gate (BF20 returns 0 for another reason, e.g. count byte -0x7153 / a gate), H-ordering (clear runs but AFTER the ack send, i.e. send precedes postSwapRdpReset in some path).
-ONE build, one run: mark postSwapRdpReset entry + 0x8001BF20 args/return (fixup: add rs64_s4913_mark-style call with value) + dump slot-state bytes (base 0x8012_8EAA: -0x7156+i for i<count, count at 0x8012_8EAD) at each retrace and each acquire; cover the 1->2 recv transition (ROGUESQ_S4913_SKIP) with table keyed per retrace. Positive control: A 1->0 transitions from the poll thread must coincide with BF20 returning nonzero.
-Outcome: BF20 returns 0 with all slots busy => find who frees the slot (host RT64 present?) and compare with retail via oracle; BF20 nonzero but A stays => read 0x8001C160.. path; clear after send => ordering bug.
+s4915 result: flag A is skipped-clear at the first retrace exactly when bufferArbiterAllocSlot(1) (0x8001BF20) returns 0 (28/28 two-recv calls; 156/156 one-recv calls return nonzero). Slot bytes differ: ret-0 has +2,+3 = 04 05 / 05 04 and +6,+7 = 01 02; ret-nz has +2,+3 = 00 05 / 05 00 and +6,+7 = 00 01.
+Hypotheses: H-prev-frame-dl-still-running (slot held until the previous frame's RDP/SP-done event, which our host delivers a retrace late), H-host-timing-only (retail also needs 2 VIs), H-wrong-release-path (a guest releaser we stub/skip never runs the first time).
+ONE build, one run: extend the poll thread to log every change of bytes 0x80128EA8..B7 with last guest mark/tid (positive control: ret-nz acquire must show a +2/+3 change), plus marks at the releaser candidates found by statically grepping writers of the slot-byte base in funcs_*.c. Decode bufferArbiterAllocSlot (0x15C bytes) first so the table is keyed by slot index.
+Outcome: releaser runs on the gfx/RDP-done path late => compare timing with oracle/host event; releaser never runs first time => stubbed/skipped function; both retail-like => 2-VI wait is genuine and not a bug.
 If stalled, resume the M5 audio plan.

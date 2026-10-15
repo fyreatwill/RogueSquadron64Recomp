@@ -5261,9 +5261,14 @@ extern "C" void rs64_s4913_mark(uint8_t* rdram, const char* tag) {
     if (k < skip || k >= skip + 12000) return;
     const uint8_t a = rdram[((uint64_t)(int64_t)(int32_t)0x8011A8C8u - 0xFFFFFFFF80000000ull) ^ 3u];
     const uint8_t b = rdram[((uint64_t)(int64_t)(int32_t)0x8011A8C9u - 0xFFFFFFFF80000000ull) ^ 3u];
-    std::fprintf(stderr, "[s4913] k=%u t=%.3f tid=%d %s A=%u B=%u\n", k,
+    char slots[64] = "";
+    if (tag[0] == 'p' || tag[0] == 'b') {   // psrr-* / bAlloc-*: arbiter slot bytes 0x80128EA8..B7
+        for (uint32_t i = 0; i < 16; ++i)
+            std::snprintf(slots + i * 3, 4, "%02x ", rdram[((uint64_t)(int64_t)(int32_t)(0x80128EA8u + i) - 0xFFFFFFFF80000000ull) ^ 3u]);
+    }
+    std::fprintf(stderr, "[s4913] k=%u t=%.3f tid=%d %s A=%u B=%u %s\n", k,
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(),
-        (int)rogue_current_thread_id(rdram), tag, a, b);
+        (int)rogue_current_thread_id(rdram), tag, a, b, slots);
 }
 struct S4913RecvScope {
     uint8_t* rdram; const char* tag;

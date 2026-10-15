@@ -18446,6 +18446,16 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             changed = True
             report.append(f"{p.name}: s4913 mark patched into {_nm}")
 
+    # s4915: marks in postSwapRdpReset / bufferArbiterAllocSlot (host side inert unless ROGUESQ_S4913=1).
+    if "RECOMP_FUNC void postSwapRdpReset(" in text or "RECOMP_FUNC void bufferArbiterAllocSlot(" in text:
+        sys.path.insert(0, os.environ.get("RS64_TOOLS_DIR") or str(pathlib.Path(__file__).resolve().parent))
+        import apply_s4915_marks as _s4915
+        _new = _s4915.patch_text(text)
+        if _new != text:
+            text = _new
+            changed = True
+            report.append(f"{p.name}: s4915 marks patched")
+
     # waitForPostSwapAck entry/block diagnostic (s177). NEXT.md's s176 stall
     # hypothesis assumed the [vi-fs-decision] "stalled" field hides a hidden
     # tick/resource-count threshold -- source read of rt64_state.cpp shows
