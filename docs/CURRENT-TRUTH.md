@@ -235,6 +235,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Superseded conclusions to avoid repeating
 
+- **"Port retrace delivery is bimodal/bursty (0/2 per VI) vs retail's steady 1" (s4899-s4900).** Believable because per-update_screen rows showed R=0 in 4341 and R=2 in 4294 VIs. Overturned s4901: update_screen runs 2x per true origin change; per origin change the port is steady at 2 (retail 1), so the gap is 2:1 frame pacing, not burstiness.
 - **"M5 needs human authorization for the data_size writer trace; no de-stub step remains" (s4863).** Believable because every M5-AUDIO-PLAN step was closed and the trace looked like a new build+run. Overturned s4864: builds/runs are already permitted by ITERATION.md, and the data_size 1-vs-2 question is still an open, cheap discriminating experiment.
 - **"Loop must wait for the owner to choose a target / no retail framebuffer reference known" (s4729).** Believable because M5, M3, the rename sweep and 0x1F0D74 were all closed and the BLOCKED question was framed around a missing reference. Overturned s4730: the retail hangar RDP capture (`s4514_rdp_hangar512.bin`, 166 MB) and oracle video-plugin runs already existed, and choosing a target is in-scope prioritization.
 - **"Mission entry needs an owner-supplied recipe or savestate" (s4719-s4721).** Believable because ~10 button-press variants (s4657-s4720) never left the hangar/viewer/attract. Overturned s4722 as unproven: every variant varied button input only; forcing the mode variable in RDRAM was never tried, and the oracle reliably reaches the hangar unaided.
@@ -277,7 +278,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
    does retail run synth at ~1 per retrace with the SAME retrace:update_screen
    ratio, or does the port deliver/handle retraces at half the retail VI rate?
    Measure in one unit (retrace returns per VI-origin change) on both sides.
-   **s4900 answer:** retail (oracle, control passed) = 1,302 hits / 1,301 origin changes, 94% of intervals exactly 1 (steady). Mean agrees with port; shape differs (port 0/2 bimodal per update_screen). Open: port's true VI origin-change count per retrace return.
+   **s4900 answer:** retail (oracle, control passed) = 1,302 hits / 1,301 origin changes, 94% of intervals exactly 1 (steady). Mean agrees with port; shape differs (port 0/2 bimodal per update_screen).
+   **s4901 answer:** per TRUE fb-origin change (osViSwapBuffer fb change) the port is steady at 2 retrace returns (hangar 4642/4644; title-640 285/325), retail steady at 1. The 0/2 was update_screen aliasing (2 update_screens per origin change). Real gap = 2:1 frame pacing (single-source each side). NEXT: swap rate in Hz port vs retail + the game's frame-limiter/retrace-per-frame variable (slow-frame vs divider vs VI-rate).
 
 0. **M5 callback teardown boundary (s4894):** the qualified route does not
    reach `shutdownAudioEngine`; s4894's generated entry/return marker and the
