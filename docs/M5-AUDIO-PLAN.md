@@ -255,3 +255,5 @@ Runs 1/2: mission scanout 0x690400 at t=186/185 s, held to t=314 s, crash=0 abor
 
 ## Long mission hold row (s4967, enqueued)
 Plan row: image arm, keyed route, hold ~310 s after route reaches 0x6A2900 (cap 600 s) via soak_queue/s4967_mission_image_long.sh. Clean (crash=0, mission onset reached, PCM nz>0) => long-hold qualified; crash/stall => name the writer (rule 11).
+
+**Result (s4968):** s4967 long hold clean: alive to t=586 s (cap 600 s killed it, rc=137), crash=0, mission 0x690400 entered 3x (180.7, ~495.7 s; title bounce ~453 s), consumer nz=756 in mission. Long-hold qualified (n=1). M5 sequence fully closed.
