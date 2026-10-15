@@ -170,7 +170,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4973 (top):** s4972 soaks never ran (zsh ${0:A:h...} bug, rc=2 in 0 s). Requeued as soak_queue/s4972r_vi640_idle_a.sh (5 idle runs; verdict in soak_results/s4972r_a/summary.txt, seen640=1 is the positive control). 0/5 stall => close the VI-640 wall; any stay640 => reproduced stall, investigate phase-gated.
+**s4974 (top):** s4972r soak consumed: 5/5 runs seen640=1 (positive control) and exit640@48s, bad=0. With s4971 (4/4) that is 0/9 VI-640 stalls vs s4794's 2/5; Fisher p~0.1, so not proven gone but not reproducible. VI-640 route wall CLOSED as non-observable (re-open only on a stay640 line in any future soak, since all recipes now arm seen640). Next: M3 census of idiom classes NOT in the closed list (see NEXT.md).
+
+**s4973 (prior):** s4972 soaks never ran (zsh ${0:A:h...} bug, rc=2 in 0 s). Requeued as soak_queue/s4972r_vi640_idle_a.sh (5 idle runs; verdict in soak_results/s4972r_a/summary.txt, seen640=1 is the positive control). 0/5 stall => close the VI-640 wall; any stay640 => reproduced stall, investigate phase-gated.
 
 **s4971 (prior):** VI-640 boot stall NOT reproduced (4/4 idle/loaded arms exit at 48-50 s, loadavg up to 39; no positive control, so not proof it is gone). H-load unsupported. Route wall is not currently observable; next: N>=10 repeat in soak queue to bound the rate, else treat as closed.
 

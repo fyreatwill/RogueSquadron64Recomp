@@ -1,6 +1,6 @@
 # Next work unit
-HYPOTHESIS-ID: vi640-route-wall
-Read scratch/agent/soak_results/s4972r_a/summary.txt (soak s4972r_vi640_idle_a; the s4972 originals never ran - zsh bug, see s4973). Each line needs seen640=1 as positive control.
-- bad=0 (0/5 stall): close the VI-640 wall in CURRENT-TRUTH, then M3 idiom-class audit or the renaming sweep (check `grep -n '^## Session ' PORTING-STATE.md | tail -15` first).
-- any stay640: reproduced stall; capture the log's vi-fs stalled state and investigate with phase-gated instrumentation.
-- recipe absent from SOAK-RESULTS.md: check soak_queue/ still holds it; if rc=2 in 0s again, read the log for the shell error. Do not use `${0:A:h...}` in recipes.
+HYPOTHESIS-ID: m3-unclosed-idiom-census
+Goal: list M3 idiom classes NOT in CURRENT-TRUTH "M3 and rendering" closed list (trap/break/syscall/cop0, unaligned, LL/SC/cache, div, float conv/cmp/FCSR, mem-width, indirect calls, self walks, branch-likely, var shifts, HI/LO, 64-bit shifts, 32-bit mult, movz/movn).
+Method: one pass over RecompiledFuncs/ grepping for helper/do_break/unimplemented emitters; count sites per class (denominators). Candidates: COP1 ldc1/sdc1 alignment, cvt rounding modes, trunc.l, mfc1/dmfc1 width, sltiu sign-extension, jr with non-ra reg in delay slot.
+Outcomes: class with >0 unguarded sites -> classify each, guard or prove dead (commit a guard in fixup script); all zero -> close and note in CURRENT-TRUTH, then resume renaming preflight.
+Do not re-run VI-640 soaks.
