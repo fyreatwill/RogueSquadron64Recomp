@@ -6,6 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4954:** the 512 (0x690400) phase in the s4950 soaks is the ATTRACT DEMO: keys were only sent after it appeared and timing is identical across 5/5 runs (640@~76s, 512@~97s, title again ~4s later). Not a mission, not an abort. Real mission needs hangar + keys (s4943 route).
+
 - **s4953:** `tools/vi_progress.py` over the s4950 logs: all 5 runs go title -> 640 -> 512 (0x690400, ~3-4 s, ~150-260 update_screens) -> title again; no run's VI progress halts. The 512 "mission" may be an attract demo or a port bounce-to-title (undiscriminated). Mission-phase row added to `docs/M5-AUDIO-PLAN.md`.
 
 - **s4949 (unblock):** the s4948 "owner decision" block was refuted: movz/movn defect is dormant (2 of 149 sites "reachable", both data-as-code; do_break exits loudly, no hit recorded). Next unit is a mission-route soak, not a human decision.
@@ -158,7 +160,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4953 next:** discriminate whether the 512 phase is demo vs real-mission abort (key-injection log vs phase transitions, one run; see NEXT.md). If abort, fix the route path (pivot item b).
+**s4954 next:** resolved as demo. Next: M5 plan row for the keyed route (title->hangar->mission) with the s4943 recipe; see NEXT.md.
 
 **s4952: unblocked** - s4951 scope question re-scoped to NEXT.md (VI-progress metric from s4950 logs, then mission-phase M5 row). stalled=1 is not a VI640 indicator. Declaring the milestone done remains an owner decision.
 
