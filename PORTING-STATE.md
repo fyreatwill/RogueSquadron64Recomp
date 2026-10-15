@@ -157723,3 +157723,10 @@ Verdict: H-keyed-mission-stable / H-keyed-bounce are both UNTESTED: positive con
 Rules out: reading the 512 phase as a mission with this driver. Does NOT show a port defect.
 Next: keys must go in at the title phase (~t=50 s, 1024/0x790400) as in s4943, gated on that phase, with hangar 0x6AB400 as the control before any mission claim.
 ORIGIN: no mitigation added; no runtime code changed.
+
+## Session 4956 (2026-10-14) — keys sent from title phase: hangar reached 3/3, mission never (8 key pairs/run)
+
+Ran `scratch/agent/s4956_keyed_title.sh` (copy of s4955 with the key driver triggered on first `origin=0x00790400` instead of 512; 8 pairs of winctl key 36 then 6, ~11 s apart, 195 s/run, N=3). Note: first launch used `timeout`, which does not exist on this macOS; reran directly.
+Results (`scratch/agent/s4956_keyed_title/driver.log`, `vi_progress.txt`): title at ~50 s, hangar `0x006AB400` (VI 512) at 58-66 s in 3/3 (control PASSED), VI progress continues to threadPresent #9720 in all runs, crash=0, `0x00690400`=0 and `0x00620400`=0 in 3/3.
+Hypotheses: H-route-flaky (no hangar) REFUTED 3/3. H-keyed-bounce (return to title) REFUTED: hangar persists to run end. H-keyed-mission-stable: NOT reached; the (36,6) x8 recipe never leaves the hangar. Survivor: the (36,6) key pair does not trigger hangar->mission launch (wrong key or menu state), or the port does not deliver the needed input. One recipe, N=3, so single-source.
+Implication: the s4943 "mission" origins (0x690400/0x620400) were likely the attract demo (cf. s4954/s4955), not a keyed mission. ORIGIN: no mitigation added; only a driver script and logs.

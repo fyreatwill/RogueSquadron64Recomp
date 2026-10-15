@@ -6,6 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4956:** keys sent from the title phase (36,6 x8/run, N=3) reach the hangar `0x006AB400` in 3/3 at ~58-66 s with VI advancing and crash=0, but never any mission origin. Hangar control passed; (36,6) does not launch a mission. The s4943 "mission" origins are probably the attract demo. Recipe: `scratch/agent/s4956_keyed_title.sh`.
+
 - **s4954:** the 512 (0x690400) phase in the s4950 soaks is the ATTRACT DEMO: keys were only sent after it appeared and timing is identical across 5/5 runs (640@~76s, 512@~97s, title again ~4s later). Not a mission, not an abort. Real mission needs hangar + keys (s4943 route).
 
 - **s4953:** `tools/vi_progress.py` over the s4950 logs: all 5 runs go title -> 640 -> 512 (0x690400, ~3-4 s, ~150-260 update_screens) -> title again; no run's VI progress halts. The 512 "mission" may be an attract demo or a port bounce-to-title (undiscriminated). Mission-phase row added to `docs/M5-AUDIO-PLAN.md`.
