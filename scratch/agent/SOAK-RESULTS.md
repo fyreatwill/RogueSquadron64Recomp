@@ -574,3 +574,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261014-s4854 | s4854_m5_port_load | result=single-source H-port-load-unreached; title=1 hangar=1 port_control=0 port_rows=0 sp_enter=1255 sp_return=1255 action=1255 pcm=10970 crash=0 abort=0 | scratch/agent/soak_results/s4854_m5_port_load/verdict.txt
 20261014-144220 | s4880_dedup_crash_rate | rc=1 | 508s | scratch/agent/soak_results/s4880_dedup_crash_rate_20261014-144220.log
 20261014-200210 | s4921_gated_sample_x5 | rc=137 | 600s | scratch/agent/soak_results/s4921_gated_sample_x5_20261014-200210.log
+20261015-002208 | s4959_mission_run1 | rc=1 | 152s | scratch/agent/soak_results/s4959_mission_run1_20261015-002208.log
+20261015-002440 | s4959_mission_run2 | rc=1 | 153s | scratch/agent/soak_results/s4959_mission_run2_20261015-002440.log
