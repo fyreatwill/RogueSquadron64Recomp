@@ -157024,3 +157024,23 @@ the absent return marker. See `docs/M5-S4894-SHUTDOWN-RETURN-MARKER.md`.
 ORIGIN: diagnostic-only generated entry/return and existing callback-table,
 SP, PCM, audio-return, and VI controls. No callback table, teardown, or audio
 behavior changed.
+
+## Session 4895 (2026-10-14) — checkpointed s4894 callback-boundary result
+
+This retry did not rerun the experiment. The s4894 artifact and qualified
+capture are already present in the ledger: the corrected callback-kind marker
+showed seven registration rows, zero `shutdownAudioEngine` entries, and zero
+returns, while independent title/hangar, SP, PCM, and no-crash controls
+passed. The selected discriminator is H3: the covered route does not reach the
+generated shutdown function. This rules out treating the registration rows as
+shutdown entries and leaves no basis for a non-return claim.
+
+The next discriminator is the existing required last-15-session preflight. If
+the recent session titles are not all generated-symbol sweep sessions or
+sweep-scoped census sessions, resume the bounded generated-symbol audit; if
+they are, revisit the external retail-entry or M4 accumulator boundary with a
+new discriminator. No runtime behavior change is authorized by this
+checkpoint.
+
+ORIGIN: checkpoint-only; no new instrumentation, runtime behavior, or soak
+was run in this retry.

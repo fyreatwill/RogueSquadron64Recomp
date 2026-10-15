@@ -1,8 +1,9 @@
-# Next work unit
+# Next work unit (resume after checkpoint)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Begin the generated-symbol sweep only after the required revisit preflight.
+The previous work unit is complete and was not rerun during the retry. Begin
+the generated-symbol sweep only after the required revisit preflight.
 Run `grep -n '^## Session ' PORTING-STATE.md | tail -15`. If all 15 titles
 contain `synchronized`, `confirmed ... symbol`, or a sweep-scoped census that
 selected H2/H3, this is a REVISIT instead: use a genuinely new angle on the
@@ -28,3 +29,7 @@ Expected discriminator: either one candidate satisfies all three rename gates,
 selecting a bounded mapping change, or the census finds no eligible candidate
 and the sweep remains parked while the revisit branch is selected. Do not build
 or run the game unless a runtime discriminator is required by the revisit.
+
+Checkpoint artifacts: s4894's capture and `docs/M5-S4894-SHUTDOWN-RETURN-MARKER.md`
+are already recorded; do not repeat that route or add more callback return
+fields.
