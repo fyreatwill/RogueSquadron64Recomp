@@ -1,28 +1,31 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-retail-writer-store-attribution
+HYPOTHESIS-ID: m5-retail-writer-ownership
 
-Run one bounded retail-only store-site capture around `0x80091784`. s4935
-passed the whole-RDRAM and VI controls, but its stable auxiliary context and
-zero independent type-2 task rows select H-auxiliary-writer. Identify the
-physical destination and source register/value for phase-gated stores in
-hangar `0x006AB400`, first mission `0x00690400`, and following mission
-`0x00620400`. Do not change runtime behavior.
+Use one bounded static ownership lookup for the three retail destinations
+identified in s4936: 0x80149702, 0x80149988/8A, and 0x800A1778. Search the
+companion decomp symbols/m2c output and the port's generated symbols for the
+owning structure and fields, then compare the retail store cadence with the
+port's 0x80149470 route state. Do not change runtime behavior.
 
 Competing hypotheses and discriminator:
 
-1. H-task-store: a phase-gated store in the `0x80091784` neighborhood writes
-   an OSTask field or task-adjacent publication value.
-2. H-auxiliary-store: the stores target an auxiliary table/cadence field and
-   never an OSTask-shaped destination.
-3. H-capture-invalid: whole-RDRAM or VI controls fail, so store nulls are not
-   interpretable.
+1. H-route-state: the destinations are fields in the audio route/slot state
+   represented by 0x80149470 or a directly referenced child structure.
+2. H-render-or-input: the destinations belong to an unrelated render, input,
+   or timing table, and the writer's audio-looking context is incidental.
+3. H-unknown: the available symbol/decomp material cannot establish ownership
+   without a new runtime watch.
 
-The discriminating measurement is the bounded phase-gated store-field table
-for the writer's exact store sites, joined to `--watch-pc 0x80091784` and
-`--pc-task-dump 0x80033FCC --pc-task-type 2`. A task-adjacent destination
-selects H-task-store; stable auxiliary destinations select H-auxiliary-store;
-a failed control selects H-capture-invalid. Use the same 240-second recipe,
-with `--watch-pc-range 0x80091600:0x80091840` and the oracle's
-`--store-field-dump` option once exact store PCs are enumerated from the range
-output.
+The discriminating measurement is a complete address-to-symbol/field table for
+all three destinations, including every static reference and the closest named
+structure member. H-route-state is selected if the table identifies the
+route/slot object and its port counterpart; H-render-or-input if it identifies
+another subsystem; H-unknown if no named owner can be proven. If static
+ownership is unresolved, stop and design a new phase-gated oracle/port join
+before building anything.
+
+Suggested commands: rg -n "80149702|80149988|8014998A|800A1778|80149470"
+../rogue_squadron64 ../N64Recomp RecompiledFuncs syms docs; then read bounded
+windows around each hit. No build or soak is authorized until the table and
+the competing outcomes are written here.

@@ -6,7 +6,14 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4935; compacted s4898)
+## Headline (as of s4936; compacted s4898)
+
+- Latest (s4936): the corrected retail store-site capture passed the
+  whole-RDRAM and VI controls and identified stable auxiliary destinations for
+  the 0x80091784 neighborhood: 0x80149702, 0x80149988/8A, and 0x800A1778.
+  The independent type-2 task decoder remained 0/8192. This selects
+  H-auxiliary-store over H-task-store, single-source; no mitigation is
+  authorized. See docs/M5-S4936-RETAIL-WRITER-STORE.md.
 
 - **Latest (s4935):** the bounded retail writer-context capture passed the
   whole-RDRAM and VI controls; `0x80091784` executed `12,077` times across
@@ -194,6 +201,16 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   auxiliary writer, not the OSTask publication boundary, and remains
   single-source. No mitigation or value filter is authorized. See
   `docs/M5-S4935-RETAIL-WRITER-CONTEXT.md`.
+
+- **M5 retail writer stores (s4936):** the corrected capture retained the
+  whole-RDRAM control until 10,000 writes, then kept three targeted physical
+  watches. It recorded 19,773 phase hits and 17,199 unique rows with no
+  overflow. Stores in the `0x80091600:0x80091840` range wrote stable auxiliary
+  destinations `0x80149702`, `0x80149988/8A`, and `0x800A1778` across hangar
+  and both mission origins. The independent type-2 decoder remained `0/8192`.
+  This selects H-auxiliary-store, but remains single-source retail evidence;
+  no mitigation or value filter is authorized. See
+  `docs/M5-S4936-RETAIL-WRITER-STORE.md`.
 
 - **M5 retail parity join (s4931):** the independent oracle was instrumented
   correctly and reached the 512-wide hangar route, with 11,629 whole-RDRAM
@@ -473,12 +490,11 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4935) Attribute the auxiliary writer's store:** run one bounded retail
-  store-site capture around `0x80091784`, using phase-gated store-field
-  instrumentation and the same whole-RDRAM/VI controls. Identify the physical
-  destination and source register/value for the writer in hangar,
-  `0x00690400`, and `0x00620400`; compare it with the OSTask decoder. Do not
-  filter or rewrite the value.
+- **(s4936) Explain the auxiliary writer's ownership:** identify the named
+  game structure/field behind `0x80149702`, `0x80149988/8A`, and `0x800A1778`
+  from the companion decomp and static symbols, then compare its update
+  cadence with the port's `0x80149470` route state. Do not filter or rewrite
+  the value; the retail store attribution is not a mitigation authorization.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 

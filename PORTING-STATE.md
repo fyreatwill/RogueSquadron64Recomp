@@ -157481,3 +157481,27 @@ writer retained `s0=0x80149470`, rotating small `s1` selectors, and mission
 H-task-writer for this capture and rules out treating `0x80091784` as a proven
 OSTask publication boundary. It does not identify the ultimate store target;
 the next unit is store-site attribution. No mitigation was added.
+
+## Session 4936 (2026-10-14) — retail writer stores select auxiliary state
+
+Ran the bounded retail store-site capture. The first retained-watch variant
+passed the whole-RDRAM control but was too broad: it collected 78.5 million
+candidate callbacks and reached only 49.7 emulated seconds, so its empty
+mission result was not interpretable. The corrected variant used separate
+targeted watches after a range census identified the relevant stores. The
+whole-RDRAM control reached 67,289 writes and retired at 10,000; VI polling
+reached 14,384 frames over 239.7 emulated seconds. Writer `0x80091784`
+executed 12,076 times. The store sampler recorded 19,773 phase hits, 17,199
+unique rows, and no overflow; the independent type-2 decoder at `0x80033FCC`
+remained `0/8192`.
+
+The relevant stores were `0x800917C4` -> effective `0x80149702` (sb),
+`0x80091698`/`0x800916A4` -> `0x80149988`/`0x8014998A` (sh), and
+`0x800917F4` -> `0x800A1778` (sw), with all destinations recurring in hangar
+and both mission-origin buckets. This selects H-auxiliary-store over
+H-task-store and rules out treating the writer as an OSTask publication
+boundary for this route. It does not name the owning structure or field. No
+guard, skip, mitigation, filter, or behavior change was authorized.
+
+ORIGIN: the stores are legitimate retail writes observed by the independent
+oracle; no corruption mitigation was added.
