@@ -157282,3 +157282,12 @@ Result: retail hangar, gated, 64 hits: +7=02 in 64/64, slot 5 present in 64/64, 
 Not shown: why retail waits >=2 retraces before re-entering while swapping 60/s (s4916). Candidate: retail gfx thread is slower per frame (RSP/RDP task completion pacing) and the port's HLE tasks complete instantly, so the producer parks on retrace instead; if so the port park is natural vsync pacing, not a defect.
 Next: in retail, count retraces (0x80019948 executions) between 0x800199DC (4->5 flip) and the next 0x8001BCE4, hangar-gated, vs same in port; plus what the retail gfx thread blocks on between (RSP task done / RDP done event).
 Discrimination (s4919): selects H-port-reenters-early; refutes H-sample-artifact and H-retail-counter-differs.
+
+## Session 4920 (2026-10-14) — retail counts retraces F->P: 2-3 in 83/83 gated; port frame is shorter than retail's, so the producer park is benign vsync pacing
+
+What ran: added `--seq-hangar` to tools/oracle/rs64_oracle.c (ordered ring of retrace/flip/producer-entry events; reports retraces between flip and next producer entry, +6 byte at gated P, and F->F spacing). One build, two 60 s retail runs (scratch/agent/s4920_oracle_seq.sh). Run 1 used 0x80019948 as the retrace marker and saw 1 hit: that PC is the delay slot of `blez $v1` at 0x80019944 and mupen's exec breakpoint does not fire for taken-branch delay slots. Run 2 used 0x80019944: 1,303 hits (positive control: whole-RDRAM watch 11,950 hits).
+Result (run 2): R=1303 F=323 P=324 (P gated 83). Retraces F->next P, gated: 2 x9, 3 x74, 0/1 x0; +6 byte at gated P identical (9/74). F->F retail: 3 x108, 4 x213, 5 x1 (whole run, ungated). Port (s4918 run.log, 3,129 flips): F->next P 3-5 ms i.e. 0 retraces; F->F 24-40 ms (~2 retraces) in 3,100/3,129.
+Reading: retail produces a frame every 3-4 retraces; port every ~2. The port producer re-enters before the next retrace and parks one retrace, which is vsync pacing of a faster-than-retail loop. Selects H-retail-gfx-slow (port benign); refutes H-port-flip-early and H-retrace-rate (R ticks equal +6 exactly). Caveat: F->F retail is whole-run, not hangar-gated; R/F ratio differs port 1.8 vs retail 4.0 which supports the same reading.
+ORIGIN: no mitigation added; tools change is an oracle instrument only.
+Discrimination (s4920): selects H-retail-gfx-slow; refutes H-port-flip-early, H-retrace-rate.
+Next: thread closed. Resume M5 audio de-stub plan (docs/M5-AUDIO-PLAN.md).

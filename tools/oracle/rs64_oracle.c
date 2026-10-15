@@ -935,6 +935,52 @@ static void slot_peek(uint32_t pc)
     g_slot_peek_cnt[g_slot_peek_n++] = 1;
 }
 
+/* s4920: --seq-hangar: ordered R(0x80019948)/F(0x800199DC)/P(0x8001BCE4) event ring + retraces-between-flip-and-producer histogram */
+#define SEQ_MAX 400000
+static int g_seq_on;
+static unsigned char g_seq_ev[SEQ_MAX], g_seq_gate[SEQ_MAX], g_seq_p6[SEQ_MAX];
+static long g_seq_n, g_seq_over;
+static void seq_record(uint32_t pc)
+{
+    unsigned char e;
+    if (!g_seq_on) return;
+    if (pc == 0x80019944u) e = 'R';
+    else if (pc == 0x800199DCu) e = 'F';
+    else if (pc == 0x8001BCE4u) e = 'P';
+    else return;
+    if (g_seq_n >= SEQ_MAX) { g_seq_over++; return; }
+    g_seq_ev[g_seq_n] = e;
+    g_seq_gate[g_seq_n] = (unsigned char)pc_phase_log_match();
+    g_seq_p6[g_seq_n] = e == 'P' ? (unsigned char)debug_mem_u8(0x80128EAEu) : 0;
+    g_seq_n++;
+}
+static void seq_report(void)
+{
+    long i, nR = 0, nF = 0, nP = 0, nPg = 0, hist[8] = {0}, histall[8] = {0}, ffh[16] = {0}, lastF = -1, rs = 0, rsF = 0, p6h[8] = {0};
+    if (!g_seq_on) return;
+    for (i = 0; i < g_seq_n; i++) {
+        if (g_seq_ev[i] == 'R') { nR++; rs++; }
+        else if (g_seq_ev[i] == 'F') {
+            nF++;
+            if (lastF >= 0) { long d = rs - rsF; ffh[d > 15 ? 15 : d]++; }
+            lastF = i; rsF = rs;
+        } else {
+            nP++;
+            if (g_seq_gate[i]) nPg++;
+            if (lastF >= 0) {
+                long d = rs - rsF;
+                histall[d > 7 ? 7 : d]++;
+                if (g_seq_gate[i]) { hist[d > 7 ? 7 : d]++; p6h[g_seq_p6[i] > 7 ? 7 : g_seq_p6[i]]++; }
+            }
+        }
+    }
+    printf("[seq] events=%ld over=%ld R=%ld F=%ld P=%ld P_gated=%ld\n", g_seq_n, g_seq_over, nR, nF, nP, nPg);
+    printf("[seq] retraces F->next P (gated P):"); for (i = 0; i < 8; i++) printf(" %ld", hist[i]); printf("\n");
+    printf("[seq] retraces F->next P (all P):  "); for (i = 0; i < 8; i++) printf(" %ld", histall[i]); printf("\n");
+    printf("[seq] +6 at gated P:               "); for (i = 0; i < 8; i++) printf(" %ld", p6h[i]); printf("\n");
+    printf("[seq] retraces F->next F (all):    "); for (i = 0; i < 16; i++) printf(" %ld", ffh[i]); printf("\n");
+}
+
 static void dump_pc_field(uint32_t pc)
 {
     struct pc_field_dump_bucket *bucket;
@@ -2721,7 +2767,7 @@ static void dbg_update(unsigned int pc)
     if (flags & M64P_BKP_FLAG_EXEC)
         dump_pc_field(pc);
     if (flags & M64P_BKP_FLAG_EXEC)
-        slot_peek(pc);
+        { slot_peek(pc); seq_record(pc); }
 
     if (flags & M64P_BKP_FLAG_EXEC)
         dump_c904_witness(pc);
@@ -3617,6 +3663,8 @@ int main(int argc, char **argv)
             sscanf(argv[++i], "%x", &spc);
             g_slot_peek_pc = spc;
         }
+        else if (!strcmp(argv[i], "--seq-hangar"))
+            g_seq_on = 1;
         else if (!strcmp(argv[i], "--pc-field-dump-any-phase"))
             g_pc_field_dump_any_phase = 1;
         else if (!strcmp(argv[i], "--boundary-join")) {
@@ -4074,6 +4122,7 @@ int main(int argc, char **argv)
             printf("\n");
         }
     }
+    seq_report();
     for (int i = 0; i < g_n_pc_field_dump; i++) {
         struct pc_field_dump_bucket *bucket = &g_pc_field_dump[i];
         printf("[oracle] pc-field-summary pc=0x%08x rows=%d/%d hits=%ld overflow=%ld\n",
