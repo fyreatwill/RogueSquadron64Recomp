@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4927; compacted s4898)
+## Headline (as of s4928; compacted s4898)
+
+- **Latest (s4928):** the corrected transition-window join ran on the same
+  width-gated mission route. Independent phase output saw the `0x00690400`
+  mission origin and the audio join saw 268 PCM rows there plus 101 at the
+  following `0x00620400`; the transition instrument recorded 4,172 global
+  audio events across 472 windows, with zero crashes and an advancing counter.
+  This selects stale/current-origin attribution drift, not a pre-publication
+  audio boundary. No guard or skip is authorized. See
+  `scratch/agent/s4923_mission_longevity/summary.txt`.
 
 - **Latest (s4927):** the same-build mission capture reached post-key
   `0x00690400`, then observed `0x00620400`, and advanced `update_screen` from
@@ -108,6 +117,16 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   43 PCM-sanity rows), while both mission-origin buckets had zero rows. This
   selects an internal boundary before the instrumented mission audio route;
   it is not a retail-ground-truth claim. Do not add a guard or skip.
+
+- **M5 mission transition-window join (s4928):** the corrected same-build
+  capture independently saw the `0x00690400` phase, and the audio join saw 268
+  PCM rows at `0x690400` plus 101 at `0x620400`. The new event-source hook
+  recorded 4,172 global route/task/PCM events across 472 observed windows,
+  including `keyon-w40` and `slot-sb` rows at `0x620400`; the mission counter
+  advanced 6592 -> 13888 over 120 seconds with zero crash/abort markers. This
+  selects an attribution/current-origin drift within the handoff window. The
+  result is single-run port evidence with independent phase and join sources;
+  it is not retail ground truth. Do not add a guard or skip.
 
 - **M5 callback teardown reachability (s4894 correction):** the qualified
   route passed title/hangar, 758 SP returns, 44 PCM sources, 259 PCM consumers
@@ -317,14 +336,13 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4927) Locate the selected internal mission-audio boundary:** add one
-  transition-window join that labels every global audio-task/PCM event between
-  the post-key `0x00690400` commit and the following `0x00620400` commit,
-  without requiring either origin to be the current phase bucket. Keep the
-  first-512 gate and one-pair input schedule. Events in the window select a
-  stale/current-origin attribution defect; no events with global controls still
-  positive select a boundary before task/PCM publication. Do not add a guard or
-  skip.
+- **(s4928) Resolve the selected mission attribution drift:** use the existing
+  same-build width-gated mission capture to join the 268 `0x690400` and 101
+  `0x620400` PCM rows to their nearest transition-window event ordinals and
+  route rows. The discriminator is whether the same event sequence carries a
+  stable route ordinal across the origin change (stable selects a VI-origin
+  label defect; discontinuity selects route reinitialization during the
+  handoff). Do not add a guard or skip.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 

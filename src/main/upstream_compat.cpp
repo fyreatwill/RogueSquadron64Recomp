@@ -62,6 +62,9 @@ extern "C" volatile uint32_t g_rs64_last_guest_pc;
 extern "C" uint64_t rs64_m5_clear_branch_source_sequence(void);
 extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller, uint32_t requested_width,
                                             uint32_t mode_ptr);
+extern "C" void rs64_m5_audio_transition_commit(uint32_t width,
+                                                   uint32_t origin,
+                                                   uint32_t phase);
 
 namespace {
 
@@ -597,6 +600,9 @@ extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller,
     rs64_m5_selector_ai_call_latch_join(vi->VI_WIDTH_REG,
                                          vi->VI_ORIGIN_REG & 0x00FFFFFFu,
                                          rs64_phase_ord());
+    rs64_m5_audio_transition_commit(vi->VI_WIDTH_REG,
+                                    vi->VI_ORIGIN_REG & 0x00FFFFFFu,
+                                    rs64_phase_ord());
     if (!enabled) return;
 
     const uint32_t seq = g_m5_vi_commit.next_sequence.fetch_add(1, std::memory_order_relaxed);

@@ -2,31 +2,33 @@
 
 HYPOTHESIS-ID: m5-audio-destub
 
-s4927 selected an internal mission-audio boundary: the corrected driver
-reached post-key `0x00690400` and later `0x00620400`, with `update_screen`
-6720 -> 13696 and zero crash/abort markers. Global route/audio-task/PCM
-controls were positive, but both mission-origin buckets were empty.
-
-Next work unit: add one transition-window join that labels every global
-audio-task/PCM event between the post-key `0x00690400` commit and the
-following `0x00620400` commit, independent of the current origin bucket. Run
-`zsh scratch/agent/s4923_mission_longevity.sh` once with the first-512 gate and
-one Start/A pair unchanged. Do not add a guard or skip.
+Resolve the selected mission attribution drift with one bounded join. Extend
+the existing `scratch/agent/s4923_mission_longevity.sh` capture so the nearest
+transition-window event ordinal, route ordinal/row, and PCM join event are
+reported together for both `0x00690400` and `0x00620400`. Keep the first-512
+gate, one Start/A pair, all passive breadcrumbs, and the current default
+audio behavior. Build once and run one same-build capture; do not add a guard
+or skip.
 
 Competing hypotheses and discriminator:
 
-1. H-stale-origin: task/PCM events occur in the transition window but are
-   reported under another current origin; transition-window rows select an
-   attribution defect.
-2. H-before-publication: no task/PCM events occur in the transition window,
-   while same-run global controls remain positive; this selects a boundary
-   before mission task/PCM publication.
-3. H-route-invalid: the first-512, post-key `0x00690400`, following
-   `0x00620400`, advancing counter, or global controls fail; the capture is
-   unevaluable.
+1. H-origin-label: the same audio event sequence retains a stable route
+   ordinal/row across the origin change, while only the VI origin label moves.
+   Stable ordinal/row joins select a VI-origin attribution defect.
+2. H-route-reinit: the origin change coincides with a new route ordinal or
+   row and the PCM event sequence restarts. A discontinuity selects route
+   reinitialization during the handoff.
+3. H-route-invalid: the first-512 gate, post-key `0x00690400`, following
+   `0x00620400`, advancing counter, or PCM controls fail. Missing controls
+   make the capture unevaluable and select no audio explanation.
 
-Positive controls: first `vi_width=512`, post-key origin `0x00690400`, later
-origin `0x00620400`, advancing `update_screen`, and nonzero global
-route/audio-task/PCM rows. The transition-window event count is the
-discriminator: nonzero selects H-stale-origin; zero with controls positive
-selects H-before-publication; missing controls selects H-route-invalid.
+Positive controls: phase output at `0x00690400`, audio-join PCM rows at both
+origins, advancing `update_screen`, nonzero global task/PCM rows, and zero
+crash/abort markers. The ordinal/row continuity table is the discriminator.
+
+Exact baseline command:
+
+`cmake --build build --config Debug --target RogueSquadron64Recomp && zsh scratch/agent/s4923_mission_longevity.sh`
+
+Inspect only `scratch/agent/s4923_mission_longevity/summary.txt` and bounded
+`grep -a` matches from `run.log`; kill any manual process with SIGKILL.

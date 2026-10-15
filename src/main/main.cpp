@@ -135,7 +135,22 @@ extern "C" uint64_t rs64_m5_route_handoff_event(
     uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
     uint32_t row, uint32_t value0, uint32_t value1, uint32_t value2);
 extern "C" uint64_t rs64_m5_latest_audio_generation();
+extern "C" void rs64_m5_audio_transition_commit(uint32_t width,
+                                                   uint32_t origin,
+                                                   uint32_t phase);
+extern "C" void rs64_m5_audio_transition_event(const char* kind,
+                                                  uint32_t site,
+                                                  uint32_t phase,
+                                                  uint32_t width,
+                                                  uint32_t origin);
 static uint32_t rs64_m5_identity_thread_id();
+
+namespace {
+std::mutex g_rs64_m5_audio_transition_mutex;
+bool g_rs64_m5_audio_transition_open = false;
+uint32_t g_rs64_m5_audio_transition_window = 0;
+uint32_t g_rs64_m5_audio_transition_rows = 0;
+}
 
 static thread_local uint32_t s_pending_task_data_ptr  = 0;
 static thread_local uint32_t s_pending_task_data_size = 0;
@@ -3931,6 +3946,81 @@ extern "C" void rs64_m5_audio_event(const char* kind, uint32_t site,
     rs64_audio_join_m5_event(
         kind, site, active ? 1u : 0u, arm, phase, width, origin, ordinal,
         row, idx, dest, value0, value1, value2, value3);
+}
+
+extern "C" void rs64_m5_audio_transition_commit(uint32_t width,
+                                                   uint32_t origin,
+                                                   uint32_t phase) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_TRANSITION");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || width != 512u) return;
+    std::lock_guard<std::mutex> lock(g_rs64_m5_audio_transition_mutex);
+    origin &= 0x00FFFFFFu;
+    if (origin == 0x00690400u) {
+        g_rs64_m5_audio_transition_open = true;
+        ++g_rs64_m5_audio_transition_window;
+        g_rs64_m5_audio_transition_rows = 0;
+        std::fprintf(stderr,
+                     "[m5-audio-transition-control] edge=start window=%u "
+                     "phase=%u width=%u origin=0x%06X\n",
+                     g_rs64_m5_audio_transition_window, phase, width, origin);
+        std::fflush(stderr);
+    } else if (origin == 0x00620400u && g_rs64_m5_audio_transition_open) {
+        std::fprintf(stderr,
+                     "[m5-audio-transition-control] edge=end window=%u "
+                     "phase=%u width=%u origin=0x%06X\n",
+                     g_rs64_m5_audio_transition_window, phase, width, origin);
+        std::fflush(stderr);
+        g_rs64_m5_audio_transition_open = false;
+    }
+}
+
+extern "C" void rs64_m5_audio_transition_event(const char* kind,
+                                                  uint32_t site,
+                                                  uint32_t phase,
+                                                  uint32_t width,
+                                                  uint32_t origin) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_TRANSITION");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    if (width != 512u) return;
+    std::lock_guard<std::mutex> lock(g_rs64_m5_audio_transition_mutex);
+    origin &= 0x00FFFFFFu;
+    if (origin == 0x00690400u && !g_rs64_m5_audio_transition_open) {
+        g_rs64_m5_audio_transition_open = true;
+        ++g_rs64_m5_audio_transition_window;
+        g_rs64_m5_audio_transition_rows = 0;
+        std::fprintf(stderr,
+                     "[m5-audio-transition-control] edge=start window=%u "
+                     "phase=%u width=%u origin=0x%06X source=event\n",
+                     g_rs64_m5_audio_transition_window, phase, width, origin);
+        std::fflush(stderr);
+    }
+    if (!g_rs64_m5_audio_transition_open ||
+        g_rs64_m5_audio_transition_rows >= 512u) return;
+    std::fprintf(stderr,
+                 "[m5-audio-transition-event] window=%u row=%u phase=%u "
+                 "width=%u origin=0x%06X kind=%s site=0x%08X\n",
+                 g_rs64_m5_audio_transition_window,
+                 g_rs64_m5_audio_transition_rows++, phase, width, origin,
+                 kind ? kind : "?", site);
+    std::fflush(stderr);
+    if (origin == 0x00620400u) {
+        std::fprintf(stderr,
+                     "[m5-audio-transition-control] edge=end window=%u "
+                     "phase=%u width=%u origin=0x%06X source=event\n",
+                     g_rs64_m5_audio_transition_window, phase, width, origin);
+        std::fflush(stderr);
+        g_rs64_m5_audio_transition_open = false;
+    }
 }
 
 static void rs64_audio_route_prepare(const char* arm) {
