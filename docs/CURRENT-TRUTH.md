@@ -217,6 +217,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Superseded conclusions
 
+- **s5007/s5009: "loop needs an owner decision; no runnable experiment"** — believable because every audited thread was closed and the s4993 per-origin budget had been run. Wrong because the mission-qualified s4994 sample was runnable via the soak queue; it had just never been enqueued (s5010).
+
 - **s5001 “M4 accumulator witness needs a human-installed LLE RSP plugin”** -
   believable because the oracle README names `mupen64plus-rsp-hle` and s4689
   measured no accumulator/DMEM rows, and the s4514 cxd4 build was not carried
@@ -267,6 +269,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   task-contract, ownership, wait-gate, safety-exit, or MORT correctness.
 
 ## Next steps (single monotonic backlog)
+
+**s5010 (top):** The s5007/s5009 "BLOCKED on owner decision" was refuted: running the queued mission-sample soak needs no human decision (the s4994-instrumented binary is already built). Enqueued `soak_queue/s5010_s4540_mission_sample.sh`; next unit is consuming its verdict (NEXT.md). Declaring M5 done stays an owner question but is non-gating.
 
 **s5007 (top):** All priority threads are closed or parked; loop is BLOCKED on an owner decision (scratch/agent/BLOCKED.md). Only live defect: mission-phase `kind=bad` voice-index reads (H-lock-required); s4985 lock attempt was route-unevaluable.
 
