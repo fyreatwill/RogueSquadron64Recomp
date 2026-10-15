@@ -54,7 +54,17 @@ if(ROGUESQ_DX12_DEBUG)
     add_compile_definitions(D3D12_DEBUG_LAYER_ENABLED)
     message(STATUS "D3D12 debug layer ENABLED")
 endif()
+# s4907: the Debug config is a bare "-g" (-O0) and RT64 inherited it. Measured at -O0:
+# State::updateScreen spends 1.6 ms in a 344 KB vector resize and 1.1 ms in a 344 KB XXH3 hash
+# (~0.3 GB/s) -- ~30x off a Fermi estimate -- and the gfx task takes ~21 ms. RT64 is host code
+# with no recompiled-guest semantics, so optimise it; ROGUESQ_RT64_OPT=OFF restores -O0.
+option(ROGUESQ_RT64_OPT "Compile RT64 (host renderer) with -O2 under the Debug config" ON)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/rt64 ${CMAKE_BINARY_DIR}/rt64)
+if (ROGUESQ_RT64_OPT AND NOT MSVC)
+    # Target-scoped on purpose: a global flag change also rebuilds the shader helper tools, which
+    # regenerates every shader and needs the Metal toolchain.
+    target_compile_options(rt64 PRIVATE -O2)
+endif()
 
 # ---- N64ModernRuntime (ultramodern + librecomp) ----
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime ${CMAKE_BINARY_DIR}/N64ModernRuntime)

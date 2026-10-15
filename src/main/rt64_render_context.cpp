@@ -89,13 +89,13 @@ static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4267"); return
 static std::mutex m;
 static const auto t0 = std::chrono::steady_clock::now();
 struct A { uint64_t n = 0; double sum = 0, mx = 0; };
-static A agg[27];
+static A agg[36];
 static int last_sec = -1;
 static void flush_locked(int sec) {
-    static const char* nm[27] = {"pipeline","texwait","fbwait","ddwait","fullSync","procDL","lleRun","sendDl","fsFlush","fsSubmitFb","fsMisc","fsValidate","fsUpload","fsRspPipe","fsRender","fsEvict","fsProj","fsAdvance","fsTail","fsRsz","fsTiles","fsRenderSync","fsEvictOnly","fsPostEvict","fsScript","fsUpdScreen","ctlSleep"};
+    static const char* nm[36] = {"pipeline","texwait","fbwait","ddwait","fullSync","procDL","lleRun","sendDl","fsFlush","fsSubmitFb","fsMisc","fsValidate","fsUpload","fsRspPipe","fsRender","fsEvict","fsProj","fsAdvance","fsTail","fsRsz","fsTiles","fsRenderSync","fsEvictOnly","fsPostEvict","fsScript","fsUpdScreen","ctlSleep","usUpload","usCopyHash","usAdvance","usPre","usRest","usResize","usMemcpy","usHash","pad"};
     std::string o;
     char b[96];
-    for (int i = 0; i < 27; ++i) {
+    for (int i = 0; i < 35; ++i) {
         std::snprintf(b, sizeof b, " %s=%llu/%.0fms/max%.0f", nm[i], (unsigned long long)agg[i].n, agg[i].sum, agg[i].mx);
         o += b; agg[i] = A{};
     }

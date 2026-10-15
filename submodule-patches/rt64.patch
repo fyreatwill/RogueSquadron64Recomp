@@ -5144,7 +5144,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..f5dc5f5 100644
+index 10f98af..2b61c50 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -6653,7 +6653,7 @@ index 10f98af..f5dc5f5 100644
                          viPresented = true;
                      }
                      else if (s_rs64_log_pe) {
-@@ -1873,6 +3038,25 @@ namespace RT64 {
+@@ -1873,7 +3038,27 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -6677,9 +6677,11 @@ index 10f98af..f5dc5f5 100644
 +    }
 +
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
++        S4267Seg _usSeg(31); // s4907: phase 30 = updateScreen entry up to the screen profiler start
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
-@@ -1899,6 +3083,132 @@ namespace RT64 {
+             if (ext.userConfig->developerMode) {
+@@ -1899,6 +3084,132 @@ namespace RT64 {
              }
          }
          
@@ -6812,7 +6814,7 @@ index 10f98af..f5dc5f5 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1915,6 +3225,20 @@ namespace RT64 {
+@@ -1915,6 +3226,20 @@ namespace RT64 {
              viDifferent = (newVI != lastScreenVI);
              lastScreenVI = newVI;
  
@@ -6833,7 +6835,7 @@ index 10f98af..f5dc5f5 100644
              // Diagnostic (ROGUESQ_LOG_PRESENT_EARLY=1) — track why viHistory stays empty.
              // We reuse the same env flag the present-early matcher uses.
              static const bool s_us_log_pe = [](){
-@@ -1959,8 +3283,20 @@ namespace RT64 {
+@@ -1959,12 +3284,25 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -6856,7 +6858,12 @@ index 10f98af..f5dc5f5 100644
                  return;
              }
          }
-@@ -1972,7 +3308,11 @@ namespace RT64 {
+ 
++        _usSeg.mark(30);
+         screenCpuProfiler.start();
+         bool fbChangesMade = false;
+         bool screenChangesMade = false;
+@@ -1972,7 +3310,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6869,7 +6876,36 @@ index 10f98af..f5dc5f5 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3373,51 @@ namespace RT64 {
+@@ -1989,6 +3331,7 @@ namespace RT64 {
+                     uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
+                     if (currentHash != screenFb->RAMHash) {
+                         {
++                            S4267T _uw(27); // s4907: screen-fb upload + performOperations
+                             RenderWorkerExecution workerExecution(worker);
+                             thread_local std::vector<uint32_t> fbDiscards;
+                             const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
+@@ -2018,9 +3361,17 @@ namespace RT64 {
+             // Store the RAM required by the VI so the render thread can display it if necessary.
+             if (screenFbSiz >= G_IM_SIZ_16b) {
+                 uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
+-                present.storage.resize(screenFbBytes);
+-                memcpy(present.storage.data(), &RDRAM[screenFbAddress], screenFbBytes);
+-                uint64_t newScreenHash = XXH3_64bits(present.storage.data(), screenFbBytes);
++                S4267T _um(28); // s4907: present.storage copy + hash
++                static const bool s_ctl28 = [](){ const char *v = std::getenv("ROGUESQ_S4267_SLEEP28"); return v && *v && *v != '0'; }();
++                if (s_ctl28) std::this_thread::sleep_for(std::chrono::milliseconds(2));
++                { S4267T _r(32); present.storage.resize(screenFbBytes); }
++                { S4267T _c(33); memcpy(present.storage.data(), &RDRAM[screenFbAddress], screenFbBytes); }
++                uint64_t newScreenHash;
++                { S4267T _h(34); newScreenHash = XXH3_64bits(present.storage.data(), screenFbBytes); }
++                {
++                    static std::atomic<int> s_nb{0};
++                    if (++s_nb <= 3 || (s_nb % 600) == 0) { std::fprintf(stderr, "[s4907-us] bytes=%u fbSize=%ux%u siz=%u cap=%zu\n", screenFbBytes, (unsigned)screenFbSize.x, (unsigned)screenFbSize.y, (unsigned)screenFbSiz, present.storage.capacity()); }
++                }
+                 screenChangesMade = (newScreenHash != lastScreenHash);
+                 lastScreenHash = newScreenHash;
+             }
+@@ -2033,26 +3384,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6939,7 +6975,15 @@ index 10f98af..f5dc5f5 100644
              }
          }
  
-@@ -2910,4 +4275,4 @@ namespace RT64 {
+@@ -2060,6 +3436,7 @@ namespace RT64 {
+         if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
+             // Push a new renderer event to the timeline for presenting this VI.
+             present.screenVI = newVI;
++            S4267T _ua(29); // s4907: advancePresent + advanceToNextPresent
+             advancePresent(present, false);
+             ext.presentQueue->advanceToNextPresent();
+ 
+@@ -2910,4 +4287,4 @@ namespace RT64 {
              break;
          }
      }
