@@ -585,3 +585,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261015-012620 | s4972_vi640_idle_a | rc=2 | 0s | scratch/agent/soak_results/s4972_vi640_idle_a_20261015-012620.log
 20261015-012620 | s4972_vi640_idle_b | rc=2 | 0s | scratch/agent/soak_results/s4972_vi640_idle_b_20261015-012620.log
 20261015-012717 | s4972r_vi640_idle_a | rc=0 | 271s | scratch/agent/soak_results/s4972r_vi640_idle_a_20261015-012717.log
+20261015-015400 | s4980_armed_mission_a | rc=0 | 446s | scratch/agent/soak_results/s4980_armed_mission_a_20261015-015400.log
+20261015-s4981 | s4981_armed_mission_fix | result=reader-order-live; mission_onset_t=173s; ctl_arm=1; ctl_in=1; s4579A=9; bad=4; pidma=0; crash=0; route qualified, writer reorder insufficient | scratch/agent/soak_results/s4981_armed_mission_fix/keys1.log

@@ -1,10 +1,12 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4942; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4982; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s4982:** The armed post-writer-fix mission soak reached the allocator and mission (ctl_arm=1, s4579A=9, onset 173 s) but still logged 4 `kind=bad` stale-base calls, with pidma=0 and crash=0. Writer ordering alone is insufficient; next is reader-side acquire/order qualification.
 
 - **s4964:** s4959 run3 valid (mission onset t=182 s, crash=0, pcm_nz 128/164). Keyed mission route now 3/3 valid, crash=0, PCM live. M5 plan steps 0-11 all closed; next is a mission-phase image-vs-silent (`ROGUESQ_AUDIO_UCODE=1/0`) A/B soak pair on the keyed route.
 
@@ -146,6 +148,13 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Superseded conclusions
 
+- **s4981 expected "writer reorder closes the race"** - believable because the
+  source fix moved the legitimate count publication after allocation and added
+  a release fence. Overturned by the same-run armed validation: allocator
+  control and 9 array-control rows fired, yet 4 stale-base calls remained.
+  This selects a reader-side ordering defect; no guard or value rewrite was
+  added.
+
 - **s4959 "BLOCKED: multi-minute recipes cannot be waited on inside an iteration"** - believable because foreground sleep/polling is blocked and the Stop hook fired six times mid-run. Overturned by the unblock iteration: the soak queue (ITERATION.md, 600 s cap per recipe, verdicts in SOAK-RESULTS.md) is the intended mechanism; the x3 script was just too long for it. Split into soak_queue/s4959_mission_run{1,2,3}.sh. Mission stability is still unmeasured.
 
 - **s4950 "5/5 reached mission" (0x690400, VI-512)** - believable because the phase appeared after scripted keys and had a distinct width/origin. Overturned s4954 (script ordering + deterministic timing) and s4955 (3/3 solo run, hangar control absent): it is the attract demo, not player-mission evidence.
@@ -171,7 +180,11 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4980 (top):** Default soaks since s4959 never armed the env-gated S45xx instruments (0 `[s4539-entry] kind=arm` lines), so their zero `kind=bad`/`pi.cpp` hits are uninterpretable; 6 uninstrumented mission runs had 0 CRASH. Armed recipe queued (`soak_queue/s4980_armed_mission_a.sh`), verdict decides close vs source fix (NEXT.md).
+**s4982 (top):** `soak_queue/s4981_armed_mission_fix.sh` qualified the route and allocator after the writer reorder (`ctl_arm=1`, `s4579A=9`, mission onset 173 s), but found `bad=4`, `pidma=0`, `crash=0`. H-fixed is refuted; H-reader-order remains. Next: add an acquire/order barrier to the reader-side count/base observation in `musyxMixActiveVoices`, preserve it through the fixup replay, build, and run one armed mission validation soak. ORIGIN: writer is `allocateSongChannelArray` publishing a legitimate count 32 before/without a reader-visible base pair; the remaining change is synchronization, not a value guard.
+
+**s4981 (prior):** Armed soak s4980 showed the count-before-base race LIVE (`[s4540-call] kind=bad` s0=30 count=32 against the old 18-voice base; ctl_arm=1). Root cause: the s147 reorder never reached the live funcs_23.c. Fixed by `tools/apply_s4981_count_after_base.py` (applied, replay-registered, built). Verification showed the route and allocator were live, but the reader still logged 4 bad calls; see s4982.
+
+**s4980 (prior):** Default soaks since s4959 never armed the env-gated S45xx instruments (0 `[s4539-entry] kind=arm` lines), so their zero `kind=bad`/`pi.cpp` hits are uninterpretable; 6 uninstrumented mission runs had 0 CRASH. Armed recipe queued (`soak_queue/s4980_armed_mission_a.sh`), verdict decides close vs source fix (NEXT.md).
 
 **s4979 (top):** Retail-entry boundary CLOSED as design-dead. Two-source offline check (`tools/voice_kind_crosscheck.py`, no new run): (a) port `[init-desc]` rows are retail-consistent — 11,444 rows, only descs `0x8013ACA0` (d04 top nibble 0xB -> flag set, kind 3) and `0x8011C820` (d04 `0x801B2C60`, nibble 8 -> flag clear, kind 0); init (`0x80092234-0x80092268`) sets flag bit0 only when `(d04&0xF0000000)!=0x80000000`; (b) retail also inits kind-0 voices from `0x8011C820` (ra `0x800980f4`) and their next renders show flag v0=0 at `0x800901C0`, so they never reach `0x800901CC/0x800903F0`. H1 (init skipped) and H2 (stray ASCII store) refuted; the port reaches 0x800903F0 only via s4577/s4578's mixer index past the 18-voice array (count stored before `rs_malloc`, base after) into name-string memory. Not a retail boundary; no guard added.
 **s4978:** Retail branch census: 0x800903F0 is design-dead in retail. Flagged voices always have `+0x6D==3` (241,308 hits); the `+0x6D==0` branch at 0x80090358 has 0 hits. The port reaches it, so port voice records carry kind 0 with the flag set, a state retail never makes. Next: port-side histogram of `+0x6D` and its writers (NEXT.md).

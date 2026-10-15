@@ -40540,6 +40540,7 @@ RS64_REPLAY = [
     "apply_s4878_synth_dedup.py",
     "apply_s4889_first_dereg.py",
     "apply_s4899_cadence_join.py",
+    "apply_s4981_count_after_base.py",
 ]
 
 

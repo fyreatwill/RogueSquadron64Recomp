@@ -1,8 +1,25 @@
 # Next work unit
 HYPOTHESIS-ID: voice-count-before-base-race
-s4980: default soaks never armed the S45xx instruments (env-gated), so their zero hits were uninterpretable. Queued scratch/agent/soak_queue/s4980_armed_mission_a.sh (loop runs it between iterations; verdict in SOAK-RESULTS.md and scratch/agent/soak_results/s4980_armed_mission_a/keys1.log).
-Work unit: read that verdict line. Fields: ctl_arm (positive control, must be >=1), bad, s4579A, pidma, crash.
-- ctl_arm>=1, bad=0, pidma=0, crash=0 -> A (dissolved by default fixes): close thread, pivot to the next M5 plan step (docs/M5-AUDIO-PLAN.md).
-- bad>0 or pidma>0 -> B live: fix at source in a fixup script (publish voice count after base, or hold mixer lock), ORIGIN line required.
-- ctl_arm=0 -> route never reaches the render entry; redesign (arm on the hangar route, or the s4577 recipe).
-If the soak has not run yet (no s4980 line in SOAK-RESULTS.md), run scratch/agent/soak_queue/s4980_armed_mission_a.sh yourself (one game at a time).
+
+Implement the reader-side ordering fix for `musyxMixActiveVoices`: make the
+count/base pair observation acquire the publication from
+`allocateSongChannelArray`, using the existing fixup/replay mechanism rather
+than a generated-file-only edit. Preserve the diagnostic controls, build the
+runtime, and run one armed mission validation soak derived from
+`s4981_armed_mission_fix.sh`.
+
+Competing hypotheses:
+
+1. H-reader-order: an acquire/order barrier at the mixer reader prevents the
+   stale base. Prediction with `ctl_arm>=1` and `s4579A>=1`: `bad=0`,
+   `pidma=0`, `crash=0`, mission onset present.
+2. H-lock-required: acquire alone is insufficient because the pointer/count
+   pair is not published atomically with respect to the host-thread schedule.
+   Prediction: controls and mission fire but `bad>0` or `pidma>0` remains.
+3. H-route: the validation route fails to exercise the allocator. Prediction:
+   `ctl_arm=0` or `s4579A=0`; no race conclusion is allowed.
+
+Discriminator: the same run must pass both allocator controls and mission onset;
+then `bad`/`pidma` separates reader ordering from a remaining synchronization
+defect. ORIGIN: the writer publishes legitimate count 32 and the reader sees a
+stale base; this is synchronization work, not a guard or value filter.
