@@ -158261,3 +158261,19 @@ is 0xE8 bytes and publishes free-list/queue state, which the bounded slice
 does not implement. This selects H3 for the slice: the toolchain works, but
 the slice is not a faithful override. It was not enabled. The next unit is the
 remaining control-flow/store port, not a runtime crash chase.
+
+## Session 5020 (2026-10-15) — extended disabled assembly slice through queue publication
+
+Extended `patches/heap_guard_asm.S` from the free-list dequeue prefix through
+the recovered expansion-chain walk, free-list head publication, active-queue
+append, and `heap_bump` publication. The Homebrew MIPS assembler and linker
+completed successfully; the ELF `.recomp_patch` section is `0xCC` bytes at
+`0x80801000`, with symbol `allocateDisplayListBuffer`. `build/N64Recomp
+patches.toml` also completed and emitted the host override.
+
+The known original entry span is `0xE8` bytes, so the generated assembly is
+still a bounded structural slice rather than a faithful replacement. This
+rules out relocation/toolchain failure for the covered operations, but does
+not establish exact original control flow or authorize enabling the override.
+The next discriminator is a recovered/generated instruction window for
+`0x80007D74..0x80007E58`; absent that source, this route remains blocked.

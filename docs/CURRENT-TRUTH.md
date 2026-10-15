@@ -1,10 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5019; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5020; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5020:** Extended the disabled assembly-only `allocateDisplayListBuffer`
+  probe through free-list expansion, dequeue, active-queue append, and
+  bump-cursor publication. Assembly/link/N64Recomp all pass and emit the
+  correct symbol, but the section is `0xCC` bytes versus the known original
+  `0xE8` span. The port remains a structural H3 slice; no runtime behavior
+  changed.
 
 - **s5018:** Homebrew `mips-linux-gnu-as`/`ld` can assemble and link the
   existing patch layout: a temporary assembly override produced ELF32
@@ -293,6 +300,13 @@ and queue stores in assembly, then compare its disassembly and generated host
 function to the known 0x80007D74–0x80007E58 path. Keep it disabled until the
 full path matches; the missing MIPS C compiler still blocks compiling
 `patches/heap_guards.c` directly.
+
+**s5020 (top):** Obtain or reconstruct the missing recovered instruction window
+for `allocateDisplayListBuffer` (`0x80007D74..0x80007E58`) before extending the
+assembly probe again. Compare its branch targets and every memory store with
+`patches/heap_guard_asm.S`; a source-backed exact `0xE8` span selects faithful
+assembly coverage, while absent or ambiguous source leaves this M3 route
+blocked. Do not enable the override or pad the function to match size.
 
 **s5012 (top):** The mission-qualified s4994 sample ran validly (mission_onset_t=173, arm=1, crash=0): 32 of 32 mission-origin s4540 caller rows were current-base `0x8018C720`, 0 stale `0x801714D0`; with s4993 (0 bad rows at mission origins) this closes the mission-phase `kind=bad` thread. No runnable M5 unit remains; next eligible work is a genuinely new M3 idiom class or a new witness for the parked retail/M4 boundaries. Declaring M5 done stays an owner call, non-gating.
 

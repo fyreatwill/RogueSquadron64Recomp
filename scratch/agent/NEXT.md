@@ -1,20 +1,19 @@
-# Next work unit: complete the bounded assembly port of allocateDisplayListBuffer
+# Next work unit: recover the missing allocateDisplayListBuffer instruction window
 HYPOTHESIS-ID: m3-assembly-patch-pipeline
 
 Competing hypotheses:
 
-1. The remaining original `allocateDisplayListBuffer` path can be hand-written
-   in MIPS assembly and consumed by N64Recomp with the existing linker scripts.
-2. Absolute game-data references or the helper call need relocation handling
-   that the assembly pipeline cannot provide.
-3. The existing patch's queue semantics are too under-specified to reproduce
-   faithfully from the recovered control flow, so the port should remain
-   disabled.
+1. The remaining seven-instruction-equivalent gap is recoverable from the
+   original/generated entry and the assembly port can reach the known `0xE8`
+   span with matching control flow.
+2. The current `0xCC` result is only a size/layout difference; existing stores
+   and branches already cover the complete behavior.
+3. Available source is insufficient to prove the missing control flow, so the
+   assembly override must remain disabled pending a new source artifact.
 
-Discriminating measurement: extend `patches/heap_guard_asm.S` to cover the
-known original `0x80007D74–0x80007E58` path, assemble with
-`make -C patches ASM_ONLY=1 AS=/opt/homebrew/bin/mips-linux-gnu-as LD=/opt/homebrew/bin/mips-linux-gnu-ld patches.elf`,
-run `build/N64Recomp patches.toml`, and compare emitted size, branch targets,
-and references against the recovered generated translation. Full
-control-flow/store coverage selects H1; relocation failure selects H2; any
-unmatched queue publication selects H3. Do not enable the override.
+Discriminating measurement: locate the recovered/generated entry or an
+independent disassembly for `0x80007D74..0x80007E58`, then compare every
+branch target, load/store address, and call against `patches/heap_guard_asm.S`.
+An exact source-backed `0xE8` match selects H1; a complete `0xCC` source-backed
+entry selects H2; absent or ambiguous missing instructions selects H3 and
+requires a human-provided source artifact. Do not pad or enable the override.
