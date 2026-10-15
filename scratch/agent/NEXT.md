@@ -1,36 +1,32 @@
-# Next work unit (resume after checkpoint; do not rerun s4894)
+# Next work unit
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: external-retail-entry-new-pc-discriminator
 
-The previous work unit is complete and was not rerun during the retry. Begin
-the generated-symbol sweep only after the required revisit preflight.
-Run `grep -n '^## Session ' PORTING-STATE.md | tail -15`. If all 15 titles
-contain `synchronized`, `confirmed ... symbol`, or a sweep-scoped census that
-selected H2/H3, this is a REVISIT instead: use a genuinely new angle on the
-CURRENT-TRUTH external retail-entry boundary, with its existing independent
-whole-RDRAM/title/hangar controls, or the M4 accumulator boundary. Do not add
-another sweep diagnostic field.
+Run one independent retail-oracle capture that keeps the qualified
+whole-RDRAM, title, and hangar controls but watches the complete
+`musyxRenderVoiceSamples` execution range `0x8008FFAC:0x80090640`, plus the
+two statically identified voice `+0x34` writers `0x80090C80` and `0x800921E8`.
+Use phase-gated rows for title `0x00790400:1024` and hangar
+`0x006AB400:512`; do not repeat the old `0x800903F0`-only watch.
 
-Otherwise, audit the next ranked generated placeholder from the current
-`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs` tree against
-the companion symbol/m2c sources. Rename exactly one function only if all three
-gates pass: a semantic companion mapping exists, the function has a live caller
-or independently meaningful body, and the mapped span agrees exactly. If any
-gate fails, record the candidate as retained and move to the next ranked
-candidate in the same bounded census; do not invent an address-based name.
+Before building any instrument, read `tools/oracle/README.md` and reuse the
+existing qualified Rice/input launch recipe. Capture the exact command and
+output under `scratch/agent/soak_results/` (or a self-contained queued script
+if the run exceeds the iteration window). Positive control: whole-RDRAM watch
+must reach 10,000, and both title and hangar VI controls must fire.
 
-Exact preflight/census commands:
+Competing hypotheses and discriminator:
 
-    grep -n '^## Session ' PORTING-STATE.md | tail -15
-    rg -n '^RECOMP_FUNC .*func_0x|^RECOMP_FUNC .*func_[0-9A-Fa-f]{8}' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-    rg -n '8000040C|800E9AE0|func_8000040C|func_800E9AE0' /Users/williambuckley/Documents/Tools/rogue_squadron64 2>/dev/null
+* H1: the retail route reaches the voice-render function but not the selected
+  consumer instruction; range hits plus phase writer activity prove an
+  internal consumer/branch boundary.
+* H2: the route reaches the voice-render range and selected consumer, but the
+  prior single-PC watch missed due to breakpoint/PC attribution; range hits and
+  a `0x800903F0` hit select a watch artifact.
+* H3: the qualified retail route has no phase-gated voice-render range hits;
+  the external handoff is genuinely route-absent and this thread closes.
 
-Expected discriminator: either one candidate satisfies all three rename gates,
-selecting a bounded mapping change, or the census finds no eligible candidate
-and the sweep remains parked while the revisit branch is selected. Do not build
-or run the game unless a runtime discriminator is required by the revisit.
-
-Checkpoint artifacts already exist: s4894's capture, its ledger entry, and
-`docs/M5-S4894-SHUTDOWN-RETURN-MARKER.md`. Do not repeat that route or add
-more callback return fields. The first command in the next iteration is the
-last-15-session preflight above; this retry has not run it.
+The result must include the positive controls and phase-gated counts for all
+three arms (range, writers, exact consumer). Do not infer a writer or land a
+mitigation from a null. If the launch is unavailable, record the concrete
+failure and do not substitute another diagnostic.

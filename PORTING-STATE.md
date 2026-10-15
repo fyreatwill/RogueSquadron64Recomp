@@ -157044,3 +157044,26 @@ checkpoint.
 
 ORIGIN: checkpoint-only; no new instrumentation, runtime behavior, or soak
 was run in this retry.
+
+## Session 4896 (2026-10-14) — completed bounded generated-symbol sweep
+
+The required last-15-session preflight was not an all-sweep set, so the
+generated-symbol work unit ran. A complete placeholder census of the current
+generated tree found only `func_8000040C` and `func_800E9AE0` (excluding
+intentional `fake_func_*` entries). `func_8000040C` has an exact `0x34` span
+and two generated callsites, but the companion decomp project has no semantic
+mapping; `clearMemory16ByteBlocks` exists only as an inferred entry in the
+local rename script. `func_800E9AE0` has the companion's documented false-split
+note, an exact `0x114` span ending at `0x800E9BF4`, and no generated caller.
+
+The three-gate discriminator therefore selected no eligible rename: H1 is
+rejected for both candidates, H2 applies to the false-split/no-caller case,
+and H3 applies to the unmapped entry-local loop. This rules out inventing a
+name for either placeholder and parks the sweep pending a new mapping source
+or generated snapshot. The next work unit is a new external retail-entry
+boundary discriminator; the prior `0x800903F0` execution watch must not be
+repeated unchanged.
+
+ORIGIN: static census of the companion symbol/m2c tree, generated function
+definitions/calls, local rename table, and exact generated spans. No runtime
+or generated output was changed.

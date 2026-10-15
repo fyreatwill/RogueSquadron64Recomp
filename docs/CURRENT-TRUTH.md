@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4894)
+## Headline (as of s4896)
+
+- **s4896:** the required generated-symbol sweep preflight found the only two
+  real placeholders again. `func_8000040C` has no companion semantic mapping
+  (the local rename table's inferred `clearMemory16ByteBlocks` is not an
+  independent mapping), despite an exact `0x34` span and two callers.
+  `func_800E9AE0` has the companion's documented false-split placeholder, an
+  exact `0x114` span, and no generated caller. Neither passes all three rename
+  gates, so no rename is authorized; the sweep is parked pending a new mapping
+  source or generated snapshot.
 
 - **s4894:** the shutdown-return marker capture corrected s4893's callback
   identity. The qualified route passed title/hangar, 758 SP returns, 44 PCM
@@ -646,13 +655,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
    one-shot deregistration fixes the named origin; retain s4878's dedup only as
    rollback context while testing its retirement.
 
-1. (s4888) The available generated tree has only `func_8000040C` and
+1. (s4896) The available generated tree still has only `func_8000040C` and
    `func_800E9AE0` placeholders. The former has no companion semantic mapping;
    the latter is an intentional companion placeholder with no caller because of
    a documented false split reference. No rename is authorized. Keep the
-   generated-symbol-renaming-sweep parked until a new snapshot or mapping source
-   supplies a candidate with companion mapping, live callers/body, and exact span
-   agreement.
+   generated-symbol-renaming-sweep is parked until a new snapshot or mapping
+   source supplies a candidate with companion mapping, live callers/body, and
+   exact span agreement. Next take the external retail-entry boundary with a
+   genuinely new discriminator; do not repeat the prior `0x800903F0` watch.
 2. (s4887) The qualified same-build port capture closes the OSTask `data_size` boundary as H-port-cadence: writer/ABI values agree, while port is 1-dominant and retail is 2-dominant. The blind retail `0x80091084` watch remains unusable; do not repeat it. M5 task-family work is closed; next take the generated-symbol renaming sweep / VI-640 route wall.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
