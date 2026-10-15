@@ -1,15 +1,16 @@
-# RESUME s4995 mission-origin caller discriminator with route-qualified driver
+# RESUME s4997 mission-origin caller discriminator with route-qualified driver
 
 HYPOTHESIS-ID: voice-count-before-base-race
 
-Checkpoint state: the regeneration-preserved sample exists at
+Resume state: the regeneration-preserved sample exists at
 `tools/apply_s4994_s4540_mission_sample.py`, is registered in
 `tools/fixup_game_funcs_vendored.py`, and built successfully. The attempted
 validation reached title/hangar and pre-mission `0x00656400`, but not either
 mission origin (`mission_onset_t=-1`); crash markers were present. The arm and
 s4987 controls fired, so the diagnostic is live, but the run selected nothing.
-Do not rerun in the checkpoint iteration. On the next iteration, run exactly
-the route-qualified driver below once with no code or instrumentation changes.
+The checkpoint iteration is closed without rerunning it. On the next
+iteration, run exactly the route-qualified driver below once with no code or
+instrumentation changes.
 
 Competing hypotheses:
 

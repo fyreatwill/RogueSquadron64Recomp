@@ -158077,3 +158077,17 @@ experiment and makes no claim about the writer or a mitigation. The next
 discriminator remains one route-qualified s4958 driver run with the existing
 sample and phase controls. ORIGIN: `allocateSongChannelArray` remains the
 legitimate writer; the observation/propagation boundary is unexplained.
+
+## Session 4997 (2026-10-15) — closed the retry without rerunning the discriminator
+
+This retry followed the checkpoint-closeout instruction and did not rerun the
+s4995 route-qualified driver. The retained evidence remains the successful
+regeneration-preserved sample build and its unevaluable validation: title,
+hangar, pre-mission `0x00656400`, s4540 arm, and s4987 observations fired, but
+neither mission origin was reached (`mission_onset_t=-1`) and crash markers
+were present. The mission-origin zero is therefore still not a null result;
+H-uninstrumented-reader, H-classifier-phase, and H-no-sample remain open.
+The next iteration must run the exact s4958 driver once, with no diagnostic
+changes, and classify the first mission-origin sample outcome. ORIGIN:
+`allocateSongChannelArray` remains the legitimate writer; no mitigation or
+value rewrite is authorized.
