@@ -5230,7 +5230,9 @@ extern "C" void rs64_m5_frequency_caller(uint8_t* rdram, recomp_context* ctx,
     std::fflush(stderr);
 }
 
+extern thread_local uint32_t g_s4911_guest_ra; extern thread_local void* g_s4911_host_ra;
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    g_s4911_host_ra = __builtin_return_address(0); g_s4911_guest_ra = (uint32_t)ctx->r31; /* PATCH: s4911 guest call site of VI recv */
     const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
     int s4580_vcb = 0; uint32_t s4580_id = 0;
     if (s4580_q) { s4580_vcb = s4580::vc(rdram, (uint32_t)ctx->r4);
