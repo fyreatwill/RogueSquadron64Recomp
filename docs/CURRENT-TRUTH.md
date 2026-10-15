@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4929; compacted s4898)
+## Headline (as of s4930; compacted s4898)
+
+- **Latest (s4930):** the complete route-identity census found one identity
+  constructor and two direct prepare callers; the qualified mission capture
+  showed only `factor5_ucode_b` on both `0x00690400` and `0x00620400`, with
+  fresh ordinals/row-0 resets, advancing counter, PCM activity, and zero
+  crashes. This selects a real Factor5 audio-task publication/reprepare path
+  at the port level, not a port-only route-identity writer. It is one run plus
+  static source evidence; retail ordinal parity remains unclaimed. No guard or
+  skip is authorized. See `docs/M5-S4930-ROUTE-REINIT-CENSUS.md`.
 
 - **Latest (s4929):** the corrected mission capture passed the first-512 and
   post-key controls, advanced `update_screen` 6720 -> 13696 for 120 seconds,
@@ -145,6 +154,16 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   selects route reinitialization during the handoff, not a stable route with a
   mislabeled VI origin. It remains single-run port evidence and does not name
   whether the reinitialization is legitimate; no guard or skip is authorized.
+
+- **M5 route reinitialization census (s4930):** `rs64_audio_route_prepare` is
+  the sole identity constructor. Its ordinal comes only from the global
+  `fetch_add`, and its row comes only from the per-origin `phase_row++`; the
+  direct callers are `musyx_stub_probe` and `factor5_ucode_b_probe`, plus a
+  lazy return fallback. The qualified mission capture observed only
+  `factor5_ucode_b`, fresh ordinals and row-0 resets at the
+  `0x00690400` -> `0x00620400` handoff, and concurrent route/PCM activity.
+  This selects a legitimate port-side new publication/reprepare path, without
+  establishing retail ordinal parity or authorizing a mitigation.
 
 - **M5 callback teardown reachability (s4894 correction):** the qualified
   route passed title/hangar, 758 SP returns, 44 PCM sources, 259 PCM consumers
@@ -354,13 +373,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4929) Explain the selected mission route reinitialization:** identify
-  the route-identity writer/prepare path that creates the fresh ordinal at each
-  `0x00690400` -> `0x00620400` handoff, then classify whether that reset is a
-  legitimate new audio publication or a port-only discontinuity. Use one
-  bounded source census plus a phase-gated capture only if the census leaves
-  competing writers. Do not add a guard or skip until the writer and its
-  legitimacy are established.
+- **(s4930) Establish retail parity for the selected route reprepare:** use one
+  bounded oracle/port publication join, with a whole-RDRAM positive control,
+  to compare the first post-handoff audio-task publication and its source/PCM
+  cadence. The port-side writer is already identified as
+  `factor5_ucode_b`; do not add a guard, skip, or another host-only route
+  census.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 

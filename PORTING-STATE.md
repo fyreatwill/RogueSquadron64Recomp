@@ -157360,3 +157360,22 @@ name the writer, and authorizes no guard or skip.
 
 ORIGIN: no mitigation or game-behavior change; this iteration only used the
 existing phase-scoped transition, route, and PCM diagnostics.
+
+## Session 4930 (2026-10-14) — censused route identity and selected Factor5 reprepare
+
+The required source census found one route-identity constructor in
+`rs64_audio_route_prepare`: ordinal from `g_rs64_audio_ordinal.fetch_add(1)`
+and row from `g_rs64_audio_phase_row++`, reset by the width/origin key. The
+only direct prepare callers are `musyx_stub_probe` and `factor5_ucode_b`; the
+return path is a lazy fallback, while `rs64_m5_route_prepare_handoff` is only
+an observer. A rebuilt, phase-gated mission capture passed the first-512,
+advancing-counter, transition, PCM, and zero-crash controls. It observed only
+`factor5_ucode_b` at both `0x00690400` and `0x00620400`; the handoff created a
+fresh ordinal and row 0, with route/task/PCM activity continuing. This selects
+a legitimate port-side new Factor5 audio publication/reprepare path over a
+port-only identity writer. It does not establish retail ordinal parity and
+authorizes no guard or skip. The initial phase search was route-invalid until
+the script reached the qualified mission phase; no null was used as evidence.
+
+ORIGIN: no mitigation or game-behavior change; the result is static census plus
+existing phase-scoped transition/route/PCM diagnostics.
