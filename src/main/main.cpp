@@ -5286,6 +5286,36 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
     }
 }
 
+extern "C" void rs64_s4938_aux_store(char width, uint32_t pc,
+                                      uint32_t addr, uint32_t value,
+                                      uint32_t s0, uint32_t s1) {
+    static const bool enabled = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_S4938_AUX_JOIN");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (!enabled) return;
+    const uint32_t width_vi = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width_vi != 512u && width_vi != 1024u) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width_vi << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+    }
+    if (rows >= 256u) return;
+    std::fprintf(stderr,
+                 "[s4938-aux-store] row=%u phase=%u width=%u origin=0x%06X"
+                 " pc=0x%08X type=%c addr=0x%08X value=0x%08X"
+                 " s0=0x%08X s1=0x%08X\n",
+                 rows++, rs64_phase_ord(), width_vi, origin, pc, width, addr,
+                 value, s0, s1);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_status_table_store(uint8_t* rdram, uint32_t pc,
                                                uint32_t addr, uint32_t old_value,
                                                uint32_t new_value) {

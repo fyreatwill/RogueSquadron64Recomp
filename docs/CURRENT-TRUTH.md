@@ -1,11 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4938; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4939; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4939:** The phase-gated retail/port join reached the title phase on both
+  sides and the port witness recorded all four `musyxSynthFrame` stores in the
+  retail order. Retail controls fired for whole RDRAM and the other target
+  stores, but the exact retail watch for odd-byte `0x80149702` stayed empty;
+  the port arm produced 256 capped title rows. The join is unresolved because
+  the missing retail destination may be an oracle watch boundary. No value
+  rewrite or filter was added.
 - **s4937:** Static ownership lookup identifies `0x80149702` as the MusyX
   double-buffer toggle and `0x80149988/8A` as synth output/countdown state.
   `0x800A1778` has no named companion symbol; its only current reference is
@@ -52,6 +59,10 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 - Current default stability: title/hangar longevity is qualified; mission
   route captures have advanced counters and zero crash/abort markers in the
   cited runs. Judge future runs by phase controls, never wall-clock alone.
+- The s4939 auxiliary-store witness is regeneration-preserved in the fixup
+  template and records the four store sites with phase, order, value, and
+  `s0/s1`; its title controls passed, while the requested hangar phase was not
+  reached by the driven port capture.
 
 ### M3 and rendering
 
@@ -115,12 +126,16 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-1. **Active — s4938:** perform the phase-gated retail/port join for
+1. **Completed — s4939:** perform the phase-gated retail/port join for
    `0x800A1778`, `0x80149702`, and `0x80149988/8A`, using whole-RDRAM and VI
    controls plus port `musyxSynthFrame`/`aspTask=0x80149470` controls. Match
-   store order, values, and cadence in one table. Do not rewrite or filter.
-2. If the active join is unresolved, identify the missing destination or phase
-   boundary with one new independent control; do not add a mitigation.
+   store order, values, and cadence in one table. The title-phase arm is
+   unresolved because retail `0x80149702` was absent and the port did not reach
+   hangar. No rewrite or filter was added.
+2. **Next:** resolve the missing retail byte-watch boundary with one oracle run
+   using an aligned physical range around `0x00149702`, retaining the
+   whole-RDRAM positive control and the qualified `0x00149988` and
+   `0x000A1778` controls. Do not add a port instrument or mitigation.
 3. Revisit M3 only as a complete idiom-class audit with a new discriminator;
    conditional-move recompiler support is a separate engineering task.
 4. Revisit external retail-entry or M4 only with a genuinely new oracle route,

@@ -7784,6 +7784,34 @@ void rs64_s3352_m5_consumer_entry(uint8_t* rdram, uint32_t pc) {
     return text, True, f"{p.name}: s3352 consumer entry probes added x{len(replacements)}"
 
 
+def apply_s4938_aux_join(p, text):
+    """Keep the retail/port auxiliary-store join at its four source sites."""
+    if p.name != "funcs_24.c":
+        return text, False, None
+    marker = "PATCH: s4938 auxiliary store join"
+    if marker in text:
+        return text, False, "funcs_24.c: s4938 auxiliary store join already present"
+    declaration = (
+        'extern void rs64_s4938_aux_store(char, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);\n'
+    )
+    text = text.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + declaration, 1)
+    sites = [
+        ("    // 0x80091698: sh          $s0, -0x6678($at)\n    MEM_H(-0X6678, ctx->r1) = ctx->r16;\n",
+         "    rs64_s4938_aux_store('H', 0x80091698u, U32(ADD32(ctx->r1, -0X6678)), U32(ctx->r16), U32(ctx->r16), U32(ctx->r17)); /* PATCH: s4938 auxiliary store join */\n"),
+        ("    // 0x800916A4: sh          $v0, -0x6676($at)\n    MEM_H(-0X6676, ctx->r1) = ctx->r2;\n",
+         "    rs64_s4938_aux_store('H', 0x800916A4u, U32(ADD32(ctx->r1, -0X6676)), U32(ctx->r2), U32(ctx->r16), U32(ctx->r17)); /* PATCH: s4938 auxiliary store join */\n"),
+        ("    // 0x800917C4: sb          $v0, -0x68FE($at)\n    MEM_B(-0X68FE, ctx->r1) = ctx->r2;\n",
+         "    rs64_s4938_aux_store('B', 0x800917C4u, U32(ADD32(ctx->r1, -0X68FE)), U32(ctx->r2), U32(ctx->r16), U32(ctx->r17)); /* PATCH: s4938 auxiliary store join */\n"),
+        ("    // 0x800917F4: sw          $v0, 0x1778($at)\n    MEM_W(0X1778, ctx->r1) = ctx->r2;\n",
+         "    rs64_s4938_aux_store('W', 0x800917F4u, U32(ADD32(ctx->r1, 0X1778)), U32(ctx->r2), U32(ctx->r16), U32(ctx->r17)); /* PATCH: s4938 auxiliary store join */\n"),
+    ]
+    for anchor, insert in sites:
+        if text.count(anchor) != 1:
+            raise RuntimeError(f"s4938 {p.name}: anchor count={text.count(anchor)} for {anchor.strip()}")
+        text = text.replace(anchor, anchor + insert, 1)
+    return text, True, "funcs_24.c: s4938 auxiliary store join added x4"
+
+
 report = []
 for p in sorted(base.glob("funcs_*.c")):
     text = p.read_text()
@@ -7806,6 +7834,11 @@ for p in sorted(base.glob("funcs_*.c")):
     if s3352_message:
         report.append(s3352_message)
     changed = changed or s3352_changed
+
+    text, s4938_changed, s4938_message = apply_s4938_aux_join(p, text)
+    if s4938_message:
+        report.append(s4938_message)
+    changed = changed or s4938_changed
 
     # s1108: attribute writes to the SP producer gate without changing the
     # MEM_* lvalue macros.  The helper is cheap when disabled and the call

@@ -157534,3 +157534,30 @@ active s4937 auxiliary-field join, durable M5/M3 conclusions, superseded
 interpretations, operating rules, and links to the detailed evidence archive.
 The backlog is now one monotonic sequence. This rules out neither arm of the
 next experiment; it only makes the documented active discriminator unambiguous.
+
+## Session 4939 (2026-10-14) — phase-gated auxiliary-store join reaches title only
+
+Ran the planned retail/port auxiliary-store join with whole-RDRAM and VI
+controls in the retail oracle, and added a regeneration-preserved port witness
+at `0x80091698`, `0x800916A4`, `0x800917C4`, and `0x800917F4`. The build passed.
+
+The retail whole-RDRAM control fired. In the title bucket (`width=1024`,
+origin `0x00790400`), retail produced 629 `0x800A1778` store rows and 1,259
+rows for `0x80149988/8A`; the exact one-byte watch for physical `0x00149702`
+produced zero rows. The port witness reached the same title bucket and recorded
+256 capped rows with the four store PCs recurring in order W, H, H, B; the
+independent synth-entry and audio-task controls also fired. The requested
+hangar bucket was not reached by the driven port capture. The first port run
+stayed at VI-640 and was phase-invalid; the fixed driver was then used before
+interpreting the title rows.
+
+This selects no ownership hypothesis: the missing retail byte is an
+instrument-boundary ambiguity, while the title-side port order is consistent
+with the retail store sequence but not sufficient to prove value parity. It
+rules out a port-side absence of these generated store sites in the qualified
+title phase. The next experiment widens only the retail byte watch to an
+aligned containing range.
+
+ORIGIN: the new code is read-only diagnostic instrumentation. The observed
+stores are legitimate game-state writes; no mitigation, skip, filter, or value
+rewrite was added.
