@@ -2,13 +2,10 @@
 
 HYPOTHESIS-ID: m5-aux-store-ab
 
-Run the same-build image vs `musyx_stub` auxiliary-store A/B (recipe:
-`scratch/agent/s4942_m5_aux_ab.sh`, built in s4942), both arms concurrently,
-using the s4923-style driver that qualified title+mission in s4943. Controls:
-title `0x00790400` and mission `0x00690400` must fire in BOTH arms; relaunch an
-arm that stalls at VI-640 (intermittent), do not read it as a null.
-
-Hypotheses: H-contract-gap (silent arm diverges in aux-store rows/task cadence),
-H-route-only (rows identical across arms), H-rollback-specific (silent arm
-changes route progress). Discriminator: per-phase `s4938-aux-store` row
-counts/values, image vs silent.
+s4944 showed the image and silent arms emit structurally identical aux-store rows but the silent arm runs ~11x more
+mission synth frames per VI (~15.5k vs ~1.3k rows at VI #9600 each). Discriminate WHY: (H-ai-drain-pacing) image
+arm's `musyxSynthFrame` rate is gated by AI DMA drain; (H-log-budget) the witness has a per-phase row cap hit
+differently; (H-slow-synth) image synth is CPU-bound under 2 concurrent instances.
+Boring check FIRST: `grep -n s4938 tools/fixup_game_funcs.py` for the witness budget. Then re-run
+`scratch/agent/s4944_aux_ab.sh` with a per-origin count of `musyxSynthFrame` entries and AI-drain events per VI
+(one build). Positive control: title rows must equal the 256 cap. Also fix stale `m5-task-contract` grep (0 in both).

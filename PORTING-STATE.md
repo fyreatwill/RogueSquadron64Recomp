@@ -157639,3 +157639,25 @@ for title+mission, not hangar; H-image-failure refuted. The s4942 VI-640 stall i
 therefore intermittent (cf. s4794: 2/5 stalled), not a build defect. No A1
 contract result is claimed. Next: image vs silent A/B with title and mission as
 controls, relaunching any arm that stalls at VI-640.
+
+## Session 4944 (2026-10-14) — aux-store A/B qualified: arms structurally identical, silent runs ~11x more synth frames per VI
+
+Built `scratch/agent/s4944_aux_ab.sh` (s4923-style driver, both arms concurrent, whole-attempt relaunch on a failed
+title+mission control) and `s4944_summarize.sh`. Image (`ROGUESQ_AUDIO_UCODE=1`) vs silent (`=0`) qualified on attempt 1:
+both arms title `0x00790400` (7807 lines) and mission `0x00690400` (117 image / 692 silent lines), crash=0 both, both
+at `update_screen #9600` at the end. Controls therefore fired in BOTH arms (no VI-640 stall this time).
+
+Findings (single run, single-source): (a) the four auxiliary stores (`0x80149988` pc `0x80091698`, `0x8014998A`
+`0x800916A4`, `0x80149702` `0x800917C4`, `0x800A1778` `0x800917F4`) fire in both arms at title and at both mission
+origins; the `0x80149702` toggle alternates 0/1 in both; the `0x80149988` counter cycles 0..F with `0x8014998A`
+counting down in step in both. Title rows 256/256 (log-capped). (b) mission rows differ in count: image ~1349 total
+(origin 690400: ~187/site, 620400: ~150/site) vs silent ~15.5k (~2000/site) at the same final VI counter (#9600).
+Mechanism hypothesis (NOT tested): `musyxSynthFrame` is paced by the AI/audio-task drain in the image arm and
+free-running in the silent arm. Not phase-gated per VI; treat as a lead.
+Refuted: H-contract-gap (silent arm lacking the aux stores) — silent emits all four sites with identical value
+structure. Supported: H-route-only for value/structure. H-rollback-specific unaddressed (no route-progress difference
+seen: both reached the same VI count). The `m5-task-contract` grep count is 0 in both arms (stale log tag, not
+investigated). ORIGIN: no mitigation added; the aux fields are legitimate retail-style state (s4937).
+
+Next: normalize synth-frame cadence per VI per phase and check whether the image-arm throttle is the AI-drain gate or
+a witness row budget; no new code until that discriminates.
