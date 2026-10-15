@@ -158205,3 +158205,14 @@ carried crash markers, so that arm is unevaluable. No new idea or runnable unit
 exists beyond re-running a mission-qualified recipe for the 4994 sample; that
 is a soak-queue item, not a session. ORIGIN: `allocateSongChannelArray` remains
 the legitimate writer; no guard/rewrite/mitigation added.
+
+## Session 5010 (unblock) — s5009 "owner decision" block refuted (route 3)
+The s5009 block asked the owner to choose (a)/(c)/(d). Option (d), running the queued
+mission-sample soak, needs no human decision: it is an ordinary soak-queue item
+(ITERATION.md "Soak queue"), and the build/RogueSquadron64Recomp binary (Oct 15 04:05)
+already contains the s4994 sample (`strings` finds `s4994-s4540`; RecompiledFuncs/funcs_24.c
+carries the patch). Enqueued `scratch/agent/soak_queue/s5010_s4540_mission_sample.sh`
+(s4981 mission route, 690400 onset gate, plus s4994arm/rows/cur20/stale32/crash counters).
+Interpretation table is in NEXT.md. BLOCKED.md moved to BLOCKED.resolved.s5009-owner-decision.md.
+Declaring M5 done remains an owner decision but does not gate this work. Nothing was run
+this session; the result arrives in SOAK-RESULTS.md.

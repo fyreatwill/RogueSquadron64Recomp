@@ -1,4 +1,2 @@
-# UNBLOCK s5008 - route 3 (re-scope)
-Claim: owner decision needed. Not a missing resource, so routes 1/2 do not apply.
-Evidence: option (b) was already done in s4987 (bad=8, refuted); s4990/s4991 left an unrun per-origin budget step that the s5007 walk missed.
-Action: NEXT.md now carries that unit; BLOCKED.md archived as BLOCKED.resolved.s5007-owner-decision.md. Owner options (a)/(c) remain open in CURRENT-TRUTH.
+# UNBLOCK s5010
+Route 3 (re-scope), after route 1: the block's option (d) is not a human decision. The s4994 instrumented binary is already built, the mission route recipe exists (s4981), so the soak was merely un-enqueued. Evidence: strings build/RogueSquadron64Recomp | grep s4994-s4540 -> 2 hits; funcs_24.c has the patch. Enqueued s5010 soak; no run this session. Refuting experiment: if the soak shows mission_onset_t=-1 again, the route (not authorization) is the blocker.
