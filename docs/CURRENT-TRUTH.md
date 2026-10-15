@@ -6,6 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4953:** `tools/vi_progress.py` over the s4950 logs: all 5 runs go title -> 640 -> 512 (0x690400, ~3-4 s, ~150-260 update_screens) -> title again; no run's VI progress halts. The 512 "mission" may be an attract demo or a port bounce-to-title (undiscriminated). Mission-phase row added to `docs/M5-AUDIO-PLAN.md`.
+
 - **s4949 (unblock):** the s4948 "owner decision" block was refuted: movz/movn defect is dormant (2 of 149 sites "reachable", both data-as-code; do_break exits loudly, no hit recorded). Next unit is a mission-route soak, not a human decision.
 - **s4946:** solo vs duo image-arm VI pacing identical (mission entry #5738/#5744/#5735 at ~96.8s); concurrency does not explain the s4944 flip-count gap. M5 plan steps 0-11 all closed.
 
@@ -135,6 +137,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Superseded conclusions
 
+- s4950's "5/5 reached mission" (and its `stalled=1` stall grep) was refined by s4953: `stalled=1` appears at every phase, and the 512 phase is only ~3-4 s before return to title, so it is not established as a player mission. Believable because the origin 0x690400 matched the retail mission origin.
+
 - s4934's “writer attribution” was refined by s4935–s4937: `0x80091784` is
   real mission-phase auxiliary activity, not yet an OSTask publisher.
 - s4940's phase-route-mismatch selection was overturned by s4941: the same
@@ -153,6 +157,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   task-contract, ownership, wait-gate, safety-exit, or MORT correctness.
 
 ## Next steps (single monotonic backlog)
+
+**s4953 next:** discriminate whether the 512 phase is demo vs real-mission abort (key-injection log vs phase transitions, one run; see NEXT.md). If abort, fix the route path (pivot item b).
 
 **s4952: unblocked** - s4951 scope question re-scoped to NEXT.md (VI-progress metric from s4950 logs, then mission-phase M5 row). stalled=1 is not a VI640 indicator. Declaring the milestone done remains an owner decision.
 
