@@ -157446,3 +157446,25 @@ attributed outside `0x80033FCC`; the next unit watches retail writer
 ORIGIN: no mitigation or game-behavior change; the only code change was to the
 scratch driver so the fixed capture continued the already-qualified input-pair
 sequence.
+
+## Session 4934 (2026-10-14) — retail writer attribution reaches both mission origins
+
+Ran the planned bounded retail-only writer attribution capture. The independent
+oracle passed the whole-RDRAM positive control at 10,000 writes and VI polling
+recorded 14,386 frames over about 239.8 emulated seconds. Writer
+`0x80091784` executed 12,076 times, all from `prev_pc=0x80091780`; grouped by
+512-wide VI origin it recorded 618 rows at hangar `0x006AB400`, 2,151 at
+mission origin `0x00690400`, and 2,135 at `0x00620400`. Mission rows repeatedly
+included `a1=0x142, a2=2` (1,970 and 1,945 respectively). The old
+`0x80033FCC` task-entry watch remained at zero.
+
+This selects H-writer-attribution over H-retail-absent: retail reaches a
+mission-side writer boundary that the old task-entry watch does not observe.
+It does not yet prove that this writer publishes the OSTask; the next unit
+captures its register/field context. No guard, skip, mitigation, or behavior
+change was authorized. The s4933 publication-mismatch cause is therefore
+superseded, while its observation of zero `0x80033FCC` task-entry rows remains
+valid.
+
+ORIGIN: no runtime or game-behavior change; this iteration added only the
+bounded oracle result note and the next-probe documentation.

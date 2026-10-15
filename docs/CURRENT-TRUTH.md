@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4933; compacted s4898)
+## Headline (as of s4934; compacted s4898)
+
+- **Latest (s4934):** the bounded retail writer-attribution capture passed the
+  whole-RDRAM and VI controls, then recorded writer `0x80091784` at both
+  mission origins (`2,151` rows at `0x00690400`, `2,135` at `0x00620400`) and
+  at hangar (`618` at `0x006AB400`). The old `0x80033FCC` task-entry watch
+  remained zero. This selects **H-writer-attribution** over absent retail
+  publication, but does not yet prove that `0x80091784` publishes the OSTask;
+  next identify its target/context. No mitigation is authorized. See
+  `docs/M5-S4934-RETAIL-WRITER-ATTRIBUTION.md`.
 
 - **Latest (s4933):** the corrected same-build port/retail join qualified both
   mission origins. The port recorded fresh route handoffs at `0x00690400`
@@ -157,6 +166,15 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   not its cause: the next capture must watch retail writer `0x80091784` to
   distinguish absent mission publication from attribution outside `0x80033FCC`.
   No mitigation is authorized.
+
+- **M5 retail writer attribution (s4934):** the independent retail oracle
+  passed its whole-RDRAM and VI controls and recorded 12,076 executions of
+  writer `0x80091784`. It recorded 618 rows at hangar origin `0x006AB400`,
+  2,151 at mission origin `0x00690400`, and 2,135 at `0x00620400`; repeated
+  mission rows included `a1=0x142, a2=2`. The old `0x80033FCC` task-entry watch
+  remained zero. This selects a writer-attribution boundary over a retail
+  publication null, but is single-source for the writer's target and does not
+  authorize a mitigation. See `docs/M5-S4934-RETAIL-WRITER-ATTRIBUTION.md`.
 
 - **M5 retail parity join (s4931):** the independent oracle was instrumented
   correctly and reached the 512-wide hangar route, with 11,629 whole-RDRAM
@@ -431,14 +449,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4933) Name the retail-side publication boundary:** the qualified join
-  found 643 type-2 task rows at hangar `0x006AB400`, but none at either mission
-  origin, while the port produced fresh mission-origin handoffs. Run the
-  retail oracle with the known task-state writer `0x80091784` watched and keep
-  the whole-RDRAM, VI, hangar-task, and both mission-origin controls positive.
-  A writer hit at a mission origin selects attribution outside the old
-  `0x80033FCC` task-entry watch; a qualified writer null selects absent retail
-  publication. Do not add a mitigation.
+- **(s4934) Identify the retail writer target/context:** run one bounded
+  retail oracle capture with `--pc-field-dump 0x80091784`, retaining the
+  whole-RDRAM and VI controls and the three 512-wide origin buckets. Compare
+  the writer's `s0`, `s1`, `MEM_W(s0+0x60)`, `MEM_BU(s0+0x22)`, `$v0`, and
+  `MEM_HU(s1+0x22)` rows at hangar and both mission origins. A stable task-like
+  pointer/value at mission origins selects a writer-to-OSTask path; stable
+  non-task context selects a cadence/auxiliary writer; a failed control makes
+  the capture invalid. Do not add a mitigation.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 
