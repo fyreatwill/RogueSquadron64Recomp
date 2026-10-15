@@ -1,20 +1,20 @@
-# Next work unit: hand-port one bounded heap-guard entry point
+# Next work unit: complete the bounded assembly port of allocateDisplayListBuffer
 HYPOTHESIS-ID: m3-assembly-patch-pipeline
 
 Competing hypotheses:
 
-1. A faithful hand-written MIPS assembly version of one existing
-   `patches/heap_guards.c` entry point can be linked and consumed by N64Recomp;
-   the assembly-only route is sufficient for a real patch.
-2. The entry point depends on C-generated ABI/relocation behavior that the
-   assembly route cannot reproduce with the current linker scripts.
-3. The function is too large or semantically under-specified to port safely;
-   static control-flow comparison will fail before any runtime enablement.
+1. The remaining original `allocateDisplayListBuffer` path can be hand-written
+   in MIPS assembly and consumed by N64Recomp with the existing linker scripts.
+2. Absolute game-data references or the helper call need relocation handling
+   that the assembly pipeline cannot provide.
+3. The existing patch's queue semantics are too under-specified to reproduce
+   faithfully from the recovered control flow, so the port should remain
+   disabled.
 
-Discriminating measurement: choose the smallest heap-guard entry point, write
-its assembly while preserving its original symbol, assemble with
-`mips-linux-gnu-as -mips2 -mabi=32 -EB`, link with `patches.ld`/`syms.ld`, run
-`build/N64Recomp` on the ELF, and compare the generated host function's branch
-targets and referenced guest addresses with the C guard's intended path. A
-successful structural match selects H1; linker/N64Recomp failure selects H2;
-control-flow mismatch selects H3. Do not enable an unverified override.
+Discriminating measurement: extend `patches/heap_guard_asm.S` to cover the
+known original `0x80007D74–0x80007E58` path, assemble with
+`make -C patches ASM_ONLY=1 AS=/opt/homebrew/bin/mips-linux-gnu-as LD=/opt/homebrew/bin/mips-linux-gnu-ld patches.elf`,
+run `build/N64Recomp patches.toml`, and compare emitted size, branch targets,
+and references against the recovered generated translation. Full
+control-flow/store coverage selects H1; relocation failure selects H2; any
+unmatched queue publication selects H3. Do not enable the override.

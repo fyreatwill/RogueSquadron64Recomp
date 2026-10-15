@@ -1,4 +1,4 @@
-// Override of func_80007D74 (heap free-list dequeue + queue insertion) with
+// Override of allocateDisplayListBuffer (heap free-list dequeue + queue insertion) with
 // KSEG0 pointer-validation guards added. The originals were inline edits
 // in funcs_3.c at L_80007DE0 and L_80007E30; moving them here so the
 // auto-generated funcs_*.c can be regenerated cleanly.
@@ -400,7 +400,7 @@ static int free_chain_disjoint_from_active_sentinel(const Block* free_head,
     return node == NULL;
 }
 
-RECOMP_PATCH Block* func_80007D74(void) {
+RECOMP_PATCH Block* allocateDisplayListBuffer(void) {
     Block* head = heap_free_head;
 
     // If the free list is empty, allocate a new chunk (which itself is a

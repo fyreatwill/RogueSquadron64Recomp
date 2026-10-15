@@ -158248,3 +158248,16 @@ emitted `probe.c`, `funcs.h`, and `recomp_overlays.inl` with exit code 0.
 This selects H1 from NEXT.md: the assembly-only route is technically
 available. It does not validate heap-guard behavior, enable an override, or
 replace the missing MIPS C compiler. No generated or runtime file was kept.
+
+## Session 5019 (2026-10-15) — validated assembly patch identity and bounded slice
+The first real assembly-only heap-guard build initially failed strict patch
+validation because the source used `func_80007D74`, while the reference symbol
+table names `0x80007D74` `allocateDisplayListBuffer`. Renamed the C and
+assembly patch symbols and added an `ASM_ONLY` Makefile path using the available
+Homebrew MIPS assembler. The corrected assembly assembled and linked, and
+`build/N64Recomp patches.toml` exited 0, emitting a host override with the
+correct name. The emitted section is 0x44 bytes; the recovered original entry
+is 0xE8 bytes and publishes free-list/queue state, which the bounded slice
+does not implement. This selects H3 for the slice: the toolchain works, but
+the slice is not a faithful override. It was not enabled. The next unit is the
+remaining control-flow/store port, not a runtime crash chase.

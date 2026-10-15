@@ -51,8 +51,8 @@ order picks the right one.
    ```c
    #define RECOMP_PATCH __attribute__((section(".recomp_patch")))
 
-   // Override of game function func_80007D74 (heap free-list dequeue).
-   RECOMP_PATCH void* func_80007D74(void) {
+   // Override of game function allocateDisplayListBuffer (heap free-list dequeue).
+   RECOMP_PATCH void* allocateDisplayListBuffer(void) {
        // ... your replacement implementation ...
    }
    ```

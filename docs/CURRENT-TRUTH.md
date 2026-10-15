@@ -1,7 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5018; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5019; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
@@ -12,6 +12,14 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   `build/N64Recomp` consumed it successfully. This unblocks an assembly-only
   patch route, but no game behavior changed and MIPS C compilation remains
   unavailable.
+
+- **s5019:** The first assembly-only heap-guard build exposed and fixed a
+  stale patch symbol: `0x80007D74` is `allocateDisplayListBuffer`, not
+  `func_80007D74`. Strict N64Recomp validation now passes and emits the host
+  override. The bounded assembly slice is only 0x44 bytes versus the original
+  0xE8-byte entry and omits queue publication, so it is not behaviorally
+  faithful and remains disabled. The assembly route is viable; the slice is
+  H3 (structural mismatch), not an explanation for a runtime defect.
 
 - **s5000:** The independent retail/port boundary retry passed retail
   whole-RDRAM, title, and hangar controls and recorded 0 exact
@@ -277,13 +285,14 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s5018 (top):** The assembly-only patch pipeline is qualified. The next
-bounded unit is to hand-port one existing M3 heap-guard entry point to MIPS
-assembly, preserving the existing legitimate-writer `ORIGIN` contract, then
-run the assembler/linker/N64Recomp pipeline and inspect the generated host
-override. Do not enable the override in the game until the generated function
-matches the intended original control flow; the missing MIPS C compiler still
-blocks compiling `patches/heap_guards.c` directly.
+**s5019 (top):** The assembly-only patch pipeline and corrected symbol identity
+are qualified, but the first bounded slice is structurally incomplete (0x44
+bytes emitted versus the original 0xE8-byte entry). The next bounded unit is
+to hand-port the remaining original `allocateDisplayListBuffer` control flow
+and queue stores in assembly, then compare its disassembly and generated host
+function to the known 0x80007D74–0x80007E58 path. Keep it disabled until the
+full path matches; the missing MIPS C compiler still blocks compiling
+`patches/heap_guards.c` directly.
 
 **s5012 (top):** The mission-qualified s4994 sample ran validly (mission_onset_t=173, arm=1, crash=0): 32 of 32 mission-origin s4540 caller rows were current-base `0x8018C720`, 0 stale `0x801714D0`; with s4993 (0 bad rows at mission origins) this closes the mission-phase `kind=bad` thread. No runnable M5 unit remains; next eligible work is a genuinely new M3 idiom class or a new witness for the parked retail/M4 boundaries. Declaring M5 done stays an owner call, non-gating.
 
