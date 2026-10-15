@@ -2,37 +2,31 @@
 
 HYPOTHESIS-ID: m5-audio-destub
 
-s4926: the width-gated driver reached the mission phase after the first
-Start/A pair and remained alive for 120 s of counter samples (6656 -> 13760),
-with zero crash/abort markers. This is a longevity result, not an audio-path
-qualification.
+s4927 selected an internal mission-audio boundary: the corrected driver
+reached post-key `0x00690400` and later `0x00620400`, with `update_screen`
+6720 -> 13696 and zero crash/abort markers. Global route/audio-task/PCM
+controls were positive, but both mission-origin buckets were empty.
 
-Completed s4925 with the corrected `scratch/agent/s4923_mission_longevity.sh`:
-the first 512-wide row armed input, one Start/A pair produced
-`vi_width=512 origin=0x00690400`, and the 120-second post-key counter stayed
-live. Positive controls: first 512 row, post-key mission origin, advancing
-counter, and zero crash/abort markers.
+Next work unit: add one transition-window join that labels every global
+audio-task/PCM event between the post-key `0x00690400` commit and the
+following `0x00620400` commit, independent of the current origin bucket. Run
+`zsh scratch/agent/s4923_mission_longevity.sh` once with the first-512 gate and
+one Start/A pair unchanged. Do not add a guard or skip.
 
 Competing hypotheses and discriminator:
 
-1. H-mission-audio-live: mission phase emits nonzero phase-scoped M5 audio/task/PCM controls; outcome: the covered mission audio path is active and remaining nulls are not route-absence evidence.
-2. H-mission-audio-absent: mission phase has positive route/counter controls but zero M5 audio controls; outcome: the remaining boundary is before the instrumented audio path and needs a new route discriminator.
-3. H-mission-route-invalid: the width gate or post-key mission control fails; outcome: invalidate the audio null and repair the driver before interpreting it.
+1. H-stale-origin: task/PCM events occur in the transition window but are
+   reported under another current origin; transition-window rows select an
+   attribution defect.
+2. H-before-publication: no task/PCM events occur in the transition window,
+   while same-run global controls remain positive; this selects a boundary
+   before mission task/PCM publication.
+3. H-route-invalid: the first-512, post-key `0x00690400`, following
+   `0x00620400`, advancing counter, or global controls fail; the capture is
+   unevaluable.
 
-Positive controls: the run must emit a first `vi_width=512` row, a post-key
-`origin=0x00690400` row, advancing `update_screen`, and nonzero route-order
-controls. A missing phase or dead counter invalidates the run. The audio
-discriminator is the phase-scoped M5 task/SP/PCM join; each possible result
-selects one of the three hypotheses above.
-
-Result s4926: the bundle was positive globally but produced zero rows at
-`0x00690400`; the post-key origin and counter controls were positive. The
-remaining ambiguity is whether audio tasks execute after the origin changes to
-`0x00620400`.
-
-Next work unit: add one origin-transition latch or include `0x00620400` in the
-phase-scoped M5 task/PCM join, then run `zsh
-scratch/agent/s4923_mission_longevity.sh` once. Keep the first-512 gate and
-one-pair input schedule. Discriminator: rows only at `0x00620400` select phase
-attribution; rows absent at both origins with global controls positive select
-an internal mission audio boundary. Do not add a guard or skip.
+Positive controls: first `vi_width=512`, post-key origin `0x00690400`, later
+origin `0x00620400`, advancing `update_screen`, and nonzero global
+route/audio-task/PCM rows. The transition-window event count is the
+discriminator: nonzero selects H-stale-origin; zero with controls positive
+selects H-before-publication; missing controls selects H-route-invalid.

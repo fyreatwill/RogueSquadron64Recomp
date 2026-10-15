@@ -3891,7 +3891,9 @@ extern "C" void rs64_m5_audio_event(const char* kind, uint32_t site,
     const uint32_t vi_width = rs64_vi_committed_width();
     const uint32_t vi_origin = rs64_vi_committed_origin();
     if (!((vi_width == 1024u && vi_origin == 0x00790400u) ||
-          (vi_width == 512u && vi_origin == 0x006AB400u))) return;
+          (vi_width == 512u && (vi_origin == 0x006AB400u ||
+                                vi_origin == 0x00690400u ||
+                                vi_origin == 0x00620400u)))) return;
 
     uint32_t phase = vi_phase;
     uint32_t width = vi_width;
@@ -3953,7 +3955,9 @@ static void rs64_audio_route_prepare(const char* arm) {
     const uint32_t origin = rs64_vi_committed_origin();
     const bool target_phase =
         (width == 1024u && origin == 0x00790400u) ||
-        (width == 512u && origin == 0x006AB400u);
+        (width == 512u && (origin == 0x006AB400u ||
+                           origin == 0x00690400u ||
+                           origin == 0x00620400u));
     rs64_m5_route_prepare_handoff(prepare_seq, phase, width, origin,
                                   target_phase ? 1u : 0u);
     rs64_m5_identity_edge("prepare-clear", before_clear, prepare_seq, clear_seq,
@@ -4356,7 +4360,9 @@ static bool rs64_m5_descriptor_phase(uint32_t* phase, uint32_t* width,
     if (!rs64_audio_current_route_snapshot(phase, width, origin, &ordinal, &row,
                                            &exit_reason, arm)) return false;
     return (*width == 1024u && *origin == 0x00790400u) ||
-           (*width == 512u && *origin == 0x006AB400u);
+           (*width == 512u && (*origin == 0x006AB400u ||
+                               *origin == 0x00690400u ||
+                               *origin == 0x00620400u));
 }
 
 extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
@@ -7005,7 +7011,8 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
         const bool phase_allowed =
             (width == 1024u && origin == 0x00790400u) ||
             (width == 512u && (origin == 0x006AB400u ||
-                               origin == 0x00690400u));
+                               origin == 0x00690400u ||
+                               origin == 0x00620400u));
         static uint32_t s_phase_key = 0xFFFFFFFFu;
         static uint32_t s_phase_n = 0;
         if (phase_allowed) {

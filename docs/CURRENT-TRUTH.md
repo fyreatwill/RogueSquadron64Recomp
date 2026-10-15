@@ -6,7 +6,14 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4926; compacted s4898)
+## Headline (as of s4927; compacted s4898)
+
+- **Latest (s4927):** the same-build mission capture reached post-key
+  `0x00690400`, then observed `0x00620400`, and advanced `update_screen` from
+  6720 to 13696 with zero crash/abort markers. Global route/audio-task/PCM
+  controls were positive, but both mission origins had zero M5 rows. This
+  selects an internal mission-audio boundary rather than phase attribution;
+  no guard or skip is authorized.
 
 - **Latest (s4926):** the width-gated mission capture reached
   `0x00690400`, advanced its counter from 6656 to 13888 for 120 seconds, and
@@ -92,6 +99,15 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   phase-handoff ambiguity, not a de-stub conclusion; the next discriminator
   must join audio work to the following `0x00620400` origin or latch the
   `0x00690400` transition.
+
+- **M5 mission audio boundary (s4927):** the widened same-build join reached
+  both 512-wide mission origins: `0x00690400` after the key pair and later
+  `0x00620400`. The counter advanced 6720 -> 13696 over 120 seconds with zero
+  crash/abort markers. Global controls were positive (18,046 route-order,
+  1,680 audio-route, 1,683 audio-task, 93 PCM-source, 567 PCM-consumer, and
+  43 PCM-sanity rows), while both mission-origin buckets had zero rows. This
+  selects an internal boundary before the instrumented mission audio route;
+  it is not a retail-ground-truth claim. Do not add a guard or skip.
 
 - **M5 callback teardown reachability (s4894 correction):** the qualified
   route passed title/hangar, 758 SP returns, 44 PCM sources, 259 PCM consumers
@@ -301,13 +317,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4926) Join mission audio across the origin handoff:** add one
-  phase-transition latch or include the immediately following 512-wide
-  `0x00620400` origin in the M5 task/PCM join, while retaining the positive
-  post-key `0x00690400` witness. Run the width-gated driver once. If audio rows
-  appear only under `0x00620400`, the null was phase attribution; if both
-  origins remain empty while global title/hangar controls fire, the internal
-  mission audio boundary is selected. Do not add a guard or skip.
+- **(s4927) Locate the selected internal mission-audio boundary:** add one
+  transition-window join that labels every global audio-task/PCM event between
+  the post-key `0x00690400` commit and the following `0x00620400` commit,
+  without requiring either origin to be the current phase bucket. Keep the
+  first-512 gate and one-pair input schedule. Events in the window select a
+  stale/current-origin attribution defect; no events with global controls still
+  positive select a boundary before task/PCM publication. Do not add a guard or
+  skip.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 
