@@ -6,7 +6,18 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4886)
+## Headline (as of s4887)
+
+- **s4887:** closed the port side of the OSTask `data_size` boundary as
+  H-port-cadence. The corrected same-build capture passed route-order, SP,
+  hangar, and PCM controls: 2,103 SP enter/return rows, 3,934 ABI rows, and
+  nonzero PCM source/consumer rows. Port ABI rows were 3,926 `data_size=1`,
+  3 `data_size=2`, and 5 `data_size=3`; the `s4864` writer and ABI values
+  agree on the observed tasks. Retail s4886 was 176 `data_size=2` and 14
+  `data_size=1` in the qualified sample. This selects a cadence difference,
+  not a publication mismatch or route failure. The initial prescribed run
+  omitted the ABI/route/PCM gates; its corrected rerun supplied them. No
+  runtime behavior change is authorized.
 
 - **s4886:** qualified the retail OSTask `data_size` boundary in one
   independent Rice-route capture. Whole-RDRAM writes reached 10,000 and
@@ -520,7 +531,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 0. **M5 double synth walk (s4874-s4875):** port synth runs 2/VI because callback-table slots 1 and 2 both hold `0x8009123C`; retail holds one. NAMED (s4875, two sources: port rows + retail oracle): the dereg comes from the teardown function at 0x8008ECxx (generated name `musyxNoopStub`, jal wait at 0x8008ED14), which branches over the wait/dereg when gate byte `0x800A0F50`==0. Retail: that teardown runs at t=1.8 s with gate=1 (before any reapply) -> dereg -> reapply -> register, balanced, 1 copy. Port: the FIRST teardown (boot) sees gate=0, skips the dereg, so cycle 1's reapply register is unmatched (+1 copy); every later cycle is balanced (dereg+register) so 2 copies persist. Root = the deliberate gate-write force-zero stubs (setDisplayMode 0x8008EB40 / reapplyDisplayMode 0x8008EC88 / initMusyXEngine never called, see fixup comments ~l.8105; reversing them hung boot 4x). Next: a bounded fix that keeps gate semantics but makes the first-teardown dereg happen (e.g. one-shot dereg of 0x8009123C when reapplyAudioConfig registers and the table already holds it) - ORIGIN named, not a mitigation of unknown writer. **s4878 RESULT: tools/apply_s4878_synth_dedup.py (env ROGUESQ_S4875_DEDUP; DEFAULT ON since s4879, =0 disables) drops the 2nd register; A/B same recipe: synth entries per message 1.97 -> 0.99. s4879: stability 2/3 + AI-ring producer now 1 per entry -> flipped default-on. s4880: paired 5x arm1/arm0 startup-crash soak QUEUED (scratch/agent/soak_queue/s4880_dedup_crash_rate.sh; verdict in soak_results/s4880/summary.txt) - decides whether the startup SIGSEGV is dedup-caused (arm1>>arm0) or pre-existing (then trace the writer of the bad si_addr/x1, no guard).** Instrument: tools/apply_s4877_dereg_order.py (ROGUESQ_LOG_S4700_CB=1), oracle recipe scratch/agent/s4877_oracle_order.sh.
 
-1. (s4869) The synth entry runs the voice-walk 0x80090E04 once per 0xC0-sample chunk (call sites 0x800914C8/0x80091588/0x8009163C, chunk loop with s2+=0xC0, s3+=1). Retail: 701 builds, 1341 walks (1.91/build), 15820 per-voice jals (11.8/walk). Port: 11264 builds, 5693 walks (0.505/build; 1.01 per REAL entry, the spurious entries do no walk and have a1=0), 66835 jals (11.74/walk). Per-voice work per walk MATCHES, so H-V (voice population) and H-W (per-voice add drops) are refuted; the split is chunks-per-synth-entry (retail ~2, port 1). Next: log the chunk-loop bound/target (s2 start, end limit near 0x800913A0-0x800914B0) in port vs retail (oracle prints only v0/s1/a0/a2; extend rs64_oracle to print s2/s3/s4 or watch the loop head). Note: oracle exec watch at a delay-slot PC (0x80091084) gives 0 hits - blind, never use.  Retail producer 0x8008EE6C = 1343 per 702 synth entries (1.91); port 5704 per 11264 (0.51) - H-A refuted. Build loop trip count a1 (loaded 0x8009132C, written by voice-array walk 0x80090E04) is ~2 retail vs ~1 port; this is the data_size 1-vs-2 residual. Next: retail vs port $v0 at 0x80091084 (=a1) histogram plus voice-array population at 0x80090E04. Older: (s4867) Loop bound 0x8014974E is 3 in retail AND port (writer 0x8008F20C, 5 writes each) - the s4866 "bound 2" was wrong. Retail = 703 synth entries : 703 builds : 702 stores, branch 0x80091390 always taken. Port: ~2 synth entries per store; the extra entry takes the FALL path (ring byte 0x801496F0 already advanced by runAiAudioStreamPlaybackLoop 0x8008EE6C), has counter 0 and stores nothing. Next: retail vs port counts of the 0x8008EE6C producer write per synth entry, and which guest thread runs each port entry (r31 is 0 in the port, no ra logging). Residual: retail TAKEN builds average 1.9 incrs, port TAKEN builds 1. Then close M5 and take the rename sweep / VI-640 route wall.
+1. (s4887) The qualified same-build port capture closes the OSTask `data_size` boundary as H-port-cadence: writer/ABI values agree, while port is 1-dominant and retail is 2-dominant. The blind retail `0x80091084` watch remains unusable; do not repeat it. M5 task-family work is closed; next take the generated-symbol renaming sweep / VI-640 route wall.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
 on both arms after removing the observer crash; do not repeat the A/B.)
@@ -572,15 +583,16 @@ resolved (s4755: the tool ran; the old block was false).
    independently reached title/hangar and showed nonzero AI length plus busy
    status. Do not change the status/length shims or repeat this caller probe.
    Select the next M5 contract boundary with a fresh route discriminator.
-0. **M5 task-family retail qualification (s4886):** the independent Rice-route
+0. **M5 task-family retail/port qualification (s4887):** the independent Rice-route
    capture passed the whole-RDRAM control (10,000 writes) and reached hangar
    origin `0x006AB400`. Retail store PC `0x80091784` fired 703 times; 190
    phase-gated type-2 publications at `0x80033FCC` matched sampled writer
    values (176 `data_size=2`, 14 `data_size=1`). The candidate upstream watch
-   `0x80091084` fired zero times, so cadence remains unresolved and this is
-   single-source until port comparison. Next: run the same-build port
-   writer/task capture, then replace the inert upstream watch with the actual
-   counter/loop discriminator.
+   `0x80091084` fired zero times. s4887's corrected same-build port capture
+   passed route-order, SP, hangar, and PCM controls; ABI rows were 3,926
+   size-1, 3 size-2, and 5 size-3, matching the observed writer values.
+   This selects H-port-cadence and closes the boundary; no runtime behavior
+   change is authorized. Do not repeat the blind upstream watch.
 0. **M5 task family (s4860):** the qualified route publishes one stable audio task family (0x80149470, type 2, ucode 0x80099FE0, data_ptr 0x80171CE0 title / 0x80171E70 hangar, data_size mostly 1), joined to 2104 SP completions and 79 nonzero PCM rows; s4854's "rows absent" was a control artifact. s4861 retail oracle (hangar only, control passed): same task 0x80149470 type 2, zero output, data_size 1-2 (retail 194x2/22x1, port mostly 1), data_ptr slot differs (ring slot). Class matches; ratio unexplained (single-source). s4862: retail data_size ratio reproduced (title 572x2/53x1, hangar 188x2/22x1, control passed, port now shares data_ptr slots): retail ~90% size 2, port 1-dominant — a real, unexplained difference (single-source on port side). Next: name the OSTask data_size writer on both sides (see NEXT.md). s4863: data_size = frame-batch counter 0x80149760 (stored at 0x80091784 in musyxSynthFrame, OSTask+0x34); no host-shim writer; likely cadence (single-source static). M5 plan has no step left; BLOCKED for direction. s4870: synth chunk loop bound = AI-ring index (byte 0x801496F0, writer runAiAudioStreamPlaybackLoop 0x8008EE6C) delta per synth entry: retail +2, port +1 (cap hw 0x8014974E=3 never binds). Next: who posts value-1 msgs to queue 0x80149670 and what wakes the synth (single-source retail). s4871: messages per synth entry retail 1.91 (1345/704, control passed) vs port 0.50 (steady, run-lifetime): port wakes synth ~2x per AI-done message. Next: per-entry caller/r31 of 0x8009123C on both sides (two registrations?). s4872: retail single caller 0x80019B74 (VI-retrace callback walk); port retrace walk ~117/s = ~2x VI updates, AI-done ~59/s = 1x VI updates (strict 1,0 alternation) - cadence difference, not two registrations. Next: who posts retrace-queue messages in the port (2/VI?) and the AI-done driver (1/VI vs retail ~2/retrace); join retail VI updates per retrace.
 0. **M5 port-task-load contract:** s4854 found both the port-load control and
    rows absent despite positive title/hangar, SP, action, and PCM controls.

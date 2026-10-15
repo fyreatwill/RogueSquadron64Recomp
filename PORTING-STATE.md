@@ -156824,3 +156824,24 @@ the cadence writer unresolved. It rules out treating the port's 1-dominant
 ratio as a task-publication artifact without a port-side comparison; it does
 not yet select the cause of the retail/port cadence difference. Next is the
 same-build port writer/task capture with a corrected upstream discriminator.
+## Session 4887 (2026-10-14) — qualified port OSTask data_size cadence
+
+Work unit: same-build port capture of the M5 OSTask `data_size` writer and
+publication boundary. The first prescribed launch reached the target route and
+the `s4864` writer control, but omitted the runtime gates for `[audtask-abi]`,
+`[m5-route-order]`, and `[pcm-boundary-*]`; that result was not used for the
+discriminator. The corrected rerun enabled `ROGUESQ_LOG_M5_TASK_CONTRACT=1`,
+`ROGUESQ_LOG_M5_ROUTE_ORDER=1`, `ROGUESQ_LOG_PCM_BOUNDARY=1`, and
+`ROGUESQ_LOG_AUDIO_RETURN=1` in the same binary and completed under SIGKILL.
+
+Positive controls passed: 2,103 SP-complete enter/return rows, 3,934 ABI rows,
+111 PCM source rows, 540 PCM consumer rows, repeated `present-1024` rows, and
+hangar origin `0x006AB400`; no crash or abort marker occurred. Port ABI
+`data_size` counts were 3,926 size-1, 3 size-2, and 5 size-3. The `s4864`
+writer values and ABI values agreed on the observed task publications, while
+retail s4886 independently measured 176 size-2 and 14 size-1 publications.
+This selects H-port-cadence and rejects a same-phase publication mismatch and
+route failure. The retail `0x80091084` watch remains blind and was not used.
+No runtime behavior change was made.
+ORIGIN: diagnostic-only capture; no mitigation or behavior change.
+Next: generated-symbol renaming sweep after M5 closure.
