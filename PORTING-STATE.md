@@ -158314,3 +158314,18 @@ integration hypothesis and rules out the prior “faithful direct call is
 unconsumable” conclusion; the runtime override remains disabled and no game
 behavior changed. The failed undefined-symbol linker attempt is retained as
 the reason the linker-script alias must remain present.
+
+## Session 5023 (2026-10-15) — qualified the normal patch target prerequisite
+
+The prescribed normal `PatchesLib` build was first attempted against the
+existing cache and correctly had no target. A clean CMake reconfigure using
+the available macOS tool locations confirmed why: this host has
+`mips-linux-gnu-as` and `mips-linux-gnu-ld`, but no `mips64-elf-gcc`. CMake
+therefore reported that the patches build was skipped, and the target request
+ended with `No rule to make target PatchesLib`.
+
+This selects the toolchain/configuration blocker rather than a generated
+relocation or symbol failure. It does not invalidate the s5022 ELF-reader fix,
+which remains qualified by the assembly-only path, and no runtime override was
+enabled. The normal artifact test now requires a compatible MIPS GCC
+toolchain; repeating the same build without it cannot discriminate further.

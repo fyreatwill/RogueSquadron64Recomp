@@ -6,6 +6,13 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s5023:** Reconfiguring with the available macOS tools confirmed the normal
+  patch path is omitted because `mips64-elf-gcc` is unavailable; only the MIPS
+  assembler/linker are installed. `PatchesLib` therefore has no CMake target,
+  and the requested build ends with `No rule to make target PatchesLib`. This
+  is a toolchain blocker, not evidence against the s5022 ELF-reader fix; the
+  runtime override remains disabled.
+
 - **s5022:** N64Recomp's ELF reader now treats an absolute linker-defined
   symbol as a game reference symbol when the same name exists in the supplied
   function table. The exact assembly-only `allocateDisplayListBuffer` patch
@@ -250,7 +257,10 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   audit found no remaining candidate satisfying semantic companion mapping,
   live caller, and exact-span gates. Reopen only with a new generated snapshot
   or companion mapping source.
-- M3 patch-runtime qualification remains blocked on the MIPS GCC/LD toolchain.
+- M3 patch-runtime qualification remains blocked on the MIPS GCC toolchain.
+  s5023 independently confirmed that CMake omits `PatchesLib` when GCC is
+  absent; the available assembler/linker are sufficient only for the
+  assembly-only artifact.
 
 ## Superseded conclusions
 
@@ -307,7 +317,17 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s5022 (top):** The exact-span assembly now passes N64Recomp after the ELF
+**s5023 (top):** The normal `PatchesLib` target is not present after a clean
+reconfigure because `mips64-elf-gcc` is unavailable on this host; only
+`mips-linux-gnu-as/ld` are installed. The patch-runtime qualification is
+blocked until a MIPS GCC toolchain is supplied. Do not substitute the
+assembly-only artifact for this test or enable the override. Once GCC is
+available, rerun `cmake -S . -B build -DMIPS_TOOLCHAIN_DIR=<toolchain>`, then
+`cmake --build build --target PatchesLib -j2`; successful generation and
+compilation selects the normal-path hypothesis, while a generated relocation
+failure selects the residual-artifact hypothesis.
+
+**s5022:** The exact-span assembly now passes N64Recomp after the ELF
 reader integration fix for absolute linker aliases that match game reference
 symbols. The next bounded unit is to build the normal patch pipeline with the
 C implementation excluded only for this validation, confirm the generated
