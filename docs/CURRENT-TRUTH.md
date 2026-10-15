@@ -6,7 +6,18 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4892)
+## Headline (as of s4893)
+
+- **s4893:** the fresh callback-teardown reachability capture selected H1 at
+  route level. `shutdownAudioEngine` entry fired 9 times across phases 2–5;
+  callback-table tracing recorded 12 deregistration enter/exit pairs, while
+  independent controls reached title and hangar, 1,271 phase-5 SP returns,
+  94 nonzero PCM-source rows, and 524 PCM consumer/audio-return rows with no
+  crash or abort. The `s4782-shut` helper emitted `shutdownMusyXVoices` but no
+  `shutdownAudioEngine` row, so direct function-return evidence is an
+  instrumentation gap rather than a non-return. H2 is rejected and H3 is not
+  supported; the exact shutdown return boundary remains open. See
+  `docs/M5-S4893-CALLBACK-TEARDOWN-REACHABILITY.md`.
 
 - **s4892:** the same-build A12 default-yield versus rollback validation was
   qualified. Both arms reached VI 640, title, and hangar, with 64 SP
@@ -407,6 +418,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Current state (durable)
 
+- **M5 callback teardown reachability (s4893):** the qualified route reached
+  `shutdownAudioEngine` 9 times and recorded 12 callback-table deregistration
+  pairs, then continued through title/hangar with phase-5 SP, nonzero PCM,
+  consumer, and audio-return controls and no crash/abort. This selects H1 at
+  route level and rejects H2/H3. The `s4782-shut` helper did not emit the
+  expected `shutdownAudioEngine` row even though its `s4771-cb` entry probe
+  did, so a direct function-return marker is still needed.
+
 - **M5 first-teardown deregistration (s4890):** a same-build default/rollback
   capture selected the bounded one-shot change. When gate `0` reapply saw an
   existing legitimate `0x8009123C`, default deregistered it once; rollback did
@@ -596,10 +615,17 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-0. **M5 callback teardown follow-up:** with s4891's dedup default retired and
-   s4890's first-teardown fix retained, select the next unqualified M5 callback
-   teardown boundary using a fresh phase-gated positive control. Do not remove
-   the rollback env arm or repeat the completed dedup A/B.
+0. **M5 shutdown return boundary:** add a regeneration-replayable,
+   phase-scoped post-body/return marker for `shutdownAudioEngine`, preserving
+   the existing `s4771-cb` entry and `s4700-cb` table probes. Run one qualified
+   capture with title/hangar, SP, PCM, audio-return, and crash/abort controls.
+   Competing hypotheses are: H1 the helper is only misbound and a direct return
+   row appears after teardown; H2 the function reaches an internal non-return
+   path and no return row appears despite downstream work; H3 the marker is
+   placed on an unreachable/generated path and remains absent while the
+   positive controls pass. The discriminator is ordered entry -> table
+   deregistration -> direct return rows in the same phase-gated run. Keep
+   `HYPOTHESIS-ID: m5-shutdownaudio-return-boundary`.
 
 1. **M5 double synth walk (s4874-s4875, closed by s4890):** the port's
    duplicate callback origin was the gate-zero first-teardown gap. s4890's

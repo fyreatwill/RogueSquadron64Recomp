@@ -156972,3 +156972,29 @@ was mitigation-shaped; only its default was retired after the named writer and
 ordering evidence were qualified.
 Next: validate the A12 default-yield versus explicit rollback arms with the
 producer arm/clear, wait-return, task/SP, slot, PCM, and route controls.
+
+## Session 4893 (2026-10-14) — qualified callback teardown reachability
+
+Work unit: rebuilt the Debug target and ran one phase-gated callback-teardown
+capture on the qualified real-audio/LLE/ungated/solo/spin-yield route. The
+first capture omitted the existing PCM control; the fixed same-build capture
+enabled it and supplied the result used here.
+
+The route passed independent controls: title VI 1024, hangar VI 512, 1,271
+phase-5 SP completion returns, 94 nonzero PCM-source rows, 524 PCM consumer
+rows, and 524 audio-return rows. No crash or abort marker occurred. The
+`s4771-cb` entry probe recorded 9 `shutdownAudioEngine` entries across phases
+2–5. The callback-table trace recorded 12 deregistration enter/exit pairs,
+including the `0x8009123C` synth callback. This selects H1 at route level:
+the teardown boundary is reached, deregistration occurs, and downstream work
+continues. It rules out H2 route absence and H3's missing deregistration or
+non-return explanation on this covered route.
+
+The `s4782-shut` helper emitted a `shutdownMusyXVoices` row but no
+`shutdownAudioEngine` row despite the `s4771-cb` entry rows. Direct function
+return is therefore an instrumentation gap, not a selected non-return. The
+next unit adds a regeneration-replayable return marker. See
+`docs/M5-S4893-CALLBACK-TEARDOWN-REACHABILITY.md`.
+
+ORIGIN: diagnostic-only generated entry/table/PCM probes and existing route
+controls. No callback-table, teardown, or audio behavior changed.
