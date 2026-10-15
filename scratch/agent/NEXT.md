@@ -1,13 +1,11 @@
-# Resume checkpoint
+# Next work unit
 
-The s4990 caller-boundary work unit already ran; do not rerun it in this
-checkpoint. The build succeeded and the phase-gated recipe was route-qualified:
-title, hangar, both mission origins, `ctl_arm=1`, `s4579A=9`, PCM-positive
-rows=149, crash=0, and abort=0. The new fields fired on four bad rows, but all
-four were at origins `0x644D00`/`0x6A2900`; the mission-origin s4987 rows stayed
-current at `20/0x8018C720`. The run-lifetime cap therefore prevented the
-required same-origin join. No hypothesis was selected and no mitigation was
-added.
+The s4990 caller-boundary work unit is complete but unevaluable; this retry did
+not rerun it. The retained build/run was route-qualified: title, hangar, both
+mission origins, `ctl_arm=1`, `s4579A=9`, PCM-positive rows=149, crash=0, and
+abort=0. Four capped bad rows fired only at `0x644D00`/`0x6A2900`; mission
+publication/observation rows remained current at `20/0x8018C720`. No hypothesis
+was selected and no mitigation was added.
 
 # Next work unit
 
@@ -46,4 +44,5 @@ Exact commands:
 The discriminating result requires a mission-origin bad row joined to a
 same-origin s4987 row: stale caller state selects H-propagation or an
 uninstrumented reader; current caller state selects H-classifier; no such row
-is unevaluable.
+is unevaluable. Do not rerun the prior capped arm; apply the per-origin reset,
+build once, and run the preserved recipe.

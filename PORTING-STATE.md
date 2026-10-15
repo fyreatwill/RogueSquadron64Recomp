@@ -157993,3 +157993,17 @@ is unchanged: reset only the bad-row budget on each committed origin and rerun
 the preserved route recipe. No guard, rewrite, lock, or other mitigation was
 added. ORIGIN: `allocateSongChannelArray` is the legitimate writer; the
 caller-boundary defect remains unexplained.
+
+## Session 4992 (2026-10-15) — closed retry checkpoint without rerunning the discriminator
+
+This retry honored the checkpoint-closeout instruction and did not rerun the
+s4990 experiment. The retained artifact still shows a successful build and a
+route-qualified run: title, hangar, both mission origins, allocator and PCM
+positive controls, crash=0, and abort=0. The caller-boundary positive control
+fired, but its four run-lifetime-capped bad rows were confined to origins
+`0x644D00` and `0x6A2900`; the mission-origin publication/observation rows
+remained current at `20/0x8018C720`. Thus no same-origin join exists and none
+of H-propagation, H-uninstrumented-reader, or H-classifier is selected. The
+next work unit remains a per-origin bad-row budget reset, with no guard,
+rewrite, lock, or other mitigation. ORIGIN: `allocateSongChannelArray` is the
+legitimate writer; the caller-boundary defect remains unexplained.
