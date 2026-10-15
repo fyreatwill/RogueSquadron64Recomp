@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: guest-2vi-wait
 
-s4918: producer parks iff slot 5 present and byte +6 (retraces since 4->5 flip) < byte +7 - 1. Port hangar: +6=0 at producer entry in 2,424/2,424 parks, +7=02. Retail sample (48 rows) shows +6>=2 but was NOT hangar-gated (peek cap = first 48 hits, tools/apply_s4916_slot_peek.py:31).
-Hypotheses: H-port-reenters-early (port gfx thread returns to producer <1 retrace after flip; retail >=2), H-retail-counter-differs (retail +6 is bumped elsewhere / reset not on 4->5), H-sample-artifact (retail hangar also shows +6=0).
-ONE change: make the oracle slot-peek phase-gated (only count hits once --pc-phase-log phase armed, cap 2000), rerun s4918r_oracle_producer_peek.sh with a longer hangar window (more --press / secs 90; check phase-arm rows >0 as the control), tabulate +6 and +7 at 0x8001BCE4. Outcome: hangar +6>=1 => port gfx thread is too fast (look at what paces it: waitOnVideoQueue/task completion); +6=0 => retail also parks, contradiction with 60 swaps/s, re-decode.
+s4919: retail hangar producer entry (0x8001BCE4) never parks (+6=2/3 >= +7-1=1 in 64/64, gated); port parks with +6=0 in 2,424/2,424. Open: what delays retail's producer re-entry by >=2 retraces after the 4->5 flip (0x800199DC).
+Hypotheses: H-retail-gfx-slow (retail gfx thread blocked on RSP/RDP task completion; port HLE completes instantly so port producer arrives early and parks on retrace = natural pacing, likely benign), H-port-flip-early (port does the 4->5 flip too early relative to display), H-retrace-rate (retail 0x80019948 runs >60/s or double-counts).
+ONE change: oracle count of 0x80019948 (retrace increment) and 0x800199DC (flip) and 0x8001BCE4 (producer entry), hangar-gated, 60 s, whole-RDRAM control; compute retraces between flip and next producer entry in retail and the event the gfx thread waits on. Compare with port bProd-entry/flip marks (s4918 log). Outcome: retail >=2 and port 0 with port gfx tasks completing instantly => park is benign pacing, close thread; retail ~0 on counter but +6 reads 2 => counter semantics differ, re-decode.
 If stalled, resume the M5 audio plan.
