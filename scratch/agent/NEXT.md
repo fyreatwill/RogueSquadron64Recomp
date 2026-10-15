@@ -1,33 +1,28 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-retail-writer-target
+HYPOTHESIS-ID: m5-retail-writer-store-attribution
 
-Run one bounded retail-only writer-context capture. s4934 passed the
-whole-RDRAM and VI controls and found writer `0x80091784` at both mission
-origins, but the old `0x80033FCC` task-entry watch remained zero. Capture the
-writer's register/field context at hangar `0x006AB400`, first mission
-`0x00690400`, and following mission `0x00620400`. Do not change runtime
-behavior.
+Run one bounded retail-only store-site capture around `0x80091784`. s4935
+passed the whole-RDRAM and VI controls, but its stable auxiliary context and
+zero independent type-2 task rows select H-auxiliary-writer. Identify the
+physical destination and source register/value for phase-gated stores in
+hangar `0x006AB400`, first mission `0x00690400`, and following mission
+`0x00620400`. Do not change runtime behavior.
 
 Competing hypotheses and discriminator:
 
-1. H-task-writer: mission-phase field rows expose a stable task-like pointer
-   and changing task/value fields, so `0x80091784` is the publication boundary.
-2. H-auxiliary-writer: mission-phase rows expose stable non-task context or
-   cadence fields, so the writer is related but not the OSTask publisher.
-3. H-capture-invalid: whole-RDRAM or VI controls fail, so field nulls are not
+1. H-task-store: a phase-gated store in the `0x80091784` neighborhood writes
+   an OSTask field or task-adjacent publication value.
+2. H-auxiliary-store: the stores target an auxiliary table/cadence field and
+   never an OSTask-shaped destination.
+3. H-capture-invalid: whole-RDRAM or VI controls fail, so store nulls are not
    interpretable.
 
-The discriminating measurement is the bounded `--pc-field-dump` table at
-`0x80091784`: compare `s0`, `s1`, `MEM_W(s0+0x60)`, `MEM_BU(s0+0x22)`, `$v0`,
-and `MEM_HU(s1+0x22)` by the three 512-wide origins. A task-like mission row
-selects H-task-writer; stable auxiliary context selects H-auxiliary-writer; a
-failed control selects H-capture-invalid.
-
-Run:
-
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 240 --vi-poll --vi-trace --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,56:start,66:start,76:start,86:start,96:start,106:start,116:start,126:start,136:start,146:start,156:start,166:start --watch-write 0x0:0x800000 --pc-phase-log-width 0x6AB400:512 --watch-pc 0x80091784 --pc-field-dump 0x80091784 --pc-task-dump 0x80033FCC --pc-task-type 2`
-
-Inspect only bounded controls and field/task rows grouped by origin. No
-mitigation is authorized from a null, mismatch, or wild value without naming
-the writer and proving the value illegitimate.
+The discriminating measurement is the bounded phase-gated store-field table
+for the writer's exact store sites, joined to `--watch-pc 0x80091784` and
+`--pc-task-dump 0x80033FCC --pc-task-type 2`. A task-adjacent destination
+selects H-task-store; stable auxiliary destinations select H-auxiliary-store;
+a failed control selects H-capture-invalid. Use the same 240-second recipe,
+with `--watch-pc-range 0x80091600:0x80091840` and the oracle's
+`--store-field-dump` option once exact store PCs are enumerated from the range
+output.

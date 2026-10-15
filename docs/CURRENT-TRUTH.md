@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4934; compacted s4898)
+## Headline (as of s4935; compacted s4898)
+
+- **Latest (s4935):** the bounded retail writer-context capture passed the
+  whole-RDRAM and VI controls; `0x80091784` executed `12,077` times across
+  the qualified 512-wide route, while the independent type-2 task decoder at
+  `0x80033FCC` remained `0/8192`. The writer retained auxiliary context
+  (`s0=0x80149470`, rotating small `s1`, mission `a1=0x142/a2=2`) rather than
+  an OSTask-shaped field set. This selects H-auxiliary-writer, single-source;
+  identify its store target next. No mitigation is authorized. See
+  `docs/M5-S4935-RETAIL-WRITER-CONTEXT.md`.
 
 - **Latest (s4934):** the bounded retail writer-attribution capture passed the
   whole-RDRAM and VI controls, then recorded writer `0x80091784` at both
@@ -175,6 +184,16 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   remained zero. This selects a writer-attribution boundary over a retail
   publication null, but is single-source for the writer's target and does not
   authorize a mitigation. See `docs/M5-S4934-RETAIL-WRITER-ATTRIBUTION.md`.
+
+- **M5 retail writer context (s4935):** the independent retail oracle passed
+  whole-RDRAM and VI controls and recorded 12,077 executions of `0x80091784`
+  across the qualified 512-wide route. Its field context retained
+  `s0=0x80149470` with rotating small `s1` selectors and mission values
+  `a1=0x142/a2=2`; the independent type-2 decoder at `0x80033FCC` reported
+  `rows=0/8192`, `phase_hits=0`, and no type-2 rows. This selects an
+  auxiliary writer, not the OSTask publication boundary, and remains
+  single-source. No mitigation or value filter is authorized. See
+  `docs/M5-S4935-RETAIL-WRITER-CONTEXT.md`.
 
 - **M5 retail parity join (s4931):** the independent oracle was instrumented
   correctly and reached the 512-wide hangar route, with 11,629 whole-RDRAM
@@ -405,6 +424,11 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Superseded conclusions to avoid repeating
 
+- **s4934 writer-attribution interpretation:** `0x80091784` remains a real
+  mission-phase writer, but s4935's independent task decoder and field context
+  refine the result to H-auxiliary-writer. Do not call it an OSTask publisher
+  until a store-site capture identifies a task-adjacent destination.
+
 - **s4893's claim that the qualified route reached `shutdownAudioEngine`** is
   superseded by s4894. It was believable because the shared `[s4771-cb]`
   helper emitted seven/nine rows alongside deregistration and downstream
@@ -449,14 +473,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4934) Identify the retail writer target/context:** run one bounded
-  retail oracle capture with `--pc-field-dump 0x80091784`, retaining the
-  whole-RDRAM and VI controls and the three 512-wide origin buckets. Compare
-  the writer's `s0`, `s1`, `MEM_W(s0+0x60)`, `MEM_BU(s0+0x22)`, `$v0`, and
-  `MEM_HU(s1+0x22)` rows at hangar and both mission origins. A stable task-like
-  pointer/value at mission origins selects a writer-to-OSTask path; stable
-  non-task context selects a cadence/auxiliary writer; a failed control makes
-  the capture invalid. Do not add a mitigation.
+- **(s4935) Attribute the auxiliary writer's store:** run one bounded retail
+  store-site capture around `0x80091784`, using phase-gated store-field
+  instrumentation and the same whole-RDRAM/VI controls. Identify the physical
+  destination and source register/value for the writer in hangar,
+  `0x00690400`, and `0x00620400`; compare it with the OSTask decoder. Do not
+  filter or rewrite the value.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 

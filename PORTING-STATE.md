@@ -157468,3 +157468,16 @@ valid.
 
 ORIGIN: no runtime or game-behavior change; this iteration added only the
 bounded oracle result note and the next-probe documentation.
+## Session 4935 (2026-10-14) — retail writer context selects auxiliary state
+
+Ran the bounded retail-only writer-context capture with whole-RDRAM and VI
+controls, `--watch-pc 0x80091784`, `--pc-field-dump 0x80091784`, and the
+independent type-2 task decoder at `0x80033FCC`. The oracle exited 0; controls
+were positive, the writer executed 12,077 times across the qualified 512-wide
+route, and mission origins `0x00690400` and `0x00620400` were observed. The
+writer retained `s0=0x80149470`, rotating small `s1` selectors, and mission
+`a1=0x142/a2=2`, while the task decoder reported `rows=0/8192`,
+`phase_hits=0`, and no type-2 rows. This selects H-auxiliary-writer over
+H-task-writer for this capture and rules out treating `0x80091784` as a proven
+OSTask publication boundary. It does not identify the ultimate store target;
+the next unit is store-site attribution. No mitigation was added.
