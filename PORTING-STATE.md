@@ -157674,3 +157674,7 @@ No behavior change. ORIGIN: n/a (no mitigation).
 
 ## Session 4947 (2026-10-14) — s4944 flip-gap closed: both arms have identical [phase] transition sequences
 Offline count of `^[phase] vi_width` lines in scratch/agent/s4944_aux_ab/{image,silent}.log: 6 per arm, same six origins (0x0, 0x280, 0x66xxxx, 0x690400, 0x696100, 0x790400). The "49 vs 512 flips" gap was the per-flip witness-cap artifact (s4945) plus origin= line counting (~370k matches), not a real difference. Aux-store A/B thread (m5-aux-store-ab) is CLOSED: arms indistinguishable on phase transitions, pacing (s4946), and rows/flip (s4945). No code changed; offline analysis only.
+
+## Session 4948 (2026-10-14) — no actionable work unit; BLOCKED for a human decision
+
+Step 0: CURRENT-TRUTH 12,337 B, no maintenance. M5 plan steps 0-11 closed (s4947 closed the aux-store A/B thread). M3 idiom classes closed (s4718). The rename sweep is exhausted (s4646: 6 non-batchable placeholders; last callable helper renamed in 99205f73) and a mapping-only edit cannot reset the engineering-change counter. The last 15 titles (s4933-s4947) are M5 retail/port census sessions, not sweep, so the REVISIT clause does not trigger. Retail-entry/M4 boundaries remain unevaluable at the Rice/HLE oracle (no retail mission-entry route; s4844 oracle control confirmed pre-title only). No experiment run, no code changed. Rules out nothing new. See scratch/agent/BLOCKED.md.

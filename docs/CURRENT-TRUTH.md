@@ -189,3 +189,4 @@ notes and `PORTING-STATE.md`. The next iteration must read `scratch/agent/NEXT.m
 and the tail of `scratch/agent/SOAK-RESULTS.md` before acting.
 
 - s4947: aux-store A/B thread closed; arms identical on [phase] transitions (6 each), pacing, rows/flip. Not a lead.
+- s4948: all tiers closed or unevaluable; BLOCKED for owner decision (see scratch/agent/BLOCKED.md).
