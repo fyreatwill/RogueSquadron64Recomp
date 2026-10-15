@@ -442,3 +442,4 @@ See [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) for the evidence archives and [M5
 - s4818: trap/break/syscall/cop0, unaligned/ll-sc/cache (s4820) census closed (docs/M3-S4818-TRAP-CENSUS.md); lvj_checkComplexObjectives syscall proven dead s4819 (data after an immediate return); remaining: M5 passive items
 
 - s4873: port VI thread is the only poster of VI queue 0x80114388 (1/VI; trace 2321 enq vs 2304 update_screen) and posts AI-done 1/VI by design; synth entries still 2.0 per VI message (strict 1,0). AI_EVENT_HZ=115 doubles msgs (control) but not synth entries. Doubling is inside the guest retrace handler / recv shim. Next: log osRecvMesg returns (calls at 0x800198F4/0x80019928) per walk.
+- (s4923) Mission-longevity driver (scratch/agent/s4923_mission_longevity.sh) did not find hangar origin 0x006AB400; 512/0x00690400 appeared unprompted at ~97 s; 240 s alive, 0 crashes (single run). Fix gate before retrying.

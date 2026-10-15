@@ -2,10 +2,6 @@
 
 HYPOTHESIS-ID: m5-audio-destub
 
-s4922: 3/3 concurrent runs alive 300 s through title+hangar, 0 crashes/guard fires, counter advancing. Mission phase NOT reached (autopilot cannot enter a mission).
-
-Next unit: mission-phase longevity, N=1 at a time (winctl keys are per-keyboard).
-- Run scratch/agent/s4796_hangar_gated_mission_2c.sh (reaches origin 0x00690400), then extend: hold 120 s after mission entry, sampling update_screen counter every 10 s.
-Hypotheses: H-stable (alive, counter advancing, no CRASH/ABORT), H-mission-crash (read fault symbol, name the writer per iron rule 11), H-mission-stall (counter static >=10 s; take `sample`).
-Positive control: mission origin 0x00690400 appears in log.
-If H-stable: go BLOCKED asking "which user-visible goal (mission playability, 60 Hz pacing, audio fidelity) should the loop target next?"
+s4923: s4796-style driver gated on origin 0x006AB400, never seen; unprompted 512/0x00690400 phase at ~97 s; alive 240 s, 0 crashes, vi-fs stalled=1 at end.
+Next: fix the driver gate to key on the 512-wide phase (any origin) as the press trigger, then press start/a and watch for a post-key phase change; N=1 run, sample counter every 10 s. Compare 512-phase origin across 3 runs first (are 0x00690400/0x006AB400 stable labels?).
+Positive control: a VI phase change within 30 s of key presses.
