@@ -23,6 +23,11 @@ order/value transitions; H-independent-global requires a reproducible mismatch;
 H-unresolved is the only result if any control or destination is absent.
 
 Before building, locate the existing phase-gated oracle and port join scripts
-with `rg -n "4936|80149702|80149988|800A1778|PROBE_PHASE_WIDTH" tools
-scratch/agent`; batch all three destination arms into one build/run. No soak
-is authorized until the positive-control table is specified.
+with:
+
+    rg -n "4936|80149702|80149988|800A1778|PROBE_PHASE_WIDTH" tools scratch/agent
+
+Batch all three destination arms into one build/run. The positive-control table
+must contain whole-RDRAM writes, VI transitions, port `musyxSynthFrame` rows,
+and port `aspTask=0x80149470` rows before any destination null is interpreted.
+No soak is authorized until that table is specified.

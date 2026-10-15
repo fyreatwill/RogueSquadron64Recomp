@@ -157524,3 +157524,13 @@ is a phase-gated retail/port value-and-order join for all three destinations.
 
 ORIGIN: static ownership evidence; all store values remain legitimate and no
 corruption mitigation was added.
+
+## Session 4938 (2026-10-14) — compacted current truth and normalized backlog
+
+The maintenance check measured `docs/CURRENT-TRUTH.md` at 60,878 bytes, so no
+experiment was run. The document was compacted to 8,056 bytes / 136 lines,
+removing duplicated headline and colliding backlog sections while retaining the
+active s4937 auxiliary-field join, durable M5/M3 conclusions, superseded
+interpretations, operating rules, and links to the detailed evidence archive.
+The backlog is now one monotonic sequence. This rules out neither arm of the
+next experiment; it only makes the documented active discriminator unambiguous.
