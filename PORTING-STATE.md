@@ -158294,3 +158294,23 @@ rules out relocation/toolchain failure for the covered operations, but does
 not establish exact original control flow or authorize enabling the override.
 The next discriminator is a recovered/generated instruction window for
 `0x80007D74..0x80007E58`; absent that source, this route remains blocked.
+
+## Session 5022 (2026-10-15) — preserved direct allocator call through ELF reference resolution
+
+The exact-span assembly build initially exposed a linker limitation when the
+game call was left undefined: the direct MIPS-26 relocation could not be
+resolved. The bounded integration fix was in N64Recomp's ELF reader: when an
+absolute linker-defined relocation name also exists in the supplied game
+reference-symbol table, it is retained as a reference-symbol relocation
+instead of being treated as an unresolvable absolute call. The nested
+submodule patch was exported to `submodule-patches/N64Recomp-nested.patch`.
+
+With the fix, the Homebrew MIPS assembler/linker produced an ELF whose
+`.recomp_patch` section is exactly `0xE8` bytes at `0x80801000`, and
+`build/N64Recomp patches.toml` exited 0. The generated host C contains the
+named direct call `findAndUnlinkSmallestEntry(rdram, ctx)` and the
+`allocateDisplayListBuffer` override. This selects the reference-resolution
+integration hypothesis and rules out the prior “faithful direct call is
+unconsumable” conclusion; the runtime override remains disabled and no game
+behavior changed. The failed undefined-symbol linker attempt is retained as
+the reason the linker-script alias must remain present.

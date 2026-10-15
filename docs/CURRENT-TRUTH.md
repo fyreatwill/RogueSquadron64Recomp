@@ -1,10 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5021; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5022; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5022:** N64Recomp's ELF reader now treats an absolute linker-defined
+  symbol as a game reference symbol when the same name exists in the supplied
+  function table. The exact assembly-only `allocateDisplayListBuffer` patch
+  therefore recompiles successfully with its direct
+  `findAndUnlinkSmallestEntry` call and preserves the `0xE8` span. The
+  override remains disabled; no runtime behavior changed.
 
 - **s5021:** The preserved generated snapshot contains the complete
   `allocateDisplayListBuffer` window. The assembly reconstruction now emits
@@ -300,7 +307,14 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s5021 (top):** The recovered generated snapshot and reconstructed assembly
+**s5022 (top):** The exact-span assembly now passes N64Recomp after the ELF
+reader integration fix for absolute linker aliases that match game reference
+symbols. The next bounded unit is to build the normal patch pipeline with the
+C implementation excluded only for this validation, confirm the generated
+host artifact is accepted by the CMake target, and keep the runtime override
+disabled until that artifact-level integration is qualified.
+
+**s5021 (completed):** The recovered generated snapshot and reconstructed assembly
 now agree on the complete `0x80007D74..0x80007E58` window and exact `0xE8`
 span. The remaining bounded unit is an N64Recomp integration fix for the
 faithful direct call to `findAndUnlinkSmallestEntry` at `0x8002221C`; the

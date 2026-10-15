@@ -1,18 +1,22 @@
-# Next work unit: make the faithful allocateDisplayListBuffer assembly consumable
+# Next work unit: qualify the normal patch artifact after reference-symbol fix
 HYPOTHESIS-ID: m3-assembly-patch-pipeline
 
 Competing hypotheses:
 
-1. N64Recomp can consume the exact direct external `jal` after a symbol/config
-   integration correction while retaining the `0xE8` machine-code span.
-2. N64Recomp's external-call resolver cannot consume this faithful form, so a
-   representable exact-span route is unavailable without a tool change.
-3. The recovered generated snapshot is stale or mismatched despite the exact
-   span, which would be exposed by a source/disassembly instruction diff.
+1. The ELF-reader fix is sufficient for the normal patch-generation path; the
+   generated host artifact is accepted by the configured patch target.
+2. The assembly-only path is fixed but the normal CMake patch path has a
+   separate toolchain/configuration blocker.
+3. The generated artifact still exposes a symbol or relocation mismatch that
+   the assembly-only result did not cover.
 
-Discriminating measurement: run the exact-span assembly through `build/N64Recomp
-patches.toml` after the smallest resolver/config change that preserves the
-direct call. Successful host emission with `0xE8` selects H1; the same
-resolver error after a source-backed exact-span diff selects H2; an
-instruction mismatch selects H3. Do not use an indirect call or enable the
-override as a workaround.
+Discriminating measurement: run `cmake --build build --target PatchesLib`
+with the normal patch inputs, then inspect `RecompiledPatches/patches.c` and
+the target result. Successful generation/compilation selects H1; a missing
+MIPS C toolchain or CMake skip selects H2; a generated relocation/symbol
+failure selects H3. Keep the runtime override disabled.
+
+Exact commands:
+
+    cmake --build build --target PatchesLib -j2
+    rg -n 'allocateDisplayListBuffer|findAndUnlinkSmallestEntry' RecompiledPatches/patches.c

@@ -13,8 +13,8 @@ __start = 0x80000000;
 /* (none yet — populate when we need them) */
 
 /* --- Game functions called from patches --------------------------------- */
-/* heap_guards.c calls func_8002221C (alloc helper). Address from
- * syms/rogue_squadron.syms.toml. */
+/* The C patch and assembly use this absolute linker alias; N64Recomp maps the
+ * matching relocation to the game's reference symbol by name. */
 func_8002221C = 0x8002221C;
 findAndUnlinkSmallestEntry = 0x8002221C;
 

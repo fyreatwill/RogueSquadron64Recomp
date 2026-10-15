@@ -18,3 +18,34 @@ index 73f3e73..fcacdcf 100644
  #define LO16(x) \
      ((x) & 0xFFFF)
  
+diff --git a/src/elf.cpp b/src/elf.cpp
+index 4fbd1ce..606c4f0 100644
+--- a/src/elf.cpp
++++ b/src/elf.cpp
+@@ -450,9 +450,23 @@ ELFIO::section* read_sections(N64Recomp::Context& context, ELFIO::section*& mdeb
+                         }
+                     }
+                     else if (rel_symbol_section_index == ELFIO::SHN_ABS) {
+-                        reloc_out.reference_symbol = false;
+-                        reloc_out.target_section = N64Recomp::SectionAbsolute;
+-                        rel_section_vram = 0;
++                        // The patch linker script binds game calls as absolute
++                        // symbols, but a matching reference symbol still carries
++                        // the overlay-aware function identity N64Recomp needs.
++                        N64Recomp::SymbolReference sym_ref;
++                        if (context.find_reference_symbol(rel_symbol_name, sym_ref)) {
++                            reloc_out.reference_symbol = true;
++                            reloc_out.target_section = sym_ref.section_index;
++                            reloc_out.symbol_index = sym_ref.symbol_index;
++                            const auto& reference_symbol = context.get_reference_symbol(reloc_out.target_section, reloc_out.symbol_index);
++                            rel_symbol_offset = reference_symbol.section_offset;
++                            rel_section_vram = 0;
++                        }
++                        else {
++                            reloc_out.reference_symbol = false;
++                            reloc_out.target_section = N64Recomp::SectionAbsolute;
++                            rel_section_vram = 0;
++                        }
+                     }
+                     else {
+                         reloc_out.reference_symbol = false;
