@@ -2,6 +2,10 @@
 
 HYPOTHESIS-ID: m5-retrace-audio-cadence-boundary
 
+(Refreshed s4898 after the maintenance iteration; CURRENT-TRUTH was compacted
+to 33 KB and no experiment ran. The work unit below is unchanged and is still
+the next one to run.)
+
 Instrument one same-build port run at the two `osRecvMesg` callsites named by
 s4873 (`0x800198F4` and `0x80019928`) and join every phase-gated return to the
 retrace queue `0x80114388`, the audio-done queue `0x80149670`, and the next
