@@ -157100,3 +157100,5 @@ Built one instrument (`tools/apply_s4899_cadence_join.py`, registered in the ven
 
 ORIGIN: read-only counters; no runtime behavior changed. Writer of the extra synth entry = the viRetraceHandler chain (recv1 return), legitimately delivered.
 
+
+Discrimination (s4899): selects H-retrace-driven-1to1 (synth entry follows each retrace-queue return); refutes H-double-synth-per-retrace and H-audio-done-extra-delivery. Next discriminator: retrace returns per VI-origin change, retail (oracle watch-pc 0x8009123C) vs port, same unit, hangar phase; selects between H-retail-also-1 / H-port-half-rate / H-port-burst-pacing (see scratch/agent/NEXT.md).
