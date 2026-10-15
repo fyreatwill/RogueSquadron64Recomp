@@ -158024,3 +158024,18 @@ executed. Next is a bounded sample of ordinary s4540 caller rows at mission
 origins, with no guard, rewrite, lock, or mitigation. ORIGIN:
 `allocateSongChannelArray` remains the legitimate writer; the defect is still
 an unexplained observation/propagation boundary.
+
+## Session 4994 (2026-10-15) — checkpointed missing mission-sample instrument
+
+This retry did not rerun the s4994 discriminator, per the checkpoint-closeout
+instruction. The retained s4993 evidence remains the only result: title,
+hangar, both mission origins, allocator, and PCM controls passed; 2,602 bad
+rows were confined to pre-mission origins, while the s4987 mission observation
+control saw the current `20/0x8018C720` pair. The planned
+`tools/apply_s4994_s4540_mission_sample.py` is absent in this checkout, and no
+s4994 patch, build, or run artifact exists, so none of H-uninstrumented-reader,
+H-classifier-phase, or H-no-sample is selected. The next iteration must resume
+by restoring or authoring that bounded, regeneration-preserved diagnostic and
+then run the already-qualified recipe once. No guard, lock, rewrite, or other
+mitigation was added. ORIGIN: `allocateSongChannelArray` remains the legitimate
+writer; this is still an unexplained observation/propagation boundary.
