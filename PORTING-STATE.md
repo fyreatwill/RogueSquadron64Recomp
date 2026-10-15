@@ -157874,3 +157874,21 @@ out route absence and PI-DMA corruption as explanations for these rows. It
 does not distinguish explicit atomic loads from a lock-compatible handoff;
 that is the next work unit. The earlier overlapping launch was discarded as
 invalid and its process was SIGKILLed.
+
+## Session 4984 (2026-10-15) — atomic voice-pair loads/stores do not close stale-base pair
+
+Implemented `tools/apply_s4984_atomic_voice_pair.py` and registered it in the
+vendored fixup replay. The writer now release-stores the legitimate guest base
+and count, and `musyxMixActiveVoices` acquire-loads those exact guest locations;
+the prior diagnostics and replay preservation remain intact. The Debug build
+completed successfully.
+
+The one armed, phase-gated mission soak reached mission at 176 s. Positive
+controls passed (`ctl_arm=1`, `s4579A=9`), PCM was nonzero (147 rows), and the
+run had `pidma=0`, `crash=0`, and `abort=0`. The stale-pair discriminator still
+produced 8 `kind=bad` rows, each showing legitimate `count=32`, old
+`base=0x801714D0`, and index 30. This refutes the tested atomic-observation
+variant and leaves a lock-compatible handoff as the next work unit. No guard,
+skip, filter, or value rewrite was added.
+ORIGIN: writer = guest `allocateSongChannelArray`; count 32 and base are
+legitimate, so this remains synchronization work rather than mitigation.
