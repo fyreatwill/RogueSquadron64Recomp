@@ -157602,3 +157602,19 @@ or port instrument was added.
 ORIGIN: the retail guest store at `0x800917C4` writes the legitimate MusyX
 double-buffer toggle byte; the observed value is legitimate state, not a
 corruption defect.
+## Session 4942 (2026-10-14) — A1 auxiliary-store A/B failed the route positive control
+
+Planned work unit: same-build real-image versus `musyx_stub` A/B for the
+task-to-`musyxSynthFrame` auxiliary-store boundary, using the existing s4938
+store witness and title/hangar phase controls. Added
+`scratch/agent/s4942_m5_aux_ab.sh`, built `RogueSquadron64Recomp`, and ran the
+two arms concurrently. The first wrapper used the old LLE recipe and both arms
+stopped at VI-640 (`0x0066A500`). The fixed window-controlled retry and then a
+no-LLE Rice/HLE retry also reached only VI-640 in both arms; processes were
+terminated with SIGKILL. No title/hangar control fired, so auxiliary, PCM, and
+task-contract nulls are unevaluable and no A1 hypothesis is selected.
+
+This rules out interpreting the A1 table from this run as a contract result. It
+does not rule out H-contract-gap, H-route-only, or H-rollback-specific. The
+next work unit is a single-arm route qualification with the verified driver;
+repeat the A/B only after title and hangar controls fire.

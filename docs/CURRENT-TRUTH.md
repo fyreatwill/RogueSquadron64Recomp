@@ -1,7 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4941; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4942; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
@@ -20,6 +20,11 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   the port arm produced 256 capped title rows. The join is unresolved because
   the missing retail destination may be an oracle watch boundary. No value
   rewrite or filter was added.
+- **s4942:** The same-build image/silent auxiliary-store A/B was unevaluable on
+  this checkout: both the old LLE recipe and a no-LLE Rice/HLE retry reached
+  VI-640 (`0x0066A500`) but neither reached title or hangar. The task, PCM,
+  and auxiliary rows therefore select no A1 hypothesis. The route wrapper and
+  rebuilt binary are retained for a route-qualified retry.
 - **s4937:** Static ownership lookup identifies `0x80149702` as the MusyX
   double-buffer toggle and `0x80149988/8A` as synth output/countdown state.
   `0x800A1778` has no named companion symbol; its only current reference is
@@ -151,16 +156,20 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
    rows identified the legitimate `0x800917C4` store in title and hangar;
    exact odd-byte watch nulls are closed as a boundary artifact. Do not add a
    rewrite, filter, or port instrument for this field.
-3. **Next:** execute the next named M5 contract edge from
-   `docs/M5-AUDIO-PLAN.md` with one same-build validation arm and its rollback
-   arm. Before changing behavior, choose a writer/consumer boundary whose
-   positive control can reach title and hangar and whose outcome distinguishes
-   a real contract gap from route-only progress.
-4. Revisit M3 only as a complete idiom-class audit with a new discriminator;
+3. **Next:** qualify the local port route with one production image arm using
+   the verified window-controlled Rice/HLE driver, recording title/hangar
+   controls before attempting the A1 auxiliary-store image/silent A/B again.
+   The s4942 A/B is unevaluable until that positive control fires.
+4. Execute the next named M5 contract edge from `docs/M5-AUDIO-PLAN.md` with
+   one same-build validation arm and its rollback arm. Before changing
+   behavior, choose a writer/consumer boundary whose positive control can
+   reach title and hangar and whose outcome distinguishes a real contract gap
+   from route-only progress.
+5. Revisit M3 only as a complete idiom-class audit with a new discriminator;
    conditional-move recompiler support is a separate engineering task.
-5. Revisit external retail-entry or M4 only with a genuinely new oracle route,
+6. Revisit external retail-entry or M4 only with a genuinely new oracle route,
    PC, or RSP witness; otherwise keep them parked.
-6. Resume symbol renaming only after the required last-15-session preflight
+7. Resume symbol renaming only after the required last-15-session preflight
    shows it is not a REVISIT and a new mapping source exists.
 
 ## Evidence index
