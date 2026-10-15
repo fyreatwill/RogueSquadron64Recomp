@@ -2644,6 +2644,27 @@ if is_main_ucode and SOURCE_AUDIT_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 10b (s5005): task-end accumulator witness. Retail baseline (s5004, cxd4
+# LLE) is 0/576 hangar gfx tasks ending with a 0x8000 VACC lane; this logs the
+# port's acch/accm/accl at the same two main-ucode exits (natural=1, iter-cap=2)
+# so the end-of-task comparison is like-for-like. Observational only.
+# ORIGIN: no mitigation; instrument for the M4 accumulator-origin question.
+# ---------------------------------------------------------------------------
+END_ACC_MARKER = "/* fixup: task-end accumulator witness */"
+if is_main_ucode and END_ACC_MARKER not in text and SOURCE_AUDIT_MARKER in text:
+    text, n_decl = re.subn(
+        r"(extern \"C\" void rs64_e9prov_source_end[^\n]*\n)",
+        lambda m: m.group(1) + 'extern "C" void rs64_m4_end_probe(void *rsp, uint32_t kind);  ' + END_ACC_MARKER + "\n",
+        text, count=1)
+    text, n_end = re.subn(
+        r"( *)(rs64_e9prov_source_end\(r17, ([12])\);  " + re.escape(SOURCE_AUDIT_MARKER) + r"\n)",
+        lambda m: m.group(1) + "rs64_m4_end_probe(&rsp, " + m.group(3) + ");  " + END_ACC_MARKER + "\n" + m.group(1) + m.group(2),
+        text)
+    if n_decl != 1 or n_end != 2:
+        print(f"fixup_factor5_ucode: FIXUP 10b ANCHOR FAILED (decl={n_decl}, exits={n_end}).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 # Fixup 11: EndDL/unwind audit (s687, item -421).
 #
 # The source audit established that the phase-latched cap tasks fetch 16K

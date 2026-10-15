@@ -368,8 +368,13 @@ preflight.
    passed all controls (6536 records = 2089 gfx + 4447 audio; gfx count equals
    2089 rdp rows; VACC non-zero in 5603; VI 1024 and 512@0x6ab800 reached).
    s5004 retail baseline: 0/576 hangar gfx tasks end with any VACC lane == 0x8000 (also 0 in every other phase); refutes retail-also-saturates, single-source until the port side is compared.
-   **NEXT: offline compare** of gfx-task VACC/DMEM records against the port's
-   accumulator/stage rows (phase-gated on the VI 1024->512 transition).
+   **s5005 CLOSED (two-source):** the port's task-end accumulator (`ROGUESQ_LOG_M4_END`,
+   fixup 10b, `tools/m4_end_table.py`) at hangar 512 (phase ord 5) is 0/1955 tasks with
+   any 0x8000 lane, nz>0 in 1955/1955 (positive control) - same as retail 0/576. The
+   end-of-task accumulator is NOT the carrier of the hangar Y=0x8000; M4 accumulator
+   thread closed at task-end granularity (mid-task not examined). Residual lead: port
+   640 phase (ord 3) has 8/1281 tasks with an accl 0x8000 lane vs retail 640 0/425
+   (likely a legitimate 48-bit value; unclassified). Capture: scratch/agent/s5005_port_end_acc.sh.
 5. Revisit M3 only as a complete idiom-class audit with a new discriminator;
    conditional-move recompiler support is a separate engineering task.
 6. Revisit external retail-entry only with a recipe that reaches the qualified

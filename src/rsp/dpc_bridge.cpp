@@ -489,6 +489,32 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage,
     fflush(stderr);
 }
 
+// s5005: one line per main-ucode gfx task exit with the 24 accumulator lanes'
+// summary, comparable with the cxd4 RSD1 end-of-task VACC dump (s5003/s5004).
+// kind: 1 = natural EndDL exit, 2 = 16384-iteration cap exit.
+extern "C" void rs64_m4_end_probe(void *opaque, uint32_t kind) {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_M4_END");
+        return e && *e && *e != '0';
+    }();
+    if (!enabled) return;
+    auto *rsp = static_cast<RSP *>(opaque);
+    unsigned sat = 0, nz = 0;
+    for (unsigned lane = 0; lane < 8; ++lane) {
+        const uint16_t v[3] = {rsp->vpu.acch.u16(lane), rsp->vpu.accm.u16(lane), rsp->vpu.accl.u16(lane)};
+        for (unsigned i = 0; i < 3; ++i) { sat += v[i] == 0x8000u; nz += v[i] != 0; }
+    }
+    fprintf(stderr, "[m4-end] task=%u phase=%u kind=%u sat8000=%u nz=%u", g_e9prov.task,
+            rs64_phase_ord(), kind, sat, nz);
+    if (sat) {
+        for (unsigned lane = 0; lane < 8; ++lane)
+            fprintf(stderr, " l%u:%04X.%04X.%04X", lane, rsp->vpu.acch.u16(lane),
+                    rsp->vpu.accm.u16(lane), rsp->vpu.accl.u16(lane));
+    }
+    fputc('\n', stderr);
+    fflush(stderr);
+}
+
 static bool m4_src_enabled(uint32_t *cap_out) {
     static const bool enabled = [] {
         const char *e = std::getenv("ROGUESQ_LOG_M4_ACCUM");
