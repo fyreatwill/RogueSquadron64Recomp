@@ -6,442 +6,50 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4897)
+## Headline (as of s4897; compacted s4898)
 
-- **s4897:** the independent Rice retail oracle passed the whole-RDRAM,
-  title, and hangar controls and watched the complete
-  `musyxRenderVoiceSamples` range in one run. The range fired in both title
-  and hangar; the two selected voice `+0x34` writer PCs also fired in both
-  phases, while exact `0x800903F0` remained absent. This selects an internal
-  boundary before the old exact consumer, rejects route absence and a single
-  PC-watch artifact, and authorizes no runtime mitigation. See
-  `docs/M5-S4897-RETAIL-VOICE-RANGE.md`.
-
-- **s4896:** the required generated-symbol sweep preflight found the only two
-  real placeholders again. `func_8000040C` has no companion semantic mapping
-  (the local rename table's inferred `clearMemory16ByteBlocks` is not an
-  independent mapping), despite an exact `0x34` span and two callers.
-  `func_800E9AE0` has the companion's documented false-split placeholder, an
-  exact `0x114` span, and no generated caller. Neither passes all three rename
-  gates, so no rename is authorized; the sweep is parked pending a new mapping
-  source or generated snapshot.
-
-- **s4894:** the shutdown-return marker capture corrected s4893's callback
-  identity. The qualified route passed title/hangar, 758 SP returns, 44 PCM
-  sources, 259 PCM consumers/audio returns, and no crash/abort, but all seven
-  `[s4771-cb]` rows were `kind=1` callback-registration rows: zero `kind=0`
-  `shutdownAudioEngine` entries and zero `kind=2` returns. The marker is in the
-  generated function and compiled, so H3 is selected: the route does not reach
-  `shutdownAudioEngine`; the callback-table deregistration and downstream work
-  do not prove that function ran. See `docs/M5-S4894-SHUTDOWN-RETURN-MARKER.md`.
-
-- **s4893:** the fresh callback-teardown reachability capture selected H1 at
-  route level. `shutdownAudioEngine` entry fired 9 times across phases 2–5;
-  callback-table tracing recorded 12 deregistration enter/exit pairs, while
-  independent controls reached title and hangar, 1,271 phase-5 SP returns,
-  94 nonzero PCM-source rows, and 524 PCM consumer/audio-return rows with no
-  crash or abort. The `s4782-shut` helper emitted `shutdownMusyXVoices` but no
-  `shutdownAudioEngine` row, so direct function-return evidence is an
-  instrumentation gap rather than a non-return. H2 is rejected and H3 is not
-  supported; the exact shutdown return boundary remains open. See
-  `docs/M5-S4893-CALLBACK-TEARDOWN-REACHABILITY.md`.
-
-- **s4892:** the same-build A12 default-yield versus rollback validation was
-  qualified. Both arms reached VI 640, title, and hangar, with 64 SP
-  completions, nonzero PCM source/consumer joins, 40 producer-arm rows, and
-  three wait returns; neither arm recorded a crash or abort. Producer/wait
-  witnesses were 43/43, so the default yield produced no qualified behavioral
-  difference. This selects H2 (A12 behavior-neutral) and authorizes no further
-  A12 change.
-
-- **s4891:** retired the default synth-registration deduplication mitigation in
-  a same-build A/B after s4890's named first-teardown fix. Default-off performed
-  one first-gate-zero deregistration, recorded zero dedup skips, reached
-  title/hangar, and preserved 696 SP-complete and 303 PCM rows with no crash or
-  abort. Rollback dedup-on reached the same controls with 703 SP and 303 PCM;
-  callback-entry counts were 7 versus 13, and snapshots showed the rollback
-  duplicate retained until normal teardown. This selects H1: the named
-  first-teardown fix makes the default dedup redundant. The change is
-  regeneration-replayable; `ROGUESQ_S4875_DEDUP=1` remains a rollback arm.
-
-- **s4890:** the bounded first-teardown deregistration change selected H1 in a
-  same-build A/B. Default performed one extra synth deregistration when the
-  gate-zero reapply saw an existing `0x8009123C`; rollback did not. Both arms
-  reached title/hangar, had 670/676 phase-gated SP completions and 329 PCM
-  rows, and had no crash/abort. Callback snapshots showed default returning to
-  one synth entry before reapply while rollback retained the duplicate until
-  normal teardown. The change is regeneration-replayable and keeps the
-  `ROGUESQ_S4889_FIRST_DEREG=0` rollback arm.
-
-- **s4889:** the M5 double-synth teardown-order discriminator passed both
-  independent controls. Retail passed the 10,000-write whole-RDRAM control,
-  reached title/hangar, and showed wait -> synth deregistration -> reapply in
-  four cycles. The same-build port probe showed the boot teardown at gate `0`
-  skipped synth deregistration, while the next teardown at gate `1` performed
-  it before reapply; the port stalled at VI 640 before title/hangar. This
-  selects the gate-zero first-teardown explanation for the duplicate callback
-  copy, with retail as independent ordering evidence. No behavior change is
-  landed.
-
-- **s4888:** the bounded generated-symbol rename audit found only two remaining
-  placeholder function identifiers. `func_8000040C` has one caller but no
-  companion semantic mapping; `func_800E9AE0` has no caller and is deliberately
-  retained by the companion symbol file because a false `func_800E9B10` reference
-  splits the real function. No rename is authorized; the sweep remains parked
-  until a new generated snapshot or mapping source supplies a candidate meeting
-  all three gates.
-
-- **s4887:** closed the port side of the OSTask `data_size` boundary as
-  H-port-cadence. The corrected same-build capture passed route-order, SP,
-  hangar, and PCM controls: 2,103 SP enter/return rows, 3,934 ABI rows, and
-  nonzero PCM source/consumer rows. Port ABI rows were 3,926 `data_size=1`,
-  3 `data_size=2`, and 5 `data_size=3`; the `s4864` writer and ABI values
-  agree on the observed tasks. Retail s4886 was 176 `data_size=2` and 14
-  `data_size=1` in the qualified sample. This selects a cadence difference,
-  not a publication mismatch or route failure. The initial prescribed run
-  omitted the ABI/route/PCM gates; its corrected rerun supplied them. No
-  runtime behavior change is authorized.
-
-- **s4886:** qualified the retail OSTask `data_size` boundary in one
-  independent Rice-route capture. Whole-RDRAM writes reached 10,000 and
-  hangar VI origin `0x006AB400` was live. The exact retail store at
-  `0x80091784` fired 703 times; 190 phase-gated type-2 task publications
-  sampled at `0x80033FCC` matched its values (176 with `data_size=2`, 14 with
-  `data_size=1`). The candidate upstream watch at `0x80091084` fired zero
-  times. This selects H-retail-known-writer for the observed values and
-  rejects a sampled writer/publication mismatch, but does not identify the
-  cadence writer; the result is single-source until the same-build port
-  comparison and a corrected upstream discriminator.
-
-- **s4885:** audit of other zero-extended register writers in tools/ and src/ found one site (fixup_game_funcs_vendored.py:9205 `r31 = 0x800155EC`, JAL link), proved dead (native call returns via C return). Class closed.
-- **s4884:** zero-extended `ctx->rN = 0x80000000u` substitution idiom (90 generated sites from 3 f-strings in tools/fixup_game_funcs_vendored.py) changed to sign-extended `(gpr)(int32_t)0x80000000u`; matches the s4883 run_1b crash register pattern (base 0x80000000 zero-extended, +4 -> 4 GiB past rdram). Faulting instruction not pinned (lldb denied) = single-source. Soak s4884: 0/16 crashes (s4883 baseline 1/16; not statistically separable).
-- **s4883:** startup SIGSEGV `spTaskSchedulerThread+9632` (si_addr 0x400128d47) NAMED and FIXED. Writer: our own s3293 scheduler-send probe. Generated funcs_4.c:37949 held `MEM_BU(-0X72BC, 0x80130000u)` (zero-extended base); s4229 had fixed the script to `S32(0x80130000u)` but `apply_s3293_scheduler_send_text` returned early on the already-patched marker, so the stale unsafe probe survived every fixup run. Evidence: (1) lldb disassembly shows the constant 0x100128d47 baked into the faulting `ldrb`, line funcs_4.c:37949; (2) generated text lacked S32 while the script had it. Fix: the script now upgrades stale text in place; applied to RecompiledFuncs, rebuilt. Soak (dedup off, 16 runs x 60 s): 0/16 of the old signature (was 1/12 s4882, 2/5 s4880 arm0); 1/16 NEW crash si_addr=0x380000004 guest pc 0x80001b08 (unexplored). Lesson: idempotence markers in fixup scripts must upgrade, not skip.
-
-- **s4859 closed the M5 A16 AI-shim caller boundary.** The independent retail
-  oracle fired its whole-RDRAM positive control at 10,000 callbacks, reached
-  title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and repeatedly
-  sampled nonzero AI length with status `0x40000000`. The same-build image
-  port reached both phases, completed 1,253 SP enter/return pairs, and
-  produced 77 nonzero PCM rows; its AI shim rows were 1,024 `set-next`, zero
-  `get-status`, and zero `get-length`, with the shim control firing once.
-  This selects H-A16-unreached: the status/length shims are not a covered-route
-  PCM explanation. No shim behavior change is authorized.
-
-- **s4858 requalified the M5 A13 drain boundary.** The same-build default-off
-  and `ROGUESQ_DRAIN_INLOOP_TICK=1` arms both reached title/hangar, completed
-  SP work, and produced nonzero PCM. Default-off observed active `0x02` slots,
-  drained to `nz=0`, and returned at 100,000 iterations with no timeout. The
-  tick arm retained 13–16 active `0x02` slots through 700,000+ iterations and
-  did not return before the watchdog kill. The retail oracle independently
-  fired its whole-RDRAM control, title/hangar VI controls, and both status
-  writer PCs `0x8009B7CC`/`0x8009B7EC`. This selects H-A13-default-valid and
-  rules out the in-loop tick as required producer activity for this route; no
-  runtime change is authorized. The recipe summary was stale, so counts were
-  extracted directly from the fresh logs.
-
-- **s4857 qualified the M5 host queue edge.** The same-build default and
-  rollback arms reached title and hangar, with 78/81 phase-5 PCM source rows
-  and 60/62 nonzero rows. Both had zero `[m5-audio-host-error]` rows, 546/549
-  successful queue edges, and consumer joins carrying the matching source
-  hash. This selects H-host-queue-valid and closes the SDL queue boundary;
-  no host-error suppression or consumer-join defect is selected.
-
-- **s4856 made the M5 host queue edge truthful.** `queue_samples` now records
-  the `SDL_QueueAudio` return, reports phase-scoped host failures, and only
-  emits the PCM consumer join after a successful queue. The DEBUG target builds
-  successfully. No runtime route result is claimed yet; the next unit is the
-  phase-gated host/source/consumer validation with this binary.
-
-- **s4855 found the task-contract qualification route-invalid.** The existing
-  image-route harness crashed at `spTaskSchedulerThread+9632` with
-  `si_addr=0x400128d47` during the first 320-wide phase. Title and hangar
-  transitions, task-contract/lifetime rows, and PCM controls were absent; the
-  single early route-order row is not a positive control for the planned
-  phase-5 measurement. This selects neither task-contract legitimacy nor a
-  mismatch. Do not infer a contract defect or repeat the same route unchanged.
-
-- **s4854 found the broader M5 port-task-load control unreached on the same
-  qualified image route.** The single-source run reached title and hangar with
-  1,255 phase-5 SP-complete enter/return rows, 1,255 action-dequeue rows, and
-  10,970 PCM rows, with no crash or abort. Both `m5-port-load-control` and
-  `m5-port-load` rows were absent. This selects H-port-load-unreached for this
-  instrument, not a task-field mismatch; do not repeat this control without a
-  new route discriminator.
-
-- **s4853 found the targeted M5 descriptor control unreached on a qualified
-  image route.** The single-arm descriptor run reached title and hangar, with
-  1,273 phase-5 SP-complete enter/return rows, 1,273 action-dequeue rows, and
-  11,027 PCM rows; it had no crash or abort. The target
-  `0x800377C8` descriptor control, start, compare, and yield rows were all
-  absent. This selects H-descriptor-unreached, not a descriptor-layout defect;
-  do not repeat this exact target without a new route discriminator.
-
-- **s4852 qualified the A10 guard class as legitimate on the covered route.**
-  The corrected same-build default/`ROGUESQ_A10_GUARD_OFF=1` pair reached title
-  and hangar in both arms. The newly enabled route-order control recorded
-  phase-5 `action-dequeue`, `sp-complete-enter`, and `sp-complete-return` rows
-  (512 each per arm), proving the prior SP zero was an instrumentation omission.
-  Both arms had 32 named-writer rows, 262 identical A10 audit/traversal rows,
-  nonzero PCM, and no crash/abort; guard-off produced no qualifying downstream
-  route or traversal difference. This selects H-A10-legitimate and authorizes
-  no guard relaxation. The next M5 unit may move past A10.
-
-- **s4851 invalidated the queued A10 port A/B and its corrected retry.** The
-  queued recipe failed before launch because its root calculation resolved to
-  `scratch/build`; the fixed same-build retry reached title and hangar in both
-  arms, with 32 named-writer rows, 262 traversal/guard rows, and nonzero PCM
-  in each. However, the required SP positive control was zero in both arms, so
-  neither A10-legitimate nor A10-suppression is selected. No guard relaxation
-  is authorized. The next A10 unit must repair/qualify the SP control itself
-  before comparing guard behavior again.
-
-- **s4849 qualified the independent A10 writer route and queued the port A/B.**
-  The same retail-oracle run reached the whole-RDRAM 10,000-hit control, title
-  VI 1024, and hangar VI 512. The physical `0x801529C0` watch recorded 2,428
-  writes, including 469 title-phase and 331 hangar-phase writes from retail PC
-  `0x80096D88`. The shared port build passed; a concurrent default versus
-  `ROGUESQ_A10_GUARD_OFF=1` soak is queued with phase-gated guard, traversal,
-  PCM, SP, and route controls. No guard relaxation is authorized before its
-  verdict.
-
-- **s4848 closed the generated 32-bit multiplication class.** The complete
-  census found 670 `mult`/`multu` annotations (669 unique file/guest-PC sites).
-  The independent retail ELF decoded 643 rows, and every decoded row had the
-  expected signed/unsigned product lowering. The first decoded row at
-  `0x80000E04` was the positive control and passed. The remaining 27 rows are
-  annotation/ELF mismatches: their retail words are not multiplication
-  instructions and their generated bodies have no product lowering. No live
-  multiplication translation defect is selected; no runtime or generated
-  output change is authorized. See `docs/M3-S4848-MUL-CENSUS.md` and
-  `tools/census_mul.py`.
-
-- **s4847 closed the generated 64-bit shift class.** The complete census found
-  720 annotations (678 unique file/guest-PC sites) across `dsll`/`dsrl`/`dsra`,
-  32-bit variants, and variable forms. All 720 raw words independently decoded
-  from the retail ELF; 529 generated lowerings matched, while the remaining 191
-  were unreachable or `$zero`-destination. The per-function CFG found 162
-  reachable rows, all 162 with nonzero destinations and correct lowerings. The
-  positive control at `0x800074E0` independently decoded as `dsll32 $v0,$a0,0`
-  and lowered correctly. No live translation defect is selected. See
-  `docs/M3-S4847-DOUBLE-SHIFT-CENSUS.md` and `tools/census_double_shifts.py`.
-
-- **s4846 closed the generated HI/LO move class.** The complete census found
-  989 annotated `mfhi`/`mflo`/`mthi`/`mtlo` rows. The independent retail ELF
-  decode and generated lowering agree at 916 rows; 47 remaining rows are
-  zero-destination/data-like sites, and 26 annotation/ELF mismatches are in
-  unreachable generated regions. The positive control at `0x80003444`
-  independently decodes as `mflo $v0` and lowers to `ctx->r2 = lo`. No live
-  HI/LO translation defect is selected. See
-  `docs/M3-S4846-HILO-MOVES-CENSUS.md` and
-  `tools/census_hilo_moves.py`.
-
-- **s4845 closed the external retail-entry boundary as route-absent.** The
-  debugger-enabled oracle ran the documented Rice video plugin and Start
-  schedule in one 180-second invocation. The whole-RDRAM control reached its
-  10,000-hit cap; title reached VI 1024 at `0x00790400` and hangar reached VI
-  512 at `0x006AB400`. The execution watch at `0x800903F0` recorded zero hits
-  on this qualified retail route. This selects H-retail-route-absent and
-  rules out the prior undriven-route explanation; it does not establish why
-  the port still observes the boundary input.
-
-- **s4844 qualified the retail-oracle setup but not the external handoff.**
-  The rebuilt DEBUGGER=1 core and frontend ran with a whole-RDRAM write
-  control, VI polling, and the target `0x800903F0` execution watch in one
-  180-second invocation. The control reached its 10,000-hit cap and VI
-  polling remained live, but the undriven Rice-less route stayed at 320-wide
-  pre-title (`0x006DD280`), with zero target-PC hits. This is a route/setup
-  result, not a retail null for the qualified title/hangar route; the next
-  attempt must add the known Rice video plugin and Start schedule.
-
-- **s4843 closed the next generic CPU-trap class: `sync`.** The new census
-  found 7 generated occurrences at 6 file/guest-PC sites whose independent
-  big-endian retail-ELF words decode as valid SPECIAL funct `0x0F` encodings.
-  The generated-C CFG classified all 6 unique sites as data-like/unreachable;
-  raw words and annotations agree, and neither N64Recomp's operation maps nor
-  `fixup_game_funcs_vendored.py` contains a `sync` lowering. This selects
-  H-unhandled-data for this class, not a live translation defect; no runtime
-  change is authorized. Tables: `docs/M3-S4843-UNHANDLED-CPU-CENSUS.md` and
-  `docs/M3-S4843-UNHANDLED-CPU-REACHABILITY.md`.
-
-- **s4842 traced the reachable conditional-move defect to N64Recomp itself.**
-  The source ELF contains the valid word `0x0022D34B` (`movn $k0,$at,$v0`) at
-  `0x800A2B64`; the pristine `RecompiledFuncs.s4204-fresh` output already emits
-  `do_break` there, and the current `fixup_game_funcs.py` has no `movn`/`movz`
-  rewrite. N64Recomp's `binary_ops`, `unary_ops`, and conditional-branch maps
-  omit both conditional moves, so `process_instruction` reaches its generic
-  unhandled-instruction trap. The duplicate `funcs_27.c` context agrees. This
-  selects H-cmov-unsupported, rules out fixup-loss and regeneration drift for
-  this site, and still authorizes no generated-output behavior change.
-
-- **s4841 selected a live generated conditional-move site in static CFG.** The
-  independent reachability pass covered all 149 file/guest-PC sites: 2 are on
-  reachable generated guest paths, 16 are post-return/unreachable, and 131
-  are data-like/unreachable. One reachable site has a nonzero destination
-  (`funcs_49.c`, `0x800A2B64`, `$k0`), so the `do_break` lowering defect is not
-  latent-only. This is still static generated-C evidence, not proof that the
-  qualified runtime route reaches that site; audit the fixup/regeneration path
-  before changing behavior. Table and classifier:
-  `docs/M3-S4840-MOVZ-MOVN-REACHABILITY.md` and
-  `tools/classify_movz_movn.py`.
-
-- **s4840 found a generated conditional-move translation defect.** The complete
-  census found 179 `movz`/`movn` annotations (95/84), 149 file/guest-PC sites,
-  and 144 `.word` encodings whose independent raw decoder agreed 144/144 with
-  the annotated opcode and operands. Every generated body is `do_break`;
-  115 sites have nonzero destinations, so this is not equivalent to a harmless
-  write to `$zero`. The sites cluster in data-like/obfuscated regions and
-  several follow indirect-return paths; runtime reachability is unmeasured.
-  Do not patch the class or call it a route cause until the next bounded
-  reachability classification. Full table and reproducer:
-  `docs/M3-S4840-MOVZ-MOVN-CENSUS.md` and `tools/census_movz_movn.py`.
-
-- **s4839 closed the generated variable-shift class.** The complete source
-  census found 721 textual `sllv`/`srlv`/`srav` mentions: 469 direct
-  instruction comments and 252 `.word` data-as-code annotations. All 403
-  live-destination sites use the expected 32-bit, masked-count, signedness
-  lowering; the other 66 write `$zero`. No mismatch or intervening-write
-  defect was found. Runtime reachability was not claimed. Full table:
-  `docs/M3-S4839-VARIABLE-SHIFT-CENSUS.md`.
-
-- **s4838 closed the generated HI16/LO16 construction class.** The complete
-  source census found 24,276 `lui` sites and 3,015 canonical same-register
-  immediate low-half pairs (2,479 `addiu`, 536 `ori`). An independent raw
-  adjacency pass found no destination/source-register mismatch; 1,174 adjacent
-  low-half-looking operations were independent operations with different
-  registers, not pairs. No intervening-write or relocation defect was found.
-  Route reachability was not claimed. Full table:
-  `docs/M3-S4838-HILO-CENSUS.md`.
-
-- **s4837 closed the generated branch-likely idiom class.** The complete
-  census found 893 sites across 44 generated files: 197 `bc1fl`, 597 `bc1tl`,
-  36 `bgezl`, 10 `bgtzl`, 13 `blezl`, and 40 `bltzl`, with no `beqzl`/`bnezl`.
-  Every site matched the annulled-delay-slot shape: conditional delay-slot
-  body, taken target, untaken skip, and fall-through duplicate. The 24 apparent
-  shape exceptions were existing guest-PC breadcrumbs (23) and one viewer-fade
-  observer; neither changes the predicate or control flow. This selects
-  generated translation validity and authorizes no guard or behavior change.
-  Full table: `docs/M3-S4837-BLIKELY-CENSUS.md`.
-
-- **s4836 qualified the Step 11 producer/clear route with the generic writer
-  table.** After replacing the table's unsafe `rogue_current_thread_id(nullptr)`
-  observer with a host-thread hash, both same-build arms reached title 1024 and
-  hangar 512, completed 64 SP tasks, produced nonzero PCM, and had no crash or
-  abort. Both recorded repeated `0x80091680` arm writes of `1` followed by the
-  exact `0x800912F8` clear writes of `0` to `0x8014974C`; the named
-  `[waitmusyx-spin2-clear]` row remained absent because its fixup anchor is not
-  present in the generated live helper. The prior s4834 crash was therefore
-  observer-induced, while the generic table independently proves the legitimate
-  clear writer and value transition. No yield-causal difference is selected.
-
-- **s4834 clear-site discriminator was route-invalid twice.** Both same-build
-  default/rollback attempts reached VI 640, title 1024, 64 SP completions, and
-  the existing second-wait arm/return rows, but crashed before hangar. PCM and
-  phase-scoped gate controls were absent, so no Step 11 hypothesis is selected.
-
-- **s4833 stabilized the M5 Step 11 route but did not qualify the clear edge.**
-  The corrected same-build default/rollback pair used `STUB_MISSING_FUNCS=1`
-  and the phase-gated autopilot; both arms reached title 1024 and hangar 512,
-  with 64 SP completions, nonzero PCM source/consumer rows, and no crash or
-  abort. Both emitted 40 second-wait arm rows and three wait-return rows, but
-  neither emitted a `waitmusyx-spin2-clear` row. The two arms therefore show
-  no yield-dependent route difference, while the required producer-clear
-  discriminator remains unevaluable. The harness's broad witness label must
-  not be read as proof of a clear.
-
-- **s4832 Step 11 remains unevaluable after correcting the wait-witness driver.** The converted same-build default/rollback driver initially reached title and hangar with SP/PCM controls but had not armed `ROGUESQ_LOG_WAITMUSYX_SPIN2`, so its zero wait count is invalid. The fixed rerun stopped before VI 640 in default and crashed in rollback (36 rows); neither emitted phase/gate/wait witnesses. No Step 11 hypothesis is selected. The oracle precheck was blocked by a missing debugger-core dylib, so no new retail null is claimed.
-
-- **s4831 M5 Step 1 is qualified on the corrected same-build pair.** The
-  corrected harness compared Factor 5 image (`ROGUESQ_AUDIO_UCODE=1`) against
-  the silent control (`=0`) using the documented multi-press autopilot. Both
-  arms reached title 1024 and hangar 512 with 64 SP completions and no
-  crash/abort. Phase-5 PCM source samples were nonzero in the image arm
-  (`nz=768`) and zero in the silent arm (`nz=0`), selecting image downstream
-  activity rather than a route-only explanation. The prior s4823/s4829
-  request-only pair remains invalid for Step 1; do not repeat it.
-
-- **s4830 A9/A10 replay passed its fixup discriminator but not whole-file
-  identity:** the pristine generated copy replayed with `failures=0`, A10
-  reported 44/44 sites, and A9 reported 13 sites plus its writer. All four
-  selected files differed from the live tree because the live files retain
-  later diagnostic patches (for example s4784/s4700 and s4597/s4601); this is
-  replay drift, not evidence that either A9 or A10 failed to replay.
-
-- **s4829 M5 Step 11 A/B is route-invalid at the wait discriminator:** the
-  corrected same-build default/rollback pair reached title and hangar, with
-  SP completion and nonzero PCM source/consumer controls in both arms and no
-  crash. Both arms showed second-spin arm and loop-return activity, but neither
-  showed the required producer-clear/seed witness or a wait-contract return;
-  both loop returns reported `yields=0`. The route therefore does not exercise
-  the A12 second-wait difference, so no yield-safe or yield-causal conclusion
-  is selected.
-
-- **s4828 crash-path capture:** the corrected same-build default/request-only
-  pair again produced the task-validity positive control: 64 matching start
-  and 64 pre-conversion enqueue rows per arm, all in-range, with no rejected
-  pointer or `0x400128d47`. Both arms reached phase 3 / VI-640 and stopped at
-  the same gate; neither emitted a native crash marker. This retains
-  intermittent route instability as the only selected explanation for the
-  absent crash and rules out the validated conversion/start/enqueue path in
-  this run. Do not repeat this capture without a new discriminator.
-
-- **s4826 host-boundary audit:** a corrected same-build default/request-only
-  pair qualified the task-validity positive control. Both arms showed the same
-  in-range task pointers and fields at `osSpTaskStartGo` and pre-conversion
-  enqueue; neither emitted a rejected pointer or `0x400128d47`. The pair still
-  stopped at the VI-640 gate (64 SP completions each), so no request-only
-  lifecycle conclusion is selected and the intermittent malformed-pointer
-  crash remains unobserved. The conversion/start/enqueue path is not the
-  source in this capture; a native crash capture is still required.
-
-- **s4825 startup-boundary audit:** the default and request-only arms share
-  the first SP task, queue/message, type-0x81 dispatch, LLE task, and one SP
-  completion. Request-only crashes before any `[sp-yielded-ab]` row, so its
-  `osSpTaskYielded` exchange did not run. The `0x8000834c` breadcrumb is the
-  `drainMeshReleaseQueue` return delay slot and is stale attribution. This
-  selects a common pre-VI-640 scheduler/host boundary, not request-only
-  lifecycle causality; exact pointer writer remains open. See
-  `docs/M5-S4825-STARTUP-BOUNDARY-AUDIT.md`.
-
-- **`ROGUESQ_OVL2C_DROP` was dead code since s4773 (s4802).** The splice route preceded the drop branch, so every DROP=0/1 A/B compared the splice with itself. Now `ROGUESQ_OVL2C_MODE` 0=splice (default) 1=drop 2=none (`tools/apply_s4805_ovl2c_mode.py`, fixup synced). s4806 three-arm run (single run each, cross-run caveat): routing 0x2C cuts phase-3 RDP submissions ~3x (513k vs 1.53M unrouted), but phases 5/6 are identical in all arms (~254k / ~955k) and the splice adds no measurable texrects at the mission origin. The old "0xBD arrival <=> runaway" claim does not extend to phase 6. VI-640 phase 3 lasts ~50 s in every run (s4803); transient `stalled=1` lines there are normal.
-
-- **VI-640 stall = presentation-side symptom (s4797, same-run `sample` control).**
-  At a live `vi-fs stalled=1`, `update_screen` ordinals advance and the Gfx
-  thread is active in `RT64::State::updateScreen`/`processDisplayLists`, while
-  guest MAIN is parked in `submitGfxFrame -> waitForPostSwapAck`; the synth
-  thread is separately in its message wait. Rejects audio-main-wait and
-  producer-thread-stalled. The stall is nondeterministic (s4794: 2/5 runs stay
-  at VI 640 for 200 s, 2/5 reach VI 1024 at 55/77 s, 1/5 startup crash; s4791/
-  s4792 load-sensitive, single-source). No mitigation authorised.
-- **Mission route is blocked by that stall (s4796) and by input (s4774).**
-  Overlay-0x2C splice (resident `OVL2C_1DB0`, built and validated s4773) is
-  unevaluable: no driver has reached mission origin `0x00690400` with `res=0x2C`
-  rows since s4759. Old "zero res=0x2C" nulls were void: the `[ovl-route]`
-  logger had no 0x2C branch until s4787.
-- **Rename sweep closed (s4795).** 8 remaining placeholders are deliberate
-  `fake_func_*` boundaries; table in `docs/RENAME-S4795-AUDIT.md`.
-
-- **s4803: splice emits sprites.** Offline frame-split phase-6 diff: m1 (drop) texrects are a strict subset of m0 (splice); m0 adds up to ~119 small sprites/frame by frame 130. s4804: retail s4733 rdp.bin contains NO mission frames (its >=100-texrect frames are menu text, 0 sprites <=8x10), so splice correctness vs retail is unevaluable until a retail mission capture exists.
-- **s4823: M5 Step 1 qualification remains route-invalid.** The same-build two-arm
-  harness passed its VI-640/SP positive controls in both arms, but neither arm
-  reached title/hangar; it returned `H-DiscriminatorIncomplete`. Default had 4
-  completion-wins rows (`returned=0`, `pending_after=1`); request-only had 7
-  request-only rows (`returned=1`, `pending_after=0`) and E70/E80F rows. No
-  audio or request-only conclusion is selected.
-- **s4824: the documented qualified tuple is also route-invalid before VI 640.**
-  After adding `AUTOPILOT + real-audio + LLE / ungated / solo / spin-yield` to the
-  A/B harness, default stopped at VI 320 after 10 SP completions; request-only
-  hit the known `spTaskSchedulerThread+8972` startup segfault
-  (`si_addr=0x400128d47`) after one completion. Neither arm reached the VI-640
-  control, so Step 1 remains unevaluable and the request-only lifecycle is not
-  implicated. The harness now carries the documented tuple by default.
-- **s4822: M5 Step 1 qualification remains route-invalid.** The existing two-arm
-  harness reached its VI-640 positive control with 64 SP completions per arm,
-  but neither arm reached title/hangar; it returned `H-DiscriminatorIncomplete`.
-  A rerun with the documented qualified `AUTOPILOT + real-audio + LLE /
-  ungated / solo / spin-yield` tuple failed earlier: default stopped at VI 320
-  after 15 SP completions, while request-only hit the known
-  `spTaskSchedulerThread+9632` startup crash (36 crash rows). No audio arm or
-  SP-lifecycle hypothesis is selected.
+- **Digest of s4822–s4897 (verbatim bullets archived in
+  [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH
+  headline log s4822-s4897"; detail in each session's `docs/M5-S*.md` note):**
+  - **Latest (s4897):** the Rice retail oracle passed whole-RDRAM, title and
+    hangar controls and watched the full `musyxRenderVoiceSamples` range:
+    it fires in title and hangar, as do the two voice `+0x34` writer PCs,
+    while exact `0x800903F0` stays absent. This selects an internal boundary
+    before the old exact consumer; no runtime mitigation authorized. See
+    `docs/M5-S4897-RETAIL-VOICE-RANGE.md`. Next planned: s4898 retrace/
+    audio-done/synth cadence join (see `scratch/agent/NEXT.md`).
+  - **Shutdown/teardown (s4889–s4895):** retail shows wait -> synth
+    deregistration -> reapply; the port skipped synth deregistration at the
+    boot gate-0 teardown (s4889). s4890 landed a named, regen-replayable
+    first-teardown deregistration fix (`ROGUESQ_S4889_FIRST_DEREG=0` rolls
+    back). s4891 retired the default synth-registration dedup mitigation
+    (`ROGUESQ_S4875_DEDUP=1` rollback arm). s4893/s4894: callback-table
+    deregistrations do NOT prove `shutdownAudioEngine` ran; its `kind=0/2`
+    markers were zero, so the route does not reach it (H3). s4892: A12
+    default yield is behavior-neutral (H2).
+  - **OSTask `data_size` (s4886–s4887):** retail writer `0x80091784` matches
+    publications (176 ds=2, 14 ds=1); port is 3,926 ds=1 / 3 ds=2 / 5 ds=3 —
+    a cadence difference, not a publication mismatch.
+  - **Rename sweep (s4888, s4896):** only `func_8000040C` and `func_800E9AE0`
+    remain; neither passes the three rename gates. Sweep parked pending a new
+    mapping source or generated snapshot.
+  - **Idiom-class audits closed (s4837–s4848, s4883–s4885):** branch-likely,
+    HI16/LO16, variable shift, 64-bit shift, HI/LO move, 32-bit multiply,
+    `sync`, and zero-extended `0x80000000u` (90 sites) are all classified.
+    s4840–s4842 traced a live conditional-move defect to N64Recomp itself.
+    s4883 named and fixed the startup SIGSEGV `spTaskSchedulerThread+9632`:
+    a stale zero-extended s3293 probe skipped by an idempotence marker.
+  - **Retail-entry boundary (s4844–s4845):** closed as route-absent
+    (target PC `0x800903f0` never hit pre-title; oracle setup qualified).
+  - **M5 qualification history (s4822–s4859):** Step 1 qualified on the
+    corrected same-build pair (s4831); Step 11 producer/clear route
+    qualified with the generic writer (s4836), many other arms route-invalid;
+    A10 guard class legitimate on covered route (s4852); A13 drain boundary
+    requalified (s4858); A16 AI-shim caller boundary closed (s4859); host
+    queue edge made truthful (s4856–s4857).
+  - **Mission/VI-640 (s4796–s4803):** the VI-640 stall is a presentation-side
+    symptom and blocks the mission route (plus input, s4774);
+    `ROGUESQ_OVL2C_DROP` was dead code since s4773; splice emits sprites.
 
 ## Current state (durable)
 

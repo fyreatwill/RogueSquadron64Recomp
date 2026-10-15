@@ -157081,3 +157081,15 @@ both phases. This selects an internal boundary before the exact consumer,
 rejects route absence and a single-PC watch artifact, and rules out no writer
 or runtime behavior. Raw output and command are recorded in
 `docs/M5-S4897-RETAIL-VOICE-RANGE.md`.
+
+## Session 4898 (2026-10-14) — maintenance: CURRENT-TRUTH compacted 61 KB -> 33 KB
+
+Step 0 triggered (61,274 bytes > 60,000). No experiments run. Moved the 435-line
+per-session headline log (s4822–s4897) verbatim into PROJECT-OVERVIEW.md under
+"Archive: CURRENT-TRUTH headline log s4822-s4897" and replaced it in
+CURRENT-TRUTH with a ~40-line thematic digest (latest M5 retail voice-range
+result, teardown/dedup fixes, OSTask data_size, rename sweep park, closed idiom
+classes, retail-entry closure, M5 qualification history, VI-640 stall).
+CURRENT-TRUTH is now 418 lines / 33,409 bytes (-392 lines). Next steps section
+untouched; the s4898 retrace/audio-done/synth cadence join in
+scratch/agent/NEXT.md remains the next work unit (HYPOTHESIS-ID unchanged).
