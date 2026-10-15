@@ -157300,3 +157300,9 @@ Reading: selects H-fixed (s4883 startup SIGSEGV fix + s4890 synth-teardown fix);
 ORIGIN: no mitigation added; the only new file is the sampling script.
 Discrimination (s4921): selects H-fixed; refutes H-stall-persists, H-crash-persists.
 Next: soak longer phases (hangar + mission) on the current default; see scratch/agent/NEXT.md.
+
+## Session 4922 (2026-10-14) — longevity soak of the current default: 3/3 alive 300 s through title and hangar, 0 crashes, counter advancing to the end (H-stable, hangar only)
+- Ran scratch/agent/s4922_longevity_x3.sh: 3 concurrent instances from build/, ROGUESQ_AUTOPILOT start/a schedule out to t=240, SIGKILL at 300 s. Positive control: hangar origin 0x006AB400 at vi_width=512 hit in 3/3 (25/127/68 log lines).
+- Result: update_screen counter advanced every 10 s sample through t=300 in all 3 (19392/19456/19392 at the end); `[CRASH]`/`[ABORT]` = 0; `[audio]` guard fires = 0. Width histograms are near-identical across runs (2644-2649 x 1024, 465 x 640, 143 x 512, 110 x 320).
+- Not measured: mission phase (origin 0x00690400 = 0 lines in all 3). The autopilot key schedule does not reach a mission; that needs the winctl driver (s4796 script), which cannot run 3 instances concurrently on one keyboard. So H-late-crash/H-late-stall are ruled out for title+hangar only.
+- Rules out: late hangar crash or stall in the post-H-fix default over ~250 s of hangar time (n=3, identical traces, single recipe).

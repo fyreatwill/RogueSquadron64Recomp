@@ -573,3 +573,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261014-s4851 | s4849_m5_a10_guard_qualification_retry | result=invalid; both arms title=1 hangar=1 writer=32 traversal/guards=262 pcm>0, sp=0, crash=0; corrected ROOT fixed launch but SP positive control absent, no A10 hypothesis selected | scratch/agent/soak_results/s4849_m5_a10_guard_qualification_retry/verdict.txt
 20261014-s4854 | s4854_m5_port_load | result=single-source H-port-load-unreached; title=1 hangar=1 port_control=0 port_rows=0 sp_enter=1255 sp_return=1255 action=1255 pcm=10970 crash=0 abort=0 | scratch/agent/soak_results/s4854_m5_port_load/verdict.txt
 20261014-144220 | s4880_dedup_crash_rate | rc=1 | 508s | scratch/agent/soak_results/s4880_dedup_crash_rate_20261014-144220.log
+20261014-200210 | s4921_gated_sample_x5 | rc=137 | 600s | scratch/agent/soak_results/s4921_gated_sample_x5_20261014-200210.log
