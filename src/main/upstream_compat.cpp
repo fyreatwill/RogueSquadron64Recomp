@@ -44,6 +44,16 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
 #include "librecomp/helpers.hpp"
 #include "ultramodern/ultramodern.hpp"
 
+// The guest publishes the voice-array base/count from the allocator while the
+// audio mixer scans the same pair on another host thread.
+static std::mutex g_rs64_s4985_voice_mutex;
+extern "C" void rs64_s4985_voice_lock() {
+    g_rs64_s4985_voice_mutex.lock();
+}
+extern "C" void rs64_s4985_voice_unlock() {
+    g_rs64_s4985_voice_mutex.unlock();
+}
+
 extern "C" bool rs64_audio_current_route_snapshot(
     uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
     uint32_t* row, int* exit_reason, const char** arm);

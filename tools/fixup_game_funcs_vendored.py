@@ -40543,6 +40543,7 @@ RS64_REPLAY = [
     "apply_s4981_count_after_base.py",
     "apply_s4982_reader_acquire.py",
     "apply_s4984_atomic_voice_pair.py",
+    "apply_s4985_voice_lock.py",
 ]
 
 

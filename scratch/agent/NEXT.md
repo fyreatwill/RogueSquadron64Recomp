@@ -1,25 +1,38 @@
 # Next work unit
 HYPOTHESIS-ID: voice-count-before-base-race
 
-Implement the lock-compatible handoff variant for `musyxMixActiveVoices` and
-`allocateSongChannelArray` through the fixup/replay mechanism, rather than a
-generated-file-only edit. Preserve the diagnostic controls, build the runtime,
-and run one armed mission validation soak derived from
+Replace s4985's whole-function host mutex with a narrow lock-compatible
+handoff: lock only while `allocateSongChannelArray` publishes the base and
+count, and lock only while `musyxMixActiveVoices` acquires the paired count and
+base. Apply it through the fixup/replay mechanism, build, and run one armed
+mission validation soak derived from
 `scratch/agent/s4984_atomic_voice_pair_mission.sh`.
 
 Competing hypotheses:
 
-1. H-lock-required: a shared lock-compatible handoff prevents the pair from
-   being observed across publication. Prediction: controls and mission fire,
-   with `bad=0`, `pidma=0`, `crash=0`.
-2. H-atomic-insufficient: explicit guest-memory acquire/release atomics are
-   insufficient without exclusion. Prediction: controls and mission fire but
-   `bad>0` or `pidma>0` remains.
-3. H-route: the validation route fails to exercise the allocator. Prediction:
-   `ctl_arm=0` or `s4579A=0`; no race conclusion is allowed.
+1. H-narrow-lock: a shared lock over only publication/paired observation
+   prevents the stale pair while preserving the route. Prediction: title and
+   mission controls fire, with `bad=0`, `pidma=0`, `crash=0`.
+2. H-lock-too-coarse: even the narrow lock interferes with required runtime
+   progress. Prediction: `s4579-A` fires but title does not, as in s4985.
+3. H-atomic-insufficient: exclusion is not the missing contract. Prediction:
+   title and mission controls fire but `bad>0` or `pidma>0` remains.
+4. H-route: the validation route fails before allocator exercise. Prediction:
+   `s4579-A=0`; no race conclusion is allowed.
 
-Discriminator: the same run must pass both allocator controls and mission onset;
-then `bad`/`pidma` separates a lock handoff from atomic insufficiency. ORIGIN:
+Discriminator: the same run must pass the title and mission controls and show
+`s4579-A>0`; then title absence selects coarse-lock interference, while a
+mission run separates `bad`/`pidma` zero from atomic insufficiency. ORIGIN:
 writer = guest `allocateSongChannelArray` publishing a legitimate count 32 and
 base while the mixer runs on another host thread; this is synchronization work,
 not a guard or value filter.
+
+Exact checks:
+
+    python3 tools/apply_s4985_voice_lock.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    zsh scratch/agent/s4984_atomic_voice_pair_mission.sh
+
+Required controls: title origin `0x00790400`, hangar origin `0x006AB400`,
+mission onset, `s4579-A`, `ctl_arm`, PCM nonzero rows, `bad`, `pidma`, crash,
+and abort. Do not interpret a null unless title and allocator controls fire.

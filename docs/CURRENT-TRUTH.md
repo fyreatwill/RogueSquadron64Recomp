@@ -1,10 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4983; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4985; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s4985:** The host-lock exclusion variant serialized the complete
+  `allocateSongChannelArray` and `musyxMixActiveVoices` functions, but the
+  armed validation did not reach the title control within its 150-second gate.
+  It did fire one allocator positive-control entry (`s4579-A=1`) but had no
+  title, mission, PCM, or crash marker. This makes the whole-function lock
+  route-blocking/unevaluable; it does not select H-lock-required. Next is a
+  narrower lock around publication and the paired observation only.
 
 - **s4982:** The armed post-writer-fix mission soak reached the allocator and mission (ctl_arm=1, s4579A=9, onset 173 s) but still logged 4 `kind=bad` stale-base calls, with pidma=0 and crash=0. Writer ordering alone is insufficient; next is reader-side acquire/order qualification.
 
@@ -159,6 +167,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 - **s4982 “a reader acquire fence will close the stale-base calls”** - believable because the writer now has a release fence after both base stores and before the legitimate count publication. Overturned by the clean same-route soak: allocator and mission controls passed, but the four `s4540` bad rows remained. The ordinary `MEM_HU` load plus fence is not an effective pair handoff; no guard or value rewrite was added.
 - **s4983 “explicit atomic guest-memory observation will close the stale-base calls”** - believable because both publication sites and both mixer reads were changed to host acquire/release atomics at the exact guest locations. Overturned by the same-route armed soak: controls passed, but 8 stale rows remained. This leaves a lock-compatible handoff as the next discriminator; no guard or value rewrite was added.
 
+- **s4985 “a host mutex around both complete functions will close the stale-base calls”** - believable because it provides exclusion across allocator publication and mixer observation. Not selected: the same armed recipe did not reach the title positive control, despite one allocator entry, so the whole-function lock is route-blocking/unevaluable. This does not refute a narrower publication/observation lock; no value guard or rewrite was added.
+
 - **s4981 expected "writer reorder closes the race"** - believable because the
   source fix moved the legitimate count publication after allocation and added
   a release fence. Overturned by the same-run armed validation: allocator
@@ -191,7 +201,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4984 (top):** The explicit atomic count/base loads and release stores reached mission (onset 176 s) with `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0, abort=0, and PCM positive control 147. H-atomic-observation is refuted for this implementation; H-lock-required remains. Next: implement a lock-compatible handoff around allocator publication and mixer observation through the fixup replay, then repeat the same armed mission discriminator. ORIGIN: writer is `allocateSongChannelArray`; count 32 and base `0x801714D0` are legitimate, and stale index 30 is a synchronization defect, not a value guard.
+**s4985 (top):** The whole-function host mutex arm was route-blocking/unevaluable: `s4579-A=1`, title=0, mission=0, PCM=0, crash=0 in the 150-second gate. Next: replace it with a narrow lock held only over allocator publication (base plus count) and the mixer’s paired count/base observation, then repeat the same armed mission discriminator. ORIGIN: writer is `allocateSongChannelArray`; count 32 and base are legitimate, and stale index 30 is a synchronization defect, not a value guard.
+
+**s4984 (prior):** The explicit atomic count/base loads and release stores reached mission (onset 176 s) with `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0, abort=0, and PCM positive control 147. H-atomic-observation is refuted for this implementation; H-lock-required remains.
 
 **s4981 (prior):** Armed soak s4980 showed the count-before-base race LIVE (`[s4540-call] kind=bad` s0=30 count=32 against the old 18-voice base; ctl_arm=1). Root cause: the s147 reorder never reached the live funcs_23.c. Fixed by `tools/apply_s4981_count_after_base.py` (applied, replay-registered, built). Verification showed the route and allocator were live, but the reader still logged 4 bad calls; see s4982.
 

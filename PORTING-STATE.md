@@ -157892,3 +157892,20 @@ variant and leaves a lock-compatible handoff as the next work unit. No guard,
 skip, filter, or value rewrite was added.
 ORIGIN: writer = guest `allocateSongChannelArray`; count 32 and base are
 legitimate, so this remains synchronization work rather than mitigation.
+
+## Session 4985 (2026-10-15) — whole-function voice lock blocks validation route
+
+Implemented `tools/apply_s4985_voice_lock.py`, registered it in the vendored
+fixup replay, and added a host `std::mutex` helper in
+`src/main/upstream_compat.cpp`. The lock serialized the complete
+`allocateSongChannelArray` and `musyxMixActiveVoices` functions. The Debug
+build completed successfully.
+
+The armed validation recipe ran from the build directory and was killed by
+its route gate after 150 seconds. It fired one allocator positive-control
+entry (`s4579-A=1`) but did not reach the title control, mission, PCM rows, or
+crash/abort markers. This makes the whole-function lock route-blocking and
+unevaluable; it does not select H-lock-required or refute a narrower
+publication/observation lock. The result rules out no legitimate data and no
+PI-DMA hypothesis. ORIGIN: writer = guest `allocateSongChannelArray`; count
+and base are legitimate, so this is synchronization work, not mitigation.
