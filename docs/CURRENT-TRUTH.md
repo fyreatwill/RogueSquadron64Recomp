@@ -6,6 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4958:** first keyed route to a real mission: title (36,6) -> hangar 0x6AB400 -> ~5 A -> 0x6A2900 is a ~70 s LOADING phase (0x644D00, 0x62BD00, 0x696100) -> mission 0x620400/0x690400 at t=181, sustained 140 s, crash=0 (N=1). s4957's "model viewer" was this load. Recipe `scratch/agent/s4958_after_6a2900.sh`.
+
 - **s4956:** keys sent from the title phase (36,6 x8/run, N=3) reach the hangar `0x006AB400` in 3/3 at ~58-66 s with VI advancing and crash=0, but never any mission origin. Hangar control passed; (36,6) does not launch a mission. The s4943 "mission" origins are probably the attract demo. Recipe: `scratch/agent/s4956_keyed_title.sh`.
 
 - **s4954:** the 512 (0x690400) phase in the s4950 soaks is the ATTRACT DEMO: keys were only sent after it appeared and timing is identical across 5/5 runs (640@~76s, 512@~97s, title again ~4s later). Not a mission, not an abort. Real mission needs hangar + keys (s4943 route).
@@ -164,7 +166,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4957 next (top, single-source):** hangar keycode sweep (15 keys: A/B/Start/D-pad) never reaches a mission (0x690400/0x620400 = 0); the 5th A leaves to the 0x6A2900 model viewer. Input delivery works. Next: find the mission-launch state/flag (see scratch/agent/NEXT.md), try keys inside the viewer.
+**s4958 next (top):** repeat the keyed route N=3 with mission-phase audio/PCM counters (see NEXT.md). Older, resolved by s4958: **s4957:** hangar keycode sweep (15 keys: A/B/Start/D-pad) never reaches a mission (0x690400/0x620400 = 0); the 5th A leaves to the 0x6A2900 model viewer. Input delivery works. Next: find the mission-launch state/flag (see scratch/agent/NEXT.md), try keys inside the viewer.
 
 **s4955 next (top):** s4955 solo N=3 run confirmed the 512/0x690400 phase is the attract demo (bounces to title 3-5 s after onset; hangar 0x6AB400 never reached, keys sent only after 512 appeared). Next: rerun with keys sent at the TITLE phase (~50 s, origin 0x790400), hangar 0x6AB400 as control, then judge mission stability; see NEXT.md.
 

@@ -1,5 +1,5 @@
 # Next work unit
 HYPOTHESIS-ID: keyed-mission-route-m5-validation
-Context: s4957 — hangar sweep (15 keys) never reaches a mission; 5th A leaves to the 0x6A2900 model viewer (known). Input delivery is fine.
-Work unit: find what state launches a mission from the hangar. Hypotheses: H-launch-flag (campaign mission-select state var not set; set it directly via env poke) vs H-viewer-then-exit (mission starts from viewer exit/Start) vs H-needs-different-hangar-screen. Discriminator in ONE run: after reaching 0x6A2900 send Start/B/A and log origin; plus grep PROJECT-OVERVIEW/F5 docs for the function that enters mission (mission-entry PC) and check callers. Reuse scratch/agent/s4957_hangar_sweep.sh (extend the key list).
-Then record a mission-phase row in docs/M5-AUDIO-PLAN.md.
+Context: s4958 reached a real mission by waiting ~70 s after 0x6A2900 (scratch/agent/s4958_after_6a2900.sh), crash=0, N=1.
+Work unit: repeat that recipe N=3 sequentially (one game at a time) with M5 audio counters armed (flags from s4944_aux_ab.sh). Per run: mission onset time, origin line counts, PCM nonzero count, crash/abort. Hypotheses: H-stable (3/3 mission, crash=0) vs H-intermittent-stall (VI640 stall as in s4794) vs H-mission-audio-fault (PCM zero or abort). Positive control: hangar 0x6AB400 before 0x6A2900.
+Then add a mission-phase row to docs/M5-AUDIO-PLAN.md.
