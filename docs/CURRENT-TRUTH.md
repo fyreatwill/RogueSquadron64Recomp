@@ -139,6 +139,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Superseded conclusions
 
+- **s4950 "5/5 reached mission" (0x690400, VI-512)** - believable because the phase appeared after scripted keys and had a distinct width/origin. Overturned s4954 (script ordering + deterministic timing) and s4955 (3/3 solo run, hangar control absent): it is the attract demo, not player-mission evidence.
+
 - s4950's "5/5 reached mission" (and its `stalled=1` stall grep) was refined by s4953: `stalled=1` appears at every phase, and the 512 phase is only ~3-4 s before return to title, so it is not established as a player mission. Believable because the origin 0x690400 matched the retail mission origin.
 
 - s4934's “writer attribution” was refined by s4935–s4937: `0x80091784` is
@@ -160,7 +162,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4954 next:** resolved as demo. Next: M5 plan row for the keyed route (title->hangar->mission) with the s4943 recipe; see NEXT.md.
+**s4955 next (top):** s4955 solo N=3 run confirmed the 512/0x690400 phase is the attract demo (bounces to title 3-5 s after onset; hangar 0x6AB400 never reached, keys sent only after 512 appeared). Next: rerun with keys sent at the TITLE phase (~50 s, origin 0x790400), hangar 0x6AB400 as control, then judge mission stability; see NEXT.md.
+
+**s4954 next (superseded by s4955 above):** resolved as demo. Next: M5 plan row for the keyed route (title->hangar->mission) with the s4943 recipe; see NEXT.md.
 
 **s4952: unblocked** - s4951 scope question re-scoped to NEXT.md (VI-progress metric from s4950 logs, then mission-phase M5 row). stalled=1 is not a VI640 indicator. Declaring the milestone done remains an owner decision.
 
