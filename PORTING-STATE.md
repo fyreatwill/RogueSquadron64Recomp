@@ -156803,3 +156803,24 @@ Audit: case-insensitive grep over tools/ and src/ for `ctx->rN = 0x[89a-f]xxxxxx
 Rules out: any further hand-written zero-extended-address writers in tools/ or src/. Class closed.
 ORIGIN: no mitigation added; no code change this iteration.
 Next: resume M5 contract boundary (step 12) in docs/M5-AUDIO-PLAN.md.
+
+## Session 4886 (2026-10-14) — qualified retail OSTask data_size writer and publication match
+
+Work unit: independent retail ground-truth capture for the M5 task-family
+`data_size` boundary, with whole-RDRAM and hangar controls. The first command
+was instrument-invalid because `--pc-task-dump 0x80033FCC` was not included in
+`--watch-pc`; its writer/phase result was not used. The corrected single run
+watched `0x80033FCC`, `0x80091784`, and `0x80091084`.
+
+The corrected run passed the whole-RDRAM positive control at 10,000 writes and
+reached the hangar origin `0x006AB400`. Retail execution at the exact known
+writer `0x80091784` fired 703 times. The phase-gated type-2 task dump at
+`0x80033FCC` retained 190 rows: 176 had `data_size=2` and 14 had
+`data_size=1`; the sampled task values matched the known writer's values. The
+candidate upstream watch at `0x80091084` fired zero times. This is one
+independent retail source: it selects the known-writer explanation for the
+observed values and rejects a sampled writer/publication mismatch, but leaves
+the cadence writer unresolved. It rules out treating the port's 1-dominant
+ratio as a task-publication artifact without a port-side comparison; it does
+not yet select the cause of the retail/port cadence difference. Next is the
+same-build port writer/task capture with a corrected upstream discriminator.

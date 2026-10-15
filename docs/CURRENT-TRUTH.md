@@ -6,7 +6,18 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4883)
+## Headline (as of s4886)
+
+- **s4886:** qualified the retail OSTask `data_size` boundary in one
+  independent Rice-route capture. Whole-RDRAM writes reached 10,000 and
+  hangar VI origin `0x006AB400` was live. The exact retail store at
+  `0x80091784` fired 703 times; 190 phase-gated type-2 task publications
+  sampled at `0x80033FCC` matched its values (176 with `data_size=2`, 14 with
+  `data_size=1`). The candidate upstream watch at `0x80091084` fired zero
+  times. This selects H-retail-known-writer for the observed values and
+  rejects a sampled writer/publication mismatch, but does not identify the
+  cadence writer; the result is single-source until the same-build port
+  comparison and a corrected upstream discriminator.
 
 - **s4885:** audit of other zero-extended register writers in tools/ and src/ found one site (fixup_game_funcs_vendored.py:9205 `r31 = 0x800155EC`, JAL link), proved dead (native call returns via C return). Class closed.
 - **s4884:** zero-extended `ctx->rN = 0x80000000u` substitution idiom (90 generated sites from 3 f-strings in tools/fixup_game_funcs_vendored.py) changed to sign-extended `(gpr)(int32_t)0x80000000u`; matches the s4883 run_1b crash register pattern (base 0x80000000 zero-extended, +4 -> 4 GiB past rdram). Faulting instruction not pinned (lldb denied) = single-source. Soak s4884: 0/16 crashes (s4883 baseline 1/16; not statistically separable).
@@ -561,6 +572,15 @@ resolved (s4755: the tool ran; the old block was false).
    independently reached title/hangar and showed nonzero AI length plus busy
    status. Do not change the status/length shims or repeat this caller probe.
    Select the next M5 contract boundary with a fresh route discriminator.
+0. **M5 task-family retail qualification (s4886):** the independent Rice-route
+   capture passed the whole-RDRAM control (10,000 writes) and reached hangar
+   origin `0x006AB400`. Retail store PC `0x80091784` fired 703 times; 190
+   phase-gated type-2 publications at `0x80033FCC` matched sampled writer
+   values (176 `data_size=2`, 14 `data_size=1`). The candidate upstream watch
+   `0x80091084` fired zero times, so cadence remains unresolved and this is
+   single-source until port comparison. Next: run the same-build port
+   writer/task capture, then replace the inert upstream watch with the actual
+   counter/loop discriminator.
 0. **M5 task family (s4860):** the qualified route publishes one stable audio task family (0x80149470, type 2, ucode 0x80099FE0, data_ptr 0x80171CE0 title / 0x80171E70 hangar, data_size mostly 1), joined to 2104 SP completions and 79 nonzero PCM rows; s4854's "rows absent" was a control artifact. s4861 retail oracle (hangar only, control passed): same task 0x80149470 type 2, zero output, data_size 1-2 (retail 194x2/22x1, port mostly 1), data_ptr slot differs (ring slot). Class matches; ratio unexplained (single-source). s4862: retail data_size ratio reproduced (title 572x2/53x1, hangar 188x2/22x1, control passed, port now shares data_ptr slots): retail ~90% size 2, port 1-dominant — a real, unexplained difference (single-source on port side). Next: name the OSTask data_size writer on both sides (see NEXT.md). s4863: data_size = frame-batch counter 0x80149760 (stored at 0x80091784 in musyxSynthFrame, OSTask+0x34); no host-shim writer; likely cadence (single-source static). M5 plan has no step left; BLOCKED for direction. s4870: synth chunk loop bound = AI-ring index (byte 0x801496F0, writer runAiAudioStreamPlaybackLoop 0x8008EE6C) delta per synth entry: retail +2, port +1 (cap hw 0x8014974E=3 never binds). Next: who posts value-1 msgs to queue 0x80149670 and what wakes the synth (single-source retail). s4871: messages per synth entry retail 1.91 (1345/704, control passed) vs port 0.50 (steady, run-lifetime): port wakes synth ~2x per AI-done message. Next: per-entry caller/r31 of 0x8009123C on both sides (two registrations?). s4872: retail single caller 0x80019B74 (VI-retrace callback walk); port retrace walk ~117/s = ~2x VI updates, AI-done ~59/s = 1x VI updates (strict 1,0 alternation) - cadence difference, not two registrations. Next: who posts retrace-queue messages in the port (2/VI?) and the AI-done driver (1/VI vs retail ~2/retrace); join retail VI updates per retrace.
 0. **M5 port-task-load contract:** s4854 found both the port-load control and
    rows absent despite positive title/hangar, SP, action, and PCM controls.
