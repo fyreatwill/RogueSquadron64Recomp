@@ -158377,3 +158377,10 @@ provide live callers, with an independent companion decomp call from
 `docs/RENAME-S5027-AUDIT.md`. This rules out stale-address, split/data-record,
 and no-caller explanations for this candidate, but changes no generated code
 or runtime behavior. The missing MIPS GCC patch qualification remains parked.
+
+## Session 5028 (2026-10-15) — close-out: NEXT.md pivoted from rename sweep to retail-entry revisit
+
+Checkpoint close-out retry. No experiment ran. s5027's work was already committed
+(29e9e8d5); the exit contract failed only because NEXT.md predated the iteration.
+Rewrote NEXT.md to a REVISIT of the external retail-entry boundary, since the last
+15 session titles are all rename-sweep steps (ITERATION.md rule 4). Changes no code.

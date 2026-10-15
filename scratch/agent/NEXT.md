@@ -1,26 +1,22 @@
-# Next work unit: audit and preserve the next newly mapped menu-overlay symbol
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+# Next work unit: REVISIT external retail-entry boundary (sweep pivot)
+HYPOTHESIS-ID: external-retail-entry-revisit
 
-Competing hypotheses:
+Why: the last 15+ session titles (s5013-s5027) all belong to the generated-symbol
+renaming sweep, so per ITERATION.md this iteration is a REVISIT, not another
+sweep step. s5027 (buildScaledFormatTextElement 0x800B3AFC) is committed;
+docs/RENAME-S5027-AUDIT.md holds its gates. Do NOT resume the sweep.
 
-1. The next newly mapped menu-overlay symbol has a safe companion mapping and
-   should be preserved in the regeneration helper.
-2. The companion name is stale or belongs to a different address, so changing
-   the helper would mislabel generated code.
-3. The address is mapped correctly but the generated record is a split/data
-   fragment or has no live caller, so it fails the rename gates.
+Competing hypotheses (read CURRENT-TRUTH Next steps #2 and line ~281 first):
+1. The boundary is an input/recipe gap (our recipe never reaches the qualified
+   Rice route state), so a recipe change reaches it.
+2. The boundary is a real runtime divergence reachable only via the oracle.
+3. Boundary is design-dead (s4979 already closed one facet) and should be
+   formally closed in CURRENT-TRUTH.
 
-Discriminating measurement: independently compare the companion address,
-generated overlay span, generated body start, and generated caller set. Exact
-agreement selects H1; any disagreement selects H2/H3 and forbids the mapping
-change.
+Discriminating measurement: check CURRENT-TRUTH's stated "genuinely new angle"
+requirement (line ~261/519); pick one angle not in PORTING-STATE (grep it),
+design the whole table in ONE instrument, run once. If no new angle exists,
+go BLOCKED with that specific question or land an M5 de-stub from
+docs/M5-AUDIO-PLAN.md instead.
 
-Exact commands:
-
-    rg -n -C 3 '<candidate-name>' ../rogue_squadron64/symbol_files/menu_overlay.txt ../N64Recomp/RecompiledFuncs
-    git -C ../rogue_squadron64 diff -- symbol_files/menu_overlay.txt
-
-    python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address <start> --end-address <end> --limit 1
-
-The normal MIPS patch qualification remains parked until a GCC toolchain is
-supplied; do not rerun it in this unit.
+Parked: normal MIPS patch qualification (needs a GCC toolchain).
