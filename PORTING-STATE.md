@@ -157291,3 +157291,12 @@ Reading: retail produces a frame every 3-4 retraces; port every ~2. The port pro
 ORIGIN: no mitigation added; tools change is an oracle instrument only.
 Discrimination (s4920): selects H-retail-gfx-slow; refutes H-port-flip-early, H-retrace-rate.
 Next: thread closed. Resume M5 audio de-stub plan (docs/M5-AUDIO-PLAN.md).
+
+## Session 4921 (2026-10-14) — stability re-sample of the current default: 5/5 leave the VI-640 phase for 1024 at t=47 s, 0 stalls, 0 crashes (H-fixed)
+
+What ran: surveyed docs/M5-AUDIO-PLAN.md — inventory rows A1–A20 and sequence steps 0–11 are all qualified/closed, every M3 idiom class is closed, the rename sweep is parked (s4896) and the retail-entry boundary is parked (s4845/s4897). The one stale number was end-to-end stability: s4794 (pre-s4883) measured 2/5 stalled at VI 640, 2/5 reached 1024, 1/5 startup crash. Re-ran the same recipe (scratch/agent/s4921_gated_sample_x5.sh = s4793 recipe, 5 sequential runs, no break on freeze) on the current build (binary 19:44).
+Result (soak_results/s4921/summary.txt): 5/5 runs saw width 640 at t=4, update_screen counter 1152 at t=20 (control: counter advancing), and width 1024 at t=47 (cnt 2880-2944); froze=0 in 5/5, alive=yes at exit in 5/5, no startup crash. Load avg 4-6 throughout.
+Reading: selects H-fixed (s4883 startup SIGSEGV fix + s4890 synth-teardown fix); refutes H-stall-persists and H-crash-persists at N=5 (vs 2/5 stalled, 1/5 crashed before). Caveat: single recipe, each run stops at the 640->1024 transition (t=47), so this says nothing about hangar/mission longevity; N=5 is small (95% upper bound on stall rate ~45%).
+ORIGIN: no mitigation added; the only new file is the sampling script.
+Discrimination (s4921): selects H-fixed; refutes H-stall-persists, H-crash-persists.
+Next: soak longer phases (hangar + mission) on the current default; see scratch/agent/NEXT.md.

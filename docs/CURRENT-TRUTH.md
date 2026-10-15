@@ -269,6 +269,8 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
+-1. **(s4921) Stability baseline refreshed:** current default, 5/5 runs go VI 640 -> 1024 at t=47 s, 0 stalls, 0 crashes (was 2/5 stalled, 1/5 crashed at s4794). Each run stops at the transition, so mission/hangar longevity is unmeasured. All M5 inventory rows and M3 classes are closed; next work is a longer-phase soak (NEXT.md), then the parked sweep/retail-entry items only with a new idea.
+
 0. **M5 retrace pacing vs update_screen (s4899 result, next):** s4899's joined
    per-VI table (docs/M5-S4899-CADENCE-JOIN.md) closed the cadence join: synth
    entries == retrace-queue returns == audio-done messages (hangar R=9217 T=9217
