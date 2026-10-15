@@ -157163,3 +157163,5 @@ ORIGIN: n/a (diagnostics only, no mitigation).
 HYPOTHESIS-ID: m5-audio-destub
 REFUTED: H-evict-dominant, H-resize-dominant.
 SELECTED: none further; 30 Hz parked as host-bound (RT64 CPU cost >16.4 ms retrace). Next: M5 audio de-stub per docs/M5-AUDIO-PLAN.md.
+s4906 conclusion: this run refutes H-evict-dominant and H-resize-dominant, and selects H-updatescreen-blocking-wait (updateScreen 3.9 ms, the largest bucket, is a swapchain-acquire/vsync wait rather than CPU work) as the leading candidate over H-cpu-spread (four comparable CPU buckets, no single fix).
+NEXT DISCRIMINATOR: wrap swapchain acquire/present inside updateScreen with S4267T timers in the same default run, plus the existing sleep control; if acquire+present >= ~3 ms of the 3.9 ms, H-updatescreen-blocking-wait holds (cost is pacing, not reducible CPU); if < 1 ms, H-cpu-spread holds and 30 Hz stays parked. Queued behind M5 audio de-stub (one probe, low priority).
