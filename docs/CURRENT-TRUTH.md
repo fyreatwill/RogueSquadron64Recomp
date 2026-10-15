@@ -170,7 +170,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4968 (top):** long hold CLEAN (alive to 586 s, crash=0, PCM nz>0); M5 closed. Mandatory pivot has no remaining target; BLOCKED, see scratch/agent/BLOCKED.md.
+**s4969 (top):** the s4968 block was not an owner decision; re-scoped. Next unit is movz/movn support in N64Recomp via scratch regen (engineering-only, dormant defect, no runtime change expected); see NEXT.md.
+
+**s4968 (prior):** long hold CLEAN (alive to 586 s, crash=0, PCM nz>0); M5 closed. Mandatory pivot has no remaining target; BLOCKED, see scratch/agent/BLOCKED.md.
 
 **s4967 (prior):** Step 10 was already qualified at s4857, so the only open M5 item is a long mission hold. `soak_queue/s4967_mission_image_long.sh` is enqueued (image arm, ~310 s hold, cap 600 s); no verdict yet. Clean => long-hold qualified, then pick an M3 idiom-class audit; crash/stall => name the writer (rule 11). See NEXT.md.
 
