@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: m5-retrace-pacing-vs-retail
 
-s4902: port swaps at ~30 Hz (dt med 33.35 ms) over 60 Hz retraces (16.4 ms); swap lands 0-11 ms (med 3.8) after the 2nd retrace. H-vi-rate refuted; leans H-slow-frame over H-divider.
+s4903: gfx task begin R1+0.1 ms, dp_complete R1+20.7 ms (begin->done med 20.6 ms wall), swap +0.1 ms after done => port is 30 Hz because renderer_context->send_dl takes ~20.6 ms > 16.4 ms retrace. H-divider / H-slow-frame-other refuted.
 
-Hypotheses: H-slow-frame-gfx (frame bounded by gfx task completion latency in the port's RSP/RDP emulation); H-slow-frame-other (audio/spin-yield/mutex wait in game thread); H-divider (game-side limiter; swap would sit ~0 ms after R2 — mostly disfavoured).
-Discriminator: one run, extend tools/apply_s4902_swap_timing.py: timestamp gfx-task-done (DP/SP-done message to the game queue) and the osSendMesg/recv wait points of the game main loop; per origin-change row log ms of task-done relative to R1/R2/swap. Task-done before R1+16.7 => game-side wait (H-divider/other); after => H-slow-frame-gfx. Positive control: the existing R/S events must still fire in the same row.
+Hypotheses for where the 20.6 ms goes: H-lle-rsp (LLE RSP microcode interpretation, ROGUESQ_LLE_FORCE/UNGATED/SOLO), H-rt64-raster (RT64 RDP raster + Metal work on the calling thread), H-present-wait (blocking on render thread/present/vsync inside send_dl), H-debug-overhead (the logging env vars of the cadence recipe, e.g. ROGUESQ_AUDIO_UCODE / M5_ROUTE_ORDER).
+Discriminator: one build, one run: timestamp inside the send_dl path (events.cpp around renderer_context->send_dl; RT64 entry points if cheap) to split LLE-RSP / RDP / present-wait; plus an arm of the SAME recipe with the logging env vars removed (run concurrently, rule 13) to test H-debug-overhead. Positive control: B/D rows stay 1:1 and the full arm reproduces ~20.6 ms.
