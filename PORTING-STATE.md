@@ -157963,3 +157963,19 @@ independent oracle artifact passed whole-RDRAM and voice-pair controls but did
 not reach title/hangar in its short run, so it contributes no phase join.
 Next is the same caller-boundary discriminator, with its fixup script existence
 checked before building. No guard, rewrite, or mitigation was added.
+## Session 4990 (2026-10-15) — caller-boundary capture is phase-mismatched
+
+Restored `tools/apply_s4988_s4540_boundary.py` because the prescribed fixup was
+absent, applied it to the live external generated functions, and built the
+Debug target successfully. The phase-gated s4984 mission recipe passed title,
+hangar, both mission origins, allocator control (`ctl_arm=1`, `s4579A=9`),
+PCM-positive rows=149, crash=0, and abort=0. The positive-control arm proved
+the new diagnostic was live. Four capped `s4540` bad rows recorded
+`r31=0`, `r4/a0=0x801724C0`, and guest `count=32 base=0x801714D0`, but all
+occurred at origins `0x644D00` or `0x6A2900`; no bad row shared either mission
+origin. Mission s4987 publication/observation rows showed current
+`count=20 base=0x8018C720`. Therefore the caller hypotheses were not
+discriminated: this is an unevaluable same-origin join, not evidence for a
+guard, rewrite, or lock. Next is a per-origin bad-row budget in the same
+instrument, with the route controls preserved. ORIGIN: `allocateSongChannelArray`
+is the legitimate writer; no mitigation was added.

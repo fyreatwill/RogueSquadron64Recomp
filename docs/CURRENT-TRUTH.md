@@ -1,10 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4988; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4990; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s4990:** The caller-boundary instrument passed all route controls and
+  recorded `r31=0`, `r4=0x801724C0`, and guest `32/0x801714D0` on four bad rows,
+  but those rows occurred only at origins `0x644D00` and `0x6A2900`; the
+  mission-origin mixer/publication rows were current `20/0x8018C720`. Because
+  the bad-row budget was run-lifetime capped, this run made no same-origin
+  caller join and selected no hypothesis. The instrument is live; next is a
+  per-origin bad-row budget, with no value rewrite or guard.
 
 - **s4988:** Independent retail ground truth passed its whole-RDRAM positive
   control and wrote the voice pair at `0x801496F8/0x80149700` (dominant writer
@@ -226,7 +234,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4988 (top):** The whole-table provenance arm was route-qualified (title, hangar, both mission origins, PCM=129, crash=0, abort=0). Retail ground truth independently passed whole-RDRAM control and showed the pair is legitimate. In mission, publication and mixer observations agree at `20/0x8018C720`, but `s4540` bad rows report `32/0x801714D0` and `a0=0x801724C0`. Next: add phase/origin and caller-register capture at the `s4540` call boundary, plus a same-phase join to the nearest mixer/publication row; do not repeat locks or add a value filter. ORIGIN: legitimate writer is `allocateSongChannelArray`; the defect is an observation/propagation boundary, not yet explained.
+**s4990 (top):** The caller-boundary arm was route-qualified (title, hangar, both mission origins, PCM=149, crash=0, abort=0) and its positive controls fired. Four capped bad rows all occurred before the mission origins, so the requested same-origin join was unevaluable. Next: change only the bad-row diagnostic budget from run-lifetime to per-origin (reset on `rs64_vi_committed_origin()`), preserving phase/origin, `r31`, `r4`, guest count/base, and the s4987 publication/observation rows. A mission-origin bad row plus current `20/0x8018C720` selects H-propagation; a stale same-origin caller selects H-uninstrumented-reader; current same-origin values select H-classifier. ORIGIN: legitimate writer is `allocateSongChannelArray`; the defect is an observation/propagation boundary, not yet explained.
 
 **s4984 (prior):** The explicit atomic count/base loads and release stores reached mission (onset 176 s) with `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0, abort=0, and PCM positive control 147. H-atomic-observation is refuted for this implementation; H-lock-required remains.
 
