@@ -1,7 +1,7 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4993; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4995; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
@@ -13,6 +13,13 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   `0x00690400` or `0x00620400`. The s4987 observation control fired 20 times
   at `0x00690400` with current `20/0x8018C720`. The same-origin bad-row join
   remains unevaluable, so no hypothesis or mitigation is selected.
+
+- **s4995:** The regeneration-preserved ordinary-caller sample was added and
+  built, but the validation recipe reached hangar and pre-mission origins only
+  (`mission_onset_t=-1`; crash markers were present), so its s4540 arm and
+  s4987 observations were pre-mission controls. It emitted no mission-origin
+  sample rows. H-uninstrumented-reader, H-classifier-phase, and H-no-sample
+  remain unevaluable; retry with a route-qualified mission recipe.
 
 - **s4990:** The caller-boundary instrument passed all route controls and
   recorded `r31=0`, `r4=0x801724C0`, and guest `32/0x801714D0` on four bad rows,
@@ -242,7 +249,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4993 (top):** The per-origin budget exposed 2,602 bad rows only at pre-mission origins `0x006A2900` and `0x00644D00`; mission origins had no bad rows, while s4987 observed the current `20/0x8018C720` pair. Next: retain the per-origin budget and add a phase-scoped sample of ordinary s4540 caller rows at the mission origins, recording caller `a0`, `r4`, guest count/base, and whether each row is current or stale. A mission-origin stale sample selects an uninstrumented reader/propagation path; only-current samples select the bad predicate's phase limitation; no mission-origin sample is unevaluable. ORIGIN: legitimate writer is `allocateSongChannelArray`; this remains an observation/propagation boundary, not a value-rewrite target.
+**s4995 (top):** The new ordinary s4540 caller sample is live and regeneration-preserved, but the s4984 retry reached hangar and pre-mission origins only (`mission_onset_t=-1`), with no mission-origin rows. The s4540 arm and s4987 observations fired, proving the instrument, but their pre-mission phase cannot discriminate the hypotheses. Retry the same sample with the route-qualified s4958 hangar-to-mission driver; retain the per-origin budget and all controls. A mission-origin stale row selects an uninstrumented reader/propagation path; only-current rows select a phase-limited bad predicate; no mission-origin sample remains unevaluable. ORIGIN: legitimate writer is `allocateSongChannelArray`; this remains an observation/propagation boundary, not a value-rewrite target.
 
 **s4984 (prior):** The explicit atomic count/base loads and release stores reached mission (onset 176 s) with `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0, abort=0, and PCM positive control 147. H-atomic-observation is refuted for this implementation; H-lock-required remains.
 

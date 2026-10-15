@@ -158039,3 +158039,25 @@ by restoring or authoring that bounded, regeneration-preserved diagnostic and
 then run the already-qualified recipe once. No guard, lock, rewrite, or other
 mitigation was added. ORIGIN: `allocateSongChannelArray` remains the legitimate
 writer; this is still an unexplained observation/propagation boundary.
+
+## Session 4995 (2026-10-15) — mission caller sample is route-unevaluable
+
+Performed the required independent retail ground-truth check first, watching
+retail `0x80090F00` with explicit 512-wide mission origins and the known input
+route. The oracle did not reach the mission-origin controls before it was
+killed, so that null is unevaluable and is not evidence that retail lacks the
+caller.
+
+Added `tools/apply_s4994_s4540_mission_sample.py` and registered it in
+`tools/fixup_game_funcs_vendored.py`. The bounded diagnostic records `r31`,
+`r4`, caller `a0`, guest count/base, and current/stale status only at the two
+mission origins, while retaining the arm control and prior s4987 observations.
+The Debug binary built successfully. The validation recipe reached hangar and
+pre-mission origin `0x00656400` but not either mission origin
+(`mission_onset_t=-1`); s4540 arm and s4987 pre-mission rows fired, while the
+new mission sample produced zero rows. The run also contained crash markers,
+so it is not a qualified mission run. H-uninstrumented-reader,
+H-classifier-phase, and H-no-sample remain unevaluable. This rules out only an
+interpretation of the zero sample as a null result; it does not select a
+writer, reader, guard, or rewrite. ORIGIN: `allocateSongChannelArray` remains
+the legitimate writer; no mitigation was added.

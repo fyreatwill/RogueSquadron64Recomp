@@ -40546,6 +40546,7 @@ RS64_REPLAY = [
     "apply_s4985_voice_lock.py",
     "apply_s4986_narrow_voice_lock.py",
     "apply_s4987_voice_pair_provenance.py",
+    "apply_s4994_s4540_mission_sample.py",
 ]
 
 
