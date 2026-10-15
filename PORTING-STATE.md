@@ -158102,3 +158102,19 @@ data-as-code regions. A runtime-log search found no CPU `Failed to find
 function` marker; the matching `Unhandled jump target` hits were Factor 5 RSP
 messages. This closes the CPU indirect-call lowering class without a guard or
 rewrite. Detailed evidence: `docs/M3-S4998-INDIRECT-CALL-SOURCE-AUDIT.md`.
+
+## Session 4999 (2026-10-15) — residual generated-symbol audit found no safe rename
+
+Ran the required non-sweep-only preflight and audited the two remaining
+generated placeholders against the companion symbol files, generated bodies,
+overlay records, local TOML, and generated call sites. `func_8000040C` has an
+exact `0x34` body span and two live calls from `main`, but the companion entry
+is only the address-coded hard-coded entry symbol; it has no semantic mapping.
+`func_800E9AE0` has an exact `0x114` body/overlay span, but the companion
+deliberately retains the address-coded placeholder and the generated tree has
+no live caller. The local names `clearMemory16ByteBlocks` and
+`func_mission_overlay_800E9AE0` are inferred/mechanical entries, not mappings
+that pass all gates. No generated file, mapping, or behavior was changed; no
+build was required. This rules out a safe rename from the available snapshot,
+not future mappings. Detailed evidence: `docs/RENAME-S4999-AUDIT.md`.
+ORIGIN: no mitigation or behavior change; diagnostic-only symbol audit.

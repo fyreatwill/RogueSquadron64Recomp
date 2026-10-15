@@ -1,35 +1,41 @@
-# BEGIN generated-symbol-renaming sweep after M3 dispatch audit
+# Next work unit: new external-retail boundary discriminator
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: external-retail-entry-new-witness
 
-The s4998 M3 indirect-call audit closed that class. M5 is fully closed through
-the long mission hold. The last-15-session preflight is not sweep-only, so the
-symbol sweep is eligible. Do not revisit the stale voice-count sample.
+The generated-symbol sweep is closed at the available snapshot. M5 is closed,
+and the M3 indirect-call class is closed. Do not repeat either audit.
+
+Run one bounded, read-only design/ground-truth experiment for the parked
+external-retail boundary: use an independent retail PC watch at the first
+port-side `0x800903F0` consumer boundary, with whole-RDRAM and VI controls,
+then compare it to the qualified Rice port route. The instrument must include
+the positive controls in the same run before a null is interpreted.
 
 Competing hypotheses:
 
-1. H-companion-match: one placeholder has an exact companion/decomp mapping
-   and can be renamed without changing generated behavior.
-2. H-no-safe-map: the next ranked placeholder lacks a companion, live-caller,
-   or exact-span match and must remain `func_*`.
-3. H-stale-generated-name: the candidate is already human-named in the
-   companion but not synchronized in the generated/fixup symbol map.
+1. H-retail-boundary-live: retail reaches the consumer with the same route
+   family, but the prior watch missed the exact boundary.
+2. H-retail-design-dead: retail legitimately never reaches that consumer for
+   the relevant voice kind, while the port-only hit is an invalid port state.
+3. H-route-mismatch: the retail and port arms do not reach the same phase,
+   making the consumer comparison unevaluable.
 
-Discriminating outcomes:
+Discriminator:
 
-- An exact mapping with matching address, body span, and a live caller selects
-  H-companion-match and lands one regeneration-safe symbol-map rename.
-- Any failed gate selects H-no-safe-map; leave the placeholder unchanged and
-  record why.
-- A generated/fixup mismatch selects H-stale-generated-name and synchronizes
-  only the mapping source, with no hand edit to generated C.
+- whole-RDRAM and VI controls fire, the route reaches title/hangar, and a
+  phase-qualified retail PC row at the consumer selects H-retail-boundary-live;
+- controls and route fire but the retail PC row remains absent while the
+  independent kind/flag controls match selects H-retail-design-dead;
+- any missing control, title/hangar phase, or kind/flag join selects
+  H-route-mismatch and authorizes no mitigation.
 
-Exact next commands:
+Exact preflight commands:
 
+    rg -n '800903F0|retail.*watch|whole-RDRAM|VI control|oracle' tools/oracle docs scratch/agent
+    sed -n '1,240p' tools/oracle/README.md
     grep -n '^## Session ' PORTING-STATE.md | tail -15
-    rg -n 'func_8000040C|func_800E9AE0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs tools docs
-    sed -n '1,220p' tools/rename_functions.py 2>/dev/null || true
 
-Before any build, write the candidate table and exact mapping discriminator
-here. If an exact mapping exists, apply it through the existing rename/fixup
-source, run its checker, and commit the mapping plus a concise audit note.
+Before any build, verify the oracle recipe and positive-control watch. Build
+all controls in one arm, run one phase-gated comparison, and do not rewrite or
+filter any port value. If the oracle cannot reach the qualified route, record
+the exact missing control and leave the boundary parked.

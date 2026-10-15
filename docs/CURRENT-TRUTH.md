@@ -1,10 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4995; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4999; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s4999:** The bounded residual-symbol audit found no safe rename. `func_8000040C`
+  has an exact `0x34` span and live callers but no semantic companion name;
+  `func_800E9AE0` has an exact `0x114` span but remains address-coded in the
+  companion and has no generated live caller. Neither generated symbol was
+  changed. Evidence: `docs/RENAME-S4999-AUDIT.md`.
 
 - **s4993:** The per-origin bad-row budget passed title, hangar, both mission
   origins, allocator and PCM controls (mission onset 181 s, PCM=149,
@@ -196,9 +202,10 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   old exact PC is absent; do not repeat without a new route or PC discriminator.
 - M4 accumulator boundary, attached-mesh mission contract, hangar pillars,
   col-511 noise, `0x1F0D74`, and overlay-registration chunking are parked.
-- Generated-symbol renaming is exhausted at the available snapshot: only
-  `func_8000040C` and `func_800E9AE0` remain without a candidate satisfying
-  companion mapping, live caller/body, and exact-span gates.
+- Generated-symbol renaming is exhausted at the available snapshot: the s4999
+  audit found no remaining candidate satisfying semantic companion mapping,
+  live caller, and exact-span gates. Reopen only with a new generated snapshot
+  or companion mapping source.
 - M3 patch-runtime qualification remains blocked on the MIPS GCC/LD toolchain.
 
 ## Superseded conclusions
@@ -249,7 +256,16 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4998 (top):** The complete register-target indirect-call audit closed the
+**s4999 (top):** The residual generated-symbol audit found no safe rename. The
+`0x8000040C` entry has a live caller and exact span but no semantic companion
+name; `0x800E9AE0` has an exact span but no semantic companion name or
+generated live caller. The local inferred/mechanical rename entries do not
+meet the gates. No generated file, mapping, or behavior was changed. Detailed
+evidence: `docs/RENAME-S4999-AUDIT.md`. The symbol sweep is closed pending a
+new mapping source; next eligible work is a genuinely new M3 class or the
+parked external-retail/M4 boundary only if a new witness exists.
+
+**s4998 (prior):** The complete register-target indirect-call audit closed the
 remaining non-`$ra` M3 dispatch class: 113 `LOOKUP_FUNC(ctx->rN)` sites split
 into 42 memory-derived, 3 arithmetic-derived, 11 other, and 57 locally
 unresolved callback/data-as-code sites; the independent census found 177/177
