@@ -89,13 +89,13 @@ static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4267"); return
 static std::mutex m;
 static const auto t0 = std::chrono::steady_clock::now();
 struct A { uint64_t n = 0; double sum = 0, mx = 0; };
-static A agg[8];
+static A agg[19];
 static int last_sec = -1;
 static void flush_locked(int sec) {
-    static const char* nm[8] = {"pipeline","texwait","fbwait","ddwait","fullSync","procDL","lleRun","sendDl"};
+    static const char* nm[19] = {"pipeline","texwait","fbwait","ddwait","fullSync","procDL","lleRun","sendDl","fsFlush","fsSubmitFb","fsMisc","fsValidate","fsUpload","fsRspPipe","fsRender","fsEvict","fsProj","fsAdvance","fsTail"};
     std::string o;
     char b[96];
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 19; ++i) {
         std::snprintf(b, sizeof b, " %s=%llu/%.0fms/max%.0f", nm[i], (unsigned long long)agg[i].n, agg[i].sum, agg[i].mx);
         o += b; agg[i] = A{};
     }
@@ -218,6 +218,7 @@ public:
         }
         app->userConfig.developerMode = debug || dev_mode_on;
         app->userConfig.displayBuffering = RT64::UserConfiguration::DisplayBuffering::Triple;
+        if (const char* rm = std::getenv("ROGUESQ_RESMULT")) { double m = std::atof(rm); if (m > 0.0) app->userConfig.resolutionMultiplier = m; }
 
         // PresentEarly ON by default. Our cinematic stays on a single VI fb
         // address; without PresentEarly, RT64's updateScreen only pushes a
