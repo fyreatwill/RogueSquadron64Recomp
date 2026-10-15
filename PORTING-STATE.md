@@ -157893,6 +157893,20 @@ skip, filter, or value rewrite was added.
 ORIGIN: writer = guest `allocateSongChannelArray`; count 32 and base are
 legitimate, so this remains synchronization work rather than mitigation.
 
+## Session 4986 (2026-10-15) — retry close-out: whole-lock result is route-blocking, narrow lock remains the discriminator
+
+This retry did not rerun the game. The existing s4985 artifact and captured
+log were rechecked: the Debug build was complete, the allocator positive
+control fired once (`s4579-A=1`), and the 150-second route gate ended before
+title, mission, PCM, or crash/abort controls. The discriminating conclusion is
+therefore limited but definite: the whole-function mutex arm is route-blocking
+and unevaluable, so it neither selects H-lock-required nor refutes a narrower
+publication/observation lock. The next discriminator remains one same-run
+validation with title plus allocator controls, then mission `bad`/`pidma`.
+No legitimate value was filtered or rewritten. ORIGIN: the writer is
+`allocateSongChannelArray`; its count and base are legitimate, and the tested
+change was synchronization exclusion rather than mitigation.
+
 ## Session 4985 (2026-10-15) — whole-function voice lock blocks validation route
 
 Implemented `tools/apply_s4985_voice_lock.py`, registered it in the vendored

@@ -1,3 +1,11 @@
+# Resume checkpoint
+
+This is a close-out of the interrupted s4985 retry. Do not rerun the game in
+this iteration. The existing artifact is commit `7f17fcb4`: Debug build
+completed after `tools/apply_s4985_voice_lock.py` serialized both complete
+functions, and the captured validation log is
+`scratch/agent/soak_results/s4985_whole_voice_lock_mission/run.log`.
+
 # Next work unit
 HYPOTHESIS-ID: voice-count-before-base-race
 
