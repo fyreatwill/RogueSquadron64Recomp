@@ -1,32 +1,31 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-retire-synth-dedup
+HYPOTHESIS-ID: m5-a12-yield-validation
 
-Change the default of the existing `s4878` synth-registration deduplication
-arm to off. Keep `ROGUESQ_S4875_DEDUP=1` as the rollback arm and keep the
-s4890 one-shot first-teardown deregistration enabled. This tests whether the
-named origin fix makes the mitigation redundant.
+Run the existing A12 wait-boundary validation in one rebuilt binary, comparing
+default yielding against the explicit rollback arm. This is the next M5 audio
+step after the synth-registration mitigation was retired.
 
 Competing hypotheses:
 
-- H1: after s4890, dedup can be retired; default-off has one synth callback per
-  retrace and preserves SP/PCM/title/hangar controls.
-- H2: another duplicate source remains; default-off shows two synth callbacks
-  or a route divergence while rollback remains qualified.
-- H3: dedup is not the duplicate source but is a stability guard; default-off
-  crashes or loses the qualified route despite one callback entry.
+- H1: default A12 yielding is the correct producer/scheduler contract; it
+  records producer arm/clear and wait-return rows and preserves task/SP,
+  slot, PCM, title, and hangar controls, while rollback differs or stalls.
+- H2: the default yield changes no qualified behavior; both arms have the same
+  positive controls and route outcome, so A12 is already behavior-neutral.
+- H3: yielding is harmful on the current route; default loses a positive
+  control, crashes, or diverges while rollback remains qualified.
 
-Discriminator: one build containing default dedup-off and rollback dedup-on,
-run concurrently with `ROGUESQ_S4889_FIRST_DEREG=1`, callback-table snapshots,
-synth entries/deregistrations, `[m5-route-order]` SP completion, PCM boundary,
-title/hangar, and crash/abort controls. H1 authorizes removing the default
-mitigation; H2 keeps it and audits the remaining registration source; H3 keeps
-it and treats the one-shot fix as insufficient for retirement.
+Discriminator: one build and `tools/run_m5_yield_ab.sh`, with both arms
+phase-gated. Require producer arm/clear and wait-return controls, task/SP,
+slot transition, nonzero PCM source/consumer joins, title/hangar, and
+crash/abort markers in both arms. H1 selects the default de-stub; H2 closes
+A12 without further behavior change; H3 keeps the rollback/default decision
+open and identifies the failed contract boundary.
 
 Exact commands:
 
-    python3 tools/apply_s4891_retire_synth_dedup.py
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh tools/run_s4891_retire_synth_dedup_ab.sh
+    zsh tools/run_m5_yield_ab.sh
 
 Do not start the generated-symbol sweep while this M5 unit is applicable.

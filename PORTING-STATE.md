@@ -156925,3 +156925,31 @@ deregistration; the callback value is legitimate, and the one-shot call uses
 the existing named `findAndZeroTableSlotMatching` writer.
 Next: test retiring the now-redundant s4878 synth-registration dedup default,
 with dedup-on as rollback.
+
+## Session 4891 (2026-10-14) — retired default synth-registration deduplication
+
+Work unit: change the replayable s4878 fixup hook's default
+`ROGUESQ_S4875_DEDUP` from on to off, retain `=1` as rollback, and compare it
+with the s4889 first-gate-zero deregistration enabled in both arms. The hook
+was initially stale-idempotent: it saw the existing generated marker and left
+the old default in place. It was repaired to upgrade an existing insertion,
+then replayed and rebuilt successfully.
+
+The default-off arm recorded one `[s4889] first-gate-zero-dereg`, zero
+`[s4878] dedup-skip` rows, seven synth-entry callback rows, 696 phase-gated
+SP-complete rows, 303 PCM rows, title and hangar, and no crash/abort marker.
+The rollback dedup-on arm recorded no first-dereg marker, 13 synth-entry rows,
+703 SP-complete rows, 303 PCM rows, title and hangar, and no crash/abort. The
+callback snapshots showed default removing the existing synth before reapply,
+while rollback retained the duplicate until normal teardown.
+
+This selects H1: the named first-teardown deregistration makes the default
+deduplication redundant. It rules out a route-loss or immediate stability
+failure from retiring the default mitigation; it does not remove the rollback
+arm or the one-shot deregistration.
+ORIGIN: the duplicate was written by the legitimate `0x8009123C` reapply after
+the gate-zero teardown skipped its legitimate deregistration. The s4878 branch
+was mitigation-shaped; only its default was retired after the named writer and
+ordering evidence were qualified.
+Next: validate the A12 default-yield versus explicit rollback arms with the
+producer arm/clear, wait-return, task/SP, slot, PCM, and route controls.

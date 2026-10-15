@@ -6,7 +6,17 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4890)
+## Headline (as of s4891)
+
+- **s4891:** retired the default synth-registration deduplication mitigation in
+  a same-build A/B after s4890's named first-teardown fix. Default-off performed
+  one first-gate-zero deregistration, recorded zero dedup skips, reached
+  title/hangar, and preserved 696 SP-complete and 303 PCM rows with no crash or
+  abort. Rollback dedup-on reached the same controls with 703 SP and 303 PCM;
+  callback-entry counts were 7 versus 13, and snapshots showed the rollback
+  duplicate retained until normal teardown. This selects H1: the named
+  first-teardown fix makes the default dedup redundant. The change is
+  regeneration-replayable; `ROGUESQ_S4875_DEDUP=1` remains a rollback arm.
 
 - **s4890:** the bounded first-teardown deregistration change selected H1 in a
   same-build A/B. Default performed one extra synth deregistration when the
@@ -574,11 +584,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-0. **M5 retire the duplicate-registration mitigation:** change the default of
-   `ROGUESQ_S4875_DEDUP` to off now that the named first-teardown deregistration
-   is active. Run one same-build default/rollback A/B with callback-table
-   cardinality, SP, PCM, title/hangar, and crash controls. The rollback keeps
-   dedup on; do not remove the one-shot deregistration.
+0. **M5 callback teardown follow-up:** with s4891's dedup default retired and
+   s4890's first-teardown fix retained, select the next unqualified M5 callback
+   teardown boundary using a fresh phase-gated positive control. Do not remove
+   the rollback env arm or repeat the completed dedup A/B.
 
 1. **M5 double synth walk (s4874-s4875, closed by s4890):** the port's
    duplicate callback origin was the gate-zero first-teardown gap. s4890's
