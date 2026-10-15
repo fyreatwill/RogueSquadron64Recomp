@@ -158237,3 +158237,14 @@ Re-tested: MIPS gcc/ld still absent; the s5011 hangar crash is the already-docum
 
 ## Session 5017 (2026-10-15) — s5015 block re-checked, still stands
 No new input since s5016: MIPS gcc/ld still absent (clang has no MIPS target), soak queue empty, newest SOAK-RESULTS line (s5012) already folded in. No experiment run. Needs owner choice among BLOCKED.md options (a)-(d).
+
+## Session 5018 (2026-10-15) — qualified the assembly-only patch pipeline
+The owner-installed Homebrew binutils were tested with a temporary
+`.recomp_patch` assembly override. `mips-linux-gnu-as -mips2 -mabi=32 -EB`
+and the existing `patches.ld`/`syms.ld` produced an ELF32 MSB MIPS-II
+executable with `.recomp_patch` at `0x80801000` and symbol
+`func_80007D74`. The in-tree `build/N64Recomp` then consumed that ELF and
+emitted `probe.c`, `funcs.h`, and `recomp_overlays.inl` with exit code 0.
+This selects H1 from NEXT.md: the assembly-only route is technically
+available. It does not validate heap-guard behavior, enable an override, or
+replace the missing MIPS C compiler. No generated or runtime file was kept.

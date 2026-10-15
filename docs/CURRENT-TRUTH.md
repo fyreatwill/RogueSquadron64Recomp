@@ -1,10 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5000; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5018; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5018:** Homebrew `mips-linux-gnu-as`/`ld` can assemble and link the
+  existing patch layout: a temporary assembly override produced ELF32
+  big-endian MIPS-II with `.recomp_patch` at `0x80801000`, and the in-tree
+  `build/N64Recomp` consumed it successfully. This unblocks an assembly-only
+  patch route, but no game behavior changed and MIPS C compilation remains
+  unavailable.
 
 - **s5000:** The independent retail/port boundary retry passed retail
   whole-RDRAM, title, and hangar controls and recorded 0 exact
@@ -270,6 +277,14 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+**s5018 (top):** The assembly-only patch pipeline is qualified. The next
+bounded unit is to hand-port one existing M3 heap-guard entry point to MIPS
+assembly, preserving the existing legitimate-writer `ORIGIN` contract, then
+run the assembler/linker/N64Recomp pipeline and inspect the generated host
+override. Do not enable the override in the game until the generated function
+matches the intended original control flow; the missing MIPS C compiler still
+blocks compiling `patches/heap_guards.c` directly.
+
 **s5012 (top):** The mission-qualified s4994 sample ran validly (mission_onset_t=173, arm=1, crash=0): 32 of 32 mission-origin s4540 caller rows were current-base `0x8018C720`, 0 stale `0x801714D0`; with s4993 (0 bad rows at mission origins) this closes the mission-phase `kind=bad` thread. No runnable M5 unit remains; next eligible work is a genuinely new M3 idiom class or a new witness for the parked retail/M4 boundaries. Declaring M5 done stays an owner call, non-gating.
 
 **s5010 (top):** The s5007/s5009 "BLOCKED on owner decision" was refuted: running the queued mission-sample soak needs no human decision (the s4994-instrumented binary is already built). Enqueued `soak_queue/s5010_s4540_mission_sample.sh`; next unit is consuming its verdict (NEXT.md). Declaring M5 done stays an owner question but is non-gating.
@@ -406,4 +421,3 @@ Mission-route soak (solo, N=5): 5/5 reached origin 0x690400, 0 do_break hits, 0 
 - Open owner-level options (not blockers, s5008): (a) declare M5 done, set new target; (c) supply symbol-mapping source for rename sweep. Mission-phase kind=bad voice reads: per-origin budget ALREADY RUN (s4993): 0 bad rows at mission origins vs 2,602 pre-mission, same-run control passed; only open arm is the s4994 mission-origin caller sample, which needs a mission-qualified recipe (s4995 never reached mission).
 
 - s5011: s5010 mission-sample soak route-unevaluable (mission_onset_t=-1; updateHangarBayScene crash). Retry queued as s5012; no conclusion on stale32/cur20.
-
