@@ -1,13 +1,15 @@
-# Resume s4995 mission-origin caller discriminator with route-qualified driver
+# RESUME s4995 mission-origin caller discriminator with route-qualified driver
 
 HYPOTHESIS-ID: voice-count-before-base-race
 
-The sample is now regeneration-preserved and built, but the s4984 retry did
-not reach a mission (`mission_onset_t=-1`), so its zero mission rows are not a
-result. Run the known route-qualified s4958 driver once with the current
-binary and `ROGUESQ_LOG_S4539=1`; do not change the sample or add a guard,
-lock, rewrite, or mitigation. Capture title, hangar, mission origin, s4540
-arm, s4987 observations, and PCM controls.
+Checkpoint state: the regeneration-preserved sample exists at
+`tools/apply_s4994_s4540_mission_sample.py`, is registered in
+`tools/fixup_game_funcs_vendored.py`, and built successfully. The attempted
+validation reached title/hangar and pre-mission `0x00656400`, but not either
+mission origin (`mission_onset_t=-1`); crash markers were present. The arm and
+s4987 controls fired, so the diagnostic is live, but the run selected nothing.
+Do not rerun in the checkpoint iteration. On the next iteration, run exactly
+the route-qualified driver below once with no code or instrumentation changes.
 
 Competing hypotheses:
 
@@ -20,17 +22,20 @@ Competing hypotheses:
 
 Discriminating outcomes:
 
-- Any bounded `status=stale` row at `0x00690400` or `0x00620400` selects
+- A bounded `status=stale` row at `0x00690400` or `0x00620400` selects
   H-uninstrumented-reader / propagation boundary.
 - Mission-origin rows all `status=current` select H-classifier-phase.
-- No mission-origin rows after title+hangar+mission controls remain
-  H-no-sample/route failure and require another route driver, not a conclusion.
+- No mission-origin rows after title, hangar, mission, arm, observation, and
+  PCM controls remain unevaluable as H-no-sample/route failure; do not treat
+  the zero as evidence about the writer.
 
-Resume commands:
+Exact next command:
 
     test -e tools/apply_s4994_s4540_mission_sample.py
     grep -q 'apply_s4994_s4540_mission_sample.py' tools/fixup_game_funcs_vendored.py
     env ROGUESQ_LOG_S4539=1 zsh scratch/agent/s4958_after_6a2900.sh
 
-ORIGIN: `allocateSongChannelArray` remains the legitimate writer; the boundary
-is unexplained and is not a value-rewrite target.
+Capture title, hangar, both mission origins, s4540 arm, s4987 observations,
+mission onset, crash/abort markers, and PCM controls. ORIGIN:
+`allocateSongChannelArray` remains the legitimate writer; this is an
+unexplained observation/propagation boundary, not a value-rewrite target.

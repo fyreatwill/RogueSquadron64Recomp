@@ -158061,3 +158061,19 @@ H-classifier-phase, and H-no-sample remain unevaluable. This rules out only an
 interpretation of the zero sample as a null result; it does not select a
 writer, reader, guard, or rewrite. ORIGIN: `allocateSongChannelArray` remains
 the legitimate writer; no mitigation was added.
+
+## Session 4996 (2026-10-15) — checkpointed the route-unevaluable caller sample
+
+This retry stopped at checkpoint close-out and did not rerun the s4995
+discriminator. The retained s4995 artifact is the regeneration-preserved
+`tools/apply_s4994_s4540_mission_sample.py`, registered in
+`tools/fixup_game_funcs_vendored.py`, with a successful Debug build. Its
+validation run reached title/hangar and pre-mission origin `0x00656400`, and
+fired the s4540 arm plus s4987 observations, but it reached neither mission
+origin (`mission_onset_t=-1`) and contained crash markers. Therefore the zero
+mission sample is route-unevaluable, not a null result: H-uninstrumented-reader,
+H-classifier-phase, and H-no-sample remain open. This checkpoint adds no new
+experiment and makes no claim about the writer or a mitigation. The next
+discriminator remains one route-qualified s4958 driver run with the existing
+sample and phase controls. ORIGIN: `allocateSongChannelArray` remains the
+legitimate writer; the observation/propagation boundary is unexplained.
