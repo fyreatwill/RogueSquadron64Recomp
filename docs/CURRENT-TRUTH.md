@@ -1,11 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 4939; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 4940; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4940:** The aligned retail watch `0x00149700:0x00149704` fired 4,498
+  times, while whole-RDRAM and the other two target controls also fired. The
+  oracle remained at the undriven 320-wide boot origin (`0x006DD280`) for all
+  4,500 VI, so the aligned hits are pre-target-route activity and cannot
+  resolve the title-phase byte boundary. This selects phase-route mismatch,
+  single-source oracle evidence; no rewrite or filter was added.
 - **s4939:** The phase-gated retail/port join reached the title phase on both
   sides and the port witness recorded all four `musyxSynthFrame` stores in the
   retail order. Retail controls fired for whole RDRAM and the other target
@@ -132,10 +138,12 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
    store order, values, and cadence in one table. The title-phase arm is
    unresolved because retail `0x80149702` was absent and the port did not reach
    hangar. No rewrite or filter was added.
-2. **Next:** resolve the missing retail byte-watch boundary with one oracle run
-   using an aligned physical range around `0x00149702`, retaining the
-   whole-RDRAM positive control and the qualified `0x00149988` and
-   `0x000A1778` controls. Do not add a port instrument or mitigation.
+2. **Next:** repeat the aligned retail watch with the qualified Rice video
+   plugin and verified Start presses so the oracle reaches the title/hangar
+   route before interpreting `0x00149700:0x00149704`. Retain whole-RDRAM,
+   `0x000A1778`, and `0x00149988:0x0014998C` controls in the same run. Select
+   aligned-range title rows at `0x800917C4` versus a target-phase null; do not
+   add a port instrument or mitigation.
 3. Revisit M3 only as a complete idiom-class audit with a new discriminator;
    conditional-move recompiler support is a separate engineering task.
 4. Revisit external retail-entry or M4 only with a genuinely new oracle route,

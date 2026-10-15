@@ -157561,3 +157561,24 @@ aligned containing range.
 ORIGIN: the new code is read-only diagnostic instrumentation. The observed
 stores are legitimate game-state writes; no mitigation, skip, filter, or value
 rewrite was added.
+
+## Session 4940 (2026-10-14) — aligned retail watch remains pre-route
+
+Ran the planned retail oracle watch-boundary experiment with whole-RDRAM,
+`0x000A1778`, aligned `0x00149700:0x00149704`, and
+`0x00149988:0x0014998C` watches in one run. The whole-RDRAM positive control
+fired 27,989 times and the three target ranges fired 4,497, 4,498, and 8,994
+times respectively. Thus the watch machinery was live and the aligned range
+did include real retail stores. However, VI polling stayed at width 320,
+origin `0x006DD280`, for all 4,500 frames; title and hangar phase buckets were
+empty, and no target-phase writer rows were collected.
+
+This selects H-phase-route-mismatch for this run and rules out treating the
+aligned pre-route hits as evidence about the title-phase missing byte. It does
+not distinguish aligned-watch success from a target-phase null. The result is
+single-source oracle evidence; the next run must attach the qualified Rice
+route and verified Start presses. No mitigation, filter, rewrite, or port
+instrument was added.
+
+ORIGIN: read-only oracle watches; the observed retail stores are legitimate
+state writes, and no corruption mitigation was added.
