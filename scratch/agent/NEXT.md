@@ -2,7 +2,8 @@
 
 HYPOTHESIS-ID: m5-retrace-pacing-vs-retail
 
-s4903: gfx task begin R1+0.1 ms, dp_complete R1+20.7 ms (begin->done med 20.6 ms wall), swap +0.1 ms after done => port is 30 Hz because renderer_context->send_dl takes ~20.6 ms > 16.4 ms retrace. H-divider / H-slow-frame-other refuted.
-
-Hypotheses for where the 20.6 ms goes: H-lle-rsp (LLE RSP microcode interpretation, ROGUESQ_LLE_FORCE/UNGATED/SOLO), H-rt64-raster (RT64 RDP raster + Metal work on the calling thread), H-present-wait (blocking on render thread/present/vsync inside send_dl), H-debug-overhead (the logging env vars of the cadence recipe, e.g. ROGUESQ_AUDIO_UCODE / M5_ROUTE_ORDER).
-Discriminator: one build, one run: timestamp inside the send_dl path (events.cpp around renderer_context->send_dl; RT64 entry points if cheap) to split LLE-RSP / RDP / present-wait; plus an arm of the SAME recipe with the logging env vars removed (run concurrently, rule 13) to test H-debug-overhead. Positive control: B/D rows stay 1:1 and the full arm reproduces ~20.6 ms.
+s4904: send_dl 23.2 ms = fullSync 11.3 + procDL-rest 7.0 + LLE RSP 4.8 + fbwait 0.8; logging overhead refuted (script scratch/agent/run_s4904_senddl_split.sh, S4267 timers).
+The 30 Hz pacing is explained as host cost > 16.4 ms. Remaining question: what inside RT64 State::fullSync (11 ms) dominates — framebuffer/texture upload, draw-data/transform upload, or GPU wait (Metal)?
+Hypotheses: H-fullsync-gpuwait (waits on prior frame GPU completion), H-fullsync-upload (CPU uploads), H-resolution (render scale/internal resolution large; try lower scale in one arm).
+Discriminator: one build adding sub-timers inside lib RT64 State::fullSync (or first test existing config: run arms with RT64 resolution scale 1x vs current, concurrent) — if fullSync scales with resolution => GPU-bound/H-resolution.
+Alternative if 30 Hz judged acceptable: park and return to M5 audio de-stub plan step.
