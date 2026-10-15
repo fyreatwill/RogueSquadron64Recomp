@@ -143,6 +143,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Superseded conclusions
 
+- **s4959 "BLOCKED: multi-minute recipes cannot be waited on inside an iteration"** - believable because foreground sleep/polling is blocked and the Stop hook fired six times mid-run. Overturned by the unblock iteration: the soak queue (ITERATION.md, 600 s cap per recipe, verdicts in SOAK-RESULTS.md) is the intended mechanism; the x3 script was just too long for it. Split into soak_queue/s4959_mission_run{1,2,3}.sh. Mission stability is still unmeasured.
+
 - **s4950 "5/5 reached mission" (0x690400, VI-512)** - believable because the phase appeared after scripted keys and had a distinct width/origin. Overturned s4954 (script ordering + deterministic timing) and s4955 (3/3 solo run, hangar control absent): it is the attract demo, not player-mission evidence.
 
 - s4950's "5/5 reached mission" (and its `stalled=1` stall grep) was refined by s4953: `stalled=1` appears at every phase, and the 512 phase is only ~3-4 s before return to title, so it is not established as a player mission. Believable because the origin 0x690400 matched the retail mission origin.
@@ -166,7 +168,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4958 next (top):** repeat the keyed route N=3 with mission-phase audio/PCM counters (see NEXT.md). Older, resolved by s4958: **s4957:** hangar keycode sweep (15 keys: A/B/Start/D-pad) never reaches a mission (0x690400/0x620400 = 0); the 5th A leaves to the 0x6A2900 model viewer. Input delivery works. Next: find the mission-launch state/flag (see scratch/agent/NEXT.md), try keys inside the viewer.
+**s4960 next (top):** consume the verdicts of the three queued soaks scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh (SOAK-RESULTS.md, soak_results/s4959_mission_run*/keys*.log); do not babysit or rerun. rc=137 = timeout, not a result. Then add the mission-phase row to docs/M5-AUDIO-PLAN.md.
+
+**s4958 next (superseded by s4960 above; recipe unchanged):** repeat the keyed route N=3 with mission-phase audio/PCM counters (see NEXT.md). Older, resolved by s4958: **s4957:** hangar keycode sweep (15 keys: A/B/Start/D-pad) never reaches a mission (0x690400/0x620400 = 0); the 5th A leaves to the 0x6A2900 model viewer. Input delivery works. Next: find the mission-launch state/flag (see scratch/agent/NEXT.md), try keys inside the viewer.
 
 **s4955 next (top):** s4955 solo N=3 run confirmed the 512/0x690400 phase is the attract demo (bounces to title 3-5 s after onset; hangar 0x6AB400 never reached, keys sent only after 512 appeared). Next: rerun with keys sent at the TITLE phase (~50 s, origin 0x790400), hangar 0x6AB400 as control, then judge mission stability; see NEXT.md.
 
