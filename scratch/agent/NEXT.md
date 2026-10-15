@@ -1,6 +1,8 @@
 # Next work unit
 HYPOTHESIS-ID: voice-count-before-base-race
-s4979: retail-entry boundary closed (design-dead). Port reaches 0x800903F0 only via mixer index past the 18-voice array (count stored before rs_malloc, base after; s4577/s4578).
-Work unit: grep current-default soak logs (SOAK-RESULTS since s4959, mission/idle runs) for `kind=bad site=800903F0`, `count=32`, `[s4579` markers, and the `pi.cpp:112` odd-DMA abort. If zero across all default runs with the instruments armed (and a positive control line from the same logs), the race is dissolved by a later fix (ring-lap s4549?) - record which, close the thread, and pivot to M5 plan step. If hits remain, the allocator count-before-base window is real: fix at the source in a fixup script (publish count after base, or hold the mixer lock), with ORIGIN line.
-Hypotheses: A race already dissolved by default fixes; B still live but rare; C instruments not armed in default soaks (null uninterpretable).
-Discriminator: presence of armed-instrument control lines vs bad-site hits in the same logs.
+s4980: default soaks never armed the S45xx instruments (env-gated), so their zero hits were uninterpretable. Queued scratch/agent/soak_queue/s4980_armed_mission_a.sh (loop runs it between iterations; verdict in SOAK-RESULTS.md and scratch/agent/soak_results/s4980_armed_mission_a/keys1.log).
+Work unit: read that verdict line. Fields: ctl_arm (positive control, must be >=1), bad, s4579A, pidma, crash.
+- ctl_arm>=1, bad=0, pidma=0, crash=0 -> A (dissolved by default fixes): close thread, pivot to the next M5 plan step (docs/M5-AUDIO-PLAN.md).
+- bad>0 or pidma>0 -> B live: fix at source in a fixup script (publish voice count after base, or hold mixer lock), ORIGIN line required.
+- ctl_arm=0 -> route never reaches the render entry; redesign (arm on the hangar route, or the s4577 recipe).
+If the soak has not run yet (no s4980 line in SOAK-RESULTS.md), run scratch/agent/soak_queue/s4980_armed_mission_a.sh yourself (one game at a time).

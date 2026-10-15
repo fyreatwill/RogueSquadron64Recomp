@@ -171,6 +171,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+**s4980 (top):** Default soaks since s4959 never armed the env-gated S45xx instruments (0 `[s4539-entry] kind=arm` lines), so their zero `kind=bad`/`pi.cpp` hits are uninterpretable; 6 uninstrumented mission runs had 0 CRASH. Armed recipe queued (`soak_queue/s4980_armed_mission_a.sh`), verdict decides close vs source fix (NEXT.md).
+
 **s4979 (top):** Retail-entry boundary CLOSED as design-dead. Two-source offline check (`tools/voice_kind_crosscheck.py`, no new run): (a) port `[init-desc]` rows are retail-consistent — 11,444 rows, only descs `0x8013ACA0` (d04 top nibble 0xB -> flag set, kind 3) and `0x8011C820` (d04 `0x801B2C60`, nibble 8 -> flag clear, kind 0); init (`0x80092234-0x80092268`) sets flag bit0 only when `(d04&0xF0000000)!=0x80000000`; (b) retail also inits kind-0 voices from `0x8011C820` (ra `0x800980f4`) and their next renders show flag v0=0 at `0x800901C0`, so they never reach `0x800901CC/0x800903F0`. H1 (init skipped) and H2 (stray ASCII store) refuted; the port reaches 0x800903F0 only via s4577/s4578's mixer index past the 18-voice array (count stored before `rs_malloc`, base after) into name-string memory. Not a retail boundary; no guard added.
 **s4978:** Retail branch census: 0x800903F0 is design-dead in retail. Flagged voices always have `+0x6D==3` (241,308 hits); the `+0x6D==0` branch at 0x80090358 has 0 hits. The port reaches it, so port voice records carry kind 0 with the flag set, a state retail never makes. Next: port-side histogram of `+0x6D` and its writers (NEXT.md).
 
