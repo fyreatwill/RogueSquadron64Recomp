@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4887)
+## Headline (as of s4888)
+
+- **s4888:** the bounded generated-symbol rename audit found only two remaining
+  placeholder function identifiers. `func_8000040C` has one caller but no
+  companion semantic mapping; `func_800E9AE0` has no caller and is deliberately
+  retained by the companion symbol file because a false `func_800E9B10` reference
+  splits the real function. No rename is authorized; the sweep remains parked
+  until a new generated snapshot or mapping source supplies a candidate meeting
+  all three gates.
 
 - **s4887:** closed the port side of the OSTask `data_size` boundary as
   H-port-cadence. The corrected same-build capture passed route-order, SP,
@@ -531,7 +539,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 0. **M5 double synth walk (s4874-s4875):** port synth runs 2/VI because callback-table slots 1 and 2 both hold `0x8009123C`; retail holds one. NAMED (s4875, two sources: port rows + retail oracle): the dereg comes from the teardown function at 0x8008ECxx (generated name `musyxNoopStub`, jal wait at 0x8008ED14), which branches over the wait/dereg when gate byte `0x800A0F50`==0. Retail: that teardown runs at t=1.8 s with gate=1 (before any reapply) -> dereg -> reapply -> register, balanced, 1 copy. Port: the FIRST teardown (boot) sees gate=0, skips the dereg, so cycle 1's reapply register is unmatched (+1 copy); every later cycle is balanced (dereg+register) so 2 copies persist. Root = the deliberate gate-write force-zero stubs (setDisplayMode 0x8008EB40 / reapplyDisplayMode 0x8008EC88 / initMusyXEngine never called, see fixup comments ~l.8105; reversing them hung boot 4x). Next: a bounded fix that keeps gate semantics but makes the first-teardown dereg happen (e.g. one-shot dereg of 0x8009123C when reapplyAudioConfig registers and the table already holds it) - ORIGIN named, not a mitigation of unknown writer. **s4878 RESULT: tools/apply_s4878_synth_dedup.py (env ROGUESQ_S4875_DEDUP; DEFAULT ON since s4879, =0 disables) drops the 2nd register; A/B same recipe: synth entries per message 1.97 -> 0.99. s4879: stability 2/3 + AI-ring producer now 1 per entry -> flipped default-on. s4880: paired 5x arm1/arm0 startup-crash soak QUEUED (scratch/agent/soak_queue/s4880_dedup_crash_rate.sh; verdict in soak_results/s4880/summary.txt) - decides whether the startup SIGSEGV is dedup-caused (arm1>>arm0) or pre-existing (then trace the writer of the bad si_addr/x1, no guard).** Instrument: tools/apply_s4877_dereg_order.py (ROGUESQ_LOG_S4700_CB=1), oracle recipe scratch/agent/s4877_oracle_order.sh.
 
-1. (s4887) The qualified same-build port capture closes the OSTask `data_size` boundary as H-port-cadence: writer/ABI values agree, while port is 1-dominant and retail is 2-dominant. The blind retail `0x80091084` watch remains unusable; do not repeat it. M5 task-family work is closed; next take the generated-symbol renaming sweep / VI-640 route wall.
+1. (s4888) The available generated tree has only `func_8000040C` and
+   `func_800E9AE0` placeholders. The former has no companion semantic mapping;
+   the latter is an intentional companion placeholder with no caller because of
+   a documented false split reference. No rename is authorized. Keep the
+   generated-symbol-renaming-sweep parked until a new snapshot or mapping source
+   supplies a candidate with companion mapping, live callers/body, and exact span
+   agreement.
+2. (s4887) The qualified same-build port capture closes the OSTask `data_size` boundary as H-port-cadence: writer/ABI values agree, while port is 1-dominant and retail is 2-dominant. The blind retail `0x80091084` watch remains unusable; do not repeat it. M5 task-family work is closed; next take the generated-symbol renaming sweep / VI-640 route wall.
 
 (s4836: Step 11's generic writer table qualified arm/clear and wait-return rows
 on both arms after removing the observer crash; do not repeat the A/B.)

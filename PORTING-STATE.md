@@ -156845,3 +156845,28 @@ route failure. The retail `0x80091084` watch remains blind and was not used.
 No runtime behavior change was made.
 ORIGIN: diagnostic-only capture; no mitigation or behavior change.
 Next: generated-symbol renaming sweep after M5 closure.
+## Session 4888 (2026-10-14) — bounded generated-symbol rename audit found no safe candidate
+
+Work unit: run the generated-symbol rename census and select at most one
+high-confidence companion mapping. The prescribed `python` commands could not
+run because this environment has no `python`; rerunning with `python3` and the
+available external generated tree completed the census. `find_state_machines.py`
+found zero jump-table and zero repeated-state-write candidates. The generated
+tree contains only two placeholder function identifiers: `func_8000040C` and
+`func_800E9AE0`.
+
+Caller/span audit: `func_8000040C` has one caller (`main`) but no semantic
+companion mapping at `0x8000040C`, so no exact semantic span exists. The
+companion `mission_overlay.txt` deliberately retains `func_800E9AE0`, documents
+that a false `func_800E9B10` reference splits this real function, and provides
+no live caller in the generated tree. The prescribed
+`tools/rename/rename_generated_symbols.py` file is absent; the available
+`generated_symbol_batch.py` has an unrelated fixed mapping. No rename was made.
+
+Rules out: treating either residual placeholder as a safe semantic rename from
+the current tree. This is H2/H3 evidence, not a conclusion that no future
+rename candidate exists. The bounded audit is recorded in
+`scratch/agent/RENAME-S4888-AUDIT.md`.
+ORIGIN: no mitigation or behavior change; diagnostic/documentation-only work.
+Next: wait for a new generated snapshot or mapping source before revisiting the
+parked rename sweep.

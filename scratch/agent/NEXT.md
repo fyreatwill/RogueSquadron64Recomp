@@ -2,26 +2,30 @@
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Begin the bounded generated-symbol renaming sweep now that M5 task-family
-cadence is closed. First run the existing rename census/tool help and select
-one high-confidence companion mapping; do not rename address-encoded or
-deliberate `fake_func_*` boundaries. Competing outcomes are: (1) one mapping
-has matching companion symbol, generated body, callers, and exact span, so
-apply that single mapping; (2) candidates are ambiguous/data-like, so record
-the bounded audit and leave them unchanged; (3) the external companion or
-generated tree is unavailable, so stop and report the concrete path blocker.
+Revisit the generated-symbol sweep only after a new generated snapshot or
+companion mapping source is available. The s4888 audit found no safe candidate:
+`func_8000040C` has no companion semantic mapping, and `func_800E9AE0` is an
+intentional companion placeholder with no generated caller because of a
+documented false split reference. Do not rename either one.
 
-Discriminator: the selected candidate must have independent companion mapping,
-live generated body/callers, and exact adjacent/TOML span agreement. A rename
-is authorized only when all three agree; otherwise the sweep remains parked.
+Competing hypotheses:
+- H1: a future placeholder has companion mapping, live body/callers, and exact
+  adjacent/TOML span agreement; one rename is safe.
+- H2: candidates exist but fail one of those gates; leave them unchanged.
+- H3: the external generated snapshot or companion mapping remains unavailable;
+  record the concrete path/tool blocker.
+
+Discriminator: independently verify all three H1 gates for one candidate. H1
+authorizes one bounded mapping edit; H2 parks the candidate; H3 records the
+falsifiable availability failure.
 
 Exact commands:
 
-    python tools/rename/find_state_machines.py
-    python tools/rename/find_callers.py <selected-companion-or-placeholder>
-    python tools/rename/rename_generated_symbols.py --help
+    env RSR_FUNCS_DIR=/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs python3 tools/rename/find_state_machines.py
+    env RSR_FUNCS_DIR=/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs python3 tools/rename/find_callers.py <candidate>
+    rg -n '<candidate-address>|<candidate-name>' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 
-If a candidate passes the discriminator, make one bounded mapping edit using
-the existing rename tooling, verify the diff, and do not regenerate unrelated
-functions. If no candidate passes, write the audit result to a new
-`scratch/agent/` file and choose the next ranked lead without a build.
+Expected outcomes: one candidate passes all three gates and receives one
+mapping edit; candidates fail a gate and remain unchanged; or the required
+external source/tool is unavailable and the blocker is recorded. Do not build
+or regenerate for this unit.
