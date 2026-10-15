@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4891)
+## Headline (as of s4892)
+
+- **s4892:** the same-build A12 default-yield versus rollback validation was
+  qualified. Both arms reached VI 640, title, and hangar, with 64 SP
+  completions, nonzero PCM source/consumer joins, 40 producer-arm rows, and
+  three wait returns; neither arm recorded a crash or abort. Producer/wait
+  witnesses were 43/43, so the default yield produced no qualified behavioral
+  difference. This selects H2 (A12 behavior-neutral) and authorizes no further
+  A12 change.
 
 - **s4891:** retired the default synth-registration deduplication mitigation in
   a same-build A/B after s4890's named first-teardown fix. Default-off performed
@@ -448,6 +456,10 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   producer/clear PCs are `0x80091680`/`0x800912F8`; the named clear logger is a
   stale/missing generated anchor, not evidence that the clear is absent. The
   observer crash was diagnostic-only and is fixed by host-thread identification.
+- **M5 A12 s4892:** default `ROGUESQ_AUDIO_SPIN2_YIELD=1` and rollback `=0`
+  both passed the producer-arm, wait-return, task/SP, PCM, title, and hangar
+  controls with no crash/abort. The 43/43 producer/wait witness totals select
+  route-neutral behavior; retain the rollback arm but make no A12 change.
 - **musyxSynthFrame `+5808` crash family: closed for idle title/hangar (s4786).**
   Cause: synth ticking over the audio arena freed by the retail-legitimate
   `musyxNoopStub` teardown (s4782/s4783: retail never ticks the synth between

@@ -156926,6 +156926,25 @@ the existing named `findAndZeroTableSlotMatching` writer.
 Next: test retiring the now-redundant s4878 synth-registration dedup default,
 with dedup-on as rollback.
 
+## Session 4892 (2026-10-14) — qualified A12 yield validation as route-neutral
+
+Work unit: rebuilt the current Debug target and ran
+`tools/run_m5_yield_ab.sh`, comparing default
+`ROGUESQ_AUDIO_SPIN2_YIELD=1` with explicit rollback `=0` in one run.
+
+Both arms passed the phase-gated controls: VI 640, title VI 1024, hangar VI
+512, 64 SP completions, nonzero PCM source/consumer rows, and no crash or
+abort. The default had 40 producer-arm rows, 3 wait returns, and 43 combined
+producer/wait witness rows; rollback had the same 40, 3, and 43. The driver
+reported `verdict=H-producer-clear` because both arms had the positive witness;
+the A/B discriminator therefore selects H2, behavior-neutral on the covered
+route, rather than yield-causal behavior. No runtime change is authorized.
+This rules out a qualified A12 yield difference as the next audio
+explanation, but does not prove the unvisited shutdown callback-teardown path.
+
+Next: use a fresh phase-gated callback-teardown reachability discriminator; do
+not repeat the completed A12 or deduplication A/B.
+
 ## Session 4891 (2026-10-14) — retired default synth-registration deduplication
 
 Work unit: change the replayable s4878 fixup hook's default

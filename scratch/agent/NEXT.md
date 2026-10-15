@@ -1,31 +1,34 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-a12-yield-validation
+HYPOTHESIS-ID: m5-callback-teardown-reachability
 
-Run the existing A12 wait-boundary validation in one rebuilt binary, comparing
-default yielding against the explicit rollback arm. This is the next M5 audio
-step after the synth-registration mitigation was retired.
+Run one fresh, phase-gated callback-teardown reachability capture on the
+qualified real-audio/LLE/ungated/solo/spin-yield route. Instrument or reuse the
+existing callback entry/deregistration controls to distinguish whether
+`shutdownAudioEngine` is entered, whether its callback-table deregistration
+fires, and whether the route returns with task/SP, PCM, title, and hangar
+controls. Do not repeat the completed A12 or synth-dedup A/B.
 
 Competing hypotheses:
 
-- H1: default A12 yielding is the correct producer/scheduler contract; it
-  records producer arm/clear and wait-return rows and preserves task/SP,
-  slot, PCM, title, and hangar controls, while rollback differs or stalls.
-- H2: the default yield changes no qualified behavior; both arms have the same
-  positive controls and route outcome, so A12 is already behavior-neutral.
-- H3: yielding is harmful on the current route; default loses a positive
-  control, crashes, or diverges while rollback remains qualified.
+- H1: the callback teardown path is reached on this qualified route; entry,
+  deregistration, and return rows form an ordered lifecycle with downstream
+  controls.
+- H2: the route never reaches `shutdownAudioEngine`; entry and deregistration
+  are both absent despite positive route controls, so this boundary is parked.
+- H3: teardown is entered but does not return or deregister correctly; a
+  crash, hang, or missing ordered callback row identifies the live boundary.
 
-Discriminator: one build and `tools/run_m5_yield_ab.sh`, with both arms
-phase-gated. Require producer arm/clear and wait-return controls, task/SP,
-slot transition, nonzero PCM source/consumer joins, title/hangar, and
-crash/abort markers in both arms. H1 selects the default de-stub; H2 closes
-A12 without further behavior change; H3 keeps the rollback/default decision
-open and identifies the failed contract boundary.
+Discriminator: one rebuilt binary and one phase-gated run with callback entry,
+deregistration, return, task/SP, PCM, title/hangar, and crash/abort controls.
+H1 selects a teardown lifecycle for the next boundary audit; H2 closes this
+route as unqualified; H3 identifies a teardown defect requiring a new writer
+and legitimacy audit. The prior A12 result is H2/route-neutral and is not
+repeated.
 
 Exact commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh tools/run_m5_yield_ab.sh
+    env ROGUESQ_LOG_S4700_CB=1 ROGUESQ_LOG_SP_TASKS=1 ROGUESQ_LOG_M5_ROUTE_ORDER=1 zsh <callback-teardown-recipe>
 
 Do not start the generated-symbol sweep while this M5 unit is applicable.
