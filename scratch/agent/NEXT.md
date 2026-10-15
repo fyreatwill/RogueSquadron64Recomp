@@ -1,31 +1,28 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-retail-writer-ownership
+HYPOTHESIS-ID: m5-retail-aux-field-join
 
-Use one bounded static ownership lookup for the three retail destinations
-identified in s4936: 0x80149702, 0x80149988/8A, and 0x800A1778. Search the
-companion decomp symbols/m2c output and the port's generated symbols for the
-owning structure and fields, then compare the retail store cadence with the
-port's 0x80149470 route state. Do not change runtime behavior.
+Run one phase-gated retail/port join for the three s4936 store destinations,
+with positive controls in the same run. Use the existing corrected mission
+driver/oracle route; do not build a new mitigation or rewrite values.
 
 Competing hypotheses and discriminator:
 
-1. H-route-state: the destinations are fields in the audio route/slot state
-   represented by 0x80149470 or a directly referenced child structure.
-2. H-render-or-input: the destinations belong to an unrelated render, input,
-   or timing table, and the writer's audio-looking context is incidental.
-3. H-unknown: the available symbol/decomp material cannot establish ownership
-   without a new runtime watch.
+1. H-route-field: `0x800A1778` is a field in the same synth route/task state
+   represented by `musyxSynthFrame` and `aspTask=0x80149470`.
+2. H-independent-global: `0x800A1778` is independent global state despite the
+   adjacent stores; its phase/value cadence will not join the route fields.
+3. H-unresolved: one implementation or destination cannot be observed with
+   the existing controls, so no ownership conclusion is possible.
 
-The discriminating measurement is a complete address-to-symbol/field table for
-all three destinations, including every static reference and the closest named
-structure member. H-route-state is selected if the table identifies the
-route/slot object and its port counterpart; H-render-or-input if it identifies
-another subsystem; H-unknown if no named owner can be proven. If static
-ownership is unresolved, stop and design a new phase-gated oracle/port join
-before building anything.
+The discriminating measurement is one table per phase containing, on both
+sides, store order, values, and phase-qualified cadence for all three
+destinations, plus positive whole-RDRAM/VI controls and the port
+`musyxSynthFrame`/`aspTask` controls. H-route-field requires matching
+order/value transitions; H-independent-global requires a reproducible mismatch;
+H-unresolved is the only result if any control or destination is absent.
 
-Suggested commands: rg -n "80149702|80149988|8014998A|800A1778|80149470"
-../rogue_squadron64 ../N64Recomp RecompiledFuncs syms docs; then read bounded
-windows around each hit. No build or soak is authorized until the table and
-the competing outcomes are written here.
+Before building, locate the existing phase-gated oracle and port join scripts
+with `rg -n "4936|80149702|80149988|800A1778|PROBE_PHASE_WIDTH" tools
+scratch/agent`; batch all three destination arms into one build/run. No soak
+is authorized until the positive-control table is specified.

@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4936; compacted s4898)
+## Headline (as of s4937; compacted s4898)
+
+- Latest (s4937): the bounded static ownership lookup identified
+  `0x80149702` as the MusyX double-buffer toggle and `0x80149988/8A` as
+  synth output/countdown state. `0x800A1778` has no named companion symbol,
+  but its only current reference is the adjacent store in `musyxSynthFrame`.
+  This selects H-route-state over H-render-or-input, with the exact
+  `0x800A1778` field semantic still unresolved; no mitigation is authorized.
+  See `docs/M5-S4937-RETAIL-AUX-OWNERSHIP.md`.
 
 - Latest (s4936): the corrected retail store-site capture passed the
   whole-RDRAM and VI controls and identified stable auxiliary destinations for
@@ -211,6 +219,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   This selects H-auxiliary-store, but remains single-source retail evidence;
   no mitigation or value filter is authorized. See
   `docs/M5-S4936-RETAIL-WRITER-STORE.md`.
+
+- **M5 auxiliary ownership (s4937):** static evidence names `0x80149702` as
+  the MusyX double-buffer toggle and `0x80149988/8A` as synth output/countdown
+  state. `0x800A1778` remains unnamed, but its only current reference is the
+  adjacent store in `musyxSynthFrame`; this selects route-family ownership,
+  not render/input ownership. Exact field semantics remain single-source and
+  require a phase-gated retail/port join. No mitigation is authorized. See
+  `docs/M5-S4937-RETAIL-AUX-OWNERSHIP.md`.
 
 - **M5 retail parity join (s4931):** the independent oracle was instrumented
   correctly and reached the 512-wide hangar route, with 11,629 whole-RDRAM
@@ -490,11 +506,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4936) Explain the auxiliary writer's ownership:** identify the named
-  game structure/field behind `0x80149702`, `0x80149988/8A`, and `0x800A1778`
-  from the companion decomp and static symbols, then compare its update
-  cadence with the port's `0x80149470` route state. Do not filter or rewrite
-  the value; the retail store attribution is not a mitigation authorization.
+- **(s4937) Resolve the remaining auxiliary field:** run one phase-gated
+  retail/port join for `0x800A1778`, `0x80149702`, and `0x80149988/8A`, with
+  the port's `musyxSynthFrame` and `aspTask=0x80149470` state as controls.
+  Select whether `0x800A1778` is a route/task field or an independent global
+  by matching store order, value, and phase across both implementations. Do
+  not filter or rewrite any value.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 

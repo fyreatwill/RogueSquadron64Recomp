@@ -157505,3 +157505,22 @@ guard, skip, mitigation, filter, or behavior change was authorized.
 
 ORIGIN: the stores are legitimate retail writes observed by the independent
 oracle; no corruption mitigation was added.
+
+## Session 4937 (2026-10-14) — static ownership lookup names retail synth state
+
+Ran the planned bounded static lookup across the companion symbol/decomp tree,
+project symbols, and current generated functions. `0x80149702` is listed as
+`D_80149702` and is the MusyX double-buffer toggle; `0x80149988/8A` are listed
+as `D_80149988/8A` and are the synth output/countdown state used by
+`waitForMusyXAudioTaskDone`. The current generated code places all three stores
+inside `musyxSynthFrame`, including the only current reference to `0x800A1778`.
+No companion symbol names that last field.
+
+This selects H-route-state over H-render-or-input, but leaves the exact
+`0x800A1778` field semantic single-source and unresolved. It rules out treating
+the captured stores as an OSTask publication or a render/input table. No build,
+runtime change, filter, guard, or mitigation was made. The next discriminator
+is a phase-gated retail/port value-and-order join for all three destinations.
+
+ORIGIN: static ownership evidence; all store values remain legitimate and no
+corruption mitigation was added.
