@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4897; compacted s4898)
+## Headline (as of s4924; compacted s4898)
+
+- **Latest (s4924):** three sequential current-binary runs qualified the
+  512-wide phase control and all selected first origin `0x00690400`; later
+  512 origins included `0x00620400`. Each run advanced `update_screen` and
+  had zero crash/abort markers. Together with s4923's independent run, this
+  refutes `0x006AB400` as the universal first-512 label and selects the
+  mission-label hypothesis for the next width-triggered press test. See
+  `scratch/agent/s4924_phase_origin_x3/summary.txt`.
 
 - **Digest of s4822–s4897 (verbatim bullets archived in
   [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH
@@ -268,6 +276,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   inert chunk-2 record. Those interpretations were tested and closed.
 
 ## Next steps
+
+- **(s4924) Correct the mission-longevity driver trigger:** use the first
+  `vi_width=512` row, regardless of origin, as the press trigger; then press
+  Start/A and record whether a post-key phase change occurs. Run one instance
+  after changing only that gate. The old `0x006AB400` gate is not valid for
+  the current default route.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 

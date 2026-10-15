@@ -157309,3 +157309,10 @@ Next: soak longer phases (hangar + mission) on the current default; see scratch/
 
 ## Session 4923 (2026-10-14) — mission longevity driver: hangar gate (origin 0x006AB400) never appeared; run alive 240 s, 0 crashes
 Ran `scratch/agent/s4923_mission_longevity.sh` (s4796 recipe + 12x10 s counter sampling). The driver exited 5: it waits for `vi_width=512 origin=0x006AB400`, which did not occur in this run. Phases seen: 640@2.8s, 512 origin=0x00690400 @96.8s (no keys pressed), 640@169.8s, 1024@211.8s, 640@238.0s. update_screen reached #24832 at kill, CRASH/ABORT = 0, but the log ends in `vi-fs-decision SKIP ... stalled=1` (vi=0x0062B800). Single run, single-source. Positive control (mission origin after keys) NOT met, so the mission-phase question is still open; the 512/0x00690400 phase arrived unprompted, so the s4796 gate/origin labels do not match the current default's phase sequence. ORIGIN: no mitigation landed (new script only).
+
+## Session 4924 (2026-10-14) — three-run phase-origin census selects 0x00690400 as the first 512-wide phase
+Ran `scratch/agent/s4924_phase_origin_x3.sh` as the single bounded work unit: three sequential current-binary runs from `build/`, each capped at 240 seconds and killed with SIGKILL. The positive control passed in all runs: 799, 799, and 817 `vi_width=512` rows, with final update-screen counters 14272, 14272, and 14336. All three runs had zero `[CRASH]`/`[ABORT]` markers. The first 512-wide origin was `0x00690400` in all three; the distinct later 512 origin set was `0x00620400,0x00690400` in all three.
+
+This selects H-mission-label and refutes H-stable-label and H-route-variable for the first 512 phase on the current route. s4923 independently observed the same unprompted `0x00690400` phase, providing a second line of evidence. It rules out the old `0x006AB400` gate as a universal trigger, but does not yet prove that the first 512 phase is itself the mission-entry transition; the next width-triggered key test must measure a post-key phase change.
+
+ORIGIN: no mitigation or runtime behavior change; added only the phase-origin census script and its capture output.
