@@ -103,7 +103,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 - M3 idiom audits are closed for trap/break/syscall/cop0, unaligned and
   LL/SC/cache, integer division, float conversion/compare/FCSR, memory-width
   operations, indirect calls, self walks, branch-likely, variable shifts,
-  HI/LO moves, 64-bit shifts, and 32-bit multiplication. Do not repeat a
+  HI/LO moves, 64-bit shifts, 32-bit multiplication, and 64-bit mul/div
+  (s4975: 66 sites, 2 real, zero-divisor benign on arm64). Do not repeat a
   class without new recompiler or provenance evidence.
 - Conditional moves remain a genuine recompiler defect: all 179 generated
   `movz`/`movn` sites emit `do_break`; one reachable nonzero-destination site
@@ -169,6 +170,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   task-contract, ownership, wait-gate, safety-exit, or MORT correctness.
 
 ## Next steps (single monotonic backlog)
+
+**s4975 (top):** 64-bit mul/div class closed (see M3 list). Remaining unexamined M3 candidates: ldc1/sdc1 alignment, cvt rounding modes, mfc1/dmfc1 width, sltiu, jr non-ra. Then resume backlog item 3/4.
 
 **s4974 (top):** s4972r soak consumed: 5/5 runs seen640=1 (positive control) and exit640@48s, bad=0. With s4971 (4/4) that is 0/9 VI-640 stalls vs s4794's 2/5; Fisher p~0.1, so not proven gone but not reproducible. VI-640 route wall CLOSED as non-observable (re-open only on a stay640 line in any future soak, since all recipes now arm seen640). Next: M3 census of idiom classes NOT in the closed list (see NEXT.md).
 
