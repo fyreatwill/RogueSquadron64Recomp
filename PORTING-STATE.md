@@ -158148,3 +158148,8 @@ ORIGIN: no mitigation; documentation of an instrument boundary only.
 
 Route 1 (refute). The s5001 BLOCKED claim required a human decision to add a cxd4/parallel-rsp plugin. A built cxd4 LLE RSP already sits in the maintained tree `~/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib` and was used in s4514 (with tools/oracle/rdplog) to reach hangar 0x6ab400 — the s4514 refutation of the same shape of block was not carried forward. Accumulator is global `VACC[3][N]` (vu/vu.h:62), so exposing it is a small local source patch, not an install. Hypothesis outcome: H-needs-human-install REFUTED; H-instrument-patch-feasible SELECTED (not yet built/run — no measurement made this session). NEXT.md rewritten to the patch+controls unit. Nothing under lib/ touched.
 ORIGIN: block resolution only; no mitigation or behavior change.
+
+## Session 5003 (2026-10-15) — cxd4 VACC/DMEM per-task dump built and captured against the retail ROM
+
+Patched the local cxd4 LLE RSP (`rs64-oracle/src/mupen64plus-rsp-cxd4/module.c`, env `RS64_RSP_DUMP`) to append one record per completed RSP task: "RSD1", seq, task_type, VACC[3][8], DMEM 4096 B. Diff saved as `tools/oracle/patches/cxd4-rsp-dump.md`. Ran `scratch/agent/s5003_cxd4_dump.sh` (s4514 recipe + rdplog, 75 s). Controls: VI trace reached 320->640->1024 (t=17s)->512@0x006ab800 (t=38s, hangar); 6536 records (2089 type-1 gfx, 4447 type-2 audio), 2089 equals the rdp.log row count; VACC non-zero in 5603 records. Positive control passed; this is a capture, not yet a conclusion. Not yet done: comparing against port accumulator rows (next unit, offline, phase-gated).
+ORIGIN: instrument only; no mitigation or behavior change.

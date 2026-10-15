@@ -357,12 +357,18 @@ preflight.
 3. **Completed — s4944/s4964:** run the A1 image/silent auxiliary-store A/B concurrently with
    title + mission origins as controls (route qualified by s4943); relaunch any
    arm that stalls at VI-640 rather than reading it as a null.
-4. **NEXT (s5002, unblocked):** patch the already-built cxd4 LLE RSP
+4. **Partly done — s5003 (capture only):** patch the already-built cxd4 LLE RSP
    (`rs64-oracle/src/mupen64plus-rsp-cxd4`, global `VACC[3][N]`) to dump
    accumulator + DMEM, run with `tools/oracle/rdplog` and positive controls
    (title VI 1024 non-empty, hangar `0x006AB400` reached, dump non-zero on a
    known F5 task), then compare the first accumulator publication against the
    port. Do not rewrite or guard any value. Keep the patch diff under `tools/oracle/`.
+   s5003 landed the patch (`tools/oracle/patches/cxd4-rsp-dump.md`) and the
+   recipe `scratch/agent/s5003_cxd4_dump.sh`; capture `scratch/agent/s5003/rsp.dump`
+   passed all controls (6536 records = 2089 gfx + 4447 audio; gfx count equals
+   2089 rdp rows; VACC non-zero in 5603; VI 1024 and 512@0x6ab800 reached).
+   **NEXT: offline compare** of gfx-task VACC/DMEM records against the port's
+   accumulator/stage rows (phase-gated on the VI 1024->512 transition).
 5. Revisit M3 only as a complete idiom-class audit with a new discriminator;
    conditional-move recompiler support is a separate engineering task.
 6. Revisit external retail-entry only with a recipe that reaches the qualified
