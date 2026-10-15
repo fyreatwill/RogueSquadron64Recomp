@@ -157401,3 +157401,23 @@ absent retail publication. No guard, skip, or behavior change was authorized.
 
 ORIGIN: no mitigation or game-behavior change; this iteration used only the
 existing phase-scoped port diagnostics and independent oracle watches.
+
+## Session 4932 (2026-10-14) — retail oracle reached the mission handoff
+
+Ran the planned bounded retail-only qualification capture concurrently with
+the same-build port baseline. Retail passed the positive controls: the
+whole-RDRAM watch reached its 10,000-hit threshold, VI polling recorded 10,716
+rows, and the qualified `0x006AB400` 512-wide hangar bucket produced 630
+type-2 audio-task rows. It then reached `0x00690400` at about 97.4 seconds and
+`0x00620400` at about 180.1 seconds. The port reached `0x00690400` after the
+first Start/A pair, advanced `update_screen` 6656 -> 13888 over 120 seconds,
+and had zero crash/abort markers.
+
+This selects H-retail-mission-qualified over route absence and invalid
+instrumentation. It makes the retail/port reprepare publication join
+actionable, but does not prove ordinal or writer parity and does not authorize
+a guard or skip. The prior s4931 retail null is superseded because this
+capture used a route that actually reached both selected mission origins.
+
+ORIGIN: no mitigation or game-behavior change; this iteration only qualified
+the independent retail route and retained the existing port baseline.

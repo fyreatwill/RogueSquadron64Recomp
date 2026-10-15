@@ -6,7 +6,16 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4931; compacted s4898)
+## Headline (as of s4932; compacted s4898)
+
+- **Latest (s4932):** the bounded retail oracle qualification passed whole-
+  RDRAM and VI controls, recorded 630 qualified type-2 hangar tasks, then
+  reached `0x00690400` at about 97.4 s and `0x00620400` at about 180.1 s. The
+  same-build port baseline reached `0x00690400`, advanced 6656 -> 13888 over
+  120 seconds, and had zero crash/abort markers. This selects
+  **H-retail-mission-qualified** and makes the reprepare parity join actionable;
+  it does not establish publication parity or authorize a mitigation. See
+  `docs/M5-S4932-RETAIL-MISSION-QUALIFICATION.md`.
 
 - **Latest (s4931):** the bounded retail/port route-parity join passed the
   oracle controls (11,629 whole-RDRAM writes, 3,570 VI) and found 359 type-2
@@ -117,6 +126,16 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
     `ROGUESQ_OVL2C_DROP` was dead code since s4773; splice emits sprites.
 
 ## Current state (durable)
+
+- **M5 retail mission qualification (s4932):** the oracle's whole-RDRAM
+  positive-control threshold fired 10,000 times, VI polling produced 10,716
+  rows, and the qualified `0x006AB400` hangar bucket produced 630 type-2 task
+  rows. It subsequently reached `0x00690400` and `0x00620400`; the first was
+  at about 97.4 s and the second at about 180.1 s. The port baseline reached
+  `0x00690400`, advanced 6656 -> 13888 for 120 s, and had zero crash/abort
+  markers. This closes route qualification only; the retail/port publication
+  join remains the next discriminator. No guard or skip is authorized. See
+  `docs/M5-S4932-RETAIL-MISSION-QUALIFICATION.md`.
 
 - **M5 retail parity join (s4931):** the independent oracle was instrumented
   correctly and reached the 512-wide hangar route, with 11,629 whole-RDRAM
@@ -391,12 +410,15 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4931 unresolved) Qualify a retail mission-entry route for the selected
-  reprepare parity test:** use a new bounded oracle driving/phase capture with
-  the whole-RDRAM control and VI trace, and determine whether the oracle can
-  reach `0x00690400`/`0x00620400`. If it still cannot, leave parity
-  unresolved; do not treat the null as a publication result or add a
-  mitigation.
+- **(s4932) Run the selected retail/port reprepare parity join:** now that the
+  oracle reaches both mission origins, capture publication/task identity and
+  route ordinal/row at `0x00690400` -> `0x00620400` on retail and the same
+  phase-gated route on the port. Keep whole-RDRAM, VI, and hangar type-2
+  controls positive. A matching fresh-publication transition on both sides
+  selects parity; a retail transition without a port match selects a real
+  publication mismatch; any failed control selects an invalid capture. Do not
+  add a mitigation from either mismatch without naming the writer and proving
+  the value illegitimate.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 
