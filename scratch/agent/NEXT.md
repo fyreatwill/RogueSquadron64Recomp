@@ -2,16 +2,32 @@
 
 HYPOTHESIS-ID: m5-audio-destub
 
-s4923: s4796-style driver gated on origin 0x006AB400, never seen; unprompted 512/0x00690400 phase at ~97 s; alive 240 s, 0 crashes, vi-fs stalled=1 at end.
+s4925: the width-gated driver reached the mission phase after the first
+Start/A pair and remained alive for 120 s of counter samples (6656 -> 13760),
+with zero crash/abort markers. This is a longevity result, not an audio-path
+qualification.
 
-Completed s4924 with `scratch/agent/s4924_phase_origin_x3.sh`: three sequential current-binary runs selected first 512 origin `0x00690400` (all 3/3), with later `0x00620400` also present (3/3), positive controls in all runs, and zero crash/abort markers.
+Completed s4925 with the corrected `scratch/agent/s4923_mission_longevity.sh`:
+the first 512-wide row armed input, one Start/A pair produced
+`vi_width=512 origin=0x00690400`, and the 120-second post-key counter stayed
+live. Positive controls: first 512 row, post-key mission origin, advancing
+counter, and zero crash/abort markers.
 
 Competing hypotheses and discriminator:
 
-1. H-stable-label: the first 512 phase is consistently `0x006AB400`; outcome: all three runs' first-512 rows have that origin, so the prior miss was route timing and the hangar gate remains valid.
-2. H-mission-label: the first 512 phase is consistently `0x00690400`; outcome: all three runs select that origin, so the driver must key on width rather than the old hangar address.
-3. H-route-variable: first-512 origins vary across runs; outcome: both origins occur in the three-run table, so origin cannot identify the press trigger and the next driver must use width plus an explicit post-key phase transition.
+1. H-mission-audio-live: mission phase emits nonzero phase-scoped M5 audio/task/PCM controls; outcome: the covered mission audio path is active and remaining nulls are not route-absence evidence.
+2. H-mission-audio-absent: mission phase has positive route/counter controls but zero M5 audio controls; outcome: the remaining boundary is before the instrumented audio path and needs a new route discriminator.
+3. H-mission-route-invalid: the width gate or post-key mission control fails; outcome: invalidate the audio null and repair the driver before interpreting it.
 
-Positive control: each run must emit a 512-wide phase row and continue advancing `update_screen`; a run without that control is invalid and cannot select a hypothesis.
+Positive controls: the run must emit a first `vi_width=512` row, a post-key
+`origin=0x00690400` row, advancing `update_screen`, and nonzero route-order
+controls. A missing phase or dead counter invalidates the run. The audio
+discriminator is the phase-scoped M5 task/SP/PCM join; each possible result
+selects one of the three hypotheses above.
 
-Next work unit: make one bounded edit to `scratch/agent/s4923_mission_longevity.sh` so its wait changes from `vi_width=512.*origin=0x006AB400` to `vi_width=512`, then run `zsh scratch/agent/s4923_mission_longevity.sh`. Press Start/A only after the first 512-wide row, and inspect `scratch/agent/s4923_mission_longevity/driver.log` plus the phase rows in `run.log`. H-post-key: a new phase within the six Start/A pairs selects the mission trigger. H-no-post-key: no phase change but counter/control stays live, so width is only a press trigger and the route needs a different entry condition. Invalidate the run if there is no 512-wide positive-control row or no advancing update-screen counter.
+Next work unit: add one phase-scoped M5 audio/task/PCM control bundle to the
+width-gated driver, then run `zsh scratch/agent/s4923_mission_longevity.sh`
+once. Keep the first-512 gate and one-pair input schedule. Record the joined
+mission-phase controls and inspect `summary.txt` plus the phase rows. Do not
+interpret an audio null unless the post-key origin and advancing counter are
+present.

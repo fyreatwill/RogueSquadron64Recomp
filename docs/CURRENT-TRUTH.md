@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4924; compacted s4898)
+## Headline (as of s4925; compacted s4898)
+
+- **Latest (s4925):** the corrected width-gated driver reached the mission
+  phase after the first Start/A pair in one run. The post-key phase control
+  selected `0x00690400`, the update-screen counter advanced from 6656 to
+  13760 over 120 seconds, and crash/abort markers stayed at zero. This
+  confirms the first 512-wide phase is a usable input trigger on the current
+  route; it does not yet qualify mission audio behavior beyond longevity. See
+  `scratch/agent/s4923_mission_longevity/summary.txt`.
 
 - **Latest (s4924):** three sequential current-binary runs qualified the
   512-wide phase control and all selected first origin `0x00690400`; later
@@ -277,11 +285,12 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4924) Correct the mission-longevity driver trigger:** use the first
-  `vi_width=512` row, regardless of origin, as the press trigger; then press
-  Start/A and record whether a post-key phase change occurs. Run one instance
-  after changing only that gate. The old `0x006AB400` gate is not valid for
-  the current default route.
+- **(s4925) Qualify mission-phase audio with a fresh control:** run one
+  width-gated mission driver with phase-scoped M5 audio/task/PCM controls
+  enabled, and require both the post-key `0x00690400` phase and nonzero audio
+  controls before interpreting any null. The current driver proves longevity
+  only; it does not discriminate whether the mission route executes the
+  remaining audio path.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 

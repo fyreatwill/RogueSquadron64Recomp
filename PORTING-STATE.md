@@ -157316,3 +157316,8 @@ Ran `scratch/agent/s4924_phase_origin_x3.sh` as the single bounded work unit: th
 This selects H-mission-label and refutes H-stable-label and H-route-variable for the first 512 phase on the current route. s4923 independently observed the same unprompted `0x00690400` phase, providing a second line of evidence. It rules out the old `0x006AB400` gate as a universal trigger, but does not yet prove that the first 512 phase is itself the mission-entry transition; the next width-triggered key test must measure a post-key phase change.
 
 ORIGIN: no mitigation or runtime behavior change; added only the phase-origin census script and its capture output.
+
+## Session 4925 (2026-10-14) — width-gated mission entry reaches the mission phase and survives a 120-second validation window
+Ran the single bounded work unit by changing `scratch/agent/s4923_mission_longevity.sh` to gate on the first `vi_width=512` row instead of origin `0x006AB400`. The positive controls all passed: the first 512-wide row armed input, the first Start/A pair produced `vi_width=512 origin=0x00690400`, and the update-screen counter advanced from 6656 through 13760 across the 120-second sample window. `[CRASH]`/`[ABORT]` markers were zero.
+
+This selects H-mission-label as an input trigger on the current route and rules out the old hangar-origin gate as necessary for mission entry. It does not establish that mission audio is active, because this run did not carry a phase-scoped M5 audio/task/PCM join. Next unit adds that control bundle in one run. ORIGIN: no mitigation or runtime behavior change; only the existing driver gate was corrected.
