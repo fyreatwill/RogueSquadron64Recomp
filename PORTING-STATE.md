@@ -157340,3 +157340,23 @@ Ran the single bounded M5 work unit with the existing first-512 gate and one Sta
 The transition hook recorded 4,172 global audio events across 472 observed `0x00690400` -> `0x00620400` windows, including `keyon-w40` and `slot-sb` events at `0x620400`. The independent phase source saw the first `0x00690400` transition, while the join source saw both origin buckets. This selects H-stale-origin / current-origin attribution drift and rules out the prior “no task/PCM publication before mission audio” interpretation for this port route. It is single-run port evidence with independent phase and join sources, not retail ground truth; no guard, skip, or game-behavior change is authorized.
 
 ORIGIN: no mitigation or runtime behavior change; added only the phase-scoped transition event join and its self-contained diagnostic capture.
+## Session 4929 (2026-10-14) — mission transition join selects route reinitialization
+Ran the single bounded M5 work unit with the first-512 gate, one Start/A pair,
+all passive breadcrumbs, and the current default audio behavior. The first
+wrapper attempt failed to produce a summary and left the game alive; it was
+terminated with SIGKILL and treated as invalid. The fixed rerun passed the
+positive controls: phase output reached `0x00690400`, the mission counter
+advanced 6720 -> 13696 over 120 seconds, transition controls numbered 49,
+transition events numbered 2237, and crash/abort markers were zero.
+
+The transition/route join showed 24 complete `0x00690400` -> `0x00620400`
+windows. The first moved route ordinal/row `1541/5` -> `1546/0`; later windows
+also moved to fresh ordinals such as `1548/0` -> `1550/0`. PCM consumers were
+present under both origins and carried matching route ordinals. This selects
+route reinitialization during the handoff over a stable route with a mislabeled
+origin, and rules out the prior attribution-only reading for this capture. It
+does not establish whether the reset is legitimate or port-specific, does not
+name the writer, and authorizes no guard or skip.
+
+ORIGIN: no mitigation or game-behavior change; this iteration only used the
+existing phase-scoped transition, route, and PCM diagnostics.

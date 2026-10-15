@@ -6,7 +6,15 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4928; compacted s4898)
+## Headline (as of s4929; compacted s4898)
+
+- **Latest (s4929):** the corrected mission capture passed the first-512 and
+  post-key controls, advanced `update_screen` 6720 -> 13696 for 120 seconds,
+  and had zero crash/abort markers. Across 24 complete transition windows,
+  every `0x00690400` -> `0x00620400` handoff moved to a new audio route
+  ordinal/row while PCM consumers were present on both origins. This selects
+  route reinitialization during the handoff over a stable-route/origin-label
+  defect. It is single-run port evidence; no guard or skip is authorized.
 
 - **Latest (s4928):** the corrected transition-window join ran on the same
   width-gated mission route. Independent phase output saw the `0x00690400`
@@ -127,6 +135,16 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   selects an attribution/current-origin drift within the handoff window. The
   result is single-run port evidence with independent phase and join sources;
   it is not retail ground truth. Do not add a guard or skip.
+
+- **M5 mission transition route join (s4929):** the rerun passed the same
+  independent phase and audio controls, with 49 transition controls and 2,237
+  transition events. The first complete handoff moved route `1541/5` at
+  `0x00690400` to `1546/0` at `0x00620400`; subsequent complete windows also
+  moved to fresh ordinals (for example `1548/0` -> `1550/0`). PCM consumers
+  were recorded under both origins, including matching route ordinals. This
+  selects route reinitialization during the handoff, not a stable route with a
+  mislabeled VI origin. It remains single-run port evidence and does not name
+  whether the reinitialization is legitimate; no guard or skip is authorized.
 
 - **M5 callback teardown reachability (s4894 correction):** the qualified
   route passed title/hangar, 758 SP returns, 44 PCM sources, 259 PCM consumers
@@ -336,13 +354,13 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4928) Resolve the selected mission attribution drift:** use the existing
-  same-build width-gated mission capture to join the 268 `0x690400` and 101
-  `0x620400` PCM rows to their nearest transition-window event ordinals and
-  route rows. The discriminator is whether the same event sequence carries a
-  stable route ordinal across the origin change (stable selects a VI-origin
-  label defect; discontinuity selects route reinitialization during the
-  handoff). Do not add a guard or skip.
+- **(s4929) Explain the selected mission route reinitialization:** identify
+  the route-identity writer/prepare path that creates the fresh ordinal at each
+  `0x00690400` -> `0x00620400` handoff, then classify whether that reset is a
+  legitimate new audio publication or a port-only discontinuity. Use one
+  bounded source census plus a phase-gated capture only if the census leaves
+  competing writers. Do not add a guard or skip until the writer and its
+  legitimacy are established.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 
