@@ -5318,7 +5318,8 @@ extern "C" void osStopThread_recomp(uint8_t* rdram, recomp_context* ctx) {
 #include <mutex>
 #include <string>
 namespace {
-struct S4899 { std::mutex m; unsigned cnt[128] = {}; std::string order; unsigned swR = 0, swS = 0, swn = 0; uint32_t lastfb = ~0u; };
+struct S4899 { std::mutex m; unsigned cnt[128] = {}; std::string order; unsigned swR = 0, swS = 0, swn = 0; uint32_t lastfb = ~0u; double tR1 = -1, tR2 = -1, tlast = 0; };
+static double s4902_ms() { using C = std::chrono::steady_clock; return std::chrono::duration<double, std::milli>(C::now().time_since_epoch()).count(); } // s4902
 S4899& s4899() { static S4899 s; return s; }
 bool s4899_on() { static const bool e = [] { const char* v = std::getenv("ROGUESQ_LOG_S4899"); return v && v[0] && v[0] != '0'; }(); return e; }
 }
@@ -5326,7 +5327,7 @@ extern "C" void rs64_s4899_ev(char kind) {
     if (!s4899_on()) return;
     auto& s = s4899(); std::lock_guard<std::mutex> g(s.m);
     s.cnt[(unsigned char)kind & 127]++;
-    if (kind == 'R') s.swR++; else if (kind == 'S') s.swS++;
+    if (kind == 'R') { s.swR++; double n = s4902_ms(); if (s.tR1 < 0) s.tR1 = n; else if (s.tR2 < 0) s.tR2 = n; } else if (kind == 'S') s.swS++;
     if (s.order.size() < 40) s.order.push_back(kind);
 }
 // s4900: one row per osViSwapBuffer that CHANGES the framebuffer (true origin change).
@@ -5335,7 +5336,10 @@ extern "C" void rs64_s4899_swap(uint32_t fb, uint32_t width) {
     auto& s = s4899(); std::lock_guard<std::mutex> g(s.m);
     s.swn++;
     if (fb != s.lastfb) {
-        std::fprintf(stderr, "[s4899-sw] n=%u width=%u fb=0x%08X R=%u S=%u\n", s.swn, width, fb, s.swR, s.swS);
+        double now = s4902_ms();
+        std::fprintf(stderr, "[s4899-sw] n=%u width=%u fb=0x%08X R=%u S=%u dt=%.2f r1=%.2f r2=%.2f\n", s.swn, width, fb, s.swR, s.swS,
+                     now - s.tlast, s.tR1 < 0 ? -1.0 : now - s.tR1, s.tR2 < 0 ? -1.0 : now - s.tR2); // s4902
+        s.tlast = now; s.tR1 = s.tR2 = -1;
         s.swR = 0; s.swS = 0; s.lastfb = fb;
     }
 }

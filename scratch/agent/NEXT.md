@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: m5-retrace-pacing-vs-retail
 
-s4901: port = 2 retrace returns (and ~2 synth entries) per TRUE fb-origin change (4642/4644 hangar); retail = 1 per origin change (s4900). Aliasing explained 0/2; the real gap is 2:1.
+s4902: port swaps at ~30 Hz (dt med 33.35 ms) over 60 Hz retraces (16.4 ms); swap lands 0-11 ms (med 3.8) after the 2nd retrace. H-vi-rate refuted; leans H-slow-frame over H-divider.
 
-Hypotheses: H-slow-frame (port game frame takes >1 retrace, e.g. CPU/RSP/RDP wait stalls so it misses every other retrace); H-divider (game's frame-limiter counter/min-retrace-per-frame variable differs, set from a stubbed/uninitialised value); H-vi-rate (port retrace rate itself is 2x retail per wall second so 1 swap per 2 retraces is the same game rate).
-Discriminator: in one port run log wall-time per retrace return and per swap (rate in Hz) plus the game's frame-limiter variable; retail oracle: same variable via watch. Rates: port swap Hz ~ retail swap Hz => H-vi-rate; port swap Hz ~ half => H-slow-frame/H-divider (check variable value vs retail). Find the variable by grepping decompiled code around the swap caller for a retrace-count compare.
+Hypotheses: H-slow-frame-gfx (frame bounded by gfx task completion latency in the port's RSP/RDP emulation); H-slow-frame-other (audio/spin-yield/mutex wait in game thread); H-divider (game-side limiter; swap would sit ~0 ms after R2 — mostly disfavoured).
+Discriminator: one run, extend tools/apply_s4902_swap_timing.py: timestamp gfx-task-done (DP/SP-done message to the game queue) and the osSendMesg/recv wait points of the game main loop; per origin-change row log ms of task-done relative to R1/R2/swap. Task-done before R1+16.7 => game-side wait (H-divider/other); after => H-slow-frame-gfx. Positive control: the existing R/S events must still fire in the same row.

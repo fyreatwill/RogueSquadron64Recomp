@@ -279,6 +279,7 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
    ratio, or does the port deliver/handle retraces at half the retail VI rate?
    Measure in one unit (retrace returns per VI-origin change) on both sides.
    **s4900 answer:** retail (oracle, control passed) = 1,302 hits / 1,301 origin changes, 94% of intervals exactly 1 (steady). Mean agrees with port; shape differs (port 0/2 bimodal per update_screen).
+   **s4902 answer (single-source):** port swaps at ~30 Hz (wall dt med 33.35 ms) over true 60 Hz retraces (16.4 ms apart) => H-vi-rate refuted. Swap lands 0-11 ms (med 3.8) after the 2nd retrace, not ~0 => leans H-slow-frame over a strict divider. Next: timestamp gfx-task-done vs R1/R2 (scratch/agent/NEXT.md).
    **s4901 answer:** per TRUE fb-origin change (osViSwapBuffer fb change) the port is steady at 2 retrace returns (hangar 4642/4644; title-640 285/325), retail steady at 1. The 0/2 was update_screen aliasing (2 update_screens per origin change). Real gap = 2:1 frame pacing (single-source each side). NEXT: swap rate in Hz port vs retail + the game's frame-limiter/retrace-per-frame variable (slow-frame vs divider vs VI-rate).
 
 0. **M5 callback teardown boundary (s4894):** the qualified route does not
