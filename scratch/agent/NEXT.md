@@ -1,4 +1,4 @@
-# Next work unit (resume after checkpoint)
+# Next work unit (resume after checkpoint; do not rerun s4894)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -30,6 +30,7 @@ selecting a bounded mapping change, or the census finds no eligible candidate
 and the sweep remains parked while the revisit branch is selected. Do not build
 or run the game unless a runtime discriminator is required by the revisit.
 
-Checkpoint artifacts: s4894's capture and `docs/M5-S4894-SHUTDOWN-RETURN-MARKER.md`
-are already recorded; do not repeat that route or add more callback return
-fields.
+Checkpoint artifacts already exist: s4894's capture, its ledger entry, and
+`docs/M5-S4894-SHUTDOWN-RETURN-MARKER.md`. Do not repeat that route or add
+more callback return fields. The first command in the next iteration is the
+last-15-session preflight above; this retry has not run it.
