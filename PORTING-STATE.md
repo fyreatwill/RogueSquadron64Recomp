@@ -157178,3 +157178,12 @@ NEXT: measure swap/retrace rate per second on the -O2 binary vs retail (s4901 me
 REFUTES H-updatescreen-blocking-wait; SELECTS H-cpu-spread, and within it H-rt64-O0 (RT64 compiled without optimisation) as the cause of the host-bound frame — confirmed by the -O2 A/B (sendDl 23 -> 8.5 ms/task). Engineering change landed: CMakeLists.txt ROGUESQ_RT64_OPT (target_compile_options(rt64 PRIVATE -O2)), not only instrumentation.
 NEXT DISCRIMINATOR: on the -O2 binary, per-second osViSwapBuffer fb changes vs retrace messages vs game-thread busy/blocked ms (with a sleep control) to split H-guest-O0 / H-frame-limiter / H-sleep-paced; see scratch/agent/NEXT.md.
 Summary in gate vocabulary: this refutes H-updatescreen-blocking-wait, selects H-rt64-O0 as the root cause of the host-bound frame, and closes the s4906 updateScreen lead; the next measurement should discriminate H-guest-O0 from H-frame-limiter and H-sleep-paced.
+
+## Session 4908 (2026-10-14) — frame limiter: VI-waiting thread is 98% blocked and a 10 ms sleep in osViSwapBuffer does not slow the 30 swaps/s; H-guest-O0 refuted for that thread
+
+Added `ROGUESQ_S4908=1` per-second counters (mesgqueue.cpp `s4908_vi_recv`, events.cpp `osViSwapBuffer`; `ROGUESQ_S4908_SLEEP_MS` = control) and ran two concurrent -O2 arms to hangar (scratch/agent/run_s4908.sh, logs scratch/agent/soak_results/s4908/, 146 rows each).
+- Arm A (default), steady state: swaps 30-31/s, VI messages received 60-61/s, 100% of those recvs blocked, wall blocked in osRecvMesg(VI queue) 975-992 ms per 1.0 s, process CPU ~690 ms/s (all threads).
+- Arm B (control, 10 ms sleep per swap): blocked ms fell to 598-644 (-370 ms/s vs the 300 ms of injected sleep; control fired), blocked recvs 51-58/s, CPU fell to ~495 ms/s. Swaps stayed 30/s.
+- Refuted: H-guest-O0 as the limiter of the swap/VI-waiting thread (it sits blocked ~98% of the time, and +10 ms per frame is absorbed with no rate change, so there is >=10 ms slack per 33 ms period). Not refuted: that a different thread (gfx/audio) is slow, since counters are per-queue not per-thread.
+- Selected: H-frame-limiter / game-logic divider (the game waits two VI messages per swap: 61 recvs for 30 swaps). Single-source (one run pair), control passed.
+- Next discriminator: which guest thread/queue the two VI waits per frame sit in and what releases the second one (retail swaps at 1 retrace/fb-change per s4901).

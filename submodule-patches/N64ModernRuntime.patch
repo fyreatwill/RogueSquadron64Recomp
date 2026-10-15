@@ -3644,7 +3644,7 @@ index 3198be0..e35819c 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..014ed54 100644
+index 149e770..d6f91c3 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,11 +8,24 @@
@@ -4516,7 +4516,22 @@ index 149e770..014ed54 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -473,6 +1129,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -463,8 +1119,14 @@ void set_dummy_vi(bool odd) {
+     }
+ }
+ 
++std::atomic<uint32_t> g_s4908_swaps{0};
++std::atomic<uint32_t> g_s4908_swap_all{0};
+ extern "C" void osViSwapBuffer(RDRAM_ARG PTR(void) frameBufPtr) {
++    static const int ctl_ms = [] { const char* e = std::getenv("ROGUESQ_S4908_SLEEP_MS"); return e ? std::atoi(e) : 0; }();
++    if (ctl_ms > 0) std::this_thread::sleep_for(std::chrono::milliseconds(ctl_ms));
+     std::lock_guard lock{ events_context.message_mutex };
++    g_s4908_swap_all++;
++    if (events_context.vi.get_next_state()->framebuffer != frameBufPtr) g_s4908_swaps++;
+     events_context.vi.get_next_state()->framebuffer = frameBufPtr;
+ }
+ 
+@@ -473,6 +1135,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -4524,7 +4539,7 @@ index 149e770..014ed54 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -567,16 +1224,22 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
+@@ -567,16 +1230,22 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
  }
  
  void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
@@ -4547,7 +4562,7 @@ index 149e770..014ed54 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -632,6 +1295,37 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -632,6 +1301,37 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      events_context.vi.states[1].mode = &dummy_mode;
  
      events_context.vi.thread = std::thread{ vi_thread_func };
@@ -4586,10 +4601,10 @@ index 149e770..014ed54 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..f6b52f3 100644
+index 9944a02..ff05fa5 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,18 +1,259 @@
+@@ -1,18 +1,288 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -4607,7 +4622,36 @@ index 9944a02..f6b52f3 100644
  
  #include "ultramodern/ultra64.h"
  #include "ultramodern/ultramodern.hpp"
- 
++#include <chrono>
++#include <atomic>
++#include <cstdio>
++#include <cstdlib>
++#include <sys/resource.h>
++// s4908: per-second frame-limiter counters (ROGUESQ_S4908=1). swaps = osViSwapBuffer calls that changed fb,
++// vi_recv = VI-queue messages received, vi_blk_ms = wall ms spent inside osRecvMesg on the VI queue,
++// cpu_ms = process user+sys CPU ms in the window.
++extern std::atomic<uint32_t> g_s4908_swaps;
++extern std::atomic<uint32_t> g_s4908_swap_all;
++static bool s4908_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4908"); return e && *e && *e != '0'; }(); return on; }
++static void s4908_vi_recv(bool received, double ms, int blocked) {
++    static std::atomic<uint32_t> recv{0}, blk{0}; static std::atomic<uint64_t> blk_us{0};
++    static std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
++    static double cpu0 = 0; static uint32_t rows = 0;
++    if (!s4908_on()) return;
++    if (received) recv++;
++    if (blocked) { blk++; blk_us += static_cast<uint64_t>(ms * 1000.0); }
++    auto now = std::chrono::steady_clock::now();
++    double dt = std::chrono::duration<double>(now - t0).count();
++    if (dt >= 1.0) {
++        struct rusage ru; getrusage(RUSAGE_SELF, &ru);
++        double cpu = ru.ru_utime.tv_sec * 1000.0 + ru.ru_utime.tv_usec / 1000.0 + ru.ru_stime.tv_sec * 1000.0 + ru.ru_stime.tv_usec / 1000.0;
++        std::fprintf(stderr, "[s4908] row=%u dt=%.2f swaps=%u swap_calls=%u vi_recv=%u vi_blocked_recvs=%u vi_blk_ms=%.1f cpu_ms=%.1f\n",
++            rows++, dt, g_s4908_swaps.exchange(0), g_s4908_swap_all.exchange(0), recv.exchange(0), blk.exchange(0), blk_us.exchange(0) / 1000.0, cpu - cpu0);
++        cpu0 = cpu; t0 = now;
++    }
++}
++
++
 +extern "C" __attribute__((weak)) bool rs64_audio_route_snapshot(
 +    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
 +    uint32_t* row, int* exit_reason, const char** arm);
@@ -4755,7 +4799,7 @@ index 9944a02..f6b52f3 100644
 +    uint32_t row = 0;
 +    int exit_reason = 0;
 +};
-+
+ 
  struct QueuedMessage {
      PTR(OSMesgQueue) mq;
      OSMesg mesg;
@@ -4764,14 +4808,14 @@ index 9944a02..f6b52f3 100644
 +    int source = -1;
 +    AudioRouteMessage audio;
 +    uint32_t host_task_seq = 0xFFFFFFFFu;
- };
- 
++};
++
 +struct AudioSpDelivery {
 +    PTR(OSMesgQueue) mq;
 +    OSMesg msg;
 +    AudioRouteMessage audio;
-+};
-+
+ };
+ 
 +static std::deque<AudioSpDelivery> g_audio_sp_deliveries;
 +static thread_local OSMesg g_last_received_message = NULLPTR;
 +static AudioRouteMessage g_current_audio_route;
@@ -4849,7 +4893,7 @@ index 9944a02..f6b52f3 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -27,47 +268,169 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -27,47 +297,169 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
      requeue_enabled.set(static_cast<int>(EventMessageSource::Dp), mqc.requeue_dp);
  }
  
@@ -5024,7 +5068,7 @@ index 9944a02..f6b52f3 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      mq->blocked_on_recv = NULLPTR;
      mq->blocked_on_send = NULLPTR;
-@@ -75,6 +438,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
+@@ -75,6 +467,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
      mq->msg = msg;
      mq->validCount = 0;
      mq->first = 0;
@@ -5051,7 +5095,7 @@ index 9944a02..f6b52f3 100644
  }
  
  s32 MQ_GET_COUNT(OSMesgQueue *mq) {
-@@ -90,6 +473,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +502,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -5063,7 +5107,7 @@ index 9944a02..f6b52f3 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +494,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +523,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -5078,7 +5122,7 @@ index 9944a02..f6b52f3 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +525,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +554,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -5089,7 +5133,7 @@ index 9944a02..f6b52f3 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +545,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +574,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -5104,7 +5148,7 @@ index 9944a02..f6b52f3 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -160,8 +566,76 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -160,8 +595,76 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      return true;
  }
  
@@ -5182,7 +5226,7 @@ index 9944a02..f6b52f3 100644
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -173,8 +647,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,8 +676,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
      // Handle any messages that have been received from an external thread.
      dequeue_external_messages(PASS_RDRAM1);
  
@@ -5197,7 +5241,7 @@ index 9944a02..f6b52f3 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
-@@ -183,7 +663,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,7 +692,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -5210,7 +5254,7 @@ index 9944a02..f6b52f3 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +689,67 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +718,69 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
@@ -5249,7 +5293,9 @@ index 9944a02..f6b52f3 100644
 +        g_s4259[s4259_tid].recvs++; g_s4259[s4259_tid].last_mq = static_cast<uint32_t>(mq_);
 +        if (flags == OS_MESG_BLOCK && mq->validCount == 0) g_s4259[s4259_tid].blocked_mq = static_cast<uint32_t>(mq_);
 +    }
++    const auto s4908_t0 = std::chrono::steady_clock::now();
      bool received = do_recv(PASS_RDRAM mq_, msg_, flags == OS_MESG_BLOCK);
++    if (is_vi_mq) { s4908_vi_recv(received, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - s4908_t0).count(), blocked); }
 +    if (s4259_tid >= 0) g_s4259[s4259_tid].blocked_mq = 0;
 +    if (received) {
 +        log_audio_sp_receive(mq_, g_last_received_message);
