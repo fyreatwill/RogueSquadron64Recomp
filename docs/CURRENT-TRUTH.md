@@ -187,3 +187,5 @@ The detailed s4822–s4937 headline history and older backlog are archived in
 `docs/PROJECT-OVERVIEW.md`; per-run evidence is in the session-specific M5/M3
 notes and `PORTING-STATE.md`. The next iteration must read `scratch/agent/NEXT.md`
 and the tail of `scratch/agent/SOAK-RESULTS.md` before acting.
+
+- s4947: aux-store A/B thread closed; arms identical on [phase] transitions (6 each), pacing, rows/flip. Not a lead.

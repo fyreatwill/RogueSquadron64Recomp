@@ -157671,3 +157671,6 @@ All docs/M5-AUDIO-PLAN.md steps (0-11) are closed, so ran the NEXT.md fallback: 
 Result: mission entry (origin=0x00690400) at 96.8s/#5738 solo vs 96.9s/#5744 and 96.7s/#5735 in the duo run, so VI pacing is identical; end-of-run VI counts 10176 (solo) vs 10624 (both duo) with unequal run lengths (single-source, not a rate measurement past mission entry).
 Rules out: CPU contention from the 2-concurrent A/B as the cause of the image arm presenting fewer origin flips in s4944. The residual image-vs-silent flip-count cause stays undiscriminated. My first origin= line count was invalid (pattern matches ~370k log lines) and was discarded.
 No behavior change. ORIGIN: n/a (no mitigation).
+
+## Session 4947 (2026-10-14) — s4944 flip-gap closed: both arms have identical [phase] transition sequences
+Offline count of `^[phase] vi_width` lines in scratch/agent/s4944_aux_ab/{image,silent}.log: 6 per arm, same six origins (0x0, 0x280, 0x66xxxx, 0x690400, 0x696100, 0x790400). The "49 vs 512 flips" gap was the per-flip witness-cap artifact (s4945) plus origin= line counting (~370k matches), not a real difference. Aux-store A/B thread (m5-aux-store-ab) is CLOSED: arms indistinguishable on phase transitions, pacing (s4946), and rows/flip (s4945). No code changed; offline analysis only.

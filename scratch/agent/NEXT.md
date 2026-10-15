@@ -1,6 +1,6 @@
 # Next work unit
 
-HYPOTHESIS-ID: m5-aux-store-ab
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s4946: solo vs duo image-arm VI pacing identical (mission entry #5738/#5744/#5735 at ~96.8s), so concurrency/CPU contention does not explain fewer image-arm origin flips in s4944. M5 plan steps 0-11 are all closed.
-Next: count per-arm `[phase]` origin transitions (not `origin=` lines, which match ~370k lines) offline from scratch/agent/s4944_aux_ab/*.log to see whether the 49-vs-512 flip gap is real; if not resolvable, pick an M5 A-table row without a Qualified marker in docs/M5-AUDIO-PLAN.md, or follow the REVISIT rules.
+m5-aux-store-ab CLOSED (s4947). M5 steps 0-11 closed; M3 parked.
+Next: run `grep -n '^## Session ' PORTING-STATE.md | tail -15`; if all 15 are sweep titles do the REVISIT (CURRENT-TRUTH Next steps #2 or M4 accumulator boundary) with a new angle, else resume the rename sweep. Mapping-only edits trip the engineering-change counter; prefer a REVISIT or a committed guard.
