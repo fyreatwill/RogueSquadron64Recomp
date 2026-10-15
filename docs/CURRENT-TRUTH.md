@@ -170,7 +170,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4970 (top):** movz/movn DONE: N64Recomp now emits them (submodule-patches/n64recomp-movz-movn.patch), live tree patched by tools/fixup_movz_movn.py (census 179/179 do_break -> 0/179), build 0 errors, title+hangar smoke crash=0 (scratch/agent/s4970_smoke.sh). Live RecompiledFuncs is not reproducible from fixup_game_funcs.py alone (many apply_s*.py layers). Remaining pivot target: VI-640 route wall.
+**s4971 (top):** VI-640 boot stall NOT reproduced (4/4 idle/loaded arms exit at 48-50 s, loadavg up to 39; no positive control, so not proof it is gone). H-load unsupported. Route wall is not currently observable; next: N>=10 repeat in soak queue to bound the rate, else treat as closed.
+
+**s4970 (prior):** movz/movn DONE: N64Recomp now emits them (submodule-patches/n64recomp-movz-movn.patch), live tree patched by tools/fixup_movz_movn.py (census 179/179 do_break -> 0/179), build 0 errors, title+hangar smoke crash=0 (scratch/agent/s4970_smoke.sh). Live RecompiledFuncs is not reproducible from fixup_game_funcs.py alone (many apply_s*.py layers). Remaining pivot target: VI-640 route wall.
 
 **s4969 (top):** the s4968 block was not an owner decision; re-scoped. Next unit is movz/movn support in N64Recomp via scratch regen (engineering-only, dormant defect, no runtime change expected); see NEXT.md.
 
