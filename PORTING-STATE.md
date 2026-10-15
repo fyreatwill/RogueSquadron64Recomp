@@ -157856,3 +157856,21 @@ Verification queued: scratch/agent/soak_queue/s4981_armed_mission_fix.sh (same r
 Work unit (NEXT.md, HYPOTHESIS-ID voice-count-before-base-race): ran `scratch/agent/soak_queue/s4981_armed_mission_fix.sh` once after the count-after-base writer fix. Positive controls passed: `ctl_arm=1`, `ctl_in=1`, `s4579A=9`; the keyed route reached mission origin at 173 seconds. Result: `bad=4`, `pidma=0`, `crash=0`. The allocator was exercised and the same stale-base signature remained, so H-fixed (writer reorder alone) is refuted and H-reader-order remains. No lock, guard, filter, or value rewrite was added. Rules out: route absence and PI-DMA corruption as the cause of these four rows.
 ORIGIN: writer = `allocateSongChannelArray`, publishing legitimate count 32; the remaining defect is the reader's count/base observation without an acquire/order guarantee, not an illegitimate value.
 Next: implement the reader-side acquire/order change through the fixup replay and validate with one armed mission soak.
+
+## Session 4983 (2026-10-15) — reader acquire fence does not close stale-base pair
+
+Implemented `tools/apply_s4982_reader_acquire.py` and wired it into the vendored
+fixup replay. The patch places an acquire fence immediately after the
+`musyxMixActiveVoices` count load at `0x80090E1C`, pairing the existing
+`allocateSongChannelArray` release fence after the base stores and before the
+count store. The Debug build passed.
+
+The clean one-run armed mission validation reached the allocator and both
+mission origins (onset 175 s). Positive controls passed: `ctl_arm=1` and
+`s4579A=9`. The result was `s4540 kind=bad=4`, `pidma=0`, `crash=0`,
+`abort=0`, with nonzero PCM rows. The acquire fence did not eliminate the
+stale-base signature. This refutes the tested reader-fence placement and rules
+out route absence and PI-DMA corruption as explanations for these rows. It
+does not distinguish explicit atomic loads from a lock-compatible handoff;
+that is the next work unit. The earlier overlapping launch was discarded as
+invalid and its process was SIGKILLed.
