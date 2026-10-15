@@ -157949,3 +157949,17 @@ qualified mission route and separated current allocator/mixer state
 (`20/0x8018C720`) from stale `s4540` bad rows (`32/0x801714D0`). No guard or
 rewrite was added. ORIGIN: `allocateSongChannelArray` is the legitimate
 writer; this is provenance instrumentation only.
+
+## Session 4989 (2026-10-15) — checkpointed incomplete caller-boundary discriminator
+
+The retry did not rerun the experiment. The existing s4988 artifact remains
+the only usable evidence: its phase-qualified mission run passed
+`ctl_arm=1`, `s4579A=9`, PCM-positive rows=129, crash=0, and abort=0, while
+publication/mixer rows showed `20/0x8018C720` and four `s4540` rows showed
+`32/0x801714D0` with `a0=0x801724C0`. This preserves the provenance split but
+does not discriminate H-propagation, H-uninstrumented-reader, and H-classifier
+because no caller-register capture or same-origin join was completed. The
+independent oracle artifact passed whole-RDRAM and voice-pair controls but did
+not reach title/hangar in its short run, so it contributes no phase join.
+Next is the same caller-boundary discriminator, with its fixup script existence
+checked before building. No guard, rewrite, or mitigation was added.

@@ -1,14 +1,20 @@
 # Resume checkpoint
 
-s4988 completed the phase-scoped provenance run. The final log is
-`scratch/agent/s4984_atomic_voice_pair_mission/run.log`; its summary is in
-`keys.log`. Independent retail ground truth is in
-`scratch/agent/s4987_oracle_ground_truth/run.log`.
+The prior attempt did not complete the planned caller-boundary discriminator.
+The existing artifact `scratch/agent/s4984_atomic_voice_pair_mission/run.log`
+does establish the route-qualified provenance split recorded for s4988:
+mission publication/mixer rows were `20/0x8018C720`, while four stale
+`s4540` rows were `32/0x801714D0` with `a0=0x801724C0`. Its `keys.log` has
+mission onset 183 s, `ctl_arm=1`, `s4579A=9`, `bad=8`, `pidma=0`, crash=0,
+abort=0, and PCM-positive rows=129. The independent control artifact is
+`scratch/agent/s4987_oracle_ground_truth/run.log`; it passed whole-RDRAM and
+the watched voice-pair control, but did not reach title/hangar in that short
+oracle run. Do not treat this checkpoint as a new hypothesis selection.
 
 # Next work unit
 HYPOTHESIS-ID: voice-count-before-base-race
 
-Build one caller-boundary discriminator for `s4540`: record phase/origin,
+Resume the caller-boundary discriminator: record phase/origin,
 `ctx->r31`, `ctx->r4`, and the guest count/base immediately at each bad row,
 and join it to the nearest same-origin `s4987` mixer/publication row in the
 same run. Preserve title, hangar, mission, allocator, PCM, crash, and abort
@@ -35,6 +41,10 @@ Exact commands:
     python3 tools/apply_s4988_s4540_boundary.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
     cmake --build build --config Debug --target RogueSquadron64Recomp
     zsh scratch/agent/s4984_atomic_voice_pair_mission.sh
+
+If the fixup script is absent, stop and restore/create the regeneration-
+preserved instrument before running; do not substitute the old atomic-pair
+run as the discriminator.
 
 s4988 controls: mission onset 183 s, s4579-A=9, bad=8, pidma=0,
 crash=0, abort=0, PCM nonzero rows=129. Mission publication and mixer rows
