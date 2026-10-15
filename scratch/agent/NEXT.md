@@ -1,5 +1,5 @@
 # Next work unit
 HYPOTHESIS-ID: keyed-mission-route-m5-validation
-Context: s4958 reached a real mission by waiting ~70 s after 0x6A2900 (scratch/agent/s4958_after_6a2900.sh), crash=0, N=1.
-Work unit: repeat that recipe N=3 sequentially (one game at a time) with M5 audio counters armed (flags from s4944_aux_ab.sh). Per run: mission onset time, origin line counts, PCM nonzero count, crash/abort. Hypotheses: H-stable (3/3 mission, crash=0) vs H-intermittent-stall (VI640 stall as in s4794) vs H-mission-audio-fault (PCM zero or abort). Positive control: hangar 0x6AB400 before 0x6A2900.
+Context: s4958 reached a real mission (~70 s after 0x6A2900, crash=0, N=1). Three one-run soaks are queued: scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh (do NOT babysit or re-run them).
+Work unit: consume the SOAK-RESULTS.md lines + soak_results/s4959_mission_run*/keys*.log. Per run: mission onset time, crash, abort, pcm_rows/pcm_nz_rows. Hypotheses: H-stable (3/3 mission, crash=0) vs H-intermittent-stall (as s4794) vs H-mission-audio-fault (PCM zero/abort). rc=137 = 600 s timeout, not a result; if so, trim waits and re-enqueue. If fewer than 3 verdicts exist, work on something not needing them.
 Then add a mission-phase row to docs/M5-AUDIO-PLAN.md.
