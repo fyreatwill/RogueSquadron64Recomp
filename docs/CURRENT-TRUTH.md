@@ -6,6 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s4944:** Image-vs-silent aux-store A/B qualified (title+mission in both arms, crash=0, same final VI #9600). All four aux stores fire in both arms with identical value structure — H-contract-gap refuted, H-route-only supported. The silent arm emits ~11x more mission synth-frame rows at equal VI count (single run; AI-drain pacing suspected, untested). Recipe: `scratch/agent/s4944_aux_ab.sh`.
+
 - **s4943:** One production image arm reached title (`0x00790400`) and both
   mission origins (`0x00690400`, `0x00620400`) with crash=0 and aux-store rows
   in both phases; hangar control absent (driver keyed on first VI-512). The
