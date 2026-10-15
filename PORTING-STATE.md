@@ -157692,3 +157692,12 @@ Rules out: do_break (movz/movn) hits and startup crashes on this route in 5 runs
 NOT resolved: the "stalled" grep counts ~458/run are the vi-fs-decision field (stalled=1 lines at vi=0x00695C00, lastCimg=0 appear late
 in run1), so this soak did not discriminate the VI640 stall rate from s4794 - the grep was too coarse. Single-source, N=5.
 Logs: scratch/agent/s4950_route_soak/.
+
+## Session 4951 (2026-10-14) — pivot iteration: no landable build/runtime change exists; BLOCKED with a scope question
+
+Mandatory pivot demanded (a) an M5 de-stub or (b) an M3 guard-class audit / VI-640 route-wall change. Checked each against the docs, no game run:
+- (a) docs/M5-AUDIO-PLAN.md steps 0-11 are all qualified or closed (Step 8: A9/A10 no guard removal; Step 10: no AI/SDL gap; Step 11: spin2 yield qualified). Every row says "do not repeat / no behavior change authorized". The only open M5 item is repairing the stale named spin2-clear logger, which is a diagnostic that selects nothing (iron rule 14), so I did not land it as progress.
+- (b) M3: s4948/s4949 showed the movz/movn sites are dormant, so recompiler conditional-move support has no discriminating consumer. VI-640 route wall: s4950 soaked 5/5 to mission, 0 breaks, 0 crashes, so there is no wall left to alter.
+- Next-steps #3 (A1 aux-store A/B) was already closed by s4947.
+ORIGIN: none added; no mitigation machinery in this diff.
+Outcome: BLOCKED. Question for the human is in scratch/agent/BLOCKED.md.

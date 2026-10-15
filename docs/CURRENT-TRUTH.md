@@ -154,6 +154,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+**s4951: loop BLOCKED** - M5 steps 0-11 all closed, M3 movz/movn dormant, VI-640 wall gone (s4950 5/5 mission). Awaiting owner scope decision (scratch/agent/BLOCKED.md).
+
 0. **s4945 note:** s4944's "~11x more synth frames per VI" is a witness artifact (aux-store row cap resets per origin flip; rows/flip 32.8 image vs 30.8 silent; flips 49 vs 512). The arms are equivalent per flip; the image arm just presents fewer flips (cause undiscriminated, single-source offline).
 
 1. **Completed — s4939:** perform the phase-gated retail/port join for
