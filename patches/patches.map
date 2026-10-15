@@ -35,9 +35,9 @@ LOAD heap_guard_asm.o
  *(.text*)
  .text          0x80801000        0x0 heap_guard_asm.o
 
-.recomp_patch   0x80801000       0xcc load address 0x00000000
+.recomp_patch   0x80801000       0xe8 load address 0x00000000
  *(.recomp_patch*)
- .recomp_patch  0x80801000       0xcc heap_guard_asm.o
+ .recomp_patch  0x80801000       0xe8 heap_guard_asm.o
                 0x80801000                allocateDisplayListBuffer
  *(.recomp_force_patch*)
 
@@ -50,13 +50,13 @@ LOAD heap_guard_asm.o
 .rodata
  *(.rodata*)
 
-.data           0x808010d0        0x0 load address 0x000000cc
+.data           0x808010f0        0x0 load address 0x000000e8
  *(.data*)
- .data          0x808010d0        0x0 heap_guard_asm.o
+ .data          0x808010f0        0x0 heap_guard_asm.o
 
-.bss            0x808010d0        0x0 load address 0x000000cc
+.bss            0x808010f0        0x0 load address 0x000000e8
  *(.bss*)
- .bss           0x808010d0        0x0 heap_guard_asm.o
+ .bss           0x808010f0        0x0 heap_guard_asm.o
  *(COMMON)
                 0x00000001                        ASSERT ((. <= PATCH_RAM_END), Maxed out recomp extra ram)
 
@@ -76,6 +76,7 @@ LOAD heap_guard_asm.o
  *(*)
                 0x80000000                        __start = 0x80000000
                 0x8002221c                        func_8002221C = 0x8002221c
+                0x8002221c                        findAndUnlinkSmallestEntry = 0x8002221c
                 0x801163b0                        heap_free_head = 0x801163b0
                 0x801163fc                        heap_other_listhead = 0x801163fc
                 0x8011a7dc                        heap_tail_loc = 0x8011a7dc

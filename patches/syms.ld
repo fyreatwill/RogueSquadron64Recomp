@@ -16,6 +16,7 @@ __start = 0x80000000;
 /* heap_guards.c calls func_8002221C (alloc helper). Address from
  * syms/rogue_squadron.syms.toml. */
 func_8002221C = 0x8002221C;
+findAndUnlinkSmallestEntry = 0x8002221C;
 
 /* --- Game data symbols touched by patches ------------------------------- */
 /* heap_guards.c reads/writes these globals. Addresses are static RAM slots

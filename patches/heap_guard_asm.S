@@ -6,62 +6,70 @@
 .globl allocateDisplayListBuffer
 .type allocateDisplayListBuffer, @function
 allocateDisplayListBuffer:
-    lui     $t3, 0x8011
-    lw      $t0, 0x63B0($t3)
-    bnez    $t0, 1f
+    lui     $v1, 0x8011
+    lw      $v1, 0x63B0($v1)
+    addiu   $sp, $sp, -0x18
+    bne     $v1, $zero, .L_de0
+    sw      $ra, 0x10($sp)
+    jal     findAndUnlinkSmallestEntry
     nop
-    lui     $t9, 0x8002
-    ori     $t9, $t9, 0x221C
-    jalr    $t9
+    addu    $v1, $v0, $zero
+    beq     $v1, $zero, .L_dd8
     nop
-    addu    $t0, $v0, $zero
-    beq     $t0, $zero, 2f
+    lw      $v0, 0($v1)
+    beq     $v0, $zero, .L_db8
+    addu    $a0, $v1, $zero
+.L_da8:
+    lw      $a0, 0($a0)
+    lw      $v0, 0($a0)
+    bne     $v0, $zero, .L_da8
     nop
-    addu    $t1, $t0, $zero
-3:
-    lw      $t2, 0($t1)
-    beq     $t2, $zero, 4f
-    nop
-    addu    $t1, $t2, $zero
-    b       3b
-    nop
-4:
-    sw      $t0, 0x63B0($t3)
-    sw      $zero, 4($t0)
-1:
-    lw      $t0, 0x63B0($t3)
-    beq     $t0, $zero, 2f
-    nop
-    lw      $t1, 0($t0)
-    sw      $t1, 0x63B0($t3)
-    beq     $t1, $zero, 5f
-    nop
-    sw      $zero, 4($t1)
-5:
-    lui     $t4, 0x8011
-    ori     $t4, $t4, 0xA7DC
-    lw      $t4, 0($t4)
-    lw      $t4, 0($t4)
-    lw      $t5, 0x63FC($t3)
-    lw      $t6, 0($t5)
-    beq     $t6, $zero, 6f
-    nop
-    lw      $t7, 0($t4)
-    sw      $t0, 0($t7)
-    sw      $t7, 4($t0)
-    b       7f
-    nop
-6:
-    sw      $t0, 0($t5)
-7:
-    sw      $zero, 0($t0)
-    addiu   $t1, $t0, 0x100
-    sw      $t1, 0x63D4($t3)
-    addiu   $v0, $t0, 8
+.L_db8:
+    lui     $v0, 0x8011
+    lw      $v0, 0x63B0($v0)
+    beq     $v0, $zero, .L_dcc
+    sw      $v0, 0($a0)
+    sw      $a0, 4($v0)
+.L_dcc:
+    lui     $at, 0x8011
+    sw      $v1, 0x63B0($at)
+    sw      $zero, 4($v1)
+.L_dd8:
+    lui     $v1, 0x8011
+    lw      $v1, 0x63B0($v1)
+.L_de0:
+    lui     $v0, 0x8011
+    lw      $v0, 0x63B0($v0)
+    lw      $v0, 0($v0)
+    lui     $at, 0x8011
+    sw      $v0, 0x63B0($at)
+    bnel    $v0, $zero, .L_dfc
+    sw      $zero, 4($v0)
+.L_dfc:
+    lui     $a1, 0x8011
+    lw      $a1, 0x63FC($a1)
+    lw      $v0, 0($a1)
+    bne     $v0, $zero, .L_e18
+    addu    $a0, $v1, $zero
+    j       .L_e30
+    sw      $a0, 0($a1)
+.L_e18:
+    lui     $v0, 0x8012
+    lw      $v0, -0x5824($v0)
+    lw      $v1, 0($v0)
+    sw      $a0, 0($v1)
+    lw      $v0, 0($v0)
+    sw      $v0, 4($a0)
+.L_e30:
+    lui     $v1, 0x8012
+    lw      $v1, -0x5824($v1)
+    sw      $zero, 0($a0)
+    sw      $a0, 0($v1)
+    addiu   $v1, $a0, 0x100
+    lui     $at, 0x8011
+    sw      $v1, 0x63D4($at)
+    lw      $ra, 0x10($sp)
+    addiu   $v0, $a0, 8
     jr      $ra
-    nop
-2:
-    addu    $v0, $zero, $zero
-    jr      $ra
-    nop
+    addiu   $sp, $sp, 0x18
 .size allocateDisplayListBuffer, .-allocateDisplayListBuffer

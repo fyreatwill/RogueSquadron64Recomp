@@ -158249,6 +158249,23 @@ This selects H1 from NEXT.md: the assembly-only route is technically
 available. It does not validate heap-guard behavior, enable an override, or
 replace the missing MIPS C compiler. No generated or runtime file was kept.
 
+## Session 5021 (2026-10-15) — recovered exact allocateDisplayListBuffer window
+
+The preserved generated snapshot `scratch/agent/s389_verify/before_current_applied/funcs_3.c:996-1157`
+provided the complete `0x80007D74..0x80007E58` instruction window, including
+the stack frame, direct `findAndUnlinkSmallestEntry` call, branch-likely
+fall-through, active-queue stores, and return delay slot. Reconstructed
+`patches/heap_guard_asm.S` from that source. Homebrew MIPS assembly/link
+produced `.recomp_patch` at `0x80801000` with exactly `0xE8` bytes and symbol
+`allocateDisplayListBuffer`; disassembly ends at the expected `jr` delay slot.
+This selects the source-backed complete-window hypothesis and rules out the
+previous incomplete-slice explanation. `build/N64Recomp patches.toml` then
+rejected the faithful direct external `jal` with `No function found for jal
+target: 0x8002221C` and cleared its output. The override remains disabled;
+this is an integration limitation, not a runtime result or authorization to
+replace the direct call with an indirect sequence. Full detail:
+`docs/M3-S5021-ALLOCATE-DL-INSTRUCTION-WINDOW.md`.
+
 ## Session 5019 (2026-10-15) — validated assembly patch identity and bounded slice
 The first real assembly-only heap-guard build initially failed strict patch
 validation because the source used `func_80007D74`, while the reference symbol

@@ -1,19 +1,18 @@
-# Next work unit: recover the missing allocateDisplayListBuffer instruction window
+# Next work unit: make the faithful allocateDisplayListBuffer assembly consumable
 HYPOTHESIS-ID: m3-assembly-patch-pipeline
 
 Competing hypotheses:
 
-1. The remaining seven-instruction-equivalent gap is recoverable from the
-   original/generated entry and the assembly port can reach the known `0xE8`
-   span with matching control flow.
-2. The current `0xCC` result is only a size/layout difference; existing stores
-   and branches already cover the complete behavior.
-3. Available source is insufficient to prove the missing control flow, so the
-   assembly override must remain disabled pending a new source artifact.
+1. N64Recomp can consume the exact direct external `jal` after a symbol/config
+   integration correction while retaining the `0xE8` machine-code span.
+2. N64Recomp's external-call resolver cannot consume this faithful form, so a
+   representable exact-span route is unavailable without a tool change.
+3. The recovered generated snapshot is stale or mismatched despite the exact
+   span, which would be exposed by a source/disassembly instruction diff.
 
-Discriminating measurement: locate the recovered/generated entry or an
-independent disassembly for `0x80007D74..0x80007E58`, then compare every
-branch target, load/store address, and call against `patches/heap_guard_asm.S`.
-An exact source-backed `0xE8` match selects H1; a complete `0xCC` source-backed
-entry selects H2; absent or ambiguous missing instructions selects H3 and
-requires a human-provided source artifact. Do not pad or enable the override.
+Discriminating measurement: run the exact-span assembly through `build/N64Recomp
+patches.toml` after the smallest resolver/config change that preserves the
+direct call. Successful host emission with `0xE8` selects H1; the same
+resolver error after a source-backed exact-span diff selects H2; an
+instruction mismatch selects H3. Do not use an indirect call or enable the
+override as a workaround.

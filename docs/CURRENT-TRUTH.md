@@ -1,10 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5020; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5021; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5021:** The preserved generated snapshot contains the complete
+  `allocateDisplayListBuffer` window. The assembly reconstruction now emits
+  the exact `0xE8` span and matches its stack, branch-likely, queue-store, and
+  return structure. N64Recomp rejects the faithful direct external `jal` form
+  (`No function found for jal target: 0x8002221C`) and clears the output, so
+  the override remains disabled; this is now an integration limitation, not a
+  missing-source question. See `docs/M3-S5021-ALLOCATE-DL-INSTRUCTION-WINDOW.md`.
 
 - **s5020:** Extended the disabled assembly-only `allocateDisplayListBuffer`
   probe through free-list expansion, dequeue, active-queue append, and
@@ -292,7 +300,18 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s5019 (top):** The assembly-only patch pipeline and corrected symbol identity
+**s5021 (top):** The recovered generated snapshot and reconstructed assembly
+now agree on the complete `0x80007D74..0x80007E58` window and exact `0xE8`
+span. The remaining bounded unit is an N64Recomp integration fix for the
+faithful direct call to `findAndUnlinkSmallestEntry` at `0x8002221C`; the
+current tool reports no function for that external `jal` and clears output.
+Keep the override disabled until the exact assembly is consumable, and do not
+replace the direct call with an indirect sequence merely to satisfy the tool.
+
+**s5020 (superseded):** The missing source artifact was not yet located; this
+is superseded by s5021's preserved generated snapshot and exact reconstruction.
+
+**s5019:** The assembly-only patch pipeline and corrected symbol identity
 are qualified, but the first bounded slice is structurally incomplete (0x44
 bytes emitted versus the original 0xE8-byte entry). The next bounded unit is
 to hand-port the remaining original `allocateDisplayListBuffer` control flow
