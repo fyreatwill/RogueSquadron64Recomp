@@ -170,7 +170,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4972 (top):** queued scratch/agent/soak_queue/s4972_vi640_idle_{a,b}.sh (2x5 idle boots, 100 s cap, seen640=1 is the positive control). Verdicts arrive in SOAK-RESULTS.md. 0/10 stall => close the VI-640 wall (cannot separate "fixed by s4970" from "never real") and resume the renaming sweep or an M3 idiom audit; any stay640 => reproduced stall, investigate phase-gated. Not yet run as of this entry.
+**s4973 (top):** s4972 soaks never ran (zsh ${0:A:h...} bug, rc=2 in 0 s). Requeued as soak_queue/s4972r_vi640_idle_a.sh (5 idle runs; verdict in soak_results/s4972r_a/summary.txt, seen640=1 is the positive control). 0/5 stall => close the VI-640 wall; any stay640 => reproduced stall, investigate phase-gated.
 
 **s4971 (prior):** VI-640 boot stall NOT reproduced (4/4 idle/loaded arms exit at 48-50 s, loadavg up to 39; no positive control, so not proof it is gone). H-load unsupported. Route wall is not currently observable; next: N>=10 repeat in soak queue to bound the rate, else treat as closed.
 

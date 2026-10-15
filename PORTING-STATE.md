@@ -157799,3 +157799,8 @@ ORIGIN: no mitigation added.
 
 ## Session 4972 (2026-10-15) — queued 2x5 idle VI-640 boot-stall rate soaks (s4972_vi640_idle_a/b)
 Executed NEXT.md plan: s4971's load A/B was 4/4 exit at 48-50 s, so the s4794 stall (2/5) needs a bounded rate. Wrote two self-contained soak recipes (scratch/agent/soak_queue/s4972_vi640_idle_{a,b}.sh, 5 idle runs each, 100 s cap per run, same env set as s4971, SIGKILL, nonzero exit if any run stays at 640 or dies). Positive control is built in: each run must first see width=640 (seen640=1) before exit counts. No game run this iteration; the loop runs them between iterations. Verdict lands in SOAK-RESULTS.md and scratch/agent/soak_results/s4972_{a,b}/summary.txt. Rules out nothing yet. Caveat: soak recipes run post-s4970 movz/movn build, so 0/10 cannot separate "fixed by s4970" from "never real"; either way the wall closes.
+
+## Session 4973 (2026-10-15) — s4972 soaks never ran (zsh `${0:A:h:h:h:h}` bad substitution); requeued as s4972r
+
+Both s4972_vi640_idle_{a,b} exited rc=2 in 0 s: the recipe's `ROOT=${0:A:h:h:h:h}` is a zsh syntax error ("h:h:h:h: syntax error"), so mkdir hit `/scratch` (read-only) and `cd /build` failed. Same bug class as s4793 (queue rc=0 false pass). No VI-640 evidence was produced; the s4972 "0/10" outcomes in NEXT.md did not occur.
+Fix: hardcoded ROOT, OUT=soak_results/s4972r_a, requeued as soak_queue/s4972r_vi640_idle_a.sh (5 idle runs, 100 s cap, seen640=1 positive control). The `_b` twin was dropped: both recipes `pkill -x RogueSquadron64Recomp`, so two concurrent copies would kill each other's game. Lesson: never use `${0:A:h:h...}` in recipes; hardcode ROOT; one soak recipe using pkill at a time.
