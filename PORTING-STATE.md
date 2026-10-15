@@ -157421,3 +157421,28 @@ capture used a route that actually reached both selected mission origins.
 
 ORIGIN: no mitigation or game-behavior change; this iteration only qualified
 the independent retail route and retained the existing port baseline.
+
+## Session 4933 (2026-10-14) — retail/port reprepare join selects publication mismatch
+
+Ran the planned retail/port reprepare parity join after the s4932 route
+qualification. The first port arm was incomplete because its driver stopped
+after the first mission origin; its controls were otherwise positive. The
+fixed arm continued all six validated Start/A pairs and reached both selected
+mission origins. At `0x00690400` it recorded 419 route rows and 181 PCM rows;
+at `0x00620400` it recorded 381 route rows and 126 PCM rows. Its update-screen
+counter advanced 10688 -> 17728 over 120 seconds and crash/abort counts were
+zero.
+
+The concurrent retail oracle passed the whole-RDRAM control at 10,000 writes,
+reached both mission origins, and produced 643 qualified type-2 task rows at
+hangar origin `0x006AB400`. The watched task-entry PC produced zero rows at
+both `0x00690400` and `0x00620400`. The positive hangar task control makes the
+mission-origin null interpretable. This selects H-publication-mismatch for the
+watched task entry: the port publishes fresh mission-origin task state while
+retail does not. It does not identify whether retail publication is absent or
+attributed outside `0x80033FCC`; the next unit watches retail writer
+`0x80091784`. No guard, skip, or behavior change was authorized.
+
+ORIGIN: no mitigation or game-behavior change; the only code change was to the
+scratch driver so the fixed capture continued the already-qualified input-pair
+sequence.

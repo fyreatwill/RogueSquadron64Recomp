@@ -6,7 +6,18 @@ at s4798 (61 KB -> ~15 KB); the verbatim s4740-s4797 headline log, the old
 [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md) under "Archive: CURRENT-TRUTH headline
 log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
-## Headline (as of s4932; compacted s4898)
+## Headline (as of s4933; compacted s4898)
+
+- **Latest (s4933):** the corrected same-build port/retail join qualified both
+  mission origins. The port recorded fresh route handoffs at `0x00690400`
+  (419 route rows, 181 PCM rows) and `0x00620400` (381 route rows, 126 PCM
+  rows), with an advancing counter and zero crash/abort markers. Retail passed
+  the whole-RDRAM and VI controls and produced 643 qualified type-2 task rows
+  at hangar `0x006AB400`, but produced zero task rows at either mission origin.
+  This selects **H-publication-mismatch** for this capture: the port publishes
+  fresh mission-origin task state while retail does not at the watched task
+  entry. It does not authorize a mitigation; next watch the retail task-state
+  writer to distinguish absent publication from attribution outside `0x80033FCC`.
 
 - **Latest (s4932):** the bounded retail oracle qualification passed whole-
   RDRAM and VI controls, recorded 630 qualified type-2 hangar tasks, then
@@ -136,6 +147,16 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
   markers. This closes route qualification only; the retail/port publication
   join remains the next discriminator. No guard or skip is authorized. See
   `docs/M5-S4932-RETAIL-MISSION-QUALIFICATION.md`.
+
+- **M5 retail/port reprepare parity (s4933):** the corrected port arm reached
+  both selected mission origins and recorded 419/381 route rows plus 181/126
+  PCM rows, with no crash or abort. Retail independently passed whole-RDRAM and
+  VI controls, reached both origins, and produced 643 qualified type-2 task
+  rows at hangar `0x006AB400`; it produced zero task rows at either mission
+  origin. This selects a publication mismatch at the watched task entry, but
+  not its cause: the next capture must watch retail writer `0x80091784` to
+  distinguish absent mission publication from attribution outside `0x80033FCC`.
+  No mitigation is authorized.
 
 - **M5 retail parity join (s4931):** the independent oracle was instrumented
   correctly and reached the 512-wide hangar route, with 11,629 whole-RDRAM
@@ -410,15 +431,14 @@ log s4740-s4797 ...". Git history preserves the pre-compaction file.
 
 ## Next steps
 
-- **(s4932) Run the selected retail/port reprepare parity join:** now that the
-  oracle reaches both mission origins, capture publication/task identity and
-  route ordinal/row at `0x00690400` -> `0x00620400` on retail and the same
-  phase-gated route on the port. Keep whole-RDRAM, VI, and hangar type-2
-  controls positive. A matching fresh-publication transition on both sides
-  selects parity; a retail transition without a port match selects a real
-  publication mismatch; any failed control selects an invalid capture. Do not
-  add a mitigation from either mismatch without naming the writer and proving
-  the value illegitimate.
+- **(s4933) Name the retail-side publication boundary:** the qualified join
+  found 643 type-2 task rows at hangar `0x006AB400`, but none at either mission
+  origin, while the port produced fresh mission-origin handoffs. Run the
+  retail oracle with the known task-state writer `0x80091784` watched and keep
+  the whole-RDRAM, VI, hangar-task, and both mission-origin controls positive.
+  A writer hit at a mission origin selects attribution outside the old
+  `0x80033FCC` task-entry watch; a qualified writer null selects absent retail
+  publication. Do not add a mitigation.
 
 - (s4922) Title+hangar longevity of the current default verified: 3/3 concurrent runs alive 300 s, counter advancing, 0 crashes/guard fires. Mission-phase longevity is the open item (see NEXT.md); autopilot cannot reach a mission, needs the winctl driver, one instance at a time.
 
