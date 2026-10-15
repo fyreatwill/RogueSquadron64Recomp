@@ -168,7 +168,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s4960 next (top):** consume the verdicts of the three queued soaks scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh (SOAK-RESULTS.md, soak_results/s4959_mission_run*/keys*.log); do not babysit or rerun. rc=137 = timeout, not a result. Then add the mission-phase row to docs/M5-AUDIO-PLAN.md.
+**s4960 next (top; still unrun at s4961):** consume the verdicts of the three queued soaks scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh (SOAK-RESULTS.md, soak_results/s4959_mission_run*/keys*.log); do not babysit or rerun. rc=137 = timeout, not a result. Then add the mission-phase row to docs/M5-AUDIO-PLAN.md.
 
 **s4958 next (superseded by s4960 above; recipe unchanged):** repeat the keyed route N=3 with mission-phase audio/PCM counters (see NEXT.md). Older, resolved by s4958: **s4957:** hangar keycode sweep (15 keys: A/B/Start/D-pad) never reaches a mission (0x690400/0x620400 = 0); the 5th A leaves to the 0x6A2900 model viewer. Input delivery works. Next: find the mission-launch state/flag (see scratch/agent/NEXT.md), try keys inside the viewer.
 

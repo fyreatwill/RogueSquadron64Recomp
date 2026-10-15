@@ -157748,3 +157748,9 @@ The block asked for a human decision, but the soak queue (ITERATION.md) already 
 What ran: no game run. Read BLOCKED.md/NEXT.md, ITERATION.md soak-queue section, and s4959_mission_x3.sh. Split the x3 script into scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh (root via git, SIGKILL, nonzero exit on no-title/no-hangar/crash/no-mission); `zsh -n` passes.
 What it showed: the block asked for a human decision that the soak queue (600 s cap per recipe, verdicts to SOAK-RESULTS.md) already answers; the blocker's own suggestion was this split.
 What it rules out: the block as a real dependency. It does NOT yet establish anything about mission stability — the soaks are unrun, and worst-case path time may exceed 600 s (rc=137 would mean timeout, not a result). BLOCKED.md archived as BLOCKED.resolved.s4959-soak-split.md.
+
+## Session 4961 (2026-10-15) — s4959 soak verdicts not yet produced; static worst-case timing check of queued recipes
+What ran: no game run. Looked for verdicts of scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh: SOAK-RESULTS.md has 0 s4959 lines, soak_results/ has 0 s4959 dirs, all three scripts still in soak_queue/, no RogueSquadron64Recomp process running (pgrep) - the loop runs queued recipes only between iterations, so none ran yet.
+Static check of the recipe wait budget (per script, worst case): title 150 s + hangar 12x11=132 s + 15 s + 0x6A2900 14x7=98 s + 24x5=120 s observation = 515 s < 600 s cap; s4958's measured path (hangar t=79, 6a2900 t=112, mission t=181, observation ends ~t=232) is well inside it, so rc=137 is unlikely unless the title phase is slow.
+What it rules out: the 600 s cap as a reason the recipes would fail. Nothing about mission stability/audio is learned; that waits for the verdicts.
+ORIGIN: no mitigation added.
