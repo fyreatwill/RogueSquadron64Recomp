@@ -5238,6 +5238,7 @@ extern "C" void rs64_s4913_mark(uint8_t* rdram, const char* tag) {
     if (!on) return;
     static std::atomic<uint32_t> n{0}; static const auto t0 = std::chrono::steady_clock::now();
     static const uint32_t skip = [] { const char* e = std::getenv("ROGUESQ_S4913_SKIP"); return e ? (uint32_t)std::atoi(e) : 0u; }();
+    static const uint32_t s4913_max = [] { const char* e = std::getenv("ROGUESQ_S4913_MAX"); return e ? (uint32_t)std::atoi(e) : 12000u; }();
     const uint32_t k = n.fetch_add(1);
     g_s4913_last_tag.store(tag); g_s4913_last_tid.store((int)rogue_current_thread_id(rdram)); g_s4913_last_k.store(k);
     static std::once_flag poll_once;
@@ -5250,7 +5251,7 @@ extern "C" void rs64_s4913_mark(uint8_t* rdram, const char* tag) {
             const uint8_t ca = *pa, cb = *pb;
             if (ca != la || cb != lb) {
                 const uint32_t kk = g_s4913_last_k.load(); ++trans;
-                if (kk >= skip && logged < 12000) { ++logged;
+                if (kk >= skip && logged < s4913_max) { ++logged;
                     std::fprintf(stderr, "[s4913p] t=%.3f A %u->%u B %u->%u last_k=%u last=%s last_tid=%d trans=%u\n",
                         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(),
                         la, ca, lb, cb, kk, g_s4913_last_tag.load(), g_s4913_last_tid.load(), trans); }
@@ -5258,11 +5259,11 @@ extern "C" void rs64_s4913_mark(uint8_t* rdram, const char* tag) {
             }
         }
     }).detach(); });
-    if (k < skip || k >= skip + 12000) return;
+    if (k < skip || k >= skip + s4913_max) return;
     const uint8_t a = rdram[((uint64_t)(int64_t)(int32_t)0x8011A8C8u - 0xFFFFFFFF80000000ull) ^ 3u];
     const uint8_t b = rdram[((uint64_t)(int64_t)(int32_t)0x8011A8C9u - 0xFFFFFFFF80000000ull) ^ 3u];
     char slots[64] = "";
-    if (tag[0] == 'p' || tag[0] == 'b') {   // psrr-* / bAlloc-*: arbiter slot bytes 0x80128EA8..B7
+    if (tag[0] == 'p' || tag[0] == 'b' || tag[0] == 's') {   // psrr-* / bAlloc-*: arbiter slot bytes 0x80128EA8..B7
         for (uint32_t i = 0; i < 16; ++i)
             std::snprintf(slots + i * 3, 4, "%02x ", rdram[((uint64_t)(int64_t)(int32_t)(0x80128EA8u + i) - 0xFFFFFFFF80000000ull) ^ 3u]);
     }
@@ -5436,4 +5437,13 @@ extern "C" void rs64_audioloop_witness(uint8_t* rdram, recomp_context* ctx,
         U32(ctx->r18), U32(ctx->r19), msgp, msgb, byte(rdram, 0x801596F0u),
         U32(ctx->r4), U32(ctx->r5), U32(ctx->r31));
     std::fflush(stderr);
+}
+
+// s4916: slot-table byte stores (0x80128EA8..B7) from the VI handler and producer-mark; tag interned.
+extern "C" void rs64_s4916_sb(uint8_t* rdram, uint32_t pc, uint32_t addr, uint32_t val) {
+    if (addr < 0x80128EA8u || addr >= 0x80128EB8u) return;
+    static std::mutex mu; static std::set<std::string> tags;
+    char b[64]; std::snprintf(b, sizeof b, "sb pc=%08X a=+%u v=%02X", pc, addr - 0x80128EA8u, val & 0xFF);
+    const char* t; { std::lock_guard<std::mutex> g(mu); t = tags.insert(b).first->c_str(); }
+    rs64_s4913_mark(rdram, t);
 }

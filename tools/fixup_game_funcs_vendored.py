@@ -18456,6 +18456,16 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             changed = True
             report.append(f"{p.name}: s4915 marks patched")
 
+    # s4916: tid-marked slot-byte stores in viRetraceHandlerThread / bufferArbiterProducerMark.
+    if "RECOMP_FUNC void viRetraceHandlerThread(" in text or "RECOMP_FUNC void bufferArbiterProducerMark(" in text:
+        sys.path.insert(0, os.environ.get("RS64_TOOLS_DIR") or str(pathlib.Path(__file__).resolve().parent))
+        import apply_s4916_marks as _s4916
+        _new = _s4916.patch_text(text)
+        if _new != text:
+            text = _new
+            changed = True
+            report.append(f"{p.name}: s4916 sb marks patched")
+
     # waitForPostSwapAck entry/block diagnostic (s177). NEXT.md's s176 stall
     # hypothesis assumed the [vi-fs-decision] "stalled" field hides a hidden
     # tick/resource-count threshold -- source read of rt64_state.cpp shows
