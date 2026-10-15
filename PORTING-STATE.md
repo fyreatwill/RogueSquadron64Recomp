@@ -157743,3 +157743,8 @@ ORIGIN: no mitigation added.
 
 ## unblock (after s4959) — BLOCKED "can't wait for multi-minute recipe" refuted
 The block asked for a human decision, but the soak queue (ITERATION.md) already provides wall-clock outside a session. Split s4959_mission_x3.sh into scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh (verdicts -> SOAK-RESULTS.md, logs -> soak_results/s4959_mission_run*/). Not yet run; no game evidence produced. BLOCKED.md archived as BLOCKED.resolved.s4959-soak-split.md.
+
+## Session 4960 (2026-10-15) — unblock: s4959 "cannot wait for multi-minute recipe" block refuted
+What ran: no game run. Read BLOCKED.md/NEXT.md, ITERATION.md soak-queue section, and s4959_mission_x3.sh. Split the x3 script into scratch/agent/soak_queue/s4959_mission_run{1,2,3}.sh (root via git, SIGKILL, nonzero exit on no-title/no-hangar/crash/no-mission); `zsh -n` passes.
+What it showed: the block asked for a human decision that the soak queue (600 s cap per recipe, verdicts to SOAK-RESULTS.md) already answers; the blocker's own suggestion was this split.
+What it rules out: the block as a real dependency. It does NOT yet establish anything about mission stability — the soaks are unrun, and worst-case path time may exceed 600 s (rc=137 would mean timeout, not a result). BLOCKED.md archived as BLOCKED.resolved.s4959-soak-split.md.
