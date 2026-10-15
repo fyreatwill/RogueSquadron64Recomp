@@ -217,6 +217,11 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Superseded conclusions
 
+- **s5001 “M4 accumulator witness needs a human-installed LLE RSP plugin”** -
+  believable because the oracle README names `mupen64plus-rsp-hle` and s4689
+  measured no accumulator/DMEM rows, and the s4514 cxd4 build was not carried
+  forward. Refuted s5002: a built cxd4 dylib already exists in the maintained
+  oracle tree and reached the hangar in s4514; exposing `VACC` is a local patch.
 - **s4985 “a narrower publication/observation lock will close the stale-base
   calls”** - believable because it preserves exclusion only over the writer's
   base/count stores and the mixer's paired count/base loads, avoiding the
@@ -352,10 +357,12 @@ preflight.
 3. **Completed — s4944/s4964:** run the A1 image/silent auxiliary-store A/B concurrently with
    title + mission origins as controls (route qualified by s4943); relaunch any
    arm that stalls at VI-640 rather than reading it as a null.
-4. **BLOCKED (s5001):** the M4 accumulator-origin witness cannot run on the HLE-RSP oracle (README:233, s4689); needs an LLE RSP plugin exposing DMEM/accumulator. Original text: perform one bounded M4 accumulator-origin witness with the
-   independent retail oracle and a same-build port capture. Name exact writer
-   PCs, pass whole-RDRAM/VI/hangar controls, and compare the first accumulator
-   publication at `0x006AB400`; do not rewrite or guard any value.
+4. **NEXT (s5002, unblocked):** patch the already-built cxd4 LLE RSP
+   (`rs64-oracle/src/mupen64plus-rsp-cxd4`, global `VACC[3][N]`) to dump
+   accumulator + DMEM, run with `tools/oracle/rdplog` and positive controls
+   (title VI 1024 non-empty, hangar `0x006AB400` reached, dump non-zero on a
+   known F5 task), then compare the first accumulator publication against the
+   port. Do not rewrite or guard any value. Keep the patch diff under `tools/oracle/`.
 5. Revisit M3 only as a complete idiom-class audit with a new discriminator;
    conditional-move recompiler support is a separate engineering task.
 6. Revisit external retail-entry only with a recipe that reaches the qualified
