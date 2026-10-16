@@ -572,3 +572,6 @@ s5036 result: heap-guard census CLOSED. Mission route (onset 174 s, crash=0): gu
 
 ## s5037 addendum — copy-primitive guard
 memcpy_recomp/bcopy_recomp now carry a host range/length guard (tools/apply_s5037_copy_guard.py; FORCE control env ROGUESQ_COPY_GUARD_FORCE). Census soaks s5037_copy_guard_{default,force} enqueued; verdict pending. Next: consume them (NEXT.md).
+
+## s5038 addendum — copy-guard class closed; message-queue census built
+s5037 soaks (mission_onset 170/174s, crash=0, 1.1M lines each): force arm cg=16 (positive control fired), default arm cg=0 => no memcpy/bcopy with wild length or non-RDRAM span on the keyed title->hangar->mission route (two-source, same recipe). Class closed there; other routes unexercised. Next: s5038 log-only message-queue structure census in osSendMesg_recomp/osRecvMesg_recomp (ROGUESQ_MQ_CENSUS, control ROGUESQ_MQ_CENSUS_FORCE); soaks s5038_mq_census_{default,force} enqueued; expect force mq=16, default mq=0 closes the class (osJamMesg has no host wrapper, uncovered).

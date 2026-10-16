@@ -5126,7 +5126,31 @@ static uint32_t rec(uint8_t* rdram, recomp_context* ctx, char k, int vcb, int vc
 }
 static int vc(uint8_t* rdram, uint32_t q) { return (int)TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))q)->validCount; }
 }
+/* s5038: log-only census of message-queue structure validity at osSendMesg/osRecvMesg entry. */
+static void s5038_mq_census(uint8_t* rdram, uint32_t mq, uint32_t ra, bool send) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_MQ_CENSUS"); return e && e[0] && e[0] != '0'; }();
+    static const bool force = [] { const char* e = std::getenv("ROGUESQ_MQ_CENSUS_FORCE"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    static std::atomic<unsigned long> calls{0}, viol{0}; static std::atomic<int> shown{0};
+    ++calls;
+    auto kseg0 = [](uint32_t a, uint32_t n) { return a >= 0x80000000u && (uint64_t)(a - 0x80000000u) + n <= 0x800000u; };
+    bool bad = !kseg0(mq, sizeof(OSMesgQueue)) || (mq & 3u);
+    int32_t mc = 0, vcnt = 0, first = 0; uint32_t msg = 0;
+    if (!bad) {
+        const OSMesgQueue* q = TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq);
+        mc = q->msgCount; vcnt = q->validCount; first = q->first; msg = (uint32_t)q->msg;
+        bad = mc < 0 || mc > 4096 || vcnt < 0 || vcnt > mc || (mc > 0 && (first < 0 || first >= mc)) ||
+              (mc > 0 && (!kseg0(msg, (uint32_t)mc * 4u) || (msg & 3u)));
+    }
+    if (force) bad = true;
+    if (!bad) return;
+    unsigned long v = ++viol;
+    if (shown.fetch_add(1) < 16)
+        std::fprintf(stderr, "[s5038-mq-census] %s ra=%08X mq=%08X msgCount=%d valid=%d first=%d msg=%08X calls=%lu viol=%lu%s\n",
+                     send ? "send" : "recv", ra, mq, mc, vcnt, first, msg, calls.load(), v, force ? " (FORCE control)" : "");
+}
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, true);
     const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
     const int s4580_vcb = s4580_q ? s4580::vc(rdram, (uint32_t)ctx->r4) : 0;
     const uint32_t mq_addr = (uint32_t)ctx->r4;
@@ -5314,6 +5338,7 @@ struct S4913RecvScope {
     ~S4913RecvScope() { if (tag) rs64_s4913_mark(rdram, tag[5] == 'a' ? "recv-ack-ret" : "recv-vi-ret"); }
 };
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, false);
     S4913RecvScope s4913_scope(rdram, (uint32_t)ctx->r4);
     g_s4911_host_ra = __builtin_return_address(0); g_s4911_guest_ra = (uint32_t)ctx->r31; /* PATCH: s4911 guest call site of VI recv */
     const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
