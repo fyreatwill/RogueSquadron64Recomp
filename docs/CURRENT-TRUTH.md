@@ -588,5 +588,7 @@ s5038 result: force mq=16 (control), default mq=0, crash=0 on the keyed route =>
 - s5043: s5042 arms stalled before hangar because the recipe dropped GUARD2 (vs s5037); corrected arms s5043_poison_{off,on}_g2 queued.
 - (s5045) s5044 no-census arms stalled nohangar too: FREE_CENSUS refuted; s5045 control rerun of s5037 queued to separate route flake from binary regression (NEXT.md).
 
+- (s5048) s5047 both runs nohangar (keys rc=0, load 4-7); pre-s5038 upstream_compat.cpp rebuild also stalls => mq census/lib hook refuted. Left: host load vs generated-code staleness; next = clean s5037 worktree rebuild (NEXT.md).
+
 ## s5046 addendum — keyed route regression (open)
 Since s5042, the keyed title->hangar recipe (s5037 default) stalls: after title (phase 4, 1024/0x790400) the game goes to 640/0x696100 screens, never hangar 512/0x6AB400 (working s5037 reached hangar t=91, mission t=174). 6 straight failures (s5042-s5046). Refuted as cause: s5041/s5042 hooks (hook-free rebuild s5046 stalls identically; script tools/revert_s5041_s5042_hooks.py, dropped from RS64_REPLAY), save file (unchanged), poison/census/GUARD2 arms. Open: host load / stopwatch-driven keys vs s5038-s5040 mq census + lib weak hook. All free-poison / census-derived conclusions in s5041-s5045 entries remain valid only for phases up to title. Next: see scratch/agent/NEXT.md.

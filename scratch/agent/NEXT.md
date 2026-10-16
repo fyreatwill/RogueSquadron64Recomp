@@ -1,6 +1,5 @@
-# Next work unit: read s5047 verdict (route_flake_hostload) and act on the outcome map
+# Next work unit: end-to-end rebuild of the s5037 commit (ea2e382f) as the independent control for the nohangar stall
 HYPOTHESIS-ID: m3-idiom-class-audit
-Hypotheses: H1 host load/key delivery flake (Chrome 118% CPU, load 7.2 observed s5047); H2 s5038-s5040 mq census / lib weak hook; H3 stale build state. s5041/s5042 hooks and save file already refuted (s5046).
-Measurement: scratch/agent/soak_results/s5047_route_flake_hostload/keys{1,2}.log (per-key rc, load, hangar/nohangar + last origin).
-Outcome map: both hangar => H1, fix recipes (quiet host, longer waits) and resume s5038 mq census; both nohangar with key rc=0 and load high => try after quitting Chrome; both nohangar, load low => build with s5038 census/s5039 hook compiled out (H2), same recipe; key rc!=0 => winctl/trust problem (boring), fix permissions; mixed => flake rate, widen retry loop.
-Positive control: winctl key rc logged per press; title origin reached proves the game runs.
+Hypotheses: H1 host load (Chrome 107% CPU since Sep; unbaselined); H3 generated code/build state (libRecompiledFuncs.a rebuilt after s5037 via hook apply/revert cycle) differs from the working 14:33 binary. Refuted: mq census, s5041/42 hooks, save file, key delivery, GUARD2/poison/census arms (s5042-s5048).
+Discriminator: build ea2e382f in a separate dir (git worktree + submodule-patches/apply.sh, full regen order make_elf -> N64Recomp -> fixup -> cmake; DO NOT touch lib/ in the main tree) and run scratch/agent/s5048_preS5038_source.sh recipe against it. hangar => H3 (diff generated code vs current); nohangar => H1 (host), then ask the human to quit Chrome and rerun s5048 script. Positive control: a known-good arm reaching hangar t~91.
+If worktree rebuild is infeasible in one iteration, go BLOCKED asking the user to quit Chrome/REAPER and rerun `zsh scratch/agent/s5048_preS5038_source.sh`.
