@@ -1,4 +1,4 @@
-# Next work unit: exercise the heap-guard fire control, then close the census
+# Next work unit: close heap-guard census; return to strategic priority list
 HYPOTHESIS-ID: heap-guard-need-census
-Regen (make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake; DEVELOPER_DIR as in CLAUDE.md), then run the s5033 recipe with ROGUESQ_FORCE_ALLOC_TAIL_GUARD2=1 added (copy scratch/agent/soak_queue/done/s5033*.sh to a new soak_queue name).
-Outcomes: [alloc-tail-guard2] lines appear -> the s5033 zero is a valid null (promote to two-source, close census). No lines -> the instrument/site is dead or not on route; fix before trusting the null.
+Census result (s5035): guard2 null valid (control fired). Remaining guards (3/4/coalesce/r1) have no force control; either add log-only force envs to them in one build+run (batch all four, same pattern as tools/apply_s5034_guard2_force.py) or accept as single-source nulls and move on.
+Preferred: pivot to docs/M5-AUDIO-PLAN.md next de-stub step (priority 2), or an M3 idiom-class audit (priority 3). Rebuild with scratch/agent/s5034_build.sh (Metal toolchain missing).
