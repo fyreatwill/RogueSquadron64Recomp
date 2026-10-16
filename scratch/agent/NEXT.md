@@ -1,4 +1,4 @@
-# Next work unit: close heap-guard census; return to strategic priority list
+# Next work unit: consume s5036_guard34_force_control verdict
 HYPOTHESIS-ID: heap-guard-need-census
-Census result (s5035): guard2 null valid (control fired). Remaining guards (3/4/coalesce/r1) have no force control; either add log-only force envs to them in one build+run (batch all four, same pattern as tools/apply_s5034_guard2_force.py) or accept as single-source nulls and move on.
-Preferred: pivot to docs/M5-AUDIO-PLAN.md next de-stub step (priority 2), or an M3 idiom-class audit (priority 3). Rebuild with scratch/agent/s5034_build.sh (Metal toolchain missing).
+Read SOAK-RESULTS.md line for s5036 (keys1.log in scratch/agent/soak_results/s5036_guard34_force_control/). guard3>0 && guard4>0 && coalesce_next>0 && crash=0 => all heap-guard zeros on the mission route are two-source (r1: no site); record in CURRENT-TRUTH and close the census. guard3 or guard4 == 0 => force wiring broken (check grep "guard3_force" in built funcs), fix before reading anything.
+After that: pivot to an M3 idiom-class audit (priority 3) with a committed guard, or the renaming sweep per CLAUDE-loop priority 4 rules. Rebuild with scratch/agent/s5034_build.sh.

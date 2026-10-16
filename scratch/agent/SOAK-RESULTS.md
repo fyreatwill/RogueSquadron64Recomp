@@ -593,3 +593,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261015-042259 | s5012_s4540_mission_sample_retry | rc=0 | 444s | scratch/agent/soak_results/s5012_s4540_mission_sample_retry_20261015-042259.log
 20261016-134454 | s5033_heap_guard_census | rc=0 | 443s | scratch/agent/soak_results/s5033_heap_guard_census_20261016-134454.log
 20261016-s5034 | s5034_guard2_force_control | result=control-fired; guard2=93 sites=1; guard3/4/coalesce/r1=0; mission_onset_t=174; crash=0
+20261016-140409 | s5034_guard2_force_control | rc=0 | 444s | scratch/agent/soak_results/s5034_guard2_force_control_20261016-140409.log

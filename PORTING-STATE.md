@@ -158446,3 +158446,10 @@ Ran: added log-only ROGUESQ_FORCE_ALLOC_TAIL_GUARD2 (force logs every pass but n
 Showed: control fired, guard2=93 lines from 1 distinct site (0x800079AC, e.g. r4=0x8059BE48 valid pointer, forced) while guard3=guard4=coalesce=r1=0, as in s5033. So the guard2 instrument/site is live and on the mission route; s5033's guard2 zero is a valid null (no non-KSEG0 pointer reached the original path). guard3/4/coalesce/r1 remain single-source nulls (no force control).
 Rules out: guard2 being load-bearing on the title->hangar->mission route. ORIGIN: no mitigation added; instrument only, log-only.
 Caveat: only 1 of the guard2 sites executes on this route; other sites are unexercised by it.
+
+## Session 5036 (2026-10-16) — guard3/guard4 log-only force controls built; census recipe enqueued
+ORIGIN: no mitigation added. The alloc-tail guard3/4 blocks already existed; this adds ROGUESQ_FORCE_ALLOC_TAIL_GUARD3/4 so a zero-fire census can carry a same-run positive control (iron rule 1). Force logs every pass but takes the goto only when the original predicate is true; the predicate is evaluated once (guard3 variants carry `++s3285_walk`).
+- `tools/apply_s5036_guard34_force.py` patched 96 guard3 + 94 guard4 live blocks (idempotent: second run 0/0); matches the 190 sites counted by `scratch/agent/s5036_shapes.py` (94+2 guard3, 92+2 guard4). Added to RS64_REPLAY in the fixup so regens keep it (replay path itself not exercised this session: single-source "should work").
+- Built with s5034_build.sh (links ok). Enqueued `soak_queue/s5036_guard34_force_control.sh` (s5034 recipe, guard2 force dropped, guard3+4 force on).
+- Found: the generated code has exactly one coalesce site (funcs_0.c, 0x80002434) whose `[coalesce-next]` line logs unconditionally when enabled — that count is its control. The `ALLOCATE_DISPLAY_LIST_BUFFER_R1_GUARD` env has no site in generated funcs (grep of funcs_*.c), so the r1 "0" in s5033/s5034 is null by construction, not evidence.
+- Expect: guard3>0, guard4>0 => their s5033 zeros become two-source; guard3/4==0 => force wiring broken, do not read the zeros.

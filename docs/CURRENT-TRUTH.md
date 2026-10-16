@@ -566,3 +566,5 @@ Mission-route soak (solo, N=5): 5/5 reached origin 0x690400, 0 do_break hits, 0 
 s5033 soak: guard2/3/4, r1, coalesce guards fired 0 times on title->hangar->mission (onset 170s), no crash. Single-source (no fire control yet). MIPS toolchain no longer gates heap-guard work. Fire-control env ROGUESQ_FORCE_ALLOC_TAIL_GUARD2 is in fixup_game_funcs_vendored.py but unbuilt.
 
 s5035: guard2 force-control fired (93 lines, 1 site 0x800079AC) on the same route -> s5033 guard2 zero is a valid two-source null (guard is not load-bearing on title->hangar->mission). guard3/4/coalesce/r1 still single-source nulls. Metal toolchain absent: rebuild via scratch/agent/s5034_build.sh (touches shader artifacts, then cmake). Live guard2 patch: tools/apply_s5034_guard2_force.py.
+
+s5036: guard3/guard4 log-only force controls (ROGUESQ_FORCE_ALLOC_TAIL_GUARD3/4) built into 190 live blocks (tools/apply_s5036_guard34_force.py, in RS64_REPLAY); soak `s5036_guard34_force_control` enqueued. r1 guard env has NO generated site (null by construction); coalesce site's `[coalesce-next]` log is its control. Verdict pending -> NEXT.md.
