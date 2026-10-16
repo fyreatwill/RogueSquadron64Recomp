@@ -40485,6 +40485,7 @@ RS64_REPLAY = [
     "apply_s4222_vol.py",
     "apply_s4222_wr.py",
     "apply_s4223_memcpy.py",
+    "apply_s5037_copy_guard.py",
     "apply_s4223_stk.py",
     "apply_s4230_fd60probe.py",
     "apply_s4230_listwatch.py",

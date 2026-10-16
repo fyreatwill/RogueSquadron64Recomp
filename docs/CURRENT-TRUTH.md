@@ -569,3 +569,6 @@ s5035: guard2 force-control fired (93 lines, 1 site 0x800079AC) on the same rout
 
 s5036: guard3/guard4 log-only force controls (ROGUESQ_FORCE_ALLOC_TAIL_GUARD3/4) built into 190 live blocks (tools/apply_s5036_guard34_force.py, in RS64_REPLAY); soak `s5036_guard34_force_control` enqueued. r1 guard env has NO generated site (null by construction); coalesce site's `[coalesce-next]` log is its control. Verdict pending -> NEXT.md.
 s5036 result: heap-guard census CLOSED. Mission route (onset 174 s, crash=0): guard3 force fired 7752x at 4 drain-mesh sites, coalesce site reached 256x; no guard ever tripped => guards are live-but-silent, not load-bearing there. guard4: 0 passes under force (unreached; shares guard3's generator, no own control = single-source on wiring). r1: no generated site.
+
+## s5037 addendum — copy-primitive guard
+memcpy_recomp/bcopy_recomp now carry a host range/length guard (tools/apply_s5037_copy_guard.py; FORCE control env ROGUESQ_COPY_GUARD_FORCE). Census soaks s5037_copy_guard_{default,force} enqueued; verdict pending. Next: consume them (NEXT.md).

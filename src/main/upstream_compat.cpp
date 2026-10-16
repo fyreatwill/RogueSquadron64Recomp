@@ -2168,6 +2168,27 @@ extern "C" void rs64_s4694b_status_store(char width, uint32_t pc, uint32_t addr,
     std::fprintf(stderr, "[s4694b-status] phase=%u pc=%08X %c addr=%08X val=%08X n=%u\n", rs64_phase_ord(), pc, width, addr, value, cnt[k]);
     std::fflush(stderr);
 }
+
+extern "C" int rs64_s5037_copy_guard(uint8_t* rdram, uint32_t dst, uint32_t src, uint32_t len, uint32_t ra, int which) {
+    static const bool off = [] { const char* e = std::getenv("ROGUESQ_COPY_GUARD"); return e && e[0] == '0'; }();
+    static const bool force = [] { const char* e = std::getenv("ROGUESQ_COPY_GUARD_FORCE"); return e && e[0] && e[0] != '0'; }();
+    if (off || !rdram || len == 0) return 0;
+    auto span_ok = [len](uint32_t a) {
+        uint32_t p = a & 0x1FFFFFFFu;
+        bool seg = (a < 0x00800000u) || (a >= 0x80000000u && a < 0x80800000u) || (a >= 0xA0000000u && a < 0xA0800000u);
+        return seg && (uint64_t)p + len <= 0x800000u;
+    };
+    bool bad = len > 0x800000u || !span_ok(dst) || !span_ok(src);
+    static int shown = 0; static unsigned long viol = 0;
+    if (force) bad = true;
+    if (!bad) return 0;
+    ++viol;
+    if (shown < 16) { ++shown;
+        std::fprintf(stderr, "[s5037-copy-guard] %s ra=%08X dst=%08X src=%08X len=%u viol=%lu%s\n",
+                     which ? "bcopy" : "memcpy", ra, dst, src, len, viol, force ? " (FORCE control, not skipped)" : " SKIPPED");
+    }
+    return force ? 0 : 1;
+}
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,
                                                  uint32_t a1, uint32_t a2,
