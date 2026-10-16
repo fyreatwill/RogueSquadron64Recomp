@@ -1,5 +1,4 @@
-# Next work unit: consume s5033 heap-guard census verdict
+# Next work unit: exercise the heap-guard fire control, then close the census
 HYPOTHESIS-ID: heap-guard-need-census
-Read the s5033_heap_guard_census line in scratch/agent/SOAK-RESULTS.md (keys1.log in soak_results/s5033_heap_guard_census/).
-Outcomes: mission_onset_t>=0 and guard2/3/4/coalesce/r1 all 0 -> patch moot (single-source, no fire control); fold into CURRENT-TRUTH, withdraw toolchain dependency as non-load-bearing. Any >0 -> the guarded original path yields bad pointers: name the writer (iron rule 11), escalate toolchain need. mission_onset_t=-1 -> route failed, rerun once.
-If a fire control is wanted: add a fixup env that forces one bad r3 in alloc-tail-guard2 (tools/fixup_*.py), rebuild, rerun.
+Regen (make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake; DEVELOPER_DIR as in CLAUDE.md), then run the s5033 recipe with ROGUESQ_FORCE_ALLOC_TAIL_GUARD2=1 added (copy scratch/agent/soak_queue/done/s5033*.sh to a new soak_queue name).
+Outcomes: [alloc-tail-guard2] lines appear -> the s5033 zero is a valid null (promote to two-source, close census). No lines -> the instrument/site is dead or not on route; fix before trusting the null.

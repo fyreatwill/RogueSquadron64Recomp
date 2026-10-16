@@ -591,3 +591,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261015-s4983 | s4982_reader_acquire_mission_clean | result=reader-acquire-refuted; mission_onset_t=175s; ctl_arm=1; s4579A=9; bad=4; pidma=0; crash=0; abort=0; pcm_nz_rows=144 | scratch/agent/s4982_reader_acquire_mission_clean/keys.log
 20261015-s4985 | s4985_whole_voice_lock_mission | result=route-blocking-unevaluable; title=0; mission=0; s4579A=1; pcm_nz_rows=0; crash=0; abort=0; route_gate=150s | scratch/agent/s4984_atomic_voice_pair_mission/run.log
 20261015-042259 | s5012_s4540_mission_sample_retry | rc=0 | 444s | scratch/agent/soak_results/s5012_s4540_mission_sample_retry_20261015-042259.log
+20261016-134454 | s5033_heap_guard_census | rc=0 | 443s | scratch/agent/soak_results/s5033_heap_guard_census_20261016-134454.log

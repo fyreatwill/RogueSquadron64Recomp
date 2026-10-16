@@ -561,3 +561,6 @@ Mission-route soak (solo, N=5): 5/5 reached origin 0x690400, 0 do_break hits, 0 
 - Open owner-level options (not blockers, s5008): (a) declare M5 done, set new target; (c) supply symbol-mapping source for rename sweep. Mission-phase kind=bad voice reads: per-origin budget ALREADY RUN (s4993): 0 bad rows at mission origins vs 2,602 pre-mission, same-run control passed; only open arm is the s4994 mission-origin caller sample, which needs a mission-qualified recipe (s4995 never reached mission).
 
 - s5011: s5010 mission-sample soak route-unevaluable (mission_onset_t=-1; updateHangarBayScene crash). Retry queued as s5012; no conclusion on stale32/cur20.
+
+## s5034 addendum — heap-guard census
+s5033 soak: guard2/3/4, r1, coalesce guards fired 0 times on title->hangar->mission (onset 170s), no crash. Single-source (no fire control yet). MIPS toolchain no longer gates heap-guard work. Fire-control env ROGUESQ_FORCE_ALLOC_TAIL_GUARD2 is in fixup_game_funcs_vendored.py but unbuilt.
