@@ -158423,3 +158423,6 @@ are already generated under companion names with callsites (e.g. getStructField0
 setChildPosFromI16Pair 9), so further helper entries change nothing. Rules out: more sweep
 steps being meaningful work. No runtime/code change. Single-source (one tree snapshot).
 Remaining actionable: M5/M3/retail-entry new angle, or the MIPS GCC toolchain decision.
+
+## Session 5031 (2026-10-16) — no actionable unit left: BLOCKED on owner decision
+Step 0: CURRENT-TRUTH 45873 B (<60000), no maintenance. Re-verified: all M3 idiom classes closed (CURRENT-TRUTH "M3 and rendering"), sweep complete (s5030), M5 closed, retail-entry revisit H-retail-dead (s5029), no mips64-elf-gcc/mips-linux-gnu-gcc on PATH. No experiment run, no code change. Question for owner in scratch/agent/BLOCKED.md: install MIPS toolchain or retire the patch thread / supply new objective.
