@@ -1,3 +1,3 @@
-# Next work unit: M3 idiom audit — use-after-free reads after audited frees
+# Next work unit: per-kind budget for the mq census so osJamMesg gets a positive control
 HYPOTHESIS-ID: m3-idiom-class-audit
-Closed on the keyed route (control + zero): heap guards (s5033-36), copy primitives (s5037), message-queue structure (s5038). Enumerate free sites, classify readers of freed blocks, add log-only census with a FORCE control, one build, one run.
+s5039: osSetEventMesg is closed (force fired once, default zero). osJamMesg is unevaluable because the 16-line log budget in s5038_mq_census (src/main/upstream_compat.cpp ~5130) is shared with send/recv. Make the budget and counter per kind (send/recv/jam/setevent), rebuild with `zsh scratch/agent/s5034_build.sh`, run scratch/agent/s5039_jam_force.sh then s5039_jam_default.sh. Key driving is flaky (default arm reported nohangar twice though it reached the mission): judge by origin=0x690400 in run1.log, not keys1.log. A jam zero is valid only if the force arm shows jam>0. After that, move to use-after-free readers after audited frees.

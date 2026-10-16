@@ -158482,3 +158482,12 @@ Run: force arm mq=16, mq_force=16, crash=0, mission_onset 171s, 1.09M lines (con
 - Selects H-mq-clean for send/recv on the title->hangar->mission route; refutes H-instrument-dead (control fired in the same recipe). Two-source: instrument zero plus the s5033-s5036 result that no heap guard fired either.
 - Rules out: malformed OSMesgQueue pointer/counts as a source of the mission-route instability. Does not cover osJamMesg or other routes.
 Conclusion (s5038): the message-queue class is closed on the keyed route. Next discriminator: use-after-free reads after the audited frees, or osJamMesg/osSetEventMesg argument validity (scratch/agent/NEXT.md).
+
+## Session 5039 (2026-10-16) — message-queue census extended to osJamMesg / osSetEventMesg (lib weak hook)
+ORIGIN: no mitigation added; log-only. Closes the caveat from s5038 (osJamMesg and osSetEventMesg had no host wrapper coverage).
+Landed: weak hook `rs64_s5039_mq_hook` in lib/N64ModernRuntime/librecomp/src/ultra_translation.cpp (called at entry of osJamMesg_recomp with r4, and osSetEventMesg_recomp with the queue in r5); strong definition in src/main/upstream_compat.cpp feeds the existing s5038 census with kind "jam"/"setevent". Patches re-exported (submodule-patches/export.sh). Build clean; strings show the new kind.
+Hypotheses: H-jam/setevent pass a malformed queue on the keyed route vs H-clean vs H-instrument-dead.
+Runs (scratch/agent/s5039_jam_{force,default}.sh): force arm: mission_onset 170s, crash=0, 16 FORCE lines of which 1 was kind=setevent (mq=8010DFD8 msgCount=1 valid=0, ra=0), so the control reaches osSetEventMesg. No `jam` line appeared in the force arm: the 16-line budget is shared with send/recv, so the jam control is NOT demonstrated. Default arm (three tries; the first was cut by the background time limit, the other two reached the mission via a different menu path and reported nohangar because key timing skipped origin 0x6AB400): 0 census lines, 0 CRASH, mission origin 0x690400 reached at ~96s in the last try.
+- Selects: H-clean for osSetEventMesg (control fired, default zero). For osJamMesg: unevaluable, no same-run positive control (budget shared). Do not read the jam zero as a result.
+- Rules out: nothing for jam. Instrument weakness: per-kind log budget needed.
+Next: give each kind its own 16-line budget, re-run force once, then close the class.

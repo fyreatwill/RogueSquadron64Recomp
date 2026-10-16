@@ -357,6 +357,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+**s5039 (top):** mq census now covers osSetEventMesg (closed: force fired, default 0) and osJamMesg (unevaluable: shared 16-line budget, no jam control). Next: per-kind budget, re-run force (scratch/agent/NEXT.md). Then use-after-free readers.
+
 **s5030 (top, supersedes the s5027 rename item):** The generated-symbol renaming
 sweep is CLOSED. Measured on the current N64Recomp/RecompiledFuncs tree: 2 of the
 ~1,548 s1487 placeholders remain (`func_8000040C`, `func_800E9AE0`) and both already
