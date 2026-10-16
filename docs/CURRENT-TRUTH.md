@@ -6,6 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s5032 (unblock):** The s5031 "owner decision" block was re-scoped, not escalated. Its premise was stale (movz/movn DONE s4970; M4 accumulator CLOSED s5005/s5006). The MIPS GCC dependency is real (Apple clang has no MIPS target; installing is human-only) but gates only one disabled patch, so it is an OPEN NON-GATING dependency. Next unit: heap-guard need census (NEXT.md). Details: scratch/agent/UNBLOCK.md.
+
 - **s5029:** Mission-route external-entry join (retail oracle vs port, same run,
   controls passed): retail reaches `0x00690400` and `0x00620400` with the voice-range
   PC watch live (1241 writer hits) yet `pc=0x800903F0` executes 0 times; the port also

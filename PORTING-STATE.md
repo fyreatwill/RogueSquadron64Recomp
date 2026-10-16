@@ -158426,3 +158426,6 @@ Remaining actionable: M5/M3/retail-entry new angle, or the MIPS GCC toolchain de
 
 ## Session 5031 (2026-10-16) — no actionable unit left: BLOCKED on owner decision
 Step 0: CURRENT-TRUTH 45873 B (<60000), no maintenance. Re-verified: all M3 idiom classes closed (CURRENT-TRUTH "M3 and rendering"), sweep complete (s5030), M5 closed, retail-entry revisit H-retail-dead (s5029), no mips64-elf-gcc/mips-linux-gnu-gcc on PATH. No experiment run, no code change. Question for owner in scratch/agent/BLOCKED.md: install MIPS toolchain or retire the patch thread / supply new objective.
+
+## Session s5032 (unblock) — 2026-10-16
+Block s5031 (owner decision: install MIPS GCC vs name new objective) examined. Route 1: premise stale — movz/movn done (s4970), M4 accumulator closed (s5005/6). Compiler gap is real (Apple clang: no MIPS target, no llc; only mips-linux-gnu-as/ld) but installing software is human-only (route 2 barred). Route 3: toolchain gates only the disabled heap-guard patch; recorded as open non-gating dependency; NEXT.md = heap-guard need census needing no compiler. No code changed.
