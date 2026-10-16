@@ -158475,3 +158475,10 @@ Ran: consumed s5037 soaks. Force arm: cg=16, cg_skipped=0, crash=0, mission_onse
 Landed: log-only `s5038_mq_census` in src/main/upstream_compat.cpp, called at the entry of osSendMesg_recomp/osRecvMesg_recomp. Flags a queue pointer outside KSEG0 RDRAM/unaligned, msgCount outside 0..4096, validCount>msgCount, first>=msgCount, or msg array outside RDRAM; logs the first 16 with ra. ROGUESQ_MQ_CENSUS_FORCE=1 marks every call bad (control). Built clean. Enqueued soak_queue/s5038_mq_census_{default,force}.sh.
 ORIGIN: no mitigation added; instrument is log-only and skips nothing. Caveat: osJamMesg has no host wrapper so it is not covered; only the keyed route is exercised.
 Next: consume the two soaks; force must show mq=16, default mq=0 to close the class, else name ra callers and the writer of the bad queue field.
+
+### Session 5038 result (same session; both census soaks run inline after the Stop gate flagged diagnostic-only)
+Hypotheses: H-mq-structure-corrupt (a bad queue pointer or count field reaches osSendMesg/osRecvMesg on the keyed route) vs H-mq-clean (every queue is well-formed there) vs H-instrument-dead.
+Run: force arm mq=16, mq_force=16, crash=0, mission_onset 171s, 1.09M lines (control fired). Default arm mq=0, crash=0, mission_onset 169s, 1.08M lines.
+- Selects H-mq-clean for send/recv on the title->hangar->mission route; refutes H-instrument-dead (control fired in the same recipe). Two-source: instrument zero plus the s5033-s5036 result that no heap guard fired either.
+- Rules out: malformed OSMesgQueue pointer/counts as a source of the mission-route instability. Does not cover osJamMesg or other routes.
+Conclusion (s5038): the message-queue class is closed on the keyed route. Next discriminator: use-after-free reads after the audited frees, or osJamMesg/osSetEventMesg argument validity (scratch/agent/NEXT.md).

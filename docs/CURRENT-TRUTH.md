@@ -575,3 +575,4 @@ memcpy_recomp/bcopy_recomp now carry a host range/length guard (tools/apply_s503
 
 ## s5038 addendum — copy-guard class closed; message-queue census built
 s5037 soaks (mission_onset 170/174s, crash=0, 1.1M lines each): force arm cg=16 (positive control fired), default arm cg=0 => no memcpy/bcopy with wild length or non-RDRAM span on the keyed title->hangar->mission route (two-source, same recipe). Class closed there; other routes unexercised. Next: s5038 log-only message-queue structure census in osSendMesg_recomp/osRecvMesg_recomp (ROGUESQ_MQ_CENSUS, control ROGUESQ_MQ_CENSUS_FORCE); soaks s5038_mq_census_{default,force} enqueued; expect force mq=16, default mq=0 closes the class (osJamMesg has no host wrapper, uncovered).
+s5038 result: force mq=16 (control), default mq=0, crash=0 on the keyed route => message-queue structure class closed there (osJamMesg uncovered). Next: use-after-free reads after audited frees.
