@@ -584,3 +584,4 @@ s5038 result: force mq=16 (control), default mq=0, crash=0 on the keyed route =>
 
 - s5042: read-after-free poison probe (ROGUESQ_FREE_POISON, tools/apply_s5042_free_poison.py) built; on/off soaks queued, verdicts pending (see NEXT.md).
 - s5043: s5042 arms stalled before hangar because the recipe dropped GUARD2 (vs s5037); corrected arms s5043_poison_{off,on}_g2 queued.
+- (s5045) s5044 no-census arms stalled nohangar too: FREE_CENSUS refuted; s5045 control rerun of s5037 queued to separate route flake from binary regression (NEXT.md).
