@@ -355,6 +355,9 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 - “M5 is fully closed” was too broad: nonzero PCM proves route activity, not
   task-contract, ownership, wait-gate, safety-exit, or MORT correctness.
 
+## WARNING (s5049)
+Live N64Recomp/RecompiledFuncs was clobbered 2026-10-16 16:57 by an in-place regen (tools/agent/regen_n64recomp.sh, now disabled). Pre-damage compiled code survives only in build/ (do not cmake --build). See scratch/agent/BLOCKED.md.
+
 ## Next steps (single monotonic backlog)
 
 > s5047: queued soak s5047_route_flake_hostload (2 back-to-back runs, per-key rc + host load). Read SOAK-RESULTS first: both pass = host-load flake (H1); both fail = rebuild with s5038 census / s5039 lib hook compiled out (H2) else H3 build staleness. Host load avg was 7.2 (Chrome/REAPER) at s5047.

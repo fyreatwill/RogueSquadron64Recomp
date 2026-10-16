@@ -3,6 +3,8 @@
 # fixup_game_funcs.py -> cmake). N64Recomp must run with cwd set to its own
 # checkout (rogue_squadron.toml and relative paths inside it are relative to
 # that directory) -- see docs/CURRENT-TRUTH.md / scratch/agent/NEXT.md.
+echo "DANGER (s5049): this regenerates the LIVE N64Recomp/RecompiledFuncs in place and its fixup step fails; it destroyed the live tree once. Use scratch dirs + tools/fixup_game_funcs_vendored.py." >&2
+exit 99
 set -e
 cd /Users/williambuckley/Documents/Tools/N64Recomp
 ./build/N64Recomp rogue_squadron.toml

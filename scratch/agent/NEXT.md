@@ -1,5 +1,4 @@
-# Next work unit: end-to-end rebuild of the s5037 commit (ea2e382f) as the independent control for the nohangar stall
+# Next: restore N64Recomp/RecompiledFuncs (see BLOCKED.md), then re-baseline the nohangar route
 HYPOTHESIS-ID: m3-idiom-class-audit
-Hypotheses: H1 host load (Chrome 107% CPU since Sep; unbaselined); H3 generated code/build state (libRecompiledFuncs.a rebuilt after s5037 via hook apply/revert cycle) differs from the working 14:33 binary. Refuted: mq census, s5041/42 hooks, save file, key delivery, GUARD2/poison/census arms (s5042-s5048).
-Discriminator: build ea2e382f in a separate dir (git worktree + submodule-patches/apply.sh, full regen order make_elf -> N64Recomp -> fixup -> cmake; DO NOT touch lib/ in the main tree) and run scratch/agent/s5048_preS5038_source.sh recipe against it. hangar => H3 (diff generated code vs current); nohangar => H1 (host), then ask the human to quit Chrome and rerun s5048 script. Positive control: a known-good arm reaching hangar t~91.
-If worktree rebuild is infeasible in one iteration, go BLOCKED asking the user to quit Chrome/REAPER and rerun `zsh scratch/agent/s5048_preS5038_source.sh`.
+Order: (1) human restores tree from backup; (2) with Chrome/REAPER quit, run scratch/agent/s5048_preS5038_source.sh (host-load discriminator H1) using the surviving build/ binary; (3) if still nohangar with a quiet host, the stall is a property of the current generated code (H3), not host.
+Never run tools/agent/regen_n64recomp.sh (now disabled) or regen in place.
