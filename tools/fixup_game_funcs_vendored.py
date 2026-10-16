@@ -40553,8 +40553,6 @@ RS64_REPLAY = [
     "apply_s4987_voice_pair_provenance.py",
     "apply_s4994_s4540_mission_sample.py",
     "apply_s5036_guard34_force.py",
-    "apply_s5041_free_census.py",
-    "apply_s5042_free_poison.py",
 ]
 
 

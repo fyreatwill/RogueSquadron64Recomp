@@ -1,5 +1,6 @@
-# Next work unit: fold s5045 control rerun of s5037 on the current binary
+# Next work unit: find why the keyed route no longer enters the hangar (s5042-s5046 all nohangar)
 HYPOTHESIS-ID: m3-idiom-class-audit
-s5044 no-census arms both stalled nohangar (s3290-stall phase 7); recipe identical to working s5037 apart from name/print. Queued s5045_control_rerun_s5037.sh (verbatim s5037 default).
-Outcomes: hangar~t=91 + mission onset~174 => binary fine; route is flaky -> rerun poison arms (s5042 recipes) twice, need poison total line as positive control.
-nohangar => current binary regressed with poison hook compiled in even when off -> diff s5042 build change, rebuild without hook, rerun control.
+Hypotheses: H1 host load/stopwatch keys (keys land while game is slow/unfocused); H2 s5038-s5040 mq census / lib weak hook in osJamMesg/osSetEventMesg changed behavior; H3 other uncommitted state (build flags, stale object). Refuted s5046: s5041/s5042 hooks, save file.
+Discriminator (one iteration, all arms): write scratch/agent/soak_queue recipe that (a) logs `uptime`, `build/winctl trusted`, and top CPU at start; (b) gates keys on VI origin (press 36/6 only after origin 0x790400 seen, repeat until 0x006AB400), per-key log of winctl rc; (c) runs the current binary twice back-to-back for a flake rate. If both pass => H1 (host load/timing; fix recipe). If both fail => build with s5039 lib hook and s5038 census compiled out (H2) and rerun the same recipe.
+Positive control: s5037 default recipe on a known-good binary is the only proven pass; if no pass appears in any arm, checkout the s5037-era binary state is not possible (no git reset) -- instead diff-compile s5038+ out.
+Outcome map: pass=H1; fail+nocensus pass=H2; fail+nocensus fail=H3 (inspect build/CMakeCache, object staleness).
