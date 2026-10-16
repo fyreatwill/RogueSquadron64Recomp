@@ -158462,3 +158462,4 @@ Run (mission_onset_t=174, crash=0, 1.12M log lines): guard3 force fired 7752x at
 - Guard4: force-on 0 passes => none of the 94 guard4 blocks executed on this route (their slots at the 4 hot guard3 sites are occupied by a different drain-mesh guard, 0x800081AC). Guard4 shares the guard3 generator and force pattern, so wiring is plausible but has no own positive control: label single-source-for-wiring, "unreached" is the reading.
 - R1: no generated site, unevaluable.
 Net: no heap guard fired on the mission route; zero guards are shown load-bearing there. Next discriminator: the route-exercise question is closed; heap guards are not the mission-stability factor. Move to M3 idiom audit (NEXT.md).
+Conclusion (s5036): this run selects H-guard-live-but-silent for guard3 and coalesce, refutes H-instrument-dead for guard3 (control fired 7752x), and closes the heap-guard census. Next discriminator: an M3 idiom-class audit (scratch/agent/NEXT.md).
