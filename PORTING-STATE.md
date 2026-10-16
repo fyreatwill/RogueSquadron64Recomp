@@ -158384,3 +158384,28 @@ Checkpoint close-out retry. No experiment ran. s5027's work was already committe
 (29e9e8d5); the exit contract failed only because NEXT.md predated the iteration.
 Rewrote NEXT.md to a REVISIT of the external retail-entry boundary, since the last
 15 session titles are all rename-sweep steps (ITERATION.md rule 4). Changes no code.
+
+## Session 5029 (2026-10-16) — mission external-entry join: retail has zero 0x800903F0 in mission too (H-retail-dead)
+
+REVISIT of the external retail-entry boundary (last 15 titles were rename-sweep steps). The
+s5013-script run on disk (Oct 15) was unevaluable: port log never left the 320-wide boot
+phase and retail ran only 175 s. Rebuilt as `scratch/agent/s5029_mission_external_join.sh`
+(retail oracle 270 s with press schedule extended to 250 s; port arm = the s5012 winctl-keyed
+route that reaches 0x690400 at ~173 s; both concurrent, SIGKILL). The background harness cap
+(600 s) killed the wrapper before its own summary step, so counts were taken afterwards with
+`scratch/agent/s5029_summarize.sh` (also trims raw logs: retail.log had grown to 4.4 GB from the
+whole-RDRAM write watch and was deleted after excerpting; use S5029_KEEP_RAW=1 to keep).
+
+Controls (same run): retail whole-RDRAM/VI positive-control threshold reached = 1; retail PC-range
+watch 0x8008FFAC..0x80090640 fired (writer PCs 0x80090c80/0x800921e8 = 1241 hits), so the range
+instrument is live. Results: retail reached 0x00690400 (t~92 s, 50 rows) and 0x00620400 (42 rows);
+retail `pc=0x800903F0` = 0; retail crash/abort 0. Port reached 0x690400 (13545 lines) and 0x620400
+(11188), s4994-s4540 caller rows = 32 (all base 0x8018C720 current), s4534-jal site=800903F0 = 0,
+crash/abort 0. (My port_hangar_6AB400 regex returned 0 only because of hex case; mission origins
+prove the hangar was passed.)
+
+Verdict: selects H-retail-dead for the mission route: retail reaches the mission phase with the
+voice-range fires but the exact consumer 0x800903F0 never executes, same as title/hangar (s4897).
+The port also never executes it. H-route (prior null was route mismatch) and H-port-only are
+refuted for the mission route. Single instrument (oracle PC watch); the second line is the port's
+own s4534-jal zero. No guard, skip, or rewrite added. ORIGIN: not a mitigation; no behavior change.

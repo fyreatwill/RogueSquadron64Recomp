@@ -6,6 +6,13 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s5029:** Mission-route external-entry join (retail oracle vs port, same run,
+  controls passed): retail reaches `0x00690400` and `0x00620400` with the voice-range
+  PC watch live (1241 writer hits) yet `pc=0x800903F0` executes 0 times; the port also
+  has 0 `s4534-jal` at that site. Retail-entry boundary is now closed for title, hangar
+  AND mission (retail-design-dead consumer). Script: `scratch/agent/s5029_mission_external_join.sh`
+  (+ `s5029_summarize.sh`; run via nohup, not the 600 s background cap).
+
 - **s5027:** The next menu-overlay candidate, `0x800B3AFC`, passes the
   companion-address, exact `0x174` overlay-span, generated-body, and live-caller
   gates for `buildScaledFormatTextElement`. The regeneration helper now

@@ -1,0 +1,12 @@
+retail_vi_control: 1
+retail_690400: 50
+retail_620400: 42
+retail_consumer_800903f0: 0
+retail_writer_80090c80_800921e8: 1241
+retail_crash: 0
+port_hangar_6AB400: 0
+port_690400: 13545
+port_620400: 11188
+port_s4534_jal_800903F0: 0
+port_s4994_rows: 32
+port_crash: 0
