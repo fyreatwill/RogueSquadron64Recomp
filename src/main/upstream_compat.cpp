@@ -5131,7 +5131,8 @@ static void s5038_mq_census(uint8_t* rdram, uint32_t mq, uint32_t ra, const char
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_MQ_CENSUS"); return e && e[0] && e[0] != '0'; }();
     static const bool force = [] { const char* e = std::getenv("ROGUESQ_MQ_CENSUS_FORCE"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
-    static std::atomic<unsigned long> calls{0}, viol{0}; static std::atomic<int> shown{0};
+    static std::atomic<unsigned long> calls{0}, viol{0}; static std::atomic<int> shown_k[4]{}; /* s5040: per-kind log budget */
+    const int ki = kind[0] == 'j' ? 0 : kind[0] == 's' && kind[1] == 'e' ? 1 : kind[0] == 's' ? 2 : 3;
     ++calls;
     auto kseg0 = [](uint32_t a, uint32_t n) { return a >= 0x80000000u && (uint64_t)(a - 0x80000000u) + n <= 0x800000u; };
     bool bad = !kseg0(mq, sizeof(OSMesgQueue)) || (mq & 3u);
@@ -5145,7 +5146,7 @@ static void s5038_mq_census(uint8_t* rdram, uint32_t mq, uint32_t ra, const char
     if (force) bad = true;
     if (!bad) return;
     unsigned long v = ++viol;
-    if (shown.fetch_add(1) < 16)
+    if (shown_k[ki].fetch_add(1) < 16)
         std::fprintf(stderr, "[s5038-mq-census] %s ra=%08X mq=%08X msgCount=%d valid=%d first=%d msg=%08X calls=%lu viol=%lu%s\n",
                      kind, ra, mq, mc, vcnt, first, msg, calls.load(), v, force ? " (FORCE control)" : "");
 }

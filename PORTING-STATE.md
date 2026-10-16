@@ -158493,3 +158493,11 @@ Runs (scratch/agent/s5039_jam_{force,default}.sh): force arm: mission_onset 170s
 Next: give each kind its own 16-line budget, re-run force once, then close the class.
 
 Conclusion (s5039): this run selects H-clean for osSetEventMesg (force control fired in the same recipe, default arm 0 census lines) and refutes H-instrument-dead for it; osJamMesg stays unresolved (no control). Next discriminator: per-kind log budget so the force arm shows jam>0, then the default arm's jam count splits H-clean from H-malformed-jam-queue (scratch/agent/NEXT.md).
+
+## Session 5040 (2026-10-16) — mq census per-kind budget; osJamMesg never called on keyed route
+- Change: s5038_mq_census log budget is now per kind (jam/setevent/send/recv) in src/main/upstream_compat.cpp; rebuilt.
+- Ran s5039_jam_force.sh: keys1.log said nohangar (key driving flaky), but run1.log reached origin=0x690400 (mission). Census lines under FORCE: recv 16, send 13, setevent 3, jam 0.
+- Same-run control: setevent uses the identical lib weak hook and fired under force; jam shows 0 lines under force, so osJamMesg is not invoked on title->hangar->mission. Default arm necessarily zero (force marks every call), not run. Single run: "jam never called" is single-source.
+- Selects: message-queue class (send/recv/setevent/jam) closed on the keyed route. Rules out: corrupt queue structure at any mq API entry as a crash source on this route.
+- ORIGIN: n/a (log-only instrument, no mitigation added).
+Next: use-after-free readers after audited frees.

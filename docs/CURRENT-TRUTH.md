@@ -357,7 +357,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s5039 (top):** mq census now covers osSetEventMesg (closed: force fired, default 0) and osJamMesg (unevaluable: shared 16-line budget, no jam control). Next: per-kind budget, re-run force (scratch/agent/NEXT.md). Then use-after-free readers.
+**s5040 (top):** mq census class closed on keyed route (jam never called under force; setevent control fired). Next: use-after-free readers after audited frees (scratch/agent/NEXT.md).
 
 **s5030 (top, supersedes the s5027 rename item):** The generated-symbol renaming
 sweep is CLOSED. Measured on the current N64Recomp/RecompiledFuncs tree: 2 of the
