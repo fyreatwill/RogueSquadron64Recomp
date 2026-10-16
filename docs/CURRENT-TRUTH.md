@@ -357,6 +357,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+> s5047: queued soak s5047_route_flake_hostload (2 back-to-back runs, per-key rc + host load). Read SOAK-RESULTS first: both pass = host-load flake (H1); both fail = rebuild with s5038 census / s5039 lib hook compiled out (H2) else H3 build staleness. Host load avg was 7.2 (Chrome/REAPER) at s5047.
+
 - **s5044 note:** s5043 refuted 'GUARD2 dropped' as the cause of the poison-arm route stall; the only remaining recipe delta vs s5037 is ROGUESQ_FREE_CENSUS=1 (4/4 census runs stalled, 3/3 non-census reached mission; single-source). Do not combine census with keyed-route soaks. Poison arms re-queued as s5044_*_nocensus.
 
 **s5041 (top):** double-free census (rs_free/rs_malloc shadow set) clean on the mission route: 0 doubles in >=16K frees, force control 16384/16384. Next: poison-on-free read-after-free probe (NEXT.md).

@@ -1,6 +1,6 @@
-# Next work unit: find why the keyed route no longer enters the hangar (s5042-s5046 all nohangar)
+# Next work unit: read s5047 verdict (route_flake_hostload) and act on the outcome map
 HYPOTHESIS-ID: m3-idiom-class-audit
-Hypotheses: H1 host load/stopwatch keys (keys land while game is slow/unfocused); H2 s5038-s5040 mq census / lib weak hook in osJamMesg/osSetEventMesg changed behavior; H3 other uncommitted state (build flags, stale object). Refuted s5046: s5041/s5042 hooks, save file.
-Discriminator (one iteration, all arms): write scratch/agent/soak_queue recipe that (a) logs `uptime`, `build/winctl trusted`, and top CPU at start; (b) gates keys on VI origin (press 36/6 only after origin 0x790400 seen, repeat until 0x006AB400), per-key log of winctl rc; (c) runs the current binary twice back-to-back for a flake rate. If both pass => H1 (host load/timing; fix recipe). If both fail => build with s5039 lib hook and s5038 census compiled out (H2) and rerun the same recipe.
-Positive control: s5037 default recipe on a known-good binary is the only proven pass; if no pass appears in any arm, checkout the s5037-era binary state is not possible (no git reset) -- instead diff-compile s5038+ out.
-Outcome map: pass=H1; fail+nocensus pass=H2; fail+nocensus fail=H3 (inspect build/CMakeCache, object staleness).
+Hypotheses: H1 host load/key delivery flake (Chrome 118% CPU, load 7.2 observed s5047); H2 s5038-s5040 mq census / lib weak hook; H3 stale build state. s5041/s5042 hooks and save file already refuted (s5046).
+Measurement: scratch/agent/soak_results/s5047_route_flake_hostload/keys{1,2}.log (per-key rc, load, hangar/nohangar + last origin).
+Outcome map: both hangar => H1, fix recipes (quiet host, longer waits) and resume s5038 mq census; both nohangar with key rc=0 and load high => try after quitting Chrome; both nohangar, load low => build with s5038 census/s5039 hook compiled out (H2), same recipe; key rc!=0 => winctl/trust problem (boring), fix permissions; mixed => flake rate, widen retry loop.
+Positive control: winctl key rc logged per press; title origin reached proves the game runs.
