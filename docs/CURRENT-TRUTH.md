@@ -357,6 +357,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+- **s5044 note:** s5043 refuted 'GUARD2 dropped' as the cause of the poison-arm route stall; the only remaining recipe delta vs s5037 is ROGUESQ_FREE_CENSUS=1 (4/4 census runs stalled, 3/3 non-census reached mission; single-source). Do not combine census with keyed-route soaks. Poison arms re-queued as s5044_*_nocensus.
+
 **s5041 (top):** double-free census (rs_free/rs_malloc shadow set) clean on the mission route: 0 doubles in >=16K frees, force control 16384/16384. Next: poison-on-free read-after-free probe (NEXT.md).
 **s5040:** mq census class closed on keyed route (jam never called under force; setevent control fired). Next: use-after-free readers after audited frees (scratch/agent/NEXT.md).
 

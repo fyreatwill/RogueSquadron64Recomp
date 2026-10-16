@@ -158523,3 +158523,9 @@ Boring-first check of why both s5042 arms reported nohangar. No stale processes 
 Queued s5043_poison_off_g2 and s5043_poison_on_g2 (s5042 recipes + GUARD2). Discriminator: off_g2 reaching 0x6AB400 => GUARD2 absence was the route breaker and the poison arms become comparable; off_g2 still missing the hangar => FREE_CENSUS perturbs the route, drop it from the poison arms.
 Rules out: poison as the route breaker. H-raf is still untested on the hangar route.
 ORIGIN: n/a (no mitigation added; recipes only).
+
+## Session 5044 (2026-10-16) — s5043 refutes the GUARD2 explanation; FREE_CENSUS is the remaining recipe delta; no-census arms queued
+- s5043 results: both poison_off_g2 and poison_on_g2 ended `nohangar t=199` (rc=1) — so restoring GUARD2 did NOT fix the route stall (s5043's hypothesis refuted). Neither arm reached 0x6AB400, so there is no poison on/off comparison yet; H-raf remains untested on the route.
+- `diff` of the working s5037 recipe against s5043_poison_off_g2 shows exactly one line differing in env: `ROGUESQ_FREE_CENSUS=1` (the rest is NAME/comments/summary). s5042 off/on also carried FREE_CENSUS. Every census-armed run (4/4) stalled; every s5037/s5034 run without it (3) reached mission. Single-source, confounded by run-to-run timing variance, but it is the only recipe delta left. Mechanism candidate: the census does an unordered_set insert/erase per rs_free/rs_malloc, slowing the host and shifting the sleep-keyed route (keys are timed, not state-gated).
+- ORIGIN: no mitigation added; only recipes. FREE_POISON does not depend on FREE_CENSUS (upstream_compat.cpp rs64_s5042_poison reads its own env).
+- Queued s5044_poison_off_nocensus.sh / s5044_poison_on_nocensus.sh = s5037 recipe + GUARD2, poison off/on, census absent. Positive control: on-arm must print `[s5042-poison] total poisoned=`; route control: both must reach 0x6AB400 and mission onset (0x690400).
