@@ -5127,7 +5127,7 @@ static uint32_t rec(uint8_t* rdram, recomp_context* ctx, char k, int vcb, int vc
 static int vc(uint8_t* rdram, uint32_t q) { return (int)TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))q)->validCount; }
 }
 /* s5038: log-only census of message-queue structure validity at osSendMesg/osRecvMesg entry. */
-static void s5038_mq_census(uint8_t* rdram, uint32_t mq, uint32_t ra, bool send) {
+static void s5038_mq_census(uint8_t* rdram, uint32_t mq, uint32_t ra, const char* kind) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_MQ_CENSUS"); return e && e[0] && e[0] != '0'; }();
     static const bool force = [] { const char* e = std::getenv("ROGUESQ_MQ_CENSUS_FORCE"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
@@ -5147,10 +5147,14 @@ static void s5038_mq_census(uint8_t* rdram, uint32_t mq, uint32_t ra, bool send)
     unsigned long v = ++viol;
     if (shown.fetch_add(1) < 16)
         std::fprintf(stderr, "[s5038-mq-census] %s ra=%08X mq=%08X msgCount=%d valid=%d first=%d msg=%08X calls=%lu viol=%lu%s\n",
-                     send ? "send" : "recv", ra, mq, mc, vcnt, first, msg, calls.load(), v, force ? " (FORCE control)" : "");
+                     kind, ra, mq, mc, vcnt, first, msg, calls.load(), v, force ? " (FORCE control)" : "");
+}
+/* s5039: strong definition of the lib's weak hook; covers osJamMesg (kind 0) and osSetEventMesg (kind 1, queue in r5). */
+extern "C" void rs64_s5039_mq_hook(uint8_t* rdram, uint32_t mq, uint32_t ra, int kind) {
+    s5038_mq_census(rdram, mq, ra, kind ? "setevent" : "jam");
 }
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
-    s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, true);
+    s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, "send");
     const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
     const int s4580_vcb = s4580_q ? s4580::vc(rdram, (uint32_t)ctx->r4) : 0;
     const uint32_t mq_addr = (uint32_t)ctx->r4;
@@ -5338,7 +5342,7 @@ struct S4913RecvScope {
     ~S4913RecvScope() { if (tag) rs64_s4913_mark(rdram, tag[5] == 'a' ? "recv-ack-ret" : "recv-vi-ret"); }
 };
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
-    s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, false);
+    s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, "recv");
     S4913RecvScope s4913_scope(rdram, (uint32_t)ctx->r4);
     g_s4911_host_ra = __builtin_return_address(0); g_s4911_guest_ra = (uint32_t)ctx->r31; /* PATCH: s4911 guest call site of VI recv */
     const bool s4580_q = s4580::on() && (uint32_t)ctx->r4 == 0x8010FEE0u; /* PATCH: s4580 */
