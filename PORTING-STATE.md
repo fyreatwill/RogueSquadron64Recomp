@@ -158409,3 +158409,17 @@ voice-range fires but the exact consumer 0x800903F0 never executes, same as titl
 The port also never executes it. H-route (prior null was route mismatch) and H-port-only are
 refuted for the mission route. Single instrument (oracle PC watch); the second line is the port's
 own s4534-jal zero. No guard, skip, or rewrite added. ORIGIN: not a mitigation; no behavior change.
+
+## Session 5030 (2026-10-16) — rename sweep measured complete: 2 placeholders left in generated tree
+
+Preflight allowed resuming the sweep (last 15 titles not all sweep). Instead of adding the
+next helper mapping, measured the sweep's remaining population with the new
+`scratch/agent/s5030_rename_gate.py` against the current N64Recomp/RecompiledFuncs tree
+(note: RecompiledFuncs lives in the N64Recomp checkout, not this repo; an earlier probe of
+this repo's tree and of old s390 snapshots gave false zero-defs). Result: `RECOMP_FUNC void
+func_*` definitions = 2 (`func_8000040C`, `func_800E9AE0`), both already mapped in
+`tools/rename_generated_symbols.py`. All 14 menu-overlay candidates 0x800B32F4..0x800B4048
+are already generated under companion names with callsites (e.g. getStructField0xC 35,
+setChildPosFromI16Pair 9), so further helper entries change nothing. Rules out: more sweep
+steps being meaningful work. No runtime/code change. Single-source (one tree snapshot).
+Remaining actionable: M5/M3/retail-entry new angle, or the MIPS GCC toolchain decision.

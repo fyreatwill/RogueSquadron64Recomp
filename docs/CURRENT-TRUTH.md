@@ -354,6 +354,16 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
+**s5030 (top, supersedes the s5027 rename item):** The generated-symbol renaming
+sweep is CLOSED. Measured on the current N64Recomp/RecompiledFuncs tree: 2 of the
+~1,548 s1487 placeholders remain (`func_8000040C`, `func_800E9AE0`) and both already
+have `tools/rename_generated_symbols.py` entries (the tree just predates the mapping);
+all 14 remaining menu-overlay companion candidates 0x800B32F4..0x800B4048 are already
+generated under their companion names (N64Recomp reads the symbol files). Adding more
+helper entries is a no-op. The next unit must be M5 / M3 / retail-entry work, or a
+human decision on the missing MIPS GCC toolchain (s5023). Gate script:
+`scratch/agent/s5030_rename_gate.py LO HI`.
+
 **s5027 (top):** The next bounded rename candidate is the next newly mapped
 menu-overlay symbol. Apply the same independent companion-address, exact-span,
 and live-caller gates before adding it to

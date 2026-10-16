@@ -1,11 +1,11 @@
-# Next work unit: resume generated-symbol renaming sweep (or M5/M3 if new input)
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+# Next work unit: pick a non-sweep thread (sweep closed, s5030)
+HYPOTHESIS-ID: post-sweep-thread-selection
 
-Why: s5029 closed the REVISIT of the external retail-entry boundary (retail has zero
-0x800903F0 executions in title, hangar AND mission; see CURRENT-TRUTH headline). The
-latest session title is not a sweep step, so ITERATION.md rule 4 permits resuming the
-sweep at the next menu-overlay candidate after 0x800B3AFC (see docs/RENAME-S5027-AUDIT.md
-for the gate list: companion address, exact span, generated body, live caller).
-Caution: sweep steps do not reset the no-engineering-change counter; prefer an M5 de-stub
-step (docs/M5-AUDIO-PLAN.md) or an M3 guard-class audit that commits code if one is nameable.
-Parked: MIPS GCC patch qualification (no toolchain).
+The renaming sweep is complete (2 placeholders left, both already mapped; see CURRENT-TRUTH
+s5030). Do NOT add more rename mappings. Options, in order:
+1. M3 idiom-class audit: grep-enumerate a NOT-yet-audited idiom class (check CURRENT-TRUTH
+   "Parked and closed" and PROJECT-OVERVIEW for which s282-s288 / s4715 classes are done:
+   SDL/SDR, SWL/SWR, LL/SC, LDC1/SDC1), classify every site, commit a guard or proof of dead.
+2. If every class is already closed, go BLOCKED with the question: supply a MIPS GCC
+   toolchain (mips64-elf-gcc) to unblock s5023 patch qualification, or declare the thread dead.
+Generated tree is at /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs.
