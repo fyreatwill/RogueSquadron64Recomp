@@ -1,5 +1,5 @@
-# Next work unit: heap-guard need census (no MIPS GCC required)
+# Next work unit: consume s5033 heap-guard census verdict
 HYPOTHESIS-ID: heap-guard-need-census
-Question: does the ORIGINAL allocateDisplayListBuffer (0x80007D74..0x80007E58) ever dequeue/insert a non-KSEG0 pointer (the condition patches/heap_guards.c guards) in title/hangar/mission soaks?
-Method: add an env-gated counter via tools/fixup_*.py (not a hand-edit of generated code) logging free-list head/next values outside 0x80000000..0x807FFFFF; positive control = one run with a synthetic forced bad value (must log). One game at a time via the soak queue (nohup, not the 600 s cap); >=5 runs per scene, phase-gate on VI transitions.
-Outcomes: 0 hits with control passing -> close the patch-pipeline thread (patch moot) and withdraw the toolchain dependency. Any hit -> toolchain request becomes load-bearing; escalate with the hit as evidence.
+Read the s5033_heap_guard_census line in scratch/agent/SOAK-RESULTS.md (keys1.log in soak_results/s5033_heap_guard_census/).
+Outcomes: mission_onset_t>=0 and guard2/3/4/coalesce/r1 all 0 -> patch moot (single-source, no fire control); fold into CURRENT-TRUTH, withdraw toolchain dependency as non-load-bearing. Any >0 -> the guarded original path yields bad pointers: name the writer (iron rule 11), escalate toolchain need. mission_onset_t=-1 -> route failed, rerun once.
+If a fire control is wanted: add a fixup env that forces one bad r3 in alloc-tail-guard2 (tools/fixup_*.py), rebuild, rerun.

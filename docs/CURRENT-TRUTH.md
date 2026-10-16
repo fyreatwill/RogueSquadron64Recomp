@@ -6,6 +6,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s5033:** Heap-guard census needs no new instrument: existing env-gated guard logs (alloc-tail-guard2/3/4, R1, coalesce) fire only on bad pointers. Recipe soak_queue/s5033_heap_guard_census.sh enqueued; verdict lands in SOAK-RESULTS.md. 0 fires = single-source (no fire control without a rebuild).
 - **s5032 (unblock):** The s5031 "owner decision" block was re-scoped, not escalated. Its premise was stale (movz/movn DONE s4970; M4 accumulator CLOSED s5005/s5006). The MIPS GCC dependency is real (Apple clang has no MIPS target; installing is human-only) but gates only one disabled patch, so it is an OPEN NON-GATING dependency. Next unit: heap-guard need census (NEXT.md). Details: scratch/agent/UNBLOCK.md.
 
 - **s5029:** Mission-route external-entry join (retail oracle vs port, same run,

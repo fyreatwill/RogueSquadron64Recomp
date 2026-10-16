@@ -158429,3 +158429,7 @@ Step 0: CURRENT-TRUTH 45873 B (<60000), no maintenance. Re-verified: all M3 idio
 
 ## Session s5032 (unblock) — 2026-10-16
 Block s5031 (owner decision: install MIPS GCC vs name new objective) examined. Route 1: premise stale — movz/movn done (s4970), M4 accumulator closed (s5005/6). Compiler gap is real (Apple clang: no MIPS target, no llc; only mips-linux-gnu-as/ld) but installing software is human-only (route 2 barred). Route 3: toolchain gates only the disabled heap-guard patch; recorded as open non-gating dependency; NEXT.md = heap-guard need census needing no compiler. No code changed.
+
+## Session 5033 (2026-10-16) — heap-guard need census: reused existing guard logs, recipe enqueued
+Finding: no new counter is needed. The generated allocateDisplayListBuffer already carries env-gated guards (s3285 align+cycle, alloc-tail-guard2/3/4, R1 guard, coalesce-heap-guard; tools/fixup_game_funcs_vendored.py ~6726, ~30328) that log only when a non-KSEG0/unaligned pointer is seen. s561 (PORTING-STATE ~45410) already recorded 0 fires in hangar (n=2700 hangarbay control). Wrote and enqueued scratch/agent/soak_queue/s5033_heap_guard_census.sh (title->hangar->mission, all guard logs armed, verdict line in SOAK-RESULTS.md). Caveat: guard-fire positive control needs a rebuild, so a 0 result is single-source (route reached + hangar control from s561). Nothing run this iteration; the loop runs the soak.
+Decision rule: 0 fires -> patches/heap_guards.c moot, drop toolchain dependency (labelled single-source); any fire -> toolchain becomes load-bearing.
