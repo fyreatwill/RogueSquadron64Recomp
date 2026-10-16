@@ -581,3 +581,4 @@ s5037 soaks (mission_onset 170/174s, crash=0, 1.1M lines each): force arm cg=16 
 s5038 result: force mq=16 (control), default mq=0, crash=0 on the keyed route => message-queue structure class closed there (osJamMesg uncovered). Next: use-after-free reads after audited frees.
 
 - s5042: read-after-free poison probe (ROGUESQ_FREE_POISON, tools/apply_s5042_free_poison.py) built; on/off soaks queued, verdicts pending (see NEXT.md).
+- s5043: s5042 arms stalled before hangar because the recipe dropped GUARD2 (vs s5037); corrected arms s5043_poison_{off,on}_g2 queued.
