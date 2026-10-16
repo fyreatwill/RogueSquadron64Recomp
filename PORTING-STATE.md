@@ -158491,3 +158491,5 @@ Runs (scratch/agent/s5039_jam_{force,default}.sh): force arm: mission_onset 170s
 - Selects: H-clean for osSetEventMesg (control fired, default zero). For osJamMesg: unevaluable, no same-run positive control (budget shared). Do not read the jam zero as a result.
 - Rules out: nothing for jam. Instrument weakness: per-kind log budget needed.
 Next: give each kind its own 16-line budget, re-run force once, then close the class.
+
+Conclusion (s5039): this run selects H-clean for osSetEventMesg (force control fired in the same recipe, default arm 0 census lines) and refutes H-instrument-dead for it; osJamMesg stays unresolved (no control). Next discriminator: per-kind log budget so the force arm shows jam>0, then the default arm's jam count splits H-clean from H-malformed-jam-queue (scratch/agent/NEXT.md).
