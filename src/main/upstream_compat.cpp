@@ -2208,6 +2208,21 @@ extern "C" void rs64_s5041_malloc(uint32_t ptr) {
     if (!s5041_on() || ptr == 0) return;
     s_s5041_freed.erase(ptr);
 }
+
+static inline uint32_t s5042_rd(const uint8_t* rd, uint32_t off) { return ((uint32_t)rd[off ^ 3u] << 24) | ((uint32_t)rd[(off + 1) ^ 3u] << 16) | ((uint32_t)rd[(off + 2) ^ 3u] << 8) | rd[(off + 3) ^ 3u]; }
+extern "C" void rs64_s5042_poison(uint8_t* rdram, uint32_t ptr, uint32_t ra) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_FREE_POISON"); return e && e[0] && e[0] != '0'; }();
+    if (!on || ptr < 0x80000010u || ptr >= 0x80800000u || (ptr & 3u)) return;
+    static unsigned long npoison = 0, nskip = 0, nverify_bad = 0; static int shown = 0;
+    uint32_t off = ptr - 0x80000000u;
+    uint32_t sz = s5042_rd(rdram, off - 0x10 + 4);
+    if (sz < 0x20 || sz > 0x700000u || off + 16 > 0x800000u) { ++nskip; if (shown < 8) { ++shown; std::fprintf(stderr, "[s5042-poison] SKIP ptr=%08X sz=%08X ra=%08X\n", ptr, sz, ra); } return; }
+    for (uint32_t i = 0; i < 16; i += 4) { uint32_t v = 0xDEADBEEFu; for (int k = 0; k < 4; k++) rdram[(off + i + k) ^ 3u] = (uint8_t)(v >> (24 - 8 * k)); }
+    bool ok = s5042_rd(rdram, off) == 0xDEADBEEFu && s5042_rd(rdram, off + 12) == 0xDEADBEEFu;
+    if (!ok) ++nverify_bad;
+    ++npoison;
+    if ((npoison & (npoison - 1)) == 0) std::fprintf(stderr, "[s5042-poison] total poisoned=%lu skipped=%lu verify_bad=%lu last ptr=%08X sz=%08X ra=%08X\n", npoison, nskip, nverify_bad, ptr, sz, ra);
+}
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,
                                                  uint32_t a1, uint32_t a2,
