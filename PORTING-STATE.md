@@ -158453,3 +158453,12 @@ ORIGIN: no mitigation added. The alloc-tail guard3/4 blocks already existed; thi
 - Built with s5034_build.sh (links ok). Enqueued `soak_queue/s5036_guard34_force_control.sh` (s5034 recipe, guard2 force dropped, guard3+4 force on).
 - Found: the generated code has exactly one coalesce site (funcs_0.c, 0x80002434) whose `[coalesce-next]` line logs unconditionally when enabled — that count is its control. The `ALLOCATE_DISPLAY_LIST_BUFFER_R1_GUARD` env has no site in generated funcs (grep of funcs_*.c), so the r1 "0" in s5033/s5034 is null by construction, not evidence.
 - Expect: guard3>0, guard4>0 => their s5033 zeros become two-source; guard3/4==0 => force wiring broken, do not read the zeros.
+
+### Session 5036 result (same session; soak run inline after the Stop gate flagged diagnostic-only)
+Hypotheses: H-guard-moot (heap guards are never reached/needed on title->hangar->mission) vs H-guard-live-but-silent (sites reached, predicate never true) vs H-instrument-dead (zeros are wiring artifacts).
+Run (mission_onset_t=174, crash=0, 1.12M log lines): guard3 force fired 7752x at 4 sites (0x800081A8/81FC/8244/82F4 — drain-mesh tail-scan loops); guard4 force fired 0x; coalesce_next=256 (site reached) with coalesce-heap-guard=0; guard2=0 (its force was off this run).
+- Selects: guard3 — H-guard-live-but-silent; the sites ARE executed ~7.7k times and the predicate (bad pointer) never tripped in the unforced s5033 run, so the guard is reached but not load-bearing. H-instrument-dead refuted for guard3 (control fired).
+- Coalesce: site reached (control = unconditional log), guard never bad => live-but-silent, two-source.
+- Guard4: force-on 0 passes => none of the 94 guard4 blocks executed on this route (their slots at the 4 hot guard3 sites are occupied by a different drain-mesh guard, 0x800081AC). Guard4 shares the guard3 generator and force pattern, so wiring is plausible but has no own positive control: label single-source-for-wiring, "unreached" is the reading.
+- R1: no generated site, unevaluable.
+Net: no heap guard fired on the mission route; zero guards are shown load-bearing there. Next discriminator: the route-exercise question is closed; heap guards are not the mission-stability factor. Move to M3 idiom audit (NEXT.md).
