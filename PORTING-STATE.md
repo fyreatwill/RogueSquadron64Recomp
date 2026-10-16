@@ -158501,3 +158501,11 @@ Conclusion (s5039): this run selects H-clean for osSetEventMesg (force control f
 - Selects: message-queue class (send/recv/setevent/jam) closed on the keyed route. Rules out: corrupt queue structure at any mq API entry as a crash source on this route.
 - ORIGIN: n/a (log-only instrument, no mitigation added).
 Next: use-after-free readers after audited frees.
+
+## Session 5041 (2026-10-16) — double-free census on rs_free/rs_malloc: 0 doubles in 16K+ frees, control fired
+ORIGIN: no mitigation added; log-only instrument (tools/apply_s5041_free_census.py, registered in fixup_game_funcs_vendored.py; host fns in src/main/upstream_compat.cpp). rs_malloc is wrapped (rs_malloc_s5041_inner) so a returned pointer leaves the host shadow "freed" set; rs_free entry inserts and reports a pointer already present.
+Hypotheses: H-double-free (a block freed twice with no allocation between = UAF seed) vs H-clean vs H-instrument-dead.
+Runs (scratch/agent/s5041_free_{default,force}.sh, one build, sequential): default arm nfree reached >=16384, ndouble=0, CRASH=0, origins reached include 0x690400 (mission); keys1 said nohangar (menu-path variance, same as s5039) but the log shows the mission origin. Force arm (every free reported): 16 DOUBLE lines, totals ndouble==nfree at 16384 -> positive control fired in the same recipe.
+- Selects H-clean for double-free on the title->mission route; refutes H-instrument-dead. Rules out: free-twice as a source of corruption there. Does NOT cover reads after a single free (needs per-load hooks) nor frees of never-malloc'd pointers.
+- Caveat: default-arm per-phase totals are run-lifetime counters; arm is single run (one source + control).
+Next: read-after-free via poison-on-free is the remaining UAF probe; otherwise M3 idiom classes are exhausted -> see NEXT.md.

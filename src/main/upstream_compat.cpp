@@ -2189,6 +2189,25 @@ extern "C" int rs64_s5037_copy_guard(uint8_t* rdram, uint32_t dst, uint32_t src,
     }
     return force ? 0 : 1;
 }
+
+#include <unordered_set>
+static std::unordered_set<uint32_t> s_s5041_freed;
+static bool s5041_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_FREE_CENSUS"); return e && e[0] && e[0] != '0'; }(); return on; }
+extern "C" void rs64_s5041_free(uint32_t ptr, uint32_t ra) {
+    static const bool force = [] { const char* e = std::getenv("ROGUESQ_FREE_CENSUS_FORCE"); return e && e[0] && e[0] != '0'; }();
+    if (!s5041_on() || ptr == 0) return;
+    static unsigned long nfree = 0, ndouble = 0; static int shown = 0;
+    ++nfree;
+    bool dbl = !s_s5041_freed.insert(ptr).second;
+    if (force) dbl = true;
+    if (dbl) { ++ndouble; if (shown < 16) { ++shown;
+        std::fprintf(stderr, "[s5041-free-census] DOUBLE ptr=%08X ra=%08X nfree=%lu ndouble=%lu%s\n", ptr, ra, nfree, ndouble, force ? " (FORCE control)" : ""); } }
+    if ((nfree & (nfree - 1)) == 0) std::fprintf(stderr, "[s5041-free-census] total nfree=%lu ndouble=%lu live_freed=%zu\n", nfree, ndouble, s_s5041_freed.size());
+}
+extern "C" void rs64_s5041_malloc(uint32_t ptr) {
+    if (!s5041_on() || ptr == 0) return;
+    s_s5041_freed.erase(ptr);
+}
 extern "C" void rs64_m5_voice_modulation_call(uint8_t* rdram, uint32_t pc,
                                                  uint32_t voice_index,
                                                  uint32_t a1, uint32_t a2,

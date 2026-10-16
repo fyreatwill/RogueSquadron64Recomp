@@ -1,3 +1,3 @@
-# Next work unit: use-after-free readers after audited frees (M3 idiom-class audit)
+# Next work unit: read-after-free probe (poison freed block payload) on the keyed route
 HYPOTHESIS-ID: m3-idiom-class-audit
-s5040: mq census class closed (jam never called under force; setevent control fired). Next: grep-enumerate readers that dereference a block after the allocator free path (see the alloc-tail/coalesce guards), classify each site, guard or prove dead. Design the whole table in one instrument, one build, one run with a force control.
+s5041: double-free census clean (0 in >=16K frees; force control fired 16384/16384). Next: in rs64_s5041_free, optionally overwrite the first 16 payload bytes of the freed block with 0xDEADBEEF (env ROGUESQ_FREE_POISON, need the block size from the heap header at ptr-N; read rs_free body funcs_0.c:3979 first), run default + poison arms; a crash or new guard fire in the poison arm only = real read-after-free (name the reader pc). Control: poison arm must visibly change heap contents (log count of poisoned frees).

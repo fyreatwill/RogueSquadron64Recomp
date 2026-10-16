@@ -357,7 +357,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Next steps (single monotonic backlog)
 
-**s5040 (top):** mq census class closed on keyed route (jam never called under force; setevent control fired). Next: use-after-free readers after audited frees (scratch/agent/NEXT.md).
+**s5041 (top):** double-free census (rs_free/rs_malloc shadow set) clean on the mission route: 0 doubles in >=16K frees, force control 16384/16384. Next: poison-on-free read-after-free probe (NEXT.md).
+**s5040:** mq census class closed on keyed route (jam never called under force; setevent control fired). Next: use-after-free readers after audited frees (scratch/agent/NEXT.md).
 
 **s5030 (top, supersedes the s5027 rename item):** The generated-symbol renaming
 sweep is CLOSED. Measured on the current N64Recomp/RecompiledFuncs tree: 2 of the
