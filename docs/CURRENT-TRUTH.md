@@ -357,6 +357,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 The s5049 in-place regen (tools/agent/regen_n64recomp.sh, still disabled) destroyed the live tree, but it is RESTORED and verified: N64Recomp/scratch_s4970_live (Oct-13 copy) + replay of post-s4970 scripts (scratch/agent/s5050_replay.sh, s5050_s5037.sh) compiles to byte-identical __text for 51/51 funcs_*.c vs the surviving build/libRecompiledFuncs.a (scratch/agent/s5050_compare.py). funcs.h/lookup.cpp/recomp_overlays.inl identical to the clobbered copies. The clobbered tree is kept at N64Recomp/RecompiledFuncs.s5049-clobbered. cmake --build is safe again (it recompiles ~5 files whose mtimes the replay touched; code identical). Never regen in place; "live tree is unreproducible" was wrong: backup + ordered apply_s* replay reproduces it.
 
 ## Next steps (single monotonic backlog)
+- s5063: SP StartGo + AI SetNextBuffer guard landed (ROGUESQ_SPAI_GUARD[_FORCE]); FORCE pg=16, default pg=0 => class clean on keyed route (two-source). Next M3 class: remaining host wrappers (osViSwapBuffer, EEPROM/pak buffer args).
 - s5062: do_rom_pio guard landed (ROGUESQ_PIO_GUARD[_FORCE]); FORCE arm fired 0 => PIO never invoked on keyed route (unexercised, not clean; single-source). Next M3 class: SP/AI DMA host wrappers.
 
 > s5058: baseline hangar recipe reaches hangar 3/3 on the current binary at load 4-6 (4/4 with s5057); host load is not the discriminator. Next: census-on recipe x3 (NEXT.md).

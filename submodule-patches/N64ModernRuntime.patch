@@ -408,10 +408,10 @@ index dbf46b2..667ca69 100644
  
  template<u8 e>
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..c808ad6 100644
+index 0195f2b..8d8b36c 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,205 @@
+@@ -1,29 +1,211 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
@@ -597,7 +597,13 @@ index 0195f2b..c808ad6 100644
 +    }
 +}
 +
++extern "C" bool rs64_spai_guard_bad(const char* what, uint64_t addr, uint64_t size);
++
  extern "C" void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
++    if (rs64_spai_guard_bad("osAiSetNextBuffer", static_cast<uint64_t>(ctx->r4), static_cast<uint64_t>(ctx->r5) & 0xFFFFFFFFull)) {
++        ctx->r2 = 0;
++        return;
++    }
 +    rs64_s4245_tick(2, 1);
 +    rs64_s4245_tick(3, ctx->r5);
 +    rs64_log_ai_output(rdram, ctx->r4, ctx->r5);
@@ -3420,10 +3426,10 @@ index 1cb3f6a..78c6f71 100644
      return true;
  }
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..b6f4947 100644
+index ae0f44f..a87dbe6 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
-@@ -1,15 +1,62 @@
+@@ -1,15 +1,82 @@
  #include <cstdio>
 +#include <cstdlib>
  #include <fstream>
@@ -3482,13 +3488,33 @@ index ae0f44f..b6f4947 100644
  bool dump_frame = false;
  
 -extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
++// s5063: census-first guard for the StartGo task pointer (default-on; ROGUESQ_SPAI_GUARD=0 rolls back,
++// ROGUESQ_SPAI_GUARD_FORCE=1 marks every call bad, log-only, as the positive control).
++extern "C" bool rs64_spai_guard_bad(const char* what, uint64_t addr, uint64_t size) {
++    static const bool off = [] { const char* e = std::getenv("ROGUESQ_SPAI_GUARD"); return e && e[0] == '0'; }();
++    static const bool force = [] { const char* e = std::getenv("ROGUESQ_SPAI_GUARD_FORCE"); return e && e[0] && e[0] != '0'; }();
++    if (off) return false;
++    const bool bad = !rs64_sp_task_range_valid(addr, size);
++    if (!bad && !force) return false;
++    static std::atomic<uint32_t> rows{0};
++    if (rows.fetch_add(1, std::memory_order_relaxed) < 16u) {
++        std::fprintf(stderr, "[s5063-spai-guard] %s addr=0x%llX size=0x%llX %s\n", what,
++            (unsigned long long)addr, (unsigned long long)size, force ? "FORCE(log-only)" : "SKIPPED");
++        std::fflush(stderr);
++    }
++    return !force;
++}
++
 +extern "C" __attribute__((weak)) void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
++    if (rs64_spai_guard_bad("osSpTaskStartGo", static_cast<uint64_t>(ctx->r4), sizeof(OSTask))) {
++        return;
++    }
 +    rs64_m5_raw_task_boundary("start", rdram, static_cast<uint32_t>(ctx->r4));
 +    rs64_sp_reset_yield_request();
      //printf("[sp] osSpTaskStartGo(0x%08X)\n", (uint32_t)ctx->r4);
      OSTask* task = TO_PTR(OSTask, ctx->r4);
      if (task->t.type == M_GFXTASK) {
-@@ -37,12 +84,35 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -37,12 +104,35 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
  }
  
  extern "C" void osSpTaskYield_recomp(uint8_t* rdram, recomp_context* ctx) {
