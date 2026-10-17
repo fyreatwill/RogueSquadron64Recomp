@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5121 (2026-10-17). The
+Compact operational handoff, maintained at Session 5123 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -14,9 +14,10 @@ qualified image route; the silent `ROGUESQ_AUDIO_UCODE=0` path is only a
 control. Mission input reaches the game and changes the player vehicle state.
 
 The current bounded work is the generated-symbol renaming sweep. The last
-candidate, `cosf = 0x8002B190`, was already synchronized: its generated body
-and exact `0x170` span are present, with 75 generated callers. The next
-candidate is `osCreateMesgQueue = 0x8002B300`.
+candidates, `cosf = 0x8002B190` and `osCreateMesgQueue = 0x8002B300`, were
+already synchronized: `cosf` has its generated body, exact `0x170` span, and
+75 callers; `osCreateMesgQueue` is a zero-size host-wrapper/ABI entry with 28
+generated call sites. The next candidate is `osCreateThread = 0x8002B330`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -65,7 +66,7 @@ were retained below or in the project overview.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
-  through `docs/RENAME-S5117-AUDIT.md`.
+  through `docs/RENAME-S5123-AUDIT.md`.
 
 ## Operational rules
 
@@ -114,7 +115,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osCreateMesgQueue = 0x8002B300` using the bounded rename helper.
+1. Audit `osCreateThread = 0x8002B330` using the bounded rename helper.
    Rename only if the generated body, exact next-entry span, semantic mapping,
    and live caller all agree; otherwise preserve the ABI name and record the
    classification.

@@ -159155,3 +159155,15 @@ reported `already-synchronized`. This selects the synchronized outcome: no
 rename, build, or soak was warranted. Independent body/span/caller checks
 agree. Audit: `docs/RENAME-S5122-AUDIT.md`. Next candidate:
 `osCreateMesgQueue`.
+
+## Session 5123 (2026-10-17) — classified `osCreateMesgQueue` as host wrapper
+
+Ran the bounded generated-symbol audit for companion
+`osCreateMesgQueue = 0x8002B300`. The companion map marks it defined, but the
+generated snapshot contains only the `_recomp` ABI declaration and 28 call
+sites across 9 files; its overlay entry has `rom_size = 0`, with no generated
+body or exact span. The rename helper changed zero references and reported
+`already-synchronized`. This selects the host-wrapper/ABI-boundary outcome and
+rules out a semantic rename, build, or soak for this candidate. Independent
+companion-map, generated-tree, overlay-record, and caller-count checks agree.
+Audit: `docs/RENAME-S5123-AUDIT.md`. Next candidate: `osCreateThread`.
