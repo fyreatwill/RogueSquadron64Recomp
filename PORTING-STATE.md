@@ -159808,3 +159808,15 @@ boundary is `osPfsFindFile = 0x80032260`, so there is no generated span to
 validate. Preserved the ABI name and advanced the sweep pointer. This rules
 out a generated-body semantic rename for this candidate, not the remaining
 companion entries. Audit: `docs/RENAME-S5172-AUDIT.md`.
+
+## Session 5173 (2026-10-17) — classified `osPfsFindFile` as unmaterialized
+
+Ran the bounded generated-symbol audit for `osPfsFindFile = 0x80032260`.
+The helper reported `already-synchronized` and renamed zero references. The
+generated tree has two direct callers and a zero-size overlay record at
+offset `0x31E20`, but no generated body or placeholder at the companion
+address. The next companion boundary is `osPiStartDma = 0x80032420`, giving a
+nominal `0x1C0` span with no body to validate. Preserved the ABI name and
+advanced the sweep pointer. This rules out a generated-body semantic rename
+for this candidate, not the remaining companion entries. Audit:
+`docs/RENAME-S5173-AUDIT.md`.
