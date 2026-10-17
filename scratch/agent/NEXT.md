@@ -1,4 +1,6 @@
-# Next: run the RDRAM snapshot discriminator (unblocked s5072)
+# Next: phase-gated RDRAM witness run (keyW/keyD/keyZ vs same-origin controls)
 HYPOTHESIS-ID: m6-mission-input
-Run `zsh scratch/agent/s5069_mission_snap.sh` (now uses ROGUESQ_PAD_OVERRIDE_FILE, no winctl). Check keys.log/padlog shows edges at key windows before trusting snapshots.
-Offline: words with ctl1==ctl2==ctl3 but != keyW/keyD/keyZ = state witnesses. Positive control: frame-counter-like words differ ctl1 vs ctl2. H1 = witnesses exist; H2 = none.
+H1: some words change only with stick/button input (real input state). H2: all keyW diffs are buffer-phase/animation artifacts.
+Discriminator: edit s5069_mission_snap.sh so every snapshot (ctl and key) is triggered only when the latest origin= in run.log is 0x620400. Drop ctl3 and shorten sleeps so the whole run is under 540 s (harness caps background at 600 s; use run_in_background). Take ctlA, ctlB (same phase), keyW, ctlC, keyD, keyZ.
+Analyze: python3 -I tools/snap_witness.py DIR keyW keyD keyZ (adapt the ctl names to ctlA/B/C). Input-state words = stable across ctls, changed in W hold, and D hold changes a different word set.
+Outcomes: witnesses surviving phase-gating and differing between keyW and keyD => input-state words found (H1); none => H2.

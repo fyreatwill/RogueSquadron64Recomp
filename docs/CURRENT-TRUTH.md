@@ -615,3 +615,5 @@ s5064: EEPROM x4 + osContGetReadData guarded via shared rs64_spai_guard_bad; def
 s5065: per-wrapper census on keyed route (default+FORCE): AI/cont >=16384 calls bad=0, EepromLongRead/LongWrite 2-3 calls bad=0; short EEPROM + StartGo never reached. Host-wrapper pointer guard class closed on this route (single route, 1 run/arm). Next: M5 de-stub step.
 
 - s5069: whole-frame FNV hash (ROGUESQ_FB_HASH=1) is saturated in the mission — 100% distinct frames in ctl and key windows alike; unusable for the reaction question. Next: RDRAM state-witness diff (stable-in-ctl words that move under held W).
+
+- s5073: mission snapshot run done (W stick edge confirmed; 175k nominal witnesses but origin-phase confounded; keyD/keyZ not taken). Next: phase-gated re-run, see scratch/agent/NEXT.md.
