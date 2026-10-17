@@ -622,3 +622,5 @@ s5065: per-wrapper census on keyed route (default+FORCE): AI/cont >=16384 calls 
 - s5073: mission snapshot run done (W stick edge confirmed; 175k nominal witnesses but origin-phase confounded; keyD/keyZ not taken). Next: phase-gated re-run, see scratch/agent/NEXT.md.
 
 - s5077: mission flight floats at 0x9DEAC react to stick and coast to static ~3.5 s after release (momentum); static writers 0x800448B0/0x80045540/0x8004562C/0x80045658/0x8004567C; position-vs-scroll unverified. Next: runtime writer attribution (NEXT.md).
+
+- **s5078 (m6-mission-input):** 0x9DEAC is a per-frame lerp/copy of floats 0x80130C54/0x80130C58 written by one function at 0x8004562C/0x80045658 (single-run census, positive control passed; single-source). Hpos refuted. Next: writers of 0x130C54/58 (NEXT.md). Link failure after tree restore = stale register_overlays.cpp.o; touch it.

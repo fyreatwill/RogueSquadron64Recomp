@@ -1,5 +1,6 @@
-# Next: attribute the runtime writer of 0x9DEAC during the W hold
+# Next: who writes 0x80130C54 / 0x80130C58 (inputs of the 0x9DEAC lerp) and what drives the 0x80045618 compare
 HYPOTHESIS-ID: m6-mission-input
-Result s5077: floats at 0x9DEAC stop changing ~3.5 s after stick release (momentum). Static writers: 0x800448B0, 0x80045540, 0x8004562C, 0x80045658, 0x8004567C (swc1 -0x2154($v0), $v0=0x800A0000).
-Hypotheses: Hpos (ship/flight code writes it) vs Hscroll (grid-layer scroll code only).
-Unit: env-gated per-site counters added via the fixup script (not hand-edit), positive control = all five sites counted in W window; rerun scratch/agent/s5077_watch.sh once. Hscroll predicts only 0x8004562C/58/7C fire; Hpos predicts 0x800448B0/0x80045540 fire during W/D and not ctlA.
+Result s5078: 0x9DEAC = per-frame lerp of floats at 0x80130C54/0x80130C58 (arm 0x80045658) or copy of 0x80130C58 (arm 0x8004562C); arm flips with W/D/momentum; 0x800448B0, 0x8004567C never fire.
+Hypotheses: Hin (0x130C54/58 are written by stick-reading code, e.g. through the 0x80130B88 stick struct) vs Hmom (written by ship-velocity/throttle integrator, stick only indirect).
+Unit: extend apply_s5078 census range to 0x80130C40..0x80130C70 (physical 0x130C40..0x130C70) AND log lwc1 sources of the c1cs compare operands at 0x80045618; rerun s5078_watch.sh once (copy to s5079). Positive control = the stick struct 0x130B88 bytes still change in W and census lines appear. Discriminator: writers fire only in W/D windows (Hin) vs every frame (Hmom).
+Note: after touching RecompiledFuncs, `touch src/main/register_overlays.cpp` before cmake (stale .o link failure).

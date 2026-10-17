@@ -12,6 +12,8 @@
 #include <thread>
 #include <mutex>
 #include <set>
+#include <map>
+#include <string>
 #include <chrono>
 #include <pthread.h>
 #if !defined(_WIN32)
@@ -249,6 +251,15 @@ extern "C" void osViBlack_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" void rs64_s4899_swap(uint32_t fb, uint32_t width);
+// s5078: per-(pc,addr) count of instrumented stores into 0x9DE80..0x9DF00, fed by
+// rs64_m5_writer_parity (apply_s5078_flight_writer_census.py), printed per swap under WATCH_LOG.
+static std::mutex g_s5078_mu;
+static std::map<std::pair<uint32_t, uint32_t>, uint64_t> g_s5078_counts;
+extern "C" void rs64_s5078_flight_store(uint32_t pc, uint32_t addr) {
+    std::lock_guard<std::mutex> lk(g_s5078_mu);
+    ++g_s5078_counts[{pc, addr}];
+}
+
 extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_count = 0;
     int n = ++s_count;
@@ -475,6 +486,16 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         s_watch = (v && *v && v[0] != '0') ? 1 : 0;
     }
     if (s_watch) {
+        {
+            std::lock_guard<std::mutex> lk(g_s5078_mu);
+            std::string wr;
+            for (auto& kv : g_s5078_counts) {
+                char t[48];
+                snprintf(t, sizeof t, " %08X@%05X:%llu", kv.first.first, kv.first.second, (unsigned long long)kv.second);
+                wr += t;
+            }
+            fprintf(stderr, "[watch-wr #%d]%s\n", n, wr.c_str());
+        }
         auto b = [&](uint32_t a) { return (unsigned)rdram[a ^ 3]; };
         auto w = [&](uint32_t a) { return (b(a) << 24) | (b(a + 1) << 16) | (b(a + 2) << 8) | b(a + 3); };
         auto hr = [&](uint32_t lo, uint32_t hi) {
