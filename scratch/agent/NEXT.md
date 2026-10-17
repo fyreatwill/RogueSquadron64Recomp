@@ -1,5 +1,5 @@
-# Next: verify regen post-condition end to end
+# Next: pristine-regen discriminator for the dropped s4296 patch
 HYPOTHESIS-ID: m6-mission-stall
-Step 1: on the next regen (make_elf -> N64Recomp -> fixup_game_funcs -> cmake) tee fixup output and confirm `[s4648-replay] post-condition ok` appears; then tools/check_a14_yield_patch.py.
-Step 2: if no regen is pending, run the fixup against a scratch copy of RecompiledFuncs with the marker stripped (expect exit nonzero).
-Then: M5/M3 are closed; remaining options are owner-level (see CURRENT-TRUTH s5008 list).
+Hypotheses for the s5085 drop: H-skip (RS64_SKIP_REPLAY=1), H-noop (apply script exits 0 w/o patching), H-stale (funcs_26.c regenerated, fixup never run).
+Discriminator: regen into a SCRATCH dir (never the live RecompiledFuncs): make_elf.py -> N64Recomp -> fixup_game_funcs_vendored.py <scratch>, twice (default and RS64_SKIP_REPLAY=1); count 'PATCH: s4296 A14 spin yield' in funcs_26.c. Absent only in SKIP arm => H-skip; absent in both => H-noop (new post-condition will exit nonzero); present in both => H-stale.
+Note: fixup cannot run on a copy of the patched tree (s5090 logs).
