@@ -159290,3 +159290,16 @@ and one caller, but no generated body or placeholder; its overlay record has
 `rom_size = 0`. Preserved the ABI name and recorded the evidence in
 `docs/RENAME-S5133-AUDIT.md`. This rules out a semantic generated-symbol rename
 for this entry; it does not rule out the next companion entry.
+## Session 5134 (2026-10-17) — classified `__osRestoreInt` as host wrapper
+
+Ran the bounded generated-symbol audit for companion `__osRestoreInt` at
+`0x8002C260`, including the helper over `0x8002C260..0x8002C500`, companion
+symbol lookup, generated-tree search, and overlay-table inspection. The helper
+changed zero references and reported `already-synchronized`. The generated
+tree contains one ABI call at `funcs_24.c:7201`, but no candidate body or
+placeholder; the overlay record has `rom_size = 0`. The companion map places
+the next entry at `__osLeoInterrupt = 0x8002C500`.
+
+This rules out a generated semantic rename for `__osRestoreInt`; preserve its
+ABI name as a host-wrapper/ABI-boundary entry. No build or soak was warranted.
+The audit is recorded in `docs/RENAME-S5134-AUDIT.md`.
