@@ -159192,3 +159192,15 @@ outcome and rules out a semantic rename, build, or soak for this candidate.
 Independent companion-map, generated-tree, overlay-record, and caller-count
 checks agree. Audit: `docs/RENAME-S5125-AUDIT.md`. Next candidate:
 `osDpGetCounters`.
+## Session 5126 (2026-10-17) — classified `osDpGetCounters` as host wrapper
+
+Ran the bounded generated-symbol audit for companion
+`osDpGetCounters = 0x8002B590`. The companion map places the next entry at
+`osDpSetStatus = 0x8002B5E0`, but the generated snapshot contains no body,
+placeholder symbol, or overlay record at the candidate address. It contains
+two direct generated calls to `osDpGetCounters_recomp`; the rename helper
+changed zero references and reported `already-synchronized`. This selects the
+host-wrapper/ABI-boundary outcome and rules out a semantic rename, build, or
+soak for this candidate. Independent companion-map, generated-tree,
+overlay-record, and caller-count checks agree. Audit:
+`docs/RENAME-S5126-AUDIT.md`. Next candidate: `osDpSetStatus`.
