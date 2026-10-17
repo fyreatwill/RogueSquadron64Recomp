@@ -182,3 +182,5 @@ MIPS64 ELF cross-toolchain (absent s5337/s5342/s5343; Apple clang has no MIPS
 target). Existing-artifact qualification stands. The unblock iteration (s5344)
 re-scoped the loop to an offline delay-slot/branch-operand hazard audit
 (`scratch/agent/NEXT.md`).
+
+- s5346: branch-in-delay-slot and branch-likely+mem-slot idiom classes are EMPTY in the main ELF (0/40,028; tools/audit_delay_slot_branch_in_slot.py, self-tested). Closed. Next M3 class: lwl/lwr pairs straddling a branch target.
