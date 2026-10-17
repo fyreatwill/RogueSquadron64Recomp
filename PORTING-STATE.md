@@ -159315,3 +159315,16 @@ This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
 semantic generated-symbol rename, build, or soak for this entry. Audit:
 `docs/RENAME-S5135-AUDIT.md`. Next candidate:
 `__osLeoAbnormalResume = 0x8002CBA4`.
+
+## Session 5136 (2026-10-17) — classified `__osLeoAbnormalResume` as unmaterialized
+
+Ran the bounded generated-symbol audit for companion `__osLeoAbnormalResume`
+at `0x8002CBA4`. The helper changed zero references and reported
+`already-synchronized`. The generated tree contains no placeholder, ABI
+declaration, body, overlay record, or direct caller for this address. The
+companion map independently defines a `0xE8` span ending at
+`__osLeoResume = 0x8002CC8C`.
+
+This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
+semantic generated-symbol rename, build, or soak for this entry. Audit:
+`docs/RENAME-S5136-AUDIT.md`. Next candidate: `__osLeoResume = 0x8002CC8C`.
