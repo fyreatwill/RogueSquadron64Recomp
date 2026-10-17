@@ -159868,3 +159868,17 @@ placeholder, or direct generated caller. The next companion symbol,
 body to validate. Preserved the ABI name and advanced the sweep. This rules out
 a materialized generated function at this candidate; it does not make a claim
 about the runtime implementation of the host wrapper.
+
+## Session 5178 (2026-10-17) — classified `osGetThreadPri` as unmaterialized
+
+Ran the required bounded generated-tree search and
+`rename_generated_symbols.py` helper for `osGetThreadPri = 0x80032FB0`, with
+competing outcomes recorded in `scratch/agent/NEXT.md`. The helper reported
+`already-synchronized` and renamed zero references in zero files. The tree has
+only the ABI declaration and a zero-size overlay record at offset `0x32B70`;
+searches found no generated body, placeholder, or direct generated caller.
+The companion map puts `osPiRawStartDma = 0x80033090` next, a nominal `0xE0`
+span with no body to validate. Preserved the ABI name and advanced the sweep.
+This rules out a materialized generated function at this candidate; it does
+not make a claim about the runtime implementation of the host wrapper. No
+build or soak was warranted for this naming-only result.

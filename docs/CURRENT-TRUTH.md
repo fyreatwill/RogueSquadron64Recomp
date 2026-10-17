@@ -234,6 +234,15 @@ or direct generated caller at the companion address. Its nominal span to
 the ABI name. Audit: `docs/RENAME-S5177-AUDIT.md`. The next candidate is now
 `osGetThreadPri = 0x80032FB0`.
 
+`osGetThreadPri = 0x80032FB0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`; the
+generated tree has only the ABI declaration and a zero-size overlay record at
+offset `0x32B70`, with no body, placeholder, or direct generated caller at the
+companion address. Its nominal span to `osPiRawStartDma = 0x80033090` is
+`0xE0`, with no body to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5178-AUDIT.md`. The next candidate is now
+`osPiRawStartDma = 0x80033090`.
+
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
 were retained below or in the project overview.
@@ -485,7 +494,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osGetThreadPri = 0x80032FB0`, whose next
+1. Resume the companion sweep with `osPiRawStartDma = 0x80033090`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value
