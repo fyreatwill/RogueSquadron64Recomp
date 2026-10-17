@@ -161485,3 +161485,17 @@ fragment was found. H1 is selected; H2 and H3 are ruled out for this address.
 No build or soak was warranted. Audit:
 `docs/RENAME-S5300-AUDIT.md`. Next: classify
 `spawnInheritedNpcVariantA = 0x8003F6E4`.
+
+## Session 5301 (2026-10-17) — generated-symbol sweep: `spawnInheritedNpcVariantA` is synchronized
+
+The bounded generated-symbol helper was run for companion record
+`spawnInheritedNpcVariantA = 0x8003F6E4` with `python3`; it reported
+`already-synchronized` and renamed zero references in zero files. Independent
+inspection found the named callable body in `RecompiledFuncs/funcs_9.c`, its
+header declaration, overlay record, and a direct caller in `funcs_37.c`. No
+`func_8003F6E4` placeholder or conflicting fragment was found. H1 is selected;
+H2 and H3 are ruled out for this address. No build or soak was warranted. The
+queued soak tail also recorded the existing `s5250` baseline/control outcomes
+(baseline `rc=77`, no-guard control `rc=1`); these were not rerun or used as
+the sweep discriminator. Audit: `docs/RENAME-S5301-AUDIT.md`. Next: classify
+`spawnInheritedNpcVariantB = 0x8003F880`.

@@ -1,9 +1,9 @@
-# Next: generated-symbol sweep — `spawnInheritedNpcVariantA`
+# Next: generated-symbol sweep — `spawnInheritedNpcVariantB`
 
-Work unit: classify companion symbol `spawnInheritedNpcVariantA = 0x8003F6E4`
-with the existing bounded renaming helper, then independently
-inspect its generated body, declaration, overlay record, callers, and any
-placeholder conflict. Do not change runtime code if it is already named.
+Work unit: classify companion symbol `spawnInheritedNpcVariantB = 0x8003F880`
+with the existing bounded renaming helper, then independently inspect its
+generated body, declaration, overlay record, callers, and any placeholder
+conflict. Do not change runtime code if it is already named.
 
 Competing hypotheses:
 
@@ -16,12 +16,13 @@ Competing hypotheses:
 
 Discriminator: the helper's edit count and independent generated-tree checks
 must distinguish a named callable, a placeholder rename, or a non-callable
-data/ABI boundary; no build or soak is warranted.
+data/ABI boundary; no build or soak is warranted for a classification-only
+result.
 
 Exact commands: run `python3 tools/rename_generated_symbols.py
 ../N64Recomp/RecompiledFuncs --companion-dir
-../rogue_squadron64/symbol_files --start-address 0x8003F6E4
---end-address 0x8003F6E8 --limit 1`, then grep the companion map and generated
+../rogue_squadron64/symbol_files --start-address 0x8003F880
+--end-address 0x8003F884 --limit 1`, then grep the companion map and generated
 tree for the address, symbol, placeholder, declaration, overlay record, and
 callers.
 

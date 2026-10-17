@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5300 (2026-10-17). The
+Compact operational handoff, maintained at Session 5301 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -568,6 +568,13 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5301:** `spawnInheritedNpcVariantA = 0x8003F6E4` is a named,
+  already-synchronized callable NPC routine; the helper made zero edits and
+  independent inspection found its body in `funcs_9.c`, declaration, overlay
+  record, and a direct caller with no placeholder or conflict. No build or
+  soak was warranted. Audit: `docs/RENAME-S5301-AUDIT.md`. The next bounded
+  sweep unit is `spawnInheritedNpcVariantB = 0x8003F880`.
 
 - **s5300:** `spawnChildNpcWithTransform = 0x8003F1D0` is a named,
   already-synchronized callable NPC routine; the helper made zero edits and
