@@ -259,10 +259,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
   HI/LO moves, 64-bit shifts, 32-bit multiplication, and 64-bit mul/div
   (s4975: 66 sites, 2 real, zero-divisor benign on arm64). Do not repeat a
   class without new recompiler or provenance evidence.
-- Conditional moves remain a genuine recompiler defect: all 179 generated
-  `movz`/`movn` sites emit `do_break`; one reachable nonzero-destination site
-  is identified, and s4842 attributes it to missing N64Recomp operation
-  support. No generated-file hand edit or runtime guard is authorized.
+- Conditional moves (`movz`/`movn`) were a recompiler defect but are DONE since s4970
+  (N64Recomp patch + `tools/fixup_movz_movn.py`; census 179/179 `do_break` -> 0/179).
 - Factor5 runaway-DL cause is known: op `0xBD` loads overlay `0x2C` (ROM
   `0x27368`, destination `0x1DB0`) without a route, restarting the task.
   Runaways occur in VI-640 and much of mission; splice effect remains parked.
@@ -597,3 +595,4 @@ s5038 result: force mq=16 (control), default mq=0, crash=0 on the keyed route =>
 Since s5042, the keyed title->hangar recipe (s5037 default) stalls: after title (phase 4, 1024/0x790400) the game goes to 640/0x696100 screens, never hangar 512/0x6AB400 (working s5037 reached hangar t=91, mission t=174). 6 straight failures (s5042-s5046). Refuted as cause: s5041/s5042 hooks (hook-free rebuild s5046 stalls identically; script tools/revert_s5041_s5042_hooks.py, dropped from RS64_REPLAY), save file (unchanged), poison/census/GUARD2 arms. Open: host load / stopwatch-driven keys vs s5038-s5040 mq census + lib weak hook. All free-poison / census-derived conclusions in s5041-s5045 entries remain valid only for phases up to title. Next: see scratch/agent/NEXT.md.
 
 - s5051: restored-tree rebuild still stalls nohangar under host load 5-7 (Chrome 108% CPU). H1 vs H3 undecided; needs a quiet-host rerun (see scratch/agent/NEXT.md).
+- s5053 open dependency: H1 vs H3 needs host load <2; run scratch/agent/s5048_preS5038_source.sh then (hangar=H1, nohangar=H3). Loop continues on offline work meanwhile.

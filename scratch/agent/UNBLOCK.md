@@ -1,4 +1,6 @@
-# UNBLOCK s5050
-Route taken: 1+2 (refute, then satisfy locally). The BLOCKED claim "needs a human Time Machine restore" was false: N64Recomp/scratch_s4970_live (Oct-13 pre-movz copy made at s4970) existed.
-Evidence: replayed fixup_movz_movn, s4981..s4994, s5034, s5036, s5037 (s5041/s5042 hooks net out via the revert) onto a scratch copy, compiled with build flags.make, compared __text per file against the surviving libRecompiledFuncs.a: 51/51 identical. Negative control: first pass without s5037 showed funcs_8.c differing (11 lines); replaying s5037 fixed it. funcs.h/lookup.cpp/recomp_overlays.inl identical to the clobbered copies.
-Installed as live; clobbered tree kept as N64Recomp/RecompiledFuncs.s5049-clobbered. Scripts: scratch/agent/s5050_replay.sh, s5050_s5037.sh, s5050_compare.py, s5050_install.py.
+# UNBLOCK s5053
+Route taken: 3 (re-scope). Routes 1-2 failed.
+Route 1 (refute): the H1-vs-H3 test needs the game to reach hangar via synthetic keys; no offline route gives the same answer, and no older known-good binary is retained as a same-host control.
+Route 2 (satisfy locally): needs load <2. Measured 17:07 load 6.41/5.58/5.43: Chrome Helper 109%, WindowServer 41%, bluetoothd 26%, REAPER 20%. Lowering it means quitting the user's apps, which is a human decision.
+Route 3: NEXT.md rewritten to an offline, game-free unit; open dependency recorded in CURRENT-TRUTH. BLOCKED.md removed because the loop can continue on work that doesn't need a quiet host.
+Observation that would refute my conclusion: load average <2 for a run of scratch/agent/s5048_preS5038_source.sh (hangar => H1, nohangar => H3).
