@@ -3106,7 +3106,7 @@ index f17db9b..5087cef 100644
                      }
                  }
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..6f2fb5c 100644
+index d1a9f4e..686f916 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -3564,6 +3564,15 @@ index d1a9f4e..6f2fb5c 100644
          const uint32_t DXTSwap = 0x800;
          uint32_t textureAddress, tmemAddress, wordCount, tmemMask, tmemAdvance;
          if constexpr (RGBA32) {
+@@ -452,7 +794,7 @@ namespace RT64 {
+         if ((tmemStride > 0) && ((wordsPerRow * tmemAdvance) <= tmemStride)) {
+             int32_t rowsToSkip = rowCount - (tmemMask + tmemStride) / tmemStride;
+             if (rowsToSkip > 0) {
+-                tmemAddressRow += (tmemAddressRow + tmemStride * rowsToSkip) & tmemMask;
++                tmemAddressRow = (tmemAddressRow + tmemStride * rowsToSkip) & tmemMask;
+                 textureAddressRow += textureStride * rowsToSkip;
+                 tmemXorMask = (rowsToSkip & 0x1) << 2;
+                 rowCount -= rowsToSkip;
 @@ -540,12 +882,207 @@ namespace RT64 {
              // Load into TMEM.
              uint8_t *TMEM8 = reinterpret_cast<uint8_t *>(TMEM);
@@ -4996,7 +5005,7 @@ index d1a9f4e..6f2fb5c 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_rdp_tmem.cpp b/src/hle/rt64_rdp_tmem.cpp
-index 6051f4e..e4a8fc3 100644
+index 6051f4e..c011d38 100644
 --- a/src/hle/rt64_rdp_tmem.cpp
 +++ b/src/hle/rt64_rdp_tmem.cpp
 @@ -6,6 +6,8 @@
@@ -5040,6 +5049,15 @@ index 6051f4e..e4a8fc3 100644
          const uint8_t *TMEM = reinterpret_cast<const uint8_t *>(state->rdp->TMEM);
          uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
          if (hashSet.find(hash) == hashSet.end()) {
+@@ -85,7 +112,7 @@ namespace RT64 {
+         }
+ 
+         // Dump the RDRAM last loaded into the TMEM address pointed to by the tile. Required for generating hashes used by Rice.
+-        const LoadOperation &loadOp = state->rdp->rice.lastLoadOpByTMEM[loadTile.tmem];
++        const LoadOperation &loadOp = state->rdp->rice.lastLoadOpByTMEM[loadTile.tmem & 511];
+         uint32_t rdramStart = loadOp.texture.address;
+         uint32_t rdramCount = 0;
+         uint32_t commonBytesOffset = (loadOp.tile.uls >> 2) << loadOp.texture.siz >> 1;
 diff --git a/src/hle/rt64_rsp.cpp b/src/hle/rt64_rsp.cpp
 index d4d9883..c5aeba0 100644
 --- a/src/hle/rt64_rsp.cpp
@@ -5169,7 +5187,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..85c8d76 100644
+index 10f98af..0da5a20 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -6036,6 +6054,15 @@ index 10f98af..85c8d76 100644
  
          const int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
+@@ -618,7 +1381,7 @@ namespace RT64 {
+             const auto &loadOp = workload.drawData.loadOperations[loadOpIndex];
+ 
+             // For emulating how Rice hashes textures, we need information about the load operation that was performed in the particular TMEM address.
+-            rdp->rice.lastLoadOpByTMEM[loadOp.tile.tmem] = loadOp;
++            rdp->rice.lastLoadOpByTMEM[loadOp.tile.tmem & 511] = loadOp;
+ 
+             switch (loadOp.type) {
+             case LoadOperation::Type::Block:
 @@ -640,6 +1403,113 @@ namespace RT64 {
              }
  

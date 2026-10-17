@@ -611,3 +611,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261017-082316 | s5242_maskon | rc=1 | 205s | scratch/agent/soak_results/s5242_maskon_20261017-082316.log
 20261017-082957 | s5243_envflag_ab | rc=1 | 333s | scratch/agent/soak_results/s5243_envflag_ab_20261017-082957.log
 20261017-084213 | s5246_head_arm_loadlog | rc=1 | 540s | scratch/agent/soak_results/s5246_head_arm_loadlog_20261017-084213.log
+20261017-091345 | s5250_taskptr_baseline | rc=77 | 0s | scratch/agent/soak_results/s5250_taskptr_baseline_20261017-091345.log
+20261017-091345 | s5250_taskptr_noguard | rc=1 | 543s | scratch/agent/soak_results/s5250_taskptr_noguard_20261017-091345.log
