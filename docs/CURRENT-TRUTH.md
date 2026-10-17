@@ -729,9 +729,17 @@ record, or direct caller at the companion address. Its nominal span to
 the ABI name. Audit: `docs/RENAME-S5213-AUDIT.md`. The next candidate is now
 `__osSetTimerIntr = 0x800349D4`.
 
+`__osSetTimerIntr = 0x800349D4` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+independent generated-tree searches found no body, placeholder, overlay
+record, or direct caller at the companion address. Its nominal span to
+`__osInsertTimer = 0x80034A48` is `0x178`, with no body to validate. Preserve
+the ABI name. Audit: `docs/RENAME-S5214-AUDIT.md`. The next candidate is now
+`__osInsertTimer = 0x80034A48`.
+
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSetTimerIntr = 0x800349D4`, whose
+1. Resume the companion sweep with `__osInsertTimer = 0x80034A48`, whose
    next candidate follows from its bounded symbol-map span, one entry per iteration.
    `strchr = 0x80034744` is now correctly named: its generated body, exact
    `0x4C` overlay span, and six independent callers agree. Audit:

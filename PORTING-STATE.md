@@ -160336,3 +160336,15 @@ nominal span). Preserve the existing ABI name. This rules out a generated-
 symbol rename and span mismatch for this candidate, not runtime behavior of
 the wrapper. Added `docs/RENAME-S5213-AUDIT.md`; no build or soak was warranted
 for this naming-only result.
+## Session 5214 (2026-10-17) — classified `__osSetTimerIntr` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol helper and independent generated-tree searches for
+`__osSetTimerIntr = 0x800349D4`. The helper reported `already-synchronized`
+and renamed zero references in zero files. No generated body, placeholder,
+overlay record, or direct call site exists at the companion address; the
+companion span ends at `__osInsertTimer = 0x80034A48` (`0x178` nominal span).
+Preserve the existing ABI name. This rules out a generated-symbol rename and
+span mismatch for this candidate, not runtime behavior of the wrapper. Added
+`docs/RENAME-S5214-AUDIT.md`; no build or soak was warranted for this
+naming-only result.
