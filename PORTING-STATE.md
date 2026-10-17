@@ -161027,3 +161027,15 @@ direct calls to `osYieldThread_recomp`, and the companion `INCLUDE_ASM`
 boundary in `src/libultra/os/yieldthread.c`. This rules out a safe generated
 placeholder rename and data-fragment classification for this address; retain
 the ABI name. Audit: `docs/RENAME-S5264-AUDIT.md`.
+
+## Session 5265 (2026-10-17) — generated-symbol sweep: `osWritebackDCacheAll` already synchronized
+
+Ran the bounded generated-symbol helper over exactly `0x80035930..0x80035980`.
+It renamed zero references in zero files and classified `osWritebackDCacheAll`
+as already synchronized. Independent checks found the defined companion symbol,
+ABI declaration, zero-size generated overlay record, and two direct generated
+callers, but no generated callable body or placeholder at the companion
+address; the implementation is supplied by the host libultra wrapper. This
+rules out a safe placeholder rename and data-fragment classification for this
+address. Preserve the ABI name. No build or soak was needed. Audit:
+`docs/RENAME-S5265-AUDIT.md`. Next candidate: `_Putfld = 0x80035960`.

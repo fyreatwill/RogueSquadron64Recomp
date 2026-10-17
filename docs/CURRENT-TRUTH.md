@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5263 (2026-10-17). The
+Compact operational handoff, maintained at Session 5265 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -373,6 +373,7 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+- **s5265:** `osWritebackDCacheAll = 0x80035930` is already synchronized: the bounded helper made zero edits, and independent checks show the defined companion symbol, ABI declaration, zero-size generated overlay record, and two direct callers, but no generated callable body or placeholder. Preserve the ABI name; no build or soak. Audit `docs/RENAME-S5265-AUDIT.md`. Next sweep candidate: `_Putfld = 0x80035960`.
 - **s5264:** `osYieldThread = 0x80037510` is already synchronized: the bounded helper made zero edits, and independent checks show the defined libultra symbol, no generated placeholder/body/overlay record, 20 direct ABI callers, and the companion `INCLUDE_ASM` boundary. Preserve the ABI name; no build or soak. Audit `docs/RENAME-S5264-AUDIT.md`. Next sweep candidate: `osWritebackDCacheAll = 0x80035930`.
 - **s5263:** `_Litob = 0x80037270` is already synchronized: the bounded helper made zero edits, and independent companion/generated-tree checks show the defined symbol, exact named body, declaration, overlay record, and three direct callers. No build or soak. Next sweep candidate: `osYieldThread = 0x80037510` (audit `docs/RENAME-S5263-AUDIT.md`).
 - **s5262:** `_Ldtob = 0x80036B90` is already synchronized: the bounded helper made zero edits, and the companion/generated trees independently show the defined symbol, exact named body, declaration, overlay record, and direct caller. Adjacent `lldiv` and `ldiv` entries were also already synchronized. No build or soak. Next sweep candidate: `_Litob = 0x80037270` (audit `docs/RENAME-S5262-AUDIT.md`).
