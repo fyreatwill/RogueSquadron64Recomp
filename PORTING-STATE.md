@@ -160151,3 +160151,17 @@ validate. Preserve the ABI name. This rules out an actionable generated rename
 at this entry, but does not bear on runtime behavior. No build or soak was
 warranted for this naming-only result. Audit: `docs/RENAME-S5199-AUDIT.md`.
 The next candidate is `bcopy = 0x80034010`.
+
+## Session 5200 (2026-10-17) — classified `bcopy` as correctly named
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `bcopy = 0x80034010`. The helper reported
+`already-synchronized` and renamed zero references in zero files. The
+generated tree contains a complete `bcopy_recomp` body from `0x80034010`
+through `0x8003431C`; the companion symbol map places
+`__osSpDeviceBusy = 0x80034320` next, giving an exact `0x310` span. One
+independent generated caller invokes `bcopy_recomp`. Preserve the existing
+ABI-semantic name. This rules out an actionable generated rename at this
+entry, but does not bear on runtime behavior. No build or soak was warranted.
+Audit: `docs/RENAME-S5200-AUDIT.md`. The next candidate is
+`__osSpDeviceBusy = 0x80034320`.

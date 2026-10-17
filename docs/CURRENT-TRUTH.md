@@ -155,6 +155,12 @@ invoke the host wrapper. Its nominal span to `bcopy = 0x80034010` is `0x44`,
 with no body to validate. Preserve the ABI name. Audit:
 `docs/RENAME-S5199-AUDIT.md`. The next candidate is now `bcopy = 0x80034010`.
 
+`bcopy = 0x80034010` is now classified as already correctly named: its
+generated body spans exactly `0x310` bytes to `0x80034320`, matching the next
+companion entry, and it has one independent generated caller. Preserve the
+ABI name. Audit: `docs/RENAME-S5200-AUDIT.md`. The next candidate is now
+`__osSpDeviceBusy = 0x80034320`.
+
 `__osGetOneChannelData = 0x80030A04` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
 `already-synchronized`, and the generated tree has no body, placeholder,
@@ -645,7 +651,7 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `bcopy = 0x80034010`, whose next
+1. Resume the companion sweep with `__osSpDeviceBusy = 0x80034320`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
