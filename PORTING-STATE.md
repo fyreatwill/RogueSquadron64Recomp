@@ -159727,3 +159727,16 @@ caller at `0x800059DC`. The nominal span to `osPfsChecker = 0x80030D40` is
 this rules out a justified generated-body rename for this candidate, not the
 broader libultra/ABI boundary classification. No build or soak was needed.
 Audit: `docs/RENAME-S5165-AUDIT.md`. Next candidate: `osPfsChecker`.
+
+## Session 5166 (2026-10-17) — classified `osPfsChecker` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osPfsChecker = 0x80030D40`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+searches of the generated tree found no body, placeholder, overlay record, or
+direct generated caller at the companion address. The companion symbol map
+places `osPfsIsPlug = 0x800317A0` next, giving a nominal `0xA60` span, but no
+body exists to validate against it. Preserve the ABI name; this rules out a
+justified generated-body rename for this candidate, not the broader
+libultra/ABI boundary classification. No build or soak was needed. Audit:
+`docs/RENAME-S5166-AUDIT.md`. Next candidate: `osPfsIsPlug`.

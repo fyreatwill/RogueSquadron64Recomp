@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5165 (2026-10-17). The
+Compact operational handoff, maintained at Session 5166 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -136,6 +136,8 @@ overlay record, or direct caller at the companion address. Its nominal span to
 the next companion entry, `osPfsInitPak = 0x80030AA0`, is `0x9C`, but no body
 exists to validate. Preserve the ABI name. Audit:
 `docs/RENAME-S5164-AUDIT.md`. The next candidate is now
+`osPfsInitPak = 0x80030AA0`.
+
 `osPfsInitPak = 0x80030AA0` is now classified as another unmaterialized
 libultra/ABI entry: the bounded helper reported `already-synchronized`; the
 generated tree has one direct caller and a zero-size host-wrapper record, but
@@ -143,6 +145,14 @@ no generated body or placeholder at the companion address. Its nominal span
 to `osPfsChecker = 0x80030D40` is `0x2A0`, with no body to validate. Preserve
 the ABI name. Audit: `docs/RENAME-S5165-AUDIT.md`. The next candidate is now
 `osPfsChecker = 0x80030D40`.
+
+`osPfsChecker = 0x80030D40` is now classified
+as another unmaterialized libultra/ABI entry: the bounded helper reported
+`already-synchronized`, and the generated tree has no body, placeholder,
+overlay record, or direct caller at the companion address. Its nominal span
+to `osPfsIsPlug = 0x800317A0` is `0xA60`, with no body to validate. Preserve
+the ABI name. Audit: `docs/RENAME-S5166-AUDIT.md`. The next candidate is now
+`osPfsIsPlug = 0x800317A0`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -334,6 +344,12 @@ were retained below or in the project overview.
   placeholder at the companion address. Its nominal span to
   `osPfsChecker = 0x80030D40` is `0x2A0`, with no body to validate. Preserve
   the ABI name. Audit: `docs/RENAME-S5165-AUDIT.md`.
+- `osPfsChecker = 0x80030D40` is another unmaterialized libultra/ABI entry:
+  the bounded helper reported `already-synchronized`, and the generated tree
+  has no body, placeholder, overlay record, or direct caller at the companion
+  address. Its nominal span to `osPfsIsPlug = 0x800317A0` is `0xA60`, with no
+  body to validate. Preserve the ABI name. Audit:
+  `docs/RENAME-S5166-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -389,7 +405,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osPfsChecker = 0x80030D40`,
+1. Resume the companion sweep with `osPfsIsPlug = 0x800317A0`,
    whose next candidate is the following symbol in the companion map, one entry
    per iteration while the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value
