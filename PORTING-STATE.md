@@ -160222,3 +160222,16 @@ validate. Preserve the existing ABI-semantic name. This rules out a
 generated-symbol rename for this ABI boundary, not the runtime implementation
 of the host wrapper. Added `docs/RENAME-S5204-AUDIT.md`; no build or soak was
 warranted for a naming-only result.
+
+## Session 5205 (2026-10-17) — classified `__osSpSetStatus` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `__osSpSetStatus = 0x80034420`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found no body, placeholder, overlay record, or direct
+generated caller at the companion address; the next companion entry is
+`__osSpGetStatus = 0x800344D0`, giving a nominal `0xB0` span with no body to
+validate. Preserve the existing ABI-semantic name. This rules out a
+generated-symbol rename for this ABI boundary, not the runtime implementation
+of the host wrapper. Added `docs/RENAME-S5205-AUDIT.md`; no build or soak was
+warranted for a naming-only result.

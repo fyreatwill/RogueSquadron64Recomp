@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5203 (2026-10-17). The
+Compact operational handoff, maintained at Session 5205 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -186,6 +186,14 @@ companion address. Its nominal span to `__osSpSetPc = 0x800343E0` is `0x90`,
 with no body to validate. Preserve the ABI name. Audit:
 `docs/RENAME-S5202-AUDIT.md`. The next candidate is now
 `__osSpSetPc = 0x800343E0`.
+
+`__osSpSetStatus = 0x80034420` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated tree has no body, placeholder, overlay record, or direct
+generated caller at the companion address. Its nominal span to
+`__osSpGetStatus = 0x800344D0` is `0xB0`, with no body to validate. Preserve
+the ABI name. Audit: `docs/RENAME-S5205-AUDIT.md`. The next candidate is now
+`__osSpGetStatus = 0x800344D0`.
 
 `__osGetOneChannelData = 0x80030A04` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
@@ -678,7 +686,7 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSpSetStatus = 0x80034420`, whose next
+1. Resume the companion sweep with `__osSpGetStatus = 0x800344D0`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration
    now that the last-15 preflight has been broken by the retail revisit. The
    retail entry boundary remains open only for a port-side join. The M4 page
