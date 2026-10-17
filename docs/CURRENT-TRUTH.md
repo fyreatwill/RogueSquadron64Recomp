@@ -108,7 +108,7 @@ conflicting fragments. Audit files are `docs/RENAME-S*.md`.
 1. Keep the M4 accumulator boundary parked unless a complete task-keyed port
    sampler at a retail-comparable instruction/step boundary can be built.
 2. Resume the generated-symbol sweep; the preceding-15-title revisit rule is
-   now cleared by Session 5321. The next candidate remains
+   now cleared by Session 5321. The next candidate is
    `load_level_hmp = 0x80043D74`.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
