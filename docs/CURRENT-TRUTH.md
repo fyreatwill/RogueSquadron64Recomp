@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5225 (2026-10-17). The
+Compact operational handoff, maintained at Session 5226 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -14,13 +14,15 @@ qualified image route; the silent `ROGUESQ_AUDIO_UCODE=0` path is only a
 control. Mission input reaches the game and changes the player vehicle state.
 
 The current bounded work is still the writer of the mission-entry source
-byte. Session 5224 showed retail's modal byte is `0x00` and the port's is
-`0x03`. Session 5225's census selects H-wrong-candidate for the two words
-guessed from the first s5223 samples: retail's 41 mission `s0` values are
-`0x80190E50 + i*0x88`, and none of their `s0+0x22` bytes lie in
-`0x191070:0x191074` or `0x1951B0:0x1951B4`. The mission-phase writer tables
-for those words are empty. No guard. Audit:
-`docs/REVISIT-S5225-SOURCE-BYTE-CENSUS.md`. The renaming sweep is
+byte. Retail's modal byte is `0x00` and the port's is `0x03` (s5224).
+The retail `s0` base is not one stride: s5225 entered on
+`0x80190E50 + i*0x88`, and s5226 entered on `0x80195190 + i*0x88`.
+Session 5226 watched the first stride. Its mission-origin writer tables
+are empty (overflow 0) while that stride is written at other times by
+`0x80090F3C` (`sb` of constant 0 at `+0x22`) and `0x80090F8C` (`sb` of
+constant 1). Those are not the bytes this run's entry read. No guard.
+Audits: `docs/REVISIT-S5225-SOURCE-BYTE-CENSUS.md`,
+`docs/REVISIT-S5226-SOURCE-BYTE-WRITERS.md`. The renaming sweep is
 paused at `_Putfld = 0x80035960`. The last
 candidates, `cosf = 0x8002B190`, `osCreateMesgQueue = 0x8002B300`, and
 `osCreateThread = 0x8002B330`, were already synchronized: `cosf` has its
@@ -148,18 +150,21 @@ tuples for a future port-side join but does not identify a port writer or
 prove a port defect. Audit: `docs/REVISIT-S5203-RETAIL-ENTRY-FIELDS.md`.
 
 Session 5223 joined that contract on the port and selected H-field-diff on
-the capped retail set. Session 5224 replaced that set with a 256-bin
-frequency count of every mission-origin hit. Retail `0x00690400` /
-`0x00620400` are `0x00` on 119949/121195 and 126435/127740 hits, `0x01` on
-the rest except 3 stray hits, and `0x03` on 0. The port is `0x03` on
-79212/79362 and 79385/79498. Controls: port `[s5223-armed]`, both bin sums
-equal the entry counts; retail whole-RDRAM watch reached 10000 writes at
-vi=1 and both mission origins occurred. This selects H-port-byte-diverges
-and refutes H-retail-cap-blind. Session 5225 then showed those bytes are
-not in the two words guessed from the first three `s0` samples. No guard.
-The writer is open. Audits: `docs/REVISIT-S5223-PORT-ENTRY-JOIN.md`,
+the capped retail set. Session 5224's full histograms select
+H-port-byte-diverges: retail modal `0x00`, retail `0x03` count 0, port
+modal `0x03`. Session 5225 showed the first three port `s0` samples were
+the wrong words and recorded retail `s0` as `0x80190E50 + i*0x88`.
+Session 5226 watched that stride. Controls passed, but this run's census
+is the other stride, `0x80195190 + i*0x88`, still modal `0x00` with
+`0x03` count 0. The watched words have no writer during either mission
+origin. Their lifetime offset-`0x22` stores are constant 0
+(`0x80090F3C`) and constant 1 (`0x80090F8C`), so neither writes the
+`0x03` the port observes, and neither ran during the watched origins.
+The live entry byte's writer is still open. No guard. Audits:
+`docs/REVISIT-S5223-PORT-ENTRY-JOIN.md`,
 `docs/REVISIT-S5224-SOURCE-BYTE-HIST.md`,
-`docs/REVISIT-S5225-SOURCE-BYTE-CENSUS.md`.
+`docs/REVISIT-S5225-SOURCE-BYTE-CENSUS.md`,
+`docs/REVISIT-S5226-SOURCE-BYTE-WRITERS.md`.
 
 `__osPfsRequestOneChannel = 0x80030944` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
@@ -400,8 +405,9 @@ were retained below or in the project overview.
   DMA remain parked. The retail entry boundary's port join matches the
   retained caller and s0/s1/v0 constraints. Session 5224's full histograms
   make the `s0+0x22` difference quantitative: retail modal `0x00`, port
-  modal `0x03`, retail `0x03` count 0. Session 5225's census puts those
-  bytes at `0x190E72 + i*0x88`, not in the two sample words. Do not rename `bcmp_recomp` or
+  modal `0x03`, retail `0x03` count 0. Retail's entry stride is one of
+  `0x80190E50` (s5225) or `0x80195190` (s5226); do not watch only one
+  of them. Do not rename `bcmp_recomp` or
   `bzero_recomp` back to
   the unsuffixed libc names: those globals interpose libSystem and SIGSEGV
   in `RT64::GBIManager`.
@@ -624,9 +630,11 @@ were retained below or in the project overview.
   the follow-on claim that those capped rows hid a modal `0x03`: every
   mission-origin hit has retail `0x03` = 0 and modal `0x00`. The port modal
   `0x03` is a real field difference. Session 5225 refutes the follow-on
-  guess that the first three port `s0` samples were the addresses to watch:
-  `0x80190E50+0x22` is `0x190E72`, not `0x191072`, and retail never enters
-  with `s0=0x80195190`. No writer and no guard yet.
+  guess that the first three port `s0` samples were the addresses to watch.
+  Its own "retail never enters with `s0=0x80195190`" was that run's census
+  only. Session 5226 entered on exactly that stride, with the same modal
+  `0x00` and `0x03` count 0. Watching only `0x80190E50` does not name the
+  writer. No guard yet.
 
 `osSetEventMesg = 0x80033560` is now classified as another unmaterialized
 libultra/ABI entry: the bounded helper reported `already-synchronized`, and
@@ -836,13 +844,15 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Name the writer of the mission-entry byte at `s0+0x22` on the retail
-   census addresses, not the two s5223 sample words. Retail's mission `s0`
-   values are `0x80190E50 + i*0x88` (`i=0..40`); the bytes are
-   `0x190E72 + i*0x88`. Do not add another histogram and do not guard.
-   The sweep stays paused at `_Putfld = 0x80035960`. The M4 page writer
-   remains phase-attributed on the retail route only; its port-side value
-   origin stays parked. The writer plan is `scratch/agent/NEXT.md`.
+1. Name the writer of the live mission-entry byte at `s0+0x22`. Retail
+   uses two strides, `0x80190E50` and `0x80195190` (`i=0..40`, stride
+   `0x88`); one run sees one of them. Cover both in the same run, and
+   bucket the mission pair origins `0x00690400`, `0x00690800`,
+   `0x00620400`, and `0x00620800`. Do not add another histogram and do
+   not guard. The sweep stays paused at `_Putfld = 0x80035960`. The M4
+   page writer remains phase-attributed on the retail route only; its
+   port-side value origin stays parked. The writer plan is
+   `scratch/agent/NEXT.md`.
 2. If a new M5 step is selected, write its design and validation row in
    `docs/M5-AUDIO-PLAN.md` before changing runtime behavior.
 3. When MIPS GCC is supplied, configure and qualify `PatchesLib`; record

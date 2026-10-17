@@ -160585,3 +160585,46 @@ This selects H-wrong-candidate. It refutes H-same-writer-different-value
 and H-different-writer for the two sample words. The sample word
 `0x191072` was not `0x80190E50+0x22`; that byte is `0x190E72`. No guard.
 Audit: `docs/REVISIT-S5225-SOURCE-BYTE-CENSUS.md`.
+
+## Session 5226 (2026-10-17) — entry stride is not the stride that was watched
+
+HYPOTHESIS-ID: source-byte-writer. The planned unit was one retail oracle
+run naming the PC that stores offset `0x22` of `s0 = 0x80190E50 + i*0x88`
+during mission origins `0x00690400` and `0x00620400`. No port rebuild.
+No new soak verdicts were unconsumed. The script is
+`scratch/agent/s5226_retail_byte_writers.sh`.
+
+`scratch/agent/s5226_retail_byte_writers/oracle.log` stopped itself
+(`killed_overrun=0`) at 420.4s wall, 25189 VI. Whole-RDRAM watch index
+0 reached 10000 writes at vi=1 (removal rc=0). All 42 write watches
+armed. Both mission origins occurred: 4259 and 4111 frames at width
+512. Census sums equal the hit counts, 41 slots, overflow 0:
+`0x00690400` 123839, `0x00620400` 124299. The same-run byte histogram
+matches those hits. `0x03` is 0. Modal `0x00` is 122523 and 123031.
+Strays are one `0xF0` and one `0x02`.
+
+The census base is `0x80195190 + i*0x88`, not `0x80190E50 + i*0x88`.
+Re-parsing the s5225 log confirms that earlier run really was the
+`0x80190E50` stride. The watches this run armed
+(`0x190E70 + i*0x88`) do not contain this run's entry byte
+(`0x1951B2 + i*0x88`). The mix loop indexes two pointers at
+`0x80149708`; these two bases are the candidates, and this run did
+not watch the pointers.
+
+`writer-pc-phase` printed 82 headers, no PC rows, overflow 0. Nothing
+wrote the watched words during either exact origin. Lifetime writes
+are 777904 with no histogram overflow. Offset `0x22` stores are
+`0x80090F3C` (`sb $zero, 0x22($v0)`, 249787, all 41 words, per-word
+1391..8273) and `0x80090F8C` (constant 1, 14628, all 41 words).
+`0x80090720` and `0x80090780` are the same 249787-hit update at
+offsets `0x20` and `0x21`, not `0x22`. `0x800909CC` and `0x800909D4`
+are halfword copies at offsets `0x70` and `0x72` in
+`musyxRenderVoiceSamples` and land only in watches 23..41.
+`0x800078EC` is a byte fill, exactly 4 hits per word.
+`0x80018F5C`, `0x80018F60`, and `0x80018F80` are a dword copy and its
+tail. None of these PCs appears in a mission-origin phase row.
+
+This does not select H-const-zero, H-const-one, or H-other for the
+byte the entry read. It selects that a qualified retail entry uses
+the other stride, so one stride's writer table cannot name the byte.
+No guard. Audit: `docs/REVISIT-S5226-SOURCE-BYTE-WRITERS.md`.
