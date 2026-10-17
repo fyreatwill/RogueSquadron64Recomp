@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5201 (2026-10-17). The
+Compact operational handoff, maintained at Session 5203 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -129,6 +129,15 @@ This is single-source evidence for `H-retail-branch-diff`, not a port
 explanation: the containing function is live, but the previously watched
 interior path is not. Preserve the boundary as open pending a second source
 or a port-side join. Audit: `docs/REVISIT-S5183-RETAIL-FUNCTION-GATE.md`.
+
+Session 5203 repeated that boundary with a bounded entry field dump. With the
+whole-RDRAM and both mission VI controls positive, retail entered
+`fillSampleStreamRange = 0x8008FAAC` 290,798 times, while exact interior
+`0x800903F0` remained at zero. The entry dump retained 145,514 phase-gated
+hits before its row cap; the interior dump retained zero. This is still
+single-source oracle evidence for `H-retail-branch-diff`: it supplies entry
+tuples for a future port-side join but does not identify a port writer or
+prove a port defect. Audit: `docs/REVISIT-S5203-RETAIL-ENTRY-FIELDS.md`.
 
 `__osPfsRequestOneChannel = 0x80030944` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
@@ -338,8 +347,9 @@ were retained below or in the project overview.
   (ROM `0x27368`, destination `0x1DB0`) without a route. The splice effect
   remains parked.
 - Native hangar artifacts (rim band, holo spikes, stale right edge) remain
-  localized. M4 accumulator origin, pillar references, `0x1F0D74`, odd PI
-  DMA, and external retail-entry are parked pending a new discriminator.
+  localized. M4 accumulator origin, pillar references, `0x1F0D74`, and odd PI
+  DMA remain parked. The retail entry boundary now has a new single-source
+  branch-difference result, but its port-side value origin remains open.
 - The Session 5147 retail page-writer revisit passed whole-RDRAM, hangar, and
   mission controls and found 1,026,749 writes to `0x1F0000:0x1F1000` with
   lifetime guest-PC attribution, dominated by `0x800078EC`. The oracle's
@@ -669,11 +679,11 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 ## Next steps (single monotonic backlog)
 
 1. Resume the companion sweep with `__osSpSetPc = 0x800343E0`, whose next
-   candidate follows from its bounded symbol-map span, one entry per iteration while
-   the last-15 session preflight permits it. The retail function-entry revisit
-   is single-source and does not close the exact interior boundary. The M4 page
-   writer is now phase-attributed on the retail route, but the port-side value
-   origin remains open and requires a new discriminator before reopening.
+   candidate follows from its bounded symbol-map span, one entry per iteration
+   now that the last-15 preflight has been broken by the retail revisit. The
+   retail entry boundary remains open only for a port-side join. The M4 page
+   writer is phase-attributed on the retail route, but its port-side value
+   origin remains open.
 2. If a new M5 step is selected, write its design and validation row in
    `docs/M5-AUDIO-PLAN.md` before changing runtime behavior.
 3. When MIPS GCC is supplied, configure and qualify `PatchesLib`; record

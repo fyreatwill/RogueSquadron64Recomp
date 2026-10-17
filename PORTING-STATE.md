@@ -160190,3 +160190,22 @@ to validate. Preserve the existing ABI-semantic name. This rules out a
 generated-symbol rename for this ABI boundary, not the runtime implementation
 of the host wrapper. Added `docs/RENAME-S5202-AUDIT.md`; no build or soak was
 warranted for a naming-only result.
+
+## Session 5203 (2026-10-17) — revisited retail sample-stream entry with bounded field evidence
+
+HYPOTHESIS-ID: retail-entry-range-revisit. The first attempted range-watch
+arm was invalid because the whole-RDRAM positive control combined with the
+per-instruction range watch generated an unbounded 4.3 GB trace; the process
+group was stopped with SIGKILL and that arm is excluded from evidence. The
+fixed retail-oracle run used exact execution watches at
+`fillSampleStreamRange = 0x8008FAAC` and interior `0x800903F0`, plus bounded
+field dumps, whole-RDRAM control, and both mission VI origins. The control
+fired; VI origin rows were 40 at `0x00690400` and 46 at `0x00620400`; the run
+completed normally after 270 seconds. The entry executed 290,798 times
+(155,501 retained hit rows), while the interior executed zero times and had
+zero field rows. The entry field dump retained 145,514 phase-gated hits before
+its retention cap. This selects `H-retail-branch-diff` as single-source oracle
+evidence and supplies entry tuples for a future port-side join, but does not
+identify the port writer or prove a port defect. Added
+`docs/REVISIT-S5203-RETAIL-ENTRY-FIELDS.md`; no runtime change or soak was
+warranted.
