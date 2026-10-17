@@ -1,10 +1,23 @@
 # Next: rerun M4 shared-boundary sampler through hangar
 
-Work unit: one phase-gated comparison using the now-landed sampler. Run the
-port with the proven title-to-hangar recipe from `s5099`/`s4959` (wait for
-`0x00790400`, then send Start/A keys until `0x006AB400` appears), and run the
-retail cxd4 arm with the same title-to-hangar key schedule. Use stride 1 only
-in the retail dump. Do not add a mitigation.
+RESUME: Session 5326 completed the sampler build and positive controls but did
+not reach hangar. Do not repeat that title-only run. For the next actual work
+unit, build the already instrumented port, rebuild cxd4, then launch both arms
+with the title-observed key schedule. The port recipe is:
+
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix && make all
+cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
+env PROBE_PHASE_WIDTH=512 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+  PROBE_KEYS='2:start 8:a 14:start 20:a' \
+  zsh tools/probe.sh scratch/agent/m4-port-next 240 1
+```
+
+Use the same title-observed Start/A schedule for the cxd4 capture, with
+`RS64_RSP_MID_STRIDE=1`; retain whole-RDRAM and VI positive controls. The
+comparison is valid only if both arms reach `0x006AB400` at width 512. Do not
+add a mitigation or infer from synthetic stage ordinals.
 
 Competing hypotheses and discriminator:
 

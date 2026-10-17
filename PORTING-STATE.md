@@ -161775,3 +161775,15 @@ phase 3, width 640, origin `0x0066A500`. H3 is selected; no exact target
 task/PC join, accumulator conclusion, or mitigation is justified. The next
 run must use the title-observed key schedule from the proven hangar recipe.
 Audit: `docs/REVISIT-S5326-M4-SHARED-BOUNDARY-RESULT.md`.
+
+## Session 5327 (2026-10-17) — checkpointed M4 sampler retry after H3
+
+This was a retry close-out after the primary work unit stopped early. I did
+not rerun the sampler. The existing 5326 audit is the available evidence:
+the corrected cxd4 stride call site produced 136,872 bytes of RSM1 records,
+10,000 whole-RDRAM positive-control callbacks, and 479 VI samples, while the
+driven retail arm remained at title/VI 640 and the port remained at phase 3,
+width 640, origin `0x0066A500`. H3 remains selected because there is no shared
+512-wide hangar key and therefore no exact task/PC comparison. The next
+discriminator is the title-observed Start/A schedule, recorded in
+`scratch/agent/NEXT.md`; no accumulator mitigation is authorized.
