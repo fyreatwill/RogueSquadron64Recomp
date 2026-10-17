@@ -40818,3 +40818,12 @@ if os.environ.get("RS64_SKIP_REPLAY") != "1":
     print(f"[s4648-replay] failures={_rs64_fail}")
     if _rs64_fail:
         sys.exit(f"s4648 replay: {_rs64_fail} apply script(s) failed")
+    # s5090: post-condition. A replay script can exit 0 without patching (s5085: the regen
+    # shipped funcs_26.c with no s4296 yield and mission soaks spun in A14).
+    _rs64_f26 = pathlib.Path(base) / "funcs_26.c"
+    if _rs64_f26.exists() and "PATCH: s4296 A14 spin yield" not in _rs64_f26.read_text(errors="replace"):
+        sys.exit("s4648 replay: funcs_26.c lacks the s4296 A14 yield marker after replay")
+    print("[s4648-replay] post-condition ok: s4296 A14 yield marker present")
+else:
+    print("[s4648-replay] WARNING: RS64_SKIP_REPLAY=1 - s4296 A14 yield and other replayed patches NOT applied;"
+          " run tools/check_a14_yield_patch.py before any soak")
