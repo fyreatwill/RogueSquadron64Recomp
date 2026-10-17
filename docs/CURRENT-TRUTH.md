@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5124 (2026-10-17). The
+Compact operational handoff, maintained at Session 5125 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -18,7 +18,9 @@ candidates, `cosf = 0x8002B190`, `osCreateMesgQueue = 0x8002B300`, and
 `osCreateThread = 0x8002B330`, were already synchronized: `cosf` has its
 generated body, exact `0x170` span, and 75 callers; the two libultra entries
 are zero-size host-wrapper/ABI entries with 28 and 10 generated call sites.
-The next candidate is `osDestroyThread = 0x8002B480`.
+`osDestroyThread = 0x8002B480` is also a zero-size host-wrapper/ABI entry with
+one generated caller and no body to rename. The next candidate is
+`osDpGetCounters = 0x8002B590`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -116,7 +118,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osDestroyThread = 0x8002B480` using the bounded rename helper.
+1. Audit `osDpGetCounters = 0x8002B590` using the bounded rename helper.
    Rename only if the generated body, exact next-entry span, semantic mapping,
    and live caller all agree; otherwise preserve the ABI name and record the
    classification.

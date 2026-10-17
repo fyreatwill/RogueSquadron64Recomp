@@ -159180,3 +159180,15 @@ host-wrapper/ABI-boundary outcome and rules out a semantic rename, build, or
 soak for this candidate. Independent companion-map, generated-tree,
 overlay-record, and caller-count checks agree. Audit:
 `docs/RENAME-S5124-AUDIT.md`. Next candidate: `osDestroyThread`.
+## Session 5125 (2026-10-17) — classified `osDestroyThread` as host wrapper
+
+Ran the bounded generated-symbol audit for companion
+`osDestroyThread = 0x8002B480`. The companion map names the entry, but the
+generated snapshot contains only the `osDestroyThread_recomp` ABI declaration
+and one direct call site; its overlay entry has `rom_size = 0`, with no
+generated body or exact span. The rename helper changed zero references and
+reported `already-synchronized`. This selects the host-wrapper/ABI-boundary
+outcome and rules out a semantic rename, build, or soak for this candidate.
+Independent companion-map, generated-tree, overlay-record, and caller-count
+checks agree. Audit: `docs/RENAME-S5125-AUDIT.md`. Next candidate:
+`osDpGetCounters`.
