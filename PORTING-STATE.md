@@ -161560,3 +161560,13 @@ named caller was found in the generated tree, but the overlay entry is present.
 This selects H1 and rules out H2/H3 for this candidate. No build or soak was
 warranted. Audit: `docs/RENAME-S5306-AUDIT.md`. The next bounded candidate is
 `destroyNpcContextArrays = 0x8003FDD8`.
+## Session 5307 (2026-10-17) — generated-symbol sweep: `destroyNpcContextArrays` is synchronized
+
+Ran the bounded generated-symbol helper for `destroyNpcContextArrays` at
+`0x8003FDD8`; it reported `already-synchronized` and renamed zero references
+in zero files. Independent inspection found the companion symbol-map entry,
+named generated body and declaration, overlay record, and a named generated
+caller from `endMissionCleanup`. No `func_8003FDD8` placeholder or conflicting
+fragment was present. This selects the already-synchronized hypothesis and
+rules out a rename or data/ABI preservation case. No build or soak was needed;
+the next candidate is `spawnNpcWithSubtype` at `0x8003FE9C`.
