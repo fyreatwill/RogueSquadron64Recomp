@@ -161964,3 +161964,20 @@ the local MIPS linker relinked the existing assembly object with exit 0. These
 observations qualify the existing artifact-to-host path, not a fresh
 source-to-MIPS build. The external compiler remains an open dependency for
 that final qualification step. No runtime or mitigation change was made.
+
+## Session 5340 (2026-10-17) — isolated generated PatchesLib prototype defect
+
+The prescribed existing-artifact qualification ran from a clean generated
+host source. `./build/N64Recomp patches.toml` succeeded and regenerated 11
+functions, but the direct Clang command failed because
+`findAndUnlinkSmallestEntry` is called from `RecompiledPatches/patches.c` and
+is absent from the generated `funcs.h` declaration list. The first `ar`/`nm`
+attempt was invalidated because the shell continued after the compile error;
+the stale archive was not used as evidence.
+
+As a fixed control, an external prototype shim allowed Clang and `ar` to
+complete. `nm` then showed `allocateDisplayListBuffer` defined and
+`findAndUnlinkSmallestEntry` unresolved, which is the expected host-object
+boundary. This isolates the failure to the generated declaration path, not
+the ELF recompile, host compiler, or archiver. It does not qualify a fresh
+MIPS source build, and no runtime or mitigation change was made.

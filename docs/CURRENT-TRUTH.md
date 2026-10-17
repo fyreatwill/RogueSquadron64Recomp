@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5339 (2026-10-17).
+Compact operational handoff, maintained at Session 5340 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -92,9 +92,13 @@ this discriminator; no writer or mitigation follows. See
   closed on the qualified route with positive controls. The fresh MIPS
   source-to-ELF step remains blocked: this host has neither `mips64-elf-gcc`
   nor `mips64-elf-ld`, and Clang has no MIPS target. The existing
-  `patches.elf` is usable for a separate host-side qualification: N64Recomp
-  regenerated `RecompiledPatches/patches.c`, Clang compiled it, and `ar`
-  archived it successfully in Session 5339. This does not replace the missing
+  `patches.elf` is usable for a separate host-side qualification, but Session
+  5340 corrected the earlier claim that the direct command already compiled
+  cleanly: N64Recomp regenerated 11 functions, then Clang rejected the
+  generated call to `findAndUnlinkSmallestEntry` because `funcs.h` declares
+  only the entrypoint. Supplying that prototype externally makes Clang and
+  `ar` pass; `nm` shows `allocateDisplayListBuffer` defined and the helper
+  unresolved as expected for a host object. This does not replace the missing
   cross-compiler for a fresh source qualification.
 
 ### Generated symbols
@@ -150,9 +154,10 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    candidate or companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
-4. Qualify the host-side PatchesLib artifact from the existing `patches.elf`:
-   regenerate with N64Recomp, compile `RecompiledPatches/patches.c`, archive
-   it, and verify the override symbol. This needs no MIPS compiler.
+4. Repair or regeneration-proof the missing host prototype for
+   `findAndUnlinkSmallestEntry`, then rerun the host-side PatchesLib
+   qualification from the existing `patches.elf`; the external-prototype
+   control is only a diagnostic and must not be mistaken for a generator fix.
 5. Complete fresh PatchesLib source qualification when the external
    `mips64-elf-gcc` and `mips64-elf-ld` toolchain is supplied; record the
    generation, compile, and link outcomes.
