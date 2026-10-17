@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5296 (2026-10-17). The
+Compact operational handoff, maintained at Session 5297 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -65,15 +65,16 @@ port's `0x03`. No guard. Audits: `docs/REVISIT-S5183-*`, `S5203-*`, `S5223..S522
 
 This file was compacted at S5245 (maintenance); history is in git.
 
-Session 5296's new-angle M4 revisit reanalyzed the qualified retail RSM1/RSD1
-capture. All 3,036,036 mid-task records and 6,533 end-task records passed
-format/sequence controls; all 2,085 retail graphics tasks ended with zero
-0x8000 lanes. Mid-task retail had 367,023 sampled 0x8000 lanes across 20+
-populated sample PCs, led by 0x0B18/0x0B20/0x0B1C/0x0B34/0x0B14 rather than
-one unique PC. The RSM1 sequence is a global sample ordinal, not a task ID, so
-per-task prevalence and publication ordering remain unevaluable. This is
-single-source retail provenance with an independent end-task control; no port
-mitigation follows. Audit: `docs/REVISIT-S5296-M4-MID-PC-PROVENANCE.md`.
+Session 5296's new-angle M4 revisit found that the old RSM1 sequence was not a
+task key. Session 5297 added a task serial to both the cxd4 mid-task and
+completion records and reran the qualified retail route. All 3,020,766
+mid-task records and 2,083 graphics completion records passed format and join
+controls; every graphics task joined. 1,222/2,083 joined tasks had a transient
+`0x8000` lane at mid-task sample time, across many RSP PCs, while 0/2,083 had
+one at task end. This closes the task-key failure but does not select H1 vs H2:
+the retained port capture is row-capped and not task-keyed at comparable
+coverage. No port mitigation follows. Audit:
+`docs/REVISIT-S5297-M4-TASK-JOIN.md`.
 
 ## Durable state
 
@@ -547,12 +548,13 @@ generated reference. Preserve the data name. Audit:
 
 ## Next steps (single monotonic backlog)
 
-- **s5296:** The retail mid-task `0x8000` state is sampled across multiple RSP
-  PCs, while the independent end-task stream remains zero. The RSM1 sequence
-  cannot join samples to tasks, so the M4 publication/order boundary remains
-  open. Add an explicit task serial to the cxd4 mid-task record and rerun the
-  same qualified route, or obtain an equivalent task-keyed join. Do not add a
-  mitigation or resume the generated-symbol sweep until this revisit is done.
+- **s5297:** The cxd4 task serial joins every one of 2,083 retail graphics
+  tasks: 1,222 have a mid-task `0x8000` lane and 0 have one at task end, with
+  positive VI and whole-RDRAM controls. H3 (unevaluable task join) is refuted,
+  but H1 versus H2 still requires comparable per-task port prevalence. Add the
+  same task serial to the port-side mid-task/task-end capture and compare the
+  complete per-task table. Do not add a mitigation or resume the generated-
+  symbol sweep before that comparison.
 
 - **s5293:** `allocateNpcSlot = 0x8003E5F8` is a named, already-synchronized
   callable NPC free-list allocator; the helper made zero edits and independent

@@ -161428,3 +161428,21 @@ provenance with an independent end-task control, not a port explanation. No
 mitigation was added. The next M4 unit is to add an explicit task serial to the
 cxd4 mid-task record and rerun the same qualified route, or obtain an equivalent
 task-keyed join. Audit: `docs/REVISIT-S5296-M4-MID-PC-PROVENANCE.md`.
+
+## Session 5297 (2026-10-17) — M4 task-keyed retail accumulator join
+
+The cxd4 RSP probe was extended with a monotonically increasing task serial in
+both `RSM1` mid-task records and `RSD1` completion records. The plugin rebuilt
+successfully; the default Make target only printed help, so the explicit `all`
+target was required. One qualified 75-second retail run collected 3,020,766
+mid-task records and 2,083 graphics completion records. Four VI width controls
+and the whole-RDRAM watch passed, and all 2,083 graphics task serials joined
+with no unmatched mid-task task.
+
+The joined table contains transient `0x8000` in 1,222/2,083 tasks, across many
+RSP PCs, while 0/2,083 completion records contain `0x8000`. This refutes the
+prior task-key failure (H3) and establishes retail per-task prevalence, but it
+does not select H1 versus H2 because the retained port capture is row-capped
+and not task-keyed at comparable coverage. No mitigation was added. The next
+unit is a complete task-keyed port comparison. Audit:
+`docs/REVISIT-S5297-M4-TASK-JOIN.md`.

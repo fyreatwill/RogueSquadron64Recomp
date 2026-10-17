@@ -1,35 +1,34 @@
-# Next: M4 task-keyed retail accumulator join
+# Next: M4 task-keyed port accumulator comparison
 
-Work unit: add an explicit graphics-task serial to the cxd4 `RSM1` mid-task
-record, rebuild only the oracle plugin, and rerun the existing qualified
-retail route. The serial must be captured at task entry and copied into every
-mid-task sample until the corresponding task ends. Keep the existing RSD1
-completion dump and whole-RDRAM watch as same-run positive controls.
+Work unit: capture a comparable per-task port table using the existing
+`g_e9prov.task`/`[m4-accum]` and `[m4-end]` probes. The retail join now proves
+that 1,222/2,083 tasks can have transient `0x8000` while all task ends are
+zero; the port row cap must be removed or made per-task before H1/H2 can be
+selected.
 
 Competing hypotheses:
 
-- H1: task-keyed retail samples show `0x8000` in the same per-task population
-  and stage/PC window as the port’s stage-10/12 transient.
-- H2: task-keyed retail samples show a different per-task prevalence or PC/
-  stage distribution, leaving the port-side origin unresolved.
-- H3: the new task serial or RSM1/RSD1 alignment fails, so the join remains
-  unevaluable and no runtime conclusion is authorized.
+- H1: the port has a comparable per-task prevalence and stage/PC distribution
+  of transient `0x8000`, with zero at task end; the remaining artifact is not
+  an accumulator-origin mismatch.
+- H2: the port has a materially different per-task prevalence or stage/source
+  distribution, so the accumulator-origin boundary remains causal/open.
+- H3: task IDs or phase gates fail to align the port mid-task and end-task
+  rows, so no comparison is authorized.
 
-Discriminator: every `RSM1` record must carry a valid task serial, and the
-task-keyed join must compare mid-task `0x8000` presence/first-last sample
-stage against the matching RSD1 end record for the same graphics task. H1
-requires valid controls plus matching per-task distributions; H2 requires
-valid controls plus a distribution mismatch; H3 is selected by any failed
-control or missing task-key join.
+Discriminator: one run must produce a complete task-keyed table for every
+phase-qualified graphics task, including mid-task `0x8000` presence and first/
+last stage plus task-end `sat8000`, with positive VI-512, whole-run, and probe
+controls. H1 requires the resulting table to match the retail 1,222/2,083
+prevalence and broad stage distribution; H2 requires a mismatch; H3 is any
+failed control or missing task-key join.
 
 Exact commands:
 
-`python3 tools/apply_sXXXX_cxd4_mid_task_serial.py`
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-`make -C ../rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix`
+`env ROGUESQ_LOG_M4_ACCUM=1 ROGUESQ_LOG_M4_END=1 ROGUESQ_M4_TARGET_CAP=0 ROGUESQ_M4_SRC_CAP=0 tools/run-m4-port-task-join.sh`
 
-`tools/oracle/build/rs64_oracle --core ... --rom ... --secs 75 --vi-trace --rsp ... --video tools/oracle/rdplog/rdplog.dylib --watch-write 0x0:0x800000 --hit-cap 16 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start`
-
-`python3 tools/analyze_m4_task_join.py <mid.dump> <rsp.dump> <oracle.log>`
+`python3 tools/analyze_m4_port_task_join.py scratch/agent/m4_port_task_join/port.log`
 
 HYPOTHESIS-ID: m4-retail-accumulator-pc-provenance
