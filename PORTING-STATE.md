@@ -160106,3 +160106,11 @@ ABI name is already correct and no rename was made. This rules out an
 actionable generated rename at this entry, but does not bear on runtime
 behavior. No build or soak was warranted for this naming-only result. Audit:
 `docs/RENAME-S5195-AUDIT.md`. The next candidate is `sprintf = 0x80033CC4`.
+## Session 5196 (2026-10-17) — classified `sprintf` as correctly named
+
+Ran the bounded generated-symbol audit for `sprintf = 0x80033CC4`. The helper
+reported `already-synchronized` and made zero edits. The companion symbol map,
+generated `sprintf_recomp` body, and `recomp_overlays.inl` independently agree
+on the name and exact `0x5C` span ending at `0x80033D20`; the generated tree
+also contains many independent callers. This rules out an actionable
+placeholder rename for this entry. No build or soak was needed.
