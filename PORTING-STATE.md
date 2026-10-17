@@ -160628,3 +160628,47 @@ This does not select H-const-zero, H-const-one, or H-other for the
 byte the entry read. It selects that a qualified retail entry uses
 the other stride, so one stride's writer table cannot name the byte.
 No guard. Audit: `docs/REVISIT-S5226-SOURCE-BYTE-WRITERS.md`.
+
+## Session 5227 (2026-10-17) — both strides select the constant-zero store
+
+HYPOTHESIS-ID: source-byte-writer. The planned unit was one retail oracle
+run with both mission strides armed. `g_pc_hist_watch_mask` was a
+`uint64_t` and `MAX_WATCHES` was 64, so 82 words did not fit. This
+iteration widened `MAX_WATCHES` to 96 and replaced the four watch masks
+in `tools/oracle/rs64_oracle.c` with a bitset indexed by watch, including
+the post-value, phase-snapshot, and phase-origin masks whose hot-path
+shifts would have been undefined at index 64 or above. The entry census
+now covers the four mission-pair origins. No port rebuild. No new soak
+verdicts were unconsumed.
+
+`scratch/agent/s5227_both_strides/oracle.log` stopped itself
+(`killed_overrun=0` in `driver.log`). Whole-RDRAM watch 0 reached 10000
+writes at vi=1 (removal rc=0). All 83 write watches armed. The binary
+printed `[s5225-s0]` and `[oracle] writer-pc-phase`. Phase frames at
+width 512: `0x00690400` 4452, `0x00690800` 4077, `0x00620400` 3843,
+`0x00620800` 4218. Census sums match, 41 slots, overflow 0. Lifetime
+`0x80090F3C` is on all 41 words of the `0x80190E50` stride, overflow 0.
+
+This run's entry bases are paired with the field origins:
+`0x00690400` and `0x00620400` use `0x80195190 + i*0x88` (129420 and
+115645 hits); `0x00690800` and `0x00620800` use `0x80190E50 + i*0x88`
+(118206 and 126849). Session 5225's 0400 census was the other base, so
+which stride sits on 0400 is not fixed across runs. The stride an
+origin does not name has no phase writer and overflow 0. That is what
+session 5226 measured.
+
+On every live stride the phase rows are four PCs, overflow 0.
+`0x80090F3C` is `sb $zero, 0x22($v0)` in `musyxMixActiveVoices`
+(`MEM_B(0x22, v0) = 0`), 129881 / 118635 / 116045 / 127294 hits, all
+41 words. The address is `base + index*0x88`. `0x80090F8C` is
+`addiu $v1, $zero, 1` then `sb $v1, 0x22($v0)` after that loop,
+7844 / 7166 / 6710 / 7403 hits. `0x80090720` and `0x80090780` are
+`sb` at offsets `0x20` and `0x21` in `musyxRenderVoiceSamples`, not
+offset `0x22`. The `jal` at `0x80090F00` calls the renderer, and thus
+the `0x8008FAAC` entry read, before the constant-0 store. The entry
+byte is the previous iteration's residue.
+
+This selects H-const-zero and refutes H-other and H-not-in-pair.
+H-const-one is a real minority store. Retail's modal `0x00` is the
+constant at `0x80090F3C`. The port's `0x03` is not this store and not
+the constant 1. No guard. Audit: `docs/REVISIT-S5227-BOTH-STRIDES.md`.

@@ -46,7 +46,7 @@
 #define FRONTEND_API_VERSION 0x020106
 #endif
 
-#define MAX_WATCHES 64
+#define MAX_WATCHES 96
 #define MAX_WRITER_PCS 128
 #define MAX_PC_HIST_PHASES 16
 #define MAX_POST_VALUE_HIST 64
@@ -137,16 +137,40 @@ static long g_hit_cap = 200;          /* stop logging after this many, keep runn
 static unsigned int g_detail_watch_mask;
 static unsigned int g_detail_hangar_read_rows;
 static int g_first_watch = -1;
-static uint64_t g_pc_hist_watch_mask;
-static uint64_t g_post_value_watch_mask;
-static uint64_t g_phase_snapshot_watch_mask;
+#define WATCH_MASK_WORDS ((MAX_WATCHES + 63) / 64)
+struct watch_mask {
+    uint64_t word[WATCH_MASK_WORDS];
+};
+static int watch_mask_has(const struct watch_mask *mask, int watch)
+{
+    if ((unsigned)watch >= (unsigned)MAX_WATCHES)
+        return 0;
+    return (int)((mask->word[watch >> 6] >> (watch & 63)) & 1u);
+}
+static void watch_mask_set(struct watch_mask *mask, int watch)
+{
+    if ((unsigned)watch >= (unsigned)MAX_WATCHES)
+        return;
+    mask->word[watch >> 6] |= UINT64_C(1) << (watch & 63);
+}
+static int watch_mask_any(const struct watch_mask *mask)
+{
+    int i;
+    for (i = 0; i < WATCH_MASK_WORDS; i++)
+        if (mask->word[i])
+            return 1;
+    return 0;
+}
+static struct watch_mask g_pc_hist_watch_mask;
+static struct watch_mask g_post_value_watch_mask;
+static struct watch_mask g_phase_snapshot_watch_mask;
 static int g_phase_pointer_source_watch = -1;
 static uint32_t g_phase_pointer_bytes;
 static int g_phase_pointer_discovered;
 static int g_phase_pointer_targets;
 static uint32_t g_phase_pointer_target[MAX_PHASE_POINTER_TARGETS];
 static char g_phase_pointer_label[MAX_PHASE_POINTER_TARGETS][32];
-static uint64_t g_phase_origin_watch_mask;
+static struct watch_mask g_phase_origin_watch_mask;
 #define MAX_PHASE_ORIGIN_ROWS 512
 #define MAX_PHASE_ORIGIN_ROWS_PER_WATCH 16
 struct phase_origin_row {
@@ -981,21 +1005,21 @@ static void seq_report(void)
     printf("[seq] retraces F->next F (all):    "); for (i = 0; i < 16; i++) printf(" %ld", ffh[i]); printf("\n");
 }
 
-/* s5224: every 0x8008FAAC hit on the two mission origins, including rows
- * the unique-field cap would drop. Counted before that cap. */
-static unsigned long g_s5224_hist[2][256];
-static unsigned long g_s5224_hits[2];
+/* s5224: every 0x8008FAAC hit on the four mission-pair origins, including
+ * rows the unique-field cap would drop. Counted before that cap. */
+static unsigned long g_s5224_hist[4][256];
+static unsigned long g_s5224_hits[4];
 
 /* s5225: 64-slot census of s0 at the same entry. Overflow is every later address. */
 struct s5225_slot { uint32_t s0; unsigned long n; };
-static struct s5225_slot g_s5225_slot[2][64];
-static int g_s5225_nslot[2];
-static unsigned long g_s5225_over[2];
+static struct s5225_slot g_s5225_slot[4][64];
+static int g_s5225_nslot[4];
+static unsigned long g_s5225_over[4];
 
 static void s5225_note(int bi, uint32_t s0)
 {
     int i;
-    if (bi < 0 || bi >= 2)
+    if (bi < 0 || bi >= 4)
         return;
     for (i = 0; i < g_s5225_nslot[bi]; i++) {
         if (g_s5225_slot[bi][i].s0 == s0) {
@@ -1023,8 +1047,12 @@ static void s5224_count_entry_byte(uint32_t pc)
     origin = pDebugMemRead32(VI_ORIGIN_ADDR) & 0x00FFFFFFu;
     if (origin == 0x00690400u)
         bi = 0;
-    else if (origin == 0x00620400u)
+    else if (origin == 0x00690800u)
         bi = 1;
+    else if (origin == 0x00620400u)
+        bi = 2;
+    else if (origin == 0x00620800u)
+        bi = 3;
     else
         return;
     s0 = gpr32(16);
@@ -1036,12 +1064,14 @@ static void s5224_count_entry_byte(uint32_t pc)
 
 static void s5224_report(void)
 {
-    static const uint32_t origins[2] = { 0x00690400u, 0x00620400u };
+    static const uint32_t origins[4] = {
+        0x00690400u, 0x00690800u, 0x00620400u, 0x00620800u
+    };
     char line[8192];
     int bi;
     int i;
     int n;
-    for (bi = 0; bi < 2; bi++) {
+    for (bi = 0; bi < 4; bi++) {
         unsigned long sum = 0;
         for (i = 0; i < 256; i++)
             sum += g_s5224_hist[bi][i];
@@ -2254,7 +2284,7 @@ static void emit_checkpoint(void)
                g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase],
                g_pc_hist_phase_vis[phase]);
         for (watch = 0; watch < g_nwatch; watch++) {
-            if (!(g_pc_hist_watch_mask & (UINT64_C(1) << watch))) continue;
+            if (!(watch_mask_has(&g_pc_hist_watch_mask, watch))) continue;
             printf("[oracle-checkpoint-hist] origin=0x%08x width=%u watch=%d\n",
                    g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase], watch);
             for (i = 0; i < g_pc_hist_phase[phase][watch].n; i++)
@@ -2266,7 +2296,7 @@ static void emit_checkpoint(void)
     }
     for (watch = 0; watch < g_nwatch; watch++) {
         struct post_value_stats *stats;
-        if (!(g_post_value_watch_mask & (UINT64_C(1) << watch)))
+        if (!(watch_mask_has(&g_post_value_watch_mask, watch)))
             continue;
         stats = &g_post_value_stats[watch];
         printf("[oracle-checkpoint-post-value] watch=%d samples=%ld unique=%d overflow=%ld\n",
@@ -2549,7 +2579,7 @@ static void capture_phase_snapshot(int watch, unsigned width, unsigned origin)
     int phase = -1;
 
     if (watch < 0 || watch >= g_nwatch ||
-        !(g_phase_snapshot_watch_mask & (UINT64_C(1) << watch)))
+        !(watch_mask_has(&g_phase_snapshot_watch_mask, watch)))
         return;
     if ((width == 1024 && origin == 0x00790400u)) phase = 0;
     if ((width == 512 && origin == 0x006AB400u)) phase = 1;
@@ -2636,9 +2666,9 @@ static void discover_phase_pointer_targets(unsigned width, unsigned origin)
         g_watch[g_nwatch].flags = M64P_BKP_FLAG_WRITE;
         g_watch[g_nwatch].label = g_phase_pointer_label[g_phase_pointer_targets];
         g_watch[g_nwatch].armed = 1;
-        g_phase_snapshot_watch_mask |= UINT64_C(1) << g_nwatch;
-        if (g_phase_origin_watch_mask & (UINT64_C(1) << i))
-            g_phase_origin_watch_mask |= UINT64_C(1) << g_nwatch;
+        watch_mask_set(&g_phase_snapshot_watch_mask, g_nwatch);
+        if (watch_mask_has(&g_phase_origin_watch_mask, i))
+            watch_mask_set(&g_phase_origin_watch_mask, g_nwatch);
         printf("[oracle] phase-pointer-target source_watch=%d source=0x%08x target=0x%08x bytes=0x%x watch=%d\n",
                i, addr, target, g_phase_pointer_bytes, g_nwatch);
         g_nwatch++;
@@ -2653,7 +2683,7 @@ static void capture_phase_origin_row(int watch, uint32_t pc, uint32_t addr)
     uint32_t instruction;
     unsigned source_reg;
 
-    if (!(g_phase_origin_watch_mask & (UINT64_C(1) << watch)) ||
+    if (!(watch_mask_has(&g_phase_origin_watch_mask, watch)) ||
         width != 512u || origin != 0x006AB400u)
         return;
     if (g_phase_origin_rows_by_watch[watch] >= MAX_PHASE_ORIGIN_ROWS_PER_WATCH) {
@@ -2918,7 +2948,7 @@ static void dbg_update(unsigned int pc)
                 g_watch[i].write_hits++;
             if (access_flags & M64P_BKP_FLAG_WRITE)
                 capture_phase_origin_row(i, pc, accessed);
-            if ((g_pc_hist_watch_mask & (UINT64_C(1) << i)) &&
+            if ((watch_mask_has(&g_pc_hist_watch_mask, i)) &&
                 (access_flags & M64P_BKP_FLAG_WRITE)) {
                 count_writer_pc(i, pc);
                 if (g_n_pc_hist_phase > 0) {
@@ -2966,7 +2996,7 @@ static void dbg_update(unsigned int pc)
             if ((access_flags & M64P_BKP_FLAG_WRITE) &&
                 (g_n_store_field_dump_pc > 0 || g_store_field_dump_all_mask != 0))
                 dump_store_field(i, pc, accessed);
-            if ((g_post_value_watch_mask & (UINT64_C(1) << i)) &&
+            if ((watch_mask_has(&g_post_value_watch_mask, i)) &&
                 (access_flags & M64P_BKP_FLAG_WRITE) &&
                 g_post_value_armed) {
                 int target = post_value_requested_index(pc);
@@ -3006,7 +3036,7 @@ static void dbg_update(unsigned int pc)
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
             (access_flags & g_watch[i].flags &
              (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE)) &&
-            (g_detail_watch_mask & (1u << i)))
+            (i < 32 && (g_detail_watch_mask & (1u << i))))
             if (!getenv("RS64_DETAIL_HANGAR_READ") ||
                 !(access_flags & M64P_BKP_FLAG_READ) ||
                 (pDebugMemRead32(VI_WIDTH_ADDR) == 512u &&
@@ -3299,7 +3329,7 @@ static void dbg_vi(void)
         }
     }
 
-    if (g_post_value_watch_mask) {
+    if (watch_mask_any(&g_post_value_watch_mask)) {
         width = pDebugMemRead32(VI_WIDTH_ADDR);
         origin = pDebugMemRead32(VI_ORIGIN_ADDR);
         if ((width == 1024 && origin == 0x00790400u) ||
@@ -3743,7 +3773,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--hit-cap") && i + 1 < argc)    g_hit_cap = atol(argv[++i]);
         else if (!strcmp(argv[i], "--detail-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);
-            if (watch >= 0 && watch < MAX_WATCHES)
+            if (watch >= 0 && watch < 32)
                 g_detail_watch_mask |= 1u << watch;
         }
         else if (!strcmp(argv[i], "--pc-phase-log") && i + 1 < argc) {
@@ -3824,7 +3854,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--pc-hist-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
-                g_pc_hist_watch_mask |= UINT64_C(1) << watch;
+                watch_mask_set(&g_pc_hist_watch_mask, watch);
         }
         else if (!strcmp(argv[i], "--pc-hist-phase") && i + 1 < argc) {
             char *spec = argv[++i];
@@ -3849,12 +3879,12 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--post-value-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
-                g_post_value_watch_mask |= UINT64_C(1) << watch;
+                watch_mask_set(&g_post_value_watch_mask, watch);
         }
         else if (!strcmp(argv[i], "--phase-snapshot-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
-                g_phase_snapshot_watch_mask |= UINT64_C(1) << watch;
+                watch_mask_set(&g_phase_snapshot_watch_mask, watch);
         }
         else if (!strcmp(argv[i], "--phase-pointer-watch") && i + 1 < argc) {
             char *spec = argv[++i], *colon = strchr(spec, ':');
@@ -3878,7 +3908,7 @@ int main(int argc, char **argv)
                 fprintf(stderr, "[oracle] bad --phase-origin-watch index\n");
                 return 2;
             }
-            g_phase_origin_watch_mask |= UINT64_C(1) << watch;
+            watch_mask_set(&g_phase_origin_watch_mask, watch);
         }
         else if (!strcmp(argv[i], "--post-value-pc") && i + 1 < argc)
             add_post_value_pcs(argv[++i]);
@@ -4071,10 +4101,10 @@ int main(int argc, char **argv)
                g_ai_output[i].nonzero_rows, g_ai_output[i].vi_swaps,
                g_ai_output[i].vi_last - g_ai_output[i].vi_first,
                g_ai_output[i].calls ? (double)g_ai_output[i].rem_sum / g_ai_output[i].calls : 0.0, g_ai_output[i].rem_zero);
-    if (g_post_value_watch_mask) {
+    if (watch_mask_any(&g_post_value_watch_mask)) {
         for (int watch = 0; watch < g_nwatch; watch++) {
             struct post_value_stats *stats;
-            if (!(g_post_value_watch_mask & (UINT64_C(1) << watch)))
+            if (!(watch_mask_has(&g_post_value_watch_mask, watch)))
                 continue;
             stats = &g_post_value_stats[watch];
             summarize_post_snapshot(watch);
@@ -4154,7 +4184,7 @@ int main(int argc, char **argv)
                    g_post_value_requested_sequence[j].sentinel ? "sentinel" : "non-sentinel");
     }
     for (int watch = 0; watch < g_nwatch; watch++) {
-        if (!(g_phase_snapshot_watch_mask & (UINT64_C(1) << watch)))
+        if (!(watch_mask_has(&g_phase_snapshot_watch_mask, watch)))
             continue;
         for (int phase = 0; phase < 2; phase++)
             emit_phase_snapshot(watch, phase);
@@ -4191,7 +4221,7 @@ int main(int argc, char **argv)
                g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase],
                g_pc_hist_phase_vis[phase]);
         for (int watch = 0; watch < g_nwatch; watch++) {
-            if (!(g_pc_hist_watch_mask & (UINT64_C(1) << watch)))
+            if (!(watch_mask_has(&g_pc_hist_watch_mask, watch)))
                 continue;
             printf("[oracle] writer-pc-phase origin=0x%08x width=%u watch=%d range=[0x%08x,0x%08x)\n",
                    g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase], watch,
@@ -4208,7 +4238,7 @@ int main(int argc, char **argv)
         }
     }
     for (int watch = 0; watch < g_nwatch; watch++) {
-        if (!(g_pc_hist_watch_mask & (UINT64_C(1) << watch)))
+        if (!(watch_mask_has(&g_pc_hist_watch_mask, watch)))
             continue;
         printf("[oracle] writer-pc watch=%d range=[0x%08x,0x%08x)\n",
                watch, g_watch[watch].start, g_watch[watch].end);
