@@ -6,7 +6,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
-- **s5095:** unsigned-base class CLOSED for the audited shape: s5094 hangar fix confirmed (3/3 arrivals, 0 CRASH); 11 stale env-gated sites repaired via tools/repair_unsigned_base_live.py; soak with all gates ON 3/3 crash=0 (diagnostic lines fired). Open: U32()/(uint32_t) base shapes; pristine-regen check of the repair branch.
+- **s5096:** audit shape 2 (`(uint32_t)X`, `U32(X)`, `0x...u` bases) CLOSED: 0 hits in generated code, 3 in tools/*.py all stale-form detector strings; positive control 3/4 in same run (`scratch/agent/audit_unsigned_base.sh`). Remaining unsigned-base work: s5095 soak verdict fold-in (absent from SOAK-RESULTS at s5096 start), pristine-regen check of the AC8C0 repair branch (blocked s5091). Nothing superseded.
+- **s5095:** unsigned-base class CLOSED for the audited shape: s5094 hangar fix confirmed (3/3 arrivals, 0 CRASH); 11 stale env-gated sites repaired via tools/repair_unsigned_base_live.py; soak with all gates ON 3/3 crash=0 (diagnostic lines fired). Open: pristine-regen check of the repair branch.
 - **s5094:** hangar flake updateHangarBayScene+76424 ROOT-CAUSED: `[buttons-hangar] port=` diagnostic read `MEM_BU(-0X2930, 0x800D0000u)` (zero-extended base, host addr +2^32). Fixed in funcs_28.c + fixup repair branch; soak s5094_hangar_unsigned_base_fix queued (verify >=2 hangar arrivals, 0 CRASH). Single-source until soak.
 - **s5092:** BLOCKED for owner target; M5 plan/steps, M3 classes, sweep, retail-entry, M4, mission stall all closed. See scratch/agent/BLOCKED.md.
 - **s5090:** fixup_game_funcs_vendored.py post-condition: regen now fails if funcs_26.c lacks the s4296 A14 yield marker, and warns on RS64_SKIP_REPLAY=1 (control: marker present live/absent when stripped; not yet run through a full regen).
