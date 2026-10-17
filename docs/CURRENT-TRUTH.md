@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5217 (2026-10-17). The
+Compact operational handoff, maintained at Session 5221 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -780,11 +780,19 @@ companion map places `osViSetEvent` at `0x80035260` (nominal span `0x140`),
 but `__osProbeTLB = 0x800351A0` is the next bounded candidate. Preserve the
 ABI name. Audit: `docs/RENAME-S5220-AUDIT.md`.
 
+`__osProbeTLB = 0x800351A0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized` and
+renamed zero references in zero files. Independent generated-tree searches
+found no body, placeholder, header declaration, overlay record, or direct
+generated caller at the companion address. Its nominal span to
+`__osViSwapContext = 0x80035550` is `0x3B0`, with no body to validate.
+Preserve the ABI name. Audit: `docs/RENAME-S5221-AUDIT.md`.
+
 ## Next steps (single monotonic backlog)
 
 1. Resume the companion sweep with the next named entry after
-   `osVirtualToPhysical = 0x80035120`, whose
-   next candidate follows from its bounded symbol-map span, one entry per iteration.
+   `__osProbeTLB = 0x800351A0`: `__osViSwapContext = 0x80035550`, one entry per
+   iteration.
    `strchr = 0x80034744` is now correctly named: its generated body, exact
    `0x4C` overlay span, and six independent callers agree. Audit:
    `docs/RENAME-S5210-AUDIT.md`.

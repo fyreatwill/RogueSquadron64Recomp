@@ -160427,3 +160427,15 @@ map places `osViSetEvent` at `0x80035260`, so the nominal primary span is
 libultra/ABI outcome and preserves the semantic name. It rules out a
 generated-symbol rename and body/span mismatch for this candidate, but makes
 no runtime claim. Audit: `docs/RENAME-S5220-AUDIT.md`.
+## Session 5221 (2026-10-17) — classified `__osProbeTLB` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded companion
+audit for `__osProbeTLB = 0x800351A0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found no body, placeholder, header declaration,
+overlay record, or direct generated caller at the companion address. The
+companion map places `__osViSwapContext` at `0x80035550`, so the nominal span
+is `0x3B0`, but there is no body to validate. This selects the unmaterialized
+libultra/ABI outcome and preserves the semantic name. It rules out a
+generated-symbol rename and body/span mismatch for this candidate, but makes
+no runtime claim. Audit: `docs/RENAME-S5221-AUDIT.md`.
