@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5123 (2026-10-17). The
+Compact operational handoff, maintained at Session 5124 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -14,10 +14,11 @@ qualified image route; the silent `ROGUESQ_AUDIO_UCODE=0` path is only a
 control. Mission input reaches the game and changes the player vehicle state.
 
 The current bounded work is the generated-symbol renaming sweep. The last
-candidates, `cosf = 0x8002B190` and `osCreateMesgQueue = 0x8002B300`, were
-already synchronized: `cosf` has its generated body, exact `0x170` span, and
-75 callers; `osCreateMesgQueue` is a zero-size host-wrapper/ABI entry with 28
-generated call sites. The next candidate is `osCreateThread = 0x8002B330`.
+candidates, `cosf = 0x8002B190`, `osCreateMesgQueue = 0x8002B300`, and
+`osCreateThread = 0x8002B330`, were already synchronized: `cosf` has its
+generated body, exact `0x170` span, and 75 callers; the two libultra entries
+are zero-size host-wrapper/ABI entries with 28 and 10 generated call sites.
+The next candidate is `osDestroyThread = 0x8002B480`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -115,7 +116,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osCreateThread = 0x8002B330` using the bounded rename helper.
+1. Audit `osDestroyThread = 0x8002B480` using the bounded rename helper.
    Rename only if the generated body, exact next-entry span, semantic mapping,
    and live caller all agree; otherwise preserve the ABI name and record the
    classification.
