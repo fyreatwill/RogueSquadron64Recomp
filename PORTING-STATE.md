@@ -161016,3 +161016,14 @@ evidence exists at the candidate address. This rules out companion
 propagation and fragment renaming for `_Litob`; no build or soak was needed.
 Audit: `docs/RENAME-S5263-AUDIT.md`. Next candidate: `osYieldThread =
 0x80037510`.
+
+## Session 5264 (2026-10-17) — generated-symbol sweep: `osYieldThread` already synchronized
+
+Ran the bounded generated-symbol helper over `0x80037510..0x8003755C`; it
+renamed zero references in zero files and classified `osYieldThread` as
+already synchronized. Independent companion/generated-tree checks found the
+defined libultra symbol, no generated placeholder/body/overlay record, 20
+direct calls to `osYieldThread_recomp`, and the companion `INCLUDE_ASM`
+boundary in `src/libultra/os/yieldthread.c`. This rules out a safe generated
+placeholder rename and data-fragment classification for this address; retain
+the ABI name. Audit: `docs/RENAME-S5264-AUDIT.md`.
