@@ -161349,3 +161349,15 @@ H1 is selected in the already-synchronized callable sense; H2/H3 are ruled
 out for this address. No build or soak was warranted. Audit:
 `docs/RENAME-S5290-AUDIT.md`. Next: classify `safeLookup3DSoundEntry =
 0x80088D1C`.
+
+## Session 5291 (2026-10-17) — generated-symbol sweep: `safeLookup3DSoundEntry` is synchronized
+
+Ran the bounded rename helper for `0x80088D1C..0x80088D20` and independently
+searched the companion map and generated tree. The companion record describes
+the named mutex-guarded 3D-sound lookup wrapper; the helper reported
+`already-synchronized` and renamed zero references in zero files. The generated
+tree contains its named body in `funcs_22.c`, header declaration, overlay
+record, and callers, with no placeholder or conflicting fragment. H1 is
+selected in the already-synchronized callable sense; H2/H3 are ruled out for
+this address. No build or soak was warranted. Audit:
+`docs/RENAME-S5291-AUDIT.md`. Next: classify `initNpcSlotList = 0x8003E560`.
