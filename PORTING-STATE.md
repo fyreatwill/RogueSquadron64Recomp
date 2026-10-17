@@ -159547,3 +159547,16 @@ and span-based rename for this candidate; no build or soak was needed.
 Evidence: `docs/RENAME-S5152-AUDIT.md`.
 
 Next: audit `__osGetId = 0x8002FA04`.
+
+## Session 5153 (2026-10-17) — classified `__osGetId` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Audited the next generated-
+symbol candidate, `__osGetId = 0x8002FA04`, with the bounded rename helper and
+direct generated-tree checks. The helper made zero edits and reported
+`already-synchronized`. No generated body, placeholder, overlay record, or
+independent generated caller exists at the companion address; its companion
+boundary is `__osCheckId = 0x8002FC60`. Preserve the existing ABI name as an
+unmaterialized libultra entry. No build or soak was needed.
+Evidence: `docs/RENAME-S5153-AUDIT.md`.
+
+Next: audit `__osCheckId = 0x8002FC60`.
