@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5215 (2026-10-17). The
+Compact operational handoff, maintained at Session 5217 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -749,9 +749,18 @@ address. Its nominal span to `osViBlack = 0x80034BE0` is `0x10`, with no body
 to validate. Preserve the ABI name. Audit: `docs/RENAME-S5216-AUDIT.md`. The
 next candidate is now `osViBlack = 0x80034BE0`.
 
+`osViBlack = 0x80034BE0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized` and
+renamed zero references in zero files. The generated tree has only the ABI
+declaration, two generated callers, and a zero-size overlay record, with no
+body or placeholder at the companion address. Preserve the ABI name. Audit:
+`docs/RENAME-S5217-AUDIT.md`. The next sweep candidate is the next named
+entry after `osViBlack` in the companion symbol map.
+
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osViBlack = 0x80034BE0`, whose
+1. Resume the companion sweep with the next named entry after
+   `osViBlack = 0x80034BE0`, whose
    next candidate follows from its bounded symbol-map span, one entry per iteration.
    `strchr = 0x80034744` is now correctly named: its generated body, exact
    `0x4C` overlay span, and six independent callers agree. Audit:

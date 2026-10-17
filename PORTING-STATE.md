@@ -160373,3 +160373,16 @@ The companion map puts `osViBlack` at `0x80034BE0`, so the nominal span is
 unmaterialized libultra/ABI outcome and preserves the semantic ABI name. It
 rules out a generated body and span mismatch for this candidate, but does not
 make a runtime claim. Audit: `docs/RENAME-S5216-AUDIT.md`.
+
+## Session 5217 (2026-10-17) — classified `osViBlack` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded companion
+audit for `osViBlack = 0x80034BE0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found only the ABI declaration, two generated callers,
+and a zero-size overlay record; no generated body or placeholder exists at the
+companion address. The companion map places `osViGetCurrentField` at
+`0x80034D90`, but no body exists to validate a span. This selects the
+unmaterialized libultra/ABI outcome and preserves the semantic name. It rules
+out a generated-symbol rename and body/span mismatch for this candidate, but
+makes no runtime claim. Audit: `docs/RENAME-S5217-AUDIT.md`.
