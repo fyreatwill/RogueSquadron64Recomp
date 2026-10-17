@@ -160926,3 +160926,6 @@ Explore-agent census of guest-sized host-buffer sites (25 rows, 10 SAFE / 15 UNS
 
 ## 2026-10-17 unblock s5253
 BLOCKED.md (s5252) claimed progress needs host load1<2. Treated as a claim: the load gate is a measurement guard and is not weakened; load is user-owned (load1 4.64 and falling, still >=2). Route 3: re-scoped NEXT to the offline s5252-addendum rt64 host-buffer audit, which needs no game run. Open dependency (host load for the s5250 baseline) stays in CURRENT-TRUTH. See scratch/agent/UNBLOCK.md.
+
+## Session 5253 (2026-10-17) — unblock: host-load block re-scoped to offline rt64 buffer audit
+What ran: read BLOCKED.md/NEXT.md, sampled uptime (load1 4.64, falling from 7.6 over 15m, still >=2). No game run. What it showed: the s5250 baseline load gate (exit 77) is a measurement guard; load comes from user Chrome/REAPER, not ours to kill, and no second route to the same discriminator exists. What it rules out: running the baseline at load (would weaken the measurement). Not ruled out: H-host-load vs H-lib-patch remains undecided. Route 3: NEXT.md now = offline verification of the six s5252-addendum rt64 guest-sized host-buffer leads. Refuting experiment: baseline at load1<2 failing.
