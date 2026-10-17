@@ -848,6 +848,7 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+0d. (s5238) src/main memcpy/memset/rdram+base class CLOSED (47 hits classified; all masked/constant-gated/checked; no guard needed; static-only, single-source). Next: another idiom class (e.g. lib/ rt64 host buffer sizes) or resume sweep.
 0c. (s5237) src/main upstream_compat.cpp raw rdram[] index class CLOSED (3 diagnostic sites masked to 0x7FFFFF; static-only, single-source). Next: resume M5 plan or another idiom class.
 0b. (s5236) rsp.cpp raw rdram[] index-mask class CLOSED (8 diagnostic sites clamped to 0x7FFFFF; static-only, single-source). Signed-vs-unsigned base class was already closed s5094-s5100. Prior: s5235 PI/EEPROM guest length/offset class closed. Next: raw rdram[]/memcpy index audit in src/main debug threads, or resume M5 plan.
 0a. (s5234) Host-wrapper guest-pointer-arg class CLOSED (osDpGetCounters + rs64_m5_port_task_load guarded; rest constant-gated/already checked). Next: another class or resume sweep.
