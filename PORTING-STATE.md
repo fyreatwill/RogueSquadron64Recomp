@@ -161248,3 +161248,15 @@ interpretation and rules out callable placeholder propagation. Preserve the
 existing name; no build or soak was needed. Audit:
 `docs/RENAME-S5282-AUDIT.md`. Next: classify the following companion record
 after `__osViNext`.
+
+## Session 5283 (2026-10-17) — generated-symbol sweep: `__osViDevMgr` is data
+
+Ran the bounded generated-symbol helper over `0x80039220..0x80039240`. It
+made zero edits and reported `__osViDevMgr` as already synchronized.
+Independent inspection found the companion declaration
+`__osViDevMgr = 0x80039220` typed `OSDevMgr` with size `0x1C`; the generated
+tree contains only a surrounding `nop`, with no callable body, placeholder,
+declaration, overlay record, or direct generated reference. This selects the
+typed-data interpretation and rules out callable placeholder propagation.
+Preserve the existing name; no build or soak was needed. Audit:
+`docs/RENAME-S5283-AUDIT.md`. Next: classify `osViModeMpalLan1 = 0x80039240`.

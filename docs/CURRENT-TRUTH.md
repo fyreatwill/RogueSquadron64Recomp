@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5281 (2026-10-17). The
+Compact operational handoff, maintained at Session 5283 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -139,8 +139,13 @@ Session 5282 classified `__osViNext = 0x80039214` as already synchronized.
 The bounded helper made zero edits; the companion map types it as
 `OSViContext*`, and the generated tree has no callable body, placeholder,
 declaration, overlay record, or direct reference at the address. Audit:
-`docs/RENAME-S5282-AUDIT.md`. The next sweep candidate is the following
-companion record after `__osViNext`.
+`docs/RENAME-S5282-AUDIT.md`. Session 5283 classified
+`__osViDevMgr = 0x80039220` as already synchronized. The bounded helper made
+zero edits; the companion map types it as `OSDevMgr` data of size `0x1C`, and
+the generated tree has only a surrounding `nop` with no callable body,
+placeholder, declaration, overlay record, or direct reference at the address.
+Audit: `docs/RENAME-S5283-AUDIT.md`. The next sweep candidate is
+`osViModeMpalLan1 = 0x80039240`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or
@@ -455,6 +460,12 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5283:** `__osViDevMgr = 0x80039220` is typed `OSDevMgr` data of size
+  `0x1C` and already synchronized; no generated callable placeholder or
+  reference exists. The next bounded sweep unit is
+  `osViModeMpalLan1 = 0x80039240`, using the same helper plus independent
+  companion/generated-tree inspection. Audit: `docs/RENAME-S5283-AUDIT.md`.
 
 - **s5282:** `__osViNext = 0x80039214` is typed `OSViContext*` data and already
   synchronized; no generated callable placeholder or reference exists. The
