@@ -94,7 +94,12 @@ classified as another unmaterialized libultra/ABI entry: the helper reported
 while five generated callers target an existing host wrapper that returns
 `PFS_ERR_NOPACK`. Its requested companion boundary is `0x800303D0`; preserve
 the ABI name. Audit: `docs/RENAME-S5156-AUDIT.md`. The next candidate is
-`osPfsDeleteFile`.
+`osPfsDeleteFile = 0x800300F0` is now likewise classified as an unmaterialized
+libultra/ABI entry: the helper reported `already-synchronized`; the generated
+tree has only the ABI declaration, one generated caller, and a zero-size
+overlay record, with no generated body at the companion address. Its
+companion boundary is `0x800303D0`; preserve the ABI name. Audit:
+`docs/RENAME-S5157-AUDIT.md`. The next candidate is `__osPfsReleasePages`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -240,6 +245,12 @@ were retained below or in the project overview.
   host wrapper returning `PFS_ERR_NOPACK`. Its companion boundary is
   `0x800303D0`; preserve the ABI name. Audit:
   `docs/RENAME-S5156-AUDIT.md`.
+- `osPfsDeleteFile = 0x800300F0` is another unmaterialized libultra/ABI
+  entry: the helper reported `already-synchronized`; the generated tree has
+  only the ABI declaration, one generated caller, and a zero-size overlay
+  record, with no generated body at the companion address. Its companion
+  boundary is `0x800303D0`; preserve the ABI name. Audit:
+  `docs/RENAME-S5157-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`

@@ -159601,4 +159601,16 @@ Classified it as an unmaterialized libultra/ABI entry and preserved the ABI
 name. This rules out a generated-body rename for this candidate; no build or
 soak was needed.
 
-Next: audit `osPfsDeleteFile = 0x800300F0`.
+Next: audit `__osPfsReleasePages = 0x800303D0`.
+
+## Session 5157 (2026-10-17) — classified `osPfsDeleteFile` as unmaterialized
+
+Ran the prescribed bounded generated-symbol audit for `osPfsDeleteFile =
+0x800300F0`, with competing hypotheses recorded in `scratch/agent/NEXT.md`.
+The helper reported `already-synchronized` and renamed zero references. The
+generated tree has only the ABI declaration, one caller, and a zero-size
+overlay record; `librecomp/src/pak.cpp` independently shows the host wrapper
+returning `PFS_ERR_NOPACK`. Classified the candidate as an unmaterialized
+libultra/ABI entry and preserved its name. This rules out a generated body
+rename for this address, but does not alter the broader wrapper/ABI boundary
+model. No build or soak was needed.
