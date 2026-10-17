@@ -598,3 +598,4 @@ Since s5042, the keyed title->hangar recipe (s5037 default) stalls: after title 
 
 - s5051: restored-tree rebuild still stalls nohangar under host load 5-7 (Chrome 108% CPU). H1 vs H3 undecided; needs a quiet-host rerun (see scratch/agent/NEXT.md).
 - s5057: the 'needs load <2' dependency (s5053) is REFUTED: O0 control and the current binary both reached hangar at load 3.8-4.7 (Chrome 110% CPU). Earlier 0/8 stalls (s5042-s5051) unexplained; treat the recipe as intermittent and measure the flake rate (NEXT.md).
+- (s5059) FREE_CENSUS=1 hangar recipe 3/3 pass (t=63-75, load ~4): census does not cause the nohangar stall; 7/7 passes on current binary. Earlier stalls (s5042-s5051) unattributed/transient; resume poison-on-free probe (see NEXT.md).

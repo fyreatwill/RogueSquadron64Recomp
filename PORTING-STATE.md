@@ -158599,3 +158599,10 @@ Result: host load of ~4 does not by itself prevent hangar; the earlier stalls (s
 ## Session 5058 (2026-10-16) — hangar-recipe flake rate on the current binary: 3/3 reach hangar at load 4-6
 
 Ran scratch/agent/s5048_preS5038_source.sh three times back to back (one game at a time), host load 4.3-5.8 (REAPER 19%, bluetoothd). Logs in scratch/agent/s5058/keys_{1,2,3}.log. Results: hangar at t=64, 75, 75 s; every key rc=0; rc_all=0 each. With s5057's run that is 4/4 passes on the current binary at load ~4-6, versus 0/8 stalls in s5042-s5051. Conclusion (two runs-sets, but cause still unidentified): the stalls do not reproduce on the current binary; host load is not the discriminator. The one remaining recipe delta known from s5044 is ROGUESQ_FREE_CENSUS=1 (4/4 census runs stalled, 3/3 non-census reached mission; single-source) — this run had census off, consistent with it. No code change. Next: re-run the census recipe once on the current binary to see whether the census-stall reproduces (NEXT.md).
+
+## Session 5059 (2026-10-16) — ROGUESQ_FREE_CENSUS=1 does not stall the hangar route: 3/3 reach hangar
+
+What ran: scratch/agent/s5059_census.sh (s5048 recipe + ROGUESQ_FREE_CENSUS=1), 3 sequential runs on the current binary, host load 3.9-4.8. Logs: scratch/agent/s5059/.
+What it showed: hangar (0x006AB400) at t=75, 63, 75 s; all keys rc=0. With s5057/s5058 that is 7/7 passes on the current binary, with and without census. Same harness reaching hangar every run is the route control; the 4/4 census stall of s5044 was single-source and is contradicted.
+Rules out: census as the cause of the s5042-s5051 stalls. Stall origin remains unidentified (transient, possibly the clobbered tree rebuilt in s5049-s5050).
+ORIGIN: n/a (no code change, no mitigation).
