@@ -10,7 +10,7 @@ import sys, pathlib
 D = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 sig = ("static void rs64_m5_writer_parity(char width, uint32_t pc,\n"
        "                                   uint32_t addr, uint32_t value) {\n")
-line = ("    { uint32_t s5078_p = addr & 0x1FFFFFFFu; if (s5078_p >= 0x9DE80u && s5078_p < 0x9DF00u) "
+line = ("    { uint32_t s5078_p = addr & 0x1FFFFFFFu; if ((s5078_p >= 0x9DE80u && s5078_p < 0x9DF00u) || (s5078_p >= 0x130C40u && s5078_p < 0x130C70u)) "
         "rs64_s5078_flight_store(pc, s5078_p); } /* PATCH: s5078 flight writer census */\n")
 decl = "extern void rs64_s5078_flight_store(uint32_t, uint32_t);\n"
 n = 0
