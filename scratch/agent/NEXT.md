@@ -1,12 +1,9 @@
-# Next: offline generated-RSP-PC -> retail IMEM-PC mapping (M4 key domain)
+# Next: retail M4 run at the mapped PCs (stride 1, filtered)
 
-Unit (no game run, no toolchain needed): the port's generated PCs 0x112C/0x17F0 exceed the 0x1000 IMEM range, so they are
-likely generated-function IDs/offsets, not IMEM PCs. From the RSP recompiler output/generator (find where the M4 hook is
-emitted under tools/fixup_*) and the Factor 5 ucode image (docs/F5-UCODE-REFERENCE.md), derive the exact arithmetic mapping
-generated PC -> IMEM PC. Positive control: a PC both arms are known to execute must map correctly (the retail PC set
-0x0088..0x0FE8 must be reproduced as the image of port PCs). Record the table in a REVISIT doc.
-Only if the mapping is exact and justified, then (separate unit) align the origin (retail 0x006AB800 vs port 0x006AB400,
-phase-gated) and join. Do not normalize PCs by guess. If no exact mapping exists, close M4 as unevaluable for the
-qualified route and record that.
+Mapping is exact (s5353): retail_pc = port_pc & 0xFFF. Unit: one cxd4 retail run (S5335 recipe incl. whole-RDRAM + VI
+positive controls, autopilot route 3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a) with RSM1 stride 1 filtered
+to PC {0x012C,0x07F0}; join with port rows (task ~959-961, 512-wide hangar) by VI phase ordinal + overlay/task type.
+Outcomes: retail samples there show -32768 lanes -> port transient legitimate; retail never samples them -> close M4
+unevaluable; lanes absent there -> H2 candidate, still no mitigation without a named writer.
 
 HYPOTHESIS-ID: m4-generated-pc-imem-mapping

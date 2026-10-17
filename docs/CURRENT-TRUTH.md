@@ -158,12 +158,12 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. M4 key-domain mapping (s5352 re-scope, offline): derive the exact
-   generated-RSP-PC (`0x112C`/`0x17F0`) -> retail IMEM-PC (`0x0088..0x0FE8`)
-   mapping from the generator and the Factor 5 ucode image, with a PC both
-   arms execute as positive control. Only an exact mapping permits a later
-   origin-aligned join (`0x006AB800` vs `0x006AB400`); never normalize by
-   guess. If none exists, close M4 as unevaluable for the qualified route.
+1. M4 join (s5353): the PC mapping is exact, `retail_pc = port_pc & 0xFFF`
+   (0x112C->0x012C, 0x17F0->0x07F0; `docs/REVISIT-S5352-M4-PC-MAPPING.md`).
+   Next: one retail cxd4 run with sampler stride 1 filtered to those PCs, with
+   whole-RDRAM/VI controls, joined to port rows by VI phase ordinal and
+   overlay/task type (not origin address). Close M4 as unevaluable if retail
+   never samples them.
 2. M5 and the M3 j/jal idiom list are exhausted (s5349); do not revive
    without a new discriminator. Re-open M3 only as a complete idiom-class audit.
 3. The generated-symbol sweep is parked; re-open only if a new placeholder
