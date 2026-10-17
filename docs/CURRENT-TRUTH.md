@@ -373,6 +373,12 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+- **s5267:** `__osContinitialized = 0x800390D0` is already synchronized: the
+  bounded helper made zero edits, and independent checks identify it as a
+  typed `u32` data symbol with no generated body, placeholder, declaration,
+  overlay record, or direct generated caller. Preserve the name; no build or
+  soak. Audit: `docs/RENAME-S5267-AUDIT.md`. Next: classify
+  `__osHwIntTable = 0x800390E0`.
 - **s5266:** The bounded helper rechecked `_Putfld = 0x80035960` over
   `0x80035960..0x80035FD0`; it made zero edits and reported
   `already-synchronized`. Independent inspection found the named companion,
