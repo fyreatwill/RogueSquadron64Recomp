@@ -159111,3 +159111,12 @@ the monotonic next backlog. Historical narrative and superseded detail remain
 recoverable in git and the project overview. No experiment or build was run;
 the next bounded unit remains the `__osContGetInitData = 0x8002AFC0` generated-
 symbol audit.
+
+## Session 5119 (2026-10-17) — checkpointed maintenance retry
+
+The retry resumed after Session 5118 had already completed the maintenance
+compaction but left the exit contract incomplete. Per the checkpoint-closeout
+instruction, no rename audit, build, or soak was rerun. The repository still
+has no result for `__osContGetInitData = 0x8002AFC0`; the next iteration must
+run the bounded generated-body/span/caller inspection from `scratch/agent/NEXT.md`.
+The existing dirty submodule worktrees were preserved and not staged.

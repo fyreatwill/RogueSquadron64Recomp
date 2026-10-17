@@ -1,8 +1,10 @@
 # Next: generated-symbol renaming sweep — next libultra candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Maintenance completed in Session 5118; no experiment was run. The next
-iteration must execute the bounded audit below as one work unit.
+Checkpoint close-out completed in Session 5119. The prior maintenance
+compaction is complete, but the bounded audit below has not run. The next
+iteration must execute it as one work unit; do not repeat maintenance or this
+checkpoint close-out.
 
 Bounded work unit: audit only companion `__osContGetInitData = 0x8002AFC0`,
 the next libultra entry after `__osPackReadData`. Determine whether it has a
