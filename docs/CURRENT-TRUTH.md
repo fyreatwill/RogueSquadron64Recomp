@@ -555,11 +555,17 @@ wrapper, with no generated body or placeholder at the companion address. Its
 nominal span to `__osSiCreateAccessQueue = 0x800338A0` is `0xE0`, with no body
 to validate. Preserve the ABI name. Audit:
 `docs/RENAME-S5187-AUDIT.md`. The next candidate is now
-`__osSiCreateAccessQueue = 0x800338A0`.
+`__osSiCreateAccessQueue = 0x800338A0`. It is now classified as another
+unmaterialized libultra/ABI entry: the bounded helper reported
+`already-synchronized`, and independent generated-tree searches found no body,
+placeholder, overlay record, or direct caller at the companion address. Its
+companion span to `__osSiGetAccess = 0x800338F0` is `0x50`, with no body to
+validate. Preserve the ABI name. Audit: `docs/RENAME-S5188-AUDIT.md`. The
+next candidate is now `__osSiGetAccess = 0x800338F0`.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSiCreateAccessQueue = 0x800338A0`, whose next
+1. Resume the companion sweep with `__osSiGetAccess = 0x800338F0`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
