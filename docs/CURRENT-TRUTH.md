@@ -27,6 +27,9 @@ is therefore unevaluable without a complete task-keyed sampler at a shared
 boundary; no accumulator mitigation follows. Session 5325 validated the
 retail oracle's whole-RDRAM positive control and recorded the exact shared-
 boundary design in `docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`.
+Session 5326 made the cxd4 sampler stride configurable and added generated
+Factor 5 PCs to the port hooks; both sampler controls were live, but neither
+driven arm reached the target hangar phase, so H3 remains selected.
 
 ## Durable state
 
@@ -107,9 +110,10 @@ agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Implement and run the shared-boundary M4 sampler from
-   `docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`; do not infer an
-   instruction-PC comparison from synthetic stage ordinals.
+1. Re-run the shared-boundary M4 sampler using the proven title-to-hangar
+   phase-gated keying recipe (`PROBE_PHASE_WIDTH=512`, `PROBE_KEYS_FROM_PHASE=1`,
+   `PROBE_LEAVE_OK=1`, with keys sent after the title VI is observed); do not
+   infer an instruction-PC comparison from synthetic stage ordinals.
 2. Re-open the generated-symbol sweep only if a new placeholder candidate or
    companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new

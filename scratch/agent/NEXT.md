@@ -1,11 +1,10 @@
-# Next: implement M4 shared-boundary sampler
+# Next: rerun M4 shared-boundary sampler through hangar
 
-Work unit: one instrument/build/run comparison based on
-`docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`. First add an env-gated
-stride to the existing cxd4 `RSM1` mid-task sampler, then extend the
-regeneration-surviving port M4 probe with actual generated Factor 5 guest PCs.
-Build both arms and run the same phase-gated hangar schedule in this iteration.
-Do not add a mitigation.
+Work unit: one phase-gated comparison using the now-landed sampler. Run the
+port with the proven title-to-hangar recipe from `s5099`/`s4959` (wait for
+`0x00790400`, then send Start/A keys until `0x006AB400` appears), and run the
+retail cxd4 arm with the same title-to-hangar key schedule. Use stride 1 only
+in the retail dump. Do not add a mitigation.
 
 Competing hypotheses and discriminator:
 
@@ -30,8 +29,9 @@ tools/oracle/build/rs64_oracle --core \
 cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix && make all
 ```
 
-Expected outcomes: whole-RDRAM callbacks and VI rows must be nonzero; then
-the exact-key table selects H1, H2, or H3 as above. Do not compare stopwatch
-timestamps. Do not accept a stage-only join.
+Expected outcomes: each arm must log its positive control and reach the 512
+hangar origin. Then the exact-key table selects H1, H2, or H3 as above. The
+5326 result was H3 because both arms stayed at 640/title; do not compare
+stopwatch timestamps or accept a stage-only join.
 
 HYPOTHESIS-ID: m4-accumulator-boundary

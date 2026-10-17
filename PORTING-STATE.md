@@ -161761,3 +161761,17 @@ did not build or add a mitigation. It rules out treating the current
 stage-10/11 versus stage-12/13 rows as a retail instruction-PC comparison;
 the M4 boundary remains unevaluable until the port emits actual generated
 ucode PCs and both arms pass the same controls.
+
+## Session 5326 (2026-10-17) — built M4 shared-boundary sampler with generated PCs
+
+Ran the independent whole-RDRAM oracle control before instrumenting. Added a
+regeneration-surviving port M4 guest-PC field and configurable cxd4 mid-task
+stride, then rebuilt both the port and cxd4. The first comparison exposed a
+callback-only stride defect; the fixed call-site stride was rebuilt and its
+same-run control produced 136,872 bytes of RSM1 records, 10,000 whole-RDRAM
+watch callbacks, and 479 VI samples. The driven comparison still did not reach
+the target hangar phase: retail stayed at 640/title and the port stayed at
+phase 3, width 640, origin `0x0066A500`. H3 is selected; no exact target
+task/PC join, accumulator conclusion, or mitigation is justified. The next
+run must use the title-observed key schedule from the proven hangar recipe.
+Audit: `docs/REVISIT-S5326-M4-SHARED-BOUNDARY-RESULT.md`.

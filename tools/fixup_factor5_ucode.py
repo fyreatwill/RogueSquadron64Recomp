@@ -3206,6 +3206,24 @@ if is_shade_ucode and M4_ACCUM_MARKER not in text and not m4_migrated:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 19b: attach actual Factor 5 guest PCs to the existing M4 hooks.
+# These are instruction-list PCs at the hook boundary, not stage ordinals.
+M4_PC_MARKER = "/* fixup: M4 accumulator guest PCs v1 */"
+if is_shade_ucode and M4_PC_MARKER not in text and M4_ACCUM_MARKER in text:
+    text = text.replace(
+        'extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage, uint32_t r9, const uint8_t *rdram);  /* fixup: M4 accumulator probe v2 */',
+        'extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage, uint32_t guest_pc, uint32_t r9, const uint8_t *rdram);  ' + M4_PC_MARKER)
+    text = text.replace('rs64_m4_accum_probe(&rsp, 1, r9, rdram);  /* fixup: M4 accumulator probe v2 */',
+                        'rs64_m4_accum_probe(&rsp, 1, 0x13AC, r9, rdram);  ' + M4_PC_MARKER)
+    text = text.replace('rs64_m4_accum_probe(&rsp, 10, r9, rdram);  /* fixup: M4 accumulator probe v2 */',
+                        'rs64_m4_accum_probe(&rsp, 10, 0x16F8, r9, rdram);  ' + M4_PC_MARKER)
+    text = text.replace('rs64_m4_accum_probe(&rsp, 11, r9, rdram);  /* fixup: M4 accumulator probe v2 */',
+                        'rs64_m4_accum_probe(&rsp, 11, 0x16FC, r9, rdram);  ' + M4_PC_MARKER)
+    text = text.replace('rs64_m4_accum_probe(&rsp, 12, r9, rdram);  /* fixup: M4 accumulator probe v2 */',
+                        'rs64_m4_accum_probe(&rsp, 12, 0x1708, r9, rdram);  ' + M4_PC_MARKER)
+    text = text.replace('rs64_m4_accum_probe(&rsp, 13, r9, rdram);  /* fixup: M4 accumulator probe v2 */',
+                        'rs64_m4_accum_probe(&rsp, 13, RSP_SIGNED(r10) < 0 ? 0x1754u : 0x1770u, r9, rdram);  ' + M4_PC_MARKER)
+
 # Fixup 22: M4 operand-source probes (s4630): log every ucode SP DMA read
 # (dmem/dram/len) and, at the vertex-transform loop head (L_162C), the vertex
 # register v2, matrix registers v8..v15 and the DMEM vertex window.

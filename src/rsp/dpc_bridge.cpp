@@ -436,7 +436,8 @@ static bool log_tri_writer() {
 }
 
 extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage,
-                                     uint32_t r9, const uint8_t *rdram) {
+                                     uint32_t guest_pc, uint32_t r9,
+                                     const uint8_t *rdram) {
     static const bool enabled = [] {
         const char *e = std::getenv("ROGUESQ_LOG_M4_ACCUM");
         return e && *e && *e != '0';
@@ -468,8 +469,8 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage,
     } else if (stage == 12) {
         for (unsigned lane = 0; lane < 8; ++lane) post_vge[lane] = rsp->vpu.r[6].u16(lane);
     }
-    fprintf(stderr, "[m4-accum] task=%u phase=%u stage=%u r9=0x%08X", g_e9prov.task,
-            rs64_phase_ord(), stage, r9);
+    fprintf(stderr, "[m4-accum] task=%u phase=%u stage=%u pc=0x%04X r9=0x%08X", g_e9prov.task,
+            rs64_phase_ord(), stage, guest_pc, r9);
     for (unsigned lane = 0; lane < 8; ++lane) {
         fprintf(stderr, " l%u:v4=%04X v0=%04X v6=%04X pre=%04X vge=%04X v29=%04X acch=%04X accm=%04X accl=%04X",
                 lane, rsp->vpu.r[4].u16(lane), rsp->vpu.r[0].u16(lane),
