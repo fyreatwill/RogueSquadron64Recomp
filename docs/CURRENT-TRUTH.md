@@ -147,28 +147,30 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
   census. Corrected reads match retail (`0x00` dominant, `0x03` absent).
 - Earlier “M5 fully closed” claims were too broad until the keyed mission and
   long-hold rows; those rows now close the qualified route.
+- The s5351 claim that oracle-driving past attract needs human authorization
+  was wrong. It was believable because s5326/s5329 attempts missed the hangar,
+  but s5330's in-process autopilot route works and s5335 reached the hangar in
+  both arms; the real wall is the retail/port key-domain mismatch, which is
+  offline-resolvable.
 - Earlier route-blocked and host-load conclusions are historical. Use the soak
   queue and current `NEXT.md`; do not revive stale backlogs without a new
   measurement.
 
 ## Next steps (single monotonic backlog)
 
-1. Check docs/M5-AUDIO-PLAN.md status and run the next un-run de-stub step
-   with its validation soak (ITERATION.md priority 2). The M3 j/jal idiom
-   list is exhausted (s5349: both residual uncovered targets are dead data —
-   a constant-false `bltzal $zero` into the Q15 gap at 8009D978, and the
-   `.ovl.mission` header word at 800A5130 that the audit misdecoded).
-2. Keep the M4 accumulator boundary parked: the current retail and port key
-   domains do not align, so do not normalize PCs/origins or infer a writer.
-   Re-open only with an independently justified shared key mapping.
+1. M4 key-domain mapping (s5352 re-scope, offline): derive the exact
+   generated-RSP-PC (`0x112C`/`0x17F0`) -> retail IMEM-PC (`0x0088..0x0FE8`)
+   mapping from the generator and the Factor 5 ucode image, with a PC both
+   arms execute as positive control. Only an exact mapping permits a later
+   origin-aligned join (`0x006AB800` vs `0x006AB400`); never normalize by
+   guess. If none exists, close M4 as unevaluable for the qualified route.
+2. M5 and the M3 j/jal idiom list are exhausted (s5349); do not revive
+   without a new discriminator. Re-open M3 only as a complete idiom-class audit.
 3. The generated-symbol sweep is parked; re-open only if a new placeholder
    candidate or companion-map evidence appears.
-4. Re-open M3 only as a complete idiom-class audit selected by a new
-   discriminator. Do not chase passive recurrence breadcrumbs.
-5. Complete fresh PatchesLib source qualification when the external
-   `mips64-elf-gcc` and `mips64-elf-ld` toolchain is supplied; record the
-   generation, compile, and link outcomes. Session 5342 measured that both
-   tools are currently absent. The host-side declaration path is now
+4. Fresh PatchesLib source qualification: open dependency, NOT blocking —
+   needs an external `mips64-elf-gcc`/`mips64-elf-ld` (absent, s5342;
+   installing is a human decision). The host-side declaration path is
    regeneration-safe and qualified against the existing `patches.elf`.
 
 ## Evidence index
