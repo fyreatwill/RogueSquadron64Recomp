@@ -568,11 +568,19 @@ found no body, placeholder, overlay record, or direct generated caller at the
 companion address. Its nominal span to `__osSiRelAccess = 0x80033934` is
 `0x44`, with no body to validate. Preserve the ABI name. Audit:
 `docs/RENAME-S5189-AUDIT.md`. The next candidate is now
-`__osSiRelAccess = 0x80033934`.
+`__osSiRelAccess = 0x80033934`. `__osSiRelAccess = 0x80033934` is now
+classified as another unmaterialized libultra/ABI entry: the bounded helper
+reported `already-synchronized`, and independent generated-tree searches found
+no body, placeholder, overlay record, or direct generated caller at the
+companion address. Its nominal companion span to `__osSiRawStartDma =
+0x80033B20` is `0x1EC`, with no body to validate. Preserve the ABI name.
+The helper also surfaced `sinf = 0x80033960` as already synchronized; that is
+a separate libultra symbol. Audit: `docs/RENAME-S5190-AUDIT.md`. The next
+candidate is now `__osSiRawStartDma = 0x80033B20`.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSiRelAccess = 0x80033934`, whose next
+1. Resume the companion sweep with `__osSiRawStartDma = 0x80033B20`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page

@@ -160028,3 +160028,18 @@ to validate. Preserve the ABI name and continue the sweep at
 `__osSiRelAccess`. This rules out an actionable generated rename at this entry,
 but does not bear on runtime behavior. No build or soak was warranted for this
 naming-only result. Audit: `docs/RENAME-S5189-AUDIT.md`.
+
+## Session 5190 (2026-10-17) — classified `__osSiRelAccess` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `__osSiRelAccess = 0x80033934`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found no body, placeholder, overlay record, or direct
+generated caller at the companion address. The symbol map places
+`__osSiRawStartDma = 0x80033B20` next, giving a nominal `0x1EC` span with no
+body to validate. Preserve the ABI name and continue the sweep at
+`__osSiRawStartDma`. The helper also surfaced `sinf = 0x80033960` as already
+synchronized; it is a separate libultra symbol. This rules out an actionable
+generated rename at this entry, but does not bear on runtime behavior. No
+build or soak was warranted for this naming-only result. Audit:
+`docs/RENAME-S5190-AUDIT.md`.
