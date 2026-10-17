@@ -847,6 +847,7 @@ generated caller at the companion address. Its nominal span to `_Putfld =
 Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+0e. (s5241) Queued soak scratch/agent/soak_queue/s5240_to_ptr_mask_regress.sh to check the 0d mask for regression (clean = crash=0, mission_onset ~174s). Read its SOAK-RESULTS.md line first next iteration; if clean, resume M5 audio plan. No conclusion overturned this session.
 
 0e. (s5239) lib/ non-rsp.cpp raw rdram[] index class CLOSED (1 unsafe site: rt64_gbi_f3dfactor5.cpp:1023 texture dump could read 31 B past 8 MB, now masked; sp.cpp/pi.cpp/heap.cpp/f3dfactor5:194 proved safe; static-only, single-source). No overturned conclusions. Next: census of unchecked `TO_PTR` (ultra64.h:42) users in ultramodern/librecomp, else resume sweep at `_Putfld`.
 0d. (s5238) src/main memcpy/memset/rdram+base class CLOSED (47 hits classified; all masked/constant-gated/checked; no guard needed; static-only, single-source). Next: another idiom class (e.g. lib/ rt64 host buffer sizes) or resume sweep.
