@@ -160746,3 +160746,8 @@ for known writers in the same run. Next discriminator: audit every other raw
 `rdram[x]` byte read in census/fixup code for the missing `^3` (grep
 `rdram\[[a-z_]*\]` in tools/fixup_game_funcs_vendored.py and src/main); any
 hit that fed an earlier conclusion must be re-measured.
+
+Session 5229 summary: this run selects the byte-swizzle census bug as the
+cause of the "port 0x03" reading, refutes a late port writer, and resolves
+the s5223-s5228 retail-entry thread. Next discriminator: grep the other raw
+rdram byte reads for a missing ^3 (see above).
