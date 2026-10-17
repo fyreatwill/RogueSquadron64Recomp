@@ -158581,3 +158581,6 @@ Block claimed: the nohangar stall cannot be attributed (H1 host load vs H3 gener
 
 ## Session 5054 (2026-10-16) — BLOCKED: no runnable unit left; every M3 idiom class closed, H1-vs-H3 gated on quiet host
 Read CURRENT-TRUTH and NEXT. Step 0: CURRENT-TRUTH 52.7 KB (<60 KB), no maintenance. The offline m3-idiom-class-audit named in NEXT has no open class: CURRENT-TRUTH "M3 and rendering" lists every class closed, and its movz/movn bullet was stale (done s4970) — corrected this session. No new recompiler/provenance evidence exists to justify repeating a class. The only open item (H1 host-load vs H3 generated-code for the nohangar route stall) needs `uptime` load <2; measured 7.08/6.62/6.42 this session, top consumers Chrome 111%+31%, WindowServer 53%, REAPER 19%. Running it would repeat the s5047/s5051 invalid-under-load result. Doc-only churn avoided. ORIGIN: n/a (no mitigation added).
+
+## Session 5055 (2026-10-16) — unblock: s5054 block confirmed real, escalated (route 4)
+Block: H1 (host load) vs H3 (generated code) needs load <2; measured 6.3 at 17:43 (Chrome, REAPER). Looked for a load-free route or same-load control: s5037 soaks recorded no load, no older binary retained, key delivery needs the live game. Lowering load is a human decision. No game run, no code changed. BLOCKED.md rewritten with the refuting experiment.
