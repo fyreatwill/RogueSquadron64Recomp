@@ -434,3 +434,4 @@ Lesson: any raw `rdram[...]` byte read in a census must apply `^3`.
 `src/main/rs64_rdram_peek.h` (use it for ALL host probe reads). Logged words from the probes named in
 PORTING-STATE s5230 predating this are suspect (single-source) until re-read. Remaining single-byte
 `rdram[x]` reads: s5231 classified all; 26 more unswizzled byte reads fixed (hashes/dumps over byte-permuted data were wrong).
+- **s5253 (unblock):** s5252 block re-scoped (route 3). NEXT = offline rt64 guest-sized-host-buffer audit; host-load dependency for the s5250 baseline remains open.

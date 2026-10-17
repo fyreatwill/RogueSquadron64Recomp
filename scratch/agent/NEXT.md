@@ -1,2 +1,2 @@
-# Next: run soak_queue/s5250_taskptr_baseline.sh once uptime load1 < 2; else offline audit of guest-sized host buffers in lib/rt64 (class not yet audited; s5252 agent did not return).
-HYPOTHESIS-ID: host-load-vs-route-stall
+# Next: verify the six s5252-addendum leads in PORTING-STATE.md (guest-sized rt64 host buffers): read each cited line, then guard it or prove it dead. Offline only, no game run. lib/ edits need submodule-patches/export.sh + commit same session. Opportunistic: if load1<2 at start, also run soak_queue/s5250_taskptr_baseline.sh (it self-skips otherwise; do not wait for it).
+HYPOTHESIS-ID: rt64-guest-sized-host-buffer-audit

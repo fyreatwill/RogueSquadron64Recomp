@@ -1,2 +1,2 @@
-# UNBLOCK s5250
-Route taken: 3 (re-scope), after route 1 partially succeeded. Evidence: stop_gate --verify failed only on STATUS=WORKING; host load1=7.5 (Chrome/REAPER, user processes, not killed); static diff of submodule-patches 70a56647..HEAD is all guards/identity masks, so lib bisect not needed. Baseline script now load-gated (exit 77). Refuting experiment: run baseline at load<2 and fail it.
+# UNBLOCK s5253
+Route taken: 3 (re-scope). Route 1: the load gate is a guard (self-skip exit 77); running the baseline at load would weaken the measurement, so it is not refutable, and no second route exists to the same discriminator. Route 2: load is user-owned (Chrome/REAPER), not ours to kill; load1 observed 4.64 (falling from 7.6 over 15m) but still >= 2. Re-scoped: NEXT.md is now the offline verification of the six s5252-addendum rt64 host-buffer leads (no game run needed). Refuting experiment: run soak_queue/s5250_taskptr_baseline.sh at load1<2 and fail it.
