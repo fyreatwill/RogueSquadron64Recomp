@@ -1,10 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5106; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5107; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5107:** The bounded generated-symbol sweep renamed the companion
+  `bzero` entry at `0x8002A080`: generated `bzero_recomp` had the exact `0xA0`
+  span and three live callers. The rename was applied to the generated
+  snapshot, overlay table, and rename tooling; audit recorded in
+  `docs/RENAME-S5107-AUDIT.md`. This rules out stale-address, split-span, and
+  no-caller explanations for `bzero`; no runtime behavior changed.
 
 - **s5106:** The bounded generated-symbol sweep renamed the companion
   `bcmp` entry at `0x80029F60`: generated `bcmp_recomp` had the exact `0x120`
@@ -215,8 +222,8 @@ The s5049 in-place regen (tools/agent/regen_n64recomp.sh, still disabled) destro
 ## Next steps (single monotonic backlog)
 - s5106: `bcmp_recomp -> bcmp` passed companion semantic-name, exact-span, and
   live-caller gates and was applied to the generated snapshot and overlay
-  table. Next: audit the adjacent `bzero_recomp -> bzero` candidate at
-  `0x8002A080` with the same gates.
+  table. Next: continue the bounded companion-symbol sweep at the next
+  semantically mapped candidate; do not build or soak naming-only changes.
 - s5105: Time/interrupt host-wrapper class closed. `tools/audit_time_interrupt_wrappers.py`
   passed its 4/4 positive-control self-test; the live census found eight
   scalar/time implementations without guest dereference and one intentional

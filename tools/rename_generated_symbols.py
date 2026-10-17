@@ -12,6 +12,7 @@ RENAMES = {
     # paired zero stores match the companion libc bzero implementation.
     "func_8000040C": "clearMemory16ByteBlocks",
     "bcmp_recomp": "bcmp",
+    "bzero_recomp": "bzero",
     "func_800824F8": "rs_crc32",
     "func_800BFDC4": "setHudSecondaryWeaponInfo",
     "func_800C63C0": "getAvailableShipsForLevel",
@@ -286,6 +287,7 @@ RENAMES = {
 
 RENAME_ADDRESSES = {
     "bcmp_recomp": 0x80029F60,
+    "bzero_recomp": 0x8002A080,
 }
 
 

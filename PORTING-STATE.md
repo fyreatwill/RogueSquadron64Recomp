@@ -158974,3 +158974,21 @@ and recorded the gates in `docs/RENAME-S5106-AUDIT.md`. The
 incompatible-redeclaration warning because `bcmp` is also a host builtin.
 This rules out stale-address, split-span, and no-caller explanations for this
 candidate. It does not establish runtime behavior, so no soak was run.
+
+## Session 5107 (2026-10-17) — renamed companion-mapped libultra `bzero`
+
+Ran the generated-symbol sweep after the required last-15-session preflight;
+the titles were not sweep-only, so the sweep remained eligible. The bounded
+candidate was companion `bzero = 0x8002A080`, emitted as `bzero_recomp`. The
+companion address matched the generated prologue, `recomp_overlays.inl` gave
+the exact `0xA0` span ending at the next `osEepromLongRead` entry, and three
+independent generated callers were found in `funcs_27.c` at guest callsites
+`0x8009BE70`, `0x8009C1B4`, and `0x8009CAF8`.
+
+Applied `bzero_recomp -> bzero` to the generated snapshot and overlay table,
+added the explicit address-aware mapping to `tools/rename_generated_symbols.py`,
+and recorded the gates in `docs/RENAME-S5107-AUDIT.md`. A follow-up search
+found no stale `bzero_recomp` references. No build or soak was run because
+this was a generated-symbol naming change. This rules out stale-address,
+split-span, and no-caller explanations for this candidate, but does not
+establish runtime behavior.
