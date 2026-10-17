@@ -1,2 +1,23 @@
-# Next: M3 RDRAM-index classes (rt64 s5254-5257, librecomp s5258) are all closed. If host load1<2 run queued s5250 baseline soak (route-stall H-host-load vs H-lib-patch); otherwise take the next un-done M5 plan step (docs/M5-AUDIO-PLAN.md) or revisit the retail-entry boundary.
-HYPOTHESIS-ID: rt64-guest-sized-host-buffer-audit
+# Next: bounded generated-symbol sweep at `_Printf = 0x80035FD0`.
+
+The s5250 baseline arm self-skipped at host load1=5.20, so do not retry it
+until a future loop supplies load1<2. M5 has no uncompleted de-stub step and
+the recent M3 idiom classes are closed; continue the permitted sweep.
+
+Before the next classification, competing hypotheses and discriminator:
+
+- H1: `_Printf` is already synchronized and needs no edit.
+- H2: `_Printf` is a placeholder whose companion name can be propagated.
+- H3: the address is a data/fragment record and must remain mechanical.
+
+Discriminating measurement: run the bounded rename helper over exactly
+`0x80035FD0..0x80036620`, then independently inspect the companion symbol,
+generated body/header/overlay record, and callers. A zero-edit result plus a
+full matching body selects H1; a safe companion-to-placeholder rename selects
+H2; no callable body or fragment evidence selects H3.
+
+Exact command:
+
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80035FD0 --end-address 0x80036620 --limit 1`
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep

@@ -160953,3 +160953,16 @@ Host load 6.5 so the s5250 baseline soak stayed gated. Did the M3 idiom-class au
 - flash.cpp: unreachable, `flashram_allowed()` quits first for an EEPROM game; dead.
 - print.cpp `__osRdbSend_recomp`: `size` is guest r5 (64-bit), allocates `size+1` and reads MEM_B per byte, unbounded. GUARDED: `size > 0x800000` returns. ORIGIN: not a corruption mitigation; no wild-value writer exists, this is a defensive bound on a guest-supplied length (debug-RDB stub, not known to be called by retail).
 Patch exported (submodule-patches/N64ModernRuntime.patch). Static, single-source; no run (host load). Class closed.
+
+## Session 5259 (2026-10-17) — generated-symbol sweep: `_Putfld` already synchronized
+
+The bounded rename helper was run for `_Putfld = 0x80035960` against the
+external generated tree and companion symbol files. It renamed zero
+references in zero files and reported `already-synchronized`. Independent
+checks found the exact companion declaration, a full named 0x670-byte
+generated body, the matching header declaration, overlay record, and an
+internal caller. This rules out a missing semantic rename for `_Putfld`; it
+does not advance the runtime/audio route. No build or soak was warranted.
+The queued s5250 baseline was folded from the prior iteration: it
+self-skipped at host load1=5.20 (rc=77), so the host-load discriminator was
+not run. The next sweep candidate is `_Printf = 0x80035FD0`.

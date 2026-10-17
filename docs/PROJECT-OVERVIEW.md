@@ -6717,7 +6717,7 @@ Verbatim from docs/CURRENT-TRUTH.md Headline before compaction; newer entries su
 ## Archived sweep log (moved from CURRENT-TRUTH at S5245)
 
 `docs/REVISIT-S5227-BOTH-STRIDES.md`. The renaming sweep is
-paused at `_Putfld = 0x80035960`. The last
+paused at `_Printf = 0x80035FD0`. The last
 candidates, `cosf = 0x8002B190`, `osCreateMesgQueue = 0x8002B300`, and
 `osCreateThread = 0x8002B330`, were already synchronized: `cosf` has its
 generated body, exact `0x170` span, and 75 callers; the two libultra entries
@@ -7213,4 +7213,3 @@ were retained below or in the project overview.
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
   through `docs/RENAME-S5135-AUDIT.md`.
-

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5227 (2026-10-17). The
+Compact operational handoff, maintained at Session 5259 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -23,7 +23,7 @@ and is the minority. Neither writes the port's `0x03`. The idle stride
 of each origin has no writer. No guard. Audit:
 `docs/REVISIT-S5227-BOTH-STRIDES.md`.
 
-The renaming sweep is paused at `_Putfld = 0x80035960`. Every libultra/ABI
+The renaming sweep is paused at `_Printf = 0x80035FD0`. Every libultra/ABI
 candidate from `cosf 0x8002B190` through `osRecvMesg 0x800331D0` (and the
 companion-only `__osPfs*`/`osPi*`/`osMotor*` entries between) was classified as
 an unmaterialized host-wrapper/ABI entry or already-synchronized: preserve the
@@ -373,7 +373,8 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
-- **OPEN DEPENDENCY (unblock s5250):** the hangar-route baseline needs host load1 < 2 (measured 7.5 from user Chrome/REAPER; not ours to kill). Static read of the whole `70a56647..HEAD` submodule-patch delta (68+11 lines): every hunk is an out-of-range guard (save 0 fires) or an `& 0x7FFFFF` mask that is identity for in-range addresses, so H-lib-patch is statically implausible (single-source); host load is the leading hypothesis. `soak_queue/s5250_taskptr_baseline.sh` now self-skips (exit 77) when load1>=2. Do not bisect lib patches.
+- **s5259:** `_Putfld = 0x80035960` is already synchronized: the bounded helper made zero edits, and the companion/generated trees independently show the exact named 0x670-byte body, declaration, overlay record, and caller. No build or soak. Next sweep candidate: `_Printf = 0x80035FD0` (audit `docs/RENAME-S5259-AUDIT.md`).
+- **OPEN DEPENDENCY (unblock s5250):** the hangar-route baseline needs host load1 < 2 (the queued recipe self-skipped at 5.20; not ours to kill). The host-load discriminator therefore remains unevaluated. Do not retry until the load gate is met.
 - **s5258:** librecomp/ultramodern RDRAM-index class audited (~60 sites): rsp.cpp all masked, pi DMA guarded, flash dead, `__osRdbSend` size guard added (lib patch exported). Static, single-source. Next: s5250 baseline soak when host load1<2, else M5 step or retail-entry revisit.
 - **s5257:** rt64 guest-sized host-buffer audit is exhausted: rdp/tmem/texture/f3dfactor5 (s5255), hle/gbi memcpy (s5256), RSP matrix/viewport/mode/matrix-id stack push/pop (s5257, all bounded; assert-only paths still index in range). All static, single-source; no overturned conclusions. Next: s5250 baseline soak when host load1<2, else an M3 idiom-class audit outside rt64 (librecomp/ultramodern shim RDRAM pointer arithmetic).
 - **s5250 status:** src cleared: s5235 save-guard and task_ptr guard both 0 fires; noguard arm 0/3 hangar (load 10-12). Remaining H-host-load vs H-lib-patch; discriminator = baseline recipe at host load<2, else lib-patch bisect.
