@@ -158921,3 +158921,20 @@ This is source-audit evidence only: no runtime guard, build, or soak was
 authorized. Rules out a reachable raw guest-pointer site in this thread/queue
 wrapper set, but does not prove unexercised paths safe at runtime. Next: timer,
 virtual-address, and cache host wrappers.
+## Session 5104 (2026-10-17) — M3 timer/virtual/cache host-wrapper census
+
+Ran the prescribed timer/virtual/cache host-wrapper source audit. The named
+audit tool was missing, so restored `tools/audit_timer_virtual_cache_wrappers.py`
+using the established audit-tool pattern, then ran its positive-control
+self-test and live census in one work unit. All four controls passed. The live
+table classified `osSetTimer`/`osStopTimer` through translated `TO_PTR` runtime
+handling, `osVirtualToPhysical` as integer-only address translation, and the
+three cache wrappers as intentional no-ops. `osPiGetCmdQueue` had no definition
+in the audited runtime source set. An independent symbol/edge grep found the
+same definitions and no raw guest-pointer dereference.
+
+This rules out a reachable raw guest-pointer dereference in this wrapper class
+as a source-level M3 explanation. It does not establish runtime reachability or
+prove that the intentional cache no-ops are semantically sufficient. No guard,
+runtime build, or soak was run. The missing tool was the only substitution;
+the planned census itself completed after restoration.
