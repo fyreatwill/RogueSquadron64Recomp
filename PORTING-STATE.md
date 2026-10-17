@@ -159487,3 +159487,18 @@ span-mismatch, and unproven outcomes for this candidate. No build or soak was
 needed. Audit: `docs/RENAME-S5148-AUDIT.md`.
 
 Next: audit `__osSumcalc = 0x8002F390`.
+
+## Session 5149 (2026-10-17) — classified `__osSumcalc` as already named
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Audited the next generated-
+symbol candidate, `__osSumcalc = 0x8002F390`, with the bounded rename helper
+and direct generated-tree checks. The helper made zero edits and reported
+`already-synchronized`. The function has a generated body ending at
+`0x8002F3E8`; the companion boundary, `__osIdCheckSum = 0x8002F3EC`, and the
+overlay record independently establish the exact `0x5C` span. A generated
+caller at `0x800306B4` provides the live caller gate. The existing ABI name
+is therefore preserved. This rules out the host-wrapper, span-mismatch, and
+unproven classifications for this candidate; no build or soak was needed for
+a naming-only audit. Evidence: `docs/RENAME-S5149-AUDIT.md`.
+
+Next: audit `__osIdCheckSum = 0x8002F3EC`.
