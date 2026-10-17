@@ -161474,3 +161474,14 @@ conflicting fragment was found. H1 is selected; H2 and H3 are ruled out for
 this address. No build or soak was warranted. Audit:
 `docs/RENAME-S5299-AUDIT.md`. Next: classify
 `spawnChildNpcWithTransform = 0x8003F1D0`.
+## Session 5300 (2026-10-17) — generated-symbol sweep: `spawnChildNpcWithTransform` is synchronized
+
+The bounded generated-symbol helper was run for companion record
+`spawnChildNpcWithTransform = 0x8003F1D0` with `python3`; it reported
+`already-synchronized` and renamed zero references in zero files. Independent
+inspection found the named callable body in `RecompiledFuncs/funcs_9.c`, its
+header declaration, and overlay record. No placeholder or conflicting
+fragment was found. H1 is selected; H2 and H3 are ruled out for this address.
+No build or soak was warranted. Audit:
+`docs/RENAME-S5300-AUDIT.md`. Next: classify
+`spawnInheritedNpcVariantA = 0x8003F6E4`.

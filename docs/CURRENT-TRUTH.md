@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5299 (2026-10-17). The
+Compact operational handoff, maintained at Session 5300 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -82,6 +82,13 @@ mid-task rows, 200 with a sampled `0x8000`, and 232 joined an end row. The end
 stream had 3,746 unique task IDs. VI-512 and both probe streams fired, but the
 mid-task hook is stage-selective, so H3 remains and H1 versus H2 is not
 selected. Audit: `docs/REVISIT-S5298-M4-PORT-TASK-JOIN.md`.
+
+Session 5300 classified `spawnChildNpcWithTransform = 0x8003F1D0` as already
+synchronized. The bounded helper made zero edits; independent generated-tree
+inspection found the named callable body in `funcs_9.c`, its header
+declaration, and overlay record, with no placeholder or conflicting fragment.
+Audit: `docs/RENAME-S5300-AUDIT.md`. The next sweep candidate is
+`spawnInheritedNpcVariantA = 0x8003F6E4`.
 
 Session 5299 classified `relinkNpcSlotToNewParentGroup = 0x8003EFDC` as
 already synchronized. The bounded helper made zero edits; independent
@@ -561,6 +568,13 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5300:** `spawnChildNpcWithTransform = 0x8003F1D0` is a named,
+  already-synchronized callable NPC routine; the helper made zero edits and
+  independent inspection found its body in `funcs_9.c`, declaration, and
+  overlay record with no placeholder or conflict. No build or soak was
+  warranted. Audit: `docs/RENAME-S5300-AUDIT.md`. The next bounded sweep unit
+  is `spawnInheritedNpcVariantA = 0x8003F6E4`.
 
 - **s5299:** `relinkNpcSlotToNewParentGroup = 0x8003EFDC` is a named,
   already-synchronized callable NPC routine; the helper made zero edits and
