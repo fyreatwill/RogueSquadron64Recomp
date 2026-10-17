@@ -159248,3 +159248,13 @@ H-retail-no-0x8000-mid-task and rules out retail mid-task accumulator state as
 the carrier of the port's hangar value. Single-source oracle evidence only;
 it does not explain the port and adds no mitigation. Audit:
 `docs/REVISIT-S5129-AUDIT.md`.
+## Session 5130 (2026-10-17) — classified `__osException` as host wrapper
+
+Ran the bounded generated-symbol audit for companion `__osException =
+0x8002B600`. The helper changed zero references and reported
+`already-synchronized`. The generated snapshot contains no body, placeholder
+symbol, overlay record, or direct generated caller at the candidate address;
+the companion map places the next entry at `0x8002BC1C`. This selects the
+host-wrapper/ABI-boundary outcome and rules out a semantic rename, build, or
+soak for this candidate. Audit: `docs/RENAME-S5130-AUDIT.md`. Next candidate:
+`__osEnqueueAndYield`.

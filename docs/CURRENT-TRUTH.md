@@ -23,7 +23,9 @@ one generated caller and no body to rename. `osDpGetCounters = 0x8002B590`
 and `osDpSetStatus = 0x8002B5E0` are likewise host-wrapper/ABI entries: their
 generated trees have no bodies or overlay records, with two ABI call sites
 each. The preamble at `0x8002B5F0` is the same ABI-boundary case with no
-generated caller. The next candidate is `__osException`.
+generated caller. `__osException = 0x8002B600` is the same ABI-boundary case:
+it has no generated body, overlay record, or direct generated caller. The next
+candidate is `__osEnqueueAndYield`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -124,7 +126,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osException = 0x8002B600` using the bounded rename helper. Rename
+1. Audit `__osEnqueueAndYield = 0x8002BC1C` using the bounded rename helper. Rename
    only if the generated body, exact next-entry span, semantic mapping, and
    live caller all agree; otherwise preserve the ABI name and record the
    classification.

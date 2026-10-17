@@ -1,14 +1,14 @@
-# Next: generated-symbol renaming sweep — exception handler candidate
+# Next: generated-symbol renaming sweep — enqueue/yield candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Bounded work unit: audit only companion `__osException = 0x8002B600`, the next
-libultra entry after `__osExceptionPreamble`. Determine whether it has a
+Bounded work unit: audit only companion `__osEnqueueAndYield = 0x8002BC1C`, the
+next libultra entry after `__osException`. Determine whether it has a
 generated prologue/body or is another runtime wrapper. Do not rename a
 `_recomp` ABI symbol without a generated body and exact span.
 
 Competing hypotheses and discriminator:
 
-- H-generated-name-correct: a generated prologue/body is at `0x8002B600`, the
+- H-generated-name-correct: a generated prologue/body is at `0x8002BC1C`, the
   overlay span ends at the next entry, and an independent generated caller
   exists; apply the semantic rename.
 - H-host-wrapper: only a runtime wrapper/call declaration exists, or the
@@ -25,8 +25,8 @@ preserve ABI naming, leave unchanged, or advance without a build/soak.
 
 Commands:
 
-    rg -n '__osException|func_8002B600|fake_func_8002B600' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002B600 --end-address 0x8002BF00
+    rg -n '__osEnqueueAndYield|func_8002BC1C|fake_func_8002BC1C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002BC1C --end-address 0x8002BF00
 
 If all generated-name gates pass, apply the explicit mapping and record a new
 audit. Otherwise preserve the wrapper ABI and record the classification. No
