@@ -159132,3 +159132,15 @@ host-wrapper/unproven outcome and preserves the ABI naming; no build or soak
 was warranted. Independent companion-boundary and generated-tree searches
 agree. Audit: `docs/RENAME-S5120-AUDIT.md`. Next candidate:
 `__osPackRequestData`.
+
+## Session 5121 (2026-10-17) — classified request-packer mapping as host wrapper
+
+Ran the bounded generated-symbol audit for companion `__osPackRequestData =
+0x8002B090`. The companion source uses `INCLUDE_ASM`; the generated snapshot
+has no candidate prologue/body or direct generated caller. The generated symbol
+map records an exact `0xF4` span ending at `cosf = 0x8002B190`, but that
+boundary does not establish a generated body. The rename helper changed zero
+references and reported `already-synchronized`. This selects the
+host-wrapper/unproven outcome and preserves the ABI naming; no build or soak
+was warranted. Independent companion-source, generated-tree, and symbol-span
+checks agree. Audit: `docs/RENAME-S5121-AUDIT.md`. Next candidate: `cosf`.

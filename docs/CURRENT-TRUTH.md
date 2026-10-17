@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5118 (2026-10-17). The
+Compact operational handoff, maintained at Session 5121 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -14,9 +14,9 @@ qualified image route; the silent `ROGUESQ_AUDIO_UCODE=0` path is only a
 control. Mission input reaches the game and changes the player vehicle state.
 
 The current bounded work is the generated-symbol renaming sweep. The last
-candidate, `__osContGetInitData = 0x8002AFC0`, was a host-wrapper/ABI entry
-with no generated body or exact-span rename. The next candidate is
-`__osPackRequestData = 0x8002B090`.
+candidate, `__osPackRequestData = 0x8002B090`, was a host-wrapper/ABI entry
+with no generated body or direct caller. The next candidate is
+`cosf = 0x8002B190`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -114,10 +114,9 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osPackRequestData = 0x8002B090` using the bounded rename helper.
-   Rename only if the generated body, exact next-entry span, semantic mapping,
-   and live caller all agree; otherwise preserve the ABI name and record the
-   classification.
+1. Audit `cosf = 0x8002B190` using the bounded rename helper. Rename only if
+   the generated body, exact next-entry span, semantic mapping, and live caller
+   all agree; otherwise preserve the ABI name and record the classification.
 2. Continue the companion sweep one entry per iteration while the last-15
    session preflight permits it. If the preflight makes the sweep a REVISIT,
    return to the external retail-entry or M4 boundary only with a genuinely
