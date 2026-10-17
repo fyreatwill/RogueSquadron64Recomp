@@ -161674,3 +161674,22 @@ No `func_80043AEC` placeholder or conflicting generated fragment was found.
 H1 is selected; H2 and H3 are ruled out for this address. No build or soak was
 warranted for a classification-only result. The next bounded candidate is
 `markHighLodCellsInGrid = 0x80043C30`.
+
+## Session 5320 (2026-10-17) — M4 stage timing remains unevaluable
+
+The preceding 15 session titles were all generated-symbol sweep steps, so the
+directive required a new-angle revisit rather than another symbol candidate.
+Using the existing qualified retail task-keyed dump and port task-keyed log,
+I compared phase-5 M4 transient `0x8000` timing by port stage. Retail controls
+passed: 3,020,766 mid-task records, 2,083 joined graphics tasks, four VI
+controls, and two whole-RDRAM controls; 1,222 retail tasks sampled `0x8000`
+mid-task and none retained it at task end. The port phase-5 capture had 324,688
+stage rows across 56 joined tasks and 59 end rows: stages 10/11 had 55/56
+tasks with `0x8000`, stages 12/13 had zero, and task-end had zero.
+
+This rules out port task-end retention and supports transient pre-clear timing,
+but selects H3 (unevaluable) for the cross-runtime discriminator: retail emits
+instruction-PC samples while the port hooks expose synthetic stages, and the
+port capture covers only 56 of 59 phase-5 end tasks versus 572 retail 512-wide
+tasks. No accumulator mitigation or rewrite is authorized. Audit:
+`docs/REVISIT-S5320-M4-STAGE-TIMING.md`.
