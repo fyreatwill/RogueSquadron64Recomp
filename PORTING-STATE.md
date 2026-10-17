@@ -160882,3 +160882,6 @@ Evidence (single-source each): run_A matches s5099 run1 until t=6.6s, then slot 
 Host: load ~7, Chrome helper 112% CPU, REAPER 46%, WindowServer 37%. s5048 showed the stall on 10-16 afternoon with pre-s5038 source; s5094/s5099 passed 01:09-01:30 on 10-17. Pass/fail tracks time of day, not a commit so far (H1 host load vs H3 build state, unresolved).
 Rules out: the 5 LOG_GUARD flags, SCENE_NODE_CACHE_GUARD, the TO_PTR mask, recipe drift. Does not rule out host load or an unmarked lib patch (s5235/s5236/s5239). Next: APFS-clone end-to-end build of 70a56647 as the control (NEXT.md).
 ORIGIN: no mitigation added; diagnostic only, no code change.
+
+## Session 5245 (2026-10-17) — maintenance: CURRENT-TRUTH compacted 60228 -> ~29 KB (904 -> ~425 lines)
+Step 0 triggered (60228 > 60000). Moved the per-candidate libultra/ABI rename-sweep narrative (old lines 24-372 and the "Generated-symbol sweep" subsection) verbatim into docs/PROJECT-OVERVIEW.md under "Archived sweep log"; kept a short summary of the sweep boundary and the retail-entry (fillSampleStreamRange) findings in CURRENT-TRUTH. No experiments run. Pending work unchanged: the s5244 clone-bisect control in scratch/agent/NEXT.md (route stall host-vs-lib).
