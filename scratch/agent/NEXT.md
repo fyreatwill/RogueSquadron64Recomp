@@ -1,7 +1,7 @@
-# Next: generated-symbol renaming sweep — `__osSiRawReadIo` candidate
+# Next: generated-symbol renaming sweep — `__osSiRawWriteIo` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Audit `__osSiRawReadIo = 0x80033C00` as one bounded companion unit. Determine
+Audit `__osSiRawWriteIo = 0x80033C50` as one bounded companion unit. Determine
 whether it has a generated prologue/body, exact span to the next companion
 entry, and an independent generated caller. Do not rename an ABI symbol
 without all three gates.
@@ -18,7 +18,7 @@ Competing hypotheses and discriminator:
 The discriminator is the bounded helper result plus generated-tree body/span
 and caller counts. Run:
 
-    rg -n '__osSiRawReadIo|func_80033C00|fake_func_80033C00' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80033C00 --end-address 0x80033C50
+    rg -n '__osSiRawWriteIo|func_80033C50|fake_func_80033C50' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80033C50 --end-address 0x80033CA0
 
 No build or soak is needed for a naming-only or ABI-preservation result.
