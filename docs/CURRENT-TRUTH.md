@@ -847,6 +847,7 @@ generated caller at the companion address. Its nominal span to `_Putfld =
 Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+0f. (s5242) s5240 mask soak FAILED the route (nohangar t=205, no CRASH). A/B arms queued: soak_queue/s5242_maskon.sh vs s5242_maskoff.sh (binaries build/RS64_maskon / RS64_maskoff). Read both SOAK-RESULTS lines first: on-fail+off-pass => revert TO_PTR mask (H-mask); both pass => flake; both fail => bisect s5229-s5240 / host load. Until resolved the 0d mask is UNVALIDATED.
 0e. (s5241) Queued soak scratch/agent/soak_queue/s5240_to_ptr_mask_regress.sh to check the 0d mask for regression (clean = crash=0, mission_onset ~174s). Read its SOAK-RESULTS.md line first next iteration; if clean, resume M5 audio plan. No conclusion overturned this session.
 
 0e. (s5239) lib/ non-rsp.cpp raw rdram[] index class CLOSED (1 unsafe site: rt64_gbi_f3dfactor5.cpp:1023 texture dump could read 31 B past 8 MB, now masked; sp.cpp/pi.cpp/heap.cpp/f3dfactor5:194 proved safe; static-only, single-source). No overturned conclusions. Next: census of unchecked `TO_PTR` (ultra64.h:42) users in ultramodern/librecomp, else resume sweep at `_Putfld`.
