@@ -160809,3 +160809,9 @@ index and from disk, and *.cpp-E/*.c-E/*.h-E/*.py-E added to .gitignore.
 ORIGIN: not a mitigation. Next discriminator: M5 plan Steps 0-11 are all qualified/closed, so the remaining choice is an M3 idiom-class
 audit that commits a guard, or resuming the paused symbol sweep at `_Putfld = 0x80035960` (rule 14: a sweep step alone will not reset the
 engineering counter).
+
+## Session 5233 (2026-10-17) — rdram swizzle idiom-class lint: 2 more byte-reversed halfword probes fixed in rsp.cpp
+HYPOTHESIS-ID: m3-idiom-class-audit
+Selects: audit of the remaining raw-rdram read class (8/16-bit casts and hand-composed multi-byte reads) across src/ and librecomp/ultramodern. Refutes: that s5230/s5231 left no sites outside main.cpp/upstream_compat.cpp. Resolves: class closed.
+Enumerated by grep: aligned 32-bit `*(uint32_t*)(rdram+x)` / memcpy sites are correct (word order is native); every 16/8-bit cast already carries ^2/^3. The only misses were the two `h` lambdas in `rs64_s4221_gain/pan` (lib/.../librecomp/src/rsp.cpp), which composed a halfword from two bytes using ^2 per byte (reads the lane-swapped bytes -> byte-reversed halfword). Fixed to ^3 per byte; only affects ROGUESQ_LOG_S4221 diagnostics (no CURRENT-TRUTH / M5-plan claim cites s4221 gain output, grep). Not rebuilt (log-only, same types); submodule-patches re-exported.
+New tool `tools/lint_rdram_reads.sh` (+ `--selftest` positive control, fired 2/2 on planted bad lines; real tree: flagged exactly the 2 rsp.cpp lines before the fix, clean after). ORIGIN: the writer of the bad values is the s42xx probe author's wrong lane index, not game/port state; nothing runtime-visible changed.

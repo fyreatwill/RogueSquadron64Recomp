@@ -1,6 +1,3 @@
-# Next: pick ONE M3 idiom-class audit that commits a guard (enumerate class by grep, classify every site, guard or prove dead)
+# Next: pick ONE further M3 idiom-class audit that commits a guard (grep-enumerate, classify, guard or prove dead)
 HYPOTHESIS-ID: m3-idiom-class-audit
-s5232 closed the swizzle-fix ledger re-check (nothing live depended on it) and removed stray *-E sed backups. M5 plan steps 0-11 are
-all qualified. Choose a not-yet-audited displacement/idiom class from docs/PROJECT-OVERVIEW.md (s397 frequency-scan section), write
-hypotheses + the discriminating measurement here before building. Fallback: resume the symbol sweep at _Putfld=0x80035960
-(does not reset the engineering-counter, rule 14).
+s5233 closed the raw-rdram swizzle class and added tools/lint_rdram_reads.sh. Pick a new class (e.g. unchecked host-wrapper pointer args), write hypotheses here first. Fallback: sweep at _Putfld=0x80035960.

@@ -848,6 +848,7 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+0. (s5233) rdram byte/halfword swizzle class CLOSED and lint-enforced (`tools/lint_rdram_reads.sh`, clean; 2 rsp.cpp s4221 probe lambdas fixed). Next M3 class: pick another by grep, or resume sweep.
 1. (s5232) Swizzle-fix ledger re-check CLOSED: no CURRENT-TRUTH/M5-plan claim cites the 45 fixed probe readers
    (grep, single-source). M5 plan steps 0-11 are qualified; next is an M3 idiom-class audit or the paused sweep.
 1b. The retail-entry thread is closed (s5229: census byte-swizzle bug).
