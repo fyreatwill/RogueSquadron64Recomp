@@ -158774,3 +158774,11 @@ No experiment run. Step 0: CURRENT-TRUTH 58,361 B (<60,000), no maintenance. Las
 
 ## Session 5083 (2026-10-16) — unblock: s5082 "owner must pick a target" re-scoped to m6-mission-soak
 Block claimed all work exhausted. Refuted: candidate (c) (long in-mission soak with sustained scripted input) is runnable with existing route/pad-override/soak queue; ledger has only 8 s input holds (s5076-s5081), no sustained-input stability measurement. Real but non-gating deps remain: mips64-elf-gcc, rename symbol source, screen capture (TCC). No experiment run this iteration. Next: NEXT.md m6-mission-soak. ORIGIN: n/a.
+
+## Session 5084 (2026-10-16) — m6-mission-soak: no crash, but game thread stops polling the pad ~75 s into the mission (H-late-fault)
+Ran scratch/agent/s5084_mission_soak.sh (s5080 route, then 10 s idle, 6 x ~22 s input cycles fwd/back/left/right/Z/A+stick, 10 s idle). Single run, n=1.
+- Route qualified (title t=51, hangar t=65, mission 0x620400, input start t=263). crash=0, abort=0.
+- Cycles 1-2 behaved: padlog transitions 14-27 match the commanded sequence exactly (control passed), [watch #] lines grew 5889 -> 7803.
+- After cycle 2 the game stops: [watch #] frozen at 7803 (h9DE/cand9DEAC/stick constant), NO padlog transitions for cycles 3-6 (padlog total 27 vs ~55 commanded) i.e. osContGetReadData is no longer called, while the VI thread keeps printing update_screen with origin 0x690400 fixed and [vi-fs-decision] stalled=1 pairs=0 (rdpFs fs=7794 constant). VI alive, game/logic thread dead or blocked. Not a CRASH/abort line.
+- Not yet known: whether the stall is input-triggered (cycle-2 Z/A press at call 17469?? no - stall came after cycle 2's release, during idle) or purely mission-time (~75 s after onset). The 2 cycles of input before it were handled normally. ORIGIN: not a mitigation iteration.
+- Rules out H-stable. Does not name the blocked thread/PC.

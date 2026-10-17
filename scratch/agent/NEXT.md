@@ -1,11 +1,6 @@
-# Next: m6-mission-soak — long in-mission flight soak with scripted stick/button input
-HYPOTHESIS-ID: m6-mission-soak
-Candidate (c) from the s5082 block, runnable locally. Build on scratch/agent/s5080_watch.sh (keyed route to
-mission 0x620400, pad override file). Instead of 8 s holds, drive >=120 s of alternating W/S/A/D/Z/Return
-inputs after mission onset (enqueue via soak_queue, 600 s cap per recipe; split if longer).
-Verdict fields: crash count, VI advancing (last 20 s), ROGUESQ_PAD_LOG transitions == commanded, watch-log
-distinct values of the 0x9DEAC triple (positive control: >1 in key windows, 1 in a no-key window).
-H-stable: crash=0, VI advances throughout. H-late-fault: crash/stall/abort at a mission event under input
-(then bisect by window). Do not combine with FREE_CENSUS (s5044). Single run = label n=1; repeat x2 for two-source.
-Open non-gating human deps (no action): mips64-elf-gcc install; symbol-mapping source for renames.
-Visible frame capture needs a screenshot path (macOS screencapture needs TCC = human setting) — not used.
+# Next: m6-mission-stall — what blocks the game thread ~75 s into the mission?
+HYPOTHESIS-ID: m6-mission-stall
+Fact (s5084, n=1): after mission onset + ~75 s the game thread stops (no osContGetReadData, [watch #] frozen at 7803), VI thread alive, no CRASH.
+Hypotheses: (A) time-based mission stall independent of input; (B) input-triggered (Z/A press or stick extremes); (C) host-load/flake (s5047 route_flake_hostload precedent).
+Discriminator, ONE iteration, two arms run concurrently-safe sequentially (one game at a time): arm1 = s5084 route with NO pad input after onset, 150 s; arm2 = repeat s5084 as-is. In both, once [watch #] stops growing for 10 s, run `sample <pid> 3` (macOS) and save thread stacks to the out dir to name the blocked wait (osRecvMesg? audio slot wait?). Positive control: padlog transitions in arm2 until stall.
+Outcomes: A -> arm1 stalls at similar watch#; B -> arm1 survives; stack names the blocking primitive either way.

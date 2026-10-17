@@ -6,6 +6,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s5084 (m6-mission-soak):** mission survives ~75 s then the game thread silently stops (no pad polls, [watch] frozen) while VI keeps ticking with stalled=1; no crash line. Single run. Next: no-input control + `sample` of the hung pid (NEXT.md).
 - **s5083 (unblock):** s5082 block re-scoped, not escalated: next unit m6-mission-soak (sustained-input mission soak, NEXT.md). Open non-gating deps: mips64-elf-gcc, rename symbol source, screen capture (TCC).
 - **s5072:** Pad input can be injected without display/focus: `ROGUESQ_PAD_OVERRIDE_FILE=path` (file "btn sx sy"; librecomp cont.cpp). Verified by padlog edge (padovr_test.sh). winctl no longer required for key tests.
 - **s5068:** In-mission input reaches the game (single-source, N=1): `ROGUESQ_PAD_LOG=1` pad log shows 0 transitions in no-key mission windows and exactly press+release with correct values (W/D stick 127, Z=0x8000, Return=0x1000) in the key window; crash=0, VI advancing. Unmeasured: visible mission reaction. Next: frame capture / game-state read of ship response (NEXT.md).
