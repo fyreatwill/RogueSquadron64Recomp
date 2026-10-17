@@ -456,8 +456,8 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
             const uint32_t scan = 320u * 224u * 2u;
             for (uint32_t i = 0; i < scan; i += 2) {
                 uint32_t off = phys + i;
-                uint8_t b0 = rdram[off ^ 3];
-                uint8_t b1 = rdram[(off + 1) ^ 3];
+                uint8_t b0 = rdram[(off & 0x7FFFFFu) ^ 3];
+                uint8_t b1 = rdram[((off + 1) & 0x7FFFFFu) ^ 3];
                 if (b0 || b1) {
                     if (first_nz_off == 0xFFFFFFFFu) {
                         first_nz_off = i;
@@ -486,7 +486,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         const uint32_t phys = fb & 0x00FFFFFF;
         uint64_t h = 1469598103934665603ull;
         for (uint32_t i = 0; i < 320u * 224u * 2u; ++i) {
-            h = (h ^ rdram[(phys + i) ^ 3]) * 1099511628211ull;
+            h = (h ^ rdram[((phys + i) & 0x7FFFFFu) ^ 3]) * 1099511628211ull;
         }
         fprintf(stderr, "[fbhash #%d] fb=0x%08X h=%016llx\n", n, fb, (unsigned long long)h);
     }
@@ -584,7 +584,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     auto read_u32 = [&](uint32_t off) -> uint32_t {
         uint32_t v = 0;
         for (int i = 0; i < 4; ++i) {
-            v = (v << 8) | rdram[(rdram_off + off + i) ^ 3];
+            v = (v << 8) | rdram[((rdram_off + off + i) & 0x7FFFFFu) ^ 3];
         }
         return v;
     };

@@ -160836,3 +160836,7 @@ Classification: 0x007FFFFF-masked sites (1247-1266, 1455, 1487) fine; 1564 bound
 Changed: all eight now mask 0x007FFFFF (lib edit; patches refreshed via export.sh; rebuild 0 errors). Behaviour differs only for out-of-RDRAM addresses, which previously crashed.
 ORIGIN: no wild value observed; preventive. These are env-gated diagnostics (s4211/s4213-s4215), so not a fix for any known crash. Not run in-game (gated probes; no soak exercises them) — single-source, static reading only.
 Next: guest-derived index class in src/main debug threads, or resume M5 plan.
+
+## Session 5237 (2026-10-17) — upstream_compat.cpp rdram index class: 3 diagnostic reads masked to the 8 MB window
+
+Audited ~150 raw rdram[...] sites in src/main. Most already carry a range check or constant address. Three used a 24-bit mask on a guest-derived base (VI origin / mode_ptr) plus up to 143 KB of offset, so they could read past 8 MB: the s_dump_fb scan_fb loop, the s_fb_hash loop, and read_u32 in the mode-print site. All now mask each access with 0x7FFFFF. Build passes; static-only, single-source, no run (env-gated diagnostics). Class closed for src/main. ORIGIN: the VI/mode pointers are legitimate guest values; only the host read width exceeded the window, no corrupt writer.
