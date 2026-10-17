@@ -161092,3 +161092,14 @@ callable placeholder. This rules out a callable rename and preserves the
 existing name. No build or soak was needed. Audit:
 `docs/RENAME-S5270-AUDIT.md`. Next candidate:
 `__osMotorinitialized = 0x80039120`.
+## Session 5271 (2026-10-17) — generated-symbol sweep: `__osMotorinitialized` is data
+
+Ran the bounded companion-symbol helper over `0x80039120..0x80039130`. It
+renamed zero references and reported `__osMotorinitialized` as already
+synchronized. Independent inspection found the companion typed `u32` data
+entry of size `0x10`; the generated tree has no distinct callable body,
+placeholder, declaration, overlay record, or direct caller at the address,
+which is only a `nop` inside the preceding data/fragment decode. This rules
+out callable placeholder propagation; preserve the data name. No build or
+soak was needed. Audit: `docs/RENAME-S5271-AUDIT.md`. Next candidate:
+`__osPiDevMgr = 0x80039130`.

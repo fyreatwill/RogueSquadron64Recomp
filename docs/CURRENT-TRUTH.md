@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5269 (2026-10-17). The
+Compact operational handoff, maintained at Session 5271 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -23,7 +23,7 @@ and is the minority. Neither writes the port's `0x03`. The idle stride
 of each origin has no writer. No guard. Audit:
 `docs/REVISIT-S5227-BOTH-STRIDES.md`.
 
-The renaming sweep is paused at `_Litob = 0x80037270`. Every libultra/ABI
+The renaming sweep is paused at `__osPiDevMgr = 0x80039130`. Every libultra/ABI
 candidate from `cosf 0x8002B190` through `osRecvMesg 0x800331D0` (and the
 companion-only `__osPfs*`/`osPi*`/`osMotor*` entries between) was classified as
 an unmaterialized host-wrapper/ABI entry or already-synchronized: preserve the
@@ -379,6 +379,13 @@ function/overlay entry begins with invalid data at the address and spans
 `docs/RENAME-S5270-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5271:** `__osMotorinitialized = 0x80039120` is already synchronized: the
+  bounded helper made zero edits, and independent checks identify the companion
+  as typed `u32` data of size `0x10` with no distinct generated callable body,
+  placeholder, declaration, overlay record, or direct caller. Preserve the
+  name; no build or soak. Audit: `docs/RENAME-S5271-AUDIT.md`. Next: classify
+  `__osPiDevMgr = 0x80039130`.
 
 - **s5270:** `__OSGlobalIntMask = 0x80039110` is already synchronized: the
   bounded helper made zero edits, and independent checks identify the
