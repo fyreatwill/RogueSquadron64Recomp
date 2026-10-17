@@ -848,6 +848,7 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+0b. (s5235) Guest length/offset class in lib/ PI/EEPROM paths CLOSED (save_read/save_write guarded; do_dma/pio/eep already guarded). Next: signed-vs-unsigned base-address idiom audit, or resume sweep.
 0a. (s5234) Host-wrapper guest-pointer-arg class CLOSED (osDpGetCounters + rs64_m5_port_task_load guarded; rest constant-gated/already checked). Next: another class or resume sweep.
 0. (s5233) rdram byte/halfword swizzle class CLOSED and lint-enforced (`tools/lint_rdram_reads.sh`, clean; 2 rsp.cpp s4221 probe lambdas fixed). Next M3 class: pick another by grep, or resume sweep.
 1. (s5232) Swizzle-fix ledger re-check CLOSED: no CURRENT-TRUTH/M5-plan claim cites the 45 fixed probe readers
