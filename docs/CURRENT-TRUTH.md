@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5294 (2026-10-17). The
+Compact operational handoff, maintained at Session 5295 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -216,6 +216,12 @@ made zero edits; the generated tree contains the named body, declaration,
 overlay record, and direct callers, with no placeholder or conflicting
 fragment. Audit: `docs/RENAME-S5294-AUDIT.md`. The next companion record is
 `reinsertNpcIntoSortedFreeList = 0x8003EC10`.
+Session 5295 classified `reinsertNpcIntoSortedFreeList = 0x8003EC10` as
+already synchronized. The bounded helper made zero edits; the generated tree
+contains the named body, declaration, overlay record, and direct callers, with
+no placeholder or conflicting fragment. Audit:
+`docs/RENAME-S5295-AUDIT.md`. The next companion record is
+`relinkNpcSlotToNewParentGroup = 0x8003EFDC`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or

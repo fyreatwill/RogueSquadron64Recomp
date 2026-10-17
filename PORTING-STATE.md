@@ -161399,3 +161399,14 @@ in the already-synchronized callable sense; H2/H3 are ruled out for this
 address. No build or soak was warranted. Audit:
 `docs/RENAME-S5294-AUDIT.md`. Next: classify
 `reinsertNpcIntoSortedFreeList = 0x8003EC10`.
+## Session 5295 (2026-10-17) — generated-symbol sweep: `reinsertNpcIntoSortedFreeList` is synchronized
+
+The bounded generated-symbol helper was run for companion record
+`reinsertNpcIntoSortedFreeList = 0x8003EC10`; it reported
+`already-synchronized` and renamed zero references in zero files. Independent
+inspection found the named callable body in `RecompiledFuncs/funcs_8.c`, its
+header declaration, overlay record, and direct callers. No placeholder or
+conflicting callable/data fragment was found. This rules out H2 and H3 for
+this address; H1 is selected. No build or soak was needed. Audit:
+`docs/RENAME-S5295-AUDIT.md`. Next candidate:
+`relinkNpcSlotToNewParentGroup = 0x8003EFDC`.
