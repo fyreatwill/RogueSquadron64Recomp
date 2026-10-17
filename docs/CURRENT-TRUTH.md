@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5330 (2026-10-17).
+Compact operational handoff, maintained at Session 5331 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -38,6 +38,11 @@ validated LLE route. The rebuilt port passed the phase control at
 `0x006AB400` in 23.8 seconds; the M4 gate emitted 464 records. The M4
 task-keyed comparison is resumed, but no accumulator conclusion is drawn
 until the cxd4 and port tables join at that boundary.
+Session 5331 ran that comparison attempt. The oracle whole-RDRAM/VI controls
+passed, and the port again reached `0x006AB400`/512, but the port output
+exposed only aggregate M4 counts; it lacked actual RSP-PC, task-serial, and
+step-bucket keys. H3 remains selected and no accumulator or mitigation
+conclusion follows.
 
 ## Durable state
 
@@ -118,9 +123,10 @@ agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Run the M4 task-keyed accumulator comparison using the proven in-process
-   autopilot route. Require the oracle/port positive controls and shared
-   `0x006AB400`/512 boundary before joining cxd4 rows; select H1, H2, or H3
+1. Add one regeneration-surviving M4 record path that publishes actual port
+   guest RSP PC, task serial, and step bucket at the existing 512-wide
+   `0x006AB400` entry/flush hooks. First prove the field with a same-run
+   positive control, then rerun the oracle/port arms and select H1, H2, or H3
    from the complete `(VI origin,width,task serial,RSP PC,step bucket)` table.
 2. Re-open the generated-symbol sweep only if a new placeholder candidate or
    companion-map evidence appears.

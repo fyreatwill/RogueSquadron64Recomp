@@ -161831,3 +161831,19 @@ capability. It does not select an accumulator hypothesis: the next unit must
 build/run both arms and select H1/H2/H3 from the complete task-keyed table.
 Evidence: `scratch/agent/unblock_m4_autopilot/run.log` and
 `scratch/agent/UNBLOCK.md`.
+
+## Session 5331 (2026-10-17) — M4 shared-boundary comparison remains unevaluable
+
+Ran the prescribed M4 work unit after the independent oracle preflight. The
+oracle whole-RDRAM watch passed with 10,000 writes, 480 VI, and live VI rows in
+an 8-second run; it did not reach the 512-wide hangar boundary in that control
+window. The rebuilt port reached the 1024-width phase after 13.3 seconds and
+then reached `vi_width=512`, origin `0x006AB400`, with 209 captured frames and
+no crash or abort. Its `[m4-y8000]` records were live at the target boundary,
+but exposed aggregate entry/flush counts only; no actual RSP PC, task serial,
+or step-bucket join key was present. The required retail/port table therefore
+could not be formed. Select H3 from the predeclared discriminator: the
+accumulator question remains unevaluable. This rules out a route/phase block
+and rules out H1/H2 claims from the current aggregate records; it does not
+justify a mitigation or name a writer. Evidence: `scratch/agent/oracle-m4-positive.log`,
+`scratch/agent/m4-port-next-run.log`, and `scratch/agent/m4-port-next/run.log`.
