@@ -23,7 +23,7 @@ and is the minority. Neither writes the port's `0x03`. The idle stride
 of each origin has no writer. No guard. Audit:
 `docs/REVISIT-S5227-BOTH-STRIDES.md`.
 
-The renaming sweep is paused at `__osPiDevMgr = 0x80039130`. Every libultra/ABI
+The renaming sweep is paused at `__osPiTable = 0x8003914C`. Every libultra/ABI
 candidate from `cosf 0x8002B190` through `osRecvMesg 0x800331D0` (and the
 companion-only `__osPfs*`/`osPi*`/`osMotor*` entries between) was classified as
 an unmaterialized host-wrapper/ABI entry or already-synchronized: preserve the
