@@ -1,10 +1,18 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5104; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5105; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5105:** Restored the missing time/interrupt host-wrapper census tool.
+  Its positive-control self-test passed 4/4, and the live census classified
+  `osGetCount`, `osSetCount`, `osGetTime`, and `osSetTime` as scalar/time host
+  handling with no guest dereference; `osSetIntMask` is an intentional no-op.
+  Independent symbol/edge grep agrees. This is source-audit evidence only; no
+  runtime guard or soak was warranted. The audited M3 host-wrapper census is
+  now complete; generated-symbol renaming is the next eligible bounded work.
 
 - **s5103:** Thread/queue host-wrapper census completed after restoring the
   missing audit tool. The positive-control self-test passed (4/4), and the live
@@ -198,6 +206,12 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 The s5049 in-place regen (tools/agent/regen_n64recomp.sh, still disabled) destroyed the live tree, but it is RESTORED and verified: N64Recomp/scratch_s4970_live (Oct-13 copy) + replay of post-s4970 scripts (scratch/agent/s5050_replay.sh, s5050_s5037.sh) compiles to byte-identical __text for 51/51 funcs_*.c vs the surviving build/libRecompiledFuncs.a (scratch/agent/s5050_compare.py). funcs.h/lookup.cpp/recomp_overlays.inl identical to the clobbered copies. The clobbered tree is kept at N64Recomp/RecompiledFuncs.s5049-clobbered. cmake --build is safe again (it recompiles ~5 files whose mtimes the replay touched; code identical). Never regen in place; "live tree is unreproducible" was wrong: backup + ordered apply_s* replay reproduces it.
 
 ## Next steps (single monotonic backlog)
+- s5105: Time/interrupt host-wrapper class closed. `tools/audit_time_interrupt_wrappers.py`
+  passed its 4/4 positive-control self-test; the live census found eight
+  scalar/time implementations without guest dereference and one intentional
+  `osSetIntMask` no-op. Independent symbol/edge grep agrees. No runtime build,
+  guard, or soak was authorized. Next: resume the generated-symbol renaming
+  sweep, using the companion semantic-name, exact-span, and live-caller gates.
 - s5104: Timer/virtual/cache host-wrapper class closed. The restored
   `tools/audit_timer_virtual_cache_wrappers.py` passed its positive-control
   self-test and live census; direct symbol/edge grep independently confirmed

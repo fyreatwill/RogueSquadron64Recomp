@@ -1,27 +1,21 @@
-# Next: M3 remaining time/interrupt host-wrapper guest-pointer census
-HYPOTHESIS-ID: m3-idiom-class-audits
+# Next: generated-symbol renaming sweep — next companion-mapped candidate
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Competing hypotheses:
+Bounded work unit: select the next not-yet-renamed generated function with a
+companion semantic mapping. Competing hypotheses are H-name-correct (the
+companion symbol covers the exact generated function span and its live callers
+support the semantic name), H-span-mismatch (the mapping crosses a split or
+stale span), and H-unproven (the function has no usable live-caller evidence).
 
-- H-host-safe: time/interrupt wrappers translate every guest pointer before
-  dereference or forward it to a runtime callee that does so.
-- H-host-raw: a reachable time/interrupt wrapper raw-dereferences a guest
-  pointer without translation or range validation.
-- H-host-noop: pointer-looking arguments are only stored, forwarded, or
-  intentionally returned as no-op/error paths.
+Discriminating measurement: one candidate's companion address/span comparison
+plus live-caller census. Exact-span mismatch rejects the rename; a matching
+span with at least one live caller selects the semantic mapping; no caller
+leaves it unrenamed and selects the next candidate in a later sweep unit.
 
-Discriminating measurement: one source census over `osGetCount`, `osGetTime`,
-`osSetTime`, `osSetCount`, `osSetIntMask`, and their runtime callees. The
-positive control must classify synthetic translated, raw, and no-op bodies
-correctly. A reachable raw dereference selects H-host-raw; otherwise the
-complete live table selects H-host-safe/noop.
+Before changing the mapping, inspect the recent sweep titles:
 
-Run exactly:
+    grep -n '^## Session ' PORTING-STATE.md | tail -15
 
-    python3 tools/audit_time_interrupt_wrappers.py --selftest
-    python3 tools/audit_time_interrupt_wrappers.py .
-
-If raw is found, name its writer and state whether the value is legitimate
-before adding any guard. If no raw site is found, update the ledger and move to
-the next M3 idiom class; no runtime build or soak is authorized for this source
-audit.
+If this is not a sweep-only revisit, identify the next candidate and apply the
+existing gates with the bounded helper/tooling. Do not build or soak unless a
+mapping is actually changed.

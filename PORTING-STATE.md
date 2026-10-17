@@ -158938,3 +158938,21 @@ as a source-level M3 explanation. It does not establish runtime reachability or
 prove that the intentional cache no-ops are semantically sufficient. No guard,
 runtime build, or soak was run. The missing tool was the only substitution;
 the planned census itself completed after restoration.
+
+## Session 5105 (2026-10-17) — M3 time/interrupt host-wrapper census
+
+Ran the prescribed time/interrupt host-wrapper source audit. The named audit
+tool was missing, so restored `tools/audit_time_interrupt_wrappers.py` using the
+established audit-tool pattern, then ran its positive-control self-test and live
+census in one work unit. The self-test classified 4/4 synthetic translated,
+raw, scalar, and no-op bodies correctly. The live table classified eight
+`osGetCount`/`osSetCount`/`osGetTime`/`osSetTime` implementations as scalar/time
+handling without guest dereference and `osSetIntMask` as an intentional no-op.
+
+Independent `rg` symbol/edge inspection confirmed the wrapper bodies and agrees
+that no raw guest-pointer dereference is present. This is source-audit evidence
+only: no runtime guard, build, or soak was authorized. It rules out a reachable
+raw guest-pointer site in this remaining time/interrupt wrapper class, but does
+not prove runtime reachability or semantic sufficiency of the no-op mask path.
+The M3 host-wrapper census is complete; next is the generated-symbol renaming
+sweep.
