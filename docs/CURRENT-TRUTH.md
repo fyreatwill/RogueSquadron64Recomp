@@ -158,12 +158,11 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. M4 join (s5353): the PC mapping is exact, `retail_pc = port_pc & 0xFFF`
-   (0x112C->0x012C, 0x17F0->0x07F0; `docs/REVISIT-S5352-M4-PC-MAPPING.md`).
-   Next: one retail cxd4 run with sampler stride 1 filtered to those PCs, with
-   whole-RDRAM/VI controls, joined to port rows by VI phase ordinal and
-   overlay/task type (not origin address). Close M4 as unevaluable if retail
-   never samples them.
+1. M4 CLOSED as legitimate (s5354): retail cxd4 at the mapped PCs 0x012C/0x07F0
+   shows transient `-32768` VACC lanes in 657/657 hangar (512-wide) graphics
+   tasks (61,195 + 54,382 samples), task-end zero in all 2,172 tasks -- the
+   same shape as the port. No accumulator mitigation; nothing to name. Re-open
+   only if a port task-END record ever shows `-32768`.
 2. M5 and the M3 j/jal idiom list are exhausted (s5349); do not revive
    without a new discriminator. Re-open M3 only as a complete idiom-class audit.
 3. The generated-symbol sweep is parked; re-open only if a new placeholder
@@ -172,6 +171,12 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    needs an external `mips64-elf-gcc`/`mips64-elf-ld` (absent, s5342;
    installing is a human decision). The host-side declaration path is
    regeneration-safe and qualified against the existing `patches.elf`.
+
+Session 5354 detail: retail run `tools/oracle/run_m4_retail_pcs.sh`
+(RS64_RSP_MID_STRIDE=1 + new RS64_RSP_MID_PCS filter; rdplog video,
+README press schedule reaches 512 @ `0x6ab400` at 38.4 s), analyzed by
+`tools/analyze_m4_pc_phase.py` (phase join = Nth RSD1 gfx task == Nth
+`[rdp] sync=`; 2172==2172 control). See `docs/REVISIT-S5354-M4-RETAIL-PCS.md`.
 
 ## Evidence index
 
