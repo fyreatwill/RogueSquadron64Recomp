@@ -159843,3 +159843,17 @@ Preserve the ABI name; this rules out a justified generated-body rename for
 this candidate, not the broader libultra/ABI classification. No build or soak
 was needed. Audit: `docs/RENAME-S5175-AUDIT.md`. Next candidate:
 `osCreatePiManager`.
+
+## Session 5176 (2026-10-17) — classified `osCreatePiManager` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osCreatePiManager = 0x80032560`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+searches of the generated tree found no body or placeholder at the companion
+address; it has one direct generated caller and a zero-size overlay record at
+offset `0x32120`. The companion symbol map places `osCartRomInit` at
+`0x800326F0`, giving a nominal `0x190` span, but no body exists to validate it.
+Preserve the ABI name; this rules out a justified generated-body rename for
+this candidate, not the broader libultra/ABI classification. No build or soak
+was needed. Audit: `docs/RENAME-S5176-AUDIT.md`. Next candidate:
+`osCartRomInit`.
