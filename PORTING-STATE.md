@@ -159676,3 +159676,28 @@ generated caller; the helper reported `already-synchronized` and changed zero
 references in zero files. This rules out a justified rename for this entry and
 preserves its libultra/ABI name. No build or soak was needed. Audit:
 `docs/RENAME-S5162-AUDIT.md`. Next candidate: `__osGetOneChannelData`.
+
+## Session 5163 (2026-10-17) — phase-attributed retail M4 page writer
+
+The generated-symbol sweep preflight made this iteration a REVISIT because
+the prior 15 ledger entries were all sweep classifications. Ran one new
+independent-retail oracle experiment against the M4 page-reuse boundary. The
+first invocation intentionally exposed a route prerequisite: without the
+qualified cxd4 RSP plugin it passed the whole-RDRAM positive control but stayed
+at 320-wide boot, so its target-page null was unevaluable. The fixed invocation
+included cxd4 RSP and Rice rdplog and reached title and hangar.
+
+The qualified run recorded 83,370 whole-RDRAM control writes, 1,298,143 exact
+execution hits at `0x800078EC`, 595 hangar VI frames at origin `0x006AB400`
+and width 512, and 73,370 lifetime writes to physical page
+`0x1F0000:0x1F1000`. Its phase-gated target-page writer table attributed 8,912
+hangar writes to `0x800078EC`; the `0x800C7F08` and `0x800C7F34`…`0x800C801C`
+family also appeared at 7,680 each. The phase-origin row-retention counter
+remained zero, but the control, VI, target-watch, and writer-PC outputs are
+independently positive. This selects `H-writer-is-hangar` for the retail
+page-writer question and rules out “retail does not write this page in
+hangar.” It does not identify the port-side value origin or authorize a
+mitigation; the result is single-source oracle evidence. Audit:
+`docs/M4-S5163-PAGE-WRITER-AUDIT.md`.
+
+Next: resume the companion sweep at `__osGetOneChannelData`.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5161 (2026-10-17). The
+Compact operational handoff, maintained at Session 5163 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -172,6 +172,14 @@ were retained below or in the project overview.
   with `--phase-origin-watch`; retain this as single-source, phase-unqualified
   evidence and do not close the M4 page-reuse boundary. Audit:
   `docs/M4-S5147-PAGE-WRITER-AUDIT.md`.
+- Session 5163 repaired that phase-attribution gap with the qualified cxd4 RSP
+  route: whole-RDRAM and exact-PC controls passed, 595 hangar VI frames were
+  observed, and 73,370 lifetime writes hit `0x1F0000:0x1F1000`. The
+  phase-gated writer table attributed 8,912 hangar-page writes to
+  `0x800078EC`, with the `0x800C7F08`…`0x800C801C` family also present. This
+  selects retail-page-writer-is-hangar, but does not identify the port-side
+  value origin or authorize a mitigation; it is single-source oracle evidence.
+  Audit: `docs/M4-S5163-PAGE-WRITER-AUDIT.md`.
 
 ### Generated-symbol sweep
 
@@ -354,12 +362,11 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Continue the companion sweep with `__osGetOneChannelData = 0x80030A04`,
+1. Resume the companion sweep with `__osGetOneChannelData = 0x80030A04`,
    whose next candidate is the following symbol in the companion map, one entry
-   per iteration while the last-15 session preflight permits it. If the
-   preflight makes the sweep a REVISIT, return to the external retail-entry or
-   M4 boundary only with a genuinely new discriminator; the 5147 page-writer
-   revisit remains phase-unqualified.
+   per iteration while the last-15 session preflight permits it. The M4 page
+   writer is now phase-attributed on the retail route, but the port-side value
+   origin remains open and requires a new discriminator before reopening.
 2. If a new M5 step is selected, write its design and validation row in
    `docs/M5-AUDIO-PLAN.md` before changing runtime behavior.
 3. When MIPS GCC is supplied, configure and qualify `PatchesLib`; record
