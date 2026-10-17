@@ -160137,3 +160137,17 @@ Preserve the ABI name. This rules out an actionable generated rename at this
 entry, but does not bear on runtime behavior. No build or soak was warranted.
 Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is
 `osSpTaskStartGo = 0x80033FCC`.
+
+## Session 5199 (2026-10-17) — classified `osSpTaskStartGo` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osSpTaskStartGo = 0x80033FCC`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found no body or placeholder at the companion address;
+the overlay table records a zero-size host-wrapper entry, and five generated
+call sites invoke `osSpTaskStartGo_recomp`. The companion symbol map places
+`bcopy = 0x80034010` next, giving a nominal `0x44` span with no body to
+validate. Preserve the ABI name. This rules out an actionable generated rename
+at this entry, but does not bear on runtime behavior. No build or soak was
+warranted for this naming-only result. Audit: `docs/RENAME-S5199-AUDIT.md`.
+The next candidate is `bcopy = 0x80034010`.

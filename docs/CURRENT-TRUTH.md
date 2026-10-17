@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5198 (2026-10-17). The
+Compact operational handoff, maintained at Session 5199 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -146,6 +146,14 @@ companion address. Its nominal span to `osSendMesg = 0x80033410` is `0x240`,
 with no body to validate. Preserve the ABI name. Audit:
 `docs/RENAME-S5181-AUDIT.md`. The next candidate is now `osSetEventMesg =
 0x80033560`.
+
+`osSpTaskStartGo = 0x80033FCC` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+independent generated-tree searches found no body or placeholder at the
+companion address. Its overlay record is zero-size and five generated callers
+invoke the host wrapper. Its nominal span to `bcopy = 0x80034010` is `0x44`,
+with no body to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5199-AUDIT.md`. The next candidate is now `bcopy = 0x80034010`.
 
 `__osGetOneChannelData = 0x80030A04` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
@@ -637,7 +645,7 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osSpTaskStartGo = 0x80033FCC`, whose next
+1. Resume the companion sweep with `bcopy = 0x80034010`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
