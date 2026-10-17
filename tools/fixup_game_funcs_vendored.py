@@ -40851,6 +40851,14 @@ if os.environ.get("RS64_SKIP_REPLAY") != "1":
     if _bad5099:
         sys.exit(f"s5099 post-condition: uint32_t S32 base in MEM_x {_bad5099[:3]}")
     print("[s5099] post-condition ok: no uint32_t=S32() MEM_x base in funcs_*.c")
+    # s5100: shape 4 (any narrow-int-typed bare local/param as MEM_x base); selftest is the positive control.
+    import audit_narrow_base as _a5100
+    if len(_a5100.scan_text('void f(){ int zz = a; x=MEM_W(4, zz);}')) != 1:
+        sys.exit("s5100 post-condition: audit positive control failed")
+    _bad5100 = _a5100.scan_dir(base)
+    if _bad5100:
+        sys.exit(f"s5100 post-condition: narrow-int MEM_x base {_bad5100[:3]}")
+    print("[s5100] post-condition ok: no narrow-int bare MEM_x base in funcs_*.c")
 else:
     print("[s4648-replay] WARNING: RS64_SKIP_REPLAY=1 - s4296 A14 yield and other replayed patches NOT applied;"
           " run tools/check_a14_yield_patch.py before any soak")

@@ -1,6 +1,6 @@
-# Next: fold s5099 soak verdict, then M3 class: bare int/unsigned locals as MEM_x base
+# Next: M3 guard-class audit of host wrappers (osViSwapBuffer, EEPROM/pak buffer args)
 HYPOTHESIS-ID: m3-idiom-class-audits
 
-1. tail -5 scratch/agent/SOAK-RESULTS.md: s5099_shape3_fix_soak should show rc=0 and keys.log hangar_arrivals>=2 crash=0. If it crashed, grep the run logs for the crash symbol before anything else.
-2. Audit bare `int`/`unsigned` locals used as MEM_x base in fixup-emitted code (extend tools/audit_uint32_s32_base.py's pattern with a selftest control).
-3. Then remaining host wrappers: osViSwapBuffer, EEPROM/pak buffer args (guard-class audit).
+1. Enumerate every host wrapper taking a guest pointer (grep lib/ + src/ for osViSwapBuffer, osEepromLongRead/Write, osPfs*, osContStartReadData buffers); classify each: translated via rdram+phys, range-checked, or raw.
+2. Guard or prove dead each; add a regen-gate audit with a positive control like tools/audit_narrow_base.py.
+3. Discriminator: any wrapper dereferencing an unvalidated guest pointer is a live class member.
