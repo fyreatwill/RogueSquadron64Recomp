@@ -1,5 +1,6 @@
-# Next: M3 idiom list exhausted (s5350 closed MMIO/KSEG1); M5 closed; rename sweep paused
+# Next: awaiting human decision (see scratch/agent/BLOCKED.md)
 
-Revisit the external retail-entry boundary or the M4 accumulator boundary with a genuinely new angle. If none exists, go BLOCKED: no un-run unit remains; which parked boundary should get oracle driving time?
+If unblocked with (b): drive the oracle past attract to hangar with whole-RDRAM positive control, then key retail vs port on a shared boundary (docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md).
+If (a): run fresh PatchesLib source qualification (CURRENT-TRUTH Next #5).
 
 HYPOTHESIS-ID: m3-idiom-exhausted-revisit
