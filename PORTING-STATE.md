@@ -160123,3 +160123,17 @@ files. The generated body ends at `0x80033E38`, giving an exact `0x11C` span to
 independent generated caller exists. This rules out a missing semantic rename
 for this entry; preserve its ABI-semantic name. The next candidate is
 `osSpTaskLoad = 0x80033E3C`.
+
+## Session 5198 (2026-10-17) — classified `osSpTaskLoad` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osSpTaskLoad = 0x80033E3C`. The helper reported
+`already-synchronized` and renamed zero references in zero files. The generated
+tree has no body or placeholder at the companion address; the overlay table
+records a zero-size host-wrapper entry, and five generated call sites invoke
+`osSpTaskLoad_recomp`. The companion symbol map places `osSpTaskStartGo =
+0x80033FCC` next, giving a nominal `0x190` span with no body to validate.
+Preserve the ABI name. This rules out an actionable generated rename at this
+entry, but does not bear on runtime behavior. No build or soak was warranted.
+Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is
+`osSpTaskStartGo = 0x80033FCC`.

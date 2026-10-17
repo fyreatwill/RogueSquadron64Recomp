@@ -626,11 +626,18 @@ classified as already correctly named: its generated body spans exactly
 symbol-map and overlay record, but the generated tree has no independent
 caller. Preserve the ABI-semantic name. Audit:
 `docs/RENAME-S5197-AUDIT.md`. The next candidate is now
-`osSpTaskLoad = 0x80033E3C`.
+`osSpTaskLoad = 0x80033E3C`. `osSpTaskLoad` is now classified as another
+unmaterialized libultra/ABI entry: the bounded helper reported
+`already-synchronized`; the generated tree has no body or placeholder at the
+companion address, while the overlay record is zero-size and five generated
+calls target the existing host wrapper. Its nominal span to
+`osSpTaskStartGo = 0x80033FCC` is `0x190`, with no body to validate. Preserve
+the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
+`osSpTaskStartGo = 0x80033FCC`.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osSpTaskLoad = 0x80033E3C`, whose next
+1. Resume the companion sweep with `osSpTaskStartGo = 0x80033FCC`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
