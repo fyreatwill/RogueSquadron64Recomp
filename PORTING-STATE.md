@@ -159932,3 +159932,21 @@ the sweep. This rules out a materialized generated function at this candidate;
 it does not make a claim about the runtime implementation of the host wrapper.
 No build or soak was warranted for this naming-only result. Audit:
 `docs/RENAME-S5182-AUDIT.md`.
+
+## Session 5183 (2026-10-17) — revisited retail function-entry boundary
+
+HYPOTHESIS-ID: retail-entry-function-boundary. The required 15-session sweep
+preflight selected a boundary revisit rather than another rename. Ran the
+qualified retail oracle with a whole-RDRAM positive control, both mission VI
+phase controls, the old interior watch at `0x800903F0`, adjacent writer
+watches, and a new containing-function entry watch at
+`fillSampleStreamRange = 0x8008FAAC`. Controls were positive: mission origins
+`0x00690400` and `0x00620400` produced 47 and 45 phase rows. The entry watch
+fired 145,268 times; the interior site fired 0; adjacent writers fired 1,205.
+This selects `H-retail-branch-diff` as single-source evidence: the containing
+function is live but the old interior path is not. It rules out
+H-retail-function-absent for the containing function, but does not explain the
+port or close the exact interior boundary. Audit:
+`docs/REVISIT-S5183-RETAIL-FUNCTION-GATE.md`. The first summary extractor
+rescanned a 4.1 GB trace once per counter and was killed; the fixed one-pass
+extractor produced the counts above. No runtime mitigation was added.

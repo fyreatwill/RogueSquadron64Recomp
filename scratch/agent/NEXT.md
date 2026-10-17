@@ -1,8 +1,7 @@
 # Next: generated-symbol renaming sweep — `osSetEventMesg` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-The previous candidate `osSendMesg = 0x80033410` was classified as an
-unmaterialized ABI entry. Resume the bounded companion sweep at
+The required sweep revisit is complete. Resume the bounded companion audit at
 `osSetEventMesg = 0x80033560`. Determine whether it has a generated
 prologue/body, exact span to the next companion entry, and an independent
 generated caller. Do not rename an ABI symbol without all three gates.

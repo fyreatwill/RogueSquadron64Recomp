@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5180 (2026-10-17). The
+Compact operational handoff, maintained at Session 5183 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -120,6 +120,15 @@ independent caller at the companion address. Its companion span ends at
 `__osPfsRequestOneChannel = 0x80030944`; preserve the ABI name. Audit:
 `docs/RENAME-S5161-AUDIT.md`. The next candidate is now
 `__osPfsRequestOneChannel = 0x80030944`.
+
+The required 15-session sweep revisit ran a new retail function-entry gate.
+With the whole-RDRAM and mission VI controls positive, retail entered
+`fillSampleStreamRange = 0x8008FAAC` 145,268 times, while the old interior
+site `0x800903F0` remained at zero; adjacent writer watches fired 1,205 times.
+This is single-source evidence for `H-retail-branch-diff`, not a port
+explanation: the containing function is live, but the previously watched
+interior path is not. Preserve the boundary as open pending a second source
+or a port-side join. Audit: `docs/REVISIT-S5183-RETAIL-FUNCTION-GATE.md`.
 
 `__osPfsRequestOneChannel = 0x80030944` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
@@ -517,7 +526,8 @@ were retained below or in the project overview.
 
 1. Resume the companion sweep with `osSetEventMesg = 0x80033560`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
-   the last-15 session preflight permits it. The M4 page
+   the last-15 session preflight permits it. The retail function-entry revisit
+   is single-source and does not close the exact interior boundary. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value
    origin remains open and requires a new discriminator before reopening.
 2. If a new M5 step is selected, write its design and validation row in
