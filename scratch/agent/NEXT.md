@@ -1,4 +1,4 @@
-# Next: restore N64Recomp/RecompiledFuncs (see BLOCKED.md), then re-baseline the nohangar route
+# Next: re-baseline the nohangar route stall (tree restored in s5050; cmake --build is safe again)
 HYPOTHESIS-ID: m3-idiom-class-audit
-Order: (1) human restores tree from backup; (2) with Chrome/REAPER quit, run scratch/agent/s5048_preS5038_source.sh (host-load discriminator H1) using the surviving build/ binary; (3) if still nohangar with a quiet host, the stall is a property of the current generated code (H3), not host.
-Never run tools/agent/regen_n64recomp.sh (now disabled) or regen in place.
+Order: (1) rebuild from the restored tree and check whether nohangar stalls as before; source now equals the ea2e382f-era code, so H3 (build state) is testable again. (2) With Chrome/REAPER quit if possible, run scratch/agent/s5048_preS5038_source.sh as the host-load check (H1). (3) Quiet host + stall => property of generated code (H3).
+Never run tools/agent/regen_n64recomp.sh or regen in place.

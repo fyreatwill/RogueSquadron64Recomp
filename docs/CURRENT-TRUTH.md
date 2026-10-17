@@ -355,8 +355,8 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 - “M5 is fully closed” was too broad: nonzero PCM proves route activity, not
   task-contract, ownership, wait-gate, safety-exit, or MORT correctness.
 
-## WARNING (s5049)
-Live N64Recomp/RecompiledFuncs was clobbered 2026-10-16 16:57 by an in-place regen (tools/agent/regen_n64recomp.sh, now disabled). Pre-damage compiled code survives only in build/ (do not cmake --build). See scratch/agent/BLOCKED.md.
+## RESOLVED (s5050) - s5049 clobber of N64Recomp/RecompiledFuncs
+The s5049 in-place regen (tools/agent/regen_n64recomp.sh, still disabled) destroyed the live tree, but it is RESTORED and verified: N64Recomp/scratch_s4970_live (Oct-13 copy) + replay of post-s4970 scripts (scratch/agent/s5050_replay.sh, s5050_s5037.sh) compiles to byte-identical __text for 51/51 funcs_*.c vs the surviving build/libRecompiledFuncs.a (scratch/agent/s5050_compare.py). funcs.h/lookup.cpp/recomp_overlays.inl identical to the clobbered copies. The clobbered tree is kept at N64Recomp/RecompiledFuncs.s5049-clobbered. cmake --build is safe again (it recompiles ~5 files whose mtimes the replay touched; code identical). Never regen in place; "live tree is unreproducible" was wrong: backup + ordered apply_s* replay reproduces it.
 
 ## Next steps (single monotonic backlog)
 
