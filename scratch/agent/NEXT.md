@@ -1,31 +1,30 @@
-# Next: new-angle external retail-entry boundary revisit.
+# Next: new-angle M4 accumulator boundary revisit.
 
 The s5250 baseline arm self-skipped at host load1=5.20, so do not retry it
 until a future loop supplies load1<2. M5 has no uncompleted de-stub step and
-the recent M3 idiom classes are closed. The `vi` candidate was confirmed as
-typed `OSViContext` data with no callable placeholder in s5277; do not continue
-the sweep until the retail-entry revisit is attempted.
+the recent M3 idiom classes are closed. Session 5278 ruled out a distinct
+caller population at the retail-entry boundary but left dynamic `a1`
+unresolved. The recent 15-session census is sweep-scoped, so do not resume
+symbol classification yet.
 
 Competing hypotheses and discriminator:
 
-- H1: the remaining retail/port entry difference is an unmeasured argument or
-  return-value contract at the retained caller, not the previously censused
-  byte field.
-- H2: the difference is introduced before the retained caller by a distinct
-  caller path or phase-specific dispatch.
-- H3: the difference is measurement-only and disappears when the same
-  caller/phase/argument tuple is joined on both sides.
+- H1: the M4 accumulator difference is a mid-task RSP state/value contract
+  that task-end counts cannot see.
+- H2: the difference is introduced by task publication or DMA ordering before
+  the RSP accumulator is sampled.
+- H3: the remaining accumulator difference is measurement-only; a same-task
+  mid-task join will match retail and port.
 
-Discriminating measurement: use one phase-gated run of the existing entry-join
-instrumentation, retaining a complete tuple for every `0x8008FAAC` hit:
-caller PC, `a0`, DRAM `a1`, `a2`, `a3`, and return-side scalar state. H1
-predicts a tuple/return mismatch with the same caller; H2 predicts an
-unmatched caller/phase population; H3 predicts matching tuples and return
-state. A whole-RDRAM positive control must fire in the same run before a null
-is interpreted.
+Discriminating measurement: use one phase-gated retail oracle run with the
+existing `--pc-task-dump 0x80033FCC --pc-task-type 2` and the M4 accumulator
+watch/decoder from `scratch/agent/s5129_m4_mid_acc`, adding one positive
+whole-RDRAM watch and one task-end control in the same run. H1 predicts a
+mid-task accumulator row mismatch with matched task publication; H2 predicts
+publication/DMA ordinal mismatch before the accumulator row; H3 predicts
+matching mid-task rows and ordinals. A whole-RDRAM positive control and both
+hangar VI controls must fire before a null matters.
 
-Exact preparation command (before any build):
+Exact preparation command: `rg -n "8000|pc-task-dump|mid-task|accumulator|ordinal" scratch/agent/s5129_m4_mid_acc docs/REVISIT-S5129-AUDIT.md tools/oracle`
 
-`rg -n "s5223_entry_join|whole-RDRAM|phase-origin-watch|8008FAAC" tools src/main ../N64Recomp/RecompiledFuncs/funcs_24.c`
-
-HYPOTHESIS-ID: external-retail-entry-boundary-revisit
+HYPOTHESIS-ID: m4-accumulator-boundary-revisit

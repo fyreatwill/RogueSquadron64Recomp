@@ -30,6 +30,14 @@ an unmaterialized host-wrapper/ABI entry or already-synchronized: preserve the
 ABI name, no body to rename. Per-candidate detail was archived to
 `docs/PROJECT-OVERVIEW.md` ("Archived sweep log"); audits are `docs/RENAME-S5*-AUDIT.md`.
 
+Session 5278's new-angle entry-tuple revisit ran port and retail arms in
+parallel with whole-RDRAM controls and mission-origin gates. Both reached
+`0x00690400` and `0x00620400`; retail's `0x8008FAAC` execution rows and the
+port's bounded samples agreed on caller `0x800902CC`, `s0`/`s1`, `a0`, `a2`,
+`a3`, and `v0` shape. This is two-source evidence against a distinct caller
+population, but the dynamic `a1` buffer and the invalid host-hook `r31` leave
+the full contract unresolved. Audit: `docs/REVISIT-S5278-ENTRY-TUPLE.md`.
+
 Retail-entry boundary (`fillSampleStreamRange 0x8008FAAC`): retail enters it
 ~145k-290k times while interior `0x800903F0` stays at zero (single-source
 oracle, S5183/S5203). S5224 full histograms: retail modal offset-`0x22` byte
@@ -412,6 +420,13 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5278:** The external retail-entry revisit found matching caller and
+  bounded argument shape on both mission origins, with positive controls on
+  both arms, but did not prove the dynamic `a1` or return contract. The
+  sweep-scoped 15-session rule therefore requires the next unit to revisit
+  the parked M4 accumulator boundary with a genuinely new angle, not resume
+  generated-symbol classification.
 
 - **s5277:** `vi = 0x800391B0` is typed `OSViContext` data of size `0x60` and
   already synchronized: the bounded helper made zero edits, and independent

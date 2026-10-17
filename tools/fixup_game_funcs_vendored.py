@@ -39196,8 +39196,9 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
         else bkt[bi].v0_bad++;
         if (bi < 2 && bkt[bi].entry <= 3ul) {
             fprintf(stderr,
-                    "[s5223-sample] edge=%s origin=0x%06X n=%lu s0=0x%08X s1=0x%08X a0=0x%08X v0=0x%08X sb=%s%02X\n",
-                    edge, origin, bkt[bi].entry, s0, s1, U32(ctx->r4), v0,
+                    "[s5223-sample] edge=%s origin=0x%06X n=%lu pc=0x%08X prev=0x%08X ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X s0=0x%08X s1=0x%08X v0=0x%08X sb=%s%02X\n",
+                    edge, origin, bkt[bi].entry, edge_pc, U32(ctx->r31) - 8u, U32(ctx->r31),
+                    U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r7), s0, s1, v0,
                     sb_known ? "0x" : "badptr-", sb_known ? sb : 0u);
             fflush(stderr);
         }

@@ -161160,3 +161160,28 @@ preserve the data name. No build or soak was needed. Audit:
 `docs/RENAME-S5277-AUDIT.md`. Since the recent 15-session title census is
 sweep-scoped, the next work unit is a new-angle external retail-entry revisit,
 not another sweep candidate.
+
+## Session 5278 (2026-10-17) — revisited retail-entry contract with full tuple
+
+Built the existing port after adding a bounded diagnostic sample in both the
+fixup source and generated `funcs_24.c`, then ran port and retail arms with
+mission-origin phase gates. The first oracle capture exposed that its generic
+GPR line omitted `a3`; the oracle was rebuilt and the retail arm rerun, so the
+final comparison includes `a0..a3`, `s0/s1`, `v0`, previous PC, and `ra`.
+
+Both arms passed their whole-RDRAM positive control and reached
+`0x00690400` and `0x00620400` at width 512. Retail executed
+`0x8008FAAC` 232,590 times in the first capture, with phase rows for both
+origins and dominant previous PC `0x800902CC`; the port's final target joins
+had 62,311 entries at `0x690400` and 62,157 at `0x620400`, `c3f0=0`, and
+`0x800902CC` dominant. The bounded port samples matched retail on caller,
+`s0`/`s1`, `a0`, `a2`, `a3`, and `v0` shape. The dynamic `a1` pointer differed
+between runs, and the port host hook's `r31` was not a valid caller witness.
+
+This rules out a distinct dominant caller/phase population as the explanation
+for the remaining entry difference, but it does not distinguish an `a1` or
+return contract from measurement-only variation. The full tuple remains
+unproven because only three port samples per target origin were retained.
+No mitigation was added. Audit: `docs/REVISIT-S5278-ENTRY-TUPLE.md`.
+Next: a new-angle M4 accumulator-boundary revisit; do not resume the
+sweep-scoped generated-symbol census.
