@@ -103,7 +103,11 @@ companion boundary is `0x800303D0`; preserve the ABI name. Audit:
 classified as already correctly named: its generated body and exact `0x248`
 overlay span end at `0x80030618`, but the generated tree has no independent
 caller. Preserve the ABI name. Audit: `docs/RENAME-S5158-AUDIT.md`. The next
-candidate is `__osBlockSum = 0x80030618`.
+`__osBlockSum = 0x80030618` is now also classified as already correctly named:
+its generated body and exact `0xF8` overlay span end at `0x80030710`, and the
+generated tree has two independent callers. Preserve the ABI name. Audit:
+`docs/RENAME-S5159-AUDIT.md`. The next candidate is `osPfsFreeBlocks =
+0x80030710`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -205,6 +209,10 @@ were retained below or in the project overview.
   overlay span ending at `0x80030618`, but no independent generated caller;
   the helper reports `already-synchronized`, so preserve the existing ABI
   name. Audit: `docs/RENAME-S5158-AUDIT.md`.
+- `__osBlockSum = 0x80030618` has a generated body and exact `0xF8` overlay
+  span ending at `0x80030710`, plus two independent generated callers; the
+  helper reports `already-synchronized`, so preserve the existing ABI name.
+  Audit: `docs/RENAME-S5159-AUDIT.md`.
 - `osPfsAllocateFile = 0x8002EBE0` is another unmaterialized libultra/ABI
   entry: the bounded helper reported `already-synchronized`, and the
   generated tree has only its ABI declaration, one direct caller, and a
@@ -314,8 +322,8 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Continue the companion sweep with `__osBlockSum = 0x80030618`, whose next
-   companion boundary is `0x80030710`, one entry per
+1. Continue the companion sweep with `osPfsFreeBlocks = 0x80030710`, whose
+   next companion boundary is `0x80030A70`, one entry per
    iteration while the last-15 session preflight permits it. If the preflight
    makes the sweep a REVISIT, return to the external retail-entry or M4
    boundary only with a genuinely new discriminator; the 5147 page-writer

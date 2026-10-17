@@ -159627,3 +159627,13 @@ the absence of a caller does not support a rename. No build or soak was
 needed. Evidence: `docs/RENAME-S5158-AUDIT.md`.
 
 Next: audit `__osBlockSum = 0x80030618`.
+## Session 5159 (2026-10-17) — classified `__osBlockSum` as already named
+
+Ran the prescribed bounded generated-symbol audit for `__osBlockSum =
+0x80030618`. The helper reported `already-synchronized` and renamed zero
+references. The generated tree contains a body at the candidate address, the
+overlay table gives an exact `0xF8` span ending at `0x80030710`, and two
+independent generated callers are present. This supports the existing
+libultra/ABI name; no rename was made. The result rules out a missing-body or
+span-mismatch explanation for this candidate, but does not change the broader
+wrapper/ABI boundary conclusion. No build or soak was needed.

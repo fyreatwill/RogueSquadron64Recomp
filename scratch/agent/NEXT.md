@@ -1,9 +1,9 @@
-# Next: generated-symbol renaming sweep — `__osBlockSum` candidate
+# Next: generated-symbol renaming sweep — `osPfsFreeBlocks` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The mandatory REVISIT is complete. Resume the bounded companion sweep: audit
-only `__osBlockSum = 0x80030618`, immediately after the classified
-`__osPfsReleasePages`. Its next companion boundary is `0x80030710`. Determine
+only `osPfsFreeBlocks = 0x80030710`, immediately after the classified
+`__osBlockSum`. Its next companion boundary is `0x80030A70`. Determine
 whether it has a generated prologue/body, exact span, and independent caller.
 Do not rename an ABI symbol without all three gates.
 
@@ -11,7 +11,7 @@ Competing hypotheses and discriminator:
 
 - H-generated-name-correct: generated body at the candidate address, exact
   span to the following entry, and an independent generated caller; apply the
-  rename.
+  rename if the semantic name is not already present.
 - H-host-wrapper: only a runtime wrapper/declaration or zero-size overlay
   record; preserve the ABI name.
 - H-span-mismatch: a body exists but crosses a neighboring entry; leave it.
@@ -19,7 +19,7 @@ Competing hypotheses and discriminator:
 
 Run:
 
-    rg -n '__osBlockSum|func_80030618|fake_func_80030618' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80030618 --end-address 0x80030710
+    rg -n 'osPfsFreeBlocks|func_80030710|fake_func_80030710' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80030710 --end-address 0x80030A70
 
 No build or soak is needed for a naming-only or ABI-preservation result.
