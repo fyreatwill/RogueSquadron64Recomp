@@ -160943,3 +160943,13 @@ Host load still 5.9-7, so no live run. Explore agent was denied Bash and returne
 
 ## Session 5257 (2026-10-17) — rt64 RSP stack push/pop idiom class audited: all bounded, no guard needed
 Host load 4.7 (>2), no live run. Grepped every `*StackSize` use in hle/rt64_rsp.cpp: model matrix (push guarded `< RSP_MATRIX_STACK_SIZE`, pop `>1`), projection/viewport/geometry-mode/other-mode stacks (push `< RSP_EXTENDED_STACK_SIZE`, pop `>1`), and the extended matrix-id stacks (push `< stack.size()`; full-stack case is assert-only but falls through to the in-range top index, popMatrixId loops on `stackSize>1`). Every guest-driven push/pop is bounded; the only assert-only paths still index in range under NDEBUG. Class closed. Static-only, single-source. ORIGIN: n/a, no code change.
+
+## Session 5258 (2026-10-17) — librecomp/ultramodern RDRAM-index class audited: 1 guard (__osRdbSend size), rest bounded/dead
+
+Host load 6.5 so the s5250 baseline soak stayed gated. Did the M3 idiom-class audit outside rt64: every `rdram[`/`MEM_[BHW](` site in librecomp/src (cont, flash, heap, pi, print, recomp, rsp, sp, ultra_translation) and ultramodern mesgqueue (about 60 sites), by grep plus reading the non-obvious ones.
+- rsp.cpp (16 sites): all index through `& 0x007FFFFF`; SAFE.
+- cont/recomp/ultra_translation/sp: constant offsets, sp-relative stack args or bounded loops; SAFE.
+- pi.cpp do_rom_read DMA: already range-guarded (`pi_rom_to_rdram`, `if (!force) return`); save read/write guarded by s5235; s4589/s4590 debug dumps use constant sites; SAFE.
+- flash.cpp: unreachable, `flashram_allowed()` quits first for an EEPROM game; dead.
+- print.cpp `__osRdbSend_recomp`: `size` is guest r5 (64-bit), allocates `size+1` and reads MEM_B per byte, unbounded. GUARDED: `size > 0x800000` returns. ORIGIN: not a corruption mitigation; no wild-value writer exists, this is a defensive bound on a guest-supplied length (debug-RDB stub, not known to be called by retail).
+Patch exported (submodule-patches/N64ModernRuntime.patch). Static, single-source; no run (host load). Class closed.

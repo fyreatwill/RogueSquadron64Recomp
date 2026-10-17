@@ -1474,6 +1474,21 @@ index 43509ba..7995db3 100644
      debug_printf("[pi] DMA from 0x%08X into 0x%08X of size 0x%08X\n", devAddr, dramAddr, size);
  
      do_dma(PASS_RDRAM mq, dramAddr, physical_addr, size, direction);
+diff --git a/librecomp/src/print.cpp b/librecomp/src/print.cpp
+index 944e9fe..72c5fcd 100644
+--- a/librecomp/src/print.cpp
++++ b/librecomp/src/print.cpp
+@@ -32,6 +32,10 @@ extern "C" void isPrintfInit_recomp(uint8_t * rdram, recomp_context * ctx) {
+ extern "C" void __osRdbSend_recomp(uint8_t * rdram, recomp_context * ctx) {
+     gpr buf = ctx->r4;
+     size_t size = ctx->r5;
++    // s5258: guest-sized read; reject sizes that cannot fit in RDRAM (size is a 64-bit gpr here)
++    if (size > 0x800000) {
++        return;
++    }
+     u32 type = (u32)ctx->r6;
+     std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
+ 
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
 index 4276b7d..830192b 100644
 --- a/librecomp/src/recomp.cpp
