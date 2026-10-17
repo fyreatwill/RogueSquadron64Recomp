@@ -161743,3 +161743,21 @@ no rename, build, or soak was warranted. This rules out the remaining bounded
 placeholder as a safe semantic rename and parks the sweep pending new evidence.
 Audit: `docs/RENAME-S5324-AUDIT.md`. The next work unit is an M4 accumulator
 boundary revisit with a complete task-keyed sampler.
+## Session 5325 (2026-10-17) — designed M4 shared instruction boundary
+
+Read the required current-truth, next-work, and soak-tail files. The
+maintenance threshold was not triggered. Read `tools/oracle/README.md` and
+the Factor 5 reference before selecting the M4 boundary work. Ran the
+debugger-enabled retail oracle for 8 seconds with `--watch-write
+0x0:0x800000 --hit-cap 3 --vi-trace`: the whole-RDRAM positive control
+reached 10,000 callbacks, 480 VI, and live 320-wide VI callbacks. This
+validates the independent watch/phase instrument.
+
+The existing cxd4 `RSM1` record already carries task serial, guest RSP PC,
+step, and VACC; the qualified port probe carries only synthetic stages. I
+recorded the competing H1/H2/H3 predictions and a one-table exact-key join
+design in `docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`. This iteration
+did not build or add a mitigation. It rules out treating the current
+stage-10/11 versus stage-12/13 rows as a retail instruction-PC comparison;
+the M4 boundary remains unevaluable until the port emits actual generated
+ucode PCs and both arms pass the same controls.

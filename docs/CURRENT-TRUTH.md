@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5324 (2026-10-17).
+Compact operational handoff, maintained at Session 5325 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -19,12 +19,14 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
-The current bounded work is a parked-boundary revisit. Session 5321
-reconfirmed that the qualified port's transient M4 `0x8000` state appears in
+The current bounded work is a parked-boundary revisit. Sessions 5321 and 5325
+confirm that the qualified port's transient M4 `0x8000` state appears in
 stages 10/11 and is absent in stages 12/13 and task end, but the stage hooks
 are not comparable to the retail instruction-PC samples. The M4 discriminator
 is therefore unevaluable without a complete task-keyed sampler at a shared
-boundary; no accumulator mitigation follows.
+boundary; no accumulator mitigation follows. Session 5325 validated the
+retail oracle's whole-RDRAM positive control and recorded the exact shared-
+boundary design in `docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`.
 
 ## Durable state
 
@@ -105,9 +107,9 @@ agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Revisit the M4 accumulator boundary only with a complete task-keyed port
-   sampler at a retail-comparable instruction/step boundary; the generated
-   symbol sweep has no safe semantic rename for its remaining candidate.
+1. Implement and run the shared-boundary M4 sampler from
+   `docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`; do not infer an
+   instruction-PC comparison from synthetic stage ordinals.
 2. Re-open the generated-symbol sweep only if a new placeholder candidate or
    companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
