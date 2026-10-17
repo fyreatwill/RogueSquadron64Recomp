@@ -159830,3 +159830,16 @@ record at `0x31FE0`, but no generated body or placeholder at the candidate
 address. Classified it as an unmaterialized libultra/ABI entry and preserved
 the ABI name. This rules out a semantic generated-function rename for this
 candidate, not the next companion entry. Audit: `docs/RENAME-S5174-AUDIT.md`.
+
+## Session 5175 (2026-10-17) — classified `osPiGetCmdQueue` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osPiGetCmdQueue = 0x80032530`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+searches of the generated tree found no body, placeholder, or overlay record at
+the companion address. The companion symbol map places `osCreatePiManager` at
+`0x80032560`, giving a nominal `0x30` span, but no body exists to validate it.
+Preserve the ABI name; this rules out a justified generated-body rename for
+this candidate, not the broader libultra/ABI classification. No build or soak
+was needed. Audit: `docs/RENAME-S5175-AUDIT.md`. Next candidate:
+`osCreatePiManager`.

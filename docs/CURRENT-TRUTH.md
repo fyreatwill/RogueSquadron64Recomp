@@ -212,8 +212,13 @@ generated tree has the ABI declaration, four direct generated callers, and a
 zero-size overlay record, but no generated body or placeholder at the
 companion address. Its nominal span to `osPiGetCmdQueue = 0x80032530` is
 `0x110`, with no body to validate. Preserve the ABI name. Audit:
-`docs/RENAME-S5174-AUDIT.md`. The next candidate is now
-`osPiGetCmdQueue = 0x80032530`.
+`docs/RENAME-S5174-AUDIT.md`. `osPiGetCmdQueue = 0x80032530` is now likewise
+classified as an unmaterialized libultra/ABI entry: the bounded helper
+reported `already-synchronized`, and the generated tree has no body,
+placeholder, or overlay record at the companion address. Its nominal span to
+`osCreatePiManager = 0x80032560` is `0x30`, with no body to validate.
+Preserve the ABI name. Audit: `docs/RENAME-S5175-AUDIT.md`. The next candidate
+is now `osCreatePiManager = 0x80032560`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -466,7 +471,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osPiGetCmdQueue = 0x80032530`,
+1. Resume the companion sweep with `osCreatePiManager = 0x80032560`,
    whose next candidate is the following symbol in the companion map, one entry
    per iteration while the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value

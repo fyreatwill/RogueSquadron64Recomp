@@ -1,11 +1,11 @@
-# Next: generated-symbol renaming sweep — `osPiGetCmdQueue` candidate
+# Next: generated-symbol renaming sweep — `osCreatePiManager` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-The previous candidate was classified as an unmaterialized ABI entry. Resume
-the bounded companion sweep at `osPiGetCmdQueue = 0x80032530`. Determine
-whether it has a generated prologue/body, exact span to the next companion
-entry, and an independent generated caller. Do not rename an ABI symbol
-without all three gates.
+The previous candidate `osPiGetCmdQueue = 0x80032530` was classified as an
+unmaterialized ABI entry. Resume the bounded companion sweep at
+`osCreatePiManager = 0x80032560`. Determine whether it has a generated
+prologue/body, exact span to the next companion entry, and an independent
+generated caller. Do not rename an ABI symbol without all three gates.
 
 Competing hypotheses and discriminator:
 
@@ -19,7 +19,7 @@ Competing hypotheses and discriminator:
 The discriminator is the bounded helper result plus generated-tree body/span
 and caller counts. Run:
 
-    rg -n 'osPiGetCmdQueue|func_80032530|fake_func_80032530' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80032530 --end-address 0x80033090
+    rg -n 'osCreatePiManager|func_80032560|fake_func_80032560' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80032560 --end-address 0x800326F0
 
 No build or soak is needed for a naming-only or ABI-preservation result.
