@@ -160966,3 +160966,16 @@ does not advance the runtime/audio route. No build or soak was warranted.
 The queued s5250 baseline was folded from the prior iteration: it
 self-skipped at host load1=5.20 (rc=77), so the host-load discriminator was
 not run. The next sweep candidate is `_Printf = 0x80035FD0`.
+
+## Session 5260 (2026-10-17) — generated-symbol sweep: `_Printf` already synchronized
+
+Ran the required bounded rename classification for `_Printf = 0x80035FD0`
+over `0x80035FD0..0x80036620`. The helper made zero edits and reported
+`already-synchronized`. Independent evidence found the defined companion
+symbol in `rogue_squadron64/symbol_files/libultra.txt`, the exact named body
+in `RecompiledFuncs/funcs_8.c`, its `funcs.h` declaration, its
+`recomp_overlays.inl` record, and one direct generated caller. No placeholder,
+fragment, or unmaterialized ABI entry remains at this address. This rules out
+the companion-propagation and data-fragment hypotheses for `_Printf`; it does
+not speak to `_Genld`, which is the next bounded candidate. Audit:
+`docs/RENAME-S5260-AUDIT.md`.
