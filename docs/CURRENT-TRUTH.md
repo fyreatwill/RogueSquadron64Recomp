@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5260 (2026-10-17). The
+Compact operational handoff, maintained at Session 5261 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -373,7 +373,8 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
-- **s5260:** `_Printf = 0x80035FD0` is already synchronized: the bounded helper made zero edits, and the companion/generated trees independently show the defined symbol, exact named body, declaration, overlay record, and direct caller. No build or soak. Next sweep candidate: `_Genld = 0x80036620` (audit `docs/RENAME-S5260-AUDIT.md`).
+- **s5261:** `_Genld = 0x80036620` is already synchronized: the bounded helper made zero edits, and the companion/generated trees independently show the defined symbol, exact named body, declaration, overlay record, and direct caller. The adjacent `0x80036B88` pure return stub is separately named `noopHandler_80036B88`. No build or soak. Next sweep candidate: `_Ldtob = 0x80036B90` (audit `docs/RENAME-S5261-AUDIT.md`).
+- **s5260:** `_Printf = 0x80035FD0` is already synchronized: the bounded helper made zero edits, and the companion/generated trees independently show the defined symbol, exact named body, declaration, overlay record, and direct caller. No build or soak. Audit `docs/RENAME-S5260-AUDIT.md`.
 - **OPEN DEPENDENCY (unblock s5250):** the hangar-route baseline needs host load1 < 2 (the queued recipe self-skipped at 5.20; not ours to kill). The host-load discriminator therefore remains unevaluated. Do not retry until the load gate is met.
 - **s5258:** librecomp/ultramodern RDRAM-index class audited (~60 sites): rsp.cpp all masked, pi DMA guarded, flash dead, `__osRdbSend` size guard added (lib patch exported). Static, single-source. Next: s5250 baseline soak when host load1<2, else M5 step or retail-entry revisit.
 - **s5257:** rt64 guest-sized host-buffer audit is exhausted: rdp/tmem/texture/f3dfactor5 (s5255), hle/gbi memcpy (s5256), RSP matrix/viewport/mode/matrix-id stack push/pop (s5257, all bounded; assert-only paths still index in range). All static, single-source; no overturned conclusions. Next: s5250 baseline soak when host load1<2, else an M3 idiom-class audit outside rt64 (librecomp/ultramodern shim RDRAM pointer arithmetic).

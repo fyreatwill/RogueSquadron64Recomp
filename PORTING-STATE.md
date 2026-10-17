@@ -160979,3 +160979,15 @@ fragment, or unmaterialized ABI entry remains at this address. This rules out
 the companion-propagation and data-fragment hypotheses for `_Printf`; it does
 not speak to `_Genld`, which is the next bounded candidate. Audit:
 `docs/RENAME-S5260-AUDIT.md`.
+## Session 5261 (2026-10-17) — generated-symbol sweep: `_Genld` already synchronized
+
+Ran the bounded generated-symbol helper for exactly `0x80036620..0x80036B90`.
+It made zero edits and classified `_Genld = 0x80036620` as
+`already-synchronized`; the adjacent `0x80036B88` entry was also identified as
+the separately named `noopHandler_80036B88` stub. Independent checks found
+`_Genld` marked `defined:true` in the companion `libultra.txt`, a generated
+body beginning at the candidate address, the header declaration, an overlay
+record spanning through `0x80036B87`, and a direct generated caller at
+`0x800370AC`. This rules out placeholder propagation and data/fragment
+renaming for this candidate. No build or soak was needed. Audit:
+`docs/RENAME-S5261-AUDIT.md`. Next candidate: `_Ldtob = 0x80036B90`.
