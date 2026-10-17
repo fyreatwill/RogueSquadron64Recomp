@@ -28,7 +28,10 @@ it has no generated body, overlay record, or direct generated caller. The
 intervening
 `__osRestoreInt = 0x8002C260` is likewise an ABI-boundary entry with an
 overlay record of `rom_size = 0` and only one generated caller, with no body
-to rename. The current candidate is `osMotorStart = 0x8002D570`.
+to rename. `osMotorStart = 0x8002D570` was also classified as an
+unmaterialized libultra/ABI entry: its generated tree has only the ABI
+declaration, one caller, and a zero-size overlay record. The next candidate is
+`_MakeMotorData = 0x8002D710`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -108,6 +111,12 @@ were retained below or in the project overview.
   overlay record, with no body at the companion address. The companion next
   entry is `osMotorStart = 0x8002D570`; preserve the ABI name. Audit:
   `docs/RENAME-S5141-AUDIT.md`.
+- `osMotorStart = 0x8002D570` is another unmaterialized libultra entry: the
+  bounded helper reports `already-synchronized`; the generated tree has only
+  its ABI declaration, one wrapper call site, and a zero-size overlay record,
+  with no body at the companion address. The companion next entry is
+  `_MakeMotorData = 0x8002D710`; preserve the ABI name. Audit:
+  `docs/RENAME-S5142-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -163,7 +172,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osMotorStart = 0x8002D570` using the bounded rename helper. Rename
+1. Audit `_MakeMotorData = 0x8002D710` using the bounded rename helper. Rename
    only if the generated body, exact next-entry span, semantic mapping, and
    live caller all agree; otherwise preserve the ABI name and record the
    classification.
