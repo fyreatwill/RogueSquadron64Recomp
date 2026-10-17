@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5208 (2026-10-17). The
+Compact operational handoff, maintained at Session 5210 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -703,12 +703,22 @@ calls target the existing host wrapper. Its nominal span to
 the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 `osSpTaskStartGo = 0x80033FCC`.
 
+`strchr = 0x80034744` is now classified as already correctly named: the
+bounded helper reported `already-synchronized`; its generated body spans
+exactly `0x4C` bytes to `0x80034790`, matching the overlay record, and six
+independent generated callers agree. Preserve the ABI-semantic name. Audit:
+`docs/RENAME-S5210-AUDIT.md`. The next candidate is now
+`__osDequeueThread = 0x80034790`.
+
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `strchr = 0x80034744`, whose next
-   candidate follows from its bounded symbol-map span, one entry per iteration.
-   `strlen = 0x8003471C` is already correctly named: its generated body,
-   exact `0x28` overlay span, and 34 independent callers agree. Audit:
+1. Resume the companion sweep with `__osDequeueThread = 0x80034790`, whose
+   next candidate follows from its bounded symbol-map span, one entry per iteration.
+   `strchr = 0x80034744` is now correctly named: its generated body, exact
+   `0x4C` overlay span, and six independent callers agree. Audit:
+   `docs/RENAME-S5210-AUDIT.md`.
+   `strlen = 0x8003471C` remains correctly named: its generated body, exact
+   `0x28` overlay span, and 34 independent callers agree. Audit:
    `docs/RENAME-S5209-AUDIT.md`. The retail entry boundary remains open only
    for a port-side join. The M4 page writer is phase-attributed on the retail
    route, but its port-side value origin remains open.

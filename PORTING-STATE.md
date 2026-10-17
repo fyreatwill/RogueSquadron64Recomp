@@ -160288,3 +160288,15 @@ existing semantic name. This rules out a generated-symbol rename or span
 mismatch for `strlen`, not any runtime behavior of the libc wrapper. Added
 `docs/RENAME-S5209-AUDIT.md`; no build or soak was warranted for this
 naming-only result.
+## Session 5210 (2026-10-17) — confirmed `strchr` symbol synchronization
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded
+generated-symbol helper and independent generated-tree searches for
+`strchr = 0x80034744`. The helper reported `already-synchronized` and renamed
+zero references in zero files. A real generated body starts at the companion
+address and spans exactly `0x4C` bytes to `0x80034790`, matching the overlay
+record. Six independent generated call sites target `strchr_recomp`. Preserve
+the existing semantic name. This rules out a generated-symbol rename,
+host-wrapper-only entry, and span mismatch for `strchr`, not runtime behavior
+of the libc wrapper. Added `docs/RENAME-S5210-AUDIT.md`; no build or soak was
+warranted for this naming-only result.
