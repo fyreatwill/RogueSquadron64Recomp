@@ -154,6 +154,14 @@ to `osPfsIsPlug = 0x800317A0` is `0xA60`, with no body to validate. Preserve
 the ABI name. Audit: `docs/RENAME-S5166-AUDIT.md`. The next candidate is now
 `osPfsIsPlug = 0x800317A0`.
 
+`osPfsIsPlug = 0x800317A0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated tree has no body, placeholder, overlay record, or direct
+generated caller at the companion address. Its nominal span to
+`__osPfsRequestData = 0x80031940` is `0x1A0`, with no body to validate.
+Preserve the ABI name. Audit: `docs/RENAME-S5167-AUDIT.md`. The next candidate
+is now `__osPfsRequestData = 0x80031940`.
+
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
 were retained below or in the project overview.
@@ -405,7 +413,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osPfsIsPlug = 0x800317A0`,
+1. Resume the companion sweep with `__osPfsRequestData = 0x80031940`,
    whose next candidate is the following symbol in the companion map, one entry
    per iteration while the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value

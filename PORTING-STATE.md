@@ -159740,3 +159740,16 @@ body exists to validate against it. Preserve the ABI name; this rules out a
 justified generated-body rename for this candidate, not the broader
 libultra/ABI boundary classification. No build or soak was needed. Audit:
 `docs/RENAME-S5166-AUDIT.md`. Next candidate: `osPfsIsPlug`.
+
+## Session 5167 (2026-10-17) — classified `osPfsIsPlug` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osPfsIsPlug = 0x800317A0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+searches of the generated tree found no body, placeholder, overlay record, or
+direct generated caller at the companion address. The companion symbol map
+places `__osPfsRequestData = 0x80031940` next, giving a nominal `0x1A0` span,
+but no body exists to validate against it. Preserve the ABI name; this rules
+out a justified generated-body rename for this candidate, not the broader
+libultra/ABI boundary classification. No build or soak was needed. Audit:
+`docs/RENAME-S5167-AUDIT.md`. Next candidate: `__osPfsRequestData`.
