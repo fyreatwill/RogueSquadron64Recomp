@@ -620,3 +620,5 @@ s5065: per-wrapper census on keyed route (default+FORCE): AI/cont >=16384 calls 
 
 - s5074: phase-gated snapshot (ctlA/B/keyW only; 600 s cap hit): 205k witnesses in whole pages, gate does not phase-lock (post-snap origin 0x690400). Snapshot-diff design abandoned; next = in-VI-handler snapshot or read the pad consumer directly.
 - s5073: mission snapshot run done (W stick edge confirmed; 175k nominal witnesses but origin-phase confounded; keyD/keyZ not taken). Next: phase-gated re-run, see scratch/agent/NEXT.md.
+
+- s5077: mission flight floats at 0x9DEAC react to stick and coast to static ~3.5 s after release (momentum); static writers 0x800448B0/0x80045540/0x8004562C/0x80045658/0x8004567C; position-vs-scroll unverified. Next: runtime writer attribution (NEXT.md).

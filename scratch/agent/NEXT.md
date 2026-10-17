@@ -1,4 +1,5 @@
-# Next: identify what 0x9DEAC is and why ctlB keeps moving
+# Next: attribute the runtime writer of 0x9DEAC during the W hold
 HYPOTHESIS-ID: m6-mission-input
-Result s5076: stick reaches game (0x130B8B=7F), gate 0x130B56=0, floats at 0x9DEAC change only around key windows (static in ctlA/ctlC). H1 holds, single run.
-Unit: second line of evidence. Statically find writers of 0x8009DEAC in RecompiledFuncs (grep the constant/offset), name the object (player ship position?), and repeat s5076 (`zsh scratch/agent/s5076_watch.sh`, ~320 s) with a longer ctlB (20 s) to see whether movement decays to static (momentum) or persists (free-running).
+Result s5077: floats at 0x9DEAC stop changing ~3.5 s after stick release (momentum). Static writers: 0x800448B0, 0x80045540, 0x8004562C, 0x80045658, 0x8004567C (swc1 -0x2154($v0), $v0=0x800A0000).
+Hypotheses: Hpos (ship/flight code writes it) vs Hscroll (grid-layer scroll code only).
+Unit: env-gated per-site counters added via the fixup script (not hand-edit), positive control = all five sites counted in W window; rerun scratch/agent/s5077_watch.sh once. Hscroll predicts only 0x8004562C/58/7C fire; Hpos predicts 0x800448B0/0x80045540 fire during W/D and not ctlA.
