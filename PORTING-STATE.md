@@ -158653,3 +158653,5 @@ Hypotheses: H1 wild pointer on route; H2 clean; H3 wiring broken.
 Result (same binary, sequential): FORCE pg=16 crash=0 mission_onset 169 s; default pg=0 crash=0 mission_onset 169 s.
 Caveat: the FORCE log cap of 16 is filled entirely by osAiSetNextBuffer, so the control proves only the shared guard function, NOT that the EEPROM/cont call sites are reached. Per-wrapper reachability is unmeasured, so default pg=0 is weak, single-source evidence for these sites; H1 is not refuted for them.
 Next: per-wrapper calls/bad counters in one build.
+
+Verdict wording for the record (s5064): the FORCE control fired (pg=16) in the same recipe, which refutes H3 (guard wiring broken) for the shared guard function and, with default pg=0 and crash=0, selects H2 (clean) only as single-source for the EEPROM/cont sites; H1 (wild pointer) is not refuted for them because per-site reachability is unmeasured. Next discriminator: per-wrapper calls/bad counters, FORCE vs default in one run (calls==0 means the route never reaches the wrapper; bad>0 in default means a real wild pointer).
