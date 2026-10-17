@@ -116,3 +116,9 @@ __pycache__/
 # GPL reference implementations, fetched by tools/oracle/fetch_reference.sh
 reference/
 tools/oracle/build/
+
+# sed -i backup artifacts
+*.cpp-E
+*.c-E
+*.h-E
+*.py-E

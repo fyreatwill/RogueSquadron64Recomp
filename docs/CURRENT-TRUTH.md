@@ -848,9 +848,8 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. (s5231) All raw `rdram[x]` reads classified and fixed (26 more sites; rt64_render_context clean).
-   Now re-check ledger claims built on the 19+26 fixed probe readers (m5 DMA source/payload FNV/nonzero,
-   descriptor-layout dump, route-state byte lambdas): re-run one soak emitting them and diff against the claims.
+1. (s5232) Swizzle-fix ledger re-check CLOSED: no CURRENT-TRUTH/M5-plan claim cites the 45 fixed probe readers
+   (grep, single-source). M5 plan steps 0-11 are qualified; next is an M3 idiom-class audit or the paused sweep.
 1b. The retail-entry thread is closed (s5229: census byte-swizzle bug).
    Re-open the "external retail-entry boundary" only with a new angle
    not built on the s5223-s5228 byte census. Otherwise resume M5 audio

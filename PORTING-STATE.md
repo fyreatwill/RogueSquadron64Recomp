@@ -160791,3 +160791,21 @@ Consequence: logged FNV hashes / nonzero counts / entry_2c,2d / byte lambdas fro
 raw dump, route-state guest_byte) were computed over byte-permuted data — hashes of ranges not multiples of 4 and any "nonzero" count over a
 partial word are wrong; whole-word nonzero counts were unaffected. Claims citing them are single-source suspect.
 Next discriminator: re-run the cheapest soak that emits those probes and compare against ledger claims that cite them.
+
+## Session 5232 (2026-10-17) — swizzle-fix ledger re-check: no load-bearing claim depends on the fixed probes; stray sed backups removed
+Work unit: the s5231 follow-up — find ledger claims built on the 45 fixed rdram probe readers and re-check them.
+Hypotheses: H-A "CURRENT-TRUTH / M5 plan carry conclusions that cite the byte-permuted FNV/partial-word nonzero output" vs
+H-B "no live conclusion cites them; only archived narrative (PROJECT-OVERVIEW s3786 handoff) mentions payload zero/FNV".
+Method (offline, no game run): grep CURRENT-TRUTH.md for every fixed function/tag (frequency_producer/contract/caller,
+filter_voice hash, c88c_field, audio_source_dma, source_range_dma_write, route_state, output_state_fields, descriptor_yield,
+052c4_join, hmt_input) -> 0 hits; grep M5-AUDIO-PLAN.md -> 0 hits (steps 0-11 are qualified on SP-completion/PCM-row/writer-PC
+evidence, not on these hashes). Only PROJECT-OVERVIEW s3786 handoff ("port's joined payloads are zero; retail FNV exported") touches them;
+an all-zero payload is invariant under a within-word byte permutation, and s4831/s4857 later measured nonzero port PCM, so that
+snapshot is already superseded by independent evidence.
+Result selects H-B, refutes H-A. A confirming soak would have no ledger value to diff against, so none was run (control caveat: this is a
+grep/reading result, single-source for "nothing depends on them"). Thread closed.
+Change: s5231 had committed two `sed -i` backup artifacts (src/main/main.cpp-E, upstream_compat.cpp-E, ~15.9k lines); removed from the
+index and from disk, and *.cpp-E/*.c-E/*.h-E/*.py-E added to .gitignore.
+ORIGIN: not a mitigation. Next discriminator: M5 plan Steps 0-11 are all qualified/closed, so the remaining choice is an M3 idiom-class
+audit that commits a guard, or resuming the paused symbol sweep at `_Putfld = 0x80035960` (rule 14: a sweep step alone will not reset the
+engineering counter).

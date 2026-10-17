@@ -1,6 +1,6 @@
-# Re-check ledger claims built on the 45 fixed swizzle-bug probe readers
-HYPOTHESIS-ID: raw-rdram-swizzle-audit
-s5231 fixed 26 more unswizzled byte reads (main.cpp 20 lines, upstream_compat 6). Next: grep PORTING-STATE for
-m5-dma-source / m5-descriptor-layout / route-state / entry_2c claims; pick the cheapest soak that emits them, run once,
-compare logged FNV/nonzero to the ledger. Outcome: values change => list refuted claims in CURRENT-TRUTH superseded;
-values same (word-aligned ranges) => close the thread. Then M5 audio de-stubbing (docs/M5-AUDIO-PLAN.md) or M3 idiom audit.
+# Next: pick ONE M3 idiom-class audit that commits a guard (enumerate class by grep, classify every site, guard or prove dead)
+HYPOTHESIS-ID: m3-idiom-class-audit
+s5232 closed the swizzle-fix ledger re-check (nothing live depended on it) and removed stray *-E sed backups. M5 plan steps 0-11 are
+all qualified. Choose a not-yet-audited displacement/idiom class from docs/PROJECT-OVERVIEW.md (s397 frequency-scan section), write
+hypotheses + the discriminating measurement here before building. Fallback: resume the symbol sweep at _Putfld=0x80035960
+(does not reset the engineering-counter, rule 14).
