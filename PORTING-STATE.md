@@ -161924,3 +161924,12 @@ address, but adds no new runtime or M4 evidence. The next unit is the
 PatchesLib toolchain gate: this iteration's direct checks found both
 `mips64-elf-gcc` and `mips64-elf-ld` absent.
 Evidence: `docs/RENAME-S5336-AUDIT.md`.
+
+## Session 5337 (2026-10-17) — confirmed the PatchesLib toolchain is unavailable
+
+Ran the prescribed prerequisite measurement before any build:
+`command -v mips64-elf-gcc mips64-elf-ld` found neither executable. No
+version, target, compile, or link checks were possible, and no PatchesLib
+build was attempted. This selects the missing-toolchain hypothesis and
+blocks qualification until a MIPS GCC/LD toolchain is supplied; it does not
+select a new M3 idiom or authorize a source mitigation.
