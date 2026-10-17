@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5341 (2026-10-17).
+Compact operational handoff, maintained at Session 5342 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -162,8 +162,9 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    discriminator. Do not chase passive recurrence breadcrumbs.
 4. Complete fresh PatchesLib source qualification when the external
    `mips64-elf-gcc` and `mips64-elf-ld` toolchain is supplied; record the
-   generation, compile, and link outcomes. The host-side declaration path is
-   now regeneration-safe and qualified against the existing `patches.elf`.
+   generation, compile, and link outcomes. Session 5342 measured that both
+   tools are currently absent. The host-side declaration path is now
+   regeneration-safe and qualified against the existing `patches.elf`.
 
 ## Evidence index
 

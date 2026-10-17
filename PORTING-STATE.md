@@ -65441,7 +65441,7 @@ it does not rule out persistent EEPROM state. Static source/config evidence only
 
 ORIGIN: installed Mupen64Plus 2.6.0 UI/core source bundle, `/opt/homebrew`
 configuration, and `tools/oracle/rs64_oracle.c`. No mitigation, build, or
-runtime behavior was changed.
+ runtime behavior was changed.
 
 ## Session 1230 (2026-08-14) — audited retail EEPROM selection and contents
 
@@ -161995,3 +161995,13 @@ generated-declaration defect and qualifies the existing ELF-to-host path; it
 does not qualify fresh MIPS source compilation because the external
 `mips64-elf-gcc`/`mips64-elf-ld` pair remains unavailable. No mitigation or
 runtime behavior was changed.
+
+## Session 5342 (2026-10-17) — rechecked the fresh PatchesLib cross-toolchain gate
+
+Ran the planned prerequisite discriminator before building: neither
+`mips64-elf-gcc` nor `mips64-elf-ld` resolved via `command -v`, and the
+expected local candidate paths were absent. The fresh source-to-MIPS and
+source-to-ELF qualification therefore could not run this iteration. This
+confirms the existing-ELF host qualification remains the only available
+PatchesLib result; it does not add evidence about fresh source compilation or
+linking. No runtime or mitigation change was made.

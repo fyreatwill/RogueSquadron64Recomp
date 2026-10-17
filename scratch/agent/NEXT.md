@@ -1,9 +1,8 @@
 # Next: qualify a fresh PatchesLib source build when the cross-toolchain exists
 
-The host-side declaration path is now regeneration-safe: generation from the
-existing `patches.elf`, Clang compilation, archiving, and `nm` all passed in
-Session 5341. The remaining unit is the source-to-MIPS step, which must not be
-claimed from that artifact result.
+Session 5342 rechecked the prerequisite and found neither cross-compiler on
+PATH; no fresh source build was run. The host-side declaration path remains
+qualified only from the existing `patches.elf`.
 
 Competing hypotheses and discriminator:
 
