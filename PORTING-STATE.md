@@ -160080,3 +160080,16 @@ to validate. Preserve the ABI name and continue the sweep at
 `__osSiRawWriteIo`. This rules out an actionable generated rename at this
 entry, but does not bear on runtime behavior. No build or soak was warranted
 for this naming-only result. Audit: `docs/RENAME-S5193-AUDIT.md`.
+
+## Session 5194 (2026-10-17) — classified `__osSiRawWriteIo` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `__osSiRawWriteIo = 0x80033C50`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found no body, placeholder, overlay record, or direct
+generated caller at the companion address. The symbol map places
+`proutSprintf = 0x80033CA0` next, giving a nominal `0x50` span with no body to
+validate. Preserve the ABI name and continue the sweep at `proutSprintf`. This
+rules out an actionable generated rename at this entry, but does not bear on
+runtime behavior. No build or soak was warranted for this naming-only result.
+Audit: `docs/RENAME-S5194-AUDIT.md`.
