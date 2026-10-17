@@ -161272,3 +161272,17 @@ at that address. The address occurs only in the surrounding
 out a missed callable placeholder or needed rename. No build or soak was
 needed. Audit: `docs/RENAME-S5284-AUDIT.md`. Next:
 `osViModeNtscLan1 = 0x80039290`.
+
+## Session 5285 (2026-10-17) — generated-symbol sweep: `osViModeNtscLan1` is data
+
+Ran the bounded generated-symbol helper over `0x80039290..0x800392E0`. It
+made zero edits and reported `osViModeNtscLan1` as already synchronized.
+Independent inspection found the companion declaration
+`osViModeNtscLan1 = 0x80039290` typed `OSViMode` with size `0x50`; the next
+companion record is `osViModePalLan1 = 0x800392E0`. The generated tree has no
+callable body, placeholder, declaration, overlay record, or direct generated
+reference at the address; its apparent instructions are part of the
+surrounding `__OSGlobalIntMask` data/fragment decode. This selects the typed
+data interpretation and rules out a missed callable placeholder or needed
+rename. No build or soak was needed. Audit:
+`docs/RENAME-S5285-AUDIT.md`. Next: classify `osViModePalLan1 = 0x800392E0`.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5283 (2026-10-17). The
+Compact operational handoff, maintained at Session 5285 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -153,6 +153,14 @@ record, or direct reference at the address. Its apparent instruction lines
 are part of the surrounding `__OSGlobalIntMask` data/fragment decode. Audit:
 `docs/RENAME-S5284-AUDIT.md`. The next sweep candidate is
 `osViModeNtscLan1 = 0x80039290`.
+Session 5285 classified `osViModeNtscLan1 = 0x80039290` as already
+synchronized. The bounded helper made zero edits; the companion map types it
+as `OSViMode` data of size `0x50`, ending at `osViModePalLan1 = 0x800392E0`,
+and the generated tree has no callable placeholder, declaration, overlay
+record, or direct reference at the address. Its apparent instructions are
+part of the surrounding `__OSGlobalIntMask` data/fragment decode. Audit:
+`docs/RENAME-S5285-AUDIT.md`. The next sweep candidate is
+`osViModePalLan1 = 0x800392E0`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or
@@ -467,6 +475,12 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5285:** `osViModeNtscLan1 = 0x80039290` is typed `OSViMode` data of size
+  `0x50` and already synchronized; the generated address is only part of an
+  enclosing data/fragment decode. The next bounded sweep unit is
+  `osViModePalLan1 = 0x800392E0`, using the same helper plus independent
+  companion/generated-tree inspection. Audit: `docs/RENAME-S5285-AUDIT.md`.
 
 - **s5284:** `osViModeMpalLan1 = 0x80039240` is typed `OSViMode` data of size
   `0x50` and already synchronized; the generated address is only part of an
