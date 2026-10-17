@@ -161070,3 +161070,14 @@ entry, with no generated callable body, placeholder, header declaration,
 overlay record, or direct generated caller at the address. This rules out a
 callable rename candidate and preserves the ABI/data name. Audit:
 `docs/RENAME-S5267-AUDIT.md`. Next candidate is `__osHwIntTable = 0x800390E0`.
+
+## Session 5269 (2026-10-17) — generated-symbol sweep: `__osShutdown` is data
+
+Ran the bounded companion-symbol helper over `0x8003910C..0x80039110`. It
+renamed zero references and reported `__osShutdown` as already synchronized.
+Independent inspection found the companion typed `u32` data entry and no
+generated callable body, placeholder, declaration, overlay record, or direct
+generated caller at the address. This rules out callable placeholder
+propagation; preserve the data/fragment name. No build or soak was needed.
+Audit: `docs/RENAME-S5269-AUDIT.md`. Next candidate:
+`__OSGlobalIntMask = 0x80039110`.

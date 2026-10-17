@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5268 (2026-10-17). The
+Compact operational handoff, maintained at Session 5269 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -373,6 +373,12 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+- **s5269:** `__osShutdown = 0x8003910C` is already synchronized: the bounded
+  helper made zero edits, and independent checks identify it as a typed `u32`
+  data symbol with no generated callable body, placeholder, declaration,
+  overlay record, or direct generated caller. Preserve the name; no build or
+  soak. Audit: `docs/RENAME-S5269-AUDIT.md`. Next: classify the companion data
+  record `__OSGlobalIntMask = 0x80039110`.
 - **s5268:** `__osHwIntTable = 0x800390E0` is already synchronized: the
   bounded helper made zero edits, and independent checks identify it as a
   typed `u32` data symbol of size `0x14` with no generated callable body,
