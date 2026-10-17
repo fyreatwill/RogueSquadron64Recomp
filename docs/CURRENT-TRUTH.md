@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5314 (2026-10-17).
+Compact operational handoff, maintained at Session 5316 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -19,9 +19,9 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
-The current bounded work is the generated-symbol sweep. Session 5315 found
-`freeNpcBurstSpawnerTables = 0x80041B48` already synchronized; the next
-candidate is `initNpcContextFromTransform = 0x80041B8C`.
+The current bounded work is the generated-symbol sweep. Session 5316 found
+`initNpcContextFromTransform = 0x80041B8C` already synchronized; the next
+candidate is `spawnRandomBurstNpcVariantWrapper = 0x80041CBC`.
 
 ## Durable state
 
@@ -102,9 +102,9 @@ conflicting fragments. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Classify `initNpcContextFromTransform = 0x80041B8C` with the bounded renaming
-   helper and independent generated-tree inspection. This is the next work unit
-   in `scratch/agent/NEXT.md`.
+1. Classify `spawnRandomBurstNpcVariantWrapper = 0x80041CBC` with the bounded
+   renaming helper and independent generated-tree inspection. This is the next
+   work unit in `scratch/agent/NEXT.md`.
 2. Continue the same sweep slug only while each candidate is bounded and
    independently classifiable. If the preceding 15 session titles are all
    sweep-scoped, revisit the external retail-entry or M4 accumulator boundary
