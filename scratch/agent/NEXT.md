@@ -1,10 +1,9 @@
-# Next: generated-symbol renaming sweep — `osPfsFreeBlocks` candidate
+# Next: generated-symbol renaming sweep — `__osPfsGetStatus` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-The mandatory REVISIT is complete. Resume the bounded companion sweep: audit
-only `osPfsFreeBlocks = 0x80030710`, immediately after the classified
-`__osBlockSum`. Its next companion boundary is `0x80030A70`. Determine
-whether it has a generated prologue/body, exact span, and independent caller.
+Resume the bounded companion sweep: audit only `__osPfsGetStatus = 0x80030860`,
+immediately after the classified `osPfsFreeBlocks`. Determine whether it has a
+generated prologue/body, exact span, and independent caller.
 Do not rename an ABI symbol without all three gates.
 
 Competing hypotheses and discriminator:
@@ -19,7 +18,7 @@ Competing hypotheses and discriminator:
 
 Run:
 
-    rg -n 'osPfsFreeBlocks|func_80030710|fake_func_80030710' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80030710 --end-address 0x80030A70
+    rg -n '__osPfsGetStatus|func_80030860|fake_func_80030860' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80030860 --end-address 0x80030A04
 
 No build or soak is needed for a naming-only or ABI-preservation result.

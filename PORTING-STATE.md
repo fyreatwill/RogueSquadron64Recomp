@@ -159637,3 +159637,17 @@ independent generated callers are present. This supports the existing
 libultra/ABI name; no rename was made. The result rules out a missing-body or
 span-mismatch explanation for this candidate, but does not change the broader
 wrapper/ABI boundary conclusion. No build or soak was needed.
+
+## Session 5160 (2026-10-17) — classified `osPfsFreeBlocks` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the prescribed bounded
+generated-symbol audit for `osPfsFreeBlocks = 0x80030710`. The helper reported
+`already-synchronized` and renamed zero references. The generated tree contains
+only the ABI declaration and a zero-size overlay record; it has no generated
+body, placeholder, exact companion span, or independent caller at the
+candidate address. Preserve the ABI name. No build or soak was needed.
+Evidence: `docs/RENAME-S5160-AUDIT.md`.
+
+This rules out a generated-body rename for this candidate, not the broader
+libultra/ABI boundary classification. Next: audit `__osPfsGetStatus =
+0x80030860`.
