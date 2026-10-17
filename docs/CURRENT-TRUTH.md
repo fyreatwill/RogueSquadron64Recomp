@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5137 (2026-10-17). The
+Compact operational handoff, maintained at Session 5138 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -87,6 +87,11 @@ were retained below or in the project overview.
   body, overlay record, or caller. Its companion span is `0xEC` to
   `0x8002CD80`; preserve the ABI name. Audit:
   `docs/RENAME-S5137-AUDIT.md`.
+- `osEPiRawStartDma = 0x8002CD80` is another unmaterialized libultra entry:
+  the bounded helper reports `already-synchronized`, and the generated tree
+  has only an ABI declaration plus a zero-size overlay record, with no body or
+  caller. The companion next-entry boundary is `0x8002CFB0`; preserve the ABI
+  name. Audit: `docs/RENAME-S5138-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -142,9 +147,9 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osEPiRawStartDma = 0x8002CD80` using the bounded rename helper.
-   Rename only if the generated body, exact next-entry span, semantic mapping,
-   and live caller all agree; otherwise preserve the ABI name and record the
+1. Audit `osLeoDiskInit = 0x8002CFB0` using the bounded rename helper. Rename
+   only if the generated body, exact next-entry span, semantic mapping, and
+   live caller all agree; otherwise preserve the ABI name and record the
    classification.
 2. Continue the companion sweep one entry per iteration while the last-15
    session preflight permits it. If the preflight makes the sweep a REVISIT,

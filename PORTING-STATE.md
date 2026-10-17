@@ -159340,3 +159340,15 @@ companion map independently defines an exact `0xEC` span ending at
 This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
 semantic generated-symbol rename, build, or soak for this entry. Audit:
 `docs/RENAME-S5137-AUDIT.md`. Next candidate: `osEPiRawStartDma = 0x8002CD80`.
+## Session 5138 (2026-10-17) — classified `osEPiRawStartDma` as unmaterialized
+
+Ran the bounded generated-symbol helper and independent generated-tree checks
+for companion `osEPiRawStartDma = 0x8002CD80`. The helper changed zero
+references and reported `already-synchronized`. The generated tree contains
+only the ABI declaration and a zero-size overlay record, with no generated
+body, placeholder, or direct generated caller. The companion map places the
+next entry, `osLeoDiskInit`, at `0x8002CFB0`.
+
+This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
+semantic generated-symbol rename, build, or soak for this entry. Audit:
+`docs/RENAME-S5138-AUDIT.md`. Next candidate: `osLeoDiskInit = 0x8002CFB0`.
