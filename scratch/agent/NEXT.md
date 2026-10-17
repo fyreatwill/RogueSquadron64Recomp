@@ -1,6 +1,5 @@
-# Next: read the SOAK-RESULTS.md line for s5243_envflag_ab (keys.log in scratch/agent/soak_results/s5243_envflag_ab/).
-A pass + B fail => one of the five ROGUESQ_LOG_*GUARD* flags changes the route; bisect the flags in one sequential script and find why a log flag has behaviour.
-A pass + B pass => flake/timing; re-queue the TO_PTR mask regression (maskon vs maskoff) with the s5099 env (BASE only).
-A fail => positive control failed: HEAD code or host regressed the route; check uptime, then bisect commits s5229..s5240 via builds.
-If clean, resume M5 audio plan (docs/M5-AUDIO-PLAN.md) next de-stub step.
+# Next: decisive end-to-end control for the route stall (s5099 passed 3/3 at 01:26, same recipe fails 08:00+).
+Hypotheses: H1 host load / time-of-day (Chrome 112%, REAPER, WindowServer); H2 a lib/ patch (s5235 save guard, s5236 rsp masks, s5239 rt64) with no log marker; H3 stale generated-code/build state.
+Discriminating measurement (one iteration, both arms): (a) `cp -c -R` (APFS clone) the repo to ../RogueSquadron64Recomp-bisect, check out 70a56647 there (the clone, never this tree), run submodule-patches/apply.sh there, build, and run the scratch/agent/soak_queue/done/s5099_shape3_fix_soak_*.sh recipe against it; (b) in the same time window run the HEAD binary with the same recipe. old-pass+HEAD-fail => H2/H3 (revert lib patches s5235, s5236, s5239 one at a time in the clone); old-fail+HEAD-fail => H1 host load: record load avg and re-queue the recipe for the overnight window as the positive control. Positive control = the old build must also reach origin 0x790400.
+If H1 is confirmed, stop treating nohangar as a regression and resume the M5 audio plan (docs/M5-AUDIO-PLAN.md) next de-stub step.
 HYPOTHESIS-ID: m3-idiom-class-audit
