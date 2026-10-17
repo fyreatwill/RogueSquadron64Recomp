@@ -161719,3 +161719,14 @@ caller all use `markHighLodCellsInGrid`; no placeholder or conflicting
 fragment was found. H3 is selected, so no mapping, build, or soak change was
 warranted. Audit: `docs/RENAME-S5322-AUDIT.md`. The next bounded candidate is
 `load_level_hmp = 0x80043D74`.
+
+## Session 5323 (2026-10-17) — generated-symbol sweep: `load_level_hmp` is synchronized
+
+Ran the bounded candidate check for `0x80043D74` against the companion symbol
+map and current generated tree. The five required evidence lines all agree:
+the companion map, generated body, declaration, overlay record, and generated
+caller use `load_level_hmp`; no `func_80043D74` or conflicting fragment was
+found. H3 is selected, so no mapping, build, or soak change was warranted.
+This rules out a pending rename at `0x80043D74`; audit:
+`docs/RENAME-S5323-AUDIT.md`. The next bounded placeholder candidate is
+`func_800E9AE0 = 0x800E9AE0` in the mission overlay.

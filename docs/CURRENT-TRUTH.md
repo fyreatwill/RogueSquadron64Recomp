@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5322 (2026-10-17).
+Compact operational handoff, maintained at Session 5323 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -108,8 +108,9 @@ conflicting fragments. Audit files are `docs/RENAME-S*.md`.
 1. Keep the M4 accumulator boundary parked unless a complete task-keyed port
    sampler at a retail-comparable instruction/step boundary can be built.
 2. Resume the generated-symbol sweep; the preceding-15-title revisit rule is
-   now cleared by Session 5321. The next candidate is
-   `load_level_hmp = 0x80043D74`.
+   now cleared by Session 5321. `load_level_hmp = 0x80043D74` is already
+   synchronized; the next bounded placeholder candidate is
+   `func_800E9AE0 = 0x800E9AE0` in the mission overlay.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
 4. When MIPS GCC is supplied, qualify the existing PatchesLib pipeline and
