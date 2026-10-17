@@ -1,7 +1,7 @@
-# Next: generated-symbol renaming sweep — `__osSpGetStatus` candidate
+# Next: generated-symbol renaming sweep — `osStartThread` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Run one bounded companion audit for `__osSpGetStatus = 0x800344D0`; do not
+Run one bounded companion audit for `osStartThread = 0x800344E0`; do not
 build or soak.
 
 Competing hypotheses and discriminator:
@@ -16,5 +16,5 @@ Competing hypotheses and discriminator:
 The discriminator is the bounded helper result plus generated-tree body/span
 and caller counts. Run:
 
-    rg -n '__osSpGetStatus|func_800344D0|fake_func_800344D0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800344D0 --end-address 0x80034500
+    rg -n 'osStartThread|func_800344E0|fake_func_800344E0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800344E0 --end-address 0x80034500
