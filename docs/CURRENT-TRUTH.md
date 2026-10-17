@@ -538,9 +538,18 @@ the companion address. Its nominal span to `osSetThreadPri = 0x800336E0` is
 `docs/RENAME-S5185-AUDIT.md`. The next candidate is now
 `osSetThreadPri = 0x800336E0`.
 
+`osSetThreadPri = 0x800336E0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated tree has only the ABI declaration, a zero-size overlay record,
+and two direct callers of the host wrapper, with no generated body or
+placeholder at the companion address. Its nominal span to `osSetTimer =
+0x800337C0` is `0xE0`, with no body to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5186-AUDIT.md`. The next candidate is now `osSetTimer =
+0x800337C0`.
+
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osSetThreadPri = 0x800336E0`, whose next
+1. Resume the companion sweep with `osSetTimer = 0x800337C0`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page

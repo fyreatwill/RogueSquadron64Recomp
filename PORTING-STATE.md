@@ -159975,3 +159975,17 @@ and continue the sweep at `osSetThreadPri`. This rules out an actionable
 generated rename at this entry, but does not bear on runtime behavior. No
 build or soak was warranted for this naming-only result. Audit:
 `docs/RENAME-S5185-AUDIT.md`.
+
+## Session 5186 (2026-10-17) — classified `osSetThreadPri` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osSetThreadPri = 0x800336E0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. The
+generated tree has only the ABI declaration, a zero-size overlay record, and
+two direct generated callers of the host wrapper; no generated body or
+placeholder exists at the companion address. The symbol map places
+`osSetTimer = 0x800337C0` next, giving a nominal `0xE0` span with no body to
+validate. Preserve the ABI name and continue the sweep at `osSetTimer`. This
+rules out an actionable generated rename at this entry, but does not bear on
+runtime behavior. No build or soak was warranted for this naming-only result.
+Audit: `docs/RENAME-S5186-AUDIT.md`.
