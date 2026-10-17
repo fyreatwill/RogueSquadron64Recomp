@@ -741,11 +741,17 @@ generated-tree searches found no body, placeholder, overlay record, or direct
 caller at the companion address. Its nominal span to `__osSetCompare =
 0x80034BD0` is `0x188`, with no body to validate. Preserve the ABI name.
 Audit: `docs/RENAME-S5215-AUDIT.md`. The next candidate is now
-`__osSetCompare = 0x80034BD0`.
+`__osSetCompare = 0x80034BD0`. `__osSetCompare = 0x80034BD0` is now
+classified as another unmaterialized libultra/ABI entry: the bounded helper
+reported `already-synchronized`, and independent generated-tree searches found
+no body, placeholder, overlay record, or direct caller at the companion
+address. Its nominal span to `osViBlack = 0x80034BE0` is `0x10`, with no body
+to validate. Preserve the ABI name. Audit: `docs/RENAME-S5216-AUDIT.md`. The
+next candidate is now `osViBlack = 0x80034BE0`.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSetCompare = 0x80034BD0`, whose
+1. Resume the companion sweep with `osViBlack = 0x80034BE0`, whose
    next candidate follows from its bounded symbol-map span, one entry per iteration.
    `strchr = 0x80034744` is now correctly named: its generated body, exact
    `0x4C` overlay span, and six independent callers agree. Audit:

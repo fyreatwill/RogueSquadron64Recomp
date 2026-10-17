@@ -160360,3 +160360,16 @@ The companion map puts `__osSetCompare` at `0x80034BD0`, so the nominal span is
 unmaterialized libultra/ABI outcome and preserves the semantic ABI name. It
 rules out a generated body and span mismatch for this candidate, but does not
 make a runtime claim. Audit: `docs/RENAME-S5215-AUDIT.md`.
+
+## Session 5216 (2026-10-17) — classified `__osSetCompare` as unmaterialized
+
+Ran the bounded generated-symbol companion audit for `__osSetCompare` at
+`0x80034BD0`, with hypotheses H-generated-name-correct, H-host-wrapper,
+H-span-mismatch, and H-unproven. The helper reported `already-synchronized`
+and renamed zero references in zero files. Independent searches found no
+generated body, placeholder, overlay record, or direct caller at the address.
+The companion map puts `osViBlack` at `0x80034BE0`, so the nominal span is
+`0x10` but there is no generated body to validate. This selects the
+unmaterialized libultra/ABI outcome and preserves the semantic ABI name. It
+rules out a generated body and span mismatch for this candidate, but does not
+make a runtime claim. Audit: `docs/RENAME-S5216-AUDIT.md`.

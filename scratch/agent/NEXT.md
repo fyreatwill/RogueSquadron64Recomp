@@ -1,7 +1,7 @@
-# Next: generated-symbol renaming sweep — `__osSetCompare` candidate
+# Next: generated-symbol renaming sweep — `osViBlack` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Run one bounded companion audit for `__osSetCompare = 0x80034BD0`; do not
+Run one bounded companion audit for `osViBlack = 0x80034BE0`; do not
 build or soak.
 
 Competing hypotheses and discriminator:
@@ -16,5 +16,5 @@ Competing hypotheses and discriminator:
 The discriminator is the bounded helper result plus generated-tree body/span
 and caller counts. Run:
 
-    rg -n '__osSetCompare|func_80034BD0|fake_func_80034BD0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80034BD0 --end-address 0x80034C50
+    rg -n 'osViBlack|func_80034BE0|fake_func_80034BE0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80034BE0 --end-address 0x80034C50
