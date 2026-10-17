@@ -9,7 +9,7 @@ synced them, `scratch/agent/audit_unsigned_base.sh` is now empty for tools/ and 
 
 1. Fold the s5095 soak verdict into CURRENT-TRUTH if not yet done. Crash with a gated diagnostic ON =>
    a new fault class (read the faulting symbol; do not guess).
-2. Extend the audit to the other zero-extension shapes the regex does not match: `MEM_x(off, (uint32_t)X)`,
+2. DONE s5096 (shape 2 audited, 0 live sites). Original text: Extend the audit to the other zero-extension shapes the regex does not match: `MEM_x(off, (uint32_t)X)`,
    `MEM_x(off, U32(X))`, `(uint32_t)` / `u`-suffixed *variables* used as the base in diagnostics.
    Command: grep -nE 'MEM_[A-Z]+\([^,]+,[[:space:]]*(U32|\(uint32_t\))\(' tools/*.py build/factor5_ucode/*.c
    Classify each as base (bug) vs value (fine).
