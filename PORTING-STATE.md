@@ -160439,3 +160439,60 @@ is `0x3B0`, but there is no body to validate. This selects the unmaterialized
 libultra/ABI outcome and preserves the semantic name. It rules out a
 generated-symbol rename and body/span mismatch for this candidate, but makes
 no runtime claim. Audit: `docs/RENAME-S5221-AUDIT.md`.
+## Session 5222 (2026-10-17) — classified `__osViSwapContext` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. The bounded companion audit
+for `__osViSwapContext = 0x80035550` was already written and is ledgered
+here so it is not an orphan. The helper reported `already-synchronized` and
+renamed zero references in zero files. Independent generated-tree searches
+found no body, placeholder, header declaration, overlay record, or direct
+generated caller at the companion address. Neighbors `osWritebackDCache =
+0x800358B0` and `osWritebackDCacheAll = 0x80035930` are zero-size wrappers.
+`_Putfld = 0x80035960` is the next companion entry, a nominal span of
+`0x410`, with no body to validate. This selects the unmaterialized
+libultra/ABI outcome and preserves the ABI name. It rules out a
+generated-symbol rename for this candidate and makes no runtime claim.
+Audit: `docs/RENAME-S5222-AUDIT.md`.
+## Session 5223 (2026-10-17) — port entry join selects source-byte divergence
+
+HYPOTHESIS-ID: retail-entry-port-join. The sweep streak required a revisit of
+the external retail-entry boundary, so this session joined the s5203 retained
+entry contract on the port instead of renaming another symbol. The instrument
+is the s5223 entry hook on `fillSampleStreamRange = 0x8008FAAC` and its four
+callsites, persisted in `tools/fixup_game_funcs_vendored.py`.
+
+The first launch died before the armed line. `scratch/agent/s5223_bootcrash/run.log`
+is a SIGSEGV at `bzero+80` (`si_addr=0x858`) from `RT64::GBIManager::GBIManager`.
+`nm` showed strong `_bzero` and `_bcmp`: the rename map had stripped the
+recompiler suffix, and this relink exported those names over libSystem. The
+libc call `bzero(ptr, 0x830)` entered the guest function. Restoring
+`bzero_recomp` and `bcmp_recomp`, and deleting those two mappings, leaves
+`U _bzero` plus `T _bzero_recomp` and `T _bcmp_recomp`. The
+`register_overlays.cpp` macros only hide the libc declarations.
+
+The qualified rerun is `scratch/agent/s5223_port_entry_join/run.log` (SIGKILL
+at stop_t=403, no crash marker). Same-run controls: `[s5223-armed]` once,
+`[phase]` title `origin=0x00790400` at 51.1s width 1024, `[phase]`
+`origin=0x00690400` at 98.4s and 297.4s width 512, and `[vi]`
+`origin=0x00620400`. Hangar `0x006AB400` did not appear. The driver
+`summary.txt` missed the mission buckets because `%06X` prints `690400`;
+the figures here are the last `[s5223-join]` line per origin, and each
+equals that origin's max entry.
+
+Mission `0x690400`: entry=78464, c24c=117, c2cc=78347, c39c=0, c3f0=0,
+s0_bad=0, s1_bad=0, sb_ok=87, sb_bad=78377, sb_badptr=0, v0_bad=0.
+Mission `0x620400`: entry=79264, c24c=124, c2cc=79140, c39c=0, c3f0=0,
+s0_bad=0, s1_bad=0, sb_ok=89, sb_bad=79175, sb_badptr=0, v0_bad=0.
+On both, the four callsites sum to entry. Other origins (printed
+`origin=0x000000`) had entry=180969 and c3f0=0 and are not the discriminator.
+First samples: `s0` in {`0x80195190`, `0x80190E50`}, `s1=0x8018C720`, `v0`
+in {2, 3}, `sb` in {0x03, 0xBB}. `ctx->r31` was not compared to retail `ra`.
+
+This selects H-field-diff. It refutes H-port-takes-dead-site (`c3f0=0`),
+refutes H-port-misses-entry (both mission entries are nonzero), and refutes
+H-caller-diff (`0x800902CC` is 78347/78464 and 79140/79264). It refutes
+H-entry-contract-shared because `source_byte` at `s0+0x22` is outside
+{0x00, 0x01, 0xFF} on 78377/78464 and 79175/79264 entries, while s0, s1, and
+v0 stay inside the retained set. That retail set is the 32768 distinct rows,
+not the 111686 dropped novel tuples, so this does not prove retail never
+emits 0x03. No guard. Audit: `docs/REVISIT-S5223-PORT-ENTRY-JOIN.md`.

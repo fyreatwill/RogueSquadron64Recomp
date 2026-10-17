@@ -39039,6 +39039,137 @@ static void rs64_s2084_fill_range_edge(const char* edge, uint32_t edge_pc,
         changed = True
         report.append("funcs_24.c: s2084 fill-range reachability table patched x5")
 
+    if p.name == "funcs_24.c" and "PATCH: s5223 entry-contract join" not in text:
+        _s5223_anchor = "static void rs64_s2084_fill_range_edge"
+        if text.count(_s5223_anchor) != 1:
+            sys.exit(f"s5223 s2084 anchor count={text.count(_s5223_anchor)}")
+        _s5223_helper = r'''/* PATCH: s5223 entry-contract join */
+struct rs64_s5223_bucket {
+    unsigned long entry, c24c, c2cc, c39c, c3f0;
+    unsigned long s0_bad, s1_bad, sb_ok, sb_bad, sb_badptr, v0_ok, v0_bad;
+    unsigned long emitted_entry;
+};
+
+static void rs64_s5223_emit(int bi, const char* why, const struct rs64_s5223_bucket* b) {
+    static const uint32_t origins[3] = { 0x00690400u, 0x00620400u, 0u };
+    fprintf(stderr,
+            "[s5223-join] why=%s origin=0x%06X entry=%lu c24c=%lu c2cc=%lu c39c=%lu c3f0=%lu "
+            "s0_bad=%lu s1_bad=%lu sb_ok=%lu sb_bad=%lu sb_badptr=%lu v0_ok=%lu v0_bad=%lu\n",
+            why, origins[bi], b->entry, b->c24c, b->c2cc, b->c39c, b->c3f0,
+            b->s0_bad, b->s1_bad, b->sb_ok, b->sb_bad, b->sb_badptr, b->v0_ok, b->v0_bad);
+    fflush(stderr);
+}
+
+static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edge_pc,
+                                  recomp_context* ctx) {
+    static int enabled = -1;
+    static int armed = 0;
+    static int have_last = 0;
+    static uint32_t last_origin = 0;
+    static struct rs64_s5223_bucket bkt[3];
+    uint32_t origin;
+    int bi;
+    int prev;
+    if (enabled < 0) {
+        const char* e = getenv("ROGUESQ_LOG_S5223_ENTRY_JOIN");
+        enabled = (e && e[0] && e[0] != '0') ? 1 : 0;
+    }
+    if (!enabled) return;
+    if (!armed) {
+        armed = 1;
+        fprintf(stderr, "[s5223-armed] entry-contract-join\n");
+        fflush(stderr);
+    }
+    extern uint32_t rs64_vi_committed_origin(void);
+    origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (origin == 0x00690400u) bi = 0;
+    else if (origin == 0x00620400u) bi = 1;
+    else bi = 2;
+    if (have_last && last_origin != origin) {
+        prev = (last_origin == 0x00690400u) ? 0 : (last_origin == 0x00620400u) ? 1 : 2;
+        if (bkt[prev].entry != bkt[prev].emitted_entry) {
+            rs64_s5223_emit(prev, "leave", &bkt[prev]);
+            bkt[prev].emitted_entry = bkt[prev].entry;
+        }
+    }
+    have_last = 1;
+    last_origin = origin;
+    if (edge_pc == 0x8008FAACu) {
+        uint32_t s0 = U32(ctx->r16);
+        uint32_t s1 = U32(ctx->r17);
+        uint32_t v0 = U32(ctx->r2);
+        uint32_t phys = (s0 + 0x22u) & 0x1FFFFFFFu;
+        uint32_t sb = 0;
+        int sb_known = 0;
+        bkt[bi].entry++;
+        if (s0 < 0x80000000u || s0 >= 0x80800000u) bkt[bi].s0_bad++;
+        if (s1 < 0x80000000u || s1 >= 0x80800000u) bkt[bi].s1_bad++;
+        if (phys >= 0x800000u) bkt[bi].sb_badptr++;
+        else {
+            sb = rdram[phys];
+            sb_known = 1;
+            if (sb == 0x00u || sb == 0x01u || sb == 0xFFu) bkt[bi].sb_ok++;
+            else bkt[bi].sb_bad++;
+        }
+        if (v0 >= 1u && v0 <= 8u) bkt[bi].v0_ok++;
+        else bkt[bi].v0_bad++;
+        if (bi < 2 && bkt[bi].entry <= 3ul) {
+            fprintf(stderr,
+                    "[s5223-sample] edge=%s origin=0x%06X n=%lu s0=0x%08X s1=0x%08X a0=0x%08X v0=0x%08X sb=%s%02X\n",
+                    edge, origin, bkt[bi].entry, s0, s1, U32(ctx->r4), v0,
+                    sb_known ? "0x" : "badptr-", sb_known ? sb : 0u);
+            fflush(stderr);
+        }
+    } else if (edge_pc == 0x8009024Cu) {
+        bkt[bi].c24c++;
+    } else if (edge_pc == 0x800902CCu) {
+        bkt[bi].c2cc++;
+    } else if (edge_pc == 0x8009039Cu) {
+        bkt[bi].c39c++;
+    } else if (edge_pc == 0x800903F0u) {
+        bkt[bi].c3f0++;
+        if (bkt[bi].c3f0 == 1ul) {
+            rs64_s5223_emit(bi, "dead-site", &bkt[bi]);
+            bkt[bi].emitted_entry = bkt[bi].entry;
+        }
+    }
+    if (edge_pc == 0x8008FAACu) {
+        unsigned long n = bkt[bi].entry;
+        int milestone = (n == 1ul || n == 8ul || n == 32ul || n == 128ul || n == 512ul ||
+                         (n >= 1024ul && (n % 1024ul) == 0ul));
+        if (bi == 2) milestone = (n == 1ul || (n % 8192ul) == 0ul);
+        if (milestone) {
+            rs64_s5223_emit(bi, n == 1ul ? "first" : "interval", &bkt[bi]);
+            bkt[bi].emitted_entry = n;
+        }
+    }
+}
+
+'''
+        text = text.replace(_s5223_anchor, _s5223_helper + _s5223_anchor, 1)
+        _s5223_sites = (
+            ("entry", "0x8008FAACu"),
+            ("callsite-0x8009024C", "0x8009024Cu"),
+            ("callsite-0x800902CC", "0x800902CCu"),
+            ("callsite-0x8009039C", "0x8009039Cu"),
+            ("callsite-0x800903F0", "0x800903F0u"),
+        )
+        for _s5223_name, _s5223_pc in _s5223_sites:
+            _s5223_old = (
+                f'    rs64_s2084_fill_range_edge("{_s5223_name}", {_s5223_pc}, ctx); '
+                "/* PATCH: s2084 fill-range reachability table */\n"
+            )
+            _s5223_new = (
+                _s5223_old
+                + f'    rs64_s5223_entry_join(rdram, "{_s5223_name}", {_s5223_pc}, ctx); '
+                "/* PATCH: s5223 entry-contract join */\n"
+            )
+            if text.count(_s5223_old) != 1:
+                sys.exit(f"s5223 callsite count={text.count(_s5223_old)} for {_s5223_name}")
+            text = text.replace(_s5223_old, _s5223_new, 1)
+        changed = True
+        report.append("funcs_24.c: s5223 entry-contract join patched x5")
+
     # s2112: join the sole reapplyDisplayMode caller, callee, audio-return,
     # route edge, and function exit by a phase-local call ordinal. The helper
     # is diagnostic-only and does not alter any generated register or memory

@@ -6,7 +6,14 @@
 
 #undef main
 
+/* Hide libc bcmp/bzero while the runtime headers are parsed. The game
+   copies stay bcmp_recomp/bzero_recomp: a global bcmp/bzero interposes
+   libSystem and faults RT64's GBIManager constructor at boot. */
+#define bcmp rs64_libc_bcmp_unused
+#define bzero rs64_libc_bzero_unused
 #include "librecomp/overlays.hpp"
+#undef bcmp
+#undef bzero
 
 // All overlays registered at boot; librecomp's section table covers the
 // 3 .ovl.* overlays (mission/menu/cinematic), all sharing ram_addr

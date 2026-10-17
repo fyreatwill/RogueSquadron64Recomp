@@ -11,8 +11,9 @@ RENAMES = {
     # Entry-local zeroing loop: address/length inputs, 16-byte stride, and
     # paired zero stores match the companion libc bzero implementation.
     "func_8000040C": "clearMemory16ByteBlocks",
-    "bcmp_recomp": "bcmp",
-    "bzero_recomp": "bzero",
+    # bcmp_recomp / bzero_recomp must keep the recompiler suffix. A global
+    # bcmp or bzero in this executable interposes libSystem and SIGSEGVs in
+    # RT64 GBIManager's constructor (measured boot crash, s5223).
     "func_800824F8": "rs_crc32",
     "func_800BFDC4": "setHudSecondaryWeaponInfo",
     "func_800C63C0": "getAvailableShipsForLevel",
@@ -285,9 +286,9 @@ RENAMES = {
     "fake_func_800FA248": "data_gap_800FA248",
 }
 
+# Address-scoped renames. Empty: the only former entries were the libc
+# collisions removed above, and an unsuffixed bcmp/bzero must not return.
 RENAME_ADDRESSES = {
-    "bcmp_recomp": 0x80029F60,
-    "bzero_recomp": 0x8002A080,
 }
 
 
