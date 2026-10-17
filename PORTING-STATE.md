@@ -161606,3 +161606,9 @@ conflicting fragment was present. This selects the already-synchronized
 hypothesis and rules out a rename or data/ABI preservation case. No build or
 soak was warranted; the next candidate is `randomBurstNpcHandlerVariant` at
 `0x800403EC`.
+## Session 5311 (2026-10-17) — generated-symbol sweep: `randomBurstNpcHandlerVariant` is synchronized
+
+- Ran the bounded classification helper for `randomBurstNpcHandlerVariant = 0x800403EC`.
+- Result: `renamed 0 references in 0 files`; helper classified the candidate as `already-synchronized`.
+- Independent evidence: `main_overlay.txt` names the address; `RecompiledFuncs/funcs_9.c` contains the named callable body; `funcs.h` contains the named prototype; and `recomp_overlays.inl` contains the named overlay record. No `func_800403EC` placeholder was found.
+- This rules out a real rename at this address, but does not classify the next candidate. No build or soak was run because this was a bounded classification-only work unit.
