@@ -161594,3 +161594,15 @@ This selects the already-synchronized hypothesis and rules out a rename or
 data/ABI preservation case. No build or soak was warranted; the next candidate
 is `allocAndInitParticlePool` at `0x80040310`. Audit:
 `docs/RENAME-S5309-AUDIT.md`.
+
+## Session 5310 (2026-10-17) — generated-symbol sweep: `allocAndInitParticlePool` is synchronized
+
+Ran the bounded generated-symbol helper for `allocAndInitParticlePool` at
+`0x80040310`; it reported `already-synchronized` and renamed zero references
+in zero files. Independent inspection found the companion symbol-map entry,
+named generated body and declaration, overlay record, and named generated
+callers in `funcs_27.c`, `funcs_33.c`, and `funcs_42.c`. No placeholder or
+conflicting fragment was present. This selects the already-synchronized
+hypothesis and rules out a rename or data/ABI preservation case. No build or
+soak was warranted; the next candidate is `randomBurstNpcHandlerVariant` at
+`0x800403EC`.

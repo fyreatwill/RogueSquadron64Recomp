@@ -1,6 +1,6 @@
-# Next: generated-symbol sweep — `allocAndInitParticlePool`
+# Next: generated-symbol sweep — `randomBurstNpcHandlerVariant`
 
-Work unit: classify `allocAndInitParticlePool = 0x80040310` with the bounded helper,
+Work unit: classify `randomBurstNpcHandlerVariant = 0x800403EC` with the bounded helper,
 then independently inspect the companion record and generated tree.
 This is a classification-only unit; do not build or soak.
 
@@ -11,7 +11,7 @@ Competing hypotheses and discriminator:
 - H3: typed data or an ABI boundary with no callable placeholder selects preservation without renaming.
 
 Run:
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80040310 --end-address 0x800409A4 --limit 1`
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x800403EC --end-address 0x800409A4 --limit 1`
 
 Then grep the companion map and generated tree for the address, symbol,
 placeholder, declaration, overlay record, and callers. The helper result and
