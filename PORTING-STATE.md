@@ -160398,3 +160398,17 @@ nominal span is `0x20` but there is no body to validate. This selects the
 unmaterialized libultra/ABI outcome and preserves the semantic ABI name. It
 rules out a generated-symbol rename and body/span mismatch for this candidate,
 but makes no runtime claim. Audit: `docs/RENAME-S5218-AUDIT.md`.
+
+## Session 5219 (2026-10-17) — classified `osCreateViManager` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded companion
+audit for `osCreateViManager = 0x80034DB0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found only the ABI declaration, one generated caller,
+and a zero-size overlay record; no generated body or placeholder exists at the
+companion address. The companion map places `osVirtualToPhysical` at
+`0x80035120`, so the nominal span is `0x170` but there is no body to validate.
+This selects the unmaterialized libultra/ABI outcome and preserves the semantic
+name. It rules out a generated-symbol rename and body/span mismatch for this
+candidate, but makes no runtime claim. Audit:
+`docs/RENAME-S5219-AUDIT.md`.
