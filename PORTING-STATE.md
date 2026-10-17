@@ -159414,3 +159414,13 @@ the companion span is `0x17C`, but there is no generated body to rename.
 This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
 semantic generated-symbol rename, build, or soak for this entry. Audit:
 `docs/RENAME-S5143-AUDIT.md`. Next candidate: `osMotorInit = 0x8002D88C`.
+## Session 5144 (2026-10-17) — classified `osMotorInit` as unmaterialized
+
+Ran the bounded generated-symbol audit for companion `osMotorInit =
+0x8002D88C`. The helper reported `already-synchronized` and changed zero
+files. The generated tree has an ABI declaration, four direct generated
+callers, and a zero-size overlay record at offset `0x2D44C`, but no generated
+body or placeholder at the companion address. Classified it as an
+unmaterialized libultra/ABI entry and preserved `osMotorInit_recomp`. This
+rules out a generated-name rename for this candidate; the next candidate is
+`osPfsAllocateFile = 0x8002EBE0`.

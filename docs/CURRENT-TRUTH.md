@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5141 (2026-10-17). The
+Compact operational handoff, maintained at Session 5144 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -35,7 +35,12 @@ declaration, one caller, and a zero-size overlay record. The next candidate is
 unmaterialized ABI entry: its helper audit made zero edits, and the generated
 tree has no body, placeholder, overlay record, or direct caller. Its companion
 span ends at `osMotorInit = 0x8002D88C`; preserve the ABI name. Audit:
-`docs/RENAME-S5143-AUDIT.md`.
+`docs/RENAME-S5143-AUDIT.md`. `osMotorInit = 0x8002D88C` is also an
+unmaterialized libultra/ABI entry: the helper reported `already-synchronized`,
+and its generated tree has only the ABI declaration, four direct callers, and
+a zero-size overlay record, with no body at the companion address. The next
+candidate is `osPfsAllocateFile = 0x8002EBE0`; preserve the ABI name. Audit:
+`docs/RENAME-S5144-AUDIT.md`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -181,9 +186,9 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osMotorInit = 0x8002D88C` using the bounded rename helper. Rename
-   only if the generated body, exact next-entry span, semantic mapping, and
-   live caller all agree; otherwise preserve the ABI name and record the
+1. Audit `osPfsAllocateFile = 0x8002EBE0` using the bounded rename helper.
+   Rename only if the generated body, exact next-entry span, semantic mapping,
+   and live caller all agree; otherwise preserve the ABI name and record the
    classification.
 2. Continue the companion sweep one entry per iteration while the last-15
    session preflight permits it. If the preflight makes the sweep a REVISIT,
