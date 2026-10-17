@@ -161547,3 +161547,16 @@ callable body in `RecompiledFuncs/funcs_9.c`, its `funcs.h` declaration,
 selects H1 and rules out H2/H3 for this candidate. No build or soak was
 warranted. Audit: `docs/RENAME-S5305-AUDIT.md`. The next bounded candidate is
 `findFirstActiveNpcChildInChain = 0x8003FCBC`.
+
+## Session 5306 (2026-10-17) — generated-symbol sweep: `findFirstActiveNpcChildInChain` is synchronized
+
+Ran the bounded generated-symbol helper for companion symbol
+`findFirstActiveNpcChildInChain = 0x8003FCBC`. It reported
+`already-synchronized` and renamed zero references in zero files. Independent
+inspection found the named callable body in `RecompiledFuncs/funcs_9.c`, its
+`funcs.h` declaration, and `recomp_overlays.inl` record; no
+`func_8003FCBC` placeholder or conflicting generated fragment exists. No direct
+named caller was found in the generated tree, but the overlay entry is present.
+This selects H1 and rules out H2/H3 for this candidate. No build or soak was
+warranted. Audit: `docs/RENAME-S5306-AUDIT.md`. The next bounded candidate is
+`destroyNpcContextArrays = 0x8003FDD8`.

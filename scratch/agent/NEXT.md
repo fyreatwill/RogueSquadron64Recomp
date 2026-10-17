@@ -1,6 +1,8 @@
-# Next: generated-symbol sweep — `findFirstActiveNpcChildInChain`
+# Next: generated-symbol sweep — `destroyNpcContextArrays`
 
-Work unit: classify `findFirstActiveNpcChildInChain = 0x8003FCBC` with the bounded helper, then independently inspect the companion record and generated tree. This is a classification-only unit; do not build or soak.
+Work unit: classify `destroyNpcContextArrays = 0x8003FDD8` with the bounded
+helper, then independently inspect the companion record and generated tree.
+This is a classification-only unit; do not build or soak.
 
 Competing hypotheses and discriminator:
 
@@ -9,8 +11,10 @@ Competing hypotheses and discriminator:
 - H3: typed data or an ABI boundary with no callable placeholder selects preservation without renaming.
 
 Run:
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x8003FCBC --end-address 0x8003FCC0 --limit 1`
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x8003FDD8 --end-address 0x8003FDE0 --limit 1`
 
-Then grep the companion map and generated tree for the address, symbol, placeholder, declaration, overlay record, and callers. The helper result and independent tree inspection are the two required evidence lines.
+Then grep the companion map and generated tree for the address, symbol,
+placeholder, declaration, overlay record, and callers. The helper result and
+independent tree inspection are the two required evidence lines.
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
