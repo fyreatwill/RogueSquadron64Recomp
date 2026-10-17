@@ -1,7 +1,7 @@
-# Next: generated-symbol renaming sweep — `__osDequeueThread` candidate
+# Next: generated-symbol renaming sweep — `__osTimerServicesInit` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Run one bounded companion audit for `__osDequeueThread = 0x80034790`; do not
+Run one bounded companion audit for `__osTimerServicesInit = 0x800347D0`; do not
 build or soak.
 
 Competing hypotheses and discriminator:
@@ -16,5 +16,5 @@ Competing hypotheses and discriminator:
 The discriminator is the bounded helper result plus generated-tree body/span
 and caller counts. Run:
 
-    rg -n '__osDequeueThread|func_80034790|fake_func_80034790' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80034790 --end-address 0x80034798
+    rg -n '__osTimerServicesInit|func_800347D0|fake_func_800347D0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800347D0 --end-address 0x8003485C
