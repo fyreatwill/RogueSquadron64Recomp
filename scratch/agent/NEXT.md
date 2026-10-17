@@ -1,9 +1,12 @@
-# Next: rerun M4 shared-boundary sampler through hangar
+# Next: RESUME M4 shared-boundary sampler through hangar
 
 RESUME: Session 5326 completed the sampler build and positive controls but did
-not reach hangar. Do not repeat that title-only run. For the next actual work
-unit, build the already instrumented port, rebuild cxd4, then launch both arms
-with the title-observed key schedule. The port recipe is:
+not reach hangar. Do not repeat the title-only schedule. The next actual work
+unit is to rebuild the already instrumented port and cxd4, then launch both
+arms after observing the title VI, using the same title-observed key schedule.
+No new instrumentation or mitigation is needed before that run.
+
+Port command:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
@@ -14,10 +17,13 @@ env PROBE_PHASE_WIDTH=512 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
   zsh tools/probe.sh scratch/agent/m4-port-next 240 1
 ```
 
-Use the same title-observed Start/A schedule for the cxd4 capture, with
+For the cxd4 capture, use the same title-observed Start/A schedule with
 `RS64_RSP_MID_STRIDE=1`; retain whole-RDRAM and VI positive controls. The
 comparison is valid only if both arms reach `0x006AB400` at width 512. Do not
-add a mitigation or infer from synthetic stage ordinals.
+add a mitigation or infer from synthetic stage ordinals. The exact existing
+artifacts are `scratch/agent/s5326_m4_shared_port/port.log`,
+`scratch/agent/s5326_m4_shared_retail/rsm1.bin`, and
+`docs/REVISIT-S5326-M4-SHARED-BOUNDARY-RESULT.md`.
 
 Competing hypotheses and discriminator:
 

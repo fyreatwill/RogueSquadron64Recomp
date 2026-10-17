@@ -161787,3 +161787,15 @@ width 640, origin `0x0066A500`. H3 remains selected because there is no shared
 512-wide hangar key and therefore no exact task/PC comparison. The next
 discriminator is the title-observed Start/A schedule, recorded in
 `scratch/agent/NEXT.md`; no accumulator mitigation is authorized.
+
+## Session 5328 (2026-10-17) — closed checkpoint without rerunning M4
+
+This retry was limited to checkpoint close-out after the primary work unit
+stopped early. I did not rerun the sampler. The available 5326 artifacts are
+the discriminating evidence: the corrected cxd4 call site emitted 136,872
+bytes of RSM1 records and the same run hit 10,000 whole-RDRAM callbacks and
+479 VI samples, but neither driven arm reached the shared 512-wide hangar
+origin. H3 therefore remains selected: the exact task/PC/step join is
+unevaluable, and no H1/H2 accumulator conclusion or mitigation is justified.
+The next discriminator is the title-observed Start/A schedule in
+`scratch/agent/NEXT.md`.
