@@ -6,6 +6,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s5087 (m6-mission-stall):** apply_s4296 re-applies cleanly in a replay-style sandbox (anchor hypothesis refuted; scratch/agent/s5087_replay_probe.py). Why the 2026-10-16 23:37 regen dropped it is still unknown (likely RS64_SKIP_REPLAY=1 or unlogged). In-arm mission soak n=2 with patch: no stall at 175 s after onset, crash=0.
 - **s5086 (m6-mission-stall):** The s5085 mission 'stall' (main thread spinning in shutdownMusyXVoices A14) was a missing patch: built funcs_26.c lacked the s4296 yield (0 tags, 0 `[a14-yield]` rows). Re-applied + rebuilt: same `in` soak ran 186 s after onset with no stall, crash=0, control = 8 `[a14-yield]` rows with b0=0x03 then exit (n=1). Guard: `tools/check_a14_yield_patch.py`. Open: why the last regen dropped the patch (unverified). Supersedes s5085 'open: why A14 never exits'.
 - **s5085 (m6-mission-stall):** the s5084 'stall' = MAIN thread spinning in shutdownMusyXVoices (A14 status-03 wait) under endMissionCleanup->finalizeCurrentSpeechBuffer (`sample` stack, arm `in`, 111 s after onset). Idle arm: no stall in 175 s (n=1 each; one idle try crashed in updateHangarBayScene). Open: what ends the mission, why A14 never exits. Supersedes s5084's 'game thread blocked/dead'.
 - **s5084 (m6-mission-soak):** mission survives ~75 s then the game thread silently stops (no pad polls, [watch] frozen) while VI keeps ticking with stalled=1; no crash line. Single run. Next: no-input control + `sample` of the hung pid (NEXT.md).

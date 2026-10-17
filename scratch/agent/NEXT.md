@@ -1,5 +1,5 @@
-# Next: m6-mission-stall — find why regen dropped the s4296 A14 yield patch, then extend the mission soak
+# Next: m6-mission-stall — extend the post-mission window; log the replay line on next regen
 HYPOTHESIS-ID: m6-mission-stall
-Fact (s5086, n=1): with s4296 applied the keyed mission soak ran 186 s past onset without stall (8 [a14-yield] rows b0=0x03, then exit). Without it (s5085) stall at 111 s.
-Step 1 (boring): run `python3 tools/check_a14_yield_patch.py` first. Then determine why the last regen omitted the patch: run the replay stage alone (fixup_game_funcs_vendored.py rs64_replay_apply_scripts on a scratch copy of RecompiledFuncs, or inspect its `[s4648-replay]` output for apply_s4296) — hypotheses: (A) regen ran with RS64_SKIP_REPLAY=1, (B) replay reports ok but a later step overwrites funcs_26.c, (C) anchor mismatch in the sandbox. Discriminator: replay output line for apply_s4296 and tag count after.
-Step 2: repeat `zsh scratch/agent/s5085_stall.sh in` once more (and idle) for n=2; extend the 170 s window to see the next post-mission behaviour (what ends the mission; does the game reach a debrief/title?).
+Fact (s5086+s5087, n=2): with s4296, the keyed mission soak runs 175-186 s past onset with no stall, crash=0.
+Step 1: on the next regen, tee fixup_game_funcs.py output and read the `[s4648-replay] apply_s4296` line to settle skip-vs-overwrite.
+Step 2: extend the post-onset window (hold loop in scratch/agent/s5085_stall.sh) to see what ends the mission (debrief/title?). Run from repo root: `zsh scratch/agent/s5085_stall.sh in` in the background.

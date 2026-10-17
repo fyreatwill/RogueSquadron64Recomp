@@ -158800,3 +158800,9 @@ Next: NEXT.md (m6-mission-stall): read slot status / D_80154620 and serviceVoice
 - Hypotheses: A (zeroing writer starved by blind spin) CONFIRMED in this refined form; B (different exit flag) not needed; C (mission end caused by input) not the cause of the stall; why the mission began endMissionCleanup at all is untested (the run showed teardown calls do reach A14 and recover).
 - ORIGIN: the status byte is cleared by guest serviceVoicePoolFrame, never by the yield; no value forced.
 - Open: why the last regen's funcs_26.c lacked the patch (replay sandbox did not apply it, or regen ran with RS64_SKIP_REPLAY=1; unverified). Added `tools/check_a14_yield_patch.py` (exit 1 if the tag is absent) as a guard; run it before any soak that touches A14.
+
+## Session 5087 (2026-10-17) — m6-mission-stall: replay script re-applies s4296 in sandbox (anchor hypothesis refuted); in-arm soak n=2 no stall
+
+Ran: (1) tools/check_a14_yield_patch.py -> OK (patch live). (2) scratch/agent/s5087_replay_probe.py strips the s4296 block from a copy of funcs_26.c and runs apply_s4296_a14_spin_yield.py in the replay-style sandbox layout: rc=0, marker restored. Hypothesis C (anchor mismatch in sandbox) is refuted; apply_s4296 is also listed in RS64_REPLAY (fixup_game_funcs_vendored.py:40500). funcs_24/25/27 share a 2026-10-16 23:37 mtime (a regen) while funcs_26 lacked the patch until s5086, so that regen either ran with RS64_SKIP_REPLAY=1 or the replay did not reach funcs_26; the regen invocation was not logged, so A vs B stays unverified. (3) `zsh scratch/agent/s5085_stall.sh in` rerun: NO_STALL 175 s after mission onset, crash=0, 8 [a14-yield] rows, so n=2 with the patch and no stall.
+Rules out: sandbox/anchor failure of the s4296 script. Does not rule out a skipped replay on the last regen.
+ORIGIN: no new mitigation; patch unchanged.
