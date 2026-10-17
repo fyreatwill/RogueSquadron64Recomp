@@ -159614,3 +159614,16 @@ returning `PFS_ERR_NOPACK`. Classified the candidate as an unmaterialized
 libultra/ABI entry and preserved its name. This rules out a generated body
 rename for this address, but does not alter the broader wrapper/ABI boundary
 model. No build or soak was needed.
+
+## Session 5158 (2026-10-17) — classified `__osPfsReleasePages` as already named
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Audited
+`__osPfsReleasePages = 0x800303D0` with the bounded rename helper and direct
+generated-tree checks. The helper made zero edits and reported
+`already-synchronized`. A generated body exists and the overlay table gives an
+exact `0x248`-byte span ending at `0x80030618`, but there is no independent
+generated caller. Preserve the existing ABI name as already correctly named;
+the absence of a caller does not support a rename. No build or soak was
+needed. Evidence: `docs/RENAME-S5158-AUDIT.md`.
+
+Next: audit `__osBlockSum = 0x80030618`.
