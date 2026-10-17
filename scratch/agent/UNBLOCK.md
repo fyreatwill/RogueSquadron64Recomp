@@ -1,22 +1,23 @@
-# Unblocked: M4 shared boundary
+# Unblock result
 
-Route 1 — refuted the block as reasoned.
+Route 3 — re-scope.
 
-The blocked claim was that no locally available method could drive the rebuilt
-port from title/640 to hangar/512. Source inspection found the in-process
-`ROGUESQ_AUTOPILOT` path, and the existing validated recipe supplied its
-LLE/ungated/solo route. The prior blocked run used window-injected keys and a
-different schedule.
+The external MIPS compiler dependency is real for a fresh source-to-ELF
+qualification: `mips64-elf-gcc` and `mips64-elf-ld` are absent, Clang has no
+MIPS target, and no sibling installation exists. The block is narrower than
+the whole PatchesLib path because the repository already contains
+`patches/patches.elf`.
 
-Evidence from `scratch/agent/unblock_m4_autopilot/run.log`:
+Evidence this iteration:
 
-- build completed successfully;
-- autopilot armed and fired the validated Start/A schedule;
-- phase control reached `vi_width=1024`, origin `0x00790400`;
-- the port reached `vi_width=512`, origin `0x006AB400` at 23.8 seconds;
-- the 512-gated M4 instrument was live, with 464 `[m4-y8000]` records.
+- `build/N64Recomp patches.toml` succeeded and regenerated the 11-function
+  host output.
+- Clang compiled `RecompiledPatches/patches.c` with exit 0.
+- `ar` created a host archive, and `nm` showed
+  `allocateDisplayListBuffer`.
+- Homebrew `mips-linux-gnu-ld` relinked the existing assembly object with exit
+  0; this does not substitute for the missing C compiler.
 
-The observation that makes the block false is the live
-`vi_width=512 (was 1024) origin=0x006AB400` line from the same run. No M4
-accumulator result was inferred; NEXT now calls for the complete task-keyed
-comparison.
+The next unit is host-side artifact qualification using those commands. The
+one experiment that would close the remaining dependency is a fresh
+`patches/*.c` to MIPS ELF build after a human supplies the MIPS GCC/LD pair.

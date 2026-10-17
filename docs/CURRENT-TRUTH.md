@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5338 (2026-10-17).
+Compact operational handoff, maintained at Session 5339 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -89,10 +89,13 @@ this discriminator; no writer or mitigation follows. See
   it is not a current divergence. The retail-entry and M4 accumulator
   revisits remain parked unless a genuinely new discriminator appears.
 - Heap/copy/message-queue/PI-DMA and audited host-wrapper pointer classes are
-  closed on the qualified route with positive controls. The MIPS GCC toolchain
-  is absent, so PatchesLib qualification remains blocked until supplied.
-  Sessions 5337–5338 directly checked both required executables; neither is on
-  PATH, so no build was attempted.
+  closed on the qualified route with positive controls. The fresh MIPS
+  source-to-ELF step remains blocked: this host has neither `mips64-elf-gcc`
+  nor `mips64-elf-ld`, and Clang has no MIPS target. The existing
+  `patches.elf` is usable for a separate host-side qualification: N64Recomp
+  regenerated `RecompiledPatches/patches.c`, Clang compiled it, and `ar`
+  archived it successfully in Session 5339. This does not replace the missing
+  cross-compiler for a fresh source qualification.
 
 ### Generated symbols
 
@@ -147,9 +150,12 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    candidate or companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
-4. PatchesLib qualification is blocked on the external MIPS GCC/LD toolchain:
-   Sessions 5337–5338 found neither `mips64-elf-gcc` nor `mips64-elf-ld` on
-   PATH. When supplied, record generation, compile, and link outcomes.
+4. Qualify the host-side PatchesLib artifact from the existing `patches.elf`:
+   regenerate with N64Recomp, compile `RecompiledPatches/patches.c`, archive
+   it, and verify the override symbol. This needs no MIPS compiler.
+5. Complete fresh PatchesLib source qualification when the external
+   `mips64-elf-gcc` and `mips64-elf-ld` toolchain is supplied; record the
+   generation, compile, and link outcomes.
 
 ## Evidence index
 

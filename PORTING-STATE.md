@@ -161943,3 +161943,24 @@ unqualified build on this host. No source or runtime experiment was run. A
 human must supply/install the MIPS GCC/LD toolchain or provide its directory;
 the next work unit remains the version/target check followed by the documented
 PatchesLib pipeline.
+
+## Session 5339 (2026-10-17) — re-scoped PatchesLib qualification around existing artifacts
+
+The unblock audit followed the four required routes. Route 1 did not refute
+the dependency: `README.md` and `patches/README.md` document that fresh patch
+qualification starts with `mips64-elf-gcc`, and the source CMake gate skips the
+target when that compiler is unavailable. This host's Clang also rejected
+`-target mips` with `No available targets are compatible with triple "mips"`.
+Route 2 found no local `mips64-elf-gcc`, `mips64-elf-ld`, or sibling
+installation; only Homebrew `mips-linux-gnu-ld` is present.
+
+Route 3 succeeded by re-scoping rather than claiming the missing toolchain was
+resolved. The repository already contains `patches/patches.elf` and the
+generated host source. Running `build/N64Recomp patches.toml` completed with
+`Function count: 11`; Clang compiled the resulting `RecompiledPatches/patches.c`
+with exit 0; `ar` created a host archive with exported
+`allocateDisplayListBuffer` and unresolved `findAndUnlinkSmallestEntry`; and
+the local MIPS linker relinked the existing assembly object with exit 0. These
+observations qualify the existing artifact-to-host path, not a fresh
+source-to-MIPS build. The external compiler remains an open dependency for
+that final qualification step. No runtime or mitigation change was made.

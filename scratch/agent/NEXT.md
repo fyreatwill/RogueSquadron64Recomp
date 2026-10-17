@@ -1,37 +1,34 @@
-# Next: qualify PatchesLib after the MIPS toolchain is supplied
+# Next: qualify the host-side PatchesLib artifact without the cross-compiler
 
-The generated-symbol NEXT item was stale: Session 5336 rechecked
-`0x800927B0` and found the semantic name synchronized across generated C,
-header, overlay registration, project TOML, fixup mapping, and companion map.
-Do not repeat that census or rename by address.
-
-Session 5338 remains blocked on H2: neither required executable is available on
-this host. This is an external prerequisite, not a reason to run an
-unqualified build or repeat the availability check. Once a human supplies or
-installs the toolchain, run the following single work unit.
+The fresh source-to-MIPS qualification remains externally blocked, but the
+existing `patches/patches.elf` and generated host source permit a bounded
+host-side qualification. Do not claim this proves a fresh MIPS compilation.
 
 Competing hypotheses and discriminator:
 
-- H1: `mips64-elf-gcc` and `mips64-elf-ld` are available; PatchesLib can be
-  qualified with the documented build pipeline.
-- H2: one or both tools are absent; this is the result selected in Session
-  5337, and qualification is blocked on the external toolchain.
-- H3: tools exist but fail version/target checks; capture the exact failure
-  before deciding whether configuration or a human-supplied toolchain is
-  needed.
+- H1: N64Recomp can regenerate the host source from the existing ELF, Clang
+  can compile it, and the archive exports the intended override.
+- H2: the existing artifact is stale or incompatible; regeneration, compile,
+  or symbol verification fails.
+- H3: host-side qualification passes, but fresh source qualification remains
+  blocked until the external MIPS GCC/LD pair is supplied.
 
-Discriminating measurement after supply: both binaries must resolve, report a
-MIPS target, and complete the documented PatchesLib generation/compile/link
-pipeline. H1 selects qualification; H3 selects a toolchain/configuration
-failure with its exact diagnostic. Do not build while H2 remains true.
+Discriminating measurement: one run of `build/N64Recomp patches.toml`, host
+compile/archive, and `nm` must succeed and show `allocateDisplayListBuffer`.
+H1 selects the artifact path; H2 selects an artifact failure; H3 remains the
+known open dependency for fresh source qualification.
 
 Commands:
 
 ```sh
-command -v mips64-elf-gcc mips64-elf-ld
-mips64-elf-gcc --version
-mips64-elf-gcc -dumpmachine
-mips64-elf-ld --version
+build/N64Recomp patches.toml
+clang -c RecompiledPatches/patches.c -o /tmp/rs64-patches-host.o \
+  -I include -I RecompiledPatches \
+  -I lib/N64ModernRuntime/ultramodern/include \
+  -I lib/N64ModernRuntime/librecomp/include \
+  -I lib/N64ModernRuntime/N64Recomp/include
+ar rcs /tmp/rs64-PatchesLib.a /tmp/rs64-patches-host.o
+nm -g /tmp/rs64-PatchesLib.a | grep allocateDisplayListBuffer
 ```
 
-HYPOTHESIS-ID: patcheslib-toolchain-gate
+HYPOTHESIS-ID: patcheslib-host-artifact-qualification
