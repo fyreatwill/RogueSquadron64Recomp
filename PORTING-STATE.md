@@ -159778,3 +159778,13 @@ but no body exists to validate against it. Preserve the ABI name; this rules
 out a justified generated-body rename for this candidate, not the broader
 libultra/ABI boundary classification. No build or soak was needed. Audit:
 `docs/RENAME-S5169-AUDIT.md`. Next candidate: `__osPfsGetNextPage`.
+## Session 5170 (2026-10-17) — classified `__osPfsGetNextPage` as unmaterialized
+
+Ran the bounded generated-symbol audit for `__osPfsGetNextPage = 0x80031AE0`.
+The helper reported `already-synchronized` and renamed zero references in zero
+files. The generated-tree search found no body, placeholder, overlay record,
+or direct caller at the address. The companion map places
+`osPfsReadWriteFile = 0x80031BDC` next, a nominal `0xEC` span, but there is no
+body to validate. Preserve the ABI name; no build or soak was needed. This
+rules out a generated-body rename for this candidate, not the remaining
+companion entries.

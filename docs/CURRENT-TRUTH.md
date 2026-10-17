@@ -177,6 +177,14 @@ direct caller at the companion address. Its nominal span to
 Preserve the ABI name. Audit: `docs/RENAME-S5169-AUDIT.md`. The next candidate
 is now `__osPfsGetNextPage = 0x80031AE0`.
 
+`__osPfsGetNextPage = 0x80031AE0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated-tree search found no body, placeholder, overlay record, or
+direct caller at the companion address. Its nominal span to
+`osPfsReadWriteFile = 0x80031BDC` is `0xEC`, with no body to validate.
+Preserve the ABI name. Audit: `docs/RENAME-S5170-AUDIT.md`. The next candidate
+is now `osPfsReadWriteFile = 0x80031BDC`.
+
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
 were retained below or in the project overview.
@@ -428,7 +436,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osPfsGetNextPage = 0x80031AE0`,
+1. Resume the companion sweep with `osPfsReadWriteFile = 0x80031BDC`,
    whose next candidate is the following symbol in the companion map, one entry
    per iteration while the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value
