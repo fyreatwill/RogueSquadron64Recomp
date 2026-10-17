@@ -46,6 +46,10 @@ direct generated caller, and a zero-size overlay record, with no body at the
 companion address. Its companion span to `__osPfsDeclarePage = 0x8002F064` is
 `0x484`, but there is no generated body to rename. Preserve the ABI name.
 Audit: `docs/RENAME-S5145-AUDIT.md`.
+`__osPfsDeclarePage = 0x8002F064` is now classified as already correctly
+named: its generated body and exact `0x264` overlay span are present, but the
+generated tree has no independent caller. Preserve the ABI name. Audit:
+`docs/RENAME-S5146-AUDIT.md`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -142,6 +146,10 @@ were retained below or in the project overview.
   zero-size overlay record, with no body at the companion address. The
   companion next entry is `__osPfsDeclarePage = 0x8002F064`; preserve the ABI
   name. Audit: `docs/RENAME-S5145-AUDIT.md`.
+- `__osPfsDeclarePage = 0x8002F064` has a generated body and exact `0x264`
+  overlay span ending at `0x8002F2C8`, but no independent generated caller;
+  the helper reports `already-synchronized`, so preserve the existing ABI
+  name. Audit: `docs/RENAME-S5146-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`

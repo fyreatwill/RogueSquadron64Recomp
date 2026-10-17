@@ -1,14 +1,14 @@
-# Next: generated-symbol renaming sweep — `__osPfsDeclarePage` candidate
+# Next: generated-symbol renaming sweep — `__osClearPage` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Bounded work unit: audit only companion `__osPfsDeclarePage = 0x8002F064`, the
-next entry after classified `osPfsAllocateFile`. Determine whether it has a
-generated prologue/body or is another runtime wrapper. Do not rename a
-`_recomp` ABI symbol without a generated body and exact span.
+Bounded work unit: audit only companion `__osClearPage = 0x8002F2C8`, the next
+entry after classified `__osPfsDeclarePage`. Determine whether it has a
+generated prologue/body, exact span, and independent caller. Do not rename an
+ABI symbol without all three gates.
 
 Competing hypotheses and discriminator:
 
-- H-generated-name-correct: a generated prologue/body is at `0x8002F064`, the
+- H-generated-name-correct: a generated prologue/body is at `0x8002F2C8`, the
   overlay span ends at the next entry, and an independent generated caller
   exists; apply the semantic rename.
 - H-host-wrapper: only a runtime wrapper/call declaration exists, or the
@@ -25,8 +25,8 @@ preserve ABI naming, leave unchanged, or advance without a build/soak.
 
 Commands:
 
-    rg -n '__osPfsDeclarePage|func_8002F064|fake_func_8002F064' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002F064 --end-address 0x8002F2C8
+    rg -n '__osClearPage|func_8002F2C8|fake_func_8002F2C8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002F2C8 --end-address 0x8002F350
 
 If all generated-name gates pass, apply the explicit mapping and record a new
 audit. Otherwise preserve the wrapper ABI and record the classification. No

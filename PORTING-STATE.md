@@ -159439,3 +159439,16 @@ This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
 generated-name rename, build, or soak for this entry. Audit:
 `docs/RENAME-S5145-AUDIT.md`. Next candidate:
 `__osPfsDeclarePage = 0x8002F064`.
+## Session 5146 (2026-10-17) — classified `__osPfsDeclarePage` as already named
+
+Ran the bounded generated-symbol helper and independent generated-tree checks
+for companion `__osPfsDeclarePage = 0x8002F064`. The helper reported
+`already-synchronized` and changed zero files. A generated body starts at the
+companion address, the overlay record has the exact `0x264` span ending at
+`0x8002F2C8`, and the companion symbol map agrees. The generated tree contains
+no independent caller beyond the definition, so the existing semantic ABI name
+is preserved.
+
+This selects the already-named/no-live-caller outcome and rules out a rename,
+build, or soak for this candidate. Audit: `docs/RENAME-S5146-AUDIT.md`. Next
+candidate: `__osClearPage = 0x8002F2C8`.
