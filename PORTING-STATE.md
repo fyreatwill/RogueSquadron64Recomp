@@ -161523,6 +161523,7 @@ named callable body in `RecompiledFuncs/funcs_9.c`, its declaration in
 fragment exists. This selects H1 and rules out H2/H3 for this candidate. No
 build or soak was warranted. The next bounded candidate is
 `freeNpcSlotArray = 0x8003FBF8`.
+
 ## Session 5304 (2026-10-17) — maintenance compacted current truth
 
 The maintenance gate triggered because `docs/CURRENT-TRUTH.md` was 60,479
@@ -161534,3 +161535,15 @@ the parked M3/M4 boundaries, the active generated-symbol sweep, and the
 monotonic next steps. This rules out treating the stale sweep backlog and
 historical route blockers as current work; the next bounded unit remains
 `freeNpcSlotArray = 0x8003FBF8`.
+
+## Session 5305 (2026-10-17) — generated-symbol sweep: `freeNpcSlotArray` is synchronized
+
+Ran the bounded generated-symbol helper for companion symbol
+`freeNpcSlotArray = 0x8003FBF8`. It reported `already-synchronized` and
+renamed zero references in zero files. Independent inspection found the named
+callable body in `RecompiledFuncs/funcs_9.c`, its `funcs.h` declaration,
+`recomp_overlays.inl` record, and a direct caller in `funcs_42.c`; no
+`func_8003FBF8` placeholder or conflicting generated fragment exists. This
+selects H1 and rules out H2/H3 for this candidate. No build or soak was
+warranted. Audit: `docs/RENAME-S5305-AUDIT.md`. The next bounded candidate is
+`findFirstActiveNpcChildInChain = 0x8003FCBC`.
