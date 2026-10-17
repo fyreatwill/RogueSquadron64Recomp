@@ -158878,3 +158878,23 @@ Added `tools/audit_host_wrappers.py` for the bounded VI/EEPROM/controller/PFS/pa
 Independent source evidence: `_arg` resolves pointer arguments through `TO_PTR`, whose RDRAM form subtracts the KSEG0 base; EEPROM `save_read`/`save_write` access guest buffers only through `MEM_B`. No guard, skip, or behavior change was added, and no soak/build was needed for this source-class audit.
 
 Rules out: a live raw guest-pointer site in this wrapper class. It does not prove unexercised wrappers safe at runtime. Next: census `osPiStartDma`, `osDpSetNextBuffer`, and `osSetEventMesg` as the remaining DMA/event wrapper class.
+
+## Session 5102 (2026-10-17) — DMA/event host-wrapper guest-pointer census
+
+The staged `tools/audit_dma_event_wrappers.py` was absent, so the exact NEXT
+commands initially failed with Python file-not-found errors. Reconstructed the
+bounded audit from the existing host-wrapper audit pattern, then reran both
+commands in one pass. The positive-control self-test classified 4/4 synthetic
+translated, raw, no-op, and address-storing cases correctly. The live census
+classified `do_dma`, `osPiStartDma_recomp`, and `osEPiStartDma_recomp` as
+translated/range-checked callee paths; `osSetEventMesg` as address-storing;
+`osSetEventMesg_recomp` and `osViSetEvent_recomp` as forwarded; and
+`osDpSetNextBuffer_recomp` as intentional assert/no-op. No raw guest
+dereference was reported.
+
+Independent `rg` source evidence found every expected wrapper/callee symbol and
+the forwarding edges in `ultra_translation.cpp`; it agrees with the census.
+This is source-audit evidence only: no runtime guard, build, or soak was
+authorized. Rules out a reachable raw guest-pointer site in this DMA/event
+wrapper set, but does not prove unexercised paths safe at runtime. Next:
+remaining thread/queue host wrappers.
