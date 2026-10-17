@@ -78,7 +78,7 @@ this discriminator; no writer or mitigation follows. See
 
 - The audited trap/break/syscall/cop0, unaligned/LLSC/cache, division,
   float/FCSR, width, indirect-call, self-walk, branch-likely, variable-shift,
-  HI/LO, delay-slot operand hazard (s5345, `docs/M3-DELAY-SLOT-HAZARD-AUDIT.md`), 64-bit shift, 32-bit multiply, 64-bit mul/div, and relevant pointer
+  HI/LO, MMIO-KSEG1 lui bases (s5350, `docs/M3-MMIO-LUI-AUDIT.md`), delay-slot operand hazard (s5345, `docs/M3-DELAY-SLOT-HAZARD-AUDIT.md`), 64-bit shift, 32-bit multiply, 64-bit mul/div, and relevant pointer
   idiom classes are closed. Re-open only with new recompiler or provenance
   evidence, and audit a whole idiom class rather than a single crash.
 - Native hangar artifacts remain localized: rim band, holo spikes, stale right

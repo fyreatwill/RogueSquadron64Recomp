@@ -1,5 +1,5 @@
-# Next: M3 idiom list exhausted after s5349 — check M5 status before any rename step
+# Next: M3 idiom list exhausted (s5350 closed MMIO/KSEG1); M5 closed; rename sweep paused
 
-Check docs/M5-AUDIO-PLAN.md status (ITERATION.md priority 2) and execute the next un-run de-stub step with its validation soak. If M5 is closed, run `grep -n '^## Session ' PORTING-STATE.md | tail -15` for the sweep-revisit rule (priority 4). Prefer an M5 de-stub or a new guard-class audit over a rename step (renames trip the churn counter).
+Revisit the external retail-entry boundary or the M4 accumulator boundary with a genuinely new angle. If none exists, go BLOCKED: no un-run unit remains; which parked boundary should get oracle driving time?
 
-HYPOTHESIS-ID: m5-audio-destub-or-sweep
+HYPOTHESIS-ID: m3-idiom-exhausted-revisit
