@@ -191,7 +191,13 @@ generated tree has only its ABI declaration and three generated callers, with
 no body or placeholder at the companion address. Its zero-size overlay record
 has offset `0x3179C`; the companion boundary is `osPfsRepairId = 0x80032000`.
 Preserve the ABI name. Audit: `docs/RENAME-S5171-AUDIT.md`. The next candidate
-is now `osPfsRepairId = 0x80032000`.
+`osPfsRepairId = 0x80032000` is now likewise classified as an unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated tree has no body, placeholder, or overlay record at the
+companion address, only one ABI call site. Its companion boundary is
+`osPfsFindFile = 0x80032260`; preserve the ABI name. Audit:
+`docs/RENAME-S5172-AUDIT.md`. The next candidate is now
+`osPfsFindFile = 0x80032260`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -444,7 +450,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osPfsRepairId = 0x80032000`,
+1. Resume the companion sweep with `osPfsFindFile = 0x80032260`,
    whose next candidate is the following symbol in the companion map, one entry
    per iteration while the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value

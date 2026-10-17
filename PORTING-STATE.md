@@ -159797,3 +159797,14 @@ placeholder at the companion address, and a zero-size overlay record at
 offset `0x3179C`. The next companion boundary is `osPfsRepairId = 0x80032000`.
 This rules out a generated-body semantic rename for the candidate; preserve
 the ABI name. Audit: `docs/RENAME-S5171-AUDIT.md`.
+
+## Session 5172 (2026-10-17) — classified `osPfsRepairId` as unmaterialized
+
+Ran the bounded generated-symbol audit for `osPfsRepairId = 0x80032000`.
+The helper reported `already-synchronized` and renamed zero references. The
+generated tree has no body, placeholder, or overlay record at the companion
+address; its only generated-tree hit is one ABI call site. The next companion
+boundary is `osPfsFindFile = 0x80032260`, so there is no generated span to
+validate. Preserved the ABI name and advanced the sweep pointer. This rules
+out a generated-body semantic rename for this candidate, not the remaining
+companion entries. Audit: `docs/RENAME-S5172-AUDIT.md`.
