@@ -6,6 +6,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s5067 (unblock):** s5066 "owner must pick a target" re-scoped, not escalated: in-mission input response (never tested) is runnable via the s4958 keyed route. Next unit m6-mission-input (NEXT.md). Open non-gating human deps: mips64-elf-gcc install, symbol-mapping source for renames.
 - **s5066:** Priority list exhausted (M5, M3 classes, rename sweep, retail-entry, M4 all closed); loop BLOCKED awaiting an owner-chosen target. See scratch/agent/BLOCKED.md.
 
 - **s5033:** Heap-guard census needs no new instrument: existing env-gated guard logs (alloc-tail-guard2/3/4, R1, coalesce) fire only on bad pointers. Recipe soak_queue/s5033_heap_guard_census.sh enqueued; verdict lands in SOAK-RESULTS.md. 0 fires = single-source (no fire control without a rebuild).

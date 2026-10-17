@@ -1,1 +1,4 @@
-Route 1 (refute). Claim: H1 vs H3 needs host load <2. Observation that proves it unnecessary: a known-good binary (build/RogueSquadron64Recomp_O0) and the current binary both reached hangar at t=77/t=64 at load 3.8-4.7 with Chrome helper 110% CPU (scratch/agent/soak_results/s5057_o0_control, s5048_preS5038_source). Quiet host not required; no apps killed.
+# UNBLOCK s5067 (route 3: re-scope)
+Block (s5066): "owner must pick a new target". Premise false: BLOCKED.md's own option (a) (gameplay playability beyond passive 300 s mission hold) needs no human decision; keyed route to mission is automated (s4958 recipe, 3/3 valid s4964) and winctl key injection works. Options (b) mips64-elf-gcc install and (c) symbol source are human-only but non-gating (already logged in CURRENT-TRUTH).
+Evidence: ls/grep of CURRENT-TRUTH shows no in-mission input test ever run (s4957 swept keys at hangar only).
+Not executed this iteration: the experiment itself; NEXT.md queues it (m6-mission-input).
