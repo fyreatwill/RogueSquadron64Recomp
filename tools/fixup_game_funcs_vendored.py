@@ -39075,6 +39075,56 @@ static void rs64_s5224_flush_hist(int bi, const char* why, unsigned long entry) 
     fflush(stderr);
 }
 
+/* PATCH: s5225 s0 census. 64 addresses per mission origin; overflow is the rest. */
+struct rs64_s5225_slot { uint32_t s0; unsigned long n; };
+static struct rs64_s5225_slot rs64_s5225_slot[2][64];
+static int rs64_s5225_nslot[2];
+static unsigned long rs64_s5225_over[2];
+
+static void rs64_s5225_note(int bi, uint32_t s0) {
+    int i;
+    if (bi < 0 || bi >= 2) return;
+    for (i = 0; i < rs64_s5225_nslot[bi]; i++) {
+        if (rs64_s5225_slot[bi][i].s0 == s0) {
+            rs64_s5225_slot[bi][i].n++;
+            return;
+        }
+    }
+    if (rs64_s5225_nslot[bi] < 64) {
+        rs64_s5225_slot[bi][rs64_s5225_nslot[bi]].s0 = s0;
+        rs64_s5225_slot[bi][rs64_s5225_nslot[bi]].n = 1ul;
+        rs64_s5225_nslot[bi]++;
+    } else {
+        rs64_s5225_over[bi]++;
+    }
+}
+
+static void rs64_s5225_flush(int bi, const char* why, unsigned long entry) {
+    static const uint32_t origins[2] = { 0x00690400u, 0x00620400u };
+    char line[8192];
+    unsigned long sum;
+    int i;
+    int n;
+    if (bi < 0 || bi >= 2) return;
+    sum = rs64_s5225_over[bi];
+    for (i = 0; i < rs64_s5225_nslot[bi]; i++) sum += rs64_s5225_slot[bi][i].n;
+    n = snprintf(line, sizeof line,
+                 "[s5225-s0] why=%s origin=0x%08X entry=%lu slots=%d overflow=%lu sum=%lu rows=",
+                 why, origins[bi], entry, rs64_s5225_nslot[bi], rs64_s5225_over[bi], sum);
+    for (i = 0; i < rs64_s5225_nslot[bi] && n > 0 && n < (int)sizeof line; i++)
+        n += snprintf(line + n, sizeof line - (size_t)n, "%s%08X:%lu",
+                      i ? "," : "", rs64_s5225_slot[bi][i].s0, rs64_s5225_slot[bi][i].n);
+    if (n > 0 && n < (int)sizeof line - 1) {
+        line[n++] = '\n';
+        line[n] = 0;
+        fputs(line, stderr);
+    } else {
+        fprintf(stderr, "[s5225-s0] why=%s origin=0x%08X entry=%lu slots=%d overflow=%lu sum=%lu rows=TRUNCATED\n",
+                why, origins[bi], entry, rs64_s5225_nslot[bi], rs64_s5225_over[bi], sum);
+    }
+    fflush(stderr);
+}
+
 static void rs64_s5223_emit(int bi, const char* why, const struct rs64_s5223_bucket* b) {
     static const uint32_t origins[3] = { 0x00690400u, 0x00620400u, 0u };
     fprintf(stderr,
@@ -39116,8 +39166,10 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
             rs64_s5223_emit(prev, "leave", &bkt[prev]);
             bkt[prev].emitted_entry = bkt[prev].entry;
         }
-        if (prev < 2 && bkt[prev].entry > 0ul)
+        if (prev < 2 && bkt[prev].entry > 0ul) {
             rs64_s5224_flush_hist(prev, "leave", bkt[prev].entry);
+            rs64_s5225_flush(prev, "leave", bkt[prev].entry);
+        }
     }
     have_last = 1;
     last_origin = origin;
@@ -39129,6 +39181,7 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
         uint32_t sb = 0;
         int sb_known = 0;
         bkt[bi].entry++;
+        if (bi < 2) rs64_s5225_note(bi, s0);
         if (s0 < 0x80000000u || s0 >= 0x80800000u) bkt[bi].s0_bad++;
         if (s1 < 0x80000000u || s1 >= 0x80800000u) bkt[bi].s1_bad++;
         if (phys >= 0x800000u) bkt[bi].sb_badptr++;

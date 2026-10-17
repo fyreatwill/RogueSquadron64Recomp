@@ -160535,3 +160535,53 @@ bytes differ (`0x00` vs `0x03`) when every hit is counted, so the capped row
 table was not hiding the port's byte. It does not name the writer. No soak
 was queued. No new soak verdicts were unconsumed. Audit:
 `docs/REVISIT-S5224-SOURCE-BYTE-HIST.md`.
+
+## Session 5225 (2026-10-17) — census shows the sample words are not the source byte
+
+HYPOTHESIS-ID: source-byte-writer. Session 5224 had left the writer of the
+mission-entry byte at `s0+0x22` open. This session counted every `s0` at
+`fillSampleStreamRange` (`0x8008FAAC`) on both mission origins, 64 slots
+plus overflow, and armed retail write watches on the two words implied by
+the first three s5223 samples. No guard. No new soak verdicts were
+unconsumed. The instruments are in `tools/oracle/rs64_oracle.c` and the
+s5223 hook in `tools/fixup_game_funcs_vendored.py` (and the already-patched
+`funcs_24.c`).
+
+Port: `scratch/agent/s5225_port_s0/run.log`, SIGKILL at stop_t=404.
+`[s5223-armed]` once, title and hangar present, `origin=0x00620400`
+present, no crash marker. The driver summary says the census is absent
+because it keeps only six hex digits of the origin. The log has 1729
+leave lines. The last leave reparsed clean: `0x00690400` entry=80256
+slots=64 overflow=14 sum=80256; `0x00620400` entry=79505 slots=64
+overflow=34 sum=79505.
+
+Retail: `scratch/agent/s5225_retail_writer/oracle.log` stopped itself
+(`killed_overrun=0`) after the 420s director. Whole-RDRAM watch index 0
+reached 10000 writes at vi=1 (removal rc=0). Both mission origins
+occurred. Phase frames were 4314 and 4179 at width 512. Census sums equal
+the hit counts: 125333 and 125480, 41 slots, overflow 0. The entry watch
+fired 557582 times. A shell parse error after the summary was this
+session editing the script during the run; the log and summary were
+already written.
+
+Retail `s0` is `0x80190E50 + i*0x88` for `i=0..40` on both origins.
+Counts are flat. The highest is `0x80190E50` (4220 and 4186). Its byte
+is physical `0x190E72`. None of the 41 `s0+0x22` bytes lie in
+`0x191070:0x191074` or `0x1951B0:0x1951B4`. Retail's census does not
+contain `s0=0x80195190`. The port also has a second stride-`0x88` run at
+that base; `0x1951B2` is the only watched byte any census `s0` hits, and
+only on the port (2687/80256 and 2669/79505).
+
+`writer-pc-phase` printed four headers and no PC rows. Those words are
+not written during either mission origin. Lifetime writes outside the
+phase are 8 on watch 1 and 26681 on watch 2. The offset-`0x22` stores in
+that lifetime set are `0x80090F3C` (`sb $zero, 0x22($v0)`, n=8789) and
+`0x80090F8C` (stores the constant 1, n=306). `$v0` is `base + index*0x88`.
+`0x80090720` and `0x80090780` write offsets `0x20` and `0x21` of the same
+word. None of these can write `0x03`, and none is a mission-phase writer
+of the retail bytes.
+
+This selects H-wrong-candidate. It refutes H-same-writer-different-value
+and H-different-writer for the two sample words. The sample word
+`0x191072` was not `0x80190E50+0x22`; that byte is `0x190E72`. No guard.
+Audit: `docs/REVISIT-S5225-SOURCE-BYTE-CENSUS.md`.

@@ -1,50 +1,41 @@
-# Next: name the writer of the mission-entry source byte
+# Next: writer PCs of the retail mission-entry bytes
 HYPOTHESIS-ID: source-byte-writer
 
-Session 5224 closed the frequency question. Do not add another histogram.
-Do not guard. Do not resume the rename sweep. Do not rename `bzero_recomp`
-or `bcmp_recomp`.
+Session 5225 selected H-wrong-candidate. Do not watch `0x191070` or
+`0x1951B0` again. Do not add another source-byte histogram. Do not guard.
+Do not resume the rename sweep.
 
-Retail, every hit at `0x8008FAAC` on the mission origins: modal `0x00`
-(119949/121195 and 126435/127740), `0x03` count 0. Port, same site: modal
-`0x03` (79212/79362 and 79385/79498). s5223's first three samples had `s0`
-in {`0x80195190`, `0x80190E50`}, so the candidate bytes are physical
-`0x191072` and `0x1951B2`. Those samples are not a census.
+Retail mission `s0` is `0x80190E50 + i*0x88` for `i=0..40`. The byte at
+`s0+0x22` is physical `0x190E72 + i*0x88`. The aligned word is
+`0x190E70 + i*0x88`. One retail oracle run. No port rebuild. macOS has no
+`ROGUESQ_HWBP`.
 
-One port build and one retail oracle run. Add the census and the retail
-write watches before either run. macOS has no `ROGUESQ_HWBP`; do not use it.
+Watch index 0 stays `--watch-write 0x0:0x800000`. Then 41
+`--watch-write` ranges, `0x190E70+i*0x88` for 4 bytes, `i=0..40`.
+`--pc-hist-watch` on each of those 41 indices (1..41). Keep
+`--watch-pc 0x8008FAAC` so the existing s5225 census still prints, and
+keep both `--pc-hist-phase` buckets `0x00690400:512` and `0x00620400:512`
+(quote the colon; zsh history expansion splits `:512`). Same Rice video,
+`--secs 420`, `--hit-cap 500`, `--vi-trace --vi-poll`, `--pc-phase-quiet`,
+and the s5224 Start schedule. Whole-RDRAM must reach 10000 writes, and
+both mission origins must appear. The census slot sum plus overflow must
+equal that origin's hit count.
 
-Both sides, in the existing s5224 hooks: a 64-slot table of `s0` per
-mission origin (address, count, overflow). Port flushes it on the leave
-line as one line. Retail prints it at shutdown. Positive control: the slot
-counts plus overflow equal that origin's entry/hit count.
-
-Retail write watches, armed at first VI, not at the first entry (the byte
-may be stored once before the first read):
-
-- `--watch-write 0x191070:0x191074`
-- `--watch-write 0x1951B0:0x1951B4`
-- `--pc-hist-watch` on each of those watches
-- `--pc-hist-phase 0x00690400:512` and `0x00620400:512`
-- whole-RDRAM watch stays index 0
-
-The `writer-pc-phase` rows are the retail writers of those words. In the
-same iteration, open the recompiled store at each reported PC and record
-the value expression. That is the port-side half: there is no macOS store
-hook, so the generated store is the port witness.
+The `writer-pc-phase` rows are the retail writers of those words. Open
+every reported PC in `RecompiledFuncs` and record the store. A hit on the
+word is not a hit on the byte: offsets `0x20` and `0x21` share it.
 
 Competing hypotheses:
 
-- H-same-writer-different-value: the modal `s0+0x22` is inside a watched
-  word, and the retail writer PC's generated store is reached with a source
-  that is `0x00` on retail and can be `0x03` on the port. Next question is
-  that source, not another address.
-- H-different-writer: the modal address is watched, but the generated store
-  at the retail writer PC is absent, neutralized, or not on the port path
-  that produces `0x03`.
-- H-wrong-candidate: the modal `s0+0x22` is outside both watched words.
-  The writer-pc table is then unevaluable. The census addresses are the
-  next watch list. Do not add a third watch in this run.
+- H-const-zero: during both mission origins the dominant PC that stores
+  offset `0x22` is `0x80090F3C` (`sb $zero, 0x22($v0)`, `v0 = base +
+  index*0x88`). Retail's modal `0x00` is that constant. The port's `0x03`
+  is not this store.
+- H-const-one: the dominant offset-`0x22` PC is `0x80090F8C`, which stores
+  the constant 1. That does not explain retail `0x00` or port `0x03`.
+- H-other: the dominant offset-`0x22` PC is neither. Its value expression
+  is the next source. Do not add a watch in this run.
 
-Unevaluable: census slot counts disagree with the entry count, the
-whole-RDRAM control does not fire, or a mission origin is missing.
+Unevaluable: the whole-RDRAM control does not fire, a mission origin is
+missing, the census sum disagrees with the hit count, or writer overflow
+drops every offset-`0x22` PC.

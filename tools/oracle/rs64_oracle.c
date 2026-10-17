@@ -986,9 +986,36 @@ static void seq_report(void)
 static unsigned long g_s5224_hist[2][256];
 static unsigned long g_s5224_hits[2];
 
+/* s5225: 64-slot census of s0 at the same entry. Overflow is every later address. */
+struct s5225_slot { uint32_t s0; unsigned long n; };
+static struct s5225_slot g_s5225_slot[2][64];
+static int g_s5225_nslot[2];
+static unsigned long g_s5225_over[2];
+
+static void s5225_note(int bi, uint32_t s0)
+{
+    int i;
+    if (bi < 0 || bi >= 2)
+        return;
+    for (i = 0; i < g_s5225_nslot[bi]; i++) {
+        if (g_s5225_slot[bi][i].s0 == s0) {
+            g_s5225_slot[bi][i].n++;
+            return;
+        }
+    }
+    if (g_s5225_nslot[bi] < 64) {
+        g_s5225_slot[bi][g_s5225_nslot[bi]].s0 = s0;
+        g_s5225_slot[bi][g_s5225_nslot[bi]].n = 1;
+        g_s5225_nslot[bi]++;
+    } else {
+        g_s5225_over[bi]++;
+    }
+}
+
 static void s5224_count_entry_byte(uint32_t pc)
 {
     uint32_t origin;
+    uint32_t s0;
     uint32_t sb;
     int bi;
     if (pc != 0x8008FAACu)
@@ -1000,7 +1027,9 @@ static void s5224_count_entry_byte(uint32_t pc)
         bi = 1;
     else
         return;
-    sb = debug_mem_u8(gpr32(16) + 0x22u) & 0xFFu;
+    s0 = gpr32(16);
+    s5225_note(bi, s0);
+    sb = debug_mem_u8(s0 + 0x22u) & 0xFFu;
     g_s5224_hist[bi][sb]++;
     g_s5224_hits[bi]++;
 }
@@ -1029,6 +1058,29 @@ static void s5224_report(void)
         } else {
             printf("[s5224-hist] origin=0x%08X hits=%lu sum=%lu bins=TRUNCATED\n",
                    origins[bi], g_s5224_hits[bi], sum);
+        }
+        {
+            unsigned long csum = g_s5225_over[bi];
+            int k;
+            for (k = 0; k < g_s5225_nslot[bi]; k++)
+                csum += g_s5225_slot[bi][k].n;
+            n = snprintf(line, sizeof line,
+                         "[s5225-s0] origin=0x%08X hits=%lu slots=%d overflow=%lu sum=%lu rows=",
+                         origins[bi], g_s5224_hits[bi], g_s5225_nslot[bi],
+                         g_s5225_over[bi], csum);
+            for (k = 0; k < g_s5225_nslot[bi] && n > 0 && n < (int)sizeof line; k++)
+                n += snprintf(line + n, sizeof line - (size_t)n, "%s%08X:%lu",
+                              k ? "," : "", g_s5225_slot[bi][k].s0,
+                              g_s5225_slot[bi][k].n);
+            if (n > 0 && n < (int)sizeof line - 1) {
+                line[n++] = '\n';
+                line[n] = 0;
+                fputs(line, stdout);
+            } else {
+                printf("[s5225-s0] origin=0x%08X hits=%lu slots=%d overflow=%lu sum=%lu rows=TRUNCATED\n",
+                       origins[bi], g_s5224_hits[bi], g_s5225_nslot[bi],
+                       g_s5225_over[bi], csum);
+            }
         }
     }
     fflush(stdout);
