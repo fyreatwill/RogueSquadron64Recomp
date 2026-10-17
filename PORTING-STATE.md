@@ -161879,3 +161879,14 @@ two-arm M4 discriminator therefore remains unrun: there is no evidence here
 to select H1 or H2, and no accumulator mitigation or writer conclusion is
 authorized. The next command is the retail oracle arm plus the validated port
 recipe recorded in `scratch/agent/NEXT.md`.
+
+## Session 5334 (2026-10-17) — closed the interrupted M4 checkpoint
+
+No experiment was rerun. The surviving port capture contains live same-run
+positive-control marks and 4,091 target-boundary keyed rows at
+`0x006AB400`/512, including nonzero task serial `961`, generated PCs
+`0x112C`/`0x17F0`, and increasing per-task steps. This discriminates against
+H3's missing-port-key prediction. It does not distinguish H1 from H2: the
+retail cxd4 arm and exact cross-arm join are still absent, so no writer/lane
+agreement or mismatch, and no mitigation, may be inferred. The next
+discriminator remains the two-arm exact-key join in `scratch/agent/NEXT.md`.

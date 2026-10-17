@@ -1,8 +1,10 @@
 # Resume: compare the keyed retail and port M4 streams
 
-Checkpoint status: the prior port arm completed and its artifact is
-`scratch/agent/m4-port-next/run.log`; no retail arm or join ran in the
-interrupted attempt. Resume the same single work unit. Session 5332 reached
+Checkpoint status: this retry did not rerun the experiment. The prior port arm
+completed and its artifact is `scratch/agent/m4-port-next/run.log`; no retail
+arm or join ran. The existing same-run controls and 4,091 keyed rows refute
+H3's missing-port-key prediction, but do not select H1 or H2. Resume the same
+single work unit. Session 5332 reached
 `vi_width=512`, origin `0x006AB400`; the port key path emitted 4,091 target
 rows with task serial `961`, generated PCs `0x112C` and `0x17F0`, and
 increasing per-task step values. Do not infer PC from stage ordinal or treat
