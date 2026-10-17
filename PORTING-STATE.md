@@ -162017,3 +162017,7 @@ Existing-artifact qualification of PatchesLib (s5339-s5341) stays valid.
 Human action needed: install a MIPS64 ELF cross-toolchain (see BLOCKED.md), or
 tell the loop to drop the fresh-source-build qualification and resume the
 strategic-priority list (M3 idiom audits / REVISIT of M4 boundary).
+
+## Session 5344 (2026-10-17) — unblock: PatchesLib toolchain block re-scoped (route 3)
+
+BLOCKED.md claimed a missing mips64-elf-gcc/ld. Re-checked: Apple clang lists no MIPS target (aarch64/arm/x86 only), the patches Makefile hardcodes the GCC pair, and installing a toolchain is a human decision, so the dependency is real and not locally satisfiable. It is also not on the critical path: the existing patches.elf already qualifies the host-side path (s5339-s5341). Removed BLOCKED.md, recorded the toolchain as an open dependency in CURRENT-TRUTH, and rewrote NEXT.md to an offline delay-slot operand-hazard audit (an M3 class not in the closed list). No code or runtime change.

@@ -177,7 +177,8 @@ the tail of the soak results before acting.
 
 ## Session 5343 status
 
-Fresh PatchesLib source qualification is BLOCKED on a missing MIPS64 ELF
-cross-toolchain (third consecutive measured absence). Existing-artifact
-qualification stands. See `scratch/agent/BLOCKED.md`. If the human drops this
-thread, resume the strategic-priority list (M3 idiom audits / M4 revisit).
+Open dependency (NOT blocking): fresh PatchesLib source qualification needs a
+MIPS64 ELF cross-toolchain (absent s5337/s5342/s5343; Apple clang has no MIPS
+target). Existing-artifact qualification stands. The unblock iteration (s5344)
+re-scoped the loop to an offline delay-slot/branch-operand hazard audit
+(`scratch/agent/NEXT.md`).

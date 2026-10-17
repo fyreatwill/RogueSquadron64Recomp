@@ -1,36 +1,26 @@
-# Next: qualify a fresh PatchesLib source build once the cross-toolchain exists (BLOCKED, see BLOCKED.md)
+# Next: offline audit of the delay-slot/branch-register-hazard idiom class (M3)
 
-Session 5342 rechecked the prerequisite and found neither cross-compiler on
-PATH; no fresh source build was run. The host-side declaration path remains
-qualified only from the existing `patches.elf`.
+PatchesLib fresh-source qualification is dropped from the critical path (open
+dependency: mips64-elf-gcc/ld, see CURRENT-TRUTH). This unit needs no toolchain
+and no game run.
 
-Competing hypotheses and discriminator:
+Idiom class NOT in the CURRENT-TRUTH closed list: a branch/jr/jalr whose delay
+slot writes a register that the branch condition, target, or link value reads
+(MIPS reads the branch operands BEFORE the slot executes), plus delay slots that
+write $ra for jal/jalr. N64Recomp should latch operands first; verify on the
+generated code rather than assume.
 
-- H1: `mips64-elf-gcc` and `mips64-elf-ld` are available and the complete
-  source-to-ELF-to-host pipeline can be run.
-- H2: the cross-toolchain is absent, so fresh source qualification remains
-  blocked and the next action requires supplying it.
-- H3: the toolchain exists but the fresh source build or relink exposes a new
-  source, linker, or regeneration defect.
+Hypotheses:
+- H1: N64Recomp latches branch operands before the slot in every generated site
+  (class closed).
+- H2: some sites emit slot-then-test and read the clobbered value (real bug).
+- H3: sites exist but are statically unreachable/data (no impact).
 
-Discriminating measurement: run `command -v mips64-elf-gcc mips64-elf-ld`,
-then, only if both resolve, build `patches/patches.elf`, regenerate the host
-source, compile, archive, and inspect `nm`. H1 requires a fresh ELF plus zero
-host errors and a defined `allocateDisplayListBuffer`; H2 is the measured
-absence of either compiler; H3 is any fresh-build failure. The same-run
-positive control is the defined override symbol.
+Discriminator: scan the ROM disassembly (or RecompiledFuncs) for branches whose
+slot instruction's destination register equals a branch source register; for N
+sites found, read the generated C and check the ordering. Same-run positive
+control: at least one known-hazard site must be located and its generated C
+shown to latch correctly (or not). Report count / total branches as a
+denominator. Do not touch lib/.
 
-```sh
-command -v mips64-elf-gcc mips64-elf-ld
-make -C patches clean all
-./build/N64Recomp patches.toml
-clang -c RecompiledPatches/patches.c -o /tmp/rs64-patches-host-next.o \
-  -I include -I RecompiledPatches \
-  -I lib/N64ModernRuntime/ultramodern/include \
-  -I lib/N64ModernRuntime/librecomp/include \
-  -I lib/N64ModernRuntime/N64Recomp/include
-ar rcs /tmp/rs64-PatchesLib-next.a /tmp/rs64-patches-host-next.o
-nm -g /tmp/rs64-PatchesLib-next.a | grep -E 'allocateDisplayListBuffer|findAndUnlinkSmallestEntry'
-```
-
-HYPOTHESIS-ID: patcheslib-host-artifact-qualification
+HYPOTHESIS-ID: delay-slot-operand-hazard-audit
