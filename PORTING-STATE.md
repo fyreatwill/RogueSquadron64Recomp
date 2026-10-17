@@ -159950,3 +159950,14 @@ port or close the exact interior boundary. Audit:
 `docs/REVISIT-S5183-RETAIL-FUNCTION-GATE.md`. The first summary extractor
 rescanned a 4.1 GB trace once per counter and was killed; the fixed one-pass
 extractor produced the counts above. No runtime mitigation was added.
+## Session 5184 (2026-10-17) — classified `osSetEventMesg` as unmaterialized
+
+Ran the bounded generated-symbol audit for `osSetEventMesg = 0x80033560`.
+The helper reported `already-synchronized` and renamed zero references in zero
+files. The generated tree has only the ABI declaration, a zero-size overlay
+record, and five generated calls to the host wrapper; no generated body or
+placeholder exists at the companion address. The nominal span to
+`osSetIntMask = 0x80033630` is `0xD0`, so there is no body span to validate.
+Preserve the ABI name and continue the sweep at `osSetIntMask`. This rules out
+an actionable generated rename at this entry, but does not bear on runtime
+behavior.

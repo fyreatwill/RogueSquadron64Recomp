@@ -522,9 +522,18 @@ were retained below or in the project overview.
   explanations. Their guarded/atomic/lock variants either remained live or
   were route-blocking; no value rewrite was authorized.
 
+`osSetEventMesg = 0x80033560` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated tree has only the ABI declaration, a zero-size overlay record,
+and five direct callers of the host wrapper, with no generated body or
+placeholder at the companion address. Its nominal span to
+`osSetIntMask = 0x80033630` is `0xD0`, with no body to validate. Preserve the
+ABI name. Audit: `docs/RENAME-S5184-AUDIT.md`. The next candidate is now
+`osSetIntMask = 0x80033630`.
+
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osSetEventMesg = 0x80033560`, whose next
+1. Resume the companion sweep with `osSetIntMask = 0x80033630`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
