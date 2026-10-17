@@ -158956,3 +158956,21 @@ raw guest-pointer site in this remaining time/interrupt wrapper class, but does
 not prove runtime reachability or semantic sufficiency of the no-op mask path.
 The M3 host-wrapper census is complete; next is the generated-symbol renaming
 sweep.
+
+## Session 5106 (2026-10-17) — renamed companion-mapped libultra `bcmp`
+
+Ran the generated-symbol sweep after the required last-15-session preflight;
+the titles were not sweep-only, so the sweep remained eligible. The bounded
+candidate was companion `bcmp = 0x80029F60`, emitted as `bcmp_recomp`. The
+companion address matched the generated prologue, `recomp_overlays.inl` gave
+the exact `0x120` span ending at the next `bzero` entry, and one independent
+generated caller was found at `funcs_2.c:2619` from guest callsite
+`0x80006558`. The body is a byte-comparison routine.
+
+Applied `bcmp_recomp -> bcmp` to the generated snapshot and overlay table,
+added the explicit address-aware mapping to `tools/rename_generated_symbols.py`,
+and recorded the gates in `docs/RENAME-S5106-AUDIT.md`. The
+`RecompiledFuncs` target then built successfully; clang emitted the expected
+incompatible-redeclaration warning because `bcmp` is also a host builtin.
+This rules out stale-address, split-span, and no-caller explanations for this
+candidate. It does not establish runtime behavior, so no soak was run.

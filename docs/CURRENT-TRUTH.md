@@ -1,10 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5105; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5106; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5106:** The bounded generated-symbol sweep renamed the companion
+  `bcmp` entry at `0x80029F60`: generated `bcmp_recomp` had the exact `0x120`
+  span and one live caller. The rename was applied to the generated snapshot,
+  overlay table, and rename tooling; audit recorded in
+  `docs/RENAME-S5106-AUDIT.md`. This rules out stale-address, split-span, and
+  no-caller explanations for `bcmp`; no runtime behavior changed.
 
 - **s5105:** Restored the missing time/interrupt host-wrapper census tool.
   Its positive-control self-test passed 4/4, and the live census classified
@@ -206,6 +213,10 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 The s5049 in-place regen (tools/agent/regen_n64recomp.sh, still disabled) destroyed the live tree, but it is RESTORED and verified: N64Recomp/scratch_s4970_live (Oct-13 copy) + replay of post-s4970 scripts (scratch/agent/s5050_replay.sh, s5050_s5037.sh) compiles to byte-identical __text for 51/51 funcs_*.c vs the surviving build/libRecompiledFuncs.a (scratch/agent/s5050_compare.py). funcs.h/lookup.cpp/recomp_overlays.inl identical to the clobbered copies. The clobbered tree is kept at N64Recomp/RecompiledFuncs.s5049-clobbered. cmake --build is safe again (it recompiles ~5 files whose mtimes the replay touched; code identical). Never regen in place; "live tree is unreproducible" was wrong: backup + ordered apply_s* replay reproduces it.
 
 ## Next steps (single monotonic backlog)
+- s5106: `bcmp_recomp -> bcmp` passed companion semantic-name, exact-span, and
+  live-caller gates and was applied to the generated snapshot and overlay
+  table. Next: audit the adjacent `bzero_recomp -> bzero` candidate at
+  `0x8002A080` with the same gates.
 - s5105: Time/interrupt host-wrapper class closed. `tools/audit_time_interrupt_wrappers.py`
   passed its 4/4 positive-control self-test; the live census found eight
   scalar/time implementations without guest dereference and one intentional

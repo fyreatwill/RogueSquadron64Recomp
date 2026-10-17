@@ -1,21 +1,29 @@
-# Next: generated-symbol renaming sweep — next companion-mapped candidate
+# Next: generated-symbol renaming sweep — adjacent libultra candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Bounded work unit: select the next not-yet-renamed generated function with a
-companion semantic mapping. Competing hypotheses are H-name-correct (the
-companion symbol covers the exact generated function span and its live callers
-support the semantic name), H-span-mismatch (the mapping crosses a split or
-stale span), and H-unproven (the function has no usable live-caller evidence).
+Bounded work unit: audit `bzero_recomp -> bzero` at guest address
+`0x8002A080`.
 
-Discriminating measurement: one candidate's companion address/span comparison
-plus live-caller census. Exact-span mismatch rejects the rename; a matching
-span with at least one live caller selects the semantic mapping; no caller
-leaves it unrenamed and selects the next candidate in a later sweep unit.
+Competing hypotheses and discriminator:
 
-Before changing the mapping, inspect the recent sweep titles:
+- H-name-correct: companion name, generated start address, exact overlay span,
+  and at least one independent generated caller agree; apply the rename.
+- H-span-mismatch: the generated address or `recomp_overlays.inl` span crosses
+  a split/neighboring entry; leave it unchanged.
+- H-unproven: no live generated caller or no usable semantic companion
+  evidence; leave it unchanged and advance to the next candidate later.
+
+Discriminating measurement: compare the companion symbol address with the
+generated prologue, compare `recomp_overlays.inl`'s span with the next entry,
+and count direct generated callsites in one bounded inspection.
+
+Commands:
 
     grep -n '^## Session ' PORTING-STATE.md | tail -15
+    rg -n 'bzero_recomp|0x8002A080' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n -C 2 'bzero_recomp' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
 
-If this is not a sweep-only revisit, identify the next candidate and apply the
-existing gates with the bounded helper/tooling. Do not build or soak unless a
-mapping is actually changed.
+If all gates pass, add the explicit address mapping to
+`tools/rename_generated_symbols.py`, run the bounded helper for
+`0x8002A080..0x8002B190`, and record the audit in a new `docs/RENAME-S*.md`.
+Do not build or soak if the candidate fails a gate.

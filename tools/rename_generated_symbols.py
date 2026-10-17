@@ -11,6 +11,7 @@ RENAMES = {
     # Entry-local zeroing loop: address/length inputs, 16-byte stride, and
     # paired zero stores match the companion libc bzero implementation.
     "func_8000040C": "clearMemory16ByteBlocks",
+    "bcmp_recomp": "bcmp",
     "func_800824F8": "rs_crc32",
     "func_800BFDC4": "setHudSecondaryWeaponInfo",
     "func_800C63C0": "getAvailableShipsForLevel",
@@ -283,6 +284,10 @@ RENAMES = {
     "fake_func_800FA248": "data_gap_800FA248",
 }
 
+RENAME_ADDRESSES = {
+    "bcmp_recomp": 0x80029F60,
+}
+
 
 def in_region(address: str, start: int | None, end: int | None) -> bool:
     value = int(address, 16)
@@ -377,8 +382,21 @@ def main() -> int:
     renames = {
         old: new
         for old, new in RENAMES.items()
-        if in_region(old.rsplit("_", 1)[-1], args.start_address, args.end_address)
+        if old not in RENAME_ADDRESSES
+        and in_region(old.rsplit("_", 1)[-1], args.start_address, args.end_address)
     }
+    renames.update(
+        {
+            old: new
+            for old, new in RENAMES.items()
+            if old in RENAME_ADDRESSES
+            and (
+                args.start_address is None
+                or RENAME_ADDRESSES[old] >= args.start_address
+            )
+            and (args.end_address is None or RENAME_ADDRESSES[old] < args.end_address)
+        }
+    )
     decisions = []
     if args.companion_dir:
         discovered, decisions = companion_renames(
