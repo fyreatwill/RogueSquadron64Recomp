@@ -161081,3 +161081,14 @@ generated caller at the address. This rules out callable placeholder
 propagation; preserve the data/fragment name. No build or soak was needed.
 Audit: `docs/RENAME-S5269-AUDIT.md`. Next candidate:
 `__OSGlobalIntMask = 0x80039110`.
+## Session 5270 (2026-10-17) — generated-symbol sweep: `__OSGlobalIntMask` is data
+
+Ran the bounded companion-symbol helper over `0x80039110..0x80039120`. It
+renamed zero references and reported `__OSGlobalIntMask` as already
+synchronized. Independent inspection found the companion volatile-data entry;
+the generated same-named function/overlay starts with invalid data at the
+address and spans `0x4E10`, so it is data decoded as code rather than a
+callable placeholder. This rules out a callable rename and preserves the
+existing name. No build or soak was needed. Audit:
+`docs/RENAME-S5270-AUDIT.md`. Next candidate:
+`__osMotorinitialized = 0x80039120`.

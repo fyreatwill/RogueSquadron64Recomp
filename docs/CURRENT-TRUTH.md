@@ -371,8 +371,21 @@ generated caller at the companion address. Its nominal span to `_Putfld =
 0x80035960` is `0x410`, with no body to validate. Preserve the ABI name.
 Audit: `docs/RENAME-S5222-AUDIT.md`.
 
+`__OSGlobalIntMask = 0x80039110` is now classified as a data/fragment record:
+the bounded helper reported `already-synchronized` and renamed zero
+references. The companion map marks it as volatile data; the generated
+function/overlay entry begins with invalid data at the address and spans
+`0x4E10`, so it is not a callable placeholder. Preserve the name. Audit:
+`docs/RENAME-S5270-AUDIT.md`.
+
 ## Next steps (single monotonic backlog)
 
+- **s5270:** `__OSGlobalIntMask = 0x80039110` is already synchronized: the
+  bounded helper made zero edits, and independent checks identify the
+  companion as volatile data whose generated entry is data decoded as code.
+  Preserve the name; no build or soak. Audit:
+  `docs/RENAME-S5270-AUDIT.md`. Next: classify
+  `__osMotorinitialized = 0x80039120`.
 - **s5269:** `__osShutdown = 0x8003910C` is already synchronized: the bounded
   helper made zero edits, and independent checks identify it as a typed `u32`
   data symbol with no generated callable body, placeholder, declaration,
