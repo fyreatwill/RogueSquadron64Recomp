@@ -159303,3 +159303,15 @@ the next entry at `__osLeoInterrupt = 0x8002C500`.
 This rules out a generated semantic rename for `__osRestoreInt`; preserve its
 ABI name as a host-wrapper/ABI-boundary entry. No build or soak was warranted.
 The audit is recorded in `docs/RENAME-S5134-AUDIT.md`.
+## Session 5135 (2026-10-17) — classified `__osLeoInterrupt` as unmaterialized
+
+Ran the bounded generated-symbol audit for companion `__osLeoInterrupt` at
+`0x8002C500`. The helper changed zero references and reported
+`already-synchronized`. The generated tree contains no candidate placeholder,
+ABI declaration, body, overlay record, or direct caller; the companion map
+defines the symbol but has no matching generated artifact.
+
+This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
+semantic generated-symbol rename, build, or soak for this entry. Audit:
+`docs/RENAME-S5135-AUDIT.md`. Next candidate:
+`__osLeoAbnormalResume = 0x8002CBA4`.

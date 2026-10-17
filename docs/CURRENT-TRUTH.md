@@ -80,7 +80,7 @@ were retained below or in the project overview.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
-  through `docs/RENAME-S5134-AUDIT.md`.
+  through `docs/RENAME-S5135-AUDIT.md`.
 
 ## Operational rules
 
@@ -132,9 +132,9 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osLeoInterrupt = 0x8002C500` using the bounded rename helper. Rename only
-   if the generated body, exact next-entry span, semantic mapping, and live
-   caller all agree; otherwise preserve the ABI name and record the
+1. Audit `__osLeoAbnormalResume = 0x8002CBA4` using the bounded rename helper.
+   Rename only if the generated body, exact next-entry span, semantic mapping,
+   and live caller all agree; otherwise preserve the ABI name and record the
    classification.
 2. Continue the companion sweep one entry per iteration while the last-15
    session preflight permits it. If the preflight makes the sweep a REVISIT,
