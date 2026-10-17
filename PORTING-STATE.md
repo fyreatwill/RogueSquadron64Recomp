@@ -158588,3 +158588,10 @@ Block: H1 (host load) vs H3 (generated code) needs load <2; measured 6.3 at 17:4
 ## Session 5056 (2026-10-16) — BLOCKED: host load 3.9 (Chrome helper 106% CPU, REAPER, WindowServer) still above the <2 precondition for H1-vs-H3
 
 Measured this iteration: `uptime` load 3.00/4.00/4.96, then 3.88/4.11/4.95 after 45 s; top CPU is a Chrome helper (106%), WindowServer, REAPER. NEXT.md forbids running s5048_preS5038_source.sh above load 2 (a run under load cannot split H1 from H3). No experiment run. Needs the human to quit Chrome/REAPER.
+
+## Session 5057 (2026-10-16) — unblock: "needs quiet host (<2 load)" refuted; the current binary reaches hangar at load ~4
+
+Block claimed H1-vs-H3 for the nohangar stall could only be run with load <2 (needs Chrome/REAPER quit). Route 1 (refute): the precondition was an assumption, never measured. Ran, with Chrome helper at 110% CPU, WindowServer 52%, REAPER 20%, load 3.8-4.7:
+- Positive control: Oct-14 build/RogueSquadron64Recomp_O0 via scratch/agent/s5057_o0_control.sh (s5048 harness, binary swapped): title t=52, hangar (0x006AB400) t=77.
+- Current build/RogueSquadron64Recomp (s5050-restored source, Oct 16 17:03) via s5048_preS5038_source.sh unchanged: title t=51, hangar t=64, rc_all=0.
+Result: host load of ~4 does not by itself prevent hangar; the earlier stalls (s5042-s5051, ~8 runs, load 4-7) did not reproduce. Cause of the earlier stalls is NOT identified (n=1 pass each now vs 0/8 before; could be an intermittent route flake, key/focus timing, or state from earlier runs). Quiet-host precondition withdrawn. Nothing was killed or changed on the host; no code changed.

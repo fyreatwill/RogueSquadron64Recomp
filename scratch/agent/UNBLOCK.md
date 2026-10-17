@@ -1,4 +1,1 @@
-# UNBLOCK s5055
-Route taken: 4 (escalate). Routes 1-3 failed; route 3 was already spent in s5053 and s5054 found no offline unit.
-Evidence: load 6.32/6.48/6.38 at 17:43; s5037 soak dirs have no load record so cannot act as a same-load control.
-Observation that would refute: hangar from s5048_preS5038_source.sh at load >2.
+Route 1 (refute). Claim: H1 vs H3 needs host load <2. Observation that proves it unnecessary: a known-good binary (build/RogueSquadron64Recomp_O0) and the current binary both reached hangar at t=77/t=64 at load 3.8-4.7 with Chrome helper 110% CPU (scratch/agent/soak_results/s5057_o0_control, s5048_preS5038_source). Quiet host not required; no apps killed.
