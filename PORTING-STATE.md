@@ -161050,6 +161050,17 @@ data-fragment classification for `_Putfld`; preserve the name. The same
 candidate was already recorded by s5259, so this closes the stale next-step
 pointer rather than adding a new rename. Audit: `docs/RENAME-S5266-AUDIT.md`.
 Next bounded candidate: companion data symbol `__osContinitialized = 0x800390D0`.
+## Session 5268 (2026-10-17) — generated-symbol sweep: `__osHwIntTable` is data
+
+Ran the bounded companion-symbol helper over `0x800390E0..0x80039100`.
+It made zero edits and reported `__osHwIntTable` already synchronized.
+Independent inspection found the companion typed `u32` data entry with size
+`0x14`, and no generated callable body, placeholder, declaration, overlay
+record, or direct generated caller at the address. This rules out callable
+placeholder propagation and preserves the data/fragment name. Audit:
+`docs/RENAME-S5268-AUDIT.md`. Next candidate: inspect the next companion after
+`0x80039100`.
+
 ## Session 5267 (2026-10-17) — generated-symbol sweep: `__osContinitialized` is data
 
 Ran the bounded companion-symbol helper over `0x800390D0..0x800390E0`.
