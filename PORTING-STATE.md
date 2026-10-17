@@ -161361,3 +161361,15 @@ record, and callers, with no placeholder or conflicting fragment. H1 is
 selected in the already-synchronized callable sense; H2/H3 are ruled out for
 this address. No build or soak was warranted. Audit:
 `docs/RENAME-S5291-AUDIT.md`. Next: classify `initNpcSlotList = 0x8003E560`.
+
+## Session 5292 (2026-10-17) — generated-symbol sweep: `initNpcSlotList` is synchronized
+
+Ran the bounded rename helper for `0x8003E560..0x8003E564` and independently
+searched the companion map and generated tree. The companion record describes
+the named NPC free-list initializer; the helper reported
+`already-synchronized` and renamed zero references in zero files. The
+generated tree contains its named body in `funcs_8.c`, header declaration,
+overlay record, and callers, with no placeholder or conflicting fragment.
+H1 is selected in the already-synchronized callable sense; H2/H3 are ruled
+out for this address. No build or soak was warranted. Audit:
+`docs/RENAME-S5292-AUDIT.md`. Next: classify `allocateNpcSlot = 0x8003E5F8`.

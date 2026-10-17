@@ -1,9 +1,9 @@
 # Next: continue the generated-symbol sweep
 
-Work unit: classify `initNpcSlotList = 0x8003E560`, the next companion record
-after the completed `safeLookup3DSoundEntry` check, with one bounded
-helper run and independent generated-tree inspection. Do not build or soak
-unless the discriminator finds a callable placeholder or a needed rename.
+Work unit: classify `allocateNpcSlot = 0x8003E5F8`, the next companion record
+after the completed `initNpcSlotList` check, with one bounded helper run and
+independent generated-tree inspection. Do not build or soak unless the
+discriminator finds a callable placeholder or a needed rename.
 
 Before any build, record the competing hypotheses and discriminator in this
 file. For the next candidate they are:
@@ -21,10 +21,10 @@ callable fragment or conflicting semantic record.
 
 Exact commands after selecting the address:
 
-`rg -n -C 2 'initNpcSlotList|8003E560' ../rogue_squadron64/symbol_files`
+`rg -n -C 2 'allocateNpcSlot|8003E5F8' ../rogue_squadron64/symbol_files`
 
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x8003E560 --end-address 0x8003E564 --limit 1`
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x8003E5F8 --end-address 0x8003E5FC --limit 1`
 
-`rg -n 'initNpcSlotList|func_8003E560|fake_func_8003E560|8003E560' ../N64Recomp/RecompiledFuncs --glob '*.c' --glob '*.h' --glob '*.inl'`
+`rg -n 'allocateNpcSlot|func_8003E5F8|fake_func_8003E5F8|8003E5F8' ../N64Recomp/RecompiledFuncs --glob '*.c' --glob '*.h' --glob '*.inl'`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
