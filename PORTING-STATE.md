@@ -159903,3 +159903,17 @@ record, or direct generated caller at the companion address. The next
 companion entry is `osRecvMesg = 0x800331D0`, a nominal `0x160` span away, but
 there is no body to validate. This rules out a justified semantic rename for
 the candidate; preserve its ABI name and continue at `osRecvMesg`.
+
+## Session 5181 (2026-10-17) — classified `osRecvMesg` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osRecvMesg = 0x800331D0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. The generated
+tree contains only the ABI declaration and a zero-size overlay record at
+offset `0x32D90`; searches found no generated body, placeholder, or direct
+generated caller at the companion address. The next companion entry is
+`osSendMesg = 0x80033410`, a nominal `0x240` span away, but there is no body to
+validate. Preserved the ABI name and advanced the sweep. This rules out a
+materialized generated function at this candidate; it does not make a claim
+about the runtime implementation of the host wrapper. No build or soak was
+warranted for this naming-only result. Audit: `docs/RENAME-S5181-AUDIT.md`.

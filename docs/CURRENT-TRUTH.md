@@ -129,6 +129,15 @@ Its companion span ends at `__osGetOneChannelData = 0x80030A04`; preserve the
 ABI name. Audit: `docs/RENAME-S5162-AUDIT.md`. The next candidate is now
 `__osGetOneChannelData = 0x80030A04`.
 
+`osRecvMesg = 0x800331D0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated tree has only the ABI declaration and a zero-size overlay
+record, with no body, placeholder, or direct generated caller at the
+companion address. Its nominal span to `osSendMesg = 0x80033410` is `0x240`,
+with no body to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5181-AUDIT.md`. The next candidate is now `osSendMesg =
+0x80033410`.
+
 `__osGetOneChannelData = 0x80030A04` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
 `already-synchronized`, and the generated tree has no body, placeholder,
@@ -506,7 +515,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osRecvMesg = 0x800331D0`, whose next
+1. Resume the companion sweep with `osSendMesg = 0x80033410`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value
