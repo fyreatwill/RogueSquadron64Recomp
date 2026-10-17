@@ -1,6 +1,6 @@
-# Next: generated-symbol sweep — `spawnInheritedNpcVariantC`
+# Next: generated-symbol sweep — `freeNpcSlotArray`
 
-Work unit: classify companion symbol `spawnInheritedNpcVariantC = 0x8003FA14`
+Work unit: classify companion symbol `freeNpcSlotArray = 0x8003FBF8`
 with the existing bounded renaming helper, then independently inspect its
 generated body, declaration, overlay record, callers, and any placeholder
 conflict. Do not change runtime code if it is already named.
@@ -21,8 +21,8 @@ result.
 
 Exact commands: run `python3 tools/rename_generated_symbols.py
 ../N64Recomp/RecompiledFuncs --companion-dir
-../rogue_squadron64/symbol_files --start-address 0x8003FA14
---end-address 0x8003FA18 --limit 1`, then grep the companion map and generated
+../rogue_squadron64/symbol_files --start-address 0x8003FBF8
+--end-address 0x8003FBFC --limit 1`, then grep the companion map and generated
 tree for the address, symbol, placeholder, declaration, overlay record, and
 callers. H1 is selected by zero edits plus a named callable body and metadata;
 H2 by a placeholder/edit count; H3 by a non-callable/data-only result.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5302 (2026-10-17). The
+Compact operational handoff, maintained at Session 5303 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -89,6 +89,13 @@ inspection found the named body in `funcs_9.c`, declaration, overlay record,
 and direct caller in `funcs_19.c`, with no placeholder or conflicting fragment.
 Audit: `docs/RENAME-S5302-AUDIT.md`. The next sweep candidate is
 `spawnInheritedNpcVariantC = 0x8003FA14`.
+
+Session 5303 classified `spawnInheritedNpcVariantC = 0x8003FA14` as already
+synchronized. The bounded helper made zero edits; independent generated-tree
+inspection found the named body in `funcs_9.c`, declaration, overlay record,
+and direct callers in `funcs_18.c` and `funcs_37.c`, with no placeholder or
+conflicting fragment. Audit: `docs/RENAME-S5303-AUDIT.md`. The next sweep
+candidate is `freeNpcSlotArray = 0x8003FBF8`.
 
 Session 5300 classified `spawnChildNpcWithTransform = 0x8003F1D0` as already
 synchronized. The bounded helper made zero edits; independent generated-tree
@@ -575,6 +582,14 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5303:** `spawnInheritedNpcVariantC = 0x8003FA14` is a named,
+  already-synchronized callable NPC routine; the helper made zero edits and
+  independent inspection found its body in `funcs_9.c`, declaration, overlay
+  record, and callers in `funcs_18.c` and `funcs_37.c` with no placeholder or
+  conflict. No build or soak was warranted. Audit:
+  `docs/RENAME-S5303-AUDIT.md`. The next bounded sweep unit is
+  `freeNpcSlotArray = 0x8003FBF8`.
 
 - **s5302:** `spawnInheritedNpcVariantB = 0x8003F880` is a named,
   already-synchronized callable NPC routine; the helper made zero edits and

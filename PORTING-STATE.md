@@ -161511,3 +161511,15 @@ header declaration, overlay record, and a direct caller in `funcs_19.c`. No
 H2 and H3 are ruled out for this address. No build or soak was warranted.
 Audit: `docs/RENAME-S5302-AUDIT.md`. Next: classify
 `spawnInheritedNpcVariantC = 0x8003FA14`.
+
+## Session 5303 (2026-10-17) — generated-symbol sweep: `spawnInheritedNpcVariantC` is synchronized
+
+Ran the bounded generated-symbol helper for companion symbol
+`spawnInheritedNpcVariantC = 0x8003FA14`. It reported `already-synchronized`
+and renamed zero references in zero files. Independent inspection found the
+named callable body in `RecompiledFuncs/funcs_9.c`, its declaration in
+`funcs.h`, overlay record in `recomp_overlays.inl`, and direct callers in
+`funcs_18.c` and `funcs_37.c`; no `func_8003FA14` placeholder or conflicting
+fragment exists. This selects H1 and rules out H2/H3 for this candidate. No
+build or soak was warranted. The next bounded candidate is
+`freeNpcSlotArray = 0x8003FBF8`.
