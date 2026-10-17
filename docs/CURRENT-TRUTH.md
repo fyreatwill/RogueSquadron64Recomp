@@ -138,6 +138,8 @@ Sweep detail archived in `docs/PROJECT-OVERVIEW.md` ("Archived sweep log").
 
 ## Superseded conclusions worth retaining
 
+- (s5247) "The old-commit bisect is blocked and the loop must stop" (s5246 BLOCKED.md). Believable because cp/ditto were denied headless; overturned because the clone is only needed after the queued HEAD arm fails, and a git worktree avoids cp.
+
 - Earlier claims that M5 was fully closed were too broad: nonzero PCM proves
   route activity, not every audio contract.
 - Earlier claims that the loop had no runnable target were overturned when a
@@ -371,9 +373,9 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
-- **s5246 status:** old-commit bisect clone blocked by headless cp/ditto permission (see scratch/agent/BLOCKED.md); HEAD-arm soak s5246_head_arm_loadlog queued. No new measurement.
+- **s5247 status:** the s5246 clone block was premature (the clone is only needed if the HEAD arm fails, and that arm has not run). First fold soak_queue/s5246_head_arm_loadlog (pass => host load/time-of-day; fail => old-commit arm via `git worktree add scratch/wt_70a56647 70a56647` with lib/ symlinked, untested; cp/ditto stay permission-denied headless). Archived: scratch/agent/BLOCKED.resolved.s5246-bisect-clone.md. No new measurement.
 0g. (s5243) s5242 A/B: BOTH mask arms failed nohangar (CRASH=0), so the TO_PTR mask is not the cause (two arms agree; load avg ~6.7 so flake not excluded). Recipe delta vs passing s5099 = five ROGUESQ_LOG_*GUARD* env flags. Queued soak_queue/s5243_envflag_ab.sh (A = s5099 env control, B = A + guard flags). Read its SOAK-RESULTS line first; outcome map in scratch/agent/NEXT.md.
-0g. (s5244) s5243 env-flag A/B: control arm A (exact s5099 env) FAILED nohangar, so the log flags are refuted and the s5240 mask is un-implicated (both s5242 arms failed). The route stall is host load/time-of-day or an un-marked lib patch (s5235/36/39). Divergence marker (single-source): slot pool 'first 0 populated' vs s5099's 4 at t=6.6s, then stuck at origin 0x6DD280. Only decisive control: build 70a56647 end-to-end in an APFS-cloned copy (see NEXT.md). Until then the 0d mask and the s5229-s5240 guards are UNVALIDATED against the hangar route.
+0g. (s5244) s5243 env-flag A/B: control arm A (exact s5099 env) FAILED nohangar, so the log flags are refuted and the s5240 mask is un-implicated (both s5242 arms failed). The route stall is host load/time-of-day or an un-marked lib patch (s5235/36/39). Divergence marker (single-source): slot pool 'first 0 populated' vs s5099's 4 at t=6.6s, then stuck at origin 0x6DD280. Decisive control if the HEAD arm fails: build 70a56647 end-to-end (clone or worktree, see NEXT.md). Until then the 0d mask and the s5229-s5240 guards are UNVALIDATED against the hangar route.
 0f. (s5242) s5240 mask soak FAILED the route (nohangar t=205, no CRASH). A/B arms queued: soak_queue/s5242_maskon.sh vs s5242_maskoff.sh (binaries build/RS64_maskon / RS64_maskoff). Read both SOAK-RESULTS lines first: on-fail+off-pass => revert TO_PTR mask (H-mask); both pass => flake; both fail => bisect s5229-s5240 / host load. Until resolved the 0d mask is UNVALIDATED.
 0e. (s5241) Queued soak scratch/agent/soak_queue/s5240_to_ptr_mask_regress.sh to check the 0d mask for regression (clean = crash=0, mission_onset ~174s). Read its SOAK-RESULTS.md line first next iteration; if clean, resume M5 audio plan. No conclusion overturned this session.
 
