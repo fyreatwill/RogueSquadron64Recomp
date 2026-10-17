@@ -1,12 +1,16 @@
-# Next: audit lwl/lwr (and ldl/ldr) pairs split by a branch target (M3 idiom class)
+# Next: audit direct j/jal targets that fall in overlay-aliased VMA ranges (M3 idiom class)
 
-Delay-slot classes (operand hazard s5345, branch-in-slot s5346) are closed.
-Hypotheses: H1 every lwl/lwr pair is adjacent or in straight-line code (class empty);
-H2 some pair has a branch target between halves, so recomp's merged/ordered handling
-could read a stale partial register; H3 sites only in runtime-replaced libultra.
-Discriminator: extend tools/ with a census of lwl/lwr/swl/swr/ldl/ldr whose partner
-is not within the same basic block (a branch target or branch lies between). Positive
-control: synthetic split pair must be flagged. Report count; for hits read generated C.
-Do not touch lib/.
+lwl/lwr split-pair class closed (s5347). Finding on the way: the main ELF has overlays
+aliasing the same VMAs (e.g. 0x800C1960 exists in several sections).
+Hypotheses: H1 every direct jal/j into an aliased VMA is generated with overlay-aware
+dispatch (or is intra-overlay and thus unambiguous); H2 some jal from main/other-overlay
+code targets an aliased VMA and binds to a single overlay's function statically
+(wrong callee when another overlay is resident); H3 aliased ranges only contain
+overlay-internal calls (class empty).
+Discriminator: tools/ census (reuse tools/audit_lwl_lwr_split.py runs()) listing, per
+address run (overlay), the VMA span; then every jal/j whose target lies in a span
+shared by >=2 runs, tagged by whether caller run == target run. Positive control:
+synthetic cross-run jal into an aliased span must be flagged. For hits, read the
+generated C call site and how the project resolves overlay funcs. Do not touch lib/.
 
-HYPOTHESIS-ID: lwl-lwr-split-pair-audit
+HYPOTHESIS-ID: overlay-alias-direct-call-audit
