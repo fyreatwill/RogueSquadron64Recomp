@@ -161446,3 +161446,19 @@ does not select H1 versus H2 because the retained port capture is row-capped
 and not task-keyed at comparable coverage. No mitigation was added. The next
 unit is a complete task-keyed port comparison. Audit:
 `docs/REVISIT-S5297-M4-TASK-JOIN.md`.
+
+## Session 5298 (2026-10-17) — M4 port task-keyed accumulator coverage
+
+The qualified port route was rebuilt and run with the task-keyed M4 probes.
+The first invocation exposed that `ROGUESQ_M4_TARGET_CAP=0` suppresses all
+rows rather than meaning unlimited; the corrected invocation used a large cap
+and emitted 826,080 mid-task rows plus 3,744 task-end rows. VI-512 and both
+probe streams fired.
+
+The reduction found 234 mid-task task IDs, 200 with a sampled `0x8000`, and
+232 joined task-end rows, while the end stream contained 3,746 unique task
+IDs. Thus the existing mid-task hook is stage-selective and does not cover a
+complete phase-qualified graphics-task table. H3 remains; H1 versus H2 is
+not selected. End-task `sat8000` was zero in phases 5 and 7, but no
+accumulator-origin mitigation follows. Audit:
+`docs/REVISIT-S5298-M4-PORT-TASK-JOIN.md`.

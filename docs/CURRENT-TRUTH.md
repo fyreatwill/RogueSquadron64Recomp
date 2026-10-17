@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5297 (2026-10-17). The
+Compact operational handoff, maintained at Session 5298 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -75,6 +75,13 @@ one at task end. This closes the task-key failure but does not select H1 vs H2:
 the retained port capture is row-capped and not task-keyed at comparable
 coverage. No port mitigation follows. Audit:
 `docs/REVISIT-S5297-M4-TASK-JOIN.md`.
+
+Session 5298 reran the qualified port route with a large mid-task cap. It
+emitted 826,080 mid-task rows and 3,744 task-end rows; 234 task IDs had
+mid-task rows, 200 with a sampled `0x8000`, and 232 joined an end row. The end
+stream had 3,746 unique task IDs. VI-512 and both probe streams fired, but the
+mid-task hook is stage-selective, so H3 remains and H1 versus H2 is not
+selected. Audit: `docs/REVISIT-S5298-M4-PORT-TASK-JOIN.md`.
 
 ## Durable state
 
@@ -548,13 +555,13 @@ generated reference. Preserve the data name. Audit:
 
 ## Next steps (single monotonic backlog)
 
-- **s5297:** The cxd4 task serial joins every one of 2,083 retail graphics
-  tasks: 1,222 have a mid-task `0x8000` lane and 0 have one at task end, with
-  positive VI and whole-RDRAM controls. H3 (unevaluable task join) is refuted,
-  but H1 versus H2 still requires comparable per-task port prevalence. Add the
-  same task serial to the port-side mid-task/task-end capture and compare the
-  complete per-task table. Do not add a mitigation or resume the generated-
-  symbol sweep before that comparison.
+- **s5298:** The large-cap port capture found 234 mid-task task IDs (200 with
+  a sampled `0x8000`) and 232 joins, but 3,746 task-end IDs overall. Controls
+  fired; the existing mid-task hook is stage-selective, so H3 remains and H1
+  versus H2 is not selected. Do not treat transient port `0x8000` observations
+  as an origin explanation. Park M4 pending a broader task-coverage
+  discriminator; resume the bounded generated-symbol sweep at
+  `relinkNpcSlotToNewParentGroup = 0x8003EFDC`.
 
 - **s5293:** `allocateNpcSlot = 0x8003E5F8` is a named, already-synchronized
   callable NPC free-list allocator; the helper made zero edits and independent
