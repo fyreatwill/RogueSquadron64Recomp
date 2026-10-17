@@ -159574,3 +159574,16 @@ or soak was needed for this naming-only classification. Evidence:
 `docs/RENAME-S5154-AUDIT.md`.
 
 Next: audit `__osPfsRWInode = 0x8002FD5C`.
+
+## Session 5155 (2026-10-17) — classified `__osPfsRWInode` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Audited the next generated-
+symbol candidate, `__osPfsRWInode = 0x8002FD5C`, with the bounded rename helper
+and direct generated-tree checks. The helper made zero edits and reported
+`already-synchronized`. No generated body, placeholder, overlay record, or
+independent generated caller exists at the candidate address; the requested
+companion boundary is `0x8003007C`. Preserve the existing ABI name as an
+unmaterialized libultra entry. No build or soak was needed for this naming-only
+classification. Evidence: `docs/RENAME-S5155-AUDIT.md`.
+
+Next: audit the next companion entry after `0x8003007C`.
