@@ -19,9 +19,9 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
-The current bounded work is the generated-symbol sweep. Session 5308 found
-`spawnNpcWithSubtype = 0x8003FE9C` already synchronized; the next candidate is
-`destroyTransientNpcSlots = 0x8004028C`.
+The current bounded work is the generated-symbol sweep. Session 5309 found
+`destroyTransientNpcSlots = 0x8004028C` already synchronized; the next
+candidate is `allocAndInitParticlePool = 0x80040310`.
 
 ## Durable state
 
@@ -102,7 +102,7 @@ conflicting fragments. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Classify `destroyTransientNpcSlots = 0x8004028C` with the bounded renaming
+1. Classify `allocAndInitParticlePool = 0x80040310` with the bounded renaming
    helper and independent generated-tree inspection. This is the next work
    unit in `scratch/agent/NEXT.md`.
 2. Continue the same sweep slug only while each candidate is bounded and

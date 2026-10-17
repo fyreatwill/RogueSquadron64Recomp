@@ -161582,3 +161582,15 @@ present. This selects the already-synchronized hypothesis and rules out a
 rename or data/ABI preservation case. No build or soak was warranted; the
 next candidate is `destroyTransientNpcSlots` at `0x8004028C`. Audit:
 `docs/RENAME-S5308-AUDIT.md`.
+
+## Session 5309 (2026-10-17) — generated-symbol sweep: `destroyTransientNpcSlots` is synchronized
+
+Ran the bounded generated-symbol helper for `destroyTransientNpcSlots` at
+`0x8004028C`; it reported `already-synchronized` and renamed zero references
+in zero files. Independent inspection found the companion symbol-map entry,
+named generated body and declaration, overlay record, and a named generated
+caller. No `func_8004028C` placeholder or conflicting fragment was present.
+This selects the already-synchronized hypothesis and rules out a rename or
+data/ABI preservation case. No build or soak was warranted; the next candidate
+is `allocAndInitParticlePool` at `0x80040310`. Audit:
+`docs/RENAME-S5309-AUDIT.md`.
