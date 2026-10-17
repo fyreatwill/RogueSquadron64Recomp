@@ -159352,3 +159352,16 @@ next entry, `osLeoDiskInit`, at `0x8002CFB0`.
 This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
 semantic generated-symbol rename, build, or soak for this entry. Audit:
 `docs/RENAME-S5138-AUDIT.md`. Next candidate: `osLeoDiskInit = 0x8002CFB0`.
+
+## Session 5139 (2026-10-17) — classified `osLeoDiskInit` as unmaterialized
+
+Ran the bounded generated-symbol helper and independent generated-tree checks
+for companion `osLeoDiskInit = 0x8002CFB0`. The helper changed zero references
+and reported `already-synchronized`. The generated tree contains no
+placeholder, ABI declaration, body, overlay record, or direct generated caller
+for this address. The companion map places the next entry, `osMapTLBRdb`, at
+`0x8002D370`.
+
+This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
+semantic generated-symbol rename, build, or soak for this entry. Audit:
+`docs/RENAME-S5139-AUDIT.md`. Next candidate: `osMapTLBRdb = 0x8002D370`.

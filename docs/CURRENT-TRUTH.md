@@ -92,6 +92,11 @@ were retained below or in the project overview.
   has only an ABI declaration plus a zero-size overlay record, with no body or
   caller. The companion next-entry boundary is `0x8002CFB0`; preserve the ABI
   name. Audit: `docs/RENAME-S5138-AUDIT.md`.
+- `osLeoDiskInit = 0x8002CFB0` is another unmaterialized libultra entry: the
+  bounded helper reports `already-synchronized`, and the generated tree has no
+  body, declaration, overlay record, or caller. The companion next-entry
+  boundary is `0x8002D370`; preserve the ABI name. Audit:
+  `docs/RENAME-S5139-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -147,7 +152,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osLeoDiskInit = 0x8002CFB0` using the bounded rename helper. Rename
+1. Audit `osMapTLBRdb = 0x8002D370` using the bounded rename helper. Rename
    only if the generated body, exact next-entry span, semantic mapping, and
    live caller all agree; otherwise preserve the ABI name and record the
    classification.
