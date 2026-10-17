@@ -159060,3 +159060,14 @@ wrapper extracts the guest queue pointer before calling the host
 helper reported zero changes and `already-synchronized`; the ABI name was
 preserved and the audit is in `docs/RENAME-S5113-AUDIT.md`. This rules out a
 safe generated-symbol rename for this candidate; no build or soak was needed.
+## Session 5114 (2026-10-17) — classified next libultra mapping as host wrapper
+
+Audited companion `osContGetQuery = 0x8002AC04` with the generated-body,
+overlay-span, and direct-caller discriminator. The snapshot has no generated
+prologue/body, four generated callers through `osContGetQuery_recomp`, and a
+zero-span overlay record. The runtime wrapper translates the guest status
+pointer and calls the host implementation. The bounded rename helper changed
+zero references and reported `already-synchronized`; preserve the ABI name.
+This is single-source source-audit evidence, independently supported by the
+generated caller/overlay grep and runtime wrapper inspection. No build or soak
+was warranted. Next candidate: `osContStartReadData = 0x8002AC30`.
