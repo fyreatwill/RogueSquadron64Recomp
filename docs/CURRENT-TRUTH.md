@@ -678,7 +678,7 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSpSetPc = 0x800343E0`, whose next
+1. Resume the companion sweep with `__osSpSetStatus = 0x80034420`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration
    now that the last-15 preflight has been broken by the retail revisit. The
    retail entry boundary remains open only for a port-side join. The M4 page

@@ -160209,3 +160209,16 @@ evidence and supplies entry tuples for a future port-side join, but does not
 identify the port writer or prove a port defect. Added
 `docs/REVISIT-S5203-RETAIL-ENTRY-FIELDS.md`; no runtime change or soak was
 warranted.
+
+## Session 5204 (2026-10-17) — classified `__osSpSetPc` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `__osSpSetPc = 0x800343E0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found no body, placeholder, overlay record, or direct
+generated caller at the companion address; the next companion entry is
+`__osSpSetStatus = 0x80034420`, giving a nominal `0x40` span with no body to
+validate. Preserve the existing ABI-semantic name. This rules out a
+generated-symbol rename for this ABI boundary, not the runtime implementation
+of the host wrapper. Added `docs/RENAME-S5204-AUDIT.md`; no build or soak was
+warranted for a naming-only result.

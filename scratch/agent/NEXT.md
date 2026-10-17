@@ -1,9 +1,8 @@
-# Next: generated-symbol renaming sweep — `__osSpSetPc` candidate
+# Next: generated-symbol renaming sweep — `__osSpSetStatus` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-The 15-session sweep revisit preflight was broken by Session 5203's retail
-boundary revisit. Resume the bounded companion audit for
-`__osSpSetPc = 0x800343E0`; do not run a build or soak.
+Run one bounded companion audit for `__osSpSetStatus = 0x80034420`; do not
+build or soak.
 
 Competing hypotheses and discriminator:
 
@@ -17,5 +16,5 @@ Competing hypotheses and discriminator:
 The discriminator is the bounded helper result plus generated-tree body/span
 and caller counts. Run:
 
-    rg -n '__osSpSetPc|func_800343E0|fake_func_800343E0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800343E0 --end-address 0x80034420
+    rg -n '__osSpSetStatus|func_80034420|fake_func_80034420' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80034420 --end-address 0x800344D0
