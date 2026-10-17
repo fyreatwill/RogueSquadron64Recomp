@@ -159228,3 +159228,23 @@ generated caller. The rename helper changed zero references and reported
 `already-synchronized`. This selects the host-wrapper/ABI-boundary outcome and
 rules out a semantic rename, build, or soak for this candidate. Audit:
 `docs/RENAME-S5128-AUDIT.md`. Next candidate: `__osException`.
+
+## Session 5129 (2026-10-17) — retail M4 mid-task accumulator revisit
+
+The last 15 sessions were all generated-symbol sweep classifications, so the
+required REVISIT used the independent cxd4 retail oracle rather than another
+rename candidate. The existing per-task VACC dump remained enabled as a
+positive control, and an env-gated cxd4 probe sampled VACC every 256 RSP
+instructions during graphics tasks. The run reached the qualified hangar
+phase at 512-wide origins `0x006ab400/0x006ab800`.
+
+There were 2,090 graphics completion records aligned 1:1 with RDP rows and
+3,048,760 mid-task samples grouped into the same 2,090 tasks. Of 577 512-wide
+tasks, 289 were hangar-origin tasks. No sampled VACC lane equaled `0x8000` in
+the hangar, any 512-wide task, or any other phase; the completion dump also
+had zero. Controls passed: both dumps were nonempty (27,171,928 and
+207,315,680 bytes) and every graphics task was represented. This selects
+H-retail-no-0x8000-mid-task and rules out retail mid-task accumulator state as
+the carrier of the port's hangar value. Single-source oracle evidence only;
+it does not explain the port and adds no mitigation. Audit:
+`docs/REVISIT-S5129-AUDIT.md`.

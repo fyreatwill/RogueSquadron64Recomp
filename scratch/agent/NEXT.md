@@ -31,3 +31,7 @@ Commands:
 If all generated-name gates pass, apply the explicit mapping and record a new
 audit. Otherwise preserve the wrapper ABI and record the classification. No
 build or soak is needed for a naming-only or host-wrapper result.
+
+The prior REVISIT is closed for this cycle: the independent retail cxd4 run
+sampled 3,048,760 mid-task graphics states, including 289 hangar tasks, with
+zero `0x8000` VACC lanes; completion-state and mid-task controls both fired.

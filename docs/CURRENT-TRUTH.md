@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5128 (2026-10-17). The
+Compact operational handoff, maintained at Session 5129 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -97,8 +97,11 @@ were retained below or in the project overview.
 - External retail-entry is qualified through title/hangar/mission on the Rice
   route; the old exact PC boundary is not a current target.
 - The M4 accumulator boundary is closed at task-end granularity: hangar
-  `0x8000` lane counts matched retail (port 0/1955, retail 0/576). Mid-task
-  origin is not established.
+  `0x8000` lane counts matched retail (port 0/1955, retail 0/576). A new
+  retail cxd4 oracle run sampled mid-task state and found 0/289 hangar tasks
+  with a `0x8000` lane (0/577 across all 512-wide tasks). This is
+  single-source retail evidence, not a port explanation; see
+  `docs/REVISIT-S5129-AUDIT.md`.
 - Heap/copy/message-queue/PI-DMA and audited host-wrapper pointer classes are
   closed on the qualified keyed route with positive controls. Re-open only on
   a phase-qualified recurrence.
