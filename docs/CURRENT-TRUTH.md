@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5287 (2026-10-17). The
+Compact operational handoff, maintained at Session 5288 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -173,7 +173,13 @@ types it as `OSViMode[42]` data of size `0xD20`, ending at `0x80040050`, and
 the generated tree has only a data-region `nop` with no callable body,
 placeholder, declaration, overlay record, or direct reference. Audit:
 `docs/RENAME-S5287-AUDIT.md`. The next sweep candidate is the first
-unclassified companion record after `0x80040050`.
+unclassified companion record after `0x80040050`. Session 5288 classified
+`getNpcContextByIndex = 0x8004013C` as already synchronized. The bounded
+helper reported `already-synchronized` and renamed zero references in zero
+files; the generated tree has the named declaration, call sites, and overlay
+record, with no placeholder at the address. Audit:
+`docs/RENAME-S5288-AUDIT.md`. The next sweep candidate is
+`getNpcContextField8 = 0x8004015C`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or

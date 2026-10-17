@@ -161311,3 +161311,15 @@ callable body, placeholder, declaration, overlay record, or direct reference.
 H1 (typed data, no callable symbol) is selected; H2/H3 are ruled out for
 this address. No build or soak was warranted. Audit:
 `docs/RENAME-S5287-AUDIT.md`.
+
+## Session 5288 (2026-10-17) — generated-symbol sweep: `getNpcContextByIndex` is synchronized
+
+Ran the bounded rename helper for `0x8004013C..0x8004015C` and independently
+searched the companion map and generated tree. The companion record is the
+named callable `getNpcContextByIndex`; the helper reported
+`already-synchronized` and renamed zero references in zero files. The
+generated tree contains its named declaration, call sites, and overlay record,
+with no placeholder at the address. H1 is selected in the
+already-synchronized sense; H2/H3 are ruled out for this address. No build or
+soak was warranted. Audit: `docs/RENAME-S5288-AUDIT.md`. Next:
+`getNpcContextField8 = 0x8004015C`.

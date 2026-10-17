@@ -1,9 +1,9 @@
 # Next: continue the generated-symbol sweep
 
-Work unit: identify the first unclassified companion/generated record after
-`0x80040050`, then run one bounded helper classification and independent
-generated-tree inspection. Do not build or soak unless the discriminator finds
-a callable placeholder or a needed rename.
+Work unit: classify `getNpcContextField8 = 0x8004015C`, the next companion
+record after the completed `0x8004013C` check, with one bounded helper run and
+independent generated-tree inspection. Do not build or soak unless the
+discriminator finds a callable placeholder or a needed rename.
 
 Before any build, record the competing hypotheses and discriminator in this
 file. For the next candidate they are:
