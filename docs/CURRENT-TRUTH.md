@@ -611,11 +611,16 @@ found no body, placeholder, overlay record, or direct generated caller at the
 companion address. Its nominal span to `proutSprintf = 0x80033CA0` is `0x50`,
 with no body to validate. Preserve the ABI name. Audit:
 `docs/RENAME-S5194-AUDIT.md`. The next candidate is now
-`proutSprintf = 0x80033CA0`.
+`proutSprintf = 0x80033CA0`. `proutSprintf = 0x80033CA0` is now classified as
+already correctly named: its generated body and exact `0x24` overlay span
+end at `0x80033CC4`, matching the companion `sprintf` entry, but the
+generated tree has no independent caller. Preserve the ABI name. Audit:
+`docs/RENAME-S5195-AUDIT.md`. The next candidate is now
+`sprintf = 0x80033CC4`.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `proutSprintf = 0x80033CA0`, whose next
+1. Resume the companion sweep with `sprintf = 0x80033CC4`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page

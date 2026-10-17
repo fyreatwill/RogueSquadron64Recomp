@@ -160093,3 +160093,16 @@ validate. Preserve the ABI name and continue the sweep at `proutSprintf`. This
 rules out an actionable generated rename at this entry, but does not bear on
 runtime behavior. No build or soak was warranted for this naming-only result.
 Audit: `docs/RENAME-S5194-AUDIT.md`.
+
+## Session 5195 (2026-10-17) — classified `proutSprintf` as correctly named
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `proutSprintf = 0x80033CA0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree inspection found a body with an exact `0x24` span ending at
+`0x80033CC4`; the overlay table independently records the same `0x24` span
+before `sprintf`. There was no independent generated caller, so the existing
+ABI name is already correct and no rename was made. This rules out an
+actionable generated rename at this entry, but does not bear on runtime
+behavior. No build or soak was warranted for this naming-only result. Audit:
+`docs/RENAME-S5195-AUDIT.md`. The next candidate is `sprintf = 0x80033CC4`.
