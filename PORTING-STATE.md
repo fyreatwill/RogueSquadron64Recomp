@@ -159280,3 +159280,13 @@ companion map places the next entry at `__osDisableInt = 0x8002C240`. This
 selects the host-wrapper/ABI-boundary or unmaterialized-entry outcome and
 rules out a semantic rename, build, or soak. Audit:
 `docs/RENAME-S5132-AUDIT.md`. Next candidate: `__osDisableInt`.
+
+## Session 5133 (2026-10-17) — classified `__osDisableInt` as host wrapper
+
+Ran the bounded generated-symbol helper and independent generated-tree checks
+for companion `__osDisableInt = 0x8002C240`. The helper changed zero references
+and reported `already-synchronized`. The generated tree has the ABI declaration
+and one caller, but no generated body or placeholder; its overlay record has
+`rom_size = 0`. Preserved the ABI name and recorded the evidence in
+`docs/RENAME-S5133-AUDIT.md`. This rules out a semantic generated-symbol rename
+for this entry; it does not rule out the next companion entry.

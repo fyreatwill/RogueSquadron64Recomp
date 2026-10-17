@@ -77,7 +77,7 @@ were retained below or in the project overview.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
-  through `docs/RENAME-S5128-AUDIT.md`.
+  through `docs/RENAME-S5133-AUDIT.md`.
 
 ## Operational rules
 
@@ -129,7 +129,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osDisableInt = 0x8002C240` using the bounded rename helper. Rename only
+1. Audit `__osRestoreInt = 0x8002C260` using the bounded rename helper. Rename only
    if the generated body, exact next-entry span, semantic mapping, and live
    caller all agree; otherwise preserve the ABI name and record the
    classification.
