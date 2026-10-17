@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5337 (2026-10-17).
+Compact operational handoff, maintained at Session 5338 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -91,8 +91,8 @@ this discriminator; no writer or mitigation follows. See
 - Heap/copy/message-queue/PI-DMA and audited host-wrapper pointer classes are
   closed on the qualified route with positive controls. The MIPS GCC toolchain
   is absent, so PatchesLib qualification remains blocked until supplied.
-  Session 5337 directly checked both required executables; neither is on PATH,
-  so no build was attempted.
+  Sessions 5337–5338 directly checked both required executables; neither is on
+  PATH, so no build was attempted.
 
 ### Generated symbols
 
@@ -148,8 +148,8 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
 4. PatchesLib qualification is blocked on the external MIPS GCC/LD toolchain:
-   Session 5337 found neither `mips64-elf-gcc` nor `mips64-elf-ld` on PATH.
-   When supplied, record generation, compile, and link outcomes.
+   Sessions 5337–5338 found neither `mips64-elf-gcc` nor `mips64-elf-ld` on
+   PATH. When supplied, record generation, compile, and link outcomes.
 
 ## Evidence index
 

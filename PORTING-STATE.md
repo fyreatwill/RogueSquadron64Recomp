@@ -161933,3 +161933,13 @@ version, target, compile, or link checks were possible, and no PatchesLib
 build was attempted. This selects the missing-toolchain hypothesis and
 blocks qualification until a MIPS GCC/LD toolchain is supplied; it does not
 select a new M3 idiom or authorize a source mitigation.
+## Session 5338 (2026-10-17) — blocked on the external PatchesLib toolchain
+
+The planned PatchesLib qualification could not run. The independent
+`command -v mips64-elf-gcc` and `command -v mips64-elf-ld` checks both returned
+no path, matching Session 5337's toolchain-gate result. This rules out neither
+the PatchesLib build nor its configuration; it rules out only running an
+unqualified build on this host. No source or runtime experiment was run. A
+human must supply/install the MIPS GCC/LD toolchain or provide its directory;
+the next work unit remains the version/target check followed by the documented
+PatchesLib pipeline.

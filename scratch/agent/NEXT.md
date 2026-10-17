@@ -5,10 +5,10 @@ The generated-symbol NEXT item was stale: Session 5336 rechecked
 header, overlay registration, project TOML, fixup mapping, and companion map.
 Do not repeat that census or rename by address.
 
-Session 5337 selected H2: neither required executable is available on this
-host. This is an external prerequisite, not a reason to run an unqualified
-build or repeat the availability check. Once a human supplies or installs the
-toolchain, run the following single work unit.
+Session 5338 remains blocked on H2: neither required executable is available on
+this host. This is an external prerequisite, not a reason to run an
+unqualified build or repeat the availability check. Once a human supplies or
+installs the toolchain, run the following single work unit.
 
 Competing hypotheses and discriminator:
 
