@@ -6,6 +6,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
 
+- **s5085 (m6-mission-stall):** the s5084 'stall' = MAIN thread spinning in shutdownMusyXVoices (A14 status-03 wait) under endMissionCleanup->finalizeCurrentSpeechBuffer (`sample` stack, arm `in`, 111 s after onset). Idle arm: no stall in 175 s (n=1 each; one idle try crashed in updateHangarBayScene). Open: what ends the mission, why A14 never exits. Supersedes s5084's 'game thread blocked/dead'.
 - **s5084 (m6-mission-soak):** mission survives ~75 s then the game thread silently stops (no pad polls, [watch] frozen) while VI keeps ticking with stalled=1; no crash line. Single run. Next: no-input control + `sample` of the hung pid (NEXT.md).
 - **s5083 (unblock):** s5082 block re-scoped, not escalated: next unit m6-mission-soak (sustained-input mission soak, NEXT.md). Open non-gating deps: mips64-elf-gcc, rename symbol source, screen capture (TCC).
 - **s5072:** Pad input can be injected without display/focus: `ROGUESQ_PAD_OVERRIDE_FILE=path` (file "btn sx sy"; librecomp cont.cpp). Verified by padlog edge (padovr_test.sh). winctl no longer required for key tests.
