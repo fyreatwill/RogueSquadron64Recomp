@@ -435,3 +435,5 @@ Lesson: any raw `rdram[...]` byte read in a census must apply `^3`.
 PORTING-STATE s5230 predating this are suspect (single-source) until re-read. Remaining single-byte
 `rdram[x]` reads: s5231 classified all; 26 more unswizzled byte reads fixed (hashes/dumps over byte-permuted data were wrong).
 - **s5253 (unblock):** s5252 block re-scoped (route 3). NEXT = offline rt64 guest-sized-host-buffer audit; host-load dependency for the s5250 baseline remains open.
+
+- s5254: rt64 guest-sized host-buffer leads 1,3,6 guarded (light index, VI screenFb bytes, SHADOW2 size); 2/4 are PROT_NONE faults, 5 dead. Uncovered: tmem, texture upload, f3dfactor5 vertex/matrix. Baseline soak s5250 still load-gated.

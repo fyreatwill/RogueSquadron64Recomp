@@ -5041,7 +5041,7 @@ index 6051f4e..e4a8fc3 100644
          uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
          if (hashSet.find(hash) == hashSet.end()) {
 diff --git a/src/hle/rt64_rsp.cpp b/src/hle/rt64_rsp.cpp
-index d4d9883..02080f6 100644
+index d4d9883..c5aeba0 100644
 --- a/src/hle/rt64_rsp.cpp
 +++ b/src/hle/rt64_rsp.cpp
 @@ -5,6 +5,8 @@
@@ -5064,7 +5064,23 @@ index d4d9883..02080f6 100644
          reset();
      }
  
-@@ -1043,8 +1049,46 @@ namespace RT64 {
+@@ -923,6 +929,7 @@ namespace RT64 {
+     
+     void RSP::setLight(uint8_t index, uint32_t address) {
+         assert((index >= 0) && (index <= RSP_MAX_LIGHTS));
++        if (index > RSP_MAX_LIGHTS) return; // s5254: assert is compiled out; corrupt DL index would write past lights[]
+         const uint32_t rdramAddress = fromSegmentedMasked(address);
+         const uint8_t *data = reinterpret_cast<const uint8_t *>(state->fromRDRAM(rdramAddress));
+         memcpy(&lights[index], data, sizeof(Light));
+@@ -931,6 +938,7 @@ namespace RT64 {
+ 
+     void RSP::setLightColor(uint8_t index, uint32_t value) {
+         assert((index >= 0) && (index <= RSP_MAX_LIGHTS));
++        if (index > RSP_MAX_LIGHTS) return; // s5254: assert is compiled out; corrupt DL index would write past lights[]
+         auto &rawLight = lights[index].raw;
+         rawLight.words[0] = value;
+         rawLight.words[1] = value;
+@@ -1043,8 +1051,46 @@ namespace RT64 {
      }
  
      void RSP::drawIndexedTri(uint32_t a, uint32_t b, uint32_t c, bool rawGlobalIndices) {
@@ -5111,7 +5127,7 @@ index d4d9883..02080f6 100644
          assert(cycleType != G_CYC_COPY);
  
          // Don't draw anything if both tris are being culled.
-@@ -1295,6 +1339,14 @@ namespace RT64 {
+@@ -1295,6 +1341,14 @@ namespace RT64 {
          shadingSmoothMask = gbi->constants[F3DENUM::G_SHADING_SMOOTH];
      }
  
@@ -5153,7 +5169,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..2b61c50 100644
+index 10f98af..85c8d76 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -6893,13 +6909,14 @@ index 10f98af..2b61c50 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3361,17 @@ namespace RT64 {
+@@ -2018,9 +3361,18 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
 -                present.storage.resize(screenFbBytes);
 -                memcpy(present.storage.data(), &RDRAM[screenFbAddress], screenFbBytes);
 -                uint64_t newScreenHash = XXH3_64bits(present.storage.data(), screenFbBytes);
++                if (uint64_t(screenFbAddress) + screenFbBytes > 0x800000) screenFbBytes = 0; // s5254: RDRAM above 8MB is PROT_NONE
 +                S4267T _um(28); // s4907: present.storage copy + hash
 +                static const bool s_ctl28 = [](){ const char *v = std::getenv("ROGUESQ_S4267_SLEEP28"); return v && *v && *v != '0'; }();
 +                if (s_ctl28) std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -6914,7 +6931,7 @@ index 10f98af..2b61c50 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3384,51 @@ namespace RT64 {
+@@ -2033,26 +3385,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -6984,7 +7001,7 @@ index 10f98af..2b61c50 100644
              }
          }
  
-@@ -2060,6 +3436,7 @@ namespace RT64 {
+@@ -2060,6 +3437,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -6992,7 +7009,7 @@ index 10f98af..2b61c50 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4287,4 @@ namespace RT64 {
+@@ -2910,4 +4288,4 @@ namespace RT64 {
              break;
          }
      }

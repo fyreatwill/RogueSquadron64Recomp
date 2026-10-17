@@ -6014,7 +6014,8 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             static std::vector<uint8_t> s_sh2_buf; // shared, tasks serialized
             const uint32_t sh2_phys = ucode_addr & 0x00FFFFF8;
             uint32_t sh2_size = 0x82000; // covers observed +0x803F0 + 0xF80
-            if (sh2_phys + sh2_size > 0x800000) sh2_size = 0x800000 - sh2_phys;
+            if (sh2_phys >= 0x800000) sh2_size = 0;
+            else if (sh2_phys + sh2_size > 0x800000) sh2_size = 0x800000 - sh2_phys;
             if (s_sh2_buf.empty()) {
                 s_sh2_buf.resize(sh2_size);
                 for (uint32_t k = 0; k < sh2_size; k++) {
