@@ -162005,3 +162005,15 @@ source-to-ELF qualification therefore could not run this iteration. This
 confirms the existing-ELF host qualification remains the only available
 PatchesLib result; it does not add evidence about fresh source compilation or
 linking. No runtime or mitigation change was made.
+
+## Session 5343 (2026-10-17) — PatchesLib fresh-build gate still closed; going BLOCKED
+
+Ran `which mips64-elf-gcc mips64-elf-ld mips-linux-gnu-gcc`: all three "not found"
+(H2 selected; H1/H3 not reachable). This is the third consecutive iteration
+(s5337/s5342/s5343) stopped by the same missing cross-toolchain, and the prior
+iteration was SUBSTITUTED, so substituting again would trip the loop's
+two-SUBSTITUTED stop anyway. No code changed; no experiment run.
+Existing-artifact qualification of PatchesLib (s5339-s5341) stays valid.
+Human action needed: install a MIPS64 ELF cross-toolchain (see BLOCKED.md), or
+tell the loop to drop the fresh-source-build qualification and resume the
+strategic-priority list (M3 idiom audits / REVISIT of M4 boundary).

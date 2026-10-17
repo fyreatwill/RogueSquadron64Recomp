@@ -1,4 +1,4 @@
-# Next: qualify a fresh PatchesLib source build when the cross-toolchain exists
+# Next: qualify a fresh PatchesLib source build once the cross-toolchain exists (BLOCKED, see BLOCKED.md)
 
 Session 5342 rechecked the prerequisite and found neither cross-compiler on
 PATH; no fresh source build was run. The host-side declaration path remains

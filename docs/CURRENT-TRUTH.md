@@ -174,3 +174,10 @@ for audio inventory and validation, `docs/F5-UCODE-REFERENCE.md` for the
 microcode contract, and `scratch/agent/SOAK-RESULTS.md` for queued soak
 verdicts. The next iteration must read this file, `scratch/agent/NEXT.md`, and
 the tail of the soak results before acting.
+
+## Session 5343 status
+
+Fresh PatchesLib source qualification is BLOCKED on a missing MIPS64 ELF
+cross-toolchain (third consecutive measured absence). Existing-artifact
+qualification stands. See `scratch/agent/BLOCKED.md`. If the human drops this
+thread, resume the strategic-priority list (M3 idiom audits / M4 revisit).
