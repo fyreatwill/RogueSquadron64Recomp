@@ -158627,3 +158627,10 @@ Result: FORCE arm pg=16 (control fired, pg_skipped=0, mission_onset 173 s, crash
 Next discriminator: next unguarded idiom class = osEPiReadIo/do_rom_pio bounds and SP/AI DMA host wrappers (NEXT.md); same default-vs-FORCE pair.
 
 Verdict wording for the record: the FORCE control fired, so the default-arm zero selects H2 and refutes H1/H3; this closes the PI DMA span class on the keyed route and the next audit must discriminate do_rom_pio/SP DMA the same way.
+
+## Session 5062 (2026-10-16) — M3 guard class: do_rom_pio range guard landed; PIO path never invoked on the keyed route
+Idiom class: osEPiReadIo -> recomp::do_rom_pio (raw 4-byte copy from rom.data()+off to RDRAM, no bounds). Change: `lib/N64ModernRuntime/librecomp/src/pi.cpp` do_rom_pio skips a read whose ROM span leaves rom.size() or whose RDRAM dest leaves 8 MB, logs `[s5062-pio-guard]` (cap 16). Env: `ROGUESQ_PIO_GUARD=0` rollback, `ROGUESQ_PIO_GUARD_FORCE=1` log-only positive control. Patches refreshed via export.sh. Scripts: scratch/agent/s5062_pio_guard_{default,force}.sh (cloned from s5061 keyed title->hangar->mission recipe).
+ORIGIN: no known wild PIO writer; census-first guard, legit callers always in range. Not a mitigation for an observed defect.
+Hypotheses: H1 wild PIO read occurs on route; H2 PIO path exercised and clean; H3 PIO path never invoked on route (or guard wiring broken).
+Result: FORCE arm pg=0 (control did NOT fire; mission_onset 174 s, crash=0); default arm pg=0 (mission_onset 169 s, crash=0). Because FORCE marks every call bad, pg=0 in FORCE means do_rom_pio was invoked 0 times on the route (H3; wiring-broken variant not separately excluded - single-source). H2 NOT selected: the class is unexercised, not shown clean. No generated-code caller of osEPiReadIo found in repo sources by grep (weak second line). SP/AI DMA wrappers not audited this iteration.
+Next: SP/AI DMA host wrapper census with a control that is guaranteed reachable (osSpTaskLoad is called every frame).

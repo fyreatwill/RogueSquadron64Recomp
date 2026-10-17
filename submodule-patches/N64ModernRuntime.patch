@@ -985,7 +985,7 @@ index 8c8e5d1..1d5ee9e 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..b326cd7 100644
+index 43509ba..6b7c581 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -1,3 +1,5 @@
@@ -1099,7 +1099,7 @@ index 43509ba..b326cd7 100644
      // TODO handle misaligned DMA
      assert((physical_addr & 0x1) == 0 && "Only PI DMA from aligned ROM addresses is currently supported");
      assert((ram_address & 0x7) == 0 && "Only PI DMA to aligned RDRAM addresses is currently supported");
-@@ -72,6 +159,9 @@ void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr
+@@ -72,11 +159,35 @@ void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr
          MEM_B(i, ram_address) = *rom_addr;
          rom_addr++;
      }
@@ -1109,7 +1109,33 @@ index 43509ba..b326cd7 100644
  }
  
  void recomp::do_rom_pio(uint8_t* rdram, gpr ram_address, uint32_t physical_addr) {
-@@ -193,6 +283,18 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
+     assert((physical_addr & 0x3) == 0 && "PIO not 4-byte aligned in device, currently unsupported");
+     assert((ram_address & 0x3) == 0 && "PIO not 4-byte aligned in RDRAM, currently unsupported");
++    {   // ROGUESQ s5062: PIO range guard (M3 idiom class). Skips a 4-byte read whose ROM span leaves the cart
++        // image or whose RDRAM dest leaves 8 MB. FORCE arm logs only (positive control).
++        static const bool off = [] { const char* e = std::getenv("ROGUESQ_PIO_GUARD"); return e && e[0] == '0'; }();
++        static const bool force = [] { const char* e = std::getenv("ROGUESQ_PIO_GUARD_FORCE"); return e && e[0] && e[0] != '0'; }();
++        if (!off) {
++            uint32_t a = (uint32_t)ram_address;
++            bool seg = (a < 0x00800000u) || (a >= 0x80000000u && a < 0x80800000u) || (a >= 0xA0000000u && a < 0xA0800000u);
++            bool bad = !seg || physical_addr < recomp::rom_base || (uint64_t)(physical_addr - recomp::rom_base) + 4 > rom.size();
++            static unsigned long viol = 0; static int shown = 0, total = 0;
++            ++total;
++            if (force) bad = true;
++            if (bad) {
++                ++viol;
++                if (shown < 16) { ++shown;
++                    fprintf(stderr, "[s5062-pio-guard] dram=0x%08X phys=0x%08X total=%d viol=%lu%s\n", a, physical_addr, total, viol, force ? " (FORCE control, not skipped)" : " SKIPPED");
++                    fflush(stderr);
++                }
++                if (!force) return;
++            }
++        }
++    }
+     uint8_t* rom_addr = rom.data() + physical_addr - recomp::rom_base;
+     MEM_B(0, ram_address) = *rom_addr++;
+     MEM_B(1, ram_address) = *rom_addr++;
+@@ -193,6 +304,18 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
      for (gpr i = 0; i < count; i++) {
          MEM_B(i, rdram_address) = save_context.save_buffer[offset + i];
      }
@@ -1128,7 +1154,7 @@ index 43509ba..b326cd7 100644
  }
  
  void save_clear(uint32_t start, uint32_t size, char value) {
-@@ -266,13 +368,119 @@ void ultramodern::join_saving_thread() {
+@@ -266,13 +389,119 @@ void ultramodern::join_saving_thread() {
      }
  }
  
@@ -1248,7 +1274,7 @@ index 43509ba..b326cd7 100644
  
              // Send a message to the mq to indicate that the transfer completed
              ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
-@@ -313,12 +521,27 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,12 +542,27 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
@@ -1276,7 +1302,7 @@ index 43509ba..b326cd7 100644
      debug_printf("[pi] DMA from 0x%08X into 0x%08X of size 0x%08X\n", devAddr, dramAddr, size);
  
      do_dma(PASS_RDRAM mq, dramAddr, physical_addr, size, direction);
-@@ -336,6 +559,9 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,6 +580,9 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  

@@ -1,3 +1,3 @@
-# Next: guard-class audit of do_rom_pio + SP DMA host wrappers
+# Next: guard-class audit of SP/AI DMA host wrappers (osSpTaskLoad etc. in librecomp sp.cpp/ai)
 HYPOTHESIS-ID: m3-pi-dma-guard
-s5061 CLOSED: default pg=0, force pg=16 (H2 selected, two-source). Build a default-vs-FORCE pair for the next class; expected default 0 fires, force >0. A nonzero default means name the writer (ra) before any mitigation.
+s5062: PIO guard landed; FORCE control fired 0 => do_rom_pio unreachable on keyed route (unexercised). Pick a wrapper reachable every frame (osSpTaskLoad) so the FORCE control must fire; build default+force pair, clone scratch/agent/s5062_pio_guard_*.sh. Nonzero default => name writer (ra) before any mitigation.
