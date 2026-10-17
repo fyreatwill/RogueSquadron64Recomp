@@ -159049,3 +159049,14 @@ candidate as already synchronized under its placeholder-only policy. This
 selects the host-wrapper hypothesis and rules out a generated body rename for
 this candidate; the `_recomp` ABI name remains unchanged. No build or soak was
 run.
+## Session 5113 (2026-10-17) — classified next libultra mapping as host wrapper
+
+Audited companion `osContStartQuery = 0x8002AB80` as the single bounded
+generated-symbol sweep work unit. The generated snapshot contains four direct
+callers of `osContStartQuery_recomp` but no generated prologue/body at the
+candidate address. Its overlay record has `rom_size = 0`, and the runtime
+wrapper extracts the guest queue pointer before calling the host
+`osContStartQuery`, which sends the SI message and returns zero. The rename
+helper reported zero changes and `already-synchronized`; the ABI name was
+preserved and the audit is in `docs/RENAME-S5113-AUDIT.md`. This rules out a
+safe generated-symbol rename for this candidate; no build or soak was needed.
