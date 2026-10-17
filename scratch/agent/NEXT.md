@@ -1,2 +1,2 @@
-# Next: s5250 cleared src (taskptr guard 0 fires, noguard 0/3). Run soak_queue/s5250_taskptr_baseline.sh with host load<2 (check uptime; quit Chrome/REAPER). Pass => host load; fail => lib-patch bisect (older N64ModernRuntime.patch revision), then resume M5.
-HYPOTHESIS-ID: m3-idiom-class-audit
+# Next: run `soak_queue/s5250_taskptr_baseline.sh` only if `uptime` load1 < 2 (script self-skips with exit 77 otherwise). Pass => host load confirmed, record and resume M5/paused sweep. Fail at load<2 => lib-patch bisect (statically implausible, see CURRENT-TRUTH open dependency). If load >= 2, do NOT write BLOCKED again: take an offline-only unit from the paused sweep in CURRENT-TRUTH instead.
+HYPOTHESIS-ID: host-load-vs-route-stall
