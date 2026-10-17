@@ -159365,3 +159365,12 @@ for this address. The companion map places the next entry, `osMapTLBRdb`, at
 This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
 semantic generated-symbol rename, build, or soak for this entry. Audit:
 `docs/RENAME-S5139-AUDIT.md`. Next candidate: `osMapTLBRdb = 0x8002D370`.
+## Session 5140 (2026-10-17) — classified `osMapTLBRdb` as unmaterialized
+
+Ran the single bounded generated-symbol audit for companion entry
+`osMapTLBRdb = 0x8002D370`. The rename helper changed zero references and
+reported `already-synchronized`. A separate generated-tree search found no
+placeholder, ABI declaration, generated body, overlay record, or direct caller;
+the companion symbol map places `osMotorStop` at `0x8002D3D0`. This rules out a
+safe generated-symbol rename for the candidate and classifies it as an
+unmaterialized libultra ABI entry. No build or soak was needed.

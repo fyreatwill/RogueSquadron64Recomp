@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5138 (2026-10-17). The
+Compact operational handoff, maintained at Session 5140 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -97,6 +97,11 @@ were retained below or in the project overview.
   body, declaration, overlay record, or caller. The companion next-entry
   boundary is `0x8002D370`; preserve the ABI name. Audit:
   `docs/RENAME-S5139-AUDIT.md`.
+- `osMapTLBRdb = 0x8002D370` is another unmaterialized libultra entry: the
+  bounded helper reports `already-synchronized`, and the generated tree has no
+  body, declaration, overlay record, or caller. The companion next-entry
+  boundary is `0x8002D3D0`; preserve the ABI name. Audit:
+  `docs/RENAME-S5140-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -152,7 +157,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osMapTLBRdb = 0x8002D370` using the bounded rename helper. Rename
+1. Audit `osMotorStop = 0x8002D3D0` using the bounded rename helper. Rename
    only if the generated body, exact next-entry span, semantic mapping, and
    live caller all agree; otherwise preserve the ABI name and record the
    classification.
