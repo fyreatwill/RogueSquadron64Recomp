@@ -601,3 +601,6 @@ Since s5042, the keyed title->hangar recipe (s5037 default) stalls: after title 
 - (s5059) FREE_CENSUS=1 hangar recipe 3/3 pass (t=63-75, load ~4): census does not cause the nohangar stall; 7/7 passes on current binary. Earlier stalls (s5042-s5051) unattributed/transient; resume poison-on-free probe (see NEXT.md).
 
 - s5060: poison-on-free A/B on mission route clean (0 crash, 0 guard, control poisoned>=16384); read-after-free thread closed (single route, 1 run per arm).
+
+## s5061 addendum — PI DMA guard
+do_dma (librecomp pi.cpp) now range-guards RDRAM/ROM spans (ROGUESQ_PI_DMA_GUARD=0 rollback, _FORCE=1 control). Built; soaks s5061_pi_dma_guard_{default,force} queued. Expect default pg=0, force pg=16 -> class closed on keyed route. Next: consume them (NEXT.md).

@@ -1,3 +1,4 @@
-# Next: close poison-on-free thread; return to strategic priority (M5 de-stub step per docs/M5-AUDIO-PLAN.md)
-HYPOTHESIS-ID: m5-audio-destub
-s5060 (poison A/B, 2 arms, positive control fired) found no read-after-free on the mission route. The s5041/s5042 hooks are applied in generated funcs_0.c (inert without ROGUESQ_FREE_POISON/CENSUS); revert with tools/revert_s5041_s5042_hooks.py if they interfere. Next: read the first unexecuted step in docs/M5-AUDIO-PLAN.md, write competing hypotheses + discriminator here, build all arms in one iteration.
+# Next: consume s5061 PI DMA guard soaks, then pick next M3 idiom class or M5 item
+HYPOTHESIS-ID: m3-pi-dma-guard
+Read SOAK-RESULTS.md tail for s5061_pi_dma_guard_{default,force}. Expected: default pg=0 (no wild DMA on route), force pg=16 (control fired). Outcomes: default pg>0 => a real wild DMA exists: name the writer (ra in the log line, s4622 note) before touching anything (iron rule 11). force pg=0 => control not wired, null is worthless. Route nohangar flake (s5042-s5051) can fail the arm: rerun, do not conclude.
+If class closes, next idiom class: osEPiReadIo/do_rom_pio unguarded bounds, or osAi/SP DMA host wrappers.
