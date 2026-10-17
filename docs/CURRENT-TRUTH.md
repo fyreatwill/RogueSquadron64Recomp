@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5129 (2026-10-17). The
+Compact operational handoff, maintained at Session 5131 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -25,7 +25,7 @@ generated trees have no bodies or overlay records, with two ABI call sites
 each. The preamble at `0x8002B5F0` is the same ABI-boundary case with no
 generated caller. `__osException = 0x8002B600` is the same ABI-boundary case:
 it has no generated body, overlay record, or direct generated caller. The next
-candidate is `__osEnqueueAndYield`.
+candidate is `__osGetSR`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -126,9 +126,9 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osEnqueueAndYield = 0x8002BC1C` using the bounded rename helper. Rename
-   only if the generated body, exact next-entry span, semantic mapping, and
-   live caller all agree; otherwise preserve the ABI name and record the
+1. Audit `__osGetSR = 0x8002C230` using the bounded rename helper. Rename only
+   if the generated body, exact next-entry span, semantic mapping, and live
+   caller all agree; otherwise preserve the ABI name and record the
    classification.
 2. Continue the companion sweep one entry per iteration while the last-15
    session preflight permits it. If the preflight makes the sweep a REVISIT,

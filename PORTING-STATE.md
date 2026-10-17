@@ -159258,3 +159258,14 @@ the companion map places the next entry at `0x8002BC1C`. This selects the
 host-wrapper/ABI-boundary outcome and rules out a semantic rename, build, or
 soak for this candidate. Audit: `docs/RENAME-S5130-AUDIT.md`. Next candidate:
 `__osEnqueueAndYield`.
+## Session 5131 (2026-10-17) — classified `__osEnqueueAndYield` as host wrapper
+
+Ran the bounded generated-symbol audit for companion `__osEnqueueAndYield =
+0x8002BC1C`. The helper changed zero references and reported
+`already-synchronized` for the candidate and the four adjacent enqueue,
+dispatch, and cleanup entries through `0x8002BEF0`. The generated snapshot
+contains no body, placeholder symbol, overlay record, or direct generated
+caller at `0x8002BC1C`; the companion map places the next entry at
+`__osGetSR = 0x8002C230`. This selects the host-wrapper/ABI-boundary or
+unmaterialized-entry outcome and rules out a semantic rename, build, or soak.
+Audit: `docs/RENAME-S5131-AUDIT.md`. Next candidate: `__osGetSR`.
