@@ -1,6 +1,6 @@
-# Next: generated-symbol sweep — `spawnRandomBurstNpcVariantWrapper`
+# Next: generated-symbol sweep — `destroyNpcSlotByIndexU16`
 
-Work unit: classify `spawnRandomBurstNpcVariantWrapper = 0x80041CBC` with the bounded helper,
+Work unit: classify `destroyNpcSlotByIndexU16 = 0x80041CEC` with the bounded helper,
 then independently inspect the companion record and generated tree. This is a
 classification-only unit; do not build or soak.
 
@@ -11,9 +11,9 @@ Competing hypotheses and discriminator:
 - H3: typed data or an ABI boundary with no callable placeholder selects preservation without renaming.
 
 Run:
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80041CBC --end-address 0x80044724 --limit 1`
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80041CEC --end-address 0x80044724 --limit 1`
 
-Session 5316 result: `initNpcContextFromTransform = 0x80041B8C` was already
+Session 5317 result: `spawnRandomBurstNpcVariantWrapper = 0x80041CBC` was already
 synchronized with zero edits. The companion map and generated tree independently
 agreed: named body, prototype, overlay record, and named generated callers; no
 placeholder or conflicting fragment remained. For the next iteration the

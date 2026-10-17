@@ -161646,3 +161646,10 @@ soak was warranted; the next candidate is `randomBurstNpcHandlerVariant` at
 - Result: `renamed 0 references in 0 files`; the helper classified the candidate as `already-synchronized`.
 - Independent evidence: `main_overlay.txt` names the address; `RecompiledFuncs/funcs_9.c` contains the named callable body; `funcs.h` contains the named prototype; `recomp_overlays.inl` contains the named overlay record; and generated callers in `funcs_17.c`, `funcs_28.c`, `funcs_38.c`, and `funcs_39.c` use the named function. No `func_80041B8C` placeholder or conflicting fragment was found.
 - H1 is selected; H2 and H3 are ruled out for this address. No build or soak was run because this was a bounded classification-only work unit. Audit: `docs/RENAME-S5316-AUDIT.md`. The next bounded candidate is `spawnRandomBurstNpcVariantWrapper = 0x80041CBC`.
+
+## Session 5317 (2026-10-17) — generated-symbol sweep: `spawnRandomBurstNpcVariantWrapper` is synchronized
+
+- Ran the bounded classification helper for `spawnRandomBurstNpcVariantWrapper = 0x80041CBC`.
+- Result: `renamed 0 references in 0 files`; the helper classified the candidate as `already-synchronized`.
+- Independent evidence: `main_overlay.txt` describes the 14-instruction wrapper; `RecompiledFuncs/funcs_9.c` contains the named callable body; `funcs.h` contains the named prototype; and `recomp_overlays.inl` contains the named overlay record. Generated callers use the named symbol, and the body passes `randomBurstNpcHandlerVariant`, type 4, subtype 15 to `spawnNpcOfType`. No `func_80041CBC` placeholder or conflicting fragment was found.
+- H1 is selected; H2 and H3 are ruled out for this address. No build or soak was run because this was a bounded classification-only work unit. Audit: `docs/RENAME-S5317-AUDIT.md`. The next bounded candidate is `destroyNpcSlotByIndexU16 = 0x80041CEC`.
