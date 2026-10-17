@@ -5080,8 +5080,68 @@ extern "C" void rs64_s4457_list_check(uint8_t* rdram, uint32_t value) {
     }
     std::fflush(stderr);
 }
+// s5229: byte-granular last-writer shadow for the entry-byte question. Every
+// patched guest store updates the covered bytes; the entry join then compares
+// the live RDRAM byte at record+0x22 against the last recorded store. A
+// mismatch means the byte was written by something that is not a patched guest
+// store (host memcpy/memset, DMA, unpatched file).
+static uint32_t* g_s5229_pc;
+static uint8_t* g_s5229_val;
+static uint8_t* g_s5229_w;
+static uint64_t g_s5229_calls;
+static bool rs64_s5229_on() {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S5223_ENTRY_JOIN"); return e && e[0] && e[0] != '0'; }();
+    return on;
+}
+static void rs64_s5229_store(char width, uint32_t pc, uint32_t addr, uint32_t value) {
+    if (!g_s5229_pc) {
+        g_s5229_pc = (uint32_t*)std::calloc(0x800000, sizeof(uint32_t));
+        g_s5229_val = (uint8_t*)std::calloc(0x800000, 1);
+        g_s5229_w = (uint8_t*)std::calloc(0x800000, 1);
+    }
+    ++g_s5229_calls;
+    const uint32_t n = width == 'B' ? 1u : width == 'H' ? 2u : width == 'W' ? 4u : width == 'D' ? 8u : 0u;
+    if (!n || addr < 0x80000000u || addr >= 0x80800000u) return;
+    const uint32_t base = addr & 0x7FFFFFu;
+    for (uint32_t i = 0; i < n && base + i < 0x800000u; ++i) {
+        g_s5229_pc[base + i] = pc;
+        g_s5229_w[base + i] = (uint8_t)width;
+        g_s5229_val[base + i] = (uint8_t)(n == 1u ? value : (n == 2u ? (value >> (8u * (1u - i))) : (n == 4u ? (value >> (8u * (3u - i))) : 0xEEu)));
+    }
+}
+// Entry-time query: bucket[origin_idx][(writer pc, width, actual byte, matches recorded)] -> count.
+struct S5229Row { uint32_t pc; uint8_t w, actual, recorded, match; uint64_t n; };
+static S5229Row g_s5229_rows[2][96];
+static int g_s5229_nrows[2];
+static uint64_t g_s5229_over[2], g_s5229_entries[2];
+extern "C" void rs64_s5229_entry(int bi, uint32_t guest_addr, uint32_t actual) {
+    if (bi < 0 || bi > 1 || !g_s5229_pc) return;
+    const uint32_t b = guest_addr & 0x7FFFFFu;
+    ++g_s5229_entries[bi];
+    S5229Row key{g_s5229_pc[b], g_s5229_w[b], (uint8_t)actual, g_s5229_val[b], 0, 0};
+    key.match = g_s5229_pc[b] != 0 && g_s5229_val[b] == (uint8_t)actual;
+    for (int i = 0; i < g_s5229_nrows[bi]; ++i) {
+        S5229Row& r = g_s5229_rows[bi][i];
+        if (r.pc == key.pc && r.w == key.w && r.actual == key.actual && r.recorded == key.recorded) { ++r.n; return; }
+    }
+    if (g_s5229_nrows[bi] < 96) { key.n = 1; g_s5229_rows[bi][g_s5229_nrows[bi]++] = key; }
+    else ++g_s5229_over[bi];
+}
+extern "C" void rs64_s5229_flush(int bi, const char* why) {
+    if (bi < 0 || bi > 1 || !g_s5229_entries[bi]) return;
+    std::fprintf(stderr, "[s5229-writer] bi=%d why=%s entries=%llu hook_calls=%llu rows=%d overflow=%llu :",
+                 bi, why, (unsigned long long)g_s5229_entries[bi], (unsigned long long)g_s5229_calls,
+                 g_s5229_nrows[bi], (unsigned long long)g_s5229_over[bi]);
+    for (int i = 0; i < g_s5229_nrows[bi]; ++i) {
+        const S5229Row& r = g_s5229_rows[bi][i];
+        std::fprintf(stderr, " [pc=%08X w=%c actual=%02X rec=%02X %s n=%llu]", r.pc, r.w ? (char)r.w : '-', r.actual, r.recorded, r.match ? "match" : "MISMATCH", (unsigned long long)r.n);
+    }
+    std::fputc('\n', stderr);
+    std::fflush(stderr);
+}
 extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
                                          uint32_t addr, uint32_t value) {
+    if (rs64_s5229_on()) rs64_s5229_store(width, pc, addr, value);
     {   // s4472: who stores into the slot-0 request byte 0x801545FD (word 0x801545FC)? Control: slot-0 status word 0x80154620.
         static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_S4472"); return e && e[0] && e[0] != '0'; }();
         if (on) {

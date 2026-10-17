@@ -1,23 +1,14 @@
-# Who writes 0x03 at record+0x22 after the port's own clear
-HYPOTHESIS-ID: port-byte-not-retail-clear
+# Choose the next work unit after closing the entry-byte thread
+HYPOTHESIS-ID: m5-audio-destub-next-step
 
-Session 5228: the port runs `sb $zero,0x22` (0x80090F3C) on 53/53 entry
-records, yet the entry byte (0x8008FAAC read) is 0x03. A later writer
-restores 0x03. The port also has 53 distinct entry bases vs retail's 41.
+s5229 closed port-byte-not-retail-clear (census read lacked the MEM_B ^3
+swizzle; port entry byte is 00/01 like retail). Nothing to guard.
 
-Competing hypotheses:
-- H-generated-store: a recompiled store with offset covering +0x22 in
-  musyxRenderVoiceSamples / the 0x20/0x21 update (0x80090720/780) lands on it.
-- H-host-write: a host memcpy/memset (audio stub, DMA, LLE writeback)
-  overwrites the record.
-- H-read-is-stale-width: the entry read of 0x22 is a wider view whose
-  neighbouring byte is 0x03 (check disassembly after 0x8008FAAC).
-
-Discriminator (one build, one run, driver scratch/agent/s5228_port_stores.sh):
-keep a shadow set of the 53 addresses; on every generated-store and host
-write hook (rs64_m5_lowfield_store / rs64_m5_writer_parity exist) log
-(pc, addr, value) when addr is in the set and value != 0 in phases
-0x00620400/0x00690400; histogram by pc. Positive control: the 0x80090F8C
-constant-1 store must show up as a writer row. Do the cheap static grep
-first: MEM_B/H/W stores at offsets 0X20..0X22 off the 0x88-stride pointer
-in funcs_23.c/funcs_24.c.
+Next unit: read docs/M5-AUDIO-PLAN.md rows 12+ and the Next-steps list; pick
+the first open M5 step and write its design + validation row there BEFORE
+touching runtime. If M5 has no open step, do an M3 idiom-class audit
+(grep-enumerate one class, classify every site, guard or prove dead).
+Do not re-open the retail-entry thread without an angle independent of the
+s5223-s5228 byte census. Audit for other raw rdram[] byte reads lacking ^3
+in fixup/census code is a cheap first sub-step (grep `rdram\[[a-z_]*\]` in
+tools/fixup_game_funcs_vendored.py and src/main).

@@ -39186,7 +39186,7 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
         if (s1 < 0x80000000u || s1 >= 0x80800000u) bkt[bi].s1_bad++;
         if (phys >= 0x800000u) bkt[bi].sb_badptr++;
         else {
-            sb = rdram[phys];
+            sb = rdram[phys ^ 3u]; /* s5229: MEM_B byte swizzle */
             sb_known = 1;
             if (bi < 2) rs64_s5224_hist[bi][sb]++;
             if (sb == 0x00u || sb == 0x01u || sb == 0xFFu) bkt[bi].sb_ok++;
@@ -39339,6 +39339,21 @@ static void rs64_s5228_store(uint32_t pc, uint32_t addr, uint32_t val) {
             )
         changed = True
         report.append("funcs_24.c: s5228 store census patched x2")
+
+    # s5229: byte-granular last-writer shadow query at the fillSampleStreamRange
+    # entry read of record+0x22 (rs64_s5229_* live in src/main/main.cpp).
+    if p.name == "funcs_24.c" and "PATCH: s5229 entry writer" not in text:
+        _s5229_read = "            if (bi < 2) rs64_s5224_hist[bi][sb]++;\n"
+        _s5229_flush = '            rs64_s5224_flush_hist(prev, "leave", bkt[prev].entry);\n'
+        _s5229_anchor = "static void rs64_s5223_entry_join("
+        for _what, _cnt in (("read", text.count(_s5229_read)), ("flush", text.count(_s5229_flush)), ("anchor", text.count(_s5229_anchor))):
+            if _cnt != 1:
+                sys.exit(f"s5229 {_what} count={_cnt}")
+        text = text.replace(_s5229_read, _s5229_read + "            if (bi < 2) rs64_s5229_entry(bi, s0 + 0x22u, sb); /* PATCH: s5229 entry writer */\n", 1)
+        text = text.replace(_s5229_flush, _s5229_flush + '            rs64_s5229_flush(prev, "leave");\n', 1)
+        text = text.replace(_s5229_anchor, "extern void rs64_s5229_entry(int, uint32_t, uint32_t);\nextern void rs64_s5229_flush(int, const char*);\n" + _s5229_anchor, 1)
+        changed = True
+        report.append("funcs_24.c: s5229 entry writer patched")
 
     # s2112: join the sole reapplyDisplayMode caller, callee, audio-return,
     # route edge, and function exit by a phase-local call ordinal. The helper

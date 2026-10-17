@@ -160706,3 +160706,31 @@ the next entry read; not found in this run. No guard: the ORIGIN of the
 voice array shows 53 distinct entry bases versus retail's 41 per stride;
 origins alternate every few entries, so per-origin buckets are
 interleaved rather than contiguous.
+
+## Session 5229 (2026-10-17) — "port entry byte 0x03" was a census byte-swizzle bug
+
+HYPOTHESIS-ID: port-byte-not-retail-clear (closed). Planned unit: find the
+late writer of 0x03 at record+0x22. Built a byte-granular last-writer shadow
+(`rs64_s5229_*` in src/main/main.cpp, fed by `rs64_m5_lowfield_store`; entry
+query + flush patched into funcs_24.c via `tools/fixup_game_funcs_vendored.py`
+and mirrored live by new `tools/apply_s5229_entry_writer.py`). Driver
+`scratch/agent/s5229_entry_writer.sh`, output `scratch/agent/s5229_entry_writer/`.
+
+Run 1 (control): the shadow said the last patched store was the 0x80090F3C
+clear (rec=00) while the read said 03 in 76509/76918 entries, with `match`
+rows present for the other pcs (comparison works). That pattern fit "unhooked
+writer", but the boring check came first: `MEM_B` indexes `rdram[addr ^ 3]`,
+and the s5223 join read `rdram[phys]` with no `^3`, i.e. guest byte +0x21
+(written legitimately by `sb` at 0x80090780). Fixed the read (`phys ^ 3u`,
+vendored fixup + live file).
+
+Run 2 (fixed read, same driver; crash=0; mission 0x00620400 at 381 s):
+origin 0x00690400 entry byte 00 x76339, 01 x289 of 76649 -- retail's 00/01
+shape. Last patched writer is 0x80090F3C (match 76317) or 0x80090F8C (match
+288). Residue ~0.04%: pc=0 rows (record never stored by a patched store) and
+a few mismatches (SD/swl/swr or host write, unhooked); not chased.
+
+Rules out: any port-vs-retail divergence at the mission-entry byte; the
+s5223-s5228 conclusions that depended on "port modal 0x03" are superseded
+(CURRENT-TRUTH s5229 resolution). No guard was or is needed. Lesson: raw
+`rdram[...]` byte reads in census code must apply `^3`.

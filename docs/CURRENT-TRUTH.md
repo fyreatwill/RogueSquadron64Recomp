@@ -848,13 +848,11 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. On the port, join the entry `s0` to the destinations of the retail
-   constant-0 store `0x80090F3C` and the constant-1 store `0x80090F8C`
-   during the same four mission origins. The clear runs after the read,
-   so the entry byte is the previous iteration's residue. Do not guard
-   and do not re-watch retail. The sweep stays paused at
-   `_Putfld = 0x80035960`. The M4 page writer remains phase-attributed
-   on the retail route only. The plan is `scratch/agent/NEXT.md`.
+1. The retail-entry thread is closed (s5229: census byte-swizzle bug).
+   Re-open the "external retail-entry boundary" only with a new angle
+   not built on the s5223-s5228 byte census. Otherwise resume M5 audio
+   de-stubbing per `docs/M5-AUDIO-PLAN.md`. The sweep stays paused at
+   `_Putfld = 0x80035960`. Plan: `scratch/agent/NEXT.md`.
 2. If a new M5 step is selected, write its design and validation row in
    `docs/M5-AUDIO-PLAN.md` before changing runtime behavior.
 3. When MIPS GCC is supplied, configure and qualify `PatchesLib`; record
@@ -868,12 +866,20 @@ the per-session audit/soak paths named above. The next iteration must read
 this file, `scratch/agent/NEXT.md`, and the tail of
 `scratch/agent/SOAK-RESULTS.md` before acting.
 
-## s5228 addendum (port-byte-not-retail-clear)
+## s5229 resolution (SUPERSEDES the s5223-s5228 "port entry byte 0x03" thread)
 
-Port runs the retail `sb $zero, 0x22` at `0x80090F3C` on 53/53 of the
-entry-read records (77687 stores vs 76379 entries at origin `0x00690400`;
-`0x00620400` likewise), every stored byte `00`, yet the entry byte is
-`0x03`. Open: which port writer puts `0x03` at record+0x22 between the
-clear and the next `0x8008FAAC` entry read. Port has 53 distinct entry
-bases versus retail's 41 per stride (unexplained). See PORTING-STATE
-Session 5228; instrument `rs64_s5228_store`.
+The port's "modal 0x03 entry byte" was a CENSUS BUG, not a port divergence.
+The `rs64_s5223_entry_join` read used `rdram[phys]` without the `^3`
+byte swizzle that `MEM_B` applies, so it sampled guest byte +0x21 (the
+field `sb` at 0x80090780 writes, legitimately 3), not +0x22. It was
+believable because every earlier check (stride, coverage, store census)
+used guest addresses correctly and only the one raw read was wrong; the
+retail oracle reads physical bytes properly, so the two sides were never
+reading the same byte. With the read fixed (s5229 run, byte-granular
+last-writer shadow `rs64_s5229_*` in main.cpp): origin 0x00690400 entry
+byte is 00 x76339, 01 x289 of 76649 (matches retail 00/01); last patched
+writer is `0x80090F3C` (match 76317) or `0x80090F8C` (match 288). Residue
+about 0.04%: pc=0 rows (record never written by a patched store) and a
+handful of mismatches (unhooked SD/swl/swr/host write); not pursued.
+No port divergence at the mission entry boundary; nothing to guard.
+Lesson: any raw `rdram[...]` byte read in a census must apply `^3`.
