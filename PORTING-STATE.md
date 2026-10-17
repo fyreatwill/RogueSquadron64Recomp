@@ -161373,3 +161373,16 @@ overlay record, and callers, with no placeholder or conflicting fragment.
 H1 is selected in the already-synchronized callable sense; H2/H3 are ruled
 out for this address. No build or soak was warranted. Audit:
 `docs/RENAME-S5292-AUDIT.md`. Next: classify `allocateNpcSlot = 0x8003E5F8`.
+
+## Session 5293 (2026-10-17) — generated-symbol sweep: `allocateNpcSlot` is synchronized
+
+Ran the bounded rename helper for `0x8003E5F8..0x8003E5FC` and independently
+searched the companion map and generated tree. The companion record describes
+the named NPC free-list allocator; the helper reported `already-synchronized`
+and renamed zero references in zero files. The generated tree contains its
+named body in `funcs_8.c`, header declaration, overlay record, and callers in
+five generated files, with no placeholder or conflicting fragment. H1 is
+selected in the already-synchronized callable sense; H2/H3 are ruled out for
+this address. No build or soak was warranted. Audit:
+`docs/RENAME-S5293-AUDIT.md`. Next: classify
+`unregisterAndFreeNpcSlot = 0x8003E7D0`.

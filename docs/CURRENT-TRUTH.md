@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5292 (2026-10-17). The
+Compact operational handoff, maintained at Session 5293 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -205,6 +205,12 @@ the NPC free-list initializer, and the generated tree has its named body in
 `funcs_8.c`, declaration, overlay record, and callers, with no placeholder or
 conflict. Audit: `docs/RENAME-S5292-AUDIT.md`. The next companion record is
 `allocateNpcSlot = 0x8003E5F8`.
+Session 5293 classified `allocateNpcSlot = 0x8003E5F8` as already
+synchronized. The bounded helper made zero edits; the companion map documents
+the NPC free-list allocator, and the generated tree has its named body in
+`funcs_8.c`, declaration, overlay record, and callers with no placeholder or
+conflict. Audit: `docs/RENAME-S5293-AUDIT.md`. The next companion record is
+`unregisterAndFreeNpcSlot = 0x8003E7D0`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or
@@ -519,6 +525,14 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5293:** `allocateNpcSlot = 0x8003E5F8` is a named, already-synchronized
+  callable NPC free-list allocator; the helper made zero edits and independent
+  generated-tree inspection found its body in `funcs_8.c`, declaration, overlay
+  record, and callers with no placeholder or conflict. No build or soak was
+  warranted. Audit: `docs/RENAME-S5293-AUDIT.md`. The next bounded sweep unit
+  is `unregisterAndFreeNpcSlot = 0x8003E7D0`, using the same helper plus
+  independent companion/generated-tree inspection.
 
 - **s5292:** `initNpcSlotList = 0x8003E560` is a named, already-synchronized
   callable NPC free-list initializer; the helper made zero edits and independent
