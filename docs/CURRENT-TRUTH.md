@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5147 (2026-10-17). The
+Compact operational handoff, maintained at Session 5148 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -50,6 +50,10 @@ Audit: `docs/RENAME-S5145-AUDIT.md`.
 named: its generated body and exact `0x264` overlay span are present, but the
 generated tree has no independent caller. Preserve the ABI name. Audit:
 `docs/RENAME-S5146-AUDIT.md`.
+`__osClearPage = 0x8002F2C8` is likewise already correctly named: its
+generated body and exact `0xC8` overlay span are present, with two generated
+callers. The helper made no edits. Preserve the ABI name. Audit:
+`docs/RENAME-S5148-AUDIT.md`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -157,6 +161,10 @@ were retained below or in the project overview.
   overlay span ending at `0x8002F2C8`, but no independent generated caller;
   the helper reports `already-synchronized`, so preserve the existing ABI
   name. Audit: `docs/RENAME-S5146-AUDIT.md`.
+- `__osClearPage = 0x8002F2C8` has a generated body and exact `0xC8` overlay
+  span ending at `0x8002F390`, plus two generated callers; the helper reports
+  `already-synchronized`, so preserve the existing ABI name. Audit:
+  `docs/RENAME-S5148-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`

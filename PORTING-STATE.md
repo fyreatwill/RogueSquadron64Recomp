@@ -159473,3 +159473,17 @@ reuse boundary. No runtime change or mitigation was made. Audit:
 `docs/M4-S5147-PAGE-WRITER-AUDIT.md`.
 
 Next: resume the generated-symbol sweep at `__osClearPage = 0x8002F2C8`.
+
+## Session 5148 (2026-10-17) — classified `__osClearPage` as already named
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. The bounded generated-tree
+search and `rename_generated_symbols.py` audit both identified
+`__osClearPage = 0x8002F2C8` as already synchronized. Its named generated
+body starts at the candidate address and ends at the next entry,
+`__osSumcalc = 0x8002F390`, for an exact `0xC8` span matching
+`recomp_overlays.inl`; two generated call sites were also present. The helper
+made zero edits. This rules out a placeholder rename and the host-wrapper,
+span-mismatch, and unproven outcomes for this candidate. No build or soak was
+needed. Audit: `docs/RENAME-S5148-AUDIT.md`.
+
+Next: audit `__osSumcalc = 0x8002F390`.
