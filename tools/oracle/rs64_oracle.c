@@ -981,6 +981,59 @@ static void seq_report(void)
     printf("[seq] retraces F->next F (all):    "); for (i = 0; i < 16; i++) printf(" %ld", ffh[i]); printf("\n");
 }
 
+/* s5224: every 0x8008FAAC hit on the two mission origins, including rows
+ * the unique-field cap would drop. Counted before that cap. */
+static unsigned long g_s5224_hist[2][256];
+static unsigned long g_s5224_hits[2];
+
+static void s5224_count_entry_byte(uint32_t pc)
+{
+    uint32_t origin;
+    uint32_t sb;
+    int bi;
+    if (pc != 0x8008FAACu)
+        return;
+    origin = pDebugMemRead32(VI_ORIGIN_ADDR) & 0x00FFFFFFu;
+    if (origin == 0x00690400u)
+        bi = 0;
+    else if (origin == 0x00620400u)
+        bi = 1;
+    else
+        return;
+    sb = debug_mem_u8(gpr32(16) + 0x22u) & 0xFFu;
+    g_s5224_hist[bi][sb]++;
+    g_s5224_hits[bi]++;
+}
+
+static void s5224_report(void)
+{
+    static const uint32_t origins[2] = { 0x00690400u, 0x00620400u };
+    char line[8192];
+    int bi;
+    int i;
+    int n;
+    for (bi = 0; bi < 2; bi++) {
+        unsigned long sum = 0;
+        for (i = 0; i < 256; i++)
+            sum += g_s5224_hist[bi][i];
+        n = snprintf(line, sizeof line,
+                     "[s5224-hist] origin=0x%08X hits=%lu sum=%lu bins=",
+                     origins[bi], g_s5224_hits[bi], sum);
+        for (i = 0; i < 256 && n > 0 && n < (int)sizeof line; i++)
+            n += snprintf(line + n, sizeof line - (size_t)n, "%s%lu",
+                          i ? "," : "", g_s5224_hist[bi][i]);
+        if (n > 0 && n < (int)sizeof line - 1) {
+            line[n++] = '\n';
+            line[n] = 0;
+            fputs(line, stdout);
+        } else {
+            printf("[s5224-hist] origin=0x%08X hits=%lu sum=%lu bins=TRUNCATED\n",
+                   origins[bi], g_s5224_hits[bi], sum);
+        }
+    }
+    fflush(stdout);
+}
+
 static void dump_pc_field(uint32_t pc)
 {
     struct pc_field_dump_bucket *bucket;
@@ -988,6 +1041,7 @@ static void dump_pc_field(uint32_t pc)
     int index;
     int i;
 
+    s5224_count_entry_byte(pc);
     if (!g_pc_field_dump_any_phase && !pc_phase_log_match())
         return;
     index = pc_field_dump_index(pc);
@@ -2933,8 +2987,8 @@ static void dbg_update(unsigned int pc)
         g_watch[0].write_hits == 10000) {
         int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX,
                                           g_watch[0].breakpoint_idx, NULL);
-        printf("[oracle] positive-control threshold reached: watch index 0 callbacks=%ld; removal rc=%d; watch index 1 remains armed\n",
-               g_watch[0].write_hits, rc);
+        printf("[oracle] positive-control threshold reached: watch index 0 callbacks=%ld vi=%ld; removal rc=%d; watch index 1 remains armed\n",
+               g_watch[0].write_hits, g_vis, rc);
         fflush(stdout);
         g_positive_watch_removed = 1;
     }
@@ -4123,6 +4177,7 @@ int main(int argc, char **argv)
         }
     }
     seq_report();
+    s5224_report();
     for (int i = 0; i < g_n_pc_field_dump; i++) {
         struct pc_field_dump_bucket *bucket = &g_pc_field_dump[i];
         printf("[oracle] pc-field-summary pc=0x%08x rows=%d/%d hits=%ld overflow=%ld\n",

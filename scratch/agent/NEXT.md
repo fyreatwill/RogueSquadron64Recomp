@@ -1,46 +1,50 @@
-# Next: source-byte frequency histograms, retail and port
-HYPOTHESIS-ID: entry-source-byte
+# Next: name the writer of the mission-entry source byte
+HYPOTHESIS-ID: source-byte-writer
 
-Session 5223 selected H-field-diff and refuted a missed entry, a dead
-`0x800903F0` site, and a caller mismatch. On both mission origins the port's
-`source_byte` at `s0+0x22` was outside {0x00, 0x01, 0xFF} on about 99.9% of
-entries (78377/78464 and 79175/79264). s0/s1 stayed in KSEG0 and v0 stayed in
-1..8. The retail {0x00, 0x01, 0xFF} set is the 32768 retained distinct rows
-from `scratch/agent/s5203_retail_entry_range/retail_fixed.log`, not a
-frequency sample. 111686 later novel tuples were dropped, so retail may still
-emit 0x03 or 0xBB.
+Session 5224 closed the frequency question. Do not add another histogram.
+Do not guard. Do not resume the rename sweep. Do not rename `bzero_recomp`
+or `bcmp_recomp`.
 
-Do not resume the rename sweep. Do not re-watch whether `0x800903F0` executes.
-Do not add a guard. Do not rename `bzero_recomp` or `bcmp_recomp` back to
-`bzero` / `bcmp`.
+Retail, every hit at `0x8008FAAC` on the mission origins: modal `0x00`
+(119949/121195 and 126435/127740), `0x03` count 0. Port, same site: modal
+`0x03` (79212/79362 and 79385/79498). s5223's first three samples had `s0`
+in {`0x80195190`, `0x80190E50`}, so the candidate bytes are physical
+`0x191072` and `0x1951B2`. Those samples are not a census.
 
-One port build and one retail oracle run, in this iteration. Add all bins
-before either run.
+One port build and one retail oracle run. Add the census and the retail
+write watches before either run. macOS has no `ROGUESQ_HWBP`; do not use it.
 
-Port arm, in the existing s5223 entry hook (and the matching fixup block):
-256 bins per mission origin of the byte at `(s0+0x22) & 0x1FFFFFFF`, plus the
-existing entry counter. Flush the histogram on the leave line for that origin.
-Positive control: `[s5223-armed]` fires, and the 256 bins sum to that
-origin's entry count. A bin sum that is not the entry count is unevaluable.
+Both sides, in the existing s5224 hooks: a 64-slot table of `s0` per
+mission origin (address, count, overflow). Port flushes it on the leave
+line as one line. Retail prints it at shutdown. Positive control: the slot
+counts plus overflow equal that origin's entry/hit count.
 
-Retail arm, in `tools/oracle/rs64_oracle.c` at the `0x8008FAAC` field dump:
-256 bins of `debug_mem_u8(s0+0x22)` for every hit while the VI origin is
-`0x00690400` or `0x00620400`, including hits that would overflow the unique-row
-cap. Print the bins at shutdown. Positive control: the whole-RDRAM watch
-fires about 1.6M times in 8 emulated seconds, and both mission origins occur.
-Do not use the 4.3 GB range-watch log.
+Retail write watches, armed at first VI, not at the first entry (the byte
+may be stored once before the first read):
+
+- `--watch-write 0x191070:0x191074`
+- `--watch-write 0x1951B0:0x1951B4`
+- `--pc-hist-watch` on each of those watches
+- `--pc-hist-phase 0x00690400:512` and `0x00620400:512`
+- whole-RDRAM watch stays index 0
+
+The `writer-pc-phase` rows are the retail writers of those words. In the
+same iteration, open the recompiled store at each reported PC and record
+the value expression. That is the port-side half: there is no macOS store
+hook, so the generated store is the port witness.
 
 Competing hypotheses:
 
-- H-port-byte-diverges: retail's mission-origin histogram, counting every
-  hit, is still only {0x00, 0x01, 0xFF}, and the port's modal byte is outside
-  that set. The field difference is real. Next question is who writes the
-  port byte, not another entry-field.
-- H-retail-cap-blind: retail's modal mission-origin byte equals the port's
-  modal byte (the s5223 samples were 0x03, with one 0xBB). The unique-row cap
-  hid the common retail byte. This closes H-field-diff as a port defect.
-- Unevaluable: either histogram's bin sum disagrees with its hit count, the
-  armed or whole-RDRAM control does not fire, or a mission origin is missing
-  on either side.
+- H-same-writer-different-value: the modal `s0+0x22` is inside a watched
+  word, and the retail writer PC's generated store is reached with a source
+  that is `0x00` on retail and can be `0x03` on the port. Next question is
+  that source, not another address.
+- H-different-writer: the modal address is watched, but the generated store
+  at the retail writer PC is absent, neutralized, or not on the port path
+  that produces `0x03`.
+- H-wrong-candidate: the modal `s0+0x22` is outside both watched words.
+  The writer-pc table is then unevaluable. The census addresses are the
+  next watch list. Do not add a third watch in this run.
 
-Do not add a further field after this table.
+Unevaluable: census slot counts disagree with the entry count, the
+whole-RDRAM control does not fire, or a mission origin is missing.

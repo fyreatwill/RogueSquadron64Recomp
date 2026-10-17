@@ -39050,6 +39050,31 @@ struct rs64_s5223_bucket {
     unsigned long emitted_entry;
 };
 
+/* PATCH: s5224 source-byte histogram */
+static unsigned long rs64_s5224_hist[2][256];
+
+static void rs64_s5224_flush_hist(int bi, const char* why, unsigned long entry) {
+    static const uint32_t origins[2] = { 0x00690400u, 0x00620400u };
+    char line[8192];
+    unsigned long sum = 0;
+    int i;
+    int n;
+    if (bi < 0 || bi >= 2) return;
+    for (i = 0; i < 256; i++) sum += rs64_s5224_hist[bi][i];
+    n = snprintf(line, sizeof line,
+                 "[s5224-hist] why=%s origin=0x%08X entry=%lu sum=%lu bins=",
+                 why, origins[bi], entry, sum);
+    for (i = 0; i < 256 && n > 0 && n < (int)sizeof line; i++)
+        n += snprintf(line + n, sizeof line - (size_t)n, "%s%lu",
+                      i ? "," : "", rs64_s5224_hist[bi][i]);
+    if (n > 0 && n < (int)sizeof line - 1) {
+        line[n++] = '\n';
+        line[n] = 0;
+        fputs(line, stderr);
+    }
+    fflush(stderr);
+}
+
 static void rs64_s5223_emit(int bi, const char* why, const struct rs64_s5223_bucket* b) {
     static const uint32_t origins[3] = { 0x00690400u, 0x00620400u, 0u };
     fprintf(stderr,
@@ -39091,6 +39116,8 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
             rs64_s5223_emit(prev, "leave", &bkt[prev]);
             bkt[prev].emitted_entry = bkt[prev].entry;
         }
+        if (prev < 2 && bkt[prev].entry > 0ul)
+            rs64_s5224_flush_hist(prev, "leave", bkt[prev].entry);
     }
     have_last = 1;
     last_origin = origin;
@@ -39108,6 +39135,7 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
         else {
             sb = rdram[phys];
             sb_known = 1;
+            if (bi < 2) rs64_s5224_hist[bi][sb]++;
             if (sb == 0x00u || sb == 0x01u || sb == 0xFFu) bkt[bi].sb_ok++;
             else bkt[bi].sb_bad++;
         }
@@ -39141,6 +39169,8 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
         if (milestone) {
             rs64_s5223_emit(bi, n == 1ul ? "first" : "interval", &bkt[bi]);
             bkt[bi].emitted_entry = n;
+            if (bi < 2)
+                rs64_s5224_flush_hist(bi, n == 1ul ? "first" : "interval", n);
         }
     }
 }

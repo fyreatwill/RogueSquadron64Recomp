@@ -160496,3 +160496,42 @@ H-entry-contract-shared because `source_byte` at `s0+0x22` is outside
 v0 stay inside the retained set. That retail set is the 32768 distinct rows,
 not the 111686 dropped novel tuples, so this does not prove retail never
 emits 0x03. No guard. Audit: `docs/REVISIT-S5223-PORT-ENTRY-JOIN.md`.
+
+## Session 5224 (2026-10-17) — source-byte histograms select a real port divergence
+
+HYPOTHESIS-ID: entry-source-byte. Session 5223 had shown the port's mission-entry
+`source_byte` at `s0+0x22` outside {0x00, 0x01, 0xFF} on about 99.9% of entries,
+but that retail set was the 32768 retained distinct rows, not a frequency count.
+This session counted all 256 bins on both sides. No guard.
+
+Port: the s5223 entry hook in `../N64Recomp/RecompiledFuncs/funcs_24.c`, with the
+same block in `tools/fixup_game_funcs_vendored.py`, bins
+`rdram[(s0+0x22) & 0x1FFFFFFF]` per mission origin and flushes on leave.
+`scratch/agent/s5224_source_byte_hist/run.log` was SIGKILLed at stop_t=404.
+`[s5223-armed]` fired once, title `origin=0x00790400` was present, and there
+was no crash marker. The last leave line for each origin is intact: 256 bins
+sum to the entry count. 195 earlier lines were torn by concurrent stderr and
+were discarded. After that measurement the flush was changed to one `fputs`;
+the logged rows came from the earlier multi-`fprintf` form.
+
+Retail: `tools/oracle/rs64_oracle.c` counts `debug_mem_u8(s0+0x22)` on every
+`0x8008FAAC` hit while the VI origin is `0x00690400` or `0x00620400`, including
+hits a unique-row cap would drop, and prints the bins at shutdown.
+`scratch/agent/s5224_retail_hist/oracle.log` stopped itself after 420.3s wall,
+25177 VI (~419.6s emulated). Whole-RDRAM watch index 0 reached 10000 writes at
+vi=1 (removal rc=0), about 4.8M writes in 8 emulated seconds, above the ~1.6M
+bar. The exec watch armed at width 512 origin `0x00690400`. VI trace reached
+title, hangar `0x006AB400`, and both mission origins (phase frames 4158 and
+4258). Both bin sums equal the hit counts.
+
+Retail `0x00690400`: 121195 hits, `0x00` 119949, `0x01` 1244, `0xF0` 2,
+`0x03` 0, `0xFF` 0. Retail `0x00620400`: 127740 hits, `0x00` 126435, `0x01`
+1304, `0x0C` 1, `0x03` 0, `0xFF` 0. Port `0x00690400`: 79362 entries, `0x03`
+79212, `0x00` 110, `0x01` 2, `0xFF` 2. Port `0x00620400`: 79498 entries,
+`0x03` 79385, `0x00` 95, `0x01` 1, `0xFF` 0.
+
+This selects H-port-byte-diverges and refutes H-retail-cap-blind. The modal
+bytes differ (`0x00` vs `0x03`) when every hit is counted, so the capped row
+table was not hiding the port's byte. It does not name the writer. No soak
+was queued. No new soak verdicts were unconsumed. Audit:
+`docs/REVISIT-S5224-SOURCE-BYTE-HIST.md`.
