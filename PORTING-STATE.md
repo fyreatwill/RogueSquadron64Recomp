@@ -162065,3 +162065,7 @@ Patched cxd4 (external tree) with an `RS64_RSP_MID_PCS` filter on `pc & 0xFFF` a
 ## Session 5355 (2026-10-17) — no un-run work unit remains after M4 closure; going BLOCKED
 
 Read CURRENT-TRUTH (13 KB, no maintenance), NEXT.md (m4-closed-select-next), SOAK-RESULTS tail (newest rows are s5250 and older, already folded in). Priority check: (1) maintenance not triggered; (2) M5 exhausted (s5349); (3) M3 idiom list exhausted (s5345-s5350); (4) rename sweep paused, sole residual func_800E9AE0 has no companion-map name or live caller, and the last 15 session titles are not sweep sessions but a sweep step would add no engineering change (tools/rename* edits do not reset the churn counter). M4 was closed by s5354 (retail -32768 transient legitimate). Nothing was run. No code changed. Remaining open item is the PatchesLib fresh-build gate, which needs an external mips64-elf-gcc (a human install decision). Going BLOCKED with a specific question instead of manufacturing a work unit.
+
+## Session 5356 (2026-10-17) — unblock: BLOCKED.md re-scoped, not escalated
+
+BLOCKED.md (s5355) asked a human to pick toolchain install / new target / stop. The toolchain only gates fresh PatchesLib qualification, already a non-blocking open dependency; no MIPS toolchain exists in the allowed dirs and installing one is a human decision. Took route 3: NEXT.md is now an offline audit of the remaining M3 indirect-control-flow idiom classes (jr/jalr, lwl/lwr pairs, branch-likely). Nothing measured; no conclusions changed. See scratch/agent/UNBLOCK.md.

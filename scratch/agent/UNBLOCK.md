@@ -1,11 +1,10 @@
-# UNBLOCK (s5352) — route 1 (refute) + route 3 (re-scope)
-
-Block claimed: (a) mips64-elf toolchain must be supplied; (b) a human must "authorize oracle-driving work" past attract.
-- (b) is FALSE as framed. Authorization is not needed and the capability exists: CURRENT-TRUTH (s5330) records the in-process
-  autopilot route `3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a`; s5335 ran both arms to the hangar with same-run
-  positive controls (10,000 oracle whole-RDRAM hits; port reached 0x006AB400/512). The real obstruction is key-domain
-  mismatch (retail RSP PCs 0x0088..0x0FE8 vs port generated PCs 0x112C/0x17F0; origins 0x006AB800 vs 0x006AB400), which is
-  offline analysis, not a human decision.
-- (a) is a real, already-documented NON-blocking dependency (clang has no MIPS target; no mips64-elf-gcc/ld). Installing it
-  is out of bounds for this iteration; recorded as an open dependency only.
-Re-scope: NEXT.md is now an offline work unit deriving an independently justified generated-PC -> IMEM-PC mapping.
+# UNBLOCK (s5356): route 3 (re-scope)
+Block: BLOCKED.md asked a human to pick A (install MIPS toolchain) / B (new target) / C (stop).
+Route 1: A only gates fresh PatchesLib source qualification, already marked NOT blocking in
+CURRENT-TRUTH; the existing-artifact qualification stands. Option C is not warranted.
+Route 2: searched the four allowed working dirs for a MIPS gcc/ld: only docs/mips_to_c found
+(a doc, not a toolchain). Searching /opt/homebrew was blocked by the sandbox, and installing
+software is a human decision, so not obtained.
+Route 3: B was available without a human: NEXT.md re-scoped to an offline audit of the remaining
+M3 idiom classes (jr/jalr, unaligned pairs, branch-likely). Toolchain stays an open dependency.
+Refuting experiment: `brew install mips64-elf-gcc` would make fresh PatchesLib qualification possible.
