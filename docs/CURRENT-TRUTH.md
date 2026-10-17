@@ -23,7 +23,7 @@ and is the minority. Neither writes the port's `0x03`. The idle stride
 of each origin has no writer. No guard. Audit:
 `docs/REVISIT-S5227-BOTH-STRIDES.md`.
 
-The renaming sweep is paused at `__osPiTable = 0x8003914C`. Every libultra/ABI
+The renaming sweep is paused at `__osCurrentHandle = 0x80039150`. Every libultra/ABI
 candidate from `cosf 0x8002B190` through `osRecvMesg 0x800331D0` (and the
 companion-only `__osPfs*`/`osPi*`/`osMotor*` entries between) was classified as
 an unmaterialized host-wrapper/ABI entry or already-synchronized: preserve the
@@ -384,7 +384,20 @@ inside the preceding data/fragment decode, with no distinct callable body,
 placeholder, declaration, overlay record, or direct generated caller at the
 address. Preserve the existing data name. Audit: `docs/RENAME-S5272-AUDIT.md`.
 
+`__osPiTable = 0x8003914C` is now classified as already synchronized: the
+bounded helper made zero edits, and the companion is typed `OSPiHandle_s*`
+data of size `0x4`. The generated tree contains only a `nop` immediately
+before the next fragment, with no distinct callable body, placeholder,
+declaration, overlay record, or direct generated caller at the address.
+Preserve the existing data name. Audit: `docs/RENAME-S5273-AUDIT.md`.
+
 ## Next steps (single monotonic backlog)
+
+- **s5273:** `__osPiTable = 0x8003914C` is already synchronized: the bounded
+  helper made zero edits, and independent checks find typed pointer data with
+  no callable placeholder. Preserve the name; no build or soak. Audit:
+  `docs/RENAME-S5273-AUDIT.md`. Next: classify
+  `__osCurrentHandle = 0x80039150`.
 
 - **s5272:** `__osPiDevMgr = 0x80039130` is already synchronized: the bounded
   helper made zero edits, and independent checks find only a `nop` in the

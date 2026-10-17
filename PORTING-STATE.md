@@ -161114,3 +161114,15 @@ generated caller at the address; it is only a `nop` inside the preceding
 `__OSGlobalIntMask` data/fragment decode. This rules out callable placeholder
 propagation; preserve the data name. No build or soak was needed. Audit:
 `docs/RENAME-S5272-AUDIT.md`. Next candidate: `__osPiTable = 0x8003914C`.
+
+## Session 5273 (2026-10-17) — generated-symbol sweep: `__osPiTable` is data
+
+Ran the bounded companion-symbol helper over `0x8003914C..0x80039150`. It
+renamed zero references and reported `__osPiTable` as already synchronized.
+Independent inspection found the companion typed `OSPiHandle_s*` data entry of
+size `0x4`; the generated tree has no distinct callable body, placeholder,
+declaration, overlay record, or direct generated caller at the address, which
+is only a `nop` immediately before the next fragment. This rules out callable
+placeholder propagation; preserve the data name. No build or soak was needed.
+Audit: `docs/RENAME-S5273-AUDIT.md`. Next candidate:
+`__osCurrentHandle = 0x80039150`.
