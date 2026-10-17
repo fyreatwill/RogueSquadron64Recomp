@@ -161039,3 +161039,14 @@ address; the implementation is supplied by the host libultra wrapper. This
 rules out a safe placeholder rename and data-fragment classification for this
 address. Preserve the ABI name. No build or soak was needed. Audit:
 `docs/RENAME-S5265-AUDIT.md`. Next candidate: `_Putfld = 0x80035960`.
+## Session 5266 (2026-10-17) — generated-symbol sweep: stale `_Putfld` pointer rechecked
+
+Ran the bounded rename helper over exactly `0x80035960..0x80035FD0`.
+It renamed zero references in zero files and reported `_Putfld` as
+`already-synchronized`. Independent inspection found the companion declaration,
+the full named 0x670-byte generated body, header declaration, overlay record,
+and an internal generated caller. This rules out placeholder propagation and
+data-fragment classification for `_Putfld`; preserve the name. The same
+candidate was already recorded by s5259, so this closes the stale next-step
+pointer rather than adding a new rename. Audit: `docs/RENAME-S5266-AUDIT.md`.
+Next bounded candidate: companion data symbol `__osContinitialized = 0x800390D0`.

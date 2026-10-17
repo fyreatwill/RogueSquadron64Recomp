@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5265 (2026-10-17). The
+Compact operational handoff, maintained at Session 5266 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -373,6 +373,13 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+- **s5266:** The bounded helper rechecked `_Putfld = 0x80035960` over
+  `0x80035960..0x80035FD0`; it made zero edits and reported
+  `already-synchronized`. Independent inspection found the named companion,
+  full 0x670-byte generated body, header declaration, overlay record, and
+  generated caller. This duplicates s5259 because the prior next-step pointer
+  was stale; preserve the name. Audit: `docs/RENAME-S5266-AUDIT.md`. Next:
+  classify companion data symbol `__osContinitialized = 0x800390D0`.
 - **s5265:** `osWritebackDCacheAll = 0x80035930` is already synchronized: the bounded helper made zero edits, and independent checks show the defined companion symbol, ABI declaration, zero-size generated overlay record, and two direct callers, but no generated callable body or placeholder. Preserve the ABI name; no build or soak. Audit `docs/RENAME-S5265-AUDIT.md`. Next sweep candidate: `_Putfld = 0x80035960`.
 - **s5264:** `osYieldThread = 0x80037510` is already synchronized: the bounded helper made zero edits, and independent checks show the defined libultra symbol, no generated placeholder/body/overlay record, 20 direct ABI callers, and the companion `INCLUDE_ASM` boundary. Preserve the ABI name; no build or soak. Audit `docs/RENAME-S5264-AUDIT.md`. Next sweep candidate: `osWritebackDCacheAll = 0x80035930`.
 - **s5263:** `_Litob = 0x80037270` is already synchronized: the bounded helper made zero edits, and independent companion/generated-tree checks show the defined symbol, exact named body, declaration, overlay record, and three direct callers. No build or soak. Next sweep candidate: `osYieldThread = 0x80037510` (audit `docs/RENAME-S5263-AUDIT.md`).
