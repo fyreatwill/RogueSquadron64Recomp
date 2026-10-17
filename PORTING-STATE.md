@@ -159518,3 +159518,18 @@ soak was needed for a naming-only audit. Evidence:
 `docs/RENAME-S5150-AUDIT.md`.
 
 Next: audit `__osRepairPackId = 0x8002F454`.
+
+## Session 5151 (2026-10-17) — classified `__osRepairPackId` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Audited the next generated-
+symbol candidate, `__osRepairPackId = 0x8002F454`, with the bounded rename
+helper and direct generated-tree checks. The search found no generated body or
+placeholder at the candidate address. The helper made zero edits and reported
+`already-synchronized`. Its companion span ends at
+`__osCheckPackId = 0x8002F86C`, but there is no generated body or independent
+caller on which to apply the rename gates. Preserve the existing ABI name;
+this classifies the entry as unmaterialized libultra/ABI rather than a
+generated-name candidate. No build or soak was needed. Evidence:
+`docs/RENAME-S5151-AUDIT.md`.
+
+Next: audit `__osCheckPackId = 0x8002F86C`.

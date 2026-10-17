@@ -63,6 +63,11 @@ generated body ends at `0x8002F450`, exactly matching the `0x68` span to
 `__osRepairPackId` and the overlay record. The generated tree has no
 independent caller beyond the definition, so preserve the existing ABI name.
 Audit: `docs/RENAME-S5150-AUDIT.md`.
+`__osRepairPackId = 0x8002F454` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated-tree search found no body or placeholder at the companion
+address. Its companion span ends at `__osCheckPackId = 0x8002F86C`; preserve
+the ABI name. Audit: `docs/RENAME-S5151-AUDIT.md`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
