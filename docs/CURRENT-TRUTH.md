@@ -185,6 +185,14 @@ direct caller at the companion address. Its nominal span to
 Preserve the ABI name. Audit: `docs/RENAME-S5170-AUDIT.md`. The next candidate
 is now `osPfsReadWriteFile = 0x80031BDC`.
 
+`osPfsReadWriteFile = 0x80031BDC` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`; the
+generated tree has only its ABI declaration and three generated callers, with
+no body or placeholder at the companion address. Its zero-size overlay record
+has offset `0x3179C`; the companion boundary is `osPfsRepairId = 0x80032000`.
+Preserve the ABI name. Audit: `docs/RENAME-S5171-AUDIT.md`. The next candidate
+is now `osPfsRepairId = 0x80032000`.
+
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
 were retained below or in the project overview.
@@ -436,7 +444,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osPfsReadWriteFile = 0x80031BDC`,
+1. Resume the companion sweep with `osPfsRepairId = 0x80032000`,
    whose next candidate is the following symbol in the companion map, one entry
    per iteration while the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value

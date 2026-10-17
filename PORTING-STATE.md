@@ -159788,3 +159788,12 @@ or direct caller at the address. The companion map places
 body to validate. Preserve the ABI name; no build or soak was needed. This
 rules out a generated-body rename for this candidate, not the remaining
 companion entries.
+## Session 5171 (2026-10-17) — classified `osPfsReadWriteFile` as unmaterialized
+
+Ran the bounded generated-symbol audit for `osPfsReadWriteFile = 0x80031BDC`.
+The helper reported `already-synchronized` and made zero edits. The generated
+tree has only the ABI declaration and three generated callers, no body or
+placeholder at the companion address, and a zero-size overlay record at
+offset `0x3179C`. The next companion boundary is `osPfsRepairId = 0x80032000`.
+This rules out a generated-body semantic rename for the candidate; preserve
+the ABI name. Audit: `docs/RENAME-S5171-AUDIT.md`.
