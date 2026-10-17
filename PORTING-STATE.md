@@ -159217,3 +159217,14 @@ selects the host-wrapper/ABI-boundary outcome and rules out a semantic rename,
 build, or soak for this candidate. Independent companion-map, generated-tree,
 overlay-record, and caller-count checks agree. Audit:
 `docs/RENAME-S5127-AUDIT.md`. Next candidate: `__osExceptionPreamble`.
+
+## Session 5128 (2026-10-17) — classified `__osExceptionPreamble` as host wrapper
+
+Ran the bounded generated-symbol audit for companion
+`__osExceptionPreamble = 0x8002B5F0`. The companion map places the next entry
+at `__osException = 0x8002B600`, but the generated snapshot contains no body,
+placeholder symbol, or overlay record at the candidate address and no direct
+generated caller. The rename helper changed zero references and reported
+`already-synchronized`. This selects the host-wrapper/ABI-boundary outcome and
+rules out a semantic rename, build, or soak for this candidate. Audit:
+`docs/RENAME-S5128-AUDIT.md`. Next candidate: `__osException`.

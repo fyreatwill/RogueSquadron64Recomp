@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5126 (2026-10-17). The
+Compact operational handoff, maintained at Session 5128 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -22,7 +22,8 @@ are zero-size host-wrapper/ABI entries with 28 and 10 generated call sites.
 one generated caller and no body to rename. `osDpGetCounters = 0x8002B590`
 and `osDpSetStatus = 0x8002B5E0` are likewise host-wrapper/ABI entries: their
 generated trees have no bodies or overlay records, with two ABI call sites
-each. The next candidate is `__osExceptionPreamble`.
+each. The preamble at `0x8002B5F0` is the same ABI-boundary case with no
+generated caller. The next candidate is `__osException`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -71,7 +72,7 @@ were retained below or in the project overview.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
-  through `docs/RENAME-S5127-AUDIT.md`.
+  through `docs/RENAME-S5128-AUDIT.md`.
 
 ## Operational rules
 
@@ -120,9 +121,9 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osExceptionPreamble = 0x8002B5F0` using the bounded rename helper.
-   Rename only if the generated body, exact next-entry span, semantic mapping,
-   and live caller all agree; otherwise preserve the ABI name and record the
+1. Audit `__osException = 0x8002B600` using the bounded rename helper. Rename
+   only if the generated body, exact next-entry span, semantic mapping, and
+   live caller all agree; otherwise preserve the ABI name and record the
    classification.
 2. Continue the companion sweep one entry per iteration while the last-15
    session preflight permits it. If the preflight makes the sweep a REVISIT,
