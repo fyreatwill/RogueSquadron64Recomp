@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5298 (2026-10-17). The
+Compact operational handoff, maintained at Session 5299 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -82,6 +82,13 @@ mid-task rows, 200 with a sampled `0x8000`, and 232 joined an end row. The end
 stream had 3,746 unique task IDs. VI-512 and both probe streams fired, but the
 mid-task hook is stage-selective, so H3 remains and H1 versus H2 is not
 selected. Audit: `docs/REVISIT-S5298-M4-PORT-TASK-JOIN.md`.
+
+Session 5299 classified `relinkNpcSlotToNewParentGroup = 0x8003EFDC` as
+already synchronized. The bounded helper made zero edits; independent
+generated-tree inspection found the named body, declaration, overlay record,
+and direct callers, with no placeholder or conflicting fragment. Audit:
+`docs/RENAME-S5299-AUDIT.md`. The next sweep candidate is
+`spawnChildNpcWithTransform = 0x8003F1D0`.
 
 ## Durable state
 
@@ -554,6 +561,13 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5299:** `relinkNpcSlotToNewParentGroup = 0x8003EFDC` is a named,
+  already-synchronized callable NPC routine; the helper made zero edits and
+  independent inspection found its body, declaration, overlay record, and
+  callers with no placeholder or conflict. No build or soak was warranted.
+  Audit: `docs/RENAME-S5299-AUDIT.md`. The next bounded sweep unit is
+  `spawnChildNpcWithTransform = 0x8003F1D0`.
 
 - **s5298:** The large-cap port capture found 234 mid-task task IDs (200 with
   a sampled `0x8000`) and 232 joins, but 3,746 task-end IDs overall. Controls

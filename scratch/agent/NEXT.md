@@ -1,7 +1,7 @@
-# Next: generated-symbol sweep — `relinkNpcSlotToNewParentGroup`
+# Next: generated-symbol sweep — `spawnChildNpcWithTransform`
 
-Work unit: classify companion symbol `relinkNpcSlotToNewParentGroup =
-0x8003EFDC` with the existing bounded renaming helper, then independently
+Work unit: classify companion symbol `spawnChildNpcWithTransform =
+0x8003F1D0` with the existing bounded renaming helper, then independently
 inspect its generated body, declaration, overlay record, callers, and any
 placeholder conflict. Do not change runtime code if it is already named.
 
@@ -19,7 +19,7 @@ must distinguish a named callable, a placeholder rename, or a non-callable
 data/ABI boundary; no build or soak is warranted.
 
 Exact commands: run the repository's existing bounded rename helper for
-`0x8003EFDC`, then grep the companion map and generated tree for the address,
+`0x8003F1D0`, then grep the companion map and generated tree for the address,
 symbol, placeholder, declaration, overlay record, and callers.
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep

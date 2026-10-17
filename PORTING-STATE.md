@@ -161462,3 +161462,15 @@ complete phase-qualified graphics-task table. H3 remains; H1 versus H2 is
 not selected. End-task `sat8000` was zero in phases 5 and 7, but no
 accumulator-origin mitigation follows. Audit:
 `docs/REVISIT-S5298-M4-PORT-TASK-JOIN.md`.
+
+## Session 5299 (2026-10-17) — generated-symbol sweep: `relinkNpcSlotToNewParentGroup` is synchronized
+
+The bounded generated-symbol helper was run for companion record
+`relinkNpcSlotToNewParentGroup = 0x8003EFDC` with `python3`; it reported
+`already-synchronized` and renamed zero references in zero files. Independent
+inspection found the named callable body in `RecompiledFuncs/funcs_8.c`, its
+header declaration, overlay record, and direct callers. No placeholder or
+conflicting fragment was found. H1 is selected; H2 and H3 are ruled out for
+this address. No build or soak was warranted. Audit:
+`docs/RENAME-S5299-AUDIT.md`. Next: classify
+`spawnChildNpcWithTransform = 0x8003F1D0`.
