@@ -153,14 +153,19 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Keep the M4 accumulator boundary parked: the current retail and port key
+1. Check docs/M5-AUDIO-PLAN.md status and run the next un-run de-stub step
+   with its validation soak (ITERATION.md priority 2). The M3 j/jal idiom
+   list is exhausted (s5349: both residual uncovered targets are dead data —
+   a constant-false `bltzal $zero` into the Q15 gap at 8009D978, and the
+   `.ovl.mission` header word at 800A5130 that the audit misdecoded).
+2. Keep the M4 accumulator boundary parked: the current retail and port key
    domains do not align, so do not normalize PCs/origins or infer a writer.
    Re-open only with an independently justified shared key mapping.
-2. The generated-symbol sweep is parked; re-open only if a new placeholder
+3. The generated-symbol sweep is parked; re-open only if a new placeholder
    candidate or companion-map evidence appears.
-3. Re-open M3 only as a complete idiom-class audit selected by a new
+4. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
-4. Complete fresh PatchesLib source qualification when the external
+5. Complete fresh PatchesLib source qualification when the external
    `mips64-elf-gcc` and `mips64-elf-ld` toolchain is supplied; record the
    generation, compile, and link outcomes. Session 5342 measured that both
    tools are currently absent. The host-side declaration path is now
@@ -183,6 +188,7 @@ target). Existing-artifact qualification stands. The unblock iteration (s5344)
 re-scoped the loop to an offline delay-slot/branch-operand hazard audit
 (`scratch/agent/NEXT.md`).
 
+- s5349: the 2 residual uncovered j/jal targets are dead (constant-false bltzal into data gap; overlay header word). M3 idiom list exhausted.
 - s5348: direct j/jal into overlay-aliased VMAs CLOSED (19,974 j/jal; 84 cross-section calls into vrams covered by 2-3 sections: 84/84 emitted as LOOKUP_FUNC, 0 direct; tools/audit_overlay_alias_calls.py --generated; positive control = 6,238 unambiguous cross-section calls correctly detected as direct). Residual: 2 data-misclassified targets (jal 0x8334B334 @8009D978, j 0x80000000 @800A5130) fail only if executed.
 - s5347: lwl/lwr/ldl/ldr/swl/swr/sdl/sdr split-pair class CLOSED (930 halves: 459 adjacent, 4 straight, 0 split by branch/target, 4 lone libc halves; tools/audit_lwl_lwr_split.py, self-tested). ELF overlays alias VMAs; next class: direct j/jal into aliased VMAs.
 - s5346: branch-in-delay-slot and branch-likely+mem-slot idiom classes are EMPTY in the main ELF (0/40,028; tools/audit_delay_slot_branch_in_slot.py, self-tested). Closed. Next M3 class: lwl/lwr pairs straddling a branch target (closed s5347).
