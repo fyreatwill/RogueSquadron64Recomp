@@ -160386,3 +160386,15 @@ companion address. The companion map places `osViGetCurrentField` at
 unmaterialized libultra/ABI outcome and preserves the semantic name. It rules
 out a generated-symbol rename and body/span mismatch for this candidate, but
 makes no runtime claim. Audit: `docs/RENAME-S5217-AUDIT.md`.
+## Session 5218 (2026-10-17) — classified `osViGetCurrentField` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded companion
+audit for `osViGetCurrentField = 0x80034D90`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found one call site in `funcs_4.c`, but no generated
+body, placeholder, header declaration, or overlay record at the companion
+address. The companion map places `osCreateViManager` at `0x80034DB0`, so the
+nominal span is `0x20` but there is no body to validate. This selects the
+unmaterialized libultra/ABI outcome and preserves the semantic ABI name. It
+rules out a generated-symbol rename and body/span mismatch for this candidate,
+but makes no runtime claim. Audit: `docs/RENAME-S5218-AUDIT.md`.

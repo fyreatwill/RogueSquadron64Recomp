@@ -1,10 +1,10 @@
-# Next: generated-symbol renaming sweep — next companion candidate after `osViBlack`
+# Next: generated-symbol renaming sweep — next companion candidate after `osViGetCurrentField`
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Select the next named companion entry after `osViBlack = 0x80034BE0` from
-`rogue_squadron64/symbol_files/libultra.txt`, then run one bounded companion
-audit with `tools/rename_generated_symbols.py`; do not build or soak. Record
-the exact address and end boundary in the next NEXT.md.
+Select the next named companion entry after `osViGetCurrentField = 0x80034D90`
+from `rogue_squadron64/symbol_files/libultra.txt`, then run one bounded
+companion audit with `tools/rename_generated_symbols.py`; do not build or
+soak. Record the exact address and end boundary in the next NEXT.md.
 
 Competing hypotheses and discriminator:
 
@@ -18,5 +18,5 @@ Competing hypotheses and discriminator:
 The discriminator is the bounded helper result plus generated-tree body/span
 and caller counts. Run:
 
-    rg -n 'osViGetCurrentField|osCreateViManager|func_<address>|fake_func_<address>' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x<address> --end-address 0x<end-address>
+    rg -n 'osCreateViManager|osVirtualToPhysical|func_80034DB0|fake_func_80034DB0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80034DB0 --end-address 0x80035120
