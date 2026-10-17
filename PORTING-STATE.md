@@ -161570,3 +161570,15 @@ caller from `endMissionCleanup`. No `func_8003FDD8` placeholder or conflicting
 fragment was present. This selects the already-synchronized hypothesis and
 rules out a rename or data/ABI preservation case. No build or soak was needed;
 the next candidate is `spawnNpcWithSubtype` at `0x8003FE9C`.
+
+## Session 5308 (2026-10-17) — generated-symbol sweep: `spawnNpcWithSubtype` is synchronized
+
+Ran the bounded generated-symbol helper for `spawnNpcWithSubtype` at
+`0x8003FE9C`; it reported `already-synchronized` and renamed zero references
+in zero files. Independent inspection found the companion symbol-map entry,
+named generated body and declaration, overlay record, and a named generated
+caller. No `func_8003FE9C` placeholder or conflicting generated fragment was
+present. This selects the already-synchronized hypothesis and rules out a
+rename or data/ABI preservation case. No build or soak was warranted; the
+next candidate is `destroyTransientNpcSlots` at `0x8004028C`. Audit:
+`docs/RENAME-S5308-AUDIT.md`.
