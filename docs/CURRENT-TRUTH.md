@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5325 (2026-10-17).
+Compact operational handoff, maintained at Session 5329 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -29,7 +29,11 @@ retail oracle's whole-RDRAM positive control and recorded the exact shared-
 boundary design in `docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`.
 Session 5326 made the cxd4 sampler stride configurable and added generated
 Factor 5 PCs to the port hooks; both sampler controls were live, but neither
-driven arm reached the target hangar phase, so H3 remains selected.
+driven arm reached the target hangar phase, so H3 remains selected. Session
+5329 reran the port with the title-observed Start/A schedule after a fresh
+retail whole-RDRAM control; the port again remained at width 640/origin
+`0x00696100`. The shared 512 boundary is still absent, so the M4 join is
+parked rather than repeated with an invalid phase comparison.
 
 ## Durable state
 
@@ -110,10 +114,10 @@ agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Re-run the shared-boundary M4 sampler using the proven title-to-hangar
-   phase-gated keying recipe (`PROBE_PHASE_WIDTH=512`, `PROBE_KEYS_FROM_PHASE=1`,
-   `PROBE_LEAVE_OK=1`, with keys sent after the title VI is observed); do not
-   infer an instruction-PC comparison from synthetic stage ordinals.
+1. M4 is parked at H3: obtain a new, independently validated way to drive or
+   observe the port's title-to-hangar transition before attempting another
+   task-keyed accumulator comparison. Do not compare cxd4 rows without a
+   shared 512-wide boundary.
 2. Re-open the generated-symbol sweep only if a new placeholder candidate or
    companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new

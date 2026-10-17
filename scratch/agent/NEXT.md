@@ -1,12 +1,13 @@
-# Next: RESUME M4 shared-boundary sampler through hangar
+# Next: obtain a new phase-driving or shared-boundary capability
 
-RESUME: Session 5326 completed the sampler build and positive controls but did
-not reach hangar. Do not repeat the title-only schedule. The next actual work
-unit is to rebuild the already instrumented port and cxd4, then launch both
-arms after observing the title VI, using the same title-observed key schedule.
-No new instrumentation or mitigation is needed before that run.
+Session 5329 reran the already instrumented port after a fresh retail oracle
+positive control. The title-observed Start/A schedule still left the port at
+width 640/origin `0x00696100`; it never reached the required 512-wide hangar
+boundary. Do not repeat this schedule or compare cxd4 rows without a shared
+boundary. Human input is needed to supply or approve a new independently
+validated phase-driving/observation method.
 
-Port command:
+The failed port recipe, retained for provenance only:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
@@ -17,13 +18,10 @@ env PROBE_PHASE_WIDTH=512 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
   zsh tools/probe.sh scratch/agent/m4-port-next 240 1
 ```
 
-For the cxd4 capture, use the same title-observed Start/A schedule with
-`RS64_RSP_MID_STRIDE=1`; retain whole-RDRAM and VI positive controls. The
-comparison is valid only if both arms reach `0x006AB400` at width 512. Do not
-add a mitigation or infer from synthetic stage ordinals. The exact existing
-artifacts are `scratch/agent/s5326_m4_shared_port/port.log`,
-`scratch/agent/s5326_m4_shared_retail/rsm1.bin`, and
-`docs/REVISIT-S5326-M4-SHARED-BOUNDARY-RESULT.md`.
+If a new method is supplied, rebuild both arms, retain whole-RDRAM and VI
+positive controls, and require both arms to reach `0x006AB400` at width 512
+before joining records. Do not add a mitigation or infer from synthetic stage
+ordinals.
 
 Competing hypotheses and discriminator:
 
@@ -48,9 +46,9 @@ tools/oracle/build/rs64_oracle --core \
 cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix && make all
 ```
 
-Expected outcomes: each arm must log its positive control and reach the 512
-hangar origin. Then the exact-key table selects H1, H2, or H3 as above. The
-5326 result was H3 because both arms stayed at 640/title; do not compare
-stopwatch timestamps or accept a stage-only join.
+Expected outcomes for the next attempt: a new method must make the port reach
+the 512 hangar origin and expose an independent positive control. If either
+condition fails, select H3 and stop; do not compare stopwatch timestamps or
+accept a stage-only join.
 
 HYPOTHESIS-ID: m4-accumulator-boundary

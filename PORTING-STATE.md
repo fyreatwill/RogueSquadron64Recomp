@@ -161799,3 +161799,18 @@ origin. H3 therefore remains selected: the exact task/PC/step join is
 unevaluable, and no H1/H2 accumulator conclusion or mitigation is justified.
 The next discriminator is the title-observed Start/A schedule in
 `scratch/agent/NEXT.md`.
+
+## Session 5329 (2026-10-17) — M4 title-observed retry remains unevaluable
+
+Ran the independent retail oracle first with `--watch-write 0x0:0x800000
+--hit-cap 3 --vi-trace`: the whole-RDRAM positive control reached 10,000
+callbacks and the oracle emitted live VI samples. Rebuilt the port and cxd4;
+the port was then run with `PROBE_PHASE_WIDTH=512`,
+`PROBE_KEYS_FROM_PHASE=1`, `PROBE_LEAVE_OK=1`, and the title-observed
+`2:start 8:a 14:start 20:a` schedule. It remained at width 640 and origin
+`0x00696100` through the run, so it never reached the required 512-wide
+hangar boundary. H3 is selected: the exact task/PC/step comparison is
+unevaluable, and cxd4 rows were not compared because doing so would mix
+phases. This rules out the title-observed schedule as a sufficient new
+discriminator; no accumulator mitigation follows. The M4 thread is parked
+pending a new independently validated phase-driving or shared-boundary method.
