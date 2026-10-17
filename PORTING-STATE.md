@@ -161653,3 +161653,13 @@ soak was warranted; the next candidate is `randomBurstNpcHandlerVariant` at
 - Result: `renamed 0 references in 0 files`; the helper classified the candidate as `already-synchronized`.
 - Independent evidence: `main_overlay.txt` describes the 14-instruction wrapper; `RecompiledFuncs/funcs_9.c` contains the named callable body; `funcs.h` contains the named prototype; and `recomp_overlays.inl` contains the named overlay record. Generated callers use the named symbol, and the body passes `randomBurstNpcHandlerVariant`, type 4, subtype 15 to `spawnNpcOfType`. No `func_80041CBC` placeholder or conflicting fragment was found.
 - H1 is selected; H2 and H3 are ruled out for this address. No build or soak was run because this was a bounded classification-only work unit. Audit: `docs/RENAME-S5317-AUDIT.md`. The next bounded candidate is `destroyNpcSlotByIndexU16 = 0x80041CEC`.
+## Session 5318 (2026-10-17) — generated-symbol sweep: `destroyNpcSlotByIndexU16` is synchronized
+
+Ran the bounded generated-symbol helper for `0x80041CEC` and independently
+checked the companion map, generated declaration/body, overlay record, and
+generated caller. The helper reported zero edits and already-synchronized;
+the generated wrapper masks `a0` to `u16` and calls the named
+`destroyNpcSlotByIndex`. This rules out a remaining placeholder or conflicting
+generated fragment at this address. No build or soak was warranted for a
+classification-only result. The next bounded candidate is `markLowLodCellsInGrid`
+at `0x80043AEC`.
