@@ -159082,3 +159082,12 @@ guest queue pointer and calls the host implementation. The helper reported
 zero renames and `already-synchronized`. This rules out a generated body and
 exact-span semantic rename for this candidate; preserve its `_recomp` ABI name.
 Audit: `docs/RENAME-S5115-AUDIT.md`. Next candidate: `osContGetReadData`.
+## Session 5116 (2026-10-17) — classified next libultra mapping as host wrapper
+
+Ran the bounded generated-symbol audit for companion `osContGetReadData` at
+`0x8002ACBC`. The generated snapshot has no prologue/body, one generated
+caller through `osContGetReadData_recomp`, and a zero-span overlay record at
+offset `0x2A87C`. The rename helper reported zero changes. This selects the
+host-wrapper hypothesis and preserves the ABI name; it rules out a generated
+body/span suitable for semantic renaming. No build or soak was warranted.
+Audit: `docs/RENAME-S5116-AUDIT.md`. Next candidate: `__osPackReadData`.

@@ -1,10 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5115; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5116; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5116:** The next companion entry, `osContGetReadData = 0x8002ACBC`, is
+  another host-wrapper entry: the snapshot has one generated caller but no
+  generated prologue/body, and its zero-span overlay record preserves the ABI
+  name. Audit recorded in `docs/RENAME-S5116-AUDIT.md`; the next candidate is
+  `__osPackReadData`.
 
 - **s5115:** The next companion entry, `osContStartReadData = 0x8002AC30`,
   is another host-wrapper entry: the snapshot has one generated caller but no
