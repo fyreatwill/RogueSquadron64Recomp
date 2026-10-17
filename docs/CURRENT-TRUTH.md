@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5136 (2026-10-17). The
+Compact operational handoff, maintained at Session 5137 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -82,6 +82,11 @@ were retained below or in the project overview.
   tree has no body, overlay record, or caller. Its companion span is `0xE8` to
   `0x8002CC8C`; preserve the ABI name. Audit:
   `docs/RENAME-S5136-AUDIT.md`.
+- `__osLeoResume = 0x8002CC8C` is another companion-only libultra entry: the
+  bounded helper reports `already-synchronized`, and the generated tree has no
+  body, overlay record, or caller. Its companion span is `0xEC` to
+  `0x8002CD80`; preserve the ABI name. Audit:
+  `docs/RENAME-S5137-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -137,7 +142,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osLeoResume = 0x8002CC8C` using the bounded rename helper.
+1. Audit `osEPiRawStartDma = 0x8002CD80` using the bounded rename helper.
    Rename only if the generated body, exact next-entry span, semantic mapping,
    and live caller all agree; otherwise preserve the ABI name and record the
    classification.

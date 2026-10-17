@@ -159328,3 +159328,15 @@ companion map independently defines a `0xE8` span ending at
 This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
 semantic generated-symbol rename, build, or soak for this entry. Audit:
 `docs/RENAME-S5136-AUDIT.md`. Next candidate: `__osLeoResume = 0x8002CC8C`.
+## Session 5137 (2026-10-17) — classified `__osLeoResume` as unmaterialized
+
+Ran the bounded generated-symbol helper and independent generated-tree checks
+for companion `__osLeoResume = 0x8002CC8C`. The helper changed zero references
+and reported `already-synchronized`. The generated tree contains no placeholder,
+ABI declaration, body, overlay record, or direct caller for this address. The
+companion map independently defines an exact `0xEC` span ending at
+`osEPiRawStartDma = 0x8002CD80`.
+
+This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
+semantic generated-symbol rename, build, or soak for this entry. Audit:
+`docs/RENAME-S5137-AUDIT.md`. Next candidate: `osEPiRawStartDma = 0x8002CD80`.
