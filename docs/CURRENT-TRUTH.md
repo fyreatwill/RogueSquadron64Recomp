@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5163 (2026-10-17). The
+Compact operational handoff, maintained at Session 5164 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -129,6 +129,15 @@ Its companion span ends at `__osGetOneChannelData = 0x80030A04`; preserve the
 ABI name. Audit: `docs/RENAME-S5162-AUDIT.md`. The next candidate is now
 `__osGetOneChannelData = 0x80030A04`.
 
+`__osGetOneChannelData = 0x80030A04` is now classified as another
+unmaterialized libultra/ABI entry: the bounded helper reported
+`already-synchronized`, and the generated tree has no body, placeholder,
+overlay record, or direct caller at the companion address. Its nominal span to
+the next companion entry, `osPfsInitPak = 0x80030AA0`, is `0x9C`, but no body
+exists to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5164-AUDIT.md`. The next candidate is now
+`osPfsInitPak = 0x80030AA0`.
+
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
 were retained below or in the project overview.
@@ -253,6 +262,12 @@ were retained below or in the project overview.
   caller at the companion address. Its companion boundary is
   `__osGetOneChannelData = 0x80030A04`; preserve the ABI name. Audit:
   `docs/RENAME-S5162-AUDIT.md`.
+- `__osGetOneChannelData = 0x80030A04` is another unmaterialized libultra/ABI
+  entry: the bounded helper reported `already-synchronized`, and the
+  generated tree has no body, placeholder, overlay record, or direct caller at
+  the companion address. Its nominal span to `osPfsInitPak = 0x80030AA0` is
+  `0x9C`, but no body exists to validate. Preserve the ABI name. Audit:
+  `docs/RENAME-S5164-AUDIT.md`.
 - `osPfsAllocateFile = 0x8002EBE0` is another unmaterialized libultra/ABI
   entry: the bounded helper reported `already-synchronized`, and the
   generated tree has only its ABI declaration, one direct caller, and a
@@ -362,7 +377,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osGetOneChannelData = 0x80030A04`,
+1. Resume the companion sweep with `osPfsInitPak = 0x80030AA0`,
    whose next candidate is the following symbol in the companion map, one entry
    per iteration while the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value

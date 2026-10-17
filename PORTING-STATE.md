@@ -159701,3 +159701,16 @@ mitigation; the result is single-source oracle evidence. Audit:
 `docs/M4-S5163-PAGE-WRITER-AUDIT.md`.
 
 Next: resume the companion sweep at `__osGetOneChannelData`.
+
+## Session 5164 (2026-10-17) — classified `__osGetOneChannelData` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `__osGetOneChannelData = 0x80030A04`. The helper reported
+`already-synchronized` and renamed zero references in zero files. An
+independent search of the generated tree found no body, placeholder, overlay
+record, or direct generated caller at the companion address. The nominal
+companion boundary is `osPfsInitPak = 0x80030AA0` (`0x9C` span), but no body
+exists to validate against it. Preserve the ABI name; this rules out a
+justified generated-body rename for this candidate, not the broader
+libultra/ABI boundary classification. No build or soak was needed. Audit:
+`docs/RENAME-S5164-AUDIT.md`. Next candidate: `osPfsInitPak`.
