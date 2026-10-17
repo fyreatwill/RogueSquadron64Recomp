@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5207 (2026-10-17). The
+Compact operational handoff, maintained at Session 5208 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -205,8 +205,14 @@ the generated tree has no body or placeholder at the companion address. It
 contains only the ABI declaration, a zero-size overlay record, and 12 calls
 to the existing host wrapper. Its nominal span to `osStopThread = 0x80034630`
 is `0x150`, with no body to validate. Preserve the ABI name. Audit:
-`docs/RENAME-S5207-AUDIT.md`. The next candidate is now
-`osStopThread = 0x80034630`.
+`docs/RENAME-S5207-AUDIT.md`. `osStopThread = 0x80034630` is now classified
+as another unmaterialized libultra/ABI entry: the bounded helper reported
+`already-synchronized`; the generated tree has no body or placeholder at the
+companion address, while the overlay record is zero-size and three generated
+calls target the existing host wrapper. Its nominal span to `strlen =
+0x8003471C` is `0xEC`, with no body to validate. Preserve the ABI name.
+Audit: `docs/RENAME-S5208-AUDIT.md`. The next candidate is now
+`strlen = 0x8003471C`.
 
 `__osGetOneChannelData = 0x80030A04` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
@@ -699,7 +705,7 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osStopThread = 0x80034630`, whose next
+1. Resume the companion sweep with `strlen = 0x8003471C`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration
    now that the last-15 preflight remains broken by the retail revisit. The
    retail entry boundary remains open only for a port-side join. The M4 page

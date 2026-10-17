@@ -160261,3 +160261,16 @@ span with no body to validate. Preserve the existing ABI-semantic name. This
 rules out a generated-symbol rename for this ABI boundary, not the runtime
 implementation of the host wrapper. Added `docs/RENAME-S5207-AUDIT.md`; no
 build or soak was warranted for a naming-only result.
+## Session 5208 (2026-10-17) — classified `osStopThread` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded
+generated-symbol helper and independent generated-tree searches for
+`osStopThread = 0x80034630`. The helper reported `already-synchronized` and
+renamed zero references in zero files. No generated body or placeholder exists
+at the companion address; the generated tree contains only the ABI declaration,
+a zero-size overlay record, and three calls to the existing host wrapper. The
+next companion entry is `strlen = 0x8003471C`, so the nominal span is `0xEC`
+with no body to validate. Preserve the existing ABI-semantic name. This rules
+out a generated-symbol rename for this ABI boundary, not the runtime
+implementation of the host wrapper. Added `docs/RENAME-S5208-AUDIT.md`; no
+build or soak was warranted for a naming-only result.
