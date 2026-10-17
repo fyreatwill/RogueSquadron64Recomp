@@ -452,6 +452,21 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         scan_fb(0x8062B800u, "hiRes");
         fflush(stderr);
     }
+    // ROGUESQ_FB_HASH=1 (s5069): FNV-1a of the 320x224 RGBA16 fb on EVERY swap,
+    // so windows of a single run can be compared offline for frame variance.
+    static int s_fb_hash = -1;
+    if (s_fb_hash < 0) {
+        const char* v = std::getenv("ROGUESQ_FB_HASH");
+        s_fb_hash = (v && *v && v[0] != '0') ? 1 : 0;
+    }
+    if (s_fb_hash) {
+        const uint32_t phys = fb & 0x00FFFFFF;
+        uint64_t h = 1469598103934665603ull;
+        for (uint32_t i = 0; i < 320u * 224u * 2u; ++i) {
+            h = (h ^ rdram[(phys + i) ^ 3]) * 1099511628211ull;
+        }
+        fprintf(stderr, "[fbhash #%d] fb=0x%08X h=%016llx\n", n, fb, (unsigned long long)h);
+    }
     extern void osViSwapBuffer(uint8_t* rdram, int32_t frameBufPtr);
     osViSwapBuffer(rdram, (int32_t)fb);
 }

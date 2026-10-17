@@ -612,3 +612,5 @@ Since s5042, the keyed title->hangar recipe (s5037 default) stalls: after title 
 s5061: do_dma PI range guard CLOSED on keyed route: default pg=0, force pg=16, crash=0 (two-source). Next: do_rom_pio + SP DMA wrappers.
 s5064: EEPROM x4 + osContGetReadData guarded via shared rs64_spai_guard_bad; default pg=0 crash=0, FORCE pg=16 (all AI, so per-site reachability of EEPROM/cont is unmeasured; single-source). Next: per-wrapper calls/bad counters.
 s5065: per-wrapper census on keyed route (default+FORCE): AI/cont >=16384 calls bad=0, EepromLongRead/LongWrite 2-3 calls bad=0; short EEPROM + StartGo never reached. Host-wrapper pointer guard class closed on this route (single route, 1 run/arm). Next: M5 de-stub step.
+
+- s5069: whole-frame FNV hash (ROGUESQ_FB_HASH=1) is saturated in the mission — 100% distinct frames in ctl and key windows alike; unusable for the reaction question. Next: RDRAM state-witness diff (stable-in-ctl words that move under held W).

@@ -1,6 +1,6 @@
-# Next: does the mission world REACT to input (ship response), beyond pad-layer delivery
+# Next: find a mission state witness (ship/camera words) that moves under held stick but is stable in ctl
 HYPOTHESIS-ID: m6-mission-input
-s5068 showed pad bytes reach osContGetReadData in mission with correct values, crash=0.
-Hypotheses: H1 ship/camera state changes under held stick/fire (playable); H2 pad is read but mission ignores it (e.g. input gated by a stubbed state flag); H3 reaction exists but only after longer hold / needs a different state (e.g. intro cinematic not yet over).
-Discriminator: same s5068 route; in ctl A vs key window, capture frames (existing ROGUESQ_LOG_VI_FB_CONTENT or a screenshot hash per window) and/or hash player-ship RDRAM region; compare key-window frame-hash variance vs ctl windows within the SAME run, with a W-hold vs D-hold vs fire distinction. Positive control: any frame change at all between ctl windows (animating scene -> use phase gating, not stopwatch).
-Script base: scratch/agent/s5068_mission_input.sh (route is ~260 s on this host; keep under 600 s).
+s5069: whole-frame hash saturated (every frame unique in ctl too) -> no headroom; pixels are the wrong witness.
+Hypotheses: H1 mission reacts (some RDRAM words change only under input); H2 pad read but ignored (no ctl-stable word moves under W/D/Z/Return).
+Discriminator: add ROGUESQ_RDRAM_SNAP=<dir> env: on a signal file / at script-chosen times dump 8 MB RDRAM; snapshots: ctl1, ctl2 (10 s apart, no keys), keyW (during W held 4 s), keyD. Offline: words equal ctl1==ctl2 but differing in keyW/keyD = candidate witnesses. Positive control: a word known to change (frame counter) must show in ctl1!=ctl2.
+Script base: scratch/agent/s5069_mission_fbhash.sh (route ~260-290 s).
