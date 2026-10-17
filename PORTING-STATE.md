@@ -161323,3 +161323,16 @@ with no placeholder at the address. H1 is selected in the
 already-synchronized sense; H2/H3 are ruled out for this address. No build or
 soak was warranted. Audit: `docs/RENAME-S5288-AUDIT.md`. Next:
 `getNpcContextField8 = 0x8004015C`.
+
+## Session 5289 (2026-10-17) — generated-symbol sweep: `getNpcContextField8` is synchronized
+
+Ran the bounded rename helper for `0x8004015C..0x80040160` and independently
+searched the companion map and generated tree. The companion record describes
+the named callable NPC-slot getter `getNpcContextField8`; the helper reported
+`already-synchronized` and renamed zero references in zero files. The
+generated tree contains its named body in `funcs_9.c`, header declaration,
+call sites, and overlay record, with no placeholder or conflicting fragment.
+H1 is selected in the already-synchronized callable sense; H2/H3 are ruled
+out for this address. No build or soak was warranted. Audit:
+`docs/RENAME-S5289-AUDIT.md`. Next: classify `factor5RemoveListNode =
+0x80098DE0`.

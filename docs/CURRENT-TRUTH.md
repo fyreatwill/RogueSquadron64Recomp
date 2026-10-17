@@ -178,8 +178,13 @@ unclassified companion record after `0x80040050`. Session 5288 classified
 helper reported `already-synchronized` and renamed zero references in zero
 files; the generated tree has the named declaration, call sites, and overlay
 record, with no placeholder at the address. Audit:
-`docs/RENAME-S5288-AUDIT.md`. The next sweep candidate is
-`getNpcContextField8 = 0x8004015C`.
+`docs/RENAME-S5288-AUDIT.md`. Session 5289 classified
+`getNpcContextField8 = 0x8004015C` as already synchronized. The bounded
+helper reported `already-synchronized` and renamed zero references in zero
+files; the generated tree has the named callable body, declaration, call
+sites, and overlay record, with no placeholder or conflicting fragment.
+Audit: `docs/RENAME-S5289-AUDIT.md`. The next sweep candidate is
+`factor5RemoveListNode = 0x80098DE0`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or
@@ -494,6 +499,13 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5289:** `getNpcContextField8 = 0x8004015C` is a named, already-synchronized
+  callable NPC-slot accessor; the helper made zero edits and the generated
+  tree contains its body, declaration, call sites, and overlay record. The
+  next bounded sweep unit is `factor5RemoveListNode = 0x80098DE0`, using the
+  same helper plus independent companion/generated-tree inspection. Audit:
+  `docs/RENAME-S5289-AUDIT.md`.
 
 - **s5285:** `osViModeNtscLan1 = 0x80039290` is typed `OSViMode` data of size
   `0x50` and already synchronized; the generated address is only part of an
