@@ -159101,3 +159101,13 @@ generated caller, and the rename helper changed zero references and reported
 preserves the ABI naming; no build or soak was warranted. Independent
 companion-boundary and generated-tree searches agree. Audit:
 `docs/RENAME-S5117-AUDIT.md`. Next candidate: `__osContGetInitData`.
+
+## Session 5118 (2026-10-17) — compacted current truth handoff
+
+Maintenance iteration triggered because `docs/CURRENT-TRUTH.md` was 60,334
+bytes. Rewrote it as a compact operational handoff, retaining the live route,
+audio/M3/rendering state, closed and parked boundaries, operational rules, and
+the monotonic next backlog. Historical narrative and superseded detail remain
+recoverable in git and the project overview. No experiment or build was run;
+the next bounded unit remains the `__osContGetInitData = 0x8002AFC0` generated-
+symbol audit.

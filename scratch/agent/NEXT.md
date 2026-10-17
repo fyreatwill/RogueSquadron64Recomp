@@ -1,6 +1,9 @@
 # Next: generated-symbol renaming sweep — next libultra candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
+Maintenance completed in Session 5118; no experiment was run. The next
+iteration must execute the bounded audit below as one work unit.
+
 Bounded work unit: audit only companion `__osContGetInitData = 0x8002AFC0`,
 the next libultra entry after `__osPackReadData`. Determine whether it has a
 generated prologue/body or is another runtime wrapper. Do not rename a
