@@ -1,3 +1,4 @@
+#include "rs64_rdram_peek.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -527,8 +528,7 @@ extern "C" void rs64_m5_writer_setup_state(uint8_t* rdram, uint32_t callsite, ui
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (!rdram || guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         uint32_t p = guest - 0x80000000u;
-        return (uint32_t(rdram[p]) << 24) | (uint32_t(rdram[p + 1]) << 16) |
-               (uint32_t(rdram[p + 2]) << 8) | rdram[p + 3];
+        return rs64_rdram_u32(rdram, p);
     };
     if (rows == 0u) {
         std::fprintf(stderr, "[m5-writer-setup-input-control] phase=%u width=%u origin=0x%06X\n", rs64_phase_ord(), width, origin);
@@ -1709,14 +1709,11 @@ extern "C" void rs64_m5_object_entry_witness(uint8_t* rdram,
     if (!enabled || !rdram || !ctx) return;
     auto raw_word = [rdram](uint32_t address) -> uint32_t {
         const uint32_t p = address & 0x007FFFFCu;
-        return (uint32_t(rdram[p]) << 24) | (uint32_t(rdram[p + 1]) << 16) |
-               (uint32_t(rdram[p + 2]) << 8) | rdram[p + 3];
+        return rs64_rdram_u32(rdram, p);
     };
     auto raw_half = [rdram](uint32_t address) -> uint32_t {
         const uint32_t p = address & 0x007FFFFCu;
-        const uint32_t word = (uint32_t(rdram[p]) << 24) |
-                              (uint32_t(rdram[p + 1]) << 16) |
-                              (uint32_t(rdram[p + 2]) << 8) | rdram[p + 3];
+        const uint32_t word = rs64_rdram_u32(rdram, p);
         return (word >> ((address & 2u) ? 0u : 16u)) & 0xFFFFu;
     };
     const uint32_t s0 = U32(ctx->r16);
@@ -1887,10 +1884,7 @@ extern "C" void rs64_m5_object_successor_witness(uint8_t* rdram,
     const uint32_t load_addr = 0x801499C8u;
     const uint32_t load_phys = load_addr - 0x80000000u;
     const uint32_t load_value =
-        (uint32_t(rdram[load_phys]) << 24) |
-        (uint32_t(rdram[load_phys + 1]) << 16) |
-        (uint32_t(rdram[load_phys + 2]) << 8) |
-        uint32_t(rdram[load_phys + 3]);
+        rs64_rdram_u32(rdram, load_phys);
     std::fprintf(stderr,
         "[m5-object-successor] row=%u phase=%u width=%u origin=0x%06X "
         "pc=0x%08X v0=0x%08X v1=0x%08X a2=0x%08X s0=0x%08X "
@@ -1932,10 +1926,7 @@ extern "C" void rs64_m5_object_load_witness(uint8_t* rdram,
     const uint32_t load_addr = 0x801499C8u;
     const uint32_t load_phys = load_addr - 0x80000000u;
     const uint32_t load_value =
-        (uint32_t(rdram[load_phys]) << 24) |
-        (uint32_t(rdram[load_phys + 1]) << 16) |
-        (uint32_t(rdram[load_phys + 2]) << 8) |
-        uint32_t(rdram[load_phys + 3]);
+        rs64_rdram_u32(rdram, load_phys);
     const uint32_t v0 = U32(ctx->r2);
     const uint32_t v1 = U32(ctx->r3);
     std::fprintf(stderr,
@@ -2727,10 +2718,7 @@ static uint32_t rs64_filter_voice_guest_word(uint32_t base) {
     const volatile uint8_t* rdram = g_recomp_rdram_for_wp_raw;
     if (!rdram)
         return 0u;
-    return (uint32_t(rdram[phys]) << 24) |
-           (uint32_t(rdram[phys + 1]) << 16) |
-           (uint32_t(rdram[phys + 2]) << 8) |
-           uint32_t(rdram[phys + 3]);
+    return rs64_rdram_u32(rdram, phys);
 }
 
 static const char* rs64_filter_voice_site_name(uint32_t site) {
@@ -3044,10 +3032,7 @@ extern "C" void rs64_filter_voice_c88c_field_probe(uint8_t* rdram,
         const uint32_t phys = (segment == 0x80000000u || segment == 0xA0000000u)
             ? (guest & 0x1FFFFFFFu) : guest;
         if (phys > 0x7FFFF8u) return 0xFFFFFFFFu;
-        return (uint32_t(rdram[phys]) << 24) |
-               (uint32_t(rdram[phys + 1]) << 16) |
-               (uint32_t(rdram[phys + 2]) << 8) |
-               uint32_t(rdram[phys + 3]);
+        return rs64_rdram_u32(rdram, phys);
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
         if (!rdram) return 0xFFFFFFFFu;
@@ -3064,10 +3049,7 @@ extern "C" void rs64_filter_voice_c88c_field_probe(uint8_t* rdram,
             ? (guest & 0x1FFFFFFFu) : guest;
         const uint32_t aligned = phys & ~3u;
         if (aligned + 3u >= 0x800000u) return 0xFFFFFFFFu;
-        const uint32_t value = (uint32_t(rdram[aligned]) << 24) |
-                               (uint32_t(rdram[aligned + 1]) << 16) |
-                               (uint32_t(rdram[aligned + 2]) << 8) |
-                               uint32_t(rdram[aligned + 3]);
+        const uint32_t value = rs64_rdram_u32(rdram, aligned);
         return (value >> ((phys & 2u) ? 0u : 16u)) & 0xFFFFu;
     };
     std::fprintf(stderr,
@@ -3113,10 +3095,7 @@ extern "C" void rs64_filter_voice_c88c_branch_probe(uint8_t* rdram,
         const uint32_t phys = (segment == 0x80000000u || segment == 0xA0000000u)
             ? (guest & 0x1FFFFFFFu) : guest;
         if (phys > 0x7FFFFCu) return 0xFFFFFFFFu;
-        return (uint32_t(rdram[phys]) << 24) |
-               (uint32_t(rdram[phys + 1]) << 16) |
-               (uint32_t(rdram[phys + 2]) << 8) |
-               uint32_t(rdram[phys + 3]);
+        return rs64_rdram_u32(rdram, phys);
     };
     std::fprintf(stderr,
         "[m5-c88c-branch] seq=%lu row=%u phase=%u origin=0x%06X "

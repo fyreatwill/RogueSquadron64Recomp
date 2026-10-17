@@ -848,7 +848,9 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. The retail-entry thread is closed (s5229: census byte-swizzle bug).
+1. Classify the ~130 remaining single-byte `rdram[x]` reads (s5230): swizzle or prove
+   they index a linear copy. Then re-check any ledger claim built on the 19 fixed readers.
+1b. The retail-entry thread is closed (s5229: census byte-swizzle bug).
    Re-open the "external retail-entry boundary" only with a new angle
    not built on the s5223-s5228 byte census. Otherwise resume M5 audio
    de-stubbing per `docs/M5-AUDIO-PLAN.md`. The sweep stays paused at
@@ -883,3 +885,9 @@ about 0.04%: pc=0 rows (record never written by a patched store) and a
 handful of mismatches (unhooked SD/swl/swr/host write); not pursued.
 No port divergence at the mission entry boundary; nothing to guard.
 Lesson: any raw `rdram[...]` byte read in a census must apply `^3`.
+
+## s5230 note (raw rdram[] reads)
+19 hand-composed word reads in main.cpp/upstream_compat.cpp were byte-reversed (no `^3`); fixed via
+`src/main/rs64_rdram_peek.h` (use it for ALL host probe reads). Logged words from the probes named in
+PORTING-STATE s5230 predating this are suspect (single-source) until re-read. Remaining single-byte
+`rdram[x]` reads are unclassified (Next steps #1).

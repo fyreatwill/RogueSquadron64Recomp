@@ -32,6 +32,7 @@
 #pragma comment(lib, "winmm.lib")
 #else
 #include "win_compat.h"
+#include "rs64_rdram_peek.h"
 #endif
 
 #include <atomic>
@@ -3779,10 +3780,7 @@ extern "C" void rs64_m5_producer_input(uint8_t* rdram,
     const uint32_t source_ptr = U32(ctx->r4);
     const uint32_t source_word =
         (source_ptr >= 0x80000000u && source_ptr <= 0x807FFFFCu)
-            ? (static_cast<uint32_t>(rdram[source_ptr - 0x80000000u]) << 24 |
-               static_cast<uint32_t>(rdram[source_ptr - 0x80000000u + 1]) << 16 |
-               static_cast<uint32_t>(rdram[source_ptr - 0x80000000u + 2]) << 8 |
-               static_cast<uint32_t>(rdram[source_ptr - 0x80000000u + 3]))
+            ? rs64_rdram_u32(rdram, source_ptr - 0x80000000u)
             : 0xFFFFFFFFu;
     std::fprintf(stderr,
         "[m5-producer-input] ordinal=%u phase=%u width=%u origin=0x%06X "
@@ -3814,11 +3812,8 @@ extern "C" void rs64_m5_output_state_fields(uint8_t* rdram,
     const uint32_t s1 = U32(ctx->r17);
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
-        const uint32_t p = (guest - 0x80000000u) ^ 3u;
-        return (static_cast<uint32_t>(rdram[p]) << 24) |
-               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
-               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
-               static_cast<uint32_t>(rdram[p + 3]);
+        const uint32_t p = guest - 0x80000000u;
+        return rs64_rdram_u32(rdram, p);
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
@@ -3861,10 +3856,7 @@ extern "C" void rs64_m5_table_selection(uint8_t* rdram,
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint32_t p = guest - 0x80000000u;
-        return (static_cast<uint32_t>(rdram[p]) << 24) |
-               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
-               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
-               static_cast<uint32_t>(rdram[p + 3]);
+        return rs64_rdram_u32(rdram, p);
     };
     const uint32_t entry = U32(ctx->r3);
     const uint32_t selected = U32(ctx->r16);
@@ -4251,10 +4243,7 @@ extern "C" void rs64_m5_selector_producer(uint8_t* rdram, uint32_t pc,
     const auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint32_t p = guest - 0x80000000u;
-        return (static_cast<uint32_t>(rdram[p]) << 24) |
-               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
-               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
-               static_cast<uint32_t>(rdram[p + 3]);
+        return rs64_rdram_u32(rdram, p);
     };
     const uint32_t table = 0x80149758u + ((index & 0xFFu) * 4u);
     std::fprintf(stderr,
@@ -4980,10 +4969,7 @@ static void rs64_m5_frequency_producer(uint8_t* rdram, recomp_context* ctx,
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint32_t p = guest - 0x80000000u;
-        return (static_cast<uint32_t>(rdram[p]) << 24) |
-               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
-               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
-               static_cast<uint32_t>(rdram[p + 3]);
+        return rs64_rdram_u32(rdram, p);
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
@@ -5028,10 +5014,7 @@ static void rs64_m5_frequency_receive_join(uint8_t* rdram,
     const uint32_t slot = U32(ctx->r5);
     if (delivered == 0xFFFFFFFFu && slot >= 0x80000000u && slot <= 0x807FFFFCu) {
         const uint32_t p = slot - 0x80000000u;
-        delivered = (static_cast<uint32_t>(rdram[p]) << 24) |
-                    (static_cast<uint32_t>(rdram[p + 1]) << 16) |
-                    (static_cast<uint32_t>(rdram[p + 2]) << 8) |
-                    static_cast<uint32_t>(rdram[p + 3]);
+        delivered = rs64_rdram_u32(rdram, p);
     }
     std::fprintf(stderr,
         "[m5-frequency-receive] ordinal=%u phase=%u width=%u origin=0x%06X "
@@ -5072,10 +5055,7 @@ extern "C" void rs64_m5_frequency_consumer(uint8_t* rdram,
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint32_t p = guest - 0x80000000u;
-        return (static_cast<uint32_t>(rdram[p]) << 24) |
-               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
-               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
-               static_cast<uint32_t>(rdram[p + 3]);
+        return rs64_rdram_u32(rdram, p);
     };
     std::fprintf(stderr,
         "[m5-frequency-consumer] ordinal=%u phase=%u width=%u origin=0x%06X "
@@ -5352,10 +5332,7 @@ static void rs64_m5_frequency_contract(uint8_t* rdram, recomp_context* ctx) {
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint32_t p = guest - 0x80000000u;
-        return (static_cast<uint32_t>(rdram[p]) << 24) |
-               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
-               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
-               static_cast<uint32_t>(rdram[p + 3]);
+        return rs64_rdram_u32(rdram, p);
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
@@ -5397,10 +5374,7 @@ extern "C" void rs64_m5_frequency_caller(uint8_t* rdram, recomp_context* ctx,
     auto word = [](uint8_t* rdram, uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint32_t p = guest - 0x80000000u;
-        return (static_cast<uint32_t>(rdram[p]) << 24) |
-               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
-               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
-               static_cast<uint32_t>(rdram[p + 3]);
+        return rs64_rdram_u32(rdram, p);
     };
     auto byte = [](uint8_t* rdram, uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
@@ -5614,8 +5588,7 @@ extern "C" void rs64_audioloop_witness(uint8_t* rdram, recomp_context* ctx,
     uint32_t msgp = 0xFFFFFFFFu, msgb = 0xFFFFFFFFu;
     if (stage == 1u && msg >= 0x80000000u && msg < 0x807FFFFCu) {
         const uint32_t p = msg - 0x80000000u;
-        msgp = (uint32_t(rdram[p]) << 24) | (uint32_t(rdram[p + 1]) << 16) |
-               (uint32_t(rdram[p + 2]) << 8) | uint32_t(rdram[p + 3]);
+        msgp = rs64_rdram_u32(rdram, p);
         msgb = byte(rdram, 0x80000000u | (msgp & 0x1FFFFFFFu));
     }
     std::fprintf(stderr,

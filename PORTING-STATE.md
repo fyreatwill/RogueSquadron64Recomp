@@ -160751,3 +160751,22 @@ Session 5229 summary: this run selects the byte-swizzle census bug as the
 cause of the "port 0x03" reading, refutes a late port writer, and resolves
 the s5223-s5228 retail-entry thread. Next discriminator: grep the other raw
 rdram byte reads for a missing ^3 (see above).
+
+## Session 5230 (2026-10-17) — audited raw rdram[] word reads; 19 byte-reversed diagnostic reads fixed
+Work unit: the s5229 follow-up sub-step (find other `rdram[...]` reads lacking the `^3` swizzle).
+Finding: 19 hand-composed big-endian word reads (`rdram[p]<<24|rdram[p+1]<<16|...`) in
+src/main/main.cpp (9) and upstream_compat.cpp (10) returned BYTE-REVERSED values, because rdram is
+stored word-swapped. One site (upstream_compat `word` lambda near the 0x790400/0x790800 gate) also
+applied `^3` to the base and then read p+1..p+3, crossing into the next word. `raw_half` in main.cpp
+(object-entry probe) extracted the halfword from that reversed word, so its output was wrong too.
+Change: new src/main/rs64_rdram_peek.h (rs64_rdram_u8/u32, swizzle-correct, volatile-safe);
+tools/fix_rdram_word_reads.py (idempotent rewrite) applied; sites now call rs64_rdram_u32.
+Positive control (same-session): tools/peek_selftest.cpp stores a known pattern MEM_B-style; helper
+returns 0x12345678/0x9ABCDEF0 and the OLD pattern returns 0x78563412 (the predicted reversed value).
+Full build links. No game run: diagnostic-only readers, gameplay path untouched.
+ORIGIN: not a mitigation; the writer of the wrong values was our own probe code (missing swizzle).
+Consequence: any past conclusion citing logged words from [m5-producer-input], [m5-object-successor],
+m5_object_entry raw_word/raw_half, filter_voice_guest_word, or the 0x790400 `word` lambda was read
+byte-reversed and is single-source suspect. Not yet re-derived.
+Remaining: ~130 single-byte `rdram[x]` reads (upstream_compat 61, main 58, rt64_render_context 12 lines
+matching) still unclassified; some legitimately operate on linear copies.
