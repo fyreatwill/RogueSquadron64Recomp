@@ -1,10 +1,17 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5102; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5103; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5103:** Thread/queue host-wrapper census completed after restoring the
+  missing audit tool. The positive-control self-test passed (4/4), and the live
+  census covered 16 wrapper/runtime definitions including `do_send`/`do_recv`:
+  all pointer-bearing paths were translated/range-checked or forwarded, with
+  no raw guest dereference. Direct symbol/edge grep independently agrees. This
+  is source-audit evidence only; no runtime guard or soak was warranted.
 
 - **s5102:** DMA/event host-wrapper census completed after restoring the missing
   audit tool. The positive-control self-test passed (4/4), and the live census
@@ -183,6 +190,7 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 The s5049 in-place regen (tools/agent/regen_n64recomp.sh, still disabled) destroyed the live tree, but it is RESTORED and verified: N64Recomp/scratch_s4970_live (Oct-13 copy) + replay of post-s4970 scripts (scratch/agent/s5050_replay.sh, s5050_s5037.sh) compiles to byte-identical __text for 51/51 funcs_*.c vs the surviving build/libRecompiledFuncs.a (scratch/agent/s5050_compare.py). funcs.h/lookup.cpp/recomp_overlays.inl identical to the clobbered copies. The clobbered tree is kept at N64Recomp/RecompiledFuncs.s5049-clobbered. cmake --build is safe again (it recompiles ~5 files whose mtimes the replay touched; code identical). Never regen in place; "live tree is unreproducible" was wrong: backup + ordered apply_s* replay reproduces it.
 
 ## Next steps (single monotonic backlog)
+- s5103: Thread/queue host-wrapper class closed for the audited set. `tools/audit_thread_queue_wrappers.py` passed its synthetic raw/translated/no-op controls; live census covered the seven requested wrappers plus `do_send`/`do_recv` runtime callees and found no raw guest dereference. Direct symbol/forwarding grep independently confirmed the wrapper/callee edges. No guard or runtime build was authorized. Next: remaining timer/virtual/cache host wrappers.
 - s5102: DMA/event host-wrapper class closed for the audited set. `tools/audit_dma_event_wrappers.py` passed its synthetic raw/translated/no-op controls; live census classified `do_dma`, `osPiStartDma_recomp`, and `osEPiStartDma_recomp` as translated/range-checked callee paths, event wrappers as forwarded/address-storing, and `osDpSetNextBuffer_recomp` as intentional assert/no-op. Direct symbol grep independently confirmed all wrapper/callee edges. No raw guest dereference was found; no guard or runtime build was authorized. Next: remaining thread/queue host wrappers.
 - s5100: shape 4 (bare narrow-int local/param as MEM_x base) closed: census 26 gpr, 10 gpr params, 1 benign int loop index; tools/audit_narrow_base.py (control 2/0, live 0) gated in fixup post-condition. s5099 soak folded: rc=0, hangar_arrivals=3 crash=0. Unsigned-base class closed. Next M3 class: host wrappers (osViSwapBuffer, EEPROM/pak buffer args).
 - s5099: shape-3 now gated too: tools/audit_uint32_s32_base.py (selftest control 1/0, live tree 0 hits) is called from the fixup post-condition after s5097's; not run through a real regen. Soak s5099_shape3_fix_soak queued (hangar route, scene-node-cache guard log on) - fold its SOAK-RESULTS line next iteration. Next M3 class: bare int/unsigned locals as MEM_x base after regen; then remaining host wrappers (osViSwapBuffer, EEPROM/pak buffer args).

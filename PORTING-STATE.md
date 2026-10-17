@@ -158898,3 +158898,26 @@ This is source-audit evidence only: no runtime guard, build, or soak was
 authorized. Rules out a reachable raw guest-pointer site in this DMA/event
 wrapper set, but does not prove unexercised paths safe at runtime. Next:
 remaining thread/queue host wrappers.
+
+## Session 5103 (2026-10-17) — thread/queue host-wrapper guest-pointer census
+
+The staged `tools/audit_thread_queue_wrappers.py` was absent, so the exact NEXT
+commands initially failed with Python file-not-found errors. Reconstructed the
+bounded audit harness from the neighboring wrapper audits, including
+`do_send`/`do_recv` runtime callees, then fixed two matcher defects exposed by
+its own positive control: indented synthetic functions and `_recomp` wrapper
+names. The final same-run positive-control self-test classified 4/4 synthetic
+translated, forwarded, raw, and no-op bodies correctly.
+
+The live census covered 16 definitions: the seven requested translation
+wrappers, their thread/queue runtime implementations, and `do_send`/`do_recv`.
+All pointer-bearing paths were translated/range-checked or forwarded; the only
+non-pointer rows were the two queue entry points that delegate to the audited
+`do_send`/`do_recv` callees. No raw guest dereference was reported.
+
+Independent `rg` source evidence confirmed every expected wrapper/callee symbol
+and the forwarding edges in `ultra_translation.cpp`; it agrees with the census.
+This is source-audit evidence only: no runtime guard, build, or soak was
+authorized. Rules out a reachable raw guest-pointer site in this thread/queue
+wrapper set, but does not prove unexercised paths safe at runtime. Next: timer,
+virtual-address, and cache host wrappers.
