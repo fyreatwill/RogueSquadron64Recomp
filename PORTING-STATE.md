@@ -159560,3 +159560,17 @@ unmaterialized libultra entry. No build or soak was needed.
 Evidence: `docs/RENAME-S5153-AUDIT.md`.
 
 Next: audit `__osCheckId = 0x8002FC60`.
+
+## Session 5154 (2026-10-17) — classified `__osCheckId` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Audited the next generated-
+symbol candidate, `__osCheckId = 0x8002FC60`, with the bounded rename helper,
+direct generated-tree checks, and the companion symbol map. The helper made
+zero edits and reported `already-synchronized`. No generated body,
+placeholder, overlay record, or independent generated caller exists at the
+candidate address; the companion boundary is `__osPfsRWInode = 0x8002FD5C`.
+Preserve the existing ABI name as an unmaterialized libultra entry. No build
+or soak was needed for this naming-only classification. Evidence:
+`docs/RENAME-S5154-AUDIT.md`.
+
+Next: audit `__osPfsRWInode = 0x8002FD5C`.
