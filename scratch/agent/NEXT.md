@@ -1,32 +1,31 @@
-# Next: bounded companion-symbol classification at `vi = 0x800391B0`.
+# Next: new-angle external retail-entry boundary revisit.
 
 The s5250 baseline arm self-skipped at host load1=5.20, so do not retry it
 until a future loop supplies load1<2. M5 has no uncompleted de-stub step and
-the recent M3 idiom classes are closed; continue the permitted sweep. The
-previous `_Putfld` pointer was stale and was rechecked in s5266. The
-`__osHwIntTable` candidate was confirmed as a data/fragment record in s5268;
-the `__osShutdown` candidate was confirmed as a data/fragment record in s5269;
-the `__OSGlobalIntMask` candidate was confirmed as a data/fragment record in
-s5270 and `__osPiDevMgr` in s5272; do not build or soak for them.
-The `__osCurrentHandle` candidate was confirmed as typed data with no callable
-placeholder in s5274; do not build or soak for it.
-The `__osPiAccessQueueEnabled` candidate was confirmed as typed data with no callable placeholder in s5275; do not build or soak for it.
-The `__osSiAccessQueueEnabled` candidate was confirmed as typed data with no callable placeholder in s5276; do not build or soak for it.
+the recent M3 idiom classes are closed. The `vi` candidate was confirmed as
+typed `OSViContext` data with no callable placeholder in s5277; do not continue
+the sweep until the retail-entry revisit is attempted.
 
-Before the next classification, competing hypotheses and discriminator:
+Competing hypotheses and discriminator:
 
-- H1: `vi` is already synchronized as a data symbol and needs no edit.
-- H2: `vi` is an unmaterialized callable placeholder whose companion name can be propagated.
-- H3: `vi` is a data/fragment record and must remain mechanical.
+- H1: the remaining retail/port entry difference is an unmeasured argument or
+  return-value contract at the retained caller, not the previously censused
+  byte field.
+- H2: the difference is introduced before the retained caller by a distinct
+  caller path or phase-specific dispatch.
+- H3: the difference is measurement-only and disappears when the same
+  caller/phase/argument tuple is joined on both sides.
 
-Discriminating measurement: run the bounded rename helper over only the next
-candidate's span, then independently inspect its companion type, generated
-body/header/overlay record, and references. A zero-edit data result selects
-the data hypotheses; a callable generated placeholder with a safe companion
-mapping selects the callable hypothesis.
+Discriminating measurement: use one phase-gated run of the existing entry-join
+instrumentation, retaining a complete tuple for every `0x8008FAAC` hit:
+caller PC, `a0`, DRAM `a1`, `a2`, `a3`, and return-side scalar state. H1
+predicts a tuple/return mismatch with the same caller; H2 predicts an
+unmatched caller/phase population; H3 predicts matching tuples and return
+state. A whole-RDRAM positive control must fire in the same run before a null
+is interpreted.
 
-Exact command:
+Exact preparation command (before any build):
 
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x800391B0 --end-address 0x80039210 --limit 1`
+`rg -n "s5223_entry_join|whole-RDRAM|phase-origin-watch|8008FAAC" tools src/main ../N64Recomp/RecompiledFuncs/funcs_24.c`
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: external-retail-entry-boundary-revisit

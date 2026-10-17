@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5276 (2026-10-17). The
+Compact operational handoff, maintained at Session 5277 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -99,6 +99,11 @@ This file was compacted at S5245 (maintenance); history is in git.
 ### Generated-symbol sweep
 
 Sweep detail archived in `docs/PROJECT-OVERVIEW.md` ("Archived sweep log").
+The `vi = 0x800391B0` candidate is typed `OSViContext` data of size `0x60`;
+the bounded helper made zero edits, and the generated tree has only a data
+fragment `nop` with no callable placeholder, declaration, overlay record, or
+direct generated reference. Preserve the data name. Audit:
+`docs/RENAME-S5277-AUDIT.md`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or
@@ -407,6 +412,14 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5277:** `vi = 0x800391B0` is typed `OSViContext` data of size `0x60` and
+  already synchronized: the bounded helper made zero edits, and independent
+  checks find only a data-fragment nop with no callable placeholder, header
+  declaration, overlay record, or direct generated reference. Preserve the
+  name; no build or soak. Audit: `docs/RENAME-S5277-AUDIT.md`. Because the
+  recent 15-session census is sweep-scoped, the next unit is a new-angle
+  external retail-entry boundary revisit, not another sweep candidate.
 
 - **s5276:** `__osSiAccessQueueEnabled = 0x80039170` is typed `u32` data and
   already synchronized: the bounded helper made zero edits, and independent

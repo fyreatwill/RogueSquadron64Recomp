@@ -161147,3 +161147,16 @@ Ran the bounded companion-symbol discriminator for `__osPiAccessQueueEnabled = 0
 ## Session 5276 (2026-10-17) — generated-symbol sweep: `__osSiAccessQueueEnabled` is data
 
 Ran the bounded companion-symbol discriminator for `__osSiAccessQueueEnabled = 0x80039170` over `0x80039170..0x800391B0`. The helper made zero edits and reported `already-synchronized`. Independent checks found the companion declaration `type:u32` in `libultra.txt`; the generated region contains only a nop in the surrounding data/fragment decode and no callable body, placeholder, header declaration, overlay record, or direct generated reference. This selects the typed-data interpretation and rules out callable placeholder propagation. Preserve the existing name; no build or soak was needed. Audit: `docs/RENAME-S5276-AUDIT.md`. Next candidate: `vi = 0x800391B0`.
+
+## Session 5277 (2026-10-17) — generated-symbol sweep: `vi` is data
+
+Ran the bounded companion-symbol discriminator over `0x800391B0..0x80039210`.
+It made zero edits and reported `vi` as already synchronized. Independent
+inspection found the companion declaration `type:OSViContext size:0x60`; the
+generated tree contains only a nop in the surrounding data/fragment decode,
+with no callable body, placeholder, header declaration, overlay record, or
+direct generated reference. This rules out callable placeholder propagation;
+preserve the data name. No build or soak was needed. Audit:
+`docs/RENAME-S5277-AUDIT.md`. Since the recent 15-session title census is
+sweep-scoped, the next work unit is a new-angle external retail-entry revisit,
+not another sweep candidate.
