@@ -160177,3 +160177,16 @@ or direct caller exists at the companion address; the next companion entry is
 this ABI boundary, not the runtime implementation of the host wrapper. Added
 `docs/RENAME-S5201-AUDIT.md`; no build or soak was warranted for a
 naming-only result.
+
+## Session 5202 (2026-10-17) — classified `__osSpRawStartDma` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol helper and independent generated-tree searches for
+`__osSpRawStartDma = 0x80034350`. The helper reported `already-synchronized`
+and renamed zero references. No generated body, placeholder, overlay record,
+or direct generated caller exists at the companion address; the next companion
+entry is `__osSpSetPc = 0x800343E0`, giving a nominal `0x90` span with no body
+to validate. Preserve the existing ABI-semantic name. This rules out a
+generated-symbol rename for this ABI boundary, not the runtime implementation
+of the host wrapper. Added `docs/RENAME-S5202-AUDIT.md`; no build or soak was
+warranted for a naming-only result.

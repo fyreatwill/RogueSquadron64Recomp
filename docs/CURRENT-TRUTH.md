@@ -169,6 +169,15 @@ record, or direct caller at the companion address. Its companion span ends at
 Preserve the ABI name. Audit: `docs/RENAME-S5201-AUDIT.md`. The next candidate
 is now `__osSpRawStartDma = 0x80034350`.
 
+`__osSpRawStartDma = 0x80034350` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized` and
+renamed zero references in zero files. Independent generated-tree searches
+found no body, placeholder, overlay record, or direct generated caller at the
+companion address. Its nominal span to `__osSpSetPc = 0x800343E0` is `0x90`,
+with no body to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5202-AUDIT.md`. The next candidate is now
+`__osSpSetPc = 0x800343E0`.
+
 `__osGetOneChannelData = 0x80030A04` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported
 `already-synchronized`, and the generated tree has no body, placeholder,
@@ -659,7 +668,7 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSpRawStartDma = 0x80034350`, whose next
+1. Resume the companion sweep with `__osSpSetPc = 0x800343E0`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
