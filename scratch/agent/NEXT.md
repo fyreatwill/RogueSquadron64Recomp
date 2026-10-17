@@ -1,5 +1,17 @@
-# Next: confirm hangar flake fix, then classify remaining unsigned-base audit hits
+# Next: idiom-class audit follow-ups after the unsigned-base class closure
 HYPOTHESIS-ID: hangar-flake-fault-class
-1. Read SOAK-RESULTS.md tail for s5094_hangar_unsigned_base_fix. PASS (>=2 hangar arrivals, 0 CRASH, buttons_port>0) => move root cause to confirmed in CURRENT-TRUTH. A CRASH at updateHangarBayScene again => the fix did not apply; check `python3 tools/agent/disasm_at.py updateHangarBayScene 76424 8 4` for movk lsl #32.
-2. Run `zsh scratch/agent/audit_unsigned_base.sh`; classify the remaining hits (funcs_0:5690, funcs_23:7982, funcs_24 7611-7923 & 9697, funcs_29:12502-3): fix with S32() in the fixup scripts if the arg order is (off, base) with an unsigned base, or prove them benign.
-3. Regen-safety: confirm the fixup repair branch triggers (report line "AC8C0 port log unsigned base repaired") on a copy with the stale form.
+
+State (s5095): the hangar flake (updateHangarBayScene+76424) is confirmed fixed (s5094 soak: 3/3 hangar
+arrivals, 0 CRASH). The remaining 11 unsigned-base MEM_x sites in the live tree (all env-gated
+diagnostics) were stale forms of text whose fixup sources already emit S32(); tools/repair_unsigned_base_live.py
+synced them, `scratch/agent/audit_unsigned_base.sh` is now empty for tools/ and generated code
+(positive control = 1). s5095 soak (all gating env vars ON) verdict is in SOAK-RESULTS.md.
+
+1. Fold the s5095 soak verdict into CURRENT-TRUTH if not yet done. Crash with a gated diagnostic ON =>
+   a new fault class (read the faulting symbol; do not guess).
+2. Extend the audit to the other zero-extension shapes the regex does not match: `MEM_x(off, (uint32_t)X)`,
+   `MEM_x(off, U32(X))`, `(uint32_t)` / `u`-suffixed *variables* used as the base in diagnostics.
+   Command: grep -nE 'MEM_[A-Z]+\([^,]+,[[:space:]]*(U32|\(uint32_t\))\(' tools/*.py build/factor5_ucode/*.c
+   Classify each as base (bug) vs value (fine).
+3. Regen-safety (still open): confirm the fixup repair branch ("AC8C0 port log unsigned base repaired")
+   triggers on a copy with the stale form — needs a pristine-regen copy, see s5090/s5091 notes.
