@@ -14,9 +14,9 @@ qualified image route; the silent `ROGUESQ_AUDIO_UCODE=0` path is only a
 control. Mission input reaches the game and changes the player vehicle state.
 
 The current bounded work is the generated-symbol renaming sweep. The last
-candidate, `__osPackReadData = 0x8002AD64`, was a host-wrapper/ABI entry with
-no generated body or exact-span rename. The next candidate is
-`__osContGetInitData = 0x8002AFC0`.
+candidate, `__osContGetInitData = 0x8002AFC0`, was a host-wrapper/ABI entry
+with no generated body or exact-span rename. The next candidate is
+`__osPackRequestData = 0x8002B090`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -114,7 +114,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osContGetInitData = 0x8002AFC0` using the bounded rename helper.
+1. Audit `__osPackRequestData = 0x8002B090` using the bounded rename helper.
    Rename only if the generated body, exact next-entry span, semantic mapping,
    and live caller all agree; otherwise preserve the ABI name and record the
    classification.

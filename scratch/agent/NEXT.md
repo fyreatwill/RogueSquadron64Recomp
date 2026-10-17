@@ -1,19 +1,14 @@
 # Next: generated-symbol renaming sweep — next libultra candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Checkpoint close-out completed in Session 5119. The prior maintenance
-compaction is complete, but the bounded audit below has not run. The next
-iteration must execute it as one work unit; do not repeat maintenance or this
-checkpoint close-out.
-
-Bounded work unit: audit only companion `__osContGetInitData = 0x8002AFC0`,
-the next libultra entry after `__osPackReadData`. Determine whether it has a
-generated prologue/body or is another runtime wrapper. Do not rename a
+Bounded work unit: audit only companion `__osPackRequestData = 0x8002B090`,
+the next libultra entry after `__osContGetInitData`. Determine whether it has
+a generated prologue/body or is another runtime wrapper. Do not rename a
 `_recomp` ABI symbol without a generated body and exact span.
 
 Competing hypotheses and discriminator:
 
-- H-generated-name-correct: a generated prologue/body is at `0x8002AFC0`, the
+- H-generated-name-correct: a generated prologue/body is at `0x8002B090`, the
   overlay span ends at the next entry, and an independent generated caller
   exists; apply the semantic rename.
 - H-host-wrapper: only a runtime wrapper/call declaration exists, or the
@@ -30,8 +25,8 @@ preserve ABI naming, leave unchanged, or advance without a build/soak.
 
 Commands:
 
-    rg -n '__osContGetInitData|func_8002AFC0|fake_func_8002AFC0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002AFC0 --end-address 0x8002B090
+    rg -n '__osPackRequestData|func_8002B090|fake_func_8002B090' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002B090 --end-address 0x8002B5F0
 
 If all generated-name gates pass, apply the explicit mapping and record a new
 audit. Otherwise preserve the wrapper ABI and record the classification. No

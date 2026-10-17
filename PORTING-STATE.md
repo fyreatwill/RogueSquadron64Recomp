@@ -159120,3 +159120,15 @@ instruction, no rename audit, build, or soak was rerun. The repository still
 has no result for `__osContGetInitData = 0x8002AFC0`; the next iteration must
 run the bounded generated-body/span/caller inspection from `scratch/agent/NEXT.md`.
 The existing dirty submodule worktrees were preserved and not staged.
+
+## Session 5120 (2026-10-17) — classified controller-init mapping as host wrapper
+
+Ran the bounded generated-symbol audit for companion `__osContGetInitData =
+0x8002AFC0`. The generated snapshot has no candidate prologue/body or direct
+generated caller, and the rename helper changed zero references and reported
+`already-synchronized`. The companion source is an `INCLUDE_ASM` declaration;
+the next entry is `__osPackRequestData = 0x8002B090`. This selects the
+host-wrapper/unproven outcome and preserves the ABI naming; no build or soak
+was warranted. Independent companion-boundary and generated-tree searches
+agree. Audit: `docs/RENAME-S5120-AUDIT.md`. Next candidate:
+`__osPackRequestData`.
