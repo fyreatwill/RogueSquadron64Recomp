@@ -507,6 +507,15 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
                 "[watch #%d] fb=0x%08X gate=%02X stick=%02X%02X%02X%02X%02X%02X cand9DEAC=%08X %08X %08X %08X h10C0F0=%016llx h9DE=%016llx\n",
                 n, fb, b(0x130B56), b(0x130B88), b(0x130B89), b(0x130B8A), b(0x130B8B), b(0x130B8C), b(0x130B8D),
                 w(0x9DEAC), w(0x9DEB0), w(0x9DEB4), w(0x9DEB8), hr(0x10C0F0, 0x10C340), hr(0x9DE80, 0x9DF00));
+        // s5080: computeGridLayerScrollOffset (0x800455C8) lerps on x = *(*(0x80138D1C)+0x50)
+        // between thresholds 0x130C5C/60 into outputs 0x130C54/58 -> 0x9DEAC.
+        const uint32_t optr = w(0x138D1C);
+        const uint32_t oph = optr & 0x7FFFFF;
+        const bool ok = (optr >> 28) == 8 && oph < 0x7FFFA0;
+        fprintf(stderr, "[watch2 #%d] objptr=%08X x50=%08X obj48..58=%08X %08X %08X %08X %08X thrA=%08X thrB=%08X y0=%08X y1=%08X acc40=%08X\n",
+                n, optr, ok ? w(oph + 0x50) : 0u, ok ? w(oph + 0x48) : 0u, ok ? w(oph + 0x4C) : 0u,
+                ok ? w(oph + 0x50) : 0u, ok ? w(oph + 0x54) : 0u, ok ? w(oph + 0x58) : 0u,
+                w(0x130C5C), w(0x130C60), w(0x130C54), w(0x130C58), w(0x130C40));
     }
     // ROGUESQ_RDRAM_SNAP_DIR=<dir> (s5069): if <dir>/trigger exists, its first line names a
     // snapshot; dump 8 MB RDRAM (byte-swapped back to big-endian order) to <dir>/<name>.bin.
