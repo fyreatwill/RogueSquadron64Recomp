@@ -848,6 +848,7 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+0e. (s5239) lib/ non-rsp.cpp raw rdram[] index class CLOSED (1 unsafe site: rt64_gbi_f3dfactor5.cpp:1023 texture dump could read 31 B past 8 MB, now masked; sp.cpp/pi.cpp/heap.cpp/f3dfactor5:194 proved safe; static-only, single-source). No overturned conclusions. Next: census of unchecked `TO_PTR` (ultra64.h:42) users in ultramodern/librecomp, else resume sweep at `_Putfld`.
 0d. (s5238) src/main memcpy/memset/rdram+base class CLOSED (47 hits classified; all masked/constant-gated/checked; no guard needed; static-only, single-source). Next: another idiom class (e.g. lib/ rt64 host buffer sizes) or resume sweep.
 0c. (s5237) src/main upstream_compat.cpp raw rdram[] index class CLOSED (3 diagnostic sites masked to 0x7FFFFF; static-only, single-source). Next: resume M5 plan or another idiom class.
 0b. (s5236) rsp.cpp raw rdram[] index-mask class CLOSED (8 diagnostic sites clamped to 0x7FFFFF; static-only, single-source). Signed-vs-unsigned base class was already closed s5094-s5100. Prior: s5235 PI/EEPROM guest length/offset class closed. Next: raw rdram[]/memcpy index audit in src/main debug threads, or resume M5 plan.
