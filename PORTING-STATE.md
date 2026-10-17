@@ -159714,3 +159714,16 @@ exists to validate against it. Preserve the ABI name; this rules out a
 justified generated-body rename for this candidate, not the broader
 libultra/ABI boundary classification. No build or soak was needed. Audit:
 `docs/RENAME-S5164-AUDIT.md`. Next candidate: `osPfsInitPak`.
+## Session 5165 (2026-10-17) — classified `osPfsInitPak` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osPfsInitPak = 0x80030AA0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. An
+independent generated-tree search found no body or placeholder at the
+companion address, while `recomp_overlays.inl` contains a zero-size
+`osPfsInitPak_recomp` host-wrapper record and `funcs_2.c` has one direct
+caller at `0x800059DC`. The nominal span to `osPfsChecker = 0x80030D40` is
+`0x2A0`, but no body exists to validate against it. Preserve the ABI name;
+this rules out a justified generated-body rename for this candidate, not the
+broader libultra/ABI boundary classification. No build or soak was needed.
+Audit: `docs/RENAME-S5165-AUDIT.md`. Next candidate: `osPfsChecker`.
