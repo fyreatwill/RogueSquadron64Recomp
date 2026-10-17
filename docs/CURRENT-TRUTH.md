@@ -135,7 +135,12 @@ The bounded helper made zero edits; the companion map types it as
 `OSViContext*`, and the generated tree has no callable body, placeholder,
 declaration, overlay record, or direct reference at the address. Audit:
 `docs/RENAME-S5281-AUDIT.md`. The next sweep candidate is
-`__osViNext = 0x80039214`.
+Session 5282 classified `__osViNext = 0x80039214` as already synchronized.
+The bounded helper made zero edits; the companion map types it as
+`OSViContext*`, and the generated tree has no callable body, placeholder,
+declaration, overlay record, or direct reference at the address. Audit:
+`docs/RENAME-S5282-AUDIT.md`. The next sweep candidate is the following
+companion record after `__osViNext`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or
@@ -451,10 +456,14 @@ generated reference. Preserve the data name. Audit:
 
 ## Next steps (single monotonic backlog)
 
-- **s5281:** `__osViCurr = 0x80039210` is typed `OSViContext*` data and already
+- **s5282:** `__osViNext = 0x80039214` is typed `OSViContext*` data and already
   synchronized; no generated callable placeholder or reference exists. The
-  next bounded sweep unit is `__osViNext = 0x80039214`, using the same helper
-  plus independent companion/generated-tree inspection. Audit:
+  next bounded sweep unit is the following companion record after
+  `__osViNext`, using the same helper plus independent companion/generated-tree
+  inspection. Audit: `docs/RENAME-S5282-AUDIT.md`.
+
+- **s5281:** `__osViCurr = 0x80039210` is typed `OSViContext*` data and already
+  synchronized; no generated callable placeholder or reference exists. Audit:
   `docs/RENAME-S5281-AUDIT.md`.
 
 - **s5280:** The port capture reached the qualified hangar phase and found

@@ -1,24 +1,21 @@
-# Next: classify `__osViNext = 0x80039214`
+# Next: continue the generated-symbol sweep
 
-The previous unit classified `__osViCurr = 0x80039210` as typed data. Run the
-same bounded generated-symbol discriminator for the next companion record.
+Classify the next companion record after `__osViNext = 0x80039214` with the
+same bounded generated-symbol helper and independent companion/generated-tree
+inspection. Determine the exact next address/name from the companion map
+before running the helper. Do not build or soak unless the discriminator finds
+a callable placeholder or a needed rename.
 
 Competing hypotheses and discriminator:
 
-- H1: `__osViNext` is typed data and already has no callable generated body.
+- H1: the next record is typed data or an already-synchronized ABI symbol.
 - H2: it is an unmaterialized callable placeholder that the helper missed.
-- H3: it is a generated callable/data fragment whose name needs a semantic
-  correction.
+- H3: it is a generated callable/data fragment whose name needs correction.
 
-Discriminating measurement: run the bounded helper over
-`0x80039214..0x80039220`, then independently inspect the companion type and
-generated tree for a body, placeholder, declaration, overlay record, and
-direct reference. H1 is selected by typed data plus no generated callable;
-H2 by a callable placeholder/body; H3 by a callable fragment or conflicting
-semantic record. Do not build or soak this naming-only unit.
-
-Exact command:
-
-`python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80039214 --end-address 0x80039220 --limit 1`
+Discriminating measurement: helper result plus independent checks for a
+companion type, generated body, placeholder, declaration, overlay record, and
+direct generated reference. H1 is selected by typed data/no callable; H2 by a
+callable placeholder/body; H3 by a callable fragment or conflicting semantic
+record.
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep

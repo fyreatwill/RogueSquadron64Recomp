@@ -161235,3 +161235,16 @@ reference at that address. This selects the typed-data interpretation and
 rules out callable placeholder propagation. Preserve the existing name; no
 build or soak was needed. Audit: `docs/RENAME-S5281-AUDIT.md`. Next:
 classify `__osViNext = 0x80039214`.
+
+## Session 5282 (2026-10-17) — generated-symbol sweep: `__osViNext` is data
+
+Ran the bounded generated-symbol helper over `0x80039214..0x80039220`. It
+made zero edits and reported `__osViNext` as already synchronized. Independent
+inspection found the companion declaration `__osViNext = 0x80039214` typed
+`OSViContext*`; the generated tree contains only the instruction/data
+fragment at that address, with no callable body, placeholder, declaration,
+overlay record, or direct generated reference. This selects the typed-data
+interpretation and rules out callable placeholder propagation. Preserve the
+existing name; no build or soak was needed. Audit:
+`docs/RENAME-S5282-AUDIT.md`. Next: classify the following companion record
+after `__osViNext`.
