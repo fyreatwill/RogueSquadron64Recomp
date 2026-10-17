@@ -659,7 +659,7 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSpDeviceBusy = 0x80034320`, whose next
+1. Resume the companion sweep with `__osSpRawStartDma = 0x80034350`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
