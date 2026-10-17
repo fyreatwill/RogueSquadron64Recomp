@@ -159424,3 +159424,18 @@ body or placeholder at the companion address. Classified it as an
 unmaterialized libultra/ABI entry and preserved `osMotorInit_recomp`. This
 rules out a generated-name rename for this candidate; the next candidate is
 `osPfsAllocateFile = 0x8002EBE0`.
+## Session 5145 (2026-10-17) — classified `osPfsAllocateFile` as unmaterialized
+
+Ran the bounded generated-symbol helper and independent generated-tree checks
+for companion `osPfsAllocateFile = 0x8002EBE0`. The helper reported
+`already-synchronized` and changed zero files. The generated tree has only
+the ABI declaration, one direct generated caller, and a zero-size overlay
+record at offset `0x2E7A0`; it has no generated body or placeholder at the
+companion address. The companion map places `__osPfsDeclarePage` at
+`0x8002F064`, so the companion span is `0x484`, but there is no generated body
+to rename.
+
+This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
+generated-name rename, build, or soak for this entry. Audit:
+`docs/RENAME-S5145-AUDIT.md`. Next candidate:
+`__osPfsDeclarePage = 0x8002F064`.

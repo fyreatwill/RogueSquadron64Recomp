@@ -39,8 +39,13 @@ span ends at `osMotorInit = 0x8002D88C`; preserve the ABI name. Audit:
 unmaterialized libultra/ABI entry: the helper reported `already-synchronized`,
 and its generated tree has only the ABI declaration, four direct callers, and
 a zero-size overlay record, with no body at the companion address. The next
-candidate is `osPfsAllocateFile = 0x8002EBE0`; preserve the ABI name. Audit:
-`docs/RENAME-S5144-AUDIT.md`.
+candidate is now classified: `osPfsAllocateFile = 0x8002EBE0` is another
+unmaterialized libultra/ABI entry. Its bounded helper reported
+`already-synchronized`; the generated tree has only the ABI declaration, one
+direct generated caller, and a zero-size overlay record, with no body at the
+companion address. Its companion span to `__osPfsDeclarePage = 0x8002F064` is
+`0x484`, but there is no generated body to rename. Preserve the ABI name.
+Audit: `docs/RENAME-S5145-AUDIT.md`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -131,6 +136,12 @@ were retained below or in the project overview.
   no body, placeholder, overlay record, or direct caller. The companion next
   entry is `osMotorInit = 0x8002D88C`; preserve the ABI name. Audit:
   `docs/RENAME-S5143-AUDIT.md`.
+- `osPfsAllocateFile = 0x8002EBE0` is another unmaterialized libultra/ABI
+  entry: the bounded helper reported `already-synchronized`, and the
+  generated tree has only its ABI declaration, one direct caller, and a
+  zero-size overlay record, with no body at the companion address. The
+  companion next entry is `__osPfsDeclarePage = 0x8002F064`; preserve the ABI
+  name. Audit: `docs/RENAME-S5145-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -186,17 +197,13 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osPfsAllocateFile = 0x8002EBE0` using the bounded rename helper.
-   Rename only if the generated body, exact next-entry span, semantic mapping,
-   and live caller all agree; otherwise preserve the ABI name and record the
-   classification.
-2. Continue the companion sweep one entry per iteration while the last-15
+1. Continue the companion sweep one entry per iteration while the last-15
    session preflight permits it. If the preflight makes the sweep a REVISIT,
    return to the external retail-entry or M4 boundary only with a genuinely
    new discriminator.
-3. If a new M5 step is selected, write its design and validation row in
+2. If a new M5 step is selected, write its design and validation row in
    `docs/M5-AUDIO-PLAN.md` before changing runtime behavior.
-4. When MIPS GCC is supplied, configure and qualify `PatchesLib`; record
+3. When MIPS GCC is supplied, configure and qualify `PatchesLib`; record
    generation, compile, and link outcomes in the ledger.
 
 ## Evidence index
