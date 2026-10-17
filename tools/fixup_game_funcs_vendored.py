@@ -33391,6 +33391,13 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             changed = True
             report.append(f"{p.name}: AC8C0 port log (s577, item -7) patched x1")
         elif "a_start=%d port=%u" in text:
+            # s5094: older trees carry the zero-extended base (host SIGSEGV at
+            # updateHangarBayScene+76424, si_addr 0x4000cd6d3). Repair in place.
+            _ac8_stale = "uint32_t port = MEM_BU(-0X2930, 0x800D0000u);"
+            if _ac8_stale in text:
+                text = text.replace(_ac8_stale, "uint32_t port = MEM_BU(-0X2930, S32(0x800D0000u));")
+                changed = True
+                report.append(f"{p.name}: AC8C0 port log unsigned base repaired (s5094)")
             _s577_n += 1
             report.append(f"{p.name}: AC8C0 port log (s577, item -7) already present")
 
