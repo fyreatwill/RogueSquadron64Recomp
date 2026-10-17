@@ -161336,3 +161336,16 @@ H1 is selected in the already-synchronized callable sense; H2/H3 are ruled
 out for this address. No build or soak was warranted. Audit:
 `docs/RENAME-S5289-AUDIT.md`. Next: classify `factor5RemoveListNode =
 0x80098DE0`.
+
+## Session 5290 (2026-10-17) — generated-symbol sweep: `factor5RemoveListNode` is synchronized
+
+Ran the bounded rename helper for `0x80098DE0..0x80098DE4` and independently
+searched the companion map and generated tree. The companion record describes
+the named callable list-unlink function; the helper reported
+`already-synchronized` and renamed zero references in zero files. The
+generated tree contains its named body in `funcs_26.c`, header declaration,
+overlay record, and callers, with no placeholder or conflicting fragment.
+H1 is selected in the already-synchronized callable sense; H2/H3 are ruled
+out for this address. No build or soak was warranted. Audit:
+`docs/RENAME-S5290-AUDIT.md`. Next: classify `safeLookup3DSoundEntry =
+0x80088D1C`.

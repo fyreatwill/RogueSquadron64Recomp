@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5288 (2026-10-17). The
+Compact operational handoff, maintained at Session 5290 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -184,7 +184,14 @@ helper reported `already-synchronized` and renamed zero references in zero
 files; the generated tree has the named callable body, declaration, call
 sites, and overlay record, with no placeholder or conflicting fragment.
 Audit: `docs/RENAME-S5289-AUDIT.md`. The next sweep candidate is
-`factor5RemoveListNode = 0x80098DE0`.
+`factor5RemoveListNode = 0x80098DE0`. Session 5290 classified
+`factor5RemoveListNode = 0x80098DE0` as already synchronized. The bounded
+helper reported `already-synchronized` and renamed zero references in zero
+files; the companion map documents the named list-unlink callable, and the
+generated tree has its named body in `funcs_26.c`, declaration, overlay record,
+and callers, with no placeholder or conflicting fragment. Audit:
+`docs/RENAME-S5290-AUDIT.md`. The next companion record is
+`safeLookup3DSoundEntry = 0x80088D1C`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or
@@ -499,6 +506,14 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5290:** `factor5RemoveListNode = 0x80098DE0` is a named, already-synchronized
+  callable list-unlink function; the helper made zero edits and independent
+  generated-tree inspection found its body, declaration, overlay record, and
+  callers with no placeholder or conflict. No build or soak was warranted.
+  Audit: `docs/RENAME-S5290-AUDIT.md`. The next bounded sweep unit is
+  `safeLookup3DSoundEntry = 0x80088D1C`, using the same helper plus independent
+  companion/generated-tree inspection.
 
 - **s5289:** `getNpcContextField8 = 0x8004015C` is a named, already-synchronized
   callable NPC-slot accessor; the helper made zero edits and the generated
