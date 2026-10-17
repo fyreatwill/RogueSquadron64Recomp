@@ -616,4 +616,5 @@ s5065: per-wrapper census on keyed route (default+FORCE): AI/cont >=16384 calls 
 
 - s5069: whole-frame FNV hash (ROGUESQ_FB_HASH=1) is saturated in the mission — 100% distinct frames in ctl and key windows alike; unusable for the reaction question. Next: RDRAM state-witness diff (stable-in-ctl words that move under held W).
 
+- s5074: phase-gated snapshot (ctlA/B/keyW only; 600 s cap hit): 205k witnesses in whole pages, gate does not phase-lock (post-snap origin 0x690400). Snapshot-diff design abandoned; next = in-VI-handler snapshot or read the pad consumer directly.
 - s5073: mission snapshot run done (W stick edge confirmed; 175k nominal witnesses but origin-phase confounded; keyD/keyZ not taken). Next: phase-gated re-run, see scratch/agent/NEXT.md.

@@ -158702,3 +158702,11 @@ Ran: read keytest.sh and cont.cpp; added ROGUESQ_PAD_OVERRIDE_FILE (file "btn sx
 - CONFOUND (not a conclusion): origins at snaps were ctl1=0x620400, ctl2/ctl3=0x690400, keyW=0x620400. The framebuffer origin alternates, so keyW may differ simply from being in the other buffer phase. Witnesses are unvalidated until a ctl snapshot at the SAME origin phase as keyW is compared.
 - ORIGIN: n/a (no mitigation added; analysis tool only).
 - Next: re-run with snaps gated on origin phase, total run under 540 s so keyW/keyD/keyZ complete.
+
+## Session 5074 (2026-10-16) — m6-mission-input: phase-gated snapshot run (ctlA/ctlB/keyW) still confounded; whole-page diffs, gate not phase-locking
+
+Ran scratch/agent/s5074_phase_gated_snap.sh (s5069 recipe + `snap()` that waits for latest `origin=` == 0x00620400 before writing the trigger). Run hit the 600 s background cap after keyW (mission onset t=263 s because run.log grows to >1M lines and the script's greps slow down); keyD/keyZ/ctlC/ctlD NOT taken. Captured: ctlA, ctlB, keyW. Pad W edge reached (padlog 13->15).
+Result (python over the 3 .bin, 2,097,152 words): ctlA!=ctlB 374,678 words; A==B!=W 205,709 witnesses, spread over whole 4 KB pages (e.g. pages 495,510-522,1602 all 1024 words) = buffers/animation, not input-state words. keys.log shows the gate was satisfied (origin 0x620400) yet the post-snap mark reads origin 0x690400 each time, i.e. the trigger->snapshot latency spans frames/buffer flips, so the gate does not phase-lock the snapshot. Additionally holding W for 5 s moves the ship, so every world-state word legitimately changes; "differs under W" cannot separate input state from consequence.
+Rules out: this snapshot-diff design as a discriminator for input-state words (H2 artifact confound dominates; not a refutation of H1). A few small-cluster words (0x10c0f0..0x10c340 region, 0x9deac..) are candidates but single-source and unfiltered.
+ORIGIN: no mitigation added; instrument only.
+Next: either snapshot synchronously from inside the VI handler at the same origin (needs a runtime hook, not a trigger file), or stop RDRAM-diffing and read the game's own pad-read path (osContGetReadData consumer) to find where the stick state is stored.

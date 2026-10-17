@@ -1,6 +1,5 @@
-# Next: phase-gated RDRAM witness run (keyW/keyD/keyZ vs same-origin controls)
+# Next: locate the in-mission stick-state storage via the game's pad consumer (not RDRAM diffing)
 HYPOTHESIS-ID: m6-mission-input
-H1: some words change only with stick/button input (real input state). H2: all keyW diffs are buffer-phase/animation artifacts.
-Discriminator: edit s5069_mission_snap.sh so every snapshot (ctl and key) is triggered only when the latest origin= in run.log is 0x620400. Drop ctl3 and shorten sleeps so the whole run is under 540 s (harness caps background at 600 s; use run_in_background). Take ctlA, ctlB (same phase), keyW, ctlC, keyD, keyZ.
-Analyze: python3 -I tools/snap_witness.py DIR keyW keyD keyZ (adapt the ctl names to ctlA/B/C). Input-state words = stable across ctls, changed in W hold, and D hold changes a different word set.
-Outcomes: witnesses surviving phase-gating and differing between keyW and keyD => input-state words found (H1); none => H2.
+H1: game copies OSContPad stick bytes into a fixed struct each frame (readable by tracing the osContGetReadData result consumer). H2: input is consumed in a path our runtime never reaches in mission.
+Discriminator: in the recompiled code, find the callers of the pad-read wrapper (grep RecompiledFuncs for the osContGetReadData stub address) and log (once per VI, phase-gated to origin 0x620400) the destination addresses written with stick x/y during a W hold vs no hold, in ONE run with a same-run no-key control.
+Do NOT repeat snapshot diffing (s5074: 205k whole-page witnesses). Script run caveat: run.log >1M lines slows `has` greps; mission onset ~260 s, so budget 600 s cap for fewer snaps or use run_in_background with a lighter log level.
