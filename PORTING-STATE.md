@@ -160917,3 +160917,6 @@ Net: this result refutes H-src-regression for the task_ptr guard and the s5235 s
 
 ## Session 5251 (2026-10-17) — unblock: host-load block real; lib-patch bisect unnecessary; baseline load-gated
 Block: baseline hangar recipe needs host load < 2; gate rejection was only STATUS=WORKING (verify output measured). Route 1: static read of the full 70a56647..HEAD submodule-patch delta shows only range guards and 0x7FFFFF masks (identity in-range), so the lib-patch bisect is unnecessary (single-source; refutes H-lib-patch as a priority, selects host load as remaining hypothesis). Route 2 unavailable: load1 7.5 caused by user's Chrome/REAPER, which I will not kill. Route 3: baseline script gained a load gate (exit 77 skip, no measurement weakened); NEXT.md now = run it only if load<2, else offline paused-sweep unit. ORIGIN: no mitigation added.
+
+## Session 5252 (2026-10-17) — BLOCKED: host load still 6+, no M5 step open, offline audit did not return
+Load 5.8-6.2 so the s5250 baseline soak would self-skip. M5 plan rows 0-11 are all qualified/closed. Launched an offline audit of guest-controlled sizes feeding rt64 host buffers; it did not return in-session, so nothing is concluded. See scratch/agent/BLOCKED.md.

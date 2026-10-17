@@ -1,2 +1,2 @@
-# Next: run `soak_queue/s5250_taskptr_baseline.sh` only if `uptime` load1 < 2 (script self-skips with exit 77 otherwise). Pass => host load confirmed, record and resume M5/paused sweep. Fail at load<2 => lib-patch bisect (statically implausible, see CURRENT-TRUTH open dependency). If load >= 2, do NOT write BLOCKED again: take an offline-only unit from the paused sweep in CURRENT-TRUTH instead.
+# Next: run soak_queue/s5250_taskptr_baseline.sh once uptime load1 < 2; else offline audit of guest-sized host buffers in lib/rt64 (class not yet audited; s5252 agent did not return).
 HYPOTHESIS-ID: host-load-vs-route-stall
