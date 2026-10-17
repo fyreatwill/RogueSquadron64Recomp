@@ -159091,3 +159091,13 @@ offset `0x2A87C`. The rename helper reported zero changes. This selects the
 host-wrapper hypothesis and preserves the ABI name; it rules out a generated
 body/span suitable for semantic renaming. No build or soak was warranted.
 Audit: `docs/RENAME-S5116-AUDIT.md`. Next candidate: `__osPackReadData`.
+
+## Session 5117 (2026-10-17) — classified next libultra mapping as host wrapper
+
+Ran the bounded generated-symbol audit for companion `__osPackReadData =
+0x8002AD64`. The generated snapshot has no candidate prologue/body or direct
+generated caller, and the rename helper changed zero references and reported
+`already-synchronized`. This selects the host-wrapper/unproven outcome and
+preserves the ABI naming; no build or soak was warranted. Independent
+companion-boundary and generated-tree searches agree. Audit:
+`docs/RENAME-S5117-AUDIT.md`. Next candidate: `__osContGetInitData`.
