@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5286 (2026-10-17). The
+Compact operational handoff, maintained at Session 5287 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -167,8 +167,13 @@ as `OSViMode` data of size `0x50`, ending at `osViModeTable = 0x80039330`, and
 the generated tree has no callable body, placeholder, declaration, overlay
 record, or direct reference at the address. Its apparent instructions are
 part of the surrounding `__OSGlobalIntMask` data/fragment decode. Audit:
-`docs/RENAME-S5286-AUDIT.md`. The next sweep candidate is
-`osViModeTable = 0x80039330`.
+`docs/RENAME-S5286-AUDIT.md`. Session 5287 classified
+`osViModeTable = 0x80039330` as already synchronized. The companion map
+types it as `OSViMode[42]` data of size `0xD20`, ending at `0x80040050`, and
+the generated tree has only a data-region `nop` with no callable body,
+placeholder, declaration, overlay record, or direct reference. Audit:
+`docs/RENAME-S5287-AUDIT.md`. The next sweep candidate is the first
+unclassified companion record after `0x80040050`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or

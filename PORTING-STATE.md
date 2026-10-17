@@ -161300,3 +161300,14 @@ placeholder, declaration, overlay record, or direct generated reference at
 out a missed callable placeholder or needed rename. No build or soak was
 needed. Audit: `docs/RENAME-S5286-AUDIT.md`. Next: classify
 `osViModeTable = 0x80039330`.
+## Session 5287 (2026-10-17) — generated-symbol sweep: `osViModeTable` is data
+
+Ran the bounded rename helper for `0x80039330..0x80040050` and independently
+searched the companion map and generated tree. The companion record is
+`OSViMode[42]` data of size `0xD20`, ending at `0x80040050`; the helper
+reported `already-synchronized` and renamed zero references in zero files.
+The generated tree has only a data-region `nop` at `0x80039330`, with no
+callable body, placeholder, declaration, overlay record, or direct reference.
+H1 (typed data, no callable symbol) is selected; H2/H3 are ruled out for
+this address. No build or soak was warranted. Audit:
+`docs/RENAME-S5287-AUDIT.md`.
