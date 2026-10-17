@@ -1,31 +1,33 @@
-# Next: generated-symbol renaming sweep — next companion-mapped candidate
+# Next: generated-symbol renaming sweep — next libultra wrapper candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Bounded work unit: select the next companion-mapped generated placeholder in
-the adjacent libultra range after `0x8002A080`, then audit only that candidate.
-Use the companion semantic name, generated prologue address, exact overlay
-span, and at least one independent generated caller as gates.
+Bounded work unit: audit only companion `osEepromLongWrite = 0x8002A1B0`,
+the next libultra entry after `osEepromLongRead`. Determine whether it has a
+generated prologue/body or is another runtime wrapper. Do not rename a
+`_recomp` ABI symbol without a generated body and exact span.
 
 Competing hypotheses and discriminator:
 
-- H-name-correct: all four gates agree; apply the rename.
-- H-span-mismatch: the generated address or overlay span crosses a split or
+- H-generated-name-correct: a generated prologue/body is at `0x8002A1B0`, the
+  overlay span ends at the next entry, and an independent generated caller
+  exists; apply the semantic rename.
+- H-host-wrapper: only a runtime wrapper/call declaration exists, or the
+  overlay record has `rom_size = 0`; preserve the `_recomp` ABI name.
+- H-span-mismatch: a generated body exists but its address/span crosses a
   neighboring entry; leave it unchanged.
-- H-unproven: no live caller or usable semantic companion evidence; leave it
+- H-unproven: no usable semantic companion evidence or live caller; leave it
   unchanged and record why.
 
-Discriminating measurement: compare the companion symbol address with the
-generated prologue, compare `recomp_overlays.inl`'s span with the next entry,
-and count direct generated callsites in one bounded inspection. Each outcome
-selects rename, leave unchanged, or advance without a build/soak.
+Discriminating measurement: compare the companion address with a generated
+prologue, inspect the overlay record and next-entry boundary, and count direct
+generated callers in one bounded inspection. Each outcome selects rename,
+preserve ABI naming, leave unchanged, or advance without a build/soak.
 
 Commands:
 
-    grep -n '^## Session ' PORTING-STATE.md | tail -15
-    rg -n 'func_[0-9A-Fa-f]{8}' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -80
-    rg -n '0x8002A0|0x8002A1|0x8002A2' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    rg -n 'osEepromLongWrite|func_8002A1B0|fake_func_8002A1B0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002A1B0 --end-address 0x8002A1B1
 
-If all gates pass, add the explicit address mapping to
-`tools/rename_generated_symbols.py`, run the bounded helper, and record the
-audit in a new `docs/RENAME-S*.md`. Do not build or soak if the candidate
-fails a gate.
+If all generated-name gates pass, apply the explicit mapping and record a new
+audit. Otherwise preserve the wrapper ABI and record the classification. No
+build or soak is needed for a naming-only or host-wrapper result.

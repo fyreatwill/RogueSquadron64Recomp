@@ -158992,3 +158992,15 @@ found no stale `bzero_recomp` references. No build or soak was run because
 this was a generated-symbol naming change. This rules out stale-address,
 split-span, and no-caller explanations for this candidate, but does not
 establish runtime behavior.
+
+## Session 5108 (2026-10-17) — classified next libultra mapping as host wrapper
+
+Ran the bounded generated-symbol sweep after the required last-15-session
+preflight. The next companion entry was `osEepromLongRead = 0x8002A120`.
+The snapshot contained three generated callers, but no `func_8002A120` or
+`fake_func_8002A120` prologue/body; `recomp_overlays.inl` recorded the runtime
+wrapper with `rom_size = 0`. The bounded helper selected zero renames and
+reported the candidate as already synchronized under its placeholder-only
+policy. This selects the host-wrapper hypothesis and rules out a generated
+body rename for this candidate; the `_recomp` ABI name remains unchanged.
+No build or soak was run.
