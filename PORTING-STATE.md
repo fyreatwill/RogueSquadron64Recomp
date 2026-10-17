@@ -158584,3 +158584,7 @@ Read CURRENT-TRUTH and NEXT. Step 0: CURRENT-TRUTH 52.7 KB (<60 KB), no maintena
 
 ## Session 5055 (2026-10-16) — unblock: s5054 block confirmed real, escalated (route 4)
 Block: H1 (host load) vs H3 (generated code) needs load <2; measured 6.3 at 17:43 (Chrome, REAPER). Looked for a load-free route or same-load control: s5037 soaks recorded no load, no older binary retained, key delivery needs the live game. Lowering load is a human decision. No game run, no code changed. BLOCKED.md rewritten with the refuting experiment.
+
+## Session 5056 (2026-10-16) — BLOCKED: host load 3.9 (Chrome helper 106% CPU, REAPER, WindowServer) still above the <2 precondition for H1-vs-H3
+
+Measured this iteration: `uptime` load 3.00/4.00/4.96, then 3.88/4.11/4.95 after 45 s; top CPU is a Chrome helper (106%), WindowServer, REAPER. NEXT.md forbids running s5048_preS5038_source.sh above load 2 (a run under load cannot split H1 from H3). No experiment run. Needs the human to quit Chrome/REAPER.
