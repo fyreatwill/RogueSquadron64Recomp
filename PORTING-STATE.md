@@ -160348,3 +160348,15 @@ Preserve the existing ABI name. This rules out a generated-symbol rename and
 span mismatch for this candidate, not runtime behavior of the wrapper. Added
 `docs/RENAME-S5214-AUDIT.md`; no build or soak was warranted for this
 naming-only result.
+## Session 5215 (2026-10-17) — classified `__osInsertTimer` as unmaterialized
+
+Ran the bounded generated-symbol companion audit for `__osInsertTimer` at
+`0x80034A48`, with hypotheses H-generated-name-correct, H-host-wrapper,
+H-span-mismatch, and H-unproven. The helper reported `already-synchronized`
+and renamed zero references in zero files. Independent searches found no
+generated body, placeholder, overlay record, or direct caller at the address.
+The companion map puts `__osSetCompare` at `0x80034BD0`, so the nominal span is
+`0x188` but there is no generated body to validate. This selects the
+unmaterialized libultra/ABI outcome and preserves the semantic ABI name. It
+rules out a generated body and span mismatch for this candidate, but does not
+make a runtime claim. Audit: `docs/RENAME-S5215-AUDIT.md`.
