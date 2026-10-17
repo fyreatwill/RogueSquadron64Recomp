@@ -1,6 +1,6 @@
-# Next: confirm s5098 shape-3 fixes (build clean + hangar/mission soak), then pick next M3 idiom class
+# Next: fold s5099 soak verdict, then M3 class: bare int/unsigned locals as MEM_x base
 HYPOTHESIS-ID: m3-idiom-class-audits
 
-1. Check the s5098 build finished (cmake --build build). Then enqueue a standard keyed-route soak (copy a recent soak_queue/done recipe, e.g. s5094_hangar_unsigned_base_fix) with ROGUESQ_LOG_SCENE_NODE_CACHE_GUARD=1; expect crash=0.
-2. Add an s5097-style post-condition in fixup_game_funcs_vendored.py: abort if any funcs_*.c has `uint32_t X = S32(` later used as MEM_x base (regex: `uint32_t (\w+) = S32\(` then `MEM_\w+\([^,]+, \1\)`).
-3. Next class: bare `int`/`unsigned` locals as MEM_x base in other fixup-emitted code (audit_bare_base_types.py shows none today; re-run after regen).
+1. tail -5 scratch/agent/SOAK-RESULTS.md: s5099_shape3_fix_soak should show rc=0 and keys.log hangar_arrivals>=2 crash=0. If it crashed, grep the run logs for the crash symbol before anything else.
+2. Audit bare `int`/`unsigned` locals used as MEM_x base in fixup-emitted code (extend tools/audit_uint32_s32_base.py's pattern with a selftest control).
+3. Then remaining host wrappers: osViSwapBuffer, EEPROM/pak buffer args (guard-class audit).

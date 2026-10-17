@@ -40842,6 +40842,15 @@ if os.environ.get("RS64_SKIP_REPLAY") != "1":
     if _bad5097:
         sys.exit(f"s5097 post-condition: unsigned-base MEM_x in {_bad5097[:3]}; run tools/repair_unsigned_base_live.py")
     print("[s5097] post-condition ok: no unsigned-base MEM_x in funcs_*.c")
+    # s5099: shape 3 (uint32_t local = S32(..) used as MEM_x base); selftest is the positive control.
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    import audit_uint32_s32_base as _a5099
+    if _a5099.scan_text('uint32_t zz = S32(a); MEM_W(4, zz);') == []:
+        sys.exit("s5099 post-condition: audit positive control failed")
+    _bad5099 = _a5099.scan_dir(base)
+    if _bad5099:
+        sys.exit(f"s5099 post-condition: uint32_t S32 base in MEM_x {_bad5099[:3]}")
+    print("[s5099] post-condition ok: no uint32_t=S32() MEM_x base in funcs_*.c")
 else:
     print("[s4648-replay] WARNING: RS64_SKIP_REPLAY=1 - s4296 A14 yield and other replayed patches NOT applied;"
           " run tools/check_a14_yield_patch.py before any soak")
