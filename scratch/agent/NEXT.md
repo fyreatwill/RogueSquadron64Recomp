@@ -1,4 +1,4 @@
-# Next: bounded companion-symbol classification at `__osCurrentHandle = 0x80039150`.
+# Next: bounded companion-symbol classification at `__osPiAccessQueueEnabled = 0x80039160`.
 
 The s5250 baseline arm self-skipped at host load1=5.20, so do not retry it
 until a future loop supplies load1<2. M5 has no uncompleted de-stub step and
@@ -8,10 +8,12 @@ previous `_Putfld` pointer was stale and was rechecked in s5266. The
 the `__osShutdown` candidate was confirmed as a data/fragment record in s5269;
 the `__OSGlobalIntMask` candidate was confirmed as a data/fragment record in
 s5270 and `__osPiDevMgr` in s5272; do not build or soak for them.
+The `__osCurrentHandle` candidate was confirmed as typed data with no callable
+placeholder in s5274; do not build or soak for it.
 
 Before the next classification, competing hypotheses and discriminator:
 
-- H1: `__osCurrentHandle` is already synchronized as a data symbol and needs no edit.
+- H1: `__osPiAccessQueueEnabled` is already synchronized as a data symbol and needs no edit.
 - H2: it is an unmaterialized callable placeholder whose companion name can be propagated.
 - H3: it is a data/fragment record and must remain mechanical.
 
@@ -23,6 +25,6 @@ mapping selects the callable hypothesis.
 
 Exact command:
 
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80039150 --end-address 0x80039180 --limit 1`
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80039160 --end-address 0x80039170 --limit 1`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep

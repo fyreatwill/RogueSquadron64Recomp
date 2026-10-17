@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5273 (2026-10-17). The
+Compact operational handoff, maintained at Session 5274 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -391,7 +391,21 @@ before the next fragment, with no distinct callable body, placeholder,
 declaration, overlay record, or direct generated caller at the address.
 Preserve the existing data name. Audit: `docs/RENAME-S5273-AUDIT.md`.
 
+`__osCurrentHandle = 0x80039150` is now classified as already synchronized:
+the bounded helper made zero edits, and the companion is typed `OSPiHandle*`
+data of size `0x8`. The generated tree contains no distinct callable body,
+placeholder, declaration, overlay record, or direct generated caller at the
+address; its apparent `lb`/`nop` entries are part of the surrounding
+data/fragment decode. Preserve the existing data name. Audit:
+`docs/RENAME-S5274-AUDIT.md`.
+
 ## Next steps (single monotonic backlog)
+
+- **s5274:** `__osCurrentHandle = 0x80039150` is already synchronized: the
+  bounded helper made zero edits, and independent checks find typed pointer
+  data with no callable placeholder. Preserve the name; no build or soak.
+  Audit: `docs/RENAME-S5274-AUDIT.md`. Next: classify
+  `__osPiAccessQueueEnabled = 0x80039160`.
 
 - **s5273:** `__osPiTable = 0x8003914C` is already synchronized: the bounded
   helper made zero edits, and independent checks find typed pointer data with

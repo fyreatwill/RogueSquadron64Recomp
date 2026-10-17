@@ -161126,3 +161126,17 @@ is only a `nop` immediately before the next fragment. This rules out callable
 placeholder propagation; preserve the data name. No build or soak was needed.
 Audit: `docs/RENAME-S5273-AUDIT.md`. Next candidate:
 `__osCurrentHandle = 0x80039150`.
+
+## Session 5274 (2026-10-17) — generated-symbol sweep: `__osCurrentHandle` is data
+
+Ran the bounded companion-symbol helper over `0x80039150..0x80039180`. It
+renamed zero references and reported `__osCurrentHandle`,
+`__osPiAccessQueueEnabled`, and `__osSiAccessQueueEnabled` as already
+synchronized. Independent inspection found `__osCurrentHandle` typed as
+`OSPiHandle*` data of size `0x8` in the companion map, with no generated
+callable body, placeholder, declaration, overlay record, or direct generated
+caller at the address; the apparent `lb`/`nop` entries are part of the
+surrounding data/fragment decode. This rules out callable placeholder
+propagation; preserve the data name. No build or soak was needed. Audit:
+`docs/RENAME-S5274-AUDIT.md`. Next candidate:
+`__osPiAccessQueueEnabled = 0x80039160`.
