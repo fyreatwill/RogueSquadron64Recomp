@@ -145,7 +145,14 @@ zero edits; the companion map types it as `OSDevMgr` data of size `0x1C`, and
 the generated tree has only a surrounding `nop` with no callable body,
 placeholder, declaration, overlay record, or direct reference at the address.
 Audit: `docs/RENAME-S5283-AUDIT.md`. The next sweep candidate is
-`osViModeMpalLan1 = 0x80039240`.
+`osViModeMpalLan1 = 0x80039240`. Session 5284 classified
+`osViModeMpalLan1 = 0x80039240` as already synchronized. The bounded helper
+made zero edits; the companion map types it as `OSViMode` data of size `0x50`,
+and the generated tree has no callable placeholder, declaration, overlay
+record, or direct reference at the address. Its apparent instruction lines
+are part of the surrounding `__OSGlobalIntMask` data/fragment decode. Audit:
+`docs/RENAME-S5284-AUDIT.md`. The next sweep candidate is
+`osViModeNtscLan1 = 0x80039290`.
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 command or
@@ -460,6 +467,12 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5284:** `osViModeMpalLan1 = 0x80039240` is typed `OSViMode` data of size
+  `0x50` and already synchronized; the generated address is only part of an
+  enclosing data/fragment decode. The next bounded sweep unit is
+  `osViModeNtscLan1 = 0x80039290`, using the same helper plus independent
+  companion/generated-tree inspection. Audit: `docs/RENAME-S5284-AUDIT.md`.
 
 - **s5283:** `__osViDevMgr = 0x80039220` is typed `OSDevMgr` data of size
   `0x1C` and already synchronized; no generated callable placeholder or

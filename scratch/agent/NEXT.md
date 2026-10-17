@@ -1,10 +1,10 @@
 # Next: continue the generated-symbol sweep
 
-Classify `osViModeMpalLan1 = 0x80039240` with the same bounded generated-symbol
-helper and independent companion/generated-tree inspection. Determine its
-following boundary from the companion map before running the helper. Do not
-build or soak unless the discriminator finds a callable placeholder or a
-needed rename.
+Classify `osViModeNtscLan1 = 0x80039290` with the same bounded
+generated-symbol helper and independent companion/generated-tree inspection.
+Determine its following boundary from the companion map before running the
+helper. Do not build or soak unless the discriminator finds a callable
+placeholder or a needed rename.
 
 Competing hypotheses and discriminator:
 

@@ -161260,3 +161260,15 @@ declaration, overlay record, or direct generated reference. This selects the
 typed-data interpretation and rules out callable placeholder propagation.
 Preserve the existing name; no build or soak was needed. Audit:
 `docs/RENAME-S5283-AUDIT.md`. Next: classify `osViModeMpalLan1 = 0x80039240`.
+## Session 5284 (2026-10-17) — generated-symbol sweep: `osViModeMpalLan1` is data
+
+Ran the bounded generated-symbol helper over `0x80039240..0x80039290`. It
+made zero edits and reported `osViModeMpalLan1 = 0x80039240` as already
+synchronized. Independent inspection found the companion declaration
+`osViModeMpalLan1 = 0x80039240; // type:OSViMode size:0x50`; the generated tree
+has no callable placeholder, declaration, overlay record, or direct reference
+at that address. The address occurs only in the surrounding
+`__OSGlobalIntMask` data/fragment decode. This selects typed data and rules
+out a missed callable placeholder or needed rename. No build or soak was
+needed. Audit: `docs/RENAME-S5284-AUDIT.md`. Next:
+`osViModeNtscLan1 = 0x80039290`.
