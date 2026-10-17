@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5193 (2026-10-17). The
+Compact operational handoff, maintained at Session 5197 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -620,11 +620,17 @@ generated tree has no independent caller. Preserve the ABI name. Audit:
 companion symbol map, generated `sprintf_recomp` body, exact `0x5C` overlay
 span, and many independent generated callers all agree. Preserve the ABI name.
 Audit: `docs/RENAME-S5196-AUDIT.md`. The next candidate is now
-`_VirtualToPhysicalTask = 0x80033D20`.
+`_VirtualToPhysicalTask = 0x80033D20`. `_VirtualToPhysicalTask` is now
+classified as already correctly named: its generated body spans exactly
+`0x11C` bytes from `0x80033D20` to `0x80033E3C`, matching the companion
+symbol-map and overlay record, but the generated tree has no independent
+caller. Preserve the ABI-semantic name. Audit:
+`docs/RENAME-S5197-AUDIT.md`. The next candidate is now
+`osSpTaskLoad = 0x80033E3C`.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `_VirtualToPhysicalTask = 0x80033D20`, whose next
+1. Resume the companion sweep with `osSpTaskLoad = 0x80033E3C`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page

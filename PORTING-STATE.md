@@ -160114,3 +160114,12 @@ generated `sprintf_recomp` body, and `recomp_overlays.inl` independently agree
 on the name and exact `0x5C` span ending at `0x80033D20`; the generated tree
 also contains many independent callers. This rules out an actionable
 placeholder rename for this entry. No build or soak was needed.
+## Session 5197 (2026-10-17) — classified `_VirtualToPhysicalTask` as correctly named
+
+Ran the bounded generated-symbol audit for `_VirtualToPhysicalTask = 0x80033D20`.
+The helper reported `already-synchronized` and renamed zero references in zero
+files. The generated body ends at `0x80033E38`, giving an exact `0x11C` span to
+`0x80033E3C`, matching the companion symbol map and overlay record. No
+independent generated caller exists. This rules out a missing semantic rename
+for this entry; preserve its ABI-semantic name. The next candidate is
+`osSpTaskLoad = 0x80033E3C`.
