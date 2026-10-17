@@ -1,4 +1,4 @@
-# Next: bounded companion-symbol classification at `__osSiAccessQueueEnabled = 0x80039170`.
+# Next: bounded companion-symbol classification at `vi = 0x800391B0`.
 
 The s5250 baseline arm self-skipped at host load1=5.20, so do not retry it
 until a future loop supplies load1<2. M5 has no uncompleted de-stub step and
@@ -11,12 +11,13 @@ s5270 and `__osPiDevMgr` in s5272; do not build or soak for them.
 The `__osCurrentHandle` candidate was confirmed as typed data with no callable
 placeholder in s5274; do not build or soak for it.
 The `__osPiAccessQueueEnabled` candidate was confirmed as typed data with no callable placeholder in s5275; do not build or soak for it.
+The `__osSiAccessQueueEnabled` candidate was confirmed as typed data with no callable placeholder in s5276; do not build or soak for it.
 
 Before the next classification, competing hypotheses and discriminator:
 
-- H1: `__osSiAccessQueueEnabled` is already synchronized as a data symbol and needs no edit.
-- H2: it is an unmaterialized callable placeholder whose companion name can be propagated.
-- H3: it is a data/fragment record and must remain mechanical.
+- H1: `vi` is already synchronized as a data symbol and needs no edit.
+- H2: `vi` is an unmaterialized callable placeholder whose companion name can be propagated.
+- H3: `vi` is a data/fragment record and must remain mechanical.
 
 Discriminating measurement: run the bounded rename helper over only the next
 candidate's span, then independently inspect its companion type, generated
@@ -26,6 +27,6 @@ mapping selects the callable hypothesis.
 
 Exact command:
 
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80039170 --end-address 0x800391B0 --limit 1`
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x800391B0 --end-address 0x80039210 --limit 1`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep

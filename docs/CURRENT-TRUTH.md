@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5274 (2026-10-17). The
+Compact operational handoff, maintained at Session 5276 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -399,7 +399,20 @@ address; its apparent `lb`/`nop` entries are part of the surrounding
 data/fragment decode. Preserve the existing data name. Audit:
 `docs/RENAME-S5274-AUDIT.md`.
 
+`__osSiAccessQueueEnabled = 0x80039170` is now classified as typed data: the
+bounded helper made zero edits, and the companion declares `type:u32`. The
+generated tree contains only a `nop` in the surrounding data/fragment decode,
+with no callable body, placeholder, declaration, overlay record, or direct
+generated reference. Preserve the data name. Audit:
+`docs/RENAME-S5276-AUDIT.md`.
+
 ## Next steps (single monotonic backlog)
+
+- **s5276:** `__osSiAccessQueueEnabled = 0x80039170` is typed `u32` data and
+  already synchronized: the bounded helper made zero edits, and independent
+  checks find only a nop/data fragment with no callable placeholder. Preserve
+  the name; no build or soak. Audit: `docs/RENAME-S5276-AUDIT.md`. Next:
+  classify `vi = 0x800391B0`.
 
 - **s5274:** `__osCurrentHandle = 0x80039150` is already synchronized: the
   bounded helper made zero edits, and independent checks find typed pointer
