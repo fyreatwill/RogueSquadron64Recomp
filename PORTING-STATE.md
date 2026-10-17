@@ -161730,3 +161730,16 @@ found. H3 is selected, so no mapping, build, or soak change was warranted.
 This rules out a pending rename at `0x80043D74`; audit:
 `docs/RENAME-S5323-AUDIT.md`. The next bounded placeholder candidate is
 `func_800E9AE0 = 0x800E9AE0` in the mission overlay.
+## Session 5324 (2026-10-17) — generated-symbol sweep: `func_800E9AE0` has no safe semantic rename
+
+Ran the bounded audit for mission-overlay `0x800E9AE0`. The companion map,
+generated body, declaration, overlay record, callers, and nearby fragments were
+checked independently. The body is a complete `0x114`-byte function, but the
+companion deliberately retains the address-coded placeholder, supplies no
+semantic name, and has no live caller. The nearby main-overlay
+`initObjectAnimAndDetail = 0x800E9B10` is a documented false split: `0x800E9B10`
+is an interior instruction of this body, not a callable entry. H2 is selected;
+no rename, build, or soak was warranted. This rules out the remaining bounded
+placeholder as a safe semantic rename and parks the sweep pending new evidence.
+Audit: `docs/RENAME-S5324-AUDIT.md`. The next work unit is an M4 accumulator
+boundary revisit with a complete task-keyed sampler.

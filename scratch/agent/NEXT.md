@@ -1,26 +1,27 @@
-# Next: generated-symbol sweep — `func_800E9AE0`
+# Next: M4 accumulator boundary revisit
 
-Work unit: perform one bounded generated-symbol audit for the unresolved
-mission-overlay placeholder `func_800E9AE0 = 0x800E9AE0`. Do not build or soak.
+Work unit: design one complete task-keyed sampler at a shared,
+retail-comparable instruction/step boundary for the transient `0x8000` VACC
+state. Do not add a mitigation or build until the sampler has a non-runtime
+ground-truth counterpart and a positive control.
 
 Competing hypotheses and discriminator:
 
-- H1: the companion decomp map supplies a human semantic name and the generated
-  declaration, body, overlay record, callers, and conflicting fragments agree;
-  apply the name through the rename mapping.
-- H2: a proposed name exists but one or more evidence lines conflict or are
-  missing; leave the placeholder unchanged and record the conflict.
-- H3: the placeholder is intentionally unresolved, unmaterialized, or already
-  synchronized under another name; make no generated-symbol edit.
+- H1: the task-keyed sampler can align the port and retail at a comparable
+  boundary; the stage-10/11 versus stage-12/13 `0x8000` difference is real and
+  attributable.
+- H2: the sampler can align tasks but retail and port differ in accumulator
+  origin or lifetime; the current stage-hook comparison is misleading.
+- H3: no shared boundary can be established with positive controls; keep M4
+  parked and do not add a mitigation.
 
-Discriminating measurement: independently verify the candidate against the
-companion symbol files, generated body/declaration, overlay record, callers,
-and conflicting fragments. H1 requires all five evidence lines to agree; any
-missing or conflicting line selects H2/H3 and forbids a rename.
+Discriminating measurement: for the same task key and step/PC boundary, record
+the first writer, last writer, and task-end value of the VACC lane in both the
+port and the independent retail oracle. The three possible outcomes above must
+select attribution, divergence, or unevaluable status respectively.
 
-Suggested bounded commands:
-`rg -n '800E9AE0|func_800E9AE0' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs`
-and inspect the matching generated body, declaration, overlay record, callers,
-and symbol-map fragments.
+Ground-truth prerequisite: read `tools/oracle/README.md` and identify the
+retail watch/PC attribution needed before writing the port instrument. Also
+read `docs/F5-UCODE-REFERENCE.md` if the boundary touches a Factor 5 task.
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m4-accumulator-boundary
