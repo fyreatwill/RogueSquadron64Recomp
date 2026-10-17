@@ -1,8 +1,6 @@
-# Next: in-mission input response (playability beyond the passive 300 s hold)
+# Next: does the mission world REACT to input (ship response), beyond pad-layer delivery
 HYPOTHESIS-ID: m6-mission-input
-Hypotheses (why in-mission input might not work on the port):
- H1 input reaches the game (osContGetReadData pad bits change in mission) and the mission reacts; port is playable.
- H2 keys reach SDL but mission-phase pad polling is stubbed/stale (pad struct constant under keys).
- H3 pad reaches game but a mission-phase crash/stall triggers once the player ship receives non-zero stick/fire (crash>0 or VI stops).
-Discriminator: reuse scratch/agent/s4958_after_6a2900.sh keyed route to mission (onset ~t=181 s); then hold a key (winctl key) for 5 s, vs. a no-key control window in the SAME run (phase-gated on mission origin 0x690400/0x620400). Log pad bytes returned by the cont wrapper (existing AI/cont census hooks) + DL/VI counts + crash for key window vs control window. Positive control: hangar keys already change origin (s4956).
-Fallback if mission cannot be reached (s5046 regression): record and fix keyed title->hangar first.
+s5068 showed pad bytes reach osContGetReadData in mission with correct values, crash=0.
+Hypotheses: H1 ship/camera state changes under held stick/fire (playable); H2 pad is read but mission ignores it (e.g. input gated by a stubbed state flag); H3 reaction exists but only after longer hold / needs a different state (e.g. intro cinematic not yet over).
+Discriminator: same s5068 route; in ctl A vs key window, capture frames (existing ROGUESQ_LOG_VI_FB_CONTENT or a screenshot hash per window) and/or hash player-ship RDRAM region; compare key-window frame-hash variance vs ctl windows within the SAME run, with a W-hold vs D-hold vs fire distinction. Positive control: any frame change at all between ctl windows (animating scene -> use phase gating, not stopwatch).
+Script base: scratch/agent/s5068_mission_input.sh (route is ~260 s on this host; keep under 600 s).

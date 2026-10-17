@@ -629,10 +629,16 @@ index 0195f2b..8d8b36c 100644
 +    rs64_log_ai_status("get-status", ctx->r2, buffered, 0, 0);
  }
 diff --git a/librecomp/src/cont.cpp b/librecomp/src/cont.cpp
-index 7ad6c21..558378d 100644
+index 7ad6c21..567c2de 100644
 --- a/librecomp/src/cont.cpp
 +++ b/librecomp/src/cont.cpp
-@@ -42,9 +42,16 @@ extern "C" void osContStartReadData_recomp(uint8_t* rdram, recomp_context* ctx)
+@@ -1,3 +1,5 @@
++#include <cstdio>
++#include <cstdlib>
+ #include "ultramodern/ultramodern.hpp"
+ 
+ #include "helpers.hpp"
+@@ -42,13 +44,39 @@ extern "C" void osContStartReadData_recomp(uint8_t* rdram, recomp_context* ctx)
      _return<s32>(ctx, ret);
  }
  
@@ -649,6 +655,29 @@ index 7ad6c21..558378d 100644
      OSContPad dummy_data[MAXCONTROLLERS];
  
      osContGetReadData(dummy_data);
+ 
++    // s5068: pad-transition log (ROGUESQ_PAD_LOG=1): logs only when controller 0's tuple changes.
++    {
++        static const bool pad_log = [] { const char* e = std::getenv("ROGUESQ_PAD_LOG"); return e && e[0] && e[0] != '0'; }();
++        if (pad_log) {
++            static uint64_t calls = 0;
++            static uint32_t last = 0xFFFFFFFFu;
++            static uint64_t trans = 0;
++            ++calls;
++            uint32_t cur = (uint32_t(dummy_data[0].button) << 16) | (uint32_t(uint8_t(dummy_data[0].stick_x)) << 8) | uint8_t(dummy_data[0].stick_y);
++            cur ^= uint32_t(uint8_t(dummy_data[0].err_no)) << 24;
++            if (cur != last) {
++                last = cur;
++                ++trans;
++                fprintf(stderr, "[padlog] call=%llu trans=%llu btn=0x%04X sx=%d sy=%d err=%d\n", (unsigned long long)calls, (unsigned long long)trans,
++                        (unsigned)dummy_data[0].button, (int)dummy_data[0].stick_x, (int)dummy_data[0].stick_y, (int)dummy_data[0].err_no);
++            }
++        }
++    }
++
+     for (int controller = 0; controller < MAXCONTROLLERS; controller++) {
+         if (dummy_data[controller].err_no == 0) {
+             MEM_H(6 * controller + 0, data) = dummy_data[controller].button;
 diff --git a/librecomp/src/eep.cpp b/librecomp/src/eep.cpp
 index 048246e..5811902 100644
 --- a/librecomp/src/eep.cpp
