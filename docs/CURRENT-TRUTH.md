@@ -705,12 +705,13 @@ the ABI name. Audit: `docs/RENAME-S5198-AUDIT.md`. The next candidate is now
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `strlen = 0x8003471C`, whose next
-   candidate follows from its bounded symbol-map span, one entry per iteration
-   now that the last-15 preflight remains broken by the retail revisit. The
-   retail entry boundary remains open only for a port-side join. The M4 page
-   writer is phase-attributed on the retail route, but its port-side value
-   origin remains open.
+1. Resume the companion sweep with `strchr = 0x80034744`, whose next
+   candidate follows from its bounded symbol-map span, one entry per iteration.
+   `strlen = 0x8003471C` is already correctly named: its generated body,
+   exact `0x28` overlay span, and 34 independent callers agree. Audit:
+   `docs/RENAME-S5209-AUDIT.md`. The retail entry boundary remains open only
+   for a port-side join. The M4 page writer is phase-attributed on the retail
+   route, but its port-side value origin remains open.
 2. If a new M5 step is selected, write its design and validation row in
    `docs/M5-AUDIO-PLAN.md` before changing runtime behavior.
 3. When MIPS GCC is supplied, configure and qualify `PatchesLib`; record

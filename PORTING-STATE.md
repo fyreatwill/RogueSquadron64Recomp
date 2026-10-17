@@ -160274,3 +160274,17 @@ with no body to validate. Preserve the existing ABI-semantic name. This rules
 out a generated-symbol rename for this ABI boundary, not the runtime
 implementation of the host wrapper. Added `docs/RENAME-S5208-AUDIT.md`; no
 build or soak was warranted for a naming-only result.
+
+## Session 5209 (2026-10-17) — confirmed `strlen` symbol synchronization
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol helper and independent generated-tree searches for `strlen =
+0x8003471C`. The helper reported `already-synchronized` and renamed zero
+references in zero files. The generated body starts at the companion address,
+the body ends at `0x80034740`, and the overlay record gives an exact `0x28`
+span ending at the next companion symbol `strchr = 0x80034744`. There are 34
+independent generated call sites in addition to the definition. Preserve the
+existing semantic name. This rules out a generated-symbol rename or span
+mismatch for `strlen`, not any runtime behavior of the libc wrapper. Added
+`docs/RENAME-S5209-AUDIT.md`; no build or soak was warranted for this
+naming-only result.
