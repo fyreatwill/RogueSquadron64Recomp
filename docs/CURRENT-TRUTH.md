@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5155 (2026-10-17). The
+Compact operational handoff, maintained at Session 5156 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -88,8 +88,13 @@ unmaterialized libultra/ABI entry: the bounded helper reported
 `already-synchronized`, and the generated tree has no body, placeholder,
 overlay record, or independent caller at the companion address. Its requested
 companion boundary is `0x8003007C`; preserve the ABI name. Audit:
-`docs/RENAME-S5155-AUDIT.md`. The next candidate is the next companion entry
-after `0x8003007C`.
+`docs/RENAME-S5155-AUDIT.md`. `__osPfsSelectBank = 0x8003007C` is now
+classified as another unmaterialized libultra/ABI entry: the helper reported
+`already-synchronized`; the generated tree has no body or overlay record,
+while five generated callers target an existing host wrapper that returns
+`PFS_ERR_NOPACK`. Its requested companion boundary is `0x800303D0`; preserve
+the ABI name. Audit: `docs/RENAME-S5156-AUDIT.md`. The next candidate is
+`osPfsDeleteFile`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -229,6 +234,12 @@ were retained below or in the project overview.
   has no body, placeholder, overlay record, or independent caller at the
   companion address. Its requested companion boundary is `0x8003007C`; preserve
   the ABI name. Audit: `docs/RENAME-S5155-AUDIT.md`.
+- `__osPfsSelectBank = 0x8003007C` is another unmaterialized libultra/ABI
+  entry: the helper reported `already-synchronized`; the generated tree has
+  no body or overlay record, and five generated callers target the existing
+  host wrapper returning `PFS_ERR_NOPACK`. Its companion boundary is
+  `0x800303D0`; preserve the ABI name. Audit:
+  `docs/RENAME-S5156-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -284,8 +295,8 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Continue the companion sweep with the next companion entry after
-   `0x8003007C`, one entry per
+1. Continue the companion sweep with `osPfsDeleteFile = 0x800300F0`, whose
+   next companion boundary is `0x800303D0`, one entry per
    iteration while the last-15 session preflight permits it. If the preflight
    makes the sweep a REVISIT, return to the external retail-entry or M4
    boundary only with a genuinely new discriminator; the 5147 page-writer

@@ -159587,3 +159587,18 @@ unmaterialized libultra entry. No build or soak was needed for this naming-only
 classification. Evidence: `docs/RENAME-S5155-AUDIT.md`.
 
 Next: audit the next companion entry after `0x8003007C`.
+
+## Session 5156 (2026-10-17) — classified `__osPfsSelectBank` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Audited
+`__osPfsSelectBank = 0x8003007C`, with companion boundary `0x800303D0`.
+The bounded rename helper reported `already-synchronized` and renamed zero
+references. A direct generated-tree search found no body, placeholder, or
+overlay record at the candidate, while five generated callers target the
+existing ABI wrapper. Independent host source defines that wrapper to return
+`PFS_ERR_NOPACK`, and the symbol table assigns the candidate a `0x6C` span.
+Classified it as an unmaterialized libultra/ABI entry and preserved the ABI
+name. This rules out a generated-body rename for this candidate; no build or
+soak was needed.
+
+Next: audit `osPfsDeleteFile = 0x800300F0`.
