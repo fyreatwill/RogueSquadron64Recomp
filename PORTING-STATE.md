@@ -161185,3 +161185,22 @@ unproven because only three port samples per target origin were retained.
 No mitigation was added. Audit: `docs/REVISIT-S5278-ENTRY-TUPLE.md`.
 Next: a new-angle M4 accumulator-boundary revisit; do not resume the
 sweep-scoped generated-symbol census.
+
+## Session 5279 (2026-10-17) — corrected retail M4 mid-task accumulator decode
+
+Ran `scratch/agent/s5279_m4_acc_boundary.sh`, one 75-second retail oracle
+arm with cxd4 mid-task VACC and task-end VACC dumps, rdplog, the requested
+`0x80033FCC` task-publication watch, and a whole-RDRAM write positive control.
+The route reached both 512-wide hangar origins. The whole-RDRAM watch fired
+10,000 times; the completion dump aligned 2,085 graphics records with 2,085
+RDP rows; the mid-task dump contained 3,036,036 records across those tasks.
+
+The raw signed-i16 VACC records contain `0x8000` lanes in all 572 512-wide
+tasks, including all 286 hangar-origin tasks, while task-end VACC contains no
+`0x8000` lane. The requested publication watch returned zero rows and is
+unevaluable because its positive control did not fire. This overturns the
+s5129 “zero mid-task” result: its decoder compared signed `-32768` as though
+it could equal positive `32768`. This selects transient retail mid-task
+accumulator state as the next M4 comparison target, does not explain the port,
+and authorizes no mitigation. Audit:
+`docs/REVISIT-S5279-M4-ACCUMULATOR-AUDIT.md`.

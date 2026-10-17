@@ -38,6 +38,14 @@ port's bounded samples agreed on caller `0x800902CC`, `s0`/`s1`, `a0`, `a2`,
 population, but the dynamic `a1` buffer and the invalid host-hook `r31` leave
 the full contract unresolved. Audit: `docs/REVISIT-S5278-ENTRY-TUPLE.md`.
 
+Session 5279 corrected the M4 retail mid-task decode. In one qualified run,
+all 572 512-wide graphics tasks (including 286 at the two hangar origins) had
+at least one `0x8000` VACC lane mid-task, while all 572 had zero at task end.
+The whole-RDRAM control and both VACC dump streams fired; the requested
+`0x80033FCC` publication watch did not, so publication ordering remains
+unevaluable. The prior zero-mid-task claim was a signed-16-bit decoder error,
+not a runtime result. Audit: `docs/REVISIT-S5279-M4-ACCUMULATOR-AUDIT.md`.
+
 Retail-entry boundary (`fillSampleStreamRange 0x8008FAAC`): retail enters it
 ~145k-290k times while interior `0x800903F0` stays at zero (single-source
 oracle, S5183/S5203). S5224 full histograms: retail modal offset-`0x22` byte
@@ -136,10 +144,10 @@ direct generated reference. Preserve the data name. Audit:
   route; the old exact PC boundary is not a current target.
 - The M4 accumulator boundary is closed at task-end granularity: hangar
   `0x8000` lane counts matched retail (port 0/1955, retail 0/576). A new
-  retail cxd4 oracle run sampled mid-task state and found 0/289 hangar tasks
-  with a `0x8000` lane (0/577 across all 512-wide tasks). This is
-  single-source retail evidence, not a port explanation; see
-  `docs/REVISIT-S5129-AUDIT.md`.
+  retail cxd4 oracle run sampled mid-task state and found `0x8000` lanes in
+  all 286 hangar tasks (all 572 512-wide tasks), while task-end remained zero.
+  This is single-source retail evidence, not a port explanation; see
+  `docs/REVISIT-S5279-M4-ACCUMULATOR-AUDIT.md`.
 - Heap/copy/message-queue/PI-DMA and audited host-wrapper pointer classes are
   closed on the qualified keyed route with positive controls. Re-open only on
   a phase-qualified recurrence.
@@ -150,6 +158,12 @@ direct generated reference. Preserve the data name. Audit:
   to its missing generated patch, not a new audio diagnosis.
 
 ## Superseded conclusions worth retaining
+
+- (s5129) "Retail has no mid-task `0x8000` VACC lane" was believable because
+  the first decoder treated the signed `i16` dump as a positive `uint16`
+  comparison. Re-read of the raw dump in s5279 shows `-32768`/`0x8000` in
+  every 512-wide task; task-end remains zero. The old discriminator is
+  superseded, and no mitigation is authorized.
 
 - (s5247) "The old-commit bisect is blocked and the loop must stop" (s5246 BLOCKED.md). Believable because cp/ditto were denied headless; overturned because the clone is only needed after the queued HEAD arm fails, and a git worktree avoids cp.
 
@@ -420,6 +434,12 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5279:** The retail oracle now shows a transient mid-task `0x8000` VACC
+  lane in every 512-wide task but none at task end. The publication watch did
+  not fire. The next unit is a port-side mid-task VACC capture at the same
+  hangar phase, with a task-end dump and whole-RDRAM positive control in the
+  same run; compare lane presence and lifetime against the retail result.
 
 - **s5278:** The external retail-entry revisit found matching caller and
   bounded argument shape on both mission origins, with positive controls on
