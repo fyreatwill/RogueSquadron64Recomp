@@ -1,10 +1,12 @@
-# Next: compare the keyed retail and port M4 streams
+# Resume: compare the keyed retail and port M4 streams
 
-Session 5332 reached `vi_width=512`, origin `0x006AB400`. The port key path
-now emits 4,091 target rows with task serial `961`, generated PCs `0x112C` and
-`0x17F0`, and increasing per-task step values. The next single work unit is
-the two-arm comparison; do not infer PC from stage ordinal or treat the
-constant task serial in this one long task as a missing field.
+Checkpoint status: the prior port arm completed and its artifact is
+`scratch/agent/m4-port-next/run.log`; no retail arm or join ran in the
+interrupted attempt. Resume the same single work unit. Session 5332 reached
+`vi_width=512`, origin `0x006AB400`; the port key path emitted 4,091 target
+rows with task serial `961`, generated PCs `0x112C` and `0x17F0`, and
+increasing per-task step values. Do not infer PC from stage ordinal or treat
+the constant task serial in this one long task as a missing field.
 
 Competing hypotheses and discriminator:
 
@@ -18,10 +20,10 @@ arm with whole-RDRAM/VI positive controls, then join repeated exact
 writer/lane summaries; H2 requires a repeated mismatch; H3 requires a failed
 positive control or failed join. A hook count alone is not a field control.
 
-Run the retail oracle arm with its validated whole-RDRAM control, and the port
-arm with the validated phase-gated recipe from Session 5332. Require both
-positive controls and exact-key rows before comparing. Do not add a mitigation
-or infer from stage ordinals.
+Resume commands: run the retail oracle arm with its validated whole-RDRAM
+control, then run the port arm with the validated phase-gated recipe below.
+Require both positive controls and exact-key rows before comparing. Do not add
+a mitigation or infer from stage ordinals.
 
 Retail control:
 

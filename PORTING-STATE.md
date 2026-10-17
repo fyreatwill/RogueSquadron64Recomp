@@ -161868,3 +161868,14 @@ does not select H1 or H2 because no retail arm was run and no exact cross-arm
 join exists yet. No accumulator mitigation or writer conclusion follows.
 Evidence: `scratch/agent/m4-port-next/run.log`; build output and the source
 fixup changes are in this commit.
+
+## Session 5333 (2026-10-17) — checkpointed interrupted M4 comparison
+
+This retry did not rerun the experiment. The surviving Session 5332 artifact
+is the port-side phase-gated capture with live positive-control marks and
+4,091 keyed rows at `0x006AB400`/512; it rules out H3's missing-port-key
+prediction, but it contains no retail arm and no exact cross-arm join. The
+two-arm M4 discriminator therefore remains unrun: there is no evidence here
+to select H1 or H2, and no accumulator mitigation or writer conclusion is
+authorized. The next command is the retail oracle arm plus the validated port
+recipe recorded in `scratch/agent/NEXT.md`.
