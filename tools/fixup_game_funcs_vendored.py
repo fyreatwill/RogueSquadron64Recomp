@@ -40831,6 +40831,17 @@ if os.environ.get("RS64_SKIP_REPLAY") != "1":
     if _rs64_f26.exists() and "PATCH: s4296 A14 spin yield" not in _rs64_f26.read_text(errors="replace"):
         sys.exit("s4648 replay: funcs_26.c lacks the s4296 A14 yield marker after replay")
     print("[s4648-replay] post-condition ok: s4296 A14 yield marker present")
+    # s5097: post-condition. A bare unsigned 0x8xxxxxxx base in MEM_x() lands at rdram+2^32 (s5094
+    # hangar flake). Shape 1 only; the live-tree sync is tools/repair_unsigned_base_live.py.
+    import re as _re5097
+    _lit = r'(?:0[xX][89A-Fa-f][0-9A-Fa-f]{7}u?)'
+    _off = r'-?0[xX][0-9A-Fa-f]+u?'
+    _pat5097 = _re5097.compile(r'MEM_[A-Z]+\(\s*(?:' + _off + r'\s*,\s*' + _lit + r'\s*\)|' + _lit + r'\s*,)')
+    _bad5097 = [(_f.name, _m.group(0)) for _f in sorted(pathlib.Path(base).glob("funcs_*.c"))
+                for _m in [_pat5097.search(_f.read_text(errors="replace"))] if _m]
+    if _bad5097:
+        sys.exit(f"s5097 post-condition: unsigned-base MEM_x in {_bad5097[:3]}; run tools/repair_unsigned_base_live.py")
+    print("[s5097] post-condition ok: no unsigned-base MEM_x in funcs_*.c")
 else:
     print("[s4648-replay] WARNING: RS64_SKIP_REPLAY=1 - s4296 A14 yield and other replayed patches NOT applied;"
           " run tools/check_a14_yield_patch.py before any soak")
