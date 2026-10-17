@@ -1,34 +1,24 @@
-# Next: per-task port-side M4 transient accumulator summary
+# Next: classify `__osViNext = 0x80039214`
 
-Session 5279 corrected the retail decoder: `0x8000` is transient mid-task
-VACC state in all 572 512-wide retail tasks, including both hangar origins,
-but is absent from all task-end VACC records. Session 5280's qualified port
-run found 18 sampled `0x8000` components in 2,000 phase-5 mid-task rows and
-none in 352 task-end rows, but the row cap concentrated on one task. The
-whole-RDRAM control and both VACC streams passed; the `0x80033FCC` publication watch did not fire and
-must not be treated as a null result.
+The previous unit classified `__osViCurr = 0x80039210` as typed data. Run the
+same bounded generated-symbol discriminator for the next companion record.
 
 Competing hypotheses and discriminator:
 
-- H1: most/all port hangar tasks have transient `0x8000`, like retail; the
-  remaining M4 artifact is not an accumulator-origin difference.
-- H2: only a minority of port tasks have the transient, or its first/last
-  stage differs materially; the qualitative match is not enough.
-- H3: the current positive rows came from an exceptional task and ordinary
-  port tasks have no `0x8000`; the discrepancy remains in the port RSP/Factor 5
-  path or task input.
+- H1: `__osViNext` is typed data and already has no callable generated body.
+- H2: it is an unmaterialized callable placeholder that the helper missed.
+- H3: it is a generated callable/data fragment whose name needs a semantic
+  correction.
 
-Discriminating measurement: add a per-task accumulator summary that records
-task id, whether any sampled lane has `0x8000`, and the first/last stage that
-does, phase-gated to 512-wide hangar tasks. Retain the task-end row and phase
-positive control in the same build/run. H1 predicts near-universal task
-presence; H2 predicts a substantial but non-universal population or a
-different stage window; H3 predicts presence only in the exceptional task.
-Do not infer anything from the failed retail publication watch until its
-execution positive control is repaired.
+Discriminating measurement: run the bounded helper over
+`0x80039214..0x80039220`, then independently inspect the companion type and
+generated tree for a body, placeholder, declaration, overlay record, and
+direct reference. H1 is selected by typed data plus no generated callable;
+H2 by a callable placeholder/body; H3 by a callable fragment or conflicting
+semantic record. Do not build or soak this naming-only unit.
 
-Preparation/search command:
+Exact command:
 
-`rg -n "VACC|rsp.*task|M_GFXTASK|0x8000|mid.*dump|task.*dump|whole-RDRAM" src lib tools scratch docs`
+`python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80039214 --end-address 0x80039220 --limit 1`
 
-HYPOTHESIS-ID: m4-accumulator-boundary-revisit
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
