@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5277 (2026-10-17). The
+Compact operational handoff, maintained at Session 5280 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -45,6 +45,15 @@ The whole-RDRAM control and both VACC dump streams fired; the requested
 `0x80033FCC` publication watch did not, so publication ordering remains
 unevaluable. The prior zero-mid-task claim was a signed-16-bit decoder error,
 not a runtime result. Audit: `docs/REVISIT-S5279-M4-ACCUMULATOR-AUDIT.md`.
+
+Session 5280's corrected port capture reached title and hangar with the same
+build/run. In hangar phase 5, 2,000 bounded mid-task rows included 18 rows
+with an `0x8000` accumulator component, while 352 task-end rows had zero
+`sat8000`. The cap concentrated mid-task rows in one repeatedly staged task,
+so this is single-source qualitative port evidence only: it rules out “the
+port never creates transient `0x8000`,” but does not establish retail-like
+per-task prevalence or timing. Audit:
+`docs/REVISIT-S5280-M4-PORT-MIDTASK.md`.
 
 Retail-entry boundary (`fillSampleStreamRange 0x8008FAAC`): retail enters it
 ~145k-290k times while interior `0x800903F0` stays at zero (single-source
@@ -435,11 +444,13 @@ generated reference. Preserve the data name. Audit:
 
 ## Next steps (single monotonic backlog)
 
-- **s5279:** The retail oracle now shows a transient mid-task `0x8000` VACC
-  lane in every 512-wide task but none at task end. The publication watch did
-  not fire. The next unit is a port-side mid-task VACC capture at the same
-  hangar phase, with a task-end dump and whole-RDRAM positive control in the
-  same run; compare lane presence and lifetime against the retail result.
+- **s5280:** The port capture reached the qualified hangar phase and found
+  transient `0x8000` VACC components in bounded mid-task rows, with none at
+  task end. Because the cap concentrated on one task, the next unit is a
+  bounded per-task summary probe in the same hangar phase: count each task's
+  mid-task `0x8000` presence and first/last stage, retain task-end state, and
+  keep the phase positive control in the same run. Do not infer prevalence
+  from the current 18/2,000 row count.
 
 - **s5278:** The external retail-entry revisit found matching caller and
   bounded argument shape on both mission origins, with positive controls on

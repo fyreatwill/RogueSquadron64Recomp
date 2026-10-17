@@ -1,29 +1,31 @@
-# Next: port-side mid-task M4 accumulator capture
+# Next: per-task port-side M4 transient accumulator summary
 
 Session 5279 corrected the retail decoder: `0x8000` is transient mid-task
 VACC state in all 572 512-wide retail tasks, including both hangar origins,
-but is absent from all task-end VACC records. The whole-RDRAM control and
-both VACC streams passed; the `0x80033FCC` publication watch did not fire and
+but is absent from all task-end VACC records. Session 5280's qualified port
+run found 18 sampled `0x8000` components in 2,000 phase-5 mid-task rows and
+none in 352 task-end rows, but the row cap concentrated on one task. The
+whole-RDRAM control and both VACC streams passed; the `0x80033FCC` publication watch did not fire and
 must not be treated as a null result.
 
 Competing hypotheses and discriminator:
 
-- H1: the port has the same transient mid-task `0x8000` VACC state as retail;
-  the remaining M4 artifact is not an accumulator-origin difference.
-- H2: the port creates `0x8000` during mid-task execution but loses it before
-  task end, while retail does the same; the task-end-only comparison hid a
-  shared transient contract.
-- H3: the port has no corresponding mid-task `0x8000`; the discrepancy is in
-  the port RSP/Factor 5 implementation or task input before the accumulator.
+- H1: most/all port hangar tasks have transient `0x8000`, like retail; the
+  remaining M4 artifact is not an accumulator-origin difference.
+- H2: only a minority of port tasks have the transient, or its first/last
+  stage differs materially; the qualitative match is not enough.
+- H3: the current positive rows came from an exceptional task and ordinary
+  port tasks have no `0x8000`; the discrepancy remains in the port RSP/Factor 5
+  path or task input.
 
-Discriminating measurement: instrument the port’s graphics-task VACC state at
-the same bounded mid-task cadence and phase-gate it to 512-wide hangar tasks,
-while retaining the existing task-end row and a whole-RDRAM positive control
-in one build/run. H1 predicts matching per-task mid-task lane presence and
-task-end absence; H2 predicts both sides’ transient presence but different
-timing/lifetime; H3 predicts zero port mid-task lanes despite retail’s
-positive result. Do not infer anything from the failed retail publication
-watch until its execution positive control is repaired.
+Discriminating measurement: add a per-task accumulator summary that records
+task id, whether any sampled lane has `0x8000`, and the first/last stage that
+does, phase-gated to 512-wide hangar tasks. Retain the task-end row and phase
+positive control in the same build/run. H1 predicts near-universal task
+presence; H2 predicts a substantial but non-universal population or a
+different stage window; H3 predicts presence only in the exceptional task.
+Do not infer anything from the failed retail publication watch until its
+execution positive control is repaired.
 
 Preparation/search command:
 

@@ -161204,3 +161204,22 @@ it could equal positive `32768`. This selects transient retail mid-task
 accumulator state as the next M4 comparison target, does not explain the port,
 and authorizes no mitigation. Audit:
 `docs/REVISIT-S5279-M4-ACCUMULATOR-AUDIT.md`.
+
+## Session 5280 (2026-10-17) — port M4 mid-task capture reaches transient 0x8000
+
+Built the Debug target and ran the corrected port capture with the M4
+mid-task/task-end probes in one process. The run reached title
+`0x00790400`/1024 at 49.8s and hangar `0x006AB400`/512 at 58.0s, with no
+`[CRASH]` marker. The first attempt is documented but not used because its
+mid-task cap was consumed before hangar; the fixed attempt phase-gated the
+target budget from phase 5.
+
+The fixed run emitted 2,000 phase-5 mid-task rows, including 18 rows with an
+`0x8000` accumulator component, and 352 phase-5 task-end rows with zero
+`sat8000`. This rules out “the port never creates transient `0x8000`” and
+matches the qualitative retail transient-then-clear pattern. Because repeated
+stages in one task consumed the bounded mid-task budget, it does not measure
+per-task prevalence or timing against retail. This is single-source port
+evidence; no mitigation was added. Audit:
+`docs/REVISIT-S5280-M4-PORT-MIDTASK.md`. Next: add a per-task summary rather
+than increasing a row cap.
