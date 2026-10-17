@@ -159374,3 +159374,16 @@ placeholder, ABI declaration, generated body, overlay record, or direct caller;
 the companion symbol map places `osMotorStop` at `0x8002D3D0`. This rules out a
 safe generated-symbol rename for the candidate and classifies it as an
 unmaterialized libultra ABI entry. No build or soak was needed.
+
+## Session 5141 (2026-10-17) — classified `osMotorStop` as unmaterialized
+
+Ran the bounded generated-symbol helper and independent generated-tree checks
+for companion `osMotorStop = 0x8002D3D0`. The helper changed zero references
+and reported `already-synchronized`. The generated tree has no body at the
+companion address; it contains only the existing `osMotorStop_recomp` ABI
+declaration, four generated callers, and a zero-size overlay record. The
+companion map places the next entry, `osMotorStart`, at `0x8002D570`.
+
+This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
+semantic generated-symbol rename, build, or soak for this entry. Audit:
+`docs/RENAME-S5141-AUDIT.md`. Next candidate: `osMotorStart = 0x8002D570`.

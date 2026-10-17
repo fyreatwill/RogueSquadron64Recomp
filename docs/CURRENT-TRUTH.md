@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5140 (2026-10-17). The
+Compact operational handoff, maintained at Session 5141 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -24,11 +24,11 @@ and `osDpSetStatus = 0x8002B5E0` are likewise host-wrapper/ABI entries: their
 generated trees have no bodies or overlay records, with two ABI call sites
 each. The preamble at `0x8002B5F0` is the same ABI-boundary case with no
 generated caller. `__osException = 0x8002B600` is the same ABI-boundary case:
-it has no generated body, overlay record, or direct generated caller. The next
-candidate is `__osLeoInterrupt = 0x8002C500`; the intervening
+it has no generated body, overlay record, or direct generated caller. The
+intervening
 `__osRestoreInt = 0x8002C260` is likewise an ABI-boundary entry with an
 overlay record of `rom_size = 0` and only one generated caller, with no body
-to rename.
+to rename. The current candidate is `osMotorStart = 0x8002D570`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -102,6 +102,12 @@ were retained below or in the project overview.
   body, declaration, overlay record, or caller. The companion next-entry
   boundary is `0x8002D3D0`; preserve the ABI name. Audit:
   `docs/RENAME-S5140-AUDIT.md`.
+- `osMotorStop = 0x8002D3D0` is another unmaterialized libultra entry: the
+  bounded helper reports `already-synchronized`; the generated tree has only
+  an existing ABI declaration, four wrapper call sites, and a zero-size
+  overlay record, with no body at the companion address. The companion next
+  entry is `osMotorStart = 0x8002D570`; preserve the ABI name. Audit:
+  `docs/RENAME-S5141-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -157,7 +163,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `osMotorStop = 0x8002D3D0` using the bounded rename helper. Rename
+1. Audit `osMotorStart = 0x8002D570` using the bounded rename helper. Rename
    only if the generated body, exact next-entry span, semantic mapping, and
    live caller all agree; otherwise preserve the ABI name and record the
    classification.
