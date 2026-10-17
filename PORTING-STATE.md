@@ -161386,3 +161386,16 @@ selected in the already-synchronized callable sense; H2/H3 are ruled out for
 this address. No build or soak was warranted. Audit:
 `docs/RENAME-S5293-AUDIT.md`. Next: classify
 `unregisterAndFreeNpcSlot = 0x8003E7D0`.
+
+## Session 5294 (2026-10-17) — generated-symbol sweep: `unregisterAndFreeNpcSlot` is synchronized
+
+Ran the bounded rename helper for `0x8003E7D0..0x8003E7D4` and independently
+searched the companion map and generated tree. The companion record describes
+the named 127-caller NPC slot unregister/free-list routine; the helper reported
+`already-synchronized` and renamed zero references in zero files. The generated
+tree contains its named body in `funcs_8.c`, header declaration, overlay record,
+and direct callers, with no placeholder or conflicting fragment. H1 is selected
+in the already-synchronized callable sense; H2/H3 are ruled out for this
+address. No build or soak was warranted. Audit:
+`docs/RENAME-S5294-AUDIT.md`. Next: classify
+`reinsertNpcIntoSortedFreeList = 0x8003EC10`.
