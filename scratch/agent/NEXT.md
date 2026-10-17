@@ -1,14 +1,14 @@
-# Next: generated-symbol renaming sweep — MakeMotorData candidate
+# Next: generated-symbol renaming sweep — osMotorInit candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Bounded work unit: audit only companion `_MakeMotorData = 0x8002D710`, the
-next entry after the classified motor-start entry. Determine whether it has a
+Bounded work unit: audit only companion `osMotorInit = 0x8002D88C`, the next
+entry after the classified `_MakeMotorData` entry. Determine whether it has a
 generated prologue/body or is another runtime wrapper. Do not rename a
 `_recomp` ABI symbol without a generated body and exact span.
 
 Competing hypotheses and discriminator:
 
-- H-generated-name-correct: a generated prologue/body is at `0x8002D710`, the
+- H-generated-name-correct: a generated prologue/body is at `0x8002D88C`, the
   overlay span ends at the next entry, and an independent generated caller
   exists; apply the semantic rename.
 - H-host-wrapper: only a runtime wrapper/call declaration exists, or the
@@ -25,13 +25,9 @@ preserve ABI naming, leave unchanged, or advance without a build/soak.
 
 Commands:
 
-    rg -n '_MakeMotorData|func_8002D710|fake_func_8002D710' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002D710 --end-address 0x8002D88C
+    rg -n 'osMotorInit|func_8002D88C|fake_func_8002D88C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8002D88C --end-address 0x8002DB70
 
 If all generated-name gates pass, apply the explicit mapping and record a new
 audit. Otherwise preserve the wrapper ABI and record the classification. No
 build or soak is needed for a naming-only or host-wrapper result.
-
-The prior REVISIT is closed for this cycle: the independent retail cxd4 run
-sampled 3,048,760 mid-task graphics states, including 289 hangar tasks, with
-zero `0x8000` VACC lanes; completion-state and mid-task controls both fired.

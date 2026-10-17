@@ -159401,3 +159401,16 @@ address. The companion map places `_MakeMotorData` at `0x8002D710` and
 This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
 semantic generated-symbol rename, build, or soak for this entry. Audit:
 `docs/RENAME-S5142-AUDIT.md`. Next candidate: `_MakeMotorData = 0x8002D710`.
+
+## Session 5143 (2026-10-17) — classified `_MakeMotorData` as unmaterialized
+
+Ran the bounded generated-symbol helper and independent generated-tree checks
+for companion `_MakeMotorData = 0x8002D710`. The helper changed zero references
+and reported `already-synchronized`. The generated tree has no placeholder or
+generated body at the companion address, no overlay record, and no direct
+generated caller. The companion map places `osMotorInit` at `0x8002D88C`, so
+the companion span is `0x17C`, but there is no generated body to rename.
+
+This selects the unmaterialized libultra/ABI-boundary outcome and rules out a
+semantic generated-symbol rename, build, or soak for this entry. Audit:
+`docs/RENAME-S5143-AUDIT.md`. Next candidate: `osMotorInit = 0x8002D88C`.
