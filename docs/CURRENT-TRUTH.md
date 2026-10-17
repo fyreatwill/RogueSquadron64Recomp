@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5158 (2026-10-17). The
+Compact operational handoff, maintained at Session 5161 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -113,7 +113,13 @@ only the ABI declaration and a zero-size overlay record, with no body,
 placeholder, or independent caller at the companion address. Its companion
 boundary is `0x80030A70`; preserve the ABI name. Audit:
 `docs/RENAME-S5160-AUDIT.md`. The next candidate is
-`__osPfsGetStatus = 0x80030860`.
+`__osPfsGetStatus = 0x80030860` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated-tree search found no body, placeholder, overlay record, or
+independent caller at the companion address. Its companion span ends at
+`__osPfsRequestOneChannel = 0x80030944`; preserve the ABI name. Audit:
+`docs/RENAME-S5161-AUDIT.md`. The next candidate is now
+`__osPfsRequestOneChannel = 0x80030944`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -334,11 +340,11 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Continue the companion sweep with `__osPfsGetStatus = 0x80030860`, whose
-   next candidate follows the `0x80030A70` companion boundary, one entry per
-   iteration while the last-15 session preflight permits it. If the preflight
-   makes the sweep a REVISIT, return to the external retail-entry or M4
-   boundary only with a genuinely new discriminator; the 5147 page-writer
+1. Continue the companion sweep with `__osPfsRequestOneChannel = 0x80030944`,
+   whose next candidate is `__osPfsGetOneChannelData = 0x80030A04`, one entry
+   per iteration while the last-15 session preflight permits it. If the
+   preflight makes the sweep a REVISIT, return to the external retail-entry or
+   M4 boundary only with a genuinely new discriminator; the 5147 page-writer
    revisit remains phase-unqualified.
 2. If a new M5 step is selected, write its design and validation row in
    `docs/M5-AUDIO-PLAN.md` before changing runtime behavior.

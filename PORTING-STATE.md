@@ -159651,3 +159651,18 @@ Evidence: `docs/RENAME-S5160-AUDIT.md`.
 This rules out a generated-body rename for this candidate, not the broader
 libultra/ABI boundary classification. Next: audit `__osPfsGetStatus =
 0x80030860`.
+
+## Session 5161 (2026-10-17) — classified `__osPfsGetStatus` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the prescribed bounded
+generated-symbol audit for `__osPfsGetStatus = 0x80030860`. The helper reported
+`already-synchronized` and renamed zero references. An independent search of
+the generated tree found no body, placeholder, overlay record, or independent
+caller at the companion address; the next companion boundary is
+`__osPfsRequestOneChannel = 0x80030944`. Preserve the ABI name. No build or
+soak was needed.
+
+This rules out a generated-body rename for this candidate, not the broader
+libultra/ABI boundary classification. Evidence:
+`docs/RENAME-S5161-AUDIT.md`. Next: audit `__osPfsRequestOneChannel =
+0x80030944`.
