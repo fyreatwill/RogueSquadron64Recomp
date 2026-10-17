@@ -847,6 +847,7 @@ generated caller at the companion address. Its nominal span to `_Putfld =
 Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+0g. (s5243) s5242 A/B: BOTH mask arms failed nohangar (CRASH=0), so the TO_PTR mask is not the cause (two arms agree; load avg ~6.7 so flake not excluded). Recipe delta vs passing s5099 = five ROGUESQ_LOG_*GUARD* env flags. Queued soak_queue/s5243_envflag_ab.sh (A = s5099 env control, B = A + guard flags). Read its SOAK-RESULTS line first; outcome map in scratch/agent/NEXT.md.
 0f. (s5242) s5240 mask soak FAILED the route (nohangar t=205, no CRASH). A/B arms queued: soak_queue/s5242_maskon.sh vs s5242_maskoff.sh (binaries build/RS64_maskon / RS64_maskoff). Read both SOAK-RESULTS lines first: on-fail+off-pass => revert TO_PTR mask (H-mask); both pass => flake; both fail => bisect s5229-s5240 / host load. Until resolved the 0d mask is UNVALIDATED.
 0e. (s5241) Queued soak scratch/agent/soak_queue/s5240_to_ptr_mask_regress.sh to check the 0d mask for regression (clean = crash=0, mission_onset ~174s). Read its SOAK-RESULTS.md line first next iteration; if clean, resume M5 audio plan. No conclusion overturned this session.
 
