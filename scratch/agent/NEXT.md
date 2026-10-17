@@ -1,5 +1,5 @@
-# Next: fold s5246_head_arm_loadlog verdict (SOAK-RESULTS.md + soak_results/s5246_head_arm_loadlog/{load_before.txt,keys.log}). If it still has not run, do offline M3 idiom-class audit work; do not re-do worktree prep.
-- HEAD arm passes (>=2 hangar) => host load/time-of-day; resume M5 audio plan next de-stub step.
-- HEAD arm fails => `tools/bisect_worktree.sh 70a56647 build` (worktree already exists, symlinks done; build untested), queue the same recipe against that binary. If old src also fails => host/lib; if passes => toggle main.cpp task_ptr early-return and s5235 save-guard (only behaviour deltas).
-Positive control: origin=0x790400 reached in each try (keys.log origin790400=1).
+# Next: fold s5249_old70a56647_arm verdict (SOAK-RESULTS.md + soak_results/s5249_old70a56647_arm/keys.log). If exit 2 (no old binary): finish `tools/bisect_worktree.sh 70a56647 build`, requeue.
+- Old arm passes (>=2 hangar) => src regression: build HEAD with main.cpp task_ptr early-return and s5235 save-guard toggled via env flags in ONE build, run arms concurrently.
+- Old arm fails => host/lib/env; resume M5 audio plan (docs/M5-AUDIO-PLAN.md) next de-stub step.
+Positive control: origin=0x790400 reached each try.
 HYPOTHESIS-ID: m3-idiom-class-audit

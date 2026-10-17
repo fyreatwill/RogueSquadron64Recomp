@@ -15,6 +15,10 @@ done
 for f in RecompiledPatches rogue_squadron.z64 rs64.n64.us.1.0.z64; do
   if [ -e "$ROOT/$f" ] && [ ! -e "$WT/$f" ]; then ln -s "$ROOT/$f" "$WT/$f"; fi
 done
+# Generated (gitignored) inputs: RecompiledFuncs is found via ${SOURCE}/../N64Recomp, factor5_ucode under build/.
+[ -e "$ROOT/scratch/N64Recomp" ] || ln -s "$ROOT/../N64Recomp" "$ROOT/scratch/N64Recomp"
+mkdir -p "$WT/build"
+[ -e "$WT/build/factor5_ucode" ] || ln -s "$ROOT/build/factor5_ucode" "$WT/build/factor5_ucode"
 echo "worktree ready: $WT"
 if [ "${2:-}" = build ]; then
   cd "$WT"
