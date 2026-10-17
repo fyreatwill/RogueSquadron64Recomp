@@ -159015,3 +159015,14 @@ reported the candidate as already synchronized under its placeholder-only
 policy. This selects the host-wrapper hypothesis and rules out a generated
 body rename for this candidate; the `_recomp` ABI name remains unchanged.
 No build or soak was run.
+## Session 5110 (2026-10-17) — classified next libultra mapping as host wrapper
+
+Ran the bounded generated-symbol sweep after the required last-15-session
+preflight. The next companion entry was `osEepromProbe = 0x8002A2A0`.
+The snapshot contained one generated caller, but no `func_8002A2A0` or
+`fake_func_8002A2A0` prologue/body; `recomp_overlays.inl` recorded the runtime
+wrapper with `rom_size = 0`. The bounded helper selected zero renames and
+reported the candidate as already synchronized under its placeholder-only
+policy. This selects the host-wrapper hypothesis and rules out a generated
+body rename for this candidate; the `_recomp` ABI name remains unchanged.
+No build or soak was run.
