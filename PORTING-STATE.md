@@ -160894,3 +160894,10 @@ ORIGIN: no mitigation added.
 
 ## Session 5247 (2026-10-17) — UNBLOCK: s5246 bisect-clone block was premature
 BLOCKED.md claimed the old-commit clone (`cp -c -R`) was denied by permissions. Refuted as a blocker: the clone is only needed if the HEAD arm (soak_queue/s5246_head_arm_loadlog.sh) fails, and that arm has not yet run. Route 1+3: BLOCKED.md archived as BLOCKED.resolved.s5246-bisect-clone.md; NEXT.md now folds the HEAD arm first and gives a no-cp fallback (git worktree under scratch/, untested). No hard-boundary action taken.
+
+## Session 5248 (2026-10-17) — bisect worktree path proven headless; HEAD arm still queued
+
+The s5246_head_arm_loadlog soak had not run when this iteration started (still in soak_queue/, no SOAK-RESULTS line, no soak_results dir). The loop runs it between iterations, so no game run here.
+Measured: `git worktree add scratch/wt_70a56647 70a56647` succeeds under headless permissions (no cp/ditto needed). New tools/bisect_worktree.sh <commit> [build] creates it and symlinks lib/N64ModernRuntime, lib/rt64, RecompiledPatches and the ROMs from the main tree; verified symlinks resolve. The configure/build step is untested.
+Delta 70a56647..HEAD, src+lib only: main.cpp/upstream_compat.cpp are diagnostic host reads (`^3u` byte-swap fixes, rs64_rdram_u32, s5229 shadow gated by ROGUESQ_LOG_S5223_ENTRY_JOIN, not set in the s5099 recipe) plus a task_ptr range early-return; lib patches are the s5235 save-guard, TO_PTR 8MB mask (A/B'd in s5242, un-implicated), and masked diagnostic reads in rsp.cpp/rt64. So the only runtime-behaviour candidates left are the task_ptr early-return in main.cpp and the s5235 save-guard; both are cheap to toggle if the HEAD arm fails.
+Rules out: nothing new about the route stall. Next: fold HEAD arm; if it fails, `tools/bisect_worktree.sh 70a56647 build` then soak with the s5246 recipe.
