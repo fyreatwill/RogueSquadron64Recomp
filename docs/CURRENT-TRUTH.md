@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5187 (2026-10-17). The
+Compact operational handoff, maintained at Session 5189 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -560,12 +560,19 @@ unmaterialized libultra/ABI entry: the bounded helper reported
 `already-synchronized`, and independent generated-tree searches found no body,
 placeholder, overlay record, or direct caller at the companion address. Its
 companion span to `__osSiGetAccess = 0x800338F0` is `0x50`, with no body to
-validate. Preserve the ABI name. Audit: `docs/RENAME-S5188-AUDIT.md`. The
-next candidate is now `__osSiGetAccess = 0x800338F0`.
+validate. Preserve the ABI name. Audit: `docs/RENAME-S5188-AUDIT.md`.
+`__osSiGetAccess = 0x800338F0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized` and
+renamed zero references in zero files. Independent generated-tree searches
+found no body, placeholder, overlay record, or direct generated caller at the
+companion address. Its nominal span to `__osSiRelAccess = 0x80033934` is
+`0x44`, with no body to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5189-AUDIT.md`. The next candidate is now
+`__osSiRelAccess = 0x80033934`.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSiGetAccess = 0x800338F0`, whose next
+1. Resume the companion sweep with `__osSiRelAccess = 0x80033934`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page

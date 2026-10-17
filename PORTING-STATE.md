@@ -160015,3 +160015,16 @@ to validate. Preserve the ABI name and continue the sweep at
 `__osSiGetAccess`. This rules out an actionable generated rename at this
 entry, but does not bear on runtime behavior. No build or soak was warranted
 for this naming-only result. Audit: `docs/RENAME-S5188-AUDIT.md`.
+
+## Session 5189 (2026-10-17) — classified `__osSiGetAccess` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `__osSiGetAccess = 0x800338F0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+searches of the generated tree found no body, placeholder, overlay record, or
+direct generated caller at the companion address. The symbol map places
+`__osSiRelAccess = 0x80033934` next, giving a nominal `0x44` span with no body
+to validate. Preserve the ABI name and continue the sweep at
+`__osSiRelAccess`. This rules out an actionable generated rename at this entry,
+but does not bear on runtime behavior. No build or soak was warranted for this
+naming-only result. Audit: `docs/RENAME-S5189-AUDIT.md`.
