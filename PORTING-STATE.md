@@ -158767,3 +158767,7 @@ Result (single run; positive control: 100+ census entries in range, windows show
 Reading: Hship holds (the arm selector in computeGridLayerScrollOffset follows the player vehicle's Y, driven by stick via the orientation/control-mode functions). Hcam/Hother not supported. Two sources (census writer PCs + function bodies) but function names are heuristic; label single-run.
 Rules out: any hidden input path; the stick reaches 0x9DEAC through ordinary vehicle motion. Thread m6-mission-input is closed.
 ORIGIN: diagnostic only, no mitigation added.
+
+## Session 5082 (2026-10-16) — priority list exhausted after m6-mission-input closure; BLOCKED for owner target
+
+No experiment run. Step 0: CURRENT-TRUTH 58,361 B (<60,000), no maintenance. Last 15 session titles are m6-mission-input (not sweep), but the sweep is CLOSED per s5030 (2 of ~1,548 left, both already mapped), so resuming it would be no-op churn. M5, M3 classes, retail-entry, M4 all closed. Wrote BLOCKED.md with candidate targets. ORIGIN: n/a (no code change).
