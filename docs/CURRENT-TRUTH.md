@@ -202,3 +202,4 @@ re-scoped the loop to an offline delay-slot/branch-operand hazard audit
 - s5347: lwl/lwr/ldl/ldr/swl/swr/sdl/sdr split-pair class CLOSED (930 halves: 459 adjacent, 4 straight, 0 split by branch/target, 4 lone libc halves; tools/audit_lwl_lwr_split.py, self-tested). ELF overlays alias VMAs; next class: direct j/jal into aliased VMAs.
 - s5346: branch-in-delay-slot and branch-likely+mem-slot idiom classes are EMPTY in the main ELF (0/40,028; tools/audit_delay_slot_branch_in_slot.py, self-tested). Closed. Next M3 class: lwl/lwr pairs straddling a branch target (closed s5347).
 - s5356: unblock re-scoped loop to offline M3 indirect-control-flow idiom audit (NEXT.md); toolchain remains open dependency.
+- s5357: indirect-idiom table done (177 jump tables, 0 defects, positive control 4/4; docs/M3-S5357-INDIRECT-IDIOM-TABLE.md). Backlog exhausted; only the toolchain dependency (human) remains.

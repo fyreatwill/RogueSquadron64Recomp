@@ -162069,3 +162069,14 @@ Read CURRENT-TRUTH (13 KB, no maintenance), NEXT.md (m4-closed-select-next), SOA
 ## Session 5356 (2026-10-17) — unblock: BLOCKED.md re-scoped, not escalated
 
 BLOCKED.md (s5355) asked a human to pick toolchain install / new target / stop. The toolchain only gates fresh PatchesLib qualification, already a non-blocking open dependency; no MIPS toolchain exists in the allowed dirs and installing one is a human decision. Took route 3: NEXT.md is now an offline audit of the remaining M3 indirect-control-flow idiom classes (jr/jalr, lwl/lwr pairs, branch-likely). Nothing measured; no conclusions changed. See scratch/agent/UNBLOCK.md.
+
+## Session 5357 (2026-10-17) — consolidated indirect-control-flow idiom table: 177 jump tables, 0 defects
+
+Ran NEXT.md's offline M3 audit. New `tools/audit_indirect_idiom_table.py` with in-run
+positive control (4/4 injected defects flagged). Result over generated code: 2,546
+`jr ra`, 177 jump-table switches / 2,278 case arms, 0 defects (contiguous, same-function
+labels, `switch_error` default, addend assigned), 114 `$zero` sites already known to be
+data-as-code. Matches s4821's 177. Parts (b) and (c) of the unit were already closed in
+s5346/s5347. Table in `docs/M3-S5357-INDIRECT-IDIOM-TABLE.md`. Rules out a silent
+mis-dispatch from indirect jumps; no guard or mitigation landed (none needed).
+Backlog is now exhausted again; only the human-gated toolchain dependency remains.
