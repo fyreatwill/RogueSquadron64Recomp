@@ -603,4 +603,4 @@ Since s5042, the keyed title->hangar recipe (s5037 default) stalls: after title 
 - s5060: poison-on-free A/B on mission route clean (0 crash, 0 guard, control poisoned>=16384); read-after-free thread closed (single route, 1 run per arm).
 
 ## s5061 addendum — PI DMA guard
-do_dma (librecomp pi.cpp) now range-guards RDRAM/ROM spans (ROGUESQ_PI_DMA_GUARD=0 rollback, _FORCE=1 control). Built; soaks s5061_pi_dma_guard_{default,force} queued. Expect default pg=0, force pg=16 -> class closed on keyed route. Next: consume them (NEXT.md).
+s5061: do_dma PI range guard CLOSED on keyed route: default pg=0, force pg=16, crash=0 (two-source). Next: do_rom_pio + SP DMA wrappers.
