@@ -68,6 +68,13 @@ libultra/ABI entry: the bounded helper reported `already-synchronized`, and
 the generated-tree search found no body or placeholder at the companion
 address. Its companion span ends at `__osCheckPackId = 0x8002F86C`; preserve
 the ABI name. Audit: `docs/RENAME-S5151-AUDIT.md`.
+`__osCheckPackId = 0x8002F86C` is likewise an unmaterialized libultra/ABI
+entry: the bounded helper reported `already-synchronized`, and the generated
+tree has no body, placeholder, overlay record, or independent caller at the
+companion address. Its companion span ends at `__osGetId = 0x8002FA04`;
+preserve the ABI name. Audit: `docs/RENAME-S5152-AUDIT.md`.
+The next candidate is `__osGetId = 0x8002FA04`; preserve its existing ABI
+name unless all rename gates are present.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -187,6 +194,11 @@ were retained below or in the project overview.
   span ending at `0x8002F454`; the helper reports `already-synchronized`, and
   the generated tree has no independent caller. Preserve the existing ABI
   name. Audit: `docs/RENAME-S5150-AUDIT.md`.
+- `__osCheckPackId = 0x8002F86C` is another unmaterialized libultra/ABI entry:
+  the bounded helper reported `already-synchronized`, and no generated body,
+  placeholder, overlay record, or independent caller exists at the companion
+  address. Its next companion boundary is `__osGetId = 0x8002FA04`; preserve
+  the ABI name. Audit: `docs/RENAME-S5152-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
