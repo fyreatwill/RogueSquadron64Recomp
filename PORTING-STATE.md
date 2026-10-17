@@ -158691,3 +158691,7 @@ Ran the gate from NEXT.md, `zsh scratch/agent/keytest.sh` (game launched, 20 s w
 
 ## s5072 (unblock) - key-injection block refuted
 s5071 BLOCKED on winctl key injection needing an awake display. Refuted by routing around it: new env ROGUESQ_PAD_OVERRIDE_FILE in librecomp cont.cpp (patch exported). Positive control scratch/agent/padovr_test.sh: padlog 0x0000 -> 0x1000 -> 0x0000 with no window focus. s5069_mission_snap.sh converted to the file override. Snapshot run itself still pending (NEXT.md).
+
+## Session 5072 (2026-10-16) — m6-mission-input: UNBLOCK refuted the display-lock block via a file-based pad override
+
+Ran: read keytest.sh and cont.cpp; added ROGUESQ_PAD_OVERRIDE_FILE (file "btn sx sy", read every osContGetReadData) in librecomp cont.cpp; rebuilt; ran scratch/agent/padovr_test.sh. Showed: padlog 0x0000 (call=1) -> 0x1000 (call=1031) -> 0x0000 (call=1091) with no window focus and no winctl, same-run baseline as positive control. Rules out: the claim that mission-input testing needs an awake/unlocked display. s5069_mission_snap.sh converted to the override (syntax-checked only; the snapshot run itself is NOT done, queued in NEXT.md). Not ruled out: whether in-mission input changes game state (H1/H2 still open). Note: export.sh needed approval, so N64ModernRuntime.patch was exported by its single git diff line by hand.
