@@ -158718,3 +158718,11 @@ Next: either snapshot synchronously from inside the VI handler at the same origi
 - Rules out: H2 (input never reaches the game struct in mission) for the copy stage. Whole-RDRAM diffing is no longer needed: 0x130B8A/0x130B8B is a direct, tiny witness.
 - ORIGIN: n/a (no mitigation added; analysis only).
 - Next: does the mission FLIGHT code react? Log 0x130B8B alongside player-ship state per VI in one run (hold W vs no-key control), using the known address as the gate instead of snapshot diffs.
+
+## Session 5076 (2026-10-16) — m6-mission-input: mission flight state REACTS to the stick; gate byte is 0 (H1 holds, H2 refuted)
+- Added ROGUESQ_WATCH_LOG=1 (src/main/upstream_compat.cpp, per-swap [watch #n] line: gate 0x130B56, stick struct 0x130B88..8D, words at 0x9DEAC.., FNV hashes of 0x10C0F0..0x10C340 and 0x9DE80..0x9DF00). Ran scratch/agent/s5076_watch.sh once (keyed route to mission 0x620400; windows ctlA / W 8 s / ctlB / D 8 s / ctlC), crash=0.
+- Positive control passed: 0x130B8B = 7F in 230 of 302 W-window swaps; D sets 0x130B8A = 7F in 199 of 265. Gate byte 0x130B56 = 00 in every logged line, so readControllerInputs is not gated off (H2 refuted).
+- Floats at 0x9DEAC (e.g. 41B71333 41DE24F5 434FDAB9): ctlA 1 distinct value in 316 swaps; W 57 distinct; ctlB 28 distinct (coast after release, unattributed); D 247 distinct; ctlC 1 distinct in 62 swaps. Static in the no-key windows, moving around key windows = flight state responds to input. The 0x10C0F0 hash moves in ctl windows too, so it is not an input witness.
+- Caveats: n=1 run; 0x9DEAC called position-like by shape only (single-source).
+- ORIGIN: n/a (env-gated diagnostic, no mitigation).
+- Next: name the 0x9DEAC writer statically and rerun with longer ctlB to see decay vs free-running.

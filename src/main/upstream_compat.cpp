@@ -467,6 +467,26 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         }
         fprintf(stderr, "[fbhash #%d] fb=0x%08X h=%016llx\n", n, fb, (unsigned long long)h);
     }
+    // ROGUESQ_WATCH_LOG=1 (s5076): per-swap log of the stick struct (0x80130B88 port0),
+    // the readControllerInputs gate byte 0x130B56, and candidate flight-state words.
+    static int s_watch = -1;
+    if (s_watch < 0) {
+        const char* v = std::getenv("ROGUESQ_WATCH_LOG");
+        s_watch = (v && *v && v[0] != '0') ? 1 : 0;
+    }
+    if (s_watch) {
+        auto b = [&](uint32_t a) { return (unsigned)rdram[a ^ 3]; };
+        auto w = [&](uint32_t a) { return (b(a) << 24) | (b(a + 1) << 16) | (b(a + 2) << 8) | b(a + 3); };
+        auto hr = [&](uint32_t lo, uint32_t hi) {
+            uint64_t h = 1469598103934665603ull;
+            for (uint32_t a = lo; a < hi; ++a) h = (h ^ rdram[a ^ 3]) * 1099511628211ull;
+            return (unsigned long long)h;
+        };
+        fprintf(stderr,
+                "[watch #%d] fb=0x%08X gate=%02X stick=%02X%02X%02X%02X%02X%02X cand9DEAC=%08X %08X %08X %08X h10C0F0=%016llx h9DE=%016llx\n",
+                n, fb, b(0x130B56), b(0x130B88), b(0x130B89), b(0x130B8A), b(0x130B8B), b(0x130B8C), b(0x130B8D),
+                w(0x9DEAC), w(0x9DEB0), w(0x9DEB4), w(0x9DEB8), hr(0x10C0F0, 0x10C340), hr(0x9DE80, 0x9DF00));
+    }
     // ROGUESQ_RDRAM_SNAP_DIR=<dir> (s5069): if <dir>/trigger exists, its first line names a
     // snapshot; dump 8 MB RDRAM (byte-swapped back to big-endian order) to <dir>/<name>.bin.
     static const char* s_snap_dir = std::getenv("ROGUESQ_RDRAM_SNAP_DIR");
