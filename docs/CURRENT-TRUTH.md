@@ -405,7 +405,14 @@ data/fragment decode. Preserve the existing data name. Audit:
   bounded helper made zero edits, and independent checks find typed pointer
   data with no callable placeholder. Preserve the name; no build or soak.
   Audit: `docs/RENAME-S5274-AUDIT.md`. Next: classify
-  `__osPiAccessQueueEnabled = 0x80039160`.
+  `__osSiAccessQueueEnabled = 0x80039170`.
+
+- **s5275:** `__osPiAccessQueueEnabled = 0x80039160` is already synchronized:
+  the bounded helper made zero edits, and independent checks find companion
+  `type:u32` data plus only a nop/data fragment in the generated tree, with no
+  callable body, header declaration, overlay record, or direct generated
+  reference. Preserve the name; no build or soak. Next: classify
+  `__osSiAccessQueueEnabled = 0x80039170`.
 
 - **s5273:** `__osPiTable = 0x8003914C` is already synchronized: the bounded
   helper made zero edits, and independent checks find typed pointer data with

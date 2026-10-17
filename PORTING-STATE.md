@@ -161140,3 +161140,6 @@ surrounding data/fragment decode. This rules out callable placeholder
 propagation; preserve the data name. No build or soak was needed. Audit:
 `docs/RENAME-S5274-AUDIT.md`. Next candidate:
 `__osPiAccessQueueEnabled = 0x80039160`.
+## Session 5275 (2026-10-17) — generated-symbol sweep: `__osPiAccessQueueEnabled` is data
+
+Ran the bounded companion-symbol discriminator for `__osPiAccessQueueEnabled = 0x80039160` over `0x80039160..0x80039170`. The helper made zero edits and reported `already-synchronized`. Independent checks found the companion declaration `type:u32` in `libultra.txt`; the generated region contains only nop/data-fragment output and no callable body, header declaration, overlay record, or direct generated references. This selects the typed-data interpretation: preserve the name, with no build or soak. It rules out an unmaterialized callable placeholder at this address. Next candidate is `__osSiAccessQueueEnabled = 0x80039170`.
