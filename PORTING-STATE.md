@@ -160770,3 +160770,6 @@ m5_object_entry raw_word/raw_half, filter_voice_guest_word, or the 0x790400 `wor
 byte-reversed and is single-source suspect. Not yet re-derived.
 Remaining: ~130 single-byte `rdram[x]` reads (upstream_compat 61, main 58, rt64_render_context 12 lines
 matching) still unclassified; some legitimately operate on linear copies.
+Hypotheses: H-A "probe words were read correctly, logged values trustworthy" vs H-B "raw word probes were byte-reversed".
+Result selects H-B and refutes H-A for the 19 fixed sites (same-run positive control: old pattern 0x78563412 vs helper 0x12345678).
+Next discriminator: classify the remaining single-byte rdram[x] reads; any site whose logged value changes after the swizzle fix refutes the ledger claim that cites it, and a site that indexes a linear copy resolves as not-a-bug.
