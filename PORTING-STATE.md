@@ -161693,3 +161693,19 @@ instruction-PC samples while the port hooks expose synthetic stages, and the
 port capture covers only 56 of 59 phase-5 end tasks versus 572 retail 512-wide
 tasks. No accumulator mitigation or rewrite is authorized. Audit:
 `docs/REVISIT-S5320-M4-STAGE-TIMING.md`.
+## Session 5321 (2026-10-17) — M4 stage timing remains unevaluable
+
+The existing task-keyed retail and qualified-port captures were rechecked as
+the mandated boundary revisit. Retail controls and join coverage passed:
+3,020,766 mid-task records, 2,083 joined graphics tasks, 1,222 tasks with a
+sampled `0x8000` lane, and zero task-end tasks with that lane. The port capture
+had 59 phase-5 task ends and 56 tasks with stage rows and ends; stages 10/11
+contained `0x8000` in 55/56 tasks, stages 12/13 in 0/56, and task-end in 0/59.
+The same transient-only pattern is therefore reproduced.
+
+This still selects H3 rather than H1: retail samples are keyed by instruction
+PC/step while the port rows are synthetic stages, and their task coverage is
+not equivalent. It rules out port task-end retention but does not prove an
+accumulator implementation match or identify a writer. No mitigation or
+accumulator rewrite was made. The M4 boundary is parked; the next work unit
+resumes the generated-symbol sweep.

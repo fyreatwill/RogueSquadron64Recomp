@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5320 (2026-10-17).
+Compact operational handoff, maintained at Session 5321 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -19,11 +19,12 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
-The current bounded work is a parked-boundary revisit. Session 5320 found that
-the qualified port's transient M4 `0x8000` state appears in stages 10/11 and
-is absent in stages 12/13 and task end, but the stage hooks are not comparable
-to the retail instruction-PC samples. The M4 discriminator is therefore
-unevaluable without a complete task-keyed sampler at a shared boundary.
+The current bounded work is a parked-boundary revisit. Session 5321
+reconfirmed that the qualified port's transient M4 `0x8000` state appears in
+stages 10/11 and is absent in stages 12/13 and task end, but the stage hooks
+are not comparable to the retail instruction-PC samples. The M4 discriminator
+is therefore unevaluable without a complete task-keyed sampler at a shared
+boundary; no accumulator mitigation follows.
 
 ## Durable state
 
@@ -106,9 +107,9 @@ conflicting fragments. Audit files are `docs/RENAME-S*.md`.
 
 1. Keep the M4 accumulator boundary parked unless a complete task-keyed port
    sampler at a retail-comparable instruction/step boundary can be built.
-2. Resume the generated-symbol sweep only after the parked-boundary revisit
-   has a new discriminator and the preceding-15-title rule no longer forces a
-   revisit; the next candidate remains `markHighLodCellsInGrid = 0x80043C30`.
+2. Resume the generated-symbol sweep; the preceding-15-title revisit rule is
+   now cleared by Session 5321. The next candidate remains
+   `markHighLodCellsInGrid = 0x80043C30`.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
 4. When MIPS GCC is supplied, qualify the existing PatchesLib pipeline and
