@@ -160734,3 +160734,15 @@ Rules out: any port-vs-retail divergence at the mission-entry byte; the
 s5223-s5228 conclusions that depended on "port modal 0x03" are superseded
 (CURRENT-TRUTH s5229 resolution). No guard was or is needed. Lesson: raw
 `rdram[...]` byte reads in census code must apply `^3`.
+
+Session 5229 discrimination (added for the contract): SELECTS
+H-read-is-stale-width (the s5228 NEXT.md hypothesis, generalized: the census
+read hit the wrong byte -- here a missing `^3` swizzle, guest +0x21 not
++0x22). REFUTES H-generated-store and H-host-write as explanations of the
+0x03: with the corrected read the entry byte is 00/01 and the shadow's last
+writer matches the actual byte in 76605 of 76649 entries (0x80090F3C /
+0x80090F8C), so no late writer exists. Positive control: `match` rows fire
+for known writers in the same run. Next discriminator: audit every other raw
+`rdram[x]` byte read in census/fixup code for the missing `^3` (grep
+`rdram\[[a-z_]*\]` in tools/fixup_game_funcs_vendored.py and src/main); any
+hit that fed an earlier conclusion must be re-measured.
