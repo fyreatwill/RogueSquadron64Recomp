@@ -159204,3 +159204,16 @@ host-wrapper/ABI-boundary outcome and rules out a semantic rename, build, or
 soak for this candidate. Independent companion-map, generated-tree,
 overlay-record, and caller-count checks agree. Audit:
 `docs/RENAME-S5126-AUDIT.md`. Next candidate: `osDpSetStatus`.
+
+## Session 5127 (2026-10-17) — classified `osDpSetStatus` as host wrapper
+
+Ran the bounded generated-symbol audit for companion
+`osDpSetStatus = 0x8002B5E0`. The companion map places the next entry at
+`__osExceptionPreamble = 0x8002B5F0`, but the generated snapshot contains no
+body, placeholder symbol, or overlay record at the candidate address. It
+contains two direct generated calls to `osDpSetStatus_recomp`; the rename
+helper changed zero references and reported `already-synchronized`. This
+selects the host-wrapper/ABI-boundary outcome and rules out a semantic rename,
+build, or soak for this candidate. Independent companion-map, generated-tree,
+overlay-record, and caller-count checks agree. Audit:
+`docs/RENAME-S5127-AUDIT.md`. Next candidate: `__osExceptionPreamble`.
