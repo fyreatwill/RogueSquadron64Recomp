@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5332 (2026-10-17).
+Compact operational handoff, maintained at Session 5335 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -48,6 +48,14 @@ task serial `961`, generated PCs `0x112C`/`0x17F0`, and increasing per-task
 step values at `0x006AB400`/512. The task serial did not vary because the
 target was one long graphics task, so this proves field availability and
 rules out H3, but does not yet select H1/H2 or authorize a mitigation.
+Session 5335 ran the corrected cxd4 retail arm and the port arm with same-run
+positive controls. Retail produced 10,000 whole-RDRAM hits, live VI controls,
+2,091 graphics task joins, and 1,215 tasks with transient `-32768` VACC lanes;
+the port produced 4,096 target rows. The exact join remained unavailable:
+retail PCs were `0x0088..0x0FE8`, while port rows used `0x112C`/`0x17F0`, and
+the phase origins were `0x006AB800` versus `0x006AB400`. H3 is selected for
+this discriminator; no writer or mitigation follows. See
+`docs/REVISIT-S5335-M4-COMPARISON.md`.
 
 ## Durable state
 
@@ -128,11 +136,9 @@ agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Run the two-arm M4 comparison using the now-live port key stream and the
-   independent cxd4 oracle. Join exact `(VI origin,width,task serial,RSP PC,
-   step bucket)` rows only; select H1/H2/H3 from repeated matched keys. Do
-   not infer missing task variation or add a mitigation from this port-only
-   result.
+1. Keep the M4 accumulator boundary parked: the current retail and port key
+   domains do not align, so do not normalize PCs/origins or infer a writer.
+   Re-open only with an independently justified shared key mapping.
 2. Re-open the generated-symbol sweep only if a new placeholder candidate or
    companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new

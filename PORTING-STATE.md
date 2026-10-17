@@ -161890,3 +161890,23 @@ H3's missing-port-key prediction. It does not distinguish H1 from H2: the
 retail cxd4 arm and exact cross-arm join are still absent, so no writer/lane
 agreement or mismatch, and no mitigation, may be inferred. The next
 discriminator remains the two-arm exact-key join in `scratch/agent/NEXT.md`.
+
+## Session 5335 (2026-10-17) — M4 exact-key comparison remains unevaluable
+
+Ran the corrected two-arm M4 comparison. The first cxd4 recipe was rejected
+because it omitted the whole-RDRAM positive control; it was rerun with the
+control before interpreting any result. The corrected retail arm reached
+10,000 whole-RDRAM watch hits and live VI transitions through 320, 640, 1024,
+and 512 widths, produced 2,091 graphics task joins and 3,032,650 mid-task
+records, and found transient `-32768` VACC lanes in 1,215 tasks while every
+task-end record was zero. The port arm reached its 1024-to-512 phase gate and
+produced 4,096 M4 key rows at `0x006AB400`/512, task `959`, with PCs
+`0x112C`/`0x17F0`; its same-run M4 marks fired.
+
+The declared exact join could not be formed: retail PCs were
+`0x0088..0x0FE8`, neither port PC occurred in the retail stream, and the VI
+origins were `0x006AB800` versus `0x006AB400`. H3 is selected for this
+discriminator: the instruments are live but the key domains are not aligned.
+This rules out H1/H2 claims from these arms and leaves the VACC writer and any
+mitigation unevaluated. Evidence and the rejected first attempt are recorded
+in `docs/REVISIT-S5335-M4-COMPARISON.md`.
