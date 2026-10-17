@@ -160672,3 +160672,37 @@ This selects H-const-zero and refutes H-other and H-not-in-pair.
 H-const-one is a real minority store. Retail's modal `0x00` is the
 constant at `0x80090F3C`. The port's `0x03` is not this store and not
 the constant 1. No guard. Audit: `docs/REVISIT-S5227-BOTH-STRIDES.md`.
+
+## Session 5228 (2026-10-17) — port clears every entry record, entry byte is still 0x03
+
+HYPOTHESIS-ID: port-byte-not-retail-clear. Ran the planned unit: one port
+build, one run (`scratch/agent/s5228_port_stores.sh`, summarizer
+`scratch/agent/s5228_summarize.py`, output `scratch/agent/s5228_port_stores/`).
+Hook `rs64_s5228_store` (funcs_24.c, persisted in
+`tools/fixup_game_funcs_vendored.py`, mirrored to the live tree by new
+`tools/apply_s5228_store_census.py` because the live tree is not
+pristine-regenable) censuses the destinations of `0x80090F3C` and
+`0x80090F8C` per origin. Positive control: `[s5228-ctl]` printed 4 lines
+(stores counted under any origin), so the counter fires; crash=0; title
+51s, hangar 203s, mission `0x00620400` 383s.
+
+Results (the `[s5225-s0]` entry census is the entry control, sums match):
+- `0x00690400`: entry 76379 hits, 53 distinct `s0`; `0x80090F3C` 77687
+  stores to 53 addresses, overflow 0; 53/53 entry `s0+0x22` addresses
+  are covered; every byte stored is `00`. `0x80090F8C`: 5162 stores,
+  43 addresses, byte `01`.
+- `0x00620400`: entry 77960, 53 `s0`; `0x80090F3C` 79312 stores, 54
+  addresses, 53/53 covered, byte `00`; `0x80090F8C` 5256, 44, byte `01`.
+- `0x00690800`/`0x00620800` never occur in the port (no entry, no stores).
+- The `[s5224-hist]` bins in the same run still put the entry byte at
+  `0x03`.
+
+Selects H-port-clears-then-overwrites; refutes H-port-misses-clear
+(coverage is complete, counts are the same order as entry hits) and
+H-port-address-diff (same addresses). The port runs the retail clear.
+Some other writer puts `0x03` into offset `0x22` between that clear and
+the next entry read; not found in this run. No guard: the ORIGIN of the
+0x03 is still open, so a mask would be a mitigation. Caveats: the port's
+voice array shows 53 distinct entry bases versus retail's 41 per stride;
+origins alternate every few entries, so per-origin buckets are
+interleaved rather than contiguous.

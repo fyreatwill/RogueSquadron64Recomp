@@ -39253,6 +39253,93 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
         changed = True
         report.append("funcs_24.c: s5223 entry-contract join patched x5")
 
+    # s5228: port-side census of the offset-0x22 stores in musyxMixActiveVoices
+    # (0x80090F3C sb $zero; 0x80090F8C sb 1). Destination census per origin,
+    # flushed on origin change. Diagnostic only.
+    if p.name == "funcs_24.c" and "PATCH: s5228 store census" not in text:
+        _s5228_anchor = "static void rs64_s2084_fill_range_edge"
+        if text.count(_s5228_anchor) != 1:
+            sys.exit(f"s5228 anchor count={text.count(_s5228_anchor)}")
+        _s5228_helper = r'''/* PATCH: s5228 store census */
+struct rs64_s5228_slot { uint32_t a; unsigned long n; uint32_t last; };
+static struct rs64_s5228_slot rs64_s5228_slot[4][2][64];
+static int rs64_s5228_nslot[4][2];
+static unsigned long rs64_s5228_over[4][2];
+static unsigned long rs64_s5228_total[4][2];
+static void rs64_s5228_flush(int oi, uint32_t origin) {
+    int k, i;
+    for (k = 0; k < 2; k++) {
+        if (!rs64_s5228_total[oi][k]) continue;
+        fprintf(stderr, "[s5228-store] pc=0x%08X origin=0x%08X total=%lu slots=%d overflow=%lu rows=",
+                k ? 0x80090F8Cu : 0x80090F3Cu, origin, rs64_s5228_total[oi][k],
+                rs64_s5228_nslot[oi][k], rs64_s5228_over[oi][k]);
+        for (i = 0; i < rs64_s5228_nslot[oi][k]; i++)
+            fprintf(stderr, "%s%08X:%lu:%02X", i ? "," : "", rs64_s5228_slot[oi][k][i].a,
+                    rs64_s5228_slot[oi][k][i].n, rs64_s5228_slot[oi][k][i].last);
+        fputc('\n', stderr);
+    }
+    fflush(stderr);
+}
+static void rs64_s5228_store(uint32_t pc, uint32_t addr, uint32_t val) {
+    static int enabled = -1;
+    static int have_last = 0;
+    static int last_oi = -1;
+    static uint32_t last_origin = 0;
+    static unsigned long ctl = 0;
+    extern uint32_t rs64_vi_committed_origin(void);
+    uint32_t origin;
+    int oi, k, i;
+    if (enabled < 0) {
+        const char* e = getenv("ROGUESQ_LOG_S5223_ENTRY_JOIN");
+        enabled = (e && e[0] && e[0] != '0') ? 1 : 0;
+    }
+    if (!enabled) return;
+    origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    oi = origin == 0x00690400u ? 0 : origin == 0x00690800u ? 1 :
+         origin == 0x00620400u ? 2 : origin == 0x00620800u ? 3 : -1;
+    /* positive control: every call, any origin, counted and reported at 1,100000 */
+    ctl++;
+    if (ctl == 1ul || (ctl % 100000ul) == 0ul) {
+        fprintf(stderr, "[s5228-ctl] stores_any_origin=%lu pc=0x%08X origin=0x%08X\n", ctl, pc, origin);
+        fflush(stderr);
+    }
+    if (have_last && last_oi >= 0 && (last_oi != oi)) rs64_s5228_flush(last_oi, last_origin);
+    have_last = 1; last_oi = oi; last_origin = origin;
+    if (oi < 0) return;
+    k = pc == 0x80090F8Cu ? 1 : 0;
+    rs64_s5228_total[oi][k]++;
+    for (i = 0; i < rs64_s5228_nslot[oi][k]; i++)
+        if (rs64_s5228_slot[oi][k][i].a == addr) {
+            rs64_s5228_slot[oi][k][i].n++;
+            rs64_s5228_slot[oi][k][i].last = val & 0xFFu;
+            return;
+        }
+    if (rs64_s5228_nslot[oi][k] < 64) {
+        rs64_s5228_slot[oi][k][rs64_s5228_nslot[oi][k]].a = addr;
+        rs64_s5228_slot[oi][k][rs64_s5228_nslot[oi][k]].n = 1ul;
+        rs64_s5228_slot[oi][k][rs64_s5228_nslot[oi][k]].last = val & 0xFFu;
+        rs64_s5228_nslot[oi][k]++;
+    } else rs64_s5228_over[oi][k]++;
+}
+
+'''
+        text = text.replace(_s5228_anchor, _s5228_helper + _s5228_anchor, 1)
+        for _s5228_pc, _s5228_val in (("0x80090F3C", "U32(0)"), ("0x80090F8C", "U32(ctx->r3)")):
+            _s5228_old = (
+                f"    rs64_m5_lowfield_store('B', {_s5228_pc}u, U32(ADD32(ctx->r2, 0X22)), {_s5228_val}); "
+                "/* PATCH: s4340 lowfield writer */\n"
+            )
+            if text.count(_s5228_old) != 1:
+                sys.exit(f"s5228 store site count={text.count(_s5228_old)} for {_s5228_pc}")
+            text = text.replace(
+                _s5228_old,
+                _s5228_old
+                + f"    rs64_s5228_store({_s5228_pc}u, U32(ADD32(ctx->r2, 0X22)), {_s5228_val}); /* PATCH: s5228 store census */\n",
+                1,
+            )
+        changed = True
+        report.append("funcs_24.c: s5228 store census patched x2")
+
     # s2112: join the sole reapplyDisplayMode caller, callee, audio-return,
     # route edge, and function exit by a phase-local call ordinal. The helper
     # is diagnostic-only and does not alter any generated register or memory

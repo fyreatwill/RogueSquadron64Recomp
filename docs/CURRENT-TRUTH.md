@@ -867,3 +867,13 @@ archived durable history, `docs/M5-AUDIO-PLAN.md` for the audio sequence, and
 the per-session audit/soak paths named above. The next iteration must read
 this file, `scratch/agent/NEXT.md`, and the tail of
 `scratch/agent/SOAK-RESULTS.md` before acting.
+
+## s5228 addendum (port-byte-not-retail-clear)
+
+Port runs the retail `sb $zero, 0x22` at `0x80090F3C` on 53/53 of the
+entry-read records (77687 stores vs 76379 entries at origin `0x00690400`;
+`0x00620400` likewise), every stored byte `00`, yet the entry byte is
+`0x03`. Open: which port writer puts `0x03` at record+0x22 between the
+clear and the next `0x8008FAAC` entry read. Port has 53 distinct entry
+bases versus retail's 41 per stride (unexplained). See PORTING-STATE
+Session 5228; instrument `rs64_s5228_store`.
