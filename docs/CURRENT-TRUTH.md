@@ -225,8 +225,14 @@ libultra/ABI entry: the bounded helper reported `already-synchronized`; the
 generated tree has one direct caller and a zero-size overlay record, but no
 generated body or placeholder at the companion address. Its nominal span to
 `osCartRomInit = 0x800326F0` is `0x190`, with no body to validate. Preserve the
-ABI name. Audit: `docs/RENAME-S5176-AUDIT.md`. The next candidate is now
-`osCartRomInit = 0x800326F0`.
+ABI name. Audit: `docs/RENAME-S5176-AUDIT.md`. `osCartRomInit = 0x800326F0`
+is now likewise classified as an unmaterialized libultra/ABI entry: the
+bounded helper reported `already-synchronized`; the generated tree has only
+the ABI declaration and a zero-size overlay record, with no body, placeholder,
+or direct generated caller at the companion address. Its nominal span to
+`osGetThreadPri = 0x80032FB0` is `0x8C0`, with no body to validate. Preserve
+the ABI name. Audit: `docs/RENAME-S5177-AUDIT.md`. The next candidate is now
+`osGetThreadPri = 0x80032FB0`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -479,8 +485,8 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osCartRomInit = 0x800326F0`, whose next
-   candidate is `osGetThreadPri = 0x80032FB0`, one entry per iteration while
+1. Resume the companion sweep with `osGetThreadPri = 0x80032FB0`, whose next
+   candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value
    origin remains open and requires a new discriminator before reopening.

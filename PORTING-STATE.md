@@ -159857,3 +159857,14 @@ Preserve the ABI name; this rules out a justified generated-body rename for
 this candidate, not the broader libultra/ABI classification. No build or soak
 was needed. Audit: `docs/RENAME-S5176-AUDIT.md`. Next candidate:
 `osCartRomInit`.
+## Session 5177 (2026-10-17) — classified `osCartRomInit` as unmaterialized
+
+Ran the bounded generated-symbol audit for `osCartRomInit = 0x800326F0`.
+The rename helper reported `already-synchronized` and renamed 0 references in
+0 files. The generated tree contains only the ABI declaration and a zero-size
+overlay record at offset `0x322B0`; searches found no generated body,
+placeholder, or direct generated caller. The next companion symbol,
+`osGetThreadPri = 0x80032FB0`, gives a nominal `0x8C0` span, but there is no
+body to validate. Preserved the ABI name and advanced the sweep. This rules out
+a materialized generated function at this candidate; it does not make a claim
+about the runtime implementation of the host wrapper.
