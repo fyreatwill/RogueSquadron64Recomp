@@ -160055,3 +160055,16 @@ to validate. Preserve the ABI name and continue the sweep at
 `__osSiDeviceBusy`. This rules out an actionable generated rename at this
 entry, but does not bear on runtime behavior. No build or soak was warranted
 for this naming-only result. Audit: `docs/RENAME-S5191-AUDIT.md`.
+
+## Session 5192 (2026-10-17) — classified `__osSiDeviceBusy` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `__osSiDeviceBusy = 0x80033BD0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found no body, placeholder, overlay record, or direct
+generated caller at the companion address. The symbol map places
+`__osSiRawReadIo = 0x80033C00` next, giving a nominal `0x30` span with no body
+to validate. Preserve the ABI name and continue the sweep at
+`__osSiRawReadIo`. This rules out an actionable generated rename at this
+entry, but does not bear on runtime behavior. No build or soak was warranted
+for this naming-only result. Audit: `docs/RENAME-S5192-AUDIT.md`.

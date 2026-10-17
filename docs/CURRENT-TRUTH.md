@@ -587,9 +587,17 @@ companion address. Its nominal span to `__osSiDeviceBusy = 0x80033BD0` is
 `docs/RENAME-S5191-AUDIT.md`. The next candidate is now
 `__osSiDeviceBusy = 0x80033BD0`.
 
+`__osSiDeviceBusy = 0x80033BD0` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+the generated-tree search found no body, placeholder, overlay record, or
+direct generated caller at the companion address. Its nominal span to
+`__osSiRawReadIo = 0x80033C00` is `0x30`, with no body to validate. Preserve
+the ABI name. Audit: `docs/RENAME-S5192-AUDIT.md`. The next candidate is now
+`__osSiRawReadIo = 0x80033C00`.
+
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSiDeviceBusy = 0x80033BD0`, whose next
+1. Resume the companion sweep with `__osSiRawReadIo = 0x80033C00`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
