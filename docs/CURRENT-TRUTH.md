@@ -770,12 +770,20 @@ declaration, one generated caller, and a zero-size overlay record, with no
 body or placeholder at the companion address. Its nominal span to
 `osVirtualToPhysical = 0x80035120` is `0x170`, with no body to validate.
 Preserve the ABI name. Audit: `docs/RENAME-S5219-AUDIT.md`. The next sweep
-candidate is now `osVirtualToPhysical = 0x80035120`.
+candidate is now `osVirtualToPhysical = 0x80035120`. `osVirtualToPhysical`
+is now classified as another unmaterialized libultra/ABI entry: the bounded
+helper reported `already-synchronized` for it and the next in-range
+`__osProbeTLB`, while renaming zero references in zero files. The generated
+tree has the ABI declaration, seven generated callers, and a zero-size overlay
+record, but no body or placeholder at the companion address. The primary
+companion map places `osViSetEvent` at `0x80035260` (nominal span `0x140`),
+but `__osProbeTLB = 0x800351A0` is the next bounded candidate. Preserve the
+ABI name. Audit: `docs/RENAME-S5220-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
 1. Resume the companion sweep with the next named entry after
-   `osCreateViManager = 0x80034DB0`, whose
+   `osVirtualToPhysical = 0x80035120`, whose
    next candidate follows from its bounded symbol-map span, one entry per iteration.
    `strchr = 0x80034744` is now correctly named: its generated body, exact
    `0x4C` overlay span, and six independent callers agree. Audit:

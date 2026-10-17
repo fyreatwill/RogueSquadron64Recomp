@@ -160412,3 +160412,18 @@ This selects the unmaterialized libultra/ABI outcome and preserves the semantic
 name. It rules out a generated-symbol rename and body/span mismatch for this
 candidate, but makes no runtime claim. Audit:
 `docs/RENAME-S5219-AUDIT.md`.
+
+## Session 5220 (2026-10-17) — classified `osVirtualToPhysical` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded companion
+audit for `osVirtualToPhysical = 0x80035120`. The helper reported
+`already-synchronized` for `osVirtualToPhysical` and the next in-range
+`__osProbeTLB = 0x800351A0`, renaming zero references in zero files.
+Independent generated-tree searches found the ABI declaration, seven
+generated callers in `funcs_8.c`, and a zero-size overlay record, but no
+generated body or placeholder at the companion address. The primary companion
+map places `osViSetEvent` at `0x80035260`, so the nominal primary span is
+`0x140`; there is no body to validate it. This selects the unmaterialized
+libultra/ABI outcome and preserves the semantic name. It rules out a
+generated-symbol rename and body/span mismatch for this candidate, but makes
+no runtime claim. Audit: `docs/RENAME-S5220-AUDIT.md`.
