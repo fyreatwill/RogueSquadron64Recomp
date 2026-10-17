@@ -161814,3 +161814,20 @@ unevaluable, and cxd4 rows were not compared because doing so would mix
 phases. This rules out the title-observed schedule as a sufficient new
 discriminator; no accumulator mitigation follows. The M4 thread is parked
 pending a new independently validated phase-driving or shared-boundary method.
+
+## Session 5330 (2026-10-17) — refuted M4 shared-boundary block
+
+Read the probe source and existing validated route before treating the block as
+a missing capability. The prior attempt used window-injected keys and the
+`2:start 8:a 14:start 20:a` schedule. A fresh Debug build ran with the
+source-documented in-process autopilot and validated LLE/ungated/solo route:
+`3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a`.
+
+The run passed its phase control at `vi_width=1024`, origin `0x00790400`,
+kept the 512-gated M4 instrument live (464 `[m4-y8000]` records), and reached
+the required shared boundary at `vi_width=512`, origin `0x006AB400` at 23.8s.
+This refutes the claim that the M4 sampler needs a human-supplied phase-driving
+capability. It does not select an accumulator hypothesis: the next unit must
+build/run both arms and select H1/H2/H3 from the complete task-keyed table.
+Evidence: `scratch/agent/unblock_m4_autopilot/run.log` and
+`scratch/agent/UNBLOCK.md`.

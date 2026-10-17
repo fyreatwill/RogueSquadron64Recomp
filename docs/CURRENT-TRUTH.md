@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5329 (2026-10-17).
+Compact operational handoff, maintained at Session 5330 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -29,11 +29,15 @@ retail oracle's whole-RDRAM positive control and recorded the exact shared-
 boundary design in `docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`.
 Session 5326 made the cxd4 sampler stride configurable and added generated
 Factor 5 PCs to the port hooks; both sampler controls were live, but neither
-driven arm reached the target hangar phase, so H3 remains selected. Session
-5329 reran the port with the title-observed Start/A schedule after a fresh
-retail whole-RDRAM control; the port again remained at width 640/origin
-`0x00696100`. The shared 512 boundary is still absent, so the M4 join is
-parked rather than repeated with an invalid phase comparison.
+driven arm reached the target hangar phase, so that attempt selected H3. Session
+5329's missing boundary was caused by its window-key schedule, not a missing
+capability. Session 5330 used the source-documented in-process autopilot route
+(`3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a`) with the
+validated LLE route. The rebuilt port passed the phase control at
+1024/`0x00790400` and reached the required shared 512 boundary at
+`0x006AB400` in 23.8 seconds; the M4 gate emitted 464 records. The M4
+task-keyed comparison is resumed, but no accumulator conclusion is drawn
+until the cxd4 and port tables join at that boundary.
 
 ## Durable state
 
@@ -114,10 +118,10 @@ agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. M4 is parked at H3: obtain a new, independently validated way to drive or
-   observe the port's title-to-hangar transition before attempting another
-   task-keyed accumulator comparison. Do not compare cxd4 rows without a
-   shared 512-wide boundary.
+1. Run the M4 task-keyed accumulator comparison using the proven in-process
+   autopilot route. Require the oracle/port positive controls and shared
+   `0x006AB400`/512 boundary before joining cxd4 rows; select H1, H2, or H3
+   from the complete `(VI origin,width,task serial,RSP PC,step bucket)` table.
 2. Re-open the generated-symbol sweep only if a new placeholder candidate or
    companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new

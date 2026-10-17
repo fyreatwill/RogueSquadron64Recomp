@@ -1,27 +1,27 @@
-# Next: obtain a new phase-driving or shared-boundary capability
+# Next: run the M4 task-keyed accumulator comparison at the shared boundary
 
-Session 5329 reran the already instrumented port after a fresh retail oracle
-positive control. The title-observed Start/A schedule still left the port at
-width 640/origin `0x00696100`; it never reached the required 512-wide hangar
-boundary. Do not repeat this schedule or compare cxd4 rows without a shared
-boundary. Human input is needed to supply or approve a new independently
-validated phase-driving/observation method.
+Session 5330 refuted the phase-driving block. The in-process autopilot route
+reached the required `vi_width=512`, origin `0x006AB400` boundary, so the
+sampler can resume. Do not use the old window-injected schedule.
 
-The failed port recipe, retained for provenance only:
+Build the cxd4 sampler and port together, retain the oracle whole-RDRAM/VI
+controls, and use this proven port route:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
 cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix && make all
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-env PROBE_PHASE_WIDTH=512 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
-  PROBE_KEYS='2:start 8:a 14:start 20:a' \
-  zsh tools/probe.sh scratch/agent/m4-port-next 240 1
+env ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M4_Y8000=1 ROGUESQ_M4_Y8000_WIDTH=512 \
+  ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 \
+  ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+  ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
+  ROGUESQ_AUTOPILOT_STOP_WIDTH=512 \
+  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=110 PROBE_KEYS_FROM_PHASE=1 \
+  PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/m4-port-next 240 1
 ```
 
-If a new method is supplied, rebuild both arms, retain whole-RDRAM and VI
-positive controls, and require both arms to reach `0x006AB400` at width 512
-before joining records. Do not add a mitigation or infer from synthetic stage
-ordinals.
+Require both arms to reach the shared `0x006AB400`/512 boundary before
+joining. Do not add a mitigation or infer from synthetic stage ordinals.
 
 Competing hypotheses and discriminator:
 
