@@ -1,30 +1,24 @@
 # Next: generated-symbol sweep — `freeNpcSlotArray`
 
-Work unit: classify companion symbol `freeNpcSlotArray = 0x8003FBF8`
-with the existing bounded renaming helper, then independently inspect its
-generated body, declaration, overlay record, callers, and any placeholder
-conflict. Do not change runtime code if it is already named.
+Work unit: classify `freeNpcSlotArray = 0x8003FBF8` with the bounded helper,
+then independently inspect the companion record and generated tree. This is a
+classification-only unit; do not build or soak.
 
-Competing hypotheses:
+Competing hypotheses and discriminator:
 
-- H1: the companion entry is already synchronized and the helper makes zero
-  edits.
-- H2: a generated placeholder remains and the helper renames a bounded set of
-  references.
-- H3: the companion record is data or an ABI boundary rather than a callable
-  placeholder, so preserve its existing name without renaming.
+- H1: zero helper edits and a named callable body plus declaration/overlay
+  metadata select “already synchronized.”
+- H2: a generated `func_...` placeholder and nonzero bounded edit count select
+  a real rename; verify callers and conflicts.
+- H3: typed data or an ABI boundary with no callable placeholder selects
+  preservation without renaming.
 
-Discriminator: the helper's edit count and independent generated-tree checks
-must distinguish a named callable, a placeholder rename, or a non-callable
-data/ABI boundary; no build or soak is warranted for a classification-only
-result.
-
-Exact commands: run `python3 tools/rename_generated_symbols.py
-../N64Recomp/RecompiledFuncs --companion-dir
-../rogue_squadron64/symbol_files --start-address 0x8003FBF8
---end-address 0x8003FBFC --limit 1`, then grep the companion map and generated
-tree for the address, symbol, placeholder, declaration, overlay record, and
-callers. H1 is selected by zero edits plus a named callable body and metadata;
-H2 by a placeholder/edit count; H3 by a non-callable/data-only result.
+Run:
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs
+--companion-dir ../rogue_squadron64/symbol_files --start-address 0x8003FBF8
+--end-address 0x8003FBFC --limit 1`
+Then grep the companion map and generated tree for the address, symbol,
+placeholder, declaration, overlay record, and callers. The helper result and
+independent tree inspection are the two required evidence lines.
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep

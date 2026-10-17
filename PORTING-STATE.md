@@ -161523,3 +161523,14 @@ named callable body in `RecompiledFuncs/funcs_9.c`, its declaration in
 fragment exists. This selects H1 and rules out H2/H3 for this candidate. No
 build or soak was warranted. The next bounded candidate is
 `freeNpcSlotArray = 0x8003FBF8`.
+## Session 5304 (2026-10-17) — maintenance compacted current truth
+
+The maintenance gate triggered because `docs/CURRENT-TRUTH.md` was 60,479
+bytes. No experiment or runtime build was run. The 861-line handoff was
+compacted to a concise operational document, with durable history retained by
+reference to `docs/PROJECT-OVERVIEW.md`, `docs/M5-AUDIO-PLAN.md`, and the
+per-session audit files. The current truth now records the qualified M5 close,
+the parked M3/M4 boundaries, the active generated-symbol sweep, and the
+monotonic next steps. This rules out treating the stale sweep backlog and
+historical route blockers as current work; the next bounded unit remains
+`freeNpcSlotArray = 0x8003FBF8`.
