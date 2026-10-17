@@ -712,12 +712,18 @@ classified as an unmaterialized libultra/ABI entry: the bounded helper
 reported `already-synchronized`, and independent generated-tree searches
 found no body, placeholder, overlay record, or direct caller at the companion
 address. Its companion span ends at `__osTimerServicesInit = 0x800347D0`;
-preserve the ABI name. Audit: `docs/RENAME-S5211-AUDIT.md`. The next
-candidate is now `__osTimerServicesInit = 0x800347D0`.
+preserve the ABI name. Audit: `docs/RENAME-S5211-AUDIT.md`.
+`__osTimerServicesInit = 0x800347D0` is now classified as another
+unmaterialized libultra/ABI entry: the bounded helper reported
+`already-synchronized`, and independent generated-tree searches found no body,
+placeholder, overlay record, or direct caller at the companion address. Its
+nominal span to `__osTimerInterrupt = 0x8003485C` is `0x8C`, with no body to
+validate. Preserve the ABI name. Audit: `docs/RENAME-S5212-AUDIT.md`. The
+next candidate is now `__osTimerInterrupt = 0x8003485C`.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osTimerServicesInit = 0x800347D0`, whose
+1. Resume the companion sweep with `__osTimerInterrupt = 0x8003485C`, whose
    next candidate follows from its bounded symbol-map span, one entry per iteration.
    `strchr = 0x80034744` is now correctly named: its generated body, exact
    `0x4C` overlay span, and six independent callers agree. Audit:

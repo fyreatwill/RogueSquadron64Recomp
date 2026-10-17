@@ -160312,3 +160312,15 @@ existing ABI name. This rules out a generated-symbol rename and span mismatch
 for this candidate, not runtime behavior of the wrapper. Added
 `docs/RENAME-S5211-AUDIT.md`; no build or soak was warranted for this
 naming-only result.
+## Session 5212 (2026-10-17) — classified `__osTimerServicesInit` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol helper and independent generated-tree searches for
+`__osTimerServicesInit = 0x800347D0`. The helper reported
+`already-synchronized` and renamed zero references in zero files. No generated
+body, placeholder, overlay record, or direct call site exists at the companion
+address; the companion span ends at `__osTimerInterrupt = 0x8003485C` (`0x8C`
+nominal span). Preserve the existing ABI name. This rules out a generated-
+symbol rename and span mismatch for this candidate, not runtime behavior of
+the wrapper. Added `docs/RENAME-S5212-AUDIT.md`; no build or soak was warranted
+for this naming-only result.
