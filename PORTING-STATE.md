@@ -159917,3 +159917,18 @@ validate. Preserved the ABI name and advanced the sweep. This rules out a
 materialized generated function at this candidate; it does not make a claim
 about the runtime implementation of the host wrapper. No build or soak was
 warranted for this naming-only result. Audit: `docs/RENAME-S5181-AUDIT.md`.
+
+## Session 5182 (2026-10-17) — classified `osSendMesg` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osSendMesg = 0x80033410`. The helper reported
+`already-synchronized` and renamed zero references in zero files. The
+generated tree contains only the ABI declaration and a zero-size overlay
+record at offset `0x32FD0`; it has no generated body or placeholder at the
+companion address. There are 44 generated call sites to the host wrapper. The
+next companion entry is `osSetEventMesg = 0x80033560`, a nominal `0x150` span
+away, but there is no body to validate. Preserved the ABI name and advanced
+the sweep. This rules out a materialized generated function at this candidate;
+it does not make a claim about the runtime implementation of the host wrapper.
+No build or soak was warranted for this naming-only result. Audit:
+`docs/RENAME-S5182-AUDIT.md`.
