@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5271 (2026-10-17). The
+Compact operational handoff, maintained at Session 5272 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -378,7 +378,19 @@ function/overlay entry begins with invalid data at the address and spans
 `0x4E10`, so it is not a callable placeholder. Preserve the name. Audit:
 `docs/RENAME-S5270-AUDIT.md`.
 
+`__osPiDevMgr = 0x80039130` is now classified as already synchronized: the
+bounded helper made zero edits, and the generated tree contains only a `nop`
+inside the preceding data/fragment decode, with no distinct callable body,
+placeholder, declaration, overlay record, or direct generated caller at the
+address. Preserve the existing data name. Audit: `docs/RENAME-S5272-AUDIT.md`.
+
 ## Next steps (single monotonic backlog)
+
+- **s5272:** `__osPiDevMgr = 0x80039130` is already synchronized: the bounded
+  helper made zero edits, and independent checks find only a `nop` in the
+  preceding data/fragment decode, not a callable placeholder. Preserve the
+  name; no build or soak. Audit: `docs/RENAME-S5272-AUDIT.md`. Next: classify
+  `__osPiTable = 0x8003914C`.
 
 - **s5271:** `__osMotorinitialized = 0x80039120` is already synchronized: the
   bounded helper made zero edits, and independent checks identify the companion

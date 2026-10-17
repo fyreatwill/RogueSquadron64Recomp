@@ -161103,3 +161103,14 @@ which is only a `nop` inside the preceding data/fragment decode. This rules
 out callable placeholder propagation; preserve the data name. No build or
 soak was needed. Audit: `docs/RENAME-S5271-AUDIT.md`. Next candidate:
 `__osPiDevMgr = 0x80039130`.
+
+## Session 5272 (2026-10-17) — generated-symbol sweep: `__osPiDevMgr` is data
+
+Ran the bounded companion-symbol helper over `0x80039130..0x8003914C`. It
+renamed zero references and reported `__osPiDevMgr` as already synchronized.
+Independent inspection found the companion data-map entry and no distinct
+generated callable body, placeholder, declaration, overlay record, or direct
+generated caller at the address; it is only a `nop` inside the preceding
+`__OSGlobalIntMask` data/fragment decode. This rules out callable placeholder
+propagation; preserve the data name. No build or soak was needed. Audit:
+`docs/RENAME-S5272-AUDIT.md`. Next candidate: `__osPiTable = 0x8003914C`.
