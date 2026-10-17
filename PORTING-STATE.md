@@ -159666,3 +159666,13 @@ This rules out a generated-body rename for this candidate, not the broader
 libultra/ABI boundary classification. Evidence:
 `docs/RENAME-S5161-AUDIT.md`. Next: audit `__osPfsRequestOneChannel =
 0x80030944`.
+## Session 5162 (2026-10-17) — classified `__osPfsRequestOneChannel` as unmaterialized
+
+Ran the permitted generated-symbol sweep after the last-15 preflight. Audited
+`__osPfsRequestOneChannel = 0x80030944` through the bounded generated-tree
+search and `tools/rename_generated_symbols.py`, with the next-entry boundary
+`0x80030A04`. The search found no body, placeholder, overlay record, or direct
+generated caller; the helper reported `already-synchronized` and changed zero
+references in zero files. This rules out a justified rename for this entry and
+preserves its libultra/ABI name. No build or soak was needed. Audit:
+`docs/RENAME-S5162-AUDIT.md`. Next candidate: `__osGetOneChannelData`.

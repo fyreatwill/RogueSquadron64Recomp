@@ -1,10 +1,10 @@
-# Next: generated-symbol renaming sweep — `__osPfsRequestOneChannel` candidate
+# Next: generated-symbol renaming sweep — `__osGetOneChannelData` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the bounded companion sweep: audit only
-`__osPfsRequestOneChannel = 0x80030944`, immediately after the classified
-`__osPfsGetStatus`. Determine whether it has a generated prologue/body, exact
-span to the following entry, and independent caller.
+`__osGetOneChannelData = 0x80030A04`, immediately after the classified
+`__osPfsRequestOneChannel`. Determine whether it has a generated prologue/body,
+exact span to the following entry, and independent caller.
 Do not rename an ABI symbol without all three gates.
 
 Competing hypotheses and discriminator:
@@ -19,7 +19,7 @@ Competing hypotheses and discriminator:
 
 Run:
 
-    rg -n '__osPfsRequestOneChannel|func_80030944|fake_func_80030944' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80030944 --end-address 0x80030A04
+    rg -n '__osGetOneChannelData|func_80030A04|fake_func_80030A04' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80030A04 --end-address 0x80030C00
 
 No build or soak is needed for a naming-only or ABI-preservation result.
