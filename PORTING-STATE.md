@@ -159269,3 +159269,14 @@ caller at `0x8002BC1C`; the companion map places the next entry at
 `__osGetSR = 0x8002C230`. This selects the host-wrapper/ABI-boundary or
 unmaterialized-entry outcome and rules out a semantic rename, build, or soak.
 Audit: `docs/RENAME-S5131-AUDIT.md`. Next candidate: `__osGetSR`.
+## Session 5132 (2026-10-17) — classified `__osGetSR` as host wrapper
+
+Ran the bounded generated-symbol audit for companion `__osGetSR =
+0x8002C230`. The helper changed zero references and reported
+`already-synchronized` for the candidate and five adjacent libultra entries.
+The generated snapshot contains no body, placeholder symbol, declaration,
+overlay record, or direct generated caller at the candidate address; the
+companion map places the next entry at `__osDisableInt = 0x8002C240`. This
+selects the host-wrapper/ABI-boundary or unmaterialized-entry outcome and
+rules out a semantic rename, build, or soak. Audit:
+`docs/RENAME-S5132-AUDIT.md`. Next candidate: `__osDisableInt`.

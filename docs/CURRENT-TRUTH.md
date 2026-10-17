@@ -25,7 +25,7 @@ generated trees have no bodies or overlay records, with two ABI call sites
 each. The preamble at `0x8002B5F0` is the same ABI-boundary case with no
 generated caller. `__osException = 0x8002B600` is the same ABI-boundary case:
 it has no generated body, overlay record, or direct generated caller. The next
-candidate is `__osGetSR`.
+candidate is `__osDisableInt`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -71,6 +71,9 @@ were retained below or in the project overview.
 - Host wrappers and zero-span entries retain their `_recomp` ABI names. A
   rename helper result of `already-synchronized` is a no-change result, not a
   runtime issue.
+- `__osGetSR = 0x8002C230` is another companion-only libultra entry: the
+  helper, generated-tree search, and overlay table show no generated body or
+  caller, so its ABI name is preserved. Audit: `docs/RENAME-S5132-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`
@@ -126,7 +129,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Audit `__osGetSR = 0x8002C230` using the bounded rename helper. Rename only
+1. Audit `__osDisableInt = 0x8002C240` using the bounded rename helper. Rename only
    if the generated body, exact next-entry span, semantic mapping, and live
    caller all agree; otherwise preserve the ABI name and record the
    classification.
