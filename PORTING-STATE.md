@@ -158870,3 +158870,11 @@ Added tools/audit_uint32_s32_base.py (`uint32_t X = S32(` later used as MEM_x(of
 - New tools/audit_narrow_base.py (types: int/unsigned/(u)intN_t/u32/s32/size_t; ALLOW={s_vagn_i}); selftest positive control 2 hits / negative 0 (first draft had an off-by-one skipping line 0 and read 1/2 — caught by the control); live tree 0 hits. Wired as the s5100 post-condition in tools/fixup_game_funcs_vendored.py after s5099's (not run through a real regen; py_compile ok).
 - ORIGIN: no mitigation added; this is a regression gate only. The unsigned-base family's writers were the fixup-emitted guards fixed in s5094/s5098.
 - Rules out: any remaining bare-local base type shape in the unsigned-base class. Class (shapes 1-4) closed. Next M3 class: host wrappers (osViSwapBuffer, EEPROM/pak buffer args).
+
+## Session 5101 (2026-10-17) — M3 host-wrapper guest-pointer census: no raw guest dereference
+
+Added `tools/audit_host_wrappers.py` for the bounded VI/EEPROM/controller/PFS/pak wrapper class. Its same-run self-test positively classified synthetic translated, raw, and no-op wrappers (3/3 expected). The live census classified 15 wrappers as translated, 5 as range-checked plus `MEM_*` translated, 8 as explicit no-pak/error returns, and found no reachable raw guest-pointer dereference. `osViSwapBuffer` stores the guest framebuffer address without dereferencing it; the project override forwards to the runtime callee. The underlying `__osContGetInitData` raw pointer is host-owned and is called after the wrapper translates its guest outputs.
+
+Independent source evidence: `_arg` resolves pointer arguments through `TO_PTR`, whose RDRAM form subtracts the KSEG0 base; EEPROM `save_read`/`save_write` access guest buffers only through `MEM_B`. No guard, skip, or behavior change was added, and no soak/build was needed for this source-class audit.
+
+Rules out: a live raw guest-pointer site in this wrapper class. It does not prove unexercised wrappers safe at runtime. Next: census `osPiStartDma`, `osDpSetNextBuffer`, and `osSetEventMesg` as the remaining DMA/event wrapper class.
