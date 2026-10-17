@@ -467,6 +467,29 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         }
         fprintf(stderr, "[fbhash #%d] fb=0x%08X h=%016llx\n", n, fb, (unsigned long long)h);
     }
+    // ROGUESQ_RDRAM_SNAP_DIR=<dir> (s5069): if <dir>/trigger exists, its first line names a
+    // snapshot; dump 8 MB RDRAM (byte-swapped back to big-endian order) to <dir>/<name>.bin.
+    static const char* s_snap_dir = std::getenv("ROGUESQ_RDRAM_SNAP_DIR");
+    if (s_snap_dir && *s_snap_dir && (n & 3) == 0) {
+        std::string trig = std::string(s_snap_dir) + "/trigger";
+        if (FILE* t = fopen(trig.c_str(), "r")) {
+            char name[128] = {0};
+            if (!fgets(name, sizeof name, t)) name[0] = 0;
+            fclose(t);
+            remove(trig.c_str());
+            for (char* c = name; *c; ++c) if (*c == '\n' || *c == '/') *c = 0;
+            if (name[0]) {
+                std::string out = std::string(s_snap_dir) + "/" + name + ".bin";
+                if (FILE* o = fopen(out.c_str(), "wb")) {
+                    std::vector<uint8_t> buf(0x800000);
+                    for (uint32_t i = 0; i < 0x800000; ++i) buf[i] = rdram[i ^ 3];
+                    fwrite(buf.data(), 1, buf.size(), o);
+                    fclose(o);
+                    fprintf(stderr, "[rdram-snap] %s n=%d\n", name, n);
+                }
+            }
+        }
+    }
     extern void osViSwapBuffer(uint8_t* rdram, int32_t frameBufPtr);
     osViSwapBuffer(rdram, (int32_t)fb);
 }

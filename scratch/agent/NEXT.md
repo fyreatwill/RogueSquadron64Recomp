@@ -1,6 +1,4 @@
-# Next: find a mission state witness (ship/camera words) that moves under held stick but is stable in ctl
+# Next: run the RDRAM snapshot discriminator (instrument already landed s5070)
 HYPOTHESIS-ID: m6-mission-input
-s5069: whole-frame hash saturated (every frame unique in ctl too) -> no headroom; pixels are the wrong witness.
-Hypotheses: H1 mission reacts (some RDRAM words change only under input); H2 pad read but ignored (no ctl-stable word moves under W/D/Z/Return).
-Discriminator: add ROGUESQ_RDRAM_SNAP=<dir> env: on a signal file / at script-chosen times dump 8 MB RDRAM; snapshots: ctl1, ctl2 (10 s apart, no keys), keyW (during W held 4 s), keyD. Offline: words equal ctl1==ctl2 but differing in keyW/keyD = candidate witnesses. Positive control: a word known to change (frame counter) must show in ctl1!=ctl2.
-Script base: scratch/agent/s5069_mission_fbhash.sh (route ~260-290 s).
+First: `zsh scratch/agent/keytest.sh` must print a padlog transition (key injection alive). If not, BLOCKED (ask owner to wake/unlock display).
+Then: `zsh scratch/agent/s5069_mission_snap.sh`; offline: words with ctl1==ctl2==ctl3 but != keyW/keyD/keyZ = state witnesses. Positive control: frame-counter-like words differ ctl1 vs ctl2. H1 = witnesses exist; H2 = none.
