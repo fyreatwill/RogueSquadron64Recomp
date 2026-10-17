@@ -1,3 +1,4 @@
-# Next: guard-class audit of remaining host wrappers (osViSwapBuffer, EEPROM/pak buffer args)
+# Next: per-wrapper call/bad counters for all guarded host wrappers
 HYPOTHESIS-ID: m3-pi-dma-guard
-s5063: SP StartGo + AI SetNextBuffer guard landed; FORCE pg=16, default pg=0 => clean on keyed route. Clone scratch/agent/s5063_spai_guard_*.sh for the next wrapper (grep librecomp/ultramodern for unchecked rdram+ctx->rN derefs). Note FORCE log cap 16 hides which wrappers fire; use per-wrapper counters if StartGo coverage matters.
+s5064: EEPROM x4 + osContGetReadData guarded; default clean, but FORCE log cap (16) is consumed by osAiSetNextBuffer so reachability of the EEPROM/cont sites is unmeasured.
+Work unit: in rs64_spai_guard_bad keep a small per-`what` atomic table (calls, bad) and dump it at VI-phase transitions / exit; run FORCE (expect every reached wrapper bad==calls) and default (bad==0) in one iteration. Clone scratch/agent/s5064_eep_guard_*.sh. Outcomes: calls==0 => route never exercises the wrapper (guard dead-on-route); calls>0,bad==0 => clean; bad>0 in default => real wild pointer, name the writer (ORIGIN).

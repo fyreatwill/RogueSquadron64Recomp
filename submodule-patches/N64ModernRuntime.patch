@@ -628,6 +628,89 @@ index 0195f2b..8d8b36c 100644
 +    ctx->r2 = buffered != 0 ? AI_STATUS_FIFO_FULL : 0;
 +    rs64_log_ai_status("get-status", ctx->r2, buffered, 0, 0);
  }
+diff --git a/librecomp/src/cont.cpp b/librecomp/src/cont.cpp
+index 7ad6c21..558378d 100644
+--- a/librecomp/src/cont.cpp
++++ b/librecomp/src/cont.cpp
+@@ -42,9 +42,16 @@ extern "C" void osContStartReadData_recomp(uint8_t* rdram, recomp_context* ctx)
+     _return<s32>(ctx, ret);
+ }
+ 
++extern "C" bool rs64_spai_guard_bad(const char* what, uint64_t addr, uint64_t size);
++
+ extern "C" void osContGetReadData_recomp(uint8_t* rdram, recomp_context* ctx) {
+     PTR(OSContPad) data = _arg<0, PTR(OSContPad)>(rdram, ctx);
+ 
++    // s5064: census-first guard (sp.cpp) for the pad buffer pointer.
++    if (rs64_spai_guard_bad("osContGetReadData", static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(data))), 6 * MAXCONTROLLERS)) {
++        return;
++    }
++
+     OSContPad dummy_data[MAXCONTROLLERS];
+ 
+     osContGetReadData(dummy_data);
+diff --git a/librecomp/src/eep.cpp b/librecomp/src/eep.cpp
+index 048246e..5811902 100644
+--- a/librecomp/src/eep.cpp
++++ b/librecomp/src/eep.cpp
+@@ -8,6 +8,9 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
+ 
+ constexpr int eeprom_block_size = 8;
+ 
++// s5064: reuse the s5063 census-first guard (sp.cpp) for EEPROM buffer pointers.
++extern "C" bool rs64_spai_guard_bad(const char* what, uint64_t addr, uint64_t size);
++
+ extern "C" void osEepromProbe_recomp(uint8_t* rdram, recomp_context* ctx) {
+     switch (recomp::get_save_type()) {
+         case recomp::SaveType::AllowAll:
+@@ -33,6 +36,11 @@ extern "C" void osEepromWrite_recomp(uint8_t* rdram, recomp_context* ctx) {
+     gpr buffer = ctx->r6;
+     int32_t nbytes = eeprom_block_size;
+ 
++    if (rs64_spai_guard_bad("osEepromWrite", static_cast<uint64_t>(buffer), eeprom_block_size)) {
++        ctx->r2 = 0;
++        return;
++    }
++
+     save_write(rdram, buffer, eep_address * eeprom_block_size, nbytes);
+ 
+     ctx->r2 = 0;
+@@ -50,6 +58,11 @@ extern "C" void osEepromLongWrite_recomp(uint8_t* rdram, recomp_context* ctx) {
+ 
+     assert((nbytes % eeprom_block_size) == 0);
+ 
++    if (rs64_spai_guard_bad("osEepromLongWrite", static_cast<uint64_t>(buffer), static_cast<uint64_t>(nbytes) & 0xFFFFFFFFull)) {
++        ctx->r2 = 0;
++        return;
++    }
++
+     save_write(rdram, buffer, eep_address * eeprom_block_size, nbytes);
+ 
+     ctx->r2 = 0;
+@@ -65,6 +78,11 @@ extern "C" void osEepromRead_recomp(uint8_t* rdram, recomp_context* ctx) {
+     gpr buffer = ctx->r6;
+     int32_t nbytes = eeprom_block_size;
+ 
++    if (rs64_spai_guard_bad("osEepromRead", static_cast<uint64_t>(buffer), eeprom_block_size)) {
++        ctx->r2 = 0;
++        return;
++    }
++
+     save_read(rdram, buffer, eep_address * eeprom_block_size, nbytes);
+ 
+     ctx->r2 = 0;
+@@ -82,6 +100,11 @@ extern "C" void osEepromLongRead_recomp(uint8_t* rdram, recomp_context* ctx) {
+ 
+     assert((nbytes % eeprom_block_size) == 0);
+ 
++    if (rs64_spai_guard_bad("osEepromLongRead", static_cast<uint64_t>(buffer), static_cast<uint64_t>(nbytes) & 0xFFFFFFFFull)) {
++        ctx->r2 = 0;
++        return;
++    }
++
+     save_read(rdram, buffer, eep_address * eeprom_block_size, nbytes);
+ 
+     ctx->r2 = 0;
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
 index 8c8e5d1..1d5ee9e 100644
 --- a/librecomp/src/overlays.cpp

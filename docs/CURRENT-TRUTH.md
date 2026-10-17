@@ -606,3 +606,4 @@ Since s5042, the keyed title->hangar recipe (s5037 default) stalls: after title 
 
 ## s5061 addendum — PI DMA guard
 s5061: do_dma PI range guard CLOSED on keyed route: default pg=0, force pg=16, crash=0 (two-source). Next: do_rom_pio + SP DMA wrappers.
+s5064: EEPROM x4 + osContGetReadData guarded via shared rs64_spai_guard_bad; default pg=0 crash=0, FORCE pg=16 (all AI, so per-site reachability of EEPROM/cont is unmeasured; single-source). Next: per-wrapper calls/bad counters.

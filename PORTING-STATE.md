@@ -158645,3 +158645,11 @@ Result (same binary, same keyed recipe, run sequentially): FORCE pg=16 (control 
 Next: remaining unguarded host-wrapper classes (VI/osViSwapBuffer, osPiRawStartDma callers, EEPROM/pak buffers) with the same default-vs-FORCE pair.
 
 Verdict wording for the record (s5063): the FORCE control fired (pg=16) in the same recipe, which selects H2 (SP/AI wrappers exercised and clean on the keyed route) and refutes H1 (no wild SP/AI pointer) and H3 (wiring not broken). Next discriminator: osViSwapBuffer and EEPROM/pak buffer-arg wrapper census, default-vs-FORCE pair, with per-wrapper counters so osSpTaskStartGo coverage is counted separately from the shared 16-line log cap.
+
+## Session 5064 (2026-10-16) — M3 guard class: EEPROM (4 wrappers) + osContGetReadData buffer guard landed; default clean on keyed route
+Idiom class: host wrappers that deref a game-supplied rdram pointer. eep.cpp osEepromWrite/Read/LongWrite/LongRead passed `buffer` (r6) to save_write/save_read unchecked; cont.cpp osContGetReadData wrote pad data through an unchecked pointer. Change: both call the shared `rs64_spai_guard_bad` (sp.cpp; env ROGUESQ_SPAI_GUARD=0 rollback, _FORCE=1 log-only control). osViSwapBuffer deliberately not guarded: the wrapper only stores the framebuffer pointer, no host deref. Patches refreshed via export.sh. Scripts: scratch/agent/s5064_eep_guard_{default,force}.sh.
+ORIGIN: no known wild EEPROM/pad pointer writer; census-first guard, not a mitigation for an observed defect.
+Hypotheses: H1 wild pointer on route; H2 clean; H3 wiring broken.
+Result (same binary, sequential): FORCE pg=16 crash=0 mission_onset 169 s; default pg=0 crash=0 mission_onset 169 s.
+Caveat: the FORCE log cap of 16 is filled entirely by osAiSetNextBuffer, so the control proves only the shared guard function, NOT that the EEPROM/cont call sites are reached. Per-wrapper reachability is unmeasured, so default pg=0 is weak, single-source evidence for these sites; H1 is not refuted for them.
+Next: per-wrapper calls/bad counters in one build.
