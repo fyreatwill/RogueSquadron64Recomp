@@ -187,6 +187,7 @@ struct Rs64E9Provenance {
         uint32_t predecessor_from_l1298;
     };
     uint32_t task = 0;
+    uint32_t m4_y8000_step = 0;
     uint32_t guest = 0;
     uint32_t emitted = 0;
     uint32_t submitted = 0;
@@ -774,8 +775,14 @@ extern "C" void rs64_m4_y8000_store(uint32_t r16) {
     g_m4_y8000.stored[r16 & 0xFFFu] = true;
 }
 
+extern "C" uint32_t rs64_m4_y8000_step(uint32_t guest_pc) {
+    (void)guest_pc;
+    return ++g_e9prov.m4_y8000_step;
+}
+
 extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13,
-                                     uint32_t c13, uint32_t c12, uint32_t c11) {
+                                     uint32_t c13, uint32_t c12, uint32_t c11,
+                                     uint32_t guest_pc, uint32_t step) {
     if (!rs64_m4_y8000_enabled()) return;
     g_m4_y8000.n_entry_all++;
     if (!g_m4_y8000.marked_entry) {
@@ -789,6 +796,13 @@ extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13,
         fflush(stderr);
     }
     if (!rs64_m4_y8000_in_gate()) return;
+    static uint32_t key_lines = 0;
+    if (key_lines++ < 2048) {
+        fprintf(stderr, "[m4-key] edge=entry task=%u phase=%u viw=%u origin=0x%08X pc=0x%04X step=%u\n",
+                g_e9prov.task, rs64_phase_ord(), rs64_vi_committed_width(),
+                rs64_vi_committed_origin(), guest_pc, step);
+        fflush(stderr);
+    }
     g_m4_y8000.n_entry++;
     const uint32_t ya = y11 & 0xFFFF;
     const uint32_t yb = y12 & 0xFFFF;
@@ -821,7 +835,7 @@ extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13,
     }
 }
 
-extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
+extern "C" void rs64_m4_y8000_flush(uint32_t r16, uint32_t guest_pc, uint32_t step) {
     if (!rs64_m4_y8000_enabled()) return;
     g_m4_y8000.n_flush_site_all++;
     if (!g_m4_y8000.marked_flush) {
@@ -833,6 +847,13 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
         fflush(stderr);
     }
     if (!rs64_m4_y8000_in_gate()) return;
+    static uint32_t key_lines = 0;
+    if (key_lines++ < 2048) {
+        fprintf(stderr, "[m4-key] edge=flush task=%u phase=%u viw=%u origin=0x%08X pc=0x%04X step=%u\n",
+                g_e9prov.task, rs64_phase_ord(), rs64_vi_committed_width(),
+                rs64_vi_committed_origin(), guest_pc, step);
+        fflush(stderr);
+    }
     const uint32_t end = r16 & 0xFFFu;
     if (end <= 0xD60) {
         g_m4_y8000.n_empty++;

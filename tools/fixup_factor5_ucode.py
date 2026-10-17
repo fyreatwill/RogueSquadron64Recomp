@@ -3127,11 +3127,12 @@ if is_main_ucode and F5_STATE_MARKER not in text:
 # Fixup 19: capture the final shade accumulator and VGE selection (s1014).
 # ---------------------------------------------------------------------------
 M4_ACCUM_MARKER = "/* fixup: M4 accumulator probe v2 */"
-m4_migrated = False
+M4_PC_MARKER = "/* fixup: M4 accumulator guest PCs v1 */"
+m4_migrated = M4_PC_MARKER in text
 if is_shade_ucode and M4_ACCUM_MARKER in text and text.count('rs64_m4_accum_probe(&rsp, 12, r9, rdram);') == 1:
     needle = '    rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);\n    // lqv'
     text = text.replace(needle, '    rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);\n    rs64_m4_accum_probe(&rsp, 12, r9, rdram);  /* fixup: M4 accumulator probe v2 */\n    // lqv', 1)
-if is_shade_ucode and M4_ACCUM_MARKER not in text:
+if is_shade_ucode and M4_ACCUM_MARKER not in text and not m4_migrated:
     text = text.replace(
         'rs64_m4_accum_probe(&rsp, 1);  /* fixup: M4 accumulator probe v1 */',
         'rs64_m4_accum_probe(&rsp, 1, r9, rdram);  /* fixup: M4 accumulator probe v2 */')
@@ -3208,7 +3209,6 @@ if is_shade_ucode and M4_ACCUM_MARKER not in text and not m4_migrated:
 # ---------------------------------------------------------------------------
 # Fixup 19b: attach actual Factor 5 guest PCs to the existing M4 hooks.
 # These are instruction-list PCs at the hook boundary, not stage ordinals.
-M4_PC_MARKER = "/* fixup: M4 accumulator guest PCs v1 */"
 if is_shade_ucode and M4_PC_MARKER not in text and M4_ACCUM_MARKER in text:
     text = text.replace(
         'extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage, uint32_t r9, const uint8_t *rdram);  /* fixup: M4 accumulator probe v2 */',
@@ -3356,15 +3356,17 @@ if is_main_ucode and TRIGEN_RETURN_MARKER not in text:
 # L_112C walks the 0xD60..r16 command buffer for 0xC8|flags YL/YM/YH.
 # ---------------------------------------------------------------------------
 M4_Y8000_MARKER = "/* fixup: M4 y8000 */"
+M4_Y8000_KEYS_MARKER = "/* fixup: M4 y8000 task PC step keys v1 */"
 if is_main_ucode and M4_Y8000_MARKER not in text:
     decl_anchor = re.compile(
         r'(extern "C" void rs64_m4_accum_probe\(void \*rsp, uint32_t stage, uint32_t r9, const uint8_t \*rdram\);  /\* fixup: M4 accumulator probe v2 \*/\n)'
     )
     text, n_decl = decl_anchor.subn(
         lambda m: m.group(1) +
+        'extern "C" uint32_t rs64_m4_y8000_step(uint32_t guest_pc);  ' + M4_Y8000_KEYS_MARKER + "\n"
         'extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13, '
-        'uint32_t c13, uint32_t c12, uint32_t c11);\n'
-        'extern "C" void rs64_m4_y8000_flush(uint32_t r16);  ' + M4_Y8000_MARKER + "\n",
+        'uint32_t c13, uint32_t c12, uint32_t c11, uint32_t guest_pc, uint32_t step);\n'
+        'extern "C" void rs64_m4_y8000_flush(uint32_t r16, uint32_t guest_pc, uint32_t step);  ' + M4_Y8000_MARKER + "\n",
         text, count=1)
     entry_anchor = re.compile(
         r"(    r3 = RSP_MEM_HU_LOAD\(0X24, r11\);\n)"
@@ -3374,7 +3376,7 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
         lambda m: m.group(1) +
         "    rs64_m4_y8000_entry((uint32_t)RSP_MEM_HU_LOAD(0X1A, r11), "
         "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r12), "
-        "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3);  " +
+        "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3, 0x17F0, rs64_m4_y8000_step(0x17F0));  " +
         M4_Y8000_MARKER + "\n" + m.group(2),
         text, count=1)
     flush_anchor = re.compile(
@@ -3383,11 +3385,34 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
     )
     text, n_flush = flush_anchor.subn(
         lambda m: m.group(1) +
-        "    rs64_m4_y8000_flush(r16);  " + M4_Y8000_MARKER + "\n" + m.group(2),
+        "    rs64_m4_y8000_flush(r16, 0x112C, rs64_m4_y8000_step(0x112C));  " + M4_Y8000_MARKER + "\n" + m.group(2),
         text, count=1)
     if (n_decl, n_entry, n_flush) != (1, 1, 1):
         print(f"fixup_factor5_ucode: FIXUP 20 ANCHOR FAILED "
               f"(decl={n_decl} entry={n_entry} flush={n_flush}).", file=sys.stderr)
+        sys.exit(1)
+
+# Migrate already-fixed generated output so the task/PC/step key survives a
+# regeneration without requiring the fresh-output branch above.
+if is_main_ucode and M4_Y8000_MARKER in text and M4_Y8000_KEYS_MARKER not in text:
+    old_entry = 'extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13, uint32_t c13, uint32_t c12, uint32_t c11);'
+    new_entry = ('extern "C" uint32_t rs64_m4_y8000_step(uint32_t guest_pc);  ' + M4_Y8000_KEYS_MARKER + "\n" +
+                 'extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13, uint32_t c13, uint32_t c12, uint32_t c11, uint32_t guest_pc, uint32_t step);')
+    text, n_decl = text.replace(old_entry, new_entry, 1), text.count(old_entry)
+    text = text.replace('extern "C" void rs64_m4_y8000_flush(uint32_t r16);  ' + M4_Y8000_MARKER,
+                        'extern "C" void rs64_m4_y8000_flush(uint32_t r16, uint32_t guest_pc, uint32_t step);  ' + M4_Y8000_MARKER, 1)
+    old_call = ('    rs64_m4_y8000_entry((uint32_t)RSP_MEM_HU_LOAD(0X1A, r11), '
+                '(uint32_t)RSP_MEM_HU_LOAD(0X1A, r12), '
+                '(uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3);  ' + M4_Y8000_MARKER)
+    new_call = ('    rs64_m4_y8000_entry((uint32_t)RSP_MEM_HU_LOAD(0X1A, r11), '
+                '(uint32_t)RSP_MEM_HU_LOAD(0X1A, r12), '
+                '(uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3, 0x17F0, rs64_m4_y8000_step(0x17F0));  ' + M4_Y8000_MARKER)
+    text, n_entry_call = text.replace(old_call, new_call, 1), text.count(old_call)
+    old_flush = '    rs64_m4_y8000_flush(r16);  ' + M4_Y8000_MARKER
+    new_flush = '    rs64_m4_y8000_flush(r16, 0x112C, rs64_m4_y8000_step(0x112C));  ' + M4_Y8000_MARKER
+    text, n_flush_call = text.replace(old_flush, new_flush, 1), text.count(old_flush)
+    if n_decl != 1 or n_entry_call != 1 or n_flush_call != 1:
+        print(f"fixup_factor5_ucode: M4 key migration FAILED (decl={n_decl} entry={n_entry_call} flush={n_flush_call}).", file=sys.stderr)
         sys.exit(1)
 
 # ---------------------------------------------------------------------------

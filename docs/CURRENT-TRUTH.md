@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5331 (2026-10-17).
+Compact operational handoff, maintained at Session 5332 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -41,8 +41,13 @@ until the cxd4 and port tables join at that boundary.
 Session 5331 ran that comparison attempt. The oracle whole-RDRAM/VI controls
 passed, and the port again reached `0x006AB400`/512, but the port output
 exposed only aggregate M4 counts; it lacked actual RSP-PC, task-serial, and
-step-bucket keys. H3 remains selected and no accumulator or mitigation
-conclusion follows.
+step-bucket keys. H3 remained selected at that point.
+Session 5332 added a regeneration-surviving key path. In the phase-gated port
+run, the same-run hook control fired and 4,091 target rows carried nonzero
+task serial `961`, generated PCs `0x112C`/`0x17F0`, and increasing per-task
+step values at `0x006AB400`/512. The task serial did not vary because the
+target was one long graphics task, so this proves field availability and
+rules out H3, but does not yet select H1/H2 or authorize a mitigation.
 
 ## Durable state
 
@@ -123,11 +128,11 @@ agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Add one regeneration-surviving M4 record path that publishes actual port
-   guest RSP PC, task serial, and step bucket at the existing 512-wide
-   `0x006AB400` entry/flush hooks. First prove the field with a same-run
-   positive control, then rerun the oracle/port arms and select H1, H2, or H3
-   from the complete `(VI origin,width,task serial,RSP PC,step bucket)` table.
+1. Run the two-arm M4 comparison using the now-live port key stream and the
+   independent cxd4 oracle. Join exact `(VI origin,width,task serial,RSP PC,
+   step bucket)` rows only; select H1/H2/H3 from repeated matched keys. Do
+   not infer missing task variation or add a mitigation from this port-only
+   result.
 2. Re-open the generated-symbol sweep only if a new placeholder candidate or
    companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new

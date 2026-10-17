@@ -1,62 +1,47 @@
-# Next: expose port-side M4 task/PC keys at the shared boundary
+# Next: compare the keyed retail and port M4 streams
 
-Session 5331 reached `vi_width=512`, origin `0x006AB400`, but the port output
-contained only aggregate `[m4-y8000]` counters. The next single work unit is a
-regeneration-surviving diagnostic change that emits the actual port guest RSP
-PC, monotonic graphics-task serial, and instruction-step bucket alongside the
-existing M4 entry/flush records. Do not infer PC from stage ordinal.
+Session 5332 reached `vi_width=512`, origin `0x006AB400`. The port key path
+now emits 4,091 target rows with task serial `961`, generated PCs `0x112C` and
+`0x17F0`, and increasing per-task step values. The next single work unit is
+the two-arm comparison; do not infer PC from stage ordinal or treat the
+constant task serial in this one long task as a missing field.
 
 Competing hypotheses and discriminator:
 
-- H1: the existing M4 hooks already have a live task/PC/step context, but the
-  logger drops it; one bounded field-path change will produce nonzero exact-key
-  rows at `0x006AB400`/512.
-- H2: task serial is available but actual guest RSP PC or instruction step is
-  not live at these hooks; output will contain a positive task key but a
-  zero/constant/unrelated PC or step.
-- H3: none of the required keys is available at the hook; the same-run control
-  will prove the hook fires, but the join remains impossible and the M4 thread
-  must be parked again.
+- H1: retail and port agree on first/last writer and VACC lane for repeated exact keys.
+- H2: both streams join, but a repeated writer/lane mismatch remains.
+- H3: the two arms fail to produce a live positive control or exact join despite the port key path.
 
-Discriminating measurement: in one rebuilt port run, require a positive-control
-`[m4-y8000]` hook mark plus target rows containing nonzero, changing
-`task_serial`, actual generated guest `rsp_pc`, and monotonic `step` at the
-512-wide `0x006AB400` phase. A hook count alone is not a positive control for
-the fields. Do not run the retail comparison until all three fields are live.
+Discriminating measurement: run the independent cxd4 arm and the rebuilt port
+arm with whole-RDRAM/VI positive controls, then join repeated exact
+`(origin,width,task_serial,rsp_pc,step_bucket)` keys. H1 requires matching
+writer/lane summaries; H2 requires a repeated mismatch; H3 requires a failed
+positive control or failed join. A hook count alone is not a field control.
 
-Before building, consult the existing ground-truth design and source fields:
+Run the retail oracle arm with its validated whole-RDRAM control, and the port
+arm with the validated phase-gated recipe from Session 5332. Require both
+positive controls and exact-key rows before comparing. Do not add a mitigation
+or infer from stage ordinals.
 
-```sh
-sed -n '1,90p' docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md
-rg -n 'rs64_m4_y8000|task_serial|g_rs64_last_guest_pc|rs64_step|guest_pc' src build/factor5_ucode RecompiledFuncs
-```
-
-Implement the field path in the regeneration-surviving source/build route,
-then run:
-
-```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-env ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M4_Y8000=1 ROGUESQ_M4_Y8000_WIDTH=512 \
-  ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 \
-  ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
-  ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
-  ROGUESQ_AUTOPILOT_STOP_WIDTH=512 \
-  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=110 PROBE_KEYS_FROM_PHASE=1 \
-  PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/m4-port-next 240 1
-```
-
-Require the same-run hook positive control and all three fields before moving
-back to the two-arm comparison. Do not add a mitigation or infer from stage
-ordinals.
-
-The later comparison's ground-truth control remains:
+Retail control:
 
 ```sh
 tools/oracle/build/rs64_oracle --core \
   /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
   --secs 8 --watch-write 0x0:0x800000 --hit-cap 3 --vi-trace
+```
+
+Port recipe:
+
+```sh
+env ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M4_Y8000=1 ROGUESQ_M4_Y8000_WIDTH=512 \
+  ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 \
+  ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
+  ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
+  ROGUESQ_AUTOPILOT_STOP_WIDTH=512 PROBE_PHASE_WIDTH=1024 \
+  PROBE_PHASE_TIMEOUT=110 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+  zsh tools/probe.sh scratch/agent/m4-port-compare 240 1
 ```
 
 HYPOTHESIS-ID: m4-accumulator-boundary

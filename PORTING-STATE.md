@@ -161847,3 +161847,24 @@ accumulator question remains unevaluable. This rules out a route/phase block
 and rules out H1/H2 claims from the current aggregate records; it does not
 justify a mitigation or name a writer. Evidence: `scratch/agent/oracle-m4-positive.log`,
 `scratch/agent/m4-port-next-run.log`, and `scratch/agent/m4-port-next/run.log`.
+## Session 5332 (2026-10-17) — exposed M4 task PC and step keys at shared boundary
+
+Read the shared-boundary design and source fields before building. Added a
+regeneration-surviving fixup migration and host path: the y8000 entry and
+flush hooks now carry their generated Factor 5 PCs (`0x17F0` and `0x112C`),
+the current graphics-task serial, and a per-task monotonic hook-step bucket.
+The fixup is idempotent for the existing guest-PC fixup state, and the Debug
+target built successfully.
+
+Ran the phase-gated port recipe with the validated autopilot/LLE route. The
+same-run phase control reached 1024 width after 13.6 seconds; the target
+reached `vi_width=512`, origin `0x006AB400`, and captured 208 frames. The
+`[m4-y8000]` positive-control marks fired. At the target boundary there were
+4,091 `[m4-key]` rows: task serial `961` was nonzero, generated PCs were
+`0x112C` and `0x17F0`, and step values increased. The serial did not vary
+because this capture remained in one long graphics task. This proves the
+port-side fields are live and rules out H3's “no key path” prediction, but it
+does not select H1 or H2 because no retail arm was run and no exact cross-arm
+join exists yet. No accumulator mitigation or writer conclusion follows.
+Evidence: `scratch/agent/m4-port-next/run.log`; build output and the source
+fixup changes are in this commit.
