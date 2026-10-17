@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5144 (2026-10-17). The
+Compact operational handoff, maintained at Session 5147 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -87,6 +87,13 @@ were retained below or in the project overview.
 - Native hangar artifacts (rim band, holo spikes, stale right edge) remain
   localized. M4 accumulator origin, pillar references, `0x1F0D74`, odd PI
   DMA, and external retail-entry are parked pending a new discriminator.
+- The Session 5147 retail page-writer revisit passed whole-RDRAM, hangar, and
+  mission controls and found 1,026,749 writes to `0x1F0000:0x1F1000` with
+  lifetime guest-PC attribution, dominated by `0x800078EC`. The oracle's
+  hangar/mission phase writer tables remained empty even after a fixed rerun
+  with `--phase-origin-watch`; retain this as single-source, phase-unqualified
+  evidence and do not close the M4 page-reuse boundary. Audit:
+  `docs/M4-S5147-PAGE-WRITER-AUDIT.md`.
 
 ### Generated-symbol sweep
 
@@ -208,7 +215,7 @@ were retained below or in the project overview.
 1. Continue the companion sweep one entry per iteration while the last-15
    session preflight permits it. If the preflight makes the sweep a REVISIT,
    return to the external retail-entry or M4 boundary only with a genuinely
-   new discriminator.
+   new discriminator; the 5147 page-writer revisit remains phase-unqualified.
 2. If a new M5 step is selected, write its design and validation row in
    `docs/M5-AUDIO-PLAN.md` before changing runtime behavior.
 3. When MIPS GCC is supplied, configure and qualify `PatchesLib`; record

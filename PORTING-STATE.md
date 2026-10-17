@@ -159452,3 +159452,24 @@ is preserved.
 This selects the already-named/no-live-caller outcome and rules out a rename,
 build, or soak for this candidate. Audit: `docs/RENAME-S5146-AUDIT.md`. Next
 candidate: `__osClearPage = 0x8002F2C8`.
+
+## Session 5147 (2026-10-17) — M4 retail recycled-page writer attribution remained phase-unqualified
+
+HYPOTHESIS-ID: m4-recycled-page-writer-provenance. The required rename-sweep
+REVISIT ran the independent retail oracle twice against physical page
+`0x1F0000:0x1F1000`, with whole-RDRAM write control, Rice video, continued
+Start presses, VI trace, and hangar/mission phase buckets. Both runs reached
+hangar and mission; the first recorded 1,028,045 target-page writes and the
+fixed rerun (adding `--phase-origin-watch 1`) recorded 1,026,749. The
+whole-RDRAM control reached its 10,000 callback threshold in both runs.
+
+Lifetime writer attribution was guest-PC-shaped and dominated by
+`0x800078EC` (926,416 writes), with additional writers including
+`0x800C7F08` and its sequential store family. However, both phase tables had
+headers but zero retained writer rows, so the measurement cannot establish
+whether those page rewrites occurred in hangar or mission. This selects
+H-unqualified for the phase-specific M4 question; it does not close the page
+reuse boundary. No runtime change or mitigation was made. Audit:
+`docs/M4-S5147-PAGE-WRITER-AUDIT.md`.
+
+Next: resume the generated-symbol sweep at `__osClearPage = 0x8002F2C8`.
