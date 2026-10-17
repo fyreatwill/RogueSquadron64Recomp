@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5179 (2026-10-17). The
+Compact operational handoff, maintained at Session 5180 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -247,9 +247,13 @@ companion address. Its nominal span to `osPiRawStartDma = 0x80033090` is
 libultra/ABI entry: the bounded helper reported `already-synchronized`, and
 the generated-tree search found no body, placeholder, overlay record, or
 direct caller at the companion address. Its nominal span to
-`osPiRawReadIo = 0x80033170` is `0xE0`, with no body to validate. Preserve the
-ABI name. Audit: `docs/RENAME-S5179-AUDIT.md`. The next candidate is now
-`osPiRawReadIo = 0x80033170`.
+`osPiRawReadIo = 0x80033170` is another unmaterialized libultra/ABI entry:
+the bounded helper reported `already-synchronized`, and the generated tree
+has no body, placeholder, overlay record, or direct generated caller at the
+companion address. Its nominal span to `osRecvMesg = 0x800331D0` is `0x160`,
+with no body to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5180-AUDIT.md`. The next candidate is now
+`osRecvMesg = 0x800331D0`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -502,7 +506,7 @@ were retained below or in the project overview.
 
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `osPiRawReadIo = 0x80033170`, whose next
+1. Resume the companion sweep with `osRecvMesg = 0x800331D0`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The M4 page
    writer is now phase-attributed on the retail route, but the port-side value

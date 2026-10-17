@@ -159894,3 +159894,12 @@ body to validate. Preserved the ABI name and advanced the sweep. This rules
 out a materialized generated function at this candidate; it does not make a
 claim about the runtime implementation of the host wrapper. No build or soak
 was warranted for this naming-only result.
+## Session 5180 (2026-10-17) — classified `osPiRawReadIo` as unmaterialized
+
+Ran the bounded generated-symbol audit for `osPiRawReadIo = 0x80033170`.
+The rename helper reported `already-synchronized` and changed zero references
+in zero files. The generated-tree search found no body, placeholder, overlay
+record, or direct generated caller at the companion address. The next
+companion entry is `osRecvMesg = 0x800331D0`, a nominal `0x160` span away, but
+there is no body to validate. This rules out a justified semantic rename for
+the candidate; preserve its ABI name and continue at `osRecvMesg`.
