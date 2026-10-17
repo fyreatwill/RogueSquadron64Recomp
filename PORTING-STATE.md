@@ -158606,3 +158606,10 @@ What ran: scratch/agent/s5059_census.sh (s5048 recipe + ROGUESQ_FREE_CENSUS=1), 
 What it showed: hangar (0x006AB400) at t=75, 63, 75 s; all keys rc=0. With s5057/s5058 that is 7/7 passes on the current binary, with and without census. Same harness reaching hangar every run is the route control; the 4/4 census stall of s5044 was single-source and is contradicted.
 Rules out: census as the cause of the s5042-s5051 stalls. Stall origin remains unidentified (transient, possibly the clobbered tree rebuilt in s5049-s5050).
 ORIGIN: n/a (no code change, no mitigation).
+
+## Session 5060 (2026-10-16) — poison-on-free A/B on the mission route: no read-after-free (0 crashes, 0 guard fires, both arms reach mission)
+
+What ran: re-applied tools/apply_s5041_free_census.py + apply_s5042_free_poison.py to generated funcs_0.c (hand-edit; dies at regen, revert via tools/revert_s5041_s5042_hooks.py), rebuilt, ran scratch/agent/s5060_poison_ab.sh (s5045 recipe + FREE_CENSUS, GUARD2/3/4, R1, coalesce guards; arms ROGUESQ_FREE_POISON=0 then =1; sequential, load ~5).
+Result: off arm hangar t=79, mission_onset t=169, crash=0, poison_lines=0. On arm hangar t=90, mission_onset t=173, crash=0, copy-guard=0. Positive control in the same run: on arm poisoned>=16384 blocks (skipped=59, verify_bad=0, so DEADBEEF landed in RDRAM and read back); off arm 0 poison lines.
+Rules out: a crashing or guard-tripping reader of freed blocks on this route. Does NOT rule out a non-crashing stale read (only the first 16 payload bytes poisoned; no per-frame state compare). Route stalls of s5042-s5051 stay unattributed (this run reached mission twice at load 5).
+ORIGIN: n/a (probe only, no mitigation added).

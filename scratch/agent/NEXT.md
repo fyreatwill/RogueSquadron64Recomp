@@ -1,4 +1,3 @@
-# Next: resume the s5041 poison-on-free read-after-free probe on the mission route
-HYPOTHESIS-ID: poison-on-free-raf-probe
-s5059: census-on hangar recipe passed 3/3 (7/7 on current binary), so the route is usable again; the earlier nohangar stalls are unattributed/transient.
-Run: re-queue the s5042 poison_off / poison_on arms (tools/apply_s5042_free_poison.py hook, ROGUESQ_FREE_POISON) with the s5037 default recipe incl. GUARD2, one at a time, phase-gated on VI transitions. Include a positive control (poison-everything fires). Discriminator: on-arm crash/divergence at a freed-block read with a writer PC means read-after-free exists; identical off/on means none on this route.
+# Next: close poison-on-free thread; return to strategic priority (M5 de-stub step per docs/M5-AUDIO-PLAN.md)
+HYPOTHESIS-ID: m5-audio-destub
+s5060 (poison A/B, 2 arms, positive control fired) found no read-after-free on the mission route. The s5041/s5042 hooks are applied in generated funcs_0.c (inert without ROGUESQ_FREE_POISON/CENSUS); revert with tools/revert_s5041_s5042_hooks.py if they interfere. Next: read the first unexecuted step in docs/M5-AUDIO-PLAN.md, write competing hypotheses + discriminator here, build all arms in one iteration.
