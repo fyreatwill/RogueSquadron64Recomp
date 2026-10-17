@@ -158625,3 +158625,5 @@ Hypotheses: H1 = a wild PI DMA (dram/rom span out of range) occurs on title->han
 Discriminator: default-arm pg count vs FORCE-arm pg count (positive control).
 Result: FORCE arm pg=16 (control fired, pg_skipped=0, mission_onset 173 s, crash=0); default arm pg=0, pg_skipped=0 (mission_onset 170 s, crash=0, 1.08M log lines). H3 refuted (control fired in same recipe), H1 refuted for this route, H2 selected (two-source). Rules out PI DMA span corruption as the cause of any keyed-route fault. Guard stays default-on (inert on route). Other routes unexercised.
 Next discriminator: next unguarded idiom class = osEPiReadIo/do_rom_pio bounds and SP/AI DMA host wrappers (NEXT.md); same default-vs-FORCE pair.
+
+Verdict wording for the record: the FORCE control fired, so the default-arm zero selects H2 and refutes H1/H3; this closes the PI DMA span class on the keyed route and the next audit must discriminate do_rom_pio/SP DMA the same way.
