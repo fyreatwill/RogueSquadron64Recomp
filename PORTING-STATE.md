@@ -160991,3 +160991,16 @@ record spanning through `0x80036B87`, and a direct generated caller at
 `0x800370AC`. This rules out placeholder propagation and data/fragment
 renaming for this candidate. No build or soak was needed. Audit:
 `docs/RENAME-S5261-AUDIT.md`. Next candidate: `_Ldtob = 0x80036B90`.
+
+## Session 5262 (2026-10-17) — generated-symbol sweep: `_Ldtob` already synchronized
+
+Ran the bounded generated-symbol helper for exactly `0x80036B90..0x80037270`.
+It made zero edits and classified `_Ldtob = 0x80036B90` as
+`already-synchronized`; adjacent `lldiv` and `ldiv` entries were also
+already synchronized. Independent checks found `_Ldtob` marked `defined:true`
+in the companion `libultra.txt`, an exact named generated body in
+`RecompiledFuncs/funcs_8.c`, its header declaration, an overlay record
+spanning through `0x800370DF`, and a direct generated caller at `0x80035E1C`.
+This rules out placeholder propagation and data/fragment renaming for this
+candidate. No build or soak was needed. Audit:
+`docs/RENAME-S5262-AUDIT.md`. Next candidate: `_Litob = 0x80037270`.
