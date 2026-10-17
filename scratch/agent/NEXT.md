@@ -1,10 +1,10 @@
-# Next: generated-symbol renaming sweep — `osSetIntMask` candidate
+# Next: generated-symbol renaming sweep — `osSetThreadPri` candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-The required sweep revisit is complete. Resume the bounded companion audit at
-`osSetIntMask = 0x80033630`. Determine whether it has a generated
-prologue/body, exact span to the next companion entry, and an independent
-generated caller. Do not rename an ABI symbol without all three gates.
+Audit `osSetThreadPri = 0x800336E0` as one bounded companion unit. Determine
+whether it has a generated prologue/body, exact span to the next companion
+entry, and an independent generated caller. Do not rename an ABI symbol
+without all three gates.
 
 Competing hypotheses and discriminator:
 
@@ -18,7 +18,7 @@ Competing hypotheses and discriminator:
 The discriminator is the bounded helper result plus generated-tree body/span
 and caller counts. Run:
 
-    rg -n 'osSetIntMask|func_80033630|fake_func_80033630' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80033630 --end-address 0x80033A00
+    rg -n 'osSetThreadPri|func_800336E0|fake_func_800336E0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800336E0 --end-address 0x80033A00
 
 No build or soak is needed for a naming-only or ABI-preservation result.

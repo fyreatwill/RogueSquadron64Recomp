@@ -159961,3 +159961,17 @@ placeholder exists at the companion address. The nominal span to
 Preserve the ABI name and continue the sweep at `osSetIntMask`. This rules out
 an actionable generated rename at this entry, but does not bear on runtime
 behavior.
+
+## Session 5185 (2026-10-17) — classified `osSetIntMask` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `osSetIntMask = 0x80033630`. The helper reported
+`already-synchronized` and renamed zero references in zero files. The
+generated tree has only the ABI declaration and a zero-size overlay record;
+no generated body, placeholder, or direct generated caller exists at the
+companion address. The symbol map places `osSetThreadPri = 0x800336E0` next,
+giving a nominal `0xB0` span with no body to validate. Preserve the ABI name
+and continue the sweep at `osSetThreadPri`. This rules out an actionable
+generated rename at this entry, but does not bear on runtime behavior. No
+build or soak was warranted for this naming-only result. Audit:
+`docs/RENAME-S5185-AUDIT.md`.
