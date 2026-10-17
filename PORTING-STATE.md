@@ -161632,3 +161632,10 @@ soak was warranted; the next candidate is `randomBurstNpcHandlerVariant` at
 - Result: `renamed 0 references in 0 files`; the helper classified the candidate as `already-synchronized`.
 - Independent evidence: `main_overlay.txt` names the address; `RecompiledFuncs/funcs_9.c` contains the named callable body; `funcs.h` contains the named prototype; and `recomp_overlays.inl` contains the named overlay record. Named callers of the adjacent wrapper were also present, and no `func_8004191C` placeholder or conflicting fragment was found.
 - H1 is selected; H2 and H3 are ruled out for this address. No build or soak was run because this was a bounded classification-only work unit. Audit: `docs/RENAME-S5314-AUDIT.md`. The next bounded candidate is `freeNpcBurstSpawnerTables = 0x80041B48`.
+
+## Session 5315 (2026-10-17) — generated-symbol sweep: `freeNpcBurstSpawnerTables` is synchronized
+
+- Ran the bounded classification helper for `freeNpcBurstSpawnerTables = 0x80041B48`.
+- Result: `renamed 0 references in 0 files`; the helper classified the candidate as `already-synchronized`.
+- Independent evidence: `main_overlay.txt` names the address; `RecompiledFuncs/funcs_9.c` contains the named callable body; `funcs.h` contains the named prototype; `recomp_overlays.inl` contains the named overlay record; and `funcs_42.c` contains a generated caller. No `func_80041B48` placeholder or conflicting fragment was found.
+- H1 is selected; H2 and H3 are ruled out for this address. No build or soak was run because this was a bounded classification-only work unit. Audit: `docs/RENAME-S5315-AUDIT.md`. The next bounded candidate is `initNpcContextFromTransform = 0x80041B8C`.
