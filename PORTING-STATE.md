@@ -159820,3 +159820,13 @@ nominal `0x1C0` span with no body to validate. Preserved the ABI name and
 advanced the sweep pointer. This rules out a generated-body semantic rename
 for this candidate, not the remaining companion entries. Audit:
 `docs/RENAME-S5173-AUDIT.md`.
+## Session 5174 (2026-10-17) — classified `osPiStartDma` as unmaterialized
+
+Ran the bounded generated-symbol audit for `osPiStartDma = 0x80032420`.
+The rename helper reported `already-synchronized` and made zero edits. The
+companion map places `osPiGetCmdQueue` at `0x80032530`; the generated tree has
+the ABI declaration, four direct generated callers, and a zero-size overlay
+record at `0x31FE0`, but no generated body or placeholder at the candidate
+address. Classified it as an unmaterialized libultra/ABI entry and preserved
+the ABI name. This rules out a semantic generated-function rename for this
+candidate, not the next companion entry. Audit: `docs/RENAME-S5174-AUDIT.md`.
