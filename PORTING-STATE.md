@@ -159144,3 +159144,14 @@ references and reported `already-synchronized`. This selects the
 host-wrapper/unproven outcome and preserves the ABI naming; no build or soak
 was warranted. Independent companion-source, generated-tree, and symbol-span
 checks agree. Audit: `docs/RENAME-S5121-AUDIT.md`. Next candidate: `cosf`.
+
+## Session 5122 (2026-10-17) — verified synchronized `cosf` mapping
+
+Ran the bounded generated-symbol audit for companion `cosf = 0x8002B190`.
+The generated snapshot contains the semantic `cosf_recomp` body from
+`0x8002B190` through `0x8002B2FC`, exactly matching the `0x170` overlay span,
+and 75 generated callers. The rename helper changed zero references and
+reported `already-synchronized`. This selects the synchronized outcome: no
+rename, build, or soak was warranted. Independent body/span/caller checks
+agree. Audit: `docs/RENAME-S5122-AUDIT.md`. Next candidate:
+`osCreateMesgQueue`.
