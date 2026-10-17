@@ -161286,3 +161286,17 @@ surrounding `__OSGlobalIntMask` data/fragment decode. This selects the typed
 data interpretation and rules out a missed callable placeholder or needed
 rename. No build or soak was needed. Audit:
 `docs/RENAME-S5285-AUDIT.md`. Next: classify `osViModePalLan1 = 0x800392E0`.
+
+## Session 5286 (2026-10-17) — generated-symbol sweep: `osViModePalLan1` is data
+
+Ran the bounded generated-symbol helper over `0x800392E0..0x80039330`. It
+made zero edits and reported `osViModePalLan1` as already synchronized.
+Independent inspection found the companion declaration typed `OSViMode` with
+size `0x50`; the next record is `osViModeTable = 0x80039330`, typed
+`OSViMode[42]` with size `0xD20`. The generated tree has no callable body,
+placeholder, declaration, overlay record, or direct generated reference at
+`0x800392E0`; its apparent instructions are part of the surrounding
+`__OSGlobalIntMask` data/fragment decode. This selects typed data and rules
+out a missed callable placeholder or needed rename. No build or soak was
+needed. Audit: `docs/RENAME-S5286-AUDIT.md`. Next: classify
+`osViModeTable = 0x80039330`.

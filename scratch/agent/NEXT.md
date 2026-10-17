@@ -1,19 +1,19 @@
 # Next: continue the generated-symbol sweep
 
-Classify `osViModePalLan1 = 0x800392E0` with the same bounded
-generated-symbol helper and independent companion/generated-tree inspection.
-Determine its following boundary from the companion map before running the
-helper. Do not build or soak unless the discriminator finds a callable
+Classify `osViModeTable = 0x80039330` with the same bounded generated-symbol
+helper and independent companion/generated-tree inspection. Its companion
+record is an `OSViMode[42]` data array of size `0xD20`, ending at
+`0x80040050`. Do not build or soak unless the discriminator finds a callable
 placeholder or a needed rename.
 
 Exact commands:
-`rg -n -C 2 'osViModePalLan1|0x800392E0' ../rogue_squadron64/symbol_files`
+`rg -n -C 2 'osViModeTable|0x80039330' ../rogue_squadron64/symbol_files`
 then run
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x800392E0 --end-address 0x80039330 --limit 1`
+`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80039330 --end-address 0x80040050 --limit 1`
 and inspect the bounded generated tree with `rg -n
-'func_800392E0|fake_func_800392E0|osViModePalLan1|800392E0'
+'func_80039330|fake_func_80039330|osViModeTable|80039330'
 ../N64Recomp/RecompiledFuncs --glob '*.c' --glob '*.h' --glob '*.inl'`.
-Expected H1 is typed `OSViMode` data with no callable generated symbol;
+Expected H1 is typed `OSViMode[42]` data with no callable generated symbol;
 H2/H3 require preserving the helper output and callable evidence in a new
 audit before any build.
 
