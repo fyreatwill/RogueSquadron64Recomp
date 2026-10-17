@@ -161910,3 +161910,17 @@ discriminator: the instruments are live but the key domains are not aligned.
 This rules out H1/H2 claims from these arms and leaves the VACC writer and any
 mitigation unevaluated. Evidence and the rejected first attempt are recorded
 in `docs/REVISIT-S5335-M4-COMPARISON.md`.
+
+## Session 5336 (2026-10-17) — rechecked stale generated-symbol work unit
+
+The prescribed `0x800927B0` generated-symbol audit was already resolved in
+the current checkout, so no rename or build was performed. A fresh census
+found the semantic name `interpolatePointTableSamplesToPackedWord` in the
+generated body and header, overlay registration, project TOML, fixup mapping,
+and companion map. The body span is `0x124` bytes and its two generated
+callers are `0x800926F8` and `0x80092704`; all boundaries agree. This confirms
+H1 for the already-landed mapping and rules out a stale placeholder at this
+address, but adds no new runtime or M4 evidence. The next unit is the
+PatchesLib toolchain gate: this iteration's direct checks found both
+`mips64-elf-gcc` and `mips64-elf-ld` absent.
+Evidence: `docs/RENAME-S5336-AUDIT.md`.

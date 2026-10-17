@@ -1,34 +1,32 @@
-# Next: bounded generated-symbol audit for `func_800927B0`
+# Next: check the PatchesLib toolchain gate
 
-The M4 boundary is parked after Session 5335: both controls were live, but
-the retail and port PC/origin key domains did not align. Do not normalize those
-keys or infer a VACC writer. Resume the generated-symbol campaign instead.
+The generated-symbol NEXT item was stale: Session 5336 rechecked
+`0x800927B0` and found the semantic name synchronized across generated C,
+header, overlay registration, project TOML, fixup mapping, and companion map.
+Do not repeat that census or rename by address.
 
 Competing hypotheses and discriminator:
 
-- H1: the companion decomp/map, generated body span, and live callers identify
-  one stable human name; a regeneration-safe rename is justified.
-- H2: the candidate is a false split, data/host-wrapper artifact, or has no
-  semantic companion evidence; retain `func_800927B0`.
-- H3: source/body/caller boundaries disagree, so the candidate needs a
-  separate boundary audit before either naming decision.
+- H1: `mips64-elf-gcc` and `mips64-elf-ld` are available; PatchesLib can be
+  qualified with the documented build pipeline.
+- H2: one or both tools are absent; qualification is blocked on the external
+  toolchain and no source change is authorized.
+- H3: tools exist but fail version/target checks; capture the exact failure
+  before deciding whether configuration or a human-supplied toolchain is
+  needed.
 
-Discriminating measurement: in one bounded audit, compare the candidate's
-exact generated span and callers with the companion symbol/decomp map and
-record whether all three boundaries agree. H1 requires agreement plus a
-semantic name; H2 requires a clean absence of such a name with agreeing
-boundaries; H3 requires a span/caller disagreement. Do not rename on an
-address-only match.
+Discriminating measurement: run `command -v mips64-elf-gcc mips64-elf-ld`
+and, for any found binaries, run `--version` and `-dumpmachine`. H1 requires
+both binaries with a MIPS target; H2 is a missing binary; H3 is an incompatible
+or unusable binary. Do not build until H1 is selected.
 
 Commands:
 
 ```sh
-rg -n "func_800927B0|800927B0" RecompiledFuncs docs tools /Users/williambuckley/Documents/Tools/rogue_squadron64 2>/dev/null
-grep -n "func_800927B0" PORTING-STATE.md | tail -20
+command -v mips64-elf-gcc mips64-elf-ld
+mips64-elf-gcc --version
+mips64-elf-gcc -dumpmachine
+mips64-elf-ld --version
 ```
 
-If H1 is selected, update the existing fixup/mapping source and verify the
-generated/header references; otherwise make only the audit record. No runtime
-instrument or mitigation is authorized by this unit.
-
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: patcheslib-toolchain-gate

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5335 (2026-10-17).
+Compact operational handoff, maintained at Session 5336 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -96,10 +96,12 @@ this discriminator; no writer or mitigation follows. See
 
 The sweep is paused after the remaining mission-overlay placeholder
 `func_800E9AE0`: its exact body span is known, but the companion map supplies
-no semantic name and no live caller. Preserve names that are already
-synchronized, data symbols, and unmaterialized host-wrapper entries. Only
-rename a real generated placeholder when the companion map and generated tree
-agree. Audit files are `docs/RENAME-S*.md`.
+no semantic name and no live caller. Session 5336 rechecked the stale
+`0x800927B0` NEXT item and found every generated, registration, project-map,
+fixup, and companion surface already synchronized. Preserve names that are
+already synchronized, data symbols, and unmaterialized host-wrapper entries.
+Only rename a real generated placeholder when the companion map and generated
+tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Operational rules
 
@@ -139,12 +141,13 @@ agree. Audit files are `docs/RENAME-S*.md`.
 1. Keep the M4 accumulator boundary parked: the current retail and port key
    domains do not align, so do not normalize PCs/origins or infer a writer.
    Re-open only with an independently justified shared key mapping.
-2. Re-open the generated-symbol sweep only if a new placeholder candidate or
-   companion-map evidence appears.
+2. The generated-symbol sweep is parked; re-open only if a new placeholder
+   candidate or companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
-4. When MIPS GCC is supplied, qualify the existing PatchesLib pipeline and
-   record generation, compile, and link outcomes.
+4. Check for the MIPS GCC/LD toolchain before attempting PatchesLib
+   qualification; both are absent in Session 5336. When supplied, record
+   generation, compile, and link outcomes.
 
 ## Evidence index
 
