@@ -204,3 +204,4 @@ re-scoped the loop to an offline delay-slot/branch-operand hazard audit
 - s5356: unblock re-scoped loop to offline M3 indirect-control-flow idiom audit (NEXT.md); toolchain remains open dependency.
 - s5357: indirect-idiom table done (177 jump tables, 0 defects, positive control 4/4; docs/M3-S5357-INDIRECT-IDIOM-TABLE.md). Backlog exhausted; only the toolchain dependency (human) remains.
 - s5358: toolchain re-checked absent; BLOCKED.md asks human (install toolchain / new target / stop).
+- s5359: unblock iteration confirmed block (route 4); human to confirm/permit a MIPS-capable clang or install a toolchain.

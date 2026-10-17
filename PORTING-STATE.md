@@ -162084,3 +162084,7 @@ Backlog is now exhausted again; only the human-gated toolchain dependency remain
 ## Session 5358 (2026-10-17) — backlog still exhausted; BLOCKED with specific question
 
 Step 0: CURRENT-TRUTH is 13.5 KB (no maintenance). NEXT.md says no un-run unit remains. Re-checked this iteration: `which mips64-elf-gcc mips-linux-gnu-gcc mips64-linux-gnu-gcc` all not found, so the fresh PatchesLib qualification (the only open item) is still unrunnable. M3 idiom classes, M4, M5 closed; rename sweep paused per rule 14. No experiment run; no code changed. Going BLOCKED rather than inventing churn work.
+
+## Session 5359 (2026-10-17) — UNBLOCK iteration: route 4, block confirmed
+
+Block (s5358): fresh PatchesLib source qualification needs a MIPS cross-compiler. Re-checked: gcc cross compilers, zig, rustc, llvm-mc absent; Apple clang has no MIPS target; only ld.lld (linker) present. Sandbox forbids listing /opt/homebrew, so a Homebrew LLVM with MIPS could not be checked. Dependency does not block existing-artifact qualification; M3/M4/M5 closed so no re-scope target remains. Escalated with a one-command refuting experiment (scratch/agent/UNBLOCK.md). No code changed.
