@@ -1042,7 +1042,7 @@ static uint32_t rs64_m5_route_state_guest_byte(uint8_t* rdram, uint32_t guest) {
     if (rdram == nullptr || guest < 0x80000000u || guest >= 0x80800000u) {
         return 0xFFFFFFFFu;
     }
-    return rdram[guest - 0x80000000u];
+    return rdram[(guest - 0x80000000u) ^ 3u];
 }
 
 static void rs64_m5_route_state_log(uint8_t* rdram, const char* edge,
@@ -3817,7 +3817,7 @@ extern "C" void rs64_m5_output_state_fields(uint8_t* rdram,
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
-        return rdram[guest - 0x80000000u];
+        return rdram[(guest - 0x80000000u) ^ 3u];
     };
     std::fprintf(stderr,
         "[m5-output-state-fields] ordinal=%u phase=%u width=%u origin=0x%06X "
@@ -4973,7 +4973,7 @@ static void rs64_m5_frequency_producer(uint8_t* rdram, recomp_context* ctx,
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
-        return rdram[guest - 0x80000000u];
+        return rdram[(guest - 0x80000000u) ^ 3u];
     };
     static std::atomic<uint32_t> send_seq{0};
     const uint32_t sequence = send_seq.fetch_add(1, std::memory_order_relaxed);
@@ -5336,7 +5336,7 @@ static void rs64_m5_frequency_contract(uint8_t* rdram, recomp_context* ctx) {
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
-        return rdram[guest - 0x80000000u];
+        return rdram[(guest - 0x80000000u) ^ 3u];
     };
     const uint32_t source_word = word(s0 + 0x60u);
     const uint32_t source_byte = byte(s0 + 0x22u);
@@ -5378,7 +5378,7 @@ extern "C" void rs64_m5_frequency_caller(uint8_t* rdram, recomp_context* ctx,
     };
     auto byte = [](uint8_t* rdram, uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
-        return rdram[guest - 0x80000000u];
+        return rdram[(guest - 0x80000000u) ^ 3u];
     };
     std::fprintf(stderr,
         "[m5-frequency-caller] ordinal=%u phase=%u width=%u origin=0x%06X "
@@ -5582,7 +5582,7 @@ extern "C" void rs64_audioloop_witness(uint8_t* rdram, recomp_context* ctx,
     if (n >= 12u && (n & 255u) != 0u) return;
     auto byte = [](uint8_t* rdram, uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
-        return rdram[guest - 0x80000000u];
+        return rdram[(guest - 0x80000000u) ^ 3u];
     };
     const uint32_t msg = U32(ctx->r29) + 0x10u;
     uint32_t msgp = 0xFFFFFFFFu, msgb = 0xFFFFFFFFu;

@@ -585,7 +585,7 @@ extern "C" void rs64_m5_family_entry(uint8_t* rdram, const char* family, uint32_
     if (rows[which] >= 64u) return;
     auto guest_byte = [rdram](uint32_t guest) -> uint32_t {
         if (!rdram || guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
-        return rdram[guest - 0x80000000u];
+        return rdram[(guest - 0x80000000u) ^ 3u];
     };
     const uint32_t state_1ad0 = guest_byte(0x80141AD0u);
     const uint32_t state_3b038 = guest_byte(0x8013B038u);
@@ -887,7 +887,7 @@ extern "C" void rs64_m5_preclear_snapshot(uint8_t* rdram, uint32_t dst,
     const uint32_t last = spans[span - 1u][1];
     uint32_t fnv = 2166136261u, nonzero = 0;
     for (uint32_t i = first; i < last; ++i) {
-        const uint8_t b = rdram[i];
+        const uint8_t b = rdram[i ^ 3u];
         fnv = (fnv * 16777619u) ^ b;
         nonzero += b != 0;
     }
@@ -1104,13 +1104,13 @@ extern "C" void rs64_m5_hmt_input(
     if (parse && a2_ptr_ok) {
         const uint32_t phys = a2 & 0x007FFFFFu;
         auto rd16 = [rdram, phys](uint32_t offset) {
-            return (static_cast<uint32_t>(rdram[phys + offset]) << 8) |
-                   static_cast<uint32_t>(rdram[phys + offset + 1]);
+            return (static_cast<uint32_t>(rdram[(phys + offset) ^ 3u]) << 8) |
+                   static_cast<uint32_t>(rdram[(phys + offset + 1u) ^ 3u]);
         };
         entry_28 = rd16(0x28);
         entry_2a = rd16(0x2A);
-        entry_2c = rdram[phys + 0x2C];
-        entry_2d = rdram[phys + 0x2D];
+        entry_2c = rdram[(phys + 0x2Cu) ^ 3u];
+        entry_2d = rdram[(phys + 0x2Du) ^ 3u];
         entry_2e = rd16(0x2E);
     }
     if (rows == 0u) {
@@ -1165,7 +1165,7 @@ extern "C" void rs64_m5_052c4_join(uint8_t* rdram, uint32_t dst,
                  len <= 0x00800000u - phys;
     if (valid) {
         for (uint32_t i = 0; i < len; ++i) {
-            const uint8_t b = rdram[phys + i];
+            const uint8_t b = rdram[(phys + i) ^ 3u];
             fnv ^= b;
             fnv *= 16777619u;
             nz += b != 0;
@@ -1373,7 +1373,7 @@ extern "C" void rs64_m5_audio_input_dma(uint8_t* rdram, uint32_t dram_addr,
         dram_addr + len : source_last;
     uint32_t input_fnv = 2166136261u, input_nonzero = 0u;
     for (uint32_t addr = overlap_first; addr < overlap_last; ++addr) {
-        const uint8_t byte = rdram[addr & 0x007FFFFFu];
+        const uint8_t byte = rdram[(addr & 0x007FFFFFu) ^ 3u];
         input_fnv = (input_fnv * 16777619u) ^ byte;
         input_nonzero += byte != 0u;
     }
@@ -2289,7 +2289,7 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
         uint32_t dmem_fnv = 2166136261u, dmem_nz = 0u;
         for (uint32_t addr = overlap_first; addr < overlap_last; ++addr) {
             const uint32_t offset = addr - dram_addr;
-            const uint8_t source = rdram[addr & 0x007FFFFFu];
+            const uint8_t source = rdram[(addr & 0x007FFFFFu) ^ 3u];
             const uint8_t staged = RSP_MEM_BU(0, dmem_addr + offset);
             source_fnv = (source_fnv * 16777619u) ^ source;
             source_nz += source != 0u;
@@ -2458,7 +2458,7 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
         const uint8_t source = g_dmem_cur[((dmem_addr + (addr - dram_addr)) & 0xFFFu) ^ 3u];
         payload_fnv = (payload_fnv * 16777619u) ^ source;
         payload_nz += source != 0u;
-        const uint8_t stored = rdram[addr & 0x007FFFFFu];
+        const uint8_t stored = rdram[(addr & 0x007FFFFFu) ^ 3u];
         post_fnv = (post_fnv * 16777619u) ^ stored;
         post_nz += stored != 0u;
     }
@@ -2705,7 +2705,7 @@ static uint32_t rs64_filter_voice_guest_hash(uint32_t base, uint32_t span) {
         return 0u;
     uint32_t hash = 2166136261u;
     for (uint32_t i = 0; i < span; ++i)
-        hash = (hash * 16777619u) ^ rdram[phys + i];
+        hash = (hash * 16777619u) ^ rdram[(phys + i) ^ 3u];
     return hash;
 }
 
@@ -3040,7 +3040,7 @@ extern "C" void rs64_filter_voice_c88c_field_probe(uint8_t* rdram,
         const uint32_t phys = (segment == 0x80000000u || segment == 0xA0000000u)
             ? (guest & 0x1FFFFFFFu) : guest;
         if (phys >= 0x800000u) return 0xFFFFFFFFu;
-        return rdram[phys];
+        return rdram[phys ^ 3u];
     };
     auto half = [rdram](uint32_t guest) -> uint32_t {
         if (!rdram) return 0xFFFFFFFFu;
@@ -4468,7 +4468,7 @@ extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
         std::fprintf(stderr, "[m5-descriptor-layout] phase=%u width=%u origin=0x%06X task_ptr=0x%08X raw=",
                      phase, width, origin, task_ptr);
         for (uint32_t i = 0; i < 0x40u; ++i)
-            std::fprintf(stderr, "%02X", (unsigned)rdram[base + i]);
+            std::fprintf(stderr, "%02X", (unsigned)rdram[(base + i) ^ 3u]);
         std::fprintf(stderr, " fields=");
         for (uint32_t i = 0; i < 16u; ++i) {
             uint32_t aligned = 0;
@@ -5673,7 +5673,7 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
                               i + 1u == source_len ? "" : " ");
             }
             for (uint32_t i = 0; i < sample_len; ++i) {
-                std::snprintf(sample + i * 3u, 4u, "%02X%s", rdram[phys + i],
+                std::snprintf(sample + i * 3u, 4u, "%02X%s", rdram[(phys + i) ^ 3u],
                               i + 1u == sample_len ? "" : " ");
             }
             ++capture_count[slot];

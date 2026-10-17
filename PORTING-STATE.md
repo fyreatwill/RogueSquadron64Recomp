@@ -160773,3 +160773,21 @@ matching) still unclassified; some legitimately operate on linear copies.
 Hypotheses: H-A "probe words were read correctly, logged values trustworthy" vs H-B "raw word probes were byte-reversed".
 Result selects H-B and refutes H-A for the 19 fixed sites (same-run positive control: old pattern 0x78563412 vs helper 0x12345678).
 Next discriminator: classify the remaining single-byte rdram[x] reads; any site whose logged value changes after the swizzle fix refutes the ledger claim that cites it, and a site that indexes a linear copy resolves as not-a-bug.
+
+## Session 5231 (2026-10-17) — classified remaining raw rdram[] byte reads; 26 more unswizzled probe reads fixed
+Work unit: s5230 follow-up — classify every `rdram[...]` read in main.cpp / upstream_compat.cpp / rt64_render_context.cpp.
+Hypotheses: H-A "remaining reads index a linear copy or already carry ^3" vs H-B "some are raw unswizzled byte reads like the s5230 word reads".
+Method: grep of all lines matching `rdram[...]` without `^3`/rs64_rdram (131 matched before filtering), then read 6 lines of context for each hit.
+Result: rt64_render_context.cpp — all 12 already `^ 3` (clean). Every `rdram` in main/upstream_compat is the word-swapped host pointer
+(same g_recomp_rdram_for_wp_raw / MEM_B base, never a linear copy). 26 sites had NO swizzle and read guest byte a^3 instead of a:
+main.cpp 588 890 947 1107 1108 1112 1113 1168 1376 2034 2180 2264 2292 2365 2461 2708 3043 4471 4629 5676 (20 lines),
+upstream_compat.cpp 1045 3820 4976 5339 5381 5585 (6 lines; the `guest_byte`/`byte` lambdas). Result selects H-B for those 26 and refutes H-A.
+Change: each now indexes `rdram[X ^ 3u]`. Build links (cmake --build, warnings pre-existing). No game run: all are diagnostic readers
+(fnv/nonzero hashes, entry_2c/2d, sample hexdumps); gameplay path untouched.
+Control caveat: no same-run positive control this session; the s5230 peek_selftest already showed unswizzled vs ^3 reads differ for the same
+pattern, and the change is the same mechanical `^3` that every already-correct site in these files uses (single-source for "correct now").
+ORIGIN: not a mitigation; the writer of the wrong values was our own probe code.
+Consequence: logged FNV hashes / nonzero counts / entry_2c,2d / byte lambdas from these probes (m5 DMA source/payload census, descriptor-layout
+raw dump, route-state guest_byte) were computed over byte-permuted data — hashes of ranges not multiples of 4 and any "nonzero" count over a
+partial word are wrong; whole-word nonzero counts were unaffected. Claims citing them are single-source suspect.
+Next discriminator: re-run the cheapest soak that emits those probes and compare against ledger claims that cite them.
