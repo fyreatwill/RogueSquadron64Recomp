@@ -1,3 +1,2 @@
-# Next: queue a default-recipe mission soak (scratch/agent/soak_queue/) to confirm the s5240 TO_PTR mask (ultra64.h:42) causes no regression; then resume M5 audio plan or one more M3 idiom-class audit
+# Next: read the s5240_to_ptr_mask_regress verdict in SOAK-RESULTS.md (H-clean: crash=0, mission_onset_t ~174s; H-regress otherwise, then inspect the ultra64.h TO_PTR mask). If clean, resume M5 audio plan (docs/M5-AUDIO-PLAN.md) next de-stub step.
 HYPOTHESIS-ID: m3-idiom-class-audit
-Closed: s5233-s5240 (swizzle, host-wrapper ptr args, PI/EEPROM lengths, rsp/upstream_compat/lib rdram masks, src/main memcpy, TO_PTR macro mask). H-regress: mask changes behaviour (expect none; crash=0, mission_onset ~174s as in s5034 recipe) vs H-clean.
