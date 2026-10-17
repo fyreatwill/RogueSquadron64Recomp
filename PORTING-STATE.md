@@ -161619,3 +161619,9 @@ soak was warranted; the next candidate is `randomBurstNpcHandlerVariant` at
 - Result: `renamed 0 references in 0 files`; the helper classified the candidate as `already-synchronized`.
 - Independent evidence: `main_overlay.txt` names the address; `RecompiledFuncs/funcs_9.c` contains the named callable body and a direct caller; `funcs.h` contains the named prototype; and `recomp_overlays.inl` contains the named overlay record. No `func_800409A4` placeholder or conflicting fragment was found.
 - H1 is selected; H2 and H3 are ruled out for this address. No build or soak was run because this was a bounded classification-only work unit. Audit: `docs/RENAME-S5312-AUDIT.md`. The next bounded candidate is `computeNpcGroupCentroidAndCull = 0x8004118C`.
+## Session 5313 (2026-10-17) — generated-symbol sweep: `computeNpcGroupCentroidAndCull` is synchronized
+
+- Ran the bounded classification helper for `computeNpcGroupCentroidAndCull = 0x8004118C`.
+- Result: `renamed 0 references in 0 files`; the helper classified the candidate as `already-synchronized`.
+- Independent evidence: `main_overlay.txt` names the address; `RecompiledFuncs/funcs_9.c` contains the named callable body and two direct generated callers; `funcs.h` contains the named prototype; and `recomp_overlays.inl` contains the named overlay record. No `func_8004118C` placeholder or conflicting fragment was found.
+- H1 is selected; H2 and H3 are ruled out for this address. No build or soak was run because this was a bounded classification-only work unit. Audit: `docs/RENAME-S5313-AUDIT.md`. The next bounded candidate is `spawnRandomBurstNpc = 0x8004191C`.
