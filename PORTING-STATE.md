@@ -161709,3 +161709,13 @@ not equivalent. It rules out port task-end retention but does not prove an
 accumulator implementation match or identify a writer. No mitigation or
 accumulator rewrite was made. The M4 boundary is parked; the next work unit
 resumes the generated-symbol sweep.
+
+## Session 5322 (2026-10-17) — generated-symbol sweep: `markHighLodCellsInGrid` is synchronized
+
+Ran the bounded generated-symbol helper for `0x80043C30` with the companion
+symbol map. It reported zero edits and already-synchronized. Independently,
+the companion map, generated body, declaration, overlay record, and generated
+caller all use `markHighLodCellsInGrid`; no placeholder or conflicting
+fragment was found. H3 is selected, so no mapping, build, or soak change was
+warranted. Audit: `docs/RENAME-S5322-AUDIT.md`. The next bounded candidate is
+`load_level_hmp = 0x80043D74`.
