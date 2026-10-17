@@ -1,3 +1,3 @@
 # Next: ONE further M3 idiom-class audit that commits a guard (or resume M5 per docs/M5-AUDIO-PLAN.md)
 HYPOTHESIS-ID: m3-idiom-class-audit
-s5233 swizzle, s5234 host-wrapper ptr args, s5235 guest length/offset in lib PI/EEPROM closed. Candidate: signed-vs-unsigned base-address idiom (s5094 generalisation: grep int32_t-cast addresses added to rdram in src/main + lib). Optionally queue a soak of the current build to confirm no [s5235-save-guard] fires in normal play. Write hypotheses first.
+Closed: s5233 swizzle, s5234 host-wrapper ptr args, s5235 PI/EEPROM lengths, s5236 rsp.cpp rdram index masks (signed/unsigned base class already closed s5094-s5100). Candidate: raw rdram[]/memcpy index audit in src/main (debug threads, g_recomp_rdram_for_wp_raw users) for unmasked guest-derived addresses; or queue a soak with ROGUESQ_LOG_S4213 on to exercise the s5236-edited probes. Write hypotheses first.

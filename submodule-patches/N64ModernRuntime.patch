@@ -1527,7 +1527,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..f54d50c 100644
+index 1cb3f6a..5a25f86 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,12 @@
@@ -2869,7 +2869,7 @@ index 1cb3f6a..f54d50c 100644
 +    if (phase != ph_key) { ph_key = phase; ph_tasks = ph_changes = 0; }
 +    const uint32_t dp = dp_virt & 0x7FFFFFu;
 +    const uint32_t lo = dp - 0x10, len = 0x130;
-+    auto byte = [&](uint32_t p) { return rdram[(p) ^ 3]; };
++    auto byte = [&](uint32_t p) { return rdram[(p & 0x007FFFFFu) ^ 3]; };
 +    uint32_t h = 2166136261u;
 +    for (uint32_t i = 0; i < len; i++) { h ^= byte(lo + i); h *= 16777619u; }
 +    Slot* s = nullptr;
@@ -2915,7 +2915,7 @@ index 1cb3f6a..f54d50c 100644
 +        if (ph_key != 0xFFFFFFFFu) std::fprintf(stderr, "[s4221-sum] phase=%u calls=%lu nonzero_gain_calls=%lu\n", ph_key, calls, nzcalls);
 +        ph_key = phase; calls = 0; nzcalls = 0;
 +    }
-+    auto h = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x1FFFFFFFu) ^ 3] << 8) | rdram[((a & 0x1FFFFFFFu) + 1) ^ 3]); };
++    auto h = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x007FFFFFu) ^ 3] << 8) | rdram[((a & 0x007FFFFFu) + 1) ^ 3]); };
 +    uint32_t g[4]; bool nz = false;
 +    for (int i = 0; i < 4; i++) { g[i] = h(s0 + 0x6E + 2 * i); nz |= g[i] != 0; }
 +    calls++; if (nz) nzcalls++;
@@ -2931,8 +2931,8 @@ index 1cb3f6a..f54d50c 100644
 +    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned long calls, nzcalls;
 +    uint32_t phase = rs64_phase_ord();
 +    if (phase != ph_key) { ph_key = phase; calls = 0; nzcalls = 0; }
-+    auto h = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x1FFFFFFFu) ^ 3] << 8) | rdram[((a & 0x1FFFFFFFu) + 1) ^ 3]); };
-+    auto w = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x1FFFFFFFu) ^ 3]; return v; };
++    auto h = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x007FFFFFu) ^ 3] << 8) | rdram[((a & 0x007FFFFFu) + 1) ^ 3]); };
++    auto w = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x007FFFFFu) ^ 3]; return v; };
 +    bool nz = h(s1 + 0x44) | h(s1 + 0x46) | h(s1 + 0x48) | h(s1 + 0x4A);
 +    calls++; if (nz) nzcalls++;
 +    if (calls <= 6 || calls % 256 == 0) {
@@ -2945,7 +2945,7 @@ index 1cb3f6a..f54d50c 100644
 +    static uint32_t ph_key = 0xFFFFFFFFu; static unsigned long calls, nzcalls;
 +    uint32_t phase = rs64_phase_ord();
 +    if (phase != ph_key) { ph_key = phase; calls = 0; nzcalls = 0; }
-+    auto w = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x1FFFFFFFu) ^ 3]; return v; };
++    auto w = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x007FFFFFu) ^ 3]; return v; };
 +    calls++; if (res & 0xFFFF) nzcalls++;
 +    if (calls <= 6 || calls % 256 == 0) {
 +        std::fprintf(stderr, "[s4221-coef] phase=%u n=%lu nzres=%lu res=%08X vol(sp0)=%08X a2now=%08X pan(sp14)=%08X out=%08X tabV=%08X,%08X,%08X tabS=%08X,%08X,%08X,%08X tabP=%08X,%08X\n", phase, calls, nzcalls, res, w(sp), a2, w(sp + 0x14), outp, w(0x800A4BD8), w(0x800A4BDC), w(0x800A4BE0), w(0x800A4DD8), w(0x800A4DDC), w(0x800A4DE0), w(0x800A4DE4), w(0x800A4DE8), w(0x800A4DEC));
@@ -3095,8 +3095,8 @@ index 1cb3f6a..f54d50c 100644
 +    memcpy(prev, cur, sizeof(cur)); prev_dp = dp; have = true;
 +    if (n <= 8 || n % 64 == 0) {
 +        uint32_t cnt = (uint32_t)task->t.data_size; if (cnt > 4) cnt = 4;
-+        auto rd32 = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x1FFFFFFFu) ^ 3]; return v; };
-+        auto rd16 = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x1FFFFFFFu) ^ 3] << 8) | rdram[((a + 1) & 0x1FFFFFFFu) ^ 3]); };
++        auto rd32 = [&](uint32_t a) { uint32_t v = 0; for (int k = 0; k < 4; k++) v = (v << 8) | rdram[((a + k) & 0x007FFFFFu) ^ 3]; return v; };
++        auto rd16 = [&](uint32_t a) { return (uint32_t)((rdram[(a & 0x007FFFFFu) ^ 3] << 8) | rdram[((a + 1) & 0x007FFFFFu) ^ 3]); };
 +        for (uint32_t f = 0; f < cnt; f++) {
 +            uint32_t base = off + f * 0xA10u; unsigned active = 0; uint32_t output = 0;
 +            for (uint32_t v = 0; v < 32; v++) {
@@ -3147,7 +3147,7 @@ index 1cb3f6a..f54d50c 100644
 +    std::fprintf(stderr, "[s4215-task] phase=%u n=%u task_off=0x%X ctl_type=%u\n", phase, n, ga, (unsigned)task->t.type);
 +    for (int row = -4; row < 20; row++) {
 +        uint32_t a = ga + row * 4;
-+        uint32_t w = (uint32_t)rdram[(a + 0) ^ 3] << 24 | (uint32_t)rdram[(a + 1) ^ 3] << 16 | (uint32_t)rdram[(a + 2) ^ 3] << 8 | rdram[(a + 3) ^ 3];
++        uint32_t w = (uint32_t)rdram[((a + 0) & 0x007FFFFFu) ^ 3] << 24 | (uint32_t)rdram[((a + 1) & 0x007FFFFFu) ^ 3] << 16 | (uint32_t)rdram[((a + 2) & 0x007FFFFFu) ^ 3] << 8 | rdram[((a + 3) & 0x007FFFFFu) ^ 3];
 +        std::fprintf(stderr, "[s4215-w] phase=%u n=%u off=%+d w=0x%08X\n", phase, n, row * 4, w);
 +    }
 +}
