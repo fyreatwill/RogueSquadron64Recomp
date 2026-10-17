@@ -58,6 +58,11 @@ callers. The helper made no edits. Preserve the ABI name. Audit:
 ends at `0x8002F3E8`, exactly matching the `0x5C` span to `__osIdCheckSum` and
 the overlay record; it has an independent caller at `0x800306B4`. The helper
 made no edits. Audit: `docs/RENAME-S5149-AUDIT.md`.
+`__osIdCheckSum = 0x8002F3EC` is likewise already correctly named: its
+generated body ends at `0x8002F450`, exactly matching the `0x68` span to
+`__osRepairPackId` and the overlay record. The generated tree has no
+independent caller beyond the definition, so preserve the existing ABI name.
+Audit: `docs/RENAME-S5150-AUDIT.md`.
 
 This maintenance iteration compacted the previous 611-line state file. The
 removed historical narrative remains recoverable in git; durable conclusions
@@ -173,6 +178,10 @@ were retained below or in the project overview.
   span ending at `0x8002F3EC`, plus an independent generated caller at
   `0x800306B4`; the helper reports `already-synchronized`, so preserve the
   existing ABI name. Audit: `docs/RENAME-S5149-AUDIT.md`.
+- `__osIdCheckSum = 0x8002F3EC` has a generated body and exact `0x68` overlay
+  span ending at `0x8002F454`; the helper reports `already-synchronized`, and
+  the generated tree has no independent caller. Preserve the existing ABI
+  name. Audit: `docs/RENAME-S5150-AUDIT.md`.
 - Recent classifications: `bcmp` and `bzero` were renamed with exact spans;
   EEPROM/controller entries through `__osPackReadData` were classified as
   host wrappers or ABI boundaries. Audits are `docs/RENAME-S5106-AUDIT.md`

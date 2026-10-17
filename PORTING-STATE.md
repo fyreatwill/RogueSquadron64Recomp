@@ -159502,3 +159502,19 @@ unproven classifications for this candidate; no build or soak was needed for
 a naming-only audit. Evidence: `docs/RENAME-S5149-AUDIT.md`.
 
 Next: audit `__osIdCheckSum = 0x8002F3EC`.
+
+## Session 5150 (2026-10-17) — classified `__osIdCheckSum` as already named
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Audited the next generated-
+symbol candidate, `__osIdCheckSum = 0x8002F3EC`, with the bounded rename helper
+and direct generated-tree checks. The helper made zero edits and reported
+`already-synchronized`. The function has a generated body ending at
+`0x8002F450`; the companion boundary, `__osRepairPackId = 0x8002F454`, and
+the overlay record independently establish the exact `0x68` span. No
+independent generated caller was present beyond the definition. The existing
+ABI name is therefore preserved. This rules out the host-wrapper,
+span-mismatch, and unproven classifications for this candidate; no build or
+soak was needed for a naming-only audit. Evidence:
+`docs/RENAME-S5150-AUDIT.md`.
+
+Next: audit `__osRepairPackId = 0x8002F454`.
