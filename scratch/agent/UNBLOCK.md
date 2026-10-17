@@ -1,8 +1,4 @@
-# UNBLOCK s5082 — route 3 (re-scope)
-Block: "need owner-chosen target". Route 1: the block's own candidate list (a)-(d) contains (c) next
-milestone beyond the mission route / gameplay soak, which needs no human decision: the keyed route,
-pad-override file and soak queue all exist (s5080_watch.sh). Premise "no runnable work" refuted.
-Not locally obtainable (stay open deps): mips64-elf-gcc (install = human), rename symbol source,
-screencapture (TCC). Evidence: s5068 lists "visible mission reaction" unmeasured; no mission soak under
-sustained input exists in ledger (only 8 s holds s5076-s5081).
-New unit: m6-mission-soak (NEXT.md). Old block archived as BLOCKED.resolved.s5082-no-target.md.
+# UNBLOCK (s5092 block "owner must pick a target")
+Route taken: 3 (re-scope). Routes 1/2 inapplicable: the block is "no target", not a missing tool; candidate (a) MIPS GCC needs an internet install (hard boundary); (b) a driven oracle route is not needed.
+Evidence the block was false as reasoned: it called the hangar flake a "single crash barred by directive 3". The ledger shows the same pc/signature at s2290, s2511, s5010, s5085 (x2), s5089 (~1 in 2 hangar routes), so it is a recurring class, and directive 3 explicitly permits idiom-class audits. Refutation observation: the faulting-instruction disassembly named in NEXT.md; if the base register is an ordinary valid pointer, the class framing is wrong.
+Open dependency (not blocking): mips64-elf-gcc for PatchesLib qualification (s5023).
