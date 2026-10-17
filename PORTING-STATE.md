@@ -158771,3 +158771,6 @@ ORIGIN: diagnostic only, no mitigation added.
 ## Session 5082 (2026-10-16) — priority list exhausted after m6-mission-input closure; BLOCKED for owner target
 
 No experiment run. Step 0: CURRENT-TRUTH 58,361 B (<60,000), no maintenance. Last 15 session titles are m6-mission-input (not sweep), but the sweep is CLOSED per s5030 (2 of ~1,548 left, both already mapped), so resuming it would be no-op churn. M5, M3 classes, retail-entry, M4 all closed. Wrote BLOCKED.md with candidate targets. ORIGIN: n/a (no code change).
+
+## Session 5083 (2026-10-16) — unblock: s5082 "owner must pick a target" re-scoped to m6-mission-soak
+Block claimed all work exhausted. Refuted: candidate (c) (long in-mission soak with sustained scripted input) is runnable with existing route/pad-override/soak queue; ledger has only 8 s input holds (s5076-s5081), no sustained-input stability measurement. Real but non-gating deps remain: mips64-elf-gcc, rename symbol source, screen capture (TCC). No experiment run this iteration. Next: NEXT.md m6-mission-soak. ORIGIN: n/a.
