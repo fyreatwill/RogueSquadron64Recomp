@@ -1,3 +1,3 @@
-# Next: TO_PTR (ultra64.h:42 unchecked `&rdram[(uint64_t)var - 0xFFFFFFFF80000000]`) user census in ultramodern/librecomp — classify guest-derived args, guard or prove dead; else resume rename sweep at _Putfld = 0x80035960
+# Next: queue a default-recipe mission soak (scratch/agent/soak_queue/) to confirm the s5240 TO_PTR mask (ultra64.h:42) causes no regression; then resume M5 audio plan or one more M3 idiom-class audit
 HYPOTHESIS-ID: m3-idiom-class-audit
-Closed: s5233-s5239 (swizzle, host-wrapper ptr args, PI/EEPROM lengths, rsp.cpp/upstream_compat/lib rdram index masks, src/main memcpy class). Write hypotheses first. M5 steps 0-11 closed.
+Closed: s5233-s5240 (swizzle, host-wrapper ptr args, PI/EEPROM lengths, rsp/upstream_compat/lib rdram masks, src/main memcpy, TO_PTR macro mask). H-regress: mask changes behaviour (expect none; crash=0, mission_onset ~174s as in s5034 recipe) vs H-clean.

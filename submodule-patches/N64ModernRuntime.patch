@@ -3828,6 +3828,21 @@ index 1f3a4cf..b9cc34f 100644
      osViSetMode(rdram, (int32_t)ctx->r4);
  }
  
+diff --git a/ultramodern/include/ultramodern/ultra64.h b/ultramodern/include/ultramodern/ultra64.h
+index 31eb106..37b7100 100644
+--- a/ultramodern/include/ultramodern/ultra64.h
++++ b/ultramodern/include/ultramodern/ultra64.h
+@@ -39,7 +39,9 @@ typedef uint8_t u8;
+ #  define RDRAM_ARG1 uint8_t *rdram
+ #  define PASS_RDRAM rdram, 
+ #  define PASS_RDRAM1 rdram
+-#  define TO_PTR(type, var) ((type*)(&rdram[(uint64_t)var - 0xFFFFFFFF80000000]))
++// s5240: index masked to the 8 MB RDRAM window (hardware mirrors RDRAM) so a guest-supplied
++// NULL / bad pointer cannot form a wild host pointer; in-range addresses are unchanged.
++#  define TO_PTR(type, var) ((type*)(&rdram[((uint64_t)var - 0xFFFFFFFF80000000) & 0x7FFFFFull]))
+ #  define GET_MEMBER(type, addr, member) (addr + (intptr_t)&(((type*)nullptr)->member))
+ #  ifdef __cplusplus
+ #    define NULLPTR (PTR(void))0
 diff --git a/ultramodern/include/ultramodern/ultramodern.hpp b/ultramodern/include/ultramodern/ultramodern.hpp
 index 57db6f6..a282425 100644
 --- a/ultramodern/include/ultramodern/ultramodern.hpp
