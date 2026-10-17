@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5340 (2026-10-17).
+Compact operational handoff, maintained at Session 5341 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -99,7 +99,13 @@ this discriminator; no writer or mitigation follows. See
   only the entrypoint. Supplying that prototype externally makes Clang and
   `ar` pass; `nm` shows `allocateDisplayListBuffer` defined and the helper
   unresolved as expected for a host object. This does not replace the missing
-  cross-compiler for a fresh source qualification.
+  cross-compiler for a fresh source qualification. Session 5341 made the
+  declaration repair regeneration-safe in `tools/fixup_patches_host.py`,
+  wired it into the CMake N64Recomp rule, and reran the existing-ELF
+  qualification without an external shim: generation, Clang compilation,
+  archiving, and the `nm` positive control all passed. This qualifies only the
+  existing ELF-to-host artifact path; fresh source qualification still
+  requires the missing cross-compiler.
 
 ### Generated symbols
 
@@ -154,13 +160,10 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    candidate or companion-map evidence appears.
 3. Re-open M3 only as a complete idiom-class audit selected by a new
    discriminator. Do not chase passive recurrence breadcrumbs.
-4. Repair or regeneration-proof the missing host prototype for
-   `findAndUnlinkSmallestEntry`, then rerun the host-side PatchesLib
-   qualification from the existing `patches.elf`; the external-prototype
-   control is only a diagnostic and must not be mistaken for a generator fix.
-5. Complete fresh PatchesLib source qualification when the external
+4. Complete fresh PatchesLib source qualification when the external
    `mips64-elf-gcc` and `mips64-elf-ld` toolchain is supplied; record the
-   generation, compile, and link outcomes.
+   generation, compile, and link outcomes. The host-side declaration path is
+   now regeneration-safe and qualified against the existing `patches.elf`.
 
 ## Evidence index
 

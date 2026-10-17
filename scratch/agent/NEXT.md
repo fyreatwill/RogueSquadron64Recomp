@@ -1,28 +1,29 @@
-# Next: make the host-side PatchesLib qualification regeneration-safe
+# Next: qualify a fresh PatchesLib source build when the cross-toolchain exists
 
-The direct host-side qualification exposed a generated-source defect: the
-existing ELF recompiles, but `RecompiledPatches/patches.c` calls
-`findAndUnlinkSmallestEntry` without a declaration. An external prototype
-control compiled and archived successfully, so the next unit is to repair the
-declaration path and rerun from regenerated output. Do not claim this proves a
-fresh MIPS compilation.
+The host-side declaration path is now regeneration-safe: generation from the
+existing `patches.elf`, Clang compilation, archiving, and `nm` all passed in
+Session 5341. The remaining unit is the source-to-MIPS step, which must not be
+claimed from that artifact result.
 
 Competing hypotheses and discriminator:
 
-- H1: adding the helper prototype to the regeneration-safe declaration path
-  makes the generated host source compile and archive cleanly.
-- H2: the prototype fix is insufficient because regeneration still omits a
-  required declaration or another host compile error appears.
-- H3: the host-side artifact qualifies after the fix, while fresh source
-  qualification remains blocked until the external MIPS GCC/LD pair is
-  supplied.
+- H1: `mips64-elf-gcc` and `mips64-elf-ld` are available and the complete
+  source-to-ELF-to-host pipeline can be run.
+- H2: the cross-toolchain is absent, so fresh source qualification remains
+  blocked and the next action requires supplying it.
+- H3: the toolchain exists but the fresh source build or relink exposes a new
+  source, linker, or regeneration defect.
 
-Discriminating measurement: regenerate, compile without the external
-prototype shim, archive, and run `nm`. H1/H3 require zero compile errors and a
-defined `allocateDisplayListBuffer`; H2 is any remaining generated-source
-failure. The same-run positive control is the defined override symbol.
+Discriminating measurement: run `command -v mips64-elf-gcc mips64-elf-ld`,
+then, only if both resolve, build `patches/patches.elf`, regenerate the host
+source, compile, archive, and inspect `nm`. H1 requires a fresh ELF plus zero
+host errors and a defined `allocateDisplayListBuffer`; H2 is the measured
+absence of either compiler; H3 is any fresh-build failure. The same-run
+positive control is the defined override symbol.
 
 ```sh
+command -v mips64-elf-gcc mips64-elf-ld
+make -C patches clean all
 ./build/N64Recomp patches.toml
 clang -c RecompiledPatches/patches.c -o /tmp/rs64-patches-host-next.o \
   -I include -I RecompiledPatches \

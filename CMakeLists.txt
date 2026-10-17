@@ -159,8 +159,9 @@ if (NOT DEFINED N64RECOMP_EXE OR NOT EXISTS "${N64RECOMP_EXE}")
         "N64Recomp executable (built from lib/N64ModernRuntime/N64Recomp via N64RecompCLI target)" FORCE)
 endif()
 find_program(PATCHES_MAKE_EXE NAMES mingw32-make make)
+find_package(Python3 COMPONENTS Interpreter)
 
-if (EXISTS "${MIPS_GCC}" AND EXISTS "${N64RECOMP_EXE}" AND PATCHES_MAKE_EXE)
+if (EXISTS "${MIPS_GCC}" AND EXISTS "${N64RECOMP_EXE}" AND PATCHES_MAKE_EXE AND Python3_Interpreter_FOUND)
     file(GLOB PATCH_C_SOURCES "${PATCHES_DIR}/*.c")
 
     # Step 1: cross-compile *.c → patches.elf (MIPS)
@@ -180,8 +181,11 @@ if (EXISTS "${MIPS_GCC}" AND EXISTS "${N64RECOMP_EXE}" AND PATCHES_MAKE_EXE)
                               "${RECOMPILED_PATCHES_DIR}/funcs.h"
                               "${RECOMPILED_PATCHES_DIR}/recomp_overlays.inl"
         COMMAND ${N64RECOMP_EXE} "${CMAKE_SOURCE_DIR}/patches.toml"
+        COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tools/fixup_patches_host.py"
+                "${RECOMPILED_PATCHES_DIR}/patches.c"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         DEPENDS "${PATCHES_DIR}/patches.elf" "${CMAKE_SOURCE_DIR}/patches.toml"
+                "${CMAKE_SOURCE_DIR}/tools/fixup_patches_host.py"
         COMMENT "Recompiling patches.elf → RecompiledPatches/patches.c"
         VERBATIM
     )

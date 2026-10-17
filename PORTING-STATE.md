@@ -161981,3 +161981,17 @@ complete. `nm` then showed `allocateDisplayListBuffer` defined and
 boundary. This isolates the failure to the generated declaration path, not
 the ELF recompile, host compiler, or archiver. It does not qualify a fresh
 MIPS source build, and no runtime or mitigation change was made.
+
+## Session 5341 (2026-10-17) — made PatchesLib host declaration regeneration-safe
+
+Added `tools/fixup_patches_host.py` and wired it after the N64Recomp step in
+the PatchesLib CMake custom command. The fixup inserts the missing declaration
+for `findAndUnlinkSmallestEntry` into regenerated `RecompiledPatches/patches.c`
+and is idempotent. The same existing-ELF run regenerated 11 functions, the
+fixed host source compiled with Clang, `ar` created the archive, and `nm` showed
+`allocateDisplayListBuffer` defined while `findAndUnlinkSmallestEntry` remained
+unresolved as expected for the host link boundary. This rules out the prior
+generated-declaration defect and qualifies the existing ELF-to-host path; it
+does not qualify fresh MIPS source compilation because the external
+`mips64-elf-gcc`/`mips64-elf-ld` pair remains unavailable. No mitigation or
+runtime behavior was changed.
