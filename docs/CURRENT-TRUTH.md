@@ -373,6 +373,7 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+- **s5250 status:** s5235 save-guard never fired in failing HEAD-arm logs (0 hits) so it is cleared; old-src arm blocked (Metal toolchain), replaced by env toggle ROGUESQ_NO_TASKPTR_GUARD + fire log on the main.cpp task_ptr early-return; baseline/noguard soaks queued (soak_queue/s5250_*).
 - **s5249 status:** HEAD arm ran: 0/3 hangar, 0 crash (load avg 5-9). Old-src arm queued (soak_queue/s5249_old70a56647_arm.sh); tools/bisect_worktree.sh now symlinks scratch/N64Recomp + build/factor5_ucode so the worktree builds.
 - **s5248 status:** HEAD arm (soak_queue/s5246_head_arm_loadlog.sh) still not run. Old-commit arm is now one command: `tools/bisect_worktree.sh 70a56647 build` (worktree works headless; build step untested; arm = old src + CURRENT lib). Only behaviour-changing deltas since 70a56647: main.cpp task_ptr range early-return and the s5235 save-guard (lib); rest is diagnostics/ TO_PTR mask (refuted s5242).
 - **s5247 status:** the s5246 clone block was premature (the clone is only needed if the HEAD arm fails, and that arm has not run). First fold soak_queue/s5246_head_arm_loadlog (pass => host load/time-of-day; fail => old-commit arm via `git worktree add scratch/wt_70a56647 70a56647` with lib/ symlinked, untested; cp/ditto stay permission-denied headless). Archived: scratch/agent/BLOCKED.resolved.s5246-bisect-clone.md. No new measurement.

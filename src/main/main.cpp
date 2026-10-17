@@ -4580,7 +4580,13 @@ extern "C" void rs64_m5_port_task_load(uint8_t* rdram, uint32_t task_ptr) {
     }
     if (phase_rows++ >= 256u) return;
 
-    if (task_ptr < 0x80000000u || task_ptr > 0x80800000u - sizeof(OSTask)) return;
+    if (task_ptr < 0x80000000u || task_ptr > 0x80800000u - sizeof(OSTask)) {
+        // s5250: count fires; ROGUESQ_NO_TASKPTR_GUARD=1 lets the old (unguarded) path run for the route-stall bisect.
+        static int fired = 0;
+        static const bool disabled = std::getenv("ROGUESQ_NO_TASKPTR_GUARD") != nullptr;
+        if (fired++ < 8) std::fprintf(stderr, "[s5250-taskptr-guard] task_ptr=0x%08X %s\n", task_ptr, disabled ? "PASSTHROUGH" : "RETURN");
+        if (!disabled) return;
+    }
     const uint64_t guest_task_ptr = static_cast<uint64_t>(
         static_cast<int64_t>(static_cast<int32_t>(task_ptr)));
     const OSTask* task = TO_PTR(OSTask, guest_task_ptr);
