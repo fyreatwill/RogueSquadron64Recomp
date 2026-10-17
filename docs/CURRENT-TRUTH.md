@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5262 (2026-10-17). The
+Compact operational handoff, maintained at Session 5263 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -373,6 +373,7 @@ Audit: `docs/RENAME-S5222-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
 
+- **s5263:** `_Litob = 0x80037270` is already synchronized: the bounded helper made zero edits, and independent companion/generated-tree checks show the defined symbol, exact named body, declaration, overlay record, and three direct callers. No build or soak. Next sweep candidate: `osYieldThread = 0x80037510` (audit `docs/RENAME-S5263-AUDIT.md`).
 - **s5262:** `_Ldtob = 0x80036B90` is already synchronized: the bounded helper made zero edits, and the companion/generated trees independently show the defined symbol, exact named body, declaration, overlay record, and direct caller. Adjacent `lldiv` and `ldiv` entries were also already synchronized. No build or soak. Next sweep candidate: `_Litob = 0x80037270` (audit `docs/RENAME-S5262-AUDIT.md`).
 - **s5261:** `_Genld = 0x80036620` is already synchronized: the bounded helper made zero edits, and the companion/generated trees independently show the defined symbol, exact named body, declaration, overlay record, and direct caller. The adjacent `0x80036B88` pure return stub is separately named `noopHandler_80036B88`. No build or soak. Next sweep candidate: `_Ldtob = 0x80036B90` (audit `docs/RENAME-S5261-AUDIT.md`).
 - **s5260:** `_Printf = 0x80035FD0` is already synchronized: the bounded helper made zero edits, and the companion/generated trees independently show the defined symbol, exact named body, declaration, overlay record, and direct caller. No build or soak. Audit `docs/RENAME-S5260-AUDIT.md`.

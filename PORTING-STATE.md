@@ -161004,3 +161004,15 @@ spanning through `0x800370DF`, and a direct generated caller at `0x80035E1C`.
 This rules out placeholder propagation and data/fragment renaming for this
 candidate. No build or soak was needed. Audit:
 `docs/RENAME-S5262-AUDIT.md`. Next candidate: `_Litob = 0x80037270`.
+
+## Session 5263 (2026-10-17) — generated-symbol sweep: `_Litob` already synchronized
+
+Ran the bounded generated-symbol helper for exactly
+`0x80037270..0x80037510`. It made zero edits and classified `_Litob =
+0x80037270` as `already-synchronized`. Independent checks found the defined
+companion symbol, exact named generated body, header declaration, overlay
+record, and three direct generated callers. No placeholder or data-fragment
+evidence exists at the candidate address. This rules out companion
+propagation and fragment renaming for `_Litob`; no build or soak was needed.
+Audit: `docs/RENAME-S5263-AUDIT.md`. Next candidate: `osYieldThread =
+0x80037510`.
