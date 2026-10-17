@@ -1,20 +1,5 @@
-# Next: decisive end-to-end control for the route stall (s5099 passed 3/3 at 01:26, same recipe fails 08:00+).
-(Rewritten s5245 after the CURRENT-TRUTH maintenance iteration; work unit unchanged from s5244.)
-
-Hypotheses:
-- H1 host load / time-of-day (Chrome 112%, REAPER, WindowServer).
-- H2 a lib/ patch (s5235 save guard, s5236 rsp masks, s5239 rt64) with no log marker.
-- H3 stale generated-code/build state.
-
-Discriminating measurement (one iteration, both arms):
-(a) `cp -c -R` (APFS clone) the repo to ../RogueSquadron64Recomp-bisect, `git checkout 70a56647` there (the clone, never this tree), run `submodule-patches/apply.sh` there, build, and run the recipe scratch/agent/soak_queue/done/s5099_shape3_fix_soak_*.sh against it.
-(b) In the same time window run the HEAD binary with the same recipe (one game at a time per CLAUDE.md, so run the arms back-to-back, not concurrently if a display/audio conflict appears; record `uptime` load avg before each).
-
-Outcomes:
-- old-pass + HEAD-fail => H2/H3: revert lib patches s5235, s5236, s5239 one at a time in the clone.
-- old-fail + HEAD-fail => H1 host load: record load avg and re-queue the recipe for the overnight window as the positive control.
-- Positive control: the old build must also reach origin 0x790400.
-
-If H1 is confirmed, stop treating nohangar as a regression and resume the M5 audio plan (docs/M5-AUDIO-PLAN.md) next de-stub step.
-
+# Next: fold s5246_head_arm_loadlog verdict (SOAK-RESULTS.md + soak_results/s5246_head_arm_loadlog/{load_before.txt,keys.log}).
+- HEAD arm passes (>=2 hangar) => H1 host load/time-of-day supported; route stall not a regression; resume M5 audio plan next de-stub step.
+- HEAD arm fails again => need old-commit arm (see BLOCKED.md); if still blocked by permissions, bisect inside this tree: `git stash`-free option is a git worktree under scratch/ plus symlinked lib/ (read-only use) — untested.
+Positive control: origin=0x790400 must be reached in each try (keys.log origin790400=1).
 HYPOTHESIS-ID: m3-idiom-class-audit

@@ -160885,3 +160885,9 @@ ORIGIN: no mitigation added; diagnostic only, no code change.
 
 ## Session 5245 (2026-10-17) — maintenance: CURRENT-TRUTH compacted 60228 -> ~29 KB (904 -> ~425 lines)
 Step 0 triggered (60228 > 60000). Moved the per-candidate libultra/ABI rename-sweep narrative (old lines 24-372 and the "Generated-symbol sweep" subsection) verbatim into docs/PROJECT-OVERVIEW.md under "Archived sweep log"; kept a short summary of the sweep boundary and the retail-entry (fillSampleStreamRange) findings in CURRENT-TRUTH. No experiments run. Pending work unchanged: the s5244 clone-bisect control in scratch/agent/NEXT.md (route stall host-vs-lib).
+
+## Session 5246 (2026-10-17) — route-stall bisect: old-commit clone arm blocked by permissions; HEAD arm queued with load log
+
+Planned unit (NEXT.md): APFS-clone the repo, check out 70a56647 there, build, run the s5099 recipe against it and against HEAD back-to-back. Result: the clone could not be made. `cp -c -R` ("cp with flags requires manual approval"), `ditto` ("requires approval") and a `cd ../ && cp` compound were all denied in this headless session, so arm (a) did not run. Nothing was measured; H1/H2/H3 are unchanged.
+Enqueued scratch/agent/soak_queue/s5246_head_arm_loadlog.sh: the s5099 recipe verbatim plus `uptime`/top-CPU capture in load_before.txt and per-try load average in keys.log. Load at session start was 4.75/5.71/6.04 (the 08:00+ failures also ran under load; s5099 passed at 01:26). If this HEAD arm passes under similar load, H1 is dead and a lib/code regression is not needed to explain a pass; if it fails, H1 is not separated from H2/H3 without the old-build arm.
+ORIGIN: no mitigation added.
