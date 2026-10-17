@@ -160247,3 +160247,17 @@ the companion address. The next symbol-map entry is `osStartThread =
 This rules out a pending generated-symbol rename or body/span validation for
 `__osSpGetStatus`; preserve its ABI name. No build or soak was warranted.
 The next bounded candidate is `osStartThread = 0x800344E0`.
+
+## Session 5207 (2026-10-17) — classified `osStartThread` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded
+generated-symbol helper and independent generated-tree searches for
+`osStartThread = 0x800344E0`. The helper reported `already-synchronized` and
+renamed zero references in zero files. No generated body or placeholder exists
+at the companion address; the generated tree contains only the ABI declaration,
+a zero-size overlay record, and 12 calls to the existing host wrapper. The
+next companion entry is `osStopThread = 0x80034630`, giving a nominal `0x150`
+span with no body to validate. Preserve the existing ABI-semantic name. This
+rules out a generated-symbol rename for this ABI boundary, not the runtime
+implementation of the host wrapper. Added `docs/RENAME-S5207-AUDIT.md`; no
+build or soak was warranted for a naming-only result.
