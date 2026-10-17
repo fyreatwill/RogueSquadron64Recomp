@@ -160043,3 +160043,15 @@ synchronized; it is a separate libultra symbol. This rules out an actionable
 generated rename at this entry, but does not bear on runtime behavior. No
 build or soak was warranted for this naming-only result. Audit:
 `docs/RENAME-S5190-AUDIT.md`.
+## Session 5191 (2026-10-17) — classified `__osSiRawStartDma` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol audit for `__osSiRawStartDma = 0x80033B20`. The helper reported
+`already-synchronized` and renamed zero references in zero files. Independent
+generated-tree searches found no body, placeholder, overlay record, or direct
+generated caller at the companion address. The symbol map places
+`__osSiDeviceBusy = 0x80033BD0` next, giving a nominal `0xAC` span with no body
+to validate. Preserve the ABI name and continue the sweep at
+`__osSiDeviceBusy`. This rules out an actionable generated rename at this
+entry, but does not bear on runtime behavior. No build or soak was warranted
+for this naming-only result. Audit: `docs/RENAME-S5191-AUDIT.md`.

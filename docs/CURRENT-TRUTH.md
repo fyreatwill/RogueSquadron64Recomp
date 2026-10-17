@@ -578,9 +578,18 @@ The helper also surfaced `sinf = 0x80033960` as already synchronized; that is
 a separate libultra symbol. Audit: `docs/RENAME-S5190-AUDIT.md`. The next
 candidate is now `__osSiRawStartDma = 0x80033B20`.
 
+`__osSiRawStartDma = 0x80033B20` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized` and
+renamed zero references in zero files. Independent generated-tree searches
+found no body, placeholder, overlay record, or direct generated caller at the
+companion address. Its nominal span to `__osSiDeviceBusy = 0x80033BD0` is
+`0xAC`, with no body to validate. Preserve the ABI name. Audit:
+`docs/RENAME-S5191-AUDIT.md`. The next candidate is now
+`__osSiDeviceBusy = 0x80033BD0`.
+
 ## Next steps (single monotonic backlog)
 
-1. Resume the companion sweep with `__osSiRawStartDma = 0x80033B20`, whose next
+1. Resume the companion sweep with `__osSiDeviceBusy = 0x80033BD0`, whose next
    candidate follows from its bounded symbol-map span, one entry per iteration while
    the last-15 session preflight permits it. The retail function-entry revisit
    is single-source and does not close the exact interior boundary. The M4 page
