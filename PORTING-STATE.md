@@ -158655,3 +158655,10 @@ Caveat: the FORCE log cap of 16 is filled entirely by osAiSetNextBuffer, so the 
 Next: per-wrapper calls/bad counters in one build.
 
 Verdict wording for the record (s5064): the FORCE control fired (pg=16) in the same recipe, which refutes H3 (guard wiring broken) for the shared guard function and, with default pg=0 and crash=0, selects H2 (clean) only as single-source for the EEPROM/cont sites; H1 (wild pointer) is not refuted for them because per-site reachability is unmeasured. Next discriminator: per-wrapper calls/bad counters, FORCE vs default in one run (calls==0 means the route never reaches the wrapper; bad>0 in default means a real wild pointer).
+
+## Session 5065 (2026-10-16) — M3 guard class: per-wrapper call/bad census on keyed route; EEPROM/cont reachable and clean
+ORIGIN: instrument only (census counters in rs64_spai_guard_bad, lib/.../sp.cpp; patches re-exported); no new mitigation.
+Hypotheses: H1 EEPROM/cont wrappers never reached (guard dead-on-route); H2 reached and clean; H3 reached with wild pointers.
+Result (default and FORCE, same binary, sequential, keyed route to mission, crash=0, mission_onset 169/168 s): osAiSetNextBuffer calls>=16384 bad=0 and osContGetReadData calls>=16384 bad=0 in both runs; osEepromLongRead calls 2-3 bad=0 in both; osEepromLongWrite calls 2-3 bad=0 (seen in 1 of 2 runs — route variance, not a guard effect); osEepromRead/osEepromWrite (short forms) never called; osSpTaskStartGo not logged at all (never reaches this guard in-run). Census lines are power-of-two logged so counts are lower bounds. Positive control: the census itself fired for every reached wrapper, and FORCE pg=16 fired.
+Selects H2 for AI, cont, EepromLong*; short EEPROM wrappers and StartGo are dead on this route (not proven wild-free elsewhere). Single route, 1 run per arm.
+Next: close the host-wrapper pointer class (record dead-on-route set) and move to M5 de-stub step per docs/M5-AUDIO-PLAN.md.

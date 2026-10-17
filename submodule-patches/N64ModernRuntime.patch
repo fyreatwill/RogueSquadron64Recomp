@@ -3509,12 +3509,13 @@ index 1cb3f6a..78c6f71 100644
      return true;
  }
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..a87dbe6 100644
+index ae0f44f..d2d65ec 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
-@@ -1,15 +1,82 @@
+@@ -1,15 +1,112 @@
  #include <cstdio>
 +#include <cstdlib>
++#include <cstring>
  #include <fstream>
 +#include <atomic>
  #include <ultramodern/ultramodern.hpp>
@@ -3578,6 +3579,35 @@ index ae0f44f..a87dbe6 100644
 +    static const bool force = [] { const char* e = std::getenv("ROGUESQ_SPAI_GUARD_FORCE"); return e && e[0] && e[0] != '0'; }();
 +    if (off) return false;
 +    const bool bad = !rs64_sp_task_range_valid(addr, size);
++    // s5065: per-wrapper census. Process is SIGKILLed so no exit dump; log at power-of-two call counts.
++    {
++        struct Site { const char* what; std::atomic<uint64_t> calls; std::atomic<uint64_t> bad; };
++        static Site sites[8];
++        static std::atomic<uint32_t> nsites{0};
++        static std::atomic<bool> lock{false};
++        Site* site = nullptr;
++        for (int pass = 0; pass < 2 && !site; pass++) {
++            uint32_t n = nsites.load(std::memory_order_acquire);
++            for (uint32_t i = 0; i < n; i++) if (std::strcmp(sites[i].what, what) == 0) { site = &sites[i]; break; }
++            if (!site && pass == 0) {
++                while (lock.exchange(true, std::memory_order_acquire)) {}
++                uint32_t m = nsites.load(std::memory_order_relaxed);
++                bool found = false;
++                for (uint32_t i = 0; i < m; i++) if (std::strcmp(sites[i].what, what) == 0) found = true;
++                if (!found && m < 8) { sites[m].what = what; nsites.store(m + 1, std::memory_order_release); }
++                lock.store(false, std::memory_order_release);
++            }
++        }
++        if (site) {
++            const uint64_t c = site->calls.fetch_add(1, std::memory_order_relaxed) + 1;
++            const uint64_t b = bad ? site->bad.fetch_add(1, std::memory_order_relaxed) + 1 : site->bad.load(std::memory_order_relaxed);
++            if ((c & (c - 1)) == 0) {
++                std::fprintf(stderr, "[s5065-wrapper-census] %s calls=%llu bad=%llu\n", what,
++                    (unsigned long long)c, (unsigned long long)b);
++                std::fflush(stderr);
++            }
++        }
++    }
 +    if (!bad && !force) return false;
 +    static std::atomic<uint32_t> rows{0};
 +    if (rows.fetch_add(1, std::memory_order_relaxed) < 16u) {
@@ -3597,7 +3627,7 @@ index ae0f44f..a87dbe6 100644
      //printf("[sp] osSpTaskStartGo(0x%08X)\n", (uint32_t)ctx->r4);
      OSTask* task = TO_PTR(OSTask, ctx->r4);
      if (task->t.type == M_GFXTASK) {
-@@ -37,12 +104,35 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -37,12 +134,35 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
  }
  
  extern "C" void osSpTaskYield_recomp(uint8_t* rdram, recomp_context* ctx) {
