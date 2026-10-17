@@ -1,5 +1,4 @@
-# Next: pristine-regen discriminator for the dropped s4296 patch
-HYPOTHESIS-ID: m6-mission-stall
-Hypotheses for the s5085 drop: H-skip (RS64_SKIP_REPLAY=1), H-noop (apply script exits 0 w/o patching), H-stale (funcs_26.c regenerated, fixup never run).
-Discriminator: regen into a SCRATCH dir (never the live RecompiledFuncs): make_elf.py -> N64Recomp -> fixup_game_funcs_vendored.py <scratch>, twice (default and RS64_SKIP_REPLAY=1); count 'PATCH: s4296 A14 spin yield' in funcs_26.c. Absent only in SKIP arm => H-skip; absent in both => H-noop (new post-condition will exit nonzero); present in both => H-stale.
-Note: fixup cannot run on a copy of the patched tree (s5090 logs).
+# Next: M5 audio de-stubbing survey (docs/M5-AUDIO-PLAN.md) — the regen-discriminator thread is parked
+HYPOTHESIS-ID: m5-audio-destub
+s5091: pristine-regen discriminator was unevaluable (s4204-fresh tree fails vendored fixup at s4938 before replay). s5090's post-condition already guards the s4296 marker; do not spend more on this unless regen output can be redirected to a scratch dir.
+Work unit: write docs/M5-AUDIO-PLAN.md — grep-survey every audio stub/trap/gate in force, then an incremental de-stub sequence with a validation soak per step (strategic priority 2). Discriminating outcome: a ranked step list whose step 1 is executable with an existing soak recipe.
