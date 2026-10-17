@@ -210,6 +210,17 @@ extern "C" void osDpGetCounters_recomp(uint8_t* rdram, recomp_context* ctx) {
     // Zero out the 8 DP counters. buf_ptr stays gpr (64-bit) so the
     // sign-extended MIPS address survives MEM_W's KSEG0 unmasking.
     gpr buf_ptr = ctx->r4;
+    // Guest-pointer arg: refuse a buffer outside KSEG0 RDRAM (a wild r4 would
+    // write host memory out of bounds through MEM_W).
+    {
+        const uint32_t lo = (uint32_t)buf_ptr;
+        const bool sext = (int64_t)buf_ptr == (int64_t)(int32_t)lo;
+        if (!sext || lo < 0x80000000u || 32u > 0x00800000u - (lo - 0x80000000u)) {
+            static std::atomic<uint32_t> bad{0};
+            if (bad++ < 8) fprintf(stderr, "[osDpGetCounters] wild buf 0x%llX ignored\n", (unsigned long long)buf_ptr);
+            return;
+        }
+    }
     for (int i = 0; i < 8; i++) {
         MEM_W(i * 4, buf_ptr) = 0;
     }

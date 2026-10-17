@@ -4580,6 +4580,7 @@ extern "C" void rs64_m5_port_task_load(uint8_t* rdram, uint32_t task_ptr) {
     }
     if (phase_rows++ >= 256u) return;
 
+    if (task_ptr < 0x80000000u || task_ptr > 0x80800000u - sizeof(OSTask)) return;
     const uint64_t guest_task_ptr = static_cast<uint64_t>(
         static_cast<int64_t>(static_cast<int32_t>(task_ptr)));
     const OSTask* task = TO_PTR(OSTask, guest_task_ptr);
