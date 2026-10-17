@@ -19,9 +19,9 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
-The current bounded work is the generated-symbol sweep. Session 5318 found
-`destroyNpcSlotByIndexU16 = 0x80041CEC` already synchronized; the next
-candidate is `markLowLodCellsInGrid = 0x80043AEC`.
+The current bounded work is the generated-symbol sweep. Session 5319 found
+`markLowLodCellsInGrid = 0x80043AEC` already synchronized; the next candidate
+is `markHighLodCellsInGrid = 0x80043C30`.
 
 ## Durable state
 
@@ -102,7 +102,7 @@ conflicting fragments. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-1. Classify `markLowLodCellsInGrid = 0x80043AEC` with the bounded renaming
+1. Classify `markHighLodCellsInGrid = 0x80043C30` with the bounded renaming
    helper and independent generated-tree inspection. This is the next work
    unit in `scratch/agent/NEXT.md`.
 2. Continue the same sweep slug only while each candidate is bounded and

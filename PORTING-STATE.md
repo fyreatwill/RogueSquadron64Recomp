@@ -161663,3 +161663,14 @@ the generated wrapper masks `a0` to `u16` and calls the named
 generated fragment at this address. No build or soak was warranted for a
 classification-only result. The next bounded candidate is `markLowLodCellsInGrid`
 at `0x80043AEC`.
+
+## Session 5319 (2026-10-17) — generated-symbol sweep: `markLowLodCellsInGrid` is synchronized
+
+Ran the bounded generated-symbol helper for `0x80043AEC` and independently
+checked the companion map, generated declaration/body, overlay record, and
+generated caller. The helper reported zero edits and already-synchronized; the
+generated body is a named callable implementing the low-LOD grid-cell marker.
+No `func_80043AEC` placeholder or conflicting generated fragment was found.
+H1 is selected; H2 and H3 are ruled out for this address. No build or soak was
+warranted for a classification-only result. The next bounded candidate is
+`markHighLodCellsInGrid = 0x80043C30`.
