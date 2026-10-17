@@ -159882,3 +159882,15 @@ span with no body to validate. Preserved the ABI name and advanced the sweep.
 This rules out a materialized generated function at this candidate; it does
 not make a claim about the runtime implementation of the host wrapper. No
 build or soak was warranted for this naming-only result.
+
+## Session 5179 (2026-10-17) — classified `osPiRawStartDma` as unmaterialized
+
+Ran the bounded generated-symbol audit for `osPiRawStartDma = 0x80033090`.
+The rename helper reported `already-synchronized` and renamed 0 references in
+0 files. Searches found no generated body, placeholder, overlay record, or
+direct generated caller. The next companion symbol,
+`osPiRawReadIo = 0x80033170`, gives a nominal `0xE0` span, but there is no
+body to validate. Preserved the ABI name and advanced the sweep. This rules
+out a materialized generated function at this candidate; it does not make a
+claim about the runtime implementation of the host wrapper. No build or soak
+was warranted for this naming-only result.
