@@ -1,10 +1,16 @@
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Maintained
-at Session 5108; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
+at Session 5109; detailed historical evidence is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)
 and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 
 ## Headline
+
+- **s5109:** The next companion entry, `osEepromLongWrite = 0x8002A1B0`, is
+  also a host-wrapper entry: the snapshot has three live callers and a
+  zero-span overlay record, but no generated prologue/body. The `_recomp`
+  name is preserved as an ABI boundary; audit recorded in
+  `docs/RENAME-S5109-AUDIT.md`.
 
 - **s5107:** The bounded generated-symbol sweep renamed the companion
   `bzero` entry at `0x8002A080`: generated `bzero_recomp` had the exact `0xA0`
@@ -226,6 +232,11 @@ and the per-session `docs/M5-S*.md` notes. Git history preserves prior wording.
 The s5049 in-place regen (tools/agent/regen_n64recomp.sh, still disabled) destroyed the live tree, but it is RESTORED and verified: N64Recomp/scratch_s4970_live (Oct-13 copy) + replay of post-s4970 scripts (scratch/agent/s5050_replay.sh, s5050_s5037.sh) compiles to byte-identical __text for 51/51 funcs_*.c vs the surviving build/libRecompiledFuncs.a (scratch/agent/s5050_compare.py). funcs.h/lookup.cpp/recomp_overlays.inl identical to the clobbered copies. The clobbered tree is kept at N64Recomp/RecompiledFuncs.s5049-clobbered. cmake --build is safe again (it recompiles ~5 files whose mtimes the replay touched; code identical). Never regen in place; "live tree is unreproducible" was wrong: backup + ordered apply_s* replay reproduces it.
 
 ## Next steps (single monotonic backlog)
+- s5109: `osEepromLongWrite = 0x8002A1B0` is a host-wrapper entry, not a
+  generated placeholder. Its three callers and zero-span overlay record are
+  documented in `docs/RENAME-S5109-AUDIT.md`; preserve the `_recomp` ABI name.
+  Next: audit the following companion-mapped entry only, `osEepromProbe =
+  0x8002A2A0`, with the same generated-body/overlay/caller gates.
 - s5108: `osEepromLongRead = 0x8002A120` is a host-wrapper entry, not a
   generated placeholder. Its three callers and zero-span overlay record are
   documented in `docs/RENAME-S5108-AUDIT.md`; preserve the `_recomp` ABI name.
