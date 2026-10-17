@@ -159071,3 +159071,14 @@ zero references and reported `already-synchronized`; preserve the ABI name.
 This is single-source source-audit evidence, independently supported by the
 generated caller/overlay grep and runtime wrapper inspection. No build or soak
 was warranted. Next candidate: `osContStartReadData = 0x8002AC30`.
+
+## Session 5115 (2026-10-17) — classified next controller mapping as host wrapper
+
+Audited companion `osContStartReadData = 0x8002AC30` with the bounded
+generated-symbol helper and direct generated/runtime searches. The generated
+snapshot has one caller but no prologue/body, and the overlay record is
+zero-span; the runtime `osContStartReadData_recomp` wrapper translates the
+guest queue pointer and calls the host implementation. The helper reported
+zero renames and `already-synchronized`. This rules out a generated body and
+exact-span semantic rename for this candidate; preserve its `_recomp` ABI name.
+Audit: `docs/RENAME-S5115-AUDIT.md`. Next candidate: `osContGetReadData`.
