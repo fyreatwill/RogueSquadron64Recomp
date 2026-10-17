@@ -161410,3 +161410,21 @@ conflicting callable/data fragment was found. This rules out H2 and H3 for
 this address; H1 is selected. No build or soak was needed. Audit:
 `docs/RENAME-S5295-AUDIT.md`. Next candidate:
 `relinkNpcSlotToNewParentGroup = 0x8003EFDC`.
+## Session 5296 (2026-10-17) — M4 retail mid-task accumulator PC provenance
+
+The required revisit after fifteen sweep-titled sessions analyzed the existing
+qualified retail `RSM1` mid-task and `RSD1` end-task dumps with a new bounded
+tool, `tools/analyze_m4_mid_provenance.py`. The parser's positive controls
+passed: 3,036,036 valid contiguous RSM1 sample records, 6,533 valid RSD1
+records, and 2,085 graphics end-task records. All 2,085 end-task records had
+zero `0x8000` lanes. Mid-task samples contained 367,023 `0x8000` lanes across
+multiple sampled PCs; the largest buckets were 0x0B18, 0x0B20, 0x0B1C,
+0x0B34, and 0x0B14, so the narrow single-PC hypothesis was rejected.
+
+The analysis also corrected the proposed join: the RSM1 sequence is a global
+sample ordinal, not a graphics-task ID. Therefore this result cannot establish
+per-task prevalence or publication ordering. It is valid single-source retail
+provenance with an independent end-task control, not a port explanation. No
+mitigation was added. The next M4 unit is to add an explicit task serial to the
+cxd4 mid-task record and rerun the same qualified route, or obtain an equivalent
+task-keyed join. Audit: `docs/REVISIT-S5296-M4-MID-PC-PROVENANCE.md`.

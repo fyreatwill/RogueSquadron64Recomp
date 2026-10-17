@@ -1,29 +1,35 @@
-# Next: continue the generated-symbol sweep
+# Next: M4 task-keyed retail accumulator join
 
-Work unit: classify `relinkNpcSlotToNewParentGroup = 0x8003EFDC`, the next
-address-ordered companion record after Session 5295. Run one bounded helper
-and independent generated-tree inspection. Do not build or soak unless the
-discriminator finds a callable placeholder or a needed rename.
+Work unit: add an explicit graphics-task serial to the cxd4 `RSM1` mid-task
+record, rebuild only the oracle plugin, and rerun the existing qualified
+retail route. The serial must be captured at task entry and copied into every
+mid-task sample until the corresponding task ends. Keep the existing RSD1
+completion dump and whole-RDRAM watch as same-run positive controls.
 
-Before any build, competing hypotheses:
+Competing hypotheses:
 
-- H1: the record is typed data or an already-synchronized named callable.
-- H2: the bounded helper misses a callable placeholder at the address.
-- H3: generated code contains a callable/data fragment whose semantic name
-  conflicts with the companion record.
+- H1: task-keyed retail samples show `0x8000` in the same per-task population
+  and stage/PC window as the port’s stage-10/12 transient.
+- H2: task-keyed retail samples show a different per-task prevalence or PC/
+  stage distribution, leaving the port-side origin unresolved.
+- H3: the new task serial or RSM1/RSD1 alignment fails, so the join remains
+  unevaluable and no runtime conclusion is authorized.
 
-Discriminator: combine the helper result with companion typing/description and
-searches for a generated body, placeholder, declaration, overlay record, and
-direct reference. H1 requires typed data or a matching named callable plus no
-placeholder/conflict; H2 requires a callable placeholder/body; H3 requires a
-callable fragment or conflicting semantic record.
+Discriminator: every `RSM1` record must carry a valid task serial, and the
+task-keyed join must compare mid-task `0x8000` presence/first-last sample
+stage against the matching RSD1 end record for the same graphics task. H1
+requires valid controls plus matching per-task distributions; H2 requires
+valid controls plus a distribution mismatch; H3 is selected by any failed
+control or missing task-key join.
 
 Exact commands:
 
-`rg -n -C 2 'relinkNpcSlotToNewParentGroup|8003EFDC' ../rogue_squadron64/symbol_files`
+`python3 tools/apply_sXXXX_cxd4_mid_task_serial.py`
 
-`python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x8003EFDC --end-address 0x8003EFE0 --limit 1`
+`make -C ../rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix`
 
-`rg -n 'relinkNpcSlotToNewParentGroup|func_8003EFDC|fake_func_8003EFDC|8003EFDC' ../N64Recomp/RecompiledFuncs --glob '*.c' --glob '*.h' --glob '*.inl'`
+`tools/oracle/build/rs64_oracle --core ... --rom ... --secs 75 --vi-trace --rsp ... --video tools/oracle/rdplog/rdplog.dylib --watch-write 0x0:0x800000 --hit-cap 16 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start`
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+`python3 tools/analyze_m4_task_join.py <mid.dump> <rsp.dump> <oracle.log>`
+
+HYPOTHESIS-ID: m4-retail-accumulator-pc-provenance

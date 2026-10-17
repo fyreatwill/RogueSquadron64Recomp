@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5295 (2026-10-17). The
+Compact operational handoff, maintained at Session 5296 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -64,6 +64,16 @@ origins): the live-stride writer is `0x80090F3C` (constant 0) in
 port's `0x03`. No guard. Audits: `docs/REVISIT-S5183-*`, `S5203-*`, `S5223..S5227-*`.
 
 This file was compacted at S5245 (maintenance); history is in git.
+
+Session 5296's new-angle M4 revisit reanalyzed the qualified retail RSM1/RSD1
+capture. All 3,036,036 mid-task records and 6,533 end-task records passed
+format/sequence controls; all 2,085 retail graphics tasks ended with zero
+0x8000 lanes. Mid-task retail had 367,023 sampled 0x8000 lanes across 20+
+populated sample PCs, led by 0x0B18/0x0B20/0x0B1C/0x0B34/0x0B14 rather than
+one unique PC. The RSM1 sequence is a global sample ordinal, not a task ID, so
+per-task prevalence and publication ordering remain unevaluable. This is
+single-source retail provenance with an independent end-task control; no port
+mitigation follows. Audit: `docs/REVISIT-S5296-M4-MID-PC-PROVENANCE.md`.
 
 ## Durable state
 
@@ -536,6 +546,13 @@ generated reference. Preserve the data name. Audit:
 `docs/RENAME-S5276-AUDIT.md`.
 
 ## Next steps (single monotonic backlog)
+
+- **s5296:** The retail mid-task `0x8000` state is sampled across multiple RSP
+  PCs, while the independent end-task stream remains zero. The RSM1 sequence
+  cannot join samples to tasks, so the M4 publication/order boundary remains
+  open. Add an explicit task serial to the cxd4 mid-task record and rerun the
+  same qualified route, or obtain an equivalent task-keyed join. Do not add a
+  mitigation or resume the generated-symbol sweep until this revisit is done.
 
 - **s5293:** `allocateNpcSlot = 0x8003E5F8` is a named, already-synchronized
   callable NPC free-list allocator; the helper made zero edits and independent
