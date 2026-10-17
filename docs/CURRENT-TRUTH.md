@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5199 (2026-10-17). The
+Compact operational handoff, maintained at Session 5201 (2026-10-17). The
 chronological ledger is `PORTING-STATE.md`; durable background belongs in
 `docs/PROJECT-OVERVIEW.md`; per-topic evidence is in the `docs/M5-S*.md` and
 `docs/RENAME-S*.md` audit files.
@@ -160,6 +160,14 @@ generated body spans exactly `0x310` bytes to `0x80034320`, matching the next
 companion entry, and it has one independent generated caller. Preserve the
 ABI name. Audit: `docs/RENAME-S5200-AUDIT.md`. The next candidate is now
 `__osSpDeviceBusy = 0x80034320`.
+
+`__osSpDeviceBusy = 0x80034320` is now classified as another unmaterialized
+libultra/ABI entry: the bounded helper reported `already-synchronized`, and
+independent generated-tree searches found no body, placeholder, overlay
+record, or direct caller at the companion address. Its companion span ends at
+`__osSpRawStartDma = 0x80034350`, but no generated body exists to validate.
+Preserve the ABI name. Audit: `docs/RENAME-S5201-AUDIT.md`. The next candidate
+is now `__osSpRawStartDma = 0x80034350`.
 
 `__osGetOneChannelData = 0x80030A04` is now classified as another
 unmaterialized libultra/ABI entry: the bounded helper reported

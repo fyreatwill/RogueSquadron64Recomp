@@ -160165,3 +160165,15 @@ ABI-semantic name. This rules out an actionable generated rename at this
 entry, but does not bear on runtime behavior. No build or soak was warranted.
 Audit: `docs/RENAME-S5200-AUDIT.md`. The next candidate is
 `__osSpDeviceBusy = 0x80034320`.
+
+## Session 5201 (2026-10-17) — classified `__osSpDeviceBusy` as unmaterialized
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Ran the bounded generated-
+symbol helper and independent generated-tree searches for
+`__osSpDeviceBusy = 0x80034320`. The helper reported `already-synchronized`
+and renamed zero references. No generated body, placeholder, overlay record,
+or direct caller exists at the companion address; the next companion entry is
+`__osSpRawStartDma = 0x80034350`. This rules out a generated-symbol rename for
+this ABI boundary, not the runtime implementation of the host wrapper. Added
+`docs/RENAME-S5201-AUDIT.md`; no build or soak was warranted for a
+naming-only result.
