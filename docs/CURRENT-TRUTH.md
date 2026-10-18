@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5399 (2026-10-17).
+Compact operational handoff, maintained at Session 5400 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -161,6 +161,10 @@ span at `0x800B58B4` to the existing `playerAwingInitPreamble` syms mapping;
 the committed generated tree was already synchronized, while a stale
 placeholder existed only in a pre-existing dirty sibling worktree. Audit
 files are `docs/RENAME-S*.md`.
+Session 5400 audited `fake_func_800B75C4`: the generated 0xC-byte instruction
+fragment ends before `playerYwingInit`, while the companion map retains the fake
+symbol and the independent syms table calls the exact span `data_gap_800B75C4`.
+H2 selected; no semantic rename is authorized. See `docs/RENAME-S5400.md`.
 
 ## Operational rules
 
@@ -211,6 +215,11 @@ files are `docs/RENAME-S*.md`.
   measurement.
 
 ## Next steps (single monotonic backlog)
+
+0. (s5400) Audited `fake_func_800B75C4`: generated body, entry table,
+   companion fake/real boundary, and syms classification agree on a 0xC-byte
+   split/data fragment before `playerYwingInit`; H2 selected, no rename. See
+   `docs/RENAME-S5400.md`. Next candidate must pass the same exact-span/name test.
 
 0. (s5399) Audited `fake_func_800B58B4`: generated body, entry table,
    companion fake/real boundary, and syms size agree, and the committed

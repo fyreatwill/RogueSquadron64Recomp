@@ -162392,3 +162392,17 @@ stale placeholder. H3 selected, so no generated-code change was committed.
 This rules out treating the short record as an unnameable data gap for this
 address, but does not provide runtime evidence or alter game behavior. Details:
 `docs/RENAME-S5399.md`.
+
+## Session 5400 (2026-10-17) — rejected Y-wing split-fragment rename
+
+Audited the next generated-symbol candidate, `fake_func_800B75C4`, using the
+required exact-span and independent-map discriminator. The generated body is a
+12-byte instruction fragment (`lui`, `lwc1`, `mul.s`) from `0x800B75C4` through
+`0x800B75CC`, followed by `playerYwingInit` at `0x800B75D0`. The companion map
+retains the fake symbol and explicitly says the real function is
+`playerYwingInit`; the independent syms table classifies the same exact span as
+`data_gap_800B75C4`. H2 selected: no semantic preamble name is justified, so
+the generated tree was left unchanged. This rules out a rename for this split
+fragment, not any runtime behavior. Details: `docs/RENAME-S5400.md`.
+
+ORIGIN: n/a (symbol audit only; no mitigation).
