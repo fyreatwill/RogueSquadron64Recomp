@@ -1,2 +1,4 @@
-# Next work unit: run keyed holds WITHOUT lldb (LATE=340, ~1300 s) directly as a background task (zsh scratch/agent/m6_keyed_hold.sh <tag> 1300); no loop restart needed. lldb holds are 6/6 clean incl. 22 min, so lldb may mask a timing-dependent fault. Fold crash/stall verdicts; if null x2, re-scope away from endurance.
-HYPOTHESIS-ID: m6-mission-transition-endurance
+# Next work unit: capture the title-boot plume SIGSEGV (si_addr=0x58, ~1/7 boots) under lldb. Mission-hold endurance is closed (8/8 clean incl. 2 non-lldb 1300 s holds, s5461).
+Design: loop title boots (tools/agent/mk_lldb_hold.py / s5453_plume_lldb_attach10 recipe as base; check its log for why it ran to the 600 s cap) with lldb set to stop on SIGSEGV, N>=20 boots, in a background task with explicit long timeout (foreground >10 min is killed). On a hit: `bt all`, registers, name the writer of the null-ish pointer (si_addr 0x58 = field offset 0x58 off a NULL struct), fix root cause. Positive control: lldb must demonstrably catch a deliberately raised signal in the same run.
+Hypotheses: (a) uninitialised plume/effect struct read before alloc; (b) race with audio/RT64 thread; (c) already fixed by s5446 scratch-fb guard (then 0 hits in 20+ boots).
+HYPOTHESIS-ID: m6-title-boot-plume-sigsegv
