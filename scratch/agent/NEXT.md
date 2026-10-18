@@ -1,9 +1,8 @@
-# Next work unit: read s5406 lldb title-boot soak
-HYPOTHESIS-ID: m6-title-boot-plume-sigsegv
+# Next work unit: M6 keyed mission endurance, segmented under the 600 s soak cap
+HYPOTHESIS-ID: m6-mission-endurance
 
-Read scratch/agent/SOAK-RESULTS.md tail and soak_results/s5406_plume_lldb_title/summary.
-- titles<8/10: lldb perturbs boot; null worthless, adjust (e.g. attach instead) and requeue.
-- STOP in some run: read that run's `bt 30`; name the createFramebuffer caller and the
-  writer of the null attachment texture (640 mode switch); fix root cause, not a guard.
-- titles~10/10 and no STOP: crash did not recur (0/28 total); requeue with 20 boots and
-  fall back to the keyed mission endurance (3 more runs, different mission content).
+lldb is unusable (s5407). Start from scratch/agent/soak_queue/done/s5377_census_mission_retry_*.sh (rc=137 = hit 600 s cap):
+trim to a <=540 s recipe that reaches mission origin 0x00690400, then holds, logging CRASH/abort and VI-origin stalls (>30 s unchanged).
+Enqueue 3 segments (different key timing) and read SOAK-RESULTS.md. Each distinct failure: backtrace from the in-process
+crash handler (main.cpp ~10078), name the writer, root-cause fix (mips64-elf-gcc PatchesLib patch allowed, two-arm qualification).
+Outcomes: clean holds => extend segment length; CRASH/stall => capture and root-cause. Check CGSSessionScreenIsLocked first.

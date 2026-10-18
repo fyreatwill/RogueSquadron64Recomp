@@ -245,7 +245,7 @@ progress/end observations to the port and cxd4 arms before another comparison.
 
 ## Next steps (single monotonic backlog)
 
-0. (s5406) M6 secondary: queued `s5406_plume_lldb_title.sh` (10 title boots under lldb, bt on SIGSEGV). Read its verdict first; a control is titles~10/10. 0/18 plain boots hit the crash earlier.
+0. (s5407) lldb is UNUSABLE here: launch mode never runs the game (0 bytes stdout in 30 s), attach mode hangs at `process attach` and freezes the game (suspected macOS debugger authorization; unconfirmed - a human can run `DevToolsSecurity -status` / approve the prompt). s5406 titles=0/10 is a tooling null, not crash evidence. Plume crash: rely on the in-process `[plume-null-color-attachment]` breadcrumb (0/18 boots). Next M6 work = keyed mission endurance (recipe s5377 hit the 600 s cap; split into <=540 s segments).
 
 0. (s5405) The normalized gate selected H3: retail controls/rows are live, but
 the available port log has zero normalized rows and both existing schemas lack

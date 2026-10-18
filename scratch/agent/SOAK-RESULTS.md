@@ -618,3 +618,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261017-201923 | s5377_census_mission_retry | rc=137 | 600s | scratch/agent/soak_results/s5377_census_mission_retry_20261017-201923.log
 20261017-204108 | s5384_plume_null_watch | rc=0 | 464s | scratch/agent/soak_results/s5384_plume_null_watch_20261017-204108.log
 20261017-204944 | s5385_plume_null_watch16 | rc=137 | 600s | scratch/agent/soak_results/s5385_plume_null_watch16_20261017-204944.log
+20261017-225338 | s5406_plume_lldb_title | rc=0 | 521s | scratch/agent/soak_results/s5406_plume_lldb_title_20261017-225338.log
