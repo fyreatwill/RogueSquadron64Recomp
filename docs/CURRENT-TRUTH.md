@@ -174,8 +174,10 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 0. (s5370) Path census (`tools/apply_s5370_path_census.py`): on boot/title, ent=12288 with
    slot0=0 -- cached slot 0x801163B0 never empty, so head/walk guard sites are unreachable by
-   construction. Mission still unmeasured (route flaked); rerun `scratch/patchq/ab/run_a5370.sh`
-   on a cooperative route; slot0=0 there closes the thread. See scratch/agent/NEXT.md.
+   construction. Mission still unmeasured (s5371: manual run_a5370.sh failed again, nohangar at
+   199 s; same title-window numbers). Queued `soak_queue/s5371_path_census_mission.sh` (the
+   s4964 route + census env); read its SOAK-RESULTS line + `[a5370]` rows in its run1.log.
+   slot0=0 at mission closes the thread. See scratch/agent/NEXT.md.
 
 1. M4 CLOSED as legitimate (s5354): retail cxd4 at the mapped PCs 0x012C/0x07F0
    shows transient `-32768` VACC lanes in 657/657 hangar (512-wide) graphics
