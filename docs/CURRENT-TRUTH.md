@@ -251,6 +251,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+> s5450: mission-select variation soaks m6_sel_a/b/c queued (SEL_KEYS stick presses in hangar window); read SOAK-RESULTS, compare origin sets vs s5449. Keys-take-effect is unproven.
 > s5449 (TOP): post-results transition hold 1203 s clean (4/4 transition runs total, ~12 scene origins, 0 crash/0 stall). M6 first-mission goal met; remaining: plume SIGSEGV (guarded, unproven) and rarer-route variation (NEXT.md).
 
 > s5448 (TOP): plume guard fired 0/9 naturally; forced-zero control (RS64_FORCE_SCRATCHFB_ZERO) 3/3 survivable -> thread closed "guarded, unproven"; next = mission transition endurance (NEXT.md).
