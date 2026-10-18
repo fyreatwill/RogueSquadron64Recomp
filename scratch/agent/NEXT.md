@@ -1,11 +1,3 @@
-# Next work unit: render-fidelity A/B of the mission origin framebuffer (port vs retail oracle)
-HYPOTHESIS-ID: render-fidelity-mission-fb-phase-gated
-Backlog of audit threads (M3/M4/M5/indirect sites) is exhausted; do NOT redo the indirect-site audit
-(s4821/s4998/s5357). New milestone (human option (a)): render fidelity at the first mission origin
-(VI 512, 0x00690400 / 0x00620400), the one area never compared against retail.
-Method: reach the phase with the validated autopilot route (3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a)
-in BOTH the port and the rs64-oracle (cxd4 + an attached video plugin, see oracle --help `--video PATH`), phase-gate
-on the VI transition (no cross-run A/B on animating frames), dump the framebuffer once from each, diff offline.
-Positive control: same-run dump of the title screen (VI 1024) must match within tolerance first.
-A null result without that control is not a result. One game run at a time.
-Open dependency (not blocking): MIPS cross-toolchain for fresh PatchesLib qualification (clang has no MIPS target, verified s5390).
+# Next work unit: M6 keyed mission holds
+HYPOTHESIS-ID: m6-mission-endurance
+Autopilot route stops in the hangar (s5391 r1: 880 s clean hangar hold). Find the s5378 recipe (grep loop.log / soak_results for s5378; it reached 0x00690400), extend scratch/agent/m6_hold.sh with the hangar->mission key step (winctl key, needs unlocked screen), then run >=3 holds of >=10 min. Each distinct crash/stall: lldb backtrace, name the writer, root-cause fix (mips64-elf-gcc available for PatchesLib C patches). Outcomes: all clean = endurance datum; crash = backtrace.

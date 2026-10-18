@@ -92,8 +92,10 @@ this discriminator; no writer or mitigation follows. See
   revisits remain parked unless a genuinely new discriminator appears.
 - Heap/copy/message-queue/PI-DMA and audited host-wrapper pointer classes are
   closed on the qualified route with positive controls. The fresh MIPS
-  source-to-ELF step remains blocked: this host has neither `mips64-elf-gcc`
-  nor `mips64-elf-ld`, and Clang has no MIPS target. The existing
+  source-to-ELF step is UNBLOCKED (2026-10-17): a real `mips64-elf-gcc` 14.2.0 + binutils 2.40
+  are installed (~/toolchains/mips64-elf, symlinked into /opt/homebrew/bin; clang kept as
+  `mips64-elf-clang`; `patches/` plain `make` uses them). Check with
+  `/opt/homebrew/bin/mips64-elf-gcc --version` (full path if PATH lacks Homebrew). [older text follows:] The existing
   `patches.elf` is usable for a separate host-side qualification, but Session
   5340 corrected the earlier claim that the direct command already compiled
   cleanly: N64Recomp regenerated 11 functions, then Clang rejected the
@@ -241,8 +243,7 @@ the tail of the soak results before acting.
 ## Session 5343 status
 
 Open dependency (NOT blocking): fresh PatchesLib source qualification needs a
-MIPS64 ELF cross-toolchain (absent s5337/s5342/s5343; Apple clang has no MIPS
-target). Existing-artifact qualification stands. The unblock iteration (s5344)
+MIPS64 ELF cross-toolchain (INSTALLED 2026-10-17: mips64-elf-gcc 14.2.0, see Durable state; absent s5337/s5342/s5343 only). Existing-artifact qualification stands. The unblock iteration (s5344)
 re-scoped the loop to an offline delay-slot/branch-operand hazard audit
 (`scratch/agent/NEXT.md`).
 
@@ -262,3 +263,5 @@ re-scoped the loop to an offline delay-slot/branch-operand hazard audit
 Title-boot SIGSEGV si_addr=0x58 (1/7 launches, single-source) is in plume MetalFramebuffer ctor (null attachment texture at the 640 mode switch); renderer-side, unguarded, writer unnamed. s5377_census_mission_retry soak queued.
 
 - (s5390) Direction block s5389 re-scoped: NEXT.md = render-fidelity framebuffer diff at mission origin (port vs oracle). Indirect-site audit is a triple duplicate; do not redo. MIPS toolchain remains an open human-gated dependency.
+
+- (s5391) M6: `scratch/agent/m6_hold.sh` added. r1: autopilot route reaches hangar at 24 s, 880 s hold with 0 crash/0 stall, but autopilot never enters the mission. Next: keyed route to mission (s5378 recipe), >=3 holds of >=10 min.
