@@ -1,6 +1,6 @@
-# Next work unit: read s5453_plume_lldb_attach10 verdict (scratch/agent/soak_results/s5453_plume_lldb_attach10/summary).
+# Next work unit: M6 mission endurance - reuse attach recipe on the mission route, or M3 idiom audit.
 HYPOTHESIS-ID: m6-mission-transition-endurance
-- control=FAIL: attach did not catch injected SIGSEGV -> fall back to an in-process crash-handler backtrace loop (10 title boots).
-- control=PASS and a STOP in some run: read runN.lldb bt, name the writer, fix the root cause.
-- control=PASS and 10 clean boots (titles>=8): plume guard (s5446) holds; move to an M3 idiom-class audit.
-- (s5452 lldb LAUNCH results are a tooling null: getcwd EPERM before main.)
+- s5453 result: lldb attach control PASS, 0/9 title-boot SIGSEGV (run 10 truncated by 600 s cap; lower N to 8 next time).
+- Next: queue a 3-run keyed mission hold (>=10 min) with the lldb attach wrapper from soak_queue/done/s5453*.sh so the
+  next rc=137 stall/crash (m6_res_late_*, m6_keyed_var_a precedents) yields a real backtrace instead of a watchdog kill.
+- Expected: STOP with SIGSEGV -> read bt, name writer; stall -> `process interrupt` + `bt all` at stall time.

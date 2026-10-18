@@ -252,7 +252,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 ## Next steps (single monotonic backlog)
 
 > s5450: mission-select variation soaks m6_sel_a/b/c queued (SEL_KEYS stick presses in hangar window); read SOAK-RESULTS, compare origin sets vs s5449. Keys-take-effect is unproven.
-> s5449 (TOP): post-results transition hold 1203 s clean (4/4 transition runs total, ~12 scene origins, 0 crash/0 stall). M6 first-mission goal met; remaining: plume SIGSEGV (guarded, unproven) and rarer-route variation (NEXT.md).
+> s5454 (TOP): lldb ATTACH loop (control PASS) 0/9 title-boot SIGSEGV; s5452 "lldb unusable" claim superseded (getcwd-EPERM was launch-mode only). Next: attach wrapper on mission-hold soaks (NEXT.md).
+> s5449: post-results transition hold 1203 s clean (4/4 transition runs total, ~12 scene origins, 0 crash/0 stall). M6 first-mission goal met; remaining: plume SIGSEGV (guarded, unproven) and rarer-route variation (NEXT.md).
 
 > s5448 (TOP): plume guard fired 0/9 naturally; forced-zero control (RS64_FORCE_SCRATCHFB_ZERO) 3/3 survivable -> thread closed "guarded, unproven"; next = mission transition endurance (NEXT.md).
 > s5447: s5446 guard soak 10/10 titles clean, 0 crash ((6/7)^10=0.21, weak). Breadcrumb `[s5446-scratchfb-guard]` added; s5447_plume_guard_crumb queued - read summary `guard_fired_runs` (fired>0 = mechanism proven). Then resume M6 mission/results endurance.

@@ -162759,3 +162759,11 @@ Added scratch/agent/m6_keyed_hold_sel.sh (derived from m6_keyed_hold_var.sh; env
 - Fresh datum: lldb ATTACH to a normally launched game works (attach at +3 s, `continue`; the game reached phase 3 origin=0x62BD00, 110693 `origin=` log lines in 30 s). This overturns the s5407 "attach hangs / freezes the game" claim in this environment (CURRENT-TRUTH line ~277 annotated).
 - Queued scratch/agent/soak_queue/s5453_plume_lldb_attach10.sh: 10 title boots with `lldb -w` attach (before game launch) plus a same-run positive control (inject SIGSEGV into a running game; lldb must report the stop). Attach's own SIGSTOP is excluded from the STOP grep. N=10 to fit the 600 s cap.
 - ORIGIN: no mitigation added; instrument-only (queue recipe + probe script).
+
+## Session 5454 (2026-10-18) — s5453 lldb ATTACH loop: control PASS, 0/9 plume SIGSEGV
+Folded soak s5453_plume_lldb_attach10 (rc=137 = 600 s cap hit during run 10, so 9 of 10 boots completed).
+- Positive control (injected SIGSEGV) PASSED: control.lldb shows `stop reason = signal SIGSEGV`, so the attach instrument can see the fault.
+- Runs 1-9 each reached the title (origin=0x00790400 logged 370-1431 times per run); each lldb log holds only the attach SIGSEGV-free SIGSTOP and the watchdog SIGKILL. 0 SIGSEGV/SIGBUS in 9 title boots. Run 10 never reached title (0 hits) before the cap — truncated, not a result.
+- Reading: with the control passing, the s5446 plume guard holds at 0/9 (prior rate ~1/7, so 9 clean boots has ~25% chance by luck alone: single-source, not proof). Secondary M6 thread stays "passive": the attach recipe is reusable for any later recurrence.
+- Rules out: lldb attach tooling failure (s5452 getcwd-EPERM null is superseded by this positive-control run).
+No code change this iteration; ORIGIN: n/a (no mitigation added).
