@@ -251,6 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5456 (TOP):** s5455 lldb mission-hold a/b folded: both reached the mission (t=86-88 s, origin 0x00690400), held to the 600 s cap, 0 crash / 0 stall (n=2, frame-counter evidence, single-source). Nothing overturned. m6_lldb_c (LATE=340) and m6_lldb_d (LATE=200) are queued; fold them next. If 4/4 are null, raise the soak cap in loop.sh for a >=20 min hold (the 600 s cap cannot see slow-onset failures). Any bt: name the writer.
+
 - **s5455 (top):** queued m6_lldb_a/b/c (tools/agent/mk_lldb_hold.py -> m6_keyed_hold_lldb.sh): mission hold under lldb attach; stall => bt all. Read scratch/agent/m6/s5455_lldb_*/keys.log + lldb_att*.log; name the writer of any stall/crash.
 
 > s5450: mission-select variation soaks m6_sel_a/b/c queued (SEL_KEYS stick presses in hangar window); read SOAK-RESULTS, compare origin sets vs s5449. Keys-take-effect is unproven.
