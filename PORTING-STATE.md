@@ -162241,3 +162241,10 @@ The one open defect with an unnamed writer is the s5377 title-boot SIGSEGV (si_a
 ## Session 5384 (2026-10-17) — enqueued title-boot soak watching for plume null-color-attachment breadcrumb
 
 No grep hit for `[plume-null-color-attachment]` in any soak result or run log yet (diagnostic from s5383 is unexercised; no positive control for the print). Wrote scratch/agent/soak_queue/s5384_plume_null_watch.sh: 8 title boots, 6 s past title origin 0x00790400 each, exits nonzero on breadcrumb/CRASH/SIGSEGV. Verdict lands in SOAK-RESULTS.md. Nothing ruled out; this session is a queued passive watch only.
+
+## Session 5385 (2026-10-17) — s5384 plume null-watch soak read: 8/8 titles, no breadcrumb, no crash; enqueued 16-boot extension
+
+Ran: nothing new in-game; consumed SOAK-RESULTS line s5384_plume_null_watch rc=0 464s. summary = titles=8/8 bad=0; grep of run1..8 logs for plume-null = 0 hits.
+Showed: with a ~1/7 crash rate, 8 clean boots has p~0.29 under the null, so absence of the breadcrumb is neither evidence the diagnostic is wrong nor that the crash is gone. The print has no positive control (cannot be forced): uninformative null.
+Enqueued: scratch/agent/soak_queue/s5385_plume_null_watch16.sh (same recipe, 16 boots; P(0 crash | 1/7) ~0.08). No guard landed: no writer named yet (iron rule 11).
+Rules out: nothing.

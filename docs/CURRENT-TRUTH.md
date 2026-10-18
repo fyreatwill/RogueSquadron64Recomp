@@ -180,7 +180,7 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-0. (s5383) Title-boot SIGSEGV si_addr=0x58 (plume MetalFramebuffer ctor, ~1/7 launches): diagnostic print `[plume-null-color-attachment]` + backtrace landed (build-only, unexercised, no positive control possible). Grep future run logs for it; the first hit names the createFramebuffer caller. Do not guard until the writer is named. (s5384) Queued scratch/agent/soak_queue/s5384_plume_null_watch.sh (8 title boots, exits nonzero on breadcrumb/crash); read its summary in SOAK-RESULTS.md first. No overturned conclusions this session.
+0. (s5383) Title-boot SIGSEGV si_addr=0x58 (plume MetalFramebuffer ctor, ~1/7 launches): diagnostic print `[plume-null-color-attachment]` + backtrace landed (build-only, unexercised, no positive control possible). Grep future run logs for it; the first hit names the createFramebuffer caller. Do not guard until the writer is named. (s5385) s5384 soak 8/8 titles, 0 breadcrumb, 0 crash = uninformative null (p~0.29 at 1/7); extended to 16 boots via soak_queue/s5385_plume_null_watch16.sh, read its summary first. (s5384) Queued scratch/agent/soak_queue/s5384_plume_null_watch.sh (8 title boots, exits nonzero on breadcrumb/crash); read its summary in SOAK-RESULTS.md first. No overturned conclusions this session.
 
 0. (s5376) Hangar route n=5 interactive: 3/5 hangar (try4 title-boot SIGSEGV si_addr=0x58, 37 CRASH lines; try5 key-timing miss); with s5375 5/7 vs soak 0/2. Route is flaky, not proven soak-only focus. Next: classify run4.log crash, add retry-on-no-hangar to the census recipe.
 
