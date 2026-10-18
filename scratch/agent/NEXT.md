@@ -1,3 +1,3 @@
-# Next work unit: read the s5385_plume_null_watch16 soak verdict, then act
+# Next work unit: plume watch parked; pick next from CURRENT-TRUTH
 HYPOTHESIS-ID: plume-null-color-attachment-caller
-s5384 (8 boots) was clean = uninformative (p~0.29 at 1/7 crash rate). s5385 enqueued 16 boots (summary at scratch/agent/soak_results/s5385_plume_null_watch16/summary). If a run shows BREADCRUMB, read its `[plume-null-color-attachment]` backtrace, name the createFramebuffer caller and why a texture is null at the 320->640 switch, then land a guard WITH an ORIGIN: line. If still clean (titles=16/16, bad=0), the crash rate is likely below 1/7 now: stop soaking this and pivot to M5 audio de-stub (docs/M5-AUDIO-PLAN.md) for a committed change.
+s5385 soak: 10/11 titles, 0 breadcrumb, 0 crash (18 clean boots with s5384). Plume thread PARKED: re-open only on a new title-boot SIGSEGV si_addr=0x58 (grep `plume-null-color-attachment`). M5 closed (s5349), M3 j/jal list exhausted, rename sweep parked. Next: a bounded M3 idiom-class audit that commits a guard, or go BLOCKED asking the human for a new discriminator. Soak recipes must stay <=8 boots (600 s cap).
