@@ -1,6 +1,3 @@
-# Next work unit: resume generated-symbol renaming sweep (or REVISIT per rule 4)
+# Next work unit: REVISIT retail-entry boundary (CURRENT-TRUTH Next steps #2 / M4 notes) with a genuinely new angle, or verify s5381 quick_exit
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
-patcheslib-shadowed thread closed in s5379 (census control passed; guards unreachable on route).
-M5 closed, M3 parked. First run `grep -n '^## Session ' PORTING-STATE.md | tail -15`: if all 15 are sweep titles -> REVISIT retail-entry boundary (CURRENT-TRUTH Next steps #2) with a new angle; else resume the sweep (see tools/rename* and CURRENT-TRUTH).
-Warning: the sweep alone trips the engineering-pivot counter at 6; prefer pairing it with a committed guard/tool change.
-(s5380: the s5379 norm-arm SIGABRT is classified as an SDL_QUIT exit() shutdown artifact; nothing left there.)
+Sweep parked (only func_800E9AE0 remains, no semantic name). s5381 changed SDL_QUIT exit() -> quick_exit; verify opportunistically: next run that logs "[main] SDL_QUIT received" should show no SIGABRT/CRASH after it. Prefer a committed guard/tool change over more doc-only work (engineering-pivot counter).

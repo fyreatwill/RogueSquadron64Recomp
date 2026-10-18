@@ -178,6 +178,7 @@ extern "C" void rs64_vi_boundary_log(const char* edge, uint32_t requested_fb,
 
     if (g_vi_boundary_summary_armed.exchange(1, std::memory_order_relaxed) == 0) {
         std::atexit(vi_boundary_summary);
+        std::at_quick_exit(vi_boundary_summary);
     }
 
     const uint32_t edge_index = static_cast<uint32_t>(edge_id);

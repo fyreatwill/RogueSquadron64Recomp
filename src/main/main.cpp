@@ -9356,7 +9356,9 @@ static void poll_input() {
         if (e.type == SDL_QUIT) {
             fprintf(stderr, "[main] SDL_QUIT received, exiting\n");
             fflush(stderr);
-            exit(EXIT_SUCCESS);
+            // quick_exit: exit() here runs static destructors while guest/audio threads
+            // are live and ends in std::terminate -> SIGABRT (s5380).
+            std::quick_exit(EXIT_SUCCESS);
         }
         if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) &&
             (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_z)) {

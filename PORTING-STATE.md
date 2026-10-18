@@ -162225,3 +162225,7 @@ viw=640). So it is NOT an init-time guest crash: a window-close/quit event arriv
 thread destroyed statics while guest/audio threads were live. The WRITER of the quit event is not identified
 (single-source: one arm, one log; the host/harness window close is the boring candidate). No mitigation added, so
 no ORIGIN line owed. Rules out: guest idiom or allocDLB involvement in that abort. Closes the optional s5379 item.
+
+## Session 5381 (2026-10-17) — SDL_QUIT path switched exit() -> quick_exit (build-only; shutdown SIGABRT fix, unverified at runtime)
+
+Sweep is parked (CURRENT-TRUTH Generated symbols: only func_800E9AE0 left, no semantic name), so landed the bounded engineering change implied by s5380: `src/main/main.cpp` poll_input SDL_QUIT branch now calls `std::quick_exit` instead of `exit`, skipping static destruction that ended in std::terminate/SIGABRT while guest/audio threads were live; `src/main/upstream_compat.cpp` also registers `vi_boundary_summary` via `at_quick_exit` so the atexit summary still prints. Build links clean. NOT run: triggering SDL_QUIT needs a window close; the next harness-driven quit will show whether "CRASH SIGABRT" disappears after "[main] SDL_QUIT received". Single-source (s5380 norm.log) for the original diagnosis. Not a mitigation of guest corruption (host shutdown only), so no ORIGIN owed.
