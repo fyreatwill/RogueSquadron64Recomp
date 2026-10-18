@@ -1,6 +1,7 @@
-# Next work unit: view mission framebuffer (H3) and, if sky-only, bisect GPU-side drops (H4b)
+# Next work unit: is mission ground coverage missing (H4b) or just camera pitch?
 HYPOTHESIS-ID: m6-flown-render-fidelity
 
-State (s5426): RT64 parser accepts ~100% of submitted triangles in the mission, so drops are post-parse or the dump is partial.
-Steps: 1. add `mkdir -p $OUT/fbd` to scratch/agent/m6_keyed_hold.sh before launch (or mkdir in upstream_compat.cpp:495). 2. zsh scratch/agent/m6_keyed_hold.sh s5426_fbd 200 (screen unlocked). 3. convert mission-phase PPMs with tools/ppm2png.py and view; hangar frame is the positive control.
-Outcomes: mission frames show terrain => render fine, close thread. Sky-only => H4b: bisect RT64 scissor/viewport/depth/cull for that phase (single run, toggle within run). Partial frames => H3 readback bug.
+State (s5427): mission framebuffer renders (sky, horizon sliver, green ship, HUD); readback OK. Ground is only ~10px at frames 3500/4500 (dumps in scratch/agent/m6/s5427_fbd/fbd, every 500 VIs).
+Hypotheses: (A) camera pitched up, scene correct; (B) terrain triangles lost post-parse (RT64 depth/scissor/cull); (C) terrain draws never submitted by the game.
+Discriminator: one run, dump every ~50 VIs in the mission phase (find the dump interval env near FB_DUMP in upstream_compat.cpp) and view ~6 frames: horizon moves with pitch -> A; ground never exceeds the sliver across varied pitch -> B/C; then compare LOG_RDP_TRICOUNT vs LOG_RT64_DRAWN for terrain-sized DLs.
+Command: zsh scratch/agent/m6_keyed_hold.sh s5428 200 (screen unlocked; script now mkdirs fbd).

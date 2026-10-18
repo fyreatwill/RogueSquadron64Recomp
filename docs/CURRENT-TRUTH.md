@@ -413,3 +413,6 @@ The s5420 mission-exit-to-title at ~634 s was caused by the autopilot 'r' key. C
 
 ## s5426 addendum (flown render fidelity)
 RT64 parser accepts ~100% of submitted flown triangles (mission 3,709,507/3,710,659). H4 narrowed to post-parse GPU drops; H3 untested because FB_DUMP_DIR needs a pre-created directory (mkdir -p). Next: mkdir fbd, re-run, view mission frames.
+
+## s5427 addendum
+Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames show sky, ~10px horizon sliver, green ship, HUD; title control renders fine. H3 (partial readback) refuted. Open: pitched-up camera (A) vs post-parse terrain loss (B) vs terrain never submitted (C) — single-source, see NEXT.md for the finer-cadence dump.
