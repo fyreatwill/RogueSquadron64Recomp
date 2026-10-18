@@ -181,13 +181,18 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    without a new discriminator. Re-open M3 only as a complete idiom-class audit.
 3. The generated-symbol sweep is parked; re-open only if a new placeholder
    candidate or companion-map evidence appears.
-4. Patch-only guard predicates (s5367, source-reading, single-source): the C
-   patch's `block_ok`/`bump_cursor_ok` (0x100 alignment, end-of-RDRAM bound,
-   bump cursor, link back-pointers) are stricter than the live inlined guards
-   (range + 4-byte alignment only). Next: counter-only 0x100-alignment check in
-   `tools/apply_s3285_freelist_align_cycle.py` with a positive control, one
-   autopilot hangar run (NEXT.md). Fires -> make it reject and name the writer;
-   zero -> retire the patch layer. C-vs-asm A/B is moot (s5366).
+4. Patch-layer guard sites are UNREACHED on the hangar route (s5368). A
+   counter-only 0x100-alignment census (`tools/apply_s5368_align100_counter.py`,
+   run `scratch/patchq/ab/run_a100.sh`) shows `allocateDisplayListBuffer` entered
+   >=4096 times in each of two concurrent arms that both reached hangar 512
+   (~2100 phase-5 log lines each), yet the free-list head sites (guard2) and the
+   walk loop-back site (guard3) executed 0 times; the forced-true control arm
+   (`ROGUESQ_A100_CTL=1`) also printed 0, so the sites themselves are not
+   reached (entry counter is the same-run reach control). Consequence: the
+   0x100-alignment question is moot for hangar; the free-list walk guards are
+   dead there. Next: same binary on the mission route (NEXT.md); if still 0,
+   the inlined walk guards are dead on the whole qualified route -- document
+   and stop guarding that path.
 
 Session 5354 detail: retail run `tools/oracle/run_m4_retail_pcs.sh`
 (RS64_RSP_MID_STRIDE=1 + new RS64_RSP_MID_PCS filter; rdplog video,

@@ -1,4 +1,4 @@
-# Next work unit: port patch-only guard predicates into fixup-inlined allocateDisplayListBuffer
+# Next work unit: do the free-list head/walk guard sites ever execute on the mission route?
 HYPOTHESIS-ID: patcheslib-shadowed
-Finding (s5367): patch block_ok/bump_cursor_ok are stricter than inlined guards (0x100 alignment, end bound, bump cursor). H2 supported by source reading only.
-Unit: in tools/apply_s3285_freelist_align_cycle.py add a counter-only (non-rejecting) check for (addr&0xFF)!=0 on free-list node pointers; positive control = same counter on a deliberately always-true predicate; run one autopilot hangar run (scratch/patchq/ab/run_ab.sh recipe). If count>0, make it reject and name the writer (ORIGIN). If 0, retire the patch layer as dead.
+s5368: on hangar 512, allocateDisplayListBuffer entry >=4096 but head (guard2) and walk (guard3) a100 sites = 0 incl. forced control. H1: sites dead on whole route (retire, document). H2: sites reached only in mission/other phase (then census 0x100 there).
+Unit: no rebuild. Copy scratch/patchq/ab/run_a100.sh, lengthen sleep to ~300 and use the validated mission autopilot schedule (CURRENT-TRUTH/M5 plan keyed mission runs); grep `[a100-head]`, `[a100]`, `[a100-ent]` for allocDLBlockToFillRectList too. Outcomes: any head/walk line -> read mis count, name writer if mis>0; all 0 with mission reached -> H1, close thread.
