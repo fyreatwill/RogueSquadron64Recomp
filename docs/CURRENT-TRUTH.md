@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5396 (2026-10-17).
+Compact operational handoff, maintained at Session 5397 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -145,7 +145,10 @@ this discriminator; no writer or mitigation follows. See
 
 The sweep is paused after the remaining mission-overlay placeholder
 `func_800E9AE0`: its exact body span is known, but the companion map supplies
-no semantic name and no live caller. Session 5336 rechecked the stale
+no semantic name and no live caller. Session 5397 synchronized the distinct
+menu-overlay `fake_func_800B47C4` preamble to
+`menuControllerInputPreamble`; its generated span, syms size, and following
+`menuControllerInput` boundary agree. Session 5336 rechecked the stale
 `0x800927B0` NEXT item and found every generated, registration, project-map,
 fixup, and companion surface already synchronized. Preserve names that are
 already synchronized, data symbols, and unmaterialized host-wrapper entries.
@@ -202,11 +205,12 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-0. (s5396) Resume the bounded generated-symbol renaming sweep. Select one real
-   placeholder outside the already-audited `func_800E9AE0`, and rename it only
-   if the companion map and generated tree agree on the same function span and
-   semantic name. Record the candidate census and agreement test in a new
-   `docs/RENAME-S5396.md`; leave it unchanged if the evidence is incomplete.
+0. (s5397) Continue the bounded generated-symbol renaming sweep with
+   `func_8000040C`. Confirm the 0x34-byte generated span against the companion
+   `make_elf.py` mapping and the syms entry before applying the existing
+   `clearMemory16ByteBlocks` mapping; record the result in
+   `docs/RENAME-S5397.md`. Do not rename if the exact span or semantic source
+   does not agree.
 
 0. (s5389) The s5388 indirect-site audit is a DUPLICATE of s4821/s4998/s5357 (class closed; no raw indirect lowering exists). Backlog exhausted; BLOCKED for a human-chosen direction (BLOCKED.md). No conclusions overturned.
 

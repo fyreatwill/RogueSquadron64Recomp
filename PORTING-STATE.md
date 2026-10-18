@@ -162335,3 +162335,24 @@ gate for the qualified image/audio path. It rules out an immediately recurring
 mission-entry crash or frozen-frame stall under this keyed route, but does not
 rule out unvisited mission content or render-fidelity defects. No code or
 mitigation changed; ORIGIN: n/a.
+
+## Session 5397 (2026-10-17) — synchronized menu-overlay preamble symbol
+
+Planned unit: one generated-symbol renaming candidate outside the audited
+`func_800E9AE0`, with exact generated-span and companion-map discrimination.
+The initial census found three non-data mismatches. Selected
+`fake_func_800B47C4`: its generated body is three instructions from
+`0x800B47C4` through `0x800B47CC`; the syms entry gives the same `0xC` size,
+and the companion menu map places `menuControllerInput` at `0x800B47D0`.
+The existing regeneration-safe mapping names the preamble
+`menuControllerInputPreamble`, so H1 passed; this was not inferred from a
+caller alone. H2/H3 were rejected by the exact size/boundary agreement.
+
+Ran `tools/rename_generated_symbols.py` over the bounded range
+`0x800B47C4 <= address < 0x800B47D0`; it renamed three generated references
+in `funcs_31.c`, `funcs.h`, and `recomp_overlays.inl`. A follow-up search found
+no stale `fake_func_800B47C4` generated reference. No build was needed for this
+symbol-only synchronization. The two other census mismatches were left alone:
+`func_8000040C` is the next exact candidate, while `fake_func_800B58B4` has no
+semantic companion name. No conclusions about runtime behavior changed.
+ORIGIN: n/a (symbol synchronization only; no mitigation).

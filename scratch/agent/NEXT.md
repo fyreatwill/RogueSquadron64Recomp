@@ -1,25 +1,24 @@
 # Next work unit: one generated-symbol renaming candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Bound the sweep to one candidate outside the already-audited
-`func_800E9AE0`. First enumerate nearby placeholders and companion-map names:
+Bound the sweep to `fake_func_800B47C4`, outside the already-audited
+`func_800E9AE0`. The candidate census found three non-data mismatches; this
+one is the only one with a named 0xC-byte preamble mapping and a companion
+comment identifying the following real `menuControllerInput` body. Before
+the rename, the competing hypotheses are:
+
+* H1: `fake_func_800B47C4` is a real generated 0xC-byte preamble and the
+  existing `menuControllerInputPreamble` mapping is exact; rename all generated
+  references.
+* H2: the 0xC-byte record is data or an invalid split; leave it address-coded
+  despite the nearby menu name.
+* H3: the generated snapshot and mapping are already synchronized or the
+  address is reused; no rename is safe.
+
+Discriminator: generated prologue span (`0x800B47C4` through `0x800B47CC`),
+the syms size (`0xC`), and the companion note that `menuControllerInput` starts
+at `0x800B47D0`; only H1 authorizes the bounded mapping rename.
+
+The broader census command was:
 
 `rg -n 'func_0x|func_[0-9A-Fa-f]{8}' RecompiledFuncs docs tools | head -200`
-
-Then inspect the candidate's generated function span and its companion m2c/map
-entry with bounded `rg`/`sed` windows. Write `docs/RENAME-S5396.md` containing
-the address, span, callers, companion evidence, and decision. Rename only when
-the generated tree and companion map agree; otherwise leave the symbol intact.
-
-Competing hypotheses:
-
-* H1: one placeholder has a matching companion semantic name and exact span;
-  a regeneration-safe mapping edit and regenerated host name are justified.
-* H2: candidates have names but no exact generated-span agreement; no rename
-  is safe and the audit records the missing discriminator.
-* H3: the selected region is already synchronized or contains only data and
-  wrappers; this lead is closed and the next ranked region must be selected.
-
-Discriminator: exact address/span agreement between the companion map and the
-generated function, plus a non-placeholder semantic name. Do not infer a name
-from callers alone.
