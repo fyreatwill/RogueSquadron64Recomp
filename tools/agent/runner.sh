@@ -88,11 +88,36 @@ case "$RUNNER" in
     # so loop.log reads uniformly. Non-JSON output (crash text) passes
     # through untouched, and claude's exit code is preserved either way —
     # loop.sh classifies limits by rc.
-    out="$(claude -p "$(cat "$PROMPT_FILE")" \
+    # 2026-10-17: `claude -p` sometimes finishes its turn (Stop hooks run, STATUS written,
+    # work committed) and then never exits - idle in kevent, no children - which stalled the
+    # loop for 45+ min with nothing in loop.log (--output-format json emits only at exit).
+    # Watchdog: once STATUS is newer than ITER_START_MARK and has sat untouched for
+    # DONE_GRACE seconds (default 480) with claude still alive, the iteration is over - stop
+    # claude and report success. RUNNER_MAX_SECS (default 3600) is the hard wall-clock cap.
+    AGD="scratch/agent"; tmpout="$(mktemp -t rs64-claude-out)"
+    claude -p "$(cat "$PROMPT_FILE")" \
       --model "${RUNNER_MODEL:-${LOOP_MODEL:-claude-sonnet-5-5}}" \
       --permission-mode acceptEdits \
-      --output-format json 2>&1)"
-    rc=$?
+      --output-format json > "$tmpout" 2>&1 &
+    cpid=$!; t_start=$(date +%s); hung=0
+    while kill -0 "$cpid" 2>/dev/null; do
+      sleep 15
+      now=$(date +%s)
+      if [ -f "$AGD/STATUS" ] && [ "$AGD/STATUS" -nt "$AGD/ITER_START_MARK" ] \
+         && [ $((now - $(stat -f %m "$AGD/STATUS"))) -ge "${DONE_GRACE:-480}" ] && kill -0 "$cpid" 2>/dev/null; then
+        hung=1; break
+      fi
+      if [ $((now - t_start)) -ge "${RUNNER_MAX_SECS:-3600}" ]; then hung=2; break; fi
+    done
+    if [ $hung -ne 0 ]; then
+      kill "$cpid" 2>/dev/null; sleep 5; kill -9 "$cpid" 2>/dev/null
+      wait "$cpid" 2>/dev/null
+      echo "[runner] watchdog: claude -p stayed alive after finishing (hung=$hung, ${DONE_GRACE:-480}s idle after STATUS / ${RUNNER_MAX_SECS:-3600}s cap); stopped it" >&2
+      rc=0; [ $hung -eq 2 ] && rc=124
+    else
+      wait "$cpid"; rc=$?
+    fi
+    out="$(cat "$tmpout")"; rm -f "$tmpout"
     printf '%s\n' "$out" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$out"
     exit $rc
     ;;

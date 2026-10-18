@@ -162179,3 +162179,15 @@ Ran the s5099 recipe verbatim (scratch/agent/bisect_hangar.sh, parametrized bina
 RS64_maskoff (08:18) title 2/2, hangar 0/2; RS64_patch_c (18:06) title 2/2, hangar 1/2; RogueSquadron64Recomp (18:30, current) title 2/2, hangar 2/2, crash 0.
 Result: H1 (18:30 build regressed title->hangar) is REFUTED — the current binary reaches hangar 2/2 under the same recipe that failed 0/2 in the loop-run soak s5373. H2-like host variance (focus/key delivery in the loop-spawned context vs this shell, or flake rate) explains the difference. Caveat: n=2 per binary, single-source; the maskoff/patch_c rows show the hangar route is itself flaky (0/2, 1/2), so per-binary conclusions need n>=5. No code changed; no mitigation. ORIGIN: n/a (no mitigation added).
 Consequence: s5371's "nohangar" was a route/host failure, not a build property. Census/mission work can proceed by driving runs interactively (not via the soak queue) or with retries; the soak runner's winctl focus is the suspect.
+
+## Session 5376 (2026-10-17) — hangar route n=5 interactive: 3/5 hangar, route is flaky (not a soak-only focus bug)
+
+Ran `scratch/agent/bisect_hangar.sh RogueSquadron64Recomp 5` (s5099 recipe, 18:30 binary, launched from the
+tool shell). Result (keys.log): try1-3 title=1 hangar=1 crash=0; try4 title=0 hangar=0 with 37 CRASH lines
+(first: SIGSEGV si_addr=0x58, never reached title); try5 title=1 hangar=0 crash=0 (key loop ran out).
+Combined with s5375 (2/2) interactive = 5/7 hangar; s5373 soak = 0/2. Hypotheses: (A) soak-runner focus loss
+would give interactive >=4/5 and soak 0: NOT supported, interactive itself failed 2/5 for two different
+reasons; (B) flaky route (title-boot SIGSEGV si_addr=0x58 in 1/5; key-timing miss in 1/5): supported.
+The soak 0/2 vs interactive 5/7 gap is not statistically separated (single-source, small n), so a
+soak-runner focus effect is neither confirmed nor excluded. New: a title-boot SIGSEGV (si_addr=0x58, 1/5 runs)
+in run4.log, unclassified, no stack read yet. ORIGIN: no mitigation added.

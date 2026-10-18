@@ -1,5 +1,5 @@
-# Next work unit: rerun the s5371 mission path census using the interactive-launch hangar route
+# Next work unit: classify title-boot SIGSEGV (si_addr=0x58) from bisect run4.log, then rerun s5371 mission census with retries
 HYPOTHESIS-ID: patcheslib-shadowed
-s5375: current 18:30 binary reaches hangar 2/2 when launched via scratch/agent/bisect_hangar.sh from a shell (soak s5373 got 0/2). So the build is fine; soak-runner context loses focus/keys (suspect: winctl activate under loop's process group).
-Next: (1) run `zsh scratch/agent/bisect_hangar.sh RogueSquadron64Recomp 5` for n=5 and compare to a queued soak of the same recipe: if interactive >=4/5 and soak 0/N, fix soak focus handling (positive control: key press changes title). (2) Then redo the s5371 mission census with the working route.
-Outcomes: interactive high + soak low => runner focus issue; both low => flaky route, add retries.
+s5376: interactive hangar 3/5 (5/7 with s5375); soak 0/2. Route flaky: try4 never reached title (SIGSEGV si_addr=0x58, 37 CRASH lines), try5 missed hangar.
+Next: (1) read stack in scratch/agent/soak_results/bisect_RogueSquadron64Recomp/run4.log (rerun bisect n=5 if lost) - name the faulting function/idiom. (2) Modify soak_queue/s5371_path_census_mission.sh to retry up to 4 launches until hangar, then read [a5370] rows.
+Outcomes: known idiom -> guard class; unknown -> only act if an idiom-class audit applies.
