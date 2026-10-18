@@ -246,7 +246,7 @@ progress/end observations to the port and cxd4 arms before another comparison.
 ## Next steps (single monotonic backlog)
 
 0. (s5407) lldb is UNUSABLE here: launch mode never runs the game (0 bytes stdout in 30 s), attach mode hangs at `process attach` and freezes the game (suspected macOS debugger authorization; unconfirmed - a human can run `DevToolsSecurity -status` / approve the prompt). s5406 titles=0/10 is a tooling null, not crash evidence. Plume crash: rely on the in-process `[plume-null-color-attachment]` breadcrumb (0/18 boots). Next M6 work = keyed mission endurance (recipe s5377 hit the 600 s cap; split into <=540 s segments).
-0b. (s5408) Enqueued `m6_mission_seg_{a,b,c}.sh` (<=555 s keyed mission holds, crash+stall logging). Read their SOAK-RESULTS lines first. Caveat from s5394: dead keys can be a crash-report modal on screen (kill UserNotificationCenter) - the recipes do NOT do this, so an all-nohangar result means check for that before blaming the route.
+0b. (s5409) seg_a/b "nohangar" was a recipe bug (padded-origin grep; mission 0x690400 WAS reached, 0 CRASH). Re-enqueued as `m6_mission_v2_{a,b,c}.sh`; check whether mission-onset precedes keys (attract?). (s5408) Enqueued `m6_mission_seg_{a,b,c}.sh` (<=555 s keyed mission holds, crash+stall logging). Read their SOAK-RESULTS lines first. Caveat from s5394: dead keys can be a crash-report modal on screen (kill UserNotificationCenter) - the recipes do NOT do this, so an all-nohangar result means check for that before blaming the route.
 
 0. (s5405) The normalized gate selected H3: retail controls/rows are live, but
 the available port log has zero normalized rows and both existing schemas lack

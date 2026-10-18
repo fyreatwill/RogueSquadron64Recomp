@@ -619,3 +619,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261017-204108 | s5384_plume_null_watch | rc=0 | 464s | scratch/agent/soak_results/s5384_plume_null_watch_20261017-204108.log
 20261017-204944 | s5385_plume_null_watch16 | rc=137 | 600s | scratch/agent/soak_results/s5385_plume_null_watch16_20261017-204944.log
 20261017-225338 | s5406_plume_lldb_title | rc=0 | 521s | scratch/agent/soak_results/s5406_plume_lldb_title_20261017-225338.log
+20261017-230730 | m6_mission_seg_a | rc=1 | 350s | scratch/agent/soak_results/m6_mission_seg_a_20261017-230730.log
+20261017-231320 | m6_mission_seg_b | rc=1 | 392s | scratch/agent/soak_results/m6_mission_seg_b_20261017-231320.log

@@ -162515,3 +162515,10 @@ Each recipe: refuses to run if the macOS screen is locked (ioreg CGSSessionScree
 Positive control: the existing hangar/mission route markers are the same ones s5377 used; the stall detector counts `origin=` rows (it must tick every few seconds in a live run -- if maxstall is huge with vi_rows flat, the instrument not the game is suspect).
 Shows/rules out: nothing yet; the verdicts arrive in SOAK-RESULTS.md. Lock state could not be checked from this session (ioreg is permission-gated) so the recipe checks it itself and logs SCREEN-LOCKED.
 Next: read SOAK-RESULTS.md m6_mission_seg_* lines; each distinct failure gets a backtrace from the in-process crash handler and a root-cause fix.
+
+## Session 5409 (2026-10-17) — M6 segments a/b allattempts-failed was a recipe bug, not a route flake
+Ran: read m6_mission_seg_a/b verdicts (rc=1, keys.log nohangar-att1/att2, allattempts-failed). Screen was not locked (script would have written SCREEN-LOCKED).
+Showed: both run.logs contain origin=0x690400 (mission origin) ~10.6k rows, 0 rows of 0x6AB400/0x006AB400, 0 CRASH. The recipe gated on the zero-padded string origin=0x006AB400 only; the log mixes padded and unpadded formats and the game reaches the mission without the hangar (s5378). Recipes killed healthy runs at ~175 s per attempt and never started the hold.
+Changed: tools/agent/m6_mission_tmpl.sh.in accepts hangar (either format) OR mission origin as route success; regenerated as soak_queue/m6_mission_v2_{a,b,c}.sh (key gaps 4/6/9 s); old seg_c cancelled.
+Caveat (single-source): 0x690400 before/without keys might be attract-demo, not a player mission; v2 keys.log mission-onset time vs key activity will tell.
+Rules out: route flake as the explanation for a/b. No game crash/stall datum yet.
