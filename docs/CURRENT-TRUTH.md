@@ -251,6 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+> s5445 (TOP): flight endurance CLOSED clean - s5444_nostart_a/b 480 s holds, 0 crash / 0 stall / animating (12131 distinct of 13322 frames); ~10 clean runs total. z-only flight never ends the mission. Active item: title-boot plume SIGSEGV (si_addr=0x58) lldb loop (NEXT.md, slug m6-title-boot-plume-sigsegv); plain flight-endurance soaks are retired, and reaching the results screen needs a different recipe. Superseded: the s5444 res_late soaks as evidence about results-screen behaviour - they were recipe-defective (cap overrun, start=pause); rc=137 made them look like hangs.
+
 > s5442: var_d/e clean, log cap confirmed (65 MB); m6_post_late_a/b queued. s5441: var_c clean (3/3 var soaks, 0 crash/stall). s4234-ENTRY cap confirmed working, but run.log was still 905 MB from [tricnt]/[rt64drawn] (1.2M lines/phase); now capped at 4000 lines/phase in rt64_render_context.cpp. var_d/e queued to confirm size drop. Then vary the hangar route / 1200 s holds with variation.
 
 > s5440: s5439 var_a/var_b clean (0 crash/stall; var_a hit the 600 s cap with no summary). Cause of slow/huge runs: [s4234-ENTRY] log flood (1 GB run.log) - now capped in apply_s4234_entryprobe.py/apply_s4278_headwriter.py + live funcs_24.c. Check var_c run.log size on the new binary.
