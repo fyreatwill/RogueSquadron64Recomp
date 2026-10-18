@@ -162692,3 +162692,10 @@ Added scratch/agent/m6_keyed_hold_var.sh (derived by scratch/agent/mkvar.py): id
 - Finding: run.log was 1.17 GB (var_a) / 1.03 GB (var_b), ~495k `[s4234-ENTRY]` lines. The probe in funcs_24.c (tools/apply_s4234_entryprobe.py, + s4278 variant) logged unconditionally whenever ctx->r31==0 (always true here) or n>=9500. Pure logging flood, slows the run and risks disk/cap timeouts.
 - ORIGIN: not a mitigation of corruption; a diagnostic print is now bounded (r31==0/h==0 rows capped at n<=2000, n 9500-9600 window kept). Fixed in both generator scripts and in the live funcs_24.c; rebuilt (cmake exit 0).
 - Verification pending: var_c (next queued soak) runs on the new binary; expect run.log far below 1 GB and a summary line.
+
+## Session 5441 (2026-10-18) — var_c confirms s4234-ENTRY cap; next flood is [tricnt]/[rt64drawn], capped per phase
+
+- m6_keyed_var_c (s5439): rc=0, 583 s, mission_t=78s, hold=487s, alive_at_end=1, vi_stalls30s=0, crashlines=0. var_a/b/c = 3/3 clean (var_a hit the 600 s cap, no summary).
+- run.log was still 905 MB. Last-200MB census: 1.19M `[rt64drawn] ord=7`, 1.19M `[tricnt] ord=7`, 0.58M each for ord=9, etc. The s4234-ENTRY flood is gone (binary built 07:47:25, var_c started after); the new dominant source is the s5424/s5425 per-submission probes in src/main/rt64_render_context.cpp (env-gated ROGUESQ_LOG_RDP_TRICOUNT / ROGUESQ_LOG_RT64_DRAWN, set by the recipe). Their H3/H4 question is closed, so they are now just cost.
+- Change: per-phase (ord&63) budget of 4000 lines each for both probes; rebuilt clean. Queued m6_keyed_var_d/e (480 s) to confirm run.log size drops and keep the variation endurance sample growing.
+- Rules out: a crash/stall cause for the slow soaks - the slowdown was log I/O volume, not game state. No mitigation of a corruption defect (no ORIGIN needed: diagnostics only).

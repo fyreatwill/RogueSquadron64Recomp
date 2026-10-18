@@ -1230,6 +1230,8 @@ namespace ultramodern {
                         else ++other;
                         a += n;
                     }
+                    static uint32_t s_tc_n[64]; uint32_t tco = rs64_phase_ord() & 63;
+                    if (s_tc_n[tco]++ < 4000)  // s5441: per-phase cap (log flood: 1.2M lines/phase)
                     fprintf(stderr, "[tricnt] ord=%u len=%u tri=%u trect=%u frect=%u other=%u\n",
                             rs64_phase_ord(), hi_phys - lo_phys, tri, trect, frect, other);
                 }
@@ -1239,7 +1241,8 @@ namespace ultramodern {
             if (s_dr < 0) { const char *e = std::getenv("ROGUESQ_LOG_RT64_DRAWN"); s_dr = (e && *e && *e != '0') ? 1 : 0; }
             if (s_dr) { dr_t0 = g_rs64_rt64_tri_accepted.load(); dr_r0 = g_rs64_rt64_rect_accepted.load(); }
             run_rdp_submission(app, lo_phys, hi_phys);
-            if (s_dr) fprintf(stderr, "[rt64drawn] ord=%u tri=%llu rect=%llu\n", rs64_phase_ord(),
+            static uint32_t s_dr_n[64];
+            if (s_dr && s_dr_n[rs64_phase_ord() & 63]++ < 4000) fprintf(stderr, "[rt64drawn] ord=%u tri=%llu rect=%llu\n", rs64_phase_ord(),
                               (unsigned long long)(g_rs64_rt64_tri_accepted.load() - dr_t0),
                               (unsigned long long)(g_rs64_rt64_rect_accepted.load() - dr_r0));
         }
