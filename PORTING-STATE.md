@@ -162269,3 +162269,6 @@ Outcome: BLOCKED. The s5388 re-scope pointed at a duplicate unit; backlog is gen
 
 ## s5390 (unblock)
 Block s5389 (backlog exhausted, need direction) re-scoped, not escalated. Verified clang has no MIPS target and no mips64-elf toolchain (option b stays a human-gated open dependency). New NEXT.md: phase-gated mission-origin framebuffer diff, port vs retail oracle (render fidelity), title-screen positive control. No conclusions overturned.
+
+## Session 5390 (2026-10-17) — unblock: s5389 direction block re-scoped to render-fidelity framebuffer diff
+Ran: `clang --print-targets` (no MIPS target) and a PATH check for mips64-elf-gcc (absent); read BLOCKED.md, NEXT.md and CURRENT-TRUTH headline. No game run, no measurements. Showed: the block was a direction request, not a missing tool; the toolchain option (b) is real but needs a human-gated install. Rules out: redoing the indirect-site audit (triple duplicate). Route 3: NEXT.md now a phase-gated mission-origin framebuffer diff, port vs retail oracle, title-screen positive control. No conclusions overturned.
