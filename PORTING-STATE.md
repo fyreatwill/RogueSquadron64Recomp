@@ -162213,3 +162213,15 @@ Built `tools/apply_s5379_census_ctl.py` (applied to N64Recomp/RecompiledFuncs/fu
 - Caveat: g3 (walk loop-back) never fired even in the control, so the g3/g3bad counters have NO positive control; only slot0/g2/g2bad are validated.
 Conclusion (two lines: s5378 mission census + this control): on the title->hangar->mission route the cached slot is never empty, so the allocDLB tail guards are unreachable there, and the instrument that says so is validated for slot0/g2. No guard change; no mitigation added, so no ORIGIN needed. Thread `patcheslib-shadowed` closed.
 Rules out: census instrument broken for slot0/g2. Does not rule out: guards live on other routes; g3 counter correctness.
+
+## Session 5380 (2026-10-17) — s5379 norm-arm SIGABRT classified: SDL_QUIT -> exit() -> terminate during static destruction (shutdown artifact)
+
+Offline classification of `scratch/agent/soak_results/s5379/norm.log` (no game run). Line 196945 prints
+`[main] SDL_QUIT received, exiting` (absent from ctl.log, count 0); the stack at 196978 is
+`poll_input` (src/main/main.cpp:9336, SDL_QUIT branch calls `exit(EXIT_SUCCESS)`) -> `exit` ->
+`__cxa_finalize_ranges` -> `std::terminate` ("libc++abi: terminating" at 196977) -> `abort` -> our SIGABRT
+handler. The [m4-y8000] atexit summary printed just before it, confirming the exit path ran at phase 3 (title,
+viw=640). So it is NOT an init-time guest crash: a window-close/quit event arrived and `exit()` from the siService
+thread destroyed statics while guest/audio threads were live. The WRITER of the quit event is not identified
+(single-source: one arm, one log; the host/harness window close is the boring candidate). No mitigation added, so
+no ORIGIN line owed. Rules out: guest idiom or allocDLB involvement in that abort. Closes the optional s5379 item.
