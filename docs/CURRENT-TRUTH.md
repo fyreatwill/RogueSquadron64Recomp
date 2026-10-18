@@ -390,3 +390,6 @@ Dead keys in s5377/s5392/s5393 = crash-report modal on screen; kill UserNotifica
 - (s5411) M6 stall detector fixed: counts `[vi] update_screen` rows with a synthetic positive control; earlier v2 "0 stall" results were against a spam-masked detector. v3 a/b/c queued.
 
 - (s5415) Keyed control s5415a: modal cleared, winctl trusted=yes, title 0x790400 reached, hangar 0x6AB400 NOT reached in att1 (nohangar). Dead keys not explained by the crash modal alone. Next: NEXT.md (in-run SDL key witness, H1 vs H2 split).
+
+## s5416 note (key delivery SOLVED)
+winctl keys never reach SDL: macOS refuses to activate the game from the harness (lsappinfo isfrontmost=NULL; SDL_AddEventWatch witness [keywitness] saw 0 key/focus events with a same-run positive control). Not a title->hangar regression. Use in-process `ROGUESQ_AUTOPILOT` (m6_keyed_hold.sh now does): s5416a reached hangar, mission t=81 s, 204 s hold clean (single run). m6_keyed_ap_{a,b,c} queued. Supersedes the s5393/s5394/s5415 'dead keys' open questions.

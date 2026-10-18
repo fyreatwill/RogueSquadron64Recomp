@@ -9647,6 +9647,26 @@ ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
+    // s5416 key-delivery witness: SDL_AddEventWatch fires at event push time,
+    // before RT64's filter or any PollEvent consumer, so it sees every key
+    // and focus event SDL receives from Cocoa.
+    SDL_AddEventWatch([](void*, SDL_Event* ev) -> int {
+        static std::atomic<int> n{0};
+        const bool key = ev->type == SDL_KEYDOWN || ev->type == SDL_KEYUP;
+        const bool win = ev->type == SDL_WINDOWEVENT &&
+            (ev->window.event == SDL_WINDOWEVENT_FOCUS_GAINED ||
+             ev->window.event == SDL_WINDOWEVENT_FOCUS_LOST);
+        static std::atomic<int> any{0};
+        const bool first = any.fetch_add(1) < 40;
+        if (first) { fprintf(stderr, "[keywitness] anyevent type=0x%X\n", (unsigned)ev->type); fflush(stderr); }
+        if ((key || win) && n.fetch_add(1) < 400) {
+            fprintf(stderr, "[keywitness] type=0x%X %s=%d scancode=%d\n", (unsigned)ev->type,
+                    key ? "sym" : "winev", key ? (int)ev->key.keysym.sym : (int)ev->window.event,
+                    key ? (int)ev->key.keysym.scancode : 0);
+            fflush(stderr);
+        }
+        return 1;
+    }, nullptr);
     return nullptr;
 }
 

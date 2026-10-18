@@ -1,5 +1,4 @@
-# Next work unit: split key-delivery (H2) from title->hangar regression (H1)
+# Next work unit: fold m6_keyed_ap_{a,b,c} results; fix each DISTINCT failure at the root
 HYPOTHESIS-ID: m6-mission-endurance
 
-s5415a: title reached, keys sent via winctl, hangar 0x6AB400 never appeared (nohangar-att1), modal cleared, trusted=yes.
-Do in ONE run: at title, send a key and log an in-process SDL key event witness (one-line SDL_KEYDOWN log in the input path; positive control = it fires for a winctl key) AND watch whether any phase/origin changes. If SDL sees keys but no hangar -> H1 (regression; bisect via the s5374 deltas). If SDL sees nothing -> H2 (focus/keycode; try CGEventPost or osascript keystroke).
+s5416 solved key delivery (autopilot; winctl keys can't reach SDL because the game is never frontmost). Read SOAK-RESULTS.md for m6_keyed_ap_*; check keys.log in scratch/agent/m6/s5416_soak_*/ and the frame-hash (fbhash) metric to confirm a real mission, not attract. For each distinct CRASH/stall: lldb or ASan backtrace, name the writer, root-cause fix (no guard-one-deref). If all 3 hold clean 480 s, extend the hold to 1200 s and add a frozen-frame check.
