@@ -162092,3 +162092,7 @@ Block (s5358): fresh PatchesLib source qualification needs a MIPS cross-compiler
 ## Session 5360 (2026-10-17) — still BLOCKED: no human input since s5359, no un-run work unit
 
 Step 0: CURRENT-TRUTH 13.7 KB, no maintenance. NEXT.md and CURRENT-TRUTH item 4 agree the only open item is fresh PatchesLib qualification, which needs a MIPS cross-compiler (`mips64-elf-gcc`, `mips-linux-gnu-gcc` re-checked absent this iteration; `/opt/homebrew` is outside the sandbox so the s5359 refuting command could not be run by the loop). M3/M4/M5 closed; rename sweep parked by directive. No experiment run, no code changed. The human must run the refuting command in UNBLOCK.md, install a toolchain, or name a new target.
+
+## Session 5361 (2026-10-17) — UNBLOCK iteration: route 4, block unchanged
+
+Block (s5360): fresh PatchesLib qualification needs a MIPS cross-compiler. The one check that could refute it (Homebrew LLVM --print-targets) was denied by the sandbox, so it remains unverified rather than negative. No other un-run work unit exists (M3/M4/M5 closed). No code changes. Human action: run the check in BLOCKED.md or install a toolchain.
