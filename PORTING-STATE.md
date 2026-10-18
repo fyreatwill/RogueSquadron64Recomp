@@ -162592,3 +162592,9 @@ ORIGIN: none (no mitigation landed; instrument and input-cap change only).
   - no-'r' arm (NOR=1): VI origin alternates 0x620400/0x690400 (mission double buffer) through the entire 1105 s hold; no 0x790400 transition; fbhash maxrun=2217 distinct=25773 total=30917.
 - Conclusion: the ~10-12 min "mission ends" in s5419/s5420 was an AUTOPILOT ARTEFACT (the 'r' key selects a quit/exit action), not a game, recomp, death or objective bug. Mission endurance of >=1105 s flown is clean. (Exact trigger within 'r' not isolated; death/debrief frames not needed.)
 - Lesson: background game runs started from an interactive turn die when the turn ends unless launched with run_in_background.
+
+## Session 5422 (2026-10-18) — unblock: autopilot 'r' key, not the game, ends the flown mission at ~10 min
+- Ran: the s5421 two-arm flown hold (`run_s5421.sh`, 1100 s hold each) relaunched with run_in_background after the first launch was killed with the interactive turn (first attempt = failed experiment, no summary, logs ended mid-mission).
+- Showed: with 'r' the VI origin ends on 0x790400/0x720400 (title); without 'r' (NOR=1) it alternates 0x620400/0x690400 for the full 1105 s. Both: 0 crash, 0 VI stall, alive at end.
+- Rules out: H1 (player death) and H2' (objective complete) as the cause of the s5419/s5420 exit; H2 (hang) was already ruled out in s5420. Confirms H3 (autopilot 'r' quits). Exact in-game action bound to 'r' not isolated.
+- Block (waiting on runs) resolved via route 2. Next: m6-flown-render-fidelity (see NEXT.md).
