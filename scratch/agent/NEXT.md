@@ -1,6 +1,3 @@
-# Next work unit: fold m6_lldb_a/b/c soak verdicts (s5455 harness) - read backtraces at stall/crash, name the writer.
+# Next work unit: fold m6_lldb_c and m6_lldb_d verdicts; if any stall/crash, read bt and name writer; if all null (4/4), raise soak cap beyond 600 s in loop.sh for a >=20 min mission hold (code change).
 HYPOTHESIS-ID: m6-mission-transition-endurance
-- Files: scratch/agent/m6/s5455_lldb_{a,b,c}/{keys.log,summary,lldb_att*.log}; SOAK-RESULTS.md tail.
-- keys.log "lldb interrupted at stall" + lldb_att log with `thread backtrace all` => stall located; investigate the blocked thread's wait.
-- "stop reason" SIGSEGV in lldb log => crash bt; name the writer, fix root cause.
-- No stall/crash in 3 runs => lengthen hold / vary LATE; if stall with no bt, fix interrupt path (lldb -b may exit on SIGINT).
+- Files: scratch/agent/m6/s5455_lldb_c, s5456_lldb_d; SOAK-RESULTS.md tail.
