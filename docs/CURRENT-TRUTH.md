@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5403 (2026-10-17).
+Compact operational handoff, maintained at Session 5402 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -143,9 +143,9 @@ this discriminator; no writer or mitigation follows. See
 
 ### Generated symbols
 
-The sweep is paused after the remaining mission-overlay placeholder
-`func_800E9AE0`: its exact body span is known, but the companion map supplies
-no semantic name and no live caller. Session 5397 synchronized the distinct
+The generated-symbol sweep is now exhausted: Session 5402 confirmed that the
+remaining mission-overlay placeholder `func_800E9AE0` has an exact body span,
+but the companion map supplies no semantic name and no live caller. Session 5397 synchronized the distinct
 menu-overlay `fake_func_800B47C4` preamble to
 `menuControllerInputPreamble`; its generated span, syms size, and following
 `menuControllerInput` boundary agree. Session 5336 rechecked the stale
@@ -226,16 +226,12 @@ semantic rename is authorized. See `docs/RENAME-S5402.md`.
 
 ## Next steps (single monotonic backlog)
 
-0. (s5403) Rechecked `fake_func_800AE3E4`: the generated 0xC-byte fragment,
-   companion fake symbol, following `initPlayerCraftTrailBuffers` boundary,
-   overlay entry, and independent syms size all agree. H3 selected; no rename.
-   This confirms the earlier range audit; see `docs/RENAME-S5403.md`.
-   Next candidate is `func_800E9AE0`.
-
-0. (s5402) Audited `fake_func_800AF6A8`: generated body, companion data
-   boundary, and independent syms span agree on an 8-byte data/splat fragment;
-   H2 selected, no rename. See `docs/RENAME-S5402.md`. Next candidate is
-   `fake_func_800AE3E4`.
+0. (s5402) Audited `func_800E9AE0`: the generated 0x114-byte callable span,
+   companion false-split note, overlay entry, and independent syms mapping
+   agree, but no semantic name or live caller exists. H2 selected; no rename.
+   See `docs/RENAME-S5402-MISSION-AUDIT.md`. The generated-symbol sweep is exhausted; next
+   work must revisit a parked retail-entry or M4 boundary with a new
+   discriminator.
 
 0. (s5401) Audited `fake_func_800B89F4`: generated body, companion fake/real
    boundary, overlay entry, and syms classification agree on a 0xC-byte

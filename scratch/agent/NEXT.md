@@ -1,23 +1,23 @@
-# Next work unit: audit the remaining mission-overlay placeholder
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+# Next work unit: design a new M4 shared-boundary discriminator
+HYPOTHESIS-ID: m4-shared-boundary-revisit
 
-Candidate: `func_800E9AE0`.
+Do one offline design/measurement pass for the parked M4 accumulator thread.
+The previous comparison joined retail cxd4 samples to port phase records but
+used different RSP-PC domains and different phase origins. Build no runtime
+instrument until the independent oracle boundary and the port boundary are
+defined in the same task-key domain.
 
-* H1: the generated record has an independently supported semantic name;
-  synchronize its bounded references.
-* H2: the companion or syms entry is only an address-coded/overlay placeholder
-  or split fragment, so no semantic rename is safe.
-* H3: the generated tree and existing mapping are already synchronized; make
-  no change.
+Competing hypotheses:
 
-Discriminator: compare the generated body and exact span, the companion
-symbol-file classification, the following symbol boundary, `recomp_overlays.inl`,
-and the checked-in syms and redefinition mappings. Only an exact callable span
-plus independent semantic evidence authorizes H1. If H2 or H3 wins, write the
-bounded audit and leave the generated name unchanged.
+* H1: a shared task-keyed boundary can join retail and port samples, and the
+  transient `0x8000` lane is the same legitimate accumulator behavior.
+* H2: a shared boundary joins, but the lane differs between implementations;
+  a writer/origin investigation is then justified.
+* H3: the remaining key-domain mismatch is structural, so this boundary is
+  unevaluable and the thread must remain parked.
 
-Run the bounded census first:
-
-`rg -n -C 5 'func_800E9AE0|800E9AE0|data_gap_800E9AD8|playStateGatedDestroySound' ../N64Recomp/RecompiledFuncs ../rogue_squadron64/symbol_files syms tools/rename`
-
-`rg -n -C 5 'fake_func_800AE3E4|Preamble' ../N64Recomp/RecompiledFuncs ../rogue_squadron64/symbol_files ../rogue_squadron64/tools syms tools/rename`
+Discriminator: write down the exact retail task serial, RSP-PC/step bucket,
+VI origin, and port task serial/PC/step fields that must join for one 512-wide
+hangar task. The result must specify what concrete row would select H1 or H2;
+an absent join selects H3. Consult `docs/REVISIT-S5325-M4-SHARED-BOUNDARY-DESIGN.md`
+and the oracle README before building anything.

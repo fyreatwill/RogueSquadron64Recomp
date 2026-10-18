@@ -162440,3 +162440,19 @@ rules out a callable V-wing initialization preamble at this address; see
 `docs/RENAME-S5401.md`.
 
 ORIGIN: n/a (symbol audit only; no mitigation).
+
+## Session 5402 (2026-10-17) — rejected mission-overlay placeholder rename
+
+Audited `func_800E9AE0` with the exact-span and independent-map
+discriminator. The generated body is a real callable `0x114`-byte span from
+`0x800E9AE0` through `0x800E9BF0`, followed by
+`playStateGatedDestroySound` at `0x800E9BF4`. `recomp_overlays.inl` and
+`funcs.h` agree with that boundary. The companion mission-overlay map
+explicitly retains the address-coded name and documents that a false
+`func_800E9B10` reference makes the surrounding region appear split. The
+independent syms table likewise uses `func_mission_overlay_800E9AE0`, and no
+semantic name or generated caller exists. H2 selected: the callable span is
+real, but no safe semantic rename is supported. No generated or mapping file
+changed. Details: `docs/RENAME-S5402-MISSION-AUDIT.md`.
+
+ORIGIN: n/a (symbol audit only; no mitigation).
