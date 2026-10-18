@@ -265,3 +265,6 @@ Title-boot SIGSEGV si_addr=0x58 (1/7 launches, single-source) is in plume MetalF
 - (s5390) Direction block s5389 re-scoped: NEXT.md = render-fidelity framebuffer diff at mission origin (port vs oracle). Indirect-site audit is a triple duplicate; do not redo. MIPS toolchain remains an open human-gated dependency.
 
 - (s5391) M6: `scratch/agent/m6_hold.sh` added. r1: autopilot route reaches hangar at 24 s, 880 s hold with 0 crash/0 stall, but autopilot never enters the mission. Next: keyed route to mission (s5378 recipe), >=3 holds of >=10 min.
+
+## s5392 note (M6 keyed route)
+`scratch/agent/m6_keyed_hold.sh` (keyed title->hangar->mission hold harness) exists. First run: 0/5 launches reached hangar; all parked at origin 0x696100 with ~110k `[s3290-stall]` lines, no CRASH (single-source). Key delivery is unverified (no positive control) — next work unit is NEXT.md. Next-steps #1: make the keyed route reach the mission, then >=3 holds of >=10 min.
