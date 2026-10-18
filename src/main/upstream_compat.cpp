@@ -511,6 +511,14 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
             fclose(f);
         }
     }
+    // ROGUESQ_TRAP_AT_SWAP=N (s5466): print the host address of guest RDRAM and raise a debugger trap once at swap N,
+    // so an attached lldb can arm hardware write-watchpoints on guest words (only set this under lldb).
+    static const int s_trap_at = [] { const char* e = std::getenv("ROGUESQ_TRAP_AT_SWAP"); return e ? atoi(e) : 0; }();
+    if (s_trap_at > 0 && n == s_trap_at) {
+        fprintf(stderr, "[trap-at-swap #%d] rdram=%p (guest word at phys P is the LE u32 at rdram+P)\n", n, (const void*)rdram);
+        fflush(stderr);
+        // no trap: the driver script sends `process interrupt` to lldb when it sees this line
+    }
     // ROGUESQ_RDRAM_DUMP_DIR=<dir> (s5465): raw RDRAM[0..0x680000) (host byte order, ^3 swapped) at swaps
     // n%COARSE==0 (default 500) and, inside [FROM,TO], n%EVERY==0 (default 50). For the results-entry state diff.
     static const char* s_rd = std::getenv("ROGUESQ_RDRAM_DUMP_DIR");
