@@ -1,3 +1,14 @@
+## Session 5403 (2026-10-17) — confirmed existing fake-fragment symbol audit
+
+Rechecked `fake_func_800AE3E4` with the generated body, companion map,
+following-symbol boundary, overlay table, and independent syms table. The
+generated record is exactly 0xC bytes from `0x800AE3E4` to
+`initPlayerCraftTrailBuffers` at `0x800AE3F0`; the companion retains the fake
+symbol and the syms table agrees on the span. No semantic name or caller
+evidence exists. H3 won and no generated or mapping surface changed. This
+confirms the earlier Session 4795 range audit and rules out a rename for this
+candidate. Details: `docs/RENAME-S5403.md`.
+
 ## Session 5402 (2026-10-17) — rejected cinematic data-gap rename
 
 Audited the next generated-symbol candidate, `fake_func_800AF6A8`, using the
