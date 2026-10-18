@@ -162863,3 +162863,6 @@ Next: arm the mask watch from mission onset (TRAPSWAP ~ origin 0x690400 + few hu
 Ran scratch/agent/m6_wp10c9e0.sh early2500 420 (TRAPSWAP=2500, mission onset t=82s, hold 421s, alive_at_end=1, 10 watchpoint hits; positive control 0x3470 fired). lldb log scratch/agent/m6/early2500/lldb_att1.log.
 Result: the first write of mask 0x8010C9E0 (value then 4 = event 2) comes from setHudEnableBit4 (funcs_35.c:8023-8024) <- lv0_checkComplexObjectives (0x8010119C, level-0 objective logic) <- checkComplexObjectives <- runInMissionFrame. Next frames: requestMissionTransitionMode (event 2 handler) from runInMissionFrame, then requestSpeechResponseMode2, then clearMissionObjectiveFlagsAndEnterPhaseSix (phase 6). So H2 (objectives-complete) wins; H1 (player death) and H3 (timer) have no writer in the trace. Mission end in the soak is the game's own scripted objective path, not a guard/crash. Single-source (one run); whether the autopilot legitimately met the objectives is NOT yet checked.
 ORIGIN: no mitigation added; diagnostic only (no code change).
+
+## Session 5472 (2026-10-18) — blocked: cannot disassemble lv0_checkComplexObjectives
+mips64-elf-objdump was denied by headless permissions; no generated C exists in-repo. No experiment run. See scratch/agent/BLOCKED.md.
