@@ -162109,3 +162109,7 @@ used to stay fed. Outcome BLOCKED: human choice needed (see BLOCKED.md).
 
 ## s5363 (unblock) — BLOCK CONFIRMED, escalated again
 BLOCKED.md claim: no MIPS64 cross-compiler for fresh PatchesLib qualification. Route 1: compiler is inherent to fresh compilation. Route 2: find over the four allowed trees found no mips gcc; homebrew llvm probe is sandbox-denied (unverified, not negative). Route 3: no unit remains. No code changed. Outcome BLOCKED; human must run the clang target probe or install a toolchain.
+
+## Session 5364 (2026-10-17) — still BLOCKED; toolchain re-measured absent
+
+Re-read CURRENT-TRUTH (13.8 KB, no maintenance trigger), NEXT.md (no un-run unit) and SOAK-RESULTS tail (no new verdicts since s5250). `which mips64-elf-gcc mips-linux-gnu-gcc llvm-mc` -> not found. No experiment, no code change; the rename sweep is not used to stay fed. Outcome BLOCKED; BLOCKED.md rewritten with the one human action.
