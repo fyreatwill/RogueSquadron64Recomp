@@ -175,6 +175,8 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
   measurement.
 
 ## Next steps (single monotonic backlog)
+
+0. (s5375) Hangar route: 18:30 binary reaches hangar 2/2 interactively; s5373 soak 0/2 was host/soak-context, not a build regression (n=2, single-source). Next: n=5 interactive vs soak of the same recipe, then redo the mission census.
 - s5374 (first): s5373 control FAILED (s5099 recipe verbatim, 18:30 binary: title reached, hangar 0/2, 0 CRASH). The s5371 env delta is cleared as cause. Separate H1 (18:30 build regressed title->hangar; deltas 2bb94123, 8c27834d, 6392e160, s5368/s5370 census patches) from H2 (host focus/key delivery) by building the s5099-era commit (git log around 01:28 on 2026-10-17) in a separate build dir and running both binaries with the identical recipe in one iteration. Not blocked on a human.
 
 0. (s5370) Path census (`tools/apply_s5370_path_census.py`): on boot/title, ent=12288 with

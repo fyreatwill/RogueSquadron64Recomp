@@ -162173,3 +162173,9 @@ Ran `scratch/agent/soak_queue/s5373_hangar_control_s5099_recipe.sh` directly (th
 Meaning: the s5371 failure is NOT caused by its env delta (GUARD2/3 vs SCENE_NODE_CACHE_GUARD) — the s5099 env fails too. Remaining hypotheses: H1 the 18:30 binary regressed title->hangar (build delta vs s5099-era binary: 2bb94123 PatchesLib host decl/CMake, 8c27834d/6392e160 dpc_bridge M4 PC keys, s5368/s5370 census patches); H2 host focus/key delivery changed today (winctl activate). Not yet separated.
 ORIGIN: no mitigation landed; diagnostic only.
 Next: build the s5099-era commit into a second build dir and run both binaries with the same recipe (see NEXT.md).
+
+## Session 5375 (2026-10-17) — hangar-regression bisect: the 18:30 binary is NOT regressed; s5373 failure was soak-context/host flake
+Ran the s5099 recipe verbatim (scratch/agent/bisect_hangar.sh, parametrized binary, 2 tries each, interactive-launched, one game at a time) on existing binaries:
+RS64_maskoff (08:18) title 2/2, hangar 0/2; RS64_patch_c (18:06) title 2/2, hangar 1/2; RogueSquadron64Recomp (18:30, current) title 2/2, hangar 2/2, crash 0.
+Result: H1 (18:30 build regressed title->hangar) is REFUTED — the current binary reaches hangar 2/2 under the same recipe that failed 0/2 in the loop-run soak s5373. H2-like host variance (focus/key delivery in the loop-spawned context vs this shell, or flake rate) explains the difference. Caveat: n=2 per binary, single-source; the maskoff/patch_c rows show the hangar route is itself flaky (0/2, 1/2), so per-binary conclusions need n>=5. No code changed; no mitigation. ORIGIN: n/a (no mitigation added).
+Consequence: s5371's "nohangar" was a route/host failure, not a build property. Census/mission work can proceed by driving runs interactively (not via the soak queue) or with retries; the soak runner's winctl focus is the suspect.
