@@ -1,5 +1,24 @@
-# Next work unit: repeat keyed mission holds (M6)
+# Next work unit: keyed mission endurance confirmation (M6)
 HYPOTHESIS-ID: m6-mission-endurance
-s5394a: 1 clean 600 s hold (mission seen t=168 s, 130 s verify ok). Kill any UserNotificationCenter modal first (`pkill -KILL UserNotificationCenter`).
-Run `zsh scratch/agent/m6_keyed_hold.sh s5394b 900` and s5394c (one at a time). Also confirm the hangar row 0x6AB400 precedes the mission in run.log (guards against attract-demo false positive).
-Outcomes: all clean => lengthen to 30 min and play inputs; any CRASH/stall => capture lldb backtrace, name the writer, fix root cause.
+
+Clear any macOS UserNotificationCenter crash modal first with
+`pkill -KILL UserNotificationCenter`. Run the existing keyed mission-hold
+recipe one at a time:
+
+`zsh scratch/agent/m6_keyed_hold.sh s5394b 900`
+
+then repeat for `s5394c`. Confirm each log contains a preceding hangar VI
+origin `0x006AB400` before accepting mission `0x00690400`; this distinguishes
+playable mission entry from the attract demo.
+
+Competing hypotheses:
+
+* H1: the qualified route is stable beyond the first 600-second hold; both
+  runs stay alive with no crash and no unchanged VI origin for 30 seconds.
+* H2: a distinct mission crash or stall remains; a failure log plus lldb
+  backtrace names the writer and becomes the next root-cause fix.
+* H3: the route is still not keyed into playable mission; the hangar
+  prerequisite or key positive control fails before the hold begins.
+
+Discriminator: per-run hangar prerequisite, mission-arrival verification,
+CRASH/abort count, and VI-origin stall count. Use SIGKILL for watchdog cleanup.

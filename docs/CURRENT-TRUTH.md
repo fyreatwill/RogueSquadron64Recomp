@@ -38,6 +38,13 @@ validated LLE route. The rebuilt port passed the phase control at
 `0x006AB400` in 23.8 seconds; the M4 gate emitted 464 records. The M4
 task-keyed comparison is resumed, but no accumulator conclusion is drawn
 until the cxd4 and port tables join at that boundary.
+
+Session 5395 added null guards at both host-facing RSP task entrypoints:
+`rs64_run_lle_gfx` now returns `-1` for a null task and `get_rsp_microcode`
+returns the existing unknown-task stub. The normal Debug target builds. This
+is a host callback-contract guard, not evidence of a guest writer or a route
+defect; no runtime null reach was observed because the available SDL verifier
+failed to start the child route (`rc=126`, no SDL_QUIT line).
 Session 5331 ran that comparison attempt. The oracle whole-RDRAM/VI controls
 passed, and the port again reached `0x006AB400`/512, but the port output
 exposed only aggregate M4 counts; it lacked actual RSP-PC, task-serial, and
@@ -58,6 +65,12 @@ this discriminator; no writer or mitigation follows. See
 `docs/REVISIT-S5335-M4-COMPARISON.md`.
 
 ## Durable state
+
+- **RSP task-entry null-contract guard (s5395).** The two public task callback
+  entrypoints now reject a null `OSTask` before dereferencing it. The writer is
+  the host runtime callback boundary (`recomp::rsp::run_task`); null is not a
+  legitimate guest task value. Debug compilation passes. The direct null arm
+  has no in-game harness, so reachability remains a static contract result.
 
 - **SDL_QUIT shutdown (s5382, verified).** The `quick_exit` fix works: old binary rc=134 SIGABRT, new rc=0 on the same SIGTERM->SDL_QUIT recipe (`tools/verify_sdl_quit.sh`). Closed.
 
@@ -181,6 +194,11 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
   measurement.
 
 ## Next steps (single monotonic backlog)
+
+0. (s5395) Run the queued M6 keyed mission holds `s5394b` and `s5394c` one at
+   a time after clearing any UserNotificationCenter modal; require a preceding
+   hangar origin `0x006AB400` before accepting mission `0x00690400`. Any
+   distinct crash or VI-origin stall requires a backtrace and named writer.
 
 0. (s5389) The s5388 indirect-site audit is a DUPLICATE of s4821/s4998/s5357 (class closed; no raw indirect lowering exists). Backlog exhausted; BLOCKED for a human-chosen direction (BLOCKED.md). No conclusions overturned.
 

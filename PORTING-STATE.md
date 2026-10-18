@@ -162297,3 +162297,22 @@ ORIGIN: no mitigation added (harness-only change).
 
 ## Session 5394 (2026-10-17) — M6 key delivery restored; first keyed 600 s mission hold clean
 Cause of s5377/s5392/s5393 dead keys: the macOS "RS64_patch_c quit unexpectedly" modal (UserNotificationCenter pid) was on screen (H1). `kill -9` of that process, then `m6_keyctl.sh`: 12 `site=key` rows, origin 0x790400 -> 0x656400 -> 0x6A2900 (positive control passes). `m6_keyed_hold.sh` now sleeps 130 s after seeing 0x690400 and fails the attempt if the game died (attract demo also shows 0x690400, ends ~167 s). Run s5394a: att=1, mission seen t=168 s, 130 s verify passed, 600 s hold, alive at end, 0 VI stalls >30 s, 0 crash lines. Single run, single-source; mission_t=168 is close to the attract-demo length, so the route needs a second confirmation (hangar 0x6AB400 row preceded it per script gating). No distinct failure captured yet.
+## Session 5395 (2026-10-17) — added host RSP task-entry null-contract guards
+
+Planned unit: a bounded M3 guard-class audit of the two host-facing RSP task
+entrypoints, `rs64_run_lle_gfx` and `get_rsp_microcode`. Source inspection
+showed both dereferenced `OSTask*` before checking it; the pointer is supplied
+by the host runtime callback boundary, so null is malformed host input rather
+than a legitimate guest value. Added guards: the LLE runner returns `-1`, and
+the callback returns the existing `unknown_task_stub`.
+
+Built with `cmake --build build --config Debug --target
+RogueSquadron64Recomp`; the full target passed. Attempted the SDL route
+verification with `zsh tools/verify_sdl_quit.sh`; the script itself exited 0,
+but its child reported `rc=126` and emitted no SDL_QUIT line, so it is not a
+valid runtime positive control. The change therefore proves compilation and
+preserves the valid callback path statically, but does not claim a live null
+reach. H1 remains the working contract hypothesis; H2/H3 are unevaluated.
+
+ORIGIN: host `recomp::rsp::run_task` supplies the callback task pointer; the
+guard rejects only null host input and does not alter guest-written values.

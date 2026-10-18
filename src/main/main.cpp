@@ -6749,6 +6749,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
 // (real SP_BOOT does this DMA-style; the runner mimics SP_BOOT but skips
 // this step), then invokes the LLE runner.
 extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
+    if (task == nullptr) {
+        return -1;
+    }
     std::lock_guard<std::recursive_mutex> lle_lock(g_lle_task_mutex);
     s4249::Hold s4249_hold(1);
     rs64_rdp_advance_reset();
@@ -6831,6 +6834,9 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
 }
 
 RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
+    if (task == nullptr) {
+        return &unknown_task_stub;
+    }
     switch (task->t.type) {
     case M_GFXTASK:
         // Cache OSTask fields for factor5_gfx_runner. The runner needs to:
