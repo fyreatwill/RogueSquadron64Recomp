@@ -438,3 +438,5 @@ Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames sh
 - s5439: queued 3 stick/fire variation soaks (m6_keyed_var_*); verdicts pending in SOAK-RESULTS.md.
 
 - (s5443) m6_post_late_a/b (LATE=200, 480 s) clean but stayed in flight (no VI mode change after 78.5 s; dumps at swap 7000/10000 are flight): mission-transition endurance is UNTESTED. Queued m6_res_late_a/b (LATE=340, 540 s). Single-source (visual+fbhash).
+
+<!-- s5444: res_late soaks invalid (600 s cap overrun; `start`=pause -> MISSION GOALS overlay). Re-queued m6_res_nostart_a/b with HOLD=480, late keys `a` only. Read their summaries next. -->
