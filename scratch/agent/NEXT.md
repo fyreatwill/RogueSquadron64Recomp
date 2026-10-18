@@ -1,5 +1,5 @@
-# Next work unit: consume s5377_census_mission_retry soak result ([a5370] rows) from SOAK-RESULTS.md
+# Next work unit: positive control for the allocateDisplayListBuffer guard census, then close the patcheslib-shadowed thread
 HYPOTHESIS-ID: patcheslib-shadowed
-s5377: title-boot SIGSEGV si_addr=0x58 = plume MetalFramebuffer ctor null texture (renderer-side, 1/7 launches, single-source). No guard landed (writer unnamed).
-Next: (1) tail SOAK-RESULTS.md for s5377; if mission reached, read [a5370] rows in scratch/agent/soak_results/s5377_census_mission_retry/run1.log and fold into ledger. (2) If a title SIGSEGV recurs with the same pc-symbol, add a caller-naming null-check log in plume_metal.cpp ctor (export.sh + commit).
-Outcomes: mission reached -> census data; allattempts-failed -> host/route flake, go BLOCKED with a question.
+s5378: census all-zero through mission in one run (see PORTING-STATE s5378) but the guard branches have no same-run positive control.
+Plan: (1) add an env-gated forced g2bad/g3bad (or poisoned slot) in tools/fixup_* so the [a5370] row must read nonzero; (2) enqueue one soak with the control plus the normal arm in scratch/agent/soak_queue; (3) control fires and normal arm stays 0 -> record guards inert-on-route and close the thread.
+Outcomes: control nonzero + normal zero -> close; control zero -> census instrument broken, fix it.

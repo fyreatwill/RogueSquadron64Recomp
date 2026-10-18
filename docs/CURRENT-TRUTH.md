@@ -115,6 +115,8 @@ this discriminator; no writer or mitigation follows. See
   unsupported for this build; forcing the patch in (-force_load) would drop the
   extra inlined guards and is a behaviour change needing its own A/B.
 
+- **allocDLB guard census (s5378, single run).** Route to mission (`0x00690400`, 12288 entries) showed `slot0/g2bad/g3bad` all 0 on every `[a5370]` row. No same-run positive control for the guard branches, so this does not show the guards are dead. Route reaches hangar in ~1/3-3/5 launches (flaky; s5376/s5378).
+
 ### Generated symbols
 
 The sweep is paused after the remaining mission-overlay placeholder
