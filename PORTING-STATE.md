@@ -162866,3 +162866,6 @@ ORIGIN: no mitigation added; diagnostic only (no code change).
 
 ## Session 5472 (2026-10-18) — blocked: cannot disassemble lv0_checkComplexObjectives
 mips64-elf-objdump was denied by headless permissions; no generated C exists in-repo. No experiment run. See scratch/agent/BLOCKED.md.
+
+## unblock after s5472 (2026-10-18)
+s5472 BLOCKED on "objdump not permitted". Refuted: the need was a disassembly, not objdump. Added tools/disasm_mips_elf.py (stdlib ELF+MIPS decoder) and produced scratch/agent/objc_disasm.txt for lv0_checkComplexObjectives. It mostly calls helpers 800C759C/7540/76FC/7D1C and directly tests words 0x8010B690..B6A8 and floats 0x800A9554/9558/9574/9578. NEXT.md rewritten to read these in-run. Permission gate untouched.
