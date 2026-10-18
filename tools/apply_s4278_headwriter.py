@@ -32,7 +32,7 @@ if "rs64_s4234_g" not in s:
     a = "++s4234_n; "
     assert s.count(a) == 1
     s = s.replace(a, a + "rs64_s4234_g = s4234_n; ", 1)
-    s = s.replace("s4234_n <= 30 ||", "s4234_n <= 30 || s4234_n >= 9500 ||", 1)
+    s = s.replace("s4234_n <= 30 ||", "s4234_n <= 30 || (s4234_n >= 9500 && s4234_n <= 9600) ||", 1)
     s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\nextern volatile unsigned rs64_s4234_g;\n', 1)
     p.write_text(s)
 print("ok")

@@ -632,3 +632,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261018-002400 | m6_mission_v4_a | rc=0 | 581s | scratch/agent/soak_results/m6_mission_v4_a_20261018-002400.log
 20261018-005806 | m6_keyed_ap_a | rc=0 | 567s | scratch/agent/soak_results/m6_keyed_ap_a_20261018-005806.log
 20261018-010733 | m6_keyed_ap_b | rc=0 | 568s | scratch/agent/soak_results/m6_keyed_ap_b_20261018-010733.log
+20261018-072638 | m6_keyed_var_a | rc=137 | 600s | scratch/agent/soak_results/m6_keyed_var_a_20261018-072638.log
+20261018-073638 | m6_keyed_var_b | rc=0 | 596s | scratch/agent/soak_results/m6_keyed_var_b_20261018-073638.log

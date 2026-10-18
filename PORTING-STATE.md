@@ -162686,3 +162686,9 @@ Added scratch/agent/m6/{compare_flights.sh,frame_stats.py,ppm2png.py}. Across s5
 
 ## Session 5439 (2026-10-18) — queued stick/fire route-variation soaks (m6_keyed_hold_var.sh x3)
 Added scratch/agent/m6_keyed_hold_var.sh (derived by scratch/agent/mkvar.py): identical title->hangar->mission route as m6_keyed_hold.sh plus an autopilot tail from t=260 s (sl/a/sr/b/su/a/sd/b every 3 s) so flight sees stick sweeps and A/B fire, not only z/start. Queued m6_keyed_var_{a,b,c} (480 s hold each). No run this iteration; verdicts arrive in SOAK-RESULTS.md. Rules out nothing yet. Caveat: stick event duration semantics in the autopilot not verified; check keys.log/summary for crash/stall lines.
+
+## Session 5440 (2026-10-18) — folded s5439 variation soaks; capped the s4234-ENTRY log flood
+- m6_keyed_var_a: rc=137 at the 600 s loop cap, empty summary, but keys.log shows mission verified at t=80 s, fbhash maxrun=323 distinct=8523, 0 CRASH/SIGSEGV/abort lines in run.log. The kill was the harness cap, not a game failure (single-source: no summary line). m6_keyed_var_b: clean (mission_t=78 s, hold=497 s, vi_stalls30s=0, crashlines=0). var_c still queued.
+- Finding: run.log was 1.17 GB (var_a) / 1.03 GB (var_b), ~495k `[s4234-ENTRY]` lines. The probe in funcs_24.c (tools/apply_s4234_entryprobe.py, + s4278 variant) logged unconditionally whenever ctx->r31==0 (always true here) or n>=9500. Pure logging flood, slows the run and risks disk/cap timeouts.
+- ORIGIN: not a mitigation of corruption; a diagnostic print is now bounded (r31==0/h==0 rows capped at n<=2000, n 9500-9600 window kept). Fixed in both generator scripts and in the live funcs_24.c; rebuilt (cmake exit 0).
+- Verification pending: var_c (next queued soak) runs on the new binary; expect run.log far below 1 GB and a summary line.
