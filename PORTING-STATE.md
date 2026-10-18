@@ -162088,3 +162088,7 @@ Step 0: CURRENT-TRUTH is 13.5 KB (no maintenance). NEXT.md says no un-run unit r
 ## Session 5359 (2026-10-17) — UNBLOCK iteration: route 4, block confirmed
 
 Block (s5358): fresh PatchesLib source qualification needs a MIPS cross-compiler. Re-checked: gcc cross compilers, zig, rustc, llvm-mc absent; Apple clang has no MIPS target; only ld.lld (linker) present. Sandbox forbids listing /opt/homebrew, so a Homebrew LLVM with MIPS could not be checked. Dependency does not block existing-artifact qualification; M3/M4/M5 closed so no re-scope target remains. Escalated with a one-command refuting experiment (scratch/agent/UNBLOCK.md). No code changed.
+
+## Session 5360 (2026-10-17) — still BLOCKED: no human input since s5359, no un-run work unit
+
+Step 0: CURRENT-TRUTH 13.7 KB, no maintenance. NEXT.md and CURRENT-TRUTH item 4 agree the only open item is fresh PatchesLib qualification, which needs a MIPS cross-compiler (`mips64-elf-gcc`, `mips-linux-gnu-gcc` re-checked absent this iteration; `/opt/homebrew` is outside the sandbox so the s5359 refuting command could not be run by the loop). M3/M4/M5 closed; rename sweep parked by directive. No experiment run, no code changed. The human must run the refuting command in UNBLOCK.md, install a toolchain, or name a new target.
