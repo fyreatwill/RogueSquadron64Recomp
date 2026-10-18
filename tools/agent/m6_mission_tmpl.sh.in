@@ -1,0 +1,56 @@
+#!/bin/zsh
+[ -n "${ZSH_VERSION:-}" ] || exec /bin/zsh "$0" "$@"
+# M6 mission endurance segment @NAME@ (key gap @GAP@s). Reaches mission origin 0x00690400 then holds until the internal 555 s deadline,
+# logging CRASH/abort and VI-origin stalls (>30 s unchanged). rc=1 on crash/stall/never-reached-mission.
+# Generated from tools/agent/m6_mission_tmpl.sh.in via sed (@NAME@, @GAP@).
+set -u
+ROOT=$(git -C "${0:A:h}" rev-parse --show-toplevel); OUT="$ROOT/scratch/agent/soak_results/@NAME@"; BUILD="$ROOT/build"
+rm -rf "$OUT"; mkdir -p "$OUT"; K=$OUT/keys.log; D0=$SECONDS; DEADLINE=555
+ioreg -n Root -d1 -a 2>/dev/null | grep -A1 CGSSessionScreenIsLocked | grep -q true && { echo SCREEN-LOCKED >> $K; exit 1; }
+COMMON=(ROGUESQ_OVL2C_DROP=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1
+  ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_DLWALK=1 ROGUESQ_LOG_PHASE=1
+  ROGUESQ_LOG_ALLOC_TAIL_GUARD2=1 ROGUESQ_LOG_ALLOC_TAIL_GUARD3=1 ROGUESQ_LOG_M5_ROUTE_TRANSITION=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_AUDIO_UCODE=1
+  PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=240 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1)
+pkill -KILL -x RogueSquadron64Recomp >/dev/null 2>&1 || true
+L=$OUT/run.log
+has() { grep -aq "$1" $L; }
+left() { [ $((SECONDS-D0)) -lt $DEADLINE ]; }
+for att in 1 2; do
+  ( cd "$BUILD" && exec env "${COMMON[@]}" ./RogueSquadron64Recomp ) > $L 2>&1 &
+  p=$!
+  key() { "$BUILD/winctl" activate $p >/dev/null 2>&1; "$BUILD/winctl" key $p $1 250 >/dev/null 2>&1; }
+  for i in $(seq 1 100); do has 'origin=0x00790400' && break; sleep 1; done
+  has 'origin=0x00790400' || { echo notitle-att$att >> $K; kill -9 $p; wait $p 2>/dev/null; continue; }
+  for n in $(seq 1 10); do
+    has 'origin=0x006AB400' && break
+    left || break
+    key 36; sleep @GAP@; key 6; sleep 7
+  done
+  has 'origin=0x006AB400' || { echo nohangar-att$att t=$((SECONDS-D0)) >> $K; kill -9 $p; wait $p 2>/dev/null; left || break; continue; }
+  sleep 15; echo "att=$att hangar t=$((SECONDS-D0))" >> $K
+  for n in $(seq 1 10); do
+    if has 'origin=0x006A2900' || has 'origin=0x6A2900'; then break; fi
+    left || break
+    key 6; sleep 7
+  done
+  mt=-1; lastn=""; lastt=$SECONDS; stalls=0; maxstall=0
+  while left; do
+    sleep 3
+    kill -0 $p 2>/dev/null || { echo "PROCESS-DIED t=$((SECONDS-D0))" >> $K; break; }
+    [ $((SECONDS%24)) -lt 3 ] && key 6
+    if [ $mt -lt 0 ] && grep -aqE 'origin=0x(00)?690400' $L; then mt=$((SECONDS-D0)); echo "mission-onset t=$mt" >> $K; fi
+    n=$(grep -ac origin= $L)
+    if [ "$n" != "$lastn" ]; then lastn=$n; lastt=$SECONDS
+    else
+      g=$((SECONDS-lastt)); [ $g -gt $maxstall ] && maxstall=$g
+      if [ $g -ge 31 ] && [ $g -le 33 ]; then stalls=$((stalls+1)); echo "STALL t=$((SECONDS-D0)) vi_rows=$n" >> $K; lastt=$((SECONDS+40)); fi
+    fi
+    grep -aq CRASH $L && break
+  done
+  kill -9 $p 2>/dev/null; wait $p 2>/dev/null
+  echo "summary att=$att mission_onset=$mt crash=$(grep -ac CRASH $L) abort=$(grep -aic abort $L) stalls=$stalls maxstall=$maxstall vi_rows=$(grep -ac origin= $L) m690400=$(grep -ac origin=0x00690400 $L) end_t=$((SECONDS-D0))" >> $K
+  grep -a -B2 -A25 CRASH $L | head -60 > $OUT/crash_excerpt.txt
+  [ "$(grep -ac CRASH $L)" -eq 0 ] && [ $stalls -eq 0 ] && [ $mt -ge 0 ] && exit 0
+  exit 1
+done
+echo allattempts-failed >> $K; exit 1

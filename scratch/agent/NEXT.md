@@ -1,8 +1,9 @@
-# Next work unit: M6 keyed mission endurance, segmented under the 600 s soak cap
+# Next work unit: read M6 mission-endurance segment verdicts, root-cause the first distinct failure
 HYPOTHESIS-ID: m6-mission-endurance
 
-lldb is unusable (s5407). Start from scratch/agent/soak_queue/done/s5377_census_mission_retry_*.sh (rc=137 = hit 600 s cap):
-trim to a <=540 s recipe that reaches mission origin 0x00690400, then holds, logging CRASH/abort and VI-origin stalls (>30 s unchanged).
-Enqueue 3 segments (different key timing) and read SOAK-RESULTS.md. Each distinct failure: backtrace from the in-process
-crash handler (main.cpp ~10078), name the writer, root-cause fix (mips64-elf-gcc PatchesLib patch allowed, two-arm qualification).
-Outcomes: clean holds => extend segment length; CRASH/stall => capture and root-cause. Check CGSSessionScreenIsLocked first.
+Enqueued s5408: scratch/agent/soak_queue/m6_mission_seg_{a,b,c}.sh (template tools/agent/m6_mission_tmpl.sh.in; key gaps 4/6/9 s; 555 s deadline).
+Read: tail SOAK-RESULTS.md, then scratch/agent/soak_results/m6_mission_seg_*/keys.log (+ crash_excerpt.txt).
+Outcomes: SCREEN-LOCKED => unlock, re-enqueue (result meaningless). nohangar/notitle in all => route flake, not a game finding; lengthen key loop.
+mission-onset + clean summary (crash=0 stalls=0) => hold is clean for ~5 min; raise DEADLINE via a second launch phase or stack segments.
+CRASH => backtrace from crash handler (main.cpp ~10078), name the writer, root-cause fix (PatchesLib C patch allowed, two-arm qualification).
+STALL => capture VI origin + last log rows around the stall; check threads via crash handler/sample.
