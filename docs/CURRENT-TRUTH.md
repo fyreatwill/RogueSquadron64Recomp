@@ -165,6 +165,11 @@ Session 5400 audited `fake_func_800B75C4`: the generated 0xC-byte instruction
 fragment ends before `playerYwingInit`, while the companion map retains the fake
 symbol and the independent syms table calls the exact span `data_gap_800B75C4`.
 H2 selected; no semantic rename is authorized. See `docs/RENAME-S5400.md`.
+Session 5401 applied the same exact-span test to `fake_func_800B89F4`: the
+generated record is an invalid-C gap filler, the companion map identifies a
+split before `playerVwingInit`, and the independent syms table classifies the
+same 0xC-byte span as `data_gap_800B89F4`. H2 selected; no semantic rename is
+authorized. See `docs/RENAME-S5401.md`.
 
 ## Operational rules
 
@@ -215,6 +220,12 @@ H2 selected; no semantic rename is authorized. See `docs/RENAME-S5400.md`.
   measurement.
 
 ## Next steps (single monotonic backlog)
+
+0. (s5401) Audited `fake_func_800B89F4`: generated body, companion fake/real
+   boundary, overlay entry, and syms classification agree on a 0xC-byte
+   data/splat fragment before `playerVwingInit`; H2 selected, no rename. See
+   `docs/RENAME-S5401.md`. Next candidate must pass the same exact-span/name
+   test.
 
 0. (s5400) Audited `fake_func_800B75C4`: generated body, entry table,
    companion fake/real boundary, and syms classification agree on a 0xC-byte

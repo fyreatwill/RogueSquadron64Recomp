@@ -162406,3 +162406,15 @@ the generated tree was left unchanged. This rules out a rename for this split
 fragment, not any runtime behavior. Details: `docs/RENAME-S5400.md`.
 
 ORIGIN: n/a (symbol audit only; no mitigation).
+
+## Session 5401 (2026-10-17) — rejected V-wing split-fragment rename
+
+Audited `fake_func_800B89F4` using the exact-span discriminator. The generated
+record is a 0xC-byte invalid-C gap filler ending at `playerVwingInit`; the
+companion mission symbol file marks it as a fake split and the independent syms
+table names the same span `data_gap_800B89F4`. `recomp_overlays.inl` and the
+rename mapping agree. H2 won, so no generated or mapping rename was made. This
+rules out a callable V-wing initialization preamble at this address; see
+`docs/RENAME-S5401.md`.
+
+ORIGIN: n/a (symbol audit only; no mitigation).
