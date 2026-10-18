@@ -1,5 +1,4 @@
-# Next work unit: M6 endurance across mission restarts (x3)
+# Next work unit: M6 endurance runs 2 and 3, plus second-flight frame comparison
 HYPOTHESIS-ID: m6-flown-render-fidelity
 
-State (s5435): post-results flow works (a/start restarts the mission; hangar and second flight reached; 0 crash). Hypotheses: (A) repeated mission cycles stay clean; (B) a distinct crash/stall appears on a later restart (teardown/voice arrays); (C) renders degrade on the second flight.
-Discriminator: enqueue 3 recipes copying m6_keyed_hold_post.sh with HOLD=1200 (`env LATE=520 FBD_EVERY=400 zsh scratch/agent/m6_keyed_hold_post.sh <tag> 1200`). B = CRASH line or vi_stalls>0; C = compare second-flight frames to first. Control: results frame at ~swap 8000.
+State (s5436): run a of 3 clean (1217 s hold, 0 crash, 0 stall, alive). Remaining: runs b and c (`env LATE=520 FBD_EVERY=400 zsh scratch/agent/m6_keyed_hold_post.sh s5437_b 1200`, run foreground-in-background one at a time; the soak queue's 600 s cap is too short for HOLD=1200). Then compare first-flight vs second-flight frames in scratch/agent/m6/*/fbd (hypothesis C). B = CRASH line or vi_stalls>0 -> capture backtrace (lldb) and name the writer.
