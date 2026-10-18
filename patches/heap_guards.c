@@ -4,7 +4,7 @@
 // auto-generated funcs_*.c can be regenerated cleanly.
 //
 // The function pops a block off a doubly-linked free list (allocating a
-// new chunk via func_8002221C if the list is empty), then inserts the
+// new chunk via findAndUnlinkSmallestEntry if the list is empty), then inserts the
 // popped block into a per-frame "active" queue and bumps the queue's
 // allocation pointer. Returns block + 8 (skipping the 8-byte header).
 
@@ -24,7 +24,7 @@ typedef struct Block {
 } Block;
 
 // Game-side allocator helper (resolved via syms.ld → 0x8002221C).
-extern Block* func_8002221C(void);
+extern Block* findAndUnlinkSmallestEntry(void);
 
 // Game-side globals (declared in syms.ld at their RAM addresses):
 extern Block*  heap_free_head;       // 0x801163B0 — head of free list
@@ -40,12 +40,12 @@ static int kseg0_ok(const void* p) {
 #define MAX_FREE_BLOCKS (0x800000 / 0x100)
 #define BLOCK_SIZE 0x100
 
-// ORIGIN: func_8002221C and the free-list link stores publish block bases;
+// ORIGIN: findAndUnlinkSmallestEntry and the free-list link stores publish block bases;
 // every block dereference below reads the fixed 0x100-byte allocator object.
 // A KSEG0 base in the final 0xFF bytes is not a legitimate complete block.
 static int block_ok(const void* p) {
     uintptr_t addr = (uintptr_t)p;
-    // ORIGIN: func_8002221C and the free-list link stores publish fixed-size
+    // ORIGIN: findAndUnlinkSmallestEntry and the free-list link stores publish fixed-size
     // 0x100-byte allocator blocks. A KSEG0 pointer with another base
     // alignment cannot identify one of those blocks.
     return kseg0_ok(p) && (addr & (BLOCK_SIZE - 1U)) == 0 &&
@@ -132,7 +132,7 @@ static int free_head_link_ok(const Block* head) {
            (block_ok(head->next) && head->next->prev == head);
 }
 
-// ORIGIN: func_8002221C and the allocator's free-list link stores publish
+// ORIGIN: findAndUnlinkSmallestEntry and the allocator's free-list link stores publish
 // every successor and predecessor. A valid list must remain reciprocal for
 // its whole bounded chain; checking only the head leaves a later cycle or
 // foreign link available to the next dequeue.
@@ -285,7 +285,7 @@ static int active_queue_disjoint(const Block* queue_head,
     return node == NULL;
 }
 
-// ORIGIN: func_8002221C publishes every node in an expansion chain before the
+// ORIGIN: findAndUnlinkSmallestEntry publishes every node in an expansion chain before the
 // dequeue splices that chain into heap_free_head. A node already owned by the
 // active queue is not a legitimate expansion result; linking through it would
 // mutate the active queue while validating the new free-list chain.
@@ -308,7 +308,7 @@ static int expansion_chain_disjoint_from_active(const Block* expansion,
     return node == NULL;
 }
 
-// ORIGIN: func_8002221C publishes the expansion head with no predecessor and
+// ORIGIN: findAndUnlinkSmallestEntry publishes the expansion head with no predecessor and
 // links each successor back to its owning block. A foreign predecessor would
 // let the free-list splice overwrite an unrelated owner through next/prev.
 static int expansion_chain_links_ok(const Block* expansion) {
@@ -406,7 +406,7 @@ RECOMP_PATCH Block* allocateDisplayListBuffer(void) {
     // If the free list is empty, allocate a new chunk (which itself is a
     // chain of free blocks linked via .next) and prepend it to the list.
     if (head == NULL) {
-        Block* fresh = func_8002221C();
+        Block* fresh = findAndUnlinkSmallestEntry();
         if (fresh != NULL) {
             if (!block_ok(fresh)) {
                 return NULL;
@@ -414,7 +414,7 @@ RECOMP_PATCH Block* allocateDisplayListBuffer(void) {
             if (!expansion_chain_links_ok(fresh)) {
                 return NULL;
             }
-            // ORIGIN: func_8002221C publishes fresh free-list nodes, while
+            // ORIGIN: findAndUnlinkSmallestEntry publishes fresh free-list nodes, while
             // heap_tail_loc publishes the active allocator sentinel. They
             // are separate ownership domains; reject an expansion alias
             // before the splice below can rewrite either chain.

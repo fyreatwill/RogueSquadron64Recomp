@@ -167,10 +167,12 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    without a new discriminator. Re-open M3 only as a complete idiom-class audit.
 3. The generated-symbol sweep is parked; re-open only if a new placeholder
    candidate or companion-map evidence appears.
-4. Fresh PatchesLib source qualification: open dependency, NOT blocking —
-   needs an external `mips64-elf-gcc`/`mips64-elf-ld` (absent, s5342;
-   installing is a human decision). The host-side declaration path is
-   regeneration-safe and qualified against the existing `patches.elf`.
+4. Fresh PatchesLib source qualification (s5365): toolchain now present (clang-22
+   shims; build with `make CC=mips64-elf-gcc LD=mips64-elf-ld`). C source ->
+   ELF -> N64Recomp -> fixup -> clang compiles after fixing a `func_8002221C`
+   vs `findAndUnlinkSmallestEntry` naming bug in `patches/heap_guards.c`. The
+   shipped `patches.elf` is the asm-only build; the C override is not in the
+   image. Open: runtime A/B of C-patch vs asm-patch (NEXT.md).
 
 Session 5354 detail: retail run `tools/oracle/run_m4_retail_pcs.sh`
 (RS64_RSP_MID_STRIDE=1 + new RS64_RSP_MID_PCS filter; rdplog video,

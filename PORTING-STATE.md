@@ -162116,3 +162116,11 @@ Re-read CURRENT-TRUTH (13.8 KB, no maintenance trigger), NEXT.md (no un-run unit
 
 ## s5365 (unblock iteration, 2026-10-17)
 BLOCKED.md claim: no MIPS64 toolchain, no un-run work unit. Routes 1-3 re-examined: the llvm target probe is still refused by the permission layer (unverified, not negative); no work unit avoids the compiler. Route 4: escalated unchanged. No conclusions changed; CURRENT-TRUTH untouched.
+
+## Session 5365 (2026-10-17) — fresh PatchesLib source qualification (clang-22 MIPS shim)
+
+Owner installed a MIPS toolchain (`mips64-elf-gcc`/`-ld` shims over Homebrew LLVM clang 22). Ran the previously blocked fresh source-to-host qualification in `scratch/patchq/` (nothing under `patches/*.elf` touched):
+- `make CC=mips64-elf-gcc LD=mips64-elf-ld` on `heap_guards.c` + `heap_guard_asm.S`: compiles and links (`-Wlogical-op-parentheses` at heap_guards.c:143 only). Fresh ELF .recomp_patch is 0xa88 bytes at 0x80801668 versus the shipped asm-only ELF's 0xe8 bytes at 0x80801000 — the shipped `patches.elf` is built from `heap_guard_asm.S` (ASM_ONLY), so the C override is NOT in the shipped image.
+- FIRST N64Recomp run on the fresh ELF FAILED: `No function found for jal target: 0x8002221C` ("Error in recompiling allocateDisplayListBuffer"). Cause: the C source called `func_8002221C`, but `syms/rogue_squadron.syms.toml:341` only names that vram `findAndUnlinkSmallestEntry` (the asm uses that name). Fix: renamed the extern/call in `patches/heap_guards.c` (9 lines, no behaviour change; syms.ld aliases both names).
+- After the rename: N64Recomp emitted 11 functions (22 counted incl. refs), `tools/fixup_patches_host.py` ran, `clang -c` of the generated `patches.c` with PatchesLib flags compiled clean (20888-byte .o); `allocateDisplayListBuffer` is defined in the generated source (positive control; static helpers emitted as address-named funcs).
+- Rules out: toolchain absence as a blocker; the pipeline defect was a source naming bug, not the toolchain. NOT shown: that clang-built C behaves like the shipped asm patch at runtime (no game run this session; clang not gcc codegen). Single-source: compile/recomp only.
