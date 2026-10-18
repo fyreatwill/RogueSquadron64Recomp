@@ -253,7 +253,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5470 (TOP):** runInMissionFrame dispatches an EVENT-BITMASK table (mask word 0x8010C9E0, table 0x8010B350, {id,handler} stride 8): requestMissionTransitionMode is the handler of event 2; mission end = whoever posts that bit. s5472a (m6_wp10c9e0.sh) armed at swap 7000 was too late (mask already 1, event-0 handler -> phase 6). Next = rerun with TRAPSWAP~2500 to catch the poster (NEXT.md).
+- **s5471 (TOP):** mission-end poster = lv0_checkComplexObjectives -> setHudEnableBit4 (event 4 in 0x8010C9E0) -> requestMissionTransitionMode -> phase 6 (single-source, scratch/agent/m6/early2500). Next: read lv0_checkComplexObjectives (0x8010119C) conditions to decide whether autopilot legitimately met them or a stale/zeroed counter fired it early; then check what renders after phase 6.
 - **s5469:** early-armed bp+watch caught phase 0->4 in requestMissionTransitionMode(a0=2) from runInMissionFrame (single run). Next = the a0=2 selecting condition (NEXT.md).
 - **s5468:** phase machine read statically (docs/M6-PHASE-MACHINE.md). s5470a: phase was already 3 at swap 7400 and requestMissionTransitionMode/beginMissionEndTransition were never called afterwards. Next = rerun m6_bp_trans.sh with TRAPSWAP~2500 so the phase-0->3 write and its caller are caught (NEXT.md).
 

@@ -1,3 +1,3 @@
-# Next work unit: who POSTS the event bit into mask word 0x8010C9E0 (event 0 / event 2 handlers = mission end)?
-Hypotheses: H1 posted by player-death/lives code; H2 posted by objectives-complete code; H3 timer/scripted. Discriminator: run scratch/agent/m6_wp10c9e0.sh with a much earlier TRAPSWAP (try 2500; mission onset swap is known from run.log) so the write watch on 0x10C9E0 catches the posting writer with bt (positive control: 0x3470 + dispatcher clears must hit). Static alt: enumerate writers of -0x3620 with 0x8011 base that OR a constant (funcs_11/30/32/33/35/36/37/40/42).
+# Next work unit: is the objectives-complete trigger legitimate?
+Hypotheses: H1 autopilot genuinely met level-0 objectives; H2 a counter/flag read by lv0_checkComplexObjectives (0x8010119C, size 0x750) is zeroed/stale so it fires early; H3 timer-based. Discriminator: list the memory words it tests, then in a TRAPSWAP=2500 run read them just before the setHudEnableBit4 hit (positive control: 0x3470 hit). Also record what renders after phase 6.
 HYPOTHESIS-ID: m6-mission-end-trigger
