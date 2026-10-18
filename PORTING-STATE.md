@@ -162532,3 +162532,7 @@ Read m6_mission_v2_{a,b} (rc=0, 573 s / 570 s). Both: hangar at t=122/114 s, mis
 - tools/agent/m6_mission_tmpl.sh.in now: counts only `[vi] update_screen` rows; runs a synthetic-frozen-sequence positive control at start (must fire exactly once, else rc=1; verified ctl=1 offline); summary adds last_vi and the distinct-origin list (flight-vs-briefing marker: v2_c ended on origins 0x00696100/0x00620400, i.e. scene churn, not a static 0x690400).
 - Enqueued m6_mission_v3_a/b/c (gaps 4/6/9). Caveat: v2 "0 stall" verdicts are unproven for that reason; v3 is the first valid stall measurement.
 - Next: read v3 verdicts; CRASH => backtrace + writer; stall => capture.
+
+## Session 5412 (2026-10-17) — v3 soaks died at 0 s: detector positive-control sequence too short
+
+v3_a/b exited rc=1 in 0 s; keys.log = "detector-control FAIL ctl=0". Cause (hand-traced, boring bug): the synthetic frozen sequence ended at t=36 with the frozen run starting at t=6, so the max gap was 30 and never entered the 31-33 firing window. Extended the sequence to 39 (gap 33 -> exactly one fire) in tools/agent/m6_mission_tmpl.sh.in and soak_queue/m6_mission_v3_c.sh; regenerated v3_a/v3_b from c. No game run this iteration (the three recipes are queued for the loop). Still no valid mission stall/crash datum; v2 "no stall" remains unproven.
