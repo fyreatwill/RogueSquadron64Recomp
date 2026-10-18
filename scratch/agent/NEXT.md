@@ -1,3 +1,3 @@
-# Next work unit: what condition in runInMissionFrame (funcs_42.c ~12256) passes a0=2 to requestMissionTransitionMode?
-Hypotheses: H1 objectives-complete (success); H2 death/lives==0; H3 timer/scripted event. Discriminator: static read of generated runInMissionFrame around the call, then rerun m6_bp_trans.sh s5472a with extra reads of lives/objective words at the requestMissionTransitionMode bp. s5471a showed a0=2 and phase 0->4 (PORTING-STATE s5469). Control: watch on 0x3470 must hit.
+# Next work unit: who POSTS the event bit into mask word 0x8010C9E0 (event 0 / event 2 handlers = mission end)?
+Hypotheses: H1 posted by player-death/lives code; H2 posted by objectives-complete code; H3 timer/scripted. Discriminator: run scratch/agent/m6_wp10c9e0.sh with a much earlier TRAPSWAP (try 2500; mission onset swap is known from run.log) so the write watch on 0x10C9E0 catches the posting writer with bt (positive control: 0x3470 + dispatcher clears must hit). Static alt: enumerate writers of -0x3620 with 0x8011 base that OR a constant (funcs_11/30/32/33/35/36/37/40/42).
 HYPOTHESIS-ID: m6-mission-end-trigger
