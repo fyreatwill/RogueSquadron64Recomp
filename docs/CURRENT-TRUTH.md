@@ -410,3 +410,6 @@ winctl keys never reach SDL: macOS refuses to activate the game from the harness
 
 ## M6 flown-hold resolution (s5421/unblock)
 The s5420 mission-exit-to-title at ~634 s was caused by the autopilot 'r' key. Control arm (no 'r', NOR=1) stayed in the mission (origins 0x620400/0x690400) for the full 1105 s hold, 0 crash/0 stall; the 'r' arm returned to title (0x790400). Do not use 'r' in flown holds.
+
+## s5426 addendum (flown render fidelity)
+RT64 parser accepts ~100% of submitted flown triangles (mission 3,709,507/3,710,659). H4 narrowed to post-parse GPU drops; H3 untested because FB_DUMP_DIR needs a pre-created directory (mkdir -p). Next: mkdir fbd, re-run, view mission frames.

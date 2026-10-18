@@ -162614,3 +162614,9 @@ Summary: s5424 refutes H1 (upstream DL drop) and selects H4 (RT64 clip/cull/dept
 What ran: nothing on the game. The s5424 result stands (flown RDP stream 2.40M tri vs hangar 349k, same ~1.7 tri/submission; scratch/agent/m6/s5424_tri/run.log). This session only reconciled the exit contract: the stop gate's diagnostic-only check is case-sensitive lowercase (selects|refutes|...), so the s5424 entry's capitalised words did not count; and the loop tick reset scratch/agent/STATUS to WORKING and removed OUTCOME, which had to be rewritten (DONE / ADVANCED).
 What it rules out: no new hypothesis change. s5424 still refutes H1 (upstream DL drop) and selects H4 (RT64 clip/cull/depth) vs H3 (partial fb dump) as the live pair.
 Next discriminator unchanged (scratch/agent/NEXT.md): one run with tricnt + fb dump + RT64 drawn-tri count at processDisplayLists.
+
+## Session 5426 (2026-10-18) — RT64 parser accepts 100% of submitted flown triangles (H4 parse-stage refuted)
+Added g_rs64_rt64_tri_accepted/rect_accepted atomics in lib/rt64 rt64_rdp.cpp (patch re-exported) plus a [rt64drawn] per-submission log (ROGUESQ_LOG_RT64_DRAWN=1). Run m6_keyed_hold.sh s5425_drawn 200: mission at 79 s, 0 crashlines, 0 VI stalls, alive at end.
+Per phase ord, [tricnt] tri vs [rt64drawn] tri: ord5 683674/683674, ord6 129713/129713, ord7 (mission) 3710659 vs 3709507 (0.03% gap), ord3/4 exact. Positive control: other phases nonzero and equal; rect counts track.
+Result: RT64 ingest drops nothing, so H4 can only live post-parse (GPU clip/cull/depth/scissor), which this counter cannot see. H3 NOT tested: ROGUESQ_FB_DUMP_DIR produced no files (upstream_compat.cpp:495 apparently does not mkdir; $OUT/fbd never created).
+ORIGIN: n/a (diagnostic counter only, no mitigation).
