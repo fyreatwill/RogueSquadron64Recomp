@@ -162456,3 +162456,21 @@ real, but no safe semantic rename is supported. No generated or mapping file
 changed. Details: `docs/RENAME-S5402-MISSION-AUDIT.md`.
 
 ORIGIN: n/a (symbol audit only; no mitigation).
+## Session 5404 (2026-10-17) — designed normalized M4 boundary discriminator
+
+Ran the existing offline M4 parser against `scratch/agent/m4_task_join_run`.
+The retail arm had 3,020,766 RSM1 records, 2,083/2,083 RSM1-to-RSD1 task
+joins, 1,222 tasks with transient signed `-32768` VACC lanes, and zero such
+task-end lanes. The same capture had four VI-width controls and two
+whole-RDRAM positive-control markers, confirming the instrument is live.
+
+The exact prior key is not portable: retail task serials are run-local, the
+port target capture uses one long graphics task, and the 512 framebuffer origin
+alternates between `0x006AB400` and `0x006AB800`. The mapped PCs remain valid
+(`0x112C -> 0x012C`, `0x17F0 -> 0x07F0`), but hook events and periodic samples
+also need task-local normalization. I wrote
+`docs/REVISIT-S5404-M4-NORMALIZED-BOUNDARY-DESIGN.md`, defining a single
+batched discriminator keyed by phase epoch, ucode image identity, mapped PC,
+and normalized task progress, with explicit H1/H2/H3 thresholds. This rules
+out only the exact raw-key comparison and does not identify a writer or permit
+a mitigation.

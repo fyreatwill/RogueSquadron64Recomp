@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5402 (2026-10-17).
+Compact operational handoff, maintained at Session 5404 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -176,6 +176,15 @@ generated record is a trap-only invalid-C gap filler, the companion map starts
 `0x800AF6A8..0x800AF6B0` as `data_gap_800AF6A8` (size `0x8`). H2 selected; no
 semantic rename is authorized. See `docs/RENAME-S5402.md`.
 
+Session 5404's offline M4 pass re-ran the existing retail parser with positive
+controls: 2,083/2,083 task joins, 3,020,766 mid-task records, 1,222 tasks with
+transient `-32768` lanes, and zero task-end lanes. It confirmed that the prior
+exact join is structurally impossible because task serials are local, the port
+capture is one long task, and framebuffer origins alternate. The usable next
+discriminator is phase epoch + ucode image identity + mapped IMEM PC +
+task-local normalized progress; no writer or mitigation is inferred. See
+`docs/REVISIT-S5404-M4-NORMALIZED-BOUNDARY-DESIGN.md`.
+
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 commands or
@@ -226,6 +235,11 @@ semantic rename is authorized. See `docs/RENAME-S5402.md`.
 
 ## Next steps (single monotonic backlog)
 
+0. (s5404) Designed a normalized M4 boundary key after the exact task-key join
+   was shown structurally impossible: phase epoch, ucode image identity,
+   mapped IMEM PC, and task-local progress bucket. The next unit must implement
+   both arms with positive controls and a >=20-row threshold; no mitigation is
+   authorized. See `docs/REVISIT-S5404-M4-NORMALIZED-BOUNDARY-DESIGN.md`.
 0. (s5402) Audited `func_800E9AE0`: the generated 0x114-byte callable span,
    companion false-split note, overlay entry, and independent syms mapping
    agree, but no semantic name or live caller exists. H2 selected; no rename.
