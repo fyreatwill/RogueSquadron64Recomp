@@ -268,3 +268,7 @@ Title-boot SIGSEGV si_addr=0x58 (1/7 launches, single-source) is in plume MetalF
 
 ## s5392 note (M6 keyed route)
 `scratch/agent/m6_keyed_hold.sh` (keyed title->hangar->mission hold harness) exists. First run: 0/5 launches reached hangar; all parked at origin 0x696100 with ~110k `[s3290-stall]` lines, no CRASH (single-source). Key delivery is unverified (no positive control) — next work unit is NEXT.md. Next-steps #1: make the keyed route reach the mission, then >=3 holds of >=10 min.
+
+
+### s5393 M6 correction
+0x696100 and 0x690400 appear in UNKEYED launches at ~76 s / ~97 s and the game returns to title by ~167 s: that is the attract loop, so origin 0x690400 alone does NOT prove a playable mission. Keys (winctl) have not reached the game since s5377 (positive control s5393 failed with trusted=yes, rc=0); a macOS RS64_patch_c crash modal was on screen. `[pad-sdl] site=key` is not a valid key witness (0 in good s5099 run). Next: NEXT.md.

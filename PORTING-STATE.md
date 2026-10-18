@@ -162283,3 +162283,14 @@ Built `scratch/agent/m6_keyed_hold.sh` (s5377 key route, up to 5 launches, then 
 Run k1 (hold 600): `nohangar` on attempts 1-5; no CRASH lines in any attempt log. Every attempt's last origin rows are 0x00696100/0x696100 (width 640, phase=7) with ~110k `[s3290-stall]` lines each (109434-111203). So the failure mode this time is not "no title" but a consistent park at 0x696100 before the hangar origin 0x6AB400 (s5377 saw 2/3 nohangar; here 5/5).
 Not determined: whether keys were delivered (winctl output is discarded; no positive control that a key reaches the game window), and whether 0x696100 is a legitimate pre-hangar screen the key sequence fails to advance or a real stall. Mission hold was never reached, so no endurance datum. Single-source (one script run).
 Rules out: a crash on this route in these 5 launches. Does not rule out: key-delivery failure (boring-first suspect), unlocked-screen assumption.
+
+## Session 5393 (2026-10-17) — M6 keyed route: 0x696100 is the attract loop, not a stall; keys never reach the game; crash dialog on screen
+
+What ran: re-read the five s5392 `fail_att*.log` files offline, then `scratch/agent/m6_keyctl.sh` (new): launch, wait for title (0x790400), log lock state / `winctl find` / frontmost app / screenshot, send Return (keycode 36) x6 and watch the VI origin.
+Findings:
+- All 5 s5392 launches (and both s5377 launches) have IDENTICAL timing: title 0x790400 @~50 s -> 0x696100 @~76 s -> 0x690400 (w=512) @~97 s -> 0x696100 @~167 s -> title-ish 0x62BD00, animating (update_screen still climbing, so no hang). That is the unkeyed ATTRACT LOOP. So 0x690400 reached "without the hangar" (s5378) was the attract DEMO, not a playable mission, and 0x696100 is a normal attract screen. The 110k `[s3290-stall]` lines are instrument noise in that loop, not a stall. (Two sources: five s5392 logs + s5377 logs.)
+- The harness's hangar gate (0x6AB400) was never reached in s5377 or s5392: keys have been ineffective since at least s5377 (last confirmed hangar-by-keys: s5099 01:26 today).
+- Positive control FAILED: `winctl trusted`=yes, activate rc=0, key rc=0, lock state not Locked, window found (`find` -> 436,204 640x512), but 6 Return presses at title changed nothing. NOTE `[pad-sdl] site=key` is NOT a valid witness: it is 0 even in the successful-hangar s5099 log.
+- The screenshot shows a macOS "RS64_patch_c quit unexpectedly" crash-report modal in front of the desktop, and NO game window visible although `find` returns one. Frontmost app was Claude before activate. Leading hypothesis (single-source, untested): the modal dialog / Space placement keeps the game window from being key, so CGEventPostToPid keys are dropped. RS64_patch_c is a different binary (the new MIPS patch toolchain test?).
+Rules out: H3 (real stall at 0x696100) for the keyed-route parks; "mission reached" claims based on origin 0x690400 alone.
+ORIGIN: no mitigation added (harness-only change).
