@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5404 (2026-10-17).
+Compact operational handoff, maintained at Session 5405 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -185,6 +185,16 @@ discriminator is phase epoch + ucode image identity + mapped IMEM PC +
 task-local normalized progress; no writer or mitigation is inferred. See
 `docs/REVISIT-S5404-M4-NORMALIZED-BOUNDARY-DESIGN.md`.
 
+Session 5405 ran the batched normalized-boundary gate in
+`tools/analyze_m4_normalized.py` with a self-test and the existing s5354
+retail capture plus an existing port log. Retail passed whole-RDRAM, VI, and
+mapped-PC controls and supplied 2,580,925 mapped-PC rows; the available port
+log supplied zero normalized rows. Neither arm's available record format
+contains an explicit ucode image identity, so H3 is selected. This is an
+instrument/schema result only: no accumulator writer or mitigation is
+authorized. The next implementation must add real image identity and task
+progress/end observations to the port and cxd4 arms before another comparison.
+
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 commands or
@@ -235,6 +245,10 @@ task-local normalized progress; no writer or mitigation is inferred. See
 
 ## Next steps (single monotonic backlog)
 
+0. (s5405) The normalized gate selected H3: retail controls/rows are live, but
+the available port log has zero normalized rows and both existing schemas lack
+explicit ucode image identity. Implement those observations before rerunning;
+no writer or mitigation follows. See `tools/analyze_m4_normalized.py`.
 0. (s5404) Designed a normalized M4 boundary key after the exact task-key join
    was shown structurally impossible: phase epoch, ucode image identity,
    mapped IMEM PC, and task-local progress bucket. The next unit must implement

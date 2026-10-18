@@ -162474,3 +162474,19 @@ batched discriminator keyed by phase epoch, ucode image identity, mapped PC,
 and normalized task progress, with explicit H1/H2/H3 thresholds. This rules
 out only the exact raw-key comparison and does not identify a writer or permit
 a mitigation.
+
+## Session 5405 (2026-10-17) — normalized M4 boundary gate selected H3
+
+Implemented `tools/analyze_m4_normalized.py` as a schema-checked, batched
+normalizer for the cxd4 `RSM1`/`RSD1` records and port normalized rows. Its
+self-test exercised both a passing H1 control and a missing-image-field H3
+rejection. The capture run used the existing s5354 retail records and an
+existing port log: retail passed whole-RDRAM, VI, and mapped-PC controls and
+provided 2,580,925 mapped-PC rows; the port provided zero normalized rows.
+The existing records also lack explicit ucode image identity, so the
+discriminator selected H3. This rules out H1/H2 for the current schemas, not
+the M4 accumulator hypothesis or any writer. The next work must add real
+image identity plus task-progress/end observations to both arms before a
+comparison can authorize writer attribution.
+
+ORIGIN: n/a (observational schema gate; no mitigation or value filtering).
