@@ -215,6 +215,8 @@ progress/end observations to the port and cxd4 arms before another comparison.
   iterations. A diagnostic field alone is not a work unit.
 
 ## Superseded conclusions worth retaining
+
+- (s5470) "requestMissionTransitionMode has no jal callers => reached via function pointers / a condition in runInMissionFrame at funcs_42.c:12256" (docs/M6-PHASE-MACHINE.md, s5469 NEXT.md). Believable because grep found no jal and the bt showed runInMissionFrame as caller. Actually the call is the jalr in the event-table loop; a0=2 is the event id, not a computed condition.
 - s5423 hypothesis H1 "renderer/DL path drops flown terrain geometry before the RDP" is refuted by s5424: the flown RDP stream has 2.40M tri vs hangar 349k at the same ~1.7 tri/submission. It was believable because flown frames show only sky and the hangar renders fine. Live pair now: H4 (RT64 clip/cull/depth rejects it) vs H3 (partial fb dump).
 
 - s5423 caveat: "M6 endurance closed / flown hold clean" proves no crash/stall only; it was believable because the detectors (VI stall, crash markers, fbhash) cannot see a frame that is alive but nearly empty. Flight frames show sky only, so render fidelity in flight is OPEN.
@@ -251,7 +253,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5469 (TOP):** early-armed bp+watch caught phase 0->4 in requestMissionTransitionMode(a0=2) from runInMissionFrame (single run). Next = the a0=2 selecting condition (NEXT.md).
+- **s5470 (TOP):** runInMissionFrame dispatches an EVENT-BITMASK table (mask word 0x8010C9E0, table 0x8010B350, {id,handler} stride 8): requestMissionTransitionMode is the handler of event 2; mission end = whoever posts that bit. s5472a (m6_wp10c9e0.sh) armed at swap 7000 was too late (mask already 1, event-0 handler -> phase 6). Next = rerun with TRAPSWAP~2500 to catch the poster (NEXT.md).
+- **s5469:** early-armed bp+watch caught phase 0->4 in requestMissionTransitionMode(a0=2) from runInMissionFrame (single run). Next = the a0=2 selecting condition (NEXT.md).
 - **s5468:** phase machine read statically (docs/M6-PHASE-MACHINE.md). s5470a: phase was already 3 at swap 7400 and requestMissionTransitionMode/beginMissionEndTransition were never called afterwards. Next = rerun m6_bp_trans.sh with TRAPSWAP~2500 so the phase-0->3 write and its caller are caught (NEXT.md).
 
 - **s5467 (TOP):** results swap trigger = game's own mission phase machine: runInMissionFrame dispatches on word 0x8010CA20 -> requestSpeechResponseMode2 (0x800FBAE8, needs isSpeechBusyOrQueued==idle) sets mode byte 0x80130B14=2 -> clearMissionObjectiveFlagsAndEnterPhaseSix (phase 4->6) -> mainGameLoop loadOverlay (const arg). Not a stub artifact (H3 dead); flag words 0x80130B50/58 uninvolved. Next = what advances phase to the Mode2/Mode1 handler (objectives vs death vs timer) and whether Mode2 = success or fail (NEXT.md).
