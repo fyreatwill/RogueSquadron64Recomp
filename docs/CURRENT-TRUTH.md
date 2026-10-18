@@ -172,9 +172,10 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-0. (s5369) a100 head/walk census: 300 s runs reached hangar but not mission, and
-   the CTL arm does not fire the head/walk sites, so H1/H2 are both unresolved
-   (single-source null, no control). See scratch/agent/NEXT.md.
+0. (s5370) Path census (`tools/apply_s5370_path_census.py`): on boot/title, ent=12288 with
+   slot0=0 -- cached slot 0x801163B0 never empty, so head/walk guard sites are unreachable by
+   construction. Mission still unmeasured (route flaked); rerun `scratch/patchq/ab/run_a5370.sh`
+   on a cooperative route; slot0=0 there closes the thread. See scratch/agent/NEXT.md.
 
 1. M4 CLOSED as legitimate (s5354): retail cxd4 at the mapped PCs 0x012C/0x07F0
    shows transient `-32768` VACC lanes in 657/657 hangar (512-wide) graphics

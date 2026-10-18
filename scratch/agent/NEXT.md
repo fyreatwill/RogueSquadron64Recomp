@@ -1,4 +1,4 @@
-# Next work unit: make the a100 census valid (route + control) before reading it
+# Next work unit: rerun the s5370 path census until it reaches hangar and mission
 HYPOTHESIS-ID: patcheslib-shadowed
-s5369: two 300 s runs; hangar reached but mission (scanout 0x690400) not; head/walk a100 sites 0 in census and ctl; ctl never fires them -> no positive control for those sites, H2 untested.
-Unit: (1) copy scratch/agent/soak_queue/done/s4849_m5_a10_guard_qualification_*.sh (known to reach mission ~185 s), add the a100 counter env + ROGUESQ_A100_CTL arms, grep 0x690400 first to confirm the route; (2) make CTL force the head/walk predicate itself (edit tools/apply_s5368_align100_counter.py) so ctl must print head/walk lines. Outcomes: ctl silent -> instrument broken; ctl fires + census 0 with mission reached -> H1 close; census fires -> read mis count, name writer.
+s5370: tools/apply_s5370_path_census.py built; title window shows ent=12288 slot0=0 g2=g3=0 (cached slot 0x801163B0 never empty).
+Unit: `zsh scratch/patchq/ab/run_a5370.sh` (single run, keys via winctl; run 2 stalled before hangar, run 1 before title) and read `[a5370]` lines + a5370.keys. Outcomes: mission reached and slot0=0 -> close thread (walk guards dead route-wide, stop guarding); slot0>0 and g2>0 -> read g2bad/g3bad, name the writer; route fails again -> use the soak queue (copy done/s4964_mission_image_*.sh with the census env) instead of babysitting.
