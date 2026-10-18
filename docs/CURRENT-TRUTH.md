@@ -424,3 +424,5 @@ Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames sh
 - **s5430 (single-source, visual):** 310 s keyed hold, dumps every 10 swaps: no Mission Failed frame by swap 7470; goals overlay appears 3x (periodic HUD vs restart unresolved). See NEXT.md.
 
 - s5430 follow-up: mission start = logo crawl + wingman flyby (swaps 2250-2450) then flight; no restart observed. Goals-overlay recurrence still open.
+
+- s5431 (single-source, visual): 568 s keyed hold, dumps/20 swaps: flight ~swaps 2800-4400 then persistent MISSION GOALS screen to swap 16400 (emblem animating, not frozen); preceded by flight => not a restart. Cause (autopilot `start` pause vs mission-end) open; see NEXT.md.

@@ -162637,3 +162637,10 @@ Ran FBD_EVERY=10 m6_keyed_hold.sh s5430a 300 (autopilot route, mission t=79 s, h
 
 ### s5430 follow-up (single-source, visual)
 Finer sheet (swaps 2250-2490, every 10): the mission opens with the Star Wars logo crawl (~2250-2400), then a wingman flyby (~2450), then green-craft HUD flight. One continuous mission start, no restart observed; the goals-overlay recurrence (swaps ~3000-4200) is still unexplained but is not evidence of a restart loop. NEXT.md hypothesis (B) lowered.
+
+## Session 5431 (2026-10-18) — 568 s keyed hold, dumps every 20 swaps: flight ends ~swap 4400, then a persistent MISSION GOALS screen for ~12000 swaps; not a restart, not a freeze
+
+What ran: `FBD_EVERY=20 m6_keyed_hold.sh s5431a 560` (att=1, mission at t=78 s, hold 568 s, alive, 0 VI stalls, 0 crash lines). 782 dumps (swaps 20-16700); contact sheet every 400 swaps via new `scratch/agent/m6_sheet.py` (positive control: sheet shows title, hangar, flight and overlay frames, so the dump pipeline discriminates).
+Result: title/hangar (swaps 0-2000), desert flight (~2800-4400, ship visible), then from ~4800 to the end (swap 16400) every sampled frame is the MISSION GOALS screen over the rotating Rebel emblem. The frame preceding the overlay is flight, not menu/title, so hypothesis B (restart) is refuted (single-source, visual). fbhash: 15333 distinct of 16508, maxrun 319 — the framebuffer keeps animating, so it is not a frozen frame (hypothesis: the emblem rotates).
+Reading: the goals screen is a pause/mission-end state entered ~1500 swaps into flight with no flight input (autopilot sends only z/start every 4 s; `start` plausibly pauses). Unresolved: whether it is the pause menu (our injected `start`) or mission-end flow. Rules out: restart loop, crash, VI stall in this 568 s window.
+Next: run once with the autopilot's `start` removed (z only) in the same session recipe, compare time-to-overlay; ORIGIN not needed (no mitigation added).
