@@ -162573,3 +162573,11 @@ Built: autopilot caps raised (src/main/main.cpp: 64->512 events, 512->8192 char 
 fbhash (41703 samples, 22244 distinct): maxrun 2267, which is not a free pass. Offline analysis of run.log shows that from sample ~23479 (~12 min) the framebuffer cycles through two static hashes (656a759f..., runs of ~2217 samples, and ef16afe6..., runs of ~570), repeated 4 times with period ~2790 samples (~87 s). Reading: the flown mission likely ended (death/complete) and the game is parked on a results/retry cycle, or it hung while VI keeps scanning a stale buffer. Single-source (fbhash only, no screenshot) and not yet distinguished.
 Ruled out: crash/stall in 1200 s of flown input (n=1). Not shown: that the player was alive and flying through the hold.
 ORIGIN: none (no mitigation landed; instrument and input-cap change only).
+
+## Session 5420 (2026-10-18) — flown hold's static cycle is the title screen: mission exits to origin 0x790400 at ~634 s, not a hang
+- Added `ROGUESQ_FB_DUMP_DIR` (src/main/upstream_compat.cpp): PPM of the fb every 1000th swap; wired into scratch/agent/m6_flown_hold.sh. Dump assumes stride 320, so frames at other VI widths are garbled (early frames at width 640/512 are garbled too: the dump is live but not decodable there).
+- Run s5420_b (1200 s, flown pattern): mission at t=81 s, hold 1208 s, alive_at_end=1, 0 crashlines, 0 VI stalls >30 s. fbhash maxrun=1440 distinct=14070 total=53575. Periodic cycle again: hash 8ba65ad9 (840 samples) / db90cbd7 (1440 samples), ~2280-sample period, from sample ~15404.
+- Discriminator: `[phase]` VI transitions. Mission origin 0x690400 (width 512) at 76.8 s; excursion to 0x696100 at 354 s, back at 369 s; then width=1024 origin=0x790400 at 634.1 s (update_screen #37981) - the SAME origin/width as the title screen at 12.8 s.
+- Verdict (phase transitions + the fbhash period recurring in s5419): the static cycle is the game having left the mission and sitting in the title/attract loop. Not a hang (VI keeps new frames), not a crash. Onset differs from s5419 (~730 s vs 634 s), so not time-deterministic.
+- Open: why the mission ended (death, objective complete, or autopilot 'r'/start hitting a quit option). No in-game state was read.
+- No mitigation/guard added; instrument only.

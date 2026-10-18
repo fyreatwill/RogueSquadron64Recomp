@@ -243,6 +243,9 @@ progress/end observations to the port and cxd4 arms before another comparison.
   queue and current `NEXT.md`; do not revive stale backlogs without a new
   measurement.
 
+## M6 flown-hold update (s5420)
+Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-12 min is the TITLE screen (VI width 1024 origin 0x790400 from 634 s): the mission ended and the game fell back to title/attract. Not a hang. Cause of mission end unknown (death vs objective vs autopilot 'r'). ROGUESQ_FB_DUMP_DIR dumps PPMs but assumes stride 320 (garbled at other widths).
+
 ## Next steps (single monotonic backlog)
 
 > s5419: first FLOWN 1200 s hold (autopilot caps now 512 ev/8192 chars) clean: 0 crash, 0 stall; BUT fbhash shows a 4x repeating static two-frame cycle (~87 s period) from ~12 min on, so the mission is likely ended/parked (single-source, unresolved). Next: dump a frame at that point, replicate, vary pattern.
