@@ -1,5 +1,4 @@
-# Next work unit: fold s5446_plume_scratchfb_guard soak verdict, then mission endurance
+# Next work unit: fold s5447_plume_guard_crumb, then mission endurance
 HYPOTHESIS-ID: m6-title-boot-plume-sigsegv
-- Read SOAK-RESULTS.md for s5446_plume_scratchfb_guard (title boots; any [CRASH]/si_addr=0x58 = guard incomplete, read the crash-handler backtrace in the log).
-- Clean = weak evidence only (p~0.29 at 1/7). Optionally add a one-shot stderr breadcrumb in the new guard branch to prove it fires (positive control for the mechanism).
-- Then resume M6: keyed mission endurance / results-screen recipe (start=pause defect noted in s5444).
+- Read scratch/agent/soak_results/s5447_plume_guard_crumb/summary: guard_fired_runs>0 proves the zero-size path occurs (mechanism control); any CRASH = guard incomplete, read run*.log backtrace.
+- If fired=0 and no crash: still weak; close the thread as "guarded, unproven" and resume M6: keyed mission endurance / results-screen recipe (start=pause defect, s5444).
