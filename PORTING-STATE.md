@@ -162525,3 +162525,10 @@ Rules out: route flake as the explanation for a/b. No game crash/stall datum yet
 
 ## Session 5410 (2026-10-17) — M6 v2 soaks a/b: two clean ~440 s mission holds, 0 crash / 0 stall
 Read m6_mission_v2_{a,b} (rc=0, 573 s / 570 s). Both: hangar at t=122/114 s, mission origin 0x690400 at t=127/119 s, then hold to t~568 s with crash=0 abort=0 stalls=0 maxstall=0. The VI log shows the mission triple-buffer alternating 0x696100 / 0x62BD00 (~380k rows each in run a), so frames advance for the whole hold rather than parking at one origin (the s5373 failure shape). Caveats: (1) the stall detector has no same-run positive control (counts "origin=" rows, which also match non-VI debug lines, so it could miss a true VI freeze while debug spam continues); (2) run.log is ~450 MB per run, dominated by s3290-stall spam; (3) keys are sent every 24 s so this may be mission-select/briefing, not flight - no in-flight evidence. m6_mission_v2_c still queued. No code change this iteration. ORIGIN: n/a (no mitigation added).
+
+## Session 5411 (2026-10-17) — M6 stall detector fixed (it was counting debug spam); v3 soaks enqueued
+- v2_c: clean (0 crash/0 stall, 570 s, mission onset t=129). So v2 a/b/c = 3/3 clean holds.
+- Found the v2 detector was blind: it counted every line containing `origin=`; v2_c had 1,714,671 such rows (s3294/s3295 debug spam carries origin=), so a frozen VI would still have looked "alive". Real VI rows are `^[vi] update_screen #N` (every 64 updates, 526 rows in 570 s, ~1.1 s apart), so the 30 s rule is well-posed on them.
+- tools/agent/m6_mission_tmpl.sh.in now: counts only `[vi] update_screen` rows; runs a synthetic-frozen-sequence positive control at start (must fire exactly once, else rc=1; verified ctl=1 offline); summary adds last_vi and the distinct-origin list (flight-vs-briefing marker: v2_c ended on origins 0x00696100/0x00620400, i.e. scene churn, not a static 0x690400).
+- Enqueued m6_mission_v3_a/b/c (gaps 4/6/9). Caveat: v2 "0 stall" verdicts are unproven for that reason; v3 is the first valid stall measurement.
+- Next: read v3 verdicts; CRASH => backtrace + writer; stall => capture.

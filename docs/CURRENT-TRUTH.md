@@ -381,3 +381,5 @@ Title-boot SIGSEGV si_addr=0x58 (1/7 launches, single-source) is in plume MetalF
 
 ### s5394 M6 key delivery
 Dead keys in s5377/s5392/s5393 = crash-report modal on screen; kill UserNotificationCenter before key-driven soaks. After that `m6_keyed_hold.sh s5394a 600`: 1 run, 600 s hold clean (0 stalls, 0 crash lines), single-source. Next: >=2 more holds, then 10+ min each; capture a backtrace on any failure.
+
+- (s5411) M6 stall detector fixed: counts `[vi] update_screen` rows with a synthetic positive control; earlier v2 "0 stall" results were against a spam-masked detector. v3 a/b/c queued.
