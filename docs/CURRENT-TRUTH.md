@@ -171,6 +171,7 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
   measurement.
 
 ## Next steps (single monotonic backlog)
+- s5372: hangar key route fails (nohangar t=200) in s5371; mission census unmeasured. BLOCKED on direction (scratch/agent/BLOCKED.md).
 
 0. (s5370) Path census (`tools/apply_s5370_path_census.py`): on boot/title, ent=12288 with
    slot0=0 -- cached slot 0x801163B0 never empty, so head/walk guard sites are unreachable by
