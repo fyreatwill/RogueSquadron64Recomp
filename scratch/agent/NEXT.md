@@ -1,5 +1,4 @@
-# Next work unit: reconcile the shadowed PatchesLib (s5366)
+# Next work unit: port patch-only guard predicates into fixup-inlined allocateDisplayListBuffer
 HYPOTHESIS-ID: patcheslib-shadowed
-Finding: patch layer (asm and C) is not linked on macOS; exes byte-identical; live guards are fixup-inlined in RecompiledFuncs (tools/check_patches_shadowed.sh).
-Hypotheses: H1 inlined guards are a superset of the patch's, so the patch is redundant -> retire/annotate the patch layer; H2 patch has guards the inlined version lacks (e.g. block_ok alignment/bump_cursor_ok) -> port them via tools/fixup_*.py into the inlined function; H3 forcing the patch (-force_load) is preferable.
-Discriminator: diff the guard predicates in patches/heap_guards.c (kseg0_ok/block_ok/bump_cursor_ok, free-list link checks) against the inlined guards in the generated allocateDisplayListBuffer (grep RecompiledFuncs generated tree + tools/apply_s3285*, apply_s650*). Any predicate present only in the patch = H2 candidate; then A/B the forced build vs current in one run (autopilot recipe: scratch/patchq/ab/run_ab.sh, binaries build/RS64_patch_*; positive control = a guard-hit counter in the same run).
+Finding (s5367): patch block_ok/bump_cursor_ok are stricter than inlined guards (0x100 alignment, end bound, bump cursor). H2 supported by source reading only.
+Unit: in tools/apply_s3285_freelist_align_cycle.py add a counter-only (non-rejecting) check for (addr&0xFF)!=0 on free-list node pointers; positive control = same counter on a deliberately always-true predicate; run one autopilot hangar run (scratch/patchq/ab/run_ab.sh recipe). If count>0, make it reject and name the writer (ORIGIN). If 0, retire the patch layer as dead.
