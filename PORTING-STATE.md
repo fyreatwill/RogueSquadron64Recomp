@@ -1,3 +1,14 @@
+## Session 5402 (2026-10-17) — rejected cinematic data-gap rename
+
+Audited the next generated-symbol candidate, `fake_func_800AF6A8`, using the
+required exact-span discriminator. The generated tree contains a trap-only
+invalid-C gap filler at that address. The companion cinematic symbol file
+places `cutsceneTypeStrings` at `0x800AF6B0`, and the independent checked-in
+syms table classifies `0x800AF6A8` as `data_gap_800AF6A8` with size `0x8`.
+The overlay table's broad synthetic placeholder span is therefore not
+callable-function evidence. H2 won; no rename or runtime change was made.
+The next candidate is `fake_func_800AE3E4`.
+
 ### s950 (2026-08-13)
 
 Completed the planned source-only M3 audit of the `tickAudioChannel` context

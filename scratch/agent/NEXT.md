@@ -1,7 +1,7 @@
 # Next work unit: audit the next generated-symbol candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Candidate: `fake_func_800AF6A8`.
+Candidate: `fake_func_800AE3E4`.
 
 * H1: the generated record is a callable function with an independently
   supported semantic name; synchronize its bounded references.
@@ -18,4 +18,4 @@ bounded audit and leave the generated name unchanged.
 
 Run the bounded census first:
 
-`rg -n -C 5 'fake_func_800AF6A8|Preamble' ../N64Recomp/RecompiledFuncs ../rogue_squadron64/symbol_files ../rogue_squadron64/tools syms tools/rename`
+`rg -n -C 5 'fake_func_800AE3E4|Preamble' ../N64Recomp/RecompiledFuncs ../rogue_squadron64/symbol_files ../rogue_squadron64/tools syms tools/rename`

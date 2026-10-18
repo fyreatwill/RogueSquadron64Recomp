@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5400 (2026-10-17).
+Compact operational handoff, maintained at Session 5402 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -170,6 +170,11 @@ generated record is an invalid-C gap filler, the companion map identifies a
 split before `playerVwingInit`, and the independent syms table classifies the
 same 0xC-byte span as `data_gap_800B89F4`. H2 selected; no semantic rename is
 authorized. See `docs/RENAME-S5401.md`.
+Session 5402 applied the exact-span test to `fake_func_800AF6A8`: the
+generated record is a trap-only invalid-C gap filler, the companion map starts
+`cutsceneTypeStrings` at `0x800AF6B0`, and the independent syms table classifies
+`0x800AF6A8..0x800AF6B0` as `data_gap_800AF6A8` (size `0x8`). H2 selected; no
+semantic rename is authorized. See `docs/RENAME-S5402.md`.
 
 ## Operational rules
 
@@ -220,6 +225,11 @@ authorized. See `docs/RENAME-S5401.md`.
   measurement.
 
 ## Next steps (single monotonic backlog)
+
+0. (s5402) Audited `fake_func_800AF6A8`: generated body, companion data
+   boundary, and independent syms span agree on an 8-byte data/splat fragment;
+   H2 selected, no rename. See `docs/RENAME-S5402.md`. Next candidate is
+   `fake_func_800AE3E4`.
 
 0. (s5401) Audited `fake_func_800B89F4`: generated body, companion fake/real
    boundary, overlay entry, and syms classification agree on a 0xC-byte
