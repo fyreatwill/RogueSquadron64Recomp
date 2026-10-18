@@ -162609,3 +162609,8 @@ Rules out: H1 as "geometry/terrain DLs dropped before the RDP submit" (single-so
 Discrimination (s5424): REFUTES H1 (geometry/terrain DLs dropped upstream of RDP submit): flown 2.40M tri vs hangar 349k, equal per-submission rate. SELECTS the H1-downstream family (renamed H4: RT64 clip/cull/depth/scissor rejects flown geometry) vs H3 (partial fb dump) as the live pair; H2 (empty sky) is disfavoured by the triangle volume.
 Next discriminator (NEXT.md): one run with tricnt + fb dump at the same VI phase + RT64 drawn-tri count at processDisplayLists. Submitted high & RT64 drawn ~0 => H4; drawn high & dump empty => H3; both normal => full-res frame review (H2).
 Summary: s5424 refutes H1 (upstream DL drop) and selects H4 (RT64 clip/cull/depth) vs H3 (partial fb dump) as the live pair; the next run must discriminate them via submitted-vs-drawn tri count plus an fb dump.
+
+## Session 5425 (2026-10-18) — s5424 close-out: gate bookkeeping, no new experiment
+What ran: nothing on the game. The s5424 result stands (flown RDP stream 2.40M tri vs hangar 349k, same ~1.7 tri/submission; scratch/agent/m6/s5424_tri/run.log). This session only reconciled the exit contract: the stop gate's diagnostic-only check is case-sensitive lowercase (selects|refutes|...), so the s5424 entry's capitalised words did not count; and the loop tick reset scratch/agent/STATUS to WORKING and removed OUTCOME, which had to be rewritten (DONE / ADVANCED).
+What it rules out: no new hypothesis change. s5424 still refutes H1 (upstream DL drop) and selects H4 (RT64 clip/cull/depth) vs H3 (partial fb dump) as the live pair.
+Next discriminator unchanged (scratch/agent/NEXT.md): one run with tricnt + fb dump + RT64 drawn-tri count at processDisplayLists.
