@@ -1,6 +1,5 @@
-# Next work unit: read m6_mission_v2_{a,b,c} verdicts; root-cause first distinct crash/stall
+# Next work unit: read m6_mission_v2_c verdict; harden M6 stall detector, verify in-flight
 HYPOTHESIS-ID: m6-mission-endurance
 
-Enqueued s5409 (fixed recipe: mission origin 0x690400 in either format counts as route success).
-Read: tail SOAK-RESULTS.md; scratch/agent/soak_results/m6_mission_v2_*/keys.log (+ crash_excerpt.txt).
-Clean summary => check onset vs key activity (attract vs real mission). CRASH => backtrace (main.cpp ~10078), name writer, root-cause fix, two-arm. STALL => VI origin + log rows. SCREEN-LOCKED => re-enqueue.
+s5410: v2_a/b clean (0 crash/0 stall, ~440 s). Remaining doubts: stall detector counts any "origin=" line (debug spam masks a VI freeze) and no positive control; unknown whether scene is flight or briefing.
+Do: (1) read v2_c line in SOAK-RESULTS; (2) edit tools/agent/m6_mission_tmpl.sh.in to count only '^\[phase\]' / true VI origin rows and add a SIGSTOP-free positive control (e.g. grep rate sanity); (3) add a screenshot or scene-marker grep to tell flight from briefing; (4) enqueue 3 v3 segments; CRASH => backtrace, writer, root-cause fix.
