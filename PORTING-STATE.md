@@ -162728,3 +162728,10 @@ Change: lib/rt64 present queue scratch branch skips (colorTarget=nullptr, worklo
 - s5446_plume_scratchfb_guard hit the 600 s cap (rc=137) after 10 complete title boots: 10/10 reached origin=0x00790400, 0 CRASH/SIGSEGV; run11 truncated. Clean-probability at the old 1/7 rate = (6/7)^10 = 0.21 -> weak evidence only (single-source; guard not yet shown to fire).
 - Change: one-shot stderr breadcrumb `[s5446-scratchfb-guard] fired #N` (first 5 hits) in lib/rt64 rt64_present_queue.cpp guard branch; rt64.patch re-exported; build ok. Queued s5447_plume_guard_crumb (9 boots, fits cap) which records guard_fired_runs in its summary: fired>0 = mechanism positive control (the zero-size path is real); fired=0 with 0 crash stays weak.
 - ORIGIN: writer already named in s5446 (VI::fbSize()==(0,0) mid mode-switch -> null texture in clearColorTarget); this session only adds observability, no new mitigation.
+
+## Session 5448 (2026-10-18) — plume guard crumb soak folded (fired 0/9, 9/9 clean); forced-zero positive control passes 3/3
+- s5447_plume_guard_crumb: guard_fired_runs=0, titles=9/9, bad=0. Natural fbSize (0,0) did not occur in 9 boots (consistent with ~1/7 rate being a different trigger or rarer); thread = "guarded, unproven".
+- Change: env `RS64_FORCE_SCRATCHFB_ZERO` forces width=0 on the first 3 scratch-fb presents (lib/rt64 rt64_present_queue.cpp; rt64.patch re-exported; build ok). Control run s5448_scratchfb_force_ctl: fired 3/3, titles 3/3, 0 CRASH — the scratch-fb branch IS reached every title boot and the guard path (colorTarget=nullptr, mutex released) is survivable downstream.
+- Rules out: guard path itself crashing or deadlocking. Does NOT show the guard prevents the natural crash (never observed natural zero).
+- ORIGIN: unchanged from s5446 (VI::fbSize()==(0,0) mid mode-switch); this adds only a test hook, no new mitigation.
+- Next: resume M6 results-screen/mission-transition endurance; res_nostart_a/b clean 480 s but stayed in flight, so transition remains untested.
