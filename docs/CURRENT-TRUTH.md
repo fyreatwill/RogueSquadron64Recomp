@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5342 (2026-10-17).
+Compact operational handoff, maintained at Session 5381 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -199,7 +199,8 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    only if a port task-END record ever shows `-32768`.
 2. M5 and the M3 j/jal idiom list are exhausted (s5349); do not revive
    without a new discriminator. Re-open M3 only as a complete idiom-class audit.
-3. The generated-symbol sweep is parked; re-open only if a new placeholder
+3. s5381: SDL_QUIT path now `quick_exit` (was `exit()` -> static-destruction std::terminate SIGABRT, s5380 single-source). Build-only; verify on the next run logging "SDL_QUIT received" (no CRASH after it). Any SIGABRT with that line is now a regression, not a guest crash.
+   The generated-symbol sweep is parked; re-open only if a new placeholder
    candidate or companion-map evidence appears.
 4. Patch-layer guard sites are UNREACHED on the hangar route (s5368). A
    counter-only 0x100-alignment census (`tools/apply_s5368_align100_counter.py`,
