@@ -162106,3 +162106,6 @@ NEXT.md states no un-run work unit remains. This iteration re-measured:
 No experiment run; no code changed. The rename sweep is paused and, per the
 loop contract, no longer resets the engineering-change counter, so it is not
 used to stay fed. Outcome BLOCKED: human choice needed (see BLOCKED.md).
+
+## s5363 (unblock) — BLOCK CONFIRMED, escalated again
+BLOCKED.md claim: no MIPS64 cross-compiler for fresh PatchesLib qualification. Route 1: compiler is inherent to fresh compilation. Route 2: find over the four allowed trees found no mips gcc; homebrew llvm probe is sandbox-denied (unverified, not negative). Route 3: no unit remains. No code changed. Outcome BLOCKED; human must run the clang target probe or install a toolchain.
