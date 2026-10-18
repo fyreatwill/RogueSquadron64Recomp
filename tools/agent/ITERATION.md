@@ -36,6 +36,22 @@ When choosing the work unit, this order overrides Next-steps ordering:
    guard or prove dead, close the class). No reactive single-crash chases.
    Wait-for-recurrence breadcrumbs are passive: enqueue their soaks (see Soak
    queue below) and move on.
+3b. **M6 play-through endurance (user directive 2026-10-17).** When items 1-3 are
+   exhausted (the current offline indirect-site audit gets at most 2 iterations), do THIS
+   instead of writing BLOCKED.md "no discriminator remains". Goal: the first mission plays
+   without a crash, hang or frozen frame. Method: queue soaks on the title->mission route
+   (s5378 reached mission origin 0x00690400 without the hangar; the hangar route is flaky
+   3/5) with a keyed mission hold of >=10 min, >=3 runs, logging every CRASH/abort and every
+   stall (VI origin unchanged >30 s). Each DISTINCT failure: capture a backtrace (lldb or an
+   ASan arm in a separate build dir), name the writer, and fix the root cause - no more
+   guard-one-deref patches. A real MIPS toolchain now exists (mips64-elf-gcc 14.2 +
+   binutils; clang kept as mips64-elf-clang), so PatchesLib C patches are allowed; qualify
+   them with the same two-arm discipline. Secondary: the ~1/7 title-boot plume SIGSEGV
+   (si_addr=0x58) - loop title boots under lldb until it recurs, then read the real
+   backtrace instead of waiting on breadcrumbs. Soak hygiene: the macOS screen must be
+   unlocked (check CGSSessionScreenIsLocked before key-driven soaks) or nohangar results
+   are meaningless. This is engineering, not churn: every iteration must end with either a
+   new crash/stall datum or a code/patch change.
 4. **Generated-symbol renaming sweep** (HYPOTHESIS-ID:
    generated-symbol-renaming-sweep), once 1-3 are inapplicable (M5 closed;
    M3 parked pending a new discriminator). Real, bounded work — ~1,548
