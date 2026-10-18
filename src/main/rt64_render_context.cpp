@@ -84,6 +84,8 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task);
 #include <chrono>
 #include <mutex>
 #include <string>
+#include <atomic>
+extern std::atomic<uint64_t> g_rs64_rt64_tri_accepted, g_rs64_rt64_rect_accepted;
 namespace s4267 {
 static const bool on = [] { const char* e = std::getenv("ROGUESQ_S4267"); return e && *e && *e != '0'; }();
 static std::mutex m;
@@ -1232,7 +1234,14 @@ namespace ultramodern {
                             rs64_phase_ord(), hi_phys - lo_phys, tri, trect, frect, other);
                 }
             }
+            static int s_dr = -1;
+            uint64_t dr_t0 = 0, dr_r0 = 0;
+            if (s_dr < 0) { const char *e = std::getenv("ROGUESQ_LOG_RT64_DRAWN"); s_dr = (e && *e && *e != '0') ? 1 : 0; }
+            if (s_dr) { dr_t0 = g_rs64_rt64_tri_accepted.load(); dr_r0 = g_rs64_rt64_rect_accepted.load(); }
             run_rdp_submission(app, lo_phys, hi_phys);
+            if (s_dr) fprintf(stderr, "[rt64drawn] ord=%u tri=%llu rect=%llu\n", rs64_phase_ord(),
+                              (unsigned long long)(g_rs64_rt64_tri_accepted.load() - dr_t0),
+                              (unsigned long long)(g_rs64_rt64_rect_accepted.load() - dr_r0));
         }
     }
 }
