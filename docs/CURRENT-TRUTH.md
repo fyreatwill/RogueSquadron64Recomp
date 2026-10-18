@@ -251,7 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5456 (TOP):** s5455 lldb mission-hold a/b folded: both reached the mission (t=86-88 s, origin 0x00690400), held to the 600 s cap, 0 crash / 0 stall (n=2, frame-counter evidence, single-source). Nothing overturned. m6_lldb_c (LATE=340) and m6_lldb_d (LATE=200) are queued; fold them next. If 4/4 are null, raise the soak cap in loop.sh for a >=20 min hold (the 600 s cap cannot see slow-onset failures). Any bt: name the writer.
+- **s5457 (TOP):** lldb mission-hold c/d folded: 0 crash / 0 stall (4/4 null total, each <=10 min). loop.sh now honours `# SOAK_TIMEOUT=<secs>` in a recipe; m6_lldb_long_a (20-min hold, cap 1800) is queued. Fold it next; any bt: name the writer.
+- **s5456:** s5455 lldb mission-hold a/b folded: both reached the mission (t=86-88 s, origin 0x00690400), held to the 600 s cap, 0 crash / 0 stall (n=2, frame-counter evidence, single-source). Nothing overturned. m6_lldb_c (LATE=340) and m6_lldb_d (LATE=200) are queued; fold them next. If 4/4 are null, raise the soak cap in loop.sh for a >=20 min hold (the 600 s cap cannot see slow-onset failures). Any bt: name the writer.
 
 - **s5455 (top):** queued m6_lldb_a/b/c (tools/agent/mk_lldb_hold.py -> m6_keyed_hold_lldb.sh): mission hold under lldb attach; stall => bt all. Read scratch/agent/m6/s5455_lldb_*/keys.log + lldb_att*.log; name the writer of any stall/crash.
 
