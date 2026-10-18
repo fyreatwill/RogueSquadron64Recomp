@@ -162380,3 +162380,15 @@ Ran `tools/rename_generated_symbols.py` only for
 needed for this symbol-only synchronization. This rules out the stale
 placeholder in the current generated tree, not any runtime behavior.
 ORIGIN: n/a (symbol synchronization only; no mitigation).
+## Session 5399 (2026-10-17) — synchronized A-wing initialization preamble symbol
+
+Audited the next generated-symbol candidate, `fake_func_800B58B4`, with the
+required exact-span comparison. The generated record is exactly `0xC` bytes
+from `0x800B58B4` through the `playerAwingInit` entry at `0x800B58C0`; the
+companion map identifies the fake/real boundary, and the independent syms map
+names that exact span `playerAwingInitPreamble`. The committed generated tree
+was already synchronized; only a pre-existing dirty sibling worktree had the
+stale placeholder. H3 selected, so no generated-code change was committed.
+This rules out treating the short record as an unnameable data gap for this
+address, but does not provide runtime evidence or alter game behavior. Details:
+`docs/RENAME-S5399.md`.

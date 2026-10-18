@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5398 (2026-10-17).
+Compact operational handoff, maintained at Session 5399 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -156,7 +156,11 @@ Only rename a real generated placeholder when the companion map and generated
 tree agree. Session 5398 synchronized the exact entry-local `0x8000040C` /
 `0x34` span to the existing `clearMemory16ByteBlocks` syms mapping; the
 companion `make_elf.py` remains address-coded for this hard-coded entry, so no
-new semantic name was inferred. Audit files are `docs/RENAME-S*.md`.
+new semantic name was inferred. Session 5399 synchronized the exact `0xC`
+span at `0x800B58B4` to the existing `playerAwingInitPreamble` syms mapping;
+the committed generated tree was already synchronized, while a stale
+placeholder existed only in a pre-existing dirty sibling worktree. Audit
+files are `docs/RENAME-S*.md`.
 
 ## Operational rules
 
@@ -207,6 +211,12 @@ new semantic name was inferred. Audit files are `docs/RENAME-S*.md`.
   measurement.
 
 ## Next steps (single monotonic backlog)
+
+0. (s5399) Audited `fake_func_800B58B4`: generated body, entry table,
+   companion fake/real boundary, and syms size agree, and the committed
+   generated tree was already named `playerAwingInitPreamble`; H3 selected,
+   no generated change. See `docs/RENAME-S5399.md`. Next candidate must pass
+   the same exact-span/name test.
 
 0. (s5398) Completed the bounded generated-symbol renaming sweep for
    `func_8000040C`: generated body, entry table, companion hard-coded
