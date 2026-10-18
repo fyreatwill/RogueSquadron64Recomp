@@ -162805,6 +162805,13 @@ Rules out: lldb-masked timing fault in the mission hold; slow-onset (<=22 min) c
 s5453 (N=10 lldb-attach title boots) hit the 600 s cap before writing its titles= line (~60 s/boot): control=PASS, no STOP/BREADCRUMB lines. Queued s5463_plume_title8_a/b (same recipe, N=8, separate output dirs; 16 boots total). control=PASS + STOP => read bt, name the writer. 16 clean => (6/7)^16~0.09; close thread as "guarded s5446, unreproduced" and move to an M3 idiom audit. Nothing else run; no conclusions changed.
 ORIGIN: no mitigation added (soak scripts only).
 
+## Session 5464 (2026-10-18) — mission-end audit: fail-results already reached; success path is the gap
+- Ran: offline ledger audit of s5420-s5449 (no game run). New docs/M6-MISSION-END-TRIGGER.md (fact table, H1 timer / H2 out-of-bounds / H3 cheat path).
+- Showed: NEXT's premise was stale. Fail results reached in 3+ runs at ~swap 8000-8100; restart from them clean 3/3 x 1200 s. The fail condition itself was never read from RAM; s5445 nostart 480 s did not fail, against a pure timer.
+- Rules out: "no recipe reaches results"; more fail-path soaks as information-bearing.
+- ORIGIN: none (doc only, no mitigation).
+- Next: one RDRAM state-diff at results entry, or H3.
+
 ## Session 5463 (2026-10-18) — plume title-boot lldb loop: 16/16 clean, thread closed
 
 Folded s5463_plume_title8_a/b (queued s5462). Both summaries: `control=PASS`, `titles=8/8 bad=0` (positive control fired in each run, so the null is valid). Total 16 lldb-attached title boots with 0 SIGSEGV; with the earlier 9 attach boots and 18 breadcrumb boots the si_addr=0x58 plume crash has not recurred since the s5446 scratch-fb guard landed. The guarded base rate was ~1/7, so (6/7)^16 = 0.085: suggestive, not proof, that the guard (or an unknown change) removed it. Conclusion label: single-mechanism, guarded-s5446/unreproduced. No lldb bt exists to read, so no writer beyond the s5446 attribution (scratch-fb branch of PresentQueue::threadPresent, VI::fbSize()==(0,0) -> null texture) can be named. Plume thread CLOSED; stop re-running title loops.
