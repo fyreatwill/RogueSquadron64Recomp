@@ -422,3 +422,5 @@ Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames sh
 - **s5429 flown render (single-source, visual):** 613 s hold clean; dune relief renders at VI 3000/6000/9000 (A selected, B/C refuted for terrain). The mission ends in MISSION FAILED between VI 9000 and 12000 (autopilot does not fly), so later hold time is the results screen. Next: make the hold a real flight (flight keys) or stop treating hold length as flight time; see NEXT.md.
 
 - **s5430 (single-source, visual):** 310 s keyed hold, dumps every 10 swaps: no Mission Failed frame by swap 7470; goals overlay appears 3x (periodic HUD vs restart unresolved). See NEXT.md.
+
+- s5430 follow-up: mission start = logo crawl + wingman flyby (swaps 2250-2450) then flight; no restart observed. Goals-overlay recurrence still open.

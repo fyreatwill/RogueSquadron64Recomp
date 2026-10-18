@@ -162634,3 +162634,6 @@ Ran `FBD_EVERY=50 m6_keyed_hold.sh s5429_relief 600`: mission at t=78 s, hold 61
 
 ## Session 5430 (2026-10-18) — 310 s flown hold with 10-swap dumps: no failure text by swap 7470; goals overlay recurs
 Ran FBD_EVERY=10 m6_keyed_hold.sh s5430a 300 (autopilot route, mission t=79 s, hold 310 s, alive, 0 CRASH, 0 VI stalls, fbhash distinct=6379/7474). 747 dumps; 25-frame contact sheet (every 30th) shows title, level select, hangar, desert flight, and the MISSION GOALS overlay at 3 separate times; no Mission Failed frame through swap 7470. So failure-by-destruction is not reached in the first ~310 s; s5429 failure (VI ~12000) is later. Recurring overlay = periodic HUD vs mission restart, unresolved (single-source, 25 of 747 frames viewed). No code changed; dumps gitignored.
+
+### s5430 follow-up (single-source, visual)
+Finer sheet (swaps 2250-2490, every 10): the mission opens with the Star Wars logo crawl (~2250-2400), then a wingman flyby (~2450), then green-craft HUD flight. One continuous mission start, no restart observed; the goals-overlay recurrence (swaps ~3000-4200) is still unexplained but is not evidence of a restart loop. NEXT.md hypothesis (B) lowered.
