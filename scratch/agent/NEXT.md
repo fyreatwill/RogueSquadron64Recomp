@@ -1,9 +1,5 @@
-# Next: no un-run work unit remains
+# Next: BLOCKED pending human choice (see BLOCKED.md)
 
-M3 idiom classes (j/jal, lwl/lwr, delay-slot, indirect jr/jalr) and M4 are closed;
-M5 closed; rename sweep paused. The only open item is the fresh PatchesLib source
-qualification, which needs a MIPS64 cross-compiler (human install decision).
-Next iteration: go BLOCKED with that question unless the human has supplied a new
-target or the toolchain.
+No un-run work unit remains. If the human installs a MIPS64 cross toolchain, run fresh PatchesLib source qualification; otherwise remain BLOCKED.
 
 HYPOTHESIS-ID: m3-indirect-idiom-class-audit

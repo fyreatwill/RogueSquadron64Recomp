@@ -162096,3 +162096,13 @@ Step 0: CURRENT-TRUTH 13.7 KB, no maintenance. NEXT.md and CURRENT-TRUTH item 4 
 ## Session 5361 (2026-10-17) — UNBLOCK iteration: route 4, block unchanged
 
 Block (s5360): fresh PatchesLib qualification needs a MIPS cross-compiler. The one check that could refute it (Homebrew LLVM --print-targets) was denied by the sandbox, so it remains unverified rather than negative. No other un-run work unit exists (M3/M4/M5 closed). No code changes. Human action: run the check in BLOCKED.md or install a toolchain.
+
+## Session 5362 (2026-10-17) — backlog exhausted; toolchain re-measured absent; BLOCKED
+
+Read CURRENT-TRUTH (13.7 KB, no maintenance trigger), NEXT.md and SOAK-RESULTS tail.
+NEXT.md states no un-run work unit remains. This iteration re-measured:
+`which mips64-elf-gcc mips64-elf-ld mips-linux-gnu-gcc` -> all not found;
+`clang --print-targets | grep -i mips` -> no output (no MIPS target).
+No experiment run; no code changed. The rename sweep is paused and, per the
+loop contract, no longer resets the engineering-change counter, so it is not
+used to stay fed. Outcome BLOCKED: human choice needed (see BLOCKED.md).
