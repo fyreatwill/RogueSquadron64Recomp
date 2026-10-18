@@ -162583,3 +162583,4 @@ ORIGIN: none (no mitigation landed; instrument and input-cap change only).
 - No mitigation/guard added; instrument only.
 - DISCRIMINATION (s5420): REFUTES H2 (hung game with stale buffer): VI origin/width changed to the title values and hashes alternate, so frames are live. SELECTS H1/H3-family (mission left to title) over H2; H1 vs H2' (objective complete) vs H3 (autopilot quit key) remain split.
 - NEXT DISCRIMINATOR: run with the autopilot 'r'/start keys removed after t=100 s (H3 control) and a width-correct dump of frames just before the 0x790400 transition. H3 predicts no exit without 'r'; H1/H2' predict exit persists and the frame shows death/debrief. Recorded in scratch/agent/NEXT.md.
+- Summary (s5420): this run refutes the hung-game hypothesis (H2) and selects mission-exit-to-title; it does not yet discriminate H1/H2'/H3, which the no-'r' control run will discriminate.
