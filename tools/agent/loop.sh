@@ -250,11 +250,15 @@ run_soak_queue() {
     name="$(basename "$recipe" .sh)"
     ts="$(date +%Y%m%d-%H%M%S)"
     slog="$rdir/${name}_${ts}.log"
-    log "soak $name starting (cap ${SOAK_TIMEOUT}s) -> $slog"
+    # A recipe may raise its own cap with a header line "# SOAK_TIMEOUT=<secs>".
+    local cap="$SOAK_TIMEOUT" hdr
+    hdr="$(sed -n 's/^# SOAK_TIMEOUT=\([0-9][0-9]*\).*/\1/p' "$recipe" | head -1)"
+    [ -n "$hdr" ] && cap="$hdr"
+    log "soak $name starting (cap ${cap}s) -> $slog"
     t0=$SECONDS
     perl -e 'setpgrp(0,0); exec @ARGV' /bin/bash "$recipe" >"$slog" 2>&1 &
     pid=$!
-    ( sleep "$SOAK_TIMEOUT" && kill -9 -- -"$pid" 2>/dev/null ) &
+    ( sleep "$cap" && kill -9 -- -"$pid" 2>/dev/null ) &
     wd=$!
     rc=0; wait "$pid" 2>/dev/null || rc=$?
     kill "$wd" 2>/dev/null; wait "$wd" 2>/dev/null

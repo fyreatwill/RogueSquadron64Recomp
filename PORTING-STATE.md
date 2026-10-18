@@ -162773,3 +162773,8 @@ Built tools/agent/mk_lldb_hold.py, which derives scratch/agent/m6_keyed_hold_lld
 
 ## Session 5456 (2026-10-18) — fold s5455 lldb mission-hold a/b: 0 crash, 0 stall
 Read m6_lldb_a/b (rc=137 = 600 s watchdog kill, not a crash). Both: lldb attach OK, mission verified at t=86-88 s (origin 0x00690400, hangar=0), held to the cap. run.log has 0 CRASH/SIGSEGV/abort lines; lldb logs contain only the initial attach SIGSTOP stop (no SIGSEGV stop reason); keys.log has no "interrupted at stall" line; last-drawn frame counter still advancing at the end (#10616, dpc-fwd submits ~72M in run a). Single-source for "no stall" (VI origin/frame dumps), but consistent with the 3 earlier m6_sel runs (0/3). Rules out: a reproducible mission-hold stall or crash on this route at ~8 min under lldb (n=2). Does not rule out slow-onset (>10 min) failures — soak cap is 600 s. Queued m6_lldb_d (LATE=200); m6_lldb_c still pending.
+
+## Session 5457 (2026-10-18) — fold lldb mission-hold c/d: 0 crash, 0 stall; per-recipe soak cap
+- m6_lldb_c / m6_lldb_d (rc=137 is the 600 s watchdog SIGKILL, not a crash): run.log has 0 SIGSEGV/EXC_BAD/CRASH/abort matches in both; d keys.log shows `mission t=85`, `mission_verified_130s`; fbd frames kept advancing to fb_0013000. With a/b, lldb-attached mission holds are 0/4 crash, 0/4 stall (each ~8-10 min, so not evidence about >10 min).
+- Change: tools/agent/loop.sh now honours a recipe header `# SOAK_TIMEOUT=<secs>` (default stays 600). Queued scratch/agent/soak_queue/m6_lldb_long_a.sh (1320 s hold, cap 1800) = first >=20 min mission hold. Not syntax-checked with `bash -n` (denied in this sandbox); the edit is a 4-line sed/local addition.
+- Rules out: nothing new beyond a 10-min horizon; the endurance question is now the 20-min soak.
