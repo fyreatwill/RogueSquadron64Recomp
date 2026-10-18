@@ -251,6 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+> s5441: var_c clean (3/3 var soaks, 0 crash/stall). s4234-ENTRY cap confirmed working, but run.log was still 905 MB from [tricnt]/[rt64drawn] (1.2M lines/phase); now capped at 4000 lines/phase in rt64_render_context.cpp. var_d/e queued to confirm size drop. Then vary the hangar route / 1200 s holds with variation.
+
 > s5440: s5439 var_a/var_b clean (0 crash/stall; var_a hit the 600 s cap with no summary). Cause of slow/huge runs: [s4234-ENTRY] log flood (1 GB run.log) - now capped in apply_s4234_entryprobe.py/apply_s4278_headwriter.py + live funcs_24.c. Check var_c run.log size on the new binary.
 
 > s5437: M6 keyed hold 3/3 clean (s5436_a, s5437_b, s5437_c: 1217-1226 s, 0 crash, 0 stall, post-results restarts; single recipe).
