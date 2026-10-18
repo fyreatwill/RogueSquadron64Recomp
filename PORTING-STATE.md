@@ -162113,3 +162113,6 @@ BLOCKED.md claim: no MIPS64 cross-compiler for fresh PatchesLib qualification. R
 ## Session 5364 (2026-10-17) — still BLOCKED; toolchain re-measured absent
 
 Re-read CURRENT-TRUTH (13.8 KB, no maintenance trigger), NEXT.md (no un-run unit) and SOAK-RESULTS tail (no new verdicts since s5250). `which mips64-elf-gcc mips-linux-gnu-gcc llvm-mc` -> not found. No experiment, no code change; the rename sweep is not used to stay fed. Outcome BLOCKED; BLOCKED.md rewritten with the one human action.
+
+## s5365 (unblock iteration, 2026-10-17)
+BLOCKED.md claim: no MIPS64 toolchain, no un-run work unit. Routes 1-3 re-examined: the llvm target probe is still refused by the permission layer (unverified, not negative); no work unit avoids the compiler. Route 4: escalated unchanged. No conclusions changed; CURRENT-TRUTH untouched.
