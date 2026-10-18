@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5397 (2026-10-17).
+Compact operational handoff, maintained at Session 5398 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -153,7 +153,10 @@ menu-overlay `fake_func_800B47C4` preamble to
 fixup, and companion surface already synchronized. Preserve names that are
 already synchronized, data symbols, and unmaterialized host-wrapper entries.
 Only rename a real generated placeholder when the companion map and generated
-tree agree. Audit files are `docs/RENAME-S*.md`.
+tree agree. Session 5398 synchronized the exact entry-local `0x8000040C` /
+`0x34` span to the existing `clearMemory16ByteBlocks` syms mapping; the
+companion `make_elf.py` remains address-coded for this hard-coded entry, so no
+new semantic name was inferred. Audit files are `docs/RENAME-S*.md`.
 
 ## Operational rules
 
@@ -205,12 +208,11 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-0. (s5397) Continue the bounded generated-symbol renaming sweep with
-   `func_8000040C`. Confirm the 0x34-byte generated span against the companion
-   `make_elf.py` mapping and the syms entry before applying the existing
-   `clearMemory16ByteBlocks` mapping; record the result in
-   `docs/RENAME-S5397.md`. Do not rename if the exact span or semantic source
-   does not agree.
+0. (s5398) Completed the bounded generated-symbol renaming sweep for
+   `func_8000040C`: generated body, entry table, companion hard-coded
+   `0x34`-byte span, and syms mapping agree; renamed it to
+   `clearMemory16ByteBlocks`. See `docs/RENAME-S5398.md`. Next candidate must
+   pass the same exact-span/name test.
 
 0. (s5389) The s5388 indirect-site audit is a DUPLICATE of s4821/s4998/s5357 (class closed; no raw indirect lowering exists). Backlog exhausted; BLOCKED for a human-chosen direction (BLOCKED.md). No conclusions overturned.
 

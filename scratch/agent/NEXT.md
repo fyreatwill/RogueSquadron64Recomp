@@ -1,24 +1,21 @@
-# Next work unit: one generated-symbol renaming candidate
+# Next work unit: audit the next generated-symbol candidate
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Bound the sweep to `fake_func_800B47C4`, outside the already-audited
-`func_800E9AE0`. The candidate census found three non-data mismatches; this
-one is the only one with a named 0xC-byte preamble mapping and a companion
-comment identifying the following real `menuControllerInput` body. Before
-the rename, the competing hypotheses are:
+Candidate: `fake_func_800B58B4`.
 
-* H1: `fake_func_800B47C4` is a real generated 0xC-byte preamble and the
-  existing `menuControllerInputPreamble` mapping is exact; rename all generated
-  references.
-* H2: the 0xC-byte record is data or an invalid split; leave it address-coded
-  despite the nearby menu name.
-* H3: the generated snapshot and mapping are already synchronized or the
-  address is reused; no rename is safe.
+* H1: the generated short record is the exact callable preamble represented
+  by `playerAwingInitPreamble`; rename its bounded references.
+* H2: the companion map's invalid/splat classification means it is a data
+  fragment before `playerAwingInit`, so no semantic rename is safe.
+* H3: the generated tree and existing mapping are already synchronized or
+  the address is reused; make no change.
 
-Discriminator: generated prologue span (`0x800B47C4` through `0x800B47CC`),
-the syms size (`0xC`), and the companion note that `menuControllerInput` starts
-at `0x800B47D0`; only H1 authorizes the bounded mapping rename.
+Discriminator: compare the generated prologue and exact span, companion
+`symbol_files/mission_overlay.txt` classification, `recomp_overlays.inl`, and
+the checked-in syms/redefinition mappings. Only an exact callable span plus
+independent semantic evidence authorizes H1. If H2 or H3 wins, write the
+bounded audit and leave the generated name unchanged.
 
-The broader census command was:
+Run the bounded census first:
 
-`rg -n 'func_0x|func_[0-9A-Fa-f]{8}' RecompiledFuncs docs tools | head -200`
+`rg -n -C 5 'fake_func_800B58B4|playerAwingInitPreamble|playerAwingInit' ../N64Recomp/RecompiledFuncs ../rogue_squadron64/symbol_files ../rogue_squadron64/tools syms tools/rename`

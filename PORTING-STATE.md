@@ -162356,3 +162356,27 @@ symbol-only synchronization. The two other census mismatches were left alone:
 `func_8000040C` is the next exact candidate, while `fake_func_800B58B4` has no
 semantic companion name. No conclusions about runtime behavior changed.
 ORIGIN: n/a (symbol synchronization only; no mitigation).
+
+## Session 5398 (2026-10-17) — synchronized entry-local clear routine symbol
+
+Planned unit: audit and, if the exact-span discriminator passed, rename the
+next generated placeholder `func_8000040C`. Competing hypotheses were an
+exact callable span with a safe existing syms mapping, an address-only
+companion entry with no safe semantic authority, or an already synchronized
+generated tree.
+
+The live generated body starts at `0x8000040C` and ends at `0x80000440`,
+exactly `0x34` bytes. `funcs.h` and `recomp_overlays.inl` carried the same
+entry and ROM span. The companion `rogue_squadron64/tools/make_elf.py`
+hard-codes this entry's address and size but supplies no semantic label; the
+project syms table independently contains the exact existing mapping
+`clearMemory16ByteBlocks` at that address and size. The exact-span and mapping
+agreement selected the bounded rename; no new companion name was inferred.
+
+Ran `tools/rename_generated_symbols.py` only for
+`0x8000040C <= address < 0x80000440`; it renamed five references in
+`funcs_0.c`, `funcs.h`, and `recomp_overlays.inl`. A follow-up search found no
+`func_8000040C` in those generated surfaces. No build or runtime soak was
+needed for this symbol-only synchronization. This rules out the stale
+placeholder in the current generated tree, not any runtime behavior.
+ORIGIN: n/a (symbol synchronization only; no mitigation).
