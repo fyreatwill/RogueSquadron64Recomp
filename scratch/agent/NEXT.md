@@ -1,6 +1,8 @@
-# Next work unit: positive-control the title->hangar route (soak s5373 is queued)
+# Next work unit: bisect why the s5099 hangar recipe fails on the 18:30 binary
 HYPOTHESIS-ID: patcheslib-shadowed
-s5371 soak: nohangar t=200 (title reached, hangar never). s5099 (01:28) reached hangar 3/3 with the same key recipe, but build/RogueSquadron64Recomp was rebuilt 18:30, after it. Queued scratch/agent/soak_queue/s5373_hangar_control_s5099_recipe.sh = s5099 recipe verbatim on the current binary (PASS = >=2 hangar arrivals, 0 CRASH).
-Read the verdict in SOAK-RESULTS.md / soak_results/s5373_*/keys.log:
-- PASS: route and focus are fine; the s5371 failure comes from its env delta (s5371 adds LOG_ALLOC_TAIL_GUARD2/3, drops LOG_SCENE_NODE_CACHE_GUARD) or its 150s title wait. Bisect by adding the two GUARD flags to the s5099 recipe.
-- FAIL (title reached, no hangar): the 18:30 rebuild regressed the title->hangar path (H2); but a FAIL also fits host focus/key timing, so rerun once to separate it before bisecting the build delta.
+s5373 control (s5099 recipe verbatim, current 18:30 binary): title reached, hangar 0/2, no crash. Env delta of s5371 is cleared.
+Hypotheses: H1 the 18:30 build regressed title->hangar (candidates 2bb94123 PatchesLib host decl/CMake, 8c27834d+6392e160 dpc_bridge M4 keys, s5368/s5370 census patches); H2 host focus/key delivery changed (winctl).
+Discriminating measurement, ONE iteration: `git worktree`-free approach — copy the repo state at the commit just after s5099 (git log --since='2026-10-17 01:00' to find it) into a separate build dir (no git checkout in place; no lib/ touches; use `git archive` for src/tools/CMake and reuse lib/), build it, then run the s5099 recipe on BOTH binaries (old, new), each with the same recipe, one game at a time, 3 tries each.
+- old reaches hangar, new does not: H1; bisect the listed commits.
+- both fail: H2; investigate winctl activate / key delivery (positive control: key press visibly changes the title screen).
+- both pass: flaky host; rerun.

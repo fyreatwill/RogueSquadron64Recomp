@@ -175,7 +175,7 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
   measurement.
 
 ## Next steps (single monotonic backlog)
-- s5373 (first): read the verdict of queued soak `s5373_hangar_control_s5099_recipe` (s5099 recipe verbatim, current binary). s5371 failed nohangar t=200 and the mission census is unmeasured; PASS means the s5371 env delta (ALLOC_TAIL_GUARD2/3 added, SCENE_NODE_CACHE_GUARD dropped) is the cause, FAIL means rerun once, then bisect the 18:30 rebuild. Not blocked on a human.
+- s5374 (first): s5373 control FAILED (s5099 recipe verbatim, 18:30 binary: title reached, hangar 0/2, 0 CRASH). The s5371 env delta is cleared as cause. Separate H1 (18:30 build regressed title->hangar; deltas 2bb94123, 8c27834d, 6392e160, s5368/s5370 census patches) from H2 (host focus/key delivery) by building the s5099-era commit (git log around 01:28 on 2026-10-17) in a separate build dir and running both binaries with the identical recipe in one iteration. Not blocked on a human.
 
 0. (s5370) Path census (`tools/apply_s5370_path_census.py`): on boot/title, ent=12288 with
    slot0=0 -- cached slot 0x801163B0 never empty, so head/walk guard sites are unreachable by

@@ -162166,3 +162166,10 @@ Read the queued s5371_path_census_mission soak (rc=1, 200 s). keys1.log = `nohan
 ## Session 5373 (2026-10-17) — unblock: s5372 "needs human decision" block re-scoped to a queued positive control
 - Block claimed the title->hangar route is broken and needs a human choice. Evidence: s5099 hangar 3/3 at 01:28 vs s5371 nohangar at 18:48; binary rebuilt 18:30 in between; recipe diff shows only env deltas (s5371 adds LOG_ALLOC_TAIL_GUARD2/3, drops LOG_SCENE_NODE_CACHE_GUARD, longer title wait); winctl unchanged since Jul 25. No human decision needed: the prior NEXT.md discriminator was never run.
 - Could not launch the game this session (needs approval). Queued soak_queue/s5373_hangar_control_s5099_recipe.sh (s5099 recipe verbatim, current binary); verdict pending. BLOCKED.md moved to BLOCKED.resolved.s5372-hangar-route.md; NEXT.md holds the PASS/FAIL branches. No conclusion changed; CURRENT-TRUTH not edited.
+
+## Session 5374 (2026-10-17) — s5373 positive control FAILED: s5099 recipe verbatim no longer reaches hangar on the 18:30 binary
+
+Ran `scratch/agent/soak_queue/s5373_hangar_control_s5099_recipe.sh` directly (the loop had not yet picked it up; no game was running). Result: try1 hangar=0 crash=0 (t=177), try2 hangar=0 crash=0 (t=354), try3 cut off by the 600 s cap. All three runs reached the title (`origin=0x00790400` present), none reached `origin=0x006AB400`. Two independent tries failed, which counts as the "rerun once" NEXT.md asked for.
+Meaning: the s5371 failure is NOT caused by its env delta (GUARD2/3 vs SCENE_NODE_CACHE_GUARD) — the s5099 env fails too. Remaining hypotheses: H1 the 18:30 binary regressed title->hangar (build delta vs s5099-era binary: 2bb94123 PatchesLib host decl/CMake, 8c27834d/6392e160 dpc_bridge M4 PC keys, s5368/s5370 census patches); H2 host focus/key delivery changed today (winctl activate). Not yet separated.
+ORIGIN: no mitigation landed; diagnostic only.
+Next: build the s5099-era commit into a second build dir and run both binaries with the same recipe (see NEXT.md).
