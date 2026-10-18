@@ -166,12 +166,16 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
   but s5330's in-process autopilot route works and s5335 reached the hangar in
   both arms; the real wall is the retail/port key-domain mismatch, which is
   offline-resolvable.
+- The s5372 claim that the nohangar failure needs a human direction decision was
+  wrong. It was believable because s5369/s5370/s5371 all failed to reach the
+  hangar, but s5099 reached it 3/3 earlier the same day, the recipes differ only
+  in env flags, and the control run was never executed. Pending s5373 verdict.
 - Earlier route-blocked and host-load conclusions are historical. Use the soak
   queue and current `NEXT.md`; do not revive stale backlogs without a new
   measurement.
 
 ## Next steps (single monotonic backlog)
-- s5372: hangar key route fails (nohangar t=200) in s5371; mission census unmeasured. BLOCKED on direction (scratch/agent/BLOCKED.md).
+- s5373 (first): read the verdict of queued soak `s5373_hangar_control_s5099_recipe` (s5099 recipe verbatim, current binary). s5371 failed nohangar t=200 and the mission census is unmeasured; PASS means the s5371 env delta (ALLOC_TAIL_GUARD2/3 added, SCENE_NODE_CACHE_GUARD dropped) is the cause, FAIL means rerun once, then bisect the 18:30 rebuild. Not blocked on a human.
 
 0. (s5370) Path census (`tools/apply_s5370_path_census.py`): on boot/title, ent=12288 with
    slot0=0 -- cached slot 0x801163B0 never empty, so head/walk guard sites are unreachable by
