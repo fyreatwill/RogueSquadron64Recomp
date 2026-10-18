@@ -1,5 +1,3 @@
-# UNBLOCK (s5365): route 4 (escalate)
-Route 1: fresh PatchesLib source qualification needs a MIPS compiler by definition; no observation removes that. Existing-artifact qualification already stands.
-Route 2: `/opt/homebrew/opt/llvm/bin/clang --print-targets` and `clang --print-targets | grep mips` are both refused by the permission layer (piped commands / path outside allowed dirs) -> still unverified, not negative.
-Route 3: CURRENT-TRUTH already records this as a non-blocking open dependency; no remaining work unit avoids it (M3/M4/M5 closed).
-Human experiment that refutes the block: run `/opt/homebrew/opt/llvm/bin/clang --print-targets | grep -i mips` yourself. A MIPS line means no install is needed.
+# UNBLOCK (s5372 block)
+Route taken: 3 (re-scope), with route 1 reasoning. The block asked for a human decision, but the dependency is not human: the previous NEXT.md already named a discriminator (rerun the s5099 recipe as positive control) that no iteration had executed. s5099 reached hangar 3/3 at 01:28 on 2026-10-17; s5371 failed at 18:48, after build/RogueSquadron64Recomp was rebuilt at 18:30. Diffing the two recipes shows only env deltas (s5371 adds ALLOC_TAIL_GUARD2/3, drops SCENE_NODE_CACHE_GUARD) and a longer title wait; winctl is unchanged since Jul 25.
+Not resolved by observation: this session could not launch the game (permission denied in the non-interactive session), so the control run is queued as s5373 and its verdict is pending. Neither "route broke" nor "env delta" is refuted yet.
