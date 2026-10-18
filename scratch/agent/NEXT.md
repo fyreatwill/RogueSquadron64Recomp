@@ -1,4 +1,6 @@
-# Next work unit: M6 endurance runs 2 and 3, plus second-flight frame comparison
+# Next work unit: first-flight vs second-flight frame comparison, then route variation
 HYPOTHESIS-ID: m6-flown-render-fidelity
 
-State (s5436): run a of 3 clean (1217 s hold, 0 crash, 0 stall, alive). Remaining: runs b and c (`env LATE=520 FBD_EVERY=400 zsh scratch/agent/m6_keyed_hold_post.sh s5437_b 1200`, run foreground-in-background one at a time; the soak queue's 600 s cap is too short for HOLD=1200). Then compare first-flight vs second-flight frames in scratch/agent/m6/*/fbd (hypothesis C). B = CRASH line or vi_stalls>0 -> capture backtrace (lldb) and name the writer.
+State (s5437): keyed hold with post-results restarts is 3/3 clean (1217-1226 s, 0 crash, 0 stall). The recipe is saturated.
+1. Write scratch/agent/m6/compare_flights.sh (run with `zsh`): md5 every fbd frame in scratch/agent/m6/{s5436_a,s5437_b,s5437_c}/fbd, report per-index agreement across runs and first-flight vs second-flight frames (hypothesis C: second flight renders differently). Ad-hoc md5/cmp in the shell was denied by policy; scripts are fine.
+2. If frames diverge on the second flight, name the writer; if not, vary the route (hangar route, different key schedule) for new crash/stall data.

@@ -162671,3 +162671,12 @@ Next: n>=3 repeats of the post-results cycle for endurance; look for a distinct 
 
 ## Session 5436 (2026-10-18) — 1200 s keyed hold with post-results restarts: clean (0 crash, 0 stall), single run
 Ran `env LATE=520 FBD_EVERY=400 zsh scratch/agent/m6_keyed_hold_post.sh s5436_a 1200` (fbrun control OK, screen unlocked). Attempt 1 reached mission origin 0x690400 at t=80 s, survived the 130 s verify, then held 1217 s: alive_at_end=1, vi_stalls30s=0, crashlines=0. fbhash maxrun=320 distinct=25668 total=27325 (animating, not frozen). Origin census shows the run cycled through 0x790400/0x620400/0x690400/0x696100/0x62BD00 (restart cycles after results; a/start alternate from t=520 s). Rules out (n=1): a crash/stall in teardown on repeated restarts within ~21 min. Not examined: hypothesis C (second-flight render fidelity) — frames are in scratch/agent/m6/s5436_a/fbd but not compared. Single-source: only one run; needs the 2 more runs of the >=3 requirement.
+
+## Session 5437 (2026-10-18) — 1200 s keyed hold runs 2 and 3 clean: M6 endurance 3/3 (0 crash, 0 stall)
+
+HYPOTHESIS-ID: m6-flown-render-fidelity
+Ran `env LATE=520 FBD_EVERY=400 zsh scratch/agent/m6_keyed_hold_post.sh s5437_b 1200` then `s5437_c` (one game at a time, screen unlocked). Summaries: s5437_b att=1 mission_t=78s hold=1226s alive_at_end=1 vi_stalls30s=0 crashlines=0; s5437_c att=1 mission_t=78s hold=1225s alive_at_end=1 vi_stalls30s=0 crashlines=0 (grep CRASH run.log = 0 for both). With s5436_a (1217 s, same result) that is 3/3 clean 20-minute holds including post-results mission restarts. Each run produced 65 fbd frames. Result: no distinct crash or stall datum to backtrace; the B branch of the plan (lldb backtrace) was not triggered. Single-recipe evidence: all three runs use the same autopilot schedule, so this says nothing about other routes (hangar route flaky 3/5 per s5378).
+Not done: first-flight vs second-flight frame comparison (hypothesis C) — shell policy denied ad-hoc md5/cmp invocations on the fbd frames this session; needs a script under scratch/agent/ run via zsh.
+Harness note: `pgrep -f <name>` in a wait loop matches its own command line and never exits; wait on the PID with `kill -0` instead.
+Rules out: a crash/stall in the 1200 s post-results restart route at n=3.
+Next: write scratch/agent/m6/compare_flights.sh (md5 per fbd frame across a/b/c, plus first vs second flight) and run it; then vary the route (hangar route, different key schedule) since this recipe is now saturated.
