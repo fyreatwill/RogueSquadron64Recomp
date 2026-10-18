@@ -388,3 +388,5 @@ v2/v3/v4 "clean mission holds" (s5409-s5413) are the unkeyed ATTRACT loop: v4_a 
 Dead keys in s5377/s5392/s5393 = crash-report modal on screen; kill UserNotificationCenter before key-driven soaks. After that `m6_keyed_hold.sh s5394a 600`: 1 run, 600 s hold clean (0 stalls, 0 crash lines), single-source. Next: >=2 more holds, then 10+ min each; capture a backtrace on any failure.
 
 - (s5411) M6 stall detector fixed: counts `[vi] update_screen` rows with a synthetic positive control; earlier v2 "0 stall" results were against a spam-masked detector. v3 a/b/c queued.
+
+- (s5415) Keyed control s5415a: modal cleared, winctl trusted=yes, title 0x790400 reached, hangar 0x6AB400 NOT reached in att1 (nohangar). Dead keys not explained by the crash modal alone. Next: NEXT.md (in-run SDL key witness, H1 vs H2 split).

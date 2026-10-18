@@ -1,5 +1,5 @@
-# Next work unit: restore key delivery to the game (M6 blocker)
+# Next work unit: split key-delivery (H2) from title->hangar regression (H1)
 HYPOTHESIS-ID: m6-mission-endurance
 
-s5414: all prior "mission holds" were attract loop. Recipe now fails (ATTRACT-ONLY) without hangar 0x6AB400.
-Do: re-read CURRENT-TRUTH s5393/s5394 key-delivery notes; check CGSSession lock, no crash modal on screen, winctl activate/key positive control (e.g. title -> a visible phase change on key). Hypotheses: (a) window not focused / modal, (b) winctl keycodes wrong for SDL, (c) game ignores keys in attract unless pad init. Discriminator: run with keys and see whether origin 0x6AB400 appears; compare with an in-run SDL key log. Then re-enqueue via m6_mission_tmpl.sh.in.
+s5415a: title reached, keys sent via winctl, hangar 0x6AB400 never appeared (nohangar-att1), modal cleared, trusted=yes.
+Do in ONE run: at title, send a key and log an in-process SDL key event witness (one-line SDL_KEYDOWN log in the input path; positive control = it fires for a winctl key) AND watch whether any phase/origin changes. If SDL sees keys but no hangar -> H1 (regression; bisect via the s5374 deltas). If SDL sees nothing -> H2 (focus/keycode; try CGEventPost or osascript keystroke).
