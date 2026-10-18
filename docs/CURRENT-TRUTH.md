@@ -251,6 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5455 (top):** queued m6_lldb_a/b/c (tools/agent/mk_lldb_hold.py -> m6_keyed_hold_lldb.sh): mission hold under lldb attach; stall => bt all. Read scratch/agent/m6/s5455_lldb_*/keys.log + lldb_att*.log; name the writer of any stall/crash.
+
 > s5450: mission-select variation soaks m6_sel_a/b/c queued (SEL_KEYS stick presses in hangar window); read SOAK-RESULTS, compare origin sets vs s5449. Keys-take-effect is unproven.
 > s5454 (TOP): lldb ATTACH loop (control PASS) 0/9 title-boot SIGSEGV; s5452 "lldb unusable" claim superseded (getcwd-EPERM was launch-mode only). Next: attach wrapper on mission-hold soaks (NEXT.md).
 > s5449: post-results transition hold 1203 s clean (4/4 transition runs total, ~12 scene origins, 0 crash/0 stall). M6 first-mission goal met; remaining: plume SIGSEGV (guarded, unproven) and rarer-route variation (NEXT.md).

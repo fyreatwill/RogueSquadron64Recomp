@@ -1,6 +1,6 @@
-# Next work unit: M6 mission endurance - reuse attach recipe on the mission route, or M3 idiom audit.
+# Next work unit: fold m6_lldb_a/b/c soak verdicts (s5455 harness) - read backtraces at stall/crash, name the writer.
 HYPOTHESIS-ID: m6-mission-transition-endurance
-- s5453 result: lldb attach control PASS, 0/9 title-boot SIGSEGV (run 10 truncated by 600 s cap; lower N to 8 next time).
-- Next: queue a 3-run keyed mission hold (>=10 min) with the lldb attach wrapper from soak_queue/done/s5453*.sh so the
-  next rc=137 stall/crash (m6_res_late_*, m6_keyed_var_a precedents) yields a real backtrace instead of a watchdog kill.
-- Expected: STOP with SIGSEGV -> read bt, name writer; stall -> `process interrupt` + `bt all` at stall time.
+- Files: scratch/agent/m6/s5455_lldb_{a,b,c}/{keys.log,summary,lldb_att*.log}; SOAK-RESULTS.md tail.
+- keys.log "lldb interrupted at stall" + lldb_att log with `thread backtrace all` => stall located; investigate the blocked thread's wait.
+- "stop reason" SIGSEGV in lldb log => crash bt; name the writer, fix root cause.
+- No stall/crash in 3 runs => lengthen hold / vary LATE; if stall with no bt, fix interrupt path (lldb -b may exit on SIGINT).
