@@ -162257,3 +162257,6 @@ Read CURRENT-TRUTH (19.8 KB, no maintenance needed), NEXT.md, SOAK-RESULTS tail 
 
 ## s5388 (unblock) - direction block re-scoped
 Block s5387 requested a human direction (all threads parked). No missing resource; routes 1-2 N/A. Took route 3: NEXT.md rewritten to an offline static audit of all unguarded indirect-call/jr-ra sites (option a of the block). Plume left parked. No conclusions overturned. See scratch/agent/UNBLOCK.md.
+
+## Session 5388 (2026-10-17) — unblock: s5387 direction block re-scoped to offline indirect-site audit
+Ran: read BLOCKED.md, NEXT.md and CURRENT-TRUTH Next steps; compared with earlier direction blocks (s4863, s5351). Showed: the block lacked a decision, not a resource; every parked thread (M5/M4 closed, M3 j/jal exhausted, plume 0/18 clean boots, allocDLB guards unreachable) still matches CURRENT-TRUTH. Ruled out: nothing new; no game run, no experiment, no failed experiment this session. Action (route 3): NEXT.md now an offline static audit of all unguarded indirect-call/jr-ra sites (HYPOTHESIS-ID m3-unguarded-indirect-sites-all); BLOCKED.md renamed BLOCKED.resolved.s5387-direction-rescoped.md. Open dependency: human may redirect to a new milestone or the rename sweep. See scratch/agent/UNBLOCK.md.
