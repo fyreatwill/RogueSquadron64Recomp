@@ -162584,3 +162584,11 @@ ORIGIN: none (no mitigation landed; instrument and input-cap change only).
 - DISCRIMINATION (s5420): REFUTES H2 (hung game with stale buffer): VI origin/width changed to the title values and hashes alternate, so frames are live. SELECTS H1/H3-family (mission left to title) over H2; H1 vs H2' (objective complete) vs H3 (autopilot quit key) remain split.
 - NEXT DISCRIMINATOR: run with the autopilot 'r'/start keys removed after t=100 s (H3 control) and a width-correct dump of frames just before the 0x790400 transition. H3 predicts no exit without 'r'; H1/H2' predict exit persists and the frame shows death/debrief. Recorded in scratch/agent/NEXT.md.
 - Summary (s5420): this run refutes the hung-game hypothesis (H2) and selects mission-exit-to-title; it does not yet discriminate H1/H2'/H3, which the no-'r' control run will discriminate.
+
+## unblock (after s5421): block "waiting on in-flight runs" refuted/satisfied by relaunch
+- Block: s5421 wrote BLOCKED.md because two concurrent flown holds were still running. They were children of the interactive turn and were SIGKILLed/SDL_QUIT at ~03:32 on 2026-10-18 (no summary, logs ended mid-mission). Route 2: relaunched `scratch/agent/run_s5421.sh` with run_in_background and waited.
+- RESULT (H3 CONFIRMED, same-run controls): both arms mission onset t=81 s, hold ~1105-1110 s, 0 crash, 0 VI stall, alive at end.
+  - r arm (autopilot incl. 'r'): VI origin ends alternating 0x790400/0x720400 (title) - mission left; fbhash maxrun=2277 distinct=19217 total=41907.
+  - no-'r' arm (NOR=1): VI origin alternates 0x620400/0x690400 (mission double buffer) through the entire 1105 s hold; no 0x790400 transition; fbhash maxrun=2217 distinct=25773 total=30917.
+- Conclusion: the ~10-12 min "mission ends" in s5419/s5420 was an AUTOPILOT ARTEFACT (the 'r' key selects a quit/exit action), not a game, recomp, death or objective bug. Mission endurance of >=1105 s flown is clean. (Exact trigger within 'r' not isolated; death/debrief frames not needed.)
+- Lesson: background game runs started from an interactive turn die when the turn ends unless launched with run_in_background.

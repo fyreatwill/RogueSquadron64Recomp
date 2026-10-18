@@ -400,3 +400,6 @@ Dead keys in s5377/s5392/s5393 = crash-report modal on screen; kill UserNotifica
 
 ## s5416 note (key delivery SOLVED)
 winctl keys never reach SDL: macOS refuses to activate the game from the harness (lsappinfo isfrontmost=NULL; SDL_AddEventWatch witness [keywitness] saw 0 key/focus events with a same-run positive control). Not a title->hangar regression. Use in-process `ROGUESQ_AUTOPILOT` (m6_keyed_hold.sh now does): s5416a reached hangar, mission t=81 s, 204 s hold clean (single run). m6_keyed_ap_{a,b,c} queued. Supersedes the s5393/s5394/s5415 'dead keys' open questions.
+
+## M6 flown-hold resolution (s5421/unblock)
+The s5420 mission-exit-to-title at ~634 s was caused by the autopilot 'r' key. Control arm (no 'r', NOR=1) stayed in the mission (origins 0x620400/0x690400) for the full 1105 s hold, 0 crash/0 stall; the 'r' arm returned to title (0x790400). Do not use 'r' in flown holds.
