@@ -162598,3 +162598,7 @@ ORIGIN: none (no mitigation landed; instrument and input-cap change only).
 - Showed: with 'r' the VI origin ends on 0x790400/0x720400 (title); without 'r' (NOR=1) it alternates 0x620400/0x690400 for the full 1105 s. Both: 0 crash, 0 VI stall, alive at end.
 - Rules out: H1 (player death) and H2' (objective complete) as the cause of the s5419/s5420 exit; H2 (hang) was already ruled out in s5420. Confirms H3 (autopilot 'r' quits). Exact in-game action bound to 'r' not isolated.
 - Block (waiting on runs) resolved via route 2. Next: m6-flown-render-fidelity (see NEXT.md).
+
+## Session 5423 (2026-10-18) — flown-mission frames viewed: sky + partial HUD only, no terrain/objects
+
+Converted s5421_nor fbd frames (tools/ppm2png.py, new). Frame 2000 is the hangar craft-select screen and renders richly. Frames 10000 and 20000 (flight) show only a cloudy-sky gradient, a green craft icon (top-left) and a partial reticle ring (bottom-right): no terrain, no objects, no cockpit/crosshair centre; only the clouds differ between them. Single-source (our runtime only; no oracle frame at this phase, oracle is undriven past attract). Hypotheses: H1 flight geometry/terrain DLs dropped or clipped; H2 autopilot flies into legitimately empty sky; H3 the dump is a partial framebuffer. Next discriminator: per-frame RDP triangle count in flight vs hangar plus frame dumps at mission start (see NEXT.md). No game code changed.
