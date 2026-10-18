@@ -183,6 +183,8 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 0. (s5375) Hangar route: 18:30 binary reaches hangar 2/2 interactively; s5373 soak 0/2 was host/soak-context, not a build regression (n=2, single-source). Next: n=5 interactive vs soak of the same recipe, then redo the mission census.
 - s5374 (first): s5373 control FAILED (s5099 recipe verbatim, 18:30 binary: title reached, hangar 0/2, 0 CRASH). The s5371 env delta is cleared as cause. Separate H1 (18:30 build regressed title->hangar; deltas 2bb94123, 8c27834d, 6392e160, s5368/s5370 census patches) from H2 (host focus/key delivery) by building the s5099-era commit (git log around 01:28 on 2026-10-17) in a separate build dir and running both binaries with the identical recipe in one iteration. Not blocked on a human.
 
+0. (s5379) CLOSED: a5370 census validated by positive control (`tools/apply_s5379_census_ctl.py`, ROGUESQ_A5370_CTL=1 -> slot0=96 g2=92 g2bad=0 at ent=6144); normal arm and s5378 mission run slot0=0, so allocDLB tail guards are unreachable on the title->mission route. g3 counter has no control (never fired even forced). Unclassified SIGABRT at init in 1 norm arm (s5379).
+
 0. (s5370) Path census (`tools/apply_s5370_path_census.py`): on boot/title, ent=12288 with
    slot0=0 -- cached slot 0x801163B0 never empty, so head/walk guard sites are unreachable by
    construction. Mission still unmeasured (s5371: manual run_a5370.sh failed again, nohangar at

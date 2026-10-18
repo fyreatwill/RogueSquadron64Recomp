@@ -1,5 +1,6 @@
-# Next work unit: positive control for the allocateDisplayListBuffer guard census, then close the patcheslib-shadowed thread
-HYPOTHESIS-ID: patcheslib-shadowed
-s5378: census all-zero through mission in one run (see PORTING-STATE s5378) but the guard branches have no same-run positive control.
-Plan: (1) add an env-gated forced g2bad/g3bad (or poisoned slot) in tools/fixup_* so the [a5370] row must read nonzero; (2) enqueue one soak with the control plus the normal arm in scratch/agent/soak_queue; (3) control fires and normal arm stays 0 -> record guards inert-on-route and close the thread.
-Outcomes: control nonzero + normal zero -> close; control zero -> census instrument broken, fix it.
+# Next work unit: resume generated-symbol renaming sweep (or REVISIT per rule 4)
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+patcheslib-shadowed thread closed in s5379 (census control passed; guards unreachable on route).
+M5 closed, M3 parked. First run `grep -n '^## Session ' PORTING-STATE.md | tail -15`: if all 15 are sweep titles -> REVISIT retail-entry boundary (CURRENT-TRUTH Next steps #2) with a new angle; else resume the sweep (see tools/rename* and CURRENT-TRUTH).
+Warning: the sweep alone trips the engineering-pivot counter at 6; prefer pairing it with a committed guard/tool change.
+Optional: classify the s5379 norm-arm SIGABRT (scratch/agent/soak_results/s5379/norm.log) — one arm only, low priority.

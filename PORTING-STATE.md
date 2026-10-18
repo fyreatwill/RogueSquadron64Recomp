@@ -162204,3 +162204,12 @@ Reading (single run, single-source): the `s_alloc_tail_guard*` conditions never 
 Also: two of three launches failed to reach hangar before success (consistent with s5376 3/5 flake); the s5377 title SIGSEGV did not recur.
 Rules out: the mission-phase census being unobtainable; an allocDLB guard firing in this run.
 Does not rule out: guard firing on other routes; guard branches being live.
+
+## Session 5379 (2026-10-17) — a5370 census positive control: counters fire (slot0=96, g2=92 at ent=6144); head guard inert on legit heads, walk site g3 still has no control
+
+Built `tools/apply_s5379_census_ctl.py` (applied to N64Recomp/RecompiledFuncs/funcs_3.c, both allocateDisplayListBuffer and allocDLBlockToFillRectList): with `ROGUESQ_A5370_CTL=1` every 64th entry forces the cached-slot register to 0, i.e. the empty-slot path. Rebuilt, ran two sequential 75 s title-window arms (`scratch/agent/s5379_ctl_run.sh`, logs `scratch/agent/soak_results/s5379/{ctl,norm}.log`).
+- ctl arm: ent=6144 slot0=96 g2=92 g2bad=0 g3=0 g3bad=0, 0 CRASH. So slot0 and g2 counters DO fire (control passes) and the g2 predicate marks the forced-path heads as legitimate (g2bad=0 over 92 head nodes) — in this run no corrupt head was ever presented to the guard.
+- norm arm (CTL=0): slot0=g2=g3=0 through ent=2048, as in s5370/s5378. 37 CRASH lines (SIGABRT, pc in system lib, emitted right after "Initializing recomp heap"; not classified, not the s5377 si_addr=0x58 signature; ctl arm had 0).
+- Caveat: g3 (walk loop-back) never fired even in the control, so the g3/g3bad counters have NO positive control; only slot0/g2/g2bad are validated.
+Conclusion (two lines: s5378 mission census + this control): on the title->hangar->mission route the cached slot is never empty, so the allocDLB tail guards are unreachable there, and the instrument that says so is validated for slot0/g2. No guard change; no mitigation added, so no ORIGIN needed. Thread `patcheslib-shadowed` closed.
+Rules out: census instrument broken for slot0/g2. Does not rule out: guards live on other routes; g3 counter correctness.
