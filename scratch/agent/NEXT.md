@@ -1,3 +1,5 @@
-# Next work unit: M6 keyed mission holds
+# Next work unit: M6 keyed route — find out why launches park at 0x696100
 HYPOTHESIS-ID: m6-mission-endurance
-Autopilot route stops in the hangar (s5391 r1: 880 s clean hangar hold). Find the s5378 recipe (grep loop.log / soak_results for s5378; it reached 0x00690400), extend scratch/agent/m6_hold.sh with the hangar->mission key step (winctl key, needs unlocked screen), then run >=3 holds of >=10 min. Each distinct crash/stall: lldb backtrace, name the writer, root-cause fix (mips64-elf-gcc available for PatchesLib C patches). Outcomes: all clean = endurance datum; crash = backtrace.
+s5392: scratch/agent/m6_keyed_hold.sh k1 -> 5/5 nohangar, all parked at origin 0x696100 (w=640, phase=7) with ~110k [s3290-stall] lines. Hypotheses: (H1) keys not delivered (screen locked / winctl focus fails) ; (H2) 0x696100 is a real pre-hangar screen needing a different key; (H3) real stall/hang in the game loop (s3290-stall is the instrument's own complaint).
+Discriminator in ONE run: keep winctl output in keys.log (rc + stderr) and add a positive control: send keys at the title and confirm the origin changes from 0x790400 within 10 s; verify lock with ioreg while a real lock is not present; log first s3290-stall timestamp vs last key time. H1 -> no origin change after keys; H2 -> origin changes then stalls only after keys stop; H3 -> stall begins while keys are acked.
+Then run >=3 holds of >=10 min once mission is reached; each distinct crash/stall: lldb backtrace, writer, root-cause fix.
