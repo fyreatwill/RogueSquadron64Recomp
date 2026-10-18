@@ -1,7 +1,8 @@
-# Next work unit: flown mission hold (autopilot flight + fire keys)
+# Next work unit: identify the static cycle in the flown hold
 HYPOTHESIS-ID: m6-mission-endurance
 
-s5418: 3/3 unflown 1200 s holds clean. Autopilot now has l,r,sl,sr,su,sd (src/main/main.cpp, built, untested).
-Copy scratch/agent/m6_keyed_hold.sh to m6_flown_hold.sh. The autopilot caps at 64 events and a 512-char spec, so after the title/hangar z/start presses, replace the mash with a repeating pattern a,sl,a,sr,su,a,sd,r from ~t=100 s on.
-Positive control: [autopilot] fire lines with nonzero stick/btn in run.log, plus fbhash distinct count rising. Run 2-3x at 1200 s (run_in_background, outside the soak cap).
-Outcomes: CRASH/stall -> lldb backtrace, name the writer, root-cause fix; clean -> consider mission completion / second mission.
+s5419: flown hold clean but fbhash from ~sample 23479 (~730 s) cycles 656a759fda9783b9 (~2217 samples) / ef16afe604546361 (~570) x4.
+Hypotheses: (H1) player died / mission ended -> results/retry screens loop; (H2) game hung but VI keeps scanning a stale buffer; (H3) pause/menu opened by autopilot 'r'/'a' mash.
+Discriminator: rerun scratch/agent/m6_flown_hold.sh (tag s5419_b, 1200 s, run_in_background, one game at a time) with a screenshot or fb dump (look for an existing ROGUESQ_FB dump flag) when fbhash first shows 656a759f; also log whether game-thread frame counters advance (H2 vs H1/H3). Positive control: a dump of a known-animating frame in the same run.
+Also check whether the cycle onset time repeats in run B (determinism); the unflown s5418 holds never entered it (maxrun 317).
+Outcomes: H2 -> lldb backtrace of hung threads, root-cause fix; H1/H3 -> change pattern to avoid death/'r', re-run.

@@ -9517,7 +9517,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         struct ApEv { double t; uint16_t btn; float sx, sy; };
         static bool     s_init = false;
         static bool     s_on = false;
-        static ApEv     s_ev[64];
+        static ApEv     s_ev[512];
         static int      s_nev = 0;
         static int      s_idx = 0;
         static Uint32   s_t0 = 0;
@@ -9547,12 +9547,12 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     if (!strcmp(n, "right")) return N64_R_JPAD;
                     return N64_START_BUTTON;
                 };
-                char buf[512];
+                char buf[8192];
                 strncpy(buf, spec, sizeof(buf) - 1);
                 buf[sizeof(buf) - 1] = '\0';
                 char* save = nullptr;
                 for (char* tok = strtok_r(buf, ",", &save);
-                     tok && s_nev < 64; tok = strtok_r(nullptr, ",", &save)) {
+                     tok && s_nev < 512; tok = strtok_r(nullptr, ",", &save)) {
                     double t = 0.0; char kbuf[16]; kbuf[0] = '\0';
                     if (sscanf(tok, " %lf:%15[a-z]", &t, kbuf) < 1) continue;
                     s_ev[s_nev].t = t;

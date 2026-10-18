@@ -245,6 +245,7 @@ progress/end observations to the port and cxd4 arms before another comparison.
 
 ## Next steps (single monotonic backlog)
 
+> s5419: first FLOWN 1200 s hold (autopilot caps now 512 ev/8192 chars) clean: 0 crash, 0 stall; BUT fbhash shows a 4x repeating static two-frame cycle (~87 s period) from ~12 min on, so the mission is likely ended/parked (single-source, unresolved). Next: dump a frame at that point, replicate, vary pattern.
 > s5418: replicated x2 (1205 s each, 0 crash/stall, fbhash maxrun 317/318) => 3/3 clean unflown holds; autopilot now supports l/r/sl/sr/su/sd flight keys (built, untested). Next: flown hold.
 > s5417: keyed mission hold 1204 s clean (0 crash, 0 VI stall, fbhash maxrun=320 distinct=33446; single run, plus 2x483 s without fbhash). Next: repeat x2 for a 3-run sample, then add in-mission input (flight keys) since z/start autopilot does not fly.
 
