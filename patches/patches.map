@@ -4,12 +4,15 @@ Merging object attributes
 
 Discarded input sections
 
- .reginfo       0x00000000       0x18 heap_guard_asm.o
+ .mdebug.abi32  0x00000000        0x0 heap_guards.o
+ .pdr           0x00000000      0x160 heap_guards.o
+ .comment       0x00000000       0x1f heap_guards.o
+ .note.GNU-stack
+                0x00000000        0x0 heap_guards.o
+ .reginfo       0x00000000       0x18 heap_guards.o
  .MIPS.abiflags
-                0x00000000       0x18 heap_guard_asm.o
- .pdr           0x00000000        0x0 heap_guard_asm.o
- .gnu.attributes
-                0x00000000       0x10 heap_guard_asm.o
+                0x00000000       0x18 heap_guards.o
+ .llvm_addrsig  0x00000000        0x0 heap_guards.o
 
 Memory Configuration
 
@@ -20,7 +23,7 @@ rom              0x00000000         0x04000000
 
 Linker script and memory map
 
-LOAD heap_guard_asm.o
+LOAD heap_guards.o
                 0x80801000                        RAMBASE = 0x80801000
                 0x81000000                        PATCH_RAM_END = 0x81000000
 
@@ -31,14 +34,14 @@ LOAD heap_guard_asm.o
 .dtors
  *(.dtors*)
 
-.text           0x80801000        0x0 load address 0x00000000
+.text           0x80801000      0x668 load address 0x00000000
  *(.text*)
- .text          0x80801000        0x0 heap_guard_asm.o
+ .text          0x80801000      0x668 heap_guards.o
 
-.recomp_patch   0x80801000       0xe8 load address 0x00000000
+.recomp_patch   0x80801668      0xa88 load address 0x00000668
  *(.recomp_patch*)
- .recomp_patch  0x80801000       0xe8 heap_guard_asm.o
-                0x80801000                allocateDisplayListBuffer
+ .recomp_patch  0x80801668      0xa88 heap_guards.o
+                0x80801668                allocateDisplayListBuffer
  *(.recomp_force_patch*)
 
 .recomp_export
@@ -50,13 +53,13 @@ LOAD heap_guard_asm.o
 .rodata
  *(.rodata*)
 
-.data           0x808010f0        0x0 load address 0x000000e8
+.data           0x808020f0        0x0 load address 0x000010f0
  *(.data*)
- .data          0x808010f0        0x0 heap_guard_asm.o
+ .data          0x808020f0        0x0 heap_guards.o
 
-.bss            0x808010f0        0x0 load address 0x000000e8
+.bss            0x808020f0        0x0 load address 0x000010f0
  *(.bss*)
- .bss           0x808010f0        0x0 heap_guard_asm.o
+ .bss           0x808020f0        0x0 heap_guards.o
  *(COMMON)
                 0x00000001                        ASSERT ((. <= PATCH_RAM_END), Maxed out recomp extra ram)
 

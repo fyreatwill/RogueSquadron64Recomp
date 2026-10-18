@@ -1,5 +1,5 @@
-# Next work unit: runtime A/B of clang-built C heap patch vs shipped asm patch
-HYPOTHESIS-ID: patcheslib-c-vs-asm-runtime
-Toolchain present: build with `make CC=mips64-elf-gcc LD=mips64-elf-ld` (pass CPPFLAGS include path when building outside patches/; see scratch/patchq).
-Fresh C patch recomps+compiles (s5365). Hypotheses: H1 C patch (clang) is behaviourally equal to asm patch on the hangar route; H2 clang codegen diverges (guard semantics differ); H3 C patch never selected because asm-only build is the CMake default.
-Discriminator: build both arms in separate build dirs (rule 13), run the s5330 autopilot route to hangar 0x006AB400/VI512, compare heap-guard counters/crash status in one iteration. Positive control: same-run guard counter must fire.
+# Next work unit: reconcile the shadowed PatchesLib (s5366)
+HYPOTHESIS-ID: patcheslib-shadowed
+Finding: patch layer (asm and C) is not linked on macOS; exes byte-identical; live guards are fixup-inlined in RecompiledFuncs (tools/check_patches_shadowed.sh).
+Hypotheses: H1 inlined guards are a superset of the patch's, so the patch is redundant -> retire/annotate the patch layer; H2 patch has guards the inlined version lacks (e.g. block_ok alignment/bump_cursor_ok) -> port them via tools/fixup_*.py into the inlined function; H3 forcing the patch (-force_load) is preferable.
+Discriminator: diff the guard predicates in patches/heap_guards.c (kseg0_ok/block_ok/bump_cursor_ok, free-list link checks) against the inlined guards in the generated allocateDisplayListBuffer (grep RecompiledFuncs generated tree + tools/apply_s3285*, apply_s650*). Any predicate present only in the patch = H2 candidate; then A/B the forced build vs current in one run (autopilot recipe: scratch/patchq/ab/run_ab.sh, binaries build/RS64_patch_*; positive control = a guard-hit counter in the same run).

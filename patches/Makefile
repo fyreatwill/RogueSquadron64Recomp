@@ -3,8 +3,13 @@ TARGET = patches.elf
 # Default toolchain. Override on cmdline if your install lives elsewhere:
 #   make CC="C:/mips-toolchain/bin/mips64-elf-gcc.exe" LD="C:/mips-toolchain/bin/mips64-elf-ld.exe"
 # The CMake integration sets these absolute paths automatically.
-CC      ?= mips64-elf-gcc
-LD      ?= mips64-elf-ld
+# make's built-in CC=cc has 'default' origin, so '?=' never applied; override it explicitly.
+ifeq ($(origin CC),default)
+CC := mips64-elf-gcc
+endif
+ifeq ($(origin LD),default)
+LD := mips64-elf-ld
+endif
 AS      ?= mips-linux-gnu-as
 
 # Adapted from Zelda64Recompiled/patches/Makefile, gcc flavor.

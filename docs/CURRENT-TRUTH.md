@@ -107,6 +107,14 @@ this discriminator; no writer or mitigation follows. See
   existing ELF-to-host artifact path; fresh source qualification still
   requires the missing cross-compiler.
 
+- **PatchesLib is shadowed on macOS (s5366).** `libPatchesLib.a` and
+  `libRecompiledFuncs.a` both define `allocateDisplayListBuffer`; ld64 never
+  pulls the patch member, so C and asm patch exes are byte-identical and the
+  live heap guards are the fixup-inlined `s_alloc_tail_guard*` ones. Check with
+  `tools/check_patches_shadowed.sh`. Patch-layer claims in older entries are
+  unsupported for this build; forcing the patch in (-force_load) would drop the
+  extra inlined guards and is a behaviour change needing its own A/B.
+
 ### Generated symbols
 
 The sweep is paused after the remaining mission-overlay placeholder
