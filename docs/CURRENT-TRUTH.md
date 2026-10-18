@@ -251,6 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+> s5449 (TOP): post-results transition hold 1203 s clean (4/4 transition runs total, ~12 scene origins, 0 crash/0 stall). M6 first-mission goal met; remaining: plume SIGSEGV (guarded, unproven) and rarer-route variation (NEXT.md).
+
 > s5448 (TOP): plume guard fired 0/9 naturally; forced-zero control (RS64_FORCE_SCRATCHFB_ZERO) 3/3 survivable -> thread closed "guarded, unproven"; next = mission transition endurance (NEXT.md).
 > s5447: s5446 guard soak 10/10 titles clean, 0 crash ((6/7)^10=0.21, weak). Breadcrumb `[s5446-scratchfb-guard]` added; s5447_plume_guard_crumb queued - read summary `guard_fired_runs` (fired>0 = mechanism proven). Then resume M6 mission/results endurance.
 > s5446 (TOP): plume SIGSEGV si_addr=0x58 writer named from an old backtrace (bisect run4.log): scratch-fb branch of PresentQueue::threadPresent with VI::fbSize()==(0,0) -> null texture -> clearColorTarget. Guard landed in lib/rt64 (patch exported); soak s5446_plume_scratchfb_guard queued (weak evidence, base rate ~1/7). Lldb stays unusable; the in-process crash handler backtrace is the tool.
