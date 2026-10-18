@@ -251,6 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+> s5436: M6 keyed hold run 1 of 3 (1200 s, post-results restarts) clean: 0 crash, 0 stall, game alive (single-source). Next: runs 2-3 plus second-flight frame comparison (scratch/agent/NEXT.md).
+
 > Next-steps order (s5425): (1) one run with tricnt + fb dump + RT64 drawn-tri count at processDisplayLists to split H4/H3 (scratch/agent/NEXT.md); (2) only after that, further M6 endurance soaks.
 > s5424 (TOP): flown RDP stream carries 2.4M tri over the 200 s hold (hangar 349k tri / 200k subs; same ~1.7 tri/submission), so geometry reaches the RDP submit (single-source, s5424_tri). Missing terrain is downstream: RT64 draw/clip/depth/fb-readback or the fb dump. Next: NEXT.md.
 > s5423: flown frames (s5421_nor fbd 10000/20000, viewed via tools/ppm2png.py) show only sky + green craft icon + partial reticle, no terrain/objects (single-source). Discriminate H1 renderer drops geometry / H2 empty sky / H3 partial dump with per-frame RDP tri count flight vs hangar + mission-start frame dumps; see scratch/agent/NEXT.md.
