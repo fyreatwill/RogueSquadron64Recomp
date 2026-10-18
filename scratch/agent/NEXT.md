@@ -1,7 +1,6 @@
-# Next work unit: find when/why the unflown mission fails and measure flight-time endurance
+# Next work unit: locate the mission-failure swap and explain the recurring MISSION GOALS overlay
 HYPOTHESIS-ID: m6-flown-render-fidelity
 
-State (s5429): terrain relief renders in free flight (dune seen VI 3000-9000). Mission shows MISSION FAILED by VI 12000, so the 600 s hold is ~half flight, half results screen (and the fb hash 'distinct' count is inflated by it).
-Hypotheses: (A) failure is ship destroyed/crashed into terrain with no input; (B) timer/objective failure; (C) autopilot key fires a fail/retry path.
-Discriminator: `FBD_EVERY=10` run, 300 s hold, find first fb frame showing the failure text (scan dumps with tools/ppm2png.py), view the 5 frames before it (explosion/ground vs HUD timer) and grep the run.log around that VI for phase changes. Positive control: the results frame already seen at VI 12000.
-Then: add flight keys (l/r/su/sd) so the ship survives, hold >=10 min of real flight.
+State (s5430): 310 s hold (swaps 0-7470, dumps every 10) shows no failure text; goals overlay appears 3x. s5429 saw MISSION FAILED by VI ~12000.
+Hypotheses: (A) overlay is periodic HUD (goals reminder); (B) mission restarts (retry path from autopilot 'start'/'z' keys); (C) ship destroyed later with no input.
+Discriminator: `env FBD_EVERY=20 zsh scratch/agent/m6_keyed_hold.sh s5431a 560`, then contact sheet of every 20th dump (PIL via plain python3, NOT -I), find first failure frame and compare the overlay frames' preceding frame (menu/title = restart; flight = HUD). Positive control: the goals overlay frames already seen. Delete dumps afterwards (~1 GB, gitignored). Then add flight keys so the ship survives.
