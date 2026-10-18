@@ -1,7 +1,8 @@
-# Next work unit: confirm log caps on var_d/e, then vary the route
+# Next work unit: read s5442_post_a/b verdicts (mission-transition endurance)
 HYPOTHESIS-ID: m6-flown-render-fidelity
 
-s5441 capped [tricnt]/[rt64drawn] (4000 lines/phase). Read SOAK-RESULTS.md tail (m6_keyed_var_d/e) and `ls -la scratch/agent/m6/s5441_var_*/run.log`.
-- run.log well under ~200 MB and summary present with crashlines=0 vi_stalls30s=0: cap confirmed; queue hangar-route-variation and 1200 s-with-variation soaks (needs a recipe edit; runs are capped at 600 s by the loop, so long holds need a different launcher).
-- Still huge: `tail -c 200000000 run.log | cut -c1-24 | sort | uniq -c | sort -rn | head` and cap the new dominant prefix.
-- Any CRASH/stall: backtrace (ASan arm in a separate build dir; lldb is unusable here), name writer, root-cause fix.
+s5441 closed: log cap works (var_d/e run.log 65 MB vs 905 MB; crashlines=0 vi_stalls30s=0, 5/5 var soaks clean).
+Queued m6_post_late_a/b (LATE=200, 480 s hold): the results-screen a/start presses begin early so a briefing->flight->hangar transition lands inside the hold.
+- Read SOAK-RESULTS.md tail + scratch/agent/m6/s5442_post_*/summary and keys.log.
+- Clean x2 (crashlines=0, vi_stalls30s=0, VI origin changes across the transition): transition endurance is 2/2; move to the title-boot plume SIGSEGV (si_addr=0x58) loop.
+- Any CRASH/stall: ASan arm in a separate build dir for a backtrace, name writer, root-cause fix.
