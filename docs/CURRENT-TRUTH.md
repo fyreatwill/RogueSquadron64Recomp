@@ -251,7 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5468 (TOP):** phase machine read statically (docs/M6-PHASE-MACHINE.md). s5470a: phase was already 3 at swap 7400 and requestMissionTransitionMode/beginMissionEndTransition were never called afterwards. Next = rerun m6_bp_trans.sh with TRAPSWAP~2500 so the phase-0->3 write and its caller are caught (NEXT.md).
+- **s5469 (TOP):** early-armed bp+watch caught phase 0->4 in requestMissionTransitionMode(a0=2) from runInMissionFrame (single run). Next = the a0=2 selecting condition (NEXT.md).
+- **s5468:** phase machine read statically (docs/M6-PHASE-MACHINE.md). s5470a: phase was already 3 at swap 7400 and requestMissionTransitionMode/beginMissionEndTransition were never called afterwards. Next = rerun m6_bp_trans.sh with TRAPSWAP~2500 so the phase-0->3 write and its caller are caught (NEXT.md).
 
 - **s5467 (TOP):** results swap trigger = game's own mission phase machine: runInMissionFrame dispatches on word 0x8010CA20 -> requestSpeechResponseMode2 (0x800FBAE8, needs isSpeechBusyOrQueued==idle) sets mode byte 0x80130B14=2 -> clearMissionObjectiveFlagsAndEnterPhaseSix (phase 4->6) -> mainGameLoop loadOverlay (const arg). Not a stub artifact (H3 dead); flag words 0x80130B50/58 uninvolved. Next = what advances phase to the Mode2/Mode1 handler (objectives vs death vs timer) and whether Mode2 = success or fail (NEXT.md).
 - **s5466:** write census (m6_wp375b0.sh, control PASS): 0x800375B0 is written by loadOverlay (0x80000C30) from mainGameLoop funcs_8.c:23647; the 0x37580 block by menuOverlayInit (:23660). Flag is a loader consequence; next = the overlay id mainGameLoop passes (NEXT.md).
