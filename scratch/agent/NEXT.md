@@ -1,4 +1,4 @@
-# Next work unit: RDRAM state-diff at results-scene entry (see docs/M6-MISSION-END-TRIGGER.md)
-Hypotheses: H1 timer/objective loss, H2 out-of-bounds, H3 cheat/debug path forces success.
-Discriminator: one run of the z-only flight (m6_keyed_hold_zonly.sh) dumping a game-state RDRAM window at the VI-phase transition into results vs ~100 swaps earlier; positive control = same dump across title->hangar. Words that change only at results entry name the condition. One build.
+# Next work unit: name the writer of 0x800375B0 / 0x80037580 block at mission end (s5465 found 0->1 at swap ~7775)
+Hypotheses: H1 timer/objective-loss function sets the flag (writer PC in mission-update code, value derived from a counter); H2 scene-request word written by a generic mission-end handler after a ship/objective check; H3 flag is just a consequence of the overlay loader (writer = loader, flag is not the cause).
+Discriminator: one run of m6_rdram_diff.sh-style flight with an in-runtime write census on phys 0x375B0 and 0x37580..0x375A4 (log guest PC/ra + value + swap#), armed from swap 7000; positive control = census on a known-changing word (0x3470) must fire. Writer PC inside mission code => H1/H2 (then read the function's inputs); inside loader/overlay code => H3 (look earlier for the scene request).
 HYPOTHESIS-ID: m6-mission-end-trigger

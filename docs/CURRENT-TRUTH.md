@@ -251,6 +251,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5465 (TOP):** RDRAM diff run (m6_rdram_diff.sh, tools/rdram_flags_at.py): results overlay swap occurs between swaps 7750-7800 (~200 swaps before the MISSION banner), with word 0x800375B0 0->1 and block 0x80037580.. rewritten (single run). Next = name the writer of 0x800375B0 via in-runtime write census (NEXT.md).
 - **s5464 (TOP):** mission-end audit -> docs/M6-MISSION-END-TRIGGER.md: FAIL results already reached (~swap 8000, s5433-s5437); gap is the success path and a RAM read of the fail condition. Next = RDRAM state-diff at results entry (NEXT.md).
 - **s5463:** plume title-boot lldb loop 16/16 clean (control PASS both arms): plume SIGSEGV thread CLOSED as guarded-s5446/unreproduced ((6/7)^16=0.085, suggestive). M3 idiom census classes all closed. Next: offline find the mission-end trigger so a soak can reach results (NEXT.md, slug m6-mission-end-trigger).
 

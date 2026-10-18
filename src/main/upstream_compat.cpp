@@ -511,6 +511,19 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
             fclose(f);
         }
     }
+    // ROGUESQ_RDRAM_DUMP_DIR=<dir> (s5465): raw RDRAM[0..0x680000) (host byte order, ^3 swapped) at swaps
+    // n%COARSE==0 (default 500) and, inside [FROM,TO], n%EVERY==0 (default 50). For the results-entry state diff.
+    static const char* s_rd = std::getenv("ROGUESQ_RDRAM_DUMP_DIR");
+    if (s_rd && *s_rd) {
+        auto ev = [](const char* k, int d) { const char* e = std::getenv(k); int v = e ? atoi(e) : 0; return v > 0 ? v : d; };
+        static const int s_every = ev("ROGUESQ_RDRAM_DUMP_EVERY", 50), s_coarse = ev("ROGUESQ_RDRAM_DUMP_COARSE", 500),
+                         s_from = ev("ROGUESQ_RDRAM_DUMP_FROM", 6000), s_to = ev("ROGUESQ_RDRAM_DUMP_TO", 8600);
+        if (n % s_coarse == 0 || (n >= s_from && n <= s_to && n % s_every == 0)) {
+            char path[512];
+            snprintf(path, sizeof path, "%s/rdram_%07d_fb%08X.bin", s_rd, n, fb);
+            if (FILE* f = fopen(path, "wb")) { fwrite(rdram, 1, 0x680000, f); fclose(f); }
+        }
+    }
     // ROGUESQ_WATCH_LOG=1 (s5076): per-swap log of the stick struct (0x80130B88 port0),
     // the readControllerInputs gate byte 0x130B56, and candidate flight-state words.
     static int s_watch = -1;
