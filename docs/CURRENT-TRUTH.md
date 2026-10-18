@@ -244,3 +244,6 @@ re-scoped the loop to an offline delay-slot/branch-operand hazard audit
 - s5358: toolchain re-checked absent; BLOCKED.md asks human (install toolchain / new target / stop).
 - s5359: unblock iteration confirmed block (route 4); human to confirm/permit a MIPS-capable clang or install a toolchain.
 - s5362: toolchain re-measured absent; BLOCKED.md re-asks human (install / new target / stop).
+
+## s5377 note
+Title-boot SIGSEGV si_addr=0x58 (1/7 launches, single-source) is in plume MetalFramebuffer ctor (null attachment texture at the 640 mode switch); renderer-side, unguarded, writer unnamed. s5377_census_mission_retry soak queued.
