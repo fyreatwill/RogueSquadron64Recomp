@@ -1,5 +1,5 @@
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..a4c305c 100644
+index a5f30a3..8d89781 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -14,12 +14,76 @@
@@ -169,3 +169,18 @@ index a5f30a3..a4c305c 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
+@@ -2118,6 +2218,14 @@ namespace plume {
+         for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
+             const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
+             const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
++            if (colorAttachment == nullptr) {
++                // Diagnostic only (s5383): name the createFramebuffer caller of the s5377 si_addr=0x58 title-boot SIGSEGV.
++                // Behaviour is unchanged; the deref below still faults.
++                void *frames[24];
++                int n = backtrace(frames, 24);
++                fprintf(stderr, "[plume-null-color-attachment] idx=%u count=%u hasViews=%d\n", i, desc.colorAttachmentsCount, desc.colorAttachmentViews != nullptr);
++                backtrace_symbols_fd(frames, n, 2);
++            }
+             assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
+ 
+             MetalAttachment attachment;

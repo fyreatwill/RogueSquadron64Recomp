@@ -180,6 +180,8 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
+0. (s5383) Title-boot SIGSEGV si_addr=0x58 (plume MetalFramebuffer ctor, ~1/7 launches): diagnostic print `[plume-null-color-attachment]` + backtrace landed (build-only, unexercised, no positive control possible). Grep future run logs for it; the first hit names the createFramebuffer caller. Do not guard until the writer is named.
+
 0. (s5376) Hangar route n=5 interactive: 3/5 hangar (try4 title-boot SIGSEGV si_addr=0x58, 37 CRASH lines; try5 key-timing miss); with s5375 5/7 vs soak 0/2. Route is flaky, not proven soak-only focus. Next: classify run4.log crash, add retry-on-no-hangar to the census recipe.
 
 0. (s5375) Hangar route: 18:30 binary reaches hangar 2/2 interactively; s5373 soak 0/2 was host/soak-context, not a build regression (n=2, single-source). Next: n=5 interactive vs soak of the same recipe, then redo the mission census.

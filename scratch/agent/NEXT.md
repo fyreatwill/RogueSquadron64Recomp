@@ -1,3 +1,3 @@
-# Next work unit: REVISIT retail-entry boundary (CURRENT-TRUTH Next steps #2) or M4 with a genuinely new angle
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
-Sweep parked (only func_800E9AE0 remains). s5381 quick_exit is VERIFIED (s5382, tools/verify_sdl_quit.sh A/B rc 0 vs 134). Prefer a committed guard/tool change over doc-only work (engineering-pivot counter).
+# Next work unit: passive watch for [plume-null-color-attachment]; otherwise REVISIT retail-entry boundary or M4 with a new angle
+HYPOTHESIS-ID: plume-null-color-attachment-caller
+s5383 landed a backtrace diagnostic in the plume MetalFramebuffer ctor (s5377 SIGSEGV si_addr=0x58, ~1/7 title-boot launches). Grep scratch/agent/soak_results and any run logs for `[plume-null-color-attachment]`; if present, read the backtrace to name the caller (rt64_render_target / framebuffer_manager / present_queue) and find why a texture is null at the 320->640 mode switch. If absent, a null is meaningless (no positive control). Sweep parked (func_800E9AE0 only). Prefer committed guard/tool changes over doc-only work.
