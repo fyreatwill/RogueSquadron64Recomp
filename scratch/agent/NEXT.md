@@ -1,4 +1,3 @@
-# Next work unit: capture the title-boot plume SIGSEGV (si_addr=0x58, ~1/7 boots) under lldb. Mission-hold endurance is closed (8/8 clean incl. 2 non-lldb 1300 s holds, s5461).
-Design: loop title boots (tools/agent/mk_lldb_hold.py / s5453_plume_lldb_attach10 recipe as base; check its log for why it ran to the 600 s cap) with lldb set to stop on SIGSEGV, N>=20 boots, in a background task with explicit long timeout (foreground >10 min is killed). On a hit: `bt all`, registers, name the writer of the null-ish pointer (si_addr 0x58 = field offset 0x58 off a NULL struct), fix root cause. Positive control: lldb must demonstrably catch a deliberately raised signal in the same run.
-Hypotheses: (a) uninitialised plume/effect struct read before alloc; (b) race with audio/RT64 thread; (c) already fixed by s5446 scratch-fb guard (then 0 hits in 20+ boots).
+# Next work unit: read s5463_title8_a/b summaries (scratch/agent/soak_results/s5463_title8_*/summary, SOAK-RESULTS.md).
+control=PASS + any STOP: read run*.lldb bt, name the null-texture writer, fix root cause. 16 clean (titles=8/8 each): close plume thread as guarded-s5446/unreproduced and start an M3 idiom-class audit.
 HYPOTHESIS-ID: m6-title-boot-plume-sigsegv

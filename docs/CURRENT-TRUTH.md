@@ -251,7 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5461 (TOP):** non-lldb 1300 s keyed mission holds 2/2 clean (0 crash/0 stall, ~37k distinct frames each); with 6 lldb holds = 8/8 clean. Mission-hold endurance CLOSED; stop re-running it. Next: loop title boots under lldb until the plume SIGSEGV (si_addr=0x58) recurs, read the real backtrace, name the writer (NEXT.md).
+- **s5462 (TOP):** s5453 N=10 lldb title loop was cut off by the 600 s cap; re-queued as s5463_plume_title8_a/b (N=8). Read their summaries (NEXT.md).
+- **s5461:** non-lldb 1300 s keyed mission holds 2/2 clean (0 crash/0 stall, ~37k distinct frames each); with 6 lldb holds = 8/8 clean. Mission-hold endurance CLOSED; stop re-running it. Next: loop title boots under lldb until the plume SIGSEGV (si_addr=0x58) recurs, read the real backtrace, name the writer (NEXT.md).
 
 - **s5457 (TOP):** lldb mission-hold c/d folded: 0 crash / 0 stall (4/4 null total, each <=10 min). loop.sh now honours `# SOAK_TIMEOUT=<secs>` in a recipe; m6_lldb_long_a (20-min hold, cap 1800) is queued. Fold it next; any bt: name the writer.
 - **s5456:** s5455 lldb mission-hold a/b folded: both reached the mission (t=86-88 s, origin 0x00690400), held to the 600 s cap, 0 crash / 0 stall (n=2, frame-counter evidence, single-source). Nothing overturned. m6_lldb_c (LATE=340) and m6_lldb_d (LATE=200) are queued; fold them next. If 4/4 are null, raise the soak cap in loop.sh for a >=20 min hold (the 600 s cap cannot see slow-onset failures). Any bt: name the writer.
