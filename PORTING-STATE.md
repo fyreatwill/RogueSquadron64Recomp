@@ -162846,3 +162846,9 @@ Static: runInMissionFrame table 0x800AFFA0 handlers (table order UNVERIFIED); re
 Run s5470a (scratch/agent/m6_bp_trans.sh, TRAPSWAP=7400, hold 482 s, alive): breakpoints resolved; control rand_recomp stopped 2x. Stops: requestSpeechResponseMode2 286x, clearMissionObjectiveFlagsAndEnterPhaseSix 2x, initMission 2x; requestMissionTransitionMode 0x, beginMissionEndTransition 0x. ctx->r4 expression output not captured.
 Result: phase was ALREADY 3 when breakpoints armed (swap 7400) and nobody called requestMissionTransitionMode afterwards -> the phase-3 write predates 7400 or comes from another writer (candidates FB2C8/FB454/FB558/FB634 sites). Selects "arm earlier"; does not split success vs fail. Single run.
 ORIGIN: no mitigation landed; instrument script + doc only.
+
+## Session 5469 (2026-10-18) — caught phase 0->4 write: requestMissionTransitionMode(a0=2) called from runInMissionFrame
+
+(Run tag s5471a.) Ran scratch/agent/m6_bp_trans.sh s5471a (TRAPSWAP=2500, 482 s mission hold, 1 attempt). Positive control (watch on 0x3470) hit. With the early arm, lldb stopped on requestMissionTransitionMode (bp 1.1) with ctx->r4 == 2, backtrace frame #1 = runInMissionFrame (funcs_42.c:12256) <- mainGameLoop <- mainBootstrapWorker. The phase watch (0x8010CA20) then fired 0 -> 4 at the 0x800FB2C8 store in the same function, followed by requestSpeechResponseMode2 breakpoint hits (phase 4 -> mode byte 2, per s5467). Single run (one attempt), but bp + watchpoint + bt agree.
+Rules out: s5470a "never called" (it armed after the call, at swap 7400). H2 (another writer) refuted for this run: the writer is the 0x800FB2C8 site. Not decided: whether a0==2 ("Mode1" -> phase 4) is success or failure (H3 death path still open). Corrects docs/M6-PHASE-MACHINE.md line 26: the function is reached from a frame inside runInMissionFrame, not only via unreachable tables.
+Next: identify the condition in runInMissionFrame that selects a0=2 (objectives vs lives vs timer).

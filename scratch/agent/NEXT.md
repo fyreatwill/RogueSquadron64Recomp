@@ -1,4 +1,3 @@
-# Next work unit: catch the phase 0->3 write on 0x8010CA20 and its caller (early arm)
-Hypotheses: H1 requestMissionTransitionMode(a0=3) via objective table (success); H2 another writer (FB2C8/FB454/FB558/FB634 sites in funcs_32); H3 death path (lives==0).
-Discriminator: env TRAPSWAP=2500 zsh scratch/agent/m6_bp_trans.sh s5471a 480; first fix capture of ctx->r4 (try p ctx->r4). Control: rand_recomp stops. First phase-watch stop with value 3 -> bt frame #1 caller, and whether requestMissionTransitionMode bp fired just before.
+# Next work unit: what condition in runInMissionFrame (funcs_42.c ~12256) passes a0=2 to requestMissionTransitionMode?
+Hypotheses: H1 objectives-complete (success); H2 death/lives==0; H3 timer/scripted event. Discriminator: static read of generated runInMissionFrame around the call, then rerun m6_bp_trans.sh s5472a with extra reads of lives/objective words at the requestMissionTransitionMode bp. s5471a showed a0=2 and phase 0->4 (PORTING-STATE s5469). Control: watch on 0x3470 must hit.
 HYPOTHESIS-ID: m6-mission-end-trigger
