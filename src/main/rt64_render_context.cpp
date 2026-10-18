@@ -1214,6 +1214,24 @@ namespace ultramodern {
                     s_bin_total += 16 + (hi_phys - lo_phys);
                 }
             }
+            {   // s5424: per-submission RDP command census (ROGUESQ_LOG_RDP_TRICOUNT=1) for flight-vs-hangar geometry volume.
+                static int s_tc = -1;
+                if (s_tc < 0) { const char *e = std::getenv("ROGUESQ_LOG_RDP_TRICOUNT"); s_tc = (e && *e && *e != '0') ? 1 : 0; }
+                if (s_tc && app->core.RDRAM) {
+                    const uint8_t *r = app->core.RDRAM;
+                    uint32_t tri = 0, trect = 0, frect = 0, other = 0, a = lo_phys;
+                    while (a + 8 <= hi_phys) {
+                        uint32_t op = r[a ^ 3] & 0x3F, n = 8;
+                        if (op >= 0x08 && op <= 0x0F) { n = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0); ++tri; }
+                        else if (op == 0x24 || op == 0x25) { n = 16; ++trect; }
+                        else if (op == 0x36) { ++frect; }
+                        else ++other;
+                        a += n;
+                    }
+                    fprintf(stderr, "[tricnt] ord=%u len=%u tri=%u trect=%u frect=%u other=%u\n",
+                            rs64_phase_ord(), hi_phys - lo_phys, tri, trect, frect, other);
+                }
+            }
             run_rdp_submission(app, lo_phys, hi_phys);
         }
     }

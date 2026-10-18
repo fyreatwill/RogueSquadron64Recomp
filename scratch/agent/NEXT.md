@@ -1,6 +1,6 @@
-# Next work unit: why do flown-mission frames show only sky?
+# Next work unit: where do flown-mission triangles vanish between RDP submit and the framebuffer?
 HYPOTHESIS-ID: m6-flown-render-fidelity
 
-s5423: s5421_nor frames 10000/20000 = sky gradient + green craft icon + partial reticle, no terrain/objects. Hangar frame renders fine.
-H1 geometry/terrain DLs dropped/clipped; H2 autopilot legitimately flies into empty sky; H3 fb dump partial.
-Discriminator: one flown run with a per-frame triangle count (RDP tri cmds) in flight vs hangar, and frame dumps at the mission start (VI phase just after origin 0x00690400) before the autopilot pitches. Tri count ~hangar-level with empty frame => H2/H3; near zero => H1. Use tools/ppm2png.py to view frames. Keep autopilot free of 'r'.
+s5424: flown stream has 2.4M tri (hangar-level per submission) so H1-upstream is rejected. Remaining:
+H4 RT64 culls/clips/depth-rejects flown geometry; H3 fb dump captures a partial/early frame; H2 truly empty sky (unlikely).
+Discriminator: one run (m6_keyed_hold.sh, already arms TRICOUNT) that also enables the fb dump (see s5421 fbd flag in git show b5f4ced6) at VI phases right after 0x690400 and later, plus RT64 per-frame draw-call/tri count at processDisplayLists. Tri submitted high + RT64 drawn count near zero => H4 (then bisect scissor/depth/viewport); drawn count high + dump empty => H3; both normal => view full-res frames with tools/ppm2png.py. Keep autopilot free of 'r'.

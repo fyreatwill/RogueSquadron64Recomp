@@ -250,7 +250,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-> s5423 (TOP): flown frames (s5421_nor fbd 10000/20000, viewed via tools/ppm2png.py) show only sky + green craft icon + partial reticle, no terrain/objects (single-source). Discriminate H1 renderer drops geometry / H2 empty sky / H3 partial dump with per-frame RDP tri count flight vs hangar + mission-start frame dumps; see scratch/agent/NEXT.md.
+> s5424 (TOP): flown RDP stream carries 2.4M tri over the 200 s hold (hangar 349k tri / 200k subs; same ~1.7 tri/submission), so geometry reaches the RDP submit (single-source, s5424_tri). Missing terrain is downstream: RT64 draw/clip/depth/fb-readback or the fb dump. Next: NEXT.md.
+> s5423: flown frames (s5421_nor fbd 10000/20000, viewed via tools/ppm2png.py) show only sky + green craft icon + partial reticle, no terrain/objects (single-source). Discriminate H1 renderer drops geometry / H2 empty sky / H3 partial dump with per-frame RDP tri count flight vs hangar + mission-start frame dumps; see scratch/agent/NEXT.md.
 
 > s5419: first FLOWN 1200 s hold (autopilot caps now 512 ev/8192 chars) clean: 0 crash, 0 stall; BUT fbhash shows a 4x repeating static two-frame cycle (~87 s period) from ~12 min on, so the mission is likely ended/parked (single-source, unresolved). Next: dump a frame at that point, replicate, vary pattern.
 > s5418: replicated x2 (1205 s each, 0 crash/stall, fbhash maxrun 317/318) => 3/3 clean unflown holds; autopilot now supports l/r/sl/sr/su/sd flight keys (built, untested). Next: flown hold.
