@@ -1,3 +1,4 @@
-# UNBLOCK (s5372 block)
-Route taken: 3 (re-scope), with route 1 reasoning. The block asked for a human decision, but the dependency is not human: the previous NEXT.md already named a discriminator (rerun the s5099 recipe as positive control) that no iteration had executed. s5099 reached hangar 3/3 at 01:28 on 2026-10-17; s5371 failed at 18:48, after build/RogueSquadron64Recomp was rebuilt at 18:30. Diffing the two recipes shows only env deltas (s5371 adds ALLOC_TAIL_GUARD2/3, drops SCENE_NODE_CACHE_GUARD) and a longer title wait; winctl is unchanged since Jul 25.
-Not resolved by observation: this session could not launch the game (permission denied in the non-interactive session), so the control run is queued as s5373 and its verdict is pending. Neither "route broke" nor "env delta" is refuted yet.
+# UNBLOCK (s5388): route 3 (re-scope)
+Block s5387 asked for a direction; no tool/resource is missing, so routes 1-2 do not apply (nothing to refute: CURRENT-TRUTH confirms M5/M4 closed, plume 0/18, census guards unreachable).
+Evidence read: BLOCKED.md, NEXT.md, CURRENT-TRUTH Next steps; precedent BLOCKED.resolved.s4863/s5351 (direction blocks).
+Action: NEXT.md rewritten to option (a) from the block's own menu, restricted to offline static work (no game run, no lib/ edits, no safety gate touched): enumerate all unguarded indirect-call/jr-ra sites in generated code, classify by target-set provenance, and rank those with unresolved targets. Open dependency recorded in CURRENT-TRUTH: human may still redirect to (b) new milestone or (c) rename sweep.

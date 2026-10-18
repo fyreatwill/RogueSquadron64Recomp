@@ -162254,3 +162254,6 @@ Soak s5385_plume_null_watch16 returned rc=137 (600 s cap SIGKILLed the group) wi
 
 ## Session 5387 (2026-10-17) — all threads parked; going BLOCKED for a human-chosen direction
 Read CURRENT-TRUTH (19.8 KB, no maintenance needed), NEXT.md, SOAK-RESULTS tail (no new verdicts since s5385). M5, M4, M3 j/jal list, plume watch and the allocDLB guard thread are closed or parked with evidence in CURRENT-TRUTH; the rename sweep is gated as churn. No experiment run (no discriminating measurement is nameable). Wrote scratch/agent/BLOCKED.md with the question (new idiom class / new milestone / authorize rename sweep).
+
+## s5388 (unblock) - direction block re-scoped
+Block s5387 requested a human direction (all threads parked). No missing resource; routes 1-2 N/A. Took route 3: NEXT.md rewritten to an offline static audit of all unguarded indirect-call/jr-ra sites (option a of the block). Plume left parked. No conclusions overturned. See scratch/agent/UNBLOCK.md.
