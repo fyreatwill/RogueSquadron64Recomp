@@ -162752,3 +162752,10 @@ Added scratch/agent/m6_keyed_hold_sel.sh (derived from m6_keyed_hold_var.sh; env
 - m6_sel_c (s5450_sel_c): rc=0, 484 s hold, 0 crash lines, 0 VI stalls >30 s; same as sel_a/b, so the SEL_KEYS variations are 3/3 clean but unverified as mission changes (no control).
 - Direct lldb/DevToolsSecurity calls are denied in this headless session, so I could not test lldb interactively. Wrote scratch/agent/soak_queue/s5452_plume_lldb_title20.sh: the s5406 recipe with N=20 and a same-run positive control (lldb launching /bin/echo). If control=FAIL in its summary, the lldb result is a tooling null (s5407 said lldb is unusable) and the next step is the in-process crash handler loop, not more lldb.
 - Rules out nothing new. No code change this iteration beyond the new queued script.
+
+## Session 5453 (2026-10-18) — s5452 lldb loop was a tooling null (getcwd EPERM); lldb ATTACH works; attach loop queued
+- s5452 verdict: control=PASS but 20/20 "STOP" and titles=0/20. run1.log shows every lldb-LAUNCHED game dies before main with `filesystem_error: in current_path: call to getcwd failed: Operation not permitted` -> SIGABRT. The /bin/echo control cannot see this (echo never calls getcwd). So the 20 STOPs are a launch-environment artifact, NOT plume crashes; no plume datum.
+- Reproduced outside the loop (scratch/agent/lldb_probe.sh, lldb launch from build/): same abort. Boring explanation (unverified): the lldb-spawned child loses cwd access under ~/Documents (TCC/sandbox).
+- Fresh datum: lldb ATTACH to a normally launched game works (attach at +3 s, `continue`; the game reached phase 3 origin=0x62BD00, 110693 `origin=` log lines in 30 s). This overturns the s5407 "attach hangs / freezes the game" claim in this environment (CURRENT-TRUTH line ~277 annotated).
+- Queued scratch/agent/soak_queue/s5453_plume_lldb_attach10.sh: 10 title boots with `lldb -w` attach (before game launch) plus a same-run positive control (inject SIGSEGV into a running game; lldb must report the stop). Attach's own SIGSTOP is excluded from the STOP grep. N=10 to fit the 600 s cap.
+- ORIGIN: no mitigation added; instrument-only (queue recipe + probe script).
