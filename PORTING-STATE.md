@@ -162784,3 +162784,9 @@ Read m6_lldb_a/b (rc=137 = 600 s watchdog kill, not a crash). Both: lldb attach 
 - Within the 600 s it behaved like lldb a-d: keys.log mission t=85, mission_verified_130s; fbd advanced to fb_0013000.ppm; run.log has 0 SIGSEGV/EXC_BAD/CRASH/abort lines (lldb_att1.log's 3 grep hits are the `process handle` header text). So still 0 crash / 0 stall over 5 lldb holds of ~10 min each; says nothing about >10 min failures.
 - Action: requeued the recipe as soak_queue/m6_lldb_long_b.sh (header SOAK_TIMEOUT=1800). It only gets 1800 s if the loop is restarted first; otherwise it is killed at 600 s again.
 - ORIGIN: no mitigation machinery added.
+
+## Session 5459 (2026-10-18) — m6_lldb_long_b verdict: loop still stale, 20-min hold not yet run
+- loop.log: "soak m6_lldb_long_b starting (cap 600s)" / "finished rc=137 after 600s"; long_a identical. The long_b log is 0 bytes (lldb produced no output within the cap).
+- Evidence the loop is stale: running loop.sh pid 89231 started 10:53:42; tools/agent/loop.sh mtime 11:51:25 (the per-recipe SOAK_TIMEOUT header edit). The running bash loop does not pick up the edit, so the header is ignored. Both long runs were 600 s kills mid-hold: NOT a 20-min null and NOT a crash datum.
+- Rules out nothing about the game. No crash or stall recorded.
+- Needs human: restart tools/agent/loop.sh, then re-queue m6_lldb_long_a/b.

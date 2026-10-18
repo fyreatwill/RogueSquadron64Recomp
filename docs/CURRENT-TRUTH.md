@@ -459,3 +459,5 @@ Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames sh
 - s5452 (TOP): m6_sel_c also clean (484 s, 0 crash, 0 stalls), so sel_a/b/c are 3/3 clean but unverified as mission changes (no control). Direct lldb is denied in the headless session, so the 20-boot lldb loop was queued as soak s5452_plume_lldb_title20 with a /bin/echo positive control. Read `scratch/agent/soak_results/s5452_plume_lldb_title20/summary`: control=PASS plus a STOP means read the bt and name the writer; control=PASS plus 20 clean means move to an M3 idiom audit; control=FAIL means lldb is unusable and the next step is a loop using the in-process crash handler. Nothing overturned this session.
 
 - (s5458) m6_lldb_long_a got only 600 s (running loop.sh predates the SOAK_TIMEOUT header edit; restart loop to activate). 5/5 lldb holds clean. m6_lldb_long_b requeued for the 1800 s cap.
+
+- s5459: m6_lldb_long a/b ran at stale 600s cap (loop pid 89231 predates loop.sh edit); human restart of loop.sh needed, see scratch/agent/BLOCKED.md.
