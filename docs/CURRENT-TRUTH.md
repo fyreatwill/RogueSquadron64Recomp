@@ -436,3 +436,5 @@ Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames sh
 
 - **s5435 (visual+fbhash, single run):** s5434's 'terminal results screen' was a harness artifact (autopilot schedule ended at t=254 s). With `scratch/agent/m6_keyed_hold_post.sh` (a/start after LATE=520 s) the results screen advances: briefing -> flight -> hangar -> flight again over 900 s, 0 crash, 0 stall. Next: repeat x3 for endurance across mission transitions. Supersedes the s5434 'waits for input; autopilot cannot advance' reading.
 - s5439: queued 3 stick/fire variation soaks (m6_keyed_var_*); verdicts pending in SOAK-RESULTS.md.
+
+- (s5443) m6_post_late_a/b (LATE=200, 480 s) clean but stayed in flight (no VI mode change after 78.5 s; dumps at swap 7000/10000 are flight): mission-transition endurance is UNTESTED. Queued m6_res_late_a/b (LATE=340, 540 s). Single-source (visual+fbhash).
