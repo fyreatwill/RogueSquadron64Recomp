@@ -216,6 +216,8 @@ progress/end observations to the port and cxd4 arms before another comparison.
 
 ## Superseded conclusions worth retaining
 
+- s5423 caveat: "M6 endurance closed / flown hold clean" proves no crash/stall only; it was believable because the detectors (VI stall, crash markers, fbhash) cannot see a frame that is alive but nearly empty. Flight frames show sky only, so render fidelity in flight is OPEN.
+
 - "The patch layer (asm or C) provides the live heap guards" (s5365 and older
   entries) is overturned by s5366: ld64 never links the patch member. It was
   believable because Zelda-style link order (PatchesLib first) is meant to
@@ -247,6 +249,8 @@ progress/end observations to the port and cxd4 arms before another comparison.
 Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-12 min is the TITLE screen (VI width 1024 origin 0x790400 from 634 s): the mission ended and the game fell back to title/attract. Not a hang. Cause of mission end unknown (death vs objective vs autopilot 'r'). ROGUESQ_FB_DUMP_DIR dumps PPMs but assumes stride 320 (garbled at other widths).
 
 ## Next steps (single monotonic backlog)
+
+> s5423 (TOP): flown frames (s5421_nor fbd 10000/20000, viewed via tools/ppm2png.py) show only sky + green craft icon + partial reticle, no terrain/objects (single-source). Discriminate H1 renderer drops geometry / H2 empty sky / H3 partial dump with per-frame RDP tri count flight vs hangar + mission-start frame dumps; see scratch/agent/NEXT.md.
 
 > s5419: first FLOWN 1200 s hold (autopilot caps now 512 ev/8192 chars) clean: 0 crash, 0 stall; BUT fbhash shows a 4x repeating static two-frame cycle (~87 s period) from ~12 min on, so the mission is likely ended/parked (single-source, unresolved). Next: dump a frame at that point, replicate, vary pattern.
 > s5418: replicated x2 (1205 s each, 0 crash/stall, fbhash maxrun 317/318) => 3/3 clean unflown holds; autopilot now supports l/r/sl/sr/su/sd flight keys (built, untested). Next: flown hold.
