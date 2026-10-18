@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5381 (2026-10-17).
+Compact operational handoff, maintained at Session 5396 (2026-10-17).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -12,6 +12,13 @@ logo, title (`0x00790400`, VI 1024), hangar (`0x006AB400`, VI 512), and mission
 origins (`0x00690400` and later `0x00620400`, VI 512). Mission input reaches
 flight code and changes the vehicle state. The default audio route is active;
 `ROGUESQ_AUDIO_UCODE=0` is the silent control.
+
+The M6 keyed mission endurance gate is now closed: two independent runs reached
+mission only after a preceding hangar origin and held for the requested 900 s.
+Run s5394b held 904 s and s5394c held 900 s; both stayed alive, recorded zero
+30-second VI-origin stalls, and emitted zero crash/abort markers. This is route
+endurance evidence, not proof that every mission subsystem or render artifact is
+correct.
 
 M5 audio de-stubbing is closed for the qualified route. The image arm produces
 nonzero PCM, completes its task/SP contract, reaches title/hangar/mission, and
@@ -195,10 +202,11 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
-0. (s5395) Run the queued M6 keyed mission holds `s5394b` and `s5394c` one at
-   a time after clearing any UserNotificationCenter modal; require a preceding
-   hangar origin `0x006AB400` before accepting mission `0x00690400`. Any
-   distinct crash or VI-origin stall requires a backtrace and named writer.
+0. (s5396) Resume the bounded generated-symbol renaming sweep. Select one real
+   placeholder outside the already-audited `func_800E9AE0`, and rename it only
+   if the companion map and generated tree agree on the same function span and
+   semantic name. Record the candidate census and agreement test in a new
+   `docs/RENAME-S5396.md`; leave it unchanged if the evidence is incomplete.
 
 0. (s5389) The s5388 indirect-site audit is a DUPLICATE of s4821/s4998/s5357 (class closed; no raw indirect lowering exists). Backlog exhausted; BLOCKED for a human-chosen direction (BLOCKED.md). No conclusions overturned.
 

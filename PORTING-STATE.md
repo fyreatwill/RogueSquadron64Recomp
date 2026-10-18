@@ -162316,3 +162316,22 @@ reach. H1 remains the working contract hypothesis; H2/H3 are unevaluated.
 
 ORIGIN: host `recomp::rsp::run_task` supplies the callback task pointer; the
 guard rejects only null host input and does not alter guest-written values.
+
+## Session 5396 (2026-10-17) — M6 keyed mission endurance passed two 900 s holds
+
+Planned unit: run the existing keyed title-to-hangar-to-mission recipe twice,
+with a preceding hangar origin required before accepting mission origin
+`0x00690400`. Cleared the UserNotificationCenter modal and verified the screen
+was not reported locked before starting the runs.
+
+Run s5394b reached mission at 170 s, then stayed alive for a 904 s hold. Run
+s5394c reached mission at 173 s, then stayed alive for a 900 s hold. Both runs
+had the hangar positive control (`0x006AB400`) before mission acceptance, zero
+VI-origin stalls over 30 s, and zero `CRASH`, `SIGSEGV`, or abort markers. The
+recipe SIGKILLed each child after the hold and exited successfully.
+
+This supplies the second independent endurance line and closes the M6 route
+gate for the qualified image/audio path. It rules out an immediately recurring
+mission-entry crash or frozen-frame stall under this keyed route, but does not
+rule out unvisited mission content or render-fidelity defects. No code or
+mitigation changed; ORIGIN: n/a.
