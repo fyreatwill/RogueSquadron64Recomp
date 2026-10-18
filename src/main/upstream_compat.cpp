@@ -493,7 +493,8 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     }
     // ROGUESQ_FB_DUMP_DIR=<dir> (s5420): write the 320x224 RGBA16 fb as PPM every 1000th swap.
     static const char* s_fbd = std::getenv("ROGUESQ_FB_DUMP_DIR");
-    if (s_fbd && *s_fbd && n % 500 == 0) {
+    static const int s_fbd_every = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EVERY"); int v = e ? atoi(e) : 0; return v > 0 ? v : 500; }();
+    if (s_fbd && *s_fbd && n % s_fbd_every == 0) {
         char path[512];
         snprintf(path, sizeof path, "%s/fb_%07d.ppm", s_fbd, n);
         if (FILE* f = fopen(path, "wb")) {
