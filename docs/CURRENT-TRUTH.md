@@ -251,7 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-> s5437: M6 keyed hold 3/3 clean (s5436_a, s5437_b, s5437_c: 1217-1226 s, 0 crash, 0 stall, post-results restarts; single recipe). Next: flight-frame comparison script, then vary route (scratch/agent/NEXT.md).
+> s5437: M6 keyed hold 3/3 clean (s5436_a, s5437_b, s5437_c: 1217-1226 s, 0 crash, 0 stall, post-results restarts; single recipe).
+> s5438: flight-1 vs flight-2 comparison done. Frame md5 is useless on animating scenes (0/65 equal across runs, 0 repeats within runs); a visual montage shows flight 2 rendering like flight 1 (single-source), so "second flight renders differently" is not supported. Helpers: scratch/agent/m6/{compare_flights.sh,frame_stats.py,ppm2png.py}. Next (top of backlog): vary the route (hangar route, alternate key schedule), >=3 runs of >=600 s, per scratch/agent/NEXT.md.
 
 > Next-steps order (s5425): (1) one run with tricnt + fb dump + RT64 drawn-tri count at processDisplayLists to split H4/H3 (scratch/agent/NEXT.md); (2) only after that, further M6 endurance soaks.
 > s5424 (TOP): flown RDP stream carries 2.4M tri over the 200 s hold (hangar 349k tri / 200k subs; same ~1.7 tri/submission), so geometry reaches the RDP submit (single-source, s5424_tri). Missing terrain is downstream: RT64 draw/clip/depth/fb-readback or the fb dump. Next: NEXT.md.
