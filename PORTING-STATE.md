@@ -162490,3 +162490,17 @@ image identity plus task-progress/end observations to both arms before a
 comparison can authorize writer attribution.
 
 ORIGIN: n/a (observational schema gate; no mitigation or value filtering).
+
+## Session 5406 (2026-10-17) — M6 secondary: enqueued lldb title-boot soak for the si_addr=0x58 plume SIGSEGV
+
+Step 0: CURRENT-TRUTH is 28,880 bytes, no maintenance. Strategic order: M5/M3
+exhausted, M4 parked at H3 (s5405), last-15 session titles are not all sweep, so
+directive 3b applies. The 18 earlier title boots (s5384/s5385) under plain
+launch hit neither the crash nor the `[plume-null-color-attachment]` breadcrumb,
+so waiting on breadcrumbs is not producing data. Wrote
+`scratch/agent/soak_queue/s5406_plume_lldb_title.sh`: 10 title boots, each under
+`lldb -b` with SIGSEGV/SIGBUS stop, printing `bt 30`, registers and thread list
+on a stop; exits 1 on any stop or breadcrumb. Positive control: the title-origin
+count (`origin=0x00790400`) must be ~10/10 under lldb, otherwise lldb itself
+broke the boot and a null means nothing. No game result yet; this rules nothing
+out. ORIGIN: n/a (no mitigation).
