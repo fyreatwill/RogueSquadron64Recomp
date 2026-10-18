@@ -9,11 +9,15 @@ rm -rf "$OUT"; mkdir -p "$OUT"; K=$OUT/keys.log; D0=$SECONDS; DEADLINE=555
 ioreg -n Root -d1 -a 2>/dev/null | grep -A1 CGSSessionScreenIsLocked | grep -q true && { echo SCREEN-LOCKED >> $K; exit 1; }
 COMMON=(ROGUESQ_OVL2C_DROP=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1
   ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_DLWALK=1 ROGUESQ_LOG_PHASE=1
-  ROGUESQ_LOG_ALLOC_TAIL_GUARD2=1 ROGUESQ_LOG_ALLOC_TAIL_GUARD3=1 ROGUESQ_LOG_M5_ROUTE_TRANSITION=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_AUDIO_UCODE=1
+  ROGUESQ_LOG_ALLOC_TAIL_GUARD2=1 ROGUESQ_LOG_ALLOC_TAIL_GUARD3=1 ROGUESQ_LOG_M5_ROUTE_TRANSITION=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_FB_HASH=1
   PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=240 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1)
 # Detector positive control: the same stall rule applied to a synthetic frozen sequence must fire exactly once.
 ctl=0; cl=""; ct=0; for t in 0 3 6 9 12 15 18 21 24 27 30 33 36 39; do cn=$([ $t -lt 6 ] && echo $t || echo 6); if [ "$cn" != "$cl" ]; then cl=$cn; ct=$t; elif [ $((t-ct)) -ge 31 ] && [ $((t-ct)) -le 33 ]; then ctl=$((ctl+1)); fi; done
 [ $ctl -eq 1 ] && echo "detector-control OK" >> $K || { echo "detector-control FAIL ctl=$ctl" >> $K; exit 1; }
+# Frozen-frame metric (s5413): longest run of identical consecutive framebuffer hashes + distinct count.
+# Positive control: a synthetic sequence with one 5-run must report maxrun=5.
+fbrun() { awk '{h=$NF} h==p {r++} h!=p {r=1;p=h} r>m {m=r} !(h in d) {d[h]=1;n++} END{print "maxrun=" m+0 " distinct=" n+0 " total=" NR}'; }
+[ "$(printf 'a\nb\nb\nb\nb\nb\nc\n' | fbrun)" = "maxrun=5 distinct=3 total=7" ] && echo "fbrun-control OK" >> $K || { echo "fbrun-control FAIL" >> $K; exit 1; }
 pkill -KILL -x RogueSquadron64Recomp >/dev/null 2>&1 || true
 L=$OUT/run.log
 has() { grep -aq "$1" $L; }
@@ -55,6 +59,7 @@ for att in 1 2; do
   done
   kill -9 $p 2>/dev/null; wait $p 2>/dev/null
   echo "summary att=$att mission_onset=$mt crash=$(grep -ac CRASH $L) abort=$(grep -aic abort $L) stalls=$stalls maxstall=$maxstall vi_rows=$(grep -ac '^\[vi\] update_screen' $L) last_vi=$(grep -a '^\[vi\] update_screen' $L | tail -1 | grep -o '#[0-9]*') origins=$(grep -a '^\[vi\] update_screen' $L | grep -o 'origin=0x[0-9A-Fa-f]*' | sort -u | tr '\n' ',') m690400=$(grep -ac origin=0x00690400 $L) end_t=$((SECONDS-D0))" >> $K
+  echo "fbhash $(grep -a '^.fbhash' $L | sed 's/.*h=//' | fbrun)" >> $K
   grep -a -B2 -A25 CRASH $L | head -60 > $OUT/crash_excerpt.txt
   [ "$(grep -ac CRASH $L)" -eq 0 ] && [ $stalls -eq 0 ] && [ $mt -ge 0 ] && exit 0
   exit 1
