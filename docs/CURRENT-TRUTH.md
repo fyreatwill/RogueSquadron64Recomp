@@ -59,6 +59,8 @@ this discriminator; no writer or mitigation follows. See
 
 ## Durable state
 
+- **SDL_QUIT shutdown (s5382, verified).** The `quick_exit` fix works: old binary rc=134 SIGABRT, new rc=0 on the same SIGTERM->SDL_QUIT recipe (`tools/verify_sdl_quit.sh`). Closed.
+
 ### M5 audio
 
 - Default `M_AUDTASK` dispatch selects the Factor 5 image; stock `aspMain` and
