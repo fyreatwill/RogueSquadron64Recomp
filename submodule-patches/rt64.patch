@@ -2778,7 +2778,7 @@ index dccaa87..1d4bda0 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..5087cef 100644
+index f17db9b..3d21b78 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,11 +4,13 @@
@@ -3105,6 +3105,30 @@ index f17db9b..5087cef 100644
                          std::fflush(stderr);
                      }
                  }
+@@ -394,6 +619,15 @@ namespace RT64 {
+                 lockedWorkloadMutex = true;
+                 ext.sharedResources->workloadMutex.lock();
+ 
++                // RS64 (s5446): VI::fbSize() returns (0,0) while the VI registers are mid mode-switch.
++                // resize(0,0) is a no-op on a fresh target, leaving texture==nullptr, and
++                // clearColorTarget then derefs it inside plume's MetalFramebuffer ctor (si_addr=0x58).
++                if (scratchFb.width == 0 || scratchFb.height == 0) {
++                    colorTarget = nullptr;
++                    ext.sharedResources->workloadMutex.unlock();
++                    lockedWorkloadMutex = false;
++                }
++                else {
+                 RenderTargetKey colorTargetKey(fbAddress, scratchFb.width, scratchFb.siz, Framebuffer::Type::Color);
+                 colorTarget = &targetManager.get(colorTargetKey, true);
+                 colorTarget->resize(ext.presentGraphicsWorker, scratchFb.width, scratchFb.height);
+@@ -418,6 +652,7 @@ namespace RT64 {
+                 if (!present.paused && (viHistory.top().vi != present.screenVI)) {
+                     viHistory.pushVI(present.screenVI, fbSize.x);
+                 }
++                }
+             }
+         }
+ 
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
 index d1a9f4e..f65be03 100644
 --- a/src/hle/rt64_rdp.cpp

@@ -1,7 +1,5 @@
-# Next work unit: title-boot plume SIGSEGV (si_addr=0x58) lldb loop
+# Next work unit: fold s5446_plume_scratchfb_guard soak verdict, then mission endurance
 HYPOTHESIS-ID: m6-title-boot-plume-sigsegv
-
-- Flight endurance is closed as clean (s5445: 2/2 nostart holds, ~10 total runs, no crash/stall). Pivot to the secondary M6 item.
-- Write soak_queue recipe that boots to title ~8x under lldb (batch mode, `process handle SIGSEGV -s true`), exits at first SIGSEGV with `bt all` + registers into scratch/agent/soak_results; otherwise SIGKILL after title+30 s and re-launch.
-- Hypotheses: (H1) null-ish struct deref in plume emitter before init (si_addr 0x58 = field offset in NULL object); (H2) race with audio/VI thread; discriminator = the real backtrace + faulting register source.
-- Positive control: lldb must catch a deliberately raised SIGSEGV (kill -SEGV) in the same recipe.
+- Read SOAK-RESULTS.md for s5446_plume_scratchfb_guard (title boots; any [CRASH]/si_addr=0x58 = guard incomplete, read the crash-handler backtrace in the log).
+- Clean = weak evidence only (p~0.29 at 1/7). Optionally add a one-shot stderr breadcrumb in the new guard branch to prove it fires (positive control for the mechanism).
+- Then resume M6: keyed mission endurance / results-screen recipe (start=pause defect noted in s5444).
