@@ -215,6 +215,7 @@ progress/end observations to the port and cxd4 arms before another comparison.
   iterations. A diagnostic field alone is not a work unit.
 
 ## Superseded conclusions worth retaining
+- s5423 hypothesis H1 "renderer/DL path drops flown terrain geometry before the RDP" is refuted by s5424: the flown RDP stream has 2.40M tri vs hangar 349k at the same ~1.7 tri/submission. It was believable because flown frames show only sky and the hangar renders fine. Live pair now: H4 (RT64 clip/cull/depth rejects it) vs H3 (partial fb dump).
 
 - s5423 caveat: "M6 endurance closed / flown hold clean" proves no crash/stall only; it was believable because the detectors (VI stall, crash markers, fbhash) cannot see a frame that is alive but nearly empty. Flight frames show sky only, so render fidelity in flight is OPEN.
 
@@ -250,6 +251,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+> Next-steps order (s5425): (1) one run with tricnt + fb dump + RT64 drawn-tri count at processDisplayLists to split H4/H3 (scratch/agent/NEXT.md); (2) only after that, further M6 endurance soaks.
 > s5424 (TOP): flown RDP stream carries 2.4M tri over the 200 s hold (hangar 349k tri / 200k subs; same ~1.7 tri/submission), so geometry reaches the RDP submit (single-source, s5424_tri). Missing terrain is downstream: RT64 draw/clip/depth/fb-readback or the fb dump. Next: NEXT.md.
 > s5423: flown frames (s5421_nor fbd 10000/20000, viewed via tools/ppm2png.py) show only sky + green craft icon + partial reticle, no terrain/objects (single-source). Discriminate H1 renderer drops geometry / H2 empty sky / H3 partial dump with per-frame RDP tri count flight vs hangar + mission-start frame dumps; see scratch/agent/NEXT.md.
 
