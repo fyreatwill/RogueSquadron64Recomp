@@ -1,7 +1,7 @@
-# Next work unit: B vs C — is the MISSION GOALS screen a mission-end flow or ship death?
+# Next work unit: post-mission-fail flow endurance (results -> title/hangar -> retry)
 HYPOTHESIS-ID: m6-flown-render-fidelity
 
-State (s5432): z-only autopilot still reaches the goals screen (~swap 8000 vs ~4800 with start) => not the `start` pause (A refuted as sole cause).
-Hypotheses: (B) objective/mission-end flow independent of keys; (C) ship death (z-only, no steering, flying into enemies/ground).
-Discriminator: in one run, log the player-ship health/alive word and the game mode/screen-state word at each 20 swaps through goals onset (find via CURRENT-TRUTH mission-state notes or grep PORTING-STATE for "health"/"gamemode"), plus FB dumps. Health hitting 0 before onset => C; health nonzero and mission-complete/objective flag set => B. Positive control: the same logging must show the health word change during the title->flight transition.
-Recipe: `env FBD_EVERY=20 zsh scratch/agent/m6_keyed_hold_zonly.sh <tag> 300` plus the new logging. Delete fbd dumps afterwards.
+State (s5433): the autopilot mission fails at ~swap 8100 (results screen "MISSION FAILED"), a legitimate game flow. Mission flight endurance is clean to that point.
+Hypotheses: (A) after the results screen the game returns to hangar/title and a second mission start is clean; (B) post-fail transition crashes/hangs (teardown/endMissionCleanup, audio/voice arrays); (C) the game sits on the results screen forever awaiting a key (autopilot z may or may not advance it).
+Discriminator: one 900 s hold, FBD_EVERY=200 (sparse dumps), contact sheet from swap ~8000 onward + VI origin transitions after failure; CRASH/stall lines. Positive control: the existing sheet script must show the results frame at ~8100.
+Recipe: `env FBD_EVERY=200 zsh scratch/agent/m6_keyed_hold_zonly.sh s5434a 900`; view with `python3 scratch/agent/m6_sheet.py <dir>/fbd 4 scratch/agent/m6/view/x.png` (no `-I`, PIL is in user site; viewable PNGs must live inside the repo). Delete dumps afterwards.
