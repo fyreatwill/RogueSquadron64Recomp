@@ -162741,3 +162741,9 @@ Ran `m6_keyed_hold_post.sh s5449_post_late300 1200` with LATE=300 (a/start alter
 
 ## Session 5450 (2026-10-18) — mission-select variation recipe queued
 Added scratch/agent/m6_keyed_hold_sel.sh (derived from m6_keyed_hold_var.sh; env SEL_KEYS injects extra stick presses at t=11,15,... in the hangar window) and queued m6_sel_a/b/c (sr / sr sr sr / sl sl, 480 s holds). Untested: no run this iteration; the soaks run between iterations. Discriminator: distinct origin set per run vs the s5449 list; a new origin or crash/stall = new datum. Whether the stick presses change mission selection is unproven (no positive control) - an identical set means "keys had no effect", not "other missions clean".
+
+## Session 5451 (2026-10-18) — mission-select variation soaks sel_a/sel_b: clean, but no evidence the stick presses changed the mission
+- Read m6_sel_a / m6_sel_b (SEL_KEYS stick presses in the hangar window), 483 s mission hold each: alive_at_end=1, vi_stalls30s=0, crashlines=0, mission verified at t=81-82 s. m6_sel_c still queued.
+- Distinct VI origin set: sel_a 29 values, s5449 baseline 29; differ only at 0x6A2400 (sel_a) and 0x644800 (baseline) - pacing jitter, not a different scene.
+- Verdict: no positive control that SEL_KEYS selected a different mission. Single-source: same mission, 2 more clean holds. No crash/stall, no code change.
+- ORIGIN: n/a (no mitigation added).
