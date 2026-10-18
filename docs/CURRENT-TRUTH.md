@@ -461,3 +461,4 @@ Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames sh
 - (s5458) m6_lldb_long_a got only 600 s (running loop.sh predates the SOAK_TIMEOUT header edit; restart loop to activate). 5/5 lldb holds clean. m6_lldb_long_b requeued for the 1800 s cap.
 
 - s5459: m6_lldb_long a/b ran at stale 600s cap (loop pid 89231 predates loop.sh edit); human restart of loop.sh needed, see scratch/agent/BLOCKED.md.
+- (s5460) That block is REFUTED: long soaks can be run directly (`zsh <recipe>` as a background task); no loop restart needed. m6_lldb_long_a ran 1321 s: 0 crash, 0 stall, alive. 6/6 lldb holds clean. Next: non-lldb keyed holds with LATE=340.

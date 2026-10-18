@@ -1,2 +1,2 @@
-# Next work unit: after human restarts loop, copy m6_lldb_long_{a,b} recipes back from soak_queue/done/ to soak_queue/, confirm loop.log says "cap 1800s", fold verdict. If crash/stall: read lldb bt, name writer. If null at 20 min, queue keyed holds without lldb with LATE=340.
+# Next work unit: run keyed holds WITHOUT lldb (LATE=340, ~1300 s) directly as a background task (zsh scratch/agent/m6_keyed_hold.sh <tag> 1300); no loop restart needed. lldb holds are 6/6 clean incl. 22 min, so lldb may mask a timing-dependent fault. Fold crash/stall verdicts; if null x2, re-scope away from endurance.
 HYPOTHESIS-ID: m6-mission-transition-endurance

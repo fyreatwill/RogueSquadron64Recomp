@@ -162790,3 +162790,9 @@ Read m6_lldb_a/b (rc=137 = 600 s watchdog kill, not a crash). Both: lldb attach 
 - Evidence the loop is stale: running loop.sh pid 89231 started 10:53:42; tools/agent/loop.sh mtime 11:51:25 (the per-recipe SOAK_TIMEOUT header edit). The running bash loop does not pick up the edit, so the header is ignored. Both long runs were 600 s kills mid-hold: NOT a 20-min null and NOT a crash datum.
 - Rules out nothing about the game. No crash or stall recorded.
 - Needs human: restart tools/agent/loop.sh, then re-queue m6_lldb_long_a/b.
+
+## Session 5460 (2026-10-18) — UNBLOCK: loop-restart block refuted; 22-min lldb hold run directly, null
+- Block claimed a human must restart loop.sh (pid 89231 predates the SOAK_TIMEOUT header edit). True about the loop, false as a dependency: the recipe is a plain script and can be run directly with no cap (route 1).
+- Ran `zsh scratch/agent/soak_queue/done/m6_lldb_long_a_*.sh` as a background task, nothing else running. Result: att=1 mission t=85 s, mission_verified_130s, hold=1321 s, alive_at_end=1, vi_stalls30s=0, crashlines=0, lldb stops=2 (attach + final SIGKILL), fbhash maxrun=318 distinct=23134 total=26329. Log: scratch/agent/soak_results/s5460_direct_long_a.log.
+- Verdict: 6/6 lldb holds clean incl. one 22-min hold past results. Single-run null; positive control = the keys/mission-verified gates passing. Crash not reproduced under lldb.
+- Remaining: keyed holds without lldb (LATE=340), since lldb may perturb timing.
