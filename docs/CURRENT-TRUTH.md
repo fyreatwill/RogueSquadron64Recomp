@@ -172,6 +172,10 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Next steps (single monotonic backlog)
 
+0. (s5369) a100 head/walk census: 300 s runs reached hangar but not mission, and
+   the CTL arm does not fire the head/walk sites, so H1/H2 are both unresolved
+   (single-source null, no control). See scratch/agent/NEXT.md.
+
 1. M4 CLOSED as legitimate (s5354): retail cxd4 at the mapped PCs 0x012C/0x07F0
    shows transient `-32768` VACC lanes in 657/657 hangar (512-wide) graphics
    tasks (61,195 + 54,382 samples), task-end zero in all 2,172 tasks -- the
