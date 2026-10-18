@@ -147,6 +147,12 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
 
 ## Superseded conclusions worth retaining
 
+- "The patch layer (asm or C) provides the live heap guards" (s5365 and older
+  entries) is overturned by s5366: ld64 never links the patch member. It was
+  believable because Zelda-style link order (PatchesLib first) is meant to
+  make overrides win. s5367 adds that the patch is NOT redundant: it has
+  stricter predicates than the inlined guards.
+
 - The claim that retail never had a mid-task `0x8000` VACC lane came from a
   signed/unsigned decoder error; corrected retail evidence found such lanes in
   all sampled 512-wide tasks while task-end remained zero. No mitigation
@@ -175,12 +181,13 @@ tree agree. Audit files are `docs/RENAME-S*.md`.
    without a new discriminator. Re-open M3 only as a complete idiom-class audit.
 3. The generated-symbol sweep is parked; re-open only if a new placeholder
    candidate or companion-map evidence appears.
-4. Fresh PatchesLib source qualification (s5365): toolchain now present (clang-22
-   shims; build with `make CC=mips64-elf-gcc LD=mips64-elf-ld`). C source ->
-   ELF -> N64Recomp -> fixup -> clang compiles after fixing a `func_8002221C`
-   vs `findAndUnlinkSmallestEntry` naming bug in `patches/heap_guards.c`. The
-   shipped `patches.elf` is the asm-only build; the C override is not in the
-   image. Open: runtime A/B of C-patch vs asm-patch (NEXT.md).
+4. Patch-only guard predicates (s5367, source-reading, single-source): the C
+   patch's `block_ok`/`bump_cursor_ok` (0x100 alignment, end-of-RDRAM bound,
+   bump cursor, link back-pointers) are stricter than the live inlined guards
+   (range + 4-byte alignment only). Next: counter-only 0x100-alignment check in
+   `tools/apply_s3285_freelist_align_cycle.py` with a positive control, one
+   autopilot hangar run (NEXT.md). Fires -> make it reject and name the writer;
+   zero -> retire the patch layer. C-vs-asm A/B is moot (s5366).
 
 Session 5354 detail: retail run `tools/oracle/run_m4_retail_pcs.sh`
 (RS64_RSP_MID_STRIDE=1 + new RS64_RSP_MID_PCS filter; rdplog video,
