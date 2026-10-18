@@ -9545,6 +9545,8 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     if (!strcmp(n, "down"))  return N64_D_JPAD;
                     if (!strcmp(n, "left"))  return N64_L_JPAD;
                     if (!strcmp(n, "right")) return N64_R_JPAD;
+                    // s5435: an unknown name used to become START silently (start pauses flight).
+                    fprintf(stderr, "[autopilot] WARNING unknown key '%s' -> START\n", n);
                     return N64_START_BUTTON;
                 };
                 char buf[8192];
