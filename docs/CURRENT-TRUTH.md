@@ -251,6 +251,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5463 (TOP):** plume title-boot lldb loop 16/16 clean (control PASS both arms): plume SIGSEGV thread CLOSED as guarded-s5446/unreproduced ((6/7)^16=0.085, suggestive). M3 idiom census classes all closed. Next: offline find the mission-end trigger so a soak can reach results (NEXT.md, slug m6-mission-end-trigger).
+
 - **s5462 (TOP):** s5453 N=10 lldb title loop was cut off by the 600 s cap; re-queued as s5463_plume_title8_a/b (N=8). Read their summaries (NEXT.md).
 - **s5461:** non-lldb 1300 s keyed mission holds 2/2 clean (0 crash/0 stall, ~37k distinct frames each); with 6 lldb holds = 8/8 clean. Mission-hold endurance CLOSED; stop re-running it. Next: loop title boots under lldb until the plume SIGSEGV (si_addr=0x58) recurs, read the real backtrace, name the writer (NEXT.md).
 
