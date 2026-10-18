@@ -493,14 +493,17 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     }
     // ROGUESQ_FB_DUMP_DIR=<dir> (s5420): write the 320x224 RGBA16 fb as PPM every 1000th swap.
     static const char* s_fbd = std::getenv("ROGUESQ_FB_DUMP_DIR");
-    if (s_fbd && *s_fbd && n % 1000 == 0) {
+    if (s_fbd && *s_fbd && n % 500 == 0) {
         char path[512];
         snprintf(path, sizeof path, "%s/fb_%07d.ppm", s_fbd, n);
         if (FILE* f = fopen(path, "wb")) {
             fprintf(f, "P6\n320 224\n255\n");
             const uint32_t phys = fb & 0x00FFFFFF;
+            uint32_t stride = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
+            if (stride < 64u || stride > 1024u) stride = 320u;
             for (uint32_t i = 0; i < 320u * 224u; ++i) {
-                uint16_t px = (uint16_t)((rdram[((phys + i * 2) & 0x7FFFFFu) ^ 3] << 8) | rdram[((phys + i * 2 + 1) & 0x7FFFFFu) ^ 3]);
+                const uint32_t o = ((i / 320u) * stride + (i % 320u)) * 2u;
+                uint16_t px = (uint16_t)((rdram[((phys + o) & 0x7FFFFFu) ^ 3] << 8) | rdram[((phys + o + 1) & 0x7FFFFFu) ^ 3]);
                 unsigned char rgb[3] = {(unsigned char)(((px >> 11) & 31) * 255 / 31), (unsigned char)(((px >> 6) & 31) * 255 / 31), (unsigned char)(((px >> 1) & 31) * 255 / 31)};
                 fwrite(rgb, 1, 3, f);
             }
