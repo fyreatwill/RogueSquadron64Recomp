@@ -162747,3 +162747,8 @@ Added scratch/agent/m6_keyed_hold_sel.sh (derived from m6_keyed_hold_var.sh; env
 - Distinct VI origin set: sel_a 29 values, s5449 baseline 29; differ only at 0x6A2400 (sel_a) and 0x644800 (baseline) - pacing jitter, not a different scene.
 - Verdict: no positive control that SEL_KEYS selected a different mission. Single-source: same mission, 2 more clean holds. No crash/stall, no code change.
 - ORIGIN: n/a (no mitigation added).
+
+## Session 5452 (2026-10-18) — m6_sel_c folded; lldb title-boot loop queued with positive control
+- m6_sel_c (s5450_sel_c): rc=0, 484 s hold, 0 crash lines, 0 VI stalls >30 s; same as sel_a/b, so the SEL_KEYS variations are 3/3 clean but unverified as mission changes (no control).
+- Direct lldb/DevToolsSecurity calls are denied in this headless session, so I could not test lldb interactively. Wrote scratch/agent/soak_queue/s5452_plume_lldb_title20.sh: the s5406 recipe with N=20 and a same-run positive control (lldb launching /bin/echo). If control=FAIL in its summary, the lldb result is a tooling null (s5407 said lldb is unusable) and the next step is the in-process crash handler loop, not more lldb.
+- Rules out nothing new. No code change this iteration beyond the new queued script.
