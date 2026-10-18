@@ -418,3 +418,5 @@ RT64 parser accepts ~100% of submitted flown triangles (mission 3,709,507/3,710,
 Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames show sky, ~10px horizon sliver, green ship, HUD; title control renders fine. H3 (partial readback) refuted. Open: pitched-up camera (A) vs post-parse terrain loss (B) vs terrain never submitted (C) — single-source, see NEXT.md for the finer-cadence dump.
 
 - **s5428 mission render (single-source, visual):** horizon moves with pitch and sand ground renders; earlier "ground ~10px" was camera framing. Terrain relief in free flight still unchecked (see NEXT.md). Dump interval: ROGUESQ_FB_DUMP_EVERY / FBD_EVERY.
+
+- **s5429 flown render (single-source, visual):** 613 s hold clean; dune relief renders at VI 3000/6000/9000 (A selected, B/C refuted for terrain). The mission ends in MISSION FAILED between VI 9000 and 12000 (autopilot does not fly), so later hold time is the results screen. Next: make the hold a real flight (flight keys) or stop treating hold length as flight time; see NEXT.md.
