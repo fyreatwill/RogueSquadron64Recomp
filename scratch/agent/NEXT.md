@@ -1,6 +1,7 @@
-# Next work unit: is the persistent MISSION GOALS screen caused by the autopilot's `start` key (pause)?
+# Next work unit: B vs C — is the MISSION GOALS screen a mission-end flow or ship death?
 HYPOTHESIS-ID: m6-flown-render-fidelity
 
-State (s5431): 568 s hold: flight swaps ~2800-4400, then MISSION GOALS screen to the end (swap 16400), emblem animating (fbhash 15333 distinct/16508). Preceded by flight => not a restart.
-Hypotheses: (A) overlay = pause menu from autopilot `start` (toggles every 4 s alternating with z); (B) mission-end/briefing flow independent of keys; (C) ship death.
-Discriminator: copy m6_keyed_hold.sh to a variant whose AP uses only `z` (no `start` after the title->hangar->mission keys are done; keep early start presses needed for the route), run `env FBD_EVERY=20 zsh <variant> s5432a 300`, contact sheet with `python3 scratch/agent/m6_sheet.py <fbd> 20 <png>`. If flight persists far longer than 4400 swaps => A; if overlay still appears at ~4400 => B/C. Positive control: s5431a sheet (overlay at ~4800). Delete fbd dumps afterwards.
+State (s5432): z-only autopilot still reaches the goals screen (~swap 8000 vs ~4800 with start) => not the `start` pause (A refuted as sole cause).
+Hypotheses: (B) objective/mission-end flow independent of keys; (C) ship death (z-only, no steering, flying into enemies/ground).
+Discriminator: in one run, log the player-ship health/alive word and the game mode/screen-state word at each 20 swaps through goals onset (find via CURRENT-TRUTH mission-state notes or grep PORTING-STATE for "health"/"gamemode"), plus FB dumps. Health hitting 0 before onset => C; health nonzero and mission-complete/objective flag set => B. Positive control: the same logging must show the health word change during the title->flight transition.
+Recipe: `env FBD_EVERY=20 zsh scratch/agent/m6_keyed_hold_zonly.sh <tag> 300` plus the new logging. Delete fbd dumps afterwards.
