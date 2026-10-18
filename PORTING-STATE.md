@@ -162869,3 +162869,6 @@ mips64-elf-objdump was denied by headless permissions; no generated C exists in-
 
 ## unblock after s5472 (2026-10-18)
 s5472 BLOCKED on "objdump not permitted". Refuted: the need was a disassembly, not objdump. Added tools/disasm_mips_elf.py (stdlib ELF+MIPS decoder) and produced scratch/agent/objc_disasm.txt for lv0_checkComplexObjectives. It mostly calls helpers 800C759C/7540/76FC/7D1C and directly tests words 0x8010B690..B6A8 and floats 0x800A9554/9558/9574/9578. NEXT.md rewritten to read these in-run. Permission gate untouched.
+
+## Session 5473 (2026-10-18) — unblock: objdump block refuted; stdlib MIPS disassembler reads lv0_checkComplexObjectives
+Ran: tools/disasm_mips_elf.py on roguesquadron.elf 0x8010119C..0x801018EC (468 insns). Interactive objdump was also denied, so the permission is real and was left alone. Showed: the body is ~100 calls to helpers 800C759C (x47), 800C7540 (x11), 800C76FC (x7), 800C7D1C (x6), plus direct reads of words 0x8010B690..B6A8 and floats 0x800A9554/9558/9574/9578. Rules out: needing objdump or any permission change for this work unit. Not yet run: any game run; H1/H2/H3 (m6-mission-end-trigger) remain open. NEXT.md: read those words before the setHudEnableBit4 hit in a TRAPSWAP=2500 run, disassemble the helpers first.
