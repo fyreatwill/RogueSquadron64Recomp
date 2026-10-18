@@ -245,6 +245,7 @@ progress/end observations to the port and cxd4 arms before another comparison.
 
 ## Next steps (single monotonic backlog)
 
+> s5418: replicated x2 (1205 s each, 0 crash/stall, fbhash maxrun 317/318) => 3/3 clean unflown holds; autopilot now supports l/r/sl/sr/su/sd flight keys (built, untested). Next: flown hold.
 > s5417: keyed mission hold 1204 s clean (0 crash, 0 VI stall, fbhash maxrun=320 distinct=33446; single run, plus 2x483 s without fbhash). Next: repeat x2 for a 3-run sample, then add in-mission input (flight keys) since z/start autopilot does not fly.
 
 0. (s5407) lldb is UNUSABLE here: launch mode never runs the game (0 bytes stdout in 30 s), attach mode hangs at `process attach` and freezes the game (suspected macOS debugger authorization; unconfirmed - a human can run `DevToolsSecurity -status` / approve the prompt). s5406 titles=0/10 is a tooling null, not crash evidence. Plume crash: rely on the in-process `[plume-null-color-attachment]` breadcrumb (0/18 boots). Next M6 work = keyed mission endurance (recipe s5377 hit the 600 s cap; split into <=540 s segments).

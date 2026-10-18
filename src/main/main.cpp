@@ -9514,7 +9514,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     //     reached (set 512 to stop at the hangar, avoiding a mash into stubbed
     //     mission code that blacks the screen).
     {
-        struct ApEv { double t; uint16_t btn; };
+        struct ApEv { double t; uint16_t btn; float sx, sy; };
         static bool     s_init = false;
         static bool     s_on = false;
         static ApEv     s_ev[64];
@@ -9524,6 +9524,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         static double   s_hold = 0.150;
         static uint32_t s_stop_w = 0;
         static uint16_t s_held = 0;
+        static float    s_held_sx = 0.0f, s_held_sy = 0.0f;
         static double   s_release_at = 0.0;
         if (!s_init) {
             s_init = true;
@@ -9538,6 +9539,8 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     if (!strcmp(n, "a"))     return N64_A_BUTTON;
                     if (!strcmp(n, "b"))     return N64_B_BUTTON;
                     if (!strcmp(n, "z"))     return N64_Z_TRIG;
+                    if (!strcmp(n, "l"))     return N64_L_TRIG;
+                    if (!strcmp(n, "r"))     return N64_R_TRIG;
                     if (!strcmp(n, "up"))    return N64_U_JPAD;
                     if (!strcmp(n, "down"))  return N64_D_JPAD;
                     if (!strcmp(n, "left"))  return N64_L_JPAD;
@@ -9553,7 +9556,13 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     double t = 0.0; char kbuf[16]; kbuf[0] = '\0';
                     if (sscanf(tok, " %lf:%15[a-z]", &t, kbuf) < 1) continue;
                     s_ev[s_nev].t = t;
-                    s_ev[s_nev].btn = keybtn(kbuf);
+                    // s5418: stick pseudo-keys (sl/sr/su/sd) for in-mission flight.
+                    s_ev[s_nev].sx = s_ev[s_nev].sy = 0.0f;
+                    if (!strcmp(kbuf, "sl")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sx = -1.0f; }
+                    else if (!strcmp(kbuf, "sr")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sx = 1.0f; }
+                    else if (!strcmp(kbuf, "su")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sy = 1.0f; }
+                    else if (!strcmp(kbuf, "sd")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sy = -1.0f; }
+                    else s_ev[s_nev].btn = keybtn(kbuf);
                     s_nev++;
                 }
                 if (s_nev > 0) { s_on = true; s_t0 = SDL_GetTicks(); }
@@ -9565,9 +9574,10 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         if (s_on) {
             const double el = (SDL_GetTicks() - s_t0) / 1000.0;
             const bool stop = (s_stop_w != 0 && rs64_vi_committed_width() == s_stop_w);
-            if (s_held && el >= s_release_at) s_held = 0;
-            if (!stop && !s_held && s_idx < s_nev && el >= s_ev[s_idx].t) {
+            if ((s_held || s_held_sx != 0.0f || s_held_sy != 0.0f) && el >= s_release_at) { s_held = 0; s_held_sx = s_held_sy = 0.0f; }
+            if (!stop && !s_held && s_held_sx == 0.0f && s_held_sy == 0.0f && s_idx < s_nev && el >= s_ev[s_idx].t) {
                 s_held = s_ev[s_idx].btn;
+                s_held_sx = s_ev[s_idx].sx; s_held_sy = s_ev[s_idx].sy;
                 s_release_at = el + s_hold;
                 fprintf(stderr, "[autopilot] fire %d/%d t=%.1f btn=0x%04X vi_width=%u\n",
                         s_idx + 1, s_nev, el, (unsigned)s_held,
@@ -9575,8 +9585,10 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 fflush(stderr);
                 s_idx++;
             }
-            if (stop) s_held = 0;
+            if (stop) { s_held = 0; s_held_sx = s_held_sy = 0.0f; }
             btn |= s_held;
+            if (s_held_sx != 0.0f) stick_x = s_held_sx;
+            if (s_held_sy != 0.0f) stick_y = s_held_sy;
         }
     }
 
