@@ -162778,3 +162778,9 @@ Read m6_lldb_a/b (rc=137 = 600 s watchdog kill, not a crash). Both: lldb attach 
 - m6_lldb_c / m6_lldb_d (rc=137 is the 600 s watchdog SIGKILL, not a crash): run.log has 0 SIGSEGV/EXC_BAD/CRASH/abort matches in both; d keys.log shows `mission t=85`, `mission_verified_130s`; fbd frames kept advancing to fb_0013000. With a/b, lldb-attached mission holds are 0/4 crash, 0/4 stall (each ~8-10 min, so not evidence about >10 min).
 - Change: tools/agent/loop.sh now honours a recipe header `# SOAK_TIMEOUT=<secs>` (default stays 600). Queued scratch/agent/soak_queue/m6_lldb_long_a.sh (1320 s hold, cap 1800) = first >=20 min mission hold. Not syntax-checked with `bash -n` (denied in this sandbox); the edit is a 4-line sed/local addition.
 - Rules out: nothing new beyond a 10-min horizon; the endurance question is now the 20-min soak.
+
+## Session 5458 (2026-10-18) — fold m6_lldb_long_a: 600 s only (stale loop), 0 crash; long hold requeued
+- m6_lldb_long_a ran rc=137 after 600 s, NOT 1800: loop.log says "cap 600s". The running loop.sh bash had parsed run_soak_queue before s5457's header edit, so the new SOAK_TIMEOUT header is only live after a loop restart. loop.sh itself is correct (sed at lines 253-257).
+- Within the 600 s it behaved like lldb a-d: keys.log mission t=85, mission_verified_130s; fbd advanced to fb_0013000.ppm; run.log has 0 SIGSEGV/EXC_BAD/CRASH/abort lines (lldb_att1.log's 3 grep hits are the `process handle` header text). So still 0 crash / 0 stall over 5 lldb holds of ~10 min each; says nothing about >10 min failures.
+- Action: requeued the recipe as soak_queue/m6_lldb_long_b.sh (header SOAK_TIMEOUT=1800). It only gets 1800 s if the loop is restarted first; otherwise it is killed at 600 s again.
+- ORIGIN: no mitigation machinery added.
