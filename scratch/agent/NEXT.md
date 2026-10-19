@@ -1,4 +1,4 @@
-Work unit: static + one-run trace of what gates the post-initMission manifest load ([mfst] dbg_data/data, tools/fixup_game_funcs_vendored.py:~37408) on B40. Find the caller of the manifest loader, read its branch on B40 (gCurrentLevel), and log the branch inputs in base vs f2 in ONE build (phase-gated on the 0x00690400 VI transition).
-Hypotheses: H1 nonzero B40 takes a loader path that waits on state we never provide (stall) -> trace shows loader entered but not returning. H2 loader skipped for nonzero level (different branch) -> caller never reached. H3 base's 342 s transition is timing-dependent and not B40-related -> repeat base x2 to check recurrence of mfst.
-Discriminator: caller-entry counter + B40 value at it, in base x2 and f2.
+Work unit: read mainGameLoop dispatch at L_8003E114 (0x8003E114..0x8003E1F0, generated funcs_8.c ~21100-21470) for how B40 selects the loop arm; then ONE build logging arm-entry PCs (0x8003E274, 0x8003E2A8, 0x8003E320, 0x8003E3F0) with B40, base vs f2 (ROGUESQ_FORCE_INITMISSION_SEL), phase-gated on the 0x00690400 VI transition.
+Hypotheses: H1 nonzero B40 enters an arm that waits (stall); H2 it skips the manifest/initMission arm; H3 base is timing-dependent.
+Discriminator: which arm-entry PCs fire in f2 vs base (positive control: 0x8003E2A8 must fire in base).
 HYPOTHESIS-ID: second-distinct-mission-coverage
