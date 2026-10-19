@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5405 (2026-10-17).
+Compact operational handoff, maintained at Session 5558 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -65,6 +65,12 @@ Details of s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
   HI/LO, MMIO-KSEG1 lui bases (s5350, `docs/M3-MMIO-LUI-AUDIT.md`), delay-slot operand hazard (s5345, `docs/M3-DELAY-SLOT-HAZARD-AUDIT.md`), 64-bit shift, 32-bit multiply, 64-bit mul/div, and relevant pointer
   idiom classes are closed. Re-open only with new recompiler or provenance
   evidence, and audit a whole idiom class rather than a single crash.
+- **M3 `$sp` adjustment balance (s5558).** A whole-tree census found 4,854
+  generated self-adjustments across 1,751 functions. After collapsing the
+  duplicated delay-slot epilogues, 1,727 functions balance; the 24 remaining
+  candidates are intentional non-returning workers or invalid/data-gap
+  fragments. No reachable ordinary function has an unmatched frame adjustment.
+  See `docs/M3-SP-ADJUSTMENT-AUDIT.md`.
 - Native hangar artifacts remain localized: rim band, holo spikes, stale right
   edge, Factor 5 overlay splice, accumulator origin, pillar references,
   `0x1F0D74`, and odd PI DMA are parked. No mitigation is authorized without
@@ -216,7 +222,12 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5556 (TOP):** s5554 long_c folded: clean (900 s hold, 0 crash, 0 stall, mission_cycles=2). 3/3 fifteen-minute holds clean => M6 first-mission endurance MET (priority 3b closed). Next unit: priority-3 M3 idiom-class audit (pick a class absent from the closed list in the M3 section; grep-enumerate, classify every site, guard or prove dead). No conclusions overturned.
+- **s5558 (TOP):** `$sp` adjustment balance audited and closed as an artifact/
+  worker class. Next: one more unlisted M3 idiom-class audit, with a whole-tree
+  positive-control census; after two more dead classes, move to priority 4 or
+  write a specific BLOCKED question.
+- **s5557 (TOP):** M3 class `$zero`-destination writes audited: 0 `ctx->r0` refs in generated C (control: r2 55248), dead by construction (`docs/M3-ZERO-REG-WRITE-AUDIT.md`). Next: another unlisted class. No conclusions overturned.
+- **s5556:** s5554 long_c folded: clean (900 s hold, 0 crash, 0 stall, mission_cycles=2). 3/3 fifteen-minute holds clean => M6 first-mission endurance MET (priority 3b closed). Next unit: priority-3 M3 idiom-class audit (pick a class absent from the closed list in the M3 section; grep-enumerate, classify every site, guard or prove dead). No conclusions overturned.
 - (s5553, now item 2): s5551 long_d folded: 4/4 long mission holds clean (722-725 s, 0 crash/stall). `tools/m6_cycles.sh` (selftest-controlled) shows long_c/long_d re-entered hangar->mission after the mission-end fall-back to title (1 cycle each, long_a 0), no failure. `mission_cycles=` now in m6_god_common.sh summaries. Next: queue 3 holds with HOLD~900 to obtain >=2 cycles/run; any CRASH/stall -> lldb backtrace.
 
 - (s5552 TOP) s5551 long_a and long_c folded: clean (hold 722/723 s, 0 stalls, 0 crash lines). With s5549 long_b the >=3-run, >=10 min first-mission endurance bar is met (3/3 clean). long_d still queued. Next: fold long_d, then extend the route past mission 1 or disambiguate the origin alternation with a phase-gated marker.
