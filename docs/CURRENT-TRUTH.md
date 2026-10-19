@@ -26,12 +26,15 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
-The M4 accumulator comparison (s5321-s5405) is parked: the port/retail join is
-structurally impossible with current schemas (no ucode image identity, local task
-serials); H3 selected, no writer or mitigation authorized. Next discriminator would
-be phase epoch + image identity + mapped IMEM PC + normalized task progress
-(`docs/REVISIT-S5404-M4-NORMALIZED-BOUNDARY-DESIGN.md`, `tools/analyze_m4_normalized.py`).
-Details of s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH compaction).
+The M4 accumulator comparison remains parked at the cross-arm gate. Session 5562
+implemented and qualified the image/progress-bearing retail schema: the oracle
+arm emitted 941,343 normalized rows with whole-RDRAM, VI, mapped-PC, and image
+controls. The existing port capture is legacy and emitted zero rows, so the
+batched comparison selected H3; no writer or mitigation is inferred. The next
+discriminator is the matching port schema (phase epoch, image identity, mapped
+IMEM PC, task-local progress/end) before another comparison. Details of
+s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
+compaction).
 
 ## Durable state
 
@@ -242,6 +245,11 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5562 (TOP):** Retail-side M4 normalized schema is implemented and
+  qualified. Add the matching image/progress/end fields to the port capture in
+  one build/run, with whole-RAM, VI, and mapped-PC positive controls. Then run
+  the analyzer against the new retail and port captures; legacy port logs must
+  remain H3 rather than being backfilled with guessed image IDs.
 - **s5561 (TOP):** Conditional-move candidates audited and closed: 149 unique
   sites, zero semantic mismatches, and both positive controls passed. M3
   idiom-class work is now exhausted for the currently listed classes. Next:

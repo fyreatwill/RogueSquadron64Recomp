@@ -163339,3 +163339,25 @@ qualified route. It does not rule out a runtime-specific value corruption
 outside these generated idioms. ORIGIN: no mitigation added; the audited
 writers were exact generated assignments or architecturally discarded
 `$zero` destinations.
+
+## Session 5562 (2026-10-19) — implemented and qualified the retail M4 normalized schema
+
+Work unit: ground-truth-first implementation of the missing normalized-boundary
+schema for the retail arm. The oracle run used the existing whole-RDRAM watch,
+VI trace, and mapped RSP-PC probes. The whole-RDRAM positive control reached
+10,000 callbacks; VI transitions included the driven 512-wide hangar phase at
+origin `0x006ab800`.
+
+The cxd4 RSP dump arm now emits RSM2/RSD2 records carrying a per-task FNV-1a
+IMEM image identity and task instruction count; the analyzer converts samples
+to a 0..1000 task-progress bucket and derives phase epochs from the VI/task
+pairing. The rebuilt arm produced 941,343 normalized retail rows, with all
+retail controls true. The analyzer self-test passed.
+
+The batched comparison against the available port capture produced zero port
+normalized rows and selected H3 because that capture is legacy and lacks image,
+progress/end, and the required positive controls. This rules out treating the
+old port log as a normalized comparison arm; it does not identify an
+accumulator writer or authorize a mitigation. The implementation contract is
+recorded in `tools/oracle/patches/cxd4-m4-normalized-schema.md`; the next work
+unit is the matching port-side schema.

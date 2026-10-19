@@ -9,23 +9,44 @@ from collections import Counter, defaultdict
 
 RSM_SIZE = 72
 RSD_SIZE = 4160
+RSM2_SIZE = 80
+RSD2_SIZE = 4168
 MAPPED_PCS = (0x012C, 0x07F0)
 
 
-def read_fixed(path, magic, size):
+def read_fixed(path, magic, size, allow_truncated=False):
     rows = []
     with open(path, "rb") as stream:
         while True:
             raw = stream.read(size)
             if not raw:
                 break
-            if len(raw) != size or raw[:4] != magic:
+            if len(raw) != size:
+                if allow_truncated and not raw:
+                    break
+                if allow_truncated and len(raw) < size:
+                    break
+                raise ValueError(f"invalid {magic.decode()} record in {path}")
+            if raw[:4] != magic:
                 raise ValueError(f"invalid {magic.decode()} record in {path}")
             rows.append(raw)
     return rows
 
 
+def record_magic(path):
+    with open(path, "rb") as stream:
+        return stream.read(4)
+
+
+def normalized_progress(step, total):
+    if not total:
+        return None
+    return min(1000, (step * 1000) // total)
+
+
 def retail_rows(mid_path, end_path, oracle_path):
+    if record_magic(mid_path) == b"RSM2" and record_magic(end_path) == b"RSD2":
+        return retail_rows_v2(mid_path, end_path, oracle_path)
     mids = read_fixed(mid_path, b"RSM1", RSM_SIZE)
     ends = read_fixed(end_path, b"RSD1", RSD_SIZE)
     phase_rows = []
@@ -62,6 +83,47 @@ def retail_rows(mid_path, end_path, oracle_path):
     oracle_text = open(oracle_path, encoding="utf-8", errors="replace").read()
     return result, {"whole_rdram": "[hit]" in oracle_text,
                     "vi": bool(phase_rows), "mapped_pc": bool(result), "image": False}
+
+
+def retail_rows_v2(mid_path, end_path, oracle_path):
+    """Decode the image/progress-bearing cxd4 arm without backfilling old data."""
+    mids = read_fixed(mid_path, b"RSM2", RSM2_SIZE, allow_truncated=True)
+    ends = read_fixed(end_path, b"RSD2", RSD2_SIZE, allow_truncated=True)
+    phase_rows = []
+    for line in open(oracle_path, encoding="utf-8", errors="replace"):
+        m = re.search(r"\[rdp\] sync=(\d+) vi_origin=0x([0-9a-fA-F]+) vi_width=(\d+)", line)
+        if m:
+            phase_rows.append((int(m.group(1)), int(m.group(2), 16), int(m.group(3))))
+    gfx_tasks = [struct.unpack_from("<4s5I", raw) for raw in ends
+                 if struct.unpack_from("<4s5I", raw)[3] == 1]
+    if len(gfx_tasks) != len(phase_rows):
+        raise ValueError(f"retail VI/task control failed: {len(phase_rows)} != {len(gfx_tasks)}")
+    phase_by_task = {row[2]: (n, phase_rows[n][1], phase_rows[n][2])
+                     for n, row in enumerate(gfx_tasks)}
+    end_by_task = {struct.unpack_from("<4s5I", raw)[2]: raw for raw in ends
+                   if struct.unpack_from("<4s5I", raw)[3] == 1}
+    result = []
+    for raw in mids:
+        _, _, task, task_type, pc, step, image, total = struct.unpack_from("<4s7I", raw)
+        if task_type != 1 or task not in phase_by_task or pc not in MAPPED_PCS:
+            continue
+        phase, origin, width = phase_by_task[task]
+        if width != 512 or not (0x6AB000 <= origin < 0x6AC000):
+            continue
+        vacc = struct.unpack_from("<24h", raw, 32)
+        result.append({
+            "phase": phase, "image": f"0x{image:08x}", "pc": pc,
+            "progress": normalized_progress(step, total),
+            "lanes": tuple(i for i, v in enumerate(vacc) if (v & 0xFFFF) == 0x8000),
+            "writer": None, "task": task, "end": False,
+        })
+    for row in result:
+        end = end_by_task.get(row["task"])
+        row["end"] = bool(end and any((v & 0xFFFF) == 0x8000
+                                       for v in struct.unpack_from("<24h", end, 24)))
+    oracle_text = open(oracle_path, encoding="utf-8", errors="replace").read()
+    return result, {"whole_rdram": "[hit]" in oracle_text,
+                    "vi": bool(phase_rows), "mapped_pc": bool(result), "image": bool(result)}
 
 
 def port_rows(path):
