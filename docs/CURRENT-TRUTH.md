@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5574 (2026-10-19).
+Compact operational handoff, maintained at Session 5575 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -26,7 +26,11 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
-The M4 accumulator comparison remains parked at the cross-arm gate. Session 5570
+The M4 accumulator comparison remains parked at the cross-arm gate. Session 5575
+tested a new phase/image/mapped-PC/task-total event-shape key. Both arms passed
+all four controls and both had active lane rows, but zero key classes joined
+(retail 656 classes, port 6). H3 remains selected: the task-total bucket is not
+portable, so no writer or value conclusion follows. Session 5570
 relaxed the nonportable phase/image/progress join by pairing ordered groups and
 binning within-group ranks. Both mapped PCs aligned one group and 16/16 bins,
 but every lane mask was empty in both arms; this is an absent discriminator, not
@@ -44,8 +48,9 @@ Session 5574 audited `fake_func_800AE3E4`. The generated tree and independent
 syms table agree on its exact 12-byte placeholder span, while the companion
 maps provide no semantic mission name and show overlapping overlay context at
 `0x800AE3EC`. H2 selected: it is a non-callable/data-gap fragment and remains
-unchanged. The generated-symbol sweep is exhausted; the next work unit must
-return to the parked M4 accumulator boundary with a genuinely new discriminator.
+unchanged. The generated-symbol sweep is exhausted; the M4 boundary revisit is
+now parked after two new schema attempts. The next unit returns to M6's
+secondary title-boot plume question under lldb.
 
 Session 5573 audited the next remaining generated placeholder,
 `fake_func_8006ACA4`. The generated tree is already synchronized to
@@ -238,6 +243,12 @@ is inferred. The next M4 angle must relax only the structurally nonportable
 exact join (e.g. within-phase rank/lane comparison) rather than repeat this
 schema capture.
 
+Session 5575 ran `tools/analyze_m4_event_shape.py` against the same qualified
+captures. Both arms passed whole-RDRAM, VI, mapped-PC, and image controls and
+the lane field was active in both; the new task-total-bucket key formed zero
+shared classes (656 retail versus 6 port). H3 remains selected, so no writer or
+mitigation conclusion follows. See `docs/M4-S5575-EVENT-SHAPE.md`.
+
 Session 5570 ran `tools/analyze_m4_ranked.py` against those same captures. The
 analyzer passed retail and port whole-RDRAM, VI, mapped-PC, and image controls,
 filtered the shared hangar VI phase, paired the ordered phase/image groups by
@@ -306,11 +317,14 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5574 (TOP):** The generated-symbol sweep is exhausted after the exact-span
-  audit of `fake_func_800AE3E4` (see `docs/RENAME-S5574.md`). Do not rename the
-  fragment. Revisit the parked M4 accumulator boundary with a new, ground-truth
-  backed discriminator; do not repeat the unjoinable exact or empty-lane
-  comparisons from s5568/s5570.
+- **s5575 (TOP):** M4 is parked after two new schema discriminators: the s5570
+  rank-bin key had empty lane masks, and the s5575 task-total-bucket key had
+  zero shared classes despite positive controls and active lanes. Do not repeat
+  either comparison. Run the M6 secondary title-boot plume experiment: verify
+  the macOS screen is unlocked, loop the qualified title boot under lldb, and
+  when the ~1/7 SIGSEGV recurs capture the real backtrace and writer. If no
+  recurrence occurs in the bounded loop, record that passive result and keep
+  M4 parked; do not add another indirect join field.
 
 - **s5573:** `fake_func_8006ACA4` is an exact 12-byte non-callable gap
   before `transformObjectColliderCenter`; the companion map and independent

@@ -163553,3 +163553,20 @@ leave it mapped as `data_gap_800AE3E4`; no rename or runtime change was made.
 This closes the generated-symbol sweep and rules out this candidate as a
 rename lead. Next work returns to the M4 accumulator boundary with a new
 cross-arm discriminator, not another exact/ranked join.
+
+## Session 5575 (2026-10-19) — M4 event-shape key remained unjoinable
+
+Ran the new offline `tools/analyze_m4_event_shape.py` comparison against the
+qualified retail oracle capture and s5568b port capture. The key was
+`(VI phase, ucode image, mapped IMEM PC, task-total bucket)`, deliberately
+different from both the exact progress join and the ordered rank-bin join.
+Both arms passed whole-RDRAM, VI, mapped-PC, and image controls in the same
+comparison. Retail supplied 2,573,768 hangar rows and port supplied 1,220,601;
+the lane field was active in both arms (57,627 and 47,657 rows respectively).
+Despite that positive lane evidence, zero key classes joined: retail had 656
+classes and port had six. H3 selected: task-total bucketing is not a portable
+cross-arm boundary. This rules out only that key; it does not establish equal
+or divergent accumulator values, identify a writer, or authorize mitigation.
+The M4 revisit is parked after two new schema attempts. See
+`docs/M4-S5575-EVENT-SHAPE.md`; next work pivots to the M6 title-plume lldb
+experiment.
