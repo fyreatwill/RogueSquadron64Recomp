@@ -1,5 +1,5 @@
 Single next work unit: perform one bounded generated-symbol audit for the next
-remaining live placeholder, `fake_func_8006ACA4`. Use the companion decomp map,
+remaining live placeholder, `fake_func_800AE3E4`. Use the companion decomp map,
 generated function span/callers, and `syms/rogue_squadron.syms.toml`; rename only
 when all three agree on a semantic function and exact span. If the record is a
 data gap, invalid fragment, or lacks a semantic companion, leave it unchanged
@@ -16,12 +16,12 @@ Competing hypotheses and discriminator:
 
 The discriminator is the three-source exact-span table for that one candidate;
 do not build or run the game. Inspect candidates with the existing sweep tools
-and write a bounded audit under `docs/RENAME-S5571.md`.
+and write a bounded audit under `docs/RENAME-S5573.md`.
 
 Expected commands:
 
     rg -n --glob 'funcs_*.c' '^RECOMP_FUNC void (func_|fake_func_)' ../N64Recomp/RecompiledFuncs | head -1
-    rg -n '8006ACA4|fake_func_8006ACA4|func_8006ACA4' ../rogue_squadron64 syms tools ../N64Recomp/RecompiledFuncs
+    rg -n '800AE3E4|fake_func_800AE3E4|func_800AE3E4' ../rogue_squadron64 syms tools ../N64Recomp/RecompiledFuncs
     sed -n '<bounded-window>p' ../N64Recomp/RecompiledFuncs/funcs_<N>.c
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep

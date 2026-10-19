@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5571 (2026-10-19).
+Compact operational handoff, maintained at Session 5573 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -39,6 +39,13 @@ discriminator is the matching port schema (phase epoch, image identity, mapped
 IMEM PC, task-local progress/end) before another comparison. Details of
 s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
 compaction).
+
+Session 5573 audited the next remaining generated placeholder,
+`fake_func_8006ACA4`. The generated tree is already synchronized to
+`data_gap_8006ACA4`; its exact 12-byte span is a non-callable fragment before
+`transformObjectColliderCenter`, and the independent syms table agrees. H2
+selected; no rename or runtime change is authorized. The next candidate is
+`fake_func_800AE3E4`.
 
 Session 5572 audited the next remaining generated placeholder,
 `fake_func_8000337C`. The generated tree is already synchronized to
@@ -292,7 +299,15 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5571 (TOP):** The first generated-symbol candidate, `fake_func_800027B8`,
+- **s5573 (TOP):** `fake_func_8006ACA4` is an exact 12-byte non-callable gap
+  before `transformObjectColliderCenter`; the companion map and independent
+  syms table agree on `data_gap_8006ACA4`. Continue the bounded sweep with
+  `fake_func_800AE3E4`; do not infer semantic names from address-only or
+  companion fake entries.
+- **s5572:** The generated placeholder `fake_func_8000337C` is an exact 4-byte
+  non-callable gap before `setVideoReadyFlag`; the companion map and
+  independent syms table agree. No rename or runtime change is authorized.
+- **s5571:** The first generated-symbol candidate, `fake_func_800027B8`,
   is an exact 8-byte non-callable gap and remains unchanged. Continue the
   bounded sweep with the next live placeholder; do not infer semantic names
   from address-only or companion fake entries.

@@ -163527,3 +163527,15 @@ non-callable fragment, and the independent TOML agrees on address and size.
 H3 selected: no rename is justified and no runtime change was made. The next
 lead is `fake_func_8006ACA4`. See `docs/RENAME-S5572.md`. ORIGIN: no
 mitigation; bounded static audit only.
+## Session 5573 (2026-10-19) — audited generated gap at 0x8006ACA4
+
+The bounded generated-symbol discriminator compared `fake_func_8006ACA4` across
+the generated function, overlay registration, companion `main_overlay.txt`,
+and independent `syms/rogue_squadron.syms.toml`. The generated record is exactly
+12 bytes from `0x8006ACA4` through the `transformObjectColliderCenter` boundary
+at `0x8006ACB0`; the companion map supplies no semantic function name, while
+the syms table independently calls the span `data_gap_8006ACA4`. H2 selected:
+this is a non-callable fragment, already synchronized in the rename tables, so
+no rename or runtime change was made. This rules out a companion-backed semantic
+rename for this candidate, not the remaining sweep. The next candidate is
+`fake_func_800AE3E4`.
