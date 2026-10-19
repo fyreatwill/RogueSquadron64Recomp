@@ -163637,3 +163637,8 @@ recipes + this run = two sources; s5578's "lldb is not the blocker" also stands)
 copies (`soak_queue/s5581_plume_lle4_a.sh`, `_b.sh`, 4 attempts each) to reach N=12. Note: each
 run is killed at first title origin, so a crash that happens later in the title phase would not
 be seen; if 12/12 clean, extend the hold past title.
+
+## Session 5582 (2026-10-19) — s5581 plume loop 8/8 titles clean; pivot demanded engineering, none available -> BLOCKED
+
+s5581_plume_lle4_a/_b: 4/4 titles each (origin 0x790400, 212 s each, real origins, not a null). Cumulative under the LLE-trio recipe: 12/12 titles, 0 crash marks (H2 of NEXT.md). The si_addr=0x58 plume SIGSEGV did not recur; rate under kill-at-first-title is < ~1/12 (single-source; the old ~1/7 figure was from different recipes).
+Pivot check: M5-AUDIO-PLAN Steps 0-11 are closed (s4964), so (a) has no open step. For (b), the SIGSEGV handler at src/main/main.cpp:10190 already prints siginfo, ARM64 regs, pc-symbol, last-guest-pc and a 64-frame backtrace, so adding crash instrumentation would be churn (iron rule 14). No M3 idiom class is queued, and the VI-640 wall has no new route-altering idea. Nothing committed to code; see BLOCKED.md for the question.

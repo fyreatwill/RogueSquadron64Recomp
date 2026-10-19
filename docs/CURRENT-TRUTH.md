@@ -326,6 +326,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5582 (TOP):** s5581 a/b = 8/8 titles clean; LLE trio total 12/12, 0 crashes. M5 closed; crash handler already complete. Loop BLOCKED awaiting direction (see scratch/agent/BLOCKED.md). Default if none: M6 keyed mission hold >=10 min x3, fix each distinct failure.
+
 - **s5581 (TOP, pending):** s5580 returned 4/4 titles, 0 crashes (LLE trio confirmed as the title-route
   ingredient). Queued `s5581_plume_lle4_a/_b` (8 more boots). Crash seen -> lldb variant, real backtrace;
   12/12 clean -> hold past title before kill (runs currently end at first title origin).
