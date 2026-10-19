@@ -238,3 +238,5 @@ microcode contract, and `scratch/agent/SOAK-RESULTS.md` for queued soak
 verdicts. The next iteration must read this file, `scratch/agent/NEXT.md`, and
 the tail of the soak results before acting.
 
+
+- s5520: forced save slot (f2) does not change initMission B40 or [mfst] names; save byte is not the mission selector (f7 pending).

@@ -163092,3 +163092,10 @@ Folded s5517_wpflag_hangar_a and _b (m6/s5517_a, s5517_b). Both: positive contro
 
 ## Session 5519 (2026-10-19) — save-slot mission-selector override hook built; 3 arms queued
 Mandatory pivot (6 observation-only iterations). M5 is closed (Steps 0-11), so took (b): landed a runtime change on the route. Added `ROGUESQ_FORCE_SAVE_MISSION=<n>` + a `[saveslot] call#N rec[5]=.. force=..` log at 0x8006DC24 in applySaveSlotToMissionState (funcs_17.c), the sole save-data writer of selector byte B40 (store 0x8006DC2C). Edited both `tools/fixup_game_funcs_vendored.py` (survives regen) and the live funcs_17.c; cmake build rc=0. Queued `soak_queue/s5519_save_{base,f2,f7}.sh` (m6_god_common route). Discriminators: `[saveslot]` present in base = route reaches the real selector path (positive control; absent = hangar route not taken, hook unexercised, tells nothing); f2/f7 `[mfst]` name sets differing from base = save record byte selects mission content (content-aware metric, not VI origin). Not yet run; no conclusion drawn.
+
+## Session 5520 (2026-10-19) — s5519 save-slot arms folded: hook fires, mission selection unchanged
+Folded s5519_save_base / s5519_save_f2 (rc=0, 525 s / 523 s); f7 still queued.
+- base: `[saveslot] call#1 rec[5]=0x00 force=-1` (positive control: the route DOES reach applySaveSlotToMissionState), `[initMission] call#1 B40=0x00`, 6 `[mfst]` lines alternating dbg_data/data.
+- f2: `[saveslot] call#1 ... force=2` (override applied), `[initMission]` calls #1 and #2 both B40=0x00 force=-1, and the 6 `[mfst]` names are identical to base.
+- Verdict: H3 (called, content identical). Forcing the save byte does not change the mission manifest names or initMission B40, so the save slot is not the mission selector on this route. H1 refuted for f2; H2 refuted (hook is exercised). f7 pending to confirm with a second value (single-source until then).
+- Rules out: save-slot byte as second-mission selector. Next: look at what feeds initMission B40 (force=-1 path) instead.
