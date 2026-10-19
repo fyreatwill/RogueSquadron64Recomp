@@ -1,3 +1,5 @@
-# Next work unit: what increments counters 0x80138060[0..3] (end fires on [2]>=3 or [3]>=9)
-s5476: 0x10B69C is a hint latch (docs/M6-OBJECTIVE-STATE-MACHINE.md), not the end gate. Disassemble the writers of 0x80138060..6C (grep objc_disasm for B060 / helper 800C7540/7660), then run a 900 s hold (TRAPSWAP=2500) sampling the 4 counters; decide autopilot change.
+# Next work unit: which DAT items/effects target objective counters 2/3 in lv0, and do they fire during a hold?
+s5477: counters 0x80138060[1],[2] (index 2,3) have no code writer; only data-driven stores (applyDatObjectiveTriggerEffect 0x80065980 store at 0x80065A34, datItemSetObjectiveBooleanCount 0x80065914, updateNpcEffectIntensity 0x800F3D64, executeActorType1Effect 0x800F435C). See docs/M6-OBJECTIVE-COUNTER-WRITERS.md.
+Hypotheses: (A) DAT items with target idx 2/3 exist but their trigger condition (isDatItemConditionMet, counter-vs-threshold at item+0x2C/0x30, flags) is never met in the autopilot run; (B) the items fire but are lost to a recomp bug; (C) autopilot just never kills the required targets.
+Discriminator: one build logging (idx, delta, newval) at the four store sites (fixup script, not hand-edit) with a positive control (idx 1 or 99 must log), plus offline dump of lv0 DAT items by target idx; 900 s hold. Idx 2/3 logged => (C)/(B) split via counts; never logged but items exist => (A).
 HYPOTHESIS-ID: m6-mission-end-trigger
