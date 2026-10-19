@@ -70,6 +70,7 @@ def retail_rows(mid_path, end_path, oracle_path):
         result.append({
             "phase": phase, "image": None, "pc": pc,
             "progress": step, "lanes": tuple(i for i, v in enumerate(vacc) if (v & 0xFFFF) == 0x8000),
+            "viw": width, "origin": origin,
             "writer": None, "task": task, "end": False,
         })
     end_masks = {}
@@ -115,6 +116,7 @@ def retail_rows_v2(mid_path, end_path, oracle_path):
             "phase": phase, "image": f"0x{image:08x}", "pc": pc,
             "progress": normalized_progress(step, total),
             "lanes": tuple(i for i, v in enumerate(vacc) if (v & 0xFFFF) == 0x8000),
+            "viw": width, "origin": origin,
             "writer": None, "task": task, "end": False,
         })
     for row in result:
@@ -151,6 +153,8 @@ def port_rows(path):
                          "progress": int(fields["progress"], 0),
                          "lanes": tuple(int(x, 0) for x in lane_match.group(1).split(",")
                                         if x != "-"),
+                         "viw": int(fields["viw"], 0),
+                         "origin": int(fields["origin"], 0),
                          "writer": fields.get("writer"), "task": fields.get("task"),
                          "end": fields["end"] not in ("0", "false")})
         if "[m4-port-rdram-control]" in line and "bytes=0x800000" in line and "unavailable=1" not in line:

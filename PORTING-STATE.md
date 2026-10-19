@@ -163482,3 +163482,23 @@ mitigation. The ranked analyzer is not yet present, so the next run must first
 add that bounded offline comparison, then execute it against the existing
 retail and s5568 port captures. ORIGIN: none; this checkpoint changed no
 runtime or defensive code.
+
+## Session 5570 (2026-10-19) — ranked M4 lane comparison found no active witness
+
+Work unit: implement and run one offline comparison that relaxes the
+nonportable exact phase/image/progress join by pairing ordered phase/image
+groups within each arm and comparing 16 within-group rank bins per mapped PC.
+The analyzer also filtered the shared hangar VI phase and required the existing
+whole-RDRAM, VI, mapped-PC, and image controls to pass in both arms. Its
+self-test covered positive-control, synthetic H1, and synthetic H2 arms.
+
+The qualified captures passed all four controls. Retail supplied 2,573,768
+normalized rows and port supplied 21,514; after the hangar filter the port arm
+had 4,096 rows. One ordered group aligned at each mapped PC and all 32 bin
+comparisons were equal, but every retail and port lane mask was empty. The
+instrument therefore selected H3 (no active lane discriminator), not H1: an
+empty-mask agreement cannot identify a writer or establish a legitimate value.
+This rules out only the proposed rank-alignment explanation as currently
+observable; it does not authorize a mitigation or accumulator conclusion.
+The next unit pivots to the bounded generated-symbol sweep. ORIGIN: no
+mitigation; only offline analyzer logic and normalized witness fields changed.

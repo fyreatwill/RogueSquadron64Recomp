@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5568 (2026-10-19).
+Compact operational handoff, maintained at Session 5570 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -26,7 +26,11 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
-The M4 accumulator comparison remains parked at the cross-arm gate. Session 5562
+The M4 accumulator comparison remains parked at the cross-arm gate. Session 5570
+relaxed the nonportable phase/image/progress join by pairing ordered groups and
+binning within-group ranks. Both mapped PCs aligned one group and 16/16 bins,
+but every lane mask was empty in both arms; this is an absent discriminator, not
+evidence of agreement. Session 5562
 implemented and qualified the image/progress-bearing retail schema: the oracle
 arm emitted 941,343 normalized rows with whole-RDRAM, VI, mapped-PC, and image
 controls. The existing port capture is legacy and emitted zero rows, so the
@@ -206,6 +210,15 @@ is inferred. The next M4 angle must relax only the structurally nonportable
 exact join (e.g. within-phase rank/lane comparison) rather than repeat this
 schema capture.
 
+Session 5570 ran `tools/analyze_m4_ranked.py` against those same captures. The
+analyzer passed retail and port whole-RDRAM, VI, mapped-PC, and image controls,
+filtered the shared hangar VI phase, paired the ordered phase/image groups by
+within-arm ordinal, and compared 16 rank bins per mapped PC. One group aligned
+at each PC and all 32 bin comparisons were equal, but all retail and port lane
+masks were empty. The lane discriminator therefore selected H3 (no active
+masks), not H1; no accumulator writer or mitigation is inferred. The new
+comparison is not a reason to repeat the same capture.
+
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 commands or
@@ -265,12 +278,13 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5568 (TOP):** The port whole-RDRAM control and explicit VI/task fields now
-  fire in one bounded capture; all controls pass, but exact phase/image/PC/
-  progress joins remain below 20 rows at both mapped PCs. Do not rerun this
-  schema. Design one offline within-phase rank/lane comparison that can
-  distinguish a boundary-alignment mismatch from a genuine lane/writer
-  mismatch, then run it against the existing qualified retail and port logs.
+- **s5570 (TOP):** The ranked/lane comparison passes all controls and aligns
+  ordered groups at both mapped PCs, but every lane mask is empty in both arms.
+  H3 remains selected: the lane witness did not fire, so no writer or value
+  conclusion follows. Do not rerun the schema or ranked comparison. The next
+  bounded unit is the generated-symbol sweep: inspect one remaining real
+  placeholder against the companion map, generated span, and independent syms
+  table; rename only if all three agree, otherwise record a gap/data decision.
 - **s5561 (TOP):** Conditional-move candidates audited and closed: 149 unique
   sites, zero semantic mismatches, and both positive controls passed. M3
   idiom-class work is now exhausted for the currently listed classes. Next:
