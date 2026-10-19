@@ -163287,3 +163287,8 @@ Queued scratch/agent/soak_queue/s5554_m6_long_{a,b,c}.sh (s5551 long_d recipe, H
 
 ## Session 5555 (2026-10-19) — s5554 long_a/long_b clean: 903 s / 902 s mission holds, 2 mission cycles each
 Folded SOAK-RESULTS: s5554_m6_long_a and _b both rc=0 (987 s). m6_cycles: hold=903/902 s, alive_at_end=1, vi_stalls30s=0, mission_cycles=2, crashlines=0 for both. Endurance tally on 15-min holds: 2/2 clean (long_c still queued, not yet run). Cumulative 12-min+ holds: long_a/b/c/d (s5551-3) + these = all clean. Rules out: a crash/stall in the first mission within a 15 min hold at this config. No code changed; no conclusions overturned.
+
+## Session 5556 (2026-10-19) — s5554 long_c folded: M6 mission endurance met (3/3 x 900 s, 2 cycles each)
+
+Folded `s5554_m6_long_c` (SOAK-RESULTS, rc=0, 985 s): summary line `att=1 mission_t=81s hold=901s alive_at_end=1 vi_stalls30s=0 godrefills=3 mission_cycles=2 crashlines=0`. (A naive `grep -ci crash` returns 1 only because the summary line contains the word `crashlines`; the real count is 0.) With long_a/long_b (s5555) that is 3/3 fifteen-minute mission holds with 0 crash, 0 stall, and >=2 mission->title->hangar->mission re-entries each. Priority 3b goal ("first mission plays without crash, hang or frozen frame") is MET on the keyed route. Rules out: any residual crash/stall family reachable within 900 s of mission hold on this route. Does not cover: second mission content (closed s5526), render fidelity beyond s5490.
+Next: priority 3 — M3 idiom-class audit of a class not in the closed list (CURRENT-TRUTH M3 section).

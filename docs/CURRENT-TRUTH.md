@@ -216,7 +216,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5554 (TOP):** long_a/long_b (900 s holds) CLEAN: 0 crash, 0 stall, mission_cycles=2 each (s5555). long_c still queued; fold it when it lands. If clean, M6 is met; next unit is an M3 idiom-class audit. No conclusions overturned.
+- **s5556 (TOP):** s5554 long_c folded: clean (900 s hold, 0 crash, 0 stall, mission_cycles=2). 3/3 fifteen-minute holds clean => M6 first-mission endurance MET (priority 3b closed). Next unit: priority-3 M3 idiom-class audit (pick a class absent from the closed list in the M3 section; grep-enumerate, classify every site, guard or prove dead). No conclusions overturned.
 - (s5553, now item 2): s5551 long_d folded: 4/4 long mission holds clean (722-725 s, 0 crash/stall). `tools/m6_cycles.sh` (selftest-controlled) shows long_c/long_d re-entered hangar->mission after the mission-end fall-back to title (1 cycle each, long_a 0), no failure. `mission_cycles=` now in m6_god_common.sh summaries. Next: queue 3 holds with HOLD~900 to obtain >=2 cycles/run; any CRASH/stall -> lldb backtrace.
 
 - (s5552 TOP) s5551 long_a and long_c folded: clean (hold 722/723 s, 0 stalls, 0 crash lines). With s5549 long_b the >=3-run, >=10 min first-mission endurance bar is met (3/3 clean). long_d still queued. Next: fold long_d, then extend the route past mission 1 or disambiguate the origin alternation with a phase-gated marker.
