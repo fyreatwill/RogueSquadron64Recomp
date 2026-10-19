@@ -216,7 +216,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- (s5548 TOP) Queued `soak_queue/s5548_m6_hangar_{a,b,c}` (s5527 recipe, ~440 s hold under the 600 s SOAK_TIMEOUT cap); not yet run. Fold verdicts from SOAK-RESULTS.md; crash/stall -> lldb backtrace + name writer; 3/3 clean (expected, per s5529) -> raise SOAK_TIMEOUT for a true >=10 min hold, then item-4 renaming sweep. No conclusions overturned.
+- (s5549 TOP) s5548 hangar a/b folded: 2/2 clean (mission onset 83/81 s, 441 s hold, 0 stalls, 0 crash lines); hangar_c still queued. SOAK_TIMEOUT raised 600->1000 (tools/agent/loop.sh) and `soak_queue/s5549_m6_long_{a,b}` queued (HOLD=720, ~12 min after onset) = the >=10 min hold. Fold verdicts from SOAK-RESULTS.md; crash/stall -> lldb backtrace + name writer; all clean -> title-boot plume SIGSEGV loop under lldb, then item-4 renaming sweep. No conclusions overturned.
 - (s5547) Regen determinism CLOSED: make_elf ELF byte-identical; fresh N64Recomp + replay compiles to asm identical to live (only cosmetic `;`/indent, 296 lines, 3 files). RecompiledFuncs.s4204-fresh snapshot is stale vs current N64Recomp (movz/movn forms) - use scratch_s5547_regen as the fresh baseline. Next: M6 mission-hold endurance soaks (priority 3b).
 - (s5545 TOP) Replay residual ~39 -> 15: funcs_4/27/24 closed. Left: funcs_29 4, funcs_20 3, funcs_9/8/5/25 2 each. Then compile-prove.
 - (s5546 TOP) Replay residual 15 -> 0: scratch replay is text-identical to the live RecompiledFuncs (control still flags). Next: full-chain regen + cmake in a separate build dir and boot check.
