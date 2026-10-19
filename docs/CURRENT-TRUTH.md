@@ -328,6 +328,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5586 (TOP):** s5584 soak still pending (loop runs it after this iteration). Fold it next; no new work until it lands.
+
 - **s5585 (TOP):** unblock: the s5584 BLOCKED (human direction) was premature, since its soak had not run. BLOCKED.md archived; NEXT = fold s5584_plume_title_hold. Re-escalate only if it is 0/4 crashes with alive120 4/4. OPEN DEPENDENCY (human): declare goal met or name a new target.
 - (s5584 superseded by s5585, believable because the soak was queued and the author saw no other candidate): pivot found no engineering change; queued s5584_plume_title_hold (N=4, 120 s past title); BLOCKED for human direction (BLOCKED.md).
 - **s5582:** s5581 a/b = 8/8 titles clean; LLE trio total 12/12, 0 crashes. M5 closed; crash handler already complete. Loop BLOCKED awaiting direction (see scratch/agent/BLOCKED.md). (s5583: block refuted; M6 holds already closed, do not repeat. Next: LLE-trio title loop held 120 s past first title.)
