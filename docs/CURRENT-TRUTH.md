@@ -511,3 +511,5 @@ Mission framebuffer dump viewed (fbd now mkdir'd by m6_keyed_hold.sh): frames sh
 
 - s5459: m6_lldb_long a/b ran at stale 600s cap (loop pid 89231 predates loop.sh edit); human restart of loop.sh needed, see scratch/agent/BLOCKED.md.
 - (s5460) That block is REFUTED: long soaks can be run directly (`zsh <recipe>` as a background task); no loop restart needed. m6_lldb_long_a ran 1321 s: 0 crash, 0 stall, alive. 6/6 lldb holds clean. Next: non-lldb keyed holds with LATE=340.
+
+- s5509: forcing B40 at initMission (f2/f7) suppresses the [mfst] dbg_data/data loads and the call#2 re-init seen in base; it does NOT select a second mission. Single-source per arm. Next: trace what gates the manifest load on B40.

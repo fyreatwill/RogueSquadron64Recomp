@@ -1,5 +1,4 @@
-Work unit: fold the s5508 arms (s5508_im_base / _f2 / _f7, queued in soak_queue; results in SOAK-RESULTS.md, logs in scratch/agent/m6/s5508_im_<arm>/run.log).
-Commands: grep -h '\[initMission\]' and grep -h '\[mfst\]' on each run.log; diff the sorted unique [mfst] name sets base vs f2 vs f7. Also note crash/stall and whether `B40 forced` line fired (positive control).
-Hypotheses: H1 B40 at initMission selects mission content -> [mfst] names differ across arms (then M6 second-mission soak: hold f2 >=10 min x3). H2 B40 only drives config; content comes from record/DAT -> names identical, controls firing (then trace what initMission passes to 0x8005360C/0x80053288 loaders at 0x800FA4E8/A538). H3 override too late/early (control line absent or B40 re-written) -> move hook.
-Fallback if soaks have not run: run them by hand one at a time via `zsh scratch/agent/soak_queue/s5508_im_base.sh`.
+Work unit: static + one-run trace of what gates the post-initMission manifest load ([mfst] dbg_data/data, tools/fixup_game_funcs_vendored.py:~37408) on B40. Find the caller of the manifest loader, read its branch on B40 (gCurrentLevel), and log the branch inputs in base vs f2 in ONE build (phase-gated on the 0x00690400 VI transition).
+Hypotheses: H1 nonzero B40 takes a loader path that waits on state we never provide (stall) -> trace shows loader entered but not returning. H2 loader skipped for nonzero level (different branch) -> caller never reached. H3 base's 342 s transition is timing-dependent and not B40-related -> repeat base x2 to check recurrence of mfst.
+Discriminator: caller-entry counter + B40 value at it, in base x2 and f2.
 HYPOTHESIS-ID: second-distinct-mission-coverage
