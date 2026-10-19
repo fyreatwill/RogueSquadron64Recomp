@@ -163663,3 +163663,8 @@ Planned unit: fold s5584_plume_title_hold. Evidence this iteration: `scratch/age
 Ran: nothing in-game (loop ran the soak). s5584_plume_title_hold exited rc=137 at the 600 s hard cap. Summary: run1 TITLE, ALIVE_AT_+120 (first origin 0x790400 -> last 0x690400, last 0x00696100), no CRASH/SIGSEGV/breadcrumb. run2 reached TITLE but was SIGKILLed by the cap before its +120 s check; runs 3-4 never started. Control (title origin + ALIVE line) passed for run1 only.
 Result: N=1 held boot, 0 crashes. Not enough to close the plume thread (needs >=4). Shortfall cause: 4 x (boot + 120 s hold) > 600 s cap — a recipe-sizing bug, not a game fault.
 Change: queued s5587_plume_hold_{b,c,d}.sh, identical recipe with N=1 so each fits the cap.
+
+## Session 5588 (2026-10-19) — folded s5587 plume title holds b,c: 2/2 TITLE+alive@+120, 0 crashes (total 3/3 with s5584 run1)
+Ran: nothing (soak-only fold). s5587_plume_hold_b: TITLE, ALIVE_AT_+120, origin advanced 0x790400->0x690400 (reached mission origin), bad=0. s5587_plume_hold_c: TITLE, ALIVE_AT_+120, origin 0x790400->0x62 (transient)->0x790400, bad=0. Both controls (TITLE + ALIVE lines) present, so these are valid nulls, not instrument failures. hold_d still queued (loop has not run it yet).
+Showed: 3/3 LLE-trio title boots held 120 s alive with no CRASHMARK/plume-null-color-attachment breadcrumb. The ~1/7 si_addr=0x58 plume SIGSEGV has not recurred; with p~1/7 per boot, P(0 of 3) ~ 63%, so this is weak evidence only. Rules out nothing structural.
+Next: fold hold_d; if 4/4 clean, BLOCKED.md asking human whether plume target stays open.
