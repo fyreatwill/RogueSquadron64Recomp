@@ -1,37 +1,33 @@
-Single next work unit: run the M6 secondary title-boot plume experiment under
-lldb. This is the bounded pivot after two non-joining M4 schema attempts and
-the exhausted generated-symbol sweep. Before launching, check the macOS
-session is unlocked with `CGSSessionScreenIsLocked`; if locked, do not treat a
-nohangar/no-recurrence result as evidence.
+Single next work unit: run one bounded lldb-attach loop on the qualified
+default (HLE) route to determine whether the plume title-boot question is
+reachable under the debugger. The prior forced-LLE attach loop was
+non-qualifying: lldb control passed, but title origin was 0/8 and all attempts
+remained in the 640 phase.
 
 Competing hypotheses and discriminator:
 
-1. H1: the reported ~1/7 title-boot plume SIGSEGV is a real remaining defect;
-   a looped lldb run will recur and its backtrace will identify the writer.
-2. H2: the plume report was an environmental or stale-artifact failure; the
-   bounded lldb loop completes without SIGSEGV and reaches the title route.
-3. H3: the loop cannot reach a qualified title phase because screen/session
-   state or launch infrastructure is invalid; the controls expose that before
-   any crash conclusion.
+1. H1: default-route title boots are debugger-reachable; a SIGSEGV stop or
+   `[plume-null-color-attachment]` identifies the remaining plume writer.
+2. H2: default-route boots reach `origin=0x00790400` and complete cleanly;
+   the plume recurrence is not reproduced in this qualified sample.
+3. H3: attaching lldb itself prevents the qualified route from reaching title;
+   the injected SIGSEGV control passes but title-origin positive control is 0/4.
 
-The discriminator is a real SIGSEGV with `si_addr`, lldb backtrace, and guest
-writer attribution versus a bounded set of clean title boots with the screen
-unlock, launch, title-origin, and crash-marker controls all passing. A clean
-run does not reopen M4 or authorize a guard; a recurrence requires naming the
-writer before any fix.
+The discriminator is the same-run control plus per-attempt title-origin count:
+only attempts that reach `origin=0x00790400` are evidence for H1/H2. Any lldb
+SIGSEGV stop gets its `bt 30`, registers, and `si_addr` preserved; no guard is
+authorized from a recurrence without naming the writer. If H3 wins, stop
+rerunning lldb and use the in-process crash handler on the next unit.
 
-Expected checks and run:
+Ground truth already checked this iteration: `/usr/sbin/ioreg -n Root -d1`
+reported an on-console session and no `CGSSessionScreenIsLocked=Yes`. The
+Python Quartz module is unavailable.
 
-    python3 - <<'PY'
-    import Quartz
-    print(Quartz.CGSSessionScreenIsLocked())
-    PY
-    rg -n 'plume|lldb|title' scratch/agent/s5452* scratch/agent/s5406* tools | head -100
-    sed -n '1,220p' scratch/agent/s5452_plume_lldb_title.sh
-
-Use the existing lldb recipe as the starting point, loop a bounded number of
-title boots, capture each run to a path whose final component does not begin
-with `.`, and SIGKILL the process group. Do not add a runtime guard based only
-on a recurrence; capture the backtrace and writer first.
+Exact run shape: copy the fixed recipe
+`scratch/agent/s5576_plume_lldb_title8_fixed.sh` to a new scratch recipe,
+remove `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, and
+`ROGUESQ_LLE_SOLO=1` from `COMMON`, set `N=4`, retain the injected SIGSEGV
+lldb control, run from `build/`, and SIGKILL both game and lldb PIDs after
+each attempt. Capture under `scratch/agent/soak_results/`.
 
 HYPOTHESIS-ID: m6-title-plume-lldb

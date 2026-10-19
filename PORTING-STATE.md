@@ -163570,3 +163570,17 @@ or divergent accumulator values, identify a writer, or authorize mitigation.
 The M4 revisit is parked after two new schema attempts. See
 `docs/M4-S5575-EVENT-SHAPE.md`; next work pivots to the M6 title-plume lldb
 experiment.
+
+## Session 5576 (2026-10-19) — lldb plume loop failed title qualification
+
+Ran the repaired 8-attempt lldb-attach plume loop after first running the
+required session-state check. The injected SIGSEGV `/bin/echo` control passed.
+All eight game attempts produced no lldb crash stop and no
+`plume-null-color-attachment` breadcrumb, but also produced zero title-origin
+positive controls; they remained in the 640-phase path. The original recipe
+was additionally observed leaking its first game/lldb pair, so the fixed
+recipe added per-attempt SIGKILL cleanup and completed all attempts. This is
+not evidence that the plume defect is absent: H1/H2 are unevaluable without a
+title-origin control. It rules out only a conclusion from this forced-LLE
+attach route and selects the next test: default qualified-route attach with a
+title-origin gate. No runtime mitigation was added.

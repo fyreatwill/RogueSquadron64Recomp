@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5575 (2026-10-19).
+Compact operational handoff, maintained at Session 5576 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -43,6 +43,15 @@ discriminator is the matching port schema (phase epoch, image identity, mapped
 IMEM PC, task-local progress/end) before another comparison. Details of
 s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
 compaction).
+
+Session 5576 ran the repaired lldb-attach plume loop: the injected SIGSEGV
+positive control passed, but all 8 game attempts stopped in the 640-phase path
+without reaching title origin `0x00790400`; there were zero lldb crash stops and
+zero plume breadcrumbs. This is an inconclusive route/tooling result, not
+evidence that the plume defect is absent. The original recipe also leaked its
+first game/lldb pair; the fixed recipe adds per-attempt SIGKILL cleanup. The
+next unit must use the qualified default route and require a title-origin
+positive control before interpreting a null plume result.
 
 Session 5574 audited `fake_func_800AE3E4`. The generated tree and independent
 syms table agree on its exact 12-byte placeholder span, while the companion
@@ -317,7 +326,15 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5575 (TOP):** M4 is parked after two new schema discriminators: the s5570
+- **s5576 (TOP):** The lldb positive control passed, but the forced-LLE attach
+  loop reached title origin 0/8 times and therefore cannot answer the plume
+  question. Run a bounded attach loop on the qualified default route (no
+  `ROGUESQ_LLE_FORCE`/`ROGUESQ_LLE_SOLO`); require title origin in each
+  interpretable attempt. A SIGSEGV stop/backtrace names the writer; repeated
+  title boots with no stop close only this recurrence attempt. Do not add a
+  guard or another M4 join field.
+
+- **s5575:** M4 is parked after two new schema discriminators: the s5570
   rank-bin key had empty lane masks, and the s5575 task-total-bucket key had
   zero shared classes despite positive controls and active lanes. Do not repeat
   either comparison. Run the M6 secondary title-boot plume experiment: verify
