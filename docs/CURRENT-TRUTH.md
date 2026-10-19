@@ -254,6 +254,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5494 (TOP):** god_bptrans read (single-source + s5480 trace): godmode end goes via runInMissionFrame event a0=2 -> requestMissionTransitionMode, i.e. the objective chain, not HP. Next: classify objective counter 2 (0x138064, set by updateDestructionDebrisNpc) as win vs loss condition from the DAT item definition; if win, 'GAME OVER' screen text may just be the results screen.
+
 0. (s5493) godmode soaks: HP pinned (god_b refills=7), still dark/GAME OVER at ~frame 8000, same as no-key control => not HP-driven. m6_god_bptrans queued to catch the requestMissionTransitionMode caller; see scratch/agent/NEXT.md.
 
 - **s5491 (single-source):** m6 no-key flight (scratch/agent/m6_nokeys_hold.sh) still reaches GAME OVER ~6000 frames after mission onset, so the autopilot keys are not the death cause; a no-input ship may legitimately crash, so B (runtime damage/collision bug) vs C (scripted loss) is open. Next: steer/god-mode flight to measure real in-flight endurance.
