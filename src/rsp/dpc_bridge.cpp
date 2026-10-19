@@ -519,8 +519,25 @@ static bool rs64_m4_y8000_in_gate();
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
 
-extern "C" void rs64_m4_norm_sample(void *opaque, uint32_t guest_pc, uint32_t steps) {
+extern "C" void rs64_m4_norm_sample(void *opaque, uint32_t guest_pc, uint32_t steps,
+                                     const uint8_t *rdram) {
     if (!rs64_m4_norm_enabled()) return;
+    static const bool port_control = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_M4_PORT_RDRAM");
+        return e && *e && *e != '0';
+    }();
+    static bool control_done = false;
+    if (port_control && !control_done) {
+        control_done = true;
+        uint32_t nonzero = 0;
+        if (rdram != nullptr) {
+            for (uint32_t i = 0; i < 0x800000u; ++i) nonzero += rdram[i] != 0;
+            fprintf(stderr, "[m4-port-rdram-control] bytes=0x800000 nonzero=%u\n", nonzero);
+        } else {
+            fprintf(stderr, "[m4-port-rdram-control] bytes=0x800000 unavailable=1\n");
+        }
+        fflush(stderr);
+    }
     auto *rsp = static_cast<RSP *>(opaque);
     Rs64E9Provenance::M4NormRow row{};
     row.phase = rs64_phase_ord();
@@ -561,8 +578,9 @@ extern "C" void rs64_m4_end_probe(void *opaque, uint32_t kind, uint32_t total) {
     if (rs64_m4_norm_enabled()) {
         for (const auto &row : g_e9prov.m4_norm_rows) {
             const uint32_t row_total = total;
-            fprintf(stderr, "[m4-norm] phase=%u image=0x%08X pc=0x%04X steps=%u total=%u progress=%u end=%u lanes=",
-                    row.phase, row.image, row.pc,
+            fprintf(stderr, "[m4-norm] phase=%u viw=%u origin=0x%06X image=0x%08X pc=0x%04X steps=%u total=%u progress=%u end=%u lanes=",
+                    row.phase, rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu,
+                    row.image, row.pc,
                     row.steps, row_total,
                     row_total ? (row.steps * 1000u) / row_total : 0u,
                     sat ? 1u : 0u);

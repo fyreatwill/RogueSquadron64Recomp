@@ -133,7 +133,7 @@ def port_rows(path):
     for line in open(path, encoding="utf-8", errors="replace"):
         if line.startswith("[m4-norm]"):
             fields = dict(re.findall(r"(\w+)=([^ ]+)", line))
-            required = ("phase", "image", "pc", "steps", "total", "progress", "end", "lanes")
+            required = ("phase", "viw", "origin", "image", "pc", "steps", "total", "progress", "end", "lanes")
             lane_match = re.search(r"lanes=(-|[0-9]+(?:,[0-9]+)*)", line)
             if not all(k in fields for k in required) or not lane_match:
                 continue
@@ -141,6 +141,7 @@ def port_rows(path):
             controls["mapped_pc"] |= pc in MAPPED_PCS
             controls["image"] |= fields["image"] not in ("none", "0", "missing")
             phase = int(fields["phase"], 0)
+            controls["vi"] |= fields["viw"] == "512" and fields["origin"].lower().startswith("0x006ab")
             if phase_rows[phase] >= 4096:
                 continue
             phase_rows[phase] += 1
@@ -152,6 +153,8 @@ def port_rows(path):
                                         if x != "-"),
                          "writer": fields.get("writer"), "task": fields.get("task"),
                          "end": fields["end"] not in ("0", "false")})
+        if "[m4-port-rdram-control]" in line and "bytes=0x800000" in line and "unavailable=1" not in line:
+            controls["whole_rdram"] = True
         if "[m4-key]" in line:
             controls["vi"] |= "viw=512" in line and "origin=0x006AB" in line
             controls["mapped_pc"] |= any(f"pc=0x{x:04X}" in line or

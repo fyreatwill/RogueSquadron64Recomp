@@ -163448,3 +163448,24 @@ accumulator writer or authorize a mitigation. The next discriminator remains
 one fresh same-run port capture with a whole-RDRAM control, explicit VI/task
 phase join, task-local progress/end, and the retail/port comparison. ORIGIN:
 none; this checkpoint changed no runtime or defensive code.
+## Session 5568 (2026-10-19) — qualified M4 port controls and retained H3
+
+Work unit: add the missing same-run port whole-RDRAM positive control and
+explicit VI width/origin fields to the regeneration-safe M4 normalized schema,
+then run one keyed capture and the batched retail/port analyzer. The first
+arm exposed a stale generated callback declaration/call: the host had been
+changed to four arguments while the generated artifact still used three, and
+it crashed in `rs64_m4_norm_sample` before any control fired. The fixup
+migration was applied to the generated artifact and the Debug target rebuilt.
+
+The corrected capture reached mission at 106 s, verified alive through the
+hold, and recorded zero VI stalls and zero crash/abort markers. The port
+whole-RDRAM marker fired. The analyzer self-test passed; the qualified retail
+and fresh port arms both reported whole-RDRAM, VI, mapped-PC, and image
+controls true (`retail_rows=2,573,768`, `port_rows=21,514`). Exact normalized
+joins still had fewer than 20 shared rows at both mapped PCs, so H3 remains
+selected. This rules out missing controls as the current blocker, but does not
+identify an accumulator writer or authorize a mitigation. The next
+discriminator is an offline within-phase rank/lane comparison, not another
+schema capture. ORIGIN: no mitigation; only diagnostic callback arguments,
+control scanning, and analyzer validation fields changed.

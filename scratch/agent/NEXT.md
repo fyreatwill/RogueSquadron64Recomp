@@ -1,39 +1,38 @@
-RESUME instruction: the interrupted checkpoint is closed; do not rerun s5565.
-The existing schema-v2 changes are in commit 73a55a0eb and
-the known capture is a valid bounded smoke test, but remains H3 because it
-lacks a port whole-RDRAM positive control and has fewer than 20 shared rows at
-either mapped PC. The next iteration should add that control plus an explicit
-VI/task phase join, then run one bounded hangar capture and the comparison.
+The s5568 schema capture is complete; do not rerun it. Both arms now pass
+whole-RDRAM, VI, mapped-PC, and image controls, but exact joins still have
+fewer than 20 shared rows at each mapped PC. The next work unit is one offline
+ranked/lane comparison against the existing qualified retail and s5568 port
+captures; do not infer a writer from the H3 schema result.
 
 Competing hypotheses and discriminator:
 
-1. H1: the port controls and phase/task join pass; normalized rows share both
-   mapped PCs with retail at >=20 rows per PC.
-2. H2: controls and shared rows pass, but a repeated lane or writer-PC mismatch
-   remains in a phase/image/progress class.
-3. H3: the port still cannot supply an independent control or >=20 shared rows,
-   so the normalized comparison remains unevaluable.
+1. H1: exact progress is nonportable, but within-phase rank bins and lane
+   masks agree at both mapped PCs; the prior H3 is only a key-alignment issue.
+2. H2: rank bins align but lane masks differ persistently by image/PC; this
+   selects a real boundary/value divergence for a later writer audit.
+3. H3: rank/lane alignment remains absent or controls cannot be joined, so the
+   accumulator comparison is still unevaluable.
 
-Discriminating measurement: one bounded hangar capture must show a firing
-whole-RAM control, a VI/task phase join, a nonzero monotonic task-local
-instruction total at task end, a stable image ID, and both mapped PCs; then run
-`python3 tools/analyze_m4_normalized.py --self-test` and the retail/port
-comparison. H1/H2 require >=20 shared normalized rows per mapped PC; otherwise
-select H3. Keep the legacy port logs H3.
+Discriminating measurement: one analyzer run must bin each arm's rows by
+within-phase ordinal (not wall-clock time), compare lane masks separately for
+each mapped PC/image, and report positive-control status plus a per-bin match
+table. H1 requires stable lane agreement in both PCs; H2 requires stable rank
+alignment with a lane mismatch; otherwise H3. First run the existing schema
+self-test, then the ranked comparison on `s5354_retail_m4_pcs` and
+`s5568b_m4_port_controls/run.log`.
 
-Exact next commands:
+Exact next commands after implementing the one analyzer change:
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp -j2
-    env TAG=s5566_m4_port_controls XENV='ROGUESQ_LOG_M4_NORM=1 ROGUESQ_LOG_M4_Y8000=1 ROGUESQ_LOG_M4_PORT_RDRAM=1' HOLD=20 STOP=520 LATE=95 LATE_NOSTART=1 LKEY=a zsh scratch/agent/m6_god_common.sh
     python3 tools/analyze_m4_normalized.py --self-test
+    python3 tools/analyze_m4_ranked.py --retail scratch/agent/s5354_retail_m4_pcs/mid.dump scratch/agent/s5354_retail_m4_pcs/rsp.dump scratch/agent/s5354_retail_m4_pcs/oracle.log --port scratch/agent/m6/s5568b_m4_port_controls/run.log
 
 Resume artifacts: `src/rsp/dpc_bridge.cpp`, `tools/fixup_factor5_ucode.py`,
 `tools/analyze_m4_normalized.py`, and the Session 5565 ledger entry. Do not
 infer an accumulator writer or add a mitigation from the existing capture.
 
-Ground-truth gate: the retail RSM2/RSD2 capture already qualifies whole-RAM,
-VI, mapped-PC, image, and instruction-progress controls. Do not add another
-port field until the port whole-RAM control and phase/task join are measured in
-the same run.
+Ground-truth gate: the retail RSM2/RSD2 capture and the s5568 port capture both
+qualify whole-RAM, VI, mapped-PC, and image controls. Do not add another live
+port field until the offline rank/lane comparison shows that alignment is the
+remaining discriminator.
 
 HYPOTHESIS-ID: m4-normalized-boundary-schema

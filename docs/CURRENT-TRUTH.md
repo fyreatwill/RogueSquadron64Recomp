@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5566 (2026-10-19).
+Compact operational handoff, maintained at Session 5568 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -192,6 +192,20 @@ and both mapped PCs. H3 remains selected: the port capture has no whole-RDRAM
 positive control and shares fewer than 20 normalized rows at either mapped PC
 with the qualified retail capture. No writer or mitigation conclusion follows.
 
+Session 5568 added the missing port whole-RDRAM positive control and explicit
+VI width/origin fields to each normalized row, through the regeneration-safe
+fixup. The corrected keyed capture reached mission at 106 s, verified alive
+through the hold, and had zero VI stalls or crash/abort markers. All retail and
+port controls passed in the same analyzer run (`retail_rows=2,573,768`,
+`port_rows=21,514`; whole-RDRAM, VI, mapped-PC, and image all true), but exact
+phase/image/PC/progress joins remained below 20 rows for both mapped PCs, so H3
+still holds. The initial arm crashed before any control because the generated
+artifact still had the old three-argument callback; the fixup migration and
+rebuild corrected that integration defect. No accumulator writer or mitigation
+is inferred. The next M4 angle must relax only the structurally nonportable
+exact join (e.g. within-phase rank/lane comparison) rather than repeat this
+schema capture.
+
 ## Operational rules
 
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 commands or
@@ -251,13 +265,12 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5565 (TOP):** The port schema now records the observed per-task dispatch
-  counter and task total, and caps rows at 4096 per VI phase. The keyed capture
-  reached mission (84 s), held 151 s alive with zero stalls/crash markers, and
-  emitted 21,512 rows. The analyzer selected H3 because the port arm lacks a
-  whole-RDRAM positive control and has fewer than 20 shared normalized rows at
-  either mapped PC. Add the port whole-RDRAM control and a phase/task join in
-  one bounded capture; do not infer a writer from this H3.
+- **s5568 (TOP):** The port whole-RDRAM control and explicit VI/task fields now
+  fire in one bounded capture; all controls pass, but exact phase/image/PC/
+  progress joins remain below 20 rows at both mapped PCs. Do not rerun this
+  schema. Design one offline within-phase rank/lane comparison that can
+  distinguish a boundary-alignment mismatch from a genuine lane/writer
+  mismatch, then run it against the existing qualified retail and port logs.
 - **s5561 (TOP):** Conditional-move candidates audited and closed: 149 unique
   sites, zero semantic mismatches, and both positive controls passed. M3
   idiom-class work is now exhausted for the currently listed classes. Next:
