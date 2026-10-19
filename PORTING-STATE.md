@@ -163422,3 +163422,14 @@ authorize a mitigation. The parser's first pass was killed after it attempted
 to materialize the 13-million-line log; the bounded reader then completed with
 the same capture and the H3 result. ORIGIN: no mitigation; only diagnostic
 fields sourced from the live RSP task loop and task-end state changed.
+## Session 5566 (2026-10-19) — checkpointed M4 port-control resume
+
+Checkpoint close-out only; the preceding work unit is already present in the
+Session 5565 commit. No experiment was rerun. The known result remains H3:
+the bounded port schema-v2 capture reached mission and produced 21,512 rows,
+but it did not emit a whole-RDRAM positive control and shared fewer than 20
+rows at either mapped PC with the qualified retail capture. This is a schema
+failure, not evidence for an accumulator writer or a mitigation. The next
+discriminator is still one same-run port capture with the whole-RDRAM control,
+explicit VI/task phase join, task-local progress/end, and the retail/port
+comparison. ORIGIN: none; this checkpoint adds no runtime or defensive code.
