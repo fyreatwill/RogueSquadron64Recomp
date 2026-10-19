@@ -330,6 +330,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5594 (TOP):** long_i (a tag-reuse replay of c) and long_j (20 min) clean: 8 long title->mission holds, 0 crash/stall. Queued s5594_hangar_long_{k,l} (hangar route, 15 min). Clean -> pivot to ASan arm or second-mission route (s5515 flag 0x130B58).
+
 - **s5593 (TOP):** s5592 m6_long_g,h folded: both clean (hold 905/901 s, alive, vi_stalls30s=0, crashlines=0; mission_cycles 4/1). With s5551 d / s5554 a-c that is 6/6 long mission holds clean. Not covered: flaky hangar route, second mission. Queued s5592_m6_long_i (15 min) and s5593_m6_long_j (20 min). If both clean: pivot to second-mission route or ASan arm.
 - **s5592:** s5590 attach e,f folded: control=PASS, 20/20 attached title boots clean (lldb stops were only SIGSTOP/SIGKILL; no SIGSEGV, no si_addr=0x58). Plume NOT closed (single-source; P(0/20 at 1/7)~4.6%) but lldb attach is a working instrument; stop burning iterations on it. Pivot to M6: fold s5592_m6_long_{g,h,i} (>=10 min mission holds, queued). Any CRASH/stall -> backtrace, name writer, root-cause fix. (s5591's "attach recipes queued, fold them" item below is DONE.)
 

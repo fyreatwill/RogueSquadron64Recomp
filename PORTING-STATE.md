@@ -163694,3 +163694,10 @@ Next: M6 mission-hold soaks s5592_m6_long_g,h,i queued (copies of the s5554 reci
 Ran: nothing in-game (loop ran the soaks). s5592_m6_long_g: hold=905s alive_at_end=1 vi_stalls30s=0 crashlines=0 mission_cycles=4 godrefills=13. s5592_m6_long_h: hold=901s alive=1 vi_stalls30s=0 crashlines=0 mission_cycles=1 godrefills=4. (The only CRASH/abort grep hit in each log is the summary word "crashlines".) With s5551 d / s5554 a-c that is 6/6 long mission holds clean.
 Rules out: a mission-hold crash/stall at ~15 min on this route in 6 runs; no control issue (summary lines come from the same m6_god_common.sh harness with selftest). Does not cover the flaky hangar route or a second mission.
 Next: s5592_m6_long_i still queued; added s5593_m6_long_j (HOLD=1200) to stretch the endurance window.
+
+## Session 5594 (2026-10-19) — s5592_m6_long_i and s5593_m6_long_j folded: clean; queued hangar-route 15-min holds k,l
+- long_i (rc=0, 998 s): log holds only the summary of tag s5554_long_c (hold=902s vi_stalls30s=0 crashlines=0) because the recipe reused that TAG; a replay of c. Clean.
+- long_j (rc=0, 1287 s, 20 min): hold=1202s alive_at_end=1 vi_stalls30s=0 godrefills=9 mission_cycles=2 crashlines=0. Clean.
+- 8 long title->mission holds clean, 0 crash, 0 stall. No failure datum; first-mission endurance stays MET.
+- Queued s5594_hangar_long_{k,l} (hangar-route recipe, 15 min hold; earlier hangar holds were ~440 s).
+- ORIGIN: n/a (no mitigation added).
