@@ -37388,7 +37388,7 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
     if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
         _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
         if text.count(_a) == 1:
-            _code = '    { static int s_c = 0; if (s_c++ < 40) { fprintf(stderr, "[cineBody] call#%d ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X B40=0x%02X\\n", s_c, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), (unsigned)MEM_BU(0xB40, S32(0X8013 << 16))); } } /* PATCH: s5523 cineBody entry log */\n'
+            _code = '    { static int s_c = 0; if (s_c++ < 40) { fprintf(stderr, "[cineBody] call#%d ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X B40=0x%02X\\n", s_c, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), (unsigned)MEM_BU(0xB40, S32(0X8013 << 16))); }\n      { static int s_f = -2; if (s_f == -2) { const char* e = getenv("ROGUESQ_FORCE_CINE_A0"); s_f = (e && e[0]) ? (int)strtol(e, 0, 0) : -1; } if (s_f >= 0 && U32(ctx->r4) == 0u) { ctx->r4 = (gpr)(uint32_t)s_f; fprintf(stderr, "[cineBody] a0 forced 0 -> %d\\n", s_f); } } } /* PATCH: s5523 cineBody entry log */\n'
             text = text.replace(_a, _code + _a, 1)
             changed = True
             report.append(f"{p.name}: s5523 cineBody entry log patched")

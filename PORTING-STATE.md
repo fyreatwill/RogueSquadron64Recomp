@@ -163123,3 +163123,8 @@ Reading: B40 = cinematicLoopBody's a0 (0x800A5E5C stores it). Both mission inits
 Next: the caller that supplies cineBody a0 (0x13 vs 0) — log it at the call wrapper (fixup line ~37349 passes U32(ctx->r4)) with a distinct call-site id, and force a0 there.
 Discrimination (s5523): H1 (mission index is a loop counter varying per mission through cinematicLoopBody a0) is REFUTED for the no-save route: both mission-producing calls carried a0=0, so a0 does not vary there. H3 (index constant 0 without save data) is SELECTED (single-source, 1 run, B40=0 at both initMission entries). H2 (index keyed by a different byte) is not excluded but no evidence points to it, since B40 demonstrably equals a0 at 0x800A5E5C.
 Next discriminator: force cinematicLoopBody a0 (ROGUESQ_FORCE_CINE_A0=1) in a base-vs-forced pair. If initMission's B40/a0 or gCurrentLevel changes, H3 is refuted and a0 is the real selector; if it stays 0 or the game no-ops, H2 holds (selector lives elsewhere).
+
+## Session 5524 (2026-10-19) — checkpoint close-out: ROGUESQ_FORCE_CINE_A0 override landed in fixup, not yet run
+
+Primary session died mid-work-unit. Landed only: tools/fixup_game_funcs_vendored.py s5523 cineBody entry patch now also reads env ROGUESQ_FORCE_CINE_A0; if set and cinematicLoopBody (0x800A5D80) a0==0 it forces a0 to that value and logs "[cineBody] a0 forced 0 -> N" (positive control). Not regenerated, built, or run; no result. Static call-site search of a0 sources not done. No ORIGIN/mitigation: this is a diagnostic override, off by default.
+Resume: run fixup + cmake, then base arm vs ROGUESQ_FORCE_CINE_A0=1 arm (sequential), compare initMission a0/level.
