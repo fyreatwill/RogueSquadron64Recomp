@@ -132,7 +132,8 @@ struct Rs64E9Provenance {
         uint32_t phase;
         uint32_t image;
         uint32_t pc;
-        uint32_t step;
+        uint32_t steps;
+        uint32_t total;
         uint32_t lanes[24];
     };
     uint32_t root_dl = 0;
@@ -196,6 +197,9 @@ struct Rs64E9Provenance {
     uint32_t task = 0;
     uint32_t m4_image = 0;
     uint32_t m4_y8000_step = 0;
+    uint32_t m4_norm_phase = 0xFFFFFFFFu;
+    uint32_t m4_norm_phase_rows = 0;
+    uint32_t m4_norm_phase_dropped = 0;
     std::vector<M4NormRow> m4_norm_rows;
     uint32_t guest = 0;
     uint32_t emitted = 0;
@@ -515,14 +519,25 @@ static bool rs64_m4_y8000_in_gate();
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
 
-extern "C" void rs64_m4_norm_sample(void *opaque, uint32_t guest_pc, uint32_t step) {
+extern "C" void rs64_m4_norm_sample(void *opaque, uint32_t guest_pc, uint32_t steps) {
     if (!rs64_m4_norm_enabled()) return;
     auto *rsp = static_cast<RSP *>(opaque);
     Rs64E9Provenance::M4NormRow row{};
     row.phase = rs64_phase_ord();
+    if (row.phase != g_e9prov.m4_norm_phase) {
+        g_e9prov.m4_norm_phase = row.phase;
+        g_e9prov.m4_norm_phase_rows = 0;
+        g_e9prov.m4_norm_phase_dropped = 0;
+    }
+    if (g_e9prov.m4_norm_phase_rows >= 4096) {
+        ++g_e9prov.m4_norm_phase_dropped;
+        return;
+    }
+    ++g_e9prov.m4_norm_phase_rows;
     row.image = g_e9prov.m4_image;
     row.pc = guest_pc;
-    row.step = step;
+    row.steps = steps;
+    row.total = 0;
     for (unsigned lane = 0; lane < 8; ++lane) {
         row.lanes[lane] = rsp->vpu.acch.u16(lane);
         row.lanes[8 + lane] = rsp->vpu.accm.u16(lane);
@@ -531,7 +546,7 @@ extern "C" void rs64_m4_norm_sample(void *opaque, uint32_t guest_pc, uint32_t st
     g_e9prov.m4_norm_rows.push_back(row);
 }
 
-extern "C" void rs64_m4_end_probe(void *opaque, uint32_t kind) {
+extern "C" void rs64_m4_end_probe(void *opaque, uint32_t kind, uint32_t total) {
     static const bool enabled = [] {
         const char *e = std::getenv("ROGUESQ_LOG_M4_END");
         return e && *e && *e != '0';
@@ -544,11 +559,12 @@ extern "C" void rs64_m4_end_probe(void *opaque, uint32_t kind) {
         for (unsigned i = 0; i < 3; ++i) { sat += v[i] == 0x8000u; nz += v[i] != 0; }
     }
     if (rs64_m4_norm_enabled()) {
-        const uint32_t total = g_e9prov.m4_y8000_step;
         for (const auto &row : g_e9prov.m4_norm_rows) {
-            fprintf(stderr, "[m4-norm] phase=%u image=0x%08X pc=0x%04X progress=%u end=%u lanes=",
+            const uint32_t row_total = total;
+            fprintf(stderr, "[m4-norm] phase=%u image=0x%08X pc=0x%04X steps=%u total=%u progress=%u end=%u lanes=",
                     row.phase, row.image, row.pc,
-                    total ? (row.step * 1000u) / total : 0u,
+                    row.steps, row_total,
+                    row_total ? (row.steps * 1000u) / row_total : 0u,
                     sat ? 1u : 0u);
             bool first = true;
             for (unsigned i = 0; i < 24; ++i) {
@@ -560,6 +576,11 @@ extern "C" void rs64_m4_end_probe(void *opaque, uint32_t kind) {
             if (first) fputc('-', stderr);
             fprintf(stderr, " task=%u\n", g_e9prov.task);
         }
+        if (g_e9prov.m4_norm_phase_dropped) {
+            fprintf(stderr, "[m4-norm-cap] phase=%u dropped=%u cap=4096\n",
+                    g_e9prov.m4_norm_phase, g_e9prov.m4_norm_phase_dropped);
+        }
+        g_e9prov.m4_norm_rows.clear();
     }
     if (!enabled) return;
     fprintf(stderr, "[m4-end] task=%u phase=%u kind=%u sat8000=%u nz=%u", g_e9prov.task,

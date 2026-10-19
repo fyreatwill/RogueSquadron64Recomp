@@ -2654,15 +2654,27 @@ END_ACC_MARKER = "/* fixup: task-end accumulator witness */"
 if is_main_ucode and END_ACC_MARKER not in text and SOURCE_AUDIT_MARKER in text:
     text, n_decl = re.subn(
         r"(extern \"C\" void rs64_e9prov_source_end[^\n]*\n)",
-        lambda m: m.group(1) + 'extern "C" void rs64_m4_end_probe(void *rsp, uint32_t kind);  ' + END_ACC_MARKER + "\n",
+        lambda m: m.group(1) + 'extern "C" void rs64_m4_end_probe(void *rsp, uint32_t kind, uint32_t total);  ' + END_ACC_MARKER + "\n",
         text, count=1)
     text, n_end = re.subn(
         r"( *)(rs64_e9prov_source_end\(r17, ([12])\);  " + re.escape(SOURCE_AUDIT_MARKER) + r"\n)",
-        lambda m: m.group(1) + "rs64_m4_end_probe(&rsp, " + m.group(3) + ");  " + END_ACC_MARKER + "\n" + m.group(1) + m.group(2),
+        lambda m: m.group(1) + "rs64_m4_end_probe(&rsp, " + m.group(3) + ", rs64_iter);  " + END_ACC_MARKER + "\n" + m.group(1) + m.group(2),
         text)
     if n_decl != 1 or n_end != 2:
         print(f"fixup_factor5_ucode: FIXUP 10b ANCHOR FAILED (decl={n_decl}, exits={n_end}).", file=sys.stderr)
         sys.exit(1)
+
+# Migrate an already-fixed generated file to the task-total end signature.
+if is_main_ucode and END_ACC_MARKER in text:
+    text = text.replace(
+        'extern "C" void rs64_m4_end_probe(void *rsp, uint32_t kind);',
+        'extern "C" void rs64_m4_end_probe(void *rsp, uint32_t kind, uint32_t total);', 1)
+    text = text.replace(
+        'rs64_m4_end_probe(&rsp, 2);  ' + END_ACC_MARKER,
+        'rs64_m4_end_probe(&rsp, 2, rs64_iter);  ' + END_ACC_MARKER, 1)
+    text = text.replace(
+        'rs64_m4_end_probe(&rsp, 1);  ' + END_ACC_MARKER,
+        'rs64_m4_end_probe(&rsp, 1, rs64_iter);  ' + END_ACC_MARKER, 1)
 
 # ---------------------------------------------------------------------------
 # Fixup 11: EndDL/unwind audit (s687, item -421).
@@ -3366,7 +3378,7 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
         'extern "C" uint32_t rs64_m4_y8000_step(uint32_t guest_pc);  ' + M4_Y8000_KEYS_MARKER + "\n"
         'extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13, '
         'uint32_t c13, uint32_t c12, uint32_t c11, uint32_t guest_pc, uint32_t step);\n'
-        'extern "C" void rs64_m4_norm_sample(void *rsp, uint32_t guest_pc, uint32_t step);  /* fixup: M4 normalized boundary schema v1 */\n'
+        'extern "C" void rs64_m4_norm_sample(void *rsp, uint32_t guest_pc, uint32_t steps);  /* fixup: M4 normalized boundary schema v2 */\n'
         'extern "C" void rs64_m4_y8000_flush(uint32_t r16, uint32_t guest_pc, uint32_t step);  ' + M4_Y8000_MARKER + "\n",
         text, count=1)
     entry_anchor = re.compile(
@@ -3378,7 +3390,7 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
         "    rs64_m4_y8000_entry((uint32_t)RSP_MEM_HU_LOAD(0X1A, r11), "
         "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r12), "
         "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3, 0x17F0, rs64_m4_y8000_step(0x17F0));  " +
-        M4_Y8000_MARKER + "\n    rs64_m4_norm_sample(&rsp, 0x17F0, rs64_m4_y8000_step(0x17F0));  /* fixup: M4 normalized boundary schema v1 */\n" + m.group(2),
+        M4_Y8000_MARKER + "\n    rs64_m4_norm_sample(&rsp, 0x17F0, rs64_iter);  /* fixup: M4 normalized boundary schema v2 */\n" + m.group(2),
         text, count=1)
     flush_anchor = re.compile(
         r"(    r10 = RSP_ADD32\(r16, -0XD60\);\n)"
@@ -3387,7 +3399,7 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
     text, n_flush = flush_anchor.subn(
         lambda m: m.group(1) +
         "    rs64_m4_y8000_flush(r16, 0x112C, rs64_m4_y8000_step(0x112C));  " + M4_Y8000_MARKER +
-        "\n    rs64_m4_norm_sample(&rsp, 0x112C, rs64_m4_y8000_step(0x112C));  /* fixup: M4 normalized boundary schema v1 */\n" + m.group(2),
+        "\n    rs64_m4_norm_sample(&rsp, 0x112C, rs64_iter);  /* fixup: M4 normalized boundary schema v2 */\n" + m.group(2),
         text, count=1)
     if (n_decl, n_entry, n_flush) != (1, 1, 1):
         print(f"fixup_factor5_ucode: FIXUP 20 ANCHOR FAILED "
@@ -3419,16 +3431,16 @@ if is_main_ucode and M4_Y8000_MARKER in text and M4_Y8000_KEYS_MARKER not in tex
 
 # Add the normalized-boundary witness to already-fixed generated output.  This
 # keeps the schema stable across builds that reuse a previously fixed C file.
-M4_NORM_MARKER = "/* fixup: M4 normalized boundary schema v1 */"
+M4_NORM_MARKER = "/* fixup: M4 normalized boundary schema v2 */"
 if is_main_ucode and M4_Y8000_MARKER in text and M4_NORM_MARKER not in text:
     text, n_decl = re.subn(
         r'(extern "C" void rs64_m4_y8000_entry\([^\n]*\n)',
-        r'\1extern "C" void rs64_m4_norm_sample(void *rsp, uint32_t guest_pc, uint32_t step);  ' + M4_NORM_MARKER + r'\n',
+        r'\1extern "C" void rs64_m4_norm_sample(void *rsp, uint32_t guest_pc, uint32_t steps);  ' + M4_NORM_MARKER + r'\n',
         text, count=1)
     old_entry = 'rs64_m4_y8000_entry((uint32_t)RSP_MEM_HU_LOAD(0X1A, r11), (uint32_t)RSP_MEM_HU_LOAD(0X1A, r12), (uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3, 0x17F0, rs64_m4_y8000_step(0x17F0));  /* fixup: M4 y8000 */'
-    new_entry = old_entry + '  rs64_m4_norm_sample(&rsp, 0x17F0, rs64_m4_y8000_step(0x17F0));  ' + M4_NORM_MARKER
+    new_entry = old_entry + '  rs64_m4_norm_sample(&rsp, 0x17F0, rs64_iter);  ' + M4_NORM_MARKER
     old_flush = 'rs64_m4_y8000_flush(r16, 0x112C, rs64_m4_y8000_step(0x112C));  /* fixup: M4 y8000 */'
-    new_flush = old_flush + '  rs64_m4_norm_sample(&rsp, 0x112C, rs64_m4_y8000_step(0x112C));  ' + M4_NORM_MARKER
+    new_flush = old_flush + '  rs64_m4_norm_sample(&rsp, 0x112C, rs64_iter);  ' + M4_NORM_MARKER
     text, n_entry = text.replace(old_entry, new_entry, 1), text.count(old_entry)
     text, n_flush = text.replace(old_flush, new_flush, 1), text.count(old_flush)
     if (n_decl, n_entry, n_flush) != (1, 1, 1):

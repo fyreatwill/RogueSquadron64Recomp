@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5563 (2026-10-19).
+Compact operational handoff, maintained at Session 5565 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -183,11 +183,14 @@ mapped-PC controls and supplied 2,580,925 mapped-PC rows; the available port
 log supplied zero normalized rows. Neither arm's available record format
 contains an explicit ucode image identity, so H3 is selected. This is an
 instrument/schema result only: no accumulator writer or mitigation is
-authorized. Session 5563 added the regeneration-safe port-side witness and a
-keyed run reached the hangar phase, emitting 5,599,178 rows with one image ID
-and both mapped PCs. H3 remains selected because port progress is currently
-the selected-callback ordinal rather than the RSP task's actual instruction
-count; no paired comparison or writer conclusion follows.
+authorized. Session 5563 added the regeneration-safe port-side witness and
+Session 5565 replaced its callback ordinal with the observed per-task dispatch
+counter, recorded task totals, and capped retained rows at 4096 per VI phase.
+The keyed run reached mission at 84 s and stayed alive for 151 s with zero VI
+stalls and zero crash markers. It emitted 21,512 bounded rows with one image ID
+and both mapped PCs. H3 remains selected: the port capture has no whole-RDRAM
+positive control and shares fewer than 20 normalized rows at either mapped PC
+with the qualified retail capture. No writer or mitigation conclusion follows.
 
 ## Operational rules
 
@@ -248,12 +251,13 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5563 (TOP):** Port normalized rows now carry image identity, both mapped
-  PCs, 24 VACC lanes, and task-end state. The first hangar capture emitted
-  5,599,178 rows, but progress is selected-callback ordinal, not actual task
-  instruction count. Add an observed task instruction counter and bounded row
-  cap, then compare one new port capture with the qualified retail capture;
-  legacy port logs remain H3.
+- **s5565 (TOP):** The port schema now records the observed per-task dispatch
+  counter and task total, and caps rows at 4096 per VI phase. The keyed capture
+  reached mission (84 s), held 151 s alive with zero stalls/crash markers, and
+  emitted 21,512 rows. The analyzer selected H3 because the port arm lacks a
+  whole-RDRAM positive control and has fewer than 20 shared normalized rows at
+  either mapped PC. Add the port whole-RDRAM control and a phase/task join in
+  one bounded capture; do not infer a writer from this H3.
 - **s5561 (TOP):** Conditional-move candidates audited and closed: 149 unique
   sites, zero semantic mismatches, and both positive controls passed. M3
   idiom-class work is now exhausted for the currently listed classes. Next:

@@ -129,23 +129,36 @@ def retail_rows_v2(mid_path, end_path, oracle_path):
 def port_rows(path):
     rows = []
     controls = {"whole_rdram": False, "vi": False, "mapped_pc": False, "image": False}
+    phase_rows = defaultdict(int)
     for line in open(path, encoding="utf-8", errors="replace"):
         if line.startswith("[m4-norm]"):
             fields = dict(re.findall(r"(\w+)=([^ ]+)", line))
-            required = ("phase", "image", "pc", "progress", "end", "lanes")
-            if not all(k in fields for k in required):
+            required = ("phase", "image", "pc", "steps", "total", "progress", "end", "lanes")
+            lane_match = re.search(r"lanes=(-|[0-9]+(?:,[0-9]+)*)", line)
+            if not all(k in fields for k in required) or not lane_match:
                 continue
-            pc = int(fields["pc"], 0)
+            pc = int(fields["pc"], 0) & 0x0FFF
             controls["mapped_pc"] |= pc in MAPPED_PCS
             controls["image"] |= fields["image"] not in ("none", "0", "missing")
-            rows.append({"phase": int(fields["phase"], 0), "image": fields["image"],
-                         "pc": pc, "progress": int(fields["progress"], 0),
-                         "lanes": tuple(int(x, 0) for x in fields["lanes"].split(",") if x != "-"),
+            phase = int(fields["phase"], 0)
+            if phase_rows[phase] >= 4096:
+                continue
+            phase_rows[phase] += 1
+            rows.append({"phase": phase, "image": fields["image"],
+                         "pc": pc, "steps": int(fields["steps"], 0),
+                         "total": int(fields["total"], 0),
+                         "progress": int(fields["progress"], 0),
+                         "lanes": tuple(int(x, 0) for x in lane_match.group(1).split(",")
+                                        if x != "-"),
                          "writer": fields.get("writer"), "task": fields.get("task"),
                          "end": fields["end"] not in ("0", "false")})
         if "[m4-key]" in line:
             controls["vi"] |= "viw=512" in line and "origin=0x006AB" in line
-            controls["mapped_pc"] |= any(f"pc=0x{x:04X}" in line for x in MAPPED_PCS)
+            controls["mapped_pc"] |= any(f"pc=0x{x:04X}" in line or
+                                          f"pc=0x{x + 0x1000:04X}" in line
+                                          for x in MAPPED_PCS)
+        if line.startswith("[phase]"):
+            controls["vi"] |= "vi_width=512" in line and "origin=0x006AB" in line
     return rows, controls
 
 

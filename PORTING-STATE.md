@@ -163401,3 +163401,24 @@ or authorize a mitigation. The next discriminator remains an observed,
 monotonic task instruction counter plus a phase-scoped row cap, followed by
 the retail/port analyzer comparison. No experiment was rerun during this
 checkpoint.
+## Session 5565 (2026-10-19) — replaced M4 port progress ordinal with task counter
+
+Work unit: implemented the regeneration-safe M4 port schema v2. The normalized
+row callback now records the observed per-task Factor 5 dispatch counter
+(`rs64_iter`) instead of the selected y8000 callback ordinal; task-end passes
+the observed total, and rows are capped at 4096 per VI phase and cleared after
+each task. The analyzer accepts interleaved stderr safely, normalizes the port's
+IMEM PC aliases (`0x112C/0x17F0` to `0x012C/0x07F0`), and bounds its reader to
+the same phase cap.
+
+The Debug target built successfully. The keyed capture reached mission at 84 s,
+held 151 s, stayed alive, and reported zero VI stalls and zero crash markers.
+It emitted 21,512 bounded normalized rows with one image ID and both mapped PCs.
+The batched comparison against the qualified retail RSM2/RSD2 capture selected
+H3: the port arm has no whole-RDRAM positive control and has fewer than 20
+shared normalized rows at either mapped PC. This rules out treating this run as
+a retail-comparable boundary, but does not identify an accumulator writer or
+authorize a mitigation. The parser's first pass was killed after it attempted
+to materialize the 13-million-line log; the bounded reader then completed with
+the same capture and the H3 result. ORIGIN: no mitigation; only diagnostic
+fields sourced from the live RSP task loop and task-end state changed.
