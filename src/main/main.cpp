@@ -7466,6 +7466,44 @@ static inline uint32_t rdram_be32(const uint8_t* rdram, uint32_t off) {
 // at +0x14 of D_80130B10 indexes the level/scene jump-table at jtbl_8003A3E8.
 // The 4 callback slots at D_8011A8A4 are the per-frame draw callbacks the
 // main game thread iterates each frame.
+// gCurrentLevel @ 0x80130B70 (syms datasyms.toml:1072). ROGUESQ_LOG_LEVEL=1
+// logs every change with the VI phase ordinal. ROGUESQ_FORCE_MISSION=<n>
+// additionally rewrites the word to n (poll period 2 ms) once the phase
+// ordinal reaches ROGUESQ_FORCE_MISSION_PHASE (default 0), to test whether
+// the hangar/mission loader consumes the level word.
+static void start_level_poller() {
+    const char* lg = std::getenv("ROGUESQ_LOG_LEVEL");
+    const char* fm = std::getenv("ROGUESQ_FORCE_MISSION");
+    if (!(lg && lg[0] && lg[0] != '0') && !(fm && fm[0])) return;
+    const int force = fm && fm[0] ? std::atoi(fm) : -1;
+    const char* fp = std::getenv("ROGUESQ_FORCE_MISSION_PHASE");
+    const uint32_t force_phase = fp ? (uint32_t)std::strtoul(fp, nullptr, 0) : 0;
+    static std::thread t{[=]{
+        uint8_t* rdram = nullptr;
+        while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        const uint32_t off = 0x130B70;
+        uint32_t prev = 0xDEADBEEFu;
+        uint32_t pokes = 0;
+        for (;;) {
+            uint32_t cur = rdram_be32(rdram, off);
+            if (cur != prev) {
+                std::fprintf(stderr, "[level] phase=%u gCurrentLevel=0x%08X (prev=0x%08X) pokes=%u\n",
+                             rs64_phase_ord(), cur, prev, pokes);
+                std::fflush(stderr);
+                prev = cur;
+            }
+            if (force >= 0 && rs64_phase_ord() >= force_phase && cur != (uint32_t)force) {
+                for (int j = 0; j < 4; ++j)
+                    rdram[(off + j) ^ 3] = (uint8_t)((uint32_t)force >> (24 - 8 * j));
+                ++pokes;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        }
+    }};
+}
+
 static void start_state_poller() {
     if (!std::getenv("ROGUESQ_LOG_STATE")) return;
     static std::thread t{[]{
@@ -10005,6 +10043,7 @@ int main(int argc, char* argv[]) {
 
     start_b50_poller();
     start_state_poller();
+    start_level_poller();
     start_m5_exact_route_poller();
     start_phase_poller();
     start_m5_voice_slot_poller();

@@ -163008,3 +163008,7 @@ ORIGIN: n/a (no mitigation added).
 
 ## Session 5502 (2026-10-18) — UNBLOCK: s5501 block refuted (mission word already named)
 - s5501 asked for the selected-mission global. Grep of syms/docs: gCurrentLevel @ 0x80130B70 (level enum 0..0x14) is already in datasyms.toml and game-architecture.md. Route 1 (refute). Untested: that the hangar selector writes this word directly. NEXT.md rewritten: read-only log (positive control) -> find writers -> ROGUESQ_FORCE_MISSION poke. No code changed, no game run.
+
+## Session 5503 (2026-10-18) — landed gCurrentLevel poller + ROGUESQ_FORCE_MISSION; two arms queued
+
+Landed in src/main/main.cpp `start_level_poller()`: ROGUESQ_LOG_LEVEL=1 logs `[level] phase=.. gCurrentLevel=..` on every change of rdram 0x130B70; ROGUESQ_FORCE_MISSION=<n> (+ ROGUESQ_FORCE_MISSION_PHASE) rewrites the word every 2 ms. Build OK. m6_god_common.sh now accepts XENV. Queued s5502_level_log (positive control: must show mission-1 value) and s5502_force_m2 (force 2 from phase 1; compare VI origin vs 0x00690400). Not yet run; no result claimed. Next: fold both SOAK-RESULTS lines; if force arm origin differs and no crash, the word is consumed by the loader; else find writers in RecompiledFuncs.
