@@ -1,12 +1,11 @@
-Single next work unit (s5587): fold the s5584_plume_title_hold soak (N=4 LLE-trio boots held 120 s past first title origin). The loop runs it between iterations; do NOT run the game yourself.
+Single next work unit (s5588): fold s5587_plume_hold_{b,c,d} (one title boot each, held 120 s). Loop runs them; do NOT run the game yourself.
 Commands:
-  ls scratch/agent/soak_results/s5584_plume_title_hold/ && cat scratch/agent/soak_results/s5584_plume_title_hold/summary
-  grep -a ALIVE_AT_+120 scratch/agent/soak_results/s5584_plume_title_hold/run*.game
-  grep -n s5584 scratch/agent/SOAK-RESULTS.md
-Control: each titled run has an ALIVE_AT_+120 line with first!=last origin; a run without it is null.
+  grep -n s5587 scratch/agent/SOAK-RESULTS.md
+  cat scratch/agent/soak_results/s5587_plume_hold_*/summary
+Control: each run needs "TITLE" and "ALIVE_AT_+120" lines; otherwise null.
+Prior: s5584 run1 = TITLE+alive, no crash (total N=1 before these).
 Outcomes:
-  - Any crash -> read the backtrace in run*.game (main.cpp:10190 handler), name the writer of the si_addr=0x58 deref, fix the root cause (a real code change; satisfies the pivot).
-  - 0/4 crash, alive120=4/4 -> plume thread closed (<1/16 over 40 boots); write BLOCKED.md asking the human: goal met, or new target?
-  - Soak still absent/pending again -> do not re-escalate; ask in BLOCKED.md why the loop is not running soak_queue.
-Do NOT re-run M6 holds (closed) or the renaming sweep (exhausted s5530).
+  - Any CRASHMARK -> read backtrace in run1.game (main.cpp:10190), name writer of si_addr=0x58 deref, fix root cause.
+  - 4/4 total alive, 0 crash -> plume thread closed; BLOCKED.md asking human: goal met or new target?
+  - Soak absent again -> BLOCKED.md asking why loop skips soak_queue.
 HYPOTHESIS-ID: plume-title-extended-hold

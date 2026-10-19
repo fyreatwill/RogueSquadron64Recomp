@@ -163658,3 +163658,8 @@ Block: s5584 asked the owner to declare the goal met or name a new target. Findi
 
 ## Session 5586 (2026-10-19) — s5584 soak still unrun; nothing to fold; no engineering candidate (SUBSTITUTED)
 Planned unit: fold s5584_plume_title_hold. Evidence this iteration: `scratch/agent/soak_results/s5584_plume_title_hold/` does not exist, `grep s5584 SOAK-RESULTS.md` is empty, and `soak_queue/s5584_plume_title_hold.sh` is still pending (the loop runs soaks only between iterations). Read M5-AUDIO-PLAN: Steps 0-11 all closed (s4968); inventory A1-A20 has no open row; M6 holds closed. Mandatory-pivot options (a)/(b) have no concrete uncovered step, so no code was changed and no instrument re-run (rule 14). Ending the iteration is what lets the loop run the soak. Not re-escalating per s5585 instruction.
+
+## Session 5587 (2026-10-19) — folded s5584 plume title hold: 1/4 completed (cap), 0 crashes; split into 3 single-run recipes
+Ran: nothing in-game (loop ran the soak). s5584_plume_title_hold exited rc=137 at the 600 s hard cap. Summary: run1 TITLE, ALIVE_AT_+120 (first origin 0x790400 -> last 0x690400, last 0x00696100), no CRASH/SIGSEGV/breadcrumb. run2 reached TITLE but was SIGKILLed by the cap before its +120 s check; runs 3-4 never started. Control (title origin + ALIVE line) passed for run1 only.
+Result: N=1 held boot, 0 crashes. Not enough to close the plume thread (needs >=4). Shortfall cause: 4 x (boot + 120 s hold) > 600 s cap — a recipe-sizing bug, not a game fault.
+Change: queued s5587_plume_hold_{b,c,d}.sh, identical recipe with N=1 so each fits the cap.
