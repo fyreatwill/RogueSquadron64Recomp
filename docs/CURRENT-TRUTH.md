@@ -328,6 +328,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5588 (TOP):** s5587 plume holds b,c folded: both TITLE + ALIVE@+120, 0 crash (3/3 with s5584 run1; weak evidence, P(0/3 | p=1/7)~63%). Fold hold_d next (loop runs it). If 4/4 clean, BLOCKED.md asking human whether plume target stays open. No conclusions overturned.
+
 - **s5586 (TOP):** s5584 soak still pending (loop runs it after this iteration). Fold it next; no new work until it lands.
 
 - **s5585 (TOP):** unblock: the s5584 BLOCKED (human direction) was premature, since its soak had not run. BLOCKED.md archived; NEXT = fold s5584_plume_title_hold. Re-escalate only if it is 0/4 crashes with alive120 4/4. OPEN DEPENDENCY (human): declare goal met or name a new target.
