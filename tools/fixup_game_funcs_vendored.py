@@ -37347,6 +37347,7 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
                 ),
                 (
                     "    LOOKUP_FUNC(0x800A5D80)(rdram, ctx);\n        goto after_14;\n",
+                    "    { static int s_fca = -2; if (s_fca == -2) { const char* e = getenv(\"ROGUESQ_FORCE_CINE_ARG\"); s_fca = (e && e[0]) ? (int)strtol(e, 0, 0) : -1; }\n      if (s_fca >= 0 && (ctx->r4 & 0xFFFF) == 0x13) { fprintf(stderr, \"[cine-arg] mainGameLoop 0x8003E10C a0 0x13 -> 0x%X\\n\", s_fca); ctx->r4 = (int64_t)(int32_t)s_fca; } } /* PATCH: s5506 force mission id at the literal-0x13 call */\n"
                     "    rs64_s3305_postviewer_edge(rdram, 18u, \"cinematic-call\", 0x8003E10Cu,\n"
                     "                                  0x800A5D80u, U32(ctx->r4), U32(ctx->r31));\n"
                     "    LOOKUP_FUNC(0x800A5D80)(rdram, ctx);\n        goto after_14;\n",
