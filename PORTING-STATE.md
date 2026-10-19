@@ -163646,3 +163646,9 @@ Pivot check: M5-AUDIO-PLAN Steps 0-11 are closed (s4964), so (a) has no open ste
 ## Session 5583 (2026-10-19) — UNBLOCK: s5582 block refuted (M6 already closed); re-scoped to extended-hold plume loop
 
 s5582 BLOCKED asking the human to choose between an M6 keyed mission hold and an M3/VI-640 change. Option 1 was already done (s5516 31 holds/251 min; s5529 hangar 3/3; s5556 3/3 x 900 s), so the block was a choice among closed work. Open item found: the 12/12 LLE-trio title loop killed runs at first title, so later-title plume crashes were unobserved (s5581 note). NEXT.md now queues the hold-past-title loop (N=4, +120 s). No code or conclusions changed; no game run this iteration.
+
+## Session 5584 (2026-10-19) — pivot demanded engineering; none exists; queued extended-hold soak, BLOCKED
+What ran: reviewed docs/M5-AUDIO-PLAN.md (steps 0-11 all qualified/closed, no un-destubbed step left), CURRENT-TRUTH next steps (M3 idiom classes closed, M4 parked, M6 holds closed s5516/s5556/s5529, renaming sweep exhausted s5530). Neither pivot option (a) M5 de-stub nor (b) M3 guard-class / VI-640 route-path change has a concrete candidate: the only open item (si_addr=0x58 plume SIGSEGV) has 0 crashes in 28 clean boots (16 lldb + 12 LLE-trio), so any guard would be a mitigation without a named writer (iron rule 11).
+Landed: scratch/agent/soak_queue/s5584_plume_title_hold.sh (N=4 LLE-trio boots held 120 s past first title origin; control = ALIVE_AT_+120 line with advancing origin). Loop runs it between iterations; fold its SOAK-RESULTS line next iteration. Not run this session (soaks belong to the loop).
+Rules out: nothing new. This is a queue + ledger entry, not an engineering change; the pivot meter is NOT satisfied.
+Question for human: project milestones M3-M6 are closed with no open discriminator. Declare goal met, or name a new direction (e.g. VI-640 route wall target, new game feature, upstream PR cleanup).

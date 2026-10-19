@@ -326,7 +326,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5582 (TOP):** s5581 a/b = 8/8 titles clean; LLE trio total 12/12, 0 crashes. M5 closed; crash handler already complete. Loop BLOCKED awaiting direction (see scratch/agent/BLOCKED.md). (s5583: block refuted; M6 holds already closed, do not repeat. Next: LLE-trio title loop held 120 s past first title.)
+- **s5584 (TOP):** pivot found no engineering change; queued s5584_plume_title_hold (N=4, 120 s past title); BLOCKED for human direction (BLOCKED.md).
+- **s5582:** s5581 a/b = 8/8 titles clean; LLE trio total 12/12, 0 crashes. M5 closed; crash handler already complete. Loop BLOCKED awaiting direction (see scratch/agent/BLOCKED.md). (s5583: block refuted; M6 holds already closed, do not repeat. Next: LLE-trio title loop held 120 s past first title.)
 
 - **s5581 (TOP, pending):** s5580 returned 4/4 titles, 0 crashes (LLE trio confirmed as the title-route
   ingredient). Queued `s5581_plume_lle4_a/_b` (8 more boots). Crash seen -> lldb variant, real backtrace;
