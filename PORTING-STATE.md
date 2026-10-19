@@ -163596,3 +163596,17 @@ phase 3, width 640, origin `0x696100`; none reached title origin
 reachability hypothesis for this recipe, not plume absence. It rules out only
 interpreting a null plume result from these debugger attempts; the next test is
 the same qualified route without lldb, using the in-process crash handler.
+
+## Session 5578 (2026-10-19) — no-lldb default plume loop: H3, still pre-title
+Ran scratch/agent/s5578_plume_nolldb4.sh (s5577 recipe minus lldb; COMMON =
+OVL2C_DROP=0, SPIN_YIELD=1, STUB_MISSING_FUNCS=1, LOG_PHASE=1, AUDIO_UCODE=1; 120 s per
+attempt). The tool call was cut off during attempt 4, so the sample is 3 attempts, not 4.
+Result: 0/3 reached origin=0x00790400, all three stayed at phase 3 / width 640 /
+origin=0x696100, and there was no plume-null-color-attachment or SIGSEGV marker. This
+matches the lldb sample (0/4), so lldb is not the blocker (H3 wins; H1/H2 untestable).
+Boring-first finding: the earlier title-reaching plume recipes (s5453, s5463) also set
+ROGUESQ_LLE_FORCE=1 LLE_UNGATED=1 LLE_SOLO=1. The s5577/s5578 "default HLE" COMMON omits
+them, so it never reaches title in 120 s. Single-source (recipe diff), not yet run.
+Next: rerun the no-lldb loop with the LLE trio added (same script, one env change) and
+count title origins, then lldb on the arm that reaches title.
+Outcome note: soak runs consumed the session; no code change. ORIGIN: n/a (no mitigation).
