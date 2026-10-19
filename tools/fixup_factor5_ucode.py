@@ -3366,6 +3366,7 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
         'extern "C" uint32_t rs64_m4_y8000_step(uint32_t guest_pc);  ' + M4_Y8000_KEYS_MARKER + "\n"
         'extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13, '
         'uint32_t c13, uint32_t c12, uint32_t c11, uint32_t guest_pc, uint32_t step);\n'
+        'extern "C" void rs64_m4_norm_sample(void *rsp, uint32_t guest_pc, uint32_t step);  /* fixup: M4 normalized boundary schema v1 */\n'
         'extern "C" void rs64_m4_y8000_flush(uint32_t r16, uint32_t guest_pc, uint32_t step);  ' + M4_Y8000_MARKER + "\n",
         text, count=1)
     entry_anchor = re.compile(
@@ -3377,7 +3378,7 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
         "    rs64_m4_y8000_entry((uint32_t)RSP_MEM_HU_LOAD(0X1A, r11), "
         "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r12), "
         "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3, 0x17F0, rs64_m4_y8000_step(0x17F0));  " +
-        M4_Y8000_MARKER + "\n" + m.group(2),
+        M4_Y8000_MARKER + "\n    rs64_m4_norm_sample(&rsp, 0x17F0, rs64_m4_y8000_step(0x17F0));  /* fixup: M4 normalized boundary schema v1 */\n" + m.group(2),
         text, count=1)
     flush_anchor = re.compile(
         r"(    r10 = RSP_ADD32\(r16, -0XD60\);\n)"
@@ -3385,7 +3386,8 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
     )
     text, n_flush = flush_anchor.subn(
         lambda m: m.group(1) +
-        "    rs64_m4_y8000_flush(r16, 0x112C, rs64_m4_y8000_step(0x112C));  " + M4_Y8000_MARKER + "\n" + m.group(2),
+        "    rs64_m4_y8000_flush(r16, 0x112C, rs64_m4_y8000_step(0x112C));  " + M4_Y8000_MARKER +
+        "\n    rs64_m4_norm_sample(&rsp, 0x112C, rs64_m4_y8000_step(0x112C));  /* fixup: M4 normalized boundary schema v1 */\n" + m.group(2),
         text, count=1)
     if (n_decl, n_entry, n_flush) != (1, 1, 1):
         print(f"fixup_factor5_ucode: FIXUP 20 ANCHOR FAILED "
@@ -3413,6 +3415,24 @@ if is_main_ucode and M4_Y8000_MARKER in text and M4_Y8000_KEYS_MARKER not in tex
     text, n_flush_call = text.replace(old_flush, new_flush, 1), text.count(old_flush)
     if n_decl != 1 or n_entry_call != 1 or n_flush_call != 1:
         print(f"fixup_factor5_ucode: M4 key migration FAILED (decl={n_decl} entry={n_entry_call} flush={n_flush_call}).", file=sys.stderr)
+        sys.exit(1)
+
+# Add the normalized-boundary witness to already-fixed generated output.  This
+# keeps the schema stable across builds that reuse a previously fixed C file.
+M4_NORM_MARKER = "/* fixup: M4 normalized boundary schema v1 */"
+if is_main_ucode and M4_Y8000_MARKER in text and M4_NORM_MARKER not in text:
+    text, n_decl = re.subn(
+        r'(extern "C" void rs64_m4_y8000_entry\([^\n]*\n)',
+        r'\1extern "C" void rs64_m4_norm_sample(void *rsp, uint32_t guest_pc, uint32_t step);  ' + M4_NORM_MARKER + r'\n',
+        text, count=1)
+    old_entry = 'rs64_m4_y8000_entry((uint32_t)RSP_MEM_HU_LOAD(0X1A, r11), (uint32_t)RSP_MEM_HU_LOAD(0X1A, r12), (uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3, 0x17F0, rs64_m4_y8000_step(0x17F0));  /* fixup: M4 y8000 */'
+    new_entry = old_entry + '  rs64_m4_norm_sample(&rsp, 0x17F0, rs64_m4_y8000_step(0x17F0));  ' + M4_NORM_MARKER
+    old_flush = 'rs64_m4_y8000_flush(r16, 0x112C, rs64_m4_y8000_step(0x112C));  /* fixup: M4 y8000 */'
+    new_flush = old_flush + '  rs64_m4_norm_sample(&rsp, 0x112C, rs64_m4_y8000_step(0x112C));  ' + M4_NORM_MARKER
+    text, n_entry = text.replace(old_entry, new_entry, 1), text.count(old_entry)
+    text, n_flush = text.replace(old_flush, new_flush, 1), text.count(old_flush)
+    if (n_decl, n_entry, n_flush) != (1, 1, 1):
+        print(f"fixup_factor5_ucode: M4 normalized schema anchor failed (decl={n_decl} entry={n_entry} flush={n_flush}).", file=sys.stderr)
         sys.exit(1)
 
 # ---------------------------------------------------------------------------

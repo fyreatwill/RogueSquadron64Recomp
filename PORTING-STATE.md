@@ -163361,3 +163361,30 @@ old port log as a normalized comparison arm; it does not identify an
 accumulator writer or authorize a mitigation. The implementation contract is
 recorded in `tools/oracle/patches/cxd4-m4-normalized-schema.md`; the next work
 unit is the matching port-side schema.
+
+## Session 5563 (2026-10-19) — added the port M4 normalized-row witness
+
+Work unit: implement the matching port-side M4 schema after the retail-side
+RSM2/RSD2 qualification. The source-side witness hashes the task code image,
+buffers 24 VACC lanes at mapped PCs `0x112C` and `0x17F0`, and emits rows with
+phase, image, task-local progress, end state, and task serial. The fixup is in
+`tools/fixup_factor5_ucode.py`, so the generated ucode receives the callback on
+regeneration. The Debug target built and linked successfully.
+
+The first capture did not reach the hangar gate. A retry reached
+`origin=0x006AB400`, width 512, but the legacy y8000 gate suppressed all rows;
+the sampler was decoupled from that unrelated gate. The final keyed capture
+reached the same hangar phase and emitted 5,599,178 rows, one image ID
+(`0xCD1DCBC2`), and both mapped PCs (`0x112C` and `0x17F0`). The capture was
+bounded by killing the watchdog process after the schema fired; no crash marker
+was observed in the inspected log tail.
+
+H3 selected. The port progress field is the ordinal of selected callback
+events, not the actual RSP task instruction count required by the retail
+RSM2/RSD2 contract, and no same-iteration retail/port analyzer comparison or
+independent port whole-RDRAM control was completed. The rows therefore prove
+that image identity, mapped-PC, VACC, and task-end plumbing can fire, but they
+do not establish a shared normalized boundary. The next discriminator is an
+observed task instruction counter plus a bounded row cap. ORIGIN: no mitigation
+was added; the only writer changed is diagnostic logging sourced from the live
+RSP task state.
