@@ -1,2 +1,2 @@
-Single next unit: M6 is closed (title->mission 31 holds; hangar route 3/3; render in flight correct per s5490). Resume ITERATION priority 4: generated-symbol renaming sweep (tools/rename_generated_symbols.py) - one bounded batch of func_0x... names, with a regen-order check. The sweep alone does not reset the engineering-pivot counter; if it trips, land an M3 idiom-class audit guard instead.
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+Single next unit (pending human): secondary M6 item - loop title boots under lldb until the ~1/7 plume SIGSEGV (si_addr=0x58) recurs and capture the backtrace. Renaming sweep has 0 companion-backed targets (s5530).
+HYPOTHESIS-ID: title-boot-plume-sigsegv
