@@ -1,5 +1,4 @@
-# Next work unit: read s5480_objc_end (scratch/agent/m6/s5480_objc_end, SOAK-RESULTS.md)
-Question: once counter word 0x138064 reaches 3 (wp hit, TS timestamps in lldb_att1.log), do breakpoints setHudEnableBit4 / requestMissionTransitionMode fire?
-Hypotheses: (A) bp fires within seconds -> mission ends legitimately at ~450 s hold; read which phase follows. (B) counter hits 3 but bp never fires -> lv0_checkComplexObjectives not called or early-out upstream: find its caller. (C) counter never reaches 3 this run (autopilot variance) -> repeat; s5479 got 3 only at the end.
-Control: wp on 0x138064 must show stores (it did in s5479).
+# Next work unit: read s5481_mode_after_end (scratch/agent/m6/s5481_mode_after_end, SOAK-RESULTS.md)
+Question: after requestMissionTransitionMode sets 0x10C9E0=4 (s5480), what writes that word next (MODE_WP watch, bt in lldb_att1.log) and what is on screen?
+Hypotheses: (A) mode advances 4->N = results/debrief flow; read the writer. (B) stays 4 with a presenting loop = idle post-mission loop; find the consumer of mode 4 in runInMissionFrame. (C) watch never fires (control: counter wp must still fire).
 HYPOTHESIS-ID: m6-mission-end-trigger
