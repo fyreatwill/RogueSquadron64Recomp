@@ -1,3 +1,3 @@
-# Next work unit: capture counters at the setHudEnableBit4 hit
-Rerun with a longer hold: env TRAPSWAP=2500 zsh scratch/agent/m6_objc_dump.sh s5475a 560 (s5474a at 330 s never reached the end; s5471a ended <420 s). Read the last samples before the setHudEnableBit4 stop (breakpoint 2): which of counter[2]>=3 / counter[3]>=9 / 0x8010B690.. words satisfied it. Legit if counters rose gradually; stale if they jumped from 0 at the hit.
+# Next work unit: find what advances 0x8010B690 word[3] (and 0x138060 beyond 1)
+s5475a (562 s hold): 0x10B690[0..2] became 1 gradually; word[3] stayed 0; setHudEnableBit4 never hit. Either the autopilot never triggers the 4th objective (needs player action) or it needs more time. Use the stdlib MIPS disassembler on the writer of 0x8010B69C, identify the condition, then decide an autopilot change or a longer hold (TRAPSWAP=2500, hold 900).
 HYPOTHESIS-ID: m6-mission-end-trigger
