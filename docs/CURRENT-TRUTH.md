@@ -216,7 +216,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- (s5530 TOP) Renaming-sweep dry-run: 0 companion-backed "selected" function renames remain (only D_/fake_func_ gaps). Mechanical sweep exhausted; loop BLOCKED awaiting direction. Fallback unit: lldb loop on the ~1/7 title-boot plume SIGSEGV (si_addr=0x58).
+- (s5530 TOP) Renaming-sweep dry-run: 0 companion-backed "selected" function renames remain (only D_/fake_func_ gaps). Mechanical sweep exhausted; loop BLOCKED awaiting direction. Fallback unit lldb plume loop is redundant (16/16 clean, see backlog line). s5531 unblock re-scoped NEXT to regen-determinism check. OPEN DEPENDENCY (human): decide whether to declare project goal met / pick a new direction.
 
 - (s5529 TOP) s5527 hangar c folded: 3/3 hangar-route holds clean (0 crash/0 stall). 'Render fidelity in flight' was already closed by s5490 (terrain+HUD visible, tricount 3.7M) - dropped as a work unit. M6 closed on both routes; NEXT: item-4 renaming sweep.
 - (s5528) s5527 hangar soaks a,b folded: 0 crash, 0 VI stall, 440 s holds, control mission_t=81s present; c pending (replication only). NEXT: render fidelity in flight.

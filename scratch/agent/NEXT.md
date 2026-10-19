@@ -1,2 +1,2 @@
-Single next unit (pending human): secondary M6 item - loop title boots under lldb until the ~1/7 plume SIGSEGV (si_addr=0x58) recurs and capture the backtrace. Renaming sweep has 0 companion-backed targets (s5530).
-HYPOTHESIS-ID: title-boot-plume-sigsegv
+Single next unit: regen-pipeline determinism check. In a scratch dir (never touching lib/ or the live generated tree), run make_elf.py -> N64Recomp -> tools/fixup_game_funcs.py in documented order and diff the output against the current generated code. Any diff = a hand-edit living outside the fixup scripts (fix by moving it into tools/fixup_*.py). No game run needed. Positive control: perturb one scratch file and confirm the diff tool flags it.
+HYPOTHESIS-ID: regen-determinism-no-unscripted-handedits
