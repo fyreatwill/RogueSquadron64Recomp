@@ -7474,8 +7474,10 @@ static inline uint32_t rdram_be32(const uint8_t* rdram, uint32_t off) {
 static void start_level_poller() {
     const char* lg = std::getenv("ROGUESQ_LOG_LEVEL");
     const char* fm = std::getenv("ROGUESQ_FORCE_MISSION");
-    if (!(lg && lg[0] && lg[0] != '0') && !(fm && fm[0])) return;
+    const char* fs = std::getenv("ROGUESQ_FORCE_SEL");  // byte @0x80130B40: menuOverlayInit table[sel] -> cinematicLoopBody arg
+    if (!(lg && lg[0] && lg[0] != '0') && !(fm && fm[0]) && !(fs && fs[0])) return;
     const int force = fm && fm[0] ? std::atoi(fm) : -1;
+    const int force_sel = fs && fs[0] ? std::atoi(fs) : -1;
     const char* fp = std::getenv("ROGUESQ_FORCE_MISSION_PHASE");
     const uint32_t force_phase = fp ? (uint32_t)std::strtoul(fp, nullptr, 0) : 0;
     static std::thread t{[=]{
@@ -7486,7 +7488,19 @@ static void start_level_poller() {
         const uint32_t off = 0x130B70;
         uint32_t prev = 0xDEADBEEFu;
         uint32_t pokes = 0;
+        uint32_t prev_sel = 0xDEADBEEFu, sel_pokes = 0;
         for (;;) {
+            uint32_t sel = rdram[0x130B40 ^ 3];
+            if (sel != prev_sel) {
+                std::fprintf(stderr, "[level] phase=%u sel@B40=0x%02X (prev=0x%02X) selpokes=%u\n",
+                             rs64_phase_ord(), sel, prev_sel, sel_pokes);
+                std::fflush(stderr);
+                prev_sel = sel;
+            }
+            if (force_sel >= 0 && rs64_phase_ord() >= force_phase && sel != (uint32_t)force_sel) {
+                rdram[0x130B40 ^ 3] = (uint8_t)force_sel;
+                ++sel_pokes;
+            }
             uint32_t cur = rdram_be32(rdram, off);
             if (cur != prev) {
                 std::fprintf(stderr, "[level] phase=%u gCurrentLevel=0x%08X (prev=0x%08X) pokes=%u\n",
