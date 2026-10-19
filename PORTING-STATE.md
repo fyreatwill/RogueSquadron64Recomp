@@ -163539,3 +163539,17 @@ this is a non-callable fragment, already synchronized in the rename tables, so
 no rename or runtime change was made. This rules out a companion-backed semantic
 rename for this candidate, not the remaining sweep. The next candidate is
 `fake_func_800AE3E4`.
+## Session 5574 (2026-10-19) — audited generated fragment at 0x800AE3E4
+
+Ran the prescribed three-source generated-symbol discriminator for
+`fake_func_800AE3E4`; no game build or runtime experiment was appropriate.
+The generated record is a 12-byte split fragment in `funcs_28.c`, the mission
+companion map provides only the address-coded fake followed by
+`initPlayerCraftTrailBuffers`, and `syms/rogue_squadron.syms.toml` agrees on
+the exact 12-byte span. The companion menu map separately names
+`tickEasedCameraKeyframeBlend` at the overlapping `0x800AE3EC`, confirming
+overlay/split context rather than a semantic mission function. H2 selected:
+leave it mapped as `data_gap_800AE3E4`; no rename or runtime change was made.
+This closes the generated-symbol sweep and rules out this candidate as a
+rename lead. Next work returns to the M4 accumulator boundary with a new
+cross-arm discriminator, not another exact/ranked join.

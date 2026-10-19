@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5573 (2026-10-19).
+Compact operational handoff, maintained at Session 5574 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -39,6 +39,13 @@ discriminator is the matching port schema (phase epoch, image identity, mapped
 IMEM PC, task-local progress/end) before another comparison. Details of
 s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
 compaction).
+
+Session 5574 audited `fake_func_800AE3E4`. The generated tree and independent
+syms table agree on its exact 12-byte placeholder span, while the companion
+maps provide no semantic mission name and show overlapping overlay context at
+`0x800AE3EC`. H2 selected: it is a non-callable/data-gap fragment and remains
+unchanged. The generated-symbol sweep is exhausted; the next work unit must
+return to the parked M4 accumulator boundary with a genuinely new discriminator.
 
 Session 5573 audited the next remaining generated placeholder,
 `fake_func_8006ACA4`. The generated tree is already synchronized to
@@ -299,7 +306,13 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5573 (TOP):** `fake_func_8006ACA4` is an exact 12-byte non-callable gap
+- **s5574 (TOP):** The generated-symbol sweep is exhausted after the exact-span
+  audit of `fake_func_800AE3E4` (see `docs/RENAME-S5574.md`). Do not rename the
+  fragment. Revisit the parked M4 accumulator boundary with a new, ground-truth
+  backed discriminator; do not repeat the unjoinable exact or empty-lane
+  comparisons from s5568/s5570.
+
+- **s5573:** `fake_func_8006ACA4` is an exact 12-byte non-callable gap
   before `transformObjectColliderCenter`; the companion map and independent
   syms table agree on `data_gap_8006ACA4`. Continue the bounded sweep with
   `fake_func_800AE3E4`; do not infer semantic names from address-only or
