@@ -7,7 +7,7 @@ for tag in sys.argv[1:]:
     t = src.read_text()
     t = t.replace("s5587_plume_hold_d", f"s5589_plume_lldb_{tag}").replace("N=1", "N=3")
     t = t.replace('./RogueSquadron64Recomp) > "$G"',
-                  'lldb -b -o run -o "bt all" -o "register read" -o quit -- ./RogueSquadron64Recomp) > "$G"')
+                  '/usr/bin/lldb -b -o "process handle SIGSEGV -s true -n true -p true" -o "process handle SIGBUS -s true" -o run -o "bt all" -o "register read" -o quit -- ./RogueSquadron64Recomp) > "$G"')
     head, tail = t.split("for i in $(seq 1 40); do\n      grep -aqiE")
     t = head + "for i in $(seq 1 5); do\n      grep -aqiE" + tail
     t = t.replace("ALIVE_AT_+120", "ALIVE_AT_+15")
