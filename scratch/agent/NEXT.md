@@ -1,4 +1,4 @@
-Work unit: M6 endurance (strategic 3b): queue >=3 keyed mission holds (>=10 min) via existing scratch/agent/m6_hold recipes and fold crash/stall data; the flag-bit-25 thread is closed as H3 for this route (s5515).
-Hypotheses: H1 crash-free hold; H2 distinct crash needing lldb bt; H3 stall (VI origin unchanged >30s).
-Discriminator: SOAK-RESULTS rc + log CRASH/stall lines per run.
+Work unit: M6 hangar-route coverage. Adapt scratch/agent/m6_wp_flag.sh (control = 0x3470 swap counter) to the hangar route (scratch/agent/autopilot_hangar_probe.sh recipe / in-process autopilot that reaches origin 0x006AB400), queue >=3 runs, keep only runs that reached the hangar.
+Hypotheses: H1 flag word 0x130B58 bit 0x02000000 is set on the hangar route (gates second mission); H2 still never set (needs retail oracle); H3 hangar route crashes/stalls (capture lldb bt).
+Discriminator: write-watch log with control firing; per-run crash/stall lines.
 HYPOTHESIS-ID: second-distinct-mission-coverage
