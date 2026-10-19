@@ -1,5 +1,5 @@
-# Next work unit: read s5479_objc_stores_early (scratch/agent/m6/s5479_objc_early, SOAK-RESULTS.md)
-s5478 was invalid: watchpoints armed at swap 7600, mission onset is ~1068, counters already written, control silent. s5479 arms at swap 1100.
-Hypotheses: (A) idx2/3 never written even from onset - DAT items never triggered by the autopilot; (B) written - bt names the store site, then read that DAT item's condition; (C) idx1 control silent again => instrument invalid, then arm earlier (TRAPSWAP=1000) or use a game-side store log in a fixup script.
-Read: 'stop reason = watchpoint N' in lldb_att1.log (1=idx1 control must be >0), bt frames. Then dump lv0 DAT items targeting idx 2/3 offline (type u16 @0 in {0x18,0x19}).
+# Next work unit: read s5480_objc_end (scratch/agent/m6/s5480_objc_end, SOAK-RESULTS.md)
+Question: once counter word 0x138064 reaches 3 (wp hit, TS timestamps in lldb_att1.log), do breakpoints setHudEnableBit4 / requestMissionTransitionMode fire?
+Hypotheses: (A) bp fires within seconds -> mission ends legitimately at ~450 s hold; read which phase follows. (B) counter hits 3 but bp never fires -> lv0_checkComplexObjectives not called or early-out upstream: find its caller. (C) counter never reaches 3 this run (autopilot variance) -> repeat; s5479 got 3 only at the end.
+Control: wp on 0x138064 must show stores (it did in s5479).
 HYPOTHESIS-ID: m6-mission-end-trigger
