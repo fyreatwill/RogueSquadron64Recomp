@@ -163515,3 +163515,15 @@ as `data_gap_800027B8`. H2 selected: no rename is justified. This rules out
 only a semantic rename for this candidate; the sweep continues with the next
 live placeholder. ORIGIN: no mitigation or runtime change; this was a bounded
 static exact-span audit documented in `docs/RENAME-S5571.md`.
+
+## Session 5572 (2026-10-19) — audited synchronized gap at 0x8000337C
+
+Work unit: compare the next generated placeholder against the companion symbol
+map, generated registration/body, and independent syms table. The current
+tree already uses `data_gap_8000337C` in `funcs.h`, `recomp_overlays.inl`, and
+`funcs_0.c`; its generated body is the isolated four-byte `lw $s7, 0x2C($sp)`
+before `setVideoReadyFlag`. The companion map calls the exact span a
+non-callable fragment, and the independent TOML agrees on address and size.
+H3 selected: no rename is justified and no runtime change was made. The next
+lead is `fake_func_8006ACA4`. See `docs/RENAME-S5572.md`. ORIGIN: no
+mitigation; bounded static audit only.

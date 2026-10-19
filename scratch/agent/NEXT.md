@@ -1,11 +1,9 @@
 Single next work unit: perform one bounded generated-symbol audit for the next
-remaining live placeholder after `fake_func_800027B8`. Use the companion
-decomp map, generated function span/callers, and `syms/rogue_squadron.syms.toml`;
-rename only when all three agree on a semantic function and exact span. If the
-record is a data gap, invalid fragment, or lacks a semantic companion, leave it
-unchanged and record that classification. The next candidate is
-`data_gap_8000337C` in the current generated tree; verify whether the live
-placeholder source and mapping surfaces are synchronized before advancing.
+remaining live placeholder, `fake_func_8006ACA4`. Use the companion decomp map,
+generated function span/callers, and `syms/rogue_squadron.syms.toml`; rename only
+when all three agree on a semantic function and exact span. If the record is a
+data gap, invalid fragment, or lacks a semantic companion, leave it unchanged
+and record that classification.
 
 Competing hypotheses and discriminator:
 
@@ -23,7 +21,7 @@ and write a bounded audit under `docs/RENAME-S5571.md`.
 Expected commands:
 
     rg -n --glob 'funcs_*.c' '^RECOMP_FUNC void (func_|fake_func_)' ../N64Recomp/RecompiledFuncs | head -1
-    rg -n '<candidate-address>|<candidate-name>' rogue_squadron syms tools
-    sed -n '<bounded-window>p' RecompiledFuncs/funcs_<N>.c
+    rg -n '8006ACA4|fake_func_8006ACA4|func_8006ACA4' ../rogue_squadron64 syms tools ../N64Recomp/RecompiledFuncs
+    sed -n '<bounded-window>p' ../N64Recomp/RecompiledFuncs/funcs_<N>.c
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep

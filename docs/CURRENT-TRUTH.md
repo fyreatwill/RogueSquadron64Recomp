@@ -40,6 +40,13 @@ IMEM PC, task-local progress/end) before another comparison. Details of
 s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
 compaction).
 
+Session 5572 audited the next remaining generated placeholder,
+`fake_func_8000337C`. The generated tree is already synchronized to
+`data_gap_8000337C`; the companion map explicitly calls its exact 4-byte span
+a non-callable fragment before `setVideoReadyFlag`, and the independent syms
+table agrees. H3 selected; no rename or runtime change is authorized. The next
+live placeholder by address is `fake_func_8006ACA4`.
+
 Session 5571 audited the first remaining live generated placeholder,
 `fake_func_800027B8`. Its two-instruction span is a non-callable fragment
 between `getOsResetType` and `processPolledControllerData`; the companion map
