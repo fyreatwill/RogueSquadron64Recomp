@@ -162999,3 +162999,9 @@ s5499 BLOCKED.md asked for a human-chosen target. Real-input play fidelity and t
 
 ## Session 5500 (2026-10-18) — unblock s5499: direction block re-scoped to distinct second-mission coverage
 Ran: no game run; doc reads only (BLOCKED.md, NEXT.md, CURRENT-TRUTH, PORTING-STATE s5435/s5437/s5449). Showed: of the three options in the s5499 block, only real-input play fidelity and the rename sweep need a human; second-mission coverage has its recipe pieces already (keyed hold harness, autopilot_hangar_probe.sh). Rules out: that the project needs a human to continue. Not tested: whether the hangar route reaches a distinct mission (flaky 3/5 per s5378) — that is the new NEXT.md unit (second-distinct-mission-coverage). Route taken: 3 (re-scope); details scratch/agent/UNBLOCK.md.
+
+## Session 5501 (2026-10-18) — second-mission hook: generated code located, selector not named; BLOCKED
+- Pivot required a committed build/runtime change. Candidate: env hook ROGUESQ_FORCE_MISSION poking the hangar selected-mission word (s5450 stick-press soaks never had a control that keys change the mission).
+- Found: generated C is in ../N64Recomp/RecompiledFuncs; mainGameLoop = funcs_8.c:22428; it calls menuInit 0x800C58A0 (a0=state struct, a1=1/2) around funcs_8.c:22810 then reads flags word 0x10 of that struct. The mission selector word was NOT identified; a scout subagent failed (bash denied) and the inline read showed no level-index load. Poke template: main.cpp:7529-7537; autopilot schedule: main.cpp:9506-9535.
+- No code changed, no game run: observation-only, not engineering. Going BLOCKED per the pivot rule.
+ORIGIN: n/a (no mitigation added).
