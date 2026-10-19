@@ -163617,3 +163617,12 @@ What ran: no game run this iteration. Built and enqueued scratch/agent/soak_queu
 Hypotheses (see NEXT.md): H1 trio reaches title 0x00790400; H2 trio also stuck at 0x696100 (title-route regression since s5463); H3 title reached but no plume crash in N.
 Result: pending. The loop runs the recipe between iterations and appends to SOAK-RESULTS.md; summary lands in scratch/agent/soak_results/s5579_plume_lle4/summary.
 Rules out: nothing yet.
+
+## Session 5580 (2026-10-19) — s5579 soak was a tooling null; fixed and re-queued
+s5579_plume_lle4 verdict line read rc=0 in 0 s. Its log shows `A: unbound variable` at line 3 and
+`mkdir: /scratch: Read-only file system`: the recipe lacked the `[ -n "$ZSH_VERSION" ] || exec /bin/zsh`
+guard, so the runner ran it under another shell, `${0:A:h}` failed, ROOT was empty, and the game never
+launched. Not a title/plume datum (no positive control possible: nothing ran). Wrote
+scratch/agent/soak_queue/s5580_plume_lle4.sh = same recipe + guard (and simplified poll to grep the log
+directly). Rules out nothing about the title route; H1/H2/H3 from s5579 remain undecided. The s5578
+claim that the LLE trio is the missing ingredient stays single-source.
