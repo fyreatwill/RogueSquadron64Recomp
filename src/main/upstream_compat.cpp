@@ -499,7 +499,11 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         // s5486: dump at the VI line pitch (hi-res 640/1024 phases were previously cropped to 320x224).
         uint32_t stride = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
         if (stride < 64u || stride > 1024u) stride = 320u;
-        const uint32_t dw = stride, dh = stride * 224u / 320u;
+        // s5487: VI_WIDTH=1024 frames are a 512-wide buffer whose rows are paired side by side (s5486 PNGs: left/right halves
+        // were adjacent scanlines, rest of the 716-row dump was unrelated RDRAM). Dump those as 512x448 at pitch 512.
+        const uint32_t dw = stride > 640u ? stride / 2u : stride;
+        const uint32_t dh = stride > 640u ? 448u : stride * 224u / 320u;
+        if (stride > 640u) stride = dw;
         snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
         if (FILE* f = fopen(path, "wb")) {
             fprintf(f, "P6\n%u %u\n255\n", dw, dh);

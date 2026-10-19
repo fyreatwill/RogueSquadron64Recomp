@@ -254,7 +254,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5486:** fb dump now follows VI width (code change); soak s5486_menu_fb_dump queued - read its fbd/*_w*.ppm and judge menu overlay frames (NEXT.md).
+- **s5486/s5487:** fb dump follows VI width; s5486 soak read: menu overlays (title, select-game, SW crawl) render correctly, w1024 'noise' was a dump artifact (buffer is 512 wide, rows paired). Dumper fixed for stride>640; confirm via s5487_menu_fb_dump2. Menu-overlay fidelity: no defect found.
 - **s5485:** s5484 block refuted (second-mission recipe already exists, s5435/s5437). Next = menu/results overlay fidelity dump (NEXT.md).
 - **s5484 (TOP, BLOCKED on direction):** s5483 read (single-source): after flags|=0x40 runInMissionFrame exits (bufferArbiterProducerScanWait at funcs_42.c:13521), mainGameLoop runs loadOverlay(1)+menuInit(0x800C58A0) and loops at the menu head. Mission end -> results/menu chain is legitimate and fully traced; post-mission presents are the menu overlay, not a stall. All open threads closed (M5, M3, M6 endurance, mission-end). Needs a human-chosen next target (BLOCKED.md).
 - **s5477 (superseded):** objective counters 2/3 (mission-end gate in lv0) have NO code writer; only DAT-driven effects (applyDatObjectiveTriggerEffect 0x80065980 etc.) change them (docs/M6-OBJECTIVE-COUNTER-WRITERS.md, static single-source). s5478: built+queued (INVALID: armed at swap 7600, control silent; s5479 re-armed at swap 1100) watchpoint soak on 0x138060..6C (idx1 = control; scratch/agent/m6_objc_stores.sh); read its result, then dump lv0 DAT items targeting idx 2/3 (NEXT.md).
