@@ -1,5 +1,2 @@
-# UNBLOCK s5500
-Route 3 (re-scope). s5499 BLOCKED.md asked a human to choose: second mission, real-input play, or rename sweep.
-Only real-input play (human judgement of audio/visual) and the rename sweep (authorisation, known not to reset churn) truly need a human. Second-mission coverage does not: recipe pieces exist (s5435/s5437 keyed hold, autopilot_hangar_probe.sh), so it becomes the autonomous target.
-Evidence: doc-read only (BLOCKED, NEXT, CURRENT-TRUTH, PORTING-STATE s5435/s5437/s5449). No game run.
-Open human dependencies in CURRENT-TRUTH: real-controller play fidelity; rename-sweep authorisation.
+# UNBLOCK s5502
+Route taken: 1 (refute). The block asked for the global the hangar mission-select writes. It is already named: gCurrentLevel @ 0x80130B70 (datasyms.toml:1072, docs/game-architecture.md:39, referenced in ~6 M3 audit docs). Observation that refuted it: one grep of syms/ and docs/ for the level/mission names. No human decision or static-trace-from-scratch was needed. Whether the hangar writes this word directly (vs. a menu index mapped to it) is untested; NEXT.md has a read-only positive-control log first.

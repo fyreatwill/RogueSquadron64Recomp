@@ -163005,3 +163005,6 @@ Ran: no game run; doc reads only (BLOCKED.md, NEXT.md, CURRENT-TRUTH, PORTING-ST
 - Found: generated C is in ../N64Recomp/RecompiledFuncs; mainGameLoop = funcs_8.c:22428; it calls menuInit 0x800C58A0 (a0=state struct, a1=1/2) around funcs_8.c:22810 then reads flags word 0x10 of that struct. The mission selector word was NOT identified; a scout subagent failed (bash denied) and the inline read showed no level-index load. Poke template: main.cpp:7529-7537; autopilot schedule: main.cpp:9506-9535.
 - No code changed, no game run: observation-only, not engineering. Going BLOCKED per the pivot rule.
 ORIGIN: n/a (no mitigation added).
+
+## Session 5502 (2026-10-18) — UNBLOCK: s5501 block refuted (mission word already named)
+- s5501 asked for the selected-mission global. Grep of syms/docs: gCurrentLevel @ 0x80130B70 (level enum 0..0x14) is already in datasyms.toml and game-architecture.md. Route 1 (refute). Untested: that the hangar selector writes this word directly. NEXT.md rewritten: read-only log (positive control) -> find writers -> ROGUESQ_FORCE_MISSION poke. No code changed, no game run.
