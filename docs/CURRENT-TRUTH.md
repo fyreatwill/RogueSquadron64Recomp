@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5570 (2026-10-19).
+Compact operational handoff, maintained at Session 5571 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -39,6 +39,13 @@ discriminator is the matching port schema (phase epoch, image identity, mapped
 IMEM PC, task-local progress/end) before another comparison. Details of
 s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
 compaction).
+
+Session 5571 audited the first remaining live generated placeholder,
+`fake_func_800027B8`. Its two-instruction span is a non-callable fragment
+between `getOsResetType` and `processPolledControllerData`; the companion map
+and independent syms table agree on the exact 8-byte `data_gap_800027B8` span.
+H2 selected; no rename or runtime change is authorized. The next candidate is
+the following live placeholder after checking synchronization surfaces.
 
 ## Durable state
 
@@ -278,7 +285,11 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5570 (TOP):** The ranked/lane comparison passes all controls and aligns
+- **s5571 (TOP):** The first generated-symbol candidate, `fake_func_800027B8`,
+  is an exact 8-byte non-callable gap and remains unchanged. Continue the
+  bounded sweep with the next live placeholder; do not infer semantic names
+  from address-only or companion fake entries.
+- **s5570:** The ranked/lane comparison passes all controls and aligns
   ordered groups at both mapped PCs, but every lane mask is empty in both arms.
   H3 remains selected: the lane witness did not fire, so no writer or value
   conclusion follows. Do not rerun the schema or ranked comparison. The next

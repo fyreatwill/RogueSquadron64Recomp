@@ -163502,3 +163502,16 @@ This rules out only the proposed rank-alignment explanation as currently
 observable; it does not authorize a mitigation or accumulator conclusion.
 The next unit pivots to the bounded generated-symbol sweep. ORIGIN: no
 mitigation; only offline analyzer logic and normalized witness fields changed.
+
+## Session 5571 (2026-10-19) — audited generated gap at 0x800027B8
+
+Work unit: compare the first remaining live generated placeholder against the
+companion symbol map, generated body boundary, and independent syms table.
+`fake_func_800027B8` is exactly two `addu` instructions at `0x800027B8` and
+`0x800027BC`, followed by `processPolledControllerData` at `0x800027C0`; it
+has no callable prologue or return. The companion map supplies no semantic
+name, while the independent syms table classifies the exact 8-byte interval
+as `data_gap_800027B8`. H2 selected: no rename is justified. This rules out
+only a semantic rename for this candidate; the sweep continues with the next
+live placeholder. ORIGIN: no mitigation or runtime change; this was a bounded
+static exact-span audit documented in `docs/RENAME-S5571.md`.
