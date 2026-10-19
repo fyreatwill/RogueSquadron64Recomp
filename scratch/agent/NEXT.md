@@ -1,4 +1,4 @@
-Single next unit (M6 play-through endurance, directive 3b): queue >=3 soaks on the title->mission route (reuse the s5378 recipe / scratch/agent/s5525_base.sh as template) with a keyed mission hold >=10 min, logging every CRASH/abort and every stall (VI origin unchanged >30 s). Check CGSSessionScreenIsLocked first. Each distinct failure: lldb backtrace, name the writer.
-Hypotheses: H1 mission hold is stable (no crash/stall in 3x10min); H2 a stall/hang appears (VI origin frozen); H3 a crash recurs with a new backtrace.
-Discriminator: count of CRASH/stall events across the 3 runs with a same-run positive control (VI origin advancing before mission).
+Single next unit: fold the three queued soaks s5527_hangar_{a,b,c} (scratch/agent/SOAK-RESULTS.md tail; scratch/agent/m6/s5527_hangar_*/summary and keys.log). Count crashlines, vi_stalls30s, allattempts-failed per run. Same-run control: "mission t=" row plus fbhash distinct>1.
+Hypotheses: H1 stable (0 crash/stall); H2 stall (VI origin frozen >30s); H3 new crash -> capture lldb backtrace (attach; launch fails getcwd EPERM), name the writer, fix root cause.
+If all clean: M6 hangar route closed; pivot to generated-symbol-renaming revisit or render fidelity in flight (sky-only frames, OPEN per s5423 caveat).
 HYPOTHESIS-ID: m6-mission-endurance
