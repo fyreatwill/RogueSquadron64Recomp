@@ -163689,3 +163689,8 @@ Next: fold both; if a stop-reason appears, name the writer of the si_addr=0x58 d
 Ran: nothing new (loop ran the soaks). s5590_attach_e and _f: control=PASS in both; 10 attached title boots each. lldb stop reasons across all 20 runs: SIGSTOP (attach) and SIGKILL (harness kill) only; zero SIGSEGV, no si_addr=0x58. Positive control passed, so the instrument could have seen a crash. With s5587 hold b-d (clean), the ~1/7 title plume SIGSEGV did not recur in ~20 attached boots (P(0/20 at 1/7) ~ 4.6%). Single-source; the rate may have dropped under lldb timing or been fixed by earlier work; not closed.
 Rules out: lldb being unable to observe (control PASS). Does not prove the crash is fixed.
 Next: M6 mission-hold soaks s5592_m6_long_g,h,i queued (copies of the s5554 recipe, >=10 min each).
+
+## Session 5593 (2026-10-19) — s5592 M6 long holds g,h folded: clean; queued 20-min hold j
+Ran: nothing in-game (loop ran the soaks). s5592_m6_long_g: hold=905s alive_at_end=1 vi_stalls30s=0 crashlines=0 mission_cycles=4 godrefills=13. s5592_m6_long_h: hold=901s alive=1 vi_stalls30s=0 crashlines=0 mission_cycles=1 godrefills=4. (The only CRASH/abort grep hit in each log is the summary word "crashlines".) With s5551 d / s5554 a-c that is 6/6 long mission holds clean.
+Rules out: a mission-hold crash/stall at ~15 min on this route in 6 runs; no control issue (summary lines come from the same m6_god_common.sh harness with selftest). Does not cover the flaky hangar route or a second mission.
+Next: s5592_m6_long_i still queued; added s5593_m6_long_j (HOLD=1200) to stretch the endurance window.
