@@ -78,6 +78,13 @@ Details of s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
   clobbers a saved return address after its last call. See
   `docs/M3-RA-RETURN-IDIOM-AUDIT.md` and
   `tools/audit_ra_return_idiom.py`.
+- **M3 `$at`/`r1` branch joins (s5560).** The whole-tree census found 2,681
+  multi-predecessor joins and 413 touching `$at`; 25 apparent use-before-write
+  candidates all belong to explicit data-gap/invalid records or malformed
+  cross-function fragments. The ordinary `loadOverlay` join control fired and
+  no reachable complete function remained. See
+  `docs/M3-AT-BRANCH-JOIN-AUDIT.md` and
+  `tools/audit_at_branch_join.py`.
 - Native hangar artifacts remain localized: rim band, holo spikes, stale right
   edge, Factor 5 overlay splice, accumulator origin, pillar references,
   `0x1F0D74`, and odd PI DMA are parked. No mitigation is authorized without
@@ -229,11 +236,13 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5559 (TOP):** Late `$ra` writes audited and closed as invalid/data-gap,
-  Factor 5 control-flow, or intentional tail-return material. Next: one more
-  unlisted M3 idiom-class audit with a whole-tree positive-control census;
-  after two more dead classes, move to priority 4 or write a specific BLOCKED
-  question.
+- **s5560 (TOP):** `$at`/`r1` branch-join candidates audited and closed as
+  invalid/data-gap or malformed cross-function fragments, with positive and
+  independent fixup controls. Next: one more unlisted M3 idiom-class audit
+  with a whole-tree positive-control census; after one more dead class, move
+  to priority 4 or write a specific BLOCKED question.
+- **s5559:** Late `$ra` writes audited and closed as invalid/data-gap, Factor 5
+  control-flow, or intentional tail-return material.
 - **s5558:** `$sp` adjustment balance audited and closed as an artifact/worker
   class. No conclusions overturned.
 - **s5557 (TOP):** M3 class `$zero`-destination writes audited: 0 `ctx->r0` refs in generated C (control: r2 55248), dead by construction (`docs/M3-ZERO-REG-WRITE-AUDIT.md`). Next: another unlisted class. No conclusions overturned.
