@@ -163610,3 +163610,10 @@ them, so it never reaches title in 120 s. Single-source (recipe diff), not yet r
 Next: rerun the no-lldb loop with the LLE trio added (same script, one env change) and
 count title origins, then lldb on the arm that reaches title.
 Outcome note: soak runs consumed the session; no code change. ORIGIN: n/a (no mitigation).
+
+## Session 5579 (2026-10-19) — queued LLE-trio plume title-loop soak (N=4)
+
+What ran: no game run this iteration. Built and enqueued scratch/agent/soak_queue/s5579_plume_lle4.sh, a copy of the s5578 no-lldb recipe plus ROGUESQ_LLE_FORCE=1 / LLE_UNGATED=1 / LLE_SOLO=1 (the s5463 title recipe's trio). The poll now greps only the last 3 MB of the log every 3 s (40 polls, 120 s cap per attempt), because the s5578 per-second full-file grep over 70 MB logs was costly.
+Hypotheses (see NEXT.md): H1 trio reaches title 0x00790400; H2 trio also stuck at 0x696100 (title-route regression since s5463); H3 title reached but no plume crash in N.
+Result: pending. The loop runs the recipe between iterations and appends to SOAK-RESULTS.md; summary lands in scratch/agent/soak_results/s5579_plume_lle4/summary.
+Rules out: nothing yet.
