@@ -254,7 +254,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5477 (TOP):** objective counters 2/3 (mission-end gate in lv0) have NO code writer; only DAT-driven effects (applyDatObjectiveTriggerEffect 0x80065980 etc.) change them (docs/M6-OBJECTIVE-COUNTER-WRITERS.md, static single-source). Next: instrument the 4 store sites + dump lv0 DAT items targeting counters 2/3 (NEXT.md).
+- **s5477 (TOP):** objective counters 2/3 (mission-end gate in lv0) have NO code writer; only DAT-driven effects (applyDatObjectiveTriggerEffect 0x80065980 etc.) change them (docs/M6-OBJECTIVE-COUNTER-WRITERS.md, static single-source). s5478: built+queued watchpoint soak on 0x138060..6C (idx1 = control; scratch/agent/m6_objc_stores.sh); read its result, then dump lv0 DAT items targeting idx 2/3 (NEXT.md).
 - **s5476 (TOP):** 0x10B69C is a one-shot hint latch (flags 31/5/26 clear), NOT the end gate; s5475's "word[3] missing" framing is superseded. End = counter 0x138060[2]>=3 or [3]>=9; next find counter incrementers (NEXT.md; docs/M6-OBJECTIVE-STATE-MACHINE.md).
 - s5475: 562 s hold (s5475a, onset t=85 s, alive, no crash): breakpoints setHudEnableBit4/requestMissionTransitionMode never fired; 0x10B690 words 0-2 rose 0->1 gradually (legitimate), word[3] stayed 0, 0x138060[0] reached 1. Mission end needs a 4th objective step the autopilot does not trigger in ~9 min (not a stall). Next: disassemble writer of 0x8010B69C, then autopilot change or 900 s hold (see NEXT.md).
 - s5474 (done): helpers decoded (objective counters 0x80138060[n-1]; fires on counter[2]>=3 or [3]>=9); 330 s hold: counters live and monotonic, end not reached.
