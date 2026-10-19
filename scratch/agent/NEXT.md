@@ -1,3 +1,2 @@
-# Next work unit
-Fold soak s5487_menu_fb_dump2 (scratch/agent/m6/s5487_menu_fb/fbd; the 1024-VI frames now dump as 512x448 and are named w512 - check early frames ~500-1300 for noise-free menus; convert with `python3 -I scratch/agent/m6/ppm2png.py out.png in.ppm`). Then resume M6 endurance: queue >=3 x 10-min mission holds, log any crash/stall; investigate the second STAR WARS logo copy at the bottom of w640 crawl frames only if it persists after the pitch fix.
-HYPOTHESIS-ID: menu-overlay-fidelity
+Fold SOAK-RESULTS lines for m6_hold_a/b/c (summary files: scratch/agent/m6/m6_hold_*/summary, keys.log). Any crash/stall/died_in_verify: capture backtrace (lldb arm) and name the writer. If all 3 clean, next: extend hold beyond the 600s soak cap (needs loop cap change or in-game save/skip) or probe mission end/results transition.
+HYPOTHESIS-ID: m6-mission-endurance
