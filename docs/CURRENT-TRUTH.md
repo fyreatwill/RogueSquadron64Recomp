@@ -326,7 +326,14 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5578 (TOP):** The no-lldb default-route loop (3 attempts, 120 s) also stayed
+- **s5579 (TOP, pending):** Queued `soak_queue/s5579_plume_lle4.sh` (s5578 loop + LLE
+  trio, cheap tail-based poll, N=4). No result yet - read SOAK-RESULTS.md first.
+  Titles >=2/4 -> queue an lldb variant to catch the si_addr=0x58 SIGSEGV; 0/4 at
+  `0x696100` -> title-route regression since s5463, diff env against the s5463
+  recipe; titles but no crash -> raise N. The s5578 claim that the LLE trio is the
+  missing ingredient is still single-source until this lands.
+
+- **s5578 (superseded by s5579 as top):** The no-lldb default-route loop (3 attempts, 120 s) also stayed
   at origin `0x696100`, 0 titles, no crash marker, so lldb is NOT the blocker
   (overturns the implicit s5577 assumption that dropping lldb would reach title;
   it was believable because the lldb control was the only thing that differed
