@@ -163115,3 +163115,9 @@ Result: f7 sequence = `A5E5C val=0x13` -> `[saveslot] force=7` -> `DC2C val=0x07
 ORIGIN: no mitigation added; this names the writer of the observed reset (legitimate value, caller-supplied a0).
 Rules out: save-slot byte, B40 poke, cine arg as mission selector. Open: what feeds cinematicLoopBody's a0 when s0 loop reaches initMission, and whether a mission index exists elsewhere (two initMission call sites in funcs_8.c).
 Next: s5523 static+runtime caller provenance for initMission (0x800FA250): log ra and a0 at entry and cinematicLoopBody caller ra, in one build.
+
+## Session 5523 (2026-10-19) — cinematicLoopBody entry args name the B40 source: a0, and it is 0x13 once then 0 for both mission inits
+Built (tools/apply_s5523_im_ra.py live + mirrored in fixup_game_funcs_vendored.py): `[cineBody]` entry log (ra/a0/a1/a2/B40) at 0x800A5D80 and ra/a0/a1 added to the `[initMission]` log. One base run (m6_god_common.sh, tag s5523_im_ra, 520 s, no forcing).
+Result (scratch/agent/m6/s5523_im_ra/run.log): cineBody#1 a0=0x13 a1=2 (B40 0->0x13, gCurrentLevel 0x13, the title/boot phase); cineBody#2 and #3 a0=0 a1=0 a2=0 (B40 -> 0); initMission#1 a0=0xE1 and #2 a0=0xE6, both with B40=0x00. Positive control: the pre-existing `[initMission]`/`[b40w]` lines all fired.
+Reading: B40 = cinematicLoopBody's a0 (0x800A5E5C stores it). Both mission inits get a0=0 without save data, so H3 (only index 0 reachable without a save/caller change) is supported; H1 (varying a0) not seen in this run; H2 not tested. ra=0x00000000 at every entry: ctx->r31 is not maintained across these recomp calls, so ra is useless as caller identity here (single-source, 1 run).
+Next: the caller that supplies cineBody a0 (0x13 vs 0) — log it at the call wrapper (fixup line ~37349 passes U32(ctx->r4)) with a distinct call-site id, and force a0 there.

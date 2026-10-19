@@ -37385,6 +37385,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
                 changed = True
                 report.append(f"{p.name}: s3305 main postviewer table patched x14")
 
+    if p.name == "funcs_27.c" and "PATCH: s5523 cineBody entry log" not in text:
+        _a = '    // 0x800A5D80: addiu       $sp, $sp, -0xD8\n'
+        if text.count(_a) == 1:
+            _code = '    { static int s_c = 0; if (s_c++ < 40) { fprintf(stderr, "[cineBody] call#%d ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X B40=0x%02X\\n", s_c, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), (unsigned)MEM_BU(0xB40, S32(0X8013 << 16))); } } /* PATCH: s5523 cineBody entry log */\n'
+            text = text.replace(_a, _code + _a, 1)
+            changed = True
+            report.append(f"{p.name}: s5523 cineBody entry log patched")
+
     if p.name == "funcs_42.c" and "PATCH: s5508 initMission sel" not in text:
         _a = "    // 0x800FA250: addiu       $sp, $sp, -0x80\n"
         if text.count(_a) != 1:
@@ -37393,7 +37401,7 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             _code = (
                 "    { static int s_fs = -2; static int s_n = 0; if (s_fs == -2) { const char* e = getenv(\"ROGUESQ_FORCE_INITMISSION_SEL\"); s_fs = (e && e[0]) ? (int)strtol(e, 0, 0) : -1; }\n"
                 "      extern int g_rs64_s5508_in_mission; g_rs64_s5508_in_mission = 1;\n"
-                "      if (s_n++ < 8) { fprintf(stderr, \"[initMission] call#%d B40=0x%02X force=%d\\n\", s_n, (unsigned)MEM_BU(0xB40, S32(0X8013 << 16)), s_fs); }\n"
+                "      if (s_n++ < 8) { fprintf(stderr, \"[initMission] call#%d B40=0x%02X force=%d ra=0x%08X a0=0x%08X a1=0x%08X\\n\", s_n, (unsigned)MEM_BU(0xB40, S32(0X8013 << 16)), s_fs, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5)); }\n"
                 "      if (s_fs >= 0) { MEM_BU(0xB40, S32(0X8013 << 16)) = (uint8_t)s_fs; fprintf(stderr, \"[initMission] B40 forced -> 0x%02X\\n\", s_fs); } } /* PATCH: s5508 initMission sel */\n")
             text = text.replace(_a, _code + _a, 1)
             changed = True
