@@ -1,4 +1,4 @@
-Single next unit: explain what initMission (funcs_42.c) does with a0 = 0x32/0xD3/0xE3 under ROGUESQ_FORCE_CINE_A0=1/2 and why f2 emits no [mfst] lines. Offline read first (grep initMission body), then add one content-aware metric (level/DL name or fbhash at phase 7) and rerun base/f1/f2 via scratch/agent/s5525_*.sh.
-Hypotheses: H1 a0 picks a different mission whose data load is not visible to [mfst]; H2 initMission a0 is a pointer (the values are heap addresses, not mission ids) so differences are allocator noise; H3 f2 hits an early-out path.
-Discriminator: fbhash/DL hash differs between base and f1 at the same VI phase.
-HYPOTHESIS-ID: second-distinct-mission-coverage
+Single next unit (M6 play-through endurance, directive 3b): queue >=3 soaks on the title->mission route (reuse the s5378 recipe / scratch/agent/s5525_base.sh as template) with a keyed mission hold >=10 min, logging every CRASH/abort and every stall (VI origin unchanged >30 s). Check CGSSessionScreenIsLocked first. Each distinct failure: lldb backtrace, name the writer.
+Hypotheses: H1 mission hold is stable (no crash/stall in 3x10min); H2 a stall/hang appears (VI origin frozen); H3 a crash recurs with a new backtrace.
+Discriminator: count of CRASH/stall events across the 3 runs with a same-run positive control (VI origin advancing before mission).
+HYPOTHESIS-ID: m6-mission-endurance
