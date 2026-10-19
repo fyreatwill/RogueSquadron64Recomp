@@ -162924,3 +162924,6 @@ Read s5483_postloop (lldb_att1.log, 452 s alive, wp_hits=21, single-source). Aft
 
 ## Session 5485 (2026-10-18) — unblock: s5484 direction block refuted/re-scoped
 BLOCKED.md asked for a direction, option 1 assuming a missing key recipe for a second mission. That recipe already exists and was flown (s5435/s5437/s5438: briefing -> flight -> hangar -> flight, 3/3 clean). Re-scoped NEXT.md to menu/results overlay fidelity (hypothesis menu-overlay-fidelity). No game run; doc-read evidence only. Details: scratch/agent/UNBLOCK.md.
+
+## Session 5486 (2026-10-18) — fb dump follows VI line pitch (pivot: runtime change landed)
+Mandatory-pivot iteration. Changed `src/main/upstream_compat.cpp` ROGUESQ_FB_DUMP_DIR: previously always cropped to 320x224 (stride already followed VI_WIDTH); now width = VI_WIDTH (64..1024), height = width*224/320, filename `fb_<swap>_w<width>.ppm`. Built clean. Queued `soak_queue/s5486_menu_fb_dump.sh` (m6_keyed_hold_post recipe, FBD_EVERY=100, hold 420 s) for the menu/results overlay fidelity inspection (NEXT.md). No result yet; the 16bpp assumption is untested for 32bpp VI modes.

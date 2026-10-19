@@ -496,14 +496,16 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     static const int s_fbd_every = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EVERY"); int v = e ? atoi(e) : 0; return v > 0 ? v : 500; }();
     if (s_fbd && *s_fbd && n % s_fbd_every == 0) {
         char path[512];
-        snprintf(path, sizeof path, "%s/fb_%07d.ppm", s_fbd, n);
+        // s5486: dump at the VI line pitch (hi-res 640/1024 phases were previously cropped to 320x224).
+        uint32_t stride = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
+        if (stride < 64u || stride > 1024u) stride = 320u;
+        const uint32_t dw = stride, dh = stride * 224u / 320u;
+        snprintf(path, sizeof path, "%s/fb_%07d_w%u.ppm", s_fbd, n, stride);
         if (FILE* f = fopen(path, "wb")) {
-            fprintf(f, "P6\n320 224\n255\n");
+            fprintf(f, "P6\n%u %u\n255\n", dw, dh);
             const uint32_t phys = fb & 0x00FFFFFF;
-            uint32_t stride = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
-            if (stride < 64u || stride > 1024u) stride = 320u;
-            for (uint32_t i = 0; i < 320u * 224u; ++i) {
-                const uint32_t o = ((i / 320u) * stride + (i % 320u)) * 2u;
+            for (uint32_t i = 0; i < dw * dh; ++i) {
+                const uint32_t o = ((i / dw) * stride + (i % dw)) * 2u;
                 uint16_t px = (uint16_t)((rdram[((phys + o) & 0x7FFFFFu) ^ 3] << 8) | rdram[((phys + o + 1) & 0x7FFFFFu) ^ 3]);
                 unsigned char rgb[3] = {(unsigned char)(((px >> 11) & 31) * 255 / 31), (unsigned char)(((px >> 6) & 31) * 255 / 31), (unsigned char)(((px >> 1) & 31) * 255 / 31)};
                 fwrite(rgb, 1, 3, f);
