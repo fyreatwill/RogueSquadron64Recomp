@@ -163668,3 +163668,8 @@ Change: queued s5587_plume_hold_{b,c,d}.sh, identical recipe with N=1 so each fi
 Ran: nothing (soak-only fold). s5587_plume_hold_b: TITLE, ALIVE_AT_+120, origin advanced 0x790400->0x690400 (reached mission origin), bad=0. s5587_plume_hold_c: TITLE, ALIVE_AT_+120, origin 0x790400->0x62 (transient)->0x790400, bad=0. Both controls (TITLE + ALIVE lines) present, so these are valid nulls, not instrument failures. hold_d still queued (loop has not run it yet).
 Showed: 3/3 LLE-trio title boots held 120 s alive with no CRASHMARK/plume-null-color-attachment breadcrumb. The ~1/7 si_addr=0x58 plume SIGSEGV has not recurred; with p~1/7 per boot, P(0 of 3) ~ 63%, so this is weak evidence only. Rules out nothing structural.
 Next: fold hold_d; if 4/4 clean, BLOCKED.md asking human whether plume target stays open.
+
+## Session 5589 (2026-10-19) — folded s5587 hold_d (clean, 4/4 total); queued lldb-wrapped 6-boot plume soak
+Ran: nothing in-game. s5587_plume_hold_d: TITLE + ALIVE_AT_+120 (origin 0x790400->0x696100), bad=0; controls present. Total 4/4 held title boots, 0 crashes. With p~1/7 per boot P(0 of 4)~54%, so the plume thread is NOT closed; 4 boots cannot discriminate.
+Change: tools/agent/gen_plume_lldb_soak.py generates recipes that run the game under `lldb -b` (bt all + register read on stop) for 3 boots each, 15 s hold; queued s5589_plume_lldb_{a,b} (6 boots, ~doubles power to P(0)~40%). A recurrence now yields a real backtrace in the run log rather than the in-process handler only.
+Next: fold both; if a stop-reason appears, name the writer of the si_addr=0x58 deref from the lldb bt; else queue more lldb batches (cheap) rather than BLOCKED.

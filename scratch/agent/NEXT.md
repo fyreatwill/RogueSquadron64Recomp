@@ -1,11 +1,10 @@
-Single next work unit (s5589): fold s5587_plume_hold_d (b,c already folded in s5588: both TITLE+alive, 0 crash; total 3/3) (one title boot each, held 120 s). Loop runs them; do NOT run the game yourself.
+Single next work unit (s5590): fold s5589_plume_lldb_a and _b (3 title boots each under lldb, 15 s hold). Loop runs them; do NOT run the game yourself.
 Commands:
-  grep -n s5587 scratch/agent/SOAK-RESULTS.md
-  cat scratch/agent/soak_results/s5587_plume_hold_*/summary
-Control: each run needs "TITLE" and "ALIVE_AT_+120" lines; otherwise null.
-Prior: s5584 run1, hold_b, hold_c = TITLE+alive, no crash (N=3).
+  grep -n s5589 scratch/agent/SOAK-RESULTS.md
+  cat scratch/agent/soak_results/s5589_plume_lldb_*/summary
+Control: each boot needs a TITLE line; otherwise null (lldb launch failure shows as no TITLE).
 Outcomes:
-  - Any CRASHMARK -> read backtrace in run1.game (main.cpp:10190), name writer of si_addr=0x58 deref, fix root cause.
-  - 4/4 total alive, 0 crash -> plume thread closed; BLOCKED.md asking human: goal met or new target?
-  - Soak absent again -> BLOCKED.md asking why loop skips soak_queue.
+  - 'stop reason' / CRASHMARK in a run*.game -> read the lldb bt, name the writer of the si_addr=0x58 deref, fix root cause.
+  - All 6 TITLE, no crash (10/10 total clean) -> queue more batches via tools/agent/gen_plume_lldb_soak.py (c d e ...); after ~20 clean boots pivot to M6 mission-hold soaks.
+  - No TITLE (lldb broke boot) -> check run1.game head, drop `-o "register read"`/adjust.
 HYPOTHESIS-ID: plume-title-extended-hold

@@ -328,7 +328,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5588 (TOP):** s5587 plume holds b,c folded: both TITLE + ALIVE@+120, 0 crash (3/3 with s5584 run1; weak evidence, P(0/3 | p=1/7)~63%). Fold hold_d next (loop runs it). If 4/4 clean, BLOCKED.md asking human whether plume target stays open. No conclusions overturned.
+- **s5589 (TOP):** hold_d folded: TITLE+ALIVE@+120, 0 crash; 4/4 clean total (P(0/4 | p=1/7)~54%, plume NOT closed, no BLOCKED needed). Queued s5589_plume_lldb_{a,b} (3 boots each, run under `lldb -b` with launch, not attach - s5577's attach loop failed on tooling; if no TITLE lines, that hypothesis recurs). Generator: tools/agent/gen_plume_lldb_soak.py. After ~20 clean boots pivot to M6 mission holds.
 
 - **s5586 (TOP):** s5584 soak still pending (loop runs it after this iteration). Fold it next; no new work until it lands.
 
