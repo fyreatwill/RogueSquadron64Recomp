@@ -163062,3 +163062,6 @@ Findings: loop top L_8003E114 (0x8003E114) never reads B40 (0x80130B40); it call
 Rules out: B40 as the second-mission selector (fourth refuted selector after gCurrentLevel, B40 poke, cine-arg). Mission content must be chosen by the argument/arm that sets bit 0x02000000 in 0x18($s3) or by the 0x1F-style arg to cinematicLoopBody, i.e. by whichever writer sets that flag word bit.
 ORIGIN: no mitigation added.
 Next: find writers of bit 0x02000000 in the flag word at 0x18($s3) (s3 = mainGameLoop's state struct) and what precedes them (hangar mission pick), static grep only.
+
+## Session 5512 (2026-10-18) — maintenance: compacted CURRENT-TRUTH 517->233 lines (60.3 KB -> 18 KB)
+Step 0 triggered (wc -c = 60305). Archived the s5321-s5395 M4 headline narrative, the s5370-s5507 backlog and the s5343-s5427 trailing notes verbatim into docs/PROJECT-OVERVIEW.md (section "Archive: CURRENT-TRUTH compaction"); replaced them with a short M6 mission-end summary, refuted-selector list and older-backlog digest. No experiments run. Unfolded: s5508_im_base/f2/f7 soak results; compare [mfst] name sets in scratch/agent/m6/<tag>/run.log next iteration.
