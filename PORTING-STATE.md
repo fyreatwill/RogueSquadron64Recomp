@@ -163584,3 +163584,15 @@ not evidence that the plume defect is absent: H1/H2 are unevaluable without a
 title-origin control. It rules out only a conclusion from this forced-LLE
 attach route and selects the next test: default qualified-route attach with a
 title-origin gate. No runtime mitigation was added.
+
+## Session 5577 (2026-10-19) — default lldb plume loop remained pre-title
+
+Ran the corrected four-attempt lldb loop on the qualified default route after
+the initial 45-second gate proved too short. The injected SIGSEGV control
+passed. With a 120-second per-attempt gate, all four game attempts remained at
+phase 3, width 640, origin `0x696100`; none reached title origin
+`0x00790400`, and there were zero lldb crash stops and zero
+`plume-null-color-attachment` breadcrumbs. This selects the attach/tooling
+reachability hypothesis for this recipe, not plume absence. It rules out only
+interpreting a null plume result from these debugger attempts; the next test is
+the same qualified route without lldb, using the in-process crash handler.
