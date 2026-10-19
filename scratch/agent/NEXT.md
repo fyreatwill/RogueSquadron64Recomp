@@ -1,2 +1,2 @@
-Single next unit: fold s5527_hangar_c when it lands in SOAK-RESULTS.md (expect clean). Then M6 hangar route is closed (3/3). Next work: render fidelity in flight (sky-only frames, OPEN per s5423 caveat): design ONE instrument (fb dump + DL/tri counts per frame in flight, phase-gated on VI) to split H1 geometry never submitted / H2 submitted but culled/clipped / H3 rendered but off-screen camera. Oracle comparison is unavailable for missions.
-HYPOTHESIS-ID: m6-mission-endurance
+Single next unit: M6 is closed (title->mission 31 holds; hangar route 3/3; render in flight correct per s5490). Resume ITERATION priority 4: generated-symbol renaming sweep (tools/rename_generated_symbols.py) - one bounded batch of func_0x... names, with a regen-order check. The sweep alone does not reset the engineering-pivot counter; if it trips, land an M3 idiom-class audit guard instead.
+HYPOTHESIS-ID: generated-symbol-renaming-sweep

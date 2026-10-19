@@ -216,6 +216,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- (s5529 TOP) s5527 hangar c folded: 3/3 hangar-route holds clean (0 crash/0 stall). 'Render fidelity in flight' was already closed by s5490 (terrain+HUD visible, tricount 3.7M) - dropped as a work unit. M6 closed on both routes; NEXT: item-4 renaming sweep.
 - (s5528) s5527 hangar soaks a,b folded: 0 crash, 0 VI stall, 440 s holds, control mission_t=81s present; c pending (replication only). NEXT: render fidelity in flight.
 - (s5525) FORCE_CINE_A0 f1/f2 change B40 and initMission a0 (0x0A->0x32/0xD3/0xE3) with no crash; origin stays 0x690400 and [mfst] names are identical (f2 shows none). s5526: initMission reads NO a0 (static, funcs_42.c) - a0 values are leftovers; second-mission forcing via cine-arg/B40/save byte CLOSED. NEXT: pivot to M6 endurance soaks (title->mission, >=10 min hold, >=3 runs). Arms: scratch/agent/s5525_*.sh.
 
