@@ -254,6 +254,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5489:** keyed mission hold of 1502 s (m6_long25.sh, run directly, loop idle) survived: 0 stalls, 0 crash lines, 29960/34057 distinct fb hashes (single run). m6_hold_a/b also clean. Endurance on the autopilot route is closed past 25 min; remaining M6 gap = real-input play and flight render fidelity.
 - **s5486/s5487:** fb dump follows VI width; s5486 soak read: menu overlays (title, select-game, SW crawl) render correctly, w1024 'noise' was a dump artifact (buffer is 512 wide, rows paired). Dumper fixed for stride>640; s5487_menu_fb_dump2 CONFIRMED the fix (clean menu + mission frames). Menu-overlay fidelity: closed. Next: m6_hold_a/b/c soaks (440 s holds, 600 s soak cap precludes 10 min).
 - **s5485:** s5484 block refuted (second-mission recipe already exists, s5435/s5437). Next = menu/results overlay fidelity dump (NEXT.md).
 - **s5484 (TOP, BLOCKED on direction):** s5483 read (single-source): after flags|=0x40 runInMissionFrame exits (bufferArbiterProducerScanWait at funcs_42.c:13521), mainGameLoop runs loadOverlay(1)+menuInit(0x800C58A0) and loops at the menu head. Mission end -> results/menu chain is legitimate and fully traced; post-mission presents are the menu overlay, not a stall. All open threads closed (M5, M3, M6 endurance, mission-end). Needs a human-chosen next target (BLOCKED.md).
