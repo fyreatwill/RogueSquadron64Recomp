@@ -216,6 +216,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- (s5534 TOP) Replay residual 1,598 -> 1,008 lines: tools/fixup_movz_movn.py was missing from s5532_determinism.sh (now wired). Left: scratch-only s4299/s4222/s4601 diagnostics (live lacks them; hypothesis: unscripted strip - find or script it), ~201 live-only untagged lines + one-off live-only tags. Classes: `zsh scratch/agent/s5534_classes.sh`. Then compile-prove scratch tree when < ~300.
 - (s5533 TOP) Regen determinism: scratch replay now COMPLETES (fixup rc=0, failures=0) and differs from live by 1,598 lines in 53 files (was ~171k). 36 marker-present scripts wired; s5228/s4340 ordering, s3285-vs-s5034 deforce/reforce, dir-arg scripts, and s4340 scoped to funcs_23/24 fixed. Residual categories: `zsh scratch/agent/s5533_residual.sh`. Next: explain the residual (scratch-only s4299/s4222/s4601 ~190 lines; ~1.3k untagged), then build the scratch tree to prove it compiles. The s5532 note (stops at s5228) is superseded.
 
 - (s5530 TOP) Renaming-sweep dry-run: 0 companion-backed "selected" function renames remain (only D_/fake_func_ gaps). Mechanical sweep exhausted; loop BLOCKED awaiting direction. Fallback unit lldb plume loop is redundant (16/16 clean, see backlog line). s5531 unblock re-scoped NEXT to regen-determinism check. OPEN DEPENDENCY (human): decide whether to declare project goal met / pick a new direction.
