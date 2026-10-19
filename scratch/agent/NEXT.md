@@ -1,5 +1,4 @@
-Work unit 1 (fold): read scratch/agent/m6/s5508_im_{base,f2,f7}/run.log. Control = base shows the [mfst] manifest-name log; differing name sets between f2/f7 => B40/initMission override selects content. Record in PORTING-STATE + CURRENT-TRUTH.
-Work unit 2: static grep for writers of bit 0x02000000 in word 0x18($s3) of mainGameLoop state struct; classify each writer; name which one the hangar mission pick reaches.
-Hypotheses: H1 flag set by hangar via menu overlay with mission index in sibling field; H2 mission chosen inside cinematicLoopBody arg from save data; H3 only one mission in this path.
-Discriminator: writer list + sibling index field; positive control = base run shows the writer firing before 0x00690400.
+Work unit: runtime write-watch on guest word 0x80130B58 (flag word 0x18 of the B40 block). Add an env-gated hook in the guest store path (or lldb watchpoint on the host rdram address) logging PC, old, new on every write; positive control = log fires for ANY write (mainGameLoop clears at 0x8003E078/0x8003E274 must show). Run base hangar route once; report the PC that sets bit 0x02000000 and its caller.
+Hypotheses: H1 a menu-overlay (menuInit/0x800C58A0 callee) writes via passed pointer with register mask; H2 an overlay/cutscene dispatch (cutsceneDispatchSlotsByFlag) sets it; H3 never set on this route (initMission arm unreachable, mission launched elsewhere).
+Discriminator: writer PC list with bit-25 transitions; H3 = zero transitions with control firing.
 HYPOTHESIS-ID: second-distinct-mission-coverage
