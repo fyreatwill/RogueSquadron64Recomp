@@ -1,4 +1,4 @@
-RESUME (s5525): s5524 only landed the ROGUESQ_FORCE_CINE_A0 override in tools/fixup_game_funcs_vendored.py (unbuilt, unrun).
-Steps: 1) run fixup_game_funcs.py + cmake build; 2) grep live funcs_*.c for callers of 0x800A5D80 and classify a0 sources; 3) run base arm and env ROGUESQ_FORCE_CINE_A0=1 arm sequentially; positive control: "[cineBody] a0 forced 0 -> 1" appears.
-Hypotheses: H1 forced a0 selects a different mission; H2 a0 only indexes cinematics, mission index elsewhere; H3 forcing crashes/no-ops.
+Single next unit: explain what initMission (funcs_42.c) does with a0 = 0x32/0xD3/0xE3 under ROGUESQ_FORCE_CINE_A0=1/2 and why f2 emits no [mfst] lines. Offline read first (grep initMission body), then add one content-aware metric (level/DL name or fbhash at phase 7) and rerun base/f1/f2 via scratch/agent/s5525_*.sh.
+Hypotheses: H1 a0 picks a different mission whose data load is not visible to [mfst]; H2 initMission a0 is a pointer (the values are heap addresses, not mission ids) so differences are allocator noise; H3 f2 hits an early-out path.
+Discriminator: fbhash/DL hash differs between base and f1 at the same VI phase.
 HYPOTHESIS-ID: second-distinct-mission-coverage

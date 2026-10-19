@@ -216,6 +216,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- (s5525) FORCE_CINE_A0 f1/f2 change B40 and initMission a0 (0x0A->0x32/0xD3/0xE3) with no crash; origin stays 0x690400 and [mfst] names are identical (f2 shows none). NEXT: classify initMission's use of a0 and use a content-aware metric. Arms: scratch/agent/s5525_*.sh.
+
 - **s5523 (newest)**: B40 = cinematicLoopBody a0 (0x13 on the title cinematic, 0 for both mission inits; ra unusable, =0). Next: find who supplies that a0 and force it (see scratch/agent/NEXT.md). Single-source.
 - **s5523 (TOP):** s5520 b40w folded: B40 is reset at 0x800A5E5C = cinematicLoopBody (0x800A5D80) storing its a0 (0x13 / loop index s0 / B40 itself) — B40 is a mainGameLoop state byte, so every B40/gCurrentLevel/cine-arg/save-slot poke is clobbered by design (dynamic ordering log + static caller args). Next: log ra+a0 at the two initMission (0x800FA250) call sites and cinematicLoopBody entry in ONE build to find what the real mission index is.
 - **s5521 (TOP):** s5519 f7 folded: identical to base/f2 (save byte not the selector). The override sets B40=7 at DC2C but initMission reads 0, so a later guest store resets it. Built a `[b40w]` logger on all 10 B40 stores; fold `s5520_b40w_{f7,base}` next and name the resetting pc.
