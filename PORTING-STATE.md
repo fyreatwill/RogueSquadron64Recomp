@@ -162989,3 +162989,7 @@ fire_a: flight bright to 7000, results screen at 7500 ("AMBUSH AT MOS EISLEY / M
 Verdict: the ~frame-8000 end is a legitimate scripted MISSION FAILED (label, lives counter, tally all render correctly); end frame varies 7000-8000 across arms and fire input does not avert it (hypothesis L holds; X not seen; K ruled out since accuracy 0%/6% shows keys are processed). Not shown: why the unpiloted ship loses (single-source) and no oracle comparison.
 Rules out: runtime misfire of the mission-end counter as an M6 defect. M6 first-mission goal (flight, fail screen, retry, results hold) met across ~14 clean runs. ORIGIN: no mitigation added.
 Next: M5 audio plan (docs/M5-AUDIO-PLAN.md does not exist yet).
+
+## Session 5499 (2026-10-18) — pivot check: no unqualified M5/M3/VI-640 step remains; going BLOCKED with a direction question
+
+Read CURRENT-TRUTH, NEXT.md (stale: said "write M5 plan", but docs/M5-AUDIO-PLAN.md exists, 259 lines, rows A1-A20 and steps 0-11 all qualified/closed) and the soak tail (all rc=0 or cap-kill, no new crash/stall). Checked each mandatory-pivot option: (a) every M5 inventory row says keep/do-not-change with writers named; (b) M3 classes closed s5463, plume 16/16 clean. Landing a guard or stub change now would be mitigation without a writer (rule 11). No game run, no code change; outcome BLOCKED with BLOCKED.md asking for a target (second mission, real-input play, or rename sweep authorisation).

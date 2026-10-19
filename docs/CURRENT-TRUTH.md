@@ -253,6 +253,7 @@ progress/end observations to the port and cxd4 arms before another comparison.
 Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-12 min is the TITLE screen (VI width 1024 origin 0x790400 from 634 s): the mission ended and the game fell back to title/attract. Not a hang. Cause of mission end unknown (death vs objective vs autopilot 'r'). ROGUESQ_FB_DUMP_DIR dumps PPMs but assumes stride 320 (garbled at other widths).
 
 ## Next steps (single monotonic backlog)
+- **s5499 (TOP, BLOCKED):** M5 plan exists and is closed (not "unwritten" as s5498 said); M6/M3 closed. Needs a human target: second mission, real-input play, or rename-sweep authorisation (scratch/agent/BLOCKED.md).
 s5497 (TOP, single-source): s5496 bp soak named the count-3 bumpers: 4x updateDestructionDebrisNpc, 4x npcProbeDriod, 1x npcWingmanUpdate (all NPC death handlers under runInMissionFrame); reads as a legitimate loss count. Fire-arm soaks s5497_fire_a/b queued (godmode + A/B autopilot from t=95 s); compare end frame to ~8000.
 
 s5495: mission end (counter 0x80138064>=3, written by updateDestructionDebrisNpc from DAT item data) is a data-defined loss count; GAME OVER at ~frame 8000 for an unpiloted ship leans legitimate (single-source). Open: name the 3 NPCs / try a firing autopilot. s5496: naming soak s5496_dbc_names queued (bp on datItemSetObjectiveBooleanCount).
