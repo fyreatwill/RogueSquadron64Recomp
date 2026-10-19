@@ -1,28 +1,28 @@
-Single next unit: audit generated conditional-move idioms (`movz`/`movn` and
-their recompiler-emitted ternaries) as a whole-tree M3 class.
+Single next unit: implement the missing M4 normalized-boundary schema for one
+arm (phase epoch, ucode image identity, mapped IMEM PC, and task-local
+progress/end observations), then self-test it against the existing retail
+capture before any new accumulator comparison.
 
 Competing hypotheses and discriminator:
 
-1. H1: every conditional move preserves the MIPS source/destination semantics
-   across the generated C expression and does not clobber a later operand.
-2. H2: at least one reachable conditional move has a source/destination or
-   zero-register mismatch that changes a value.
-3. H3: apparent mismatches are invalid/data-gap fragments, duplicated delay
-   slots, or dead conditional material.
+1. H1: adding image identity and task-local progress makes the port/retail
+   accumulator records joinable and the boundary remains stable.
+2. H2: the records become joinable but the accumulator diverges only for one
+   image/phase/progress class, identifying a live writer boundary.
+3. H3: records remain structurally unjoinable or the normalized boundary is
+   absent in one arm; no writer or mitigation follows.
 
-Discriminating measurement: create one census script that enumerates every
-`movz`/`movn` comment and its generated assignment, reports source,
-destination, condition, and function classification, and includes positive
-controls for one ordinary conditional move and one known invalid/data-gap
-fragment. Every possible result must classify the whole table as H1, H2, or
-H3; land a fix only for a concrete reachable mismatch. No runtime build is
-planned.
+Discriminating measurement: one self-test and one existing-capture run must
+report nonzero image-identity, mapped-PC, and task-progress rows in both the
+retail and port schemas, then either produce normalized joins or explicitly
+select H3. Whole-RAM, VI, and mapped-PC positive controls must fire before a
+null is interpreted.
 
-Ground-truth gate: this is a generated-code semantic census, so no retail
-writer claim is needed; if a candidate survives as reachable game logic,
-consult `tools/oracle/README.md` before adding any runtime instrument.
+Ground-truth gate: use the retail oracle's image/PC/task watches before adding
+a port runtime instrument; the runtime cannot witness its own writer.
 
-Run after adding the census script:
-`python3 tools/audit_conditional_move.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`
+Read `docs/REVISIT-S5404-M4-NORMALIZED-BOUNDARY-DESIGN.md` and
+`tools/analyze_m4_normalized.py` first. Do not build until the oracle schema
+and positive controls are identified.
 
-HYPOTHESIS-ID: m3-idiom-class-audit
+HYPOTHESIS-ID: m4-normalized-boundary-schema

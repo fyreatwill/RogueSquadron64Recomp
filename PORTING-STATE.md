@@ -163316,3 +163316,26 @@ Ran the whole-tree census `tools/audit_at_branch_join.py` over the 51 generated 
 The complete 25-row table classified 18 candidates as explicit invalid/data-gap material and 7 as malformed cross-function fragments in `audioCompandS16`, `lvj_checkComplexObjectives`, or `static_3_800A2FE4`. Independent fixup evidence records trapped cross-function gotos for the latter fragments, and the companion symbol source labels the data-gap records. No ordinary reachable complete function retained a candidate. H3 selected; no patch, guard, or runtime build was added. Full table: `docs/M3-AT-BRANCH-JOIN-AUDIT.md`; reproducible census: `tools/audit_at_branch_join.py`.
 
 Rules out: a generic generated `$at`/`r1` branch-join value-loss bug as the explanation for a current crash on the qualified route. It does not rule out a new recompiler/provenance defect absent from this generated tree. ORIGIN: no mitigation added; the apparent writers and uses were classified as invalid/data material or malformed fragment control flow.
+
+## Session 5561 (2026-10-19) — audited generated conditional-move translations
+
+Ran `tools/audit_conditional_move.py` over the 51 generated
+`RecompiledFuncs/funcs_*.c` files. The census found 2,502 generated
+functions, 179 `movz`/`movn` occurrences, and 149 unique guest PCs. It
+classified 115 translations as exact guarded assignments and 64 as
+`$zero`-destination discards; condition mismatches, assignment mismatches,
+and missing translations were all zero.
+
+The same run passed the ordinary nonzero-destination control at `0x800A3914`
+and the invalid/data-gap control at `0x8009F020`. H1/H3 selected: no
+reachable ordinary conditional-move semantic mismatch was found, and the
+discarded writes are not a mitigation target. No code or runtime change was
+made. Full result: `docs/M3-CONDITIONAL-MOVE-AUDIT.md`; reproducible census:
+`tools/audit_conditional_move.py`.
+
+Rules out: a generic generated `movz`/`movn` source, destination, or
+condition translation bug as the explanation for a current crash on the
+qualified route. It does not rule out a runtime-specific value corruption
+outside these generated idioms. ORIGIN: no mitigation added; the audited
+writers were exact generated assignments or architecturally discarded
+`$zero` destinations.

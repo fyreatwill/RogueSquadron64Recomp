@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained at Session 5559 (2026-10-19).
+Compact operational handoff, maintained at Session 5561 (2026-10-19).
 `PORTING-STATE.md` is the chronological ledger. Durable background and the
 archived renaming sweep are in `docs/PROJECT-OVERVIEW.md`; per-session
 evidence is in the named `docs/*AUDIT.md` files and soak results.
@@ -85,6 +85,12 @@ Details of s5321-s5395 are archived in `docs/PROJECT-OVERVIEW.md` (CURRENT-TRUTH
   no reachable complete function remained. See
   `docs/M3-AT-BRANCH-JOIN-AUDIT.md` and
   `tools/audit_at_branch_join.py`.
+- **M3 conditional moves (s5561).** The whole-tree census found 179 `movz`/
+  `movn` occurrences at 149 guest PCs: 115 exact guarded translations and 64
+  `$zero`-destination discards, with zero condition, assignment, or missing
+  translation mismatches. The ordinary and invalid/data-gap positive controls
+  passed. See `docs/M3-CONDITIONAL-MOVE-AUDIT.md` and
+  `tools/audit_conditional_move.py`.
 - Native hangar artifacts remain localized: rim band, holo spikes, stale right
   edge, Factor 5 overlay splice, accumulator origin, pillar references,
   `0x1F0D74`, and odd PI DMA are parked. No mitigation is authorized without
@@ -236,11 +242,13 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5560 (TOP):** `$at`/`r1` branch-join candidates audited and closed as
-  invalid/data-gap or malformed cross-function fragments, with positive and
-  independent fixup controls. Next: one more unlisted M3 idiom-class audit
-  with a whole-tree positive-control census; after one more dead class, move
-  to priority 4 or write a specific BLOCKED question.
+- **s5561 (TOP):** Conditional-move candidates audited and closed: 149 unique
+  sites, zero semantic mismatches, and both positive controls passed. M3
+  idiom-class work is now exhausted for the currently listed classes. Next:
+  implement the new M4 normalized-boundary schema (phase epoch, ucode image
+  identity, mapped IMEM PC, and task-local progress/end observations) before
+  attempting another accumulator comparison; do not infer a writer from the
+  existing structurally unjoinable records.
 - **s5559:** Late `$ra` writes audited and closed as invalid/data-gap, Factor 5
   control-flow, or intentional tail-return material.
 - **s5558:** `$sp` adjustment balance audited and closed as an artifact/worker
