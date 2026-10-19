@@ -68,4 +68,28 @@ sub("swap_ack_entry", "funcs_5.c", hdr,
     "        }\n"
     "        s_swap_ack_call_n++;\n"
     "    }\n")
+
+
+# funcs_24: statement-order differences (s5541). Each rule moves every line matching
+# `pat` by `delta` lines (negative = up) and asserts the expected match count.
+def move_lines(name, fname, pat, delta, expect):
+    global fail
+    p = d / fname
+    ls = p.read_text().split("\n")
+    idx = [i for i, l in enumerate(ls) if re.search(pat, l)]
+    if len(idx) != expect:
+        print(f"{name}: FAIL expected {expect} matches, got {len(idx)}")
+        fail += 1
+        return
+    for i in (reversed(idx) if delta > 0 else idx):
+        ls.insert(i + delta, ls.pop(i))
+    p.write_text("\n".join(ls))
+    print(f"{name}: ok")
+
+
+move_lines("order_s5223", "funcs_24.c", r"^    rs64_s5223_entry_join\(rdram, \"callsite-", -2, 4)
+move_lines("order_lowfield", "funcs_24.c", r"^    rs64_m5_lowfield_store\('[HBW]', 0x800(91698|916A4|917C4|917F4)u", 1, 4)
+move_lines("order_s4873", "funcs_24.c", r"^    \{ extern void rs64_s4873_ev\(int\); rs64_s4873_ev\(1\);", -4, 1)
+sub("memw_order_24", "funcs_24.c",
+    "MEM_W(S32(0x80150000), -0X6908)", "MEM_W(-0X6908, S32(0x80150000))")
 sys.exit(1 if fail else 0)
