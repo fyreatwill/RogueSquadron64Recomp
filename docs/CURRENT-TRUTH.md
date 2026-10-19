@@ -216,6 +216,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- (s5547 TOP) Regen determinism CLOSED: make_elf ELF byte-identical; fresh N64Recomp + replay compiles to asm identical to live (only cosmetic `;`/indent, 296 lines, 3 files). RecompiledFuncs.s4204-fresh snapshot is stale vs current N64Recomp (movz/movn forms) - use scratch_s5547_regen as the fresh baseline. Next: M6 mission-hold endurance soaks (priority 3b).
 - (s5545 TOP) Replay residual ~39 -> 15: funcs_4/27/24 closed. Left: funcs_29 4, funcs_20 3, funcs_9/8/5/25 2 each. Then compile-prove.
 - (s5546 TOP) Replay residual 15 -> 0: scratch replay is text-identical to the live RecompiledFuncs (control still flags). Next: full-chain regen + cmake in a separate build dir and boot check.
 - (s5542) Replay residual ~393 -> ~120: block-move rules in fixup_live_replay.py; funcs_24 309 -> 35. Next: s4534 phase-gate removal + order leftovers, then funcs_23 (53), funcs_4, funcs_27.

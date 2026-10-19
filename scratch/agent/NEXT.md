@@ -1,2 +1,3 @@
-Single next unit: regen-determinism is text-closed (0 diff). Prove it end-to-end: full make_elf->N64Recomp->fixup chain (with replay) into a scratch dir, cmake-build in a separate build dir, boot to title 60 s, compare VI origin sequence vs live build.
-HYPOTHESIS-ID: regen-determinism-no-unscripted-handedits
+Single next unit (priority 3b, M6 endurance): enqueue >=3 title->mission soaks (recipe base: scratch/agent/soak_queue/done/s5527_m6_hangar_*.sh, which reached rc=0 3/3 at 523s) with a keyed mission hold >=10 min (needs per-run cap raised above 600 s only if the loop allows; otherwise hold ~480 s and log VI origin every 30 s). Log every CRASH/abort and any stall (VI origin unchanged >30 s). Expected: either a new crash/stall datum (then lldb backtrace + name the writer) or 3/3 clean (then lengthen hold). Check CGSSessionScreenIsLocked first.
+Regen-determinism thread closed (s5547); do not revisit.
+HYPOTHESIS-ID: m6-mission-endurance

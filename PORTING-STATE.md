@@ -163251,3 +163251,12 @@ Ran scratch/agent/s5532_determinism.sh: pristine N64Recomp output -> vendored fi
 ORIGIN: the dropped hooks are diagnostics hand-removed from live in earlier sessions (not corruption mitigations); the replay now reproduces that removal so regen cannot resurrect them.
 Rules out: any remaining unscripted text-level hand-edit in the generated tree. Not yet proven: that the replay tree compiles and boots identically.
 Next: full-chain regen + cmake in a separate build dir, boot check.
+
+## Session 5547 (2026-10-19) — full-chain regen proven: ROM -> make_elf -> N64Recomp -> replay compiles to the live tree's assembly
+Ran scratch/agent/s5547_frontchain.sh, s5547_replay_fresh.sh, s5547_asmcmp.sh (no live tree touched; scratch in /tmp/s5547, N64Recomp/scratch_s5547_*).
+- make_elf.py from a copy dir produced a byte-identical roguesquadron.elf (cmp) to the live one.
+- A fresh N64Recomp run (rc=0, 54 files) differs from the old RecompiledFuncs.s4204-fresh snapshot in 4 files / 553 lines, all movz/movn forms: the current binary emits native `if(...)` / nothing where the snapshot has do_break. The s4204 snapshot is STALE vs the current N64Recomp binary. Control (1-line perturbation) flagged.
+- Replay (vendored fixer + movz_movn + strip_diag + fixup_live_replay) on the FRESH regen: fixup rc=0 failures=0; differs from live in 3 files, 296 lines (funcs_27 221, funcs_49 58, funcs_37 17): bare `;` no-op lines and indentation of movz/movn blocks only.
+- Compiled to assembly with the real CMake flags (no -g): raw asm differs only by __LINE__-derived immediates shifted by the `;` lines. After stripping bare `;` lines from both, asm diff = 0 lines in all 3 files. Control (ctx->r15=r1 -> r2 in funcs_49) gives 2 asm diff lines, so the compare does discriminate (weak control: small perturbation, but >0).
+- ORIGIN: n/a (no mitigation added; scripts only).
+Rules out: unscripted hand-edits in the live generated tree that change compiled behaviour. Remaining gap is cosmetic (296 lines). Regen determinism thread CLOSED. Not done: cmake link + boot of the replayed tree (identical asm makes it redundant for the 3 files; the other 51 are text-identical).
