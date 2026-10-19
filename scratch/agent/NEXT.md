@@ -1,3 +1,3 @@
-# Next work unit: find what advances 0x8010B690 word[3] (and 0x138060 beyond 1)
-s5475a (562 s hold): 0x10B690[0..2] became 1 gradually; word[3] stayed 0; setHudEnableBit4 never hit. Either the autopilot never triggers the 4th objective (needs player action) or it needs more time. Use the stdlib MIPS disassembler on the writer of 0x8010B69C, identify the condition, then decide an autopilot change or a longer hold (TRAPSWAP=2500, hold 900).
+# Next work unit: what increments counters 0x80138060[0..3] (end fires on [2]>=3 or [3]>=9)
+s5476: 0x10B69C is a hint latch (docs/M6-OBJECTIVE-STATE-MACHINE.md), not the end gate. Disassemble the writers of 0x80138060..6C (grep objc_disasm for B060 / helper 800C7540/7660), then run a 900 s hold (TRAPSWAP=2500) sampling the 4 counters; decide autopilot change.
 HYPOTHESIS-ID: m6-mission-end-trigger
