@@ -163284,3 +163284,6 @@ Folded SOAK-RESULTS: s5551_m6_long_a rc=0 806 s (`mission_t=81s hold=722s alive_
 
 ## Session 5554 (2026-10-19) — queued three 15-min mission holds (s5554_m6_long_{a,b,c})
 Queued scratch/agent/soak_queue/s5554_m6_long_{a,b,c}.sh (s5551 long_d recipe, HOLD=900 STOP=980 SOAK_TIMEOUT=1300). No code changed and no experiment ran this iteration; the result is pending, not null. Next iteration folds rc, mission_cycles (goal >=2) and any CRASH/stall; a failure gets an lldb backtrace and a root-cause fix.
+
+## Session 5555 (2026-10-19) — s5554 long_a/long_b clean: 903 s / 902 s mission holds, 2 mission cycles each
+Folded SOAK-RESULTS: s5554_m6_long_a and _b both rc=0 (987 s). m6_cycles: hold=903/902 s, alive_at_end=1, vi_stalls30s=0, mission_cycles=2, crashlines=0 for both. Endurance tally on 15-min holds: 2/2 clean (long_c still queued, not yet run). Cumulative 12-min+ holds: long_a/b/c/d (s5551-3) + these = all clean. Rules out: a crash/stall in the first mission within a 15 min hold at this config. No code changed; no conclusions overturned.
