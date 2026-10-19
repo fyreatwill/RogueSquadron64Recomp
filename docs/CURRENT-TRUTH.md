@@ -326,7 +326,17 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5577 (TOP):** The default-route lldb control passed, but the corrected
+- **s5578 (TOP):** The no-lldb default-route loop (3 attempts, 120 s) also stayed
+  at origin `0x696100`, 0 titles, no crash marker, so lldb is NOT the blocker
+  (overturns the implicit s5577 assumption that dropping lldb would reach title;
+  it was believable because the lldb control was the only thing that differed
+  from the older title-reaching loops - it was not, the LLE env trio was).
+  Single-source: the title-reaching s5453/s5463 recipes also set
+  ROGUESQ_LLE_FORCE=1 LLE_UNGATED=1 LLE_SOLO=1. Next: queue the same loop with
+  that trio, count title origins, then attach lldb on the arm that reaches title.
+  Use a cheap poll (logs hit 70 MB per 120 s).
+
+- **s5577 (superseded by s5578):** The default-route lldb control passed, but the corrected
   four-attempt loop reached title origin 0/4 and remained at origin `0x696100`
   through 120 seconds. Stop repeating lldb: run the qualified default route
   without a debugger, retain the in-process crash handler and phase logging,
