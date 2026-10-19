@@ -1,5 +1,5 @@
-RESUME instruction: do not rerun the interrupted/finished s5565 work unit in
-this checkpoint. The existing schema-v2 changes are in commit 73a55a0eb and
+RESUME instruction: the interrupted checkpoint is closed; do not rerun s5565.
+The existing schema-v2 changes are in commit 73a55a0eb and
 the known capture is a valid bounded smoke test, but remains H3 because it
 lacks a port whole-RDRAM positive control and has fewer than 20 shared rows at
 either mapped PC. The next iteration should add that control plus an explicit

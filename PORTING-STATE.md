@@ -163433,3 +163433,18 @@ failure, not evidence for an accumulator writer or a mitigation. The next
 discriminator is still one same-run port capture with the whole-RDRAM control,
 explicit VI/task phase join, task-local progress/end, and the retail/port
 comparison. ORIGIN: none; this checkpoint adds no runtime or defensive code.
+
+## Session 5567 (2026-10-19) — closed the interrupted M4 checkpoint
+
+Checkpoint retry close-out only; no experiment was rerun. The completed
+schema-v2 work remains the usable partial result: its keyed port capture
+reached mission, stayed alive for the bounded hold, emitted 21,512
+phase-capped rows with one image ID and both mapped PCs, and showed zero VI
+stalls or crash markers. The comparison still selects H3 because the same run
+did not emit a whole-RDRAM positive control and shared fewer than 20 normalized
+rows at either mapped PC with the qualified retail capture. This rules out a
+retail-comparable M4 boundary for that capture, but does not identify an
+accumulator writer or authorize a mitigation. The next discriminator remains
+one fresh same-run port capture with a whole-RDRAM control, explicit VI/task
+phase join, task-local progress/end, and the retail/port comparison. ORIGIN:
+none; this checkpoint changed no runtime or defensive code.
