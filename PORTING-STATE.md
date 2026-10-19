@@ -163099,3 +163099,10 @@ Folded s5519_save_base / s5519_save_f2 (rc=0, 525 s / 523 s); f7 still queued.
 - f2: `[saveslot] call#1 ... force=2` (override applied), `[initMission]` calls #1 and #2 both B40=0x00 force=-1, and the 6 `[mfst]` names are identical to base.
 - Verdict: H3 (called, content identical). Forcing the save byte does not change the mission manifest names or initMission B40, so the save slot is not the mission selector on this route. H1 refuted for f2; H2 refuted (hook is exercised). f7 pending to confirm with a second value (single-source until then).
 - Rules out: save-slot byte as second-mission selector. Next: look at what feeds initMission B40 (force=-1 path) instead.
+
+## Session 5521 (2026-10-19) — s5519 f7 folded; B40 writer logger built (10 sites), 2 arms queued
+
+Folded s5519_save_f7: `[saveslot] rec[5]=0x00 force=7` (override applied), `[initMission]` #1/#2 B40=0x00, 6 `[mfst]` names identical to base and f2. Two forced values (2, 7) + base = 3 runs, no content change: the save-record byte is not the selector on this route (H1).
+New finding from reading the generated code (funcs_17.c:809-819): the override sets rec[5]=7 BEFORE `lbu 0x8006DC24` and the `sb` to B40 at 0x8006DC2C, so B40 must have been 7 immediately after the store; initMission later reads 0. Therefore some later guest store resets B40 (or initMission runs against a different instance). Ten guest stores to 0xB40(base 0x8013) exist: funcs_17 DC2C/E974, funcs_8 3E1EC/3E284/3E2E4(x2)/3E4B8(x2), funcs_27 A5E5C, funcs_34 C5B8C.
+Landed: `[b40w] pc=.. val=..` logger on all ten stores (fixup_game_funcs_vendored.py s5520 block for regen; tools/apply_s5520_b40log.py applied it once to the live tree, idempotent); build rc=0. Queued soak_queue/s5520_b40w_{f7,base}.sh. Expected: f7 shows pc 0x8006DC2C val=0x07 followed by a reset writer pc (names it); base shows natural writer sequence. Positive control: DC2C must appear in both arms.
+ORIGIN: no mitigation added; diagnostic only. Not yet run.

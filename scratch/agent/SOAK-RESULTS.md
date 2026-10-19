@@ -690,3 +690,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261018-235306 | s5517_wpflag_hangar_c | rc=137 | 601s | scratch/agent/soak_results/s5517_wpflag_hangar_c_20261018-235306.log
 20261019-000541 | s5519_save_base | rc=0 | 525s | scratch/agent/soak_results/s5519_save_base_20261019-000541.log
 20261019-001426 | s5519_save_f2 | rc=0 | 523s | scratch/agent/soak_results/s5519_save_f2_20261019-001426.log
+20261019-002343 | s5519_save_f7 | rc=0 | 523s | scratch/agent/soak_results/s5519_save_f7_20261019-002343.log

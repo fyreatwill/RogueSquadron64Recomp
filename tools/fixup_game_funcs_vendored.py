@@ -37415,6 +37415,19 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5519 save-slot mission sel hook patched")
 
+    if "PATCH: s5520 b40 writer log" not in text and "MEM_B(0XB40, ctx->r" in text:
+        # s5520: every guest store to the mission selector byte B40 (0x80130B40) logs pc/value, so the writer that
+        # clobbers the s5519 forced save value (initMission still sees 0) is named from one run.
+        import re as _re5520
+        _pat = _re5520.compile(r"(    // (0x[0-9A-F]{8}): sb [^\n]*\n(?:(?!    // 0x)[^\n]*\n){0,4}?)    MEM_B\(0XB40, ctx->(r\d+)\) = ([^;]+);\n")
+        def _sub5520(m):
+            return (m.group(1) + "    { static int s_b = 0; uint32_t _v = (uint32_t)(" + m.group(4) + ") & 0xFF; if (s_b < 200 && (uint32_t)ADD32(ctx->" + m.group(3) + ", 0XB40) == 0x80130B40u) { s_b++; fprintf(stderr, \"[b40w] pc=" + m.group(2) + " val=0x%02X\\n\", _v); } MEM_B(0XB40, ctx->" + m.group(3) + ") = (uint8_t)_v; } /* PATCH: s5520 b40 writer log */\n")
+        _new, _n = _pat.subn(_sub5520, text)
+        if _n:
+            text = _new
+            changed = True
+            report.append(f"{p.name}: s5520 b40 writer log x{_n}")
+
     if p.name == "funcs_1.c" and "PATCH: s5508 manifest name log" not in text:
         _a = "    // 0x800047F4: lui         $v1, 0x8011\n"
         if text.count(_a) != 1:
