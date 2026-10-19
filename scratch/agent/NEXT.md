@@ -1,4 +1,4 @@
-Single next unit: replace the port normalized-row progress ordinal with an
+RESUME — Single next unit: replace the port normalized-row progress ordinal with an
 observed task instruction counter and add a phase-scoped row cap, then run one
 new hangar capture and the analyzer against the qualified retail RSM2/RSD2
 capture. Do not compare the current 5.6M-row log as if its progress field were

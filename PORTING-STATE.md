@@ -163388,3 +163388,16 @@ do not establish a shared normalized boundary. The next discriminator is an
 observed task instruction counter plus a bounded row cap. ORIGIN: no mitigation
 was added; the only writer changed is diagnostic logging sourced from the live
 RSP task state.
+
+## Session 5564 (2026-10-19) — checkpointed the M4 witness resume
+
+This was a checkpoint close-out, not a new experiment. The already committed
+s5563 artifact and capture were inspected: the positive hangar route produced
+5,599,178 rows with one image ID and both mapped PCs, while the progress field
+was the selected-callback ordinal rather than a task instruction count. That
+selects H3 for the current schema and rules out treating the capture as a
+retail-comparable normalized arm; it does not identify an accumulator writer
+or authorize a mitigation. The next discriminator remains an observed,
+monotonic task instruction counter plus a phase-scoped row cap, followed by
+the retail/port analyzer comparison. No experiment was rerun during this
+checkpoint.
