@@ -217,7 +217,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 ## Next steps (single monotonic backlog)
 
 - (s5545 TOP) Replay residual ~39 -> 15: funcs_4/27/24 closed. Left: funcs_29 4, funcs_20 3, funcs_9/8/5/25 2 each. Then compile-prove.
-- (s5542 TOP) Replay residual ~393 -> ~120: block-move rules in fixup_live_replay.py; funcs_24 309 -> 35. Next: s4534 phase-gate removal + order leftovers, then funcs_23 (53), funcs_4, funcs_27.
+- (s5546 TOP) Replay residual 15 -> 0: scratch replay is text-identical to the live RecompiledFuncs (control still flags). Next: full-chain regen + cmake in a separate build dir and boot check.
+- (s5542) Replay residual ~393 -> ~120: block-move rules in fixup_live_replay.py; funcs_24 309 -> 35. Next: s4534 phase-gate removal + order leftovers, then funcs_23 (53), funcs_4, funcs_27.
 - (s5541) Replay residual ~410 -> ~393: fixup_live_replay.py move_lines() ports s5223/lowfield/s4873 order + funcs_24 MEM_W swap. funcs_24 309 = helper-block order (s4867/s4864/s5228) + live-only diag inserts; next: block-move rule, then funcs_23/4/27.
 - (s5537) Blanket static-RENAMES replay made residual WORSE (600 -> 758); reverted; live renames were batch-scoped. Derive old->new map from live-vs-replay diff instead.
 - (s5536 TOP) Replay residual 831 -> 600 (18 files): strip_diag_layers now also drops untagged header decls and exempts funcs_23/24. Left: funcs_24 325 / funcs_0 74 / funcs_23 53 / funcs_26 41 / funcs_1 25. funcs_0 gap = rename sweep (func_8000040C vs clearMemory16ByteBlocks) not in replay: wire tools/rename* next, then classify inline s4694/s4340/m5 blocks in funcs_26/1/4, then compile-prove at <~300.

@@ -1,2 +1,1 @@
-Single next unit: close remaining replay residual (15 lines): funcs_29 (4), funcs_20 (3), funcs_9/8/5/25 (2 each) via tools/fixup_live_replay.py; run scratch/agent/s5532_determinism.sh (control must still flag). Then compile-prove replay output against live tree.
-HYPOTHESIS-ID: regen-determinism-no-unscripted-handedits
+Single next unit: regen-determinism is text-closed (0 diff). Prove it end-to-end: full make_elf->N64Recomp->fixup chain (with replay) into a scratch dir, cmake-build in a separate build dir, boot to title 60 s, compare VI origin sequence vs live build. HYPOTHESIS-ID: regen-determinism-no-unscripted-handedits

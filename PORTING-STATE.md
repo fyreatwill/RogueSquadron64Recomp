@@ -163245,3 +163245,9 @@ Added replay rules for funcs_23: hoist of the s4870 helper block above the s4784
 
 ## Session 5545 (2026-10-19) — fixup_live_replay.py closes funcs_4 (10), funcs_27 (6), funcs_24 (7) residuals (total ~39 -> 15)
 Ran scratch/agent/s5532_determinism.sh (control funcs_26 still flags). Added replay rules to tools/fixup_live_replay.py: funcs_4 extern order + advanceVideoFrame avf_* census statics; funcs_27 filterVoiceSampleBlock s1970 call/entry probes + externs; funcs_24 include block and blank-line placement. Residual now funcs_29 4, funcs_20 3, funcs_9 2, funcs_8 2, funcs_5 2, funcs_25 2 (15 lines, 6 files). Next: those six, then compile-prove replay output against the live tree.
+
+## Session 5546 (2026-10-19) — fixup_live_replay.py closes last 15 residual lines: replay == live tree (0 files differ)
+Ran scratch/agent/s5532_determinism.sh: pristine N64Recomp output -> vendored fixer -> movz/movn -> strip_diag_layers -> fixup_live_replay now yields ZERO differing files vs the live RecompiledFuncs (fixup rc=0, failures=0). Positive control (perturbed funcs_26) still flags 1 line. Added rules: drop_lines() for diag hooks the live tree lacks (funcs_20 s4084 voice callee x3, funcs_9 s2463 dynamic-callback tuple x2, funcs_8 s4223 memcpy x2, funcs_25 s4221 coef x2); funcs_5 s3092 mark line moved down one; funcs_29 0x934u/0x938u literal suffixes.
+ORIGIN: the dropped hooks are diagnostics hand-removed from live in earlier sessions (not corruption mitigations); the replay now reproduces that removal so regen cannot resurrect them.
+Rules out: any remaining unscripted text-level hand-edit in the generated tree. Not yet proven: that the replay tree compiles and boots identically.
+Next: full-chain regen + cmake in a separate build dir, boot check.

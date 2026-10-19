@@ -327,4 +327,34 @@ t24 = re.sub(r"\n\n(extern void rs64_s2031_m5_gate_event\()", r"\n\1", t24, coun
 p24.write_text(t24)
 print("blank_24: ok")
 
+# s5546: diag hooks the live tree no longer carries (ORIGIN: removed from live by earlier hand cleanup; replay must match)
+def drop_lines(name, fname, pat, expect):
+    global fail
+    p = d / fname
+    ls = p.read_text().split("\n")
+    keep = [l for l in ls if not re.search(pat, l)]
+    n = len(ls) - len(keep)
+    if n == 0:
+        print(f"{name}: already applied")
+        return
+    if n != expect:
+        print(f"{name}: FAIL expected {expect} lines, got {n}")
+        fail += 1
+        return
+    p.write_text("\n".join(keep))
+    print(f"{name}: ok")
+
+
+for _f, _pat, _n in (("funcs_20.c", r"rs64_m5_voice_modulation_callee\(", 3),
+                     ("funcs_9.c", r"s2463 m5 dynamic callback tuple|rs64_m5_dynamic_callback\(U32\(ctx->r16\)", 2),
+                     ("funcs_8.c", r"rs64_s4223_memcpy\(", 2),
+                     ("funcs_25.c", r"rs64_s4221_coef\(", 2)):
+    drop_lines("drop_" + _f, _f, _pat, _n)
+move_lines("order_s3092_mark_5", "funcs_5.c", r"rs64_m5_producer_mark_handoff\(rdram, 0u, .*s3092 producer-mark entry", 1, 1)
+_p29 = d / "funcs_29.c"
+_t29 = _p29.read_text()
+_t29 = _t29.replace("MEM_W(0x934, S32(0x800B0000u))", "MEM_W(0x934u, S32(0x800B0000u))").replace("MEM_BU(0x938, S32(0x800B0000u))", "MEM_BU(0x938u, S32(0x800B0000u))")
+_p29.write_text(_t29)
+print("suffix_29: ok")
+
 sys.exit(1 if fail else 0)
