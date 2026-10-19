@@ -258,4 +258,5 @@ the tail of the soak results before acting.
 
 - s5520: forced save slot (f2) does not change initMission B40 or [mfst] names; save byte is not the mission selector (f7 pending).
 
+- s5540: tools/fixup_live_replay.py ports renames/MEM_W/guard2/swap-ack; residual ~410 (funcs_24 325, funcs_23 53, funcs_4 10, funcs_27 6). Next: funcs_24, then funcs_23.
 - s5539: strip_diag_layers strips balanced scratch-only blocks; replay residual 600 -> ~440 (funcs_24 325, funcs_23 53, funcs_4 16, funcs_5 11, funcs_0 8, funcs_27 6, funcs.h 6). Next: port funcs_4/5 live patches into a fixup script, 3 funcs.h renames + funcs_0:5690 MEM_W order, then funcs_24.

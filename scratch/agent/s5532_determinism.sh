@@ -8,6 +8,7 @@ D=../N64Recomp/scratch_s5532; rm -rf "$D"; ditto $SRC "$D" || exit 3
 python3 tools/fixup_game_funcs_vendored.py "$D" > scratch/agent/s5532_fixup.log 2>&1
 python3 tools/fixup_movz_movn.py "$D" >> scratch/agent/s5532_fixup.log 2>&1  # s5534: movz/movn replay
 python3 tools/strip_diag_layers.py "$D" >> scratch/agent/s5532_fixup.log 2>&1  # s5535
+python3 tools/fixup_live_replay.py "$D" >> scratch/agent/s5532_fixup.log 2>&1  # s5540
 echo "fixup rc=$?"; grep 'failures=' scratch/agent/s5532_fixup.log
 tot=0; for f in $LIVE/*; do b=${f:t}; n=$(diff "$D/$b" "$f" 2>&1 | grep -c '^[<>]'); [ "$n" -gt 0 ] && echo "$b $n"; tot=$((tot+n)); done | sort -k2 -nr > scratch/agent/s5532_diffsummary.txt
 echo "files differing: $(wc -l < scratch/agent/s5532_diffsummary.txt)"; head -60 scratch/agent/s5532_diffsummary.txt
