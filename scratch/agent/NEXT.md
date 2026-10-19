@@ -1,4 +1,4 @@
-Work unit: fold s5520_b40w_{f7,base} (SOAK-RESULTS.md; logs in scratch/agent/m6/s5520_b40w_*/run.log; grep '\[b40w\]|\[saveslot\]|\[initMission\]').
-Hypotheses: H1 f7 shows DC2C val=0x07 then a later reset writer (pc named) -> that site's source is the real selector; H2 DC2C never logs (store path bypassed/different B40 base) -> positive control fails, redesign; H3 B40 only written 0 by init (E974) before DC2C ordering is wrong.
-Discriminator: order and pc of [b40w] lines relative to [saveslot] and [initMission] lines.
+Work unit (s5523): one build, one run, three loggers: entry of initMission (0x800FA250) with ra/a0/B40/gCurrentLevel; entry of cinematicLoopBody (0x800A5D80) with ra/a0/a1/a2; plus caller identity of the 2 initMission call sites in funcs_8.c. Add via fixup script (tools/fixup_game_funcs_vendored.py) + live funcs files; run base arm on title->mission route.
+Hypotheses: H1 mission index is s0 loop counter passed through cinematicLoopBody (a0 varies per mission); H2 index comes from level table keyed by a different byte (e.g. a field of the 0x80130B40 block other than B40); H3 only one mission reachable without save data (index constant 0).
+Discriminator: set of distinct (ra,a0) pairs at initMission across the run; positive control = existing [initMission] log lines must still appear.
 HYPOTHESIS-ID: second-distinct-mission-coverage
