@@ -163469,3 +163469,16 @@ identify an accumulator writer or authorize a mitigation. The next
 discriminator is an offline within-phase rank/lane comparison, not another
 schema capture. ORIGIN: no mitigation; only diagnostic callback arguments,
 control scanning, and analyzer validation fields changed.
+
+## Session 5569 (2026-10-19) — checkpointed the ranked/lane comparison resume
+
+This was a retry close-out after the prior work unit had already produced the
+s5568 schema result; no experiment was rerun. The retained evidence is that
+both qualified arms pass whole-RDRAM, VI, mapped-PC, and image positive
+controls, while exact phase/image/PC/progress joins remain below 20 rows at
+both mapped PCs. That selects the offline rank/lane comparison as the next
+discriminator but does not select an accumulator writer or authorize a
+mitigation. The ranked analyzer is not yet present, so the next run must first
+add that bounded offline comparison, then execute it against the existing
+retail and s5568 port captures. ORIGIN: none; this checkpoint changed no
+runtime or defensive code.
