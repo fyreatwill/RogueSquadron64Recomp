@@ -149,6 +149,7 @@ static uint32_t rs64_m5_identity_thread_id();
 namespace {
 std::mutex g_rs64_m5_audio_transition_mutex;
 bool g_rs64_m5_audio_transition_open = false;
+extern "C" int g_rs64_s5508_in_mission = 0; /* s5508: set by initMission hook, gates [mfst] log */
 uint32_t g_rs64_m5_audio_transition_window = 0;
 uint32_t g_rs64_m5_audio_transition_rows = 0;
 }

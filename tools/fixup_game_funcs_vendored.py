@@ -37385,6 +37385,31 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
                 changed = True
                 report.append(f"{p.name}: s3305 main postviewer table patched x14")
 
+    if p.name == "funcs_42.c" and "PATCH: s5508 initMission sel" not in text:
+        _a = "    // 0x800FA250: addiu       $sp, $sp, -0x80\n"
+        if text.count(_a) != 1:
+            report.append(f"WARNING: {p.name}: s5508 initMission anchor count={text.count(_a)}")
+        else:
+            _code = (
+                "    { static int s_fs = -2; static int s_n = 0; if (s_fs == -2) { const char* e = getenv(\"ROGUESQ_FORCE_INITMISSION_SEL\"); s_fs = (e && e[0]) ? (int)strtol(e, 0, 0) : -1; }\n"
+                "      extern int g_rs64_s5508_in_mission; g_rs64_s5508_in_mission = 1;\n"
+                "      if (s_n++ < 8) { fprintf(stderr, \"[initMission] call#%d B40=0x%02X force=%d\\n\", s_n, (unsigned)MEM_BU(0xB40, S32(0X8013 << 16)), s_fs); }\n"
+                "      if (s_fs >= 0) { MEM_BU(0xB40, S32(0X8013 << 16)) = (uint8_t)s_fs; fprintf(stderr, \"[initMission] B40 forced -> 0x%02X\\n\", s_fs); } } /* PATCH: s5508 initMission sel */\n")
+            text = text.replace(_a, _code + _a, 1)
+            changed = True
+            report.append(f"{p.name}: s5508 initMission sel hook patched")
+
+    if p.name == "funcs_1.c" and "PATCH: s5508 manifest name log" not in text:
+        _a = "    // 0x800047F4: lui         $v1, 0x8011\n"
+        if text.count(_a) != 1:
+            report.append(f"WARNING: {p.name}: s5508 manifest anchor count={text.count(_a)}")
+        else:
+            _code = (
+                "    { extern int g_rs64_s5508_in_mission; static int s_m = 0; if (g_rs64_s5508_in_mission && s_m < 600) { char nm[40]; int i; for (i = 0; i < 39; i++) { char c = (char)MEM_BU(0, ctx->r4 + i); nm[i] = c; if (!c) break; } nm[i < 39 ? i : 39] = 0; s_m++; fprintf(stderr, \"[mfst] #%d name=%s\\n\", s_m, nm); } } /* PATCH: s5508 manifest name log */\n")
+            text = text.replace(_a, _code + _a, 1)
+            changed = True
+            report.append(f"{p.name}: s5508 manifest name log patched")
+
     if p.name == "funcs_27.c" and "PATCH: s3305 cinematic postviewer table" not in text:
         _s3305_start = re.search(
             r"RECOMP_FUNC void cinematicLoopBody\(uint8_t\* rdram, recomp_context\* ctx\) \{\n",
