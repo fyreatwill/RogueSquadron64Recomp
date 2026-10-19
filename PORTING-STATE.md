@@ -163128,3 +163128,4 @@ Next discriminator: force cinematicLoopBody a0 (ROGUESQ_FORCE_CINE_A0=1) in a ba
 
 Primary session died mid-work-unit. Landed only: tools/fixup_game_funcs_vendored.py s5523 cineBody entry patch now also reads env ROGUESQ_FORCE_CINE_A0; if set and cinematicLoopBody (0x800A5D80) a0==0 it forces a0 to that value and logs "[cineBody] a0 forced 0 -> N" (positive control). Not regenerated, built, or run; no result. Static call-site search of a0 sources not done. No ORIGIN/mitigation: this is a diagnostic override, off by default.
 Resume: run fixup + cmake, then base arm vs ROGUESQ_FORCE_CINE_A0=1 arm (sequential), compare initMission a0/level.
+Discriminator (s5524 close-out): base vs ROGUESQ_FORCE_CINE_A0=1 — initMission a0/level changes => H1 selected; unchanged => H2 selected; crash/no-op => H3. Generated funcs_*.c absent this iteration (grep for 0x800A5D80 empty), so static caller search needs regen first. OUTCOME set SUBSTITUTED (planned unit not run).
