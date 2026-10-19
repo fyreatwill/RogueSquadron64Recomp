@@ -163263,3 +163263,6 @@ Rules out: unscripted hand-edits in the live generated tree that change compiled
 
 ## Session 5548 (2026-10-19) — queued three M6 mission-endurance soaks (s5548_m6_hangar_a/b/c)
 Read CURRENT-TRUTH (27 KB, no maintenance needed) and NEXT.md. Cloned the s5527 godmode keyed hangar->mission recipe (m6_god_common.sh; logs CRASH lines and VI-origin stalls >30 s) into three queued soaks with fresh tags. The 600 s SOAK_TIMEOUT caps the mission hold at ~440 s, so the >=10 min hold is not reachable without raising SOAK_TIMEOUT in loop.sh. No game run this iteration; no result yet. Verdicts will appear in SOAK-RESULTS.md. Next: fold results; on a CRASH/stall capture an lldb backtrace and name the writer; if 3/3 clean, raise SOAK_TIMEOUT and lengthen the hold.
+
+## Session 5549 (2026-10-19) — M6 hangar_a/b clean; SOAK_TIMEOUT 1000 and long-hold soaks queued
+Folded s5548_m6_hangar_a/b: both rc=0, mission onset at 83 s / 81 s, 441 s hold, alive_at_end=1, vi_stalls30s=0, crashlines=0 (hangar_c still queued, not yet run). 2/2 clean at 7.3 min hold. Change: tools/agent/loop.sh SOAK_TIMEOUT 600 -> 1000 so a >=10 min hold fits; queued s5549_m6_long_a/b (HOLD=720, STOP=800, ~12 min after onset). Rules out nothing new; 7-minute missions do not crash or freeze in 2 of 2 runs. Next: fold hangar_c + long_a/b; any crash/stall -> lldb backtrace.

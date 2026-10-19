@@ -55,7 +55,7 @@ MAX_SUBSTITUTED="${MAX_SUBSTITUTED:-2}"
 SLEEP_ON_ERROR="${SLEEP_ON_ERROR:-120}"
 MAX_ERR_RETRIES="${MAX_ERR_RETRIES:-4}"
 SOAKS_BETWEEN_ITERS="${SOAKS_BETWEEN_ITERS:-2}"
-SOAK_TIMEOUT="${SOAK_TIMEOUT:-600}"
+SOAK_TIMEOUT="${SOAK_TIMEOUT:-1000}"
 
 # Choose the model EXPLICITLY. Without this the loop silently inherits whatever
 # `model` sits in ~/.claude/settings.json — which on 2026-07-26 was "fable", the
