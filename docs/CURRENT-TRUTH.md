@@ -326,6 +326,10 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5581 (TOP, pending):** s5580 returned 4/4 titles, 0 crashes (LLE trio confirmed as the title-route
+  ingredient). Queued `s5581_plume_lle4_a/_b` (8 more boots). Crash seen -> lldb variant, real backtrace;
+  12/12 clean -> hold past title before kill (runs currently end at first title origin).
+
 - **s5580 (TOP, pending):** s5579 was a TOOLING NULL (recipe lacked the zsh re-exec guard;
   ${0:A:h} unbound -> paths became /scratch, game never launched, rc=0 in 0 s). Re-queued as
   `soak_queue/s5580_plume_lle4.sh` with the guard. Same decision table as below. Rule: every

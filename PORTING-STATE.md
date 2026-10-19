@@ -163626,3 +163626,14 @@ launched. Not a title/plume datum (no positive control possible: nothing ran). W
 scratch/agent/soak_queue/s5580_plume_lle4.sh = same recipe + guard (and simplified poll to grep the log
 directly). Rules out nothing about the title route; H1/H2/H3 from s5579 remain undecided. The s5578
 claim that the LLE trio is the missing ingredient stays single-source.
+
+## Session 5581 (2026-10-19) — s5580 LLE-trio plume loop: 4/4 titles, no crash; queued N=8 more
+
+Read the s5580_plume_lle4 verdict. Not a null: 213 s, four run-N last-origin lines all
+`origin=0x790400` (title), `titles=4/4 bad=0`, no BREADCRUMB/CRASHMARK. So the LLE env trio
+(ROGUESQ_LLE_FORCE/UNGATED/SOLO) is what reaches title in the no-lldb loop (earlier s5453/s5463
+recipes + this run = two sources; s5578's "lldb is not the blocker" also stands). It also means
+0 si_addr=0x58 crashes in 4 boots, consistent with a ~1/7 rate. Per NEXT.md H3, queued two more
+copies (`soak_queue/s5581_plume_lle4_a.sh`, `_b.sh`, 4 attempts each) to reach N=12. Note: each
+run is killed at first title origin, so a crash that happens later in the title phase would not
+be seen; if 12/12 clean, extend the hold past title.
