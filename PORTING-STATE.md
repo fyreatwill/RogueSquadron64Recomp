@@ -163684,3 +163684,8 @@ Next: fold both; if a stop-reason appears, name the writer of the si_addr=0x58 d
 - s5589_plume_lldb_c/d: titles=0/3 each, 9-10 s. run1.game line 13: `getcwd failed: Operation not permitted` under lldb LAUNCH, identical to a/b even with the s5406-style invocation. Launch mode is dead in the loop context (TCC); not a plume result.
 - Wrote s5590_plume_attach_e/f (clone of the s5463 attach recipe: `lldb -w` attach, positive control = injected SIGSEGV must stop lldb, then N=10 title boots each). Queued; loop runs them.
 - ORIGIN: no code change; recipes only. Rules out: nothing about the plume (0 valid boots).
+
+## Session 5592 (2026-10-19) — s5590 attach-mode plume soaks e,f folded: 20/20 clean, no SIGSEGV
+Ran: nothing new (loop ran the soaks). s5590_attach_e and _f: control=PASS in both; 10 attached title boots each. lldb stop reasons across all 20 runs: SIGSTOP (attach) and SIGKILL (harness kill) only; zero SIGSEGV, no si_addr=0x58. Positive control passed, so the instrument could have seen a crash. With s5587 hold b-d (clean), the ~1/7 title plume SIGSEGV did not recur in ~20 attached boots (P(0/20 at 1/7) ~ 4.6%). Single-source; the rate may have dropped under lldb timing or been fixed by earlier work; not closed.
+Rules out: lldb being unable to observe (control PASS). Does not prove the crash is fixed.
+Next: M6 mission-hold soaks s5592_m6_long_g,h,i queued (copies of the s5554 recipe, >=10 min each).
