@@ -162996,3 +162996,6 @@ Read CURRENT-TRUTH, NEXT.md (stale: said "write M5 plan", but docs/M5-AUDIO-PLAN
 
 ## s5500 unblock (route 3: re-scope)
 s5499 BLOCKED.md asked for a human-chosen target. Real-input play fidelity and the rename sweep are genuine human decisions, recorded as open dependencies in CURRENT-TRUTH; second-mission coverage needs no human. Moved BLOCKED.md to BLOCKED.resolved.s5500-direction-rescoped.md and rewrote NEXT.md to reach a distinct mission via the hangar route (HYPOTHESIS-ID second-distinct-mission-coverage). Doc-read evidence only; no game run. Details: scratch/agent/UNBLOCK.md.
+
+## Session 5500 (2026-10-18) — unblock s5499: direction block re-scoped to distinct second-mission coverage
+Ran: no game run; doc reads only (BLOCKED.md, NEXT.md, CURRENT-TRUTH, PORTING-STATE s5435/s5437/s5449). Showed: of the three options in the s5499 block, only real-input play fidelity and the rename sweep need a human; second-mission coverage has its recipe pieces already (keyed hold harness, autopilot_hangar_probe.sh). Rules out: that the project needs a human to continue. Not tested: whether the hangar route reaches a distinct mission (flaky 3/5 per s5378) — that is the new NEXT.md unit (second-distinct-mission-coverage). Route taken: 3 (re-scope); details scratch/agent/UNBLOCK.md.
