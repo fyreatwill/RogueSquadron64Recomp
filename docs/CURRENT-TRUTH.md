@@ -216,6 +216,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5553 (TOP):** s5551 long_d folded: 4/4 long mission holds clean (722-725 s, 0 crash/stall). `tools/m6_cycles.sh` (selftest-controlled) shows long_c/long_d re-entered hangar->mission after the mission-end fall-back to title (1 cycle each, long_a 0), no failure. `mission_cycles=` now in m6_god_common.sh summaries. Next: queue 3 holds with HOLD~900 to obtain >=2 cycles/run; any CRASH/stall -> lldb backtrace.
+
 - (s5552 TOP) s5551 long_a and long_c folded: clean (hold 722/723 s, 0 stalls, 0 crash lines). With s5549 long_b the >=3-run, >=10 min first-mission endurance bar is met (3/3 clean). long_d still queued. Next: fold long_d, then extend the route past mission 1 or disambiguate the origin alternation with a phase-gated marker.
 - (s5550) s5548 hangar_a/b/c folded: 3/3 clean. s5549_m6_long_a rc=137 at 600 s was the loop's stale 600 s cap (loop.sh started 08:43, before the 1000 default), NOT a game failure: mission verified at 130 s, 0 crash lines in 411k log lines, origins still cycling at kill. 12-min hold still unmeasured. Fixed by a `# SOAK_TIMEOUT=1100` header on soak_queue/s5549_m6_long_b.sh (per-recipe cap, loop.sh:253). Next: fold long_b; check whether the tail 0x720400/0x790400 alternation is mission or title fallback.
 - (s5551 TOP) s5549_m6_long_b folded: clean 722 s mission hold (0 stalls, 0 crash lines, fbhash distinct 14721/16160). Queued soak_queue/s5551_m6_long_{a,c,d} (same recipe) to reach the >=3-run bar; lldb plume loop stays redundant (16/16 clean). No conclusions overturned.
