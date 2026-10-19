@@ -163642,3 +163642,7 @@ be seen; if 12/12 clean, extend the hold past title.
 
 s5581_plume_lle4_a/_b: 4/4 titles each (origin 0x790400, 212 s each, real origins, not a null). Cumulative under the LLE-trio recipe: 12/12 titles, 0 crash marks (H2 of NEXT.md). The si_addr=0x58 plume SIGSEGV did not recur; rate under kill-at-first-title is < ~1/12 (single-source; the old ~1/7 figure was from different recipes).
 Pivot check: M5-AUDIO-PLAN Steps 0-11 are closed (s4964), so (a) has no open step. For (b), the SIGSEGV handler at src/main/main.cpp:10190 already prints siginfo, ARM64 regs, pc-symbol, last-guest-pc and a 64-frame backtrace, so adding crash instrumentation would be churn (iron rule 14). No M3 idiom class is queued, and the VI-640 wall has no new route-altering idea. Nothing committed to code; see BLOCKED.md for the question.
+
+## Session 5583 (2026-10-19) — UNBLOCK: s5582 block refuted (M6 already closed); re-scoped to extended-hold plume loop
+
+s5582 BLOCKED asking the human to choose between an M6 keyed mission hold and an M3/VI-640 change. Option 1 was already done (s5516 31 holds/251 min; s5529 hangar 3/3; s5556 3/3 x 900 s), so the block was a choice among closed work. Open item found: the 12/12 LLE-trio title loop killed runs at first title, so later-title plume crashes were unobserved (s5581 note). NEXT.md now queues the hold-past-title loop (N=4, +120 s). No code or conclusions changed; no game run this iteration.

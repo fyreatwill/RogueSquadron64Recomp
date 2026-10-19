@@ -1,9 +1,4 @@
-# UNBLOCK s5531 — route 3 (re-scope)
-Block (s5530): "human decision on next direction"; sweep has 0 companion-backed renames.
-Route 1 (refute): not a missing resource; the sweep dry-run is a real 0. But the block's fallback (plume SIGSEGV lldb loop) is already
- closed in CURRENT-TRUTH ("16/16 clean lldb loops", guarded/unreproduced), so that NEXT was low-information too. Options (a) second
- mission is closed by s5526 (initMission reads no a0); (c) un-companioned RE naming is unbounded, no oracle ground truth.
-Route 2: nothing to obtain locally.
-Route 3: re-scoped NEXT to a unit needing no human: regen-pipeline determinism check (regen into scratch dir per CLAUDE.md order,
- diff vs committed/current generated code). Verifies the "fixup not optional / hand-edits die at regen" invariant holds end to end.
- Project-goal-met declaration (d) remains a human call; recorded as open dependency in CURRENT-TRUTH.
+# UNBLOCK s5583
+Route taken: 1 (refute) + 3 (re-scope).
+Evidence: BLOCKED.md asked the human to pick between (1) M6 keyed mission hold and (2) an M3/VI-640 change. Option (1) is already closed in the ledger: CURRENT-TRUTH headline + PORTING-STATE s5516 (31 holds, 251 min, 0 crash/stall), s5529 (hangar route 3/3), s5556 (3/3 x 900 s). So the "decision needed" was a choice among already-done work, not a human-only decision. The 12/12 plume loop killed each run at first title, leaving an explicit unrun follow-up (s5581: extend hold past title). That needs no human decision and no new software.
+Result: NEXT.md rewritten to that unit; BLOCKED.md moved to BLOCKED.resolved.s5583-m6-already-closed.md.
