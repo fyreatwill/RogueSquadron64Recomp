@@ -162982,3 +162982,10 @@ Hypotheses: (L) scripted/legit loss count - favored; (X) runtime-misfired destru
 Not shown: that a piloted, shooting ship avoids it. Built the discriminating arms in one iteration (iron rule 13): soak_queue/s5497_fire_a.sh and s5497_fire_b.sh (godmode + autopilot pressing A / B every 4 s from t=95 s, no START), via a new LKEY knob in scratch/agent/m6_god_common.sh (default unchanged). Controls already on disk: nokeys, god_a/b, god_bptrans all end near frame 8000.
 ORIGIN: no mitigation added.
 Next: read both fire soaks (run.log last origin rows / fbhash / results-screen FB) and compare the end frame against ~8000.
+
+## Session 5498 (2026-10-18) — read s5497 fire soaks: Mos Eisley loss is a real "MISSION FAILED" screen; end frame moves with fire input but retry works
+Read s5497_fire_a/b (rc=0, 0 crash, 0 VI stall each; fbd mean-brightness per 500 frames via new scratch/agent/m6/fb_brightness.py, frames viewed as PNG). Positive control: control arms (m6_god_a, m6_nokeys_b) show the same dark/menu signature from frame 8000 and bright flight before it.
+fire_a: flight bright to 7000, results screen at 7500 ("AMBUSH AT MOS EISLEY / MISSION FAILED / 2 SHIPS REMAINING", enemies destroyed 6 of 27, accuracy 0%), then a SECOND flight attempt is bright from 8000 to 11000 (retry path works, no crash). fire_b: results at ~7000 ("1 SHIP REMAINING"), stable on the results screen to frame 14000 (lives counter is live across arms).
+Verdict: the ~frame-8000 end is a legitimate scripted MISSION FAILED (label, lives counter, tally all render correctly); end frame varies 7000-8000 across arms and fire input does not avert it (hypothesis L holds; X not seen; K ruled out since accuracy 0%/6% shows keys are processed). Not shown: why the unpiloted ship loses (single-source) and no oracle comparison.
+Rules out: runtime misfire of the mission-end counter as an M6 defect. M6 first-mission goal (flight, fail screen, retry, results hold) met across ~14 clean runs. ORIGIN: no mitigation added.
+Next: M5 audio plan (docs/M5-AUDIO-PLAN.md does not exist yet).
