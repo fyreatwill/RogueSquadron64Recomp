@@ -7806,9 +7806,14 @@ def apply_s4938_aux_join(p, text):
          "    rs64_s4938_aux_store('W', 0x800917F4u, U32(ADD32(ctx->r1, 0X1778)), U32(ctx->r2), U32(ctx->r16), U32(ctx->r17)); /* PATCH: s4938 auxiliary store join */\n"),
     ]
     for anchor, insert in sites:
-        if text.count(anchor) != 1:
-            raise RuntimeError(f"s4938 {p.name}: anchor count={text.count(anchor)} for {anchor.strip()}")
-        text = text.replace(anchor, anchor + insert, 1)
+        # s5532: earlier stages (s2190 m5 scalar) may put one instrumentation line between the
+        # "// 0xADDR:" comment and the store, so match comment + <=2 non-comment lines + store.
+        comment, store = anchor.split("\n")[0] + "\n", anchor.split("\n")[1] + "\n"
+        rx = re.compile(re.escape(comment) + r"(?:(?!\s*//).*\n){0,2}?" + re.escape(store))
+        found = list(rx.finditer(text))
+        if len(found) != 1:
+            raise RuntimeError(f"s4938 {p.name}: anchor count={len(found)} for {anchor.strip()}")
+        text = text[:found[0].end()] + insert + text[found[0].end():]
     return text, True, "funcs_24.c: s4938 auxiliary store join added x4"
 
 
