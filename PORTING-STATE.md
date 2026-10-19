@@ -163678,3 +163678,9 @@ Next: fold both; if a stop-reason appears, name the writer of the si_addr=0x58 d
 - s5589_plume_lldb_a/b: titles=0/3 each, 12 s total. run1.game shows `libc++abi: terminating due to uncaught exception ... filesystem_error: in current_path: call to getcwd failed: Operation not permitted` -> SIGABRT inside the lldb-launched game before any TITLE. Per NEXT.md control (no TITLE = null) this says nothing about the plume SIGSEGV; 'bad=0' is not evidence.
 - Mechanism UNKNOWN (single-source): getcwd EPERM in the lldb-spawned child (likely TCC/Documents access for the debuggee in the loop's non-interactive context). s5406/s5452 used `/usr/bin/lldb` + `process handle SIGSEGV ...`; bare `lldb` resolves to /usr/bin/lldb too, so the PATH change is not the cause. gen_plume_lldb_soak.py now mirrors the s5406 invocation; c,d regenerated and queued. If c/d also fail with getcwd, the cause is the loop context, not the recipe.
 - Could not test lldb directly this iteration (ad-hoc lldb command denied by permission prefix match).
+
+## Session 5591 (2026-10-19) — s5589 lldb c,d also getcwd-EPERM nulls; switched to lldb-attach recipes (e,f)
+
+- s5589_plume_lldb_c/d: titles=0/3 each, 9-10 s. run1.game line 13: `getcwd failed: Operation not permitted` under lldb LAUNCH, identical to a/b even with the s5406-style invocation. Launch mode is dead in the loop context (TCC); not a plume result.
+- Wrote s5590_plume_attach_e/f (clone of the s5463 attach recipe: `lldb -w` attach, positive control = injected SIGSEGV must stop lldb, then N=10 title boots each). Queued; loop runs them.
+- ORIGIN: no code change; recipes only. Rules out: nothing about the plume (0 valid boots).

@@ -330,7 +330,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
-- **s5590 (TOP):** s5589_plume_lldb_{a,b} were launch-failure NULLS (titles=0/3; game SIGABRT on `getcwd failed: Operation not permitted` under lldb) - they say nothing about the plume. Generator now mirrors s5406 invocation; lldb_{c,d} queued. If c/d also hit getcwd EPERM, cause is the loop context (TCC) -> switch to lldb attach (s5453 pattern).
+- **s5591 (TOP):** lldb LAUNCH confirmed dead in loop context (c,d getcwd EPERM too). Attach recipes s5590_plume_attach_{e,f} queued (10 boots each, control = injected SIGSEGV). Fold their summaries; after ~20 clean boots pivot to M6 mission-hold soaks.
+- **s5590 (superseded by s5591):** s5589_plume_lldb_{a,b} were launch-failure NULLS (titles=0/3; game SIGABRT on `getcwd failed: Operation not permitted` under lldb) - they say nothing about the plume. Generator now mirrors s5406 invocation; lldb_{c,d} queued. If c/d also hit getcwd EPERM, cause is the loop context (TCC) -> switch to lldb attach (s5453 pattern).
 - (s5589, demoted) hold_d folded: TITLE+ALIVE@+120, 0 crash; 4/4 clean total (P(0/4 | p=1/7)~54%, plume NOT closed, no BLOCKED needed). Queued s5589_plume_lldb_{a,b} (3 boots each, run under `lldb -b` with launch, not attach - s5577's attach loop failed on tooling; if no TITLE lines, that hypothesis recurs). Generator: tools/agent/gen_plume_lldb_soak.py. After ~20 clean boots pivot to M6 mission holds.
 
 - **s5586 (TOP):** s5584 soak still pending (loop runs it after this iteration). Fold it next; no new work until it lands.
