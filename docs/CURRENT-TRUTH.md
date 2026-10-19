@@ -216,6 +216,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- (s5537) Blanket static-RENAMES replay made residual WORSE (600 -> 758); reverted; live renames were batch-scoped. Derive old->new map from live-vs-replay diff instead.
 - (s5536 TOP) Replay residual 831 -> 600 (18 files): strip_diag_layers now also drops untagged header decls and exempts funcs_23/24. Left: funcs_24 325 / funcs_0 74 / funcs_23 53 / funcs_26 41 / funcs_1 25. funcs_0 gap = rename sweep (func_8000040C vs clearMemory16ByteBlocks) not in replay: wire tools/rename* next, then classify inline s4694/s4340/m5 blocks in funcs_26/1/4, then compile-prove at <~300.
 - (s5535) tools/strip_diag_layers.py now in replay: residual 1,008 -> 831; live is partially stripped (~7 live-only lines still carry s4222/s4299/s4601 hooks => hand-assembled, single-source). Next: classify the 831 (s4340/s5223/s4899/s4223/s3556, ~201 untagged).
 - (s5534 TOP) Replay residual 1,598 -> 1,008 lines: tools/fixup_movz_movn.py was missing from s5532_determinism.sh (now wired). Left: scratch-only s4299/s4222/s4601 diagnostics (live lacks them; hypothesis: unscripted strip - find or script it), ~201 live-only untagged lines + one-off live-only tags. Classes: `zsh scratch/agent/s5534_classes.sh`. Then compile-prove scratch tree when < ~300.
