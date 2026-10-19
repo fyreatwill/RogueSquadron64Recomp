@@ -12,7 +12,12 @@ PC = re.compile(r"^\s*// 0x([0-9A-Fa-f]{8}):")
 
 total = 0
 files = 0
+# s5533: the live tree carries this census only in the two audio-engine files (funcs_23/24: 699+608 sites,
+# 0 in the other 51). Applying it tree-wide put ~45k extra lowfield_store calls into scratch regen vs live.
+ONLY = {"funcs_23.c", "funcs_24.c"}
 for path in sorted(BASE.glob("funcs_*.c")):
+    if path.name not in ONLY:
+        continue
     text = path.read_text()
     if MARKER in text:
         continue

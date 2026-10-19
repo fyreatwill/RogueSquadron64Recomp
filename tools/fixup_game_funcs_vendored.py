@@ -6984,6 +6984,37 @@ def apply_s3311_cine_init_jal_text(text):
     return _s3311.apply_s3311_cine_init_jal_text(text)
 
 
+_S5533_FORCE_INIT = re.compile(
+    r'        static int s_alloc_tail_guard2_force = -1;\n'
+    r'        if \(s_alloc_tail_guard2_force < 0\) \{[^\n]*\n')
+_S5533_FORCE_GOTO = re.compile(r'(            )if \((\w+)_lo < 0x80000000u \|\| \2_lo >= 0x80800000u\) (goto \w+;)  // force = log only\n')
+_S5533_REFORCE = re.compile(
+    r'(        uint32_t (r\d+)_lo = U32\(ctx->\2\);\n)'
+    r'        if \(\2_lo < 0x80000000u \|\| \2_lo >= 0x80800000u\) \{\n'
+    r'(            if \(s_alloc_tail_guard2_enabled\) \{\n.*?\n            \}\n)'
+    r'            goto (\w+);\n        \}\n', re.S)
+
+
+def _s5533_deforce(text):
+    """Inverse of the s5034 force rewrite (see tools/apply_s5034_guard2_force.py)."""
+    text = _S5533_FORCE_INIT.sub('', text)
+    text = text.replace(' || s_alloc_tail_guard2_force) {\n', ') {\n')
+    return _S5533_FORCE_GOTO.sub(r'\1\3\n', text)
+
+
+def _s5533_reforce(text):
+    def rep(m):
+        h = m.group(2)
+        return (m.group(1) +
+                '        static int s_alloc_tail_guard2_force = -1;\n'
+                '        if (s_alloc_tail_guard2_force < 0) { const char* e = getenv("ROGUESQ_FORCE_ALLOC_TAIL_GUARD2"); s_alloc_tail_guard2_force = (e && e[0] && e[0] != \'0\') ? 1 : 0; }\n'
+                f'        if ({h}_lo < 0x80000000u || {h}_lo >= 0x80800000u || s_alloc_tail_guard2_force) {{\n' +
+                m.group(3) +
+                f'            if ({h}_lo < 0x80000000u || {h}_lo >= 0x80800000u) goto {m.group(4)};  // force = log only\n        }}\n')
+    return _S5533_REFORCE.sub(rep, text)
+
+
+
 def apply_s3285_freelist_align_cycle_text(text):
     """Expand live free-list walks with alignment and a cyclic-chain cap.
 
@@ -39325,7 +39356,7 @@ static void rs64_s5223_entry_join(uint8_t* rdram, const char* edge, uint32_t edg
     # s5228: port-side census of the offset-0x22 stores in musyxMixActiveVoices
     # (0x80090F3C sb $zero; 0x80090F8C sb 1). Destination census per origin,
     # flushed on origin change. Diagnostic only.
-    if p.name == "funcs_24.c" and "PATCH: s5228 store census" not in text:
+    if p.name == "funcs_24.c" and "PATCH: s5228 store census" not in text and "PATCH: s4340 lowfield writer" in text:  # s5533: s4340 only exists post-replay; s5228 replayed by apply_s5228_store_census.py
         _s5228_anchor = "static void rs64_s2084_fill_range_edge"
         if text.count(_s5228_anchor) != 1:
             sys.exit(f"s5228 anchor count={text.count(_s5228_anchor)}")
@@ -40629,7 +40660,11 @@ void rs64_s2609_m5_channel_store(uint8_t* rdram, uint32_t pc,
         changed = True
 
     if p.name == "funcs_3.c":
+        # s5533: s3285's anchors predate the s5034 guard2-force rewrite (applied in-loop above). Strip the force form,
+        # run s3285, re-force whatever s3285 did not rewrite (s5034 pattern only matches the unchanged guard shape).
+        text = _s5533_deforce(text)
         text, s3285_msgs, s3285_changed = apply_s3285_freelist_align_cycle_text(text)
+        text = _s5533_reforce(text)
         report.extend(s3285_msgs)
         if s3285_changed:
             changed = True
@@ -40848,8 +40883,16 @@ _RS64_LIVE_STR = "/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFunc
 
 # Order = session order the live tree received them (PORTING-STATE s4204+).
 RS64_REPLAY = [
+    "apply_s2463_m5_dynamic_callback.py",
+    "apply_s3334_m5_callback_writer.py",
+    "apply_s3438_m5_frequency_callers.py",
+    "apply_s3500_m5_selector_caller.py",
+    "apply_s3501_m5_selector_precall.py",
     "apply_s3509_m5_selector_table.py",
     "apply_s3516_m5_selector_store_context.py",
+    "apply_s3528_m5_selector_alloc.py",
+    "apply_s3529_m5_selector_input.py",
+    "apply_s3556_m5_pretitle_route.py",
     "apply_s4140_m5_source_context.py",
     "apply_s4159_m5_preclear_span_census.py",
     "apply_s4162_m5_nonscalar_writer.py",
@@ -40877,6 +40920,18 @@ RS64_REPLAY = [
     "apply_s4222_vol.py",
     "apply_s4222_wr.py",
     "apply_s4223_memcpy.py",
+    "apply_s4700_cbtable_trace.py",
+    "apply_s4782_shutdown_caller.py",
+    "apply_s4868_branch_trace.py",
+    "apply_s4869_join.py",
+    "apply_s4870_producer.py",
+    "apply_s4871_voices.py",
+    "apply_s4872_bound.py",
+    "apply_s4873_msgrate.py",
+    "apply_s4874_caller.py",
+    "apply_s4877_dereg_order.py",
+    "apply_s4894_shutdown_return.py",
+    "apply_s4913_marks.py",
     "apply_s5037_copy_guard.py",
     "apply_s4223_stk.py",
     "apply_s4230_fd60probe.py",
@@ -40898,6 +40953,9 @@ RS64_REPLAY = [
     "apply_s4306_postfree_join.py",
     "apply_s4307_synth_read_join.py",
     "apply_s4340_m5_lowfield_writer.py",
+    "apply_s5041_free_census.py",
+    "apply_s5042_free_poison.py",
+    "apply_s5228_store_census.py",  # s5533: needs s4340 (its in-loop block is skipped when s4340 is absent)
     "apply_s4680_m5_status_table.py",
     "apply_s4432_audioloop_witness.py",
     "apply_s4455_m5_call_rate.py",
@@ -40946,11 +41004,26 @@ RS64_REPLAY = [
     "apply_s4994_s4540_mission_sample.py",
     "apply_s5036_guard34_force.py",
     "apply_s5078_flight_writer_census.py",
+    "apply_s5368_align100_counter.py",
+    "apply_s5370_path_census.py",
+    "apply_s5379_census_ctl.py",
+    "apply_s5520_b40log.py",
+    "apply_s5523_im_ra.py",
+    "apply_s4690_external_entry_probe.py",
+    "apply_s4694_a14_boundary.py",
+    "apply_s4784_gap_order.py",
+    "apply_s4864_datasize_trace.py",
+    "apply_s4867_bound_trace.py",
+    "apply_s4988_s4540_boundary.py",
+    "apply_s4991_per_origin_bad_budget.py",
 ]
 
 
 # Replay failures that are known not to affect RecompiledFuncs: the script's
 # RecompiledFuncs edit runs (and completes) before the failing src/ step.
+RS64_REPLAY_DIRARG = {"apply_s4913_marks.py", "apply_s5368_align100_counter.py", "apply_s5370_path_census.py",
+                      "apply_s5379_census_ctl.py", "apply_s4982_reader_acquire.py"}  # s5533: scripts taking <RecompiledFuncs dir>
+
 RS64_REPLAY_TOLERATE = {
     "apply_s4230_listwatch.py": "retargets RecompiledFuncs first; its later src/main/upstream_compat.cpp row-cap assert targets the throwaway copy",
 }
@@ -41188,7 +41261,8 @@ def rs64_replay_apply_scripts(tree, names=RS64_REPLAY):
                 except Exception as e:  # noqa: BLE001
                     results.append((name, f"FAIL {type(e).__name__}: {e}", ""))
                 continue
-            r = _sp.run([sys.executable, str(sb / "tools" / name)], cwd=str(sb), env=env,
+            _argv = [link] if name in RS64_REPLAY_DIRARG else []  # s5533: dir-arg scripts
+            r = _sp.run([sys.executable, str(sb / "tools" / name)] + _argv, cwd=str(sb), env=env,
                         capture_output=True, text=True)
             err = r.stderr.strip().splitlines()[-1][:200] if r.stderr.strip() else ""
             status = "ok" if r.returncode == 0 else f"FAIL rc={r.returncode}: {err}"

@@ -9,7 +9,7 @@ V = "/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/fixup_gam
 F = "/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c"
 
 src = open(V).read()
-start_marker = 'if p.name == "funcs_24.c" and "PATCH: s5228 store census" not in text:'
+start_marker = 'if p.name == "funcs_24.c" and "PATCH: s5228 store census" not in text'
 a = src.index(start_marker)
 b = src.index('report.append("funcs_24.c: s5228 store census patched x2")', a)
 body = src[a:b].split("\n", 1)[1]
