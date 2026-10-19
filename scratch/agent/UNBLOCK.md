@@ -1,5 +1,6 @@
-# UNBLOCK (after s5472) — route 1 (refuted)
-Block claimed: objdump not permitted, so lv0_checkComplexObjectives (0x8010119C..0x801018EC) cannot be read.
-Refuted: the dependency was "a MIPS disassembly", not objdump. Wrote tools/disasm_mips_elf.py (stdlib only, reads ELF PT_LOAD) and produced scratch/agent/objc_disasm.txt (468 insns). Interactive objdump was also denied here, so the permission is real; no gate was changed or bypassed.
-Observation: the body is ~100 calls to helpers 800C759C (x47), 800C7540 (x11), 800C76FC (x7), 800C7D1C (x6), 800C76B0/7660/761C (x4 each); direct memory tests: words 0x8010B690,B694,B698,B69C,B6A0,B6A4,B6A8 and floats 0x800A9554/9558/9574/9578 (lwc1 + compare).
-Next: read those words in a TRAPSWAP=2500 run just before the setHudEnableBit4 hit.
+# UNBLOCK (s5485): route 1 (refute) + route 3 (re-scope)
+Block (s5484) was a direction question, with option 1 premised on "needs key recipe". Refuted: the recipe exists and was flown
+(CURRENT-TRUTH s5435/s5437: m6_keyed_hold_post.sh, briefing -> flight -> hangar -> flight again, 3/3 clean 1217-1226 s, 0 crash/0 stall;
+s5438 flight-2 renders like flight 1). Option 3 (stop) is not a dependency. Remaining un-parked target needing no human: option 2,
+visual fidelity of the post-mission menu/results overlay, using ROGUESQ_FB_DUMP_DIR (stride-320 caveat) at the 0x720000/0x790000 origins.
+No install/spend/settings change involved. Evidence is doc-read only (single source); no game run this iteration.
