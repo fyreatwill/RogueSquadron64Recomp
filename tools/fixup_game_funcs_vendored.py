@@ -37399,6 +37399,22 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5508 initMission sel hook patched")
 
+    if p.name == "funcs_17.c" and "PATCH: s5519 save-slot mission sel" not in text:
+        # s5519: applySaveSlotToMissionState copies saveRecord[+5] into the mission selector byte B40
+        # (0x8006DC2C). Log every call (positive control that the route reaches it) and allow an env override
+        # of the value stored, to select a second mission through the real save-data path.
+        _a = "    // 0x8006DC24: lbu         $v0, 0x5($a0)\n    ctx->r2 = MEM_BU(ctx->r4, 0X5);\n"
+        if text.count(_a) != 1:
+            report.append(f"WARNING: {p.name}: s5519 save-slot anchor count={text.count(_a)}")
+        else:
+            _code = (
+                "    { static int s_fs = -2; static int s_n = 0; if (s_fs == -2) { const char* e = getenv(\"ROGUESQ_FORCE_SAVE_MISSION\"); s_fs = (e && e[0]) ? (int)strtol(e, 0, 0) : -1; }\n"
+                "      if (s_n++ < 16) { fprintf(stderr, \"[saveslot] call#%d rec[5]=0x%02X force=%d\\n\", s_n, (unsigned)MEM_BU(ctx->r4, 0X5), s_fs); }\n"
+                "      if (s_fs >= 0) { MEM_BU(ctx->r4, 0X5) = (uint8_t)s_fs; } } /* PATCH: s5519 save-slot mission sel */\n")
+            text = text.replace(_a, _code + _a, 1)
+            changed = True
+            report.append(f"{p.name}: s5519 save-slot mission sel hook patched")
+
     if p.name == "funcs_1.c" and "PATCH: s5508 manifest name log" not in text:
         _a = "    // 0x800047F4: lui         $v1, 0x8011\n"
         if text.count(_a) != 1:
