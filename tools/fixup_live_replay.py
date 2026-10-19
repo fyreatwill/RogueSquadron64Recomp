@@ -273,4 +273,58 @@ t23 = re.sub(r"^        rs64_m5_selector_store_entry\(0x8008EB5Cu, .*s4712 reapp
 p23.write_text(t23)
 move_lines("order_s4784_gate", "funcs_23.c", r"^        \{ /\* PATCH: s4784 gate-clear", -2, 1)
 
+# funcs_4 (s5545): extern order + advanceVideoFrame census statics
+_e1 = "extern void rs64_s4899_ev(char); /* PATCH: s4899 */\n"
+_a1 = "extern void rs64_s4913_mark(uint8_t* rdram, const char* tag);\n"
+p4 = d / "funcs_4.c"
+t4 = p4.read_text()
+if t4.count(_e1) == 1 and t4.count(_a1) == 1 and t4.index(_e1) < t4.index(_a1):
+    t4 = t4.replace(_e1, "").replace(_a1, _a1 + _e1)
+    print("ext_order_4: ok")
+_avf = ('    rs64_s4913_mark(rdram, "advanceVideoFrame"); // PATCH: s4913 ordering mark\n')
+_st = ("    static int avf_gate_en = -1;\n    static int avf_n = 0;\n    static int avf_b0_n = 0;\n"
+       "    static int avf_swap_n = 0;\n    static uint32_t avf_prev_byte = 0xFFFFFFFFu;\n"
+       "    static uint32_t avf_prev_s0 = 0xFFFFFFFFu;\n    static int avf_entry_n = 0;\n    static int avf_exit_n = 0;\n")
+if t4.count(_avf) == 1 and (_avf + _st) not in t4:
+    t4 = t4.replace(_avf, _avf + _st)
+    print("avf_statics_4: ok")
+p4.write_text(t4)
+
+# funcs_27 (s5545): filterVoiceSampleBlock probes (s1970)
+p27 = d / "funcs_27.c"
+t27 = p27.read_text()
+_args = "U32(ctx->r29), U32(ctx->r31), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r7)"
+if "rs64_filter_voice_call_probe" not in t27:
+    for _cm, _reg, _site in (("0x8009C544: addiu       $s0, $s0, 0x1\n    ctx->r16 = ADD32(ctx->r16, 0X1);\n", None, "0x8009C540u"),
+                             ("0x8009C890: addiu       $s1, $s1, 0x1A\n    ctx->r17 = ADD32(ctx->r17, 0X1A);\n", None, "0x8009C88Cu"),
+                             ("0x8009D744: addiu       $s3, $s3, 0x1A\n    ctx->r19 = ADD32(ctx->r19, 0X1A);\n", None, "0x8009D740u")):
+        _o = "    // " + _cm + "    filterVoiceSampleBlock(rdram, ctx);\n"
+        if t27.count(_o) != 1:
+            print("fvs_call", _site, "FAIL"); fail += 1; continue
+        t27 = t27.replace(_o, "    // " + _cm + f"    rs64_filter_voice_call_probe({_site}, {_args});\n    filterVoiceSampleBlock(rdram, ctx);\n")
+    _ent = "{ /* PATCH: s1970 filterVoiceSampleBlock audit */\n"
+    if t27.count(_ent) == 1:
+        t27 = t27.replace(_ent, _ent + f"        rs64_filter_voice_entry_probe({_args});\n")
+    else:
+        print("fvs_entry FAIL"); fail += 1
+    _x = "extern void rs64_m5_route_exact_load("
+    i = t27.index(_x); j = t27.index("\n", i) + 1
+    t27 = (t27[:j] +
+           "extern void rs64_filter_voice_call_probe(uint32_t site, uint32_t sp, uint32_t ra, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);\n"
+           "extern void rs64_filter_voice_entry_probe(uint32_t sp, uint32_t ra, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);\n" + t27[j:])
+    p27.write_text(t27)
+    print("fvs_probes_27: ok")
+
+# funcs_24 (s5545): include block + blank-line placement
+p24 = d / "funcs_24.c"
+t24 = p24.read_text()
+_i = "/* PATCH: s4899 */\n\n\n/* PATCH: s4874 caller helper */"
+if _i in t24:
+    t24 = t24.replace(_i, "/* PATCH: s4899 */\n\n#include <stdio.h>\n#include <stdlib.h>\n#include <time.h>\n/* PATCH: s4874 caller helper */")
+for _m in ("/* PATCH: s4867 bound helper */", "/* PATCH: s5223 entry-contract join */"):
+    t24 = re.sub(r"(?<=\n)(?<!\n\n)" + re.escape(_m), "\n" + _m, t24, count=1)
+t24 = re.sub(r"\n\n(extern void rs64_s2031_m5_gate_event\()", r"\n\1", t24, count=1)
+p24.write_text(t24)
+print("blank_24: ok")
+
 sys.exit(1 if fail else 0)

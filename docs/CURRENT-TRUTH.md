@@ -216,6 +216,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- (s5545 TOP) Replay residual ~39 -> 15: funcs_4/27/24 closed. Left: funcs_29 4, funcs_20 3, funcs_9/8/5/25 2 each. Then compile-prove.
 - (s5542 TOP) Replay residual ~393 -> ~120: block-move rules in fixup_live_replay.py; funcs_24 309 -> 35. Next: s4534 phase-gate removal + order leftovers, then funcs_23 (53), funcs_4, funcs_27.
 - (s5541) Replay residual ~410 -> ~393: fixup_live_replay.py move_lines() ports s5223/lowfield/s4873 order + funcs_24 MEM_W swap. funcs_24 309 = helper-block order (s4867/s4864/s5228) + live-only diag inserts; next: block-move rule, then funcs_23/4/27.
 - (s5537) Blanket static-RENAMES replay made residual WORSE (600 -> 758); reverted; live renames were batch-scoped. Derive old->new map from live-vs-replay diff instead.
