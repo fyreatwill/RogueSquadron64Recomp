@@ -254,6 +254,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+0. (s5492) `ROGUESQ_GODMODE=1` pins player health (0x80137DB8+0xC4); m6_god_a/b soaks queued vs m6_nokeys_b control. Read their SOAK-RESULTS lines first; see scratch/agent/NEXT.md.
+
 - **s5491 (single-source):** m6 no-key flight (scratch/agent/m6_nokeys_hold.sh) still reaches GAME OVER ~6000 frames after mission onset, so the autopilot keys are not the death cause; a no-input ship may legitimately crash, so B (runtime damage/collision bug) vs C (scripted loss) is open. Next: steer/god-mode flight to measure real in-flight endurance.
 
 - **s5490 correction:** flight render is correct (terrain, sky, HUD in fb frame 4000), but the m6 holds (incl. 1502 s) mostly idle on a GAME OVER results screen (completion 0:00). In-flight endurance is UNMEASURED; next: survive-in-flight hold recipe (see NEXT.md).

@@ -9594,6 +9594,29 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s5492: ROGUESQ_GODMODE=1 is a TEST-ONLY lever for M6 endurance soaks. The player
+    // record table at 0x80137DB8 (stride 0x2A0, found via getPlayerHealthPercentage)
+    // holds float health at +0xC4 and max health at +0xC8; refill slot 0 whenever it
+    // is alive but damaged. Logs each refill (control: shows damage really arrives).
+    {
+        static int s_god = -1;
+        static unsigned s_god_n = 0;
+        if (s_god < 0) { const char* g = std::getenv("ROGUESQ_GODMODE"); s_god = (g && *g == '1') ? 1 : 0; }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_god && rd) {
+            auto rdf = [&](uint32_t p) { uint32_t u = rs64_rdram_u32(rd, p); float f; memcpy(&f, &u, 4); return f; };
+            const uint32_t base = 0x137DB8u;
+            const float cur = rdf(base + 0xC4), mx = rdf(base + 0xC8);
+            if (mx > 0.0f && mx < 1.0e6f && cur > 0.0f && cur < mx) {
+                const uint32_t p = base + 0xC4, b = p & ~3u; uint32_t u; memcpy(&u, &mx, 4);
+                const_cast<uint8_t*>(rd)[b + 3] = u >> 24; const_cast<uint8_t*>(rd)[b + 2] = u >> 16;
+                const_cast<uint8_t*>(rd)[b + 1] = u >> 8;  const_cast<uint8_t*>(rd)[b] = u;
+                if (++s_god_n <= 20 || (s_god_n % 200) == 0)
+                    fprintf(stderr, "[godmode] refill #%u cur=%.2f max=%.2f\n", s_god_n, cur, mx);
+            }
+        }
+    }
+
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;
