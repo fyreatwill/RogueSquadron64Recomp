@@ -162972,3 +162972,6 @@ Hypotheses: (W) win - refuted by the GAME OVER label and enemies below need; (L)
 Rules out: win-condition reading; HP path (s5493).
 ORIGIN: no mitigation added.
 Next: name the 3 NPCs (bp datItemSetObjectiveBooleanCount, log args + caller) or run a firing autopilot.
+
+## Session 5496 (2026-10-18) — queued destruction-count naming soak (bp on datItemSetObjectiveBooleanCount)
+Built scratch/agent/m6_bp_dbc.sh (derived from m6_bp_trans.sh: positive-control watch on 0x3470 first, then lldb breakpoint on datItemSetObjectiveBooleanCount logging bt 6, ctx r4-r7/r16-r18/r31 and counters 0x138060..7C per hit) and enqueued soak_queue/s5496_dbc_names.sh (godmode, trap swap 7000, 520 s hold). Hypotheses: (L) three scripted ambush objects die at fixed times each run = legitimate; (X) runtime-misfired destruction. Discriminator: caller/npc identity per bump and whether it precedes any damage. No game run this iteration; result arrives in SOAK-RESULTS.md. Rules out nothing yet.
