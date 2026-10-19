@@ -1,5 +1,5 @@
-# Next work unit: read the s5478 objective-counter watchpoint soak (scratch/agent/m6/s5478_objc_stores, SOAK-RESULTS.md)
-s5478 queued soak_queue/s5478_objc_stores.sh: lldb hardware write-watchpoints on 0x138060 (idx1, POSITIVE CONTROL: counter 0 is known to move), 0x138064 (idx2), 0x138068 (idx3), 0x13806C (idx4), bt 3 on each hit, 1000 s mission hold (LATE=700), counters also memory-read each second.
-Hypotheses: (A) idx2/3 never written - DAT items targeting them never triggered by the autopilot; (B) written, and the bt names the store site (applyDatObjectiveTriggerEffect / datItemSetObjectiveBooleanCount / updateNpcEffectIntensity / executeActorType1Effect) - then read that item's target/condition; (C) idx1 control silent => instrument invalid, redo.
-Read: lldb_att*.log 'Watchpoint N hit' counts per watchpoint id (1 = idx1 control must be >0), the bt frames, final counter reads. Then dump lv0 DAT items whose target idx is 2/3 offline (layout from applyDatObjectiveTriggerEffect: type u16 @0 in {0x18,0x19}).
+# Next work unit: read s5479_objc_stores_early (scratch/agent/m6/s5479_objc_early, SOAK-RESULTS.md)
+s5478 was invalid: watchpoints armed at swap 7600, mission onset is ~1068, counters already written, control silent. s5479 arms at swap 1100.
+Hypotheses: (A) idx2/3 never written even from onset - DAT items never triggered by the autopilot; (B) written - bt names the store site, then read that DAT item's condition; (C) idx1 control silent again => instrument invalid, then arm earlier (TRAPSWAP=1000) or use a game-side store log in a fixup script.
+Read: 'stop reason = watchpoint N' in lldb_att1.log (1=idx1 control must be >0), bt frames. Then dump lv0 DAT items targeting idx 2/3 offline (type u16 @0 in {0x18,0x19}).
 HYPOTHESIS-ID: m6-mission-end-trigger
