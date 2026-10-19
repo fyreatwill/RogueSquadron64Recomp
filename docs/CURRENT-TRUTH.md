@@ -254,6 +254,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5491 (single-source):** m6 no-key flight (scratch/agent/m6_nokeys_hold.sh) still reaches GAME OVER ~6000 frames after mission onset, so the autopilot keys are not the death cause; a no-input ship may legitimately crash, so B (runtime damage/collision bug) vs C (scripted loss) is open. Next: steer/god-mode flight to measure real in-flight endurance.
+
 - **s5490 correction:** flight render is correct (terrain, sky, HUD in fb frame 4000), but the m6 holds (incl. 1502 s) mostly idle on a GAME OVER results screen (completion 0:00). In-flight endurance is UNMEASURED; next: survive-in-flight hold recipe (see NEXT.md).
 
 - **s5489:** keyed mission hold of 1502 s (m6_long25.sh, run directly, loop idle) survived: 0 stalls, 0 crash lines, 29960/34057 distinct fb hashes (single run). m6_hold_a/b also clean. Endurance on the autopilot route is closed past 25 min; remaining M6 gap = real-input play and flight render fidelity.
