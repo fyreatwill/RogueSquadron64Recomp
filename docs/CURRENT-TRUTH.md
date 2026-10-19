@@ -264,3 +264,4 @@ the tail of the soak results before acting.
 - s5539: strip_diag_layers strips balanced scratch-only blocks; replay residual 600 -> ~440 (funcs_24 325, funcs_23 53, funcs_4 16, funcs_5 11, funcs_0 8, funcs_27 6, funcs.h 6). Next: port funcs_4/5 live patches into a fixup script, 3 funcs.h renames + funcs_0:5690 MEM_W order, then funcs_24.
 
 - s5543: regen-determinism replay residual total ~92 (funcs_24 7 whitespace-only; funcs_23 53, funcs_4 10, funcs_27 6 next).
+- s5544: funcs_23 replay residual 0; total ~39 (funcs_4 10, funcs_24 7, funcs_27 6, funcs_29 4, funcs_20 3, 4x2).

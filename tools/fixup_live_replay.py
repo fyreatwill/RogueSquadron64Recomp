@@ -237,4 +237,40 @@ try:
 except StopIteration:
     print("s4700_move_24: FAIL no match"); fail += 1
 
+# funcs_23 (s5544): live hoists the s4870 helper block above the s4784 helper; externs sit right after recomp.h
+p = d / "funcs_23.c"
+t23 = p.read_text()
+_h = "#include \"recomp.h\"\n\n/* PATCH: s4784 gap order helper */"
+_i = t23.find("extern void rs64_s4899_ev(char); /* PATCH: s4899 */\n")
+_c = t23.find("/* PATCH: s4870 producer/entry helper */")
+_j = t23.find("#include <stdlib.h>\n#include <stdio.h>\n#include \"funcs.h\"")
+if t23.startswith(_h) and 0 < _i < _c < _j:
+    ext = t23[_i:_c].lstrip("\n")
+    body = t23[_c:_j]
+    rest = t23[:_i].rstrip("\n").split("\n", 2)
+    t23 = ("#include \"recomp.h\"\n" + ext.rstrip("\n") + "\n\n" + body + "\n" + t23[len("#include \"recomp.h\"\n"):_i].lstrip("\n").join(["", ""]) + t23[_j:])
+    p.write_text(t23)
+    print("s4870_hoist_23: ok")
+else:
+    print("s4870_hoist_23: already applied or no match")
+
+# funcs_23 (s5544) remaining: blank after hoisted block, extern block move, B40 ternary polarity, entry-census line, gate-clear order
+p23 = d / "funcs_23.c"
+t23 = p23.read_text()
+_ext4 = ("extern void rs64_s4597_target_store(char, uint32_t, uint32_t, uint32_t);\n"
+         "extern void rs64_audioloop_witness(uint8_t* rdram, recomp_context* ctx, uint32_t stage);\n"
+         "extern void rs64_m5_lowfield_store(char, uint32_t, uint32_t, uint32_t);\n"
+         "extern void rs64_s4299_store_watch(char, uint32_t, uint32_t, uint32_t);\n")
+_anc4 = "extern void rs64_s4222_pc(uint8_t*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);\n"
+if t23.count(_ext4) == 1 and t23.count(_anc4) == 1 and t23.index(_ext4) < t23.index(_anc4):
+    t23 = t23.replace(_ext4, "").replace(_anc4, _ext4 + _anc4)
+    print("ext4_move_23: ok")
+_b = 'getenv("ROGUESQ_M5_B40_VALUE")[0] == \'0\') ? 0 : ctx->r2)'
+if _b in t23:
+    t23 = t23.replace(_b, 'getenv("ROGUESQ_M5_B40_VALUE")[0] != \'0\') ? ctx->r2 : 0)')
+    print("b40_polarity_23: ok")
+t23 = re.sub(r"^        rs64_m5_selector_store_entry\(0x8008EB5Cu, .*s4712 reapplyDisplayMode census \*/\n", "", t23, flags=re.M)
+p23.write_text(t23)
+move_lines("order_s4784_gate", "funcs_23.c", r"^        \{ /\* PATCH: s4784 gate-clear", -2, 1)
+
 sys.exit(1 if fail else 0)
