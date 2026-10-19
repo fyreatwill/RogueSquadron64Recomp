@@ -180,4 +180,61 @@ def move_s5228_24():
 
 move_s5228_24()
 
+# funcs_24 tail rules (s5543): s4534 phase gate absent in live; format drops phase/width/origin.
+cut("s4534_gate_24", "funcs_24.c",
+    "    extern uint32_t rs64_phase_ord(void);\n"
+    "    extern uint32_t rs64_vi_committed_width(void);\n"
+    "    extern uint32_t rs64_vi_committed_origin(void);\n"
+    "    uint32_t phase = rs64_phase_ord();\n"
+    "    uint32_t vi_width = rs64_vi_committed_width();\n"
+    "    uint32_t vi_origin = rs64_vi_committed_origin() & 0x00FFFFFFu;\n"
+    "    if (!((vi_width == 1024u && vi_origin == 0x00790400u) ||\n"
+    "          (vi_width == 512u && vi_origin == 0x006AB400u))) return;\n")
+_f = "phase=%u width=%u origin=0x%06X "
+t24 = (d / "funcs_24.c").read_text()
+if "phase, vi_width, vi_origin, " in t24:
+    t24 = t24.replace("[s4534-jal] kind=arm " + _f, "[s4534-jal] kind=arm ")
+    t24 = t24.replace("[s4534-jal] kind=%s " + _f, "[s4534-jal] kind=%s ")
+    t24 = t24.replace("            phase, vi_width, vi_origin, site, pc,", "            site, pc,")
+    t24 = t24.replace('bad ? "bad" : "ctl", phase, vi_width, vi_origin, site,', 'bad ? "bad" : "ctl", site,')
+    (d / "funcs_24.c").write_text(t24)
+    print("s4534_fmt_24: ok")
+
+# s4938 extern sits after the s5078 extern in live, not mid-file
+ext38 = "extern void rs64_s4938_aux_store(char, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);\n"
+t24 = (d / "funcs_24.c").read_text()
+anc = "extern void rs64_s5078_flight_store(uint32_t, uint32_t);\n"
+if t24.count(ext38) == 1 and t24.count(anc) == 1 and t24.index(ext38) > t24.index(anc):
+    t24 = t24.replace(ext38, "").replace(anc, anc + ext38)
+    (d / "funcs_24.c").write_text(t24)
+    print("s4938_ext_24: ok")
+else:
+    print("s4938_ext_24: already applied or no match")
+
+# s4873 RA diagnostic gained a timestamp in live
+sub("s4873_ra_fmt_24", "funcs_24.c",
+    'for (int k = 0; k < nra; k++) fprintf(stderr, "[s4873] RA 0x%08X x%lu\\n", ras[k], cnt[k]); fflush(stderr); }',
+    'struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); fprintf(stderr, "[s4873] RA t_ms=%lu n=%lu msgs=%lu\\n", '
+    '(unsigned long)(ts.tv_sec*1000UL + ts.tv_nsec/1000000UL), n, rs64_s4873_n[0]); '
+    'for (int k = 0; k < nra; k++) fprintf(stderr, "[s4873] RA 0x%08X x%lu\\n", ras[k], cnt[k]); fflush(stderr); }')
+move_lines("order_s5223_site", "funcs_24.c", r"^    rs64_s5223_entry_join\(rdram, \"callsite-0x800903F0\"", -2, 1)
+move_lines("order_s4873_fix", "funcs_24.c", r"^    \{ extern void rs64_s4873_ev\(int\); rs64_s4873_ev\(1\);", 1, 1)
+
+# s4700 cbtable: live puts the 2-line block at the top of the musyxSynthFrame wrapper
+p = d / "funcs_24.c"
+ls = p.read_text().split("\n")
+try:
+    a = next(i for i, l in enumerate(ls) if "PATCH: s4700 cbtable" in l)
+    w = next(i for i, l in enumerate(ls) if l.startswith("RECOMP_FUNC void musyxSynthFrame(uint8_t* rdram"))
+    if a > w:
+        blk = ls[a:a + 2]
+        del ls[a:a + 2]
+        ls[w + 1:w + 1] = blk
+        p.write_text("\n".join(ls))
+        print("s4700_move_24: ok")
+    else:
+        print("s4700_move_24: already applied")
+except StopIteration:
+    print("s4700_move_24: FAIL no match"); fail += 1
+
 sys.exit(1 if fail else 0)

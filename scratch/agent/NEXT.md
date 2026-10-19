@@ -1,2 +1,2 @@
-Single next unit: funcs_24 residual 35 = s4534_jal phase gate (scratch has 8 lines + format fields live lacks -> cut), s4700 cbtable / s4873 / s5223 line order (move_lines), s4938 extern position, s4873 RA timestamp format. Then funcs_23 (53), funcs_4 (10), funcs_27 (6). Run scratch/agent/s5532_determinism.sh; control must still flag; baseline ~120 total.
+Single next unit: funcs_23 residual 53 (diff ../N64Recomp/scratch_s5532/funcs_23.c vs RecompiledFuncs/funcs_23.c after running scratch/agent/s5532_determinism.sh), add replay rules to tools/fixup_live_replay.py. Then funcs_4 (10), funcs_27 (6). Control must still flag; baseline ~92 total.
 HYPOTHESIS-ID: regen-determinism-no-unscripted-handedits
