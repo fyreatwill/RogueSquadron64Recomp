@@ -1,4 +1,4 @@
-Work unit: read mainGameLoop dispatch at L_8003E114 (0x8003E114..0x8003E1F0, generated funcs_8.c ~21100-21470) for how B40 selects the loop arm; then ONE build logging arm-entry PCs (0x8003E274, 0x8003E2A8, 0x8003E320, 0x8003E3F0) with B40, base vs f2 (ROGUESQ_FORCE_INITMISSION_SEL), phase-gated on the 0x00690400 VI transition.
-Hypotheses: H1 nonzero B40 enters an arm that waits (stall); H2 it skips the manifest/initMission arm; H3 base is timing-dependent.
-Discriminator: which arm-entry PCs fire in f2 vs base (positive control: 0x8003E2A8 must fire in base).
+Work unit: static only first - grep generated funcs for writers of bit 0x02000000 in the word at 0x18(s3) of mainGameLoop's state struct (lui 0x200 / ori patterns, "or ... 0x18($s3)" and callers outside mainGameLoop that receive s3), classify each writer, name which one the hangar mission pick reaches. If a single writer carries a mission index, hook that write (not a poll) in one build with a base/f2/f7 override arm queued together.
+Hypotheses: H1 flag set by hangar via menu overlay with the mission index in a sibling field; H2 mission is chosen purely inside cinematicLoopBody arg (0x13 literal) from save data; H3 only one mission exists in this build's manifest path (title->mission always 0x13).
+Discriminator: writer list + sibling index field; positive control = base run must show the writer firing before 0x00690400.
 HYPOTHESIS-ID: second-distinct-mission-coverage
