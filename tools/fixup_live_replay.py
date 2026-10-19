@@ -92,4 +92,92 @@ move_lines("order_lowfield", "funcs_24.c", r"^    rs64_m5_lowfield_store\('[HBW]
 move_lines("order_s4873", "funcs_24.c", r"^    \{ extern void rs64_s4873_ev\(int\); rs64_s4873_ev\(1\);", -4, 1)
 sub("memw_order_24", "funcs_24.c",
     "MEM_W(S32(0x80150000), -0X6908)", "MEM_W(-0X6908, S32(0x80150000))")
+# funcs_24 live-only diag content and layers the live tree lacks (s5542)
+def cut(name, fname, old, new=""):
+    sub(name, fname, old, new) if new else _cut(name, fname, old)
+
+
+def _cut(name, fname, old):
+    global fail
+    p = d / fname
+    t = p.read_text()
+    if t.count(old) != 1:
+        print(f"{name}: FAIL expected 1 match, got {t.count(old)}")
+        fail += 1
+        return
+    p.write_text(t.replace(old, ""))
+    print(f"{name}: ok")
+
+
+cut("cb_transfer_24", "funcs_24.c",
+    "    { extern void rs64_m5_callback_transfer_event(unsigned, unsigned, unsigned);\n"
+    "      rs64_m5_callback_transfer_event(0x800919ECu, U32(ctx->r2), U32(ctx->r4)); }\n")
+t24 = (d / "funcs_24.c").read_text()
+m = re.search(r"^    \{ extern void rs64_m5_callback_teardown_event\(.*PATCH: s4894 m5 callback teardown return \*/\n", t24, re.M)
+if m:
+    (d / "funcs_24.c").write_text(t24.replace(m.group(0), "", 1)); print("cb_teardown_24: ok")
+else:
+    print("cb_teardown_24: already applied or no match")
+cut("pause_comment_24", "funcs_24.c",
+    " /* s4698: PAUSE=2 holds the pause past wait-exit (discriminator) */")
+sub("spin2_gate_24", "funcs_24.c",
+    "        rs64_m5_field348_store(width, pc, addr, value);\n    }\n",
+    "        rs64_m5_field348_store(width, pc, addr, value);\n    }\n"
+    "    extern void rs64_m5_spin2_gate_store(char width, uint32_t pc,\n"
+    "                                          uint32_t addr, uint32_t value);\n"
+    "    rs64_m5_spin2_gate_store(width, pc, addr, value);\n")
+cut("s4690_comment_24", "funcs_24.c", " PATCH: s4690 external-entry phase attribution")
+
+# funcs_24: helper block order (s5542). Live has the s4899 extern right after recomp.h and
+# the s4867/s4864 helper blocks just before `#include "funcs.h"`.
+def move_helpers_24():
+    global fail
+    p = d / "funcs_24.c"
+    ls = p.read_text().split("\n")
+    ext = "extern void rs64_s4899_ev(char); /* PATCH: s4899 */"
+    try:
+        a = ls.index("/* PATCH: s4867 bound helper */")
+        e = ls.index(ext)
+        anchor = next(i for i in range(e, len(ls)) if ls[i] == '#include "funcs.h"') - 2
+    except (ValueError, StopIteration):
+        print("helpers_24: already applied or no match")
+        return
+    if ls[anchor] != "#include <stdlib.h>" or not (a < e < anchor):
+        print("helpers_24: FAIL layout")
+        fail += 1
+        return
+    block = ls[a:e]
+    mid = ls[e + 1:anchor]
+    ls = ls[:1] + [ext] + ls[1:a] + mid + block + ls[anchor:]
+    p.write_text("\n".join(ls))
+    print("helpers_24: ok")
+
+
+move_helpers_24()
+
+# funcs_24: s5228 census + fill_range_edge helpers sit right after the s2084 comment in live (s5542).
+def move_s5228_24():
+    global fail
+    p = d / "funcs_24.c"
+    ls = p.read_text().split("\n")
+    anc = "/* PATCH: s2084 fill-range reachability table */"
+    try:
+        a = ls.index("/* PATCH: s5228 store census */")
+        e = a + next(i for i, l in enumerate(ls[a:]) if l.startswith("extern void rs64_s2031_m5_gate_event"))
+        k = ls.index(anc)
+    except (ValueError, StopIteration):
+        print("s5228_24: already applied or no match")
+        return
+    if k > a:
+        print("s5228_24: FAIL layout")
+        fail += 1
+        return
+    block = ls[a:e]
+    ls = ls[:k + 1] + block + ls[k + 1:a] + ls[e:]
+    p.write_text("\n".join(ls))
+    print("s5228_24: ok")
+
+
+move_s5228_24()
+
 sys.exit(1 if fail else 0)
