@@ -162993,3 +162993,6 @@ Next: M5 audio plan (docs/M5-AUDIO-PLAN.md does not exist yet).
 ## Session 5499 (2026-10-18) — pivot check: no unqualified M5/M3/VI-640 step remains; going BLOCKED with a direction question
 
 Read CURRENT-TRUTH, NEXT.md (stale: said "write M5 plan", but docs/M5-AUDIO-PLAN.md exists, 259 lines, rows A1-A20 and steps 0-11 all qualified/closed) and the soak tail (all rc=0 or cap-kill, no new crash/stall). Checked each mandatory-pivot option: (a) every M5 inventory row says keep/do-not-change with writers named; (b) M3 classes closed s5463, plume 16/16 clean. Landing a guard or stub change now would be mitigation without a writer (rule 11). No game run, no code change; outcome BLOCKED with BLOCKED.md asking for a target (second mission, real-input play, or rename sweep authorisation).
+
+## s5500 unblock (route 3: re-scope)
+s5499 BLOCKED.md asked for a human-chosen target. Real-input play fidelity and the rename sweep are genuine human decisions, recorded as open dependencies in CURRENT-TRUTH; second-mission coverage needs no human. Moved BLOCKED.md to BLOCKED.resolved.s5500-direction-rescoped.md and rewrote NEXT.md to reach a distinct mission via the hangar route (HYPOTHESIS-ID second-distinct-mission-coverage). Doc-read evidence only; no game run. Details: scratch/agent/UNBLOCK.md.

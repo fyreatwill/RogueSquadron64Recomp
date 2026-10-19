@@ -1,2 +1,2 @@
-Work unit: none pending - BLOCKED on human direction (see BLOCKED.md). If directed to a second mission: reuse the s5435/s5437 second-mission recipe and the keyed hold harness.
-HYPOTHESIS-ID: awaiting-direction
+Work unit: reach a DIFFERENT mission (distinct DAT / objectives from the Mos Eisley first mission) via the hangar mission-select route (flaky 3/5 per s5378; reuse scratch/agent/autopilot_hangar_probe.sh and the keyed hold harness m6_keyed_hold_post.sh). Positive control: the known first-mission run in the same session reaches flight at ~80 s. Success = a flight whose VI origin/DAT objectives differ from mission 1, held >=600 s with 0 crash / 0 VI stall; any crash -> lldb backtrace and name the writer. One game run at a time; phase-gate on VI transitions.
+HYPOTHESIS-ID: second-distinct-mission-coverage
