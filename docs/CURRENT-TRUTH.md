@@ -253,6 +253,7 @@ progress/end observations to the port and cxd4 arms before another comparison.
 Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-12 min is the TITLE screen (VI width 1024 origin 0x790400 from 634 s): the mission ended and the game fell back to title/attract. Not a hang. Cause of mission end unknown (death vs objective vs autopilot 'r'). ROGUESQ_FB_DUMP_DIR dumps PPMs but assumes stride 320 (garbled at other widths).
 
 ## Next steps (single monotonic backlog)
+s5495: mission end (counter 0x80138064>=3, written by updateDestructionDebrisNpc from DAT item data) is a data-defined loss count; GAME OVER at ~frame 8000 for an unpiloted ship leans legitimate (single-source). Open: name the 3 NPCs / try a firing autopilot.
 
 - **s5494 (TOP):** god_bptrans read (single-source + s5480 trace): godmode end goes via runInMissionFrame event a0=2 -> requestMissionTransitionMode, i.e. the objective chain, not HP. Next: classify objective counter 2 (0x138064, set by updateDestructionDebrisNpc) as win vs loss condition from the DAT item definition; if win, 'GAME OVER' screen text may just be the results screen.
 
