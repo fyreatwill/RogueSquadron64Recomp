@@ -1,4 +1,3 @@
-# UNBLOCK s5583
-Route taken: 1 (refute) + 3 (re-scope).
-Evidence: BLOCKED.md asked the human to pick between (1) M6 keyed mission hold and (2) an M3/VI-640 change. Option (1) is already closed in the ledger: CURRENT-TRUTH headline + PORTING-STATE s5516 (31 holds, 251 min, 0 crash/stall), s5529 (hangar route 3/3), s5556 (3/3 x 900 s). So the "decision needed" was a choice among already-done work, not a human-only decision. The 12/12 plume loop killed each run at first title, leaving an explicit unrun follow-up (s5581: extend hold past title). That needs no human decision and no new software.
-Result: NEXT.md rewritten to that unit; BLOCKED.md moved to BLOCKED.resolved.s5583-m6-already-closed.md.
+# UNBLOCK (s5585)
+Route 3 (re-scope / defer). The s5584 block asked the human for direction, but its own text says the last open thread (extended-hold plume soak) is queued and had not run: soak_queue/s5584_plume_title_hold.sh is still pending, no s5584 line exists in SOAK-RESULTS.md, soak_results/ has no s5584 dir. Escalating before the one queued measurement ran is premature. The human-direction question is real but only after that soak lands; it is recorded as an OPEN DEPENDENCY in CURRENT-TRUTH (already at the s5530 line). NEXT.md is unchanged and valid (fold the soak, then re-escalate if 0/4 crash with alive120=4/4).
+No game run, no code change, no guard weakened.

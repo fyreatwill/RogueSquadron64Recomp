@@ -163652,3 +163652,6 @@ What ran: reviewed docs/M5-AUDIO-PLAN.md (steps 0-11 all qualified/closed, no un
 Landed: scratch/agent/soak_queue/s5584_plume_title_hold.sh (N=4 LLE-trio boots held 120 s past first title origin; control = ALIVE_AT_+120 line with advancing origin). Loop runs it between iterations; fold its SOAK-RESULTS line next iteration. Not run this session (soaks belong to the loop).
 Rules out: nothing new. This is a queue + ledger entry, not an engineering change; the pivot meter is NOT satisfied.
 Question for human: project milestones M3-M6 are closed with no open discriminator. Declare goal met, or name a new direction (e.g. VI-640 route wall target, new game feature, upstream PR cleanup).
+
+## Session 5585 (2026-10-19) — unblock: s5584 direction block premature (soak not yet run)
+Block: s5584 asked the owner to declare the goal met or name a new target. Finding: its own evidence says the extended-hold plume soak was only queued; no run/results exist yet. Route 3: archived BLOCKED.md as BLOCKED.resolved.s5584-premature-direction.md, kept NEXT.md (fold the s5584 soak). If the soak is 0/4 crashes with alive120=4/4, the next iteration should re-escalate; the direction question stays an open human dependency in CURRENT-TRUTH. No code/conclusion change.
