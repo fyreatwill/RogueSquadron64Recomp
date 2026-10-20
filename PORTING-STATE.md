@@ -163701,3 +163701,10 @@ Next: s5592_m6_long_i still queued; added s5593_m6_long_j (HOLD=1200) to stretch
 - 8 long title->mission holds clean, 0 crash, 0 stall. No failure datum; first-mission endurance stays MET.
 - Queued s5594_hangar_long_{k,l} (hangar-route recipe, 15 min hold; earlier hangar holds were ~440 s).
 - ORIGIN: n/a (no mitigation added).
+
+## Session 5595 (2026-10-19) — s5594 hangar-route long holds k,l folded: clean
+- s5594_hangar_long_k (rc=0, 983 s): att=1 mission_t=76s hold=903s alive_at_end=1 vi_stalls30s=0 godrefills=0 mission_cycles=1 crashlines=0.
+- s5594_hangar_long_l (rc=0, 988 s): att=1 mission_t=82s hold=903s alive_at_end=1 vi_stalls30s=0 godrefills=9 mission_cycles=1 crashlines=0.
+- (The one CRASH/SIGSEGV grep hit per log is the summary word "crashlines".) Both used the same harness/selftest as earlier holds.
+- Result: the hangar route (the flaky 3/5 one) now has 2/2 reaching a mission and holding 15 min with no crash or stall; combined with 8 title->mission holds that is 10/10 first-mission endurance. Does not cover a second mission (flag 0x130B58 bit 0x02000000 never set, s5515) or the ~1/7 title plume SIGSEGV (20/20 attached boots clean, single-source).
+- No code change this iteration; no new crash/stall datum beyond the clean null. ORIGIN: n/a (no mitigation added).

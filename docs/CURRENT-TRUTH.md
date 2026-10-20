@@ -330,6 +330,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5595 (TOP):** s5594 hangar_long_k,l folded: both clean (hold 903 s, vi_stalls30s=0, crashlines=0). First-mission endurance 10/10 (title and hangar routes). Do NOT queue more first-mission holds. Next: second-mission route investigation (flag 0x130B58 bit 0x02000000, s5515) - offline survey of who sets it, then a keyed route or an ASan arm.
+
 - **s5594 (TOP):** long_i (a tag-reuse replay of c) and long_j (20 min) clean: 8 long title->mission holds, 0 crash/stall. Queued s5594_hangar_long_{k,l} (hangar route, 15 min). Clean -> pivot to ASan arm or second-mission route (s5515 flag 0x130B58).
 
 - **s5593 (TOP):** s5592 m6_long_g,h folded: both clean (hold 905/901 s, alive, vi_stalls30s=0, crashlines=0; mission_cycles 4/1). With s5551 d / s5554 a-c that is 6/6 long mission holds clean. Not covered: flaky hangar route, second mission. Queued s5592_m6_long_i (15 min) and s5593_m6_long_j (20 min). If both clean: pivot to second-mission route or ASan arm.
