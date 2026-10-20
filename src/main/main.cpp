@@ -9704,11 +9704,15 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 const_cast<uint8_t*>(rd)[a] = 0xFF;
                 // s5605: the mask byte is HUD-only; lv0_checkComplexObjectives ends the mission on
                 // get(3)>=9 (word 0x80138068) or get(2)>=3 (0x80138064, the loss counter - not poked).
-                const uint32_t c = 0x138068u;
+                // s5612: ROGUESQ_MISSION_WIN_REAL=1 pokes get(10) (0x80138084) = 6 instead: lv0's get(3)>=9 and get(2)>=3
+                // gates both call 800C7738 (event 2 -> gate 4 -> requestSpeechResponseMode2 -> B14=2, the LOSE arm); only
+                // get(10)>=6 (0x80101224) runs objectives 3,4 + 800C776C (event 3 -> gate 3 -> Mode1 -> B14=1, the WIN arm).
+                static const bool s_real = std::getenv("ROGUESQ_MISSION_WIN_REAL") != nullptr;
+                const uint32_t c = s_real ? 0x138084u : 0x138068u;
                 // rdram words are host-native little-endian (same layout as the godmode float poke above)
                 const uint32_t cb = rd[c] | (rd[c + 1] << 8) | (rd[c + 2] << 16) | ((uint32_t)rd[c + 3] << 24);
                 const_cast<uint8_t*>(rd)[c + 3] = 0; const_cast<uint8_t*>(rd)[c + 2] = 0;
-                const_cast<uint8_t*>(rd)[c + 1] = 0; const_cast<uint8_t*>(rd)[c] = 9;
+                const_cast<uint8_t*>(rd)[c + 1] = 0; const_cast<uint8_t*>(rd)[c] = s_real ? 6 : 9;
                 s_win_done = true;
                 fprintf(stderr, "[mission-win] polls=%u mask 0x%02X -> 0xFF count3 %u -> 9 origin=0x%08X\n", s_win_polls, before, cb, org);
             }
