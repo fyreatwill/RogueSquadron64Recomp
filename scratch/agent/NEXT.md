@@ -1,5 +1,5 @@
-# NEXT: trace the FIRED lv2 voice handler into the audio path (G2 dialogue)
-Context: s5694 showed lv2 handlers (e.g. say2PickingUpMultipleSignalsTies_v0xA4 @0x801026CC) fire in the port. Dialogue is still absent (s5637: playObjectiveVoiceLine1 fired 0 in 420 s, but that counted callers of one fn).
-Hypotheses: H1 handler body runs but its voice call (playObjectiveVoiceLine1/other) is gated off by a stub; H2 voice call runs, request dies in the sound-queue/MusyX layer (no PCM); H3 voice call runs and PCM is produced but is muted/dropped at AI/host sink.
-Discriminator (ONE build, all counters): entry logs on funcs_43 say2* handler body (0x801026CC), playObjectiveVoiceLine1, and the next callee it invokes (read funcs_43.c:20466+ first), plus the audio enqueue it ends at; run existing s5693_htab recipe with ROGUESQ_LOG_HUDBIT=1 (hfire shows the handler fired = positive control). Offline first: read say2PickingUpMultipleSignalsTies_v0xA4 body (a0=0xA4 is the line id).
-HYPOTHESIS-ID: g2-voice-path-lv2
+# NEXT: G1 - find how the port selects the mission level and reach a level other than 2
+Context: s5695 closed the G2 dialogue request path (lv2 voice handlers fire and reach allocAndConfigureNewVoice). Soaks always land in level 2; level F's init (sayWhoaHim, bool 7) never runs.
+Hypotheses: H1 level is chosen by a menu/hangar selection the autopilot never changes; H2 a save-file/memory word picks it (saves/ dir); H3 a forced default in the port.
+Discriminator: offline first - grep CURRENT-TRUTH/PORTING-STATE for the level-index global written before lv2_initializeObjectTracking runs, then log it ([lvl]) in one soak with a keyed level-select (or poke) arm; positive control = value reads 2 in the default arm.
+HYPOTHESIS-ID: g1-level-select
