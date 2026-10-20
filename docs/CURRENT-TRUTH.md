@@ -225,3 +225,6 @@ before acting.
 
 ### s5638 update (G2 voice)
 s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayWhoaHim_v0x1FC fired 0 times in 420 s missions (single-source; [objbool] control active). Mission dialogue is never requested by the port; next: instrument all callers (NEXT.md, slug g2-voice-never-requested). The 0x64-vs-0x1FC hypotheses A/B/C of s5635 are unevaluated, not refuted.
+
+### s5639 update
+Caller-entry instrument [vcaller] (35 callers + runInMissionFrame control) built; soaks s5639_vcaller_{a,b} queued. See NEXT.md.

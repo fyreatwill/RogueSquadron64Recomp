@@ -163990,3 +163990,6 @@ Control: playObjectiveVoiceLine1 logging >=1 line per run. Outcome is labelled S
 - Single-source (one instrument, 2 runs, run c pending); caveat: nopoke runs may not reach any scripted trigger the retail game would.
 ORIGIN: diagnostic only; no mitigation added.
 HYPOTHESIS-ID: g2-voice-never-requested
+
+## Session 5639 (2026-10-20) — voice-line caller entry instrument (35 callers + control) built, soaks queued
+s5637 soaks a/b/c: playObjectiveVoiceLine1 never entered (c folded: 0 [voiceln] lines, alive, 0 stalls, 0 crashes). Built tools/apply_s5639_voicecaller_log.py (also vendored into fixup_game_funcs_vendored.py): env-gated ROGUESQ_LOG_HUDBIT [vcaller] entry log on every function statically calling playObjectiveVoiceLine1 (35, funcs_45..48) plus runInMissionFrame as positive control; applied to live tree, build OK. Queued s5639_vcaller_{a,b} (same recipe as s5637). Outcome split in NEXT.md. No result yet; hypotheses A/B/C unevaluated.
