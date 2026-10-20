@@ -163817,3 +163817,11 @@ Static (funcs_42.c:12300-12336): runInMissionFrame's end switch on gate 0x8010CA
 New lever: ROGUESQ_MISSION_WIN_REAL=1 (main.cpp) pokes get(10)=0x80138084 to 6. Run s5612_real (m6_god_common, hold 303 s): gate 0->3, b14 0->1, VI origins then walk 0x690400 -> 0x620400 -> 0x62BD00 -> 0x696100 -> 0x790400 (title) -> 0x656400 -> 0x6AB400 (hangar) -> 0x696100 -> mission again; crashlines=0, vi_stalls30s=0, mission_cycles=2. B50 still 0x11 (bit 0x100 is not needed on this route). Rules out: B14/B50 as a missing consumer half; the "end sequence never completes" thread.
 Single run, single build: not yet two-source for "win poke reaches mission 2" (the cycle returned to mission origin 0x690400 - could be mission 1 replay).
 ORIGIN: no mitigation added; the new env lever is test-only and fixes the poke, which was the defect.
+
+## Session 5613 (2026-10-19) — WIN_REAL did not reproduce s5612: two more runs show gate 5, 4, 6 and B14=2, no mission 2
+
+Ran scratch/agent/s5613_run.sh (two sequential arms of m6_god_common.sh, TAG s5613_real_a and _b, ROGUESQ_MISSION_WIN=300 ROGUESQ_MISSION_WIN_REAL=1). Both arms: mission at t=160-162 s, held 422-424 s, alive at end, vi_stalls30s=0, crashlines=0, mission_cycles=0 (no hangar 0x6AB400 re-entry after mission onset).
+- The poke fired (get(10) 1 to 6; the log text "count3 1 -> 9" is a misleading format string, it prints the old get(10) value). Samples in both arms: gate=5 (vflags 0x101, B14=0) x11, gate=4 x10, then gate=6 subphase 1 with B14=2 (24 and 48 samples). Never B14=1, never gate 3. The s5612 result (gate 3 / B14=1) is reproduced 0 of 2, so it is single-source.
+- The 0x690400/0x620400 origin alternation (about 9.5k 0x620400 lines per run) is present in both arms and is the mission double-buffer pair, not a level change. No level-id word was logged, so mission 2 vs replay is unmeasured; a hangar route is ruled out (no 0x6AB400 after mission onset).
+- Rules out: WIN_REAL reliably giving the win arm. Open: what differs from s5612_real (gate 5 appears first here; get(2)/get(3) may also cross thresholds under godmode within 300 polls).
+ORIGIN: no mitigation added; only a wrapper script (scratch/agent/s5613_run.sh).

@@ -1,4 +1,4 @@
-Single next work unit (s5613): qualify the win route. Run twice more: env TAG=s5613_real_a HOLD=420 STOP=500 LATE=95 LATE_NOSTART=1 LKEY=a XENV="ROGUESQ_LOG_LEVEL=1 ROGUESQ_MISSION_WIN=300 ROGUESQ_MISSION_WIN_REAL=1" zsh scratch/agent/m6_god_common.sh (queue as soaks). Then decide from the log whether the post-win 0x690400 is mission 2 or a replay of mission 1 (compare level-id word / objective counters get(1..10) at 0x80138060+ before and after; log mission id).
-Hypotheses: H1 return to 0x690400 is mission 2 (level id changes); H2 replay of mission 1 (level id same, counters reset); H3 hangar route with different mission loaded.
-Discriminator: level-id / counters at second 0x690400 vs first.
+Single next work unit (s5614): explain why WIN_REAL gives gate 5,4,6 / B14=2 in s5613 but gate 3 / B14=1 in s5612.
+Hypotheses: H1 get(2)/get(3) also cross thresholds after the poke (lose arm wins the race); H2 gate 5 (vflags 0x101) preempts, a state-dependent path before the poke settles; H3 s5612 was a one-off timing outcome.
+Discriminator: in ONE run log get(1..10) (0x80138060+) every 30 polls after the poke plus gate/B14 changes; second arm with the poke at polls=100 vs 300 in the same recipe; compare which counter hits threshold first. Fix the misleading count3 format string. Locate and log a level-id word.
 HYPOTHESIS-ID: m6-mission-endurance
