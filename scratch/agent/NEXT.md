@@ -1,5 +1,5 @@
-# NEXT (s5674): isolate speech PCM (not just loudness)
-Facts (s5673): speech enqueue windows 1.9-4.6x louder at AI output on the new cadence; callers fire. Loudness is confounded with music/SFX.
-Hypotheses: H-e1 speech PCM is intelligible (decode of voice-slot pre-mix output looks like speech: low zero-crossing rate, bandlimited); H-e2 it is loud but garbage (rail/noise); H-e3 intelligible but masked/ducked in final mix.
-Discriminator: dump the speech voice's decoded PCM (slot 0x80153420 output / ring at +0x198) for ~2 s after an enqueue, write WAV, compute spectrum offline; compare to SFX voice dump as control. If owner reports dialogue audible, close G2 and move to G1.
-HYPOTHESIS-ID: g2-speech-audible
+# NEXT (s5675): close G2 or move to G1
+Facts (s5674): speech-window AI PCM is rail-free, band-limited (<3 kHz), ~11x control level; WAVs in scratch/agent/m6/s5674_raw/wav/. Intelligibility needs a human ear.
+Hypotheses: H-f1 speech audible -> G2 closed; H-f2 only music/SFX audible (speech masked/ducked) -> solo the voice slot pre-mix; H-f3 fuzz residual -> compare retail oracle hf_ratio (already matched s5671).
+Unit: rung G1 (mission progression from real input): write a soak recipe that reaches mission 2 from real input after mission 1 win (no ROGUESQ_MISSION_WIN poke), log crashes/stalls. Keep ROGUESQ_PCM_RAW armed in soaks (cheap) so a listen is always possible.
+HYPOTHESIS-ID: g1-mission-progression

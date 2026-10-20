@@ -7527,6 +7527,22 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                     (double)sum_abs / (double)num_samples,
                     sum_abs ? (double)sum_diff / (double)sum_abs : 0.0);
         }
+        // s5674: raw s16 dump of every phase>=4 callback; the [pcm-dense] n= index
+        // lines up with the n= printed here (file offset in samples).
+        static FILE* s_pcm_raw = nullptr;
+        static int s_pcm_raw_init = 0;
+        static uint64_t s_pcm_raw_off = 0;
+        if (!s_pcm_raw_init) {
+            s_pcm_raw_init = 1;
+            const char* e = getenv("ROGUESQ_PCM_RAW");
+            if (e && e[0]) s_pcm_raw = fopen(e, "wb");
+        }
+        if (s_pcm_raw && rs64_phase_ord() >= 4) {
+            fprintf(stderr, "[pcm-raw] n=%u off=%llu ns=%zu\n", s_pcm_n,
+                    (unsigned long long)s_pcm_raw_off, num_samples);
+            fwrite(samples, sizeof(int16_t), num_samples, s_pcm_raw);
+            s_pcm_raw_off += num_samples;
+        }
         if (s_pcm_n < 20 || (s_pcm_n % 256) == 0) {
             fprintf(stderr, "[pcm-sanity] n=%u phase=%u width=%u origin=0x%06X num_samples=%zu all_zero=%d allzero_calls=%u total_calls=%u\n",
                     s_pcm_n, rs64_phase_ord(), rs64_vi_committed_width(),
