@@ -136,6 +136,8 @@ State as of s5635 (all static claims single-source unless noted):
   mission/content selection by origin alone (s5508).
 
 ## Superseded conclusions worth retaining
+- s5645 premise "consumeVoiceSamples reads the sample bytes" - overturned s5646 (pure counter); believable because its name and position in the voice pipeline suggest it moves data.
+- "Speech DMA may yield zeros" (D1) - overturned s5647; believable because the voice is audibly absent.
 
 Each: the wrong claim, why it was believable, what replaced it.
 
@@ -192,7 +194,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-0. **Fold `s5644_vdown_{a,b}`** ([vdown] log; NEXT.md). Fold `s5637_voiceln_{a,b,c}` ([voiceln] log, see NEXT.md). 1. **Fold `s5633_force2_b`** (queued) for completeness of the R refutation.
+0. **NEXT (s5648): D2 vs D3** - log whether any ucode cmd-list DRAM address falls inside the voice buffers (positive control: mark-everything); see NEXT.md. (s5644/s5646 soaks folded.) Older: fold `s5644_vdown_{a,b}` ([vdown] log; NEXT.md). Fold `s5637_voiceln_{a,b,c}` ([voiceln] log, see NEXT.md). 1. **Fold `s5633_force2_b`** (queued) for completeness of the R refutation.
 2. **Test the s5635 dialogue lead:** confirm at runtime whether
    `sayWhoaHim_v0x1FC` (or another voice-script path) sets bool 7 in failing
    runs and not in surviving ones — log entry + bool 7 transition in one build
@@ -234,4 +236,5 @@ s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayW
 [vcaller] folded (s5640): control fired, 0/35 Line1 callers fired — but lv2 uses playObjectiveVoiceLine2, so this is a wrong-function null (voice-request question still open). [speech] log on playSpeechClip + Line2 built; soaks s5640_speech_{a,b} queued. See NEXT.md.
 
 - **s5645 (2 soaks, controls OK):** voice pool is alive downstream: all 23 speech/voice allocs land on slot 0x80153420, serviceStreamingVoice runs it, slot+0x11AC completions arrive (ok=20 empty=0), consumeVoiceSamples runs, tuple advances, stream id 7 starts. "Never requested / no completion" hypotheses refuted. Gap is sample DATA or ucode mix. NB: game logs are scratch/agent/m6/<tag>/run.log, not soak_results/*.log.
-- **s5646:** consumeVoiceSamples does NOT read sample bytes (pure counter at slot+0x11D4/0x11DD) - s5645 NEXT premise was wrong. [vbuf] slot-pointer census (tools/apply_s5646_voicebuf_log.py) built; soaks s5646_vbuf_{a,b} queued; fold next.
+- **s5646:** consumeVoiceSamples does NOT read sample bytes (pure counter at slot+0x11D4/0x11DD) - s5645 NEXT premise was wrong. [vbuf] slot-pointer census (tools/apply_s5646_voicebuf_log.py) built; soaks s5646_vbuf_{a,b} queued; FOLDED s5647 (below).
+- **s5647 (2 soaks, control `nz800=1354` OK):** voice slot 0x80153420 pointer targets (+0x198 buffer, +0x11C0 ring, +0xB84) are nonzero and CHANGE between dumps (n=1/40/200/1000; +0x198 header text -> PCM-like words). Refutes D1 (DMA yields zeros). Voice data exists in RDRAM; loss is at ucode cmd-list read (D2) or AI ring/gain (D3). Caveat: not proven to be speech vs SFX.
