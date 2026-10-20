@@ -10,7 +10,7 @@ def apply(text):
     def sub(m):
         n[0] += 1
         return m.group(0) + ('    { static int s_n = 0, s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
-                             'if (s_e && s_n++ < 6) fprintf(stderr, "[cco] %s call#%%d\\n", s_n); } /* PATCH: s5619 cco log */\n' % m.group(1))
+                             'if (s_e && (s_n++ < 6 || s_n %% 60 == 0)) { extern long time(long*); fprintf(stderr, "[cco] %s call#%%d t=%%ld\\n", s_n, time(0)); } } /* PATCH: s5619 cco log */\n' % m.group(1))
     return RX.sub(sub, text), n[0]
 if __name__ == "__main__":
     tot = 0

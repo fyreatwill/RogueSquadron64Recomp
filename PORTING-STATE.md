@@ -163900,3 +163900,7 @@ ORIGIN: no mitigation added; diagnostic/static only.
 - Rules out: uninitialised memory / seed-leak as the source of the per-run id difference. Not a port defect (retail also calls randMod here).
 - Still open: why only 8 objective booleans in 420 s (level script progress). NEXT: log VI frame + mission-time per objective call and per lv2_checkComplexObjectives entry in ONE instrument to see whether the checker runs but conditions never meet, or stops being called.
 - ORIGIN: no mitigation added; static analysis only. No code change this iteration.
+
+## Session 5625 (2026-10-20) — progress-rate instrument for objective booleans (soaks queued)
+Ran: reworked tools/apply_s5619_cco_log.py (lvN_checkComplexObjectives: log call#6 first then every 60th, with wall time t=) and tools/apply_s5622_objbool_log.py (setObjectiveBoolean: all ids up to 400 calls, with t=), reapplied to the live tree (cco x21, objbool x1), rebuilt OK (replay list already includes both). Queued s5625_prog_{a,b} (unpoked, 420 s hold). Positive control: cco counter must rise in the first 60 s.
+Discriminator: cco count keeps rising with no new booleans => A (conditions never true); count freezes => B (script task stalled); booleans at fixed t => C (time-gated). Results not yet in; fold next iteration from SOAK-RESULTS.md (grep '\[cco\]\|\[objbool\]' in the soak logs).

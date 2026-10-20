@@ -5,8 +5,8 @@ import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 TAG = "[objbool]"
 BLOCK = ('    { static int s_n = 0, s_m = 0, s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
-         'if (s_e) { uint32_t id_ = U32(ctx->r4); s_n++; if (s_n <= 20 || ((id_ == 0x64 || id_ == 0x6D) && s_m++ < 200)) '
-         'fprintf(stderr, "[objbool] call#%d id=0x%X val=%u ra=0x%08X\\n", s_n, id_, U32(ctx->r5), U32(ctx->r31)); } } /* PATCH: s5622 objbool log */\n')
+         'if (s_e) { extern long time(long*); uint32_t id_ = U32(ctx->r4); s_n++; if (s_n <= 400) '
+         'fprintf(stderr, "[objbool] call#%d id=0x%X val=%u t=%ld\\n", s_n, id_, U32(ctx->r5), (long)time(0)); } } /* PATCH: s5622 objbool log */\n')
 def apply(text):
     if TAG in text: return text, 0
     i = text.find("RECOMP_FUNC void setObjectiveBoolean(")
