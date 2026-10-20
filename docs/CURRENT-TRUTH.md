@@ -188,7 +188,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-1. **Fold `s5633_force2_b`** (queued) for completeness of the R refutation.
+0. **Fold `s5637_voiceln_{a,b,c}`** ([voiceln] log, see NEXT.md). 1. **Fold `s5633_force2_b`** (queued) for completeness of the R refutation.
 2. **Test the s5635 dialogue lead:** confirm at runtime whether
    `sayWhoaHim_v0x1FC` (or another voice-script path) sets bool 7 in failing
    runs and not in surviving ones — log entry + bool 7 transition in one build

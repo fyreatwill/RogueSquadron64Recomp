@@ -163970,3 +163970,10 @@ Folded s5633_force0_{a,b} and s5633_force2_a (force2_b still queued). Positive c
 ## Session 5636 (2026-10-20) — maintenance: compacted CURRENT-TRUTH (60171 B -> 13812 B)
 
 Step 0 triggered (CURRENT-TRUTH was 60171 B > 60000). No experiments run. docs/CURRENT-TRUTH.md cut from 543 to 224 lines / 13812 B (net -319 lines): headline refreshed to s5635, active M6 objective-boolean/0x64 fail-arm thread kept, superseded-conclusions section condensed, Next steps renumbered into one monotonic backlog, durable reference material appended to docs/PROJECT-OVERVIEW.md ("Migrated from CURRENT-TRUTH (s5636)"). Git history preserves the removed text. The s5636 work unit (who invokes sayWhoaHim_v0x1FC; playObjectiveVoiceLine1 logging) is deferred unchanged to the next iteration.
+
+## Session 5637 (2026-10-20) — voice-line entry log instrument (playObjectiveVoiceLine1 + sayWhoaHim_v0x1FC)
+
+- Offline: sayWhoaHim_v0x1FC (0x80108388) has no static jal, no lui/addiu reference in RecompiledFuncs, and its address word appears nowhere in the 16 MB ROM image (so the table is built at runtime or lives in a compressed overlay). The dispatcher cannot be found statically; hypotheses A/B/C stay open.
+- Landed tools/apply_s5637_voiceline_log.py (wired into fixup_game_funcs_vendored.py + replay list): under ROGUESQ_LOG_HUDBIT=1 logs [voiceln] entry of playObjectiveVoiceLine1 and sayWhoaHim_v0x1FC with a0, ra, sp, wall time (cap 400 each). Built clean. Positive control: playObjectiveVoiceLine1 must fire for any voice line in a run; the 0x1FC call itself is the target.
+- Queued s5637_voiceln_{a,b,c} (nopoke, 420 s hold). Verdicts pending; fold from SOAK-RESULTS.md. Compare [voiceln] timing/ra against the [objbool] id 0x64 LOSE time per run.
+ORIGIN: diagnostic only; no mitigation added.
