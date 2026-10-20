@@ -194,6 +194,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
+0b. **s5660:** only unhooked game store forms are swl/swr/sdl/sdr (421 sites; many are data-as-code). Hooked via tools/apply_s5660_unaligned_store_census.py -> rs64_s5660_ustore; soak `s5660_vwriter_a` queued (look for `[ustore-all]` control and `[vstore] w=L/R/l/r`). See NEXT.md.
 0a. **s5659 (single-source):** vsnap_b: rails in voice-read range go 2 -> ~1081 (of ~1232 halfwords) in a ~18-task burst (tasks 1789-1806) right after the FIRST enqueueSpeechClip/allocAndConfigureNewVoice (phase 5); clean through task 1528. Fill is at voice start, writer unnamed (not the 28 instrumented stores, not RSP DMA-out). Next: log every write form (swl/swr/sdc1/host memcpy/PI DMA) overlapping the range between task 1528 and 1806, with PC.
 0a. **s5658:** s5657 vsnap starved (80-line budget eaten by wide-hash control by task 1007; rails 0/swz<=2 early). Rebuilt rail-count-keyed; s5658_vsnap_b queued.
 0a. **s5657:** [vsnap] instrument built (rsp.cpp) + soak s5657_vsnap_a queued: rail-count timeline of the voice-read range at every audio task; wide hash = positive control.

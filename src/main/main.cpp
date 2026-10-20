@@ -2125,6 +2125,14 @@ extern "C" void rs64_s5654_vstore(uint32_t pc, uint32_t addr, uint32_t value, ch
     if (c == 1 && by_pc.size() <= 60) std::fprintf(stderr, "[vstore] new pc=%08X addr=%06X w=%c val=%08X nn=%llu\n", pc, addr, width, value, (unsigned long long)nn);
     if ((nn & 0x3FFFu) == 0) { std::fprintf(stderr, "[vstore-sum] nn=%llu pcs=%zu:", (unsigned long long)nn, by_pc.size()); int k = 0; for (auto& kv : by_pc) { if (k++ >= 12) break; std::fprintf(stderr, " %08X=%llu", kv.first, (unsigned long long)kv.second); } std::fprintf(stderr, "\n"); }
 }
+// s5660: unaligned stores (swl/swr/sdl/sdr) were never hooked by the s5654 census; route them through it.
+// Positive control: [ustore-all] counts every call (all addresses) so a zero narrow count is interpretable.
+extern "C" void rs64_s5660_ustore(uint32_t pc, uint32_t addr, uint32_t value, char width) {
+    static std::atomic<uint64_t> all{0}, wide{0}, narrow{0};
+    uint64_t a = ++all; const uint32_t p = addr & 0x1FFFFFFFu;
+    if (p >= 0x1B2C60u && p < 0x29DFB8u) { ++wide; if (p < 0x1B3600u) ++narrow; rs64_s5654_vstore(pc, p, value, width); }
+    if ((a & 0x3FFFFu) == 1) std::fprintf(stderr, "[ustore-all] all=%llu wide=%llu narrow=%llu\n", (unsigned long long)a, (unsigned long long)wide.load(), (unsigned long long)narrow.load());
+}
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                             uint32_t phys,
                                             uint32_t len,
