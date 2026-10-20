@@ -330,6 +330,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5606 (TOP):** 800C7738 and 800C776C are identical flag-setters (bit 0x4 / 0x8 of 0x8010C9E0 if 0x8010CA20==0); lv0 win and loss gates both call 7738, so win/loss is NOT decided there (single-source static). ROGUESQ_MISSION_WIN now logs `flagword` transitions after the poke. Fold s5604_mwin_{a,b}; see NEXT.md for the a/b/c outcome split.
 - **s5605 (TOP):** s5604 gate block refuted (range artifact: retries narrowed `ITER_START_HEAD..HEAD` to docs-only commits). ROGUESQ_MISSION_WIN now also pokes get(3)=0x80138068 to 9 (lv0 end gate per M6-OBJECTIVE-COUNTER-WRITERS.md); mask 0x130B15 is HUD-only. Needs a rebuild, re-queued soaks, and a read of 800C7738 vs 800C776C (win vs loss). Single-source static.
 
 - **s5604 (TOP):** s5602_plume_c folded (3/4 titles, clean; 36 clean boots). Landed `ROGUESQ_MISSION_WIN=<n>` (main.cpp, test-only): sets objective-complete mask byte 0x130B15 to 0xFF at mission origin 0x690400. Soaks `s5604_mwin_{a,b}` queued; control = `[mission-win]` log line. Hypothesis only: that byte decides success (activateObjectiveCompleteFlag writer, single-source). If mission outcome is unchanged, trace readers / use gObjectiveBooleans 0x801388A0. Loss counter 0x80138064 = gObjectiveCounts[1].

@@ -9713,6 +9713,23 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 fprintf(stderr, "[mission-win] polls=%u mask 0x%02X -> 0xFF count3 %u -> 9 origin=0x%08X\n", s_win_polls, before, cb, org);
             }
         }
+        // s5606: after the poke, log every change of the mission-state flag word 0x8010C9E0
+        // (800C7738 ORs bit 0x4 into it unless 0x8010CA20 != 0; 800C776C ORs 0x8) plus the VI
+        // origin, so the soak shows whether the end gate fired and what the game did next.
+        if (s_win > 0 && rd && s_win_done) {
+            static uint32_t s_prev_fl = 0xFFFFFFFFu;
+            static unsigned s_fl_n = 0;
+            const uint32_t f = 0x10C9E0u;
+            const uint32_t fl = rd[f] | (rd[f + 1] << 8) | (rd[f + 2] << 16) | ((uint32_t)rd[f + 3] << 24);
+            if (fl != s_prev_fl && s_fl_n < 64) {
+                const uint32_t g = 0x10CA20u;
+                const uint32_t gate = rd[g] | (rd[g + 1] << 8) | (rd[g + 2] << 16) | ((uint32_t)rd[g + 3] << 24);
+                fprintf(stderr, "[mission-win] flagword 0x8010C9E0 %08X -> %08X gate(0x8010CA20)=%u origin=0x%08X\n",
+                        s_prev_fl, fl, gate, (unsigned)rs64_vi_committed_origin());
+                s_prev_fl = fl;
+                ++s_fl_n;
+            }
+        }
     }
 
     *x = stick_x;
