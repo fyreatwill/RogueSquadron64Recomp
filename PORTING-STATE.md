@@ -164232,3 +164232,8 @@ Verdict wording (s5680): this run refutes H-p1 and selects H-p2; the pointer-tar
 
 ## Session 5681 (2026-10-20) — pointer-follow player dump built and queued (s5681)
 Extended ROGUESQ_PLAYER_DUMP (src/main/main.cpp): after each [pdump] row, emits [pptr] rows (0x100 bytes of every distinct KSEG0 pointer target in the player record 0x137DB8). Added tools/pptr_fields.py (per-series float word ranking by delta-vs-stick correlation). Built clean; soak scratch/agent/soak_queue/s5681_pptr.sh queued (same stick schedule as s5680). No result yet — the loop folds it next iteration. Rules out nothing yet.
+
+### s5681 result (appended to the entry above; ran by hand, scratch/agent/m6/s5681_pptr, 150 paired rows, positive control: 482 [pptr] + 157 [pdump] rows, sx/sy varied)
+- 6 distinct pointer targets in the player record; none shows a float word with delta-vs-stick |c|>0.62. Only target 8034f680 (record +0x04, 153 rows) looks like a ship object: vec3 at +0x4C/+0x50/+0x54 = x[75,133] y[-8.5,7.8] z[-2.4,76.4], plus rotation-matrix-shaped words (+0x74/+0x94/+0xC0/+0xE0 in [0.96,1.0], +0x7C/+0x8C/+0xC8/+0xD8 in +-0.27 = tilt).
+- H-position-in-pointed-object: SELECTED as candidate (position-shaped + unit-matrix-shaped), NOT confirmed: delta of the vec3 vs record velocity +0xD0..D8 correlates only c=0.01..0.28 at 1 Hz sampling (aliased; mission cycles also teleport). Single-source.
+- Next discriminator: frame-rate dump (every VI, ~120 rows) of 8034f680+0x4C..0x54 and record +0xD0..D8 only, in one mission window; integrator confirmed if delta(pos)=k*vel with |c|>0.9; then altitude = +0x50 (y) feeds pitch-level closed loop.
