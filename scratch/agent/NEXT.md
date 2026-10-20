@@ -1,4 +1,4 @@
-Single next work unit (s5614): explain why WIN_REAL gives gate 5,4,6 / B14=2 in s5613 but gate 3 / B14=1 in s5612.
-Hypotheses: H1 get(2)/get(3) also cross thresholds after the poke (lose arm wins the race); H2 gate 5 (vflags 0x101) preempts, a state-dependent path before the poke settles; H3 s5612 was a one-off timing outcome.
-Discriminator: in ONE run log get(1..10) (0x80138060+) every 30 polls after the poke plus gate/B14 changes; second arm with the poke at polls=100 vs 300 in the same recipe; compare which counter hits threshold first. Fix the misleading count3 format string. Locate and log a level-id word.
+Single next work unit (s5615): fold s5614_real_p100/p300 from SOAK-RESULTS.md (logs in scratch/agent/soak_results/). grep '\[mission-win\] get' and 'seq gate' in each log.
+Hypotheses: H1 get(2)>=3 or get(3)>=9 crosses before get(10) effect (lose arm wins); H2 gate 5 (vflags 0x101) preempts; H3 timing one-off.
+Discriminator: which get() column reaches threshold before the first gate change, p100 vs p300; if get(2)/get(3) climb on their own, WIN_REAL must also hold them low (poke them to 0 each poll) - build that as the next lever. Still locate a level-id word.
 HYPOTHESIS-ID: m6-mission-endurance

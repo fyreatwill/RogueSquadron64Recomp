@@ -9714,13 +9714,29 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 const_cast<uint8_t*>(rd)[c + 3] = 0; const_cast<uint8_t*>(rd)[c + 2] = 0;
                 const_cast<uint8_t*>(rd)[c + 1] = 0; const_cast<uint8_t*>(rd)[c] = s_real ? 6 : 9;
                 s_win_done = true;
-                fprintf(stderr, "[mission-win] polls=%u mask 0x%02X -> 0xFF count3 %u -> 9 origin=0x%08X\n", s_win_polls, before, cb, org);
+                fprintf(stderr, "[mission-win] polls=%u mask 0x%02X -> 0xFF counter(0x%06X) %u -> %u origin=0x%08X\n", s_win_polls, before, c, cb, s_real ? 6u : 9u, org);
             }
         }
         // s5606: after the poke, log every change of the mission-state flag word 0x8010C9E0
         // (800C7738 ORs bit 0x4 into it unless 0x8010CA20 != 0; 800C776C ORs 0x8) plus the VI
         // origin, so the soak shows whether the end gate fired and what the game did next.
         if (s_win > 0 && rd && s_win_done) {
+            // s5614: dump get(1..10) (words 0x80138060+4*(n-1)) every 30 polls, and on any change
+            // of get(2)/get(3)/get(10), to see which lv0 threshold counter crosses first.
+            {
+                static unsigned s_dp = 0, s_dn = 0;
+                static uint32_t s_pv[10] = {};
+                uint32_t v[10]; bool chg = false;
+                for (int i = 0; i < 10; ++i) {
+                    const uint32_t o = 0x138060u + 4u * i;
+                    v[i] = rd[o] | (rd[o + 1] << 8) | (rd[o + 2] << 16) | ((uint32_t)rd[o + 3] << 24);
+                    if ((i == 1 || i == 2 || i == 9) && v[i] != s_pv[i]) chg = true;
+                }
+                if ((chg || (++s_dp % 30) == 0) && s_dn < 300) {
+                    fprintf(stderr, "[mission-win] get %u %u %u %u %u %u %u %u %u %u origin=0x%08X\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], (unsigned)rs64_vi_committed_origin());
+                    memcpy(s_pv, v, sizeof v); ++s_dn;
+                }
+            }
             static uint32_t s_prev_fl = 0xFFFFFFFFu;
             static unsigned s_fl_n = 0;
             const uint32_t f = 0x10C9E0u;

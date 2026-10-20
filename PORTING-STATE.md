@@ -163825,3 +163825,9 @@ Ran scratch/agent/s5613_run.sh (two sequential arms of m6_god_common.sh, TAG s56
 - The 0x690400/0x620400 origin alternation (about 9.5k 0x620400 lines per run) is present in both arms and is the mission double-buffer pair, not a level change. No level-id word was logged, so mission 2 vs replay is unmeasured; a hangar route is ruled out (no 0x6AB400 after mission onset).
 - Rules out: WIN_REAL reliably giving the win arm. Open: what differs from s5612_real (gate 5 appears first here; get(2)/get(3) may also cross thresholds under godmode within 300 polls).
 ORIGIN: no mitigation added; only a wrapper script (scratch/agent/s5613_run.sh).
+
+## Session 5614 (2026-10-19) — get(1..10) dump after the win poke; p100/p300 arms queued
+
+Ran: no game run this session (loop owns soaks). Changed src/main/main.cpp: the [mission-win] poke line now prints the real counter address and old->new value (the old "count3 -> 9" text was wrong for WIN_REAL), and a new "[mission-win] get ..." line dumps get(1..10) (0x80138060+4*(n-1)) every 30 polls and on any change of get(2)/get(3)/get(10). Built clean. Queued s5614_real_p100 and s5614_real_p300 (poke at 100 vs 300 polls, same recipe as s5613).
+Discriminator for next session: H1 (get(2)/get(3) cross thresholds first -> lose arm) vs H2 (state-dependent gate 5 preempt) vs H3 (timing one-off): read which get column hits threshold (get(2)>=3, get(3)>=9, get(10)>=6) before gate/B14 change, and whether p100 differs from p300.
+ORIGIN: no mitigation added; diagnostic-only line plus two soak recipes. Level-id word still unlocated.
