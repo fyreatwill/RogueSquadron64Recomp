@@ -9721,6 +9721,20 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
             static unsigned s_fl_n = 0;
             const uint32_t f = 0x10C9E0u;
             const uint32_t fl = rd[f] | (rd[f + 1] << 8) | (rd[f + 2] << 16) | ((uint32_t)rd[f + 3] << 24);
+            // s5608: gate (0x8010CA20), sub-phase byte (0x8010C9F0) and phase timer float (0x8010C9EC)
+            // drive the 800FA858 end-sequence switch; log gate/subphase changes plus a heartbeat.
+            {
+                auto w32 = [&](uint32_t o) { return (uint32_t)(rd[o] | (rd[o + 1] << 8) | (rd[o + 2] << 16) | ((uint32_t)rd[o + 3] << 24)); };
+                static uint32_t s_pg = 0xFFFFFFFFu, s_ps = 0xFFFFFFFFu;
+                static unsigned s_hb = 0, s_gn = 0;
+                const uint32_t g2 = w32(0x10CA20u), sp = rd[0x10C9F0u ^ 3u], tm = w32(0x10C9ECu), f2 = w32(0x10CA1Cu);
+                float tf; memcpy(&tf, &tm, 4);
+                if ((g2 != s_pg || sp != s_ps || (++s_hb % 120) == 0) && s_gn < 200) {
+                    fprintf(stderr, "[mission-win] seq gate=%u subphase=%u timer=%.3f vflags(0x8010CA1C)=%08X flag=%08X origin=0x%08X\n",
+                            g2, sp, tf, f2, fl, (unsigned)rs64_vi_committed_origin());
+                    s_pg = g2; s_ps = sp; ++s_gn;
+                }
+            }
             if (fl != s_prev_fl && s_fl_n < 64) {
                 const uint32_t g = 0x10CA20u;
                 const uint32_t gate = rd[g] | (rd[g + 1] << 8) | (rd[g + 2] << 16) | ((uint32_t)rd[g + 3] << 24);

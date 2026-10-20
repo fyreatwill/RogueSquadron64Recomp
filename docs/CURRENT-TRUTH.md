@@ -330,6 +330,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **(s5608, top)** End-sequence state machine: gate 0x8010CA20 (0..7), switch 800FA858, sub-phase byte 0x8010C9F0, timer float 0x8010C9EC. Flag bit4->gate4 consumption is normal (s5607's cycle); bit1 = respawn countdown. Read SOAK-RESULTS s5608_seq_{a,b} `[mission-win] seq` lines to see where the sequence stalls. Single-source (static; soak pending).
+
 - **s5607 (TOP):** s5604_mwin_{a,b} folded (full logs: scratch/agent/m6/<tag>/run.log, not soak_results). Poke control fired; flagword 0x8010C9E0 cycles 0->4->0->1->0 repeatedly (gate 0x8010CA20 0->4->6->0), mission never ends (no 0x6AB400, alive 301 s, 0 crashes). 0x690400/0x620400 alternation is baseline double-buffering. Next: static readers of 0x8010C9E0 / writers of 0x8010CA20 to explain the re-arming cycle.
 - **s5606:** 800C7738 and 800C776C are identical flag-setters (bit 0x4 / 0x8 of 0x8010C9E0 if 0x8010CA20==0); lv0 win and loss gates both call 7738, so win/loss is NOT decided there (single-source static). ROGUESQ_MISSION_WIN now logs `flagword` transitions after the poke. Fold s5604_mwin_{a,b}; see NEXT.md for the a/b/c outcome split.
 - **s5605 (TOP):** s5604 gate block refuted (range artifact: retries narrowed `ITER_START_HEAD..HEAD` to docs-only commits). ROGUESQ_MISSION_WIN now also pokes get(3)=0x80138068 to 9 (lv0 end gate per M6-OBJECTIVE-COUNTER-WRITERS.md); mask 0x130B15 is HUD-only. Needs a rebuild, re-queued soaks, and a read of 800C7738 vs 800C776C (win vs loss). Single-source static.

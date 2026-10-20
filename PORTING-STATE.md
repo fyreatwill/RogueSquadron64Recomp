@@ -163773,3 +163773,20 @@ Result: 0x8010C9E0 goes 0 -> 0x4 (gate 0x8010CA20=0), back to 0 with gate=4, 0 -
 Origin note: 0x00690400 and 0x00620400 alternate in baseline runs (double-buffered VI, CURRENT-TRUTH line 12); their alternation after the poke is NOT a scene change.
 Rules out: "bit 4 alone ends the mission"; "the poke never reached the gate". Open: the writers of bit 1 and of gate values 4/6, and what re-arms bit 4 each cycle (the poke is one-shot).
 ORIGIN: no mitigation added; no code changed this session (analysis of existing lever output).
+
+## Session 5608 (2026-10-19) — static map of the end-sequence state machine at 0x8010CA20; trace logger + 2 soaks queued
+
+Static analysis of scratch/agent/full_disasm.txt. 0x8010CA20 ("gate") is a 0..7 end-sequence state; the per-frame
+switch is 800FA858 (jump table 0x800B8FA0, handlers 800FBBA0/BBA8/BC4C/BAE8/BB44/ADEC). The per-frame updater at 800FB4B0
+turns flagword 0x8010C9E0 bit 0x4 into gate=4 (bit 0x8 -> gate=3) and clears both bits - this is the observed 0->4->0
+flag cycle in s5607, i.e. the poke IS consumed as designed. Bit 0x1 is set by the request function 800FB190 (countdown
+byte at 0x80130B10+player reaching 0, or 0x80130B40+0x10 bit 0x20) - that is the 4->0->1 part: a respawn/lives
+countdown, not mission end. Gate returns to 0 at 800FBD34 / 800FB090 (5->0) / 800FA358, so the sequence is driven by
+a sub-phase byte 0x8010C9F0 (0->1->2) and a float timer 0x8010C9EC compared against constants at 0x800B909C/9098.
+Gate readers at 800B2AD0..2C78 are audio voice-priority checks (gate!=0 suppresses SFX) - unrelated to the sequence.
+NOT yet known: whether the sequence stalls in a sub-phase (timer never advancing = dt/stub issue) or completes and
+re-enters gameplay. No guard added, so no ORIGIN needed.
+Instrument: main.cpp mission-win block now logs `[mission-win] seq gate= subphase= timer= vflags= flag=` on gate/subphase
+change + heartbeat (control: lines must appear after the poke). Soaks s5608_seq_a/b queued (build verified).
+Outcomes: timer frozen -> find who advances 0x8010C9EC (dt source); subphase 2 then gate=0 and play continues -> the win
+condition (lv0 get(3)>=9 poke) is re-zeroed each frame; gate stuck 4 -> handler 800FBB44 stalls.
