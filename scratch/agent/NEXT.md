@@ -1,6 +1,6 @@
-# NEXT (s5664): G2 voice — who is supposed to turn the slot ring (0x801535C0) into samples at 0x801B2C60?
-Fact (s5663): clip payload streams into ring in-slot; slot+0x198/+0x1210 point at 0x801B2C60 (stale heap, ASCII).
-Hypotheses: H5 decode ring->0x801B2C60 never runs (native/ucode path stubbed); H4 a2=0x801B2C60 to initMusyXVoiceSlot is wrong upstream (caller math); H6 pointer is legit but only a late-filled buffer (check after several ring cycles).
-Discriminator: one build, one run: log caller/derivation of a2 at initMusyXVoiceSlot; watch writes to [0x801B2C60,+0x400) and reads of the slot ring by any task (ucode DMEM loads) after init; control = ring bytes change after each PI DMA. Outcomes: writes happen -> H6; no writers + ring read by ucode -> H5; a2 derived from bogus field -> H4.
-Cheaper first: grep recompiled initMusyXVoiceSlot callers for a2 derivation (offline).
+# NEXT (s5665): who owns/writes the voice sample buffer at 0x801B2C60 (= *(0x80154674))?
+Fact (s5664): buffer is rs_malloc(streamSampleCountToByteSize(0x10E0)) from initMusyXVoiceTable; pointer is legit. H4 dead.
+Hypotheses: H5 nothing decodes ring (0x801535C0) into it; H6 filled late (after several ring cycles); H7 allocator overlap: other allocs/DMAs land inside the block (6,722 PI DMAs overlap the wide range).
+One build (fixup script, ROGUESQ_LOG_HUDBIT-gated): log rs_malloc return+size for the 0x10E0 call, any later rs_malloc/rs_free overlapping the block, and a write-watch on [buf, buf+size) with PC (control: writes by initMusyXVoiceTable's own users / known DMA). Outcomes: overlapping alloc -> H7; only voice-code writes -> H6; no writes at all while ring cycles -> H5.
+Queue as soak; fold results next iteration.
 HYPOTHESIS-ID: g2-voice-never-requested

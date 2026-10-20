@@ -256,3 +256,5 @@ s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayW
 
 ### s5663 update (G2 voice)
 s5662_pidma_a: speech payload IS PI-streamed in 0x400 chunks into a ring inside the voice slot (0x80153420+0x1A0); H3 (no fill) dead. Slot +0x198/+0x1210 -> 0x801B2C60 is ordinary heap (6,722/11,320 post-enqueue PI DMAs overlap the range), unfilled by the clip. Live: H5 (ring->0x801B2C60 decode never runs) vs H4 (a2 wrong upstream). Single-source. Next: trace a2 origin and writers of 0x801B2C60 after initMusyXVoiceSlot.
+
+s5664: H4 refuted statically — slot+0x1210 = *(0x80154674) = rs_malloc(streamSampleCountToByteSize(0x10E0)) from initMusyXVoiceTable (0x8009BC4C). 0x801B2C60 is a legit malloc block, uninitialised. Live: H5 decode never runs / H6 late fill / H7 block overlapped by other allocs (PI DMAs overlap the range). Single-source (static).
