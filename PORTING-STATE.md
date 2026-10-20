@@ -163977,3 +163977,9 @@ Step 0 triggered (CURRENT-TRUTH was 60171 B > 60000). No experiments run. docs/C
 - Landed tools/apply_s5637_voiceline_log.py (wired into fixup_game_funcs_vendored.py + replay list): under ROGUESQ_LOG_HUDBIT=1 logs [voiceln] entry of playObjectiveVoiceLine1 and sayWhoaHim_v0x1FC with a0, ra, sp, wall time (cap 400 each). Built clean. Positive control: playObjectiveVoiceLine1 must fire for any voice line in a run; the 0x1FC call itself is the target.
 - Queued s5637_voiceln_{a,b,c} (nopoke, 420 s hold). Verdicts pending; fold from SOAK-RESULTS.md. Compare [voiceln] timing/ra against the [objbool] id 0x64 LOSE time per run.
 ORIGIN: diagnostic only; no mitigation added.
+HYPOTHESIS-ID: m6-mission-endurance
+Discrimination (s5637): this session narrows by elimination only. Static search rules out "0x1FC is reached by a direct call or a ROM-resident pointer table" (0 hits for jal, lui/addiu 0x8010/-0x7C78, and the raw word in the ROM), so any dispatcher is built at runtime or in a decompressed overlay. That removes the offline route and makes the runtime [voiceln] log the discriminator. Next discriminator, per run (a/b/c), table of (0x1FC fired? t_fire - t_0x64, ra of playObjectiveVoiceLine1):
+ - fires only in runs that reach 0x64, shortly before it -> selects B/C (event-linked; chase ra caller);
+ - fires in every run at similar t regardless of fail -> refutes B and C as the fail cause, selects A (bool 7 is a timer/proximity voice flag, fail has another cause);
+ - never fires in a failing run -> refutes "sayWhoaHim sets bool 7 in the failing run" (bool 7 set via a dynamic id).
+Control: playObjectiveVoiceLine1 logging >=1 line per run. Outcome is labelled SUBSTITUTED-equivalent for conclusions: no hypothesis is selected yet.
