@@ -1,5 +1,5 @@
-Single next work unit (s5635): fold s5633_force2_b from SOAK-RESULTS.md, then find the WRITER of objective boolean[7] (R refuted s5634: id 1 forced, 0/2 fails).
-Hypotheses: (W1) bool 7 is set by an in-mission event/timer path via direct array store (not setObjectiveBoolean); (W2) bool 7 is a side effect of a mission-state object (e.g. ship damage/ally-loss) -- fail = real loss condition; (W3) stray write (corruption).
-Discriminator: a store watch on the boolean array slot 7 in the ccosnap instrument (positive control: watch slot 0x20 which is known set at call#1), run in a soak long enough to catch a failing run (~2/5).
-Alternatively grep recompiled code offline for stores indexed by the boolean array base with constant 7.
+Single next work unit (s5636): determine who invokes sayWhoaHim_v0x1FC (0x80108388) and whether its voice-line event precedes the 0x64 LOSE arm.
+Hypotheses: (A) the voice-line script table is stepped by an in-mission timer/proximity trigger, and the fail arm is a separate cause that merely co-occurs; (B) saying the line is a consequence of an ally/player-damage event that is the real fail cause; (C) bool 7 is only read by the checker as "player heard warning" gating the LOSE.
+Discriminator: grep the ROM/data tables and recompiled code for address 0x80108388 (lui 0x8010 / addiu -0x7C78 or table words) to find the dispatcher; then log playObjectiveVoiceLine1 calls (positive control: the 0x1FC call itself fires in a failing run) in the next soaks; also classify the 3 setObjectiveBooleans call sites for id 7.
+Related: G2 -- voice lines produce no audio; playObjectiveVoiceLine1 is the dialogue entry to trace.
 HYPOTHESIS-ID: m6-mission-endurance
