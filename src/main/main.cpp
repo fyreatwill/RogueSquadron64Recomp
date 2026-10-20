@@ -9686,6 +9686,28 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s5604: ROGUESQ_MISSION_WIN=<n> is a TEST-ONLY lever for the mission-1 -> mission-2
+    // route. activateObjectiveCompleteFlag (0x800C76B0) ORs bit (id-1) into the byte at
+    // 0x80130B15 for ids 1..8; this sets all eight bits once, after <n> polls with the
+    // mask still zero and the mission scanout origin 0x690400 up. One-shot, logged.
+    {
+        static int s_win = -1;
+        static unsigned s_win_polls = 0;
+        static bool s_win_done = false;
+        if (s_win < 0) { const char* w = std::getenv("ROGUESQ_MISSION_WIN"); s_win = (w && *w) ? std::atoi(w) : 0; }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_win > 0 && rd && !s_win_done) {
+            const uint32_t org = (uint32_t)rs64_vi_committed_origin();
+            if ((org & 0xFFFFFFu) == 0x690400u && ++s_win_polls >= (unsigned)s_win) {
+                const uint32_t a = 0x130B15u ^ 3u;  // byte address inside big-endian word storage
+                const uint8_t before = rd[a];
+                const_cast<uint8_t*>(rd)[a] = 0xFF;
+                s_win_done = true;
+                fprintf(stderr, "[mission-win] polls=%u mask 0x%02X -> 0xFF origin=0x%08X\n", s_win_polls, before, org);
+            }
+        }
+    }
+
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;
