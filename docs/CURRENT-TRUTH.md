@@ -252,3 +252,7 @@ s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayW
 - s5651: hit-loud replicated (s5649_vout_a); ROGUESQ_VDUMP raw dump built, soak s5651_vdump_a queued — next: offline spectrum analysis (NEXT.md).
 - s5653: vsrc instrument built (source d/l + host-writer tracking); soak s5653_vsrc_a queued — fold per NEXT.md.
 - s5656 (single-source): rail-range game stores are 28 total from inflate_fast/player layout/anim/particles (float bit patterns, not clamp values) — the voice-read range [1B2C60,1B3600) is shared game heap; census cannot explain the 190/200 rail records. Next: snapshot the range at boot vs at first voice read (pre-existing data vs uninstrumented stores).
+
+
+### s5663 update (G2 voice)
+s5662_pidma_a: speech payload IS PI-streamed in 0x400 chunks into a ring inside the voice slot (0x80153420+0x1A0); H3 (no fill) dead. Slot +0x198/+0x1210 -> 0x801B2C60 is ordinary heap (6,722/11,320 post-enqueue PI DMAs overlap the range), unfilled by the clip. Live: H5 (ring->0x801B2C60 decode never runs) vs H4 (a2 wrong upstream). Single-source. Next: trace a2 origin and writers of 0x801B2C60 after initMusyXVoiceSlot.

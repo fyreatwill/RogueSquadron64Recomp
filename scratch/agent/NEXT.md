@@ -1,6 +1,6 @@
-# NEXT (s5663): fold s5662_pidma_a (queued; PI DMA dests vs voice range after first enqueueSpeechClip)
-Fact: s5660 killed H1 (narrow=6 of 17.8M stores, control all>0). Range [1B2C60,1B3600) = game heap floats read by audio tasks as samples.
-Hypotheses: H3 enqueueSpeechClip allocates buffer inside range but no PI/decoder fill follows (stale heap decoded); H2 fill exists but via a native/host path writing elsewhere (buffer pointer mismatch); H4 buffer address in the clip descriptor is wrong (bad pointer math upstream) so audio reads the wrong place while the real fill lands correctly.
-Discriminator (one build, one run): at enqueueSpeechClip log descriptor src/dst addrs + size; log every PI DMA (cart->RDRAM) dest/len and every inflate output range from that tick on; positive control: log a known PI DMA (the clip's own source read). Outcomes: PI dest overlaps dst -> H3 dead, filled-then-clobbered; PI dest elsewhere -> H4; no PI at all -> H3 (find why speech load is skipped).
+# NEXT (s5664): G2 voice — who is supposed to turn the slot ring (0x801535C0) into samples at 0x801B2C60?
+Fact (s5663): clip payload streams into ring in-slot; slot+0x198/+0x1210 point at 0x801B2C60 (stale heap, ASCII).
+Hypotheses: H5 decode ring->0x801B2C60 never runs (native/ucode path stubbed); H4 a2=0x801B2C60 to initMusyXVoiceSlot is wrong upstream (caller math); H6 pointer is legit but only a late-filled buffer (check after several ring cycles).
+Discriminator: one build, one run: log caller/derivation of a2 at initMusyXVoiceSlot; watch writes to [0x801B2C60,+0x400) and reads of the slot ring by any task (ucode DMEM loads) after init; control = ring bytes change after each PI DMA. Outcomes: writes happen -> H6; no writers + ring read by ucode -> H5; a2 derived from bogus field -> H4.
+Cheaper first: grep recompiled initMusyXVoiceSlot callers for a2 derivation (offline).
 HYPOTHESIS-ID: g2-voice-never-requested
-UPDATE s5662: no build needed — ROGUESQ_LOG_DMA exists. Fold scratch/agent/m6/s5662_pidma_a/run.log: grep -n 'enqueueSpeechClip n=1\|pi-start-dma'; list PI dests after the first enqueue vs [1B2C60,29DFB8); also where loadSpeechFile's PI reads land. Control: pi-start-dma line count >0.
