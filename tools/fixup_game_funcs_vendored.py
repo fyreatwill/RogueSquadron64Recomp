@@ -37494,6 +37494,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5646 voicebuf log x{_n5646}")
 
+    if p.name in ("funcs_26.c", "funcs_27.c") and "PATCH: s5665 decodegate log" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5665_decodegate_log as _a5665
+        text, _n5665 = _a5665.apply(text)
+        if _n5665:
+            changed = True
+            report.append(f"{p.name}: s5665 decodegate log x{_n5665}")
+
     if p.name == "funcs_35.c" and "PATCH: s5622 objbool log" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5622_objbool_log as _a5622
@@ -41109,6 +41117,7 @@ RS64_REPLAY = [
     "apply_s5642_allocgate_log.py",
     "apply_s5644_voicedown_log.py",
     "apply_s5646_voicebuf_log.py",
+    "apply_s5665_decodegate_log.py",
     "apply_s5633_objdraw_force.py",
     "apply_s5619_cco_log.py",
     "apply_s4690_external_entry_probe.py",
