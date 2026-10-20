@@ -1,5 +1,4 @@
-Single next work unit (s5611): fold soaks s5610_b14_{a,b} (logs scratch/agent/m6/s5610_b14_*/run.log; grep "[mission-win] seq" for b14= and b50=).
-Hypotheses: H1 b14 becomes 1 but b50 bit 0x100 never sets (loop-exit writer missing/guarded) -> find the writer of 0x80130B50 bit 0x100 (lldb write-watch, model on scratch/agent/m6_phase6.sh) and its guard. H2 b14 never reaches 1 or is cleared to 0 (writers 800C252C, 80134888) before the loop looks -> log who clears. H3 b50 bit 0x100 sets and b14=1 but the 0x820 test at 0x8003E338 (beq r3,0x820 -> 8003E230) re-enters the loop.
-Discriminator: the b14/b50 columns around the gate 4 -> 0 transition. Positive control: gate/subphase columns change in the same line.
-If H1: static-trace what the 0x100 setter tests (likely a done condition of an objective/pause screen).
+Single next work unit (s5612): find the writers of byte 0x80130B14 (observed 0 then 2, never 1) and bit 0x100 of word 0x80130B50 (observed constant 0x11). Static: grep generated C for stores at offset 0xB14/0xB50 off lui 0x8013 and off r19=0x80130B40 (+0x14/+0x10). Dynamic: lldb write-watch modeled on scratch/agent/m6_phase6.sh; positive control = a watch on gate 0x8010CA20, which must fire.
+Hypotheses: H2 something writes B14=2 early and BB44's write of 1 is overwritten or not executed; H3 the poke skips BB44's real precondition; H4 B50 bit 0x100 is set by a path (pause/objective screen) never entered in the soak.
+Discriminator: PC attribution of each B14 write (value 2 vs 1) across the gate 4 transition.
 HYPOTHESIS-ID: m6-mission-endurance
