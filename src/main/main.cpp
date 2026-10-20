@@ -7490,6 +7490,18 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                     (double)sum_abs / (double)num_samples,
                     sum_abs ? (double)sum_diff / (double)sum_abs : 0.0);
         }
+        // s5670: dense per-callback trace so mean_abs can be aligned with
+        // [spath] enqueueSpeechClip lines in the same stderr stream.
+        static int s_pcm_dense = -1;
+        if (s_pcm_dense < 0) {
+            const char* e = getenv("ROGUESQ_LOG_PCM_DENSE");
+            s_pcm_dense = (e && e[0] && e[0] != '0') ? 1 : 0;
+        }
+        if (s_pcm_dense && rs64_phase_ord() >= 4) {
+            fprintf(stderr, "[pcm-dense] n=%u ma=%.0f hf=%.3f\n", s_pcm_n,
+                    (double)sum_abs / (double)num_samples,
+                    sum_abs ? (double)sum_diff / (double)sum_abs : 0.0);
+        }
         if (s_pcm_n < 20 || (s_pcm_n % 256) == 0) {
             fprintf(stderr, "[pcm-sanity] n=%u phase=%u width=%u origin=0x%06X num_samples=%zu all_zero=%d allzero_calls=%u total_calls=%u\n",
                     s_pcm_n, rs64_phase_ord(), rs64_vi_committed_width(),

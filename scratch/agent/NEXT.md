@@ -1,5 +1,5 @@
-# NEXT (s5670): is dialogue audible? Compare speech-slot PCM and residual noise vs retail
-Facts (s5669): AI PCM has 0 rail samples post-fix (330 rows); speech clips enqueue (6) and voices allocate (6). Instrument: [pcm-noise] in main.cpp.
-Hypotheses: H-a speech PCM reaches AI ring audible (non-silent bursts coinciding with enqueueSpeechClip); H-b speech voice allocated but output silent (volume/pan/mix zero); H-c residual hiss from lower-level quantization (hf_ratio higher than retail).
-Discriminator: one run logging, per enqueueSpeechClip, mean_abs of AI callbacks in the following ~3 s vs the 3 s before (positive control: music mean_abs>0 already); plus retail oracle hf_ratio of title music via tools/oracle for H-c.
-HYPOTHESIS-ID: g2-voice-never-requested
+# NEXT (s5671): residual noise vs retail (H-c) — oracle AI PCM hf_ratio of title music
+Facts (s5670): speech enqueue windows are 1.8-15x louder than control at AI output; rails 0. Remaining G2 complaint: fuzzy layer.
+Hypotheses: H-c1 port hf_ratio on title music > retail (quantization/resample noise); H-c2 equal to retail (noise is perceptual/host sink, e.g. SDL rate/format); H-c3 oracle cannot give AI PCM (then compare spectrum of port AI dump to known-good decode of same music).
+Discriminator: tools/oracle AI PCM capture of title music (positive control: nonzero PCM) vs port [pcm-noise] hf_ratio in title phase, same metric.
+HYPOTHESIS-ID: g2-speech-audible
