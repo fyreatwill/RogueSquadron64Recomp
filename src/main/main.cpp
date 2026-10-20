@@ -9952,7 +9952,9 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         // pos vec3 +0x4C/50/54 and record vel +0xD0/D4/D8 as floats, with stick. Pairs pos deltas vs vel offline.
         if (s_pd == 2 && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u) {
             static unsigned s_pd2_n = 0;
-            if (s_pd2_n < 400) {
+            static bool s_pd2_armed = false;
+            if (!s_pd2_armed && (stick_x != 0 || stick_y != 0)) s_pd2_armed = true;  // s5683: log only once input is live
+            if (s_pd2_armed && s_pd2_n < 600) {
                 s_pd2_n++;
                 auto f = [&](uint32_t a) { uint32_t u = rs64_rdram_u32(rd, a); float v; memcpy(&v, &u, 4); return (double)v; };
                 const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
