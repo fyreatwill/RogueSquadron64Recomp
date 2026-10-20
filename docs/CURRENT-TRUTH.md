@@ -484,3 +484,5 @@ the tail of the soak results before acting.
 - s5544: funcs_23 replay residual 0; total ~39 (funcs_4 10, funcs_24 7, funcs_27 6, funcs_29 4, funcs_20 3, 4x2).
 
 - s5587: s5584 plume title hold folded: 1/4 runs completed (600 s cap), 0 crashes, run1 alive +120 s. Remaining 3 queued as s5587_plume_hold_{b,c,d} (N=1 each). Plume thread open until they land.
+
+- s5598: POKE_WRAP A/B (default drop vs wrap): identical origin sequences, both alive 100 s, 0 crashes (single-source, origin-only). Keep default drop. s5597 ASan title boots: 2 boots, 0 ASan reports. Next: ASan-armed keyed hangar/mission hold.

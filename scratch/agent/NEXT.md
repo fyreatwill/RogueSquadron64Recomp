@@ -1,3 +1,3 @@
-Single next work unit (s5598): (1) fold scratch/agent/SOAK-RESULTS.md line for s5597_plume_asan (N=3 ASan title boots; expect titles>=2, no asan.* files; any asan.* file = new real finding -> read it, name the writer, fix). (2) Run default vs ROGUESQ_POKE_WRAP=1 title+hangar boots on build/ (concurrently, phase-gated on VI origin 0x790400) - discriminates whether DMEM[0x01C]=dl_ptr changes gfx output/ stability (identical = wrap arm safe to make default; diverges = keep drop default). (3) Queue an ASan arm keyed hangar/mission hold (build_asan, ~5 min past mission origin) for further first-hit overflows.
-Do NOT queue more non-ASan first-mission holds (10/10 clean).
+Single next work unit (s5599): queue an ASan-armed (build_asan) keyed hangar->mission hold (~5 min past mission origin 0x00690400), one run per recipe (the s5597 N=3 recipe overran the 600 s cap). Any asan.* file = new real finding: read it, name the writer, fix root cause. Control: run must log origin 0x690400 AND be alive at the end.
+Do NOT queue more non-ASan first-mission holds (10/10 clean). POKE_WRAP A/B closed (s5598: no difference; default drop kept).
 HYPOTHESIS-ID: m6-mission-endurance
