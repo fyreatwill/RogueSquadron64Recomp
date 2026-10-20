@@ -1,5 +1,6 @@
-# NEXT (s5662): does the speech clip's destination buffer ever get filled? (H3 of s5661)
+# NEXT (s5663): fold s5662_pidma_a (queued; PI DMA dests vs voice range after first enqueueSpeechClip)
 Fact: s5660 killed H1 (narrow=6 of 17.8M stores, control all>0). Range [1B2C60,1B3600) = game heap floats read by audio tasks as samples.
 Hypotheses: H3 enqueueSpeechClip allocates buffer inside range but no PI/decoder fill follows (stale heap decoded); H2 fill exists but via a native/host path writing elsewhere (buffer pointer mismatch); H4 buffer address in the clip descriptor is wrong (bad pointer math upstream) so audio reads the wrong place while the real fill lands correctly.
 Discriminator (one build, one run): at enqueueSpeechClip log descriptor src/dst addrs + size; log every PI DMA (cart->RDRAM) dest/len and every inflate output range from that tick on; positive control: log a known PI DMA (the clip's own source read). Outcomes: PI dest overlaps dst -> H3 dead, filled-then-clobbered; PI dest elsewhere -> H4; no PI at all -> H3 (find why speech load is skipped).
 HYPOTHESIS-ID: g2-voice-never-requested
+UPDATE s5662: no build needed — ROGUESQ_LOG_DMA exists. Fold scratch/agent/m6/s5662_pidma_a/run.log: grep -n 'enqueueSpeechClip n=1\|pi-start-dma'; list PI dests after the first enqueue vs [1B2C60,29DFB8); also where loadSpeechFile's PI reads land. Control: pi-start-dma line count >0.
