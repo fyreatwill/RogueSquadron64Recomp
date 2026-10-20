@@ -7033,7 +7033,8 @@ static bool rs64_m5_callback_order_event(uint32_t width, uint32_t origin,
 // plays elsewhere), name it by case-insensitive substring:
 //   ROGUESQ_AUDIO_DEVICE="MacBook Pro Speakers"            (env var, wins), or
 //   the same text on the first line of audio_device.txt beside the executable.
-// "default" or empty follows the system default. F9 cycles outputs live
+// With neither set, the built-in default is "MacBook Pro Speakers" (owner
+// request 2026-10-19). "default" follows the system default. F9 cycles outputs live
 // (default -> each device -> default) and saves the choice to audio_device.txt,
 // so the loop's headless runs pick it up too. Available names are logged as
 // "[audio-route] device[i]=..." at first open.
@@ -7074,6 +7075,12 @@ static void audio_route_load_pref() {
         if (fgets(line, sizeof line, f)) g_audio_route_pref = audio_route_trim(line);
         fclose(f);
         fprintf(stderr, "[audio-route] preference from %s: '%s'\n", audio_route_file_path().c_str(), g_audio_route_pref.c_str());
+    } else {
+        // Owner default "for now" (2026-10-19): with no env var and no file, play on
+        // the laptop speakers. If they are absent, audio_route_resolve() falls back
+        // to the system default. Write "default" to audio_device.txt to undo.
+        g_audio_route_pref = "MacBook Pro Speakers";
+        fprintf(stderr, "[audio-route] preference from built-in default: '%s'\n", g_audio_route_pref.c_str());
     }
     const int n = SDL_GetNumAudioDevices(0);
     for (int i = 0; i < n; ++i) {
