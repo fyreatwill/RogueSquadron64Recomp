@@ -1,5 +1,4 @@
-# NEXT (s5657): is the rail data in the voice-read range pre-existing, or written by an uninstrumented store?
-Facts (s5656): instrumented game stores into [1B2C60,1B3600) are only 28 rail words from non-audio code (floats/inflate); vdump shows ~190/200 rail records. Zero host writers (s5653).
-Hypotheses: H-P pre-existing (RDRAM init/ROM-DMA'd bytes before the census armed, or leftover from an earlier phase); H-U store forms not hooked (SWL/SWR/sdc1/memcpy-style helpers); H-A voice slot +0x198 pointer aliases non-audio memory so the mixer reads game heap.
-Discriminator (one build, one run): at first speech-hit audio task, hash+count rail words in the range, and compare to a snapshot taken at the VI-transition entering the phase (and at boot); also log whether the range content changed between snapshot and read. Unchanged => H-P/H-A (look at what pointer init sets +0x198); changed with 0 instrumented stores => H-U (enumerate uncovered store forms). Positive control: wide-range snapshot must show change.
+# NEXT (s5658): fold s5657_vsnap_a soak verdict
+Read scratch/agent/soak_results/s5657_vsnap_a_*.log, grep '\[vsnap\]'. Wide hash must change (positive control) else null is void.
+Outcomes: rails>0 at first vsnap and NARROW never changes => H-P (pre-existing; trace what initialised 1B2C60.. at boot / ROM DMA, then who owns voice slot +0x198 pointer -> H-A). NARROW-CHANGED line w/ rails jump => find the uncovered store form (swl/swr/sdc1/memcpy helpers) around that task.
 HYPOTHESIS-ID: g2-voice-never-requested
