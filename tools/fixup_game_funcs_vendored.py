@@ -37470,7 +37470,7 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5693 handletable log x{_n5693}")
 
-    if p.name in ("funcs_42.c", "funcs_43.c", "funcs_44.c", "funcs_45.c", "funcs_46.c", "funcs_47.c", "funcs_48.c", "funcs_49.c") and "PATCH: s5697 lvinit log" not in text:
+    if p.name in ("funcs_42.c", "funcs_43.c", "funcs_44.c", "funcs_45.c", "funcs_46.c", "funcs_47.c", "funcs_48.c", "funcs_49.c") and "[lvinit-bt]" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5697_lvinit_log as _a5697
         text, _n5697 = _a5697.apply(text)
