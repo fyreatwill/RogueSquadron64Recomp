@@ -1,5 +1,5 @@
-# NEXT (s5687): G2 audio fidelity - locate where the noise layer enters
-Hypotheses: H1 noise is in ucode PCM (ADPCM/resample/envelope output); H2 AI ring/rate/format (byte order, sample-rate mismatch) ; H3 host sink (SDL resample/format).
-Discriminator: capture title-music AI PCM from port and from retail oracle (tools/oracle) in the same phase; compare noise floor (high-band energy), spectrum, rate, byte order. Port PCM dumped pre-sink vs post-sink: if noise already in pre-sink dump -> H1/H2; if only post-sink -> H3. Positive control: inject a known tone / confirm dump is non-silent.
-First step: grep docs/M5-AUDIO-PLAN.md and src for existing PCM dump flags (ROGUESQ_*PCM*, s5669_pcm soak) and reuse; do not build a new instrument if one exists.
-HYPOTHESIS-ID: g2-audio-fidelity
+# NEXT (s5688): bool 7 / voice-script path vs mission failure (G1, Next steps #2)
+Hypotheses: H1 sayWhoaHim_v0x1FC (voice path) sets objective bool 7 in failing runs only; H2 bool 7 set by non-voice path (damage/timer); H3 unrelated to voice.
+Discriminator: one build logging entry to sayWhoaHim_v0x1FC + every write to bool 7 with caller PC, positive control = mark-all-bool-writes fires; compare failing vs surviving mission arms in ONE soak pair.
+G2 is closed pending owner listen: see docs/G2-AUDIO-FIDELITY-CLOSURE.md.
+HYPOTHESIS-ID: g1-bool7-voice-path

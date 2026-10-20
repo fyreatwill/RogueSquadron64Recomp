@@ -198,6 +198,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
+1a000. **s5687:** G2 evidence consolidated in docs/G2-AUDIO-FIDELITY-CLOSURE.md (noise causes s5668+s5672 fixed; rate/format/spectrum/dialogue refuted). G2 closed pending owner listen. Next: Next steps #2 (bool 7 voice path), slug g1-bool7-voice-path.
 0d. **s5669 (PCM-level confirmation):** s5669_pcm_a: 0/330 AI-callback rows have rail samples, hf_ratio ~0.23 in mission; speech clips now enqueue (loadSpeechFile/enqueueSpeechClip x6, voices allocated x6). The noise layer's rail component is gone at the output. NEXT: owner listen / retail-oracle AI PCM hf_ratio compare for residual noise, and confirm speech clip PCM non-rail in voice buffer (slug g2-voice-never-requested -> g2-speech-audible).
 0e. **s5670:** ROGUESQ_LOG_PCM_DENSE run: 6/6 speech-enqueue windows have mean|PCM| 1.8-15x the preceding level (control windows: median 1.0, p90 1.38, 2% >=1.8) -> speech reaches AI output (single-run, correlational). Open: owner listen; hf_ratio vs retail oracle (H-c).
 0i. **s5674:** ROGUESQ_PCM_RAW dump + tools/speech_window_spectrum.py: 6/6 speech-enqueue windows are rail-free, >98% energy <3 kHz (>8 kHz <=0.001), rms ~11x control (3.5-5.6k vs 328) -> band-limited voice-like, not noise (H-e2 refuted; single-run). Intelligibility vs masking (H-e1/H-e3) needs a listen: scratch/agent/m6/s5674_raw/wav/enq*.wav. NEXT: owner listen; if OK close G2 -> G1.
