@@ -275,6 +275,15 @@ comparison is not a reason to repeat the same capture.
 
 ## Operational rules
 
+- **Audio output routing (owner feature, 2026-10-19; code landed inside
+  d1c534be5).** `build/audio_device.txt` (gitignored) pins the game's output
+  device by case-insensitive name substring; the owner set it to
+  `MacBook Pro Speakers` so test runs play on muted laptop speakers.
+  `ROGUESQ_AUDIO_DEVICE` overrides it; `default` follows the system output.
+  F9 cycles outputs live and rewrites the file. Do not delete or change the
+  file, and do not treat `[audio-route]` log lines as M5 evidence: routing
+  changes only where samples play, not their content.
+
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 commands or
   display-list anomalies. The retail oracle is independent ground truth and
   needs whole-RDRAM, VI, and phase positive controls before a null matters.
