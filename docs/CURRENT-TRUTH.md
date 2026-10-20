@@ -535,3 +535,4 @@ NOPOKE control (s5615_nopoke_a/b): g4/b14=2 tail appeared in 1 of 2 unpoked runs
 - **(s5619)** hudbit `ra` column is always 0 (static jal never sets r31); `[cco] lvN_checkComplexObjectives` entry logs added (tools/apply_s5619_cco_log.py). nopoke_a logged 3 hudbit4 calls, nopoke_b 0; poked control pending (s5618_poked_ctl).
 
 - s5622: setObjectiveBoolean (0x800C7540) id/val/ra log landed (ROGUESQ_LOG_HUDBIT=1, tools/apply_s5622_objbool_log.py); s5620 f/g gave 0 hudbit. s5622_objbool_h/i folded (s5623): control passed, 8 calls/run, no 0x64/0x6D, 0 hudbit, ra=0 (r31 unmaintained). hudbit4 chain PARKED; next is id-source of per-run +1 shift (NEXT.md).
+- s5626: cco checker runs ~30/s (B dead); objectives time-gated (C); unpoked run b hit 0x64/0x65 at +342 s then level restarted — classify fail vs win (NEXT.md).

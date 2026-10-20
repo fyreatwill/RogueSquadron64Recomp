@@ -1,6 +1,5 @@
-Single next work unit (s5626: FOLD s5625_prog_{a,b} soaks, instrument already built/queued in s5625; original s5625 text follows): G1 mission progress. Why only 8 setObjectiveBoolean calls in 420 s unpoked?
-Competing hypotheses: (A) lv2_checkComplexObjectives is called every frame but its conditions never become true (world state/AI not advancing); (B) the level script task stops being scheduled (stall in scheduler/thread); (C) it is progressing at game speed and the objectives are simply time-gated (retail would show same).
-ONE instrument (extend apply_s5622_objbool_log.py or new apply_s5625): on every setObjectiveBoolean call AND every lv2_checkComplexObjectives entry (count only + every 60th), log VI frame counter and mission-time. Soak x2 as s5625_prog_{a,b}.
-Outcomes: entry count keeps rising with no new booleans => A (then dump which condition globals it reads); entry count freezes => B; booleans arrive at fixed mission-times => C (compare with retail oracle timing if reachable).
-Positive control: entry counter must be >0 and rising in the first 60 s.
+Single next work unit (s5627): G1 mission progression — classify the unpoked 0x64/0x65 event from s5625_prog_b (+342 s) as FAIL (player died, level restart) vs WIN.
+Evidence available offline: scratch/agent/m6/s5625_prog_b/run.log lines ~316563 (call#9/#10), ~319132 (call#11), ~331431 (restart call#12); lv2 objective ids 0x64/0x65 in the level script (grep recomp for setObjectiveBoolean callers with 0x64/0x65; docs/ for level script notes).
+Hypotheses: (F) idle player ship destroyed -> fail flag 0x64, restart; (W) real completion path fired -> 0x65 win then reset; (X) MISSION_WIN env still pokes despite NOPOKE.
+Discriminator: offline first — read the game function that sets 0x64/0x65 (callers' ra in a re-run with ROGUESQ_LOG_HUDBIT) and whether the preceding 5 s show player health/hud-damage logs; positive control = the same grep on poked run s5618_poked_ctl log must show its known win ids. If offline is inconclusive, enqueue a soak with ra logging in the objbool instrument (extend tools/apply_s5622_objbool_log.py to print the caller ra) x2.
 HYPOTHESIS-ID: m6-mission-endurance
