@@ -164327,3 +164327,10 @@ Surveyed existing G2 evidence (s4438, s4239/42, s5668, s5669-s5674) instead of b
 - Folded existing s5693_htab_{a,b} logs (ROGUESQ_LOG_HUDBIT already armed): a has 14 playSpeechClip / 16 enqueueSpeechClip / 16 allocAndConfigureNewVoice; b 18/20/20. First lines: `playObjectiveVoiceLine2 n=1 a0=0xA4` -> `playSpeechClip n=2 a0=0xA4 a3=0x43 g8E=0 g8C=0 g72=16` (all gates pass). Two runs agree.
 - Rules out: H1 (voice call gated off by a stub) and the s5637 "dialogue never requested" reading (it counted callers of playObjectiveVoiceLine1 only). H2/H3 were already settled by s5669-s5674: speech-enqueue windows show band-limited voice-like PCM at the AI output. Dialogue request path needs no further instrumentation; G2 stays closed pending owner listen.
 - No code change; no new build. NEXT moves to G1: reach a mission other than level 2 (level F holds sayWhoaHim/bool 7).
+
+## Session 5696 (2026-10-20) — G1 level-select census from existing logs: every mission phase has gCurrentLevel=1; win poke replays it
+
+- Offline fold of `[level]` lines in scratch/agent/m6/{s5612_real,s5614_real_p100,s5614_real_p300}/run.log (no new build/run). All three: phase 3 cine arg writes B40=0x13/gCurrentLevel=0x13, then the mission phase shows gCurrentLevel=0x00000001 (sel@B40=0x01). s5612_real, which cycled mission -> title -> hangar -> mission, shows gCurrentLevel=1 again at phase 9 (replay, not progression).
+- Reading: the "level 2" of the lv2_* handlers is gCurrentLevel=1 (0-based index vs 1-based names; single-source inference from naming, not verified against the init-table indexer). Level F would be gCurrentLevel=0xE or 0xF. A win poke (get(10)=6) does not advance the level, plausibly because the save/progress state is not advanced by a poked win (unverified).
+- Closed selector theories (s5504-s5521) still stand; none explains how a hangar choice becomes B40=1. NEXT is a static trace of the callback-table indexer (ROM 0x10B050 table) to name the index source.
+- No code change. ORIGIN: no mitigation added.
