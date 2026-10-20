@@ -194,6 +194,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
+0a. **s5659 (single-source):** vsnap_b: rails in voice-read range go 2 -> ~1081 (of ~1232 halfwords) in a ~18-task burst (tasks 1789-1806) right after the FIRST enqueueSpeechClip/allocAndConfigureNewVoice (phase 5); clean through task 1528. Fill is at voice start, writer unnamed (not the 28 instrumented stores, not RSP DMA-out). Next: log every write form (swl/swr/sdc1/host memcpy/PI DMA) overlapping the range between task 1528 and 1806, with PC.
 0a. **s5658:** s5657 vsnap starved (80-line budget eaten by wide-hash control by task 1007; rails 0/swz<=2 early). Rebuilt rail-count-keyed; s5658_vsnap_b queued.
 0a. **s5657:** [vsnap] instrument built (rsp.cpp) + soak s5657_vsnap_a queued: rail-count timeline of the voice-read range at every audio task; wide hash = positive control.
 0a. **s5655:** rail data (0x8000/0x7FF8) in voice-read range 1B2C60.. is REAL guest data (byte-order artifact refuted, s5655 offline un-swap) with ZERO host writers incl. RSP DMA-out (s5653). s5654 store census had val=0 always (hook pre-store); s5655 reads datum back; soak s5655_vstore_b queued — look for `[vstore-rail]` PCs. See NEXT.md.

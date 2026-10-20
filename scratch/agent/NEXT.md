@@ -1,4 +1,6 @@
-# NEXT (s5659): fold s5658_vsnap_b soak verdict
-grep '\[vsnap\]' scratch/agent/m6/s5658_vsnap_b/run.log. Now logs only on narrow rail-count change (+every 1000 tasks); wide_hash still present as control.
-Outcomes: sudden jump rails 0->~190 at task T => find who wrote at T (uncovered store form: swl/swr/sdc1/memcpy/DMA-in from ROM/PI); gradual => heap reuse by game code, trace allocator owner of 1B2C60; never >0 => hits come from different addr (re-check dump source addr).
+# NEXT (s5660): name the uninstrumented bulk writer of the voice-read range
+Fact (s5659): range [1B2C60,1B3600) clean (rails<=2) until the first enqueueSpeechClip, then ~1000 rail halfwords appear in ~18 audio tasks (1789-1806).
+Hypotheses: H1 uninstrumented game store form (swl/swr/sdc1/ldc1/sd) in a fill loop; H2 host-side memcpy/memset helper or PI DMA-in (speech file / loadSpeechFile target); H3 the voice buffer is a decode output written by a host audio routine (non-RSP) clamping to rails.
+Discriminator: one build. (a) grep recomp generated code for store forms not covered by tools/apply_s5654_vsrc_store_census.py (swl/swr/sdc1/sd/sdl/sdr) and add the same hook; (b) hook host helpers (memcpy/memset/PI DMA) for overlap with the range, logging PC/caller; (c) keep [vsnap] as ordering control; gate logging to tasks after enqueueSpeechClip n=1. Positive control: a wide-range hook must fire. Queue as soak scratch/agent/soak_queue/s5660_vwriter_a.sh (+ _b arm without hooks for regression).
+Outcomes: PCs name loop => inspect source routine (is the value legitimate?); host helper => fix helper; zero hits with control firing => writer is outside CPU/host (RSP/ucode DMA) and s5653 null needs re-control.
 HYPOTHESIS-ID: g2-voice-never-requested
