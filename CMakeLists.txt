@@ -90,7 +90,7 @@ if (MSVC)
     # Rename game's 'main' to avoid MSVC treating it as the entry point
     target_compile_definitions(RecompiledFuncs PRIVATE main=rs_main)
 else()
-    target_compile_definitions(RecompiledFuncs PRIVATE main=rs_main)
+    target_compile_definitions(RecompiledFuncs PRIVATE main=rs_main RS64_BYTE_WATCH)
     target_compile_options(RecompiledFuncs PRIVATE
         -fno-strict-aliasing
         -Wno-unused-variable
