@@ -1,5 +1,5 @@
-# NEXT (s5673): re-measure speech/dialogue with correct AI cadence
-Facts (s5672): AI event cadence fixed (DRAIN=2048 default, underrun 72% -> ~0%). Fuzz likely resolved; owner listen pending.
-Hypotheses: H-d1 dialogue now audible (speech voice cadence was starved); H-d2 dialogue still absent because playObjectiveVoiceLine callers never fire (s5637); H-d3 voice DMA/decode path still empty.
-Discriminator: one mission soak with [pcm-dense] + speech enqueue counters (s5670 recipe) on the new default; compare speech-window loudness at AI output vs s5670 baseline, and re-check caller counts.
+# NEXT (s5674): isolate speech PCM (not just loudness)
+Facts (s5673): speech enqueue windows 1.9-4.6x louder at AI output on the new cadence; callers fire. Loudness is confounded with music/SFX.
+Hypotheses: H-e1 speech PCM is intelligible (decode of voice-slot pre-mix output looks like speech: low zero-crossing rate, bandlimited); H-e2 it is loud but garbage (rail/noise); H-e3 intelligible but masked/ducked in final mix.
+Discriminator: dump the speech voice's decoded PCM (slot 0x80153420 output / ring at +0x198) for ~2 s after an enqueue, write WAV, compute spectrum offline; compare to SFX voice dump as control. If owner reports dialogue audible, close G2 and move to G1.
 HYPOTHESIS-ID: g2-speech-audible
