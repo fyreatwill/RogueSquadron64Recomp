@@ -786,3 +786,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261020-064748 | s5649_vout_a | rc=0 | 582s | scratch/agent/soak_results/s5649_vout_a_20261020-064748.log
 20261020-070052 | s5651_vdump_a | rc=0 | 583s | scratch/agent/soak_results/s5651_vdump_a_20261020-070052.log
 20261020-072400 | s5653_vsrc_a | rc=0 | 585s | scratch/agent/soak_results/s5653_vsrc_a_manual.log (run by hand; recipe was orphaned in running_s5653; run.log in scratch/agent/m6/s5653_vsrc_a)
+20261020-075137 | s5654_vstore_a | rc=0 | 581s | scratch/agent/soak_results/s5654_vstore_a_20261020-075137.log

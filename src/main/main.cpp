@@ -2101,6 +2101,22 @@ extern "C" void rs64_s5654_vstore(uint32_t pc, uint32_t addr, uint32_t value, ch
     static std::mutex mu; static std::map<uint32_t, uint64_t> by_pc; static uint64_t nw = 0, nn = 0;
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_VSRC_STORES"); return e && e[0] && e[0] != '0'; }();
     if (!on) return;
+    // s5655: hook runs BEFORE the store (value arg is a literal 0), so resolve the previous store of this
+    // thread now by reading its datum back from RDRAM.  Rail = a halfword of 0x8000/0x7FF8 in the word.
+    struct Pend { uint32_t pc, addr; char w; bool v; };
+    static thread_local Pend pend = {0, 0, 0, false};
+    static std::map<uint32_t, uint64_t> rail_by_pc; static uint64_t chk = 0, nzv = 0, rails = 0;
+    volatile uint8_t* rd_ = g_recomp_rdram_for_wp_raw;
+    if (pend.v && rd_) {
+        std::lock_guard<std::mutex> lk2(mu);
+        const uint32_t wv = rs64_rdram_u32(rd_, pend.addr); ++chk; if (wv) ++nzv;
+        const uint32_t h0 = wv >> 16, h1 = wv & 0xFFFFu;
+        const bool rail = (h0 == 0x8000u || h0 == 0x7FF8u || h1 == 0x8000u || h1 == 0x7FF8u);
+        if (rail && pend.addr < 0x1B3600u) { ++rails; uint64_t rc = ++rail_by_pc[pend.pc];
+            if (rc == 1 && rail_by_pc.size() <= 40) std::fprintf(stderr, "[vstore-rail] pc=%08X addr=%06X w=%c word=%08X rails=%llu\n", pend.pc, pend.addr, pend.w, wv, (unsigned long long)rails); }
+        if ((chk & 0xFFFFu) == 0) std::fprintf(stderr, "[vstore-val] chk=%llu nonzero=%llu rails=%llu railpcs=%zu\n", (unsigned long long)chk, (unsigned long long)nzv, (unsigned long long)rails, rail_by_pc.size());
+    }
+    pend = {pc, addr & ~0u, width, addr < 0x1B3600u};
     std::lock_guard<std::mutex> lk(mu);
     ++nw;
     if (addr >= 0x1B3600u) { if ((nw & 0xFFFFFu) == 1) std::fprintf(stderr, "[vstore-wide] total=%llu narrow=%llu\n", (unsigned long long)nw, (unsigned long long)nn); return; }
