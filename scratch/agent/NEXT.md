@@ -2,3 +2,4 @@ Single next work unit (s5612): find the writers of byte 0x80130B14 (observed 0 t
 Hypotheses: H2 something writes B14=2 early and BB44's write of 1 is overwritten or not executed; H3 the poke skips BB44's real precondition; H4 B50 bit 0x100 is set by a path (pause/objective screen) never entered in the soak.
 Discriminator: PC attribution of each B14 write (value 2 vs 1) across the gate 4 transition.
 HYPOTHESIS-ID: m6-mission-endurance
+Static result (s5611): B14=2 only from 0x800FBB18 (Mode2), =1 only from 0x800FBB74 (Mode1); both need isSpeechBusyOrQueued() (0x80067A80) nonzero and byte 0x8010C9F0==0. Check which of these two ran and why Mode2 not Mode1 (log both PCs + 0x8010C9F0). B50 bit 0x100 writer: indirect; search 0x800A5D80, 0x800C58A0 and register-mask ORs through the B40 pointer, or lldb write-watch on 0x80130B50.
