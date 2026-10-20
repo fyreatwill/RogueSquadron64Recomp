@@ -1,3 +1,3 @@
-Single next work unit (s5648): D2 vs D3. In one instrument/build: log, per audio task, whether any ucode cmd-list address (A_SETBUFF/A_LOADBUF/A_ADPCM/A_RESAMPLE dmem<-dram addrs) falls inside [slot+0x198 target, +0x1000) or the +0x11C0 ring; positive control: mark-everything must match all cmds. Also hash the +0x198 buffer vs ROM speech region.
-Outcomes: D2 (no cmd references the buffer) => the mixer never gets the voice, find the cmd builder (M5 de-stub). D3 (referenced) => loss is later; compare AI PCM with retail oracle in the same phase.
+Single next work unit (s5649): D3 split. s5648 showed the ucode DMA-reads the slot-0x80153420 +0x198 buffer (D2 refuted). Extend [vcmd] (rsp.cpp, after audio task): on tasks with hit[0]>0, log peak/rms of the output DMA write (rs64_s4239_dma dir W 0x300@0x6F0) vs tasks without hits, plus first 64 bytes of the buffer for offline ADPCM decode against ROM speech data. Fold s5648_vcmd_{a,b} first.
+Outcomes: output energy higher on hit tasks => voice reaches mix, loss is AI/host (compare with retail oracle); no difference => decode/gain kills it (inspect A_ADPCM/volume cmds).
 HYPOTHESIS-ID: g2-voice-never-requested

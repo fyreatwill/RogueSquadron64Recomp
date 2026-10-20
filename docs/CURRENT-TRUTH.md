@@ -194,7 +194,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-0. **NEXT (s5648): D2 vs D3** - log whether any ucode cmd-list DRAM address falls inside the voice buffers (positive control: mark-everything); see NEXT.md. (s5644/s5646 soaks folded.) Older: fold `s5644_vdown_{a,b}` ([vdown] log; NEXT.md). Fold `s5637_voiceln_{a,b,c}` ([voiceln] log, see NEXT.md). 1. **Fold `s5633_force2_b`** (queued) for completeness of the R refutation.
+0. **NEXT (s5649): D3 split** - s5648 REFUTED D2 (ucode DMA-reads the +0x198 voice buffer: 2561 overlapping reads/12000 tasks, control any==reads); now compare output peak/rms on hit vs non-hit tasks and dump buffer bytes for ADPCM decode; fold queued `s5648_vcmd_{a,b}`. (old line follows) **D2 vs D3** - log whether any ucode cmd-list DRAM address falls inside the voice buffers (positive control: mark-everything); see NEXT.md. (s5644/s5646 soaks folded.) Older: fold `s5644_vdown_{a,b}` ([vdown] log; NEXT.md). Fold `s5637_voiceln_{a,b,c}` ([voiceln] log, see NEXT.md). 1. **Fold `s5633_force2_b`** (queued) for completeness of the R refutation.
 2. **Test the s5635 dialogue lead:** confirm at runtime whether
    `sayWhoaHim_v0x1FC` (or another voice-script path) sets bool 7 in failing
    runs and not in surviving ones — log entry + bool 7 transition in one build
@@ -238,3 +238,5 @@ s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayW
 - **s5645 (2 soaks, controls OK):** voice pool is alive downstream: all 23 speech/voice allocs land on slot 0x80153420, serviceStreamingVoice runs it, slot+0x11AC completions arrive (ok=20 empty=0), consumeVoiceSamples runs, tuple advances, stream id 7 starts. "Never requested / no completion" hypotheses refuted. Gap is sample DATA or ucode mix. NB: game logs are scratch/agent/m6/<tag>/run.log, not soak_results/*.log.
 - **s5646:** consumeVoiceSamples does NOT read sample bytes (pure counter at slot+0x11D4/0x11DD) - s5645 NEXT premise was wrong. [vbuf] slot-pointer census (tools/apply_s5646_voicebuf_log.py) built; soaks s5646_vbuf_{a,b} queued; FOLDED s5647 (below).
 - **s5647 (2 soaks, control `nz800=1354` OK):** voice slot 0x80153420 pointer targets (+0x198 buffer, +0x11C0 ring, +0xB84) are nonzero and CHANGE between dumps (n=1/40/200/1000; +0x198 header text -> PCM-like words). Refutes D1 (DMA yields zeros). Voice data exists in RDRAM; loss is at ucode cmd-list read (D2) or AI ring/gain (D3). Caveat: not proven to be speech vs SFX.
+
+- **s5648:** [vcmd] (rsp.cpp, scans ucode DMA-read ring vs slot-0x80153420 pointer targets) REFUTES D2: mixer reads the +0x198 voice buffer (2561 overlapping reads / 12000 tasks; control passed). Single run; loss is after the read (decode/mix/gain/AI). A first attempt using task->data_ptr as a cmd list was invalid (data_size=1).
