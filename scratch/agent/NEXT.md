@@ -1,6 +1,5 @@
-# NEXT (s5656): fold soak s5655_vstore_b (SOAK-RESULTS.md; log scratch/agent/m6/s5655_vstore_b/run.log)
-grep `\[vstore-rail\]`, `\[vstore-val\]`. Positive control: [vstore-val] nonzero>0.
-Outcomes: rail PCs named -> identify function (grep RecompiledFuncs for the PC), trace its source operand (H-W2: game fills voice buffer with clamp values, e.g. uninit/overflowed mix); rails==0 & nonzero>0 -> writer is uninstrumented (SWL/SWR/sdc1/non-hooked store macros, or a zmemcpy/memset variant) -> enumerate store forms not covered by rs64_m5_writer_parity and add; nonzero==0 -> readback broken (check g_recomp_rdram_for_wp_raw set).
-If no soak result yet, wait on it (do offline work) — do not rebuild.
-Hypotheses: H-W1 refuted (s5653); H-W3 refuted; H-W2 game stores vs H-W4 uninstrumented/never-written.
+# NEXT (s5657): is the rail data in the voice-read range pre-existing, or written by an uninstrumented store?
+Facts (s5656): instrumented game stores into [1B2C60,1B3600) are only 28 rail words from non-audio code (floats/inflate); vdump shows ~190/200 rail records. Zero host writers (s5653).
+Hypotheses: H-P pre-existing (RDRAM init/ROM-DMA'd bytes before the census armed, or leftover from an earlier phase); H-U store forms not hooked (SWL/SWR/sdc1/memcpy-style helpers); H-A voice slot +0x198 pointer aliases non-audio memory so the mixer reads game heap.
+Discriminator (one build, one run): at first speech-hit audio task, hash+count rail words in the range, and compare to a snapshot taken at the VI-transition entering the phase (and at boot); also log whether the range content changed between snapshot and read. Unchanged => H-P/H-A (look at what pointer init sets +0x198); changed with 0 instrumented stores => H-U (enumerate uncovered store forms). Positive control: wide-range snapshot must show change.
 HYPOTHESIS-ID: g2-voice-never-requested

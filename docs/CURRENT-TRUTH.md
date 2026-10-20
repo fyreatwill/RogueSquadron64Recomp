@@ -244,3 +244,4 @@ s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayW
 - s5652: vdump fold — hit-task voice-buffer reads are ~all 0x8000/0x7FF8 rail words (190/200 records): garbage source (H-G1), not speech; writer of that RDRAM range unnamed — next: log source addr + find writer.
 - s5651: hit-loud replicated (s5649_vout_a); ROGUESQ_VDUMP raw dump built, soak s5651_vdump_a queued — next: offline spectrum analysis (NEXT.md).
 - s5653: vsrc instrument built (source d/l + host-writer tracking); soak s5653_vsrc_a queued — fold per NEXT.md.
+- s5656 (single-source): rail-range game stores are 28 total from inflate_fast/player layout/anim/particles (float bit patterns, not clamp values) — the voice-read range [1B2C60,1B3600) is shared game heap; census cannot explain the 190/200 rail records. Next: snapshot the range at boot vs at first voice read (pre-existing data vs uninstrumented stores).
