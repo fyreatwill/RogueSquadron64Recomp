@@ -9917,6 +9917,34 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s5685: ROGUESQ_ALT_HOLD=<deadband> is a TEST-ONLY closed-loop autopilot. s5684 measured stick_y moving
+    // ship pos y (sy=+1 -> +0.12/poll, sy=-1 -> -0.19/poll). Latch the ship y on the first mission poll and
+    // drive stick_y toward it whenever no scripted stick_y is held. Logs ~1 Hz (control: err/sy visible).
+    {
+        static float s_ah_db = -1.0f;
+        static bool s_ah_have = false;
+        static double s_ah_target = 0.0;
+        static unsigned s_ah_n = 0, s_ah_act = 0;
+        if (s_ah_db < -0.5f) { const char* g = std::getenv("ROGUESQ_ALT_HOLD"); s_ah_db = (g && *g) ? (float)atof(g) : 0.0f; }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_ah_db > 0.0f && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u) {
+            const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
+            if (p >= 0x1000u && p < 0x7FFF00u) {
+                uint32_t u = rs64_rdram_u32(rd, p + 0x50); float y; memcpy(&y, &u, 4);
+                if (y == y && y > -1.0e6f && y < 1.0e6f) {
+                    if (!s_ah_have) { s_ah_have = true; s_ah_target = y; fprintf(stderr, "[althold] target y=%.3f db=%.2f\n", (double)y, (double)s_ah_db); }
+                    const double err = (double)y - s_ah_target;
+                    if (stick_y == 0.0f) {
+                        if (err > s_ah_db) { stick_y = -1.0f; s_ah_act++; }
+                        else if (err < -s_ah_db) { stick_y = 1.0f; s_ah_act++; }
+                    }
+                    if ((++s_ah_n % 60) == 1)
+                        fprintf(stderr, "[althold] n=%u y=%.3f err=%.3f sy=%.1f acted=%u\n", s_ah_n, (double)y, err, (double)stick_y, s_ah_act);
+                }
+            }
+        }
+    }
+
     // s5492: ROGUESQ_GODMODE=1 is a TEST-ONLY lever for M6 endurance soaks. The player
     // record table at 0x80137DB8 (stride 0x2A0, found via getPlayerHealthPercentage)
     // holds float health at +0xC4 and max health at +0xC8; refill slot 0 whenever it

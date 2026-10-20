@@ -1,4 +1,6 @@
-# NEXT (s5685): closed-loop altitude hold
-Hypotheses: H1 sy drives altitude (s5684: yes, ~0.12-0.19/poll); H2 a sy-feedback autopilot keeps the ship clear of terrain through a 10 min hold; H3 crash/stall is unrelated to altitude.
-Discriminator: add an autopilot rule reading ship pos y (pd2 source) and pulsing sy toward a target; compare alive_at_end/vi_stalls over >=3 runs vs the s5678 recipe.
+# NEXT (s5686): fold s5685 altitude-hold soaks
+Queued: s5685_ctrl, s5685_hold_a, s5685_hold_b (schedule a/sl/a/sr, no su/sd; hold arms ROGUESQ_ALT_HOLD=2.0).
+Control = "[althold] target" and "n=.. acted=.." lines in hold logs (must show acted>0), absent in ctrl.
+Hypotheses: H1 altitude hold keeps alive_at_end/no mission_cycles vs ctrl; H2 no difference (crash not altitude); H3 y hold fails (acted=0 / sign wrong -> err grows).
+Discriminator: err trajectory + alive_at_end/mission_cycles/vi_stalls, hold vs ctrl in SOAK-RESULTS logs.
 HYPOTHESIS-ID: g1-mission-progression
