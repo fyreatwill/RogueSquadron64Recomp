@@ -7472,6 +7472,24 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
             if (samples[i] != 0) { all_zero = false; break; }
         }
         if (all_zero) s_pcm_allzero_calls++;
+        // s5669: rail fraction + high-frequency energy (mean|diff| / mean|x|)
+        // so noise is measurable at the AI PCM, not just "non-silent".
+        uint64_t rails = 0, sum_abs = 0, sum_diff = 0;
+        for (size_t i = 0; i < num_samples; i++) {
+            int v = samples[i];
+            if (v >= 32767 || v <= -32768) rails++;
+            sum_abs += (uint64_t)(v < 0 ? -v : v);
+            if (i >= 2) {
+                int d = v - (int)samples[i - 2];
+                sum_diff += (uint64_t)(d < 0 ? -d : d);
+            }
+        }
+        if (!all_zero && (s_pcm_n % 64) == 0) {
+            fprintf(stderr, "[pcm-noise] n=%u phase=%u rail_pct=%.2f mean_abs=%.1f hf_ratio=%.3f\n",
+                    s_pcm_n, rs64_phase_ord(), 100.0 * rails / (double)num_samples,
+                    (double)sum_abs / (double)num_samples,
+                    sum_abs ? (double)sum_diff / (double)sum_abs : 0.0);
+        }
         if (s_pcm_n < 20 || (s_pcm_n % 256) == 0) {
             fprintf(stderr, "[pcm-sanity] n=%u phase=%u width=%u origin=0x%06X num_samples=%zu all_zero=%d allzero_calls=%u total_calls=%u\n",
                     s_pcm_n, rs64_phase_ord(), rs64_vi_committed_width(),

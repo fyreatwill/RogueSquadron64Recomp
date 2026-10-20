@@ -1,6 +1,5 @@
-# NEXT (s5669): confirm the s5668 compander-label fix at PCM level, then re-measure dialogue
-Facts (s5668): N64Recomp lagging-label bug made audioCompandS16 return +-0x7FFF always; tools/fixup_label_realign.py fixes it (rebuilt, lattice rails 85% -> ~0). See PORTING-STATE s5668.
-Hypotheses: H-a noise layer gone/much reduced at the AI PCM (fix is the main cause); H-b noise still present from another stage (AI rate/format/sink) - lattice fix only part; H-c voices now audible/non-silent -> dialogue was blocked by saturated decode.
-Discriminator: run a title+mission soak with ROGUESQ_LOG_PCM_SANITY=1 (and ROGUESQ_LOG_PCM_BOUNDARY=1) on this build; compare rail fraction/high-frequency energy of AI PCM vs a pre-fix log (s5667_lat_a run.log if it carries PCM_SANITY, else rerun with git-stash'd fixup_label_realign effect is not needed: compare to old build numbers in CURRENT-TRUTH). Control: PCM_SANITY lines present and nonzero sample count. Also grep for speech clip enqueue (enqueueSpeechClip) and whether voice buffer then has non-rail audio.
-Also: run `python3 tools/fixup_label_realign.py ../N64Recomp/RecompiledFuncs` after any regen (already hooked in fixup_game_funcs_vendored.py).
+# NEXT (s5670): is dialogue audible? Compare speech-slot PCM and residual noise vs retail
+Facts (s5669): AI PCM has 0 rail samples post-fix (330 rows); speech clips enqueue (6) and voices allocate (6). Instrument: [pcm-noise] in main.cpp.
+Hypotheses: H-a speech PCM reaches AI ring audible (non-silent bursts coinciding with enqueueSpeechClip); H-b speech voice allocated but output silent (volume/pan/mix zero); H-c residual hiss from lower-level quantization (hf_ratio higher than retail).
+Discriminator: one run logging, per enqueueSpeechClip, mean_abs of AI callbacks in the following ~3 s vs the 3 s before (positive control: music mean_abs>0 already); plus retail oracle hf_ratio of title music via tools/oracle for H-c.
 HYPOTHESIS-ID: g2-voice-never-requested
