@@ -222,3 +222,6 @@ microcode contract, `docs/M6-OBJECTIVE-COUNTER-WRITERS.md` and
 `scratch/agent/SOAK-RESULTS.md` for queued soak verdicts. The next iteration
 must read this file, `scratch/agent/NEXT.md`, and the tail of the soak results
 before acting.
+
+### s5638 update (G2 voice)
+s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayWhoaHim_v0x1FC fired 0 times in 420 s missions (single-source; [objbool] control active). Mission dialogue is never requested by the port; next: instrument all callers (NEXT.md, slug g2-voice-never-requested). The 0x64-vs-0x1FC hypotheses A/B/C of s5635 are unevaluated, not refuted.

@@ -163983,3 +163983,10 @@ Discrimination (s5637): this session narrows by elimination only. Static search 
  - fires in every run at similar t regardless of fail -> refutes B and C as the fail cause, selects A (bool 7 is a timer/proximity voice flag, fail has another cause);
  - never fires in a failing run -> refutes "sayWhoaHim sets bool 7 in the failing run" (bool 7 set via a dynamic id).
 Control: playObjectiveVoiceLine1 logging >=1 line per run. Outcome is labelled SUBSTITUTED-equivalent for conclusions: no hypothesis is selected yet.
+
+## Session 5638 (2026-10-20) — s5637 voice-line soaks a/b: playObjectiveVoiceLine1 never fires in a 420 s mission
+- Folded s5637_voiceln_{a,b} (scratch/agent/m6/<tag>/run.log; build binary contains the [voiceln] strings, ROGUESQ_LOG_HUDBIT is active because [objbool] lines print: 8 per run, ids 0x20,0x7F,0x2,0xC,0x3C,0x6F,0x16,0x3B/0x1; no id 0x64 in either run).
+- Result: 0 [voiceln] lines in both runs, i.e. neither playObjectiveVoiceLine1 nor sayWhoaHim_v0x1FC was entered once. The NEXT.md control ("playObjectiveVoiceLine1 must log at least once per run") FAILED, so hypotheses A/B/C are not evaluable from these runs. But the failed control is itself the datum: ~39 static call sites (funcs_45/46/47/48: sayCheckFire_*, sayExcellentWork_*, lv9_progressWithDialogue*, ...) lead to playObjectiveVoiceLine1 and none was reached in 7 min of mission => the port never requests mission dialogue. This matches the G2 owner report (no voice) and is the more valuable lead than the 0x1FC dispatcher.
+- Single-source (one instrument, 2 runs, run c pending); caveat: nopoke runs may not reach any scripted trigger the retail game would.
+ORIGIN: diagnostic only; no mitigation added.
+HYPOTHESIS-ID: g2-voice-never-requested

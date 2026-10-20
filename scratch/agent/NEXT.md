@@ -1,5 +1,5 @@
-Single next work unit (s5638): fold s5637_voiceln_{a,b,c} soaks. For each log, grep [voiceln] and [objbool] id=0x64; table per run: did sayWhoaHim_v0x1FC fire, at what t relative to 0x64, and the ra of the playObjectiveVoiceLine1 caller (identify the dispatcher from ra).
-Hypotheses: (A) voice line stepped by timer/proximity, fail separate; (B) line follows a damage/kill event that is the real fail cause; (C) bool 7 only read by the checker as a gate.
-Outcomes: 0x1FC fires in failing runs only, shortly before 0x64 -> B/C, trace ra caller; fires in all runs -> A (not discriminating for fail); never fires in a failing run -> bool 7 set elsewhere (dynamic id).
-Control: playObjectiveVoiceLine1 must log at least once per run, else the instrument is dead. Related: G2 (no dialogue audio).
-HYPOTHESIS-ID: m6-mission-endurance
+Single next work unit (s5639): find WHY mission dialogue is never requested (G2). Fold s5637_voiceln_c first (same expectation: 0 lines).
+Hypotheses: (A) the say*/lv*_progressWithDialogue callers' scripted triggers never fire (mission-script/event dispatch stalled or gated by a stub); (B) callers run but an early-out gate (voice enabled flag / audio stub) returns before playObjectiveVoiceLine1; (C) callers are reached only via paths nopoke soaks don't take (e.g. mission start briefing in retail).
+Discriminator: one build, entry-log (ROGUESQ_LOG_HUDBIT, cap 50) on ALL ~39 direct callers (list: awk over funcs_45..48 for 'playObjectiveVoiceLine1(rdram') plus the first early-out branch of playObjectiveVoiceLine1 itself; run one 420 s soak. Control: log the first-level mission-script tick function so the instrument must show nonzero. Outcome splits: no caller entries -> A/C (trace upward to the dispatcher); caller entries but no playObjectiveVoiceLine1 -> B (read the gate); both -> look downstream of the voice call (sound start / MusyX).
+Also compare with oracle (tools/oracle) if it can reach a mission start: does retail call it within 30 s of mission start?
+HYPOTHESIS-ID: g2-voice-never-requested
