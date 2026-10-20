@@ -283,3 +283,5 @@ runVoiceLatticeFilter is pure integer fixed-point (no FPU); float-lowering hypot
 ### s5666 update (G2 voice)
 s5665_dgate_{a,b} (2 soaks, controls OK): decodeAndFillVoiceBlock RUNS on slot 0x80153420 from n=1, gates open, dst strides 0x140 through 0x801B2C60.. => H5 refuted; the guest itself fills the buffer, and the rail-saturated content is decoder OUTPUT. Suspect now: runVoiceLatticeFilter (0x8009D980) math - float->int conversion lowering (NaN/inf -> 0x80000000?), coefficients, or filter state. Next: log its float inputs/coeffs/outputs (NEXT.md).
 
+
+s5691: static census of all 179 setObjectiveBoolean sites: only sayWhoaHim_v0x1FC sets 7; draw ids (base+1..3) never 7; three level-init sites forward caller a0 (unclassified). Next: log a0 there (NEXT.md).
