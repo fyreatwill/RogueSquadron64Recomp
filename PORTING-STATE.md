@@ -164250,3 +164250,9 @@ Verdict (s5682): refutes H-p4b (+0xD0 = ship velocity driving +0x4C..54); keeps 
 
 ## Session 5683 (2026-10-20) — pd2 gate changed to input-live, soak queued
 s5682 soak folded: log has no usable [pd2] rows in the soak log (gate fired pre-input; prior entry found +0xD0 constant, y static). Changed src/main/main.cpp pd2 to arm only when stick_x/y != 0, budget 600 polls. Built clean; queued scratch/agent/soak_queue/s5683_pd2.sh. No result yet; NEXT.md has the fold command.
+
+## Session 5684 (2026-10-20) — pd2 fold: real stick moves ship pos y (altitude control datum)
+Ran: folded soak s5683_pd2 (scratch/agent/m6/s5683_pd2/run.log; the soak_results log holds only the summary line). 600 input-live [pd2] rows, ship 34f680; stick distribution sy: 0=491,+1=55,-1=54; sx: 0=439,-1=107,+1=54. Analysis via numpy-free tools/pd2_corr.py (numpy is not installed).
+Result: mean per-poll dpos.y = -0.192 (sy=-1, n=54), -0.006 (sy=0, n=490), +0.118 (sy=+1, n=55): pos y responds monotonically to stick_y, zero at neutral (positive control = the sy=0 baseline in the same run). dpos.x vs sx: -0.065 (sx=-1), -0.008 (sx=0), 0.0 (sx=+1) - weak/asymmetric, x/z likely driven by heading+throttle not sx directly. Record vel (+0xD0 region) correlation with dpos |r|<=0.22 for every pair: still not velocity (consistent with s5682). Single-source (one soak run).
+Rules out: "stick never reaches the ship at mission origin" - it does, on y. Open: whether sustained sy changes altitude enough to clear terrain; x/z steering path.
+ORIGIN: no mitigation added; analysis tool only.
