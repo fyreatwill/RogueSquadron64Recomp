@@ -163879,3 +163879,8 @@ Ran: grep of `[hudbit`/`[cco]`/`flagword` in scratch/agent/m6/s5620_nopoke_{d,e}
 Showed: (1) d and e: [cco] lv2 calls #1-#6, ZERO [hudbit] lines; hudbit4 total now 1 of 8 unpoked runs (f,g still queued). Flagword 0x8010C9E0 in both goes FFFFFFFF->0, then 0->0x10->0->0x20->0 (bits 0x10/0x20, not the 0x4/0x8 bits of the setters; gate 0->5->0). (2) Static: lv2's setHudEnableBit4 (0x800C7738) call sites are at 0x80101FE8, 0x80102094, 0x801020B0, 0x80102124, each guarded by getObjectiveBoolean(0x64) or (0x6D) == 1. So natural bit 4 in lv2 needs objective boolean 0x64/0x6D to be set by someone else (setObjectiveBoolean 0x800C7540, script/game logic) - that is the writer to name, not the setter.
 Rules out: lv2 itself spontaneously setting bit 4; "cco entry => hudbit4" again (d/e: 12 cco calls, 0 hudbit). Single-source (static + 2 runs).
 ORIGIN: no mitigation added; diagnostic/static only.
+
+## Session 5622 (2026-10-20) — fold s5620 f/g (0 hudbit); add setObjectiveBoolean log
+- s5620_nopoke_f/g: 0 `[hudbit` lines each (with d/e: 0 of 4 further unpoked runs; earlier hudbit4 ~1/4 firing unchanged).
+- Added tools/apply_s5622_objbool_log.py (env ROGUESQ_LOG_HUDBIT=1): logs setObjectiveBoolean (0x800C7540) id/val/ra for first 20 calls (positive control, all ids) then ids 0x64/0x6D only. Wired into fixup_game_funcs_vendored.py + replay list; live funcs_35.c patched, build OK.
+- Queued s5622_objbool_h/i (unpoked). Outcomes: 0x64/0x6D val=1 before hudbit4 => find caller via ra; never set but bit4 fires => other flagword writer. If no [objbool] lines at all, run is void.
