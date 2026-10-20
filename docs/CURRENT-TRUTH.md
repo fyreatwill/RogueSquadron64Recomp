@@ -1,4 +1,5 @@
 - **(s5625, top)** cco/objbool logs now carry wall time and rate-limited counts; soaks s5625_prog_{a,b} queued. Fold: cco count rising w/o booleans=A, frozen=B, fixed-t booleans=C.
+- **(s5629, top)** s5628 [ccosnap] was invalid (zero-extended address read wrong memory); fixed with (gpr)(int32_t) cast, rebuilt, s5629_snap2_{a,b} queued. Prior "S vs D/T" still open.
 # Rogue Squadron 64 Recomp — current truth
 
 Compact operational handoff, maintained at Session 5577 (2026-10-19).

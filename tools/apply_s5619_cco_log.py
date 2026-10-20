@@ -5,9 +5,9 @@ import pathlib, re
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 RX = re.compile(r"RECOMP_FUNC void (lv\w+_checkComplexObjectives)\(uint8_t\* rdram, recomp_context\* ctx\) \{\n    uint64_t hi = 0, lo = 0, result = 0;\n    int c1cs = 0;\n")
 SNAP = ('    { static unsigned char s_prev[0x81]; static int s_k = 0, s_en = -1; if (s_en < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_en = (e && e[0]) ? 1 : 0; } '
-        'if (s_en && s_k < 300) { int ch = (s_k == 0); for (int i_ = 1; i_ <= 0x80; i_++) { unsigned char v_ = MEM_BU(0x8013889F + i_, 0); if (v_ != s_prev[i_]) { ch = 1; } } '
+        'if (s_en && s_k < 300) { int ch = (s_k == 0); for (int i_ = 1; i_ <= 0x80; i_++) { unsigned char v_ = MEM_BU((gpr)(int32_t)0x8013889F + i_, 0); if (v_ != s_prev[i_]) { ch = 1; } } '
         'if (ch) { extern long time(long*); s_k++; fprintf(stderr, "[ccosnap] #%d t=%ld set:", s_k, (long)time(0)); '
-        'for (int i_ = 1; i_ <= 0x80; i_++) { unsigned char v_ = MEM_BU(0x8013889F + i_, 0); s_prev[i_] = v_; if (v_) fprintf(stderr, " %X=%u", i_, v_); } fprintf(stderr, "\\n"); } } } /* PATCH: s5628 cco snap */\n')
+        'for (int i_ = 1; i_ <= 0x80; i_++) { unsigned char v_ = MEM_BU((gpr)(int32_t)0x8013889F + i_, 0); s_prev[i_] = v_; if (v_) fprintf(stderr, " %X=%u", i_, v_); } fprintf(stderr, "\\n"); } } } /* PATCH: s5628 cco snap */\n')
 def apply(text):
     if "PATCH: s5619 cco log" in text:
         if "PATCH: s5628 cco snap" in text: return text, 0
