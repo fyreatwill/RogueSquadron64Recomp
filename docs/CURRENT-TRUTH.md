@@ -65,6 +65,7 @@ State as of s5635 (all static claims single-source unless noted):
   dialogue flag, so the fail arm links to the voice/dialogue path — which is
   exactly what G2 reports as missing (no dialogue). Single-source static.
 - **s5642:** s5641_spath soaks show tickSpeechSubsystem -> enqueueSpeechClip -> allocAndConfigureNewVoice all run (30/30 in one run); alloc has early-outs (B094/B0A8/B0D8, `a0 < *0x80154670`). `[aloc]` instrument built, soaks s5642_aloc_{a,b} queued.
+- **s5644:** queue 0x80154650 is a pool lock (recv/unlock pairs), NOT a consumer queue. Real consumer = serviceVoicePoolFrame -> serviceStreamingVoice (slot+0x11AC queue) -> consumeVoiceSamples. `[vdown]` instrument built (tools/apply_s5644_voicedown_log.py); soaks s5644_vdown_{a,b} queued.
 - **s5643 (2 soaks, a/b, [aloc] control = entry+[spath] lines present):** allocAndConfigureNewVoice entry cnt(0x80154670)=0x222 >= every clip id, all 4 first slot-used bytes 0 => no pool bail; reach_B1F4 (initMusyXVoiceSlot) and reach_B220 (findVoiceSlotByAge) fired 16/16 (a) and 17/17 (b); label_B230 bail never. Selects H-C3: the port DOES allocate and start speech voices (osSendMesg to queue 0x80154650 at B218). Refutes H-C1/C2/C4. Missing dialogue is DOWNSTREAM of alloc (audio-thread consumer of 0x80154650 / voice slot 0x1200 state / sample DMA / ucode mix). Two soaks agree.
 - **s5641 voice funnel (2 soaks, single-source):** `playObjectiveVoiceLine2` IS entered and each call reaches `playSpeechClip` through every early-out gate; playSpeechClip is a 16-entry ring enqueue that drains (g72 16->13->16). "Script never requests voice" is refuted. Gap is now the consumer `tickSpeechSubsystem` (0x80067300) -> enqueueSpeechClip -> allocAndConfigureNewVoice; `[spath]` instrument built, soaks s5641_spath_{a,b} queued (NEXT.md).
 - Parked side branches: hudbit4 chain (s5617-s5623, setHudEnableBit4/8 only
@@ -191,7 +192,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
-0. **Fold `s5637_voiceln_{a,b,c}`** ([voiceln] log, see NEXT.md). 1. **Fold `s5633_force2_b`** (queued) for completeness of the R refutation.
+0. **Fold `s5644_vdown_{a,b}`** ([vdown] log; NEXT.md). Fold `s5637_voiceln_{a,b,c}` ([voiceln] log, see NEXT.md). 1. **Fold `s5633_force2_b`** (queued) for completeness of the R refutation.
 2. **Test the s5635 dialogue lead:** confirm at runtime whether
    `sayWhoaHim_v0x1FC` (or another voice-script path) sets bool 7 in failing
    runs and not in surviving ones — log entry + bool 7 transition in one build
