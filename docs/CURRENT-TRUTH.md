@@ -262,6 +262,9 @@ s5664: H4 refuted statically — slot+0x1210 = *(0x80154674) = rs_malloc(streamS
 ### s5665 update (G2 voice)
 Only decodeAndFillVoiceBlock (0x8009C904) writes slot+0x198 buffer; gates listed in PORTING-STATE s5665. [dgate]/[dec] built, soaks s5665_dgate_{a,b} queued. Static, single-source.
 
+### s5667 update (G2 voice)
+runVoiceLatticeFilter is pure integer fixed-point (no FPU); float-lowering hypothesis dead. Instrument apply_s5667_lattice_log.py built; soaks s5667_lat_{a,b} queued; fold [lat-in]/[lat-out] lines (see PORTING-STATE s5667 outcome table).
+
 ### s5666 update (G2 voice)
 s5665_dgate_{a,b} (2 soaks, controls OK): decodeAndFillVoiceBlock RUNS on slot 0x80153420 from n=1, gates open, dst strides 0x140 through 0x801B2C60.. => H5 refuted; the guest itself fills the buffer, and the rail-saturated content is decoder OUTPUT. Suspect now: runVoiceLatticeFilter (0x8009D980) math - float->int conversion lowering (NaN/inf -> 0x80000000?), coefficients, or filter state. Next: log its float inputs/coeffs/outputs (NEXT.md).
 
