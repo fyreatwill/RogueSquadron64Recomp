@@ -9940,6 +9940,25 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s5680: ROGUESQ_PLAYER_DUMP=1 logs the whole player record (0x137DB8, 0x2A0 bytes) as hex words
+    // at ~1 Hz while the mission origin 0x690400 is up, plus the stick/button state, so field
+    // tracking vs stick input can be found offline. Passive, read-only.
+    {
+        static int s_pd = -1;
+        static std::chrono::steady_clock::time_point s_pd_last;
+        if (s_pd < 0) { const char* g = std::getenv("ROGUESQ_PLAYER_DUMP"); s_pd = (g && *g == '1') ? 1 : 0; }
+        volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (s_pd && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u) {
+            const auto now = std::chrono::steady_clock::now();
+            if (now - s_pd_last >= std::chrono::seconds(1)) {
+                s_pd_last = now;
+                fprintf(stderr, "[pdump] sx=%.2f sy=%.2f btn=0x%04X :", (double)stick_x, (double)stick_y, (unsigned)btn);
+                for (uint32_t o = 0; o < 0x2A0; o += 4) fprintf(stderr, " %08x", rs64_rdram_u32(rd, 0x137DB8u + o));
+                fprintf(stderr, "\n");
+            }
+        }
+    }
+
     // s5604: ROGUESQ_MISSION_WIN=<n> is a TEST-ONLY lever for the mission-1 -> mission-2
     // route. activateObjectiveCompleteFlag (0x800C76B0) ORs bit (id-1) into the byte at
     // 0x80130B15 for ids 1..8; this sets all eight bits once, after <n> polls with the
