@@ -4,6 +4,7 @@
 #include <cstring>
 #include <csignal>
 #include <vector>
+#include <map>
 #include <mutex>
 #include <cinttypes>
 #include <filesystem>
@@ -2093,6 +2094,20 @@ extern "C" void rs64_s4578_start(uint8_t* rdram) {
 extern "C" {
 volatile uint32_t rs64_vsrc_lo = 0, rs64_vsrc_hi = 0;
 uint32_t rs64_vsrc_nw = 0, rs64_vsrc_lastphys = 0, rs64_vsrc_lastlen = 0; char rs64_vsrc_lastapi[24] = {0};
+}
+// s5654: per-PC census of instrumented game stores into the voice-read source range.
+// narrow [1B2C60,1B3600) = where s5653 saw rail data with zero host writers; wide = positive control.
+extern "C" void rs64_s5654_vstore(uint32_t pc, uint32_t addr, uint32_t value, char width) {
+    static std::mutex mu; static std::map<uint32_t, uint64_t> by_pc; static uint64_t nw = 0, nn = 0;
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_VSRC_STORES"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    std::lock_guard<std::mutex> lk(mu);
+    ++nw;
+    if (addr >= 0x1B3600u) { if ((nw & 0xFFFFFu) == 1) std::fprintf(stderr, "[vstore-wide] total=%llu narrow=%llu\n", (unsigned long long)nw, (unsigned long long)nn); return; }
+    ++nn;
+    uint64_t c = ++by_pc[pc];
+    if (c == 1 && by_pc.size() <= 60) std::fprintf(stderr, "[vstore] new pc=%08X addr=%06X w=%c val=%08X nn=%llu\n", pc, addr, width, value, (unsigned long long)nn);
+    if ((nn & 0x3FFFu) == 0) { std::fprintf(stderr, "[vstore-sum] nn=%llu pcs=%zu:", (unsigned long long)nn, by_pc.size()); int k = 0; for (auto& kv : by_pc) { if (k++ >= 12) break; std::fprintf(stderr, " %08X=%llu", kv.first, (unsigned long long)kv.second); } std::fprintf(stderr, "\n"); }
 }
 extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
                                             uint32_t phys,

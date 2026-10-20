@@ -41093,6 +41093,7 @@ RS64_REPLAY = [
     "apply_s4994_s4540_mission_sample.py",
     "apply_s5036_guard34_force.py",
     "apply_s5078_flight_writer_census.py",
+    "apply_s5654_vsrc_store_census.py",
     "apply_s5368_align100_counter.py",
     "apply_s5370_path_census.py",
     "apply_s5379_census_ctl.py",
