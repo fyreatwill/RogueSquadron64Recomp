@@ -520,3 +520,7 @@ the tail of the soak results before acting.
 - s5587: s5584 plume title hold folded: 1/4 runs completed (600 s cap), 0 crashes, run1 alive +120 s. Remaining 3 queued as s5587_plume_hold_{b,c,d} (N=1 each). Plume thread open until they land.
 
 - s5598: POKE_WRAP A/B (default drop vs wrap): identical origin sequences, both alive 100 s, 0 crashes (single-source, origin-only). Keep default drop. s5597 ASan title boots: 2 boots, 0 ASan reports. Next: ASan-armed keyed hangar/mission hold.
+
+
+## s5616 addendum
+NOPOKE control (s5615_nopoke_a/b): g4/b14=2 tail appeared in 1 of 2 unpoked runs (b), so the poke is not required for it (H4). Next: find the natural writer of b14=2 / what ends the mission (lldb break on 800FB190 a0).

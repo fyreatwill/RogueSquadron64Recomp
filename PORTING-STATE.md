@@ -163841,3 +163841,11 @@ ORIGIN: no mitigation added; diagnostic-only line plus two soak recipes. Level-i
 - ORIGIN: no mitigation added; diagnostic env switch only. Level-id word still unlocated.
 - Discrimination (s5615): REFUTES H1 (counter-race: get(2)/get(3) never left 0 in 2/2 arms, yet gate 4/b14=2 still fired). SELECTS against "the poke alone produces the win": b14=1 is 0/4 since s5612. Remaining: H2 (gate-5 preempt) vs H4 (natural end). Next discriminator: s5615_nopoke_a/b sequence vs p100/p300 sequence (same g5/g0/g4/b14=2 at the same sample counts => H4 selected, H2 refuted for the g4 tail).
 - s5615 verdict wording: the p100/p300 data refutes H1 (counters never crossed); it selects H2-or-H4 as the survivors, and the NOPOKE runs discriminate between them (same sequence => H4, all-g0 => the poke drives gate 4).
+
+## Session 5616 (2026-10-19) — NOPOKE negative control: gate-4/b14=2 tail occurs WITHOUT the win poke (1 of 2)
+
+Ran s5615_nopoke_a/b by hand (the loop only runs soaks after an iteration ends, so waiting on them inside the iteration deadlocks the Stop gate). ROGUESQ_MISSION_WIN_NOPOKE=1, same recipe as p100. Sequence from `seq gate` lines (scratch/agent/m6/s5615_nopoke_{a,b}/run.log):
+- a: g0(2) g5(14) g0(184) — no g4 tail; alive_at_end=1, 0 crashlines, 0 VI stalls.
+- b: g0(2) g5(14) g0(151) g4(2) g4s1b2(1) g6s1b2(9) g0b2(21) — the same tail as the poked p100/p300 runs; alive, 0 crashlines, 0 stalls.
+Verdict: the g4/b14=2 tail does not need the poke (b has it, poke disabled) -> H4 (natural/poke-independent end) supported; H2 (poke swallowed by gate-5 window) irrelevant. Timing is non-deterministic (a never reached it in 420 s hold), so poked-vs-unpoked rate cannot be compared at n=2. Single positive for b; no oracle line yet for what ends the mission.
+Rules out: "poke drives gate 4". Does not yet name the writer of b14=2 (ORIGIN open).
