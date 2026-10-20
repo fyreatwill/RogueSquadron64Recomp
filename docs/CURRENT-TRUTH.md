@@ -232,3 +232,5 @@ s5637 voice-line soaks a/b: playObjectiveVoiceLine1 (39 static callers) and sayW
 
 ### s5639 update
 [vcaller] folded (s5640): control fired, 0/35 Line1 callers fired — but lv2 uses playObjectiveVoiceLine2, so this is a wrong-function null (voice-request question still open). [speech] log on playSpeechClip + Line2 built; soaks s5640_speech_{a,b} queued. See NEXT.md.
+
+- **s5645 (2 soaks, controls OK):** voice pool is alive downstream: all 23 speech/voice allocs land on slot 0x80153420, serviceStreamingVoice runs it, slot+0x11AC completions arrive (ok=20 empty=0), consumeVoiceSamples runs, tuple advances, stream id 7 starts. "Never requested / no completion" hypotheses refuted. Gap is sample DATA or ucode mix. NB: game logs are scratch/agent/m6/<tag>/run.log, not soak_results/*.log.
