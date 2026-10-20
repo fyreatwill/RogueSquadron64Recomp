@@ -1,5 +1,5 @@
-# NEXT (s5672): host-sink check for the residual fuzz (H-c2a)
-Facts (s5671): retail oracle AI PCM hf_ratio (title med 0.200, hangar 0.156) matches port AI PCM (0.20-0.24 / 0.185); fuzz is not in the ucode PCM spectrum.
-Hypotheses: H-c2a port AI frequency / SDL device rate or format differs from retail dacrate (resample artifacts); H-c2b host sink fine, fuzz was the pre-s5669 rail clipping (owner listen needed); H-c2c SDL queue underruns/crackle (callback starvation).
-Discriminator: oracle `[ai-dacrate]` lines in scratch/agent/soak_results/s5671_hf/oracle.log vs port AI rate/SDL obtained spec + underrun count in one title-phase run. Equal rate and zero underruns => H-c2b (ask owner to listen).
+# NEXT (s5673): re-measure speech/dialogue with correct AI cadence
+Facts (s5672): AI event cadence fixed (DRAIN=2048 default, underrun 72% -> ~0%). Fuzz likely resolved; owner listen pending.
+Hypotheses: H-d1 dialogue now audible (speech voice cadence was starved); H-d2 dialogue still absent because playObjectiveVoiceLine callers never fire (s5637); H-d3 voice DMA/decode path still empty.
+Discriminator: one mission soak with [pcm-dense] + speech enqueue counters (s5670 recipe) on the new default; compare speech-window loudness at AI output vs s5670 baseline, and re-check caller counts.
 HYPOTHESIS-ID: g2-speech-audible

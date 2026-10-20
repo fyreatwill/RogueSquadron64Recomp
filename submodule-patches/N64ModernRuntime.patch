@@ -4058,7 +4058,7 @@ index 3198be0..55a15a5 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..d2f3ff9 100644
+index 149e770..ad715e2 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,11 +8,24 @@
@@ -4662,7 +4662,7 @@ index 149e770..d2f3ff9 100644
 +// (polled every 1 ms, at most one post per 2 ms), i.e. paced by the real consumer like hardware's per-buffer AI
 +// interrupt, instead of a fixed timer. Suggested N=768 (one guest buffer). Takes precedence over AI_EVENT_HZ.
 +static uint32_t s4450_ai_event_drain() {
-+    static const uint32_t n = [] { const char* e = std::getenv("ROGUESQ_AI_EVENT_DRAIN"); return e ? (uint32_t)std::atoi(e) : 0u; }();
++    static const uint32_t n = [] { const char* e = std::getenv("ROGUESQ_AI_EVENT_DRAIN"); return e ? (uint32_t)std::atoi(e) : 2048u; /* s5672 default: per-VI post fed 52% of real time -> 72% empty SDL queue; 0 = legacy per-VI */ }();
 +    return n;
 +}
 +static bool ai_event_external() { return s4440_ai_event_hz() != 0 || s4450_ai_event_drain() != 0; }

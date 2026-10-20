@@ -7337,6 +7337,31 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
             fflush(stderr);
         }
     }
+    {
+        // s5672 [ai-underrun]: host SDL queue depth at each AI buffer. queued_before==0
+        // after the first fill means the device drained dry (crackle/underrun).
+        static const bool uf = getenv("ROGUESQ_LOG_AI_UNDERRUN") != nullptr;
+        static uint32_t calls = 0, zero = 0, maxq = 0, lastphase = 0xFFFFFFFFu;
+        static uint64_t sumq = 0; static uint32_t minq = 0xFFFFFFFFu;
+        if (uf && audio_device) {
+            const uint32_t ph = rs64_phase_ord();
+            if (ph != lastphase) {
+                if (calls) fprintf(stderr, "[ai-underrun] phase=%u calls=%u zero=%u min=%u max=%u avg=%llu rate=%u\n",
+                    lastphase, calls, zero, minq, maxq, (unsigned long long)(sumq / calls), audio_sample_rate);
+                calls = zero = maxq = 0; sumq = 0; minq = 0xFFFFFFFFu; lastphase = ph;
+            }
+            calls++; sumq += queued_before; if (!queued_before) zero++;
+            static uint64_t t0 = 0, fr = 0;
+            const uint64_t now = SDL_GetTicks64(); if (!t0) t0 = now;
+            fr += num_samples / 2;
+            if (queued_before < minq) minq = queued_before;
+            if (queued_before > maxq) maxq = queued_before;
+            if ((calls % 512) == 0)
+                fprintf(stderr, "[ai-underrun] phase=%u calls=%u zero=%u min=%u max=%u avg=%llu rate=%u wall_ms=%llu prod_fps=%llu\n",
+                    ph, calls, zero, minq, maxq, (unsigned long long)(sumq / calls), audio_sample_rate,
+                    (unsigned long long)(now - t0), (unsigned long long)(fr * 1000 / (now - t0 + 1)));
+        }
+    }
     rs64_m5_audio_host_row("queue", queued_before, queued_after,
                            static_cast<uint32_t>(num_samples * sizeof(int16_t)),
                            static_cast<uint32_t>(num_samples));
