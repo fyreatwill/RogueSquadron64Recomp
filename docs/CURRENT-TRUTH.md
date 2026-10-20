@@ -527,3 +527,5 @@ the tail of the soak results before acting.
 
 ## s5616 addendum
 NOPOKE control (s5615_nopoke_a/b): g4/b14=2 tail appeared in 1 of 2 unpoked runs (b), so the poke is not required for it (H4). Next: find the natural writer of b14=2 / what ends the mission (lldb break on 800FB190 a0).
+
+- **(s5619)** hudbit `ra` column is always 0 (static jal never sets r31); `[cco] lvN_checkComplexObjectives` entry logs added (tools/apply_s5619_cco_log.py). nopoke_a logged 3 hudbit4 calls, nopoke_b 0; poked control pending (s5618_poked_ctl).
