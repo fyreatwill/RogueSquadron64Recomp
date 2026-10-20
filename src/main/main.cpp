@@ -9946,8 +9946,22 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     {
         static int s_pd = -1;
         static std::chrono::steady_clock::time_point s_pd_last;
-        if (s_pd < 0) { const char* g = std::getenv("ROGUESQ_PLAYER_DUMP"); s_pd = (g && *g == '1') ? 1 : 0; }
+        if (s_pd < 0) { const char* g = std::getenv("ROGUESQ_PLAYER_DUMP"); s_pd = (g && *g == '1') ? 1 : (g && *g == '2') ? 2 : 0; }
         volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        // s5682: mode 2 = every poll (not 1 Hz), first 400 polls per mission window: ship object (record+0x04)
+        // pos vec3 +0x4C/50/54 and record vel +0xD0/D4/D8 as floats, with stick. Pairs pos deltas vs vel offline.
+        if (s_pd == 2 && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u) {
+            static unsigned s_pd2_n = 0;
+            if (s_pd2_n < 400) {
+                s_pd2_n++;
+                auto f = [&](uint32_t a) { uint32_t u = rs64_rdram_u32(rd, a); float v; memcpy(&v, &u, 4); return (double)v; };
+                const uint32_t p = rs64_rdram_u32(rd, 0x137DB8u + 4) & 0xFFFFFFu;
+                fprintf(stderr, "[pd2] n=%u t=%lld ship=%06x pos=%.4f,%.4f,%.4f vel=%.4f,%.4f,%.4f sx=%.2f sy=%.2f\n", s_pd2_n,
+                        (long long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(),
+                        (unsigned)p, f(p + 0x4C), f(p + 0x50), f(p + 0x54), f(0x137DB8u + 0xD0), f(0x137DB8u + 0xD4), f(0x137DB8u + 0xD8),
+                        (double)stick_x, (double)stick_y);
+            }
+        }
         if (s_pd && rd && ((uint32_t)rs64_vi_committed_origin() & 0xFFFFFFu) == 0x690400u) {
             const auto now = std::chrono::steady_clock::now();
             if (now - s_pd_last >= std::chrono::seconds(1)) {
