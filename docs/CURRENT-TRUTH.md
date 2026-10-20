@@ -330,6 +330,8 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5597 (TOP):** ASan arm landed (`tools/build_asan.sh` -> build_asan/) and caught a real overflow: `poke_be32(0x101C)` in `factor5_gfx_runner` wrote 0x1C bytes past gfx `dmem` into the adjacent audio DMEM global every gfx task (3/3 boots). Fixed in src/main/main.cpp (default drops OOB bytes; `ROGUESQ_POKE_WRAP=1` = wrap arm). Post-fix ASan title boots n=2 clean, 0 reports. Plume SIGSEGV (si_addr=0x58) NOT proven related. Next: fold queued `s5597_plume_asan`; run a concurrent default-vs-`ROGUESQ_POKE_WRAP=1` title+hangar pair on build/ (check whether the 0x01C read matters); then keep ASan arm for hangar/mission holds (build_asan is slow) to catch any further first-hit.
+
 - **s5596 (TOP):** second-mission gate surveyed (static, single-source): bit 0x02000000 of 0x130B58 gates initMission arm A (0x8003E2B4, B40=0x14); the normal title->hangar->mission route uses arm B (0x8003E378 via cinematicLoopBody), so the s5515/s5517 "never set" is expected and the bit is NOT the mission-2 gate. Mission 2 needs a mission-1 win, which the key autopilot cannot produce - named blocker. Next: ASan arm for the title-boot plume SIGSEGV (si_addr=0x58).
 - **s5595 (TOP):** s5594 hangar_long_k,l folded: both clean (hold 903 s, vi_stalls30s=0, crashlines=0). First-mission endurance 10/10 (title and hangar routes). Do NOT queue more first-mission holds. Next: second-mission route investigation (flag 0x130B58 bit 0x02000000, s5515) - offline survey of who sets it, then a keyed route or an ASan arm.
 

@@ -6114,9 +6114,24 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         return RspExitReason::Broke;
     }
 
+    // s5597 ORIGIN: the ASan arm (tools/build_asan.sh) caught poke_be32(0x101C)
+    // writing 0x1C bytes past the end of the 4 KB gfx `dmem` (global-buffer-
+    // overflow, 3/3 boots) - into the adjacent audio DMEM global. The offset is
+    // the original author's; RSP DMEM addressing wraps at 0xFFF. Default drops
+    // out-of-range bytes (gfx state unchanged, overflow gone);
+    // ROGUESQ_POKE_WRAP=1 masks to the wrapped hardware address (DMEM[0x01C]).
+    static const bool s_poke_wrap = [] {
+        const char* e = std::getenv("ROGUESQ_POKE_WRAP");
+        return e && *e && *e != '0';
+    }();
     auto poke_be32 = [](uint32_t off, uint32_t val) {
         for (int i = 0; i < 4; ++i) {
-            g_dmem_cur[(off + i) ^ 3] = (uint8_t)(val >> (24 - 8*i));
+            uint32_t a = off + i;
+            if (a >= 0x1000u) {
+                if (!s_poke_wrap) continue;
+                a &= 0xFFFu;
+            }
+            g_dmem_cur[a ^ 3] = (uint8_t)(val >> (24 - 8*i));
         }
     };
     auto peek_be32 = [](uint32_t off) {
