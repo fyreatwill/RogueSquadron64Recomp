@@ -164374,3 +164374,9 @@ Surveyed existing G2 evidence (s4438, s4239/42, s5668, s5669-s5674) instead of b
 - Fix: command now targets watchpoint 2. Queued s5701_wpb40_a (force3) and _b (force5). Positive control: the 0x3470 hit plus the first B40 hit (applySaveSlot) must appear, then a SECOND hit with val 2 names the reverter.
 - ORIGIN: no mitigation added; instrument fix + queue only.
 - Selects: H1/H2/H3 still open. Discriminator unchanged (see NEXT.md).
+
+## Session 5702 (2026-10-20) — s5701 B40 write-watch soaks defective a 2nd time (multi `-o` kept only `continue`); script fixed, requeued s5702
+- Read m6/s5701_{a,b}/lldb_att1.log: positive control (0x3470 hit in rand_recomp) fired, real wp 2 on 0x300130b40 armed and hit 7 times per run (first: new value 318767109 = 0x13000005, the boot cine-arg write), but `watchpoint list` shows `watchpoint commands: continue` ONLY. lldb's `watchpoint command add -o A -o B ...` via piped stdin kept just the last `-o`, so bt/value/r31 never ran. 7 hits proves B40's word is written >1 time after control; it names no writer. Not evidence about the 3->2 reverter.
+- Fix: m6_wp_b40.sh now uses the multi-line `watchpoint command add 2` ... `DONE` form (bt 8, memory read, r31, continue). Queued scratch/agent/soak_queue/s5702_wpb40_a (FORCE=3) / _b (FORCE=5).
+- Known cosmetic: soaks report rc=137/900s because the script's trailing `sleep` loop outlives the game; results are still written.
+- Rules out: nothing about the reverter yet. ORIGIN: n/a (instrument fix, no mitigation machinery).
