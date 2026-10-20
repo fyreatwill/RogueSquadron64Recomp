@@ -1,5 +1,3 @@
-Single next work unit (s5647): fold s5646_vbuf_{a,b} ([vbuf] lines in scratch/agent/m6/s5646_vbuf_*/run.log).
-Premise fix: consumeVoiceSamples is a pure counter (slot+0x11D4/0x11DD); it never reads sample bytes. Slot data lives behind pointers found in the slot (scan logged by [vbuf]).
-Controls first: `[vbuf] control code@0x80000400 nz800` must be >>0 in each dump, else the run is void.
-Outcomes: D1 every slot-pointer target nz800=0 at later dumps => PI/ROM DMA of speech yields zeros (find DMA source via the pointer, compare with ROM bytes). D2 target nonzero => next check whether the ucode cmd list reads that address (ROGUESQ_AUDIO_UCODE; M5 de-stub target). D3 nonzero and mixed => loss is later (AI ring/gain; compare with retail oracle).
+Single next work unit (s5648): D2 vs D3. In one instrument/build: log, per audio task, whether any ucode cmd-list address (A_SETBUFF/A_LOADBUF/A_ADPCM/A_RESAMPLE dmem<-dram addrs) falls inside [slot+0x198 target, +0x1000) or the +0x11C0 ring; positive control: mark-everything must match all cmds. Also hash the +0x198 buffer vs ROM speech region.
+Outcomes: D2 (no cmd references the buffer) => the mixer never gets the voice, find the cmd builder (M5 de-stub). D3 (referenced) => loss is later; compare AI PCM with retail oracle in the same phase.
 HYPOTHESIS-ID: g2-voice-never-requested
