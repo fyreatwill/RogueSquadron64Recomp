@@ -1,6 +1,6 @@
-# NEXT (s5668): fold s5667_lat_{a,b} soak results ([lat-in]/[lat-out] in scratch/agent/soak_results/)
-Facts (s5667): runVoiceLatticeFilter is pure integer; clamp translation verified correct. Instrument already built and soaks queued.
-Hypotheses: H9 coefficients/state garbage (unstable lattice); H10 input samples already garbage/rail (upstream stage-1 decode in renderVoiceAudioBlock); H11 legit clamp (unlikely).
-Discriminator: grep '\[lat-' in the logs. Control: >0 [lat-in] lines and some nonrail_nonzero>0. Coef words absurd or state diverging => H9, trace where renderVoiceAudioBlock loads coefs (header from decoded stream). Inputs at rails => H10. Both sane => revisit.
-If soaks have not run yet, do an offline read of renderVoiceAudioBlock (0x8009DB44) to find the coefficient/state source while waiting.
+# NEXT (s5669): confirm the s5668 compander-label fix at PCM level, then re-measure dialogue
+Facts (s5668): N64Recomp lagging-label bug made audioCompandS16 return +-0x7FFF always; tools/fixup_label_realign.py fixes it (rebuilt, lattice rails 85% -> ~0). See PORTING-STATE s5668.
+Hypotheses: H-a noise layer gone/much reduced at the AI PCM (fix is the main cause); H-b noise still present from another stage (AI rate/format/sink) - lattice fix only part; H-c voices now audible/non-silent -> dialogue was blocked by saturated decode.
+Discriminator: run a title+mission soak with ROGUESQ_LOG_PCM_SANITY=1 (and ROGUESQ_LOG_PCM_BOUNDARY=1) on this build; compare rail fraction/high-frequency energy of AI PCM vs a pre-fix log (s5667_lat_a run.log if it carries PCM_SANITY, else rerun with git-stash'd fixup_label_realign effect is not needed: compare to old build numbers in CURRENT-TRUTH). Control: PCM_SANITY lines present and nonzero sample count. Also grep for speech clip enqueue (enqueueSpeechClip) and whether voice buffer then has non-rail audio.
+Also: run `python3 tools/fixup_label_realign.py ../N64Recomp/RecompiledFuncs` after any regen (already hooked in fixup_game_funcs_vendored.py).
 HYPOTHESIS-ID: g2-voice-never-requested

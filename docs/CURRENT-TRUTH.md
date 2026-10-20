@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, maintained as of Session 5635 (2026-10-20).
+Compact operational handoff, maintained as of Session 5668 (2026-10-20).
 `PORTING-STATE.md` is the chronological ledger. Durable background, closed
 audit detail, and the per-thread histories moved out of this file are in
 `docs/PROJECT-OVERVIEW.md` (latest: "Migrated from CURRENT-TRUTH (s5636)");
@@ -195,6 +195,7 @@ Each: the wrong claim, why it was believable, what replaced it.
 
 ## Next steps (single monotonic backlog)
 
+0c. **s5668 (G2 noise ROOT CAUSE, lattice-level confirmed):** N64Recomp src/recompilation.cpp:874 emits at most one label per instruction, so junk out-of-function branch targets make real labels lag; audioCompandS16 (0x8009DD7C) mis-jumped and returned +-0x7FFF for every input -> saturated voice lattice coefficients -> ~85% rail output. Fixed by tools/fixup_label_realign.py (hooked at end of fixup_game_funcs_vendored.py). s5668_fix_a: rails 0 in 44/46 lattice calls, smooth output. NEXT: PCM-level confirmation (ROGUESQ_LOG_PCM_SANITY / AI ring noise floor, fixed vs s5667 build) and then the dialogue path (g2-voice-never-requested) - voice decode no longer saturates, so re-measure whether speech now plays. Only-lattice-level evidence so far (single-source).
 0b. **s5660:** only unhooked game store forms are swl/swr/sdl/sdr (421 sites; many are data-as-code). Hooked via tools/apply_s5660_unaligned_store_census.py -> rs64_s5660_ustore; soak `s5660_vwriter_a` queued (look for `[ustore-all]` control and `[vstore] w=L/R/l/r`). See NEXT.md.
 0a. **s5659 (single-source):** vsnap_b: rails in voice-read range go 2 -> ~1081 (of ~1232 halfwords) in a ~18-task burst (tasks 1789-1806) right after the FIRST enqueueSpeechClip/allocAndConfigureNewVoice (phase 5); clean through task 1528. Fill is at voice start, writer unnamed (not the 28 instrumented stores, not RSP DMA-out). Next: log every write form (swl/swr/sdc1/host memcpy/PI DMA) overlapping the range between task 1528 and 1806, with PC.
 0. **s5662:** H3 needs NO new build: `ROGUESQ_LOG_DMA` already logs every PI DMA (s5658 run never armed it). Soak `s5662_pidma_a` queued; fold = PI dests after first `enqueueSpeechClip` vs [1B2C60,29DFB8): overlap => filled-then-clobbered, elsewhere => H4 (bad descriptor address), none => H3 (speech load skipped). Prior datum (single-source, s5653): the 30 logged host writers in that range were `zmemcpy`, not PI.

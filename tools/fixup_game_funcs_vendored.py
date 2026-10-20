@@ -41441,3 +41441,7 @@ if os.environ.get("RS64_SKIP_REPLAY") != "1":
 else:
     print("[s4648-replay] WARNING: RS64_SKIP_REPLAY=1 - s4296 A14 yield and other replayed patches NOT applied;"
           " run tools/check_a14_yield_patch.py before any soak")
+
+# s5668: N64Recomp lagging-label bug repair (audioCompandS16 returned +-0x7FFF for every input). Must run last.
+import subprocess as _sp5668
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_label_realign.py")), str(base)])
