@@ -330,6 +330,7 @@ Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-
 
 ## Next steps (single monotonic backlog)
 
+- **s5596 (TOP):** second-mission gate surveyed (static, single-source): bit 0x02000000 of 0x130B58 gates initMission arm A (0x8003E2B4, B40=0x14); the normal title->hangar->mission route uses arm B (0x8003E378 via cinematicLoopBody), so the s5515/s5517 "never set" is expected and the bit is NOT the mission-2 gate. Mission 2 needs a mission-1 win, which the key autopilot cannot produce - named blocker. Next: ASan arm for the title-boot plume SIGSEGV (si_addr=0x58).
 - **s5595 (TOP):** s5594 hangar_long_k,l folded: both clean (hold 903 s, vi_stalls30s=0, crashlines=0). First-mission endurance 10/10 (title and hangar routes). Do NOT queue more first-mission holds. Next: second-mission route investigation (flag 0x130B58 bit 0x02000000, s5515) - offline survey of who sets it, then a keyed route or an ASan arm.
 
 - **s5594 (TOP):** long_i (a tag-reuse replay of c) and long_j (20 min) clean: 8 long title->mission holds, 0 crash/stall. Queued s5594_hangar_long_{k,l} (hangar route, 15 min). Clean -> pivot to ASan arm or second-mission route (s5515 flag 0x130B58).

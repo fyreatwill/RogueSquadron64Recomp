@@ -1,3 +1,3 @@
-Single next work unit (s5596): offline survey of the second-mission gate. grep PORTING-STATE.md for s5515 and "0x130B58"; find in generated code (RecompiledFuncs) every writer/reader of bit 0x02000000 at 0x130B58; classify who sets it in retail flow (oracle tools/oracle/README.md only reaches boot/attract). Outcome: a keyed route recipe for mission 2 (queue in scratch/agent/soak_queue) or a named blocker.
-Do NOT queue more first-mission holds (10/10 clean).
+Single next work unit (s5597): build an ASan arm (separate build dir, e.g. build_asan/, -fsanitize=address, DEVELOPER_DIR set) of the recomp and loop title boots (no mission hold needed) until the ~1/7 plume SIGSEGV (si_addr=0x58) recurs; capture the ASan report / backtrace and name the writer. Positive control: ASan arm must boot to title (origin 0x00790400) in the same batch. Outcomes: (a) report names a heap/stack bug -> root-cause fix; (b) 0 recurrences in >=15 boots -> record denominator, queue as soak.
+Do NOT queue more first-mission holds (10/10 clean). Mission 2 blocked on a mission-1 win (s5596).
 HYPOTHESIS-ID: m6-mission-endurance
