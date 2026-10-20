@@ -53,7 +53,8 @@ does NOT need the blocker, record the blocker as an open dependency in
 
 Only if all three fail. Leave `scratch/agent/BLOCKED.md` in place, rewritten to
 state what you tried this iteration and the one experiment that would refute
-your conclusion. The loop will stop and notify the human.
+your conclusion. Keep or add its `NEEDS-HUMAN: <category>` line (see
+ITERATION.md); the Stop gate rejects a block without one. The loop will stop and notify the human.
 
 ## Hard boundary — what stays a human decision
 

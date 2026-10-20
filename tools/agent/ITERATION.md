@@ -52,6 +52,27 @@ When choosing the work unit, this order overrides Next-steps ordering:
    unlocked (check CGSSessionScreenIsLocked before key-driven soaks) or nohangar results
    are meaningless. This is engineering, not churn: every iteration must end with either a
    new crash/stall datum or a code/patch change.
+3c. **Standing goal ladder (user directive 2026-10-19).** The backlog never runs
+   dry. When Next steps and items 1-3b offer nothing applicable, take the FIRST rung
+   below that is not closed, write NEXT.md for it, and continue. "Backlog exhausted",
+   "all threads parked", "no discriminator remains" and "need a human-chosen target"
+   are NOT blocks — 15+ of the 34 blocks between s5031 and s5604 were exactly this,
+   and every one was re-scoped by the unblock tier at the cost of two sessions.
+   - G1 **Mission progression.** Every mission reachable and completable from REAL
+     input, not memory pokes (ROGUESQ_MISSION_WIN is a probe, not a pass). The owner
+     has watched several missions besides Mos Eisley play. Close one mission at a
+     time: reach, fly, win, advance; each distinct crash/stall/softlock is a datum.
+   - G2 **Audio fidelity.** Owner listening report 2026-10-19: every sound effect is
+     recognizable, but all audio sits behind a heavy fuzzy/noise layer, and there is
+     NO dialogue/voice. "M5 closed" only proved non-silent PCM. Discriminate where the
+     noise enters (ucode PCM vs AI ring/rate/format vs host sink) by comparing retail
+     oracle AI PCM with port AI PCM in the same phase (title music is the cleanest
+     reference: noise floor, spectrum, sample-rate, byte order). Separately, find the
+     voice/dialogue path and why it produces nothing.
+   - G3 **Render fidelity.** Hangar artifacts (CURRENT-TRUTH list) and in-flight frame
+     diffs against retail framebuffers.
+   - G4 **Crash/stall hunting** across every reachable mission via queued soaks.
+   - G5 The renaming sweep (item 4), last.
 4. **Generated-symbol renaming sweep** (HYPOTHESIS-ID:
    generated-symbol-renaming-sweep), once 1-3 are inapplicable (M5 closed;
    M3 parked pending a new discriminator). Real, bounded work — ~1,548
@@ -185,7 +206,18 @@ Write ONE of these words to `scratch/agent/OUTCOME`:
   IS advancing.
 - `SUBSTITUTED` — the planned work unit could NOT be run, so you did something
   else. This is legitimate ONCE. It is not a way to keep the loop fed.
-- `BLOCKED` — you need a human. Write `scratch/agent/BLOCKED.md`.
+- `BLOCKED` — you need something only the human can do. Write
+  `scratch/agent/BLOCKED.md` and give it a line `NEEDS-HUMAN: <category>` where
+  category is one of: `install` (software from the internet), `money` (spend,
+  quota, billing), `system-settings` (TCC, permissions, keychain), `physical`
+  (unlock the screen, plug in a controller, quit an app the human is using),
+  `credentials`, or `gate-defect` (the loop/stop gate itself is wrong). The Stop
+  gate rejects a BLOCKED.md without one. These are NEVER blocks — handle them
+  yourself: backlog exhausted (take the next ladder rung, item 3c); waiting on an
+  in-flight or queued soak (do other work; the loop folds results between
+  iterations); a tool or command denied (find another route, or SUBSTITUTED);
+  host load too high (queue the run as a soak, do offline work); loop.sh edited
+  (the loop now re-executes itself when its script changes).
 
 If you write `SUBSTITUTED` you must also write `scratch/agent/SUBSTITUTION.md`
 containing three things:

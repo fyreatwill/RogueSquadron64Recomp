@@ -26,6 +26,12 @@ passed the keyed mission runs plus the long mission hold. The silent arm
 remains a same-build rollback/control. Details and validation rows are in
 `docs/M5-AUDIO-PLAN.md` (especially s4963/s4968).
 
+Owner listening report (2026-10-19): every sound effect is now recognizable,
+but all audio sits behind a heavy fuzzy/noise layer and there is no
+dialogue/voice at all. "M5 closed" proved non-silent PCM only; audio FIDELITY
+is open as standing-ladder rung G2 (`tools/agent/ITERATION.md` item 3c). The
+owner has also watched several missions besides Mos Eisley play (rung G1).
+
 The M4 accumulator comparison remains parked at the cross-arm gate. Session 5575
 tested a new phase/image/mapped-PC/task-total event-shape key. Both arms passed
 all four controls and both had active lane rows, but zero key classes joined

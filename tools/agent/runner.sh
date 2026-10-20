@@ -94,10 +94,16 @@ case "$RUNNER" in
     # Watchdog: once STATUS is newer than ITER_START_MARK and has sat untouched for
     # DONE_GRACE seconds (default 480) with claude still alive, the iteration is over - stop
     # claude and report success. RUNNER_MAX_SECS (default 3600) is the hard wall-clock cap.
+    # 2026-10-19: acceptEdits + prefix allow rules denied 1,532 ordinary Bash calls in
+    # 305 of 372 claude iterations (compound `cd X; ...`, for-loops, heredocs, redirects)
+    # and fed false "not permitted" blocks (objdump, cp, BLOCKED.md heredoc). Measured:
+    # under bypassPermissions the settings.json deny rules (git reset --hard, submodule
+    # update, lib/ checkout...) are STILL enforced. codex/grok already run unrestricted.
+    # Roll back with CLAUDE_PERMISSION_MODE=acceptEdits.
     AGD="scratch/agent"; tmpout="$(mktemp -t rs64-claude-out)"
     claude -p "$(cat "$PROMPT_FILE")" \
       --model "${RUNNER_MODEL:-${LOOP_MODEL:-claude-sonnet-5-5}}" \
-      --permission-mode acceptEdits \
+      --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
       --output-format json > "$tmpout" 2>&1 &
     cpid=$!; t_start=$(date +%s); hung=0
     while kill -0 "$cpid" 2>/dev/null; do
@@ -161,7 +167,7 @@ case "$RUNNER" in
 
     out="$(claude -p "$ds_prompt" \
       --model "$ds_model" \
-      --permission-mode acceptEdits \
+      --permission-mode "${CLAUDE_PERMISSION_MODE:-bypassPermissions}" \
       --output-format json 2>&1)"
     rc=$?
     printf '%s\n' "$out" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$out"

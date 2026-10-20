@@ -65,7 +65,7 @@ PY
 
 # Stuck detection: two blocks before the cap, redirect to a clean BLOCKED exit.
 if [ "$VERIFY" = 0 ] && [ "$count" -ge $((BLOCK_CAP - 2)) ]; then
-  block "You have been blocked from stopping $count times without meeting the exit contract, which means you are stuck. Stop retrying the current approach. Write scratch/agent/BLOCKED.md (what you need, from whom, what you already tried), commit any outstanding changes, write BLOCKED to scratch/agent/STATUS, and then stop."
+  block "You have been blocked from stopping $count times without meeting the exit contract, which means you are stuck. Stop retrying the current approach. Write scratch/agent/BLOCKED.md (what you need, from whom, what you already tried, and a line 'NEEDS-HUMAN: gate-defect'), commit any outstanding changes, write BLOCKED to scratch/agent/STATUS, and then stop."
 fi
 
 # --- condition 1: STATUS ------------------------------------------------------
@@ -104,6 +104,11 @@ fi
 # --- BLOCKED: needs a usable write-up, but not a commit it has nothing for ----
 if [ "$status" = "BLOCKED" ]; then
   [ -s "$AG/BLOCKED.md" ] || block "Exit contract unmet: STATUS is BLOCKED but scratch/agent/BLOCKED.md is missing or empty. Write it: what you need, from whom, and what you already tried — specific enough that a human can act in 2 minutes."
+  # 2026-10-19: 15+ of 34 blocks (s5031-s5604) were "backlog exhausted / need a
+  # direction" or "waiting on a run", and the unblock tier re-scoped every one.
+  # A block must name a dependency only the human can satisfy.
+  grep -qiE '^[[:space:]#*-]*NEEDS-HUMAN:[[:space:]*]*`?(install|money|system-settings|physical|credentials|gate-defect)' "$AG/BLOCKED.md" \
+    || block "Exit contract unmet: STATUS is BLOCKED but scratch/agent/BLOCKED.md has no 'NEEDS-HUMAN: <install|money|system-settings|physical|credentials|gate-defect>' line. Backlog exhaustion, needing a direction, waiting on a soak, a denied command, and host load are NOT blocks. Take the first open rung of the standing goal ladder (ITERATION.md item 3c), rewrite scratch/agent/NEXT.md for it, delete BLOCKED.md, commit, and write DONE to scratch/agent/STATUS. Only if the dependency truly needs the human, add the NEEDS-HUMAN line."
   allow
 fi
 

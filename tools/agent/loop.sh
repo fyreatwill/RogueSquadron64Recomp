@@ -47,6 +47,13 @@ for arg in "$@"; do
     *) echo "usage: $0 [key=value ...]  e.g. model=opus  runner=grok RUNNER_MODEL=grok-4.6" >&2; exit 2 ;;
   esac
 done
+# Self-reload: remember how we were started so an edited loop.sh takes effect at
+# the next iteration boundary instead of needing a human restart (s5455 blocked
+# on exactly that). The running bash keeps reading the OLD file only if the edit
+# replaced the inode; an in-place edit can corrupt a running script, so edit
+# loop.sh by writing a new file and renaming it over the old one.
+ORIG_ARGS=("$@")
+SELF_HASH="$(shasum tools/agent/loop.sh 2>/dev/null | cut -d' ' -f1)"
 ITER_CAP="${ITER_CAP:-0}"   # 0 = unlimited; the BLOCKED/stop conditions below still end the run
 SLEEP_ON_LIMIT="${SLEEP_ON_LIMIT:-1800}"
 MAX_LIMIT_WAITS="${MAX_LIMIT_WAITS:-12}"
@@ -307,6 +314,16 @@ prev_hyp=""; hyp_count=0
 [ -f "$HYPSTATE" ] && read -r prev_hyp hyp_count < "$HYPSTATE" 2>/dev/null
 case "${hyp_count:-0}" in ''|*[!0-9]*) hyp_count=0 ;; esac
 while [ "$ITER_CAP" -eq 0 ] || [ "$n" -lt "$ITER_CAP" ]; do
+
+  cur_hash="$(shasum tools/agent/loop.sh 2>/dev/null | cut -d' ' -f1)"
+  if [ -n "$cur_hash" ] && [ "$cur_hash" != "$SELF_HASH" ]; then
+    if bash -n tools/agent/loop.sh 2>/dev/null; then
+      log "loop.sh changed on disk - re-executing the new version"
+      exec /bin/bash tools/agent/loop.sh "${ORIG_ARGS[@]}"
+    fi
+    log "loop.sh changed on disk but fails 'bash -n' - keeping the running version"
+    SELF_HASH="$cur_hash"
+  fi
 
   # BLOCKED.md is the EXPLANATION of a block; scratch/agent/STATUS is the
   # DECLARATION. Halting on the file's mere existence killed a healthy run
