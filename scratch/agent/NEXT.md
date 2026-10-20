@@ -1,5 +1,5 @@
-# NEXT: G1 - name the index source of the level-init callback table
-Context: s5696 showed gCurrentLevel=1 in every mission phase (lv2_* handlers = level index 1); win poke replays it.
-Hypotheses: H1 table indexer reads gCurrentLevel (0x80130B70) directly; H2 it reads B40 (0x80130B40) copied by initMission; H3 it reads a save/progress word via applySaveSlotToMissionState.
-Discriminator (offline): in RecompiledFuncs, find who computes the address of ROM table 0x10B050 (lv2 init at 0x80101D10 region / lvF 0x80107EB0) and which global feeds its index; then one soak logging that global + a poke arm of 0xE (control: default arm reads 1 and still loads lv2 handlers via [hreg]).
+# NEXT: G1 - find who spawns the lvN init (ra=0 entry) and what feeds it
+Context: s5697 showed lv2 init and initMission enter with ra=0, gCurrentLevel=B40=2; no MIPS code references the 0x8010B050 table or jal's an lvN init.
+Hypotheses: H1 a thread is created with entry = table[B40*16] by an osCreateThread-wrapper reading the ROM/RAM table through a computed pointer (not a constant); H2 the port/host dispatches overlays by symbol (e.g. overlay loader keyed on level); H3 ra=0 is just the instrument seeing a recomp wrapper that zeroes r31 (check with a known jal-called function as control).
+Discriminator: (offline) grep funcs for osCreateThread-style callers whose a1 (entry) comes from lw with sll 4; (instrument) log ra/entry at the thread-create wrapper with a control jal-called function printing a nonzero ra in the same run. Then vary B40 via poke (ROGUESQ_MISSION_* / existing poke arm) to see lvN follow it.
 HYPOTHESIS-ID: g1-level-select
