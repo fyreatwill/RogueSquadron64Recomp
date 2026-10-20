@@ -164239,3 +164239,8 @@ Extended ROGUESQ_PLAYER_DUMP (src/main/main.cpp): after each [pdump] row, emits 
 - Next discriminator: frame-rate dump (every VI, ~120 rows) of 8034f680+0x4C..0x54 and record +0xD0..D8 only, in one mission window; integrator confirmed if delta(pos)=k*vel with |c|>0.9; then altitude = +0x50 (y) feeds pitch-level closed loop.
 
 Verdict (s5681): refutes H-p3 (no stick-correlated position in any of the 6 pointer targets, best |c|=0.62); selects H-p4 (ship object = 8034f680, position vec3 at +0x4C/+0x50/+0x54, single-source, integration vs +0xD0 unconfirmed at 1 Hz). Next discriminator: per-VI dump of pos vs vel; |corr|>0.9 confirms H-p4, <0.3 refutes it and sends the search to an oracle watch.
+
+## Session 5682 (2026-10-20) — per-poll ship pos/vel dump (ROGUESQ_PLAYER_DUMP=2) built, soak s5682_pd2 queued
+- Added mode 2 in src/main/main.cpp: for the first 400 polls at origin 0x690400, one `[pd2]` row per poll with ship object (record+0x04) pos vec3 +0x4C/50/54, record vel +0xD0/D4/D8, stick. Build OK. tools/pd2_corr.py computes corr(dpos, vel) 3x3.
+- Soak s5682_pd2 queued (s5678 g1fly recipe + PLAYER_DUMP=2). Not yet run; no result in this entry. Positive control: the off-diagonal/diagonal table itself; pos varying (std>0) required, else null is void.
+- Discriminator: |corr|>0.9 on a diagonal pair -> integrator confirmed, altitude=+0x50; <0.3 everywhere with pos std>0 -> vel is not world velocity, go to oracle watch. Poll rate vs VI not yet verified (check t= column spacing).
