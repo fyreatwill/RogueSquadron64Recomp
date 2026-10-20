@@ -1,5 +1,5 @@
-Single next work unit (s5620): fold s5618_nopoke_c + s5618_poked_ctl (run with the s5619 binary).
-Method: grep -h '\[hudbit\|\[cco\]' scratch/agent/m6/s5618_{nopoke_c,poked_ctl}/run.log. ra is ALWAYS 0 (static jal never sets r31) - identify the caller by the [cco] lvN line immediately preceding each [hudbit] line.
-Positive control: poked_ctl must log >=1 [hudbit] line, else nopoke zeros mean nothing.
-Outcomes: [cco] lvN precedes hudbit4 => H4a-i confirmed, level N is the mission; no [cco] before => script call (H4a-ii); gate 4 with no hudbit => H4c, find writers of 0x8010CA20.
+Single next work unit (s5621): fold s5620_nopoke_{d,e,f,g} from SOAK-RESULTS.md.
+Method: for each, grep -n '\[hudbit\|\[cco\]\|mission-win\] flagword' scratch/agent/m6/s5620_nopoke_X/run.log. In any run with a [hudbit4] line, read the [cco] lvN line(s) directly preceding it (ra is always 0).
+Outcomes: [cco] lvN just before hudbit4 => level N's checkComplexObjectives sets it, find which objective condition (static read of that function); no [cco] before => script stub hookSetHudEnableBit4 caller; 0/4 hudbit again => natural gate-4 needs a different trigger, grep writers of 0x8010C9E0 flagword directly (watch on write, not on setter).
+If zero hits in 4, do NOT queue more: statically read lv2_checkComplexObjectives to see what sets bit 4.
 HYPOTHESIS-ID: m6-mission-endurance
