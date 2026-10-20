@@ -1,5 +1,5 @@
-Single next work unit (s5628): G1 — find WHY the idle ship fails at ~+342 s (cause of objective 0x64=1 in lv2_checkComplexObjectives) and make the soak survive it.
-Hypotheses: (D) player ship health reaches 0 from enemy fire while idle; (T) a mission timer/escort-lost condition trips 0x64 regardless of player; (H) player-health logic already has god-mode refills (summary shows godrefills=20) that fail to cover this path.
-Discriminator: statically read lv2_checkComplexObjectives (generated C, grep 0x64) for the branch feeding setObjectiveBoolean(0x64) and its input (player health / counter / timer). Then add that input to the objbool log line (extend tools/apply_s5622_objbool_log.py), queue 2 soaks x holds >=420 s. D: input value is health<=0 at call; T: input is timer/counter unrelated to player. Positive control: log must print the input on every cco call (~30/s) not just at the event.
-Then: if D, extend god-mode to cover it (ORIGIN: name the health writer); if T, the mission requires moving, so add stick input to autopilot.
+Single next work unit (s5629): fold s5628_snap_{a,b} ([ccosnap] lines in scratch/agent/m6/s5628_snap_*/run.log) — G1 find WHY the idle ship fails at ~+342 s.
+Static fact (s5628): 0x64=1 fires when bool[0x65]==0, bool[1]==1, bool[0x63]==0, bool[7]==1, bool[0x64]==0 (lv2_checkComplexObjectives 0x80101F08-FB0); bool array at 0x8013889F+id.
+Hypotheses: (D) bool[7]/bool[1] flipped by ship death; (T) timer/escort flag flips at fixed time; (S) bool[1],[7] are set at start and the 0x65 time-gate is the trigger.
+Discriminator: timestamps of 1/7/0x63/0x65 in [ccosnap] vs +342 s. Positive control: snapshot #1 present at first cco call. Then find the writer of the flipping id (grep setObjectiveBooleans callers / direct MEM_B to 0x801388A0 range) and make the soak survive (god-mode / stick input).
 HYPOTHESIS-ID: m6-mission-endurance

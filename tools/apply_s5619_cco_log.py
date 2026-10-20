@@ -4,14 +4,26 @@ fixup_game_funcs_vendored.py for regen."""
 import pathlib, re
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 RX = re.compile(r"RECOMP_FUNC void (lv\w+_checkComplexObjectives)\(uint8_t\* rdram, recomp_context\* ctx\) \{\n    uint64_t hi = 0, lo = 0, result = 0;\n    int c1cs = 0;\n")
+SNAP = ('    { static unsigned char s_prev[0x81]; static int s_k = 0, s_en = -1; if (s_en < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_en = (e && e[0]) ? 1 : 0; } '
+        'if (s_en && s_k < 300) { int ch = (s_k == 0); for (int i_ = 1; i_ <= 0x80; i_++) { unsigned char v_ = MEM_BU(0x8013889F + i_, 0); if (v_ != s_prev[i_]) { ch = 1; } } '
+        'if (ch) { extern long time(long*); s_k++; fprintf(stderr, "[ccosnap] #%d t=%ld set:", s_k, (long)time(0)); '
+        'for (int i_ = 1; i_ <= 0x80; i_++) { unsigned char v_ = MEM_BU(0x8013889F + i_, 0); s_prev[i_] = v_; if (v_) fprintf(stderr, " %X=%u", i_, v_); } fprintf(stderr, "\\n"); } } } /* PATCH: s5628 cco snap */\n')
 def apply(text):
-    if "PATCH: s5619 cco log" in text: return text, 0
+    if "PATCH: s5619 cco log" in text:
+        if "PATCH: s5628 cco snap" in text: return text, 0
+        n2 = [0]
+        def sub2(m):
+            n2[0] += 1
+            return m.group(0) + SNAP
+        return re.sub(r"[^\n]*PATCH: s5619 cco log \*/\n", sub2, text), n2[0]
     n = [0]
     def sub(m):
         n[0] += 1
         return m.group(0) + ('    { static int s_n = 0, s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '
                              'if (s_e && (s_n++ < 6 || s_n %% 60 == 0)) { extern long time(long*); fprintf(stderr, "[cco] %s call#%%d t=%%ld\\n", s_n, time(0)); } } /* PATCH: s5619 cco log */\n' % m.group(1))
-    return RX.sub(sub, text), n[0]
+    t2 = RX.sub(sub, text)
+    t2 = re.sub(r"[^\n]*PATCH: s5619 cco log \*/\n", lambda m: m.group(0) + SNAP, t2)
+    return t2, n[0]
 if __name__ == "__main__":
     tot = 0
     for p in sorted(base.glob("funcs_*.c")):

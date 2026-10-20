@@ -536,3 +536,4 @@ NOPOKE control (s5615_nopoke_a/b): g4/b14=2 tail appeared in 1 of 2 unpoked runs
 
 - s5622: setObjectiveBoolean (0x800C7540) id/val/ra log landed (ROGUESQ_LOG_HUDBIT=1, tools/apply_s5622_objbool_log.py); s5620 f/g gave 0 hudbit. s5622_objbool_h/i folded (s5623): control passed, 8 calls/run, no 0x64/0x6D, 0 hudbit, ra=0 (r31 unmaintained). hudbit4 chain PARKED; next is id-source of per-run +1 shift (NEXT.md).
 - s5626: cco checker runs ~30/s (B dead); objectives time-gated (C). **s5627: the unpoked 0x64/0x65 at +342 s is the LOSE arm** (b14=2, gate 0->4->6, overlays 3->4->2 same-level restart); idle autopilot ship fails the mission. Next: find the fail cause (ship death vs timer) and give the soak real/invulnerable flying.
+- s5628: 0x64 fail arm needs bool[1]==1, bool[7]==1, bool[0x63]==0, bool[0x65]==0 (static); ids 1/7 not set via single setObjectiveBoolean. [ccosnap] boolean-array snapshot instrument built; s5628_snap_{a,b} queued.
