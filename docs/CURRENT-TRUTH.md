@@ -1,3 +1,4 @@
+- **(s5632, top)** snap3_{e,f}: no failure (0/4 snap3). Shifted objective ids are legitimate randMod(3)+1 picks at 0x80102158 (funcs_43.c ~19200); hypothesis O replaced by R: fail arm depends on RNG outcome. Next: find randMod seed/call-count divergence and force the draw to reproduce the fail arm.
 - **(s5631, top)** snap3_c/d: no failure (2/7 fail overall); boolean ids shift by -2 between runs (3->1, D->B, ...) while 0x20/0x7F/0x80/0x47/0x48/0x3C/0x3B are fixed. New hypothesis O: run-dependent id base. snap3_e/f still queued.
 - **(s5625, top)** cco/objbool logs now carry wall time and rate-limited counts; soaks s5625_prog_{a,b} queued. Fold: cco count rising w/o booleans=A, frozen=B, fixed-t booleans=C.
 - **(s5629, top)** s5628 [ccosnap] was invalid (zero-extended address read wrong memory); fixed with (gpr)(int32_t) cast, rebuilt, s5629_snap2_{a,b} queued. Prior "S vs D/T" still open.
