@@ -1,6 +1,5 @@
-# NEXT (s5686): fold ctrl+hold_b; hold_a already ran: alive, 0 crashes, godrefills=20 cycles=2 (H2 favoured: damage not altitude-driven)
-Queued: s5685_ctrl, s5685_hold_a, s5685_hold_b (schedule a/sl/a/sr, no su/sd; hold arms ROGUESQ_ALT_HOLD=2.0).
-Control = "[althold] target" and "n=.. acted=.." lines in hold logs (must show acted>0), absent in ctrl.
-Hypotheses: H1 altitude hold keeps alive_at_end/no mission_cycles vs ctrl; H2 no difference (crash not altitude); H3 y hold fails (acted=0 / sign wrong -> err grows).
-Discriminator: err trajectory + alive_at_end/mission_cycles/vi_stalls, hold vs ctrl in SOAK-RESULTS logs.
-HYPOTHESIS-ID: g1-mission-progression
+# NEXT (s5687): G2 audio fidelity - locate where the noise layer enters
+Hypotheses: H1 noise is in ucode PCM (ADPCM/resample/envelope output); H2 AI ring/rate/format (byte order, sample-rate mismatch) ; H3 host sink (SDL resample/format).
+Discriminator: capture title-music AI PCM from port and from retail oracle (tools/oracle) in the same phase; compare noise floor (high-band energy), spectrum, rate, byte order. Port PCM dumped pre-sink vs post-sink: if noise already in pre-sink dump -> H1/H2; if only post-sink -> H3. Positive control: inject a known tone / confirm dump is non-silent.
+First step: grep docs/M5-AUDIO-PLAN.md and src for existing PCM dump flags (ROGUESQ_*PCM*, s5669_pcm soak) and reuse; do not build a new instrument if one exists.
+HYPOTHESIS-ID: g2-audio-fidelity
