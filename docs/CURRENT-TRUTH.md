@@ -344,6 +344,7 @@ comparison is not a reason to repeat the same capture.
 Flown 1200 s hold: 0 crash/0 stall again, but the "static cycle" seen after ~10-12 min is the TITLE screen (VI width 1024 origin 0x790400 from 634 s): the mission ended and the game fell back to title/attract. Not a hang. Cause of mission end unknown (death vs objective vs autopilot 'r'). ROGUESQ_FB_DUMP_DIR dumps PPMs but assumes stride 320 (garbled at other widths).
 
 ## Next steps (single monotonic backlog)
+- **(s5624)** objective-boolean id difference per run = game `randMod(3)+1` at funcs_43.c:19207 (benign, closed). hudbit4 chain parked. Open: why only 8 objective booleans / 420 s unpoked.
 
 **s5614 (top item):** WIN_REAL gave gate 3/B14=1 in s5612 but gate 5,4,6/B14=2 in s5613 (0 of 2 repro). main.cpp now logs `[mission-win] get ...` (get(1..10)) after the poke; soaks s5614_real_p100/p300 queued. Fold them: which get() threshold crosses first decides lose-arm race vs gate-5 preempt vs timing one-off.
 
