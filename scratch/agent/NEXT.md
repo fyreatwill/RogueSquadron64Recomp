@@ -1,3 +1,3 @@
-Single next work unit (s5599): queue an ASan-armed (build_asan) keyed hangar->mission hold (~5 min past mission origin 0x00690400), one run per recipe (the s5597 N=3 recipe overran the 600 s cap). Any asan.* file = new real finding: read it, name the writer, fix root cause. Control: run must log origin 0x690400 AND be alive at the end.
-Do NOT queue more non-ASan first-mission holds (10/10 clean). POKE_WRAP A/B closed (s5598: no difference; default drop kept).
+Single next work unit (s5600): fold the s5599_asan_hangar_{a,b} verdicts (SOAK-RESULTS.md tail + scratch/agent/m6/s5599_asan_hangar_*/). Control: keys.log/game log reaches origin 0x00690400 AND game alive at end; else the run is a null (route flake 3/5) - requeue. Any asan.* file = real finding: read it, name the writer, fix the root cause (no guard-one-deref). If both clean with control met, ASan-armed first-mission is closed; next M6 datum: second-mission (needs mission-1 win, see s5596) or title-boot plume lldb loop.
+Do NOT queue more non-ASan first-mission holds (10/10 clean).
 HYPOTHESIS-ID: m6-mission-endurance

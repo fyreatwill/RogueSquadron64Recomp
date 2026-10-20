@@ -163727,3 +163727,6 @@ Next: ASan arm in separate build dir for the title-boot plume SIGSEGV (si_addr=0
 - A/B (scratch/agent/s5598_wrap_ab.sh, concurrent, build/, 100 s): default (drop OOB) vs ROGUESQ_POKE_WRAP=1. Both ALIVE at 100 s, 0 crash marks, identical VI-origin sequences (0x696100 -> 0x790400 -> 0x696100 -> 0x690400/0x620400 flip-flop). DMEM[0x01C]=dl_ptr does not change stability or the origin sequence. Limits: origin sequence only (no pixel/RDP hash), no positive control that the 0x101C poke fired - single-source. Decision: keep default = drop (no code change).
 - ORIGIN: unchanged from s5597 (original author offset 0x101C past 4 KB DMEM; hardware wraps at 0xFFF).
 - Next: ASan-armed keyed hangar/mission hold.
+
+## Session 5599 (2026-10-19) — queued ASan-armed keyed hangar->mission holds (two recipes, one run each)
+Made `scratch/agent/m6_god_common.sh` honour a `BUILD=` override (was hardcoded `$ROOT/build`) so the keyed hangar route can run against `build_asan/`. Queued `soak_queue/s5599_asan_hangar_{a,b}.sh` (HOLD=300 past mission onset, SOAK_TIMEOUT=900, ASan log_path under scratch/agent/m6/<tag>/asan). Control: log shows origin 0x00690400 AND game alive at end. Any `asan.*` file = new real finding (name the writer, fix root cause). No result yet; verdicts arrive in SOAK-RESULTS.md next iteration. HYPOTHESIS-ID: m6-mission-endurance.
