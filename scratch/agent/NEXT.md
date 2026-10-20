@@ -1,5 +1,5 @@
-# NEXT: G1 - who writes B40 (0x80130B40) before initMission
-Context: s5698 proved chain B40 -> initMission -> gCurrentLevel(B70) -> initializeObjectiveTracking jalr table[lvl*16] -> lvN init; ra=0 is a recomp artifact (generated jal never sets r31), so ra-based inference is invalid everywhere.
-Hypotheses: H1 B40 comes from hangar/briefing selection state (player picks mission); H2 from save/progress word (applySaveSlotToMissionState); H3 default/zero-init + autopilot-forced value.
-Discriminator: one soak with env-gated log (pc, new value, host backtrace first 3 hits) at the 5 B40 writers 0x8003E284/E4B8, 0x8006DC2C, 0x800A5E5C, 0x800C5B8C; control: initMission's own read logs B40. Then compare value vs hangar selection in the same run.
+# NEXT: G1 - confirm lvN follows save byte, then drive missions by forced save byte
+Context (s5699): B40 = save rec[5] via applySaveSlotToMissionState at title; hangar does not select level. Queued s5699_force3/force5 soaks (loop runs them between iterations).
+Hypotheses: H1 forced N => [lvinit] initMission gCurLevel=N and lvN init enters, mission plays; H2 level N init crashes/stalls (a datum per G1/G4); H3 forced value overwritten (b40w shows other pc).
+Discriminator: read SOAK-RESULTS + soak_results/s5699_force*.log + scratch/agent/m6/s5699_force*/run.log: grep saveslot, b40w, lvinit initMission, crashlines, vi_stalls. Then per level: reach, fly, win; each failure = backtrace + root cause.
 HYPOTHESIS-ID: g1-level-select
