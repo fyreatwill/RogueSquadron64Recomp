@@ -37462,6 +37462,14 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             changed = True
             report.append(f"{p.name}: s5640 speechclip log x{_n5640}")
 
+    if p.name == "funcs_42.c" and "PATCH: s5693 handletable log" not in text:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import apply_s5693_handletable_log as _a5693
+        text, _n5693 = _a5693.apply(text)
+        if _n5693:
+            changed = True
+            report.append(f"{p.name}: s5693 handletable log x{_n5693}")
+
     if p.name in ("funcs_15.c", "funcs_16.c", "funcs_26.c") and "PATCH: s5641 speechpath log" not in text:
         sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
         import apply_s5641_speechpath_log as _a5641
