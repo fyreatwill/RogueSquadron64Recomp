@@ -1542,7 +1542,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..6d4de29 100644
+index 1cb3f6a..b81a8f3 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,12 @@
@@ -1566,7 +1566,7 @@ index 1cb3f6a..6d4de29 100644
  uint16_t rspReciprocals[512];
  uint16_t rspInverseSquareRoots[512];
  
-@@ -32,24 +39,2039 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +39,2065 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -3444,6 +3444,7 @@ index 1cb3f6a..6d4de29 100644
 +    }
 +
 +    if (is_audio_task) { // s5648 [vcmd]: does any ucode DMA read touch the speech voice buffers?
++        static unsigned long s_tasks_h[2] = {0, 0};
 +        static int s_vc_en = -1; static unsigned s_vc_n = 0; static unsigned long s_tot_reads = 0, s_tot_hit[3] = {0, 0, 0}, s_tot_any = 0;
 +        if (s_vc_en < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_vc_en = (e && e[0]) ? 1 : 0; }
 +        if (s_vc_en) {
@@ -3457,6 +3458,31 @@ index 1cb3f6a..6d4de29 100644
 +                s_tot_reads++; if (d < 0x800000u) s_tot_any++;
 +                for (int k = 0; k < 3; k++)
 +                    if (tg[k] >= 0x100000u && tg[k] < 0x7F0000u && d < tg[k] + 0x1000u && d + l > tg[k]) { hit[k]++; s_tot_hit[k]++; }
++            }
++            { // s5649 D3 split: final output DMEM buffer energy on speech-hit vs non-hit tasks
++                static double s_ss[2] = {0, 0}; static unsigned long s_cnt[2] = {0, 0}, s_nzt[2] = {0, 0}; static int32_t s_pk[2] = {0, 0}; static unsigned s_dumped = 0;
++                double ss = 0; int32_t pk = 0;
++                for (uint32_t i = 0; i + 1 < 0x300u; i += 2) {
++                    int32_t v = (int16_t)((RSP_MEM_BU(0, 0x6F0 + i) << 8) | RSP_MEM_BU(0, 0x6F0 + i + 1));
++                    ss += (double)v * v; int32_t a = v < 0 ? -v : v; if (a > pk) pk = a;
++                }
++                const int h = hit[0] > 0 ? 1 : 0;
++                s_ss[h] += ss; s_cnt[h] += 0x180; s_nzt[h] += pk > 0; if (pk > s_pk[h]) s_pk[h] = pk; s_tasks_h[h]++;
++                if (h && s_dumped < 4) {
++                    s_dumped++;
++                    for (uint32_t i = 0; i < rs64_s4209_n; i++) {
++                        const uint32_t d = rs64_s4209_rd[i][0], l = rs64_s4209_rd[i][1];
++                        if (tg[0] >= 0x100000u && d < tg[0] + 0x1000u && d + l > tg[0]) {
++                            fprintf(stderr, "[vcmd-buf] task=%u read dram=%06X len=%X dmem=%03X srcnz=%u bytes:", s_vc_n, d, l, rs64_s4209_rd[i][4], rs64_s4209_rd[i][2]);
++                            for (uint32_t b = 0; b < 64 && b < l; b++) fprintf(stderr, " %02X", rdram[(d + b) & 0x7FFFFFu]);
++                            fprintf(stderr, "\n"); break;
++                        }
++                    }
++                }
++                if (s_vc_n <= 40 || (s_vc_n % 500) == 0)
++                    fprintf(stderr, "[vcmd-out] task=%u this: hit=%d rms=%.0f peak=%d | nohit: tasks=%lu nzout=%lu rms=%.0f peak=%d | hit: tasks=%lu nzout=%lu rms=%.0f peak=%d\n",
++                            s_vc_n, h, sqrt(ss / 0x180), pk, s_tasks_h[0], s_nzt[0], s_cnt[0] ? sqrt(s_ss[0] / s_cnt[0]) : 0.0, s_pk[0],
++                            s_tasks_h[1], s_nzt[1], s_cnt[1] ? sqrt(s_ss[1] / s_cnt[1]) : 0.0, s_pk[1]);
 +            }
 +            if (s_vc_n <= 40 || (s_vc_n % 500) == 0) {
 +                fprintf(stderr, "[vcmd] task=%u reads=%u tg=%06X,%06X,%06X hit=%u,%u,%u tot: reads=%lu any=%lu hit=%lu,%lu,%lu\n",
@@ -3609,7 +3635,7 @@ index 1cb3f6a..6d4de29 100644
  
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
-@@ -58,5 +2080,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -58,5 +2106,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
