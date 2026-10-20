@@ -368,6 +368,18 @@ static void dump_ai_output(void)
             sumsq += (double)v * v; total++;
         }
         g_ai_output[bucket].clipped += clipped; g_ai_output[bucket].total += total; g_ai_output[bucket].sumsq += sumsq;
+        {   /* s5671: same metric as port [pcm-noise]: sum|x[i]-x[i-2]| / sum|x| over interleaved s16 */
+            double sa = 0.0, sd = 0.0; long k, n = (long)(len / 2);
+            int16_t prev2 = 0, prev1 = 0;
+            for (k = 0; k < n; k++) {
+                int v = (int16_t)((debug_mem_u8(addr + 2 * k) << 8) | debug_mem_u8(addr + 2 * k + 1));
+                sa += v < 0 ? -v : v;
+                if (k >= 2) { int d = v - prev2; sd += d < 0 ? -d : d; }
+                prev2 = prev1; prev1 = (int16_t)v;
+            }
+            printf("[ai-hf] bucket=%s n=%ld mean_abs=%.1f hf_ratio=%.3f\n", g_ai_output[bucket].name,
+                   g_ai_output[bucket].rows, n ? sa / n : 0.0, sa > 0 ? sd / sa : 0.0);
+        }
         if (g_ai_output[bucket].rows <= 20 || (g_ai_output[bucket].rows % 128) == 0)
             printf("[ai-output-clip] bucket=%s n=%ld clipped=%ld total=%ld rms=%.1f\n",
                    g_ai_output[bucket].name, g_ai_output[bucket].rows, clipped, total, total ? sqrt(sumsq / total) : 0.0);
